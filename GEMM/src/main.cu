@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -36,6 +37,9 @@ __host__ __device__ __forceinline__ int ceil_div(int a, int b) {
   return (a + b - 1) / b;
 }
 
+// v1: naive SGEMM。
+// 一个线程计算 C 的一个元素，A/B 都直接从 global memory 读取。
+// 这个版本逻辑最清楚，但数据复用差，同一行 A 和同一列 B 会被大量重复读取。
 __global__ void sgemm_v1_naive(int m, int n, int k, float alpha,
                                const float* a, const float* b, float beta,
                                float* c) {
@@ -50,6 +54,9 @@ __global__ void sgemm_v1_naive(int m, int n, int k, float alpha,
   c[row * n + col] = alpha * acc + beta * c[row * n + col];
 }
 
+// v2: shared memory tiling。
+// 一个 block 计算 TILE x TILE 的 C 子块，每轮把 A/B 的一小块搬到 shared memory，
+// 让同一个 tile 内的线程复用这批数据，减少 global memory 访问次数。
 template <int TILE>
 __global__ void sgemm_v2_smem(int m, int n, int k, float alpha, const float* a,
                               const float* b, float beta, float* c) {
@@ -79,6 +86,9 @@ __global__ void sgemm_v2_smem(int m, int n, int k, float alpha, const float* a,
   }
 }
 
+// v3: thread tile。
+// 一个线程不再只算一个 C 元素，而是计算 TM x TN 个元素。
+// 好处是 A/B 从 shared memory 读入寄存器后，可以在多个 FMA 中复用，提高计算密度。
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_v3_thread_tile(int m, int n, int k, float alpha,
                                      const float* a, const float* b, float beta,
@@ -150,6 +160,9 @@ __global__ void sgemm_v3_thread_tile(int m, int n, int k, float alpha,
   }
 }
 
+// v4: float4 向量化搬运 + A tile 转置。
+// A 从 global memory 读取时是连续的 float4，写入 shared memory 时转置成 BK x BM。
+// 这样计算阶段读取 A 和 B 都更接近连续访问，减少访存指令和 shared memory 压力。
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_v4_vectorized(int m, int n, int k, float alpha,
                                     const float* a, const float* b, float beta,
@@ -225,6 +238,9 @@ __global__ void sgemm_v4_vectorized(int m, int n, int k, float alpha,
   }
 }
 
+// v5/v6 共用的向量化 tile 加载函数。
+// as_buffer 保存转置后的 A tile，bs_buffer 保存原布局的 B tile。
+// 这里假设矩阵尺寸满足高性能路径的对齐约束，边界尺寸由 main 中跳过。
 template <int BM, int BN, int BK>
 __device__ __forceinline__ void load_vectorized_tile(
     int tid, int block_row, int block_col, int n, int k, int tile,
@@ -251,6 +267,9 @@ __device__ __forceinline__ void load_vectorized_tile(
   }
 }
 
+// v5: 双缓冲。
+// shared memory 开两份 buffer：当前 buffer 用于计算，另一个 buffer 预取下一块 K tile。
+// 同时在 BK 内部用两组寄存器 frag_a/frag_b 做一拍预取，尽量隐藏 shared memory 读取延迟。
 template <int BM, int BN, int BK, int TM, int TN>
 __global__ void sgemm_v5_double_buffer(int m, int n, int k, float alpha,
                                        const float* a, const float* b,
@@ -333,6 +352,8 @@ __global__ void sgemm_v5_double_buffer(int m, int n, int k, float alpha,
 
 constexpr int kWarpSize = 32;
 
+// v6 的全局内存到 shared memory 搬运。
+// 与 v4 一样，A tile 转置写入 shared memory，B tile 保持行主序。
 template <int BM, int BN, int BK, int RowStrideA, int RowStrideB>
 __device__ __forceinline__ void load_warp_tile_from_gmem(
     int n, int k, const float* a, const float* b, float* as, float* bs,
@@ -354,6 +375,9 @@ __device__ __forceinline__ void load_warp_tile_from_gmem(
   }
 }
 
+// v6 的 warp 级计算核心。
+// 一个 block tile 被分成多个 warp tile，每个 warp 负责 WM x WN 子块；
+// warp 内线程再各自负责 TM x TN 的输出小块。
 template <int BM, int BN, int BK, int WM, int WN, int WMITER, int WNITER,
           int WSUBM, int WSUBN, int TM, int TN>
 __device__ __forceinline__ void process_warp_tile_from_smem(
@@ -399,6 +423,12 @@ __device__ __forceinline__ void process_warp_tile_from_smem(
   }
 }
 
+// v6: warp tiling。
+// 三级划分：
+// 1. block 处理 BM x BN；
+// 2. warp 处理 WM x WN；
+// 3. thread 处理 TM x TN。
+// 这样可以提高 warp 级数据局部性，并让每个 warp 的工作更规则。
 template <int BM, int BN, int BK, int WM, int WN, int WNITER, int TM, int TN,
           int NumThreads>
 __global__ void __launch_bounds__(NumThreads)
@@ -480,6 +510,7 @@ __global__ void __launch_bounds__(NumThreads)
   }
 }
 
+// 构造稳定的测试输入。避免全部填 1 导致某些索引错误不容易暴露。
 void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
   for (size_t i = 0; i < a.size(); ++i) {
     a[i] = static_cast<float>((i % 17) - 8) * 0.125f;
@@ -489,6 +520,7 @@ void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
   }
 }
 
+// 与 cuBLAS 结果对比。不同归约顺序会带来轻微浮点误差，所以使用相对/绝对容差。
 bool compare_result(const std::vector<float>& ref, const std::vector<float>& got,
                     float atol = 1e-2f, float rtol = 1e-3f) {
   int errors = 0;
@@ -507,11 +539,14 @@ float gflops(int m, int n, int k, float ms) {
   return 2.0f * static_cast<float>(m) * n * k / (ms * 1.0e6f);
 }
 
+// 通用 kernel benchmark。
+// 只把 kernel 调用放进 CUDA event 计时区；host/device 拷贝和校验不计入时间。
 template <typename Launch>
 float benchmark_kernel(const std::string& name, Launch launch, int m, int n,
                        int k, float* d_c, size_t c_bytes,
                        const std::vector<float>& ref,
-                       std::vector<float>& out) {
+                       std::vector<float>& out, std::ofstream& csv,
+                       float cublas_gflops) {
   CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
   for (int i = 0; i < kWarmup; ++i) launch();
   CHECK_CUDA(cudaDeviceSynchronize());
@@ -536,8 +571,11 @@ float benchmark_kernel(const std::string& name, Launch launch, int m, int n,
 
   const float avg_ms = total_ms / kRepeat;
   const bool ok = compare_result(ref, out);
+  const float perf = gflops(m, n, k, avg_ms);
   std::cout << name << ": " << avg_ms << " ms, " << gflops(m, n, k, avg_ms)
             << " GFLOPS, matched=" << ok << '\n';
+  csv << name << "," << n << "," << avg_ms << "," << perf << ","
+      << perf / cublas_gflops << "," << (ok ? 1 : 0) << '\n';
   return avg_ms;
 }
 
@@ -573,6 +611,9 @@ int main(int argc, char** argv) {
   cublasHandle_t handle;
   CHECK_CUBLAS(cublasCreate(&handle));
 
+  // cuBLAS 默认按 column-major 理解矩阵。
+  // 这里输入是 row-major A/B，通过交换 d_b 和 d_a，相当于计算 (B^T A^T)^T，
+  // 最终得到 row-major 语义下的 C = A @ B。
   auto launch_cublas = [&]() {
     CHECK_CUBLAS(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
                              d_b, n, d_a, k, &beta, d_c, n));
@@ -598,10 +639,18 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaMemcpy(h_ref.data(), d_c, c_bytes, cudaMemcpyDeviceToHost));
 
   const float cublas_avg_ms = cublas_ms / kRepeat;
-  std::cout << "N=" << n << '\n';
-  std::cout << "cuBLAS: " << cublas_avg_ms << " ms, "
-            << gflops(m, n, k, cublas_avg_ms) << " GFLOPS\n";
+  const float cublas_perf = gflops(m, n, k, cublas_avg_ms);
+  // 同步写出 CSV，后续可以直接画 size/version/GFLOPS 曲线。
+  std::ofstream csv("sgemm_benchmark.csv");
+  csv << "Version,N,TimeMs,GFLOPS,RatioToCuBLAS,Matched\n";
+  csv << "cuBLAS," << n << "," << cublas_avg_ms << "," << cublas_perf
+      << ",1,1\n";
 
+  std::cout << "N=" << n << '\n';
+  std::cout << "cuBLAS: " << cublas_avg_ms << " ms, " << cublas_perf
+            << " GFLOPS\n";
+
+  // v1-v3 带边界判断，支持任意正方阵尺寸。
   dim3 v1_block(16, 16);
   dim3 v1_grid(ceil_div(n, v1_block.x), ceil_div(m, v1_block.y));
   benchmark_kernel(
@@ -611,7 +660,7 @@ int main(int argc, char** argv) {
                                               d_c);
         CHECK_CUDA(cudaGetLastError());
       },
-      m, n, k, d_c, c_bytes, h_ref, h_out);
+      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
   dim3 v2_block(32, 32);
   dim3 v2_grid(ceil_div(n, 32), ceil_div(m, 32));
@@ -622,7 +671,7 @@ int main(int argc, char** argv) {
                                                  beta, d_c);
         CHECK_CUDA(cudaGetLastError());
       },
-      m, n, k, d_c, c_bytes, h_ref, h_out);
+      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
   constexpr int V3_BM = 64;
   constexpr int V3_BN = 64;
@@ -638,8 +687,10 @@ int main(int argc, char** argv) {
             <<<v3_grid, v3_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
         CHECK_CUDA(cudaGetLastError());
       },
-      m, n, k, d_c, c_bytes, h_ref, h_out);
+      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
+  // v4-v6 是高性能路径，依赖 float4 对齐和整 tile 覆盖。
+  // 为了让核心优化代码保持清晰，非 128 倍数尺寸直接跳过。
   if (n % 128 == 0) {
     constexpr int V4_BM = 128;
     constexpr int V4_BN = 128;
@@ -655,7 +706,7 @@ int main(int argc, char** argv) {
               <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
           CHECK_CUDA(cudaGetLastError());
         },
-        m, n, k, d_c, c_bytes, h_ref, h_out);
+        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
     benchmark_kernel(
         "v5 double buffer",
@@ -664,7 +715,7 @@ int main(int argc, char** argv) {
               <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
           CHECK_CUDA(cudaGetLastError());
         },
-        m, n, k, d_c, c_bytes, h_ref, h_out);
+        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
     constexpr int V6_NUM_THREADS = 128;
     constexpr int V6_BM = 128;
@@ -692,10 +743,12 @@ int main(int argc, char** argv) {
               <<<v6_grid, v6_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
           CHECK_CUDA(cudaGetLastError());
         },
-        m, n, k, d_c, c_bytes, h_ref, h_out);
+        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
   } else {
     std::cout << "v4/v5/v6: skipped because N must be a multiple of 128\n";
+    csv << "v4/v5/v6 skipped," << n << ",0,0,0,0\n";
   }
+  csv.close();
 
   CHECK_CUBLAS(cublasDestroy(handle));
   CHECK_CUDA(cudaFree(d_a));
