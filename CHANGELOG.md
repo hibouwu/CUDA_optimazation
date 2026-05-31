@@ -5,10 +5,12 @@
 ### Added
 
 - REDUCE benchmark with v0-v5 handwritten kernels and CUB baseline.
-- GEMM benchmark with v1-v6 handwritten kernels and cuBLAS baseline.
+- GEMM benchmark with documented v1-v6/v9-v10 handwritten kernels and cuBLAS baseline.
 - CSV output for reduce and SGEMM benchmark results.
+- Extended experiment script with automatic SVG plotting.
 - CMake build entry points for `reduce_bench` and `gemm_bench`.
 - Chinese source comments for kernel optimization stages.
+- Split GEMM and REDUCE source into `include/` helpers plus compact `src/main.cu` entry points.
 - Benchmark and toolchain documentation under `docs/`.
 - MIT license, contributing guide, and git ignore rules.
 

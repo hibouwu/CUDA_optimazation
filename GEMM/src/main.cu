@@ -1,583 +1,10 @@
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
+#include "gemm_benchmark.cuh"
+#include "sgemm_kernels.cuh"
 
-#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <string>
 #include <vector>
-
-#define CHECK_CUDA(call)                                                     \
-  do {                                                                       \
-    cudaError_t err__ = (call);                                               \
-    if (err__ != cudaSuccess) {                                               \
-      std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ << " - " \
-                << cudaGetErrorString(err__) << std::endl;                   \
-      std::exit(EXIT_FAILURE);                                                \
-    }                                                                        \
-  } while (0)
-
-#define CHECK_CUBLAS(call)                                                   \
-  do {                                                                       \
-    cublasStatus_t status__ = (call);                                         \
-    if (status__ != CUBLAS_STATUS_SUCCESS) {                                  \
-      std::cerr << "cuBLAS error at " << __FILE__ << ":" << __LINE__         \
-                << " - status " << status__ << std::endl;                    \
-      std::exit(EXIT_FAILURE);                                                \
-    }                                                                        \
-  } while (0)
-
-constexpr int kWarmup = 5;
-constexpr int kRepeat = 10;
-
-float abs_float(float value) { return value < 0.0f ? -value : value; }
-
-__host__ __device__ __forceinline__ int ceil_div(int a, int b) {
-  return (a + b - 1) / b;
-}
-
-// v1: naive SGEMM。
-// 一个线程计算 C 的一个元素，A/B 都直接从 global memory 读取。
-// 这个版本逻辑最清楚，但数据复用差，同一行 A 和同一列 B 会被大量重复读取。
-__global__ void sgemm_v1_naive(int m, int n, int k, float alpha,
-                               const float* a, const float* b, float beta,
-                               float* c) {
-  const int col = blockIdx.x * blockDim.x + threadIdx.x;
-  const int row = blockIdx.y * blockDim.y + threadIdx.y;
-  if (row >= m || col >= n) return;
-
-  float acc = 0.0f;
-  for (int p = 0; p < k; ++p) {
-    acc += a[row * k + p] * b[p * n + col];
-  }
-  c[row * n + col] = alpha * acc + beta * c[row * n + col];
-}
-
-// v2: shared memory tiling。
-// 一个 block 计算 TILE x TILE 的 C 子块，每轮把 A/B 的一小块搬到 shared memory，
-// 让同一个 tile 内的线程复用这批数据，减少 global memory 访问次数。
-template <int TILE>
-__global__ void sgemm_v2_smem(int m, int n, int k, float alpha, const float* a,
-                              const float* b, float beta, float* c) {
-  __shared__ float as[TILE][TILE];
-  __shared__ float bs[TILE][TILE];
-
-  const int tx = threadIdx.x;
-  const int ty = threadIdx.y;
-  const int row = blockIdx.y * TILE + ty;
-  const int col = blockIdx.x * TILE + tx;
-
-  float acc = 0.0f;
-  for (int tile = 0; tile < k; tile += TILE) {
-    as[ty][tx] = (row < m && tile + tx < k) ? a[row * k + tile + tx] : 0.0f;
-    bs[ty][tx] = (tile + ty < k && col < n) ? b[(tile + ty) * n + col] : 0.0f;
-    __syncthreads();
-
-#pragma unroll
-    for (int p = 0; p < TILE; ++p) {
-      acc += as[ty][p] * bs[p][tx];
-    }
-    __syncthreads();
-  }
-
-  if (row < m && col < n) {
-    c[row * n + col] = alpha * acc + beta * c[row * n + col];
-  }
-}
-
-// v3: thread tile。
-// 一个线程不再只算一个 C 元素，而是计算 TM x TN 个元素。
-// 好处是 A/B 从 shared memory 读入寄存器后，可以在多个 FMA 中复用，提高计算密度。
-template <int BM, int BN, int BK, int TM, int TN>
-__global__ void sgemm_v3_thread_tile(int m, int n, int k, float alpha,
-                                     const float* a, const float* b, float beta,
-                                     float* c) {
-  __shared__ float as[BM * BK];
-  __shared__ float bs[BK * BN];
-
-  const int tid = threadIdx.x;
-  const int block_row = blockIdx.y * BM;
-  const int block_col = blockIdx.x * BN;
-  constexpr int threads_per_row = BN / TN;
-  const int thread_row = tid / threads_per_row;
-  const int thread_col = tid % threads_per_row;
-  const int row_base = thread_row * TM;
-  const int col_base = thread_col * TN;
-
-  float acc[TM][TN] = {0.0f};
-
-  for (int tile = 0; tile < k; tile += BK) {
-    for (int idx = tid; idx < BM * BK; idx += blockDim.x) {
-      const int r = idx / BK;
-      const int p = idx % BK;
-      const int gr = block_row + r;
-      const int gp = tile + p;
-      as[idx] = (gr < m && gp < k) ? a[gr * k + gp] : 0.0f;
-    }
-    for (int idx = tid; idx < BK * BN; idx += blockDim.x) {
-      const int p = idx / BN;
-      const int col = idx % BN;
-      const int gp = tile + p;
-      const int gc = block_col + col;
-      bs[idx] = (gp < k && gc < n) ? b[gp * n + gc] : 0.0f;
-    }
-    __syncthreads();
-
-#pragma unroll
-    for (int p = 0; p < BK; ++p) {
-      float frag_a[TM];
-      float frag_b[TN];
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-        frag_a[i] = as[(row_base + i) * BK + p];
-      }
-#pragma unroll
-      for (int j = 0; j < TN; ++j) {
-        frag_b[j] = bs[p * BN + col_base + j];
-      }
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-#pragma unroll
-        for (int j = 0; j < TN; ++j) {
-          acc[i][j] += frag_a[i] * frag_b[j];
-        }
-      }
-    }
-    __syncthreads();
-  }
-
-#pragma unroll
-  for (int i = 0; i < TM; ++i) {
-    const int row = block_row + row_base + i;
-#pragma unroll
-    for (int j = 0; j < TN; ++j) {
-      const int col = block_col + col_base + j;
-      if (row < m && col < n) {
-        c[row * n + col] = alpha * acc[i][j] + beta * c[row * n + col];
-      }
-    }
-  }
-}
-
-// v4: float4 向量化搬运 + A tile 转置。
-// A 从 global memory 读取时是连续的 float4，写入 shared memory 时转置成 BK x BM。
-// 这样计算阶段读取 A 和 B 都更接近连续访问，减少访存指令和 shared memory 压力。
-template <int BM, int BN, int BK, int TM, int TN>
-__global__ void sgemm_v4_vectorized(int m, int n, int k, float alpha,
-                                    const float* a, const float* b, float beta,
-                                    float* c) {
-  __shared__ float as[BK * BM];
-  __shared__ float bs[BK * BN];
-
-  const int tid = threadIdx.x;
-  const int block_row = blockIdx.y * BM;
-  const int block_col = blockIdx.x * BN;
-  constexpr int threads_per_row = BN / TN;
-  const int thread_row = tid / threads_per_row;
-  const int thread_col = tid % threads_per_row;
-  const int row_base = thread_row * TM;
-  const int col_base = thread_col * TN;
-
-  float acc[TM][TN] = {0.0f};
-
-  for (int tile = 0; tile < k; tile += BK) {
-    for (int vec = tid; vec < (BM * BK) / 4; vec += blockDim.x) {
-      const int linear = vec * 4;
-      const int r = linear / BK;
-      const int p = linear % BK;
-      const float4 values =
-          reinterpret_cast<const float4*>(&a[(block_row + r) * k + tile + p])[0];
-      as[(p + 0) * BM + r] = values.x;
-      as[(p + 1) * BM + r] = values.y;
-      as[(p + 2) * BM + r] = values.z;
-      as[(p + 3) * BM + r] = values.w;
-    }
-
-    for (int vec = tid; vec < (BK * BN) / 4; vec += blockDim.x) {
-      const int linear = vec * 4;
-      const int p = linear / BN;
-      const int col = linear % BN;
-      reinterpret_cast<float4*>(&bs[p * BN + col])[0] =
-          reinterpret_cast<const float4*>(
-              &b[(tile + p) * n + block_col + col])[0];
-    }
-    __syncthreads();
-
-#pragma unroll
-    for (int p = 0; p < BK; ++p) {
-      float frag_a[TM];
-      float frag_b[TN];
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-        frag_a[i] = as[p * BM + row_base + i];
-      }
-#pragma unroll
-      for (int j = 0; j < TN; ++j) {
-        frag_b[j] = bs[p * BN + col_base + j];
-      }
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-#pragma unroll
-        for (int j = 0; j < TN; ++j) {
-          acc[i][j] += frag_a[i] * frag_b[j];
-        }
-      }
-    }
-    __syncthreads();
-  }
-
-#pragma unroll
-  for (int i = 0; i < TM; ++i) {
-    const int row = block_row + row_base + i;
-#pragma unroll
-    for (int j = 0; j < TN; ++j) {
-      const int col = block_col + col_base + j;
-      c[row * n + col] = alpha * acc[i][j] + beta * c[row * n + col];
-    }
-  }
-}
-
-// v5/v6 共用的向量化 tile 加载函数。
-// as_buffer 保存转置后的 A tile，bs_buffer 保存原布局的 B tile。
-// 这里假设矩阵尺寸满足高性能路径的对齐约束，边界尺寸由 main 中跳过。
-template <int BM, int BN, int BK>
-__device__ __forceinline__ void load_vectorized_tile(
-    int tid, int block_row, int block_col, int n, int k, int tile,
-    const float* a, const float* b, float* as_buffer, float* bs_buffer) {
-  for (int vec = tid; vec < (BM * BK) / 4; vec += blockDim.x) {
-    const int linear = vec * 4;
-    const int r = linear / BK;
-    const int p = linear % BK;
-    const float4 values =
-        reinterpret_cast<const float4*>(&a[(block_row + r) * k + tile + p])[0];
-    as_buffer[(p + 0) * BM + r] = values.x;
-    as_buffer[(p + 1) * BM + r] = values.y;
-    as_buffer[(p + 2) * BM + r] = values.z;
-    as_buffer[(p + 3) * BM + r] = values.w;
-  }
-
-  for (int vec = tid; vec < (BK * BN) / 4; vec += blockDim.x) {
-    const int linear = vec * 4;
-    const int p = linear / BN;
-    const int col = linear % BN;
-    reinterpret_cast<float4*>(&bs_buffer[p * BN + col])[0] =
-        reinterpret_cast<const float4*>(
-            &b[(tile + p) * n + block_col + col])[0];
-  }
-}
-
-// v5: 双缓冲。
-// shared memory 开两份 buffer：当前 buffer 用于计算，另一个 buffer 预取下一块 K tile。
-// 同时在 BK 内部用两组寄存器 frag_a/frag_b 做一拍预取，尽量隐藏 shared memory 读取延迟。
-template <int BM, int BN, int BK, int TM, int TN>
-__global__ void sgemm_v5_double_buffer(int m, int n, int k, float alpha,
-                                       const float* a, const float* b,
-                                       float beta, float* c) {
-  __shared__ float as[2][BK * BM];
-  __shared__ float bs[2][BK * BN];
-
-  const int tid = threadIdx.x;
-  const int block_row = blockIdx.y * BM;
-  const int block_col = blockIdx.x * BN;
-  constexpr int threads_per_row = BN / TN;
-  const int thread_row = tid / threads_per_row;
-  const int thread_col = tid % threads_per_row;
-  const int row_base = thread_row * TM;
-  const int col_base = thread_col * TN;
-
-  float acc[TM][TN] = {0.0f};
-
-  load_vectorized_tile<BM, BN, BK>(tid, block_row, block_col, n, k, 0, a, b,
-                                   as[0], bs[0]);
-  __syncthreads();
-
-  for (int tile = 0, read_buffer = 0; tile < k; tile += BK, read_buffer ^= 1) {
-    const int next_tile = tile + BK;
-    const int write_buffer = read_buffer ^ 1;
-    if (next_tile < k) {
-      load_vectorized_tile<BM, BN, BK>(tid, block_row, block_col, n, k,
-                                       next_tile, a, b, as[write_buffer],
-                                       bs[write_buffer]);
-    }
-
-    float frag_a[2][TM];
-    float frag_b[2][TN];
-#pragma unroll
-    for (int i = 0; i < TM; ++i) {
-      frag_a[0][i] = as[read_buffer][row_base + i];
-    }
-#pragma unroll
-    for (int j = 0; j < TN; ++j) {
-      frag_b[0][j] = bs[read_buffer][col_base + j];
-    }
-
-#pragma unroll
-    for (int p = 0; p < BK; ++p) {
-      const int next_p = p + 1;
-      if (next_p < BK) {
-#pragma unroll
-        for (int i = 0; i < TM; ++i) {
-          frag_a[next_p & 1][i] =
-              as[read_buffer][next_p * BM + row_base + i];
-        }
-#pragma unroll
-        for (int j = 0; j < TN; ++j) {
-          frag_b[next_p & 1][j] =
-              bs[read_buffer][next_p * BN + col_base + j];
-        }
-      }
-
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-#pragma unroll
-        for (int j = 0; j < TN; ++j) {
-          acc[i][j] += frag_a[p & 1][i] * frag_b[p & 1][j];
-        }
-      }
-    }
-    __syncthreads();
-  }
-
-#pragma unroll
-  for (int i = 0; i < TM; ++i) {
-    const int row = block_row + row_base + i;
-#pragma unroll
-    for (int j = 0; j < TN; ++j) {
-      const int col = block_col + col_base + j;
-      c[row * n + col] = alpha * acc[i][j] + beta * c[row * n + col];
-    }
-  }
-}
-
-constexpr int kWarpSize = 32;
-
-// v6 的全局内存到 shared memory 搬运。
-// 与 v4 一样，A tile 转置写入 shared memory，B tile 保持行主序。
-template <int BM, int BN, int BK, int RowStrideA, int RowStrideB>
-__device__ __forceinline__ void load_warp_tile_from_gmem(
-    int n, int k, const float* a, const float* b, float* as, float* bs,
-    int inner_row_a, int inner_col_a, int inner_row_b, int inner_col_b) {
-  for (int offset = 0; offset + RowStrideA <= BM; offset += RowStrideA) {
-    const float4 values = reinterpret_cast<const float4*>(
-        &a[(inner_row_a + offset) * k + inner_col_a * 4])[0];
-    as[(inner_col_a * 4 + 0) * BM + inner_row_a + offset] = values.x;
-    as[(inner_col_a * 4 + 1) * BM + inner_row_a + offset] = values.y;
-    as[(inner_col_a * 4 + 2) * BM + inner_row_a + offset] = values.z;
-    as[(inner_col_a * 4 + 3) * BM + inner_row_a + offset] = values.w;
-  }
-
-  for (int offset = 0; offset + RowStrideB <= BK; offset += RowStrideB) {
-    reinterpret_cast<float4*>(
-        &bs[(inner_row_b + offset) * BN + inner_col_b * 4])[0] =
-        reinterpret_cast<const float4*>(
-            &b[(inner_row_b + offset) * n + inner_col_b * 4])[0];
-  }
-}
-
-// v6 的 warp 级计算核心。
-// 一个 block tile 被分成多个 warp tile，每个 warp 负责 WM x WN 子块；
-// warp 内线程再各自负责 TM x TN 的输出小块。
-template <int BM, int BN, int BK, int WM, int WN, int WMITER, int WNITER,
-          int WSUBM, int WSUBN, int TM, int TN>
-__device__ __forceinline__ void process_warp_tile_from_smem(
-    float* reg_m, float* reg_n, float* thread_results, const float* as,
-    const float* bs, int warp_row, int warp_col, int thread_row_in_warp,
-    int thread_col_in_warp) {
-  for (int dot_idx = 0; dot_idx < BK; ++dot_idx) {
-#pragma unroll
-    for (int w_sub_row_idx = 0; w_sub_row_idx < WMITER; ++w_sub_row_idx) {
-#pragma unroll
-      for (int i = 0; i < TM; ++i) {
-        reg_m[w_sub_row_idx * TM + i] =
-            as[dot_idx * BM + warp_row * WM + w_sub_row_idx * WSUBM +
-               thread_row_in_warp * TM + i];
-      }
-    }
-#pragma unroll
-    for (int w_sub_col_idx = 0; w_sub_col_idx < WNITER; ++w_sub_col_idx) {
-#pragma unroll
-      for (int i = 0; i < TN; ++i) {
-        reg_n[w_sub_col_idx * TN + i] =
-            bs[dot_idx * BN + warp_col * WN + w_sub_col_idx * WSUBN +
-               thread_col_in_warp * TN + i];
-      }
-    }
-
-#pragma unroll
-    for (int w_sub_row_idx = 0; w_sub_row_idx < WMITER; ++w_sub_row_idx) {
-#pragma unroll
-      for (int w_sub_col_idx = 0; w_sub_col_idx < WNITER; ++w_sub_col_idx) {
-#pragma unroll
-        for (int res_idx_m = 0; res_idx_m < TM; ++res_idx_m) {
-#pragma unroll
-          for (int res_idx_n = 0; res_idx_n < TN; ++res_idx_n) {
-            thread_results[(w_sub_row_idx * TM + res_idx_m) * (WNITER * TN) +
-                           w_sub_col_idx * TN + res_idx_n] +=
-                reg_m[w_sub_row_idx * TM + res_idx_m] *
-                reg_n[w_sub_col_idx * TN + res_idx_n];
-          }
-        }
-      }
-    }
-  }
-}
-
-// v6: warp tiling。
-// 三级划分：
-// 1. block 处理 BM x BN；
-// 2. warp 处理 WM x WN；
-// 3. thread 处理 TM x TN。
-// 这样可以提高 warp 级数据局部性，并让每个 warp 的工作更规则。
-template <int BM, int BN, int BK, int WM, int WN, int WNITER, int TM, int TN,
-          int NumThreads>
-__global__ void __launch_bounds__(NumThreads)
-    sgemm_v6_warp_tiling(int m, int n, int k, float alpha, const float* a,
-                         const float* b, float beta, float* c) {
-  const int c_row = blockIdx.y;
-  const int c_col = blockIdx.x;
-
-  const int warp_idx = threadIdx.x / kWarpSize;
-  const int warp_col = warp_idx % (BN / WN);
-  const int warp_row = warp_idx / (BN / WN);
-
-  constexpr int WMITER = (WM * WN) / (kWarpSize * TM * TN * WNITER);
-  constexpr int WSUBM = WM / WMITER;
-  constexpr int WSUBN = WN / WNITER;
-
-  const int thread_idx_in_warp = threadIdx.x % kWarpSize;
-  const int thread_col_in_warp = thread_idx_in_warp % (WSUBN / TN);
-  const int thread_row_in_warp = thread_idx_in_warp / (WSUBN / TN);
-
-  __shared__ float as[BM * BK];
-  __shared__ float bs[BK * BN];
-
-  a += c_row * BM * k;
-  b += c_col * BN;
-  c += (c_row * BM + warp_row * WM) * n + c_col * BN + warp_col * WN;
-
-  const int inner_row_a = threadIdx.x / (BK / 4);
-  const int inner_col_a = threadIdx.x % (BK / 4);
-  constexpr int RowStrideA = (NumThreads * 4) / BK;
-  const int inner_row_b = threadIdx.x / (BN / 4);
-  const int inner_col_b = threadIdx.x % (BN / 4);
-  constexpr int RowStrideB = NumThreads / (BN / 4);
-
-  float thread_results[WMITER * TM * WNITER * TN] = {0.0f};
-  float reg_m[WMITER * TM] = {0.0f};
-  float reg_n[WNITER * TN] = {0.0f};
-
-  for (int bk_idx = 0; bk_idx < k; bk_idx += BK) {
-    load_warp_tile_from_gmem<BM, BN, BK, RowStrideA, RowStrideB>(
-        n, k, a, b, as, bs, inner_row_a, inner_col_a, inner_row_b,
-        inner_col_b);
-    __syncthreads();
-    process_warp_tile_from_smem<BM, BN, BK, WM, WN, WMITER, WNITER, WSUBM,
-                                WSUBN, TM, TN>(
-        reg_m, reg_n, thread_results, as, bs, warp_row, warp_col,
-        thread_row_in_warp, thread_col_in_warp);
-    a += BK;
-    b += BK * n;
-    __syncthreads();
-  }
-
-#pragma unroll
-  for (int w_sub_row_idx = 0; w_sub_row_idx < WMITER; ++w_sub_row_idx) {
-#pragma unroll
-    for (int w_sub_col_idx = 0; w_sub_col_idx < WNITER; ++w_sub_col_idx) {
-      float* c_interim =
-          c + w_sub_row_idx * WSUBM * n + w_sub_col_idx * WSUBN;
-#pragma unroll
-      for (int res_idx_m = 0; res_idx_m < TM; ++res_idx_m) {
-#pragma unroll
-        for (int res_idx_n = 0; res_idx_n < TN; res_idx_n += 4) {
-          float4 values = reinterpret_cast<float4*>(
-              &c_interim[(thread_row_in_warp * TM + res_idx_m) * n +
-                         thread_col_in_warp * TN + res_idx_n])[0];
-          const int result_idx =
-              (w_sub_row_idx * TM + res_idx_m) * (WNITER * TN) +
-              w_sub_col_idx * TN + res_idx_n;
-          values.x = alpha * thread_results[result_idx + 0] + beta * values.x;
-          values.y = alpha * thread_results[result_idx + 1] + beta * values.y;
-          values.z = alpha * thread_results[result_idx + 2] + beta * values.z;
-          values.w = alpha * thread_results[result_idx + 3] + beta * values.w;
-          reinterpret_cast<float4*>(
-              &c_interim[(thread_row_in_warp * TM + res_idx_m) * n +
-                         thread_col_in_warp * TN + res_idx_n])[0] = values;
-        }
-      }
-    }
-  }
-}
-
-// 构造稳定的测试输入。避免全部填 1 导致某些索引错误不容易暴露。
-void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
-  for (size_t i = 0; i < a.size(); ++i) {
-    a[i] = static_cast<float>((i % 17) - 8) * 0.125f;
-  }
-  for (size_t i = 0; i < b.size(); ++i) {
-    b[i] = static_cast<float>((i % 13) - 6) * 0.0625f;
-  }
-}
-
-// 与 cuBLAS 结果对比。不同归约顺序会带来轻微浮点误差，所以使用相对/绝对容差。
-bool compare_result(const std::vector<float>& ref, const std::vector<float>& got,
-                    float atol = 1e-2f, float rtol = 1e-3f) {
-  int errors = 0;
-  for (size_t i = 0; i < ref.size(); ++i) {
-    const float diff = abs_float(ref[i] - got[i]);
-    const float tol = atol + rtol * abs_float(ref[i]);
-    if (diff > tol && ++errors <= 5) {
-      std::cerr << "Mismatch at " << i << ": ref=" << ref[i]
-                << ", got=" << got[i] << ", diff=" << diff << '\n';
-    }
-  }
-  return errors == 0;
-}
-
-float gflops(int m, int n, int k, float ms) {
-  return 2.0f * static_cast<float>(m) * n * k / (ms * 1.0e6f);
-}
-
-// 通用 kernel benchmark。
-// 只把 kernel 调用放进 CUDA event 计时区；host/device 拷贝和校验不计入时间。
-template <typename Launch>
-float benchmark_kernel(const std::string& name, Launch launch, int m, int n,
-                       int k, float* d_c, size_t c_bytes,
-                       const std::vector<float>& ref,
-                       std::vector<float>& out, std::ofstream& csv,
-                       float cublas_gflops) {
-  CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
-  for (int i = 0; i < kWarmup; ++i) launch();
-  CHECK_CUDA(cudaDeviceSynchronize());
-
-  cudaEvent_t start, stop;
-  CHECK_CUDA(cudaEventCreate(&start));
-  CHECK_CUDA(cudaEventCreate(&stop));
-  CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
-
-  CHECK_CUDA(cudaEventRecord(start));
-  for (int i = 0; i < kRepeat; ++i) {
-    launch();
-  }
-  CHECK_CUDA(cudaEventRecord(stop));
-  CHECK_CUDA(cudaEventSynchronize(stop));
-
-  float total_ms = 0.0f;
-  CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
-  CHECK_CUDA(cudaEventDestroy(start));
-  CHECK_CUDA(cudaEventDestroy(stop));
-  CHECK_CUDA(cudaMemcpy(out.data(), d_c, c_bytes, cudaMemcpyDeviceToHost));
-
-  const float avg_ms = total_ms / kRepeat;
-  const bool ok = compare_result(ref, out);
-  const float perf = gflops(m, n, k, avg_ms);
-  std::cout << name << ": " << avg_ms << " ms, " << gflops(m, n, k, avg_ms)
-            << " GFLOPS, matched=" << ok << '\n';
-  csv << name << "," << n << "," << avg_ms << "," << perf << ","
-      << perf / cublas_gflops << "," << (ok ? 1 : 0) << '\n';
-  return avg_ms;
-}
 
 int main(int argc, char** argv) {
   int n = 1024;
@@ -586,6 +13,7 @@ int main(int argc, char** argv) {
     std::cerr << "Usage: " << argv[0] << " [square_size]\n";
     return EXIT_FAILURE;
   }
+
   const int m = n;
   const int k = n;
   const float alpha = 1.0f;
@@ -610,6 +38,7 @@ int main(int argc, char** argv) {
 
   cublasHandle_t handle;
   CHECK_CUBLAS(cublasCreate(&handle));
+  print_gemm_environment(handle);
 
   // cuBLAS 默认按 column-major 理解矩阵。
   // 这里输入是 row-major A/B，通过交换 d_b 和 d_a，相当于计算 (B^T A^T)^T，
@@ -640,6 +69,7 @@ int main(int argc, char** argv) {
 
   const float cublas_avg_ms = cublas_ms / kRepeat;
   const float cublas_perf = gflops(m, n, k, cublas_avg_ms);
+
   // 同步写出 CSV，后续可以直接画 size/version/GFLOPS 曲线。
   std::ofstream csv("sgemm_benchmark.csv");
   csv << "Version,N,TimeMs,GFLOPS,RatioToCuBLAS,Matched\n";
@@ -647,28 +77,55 @@ int main(int argc, char** argv) {
       << ",1,1\n";
 
   std::cout << "N=" << n << '\n';
+  std::cout << "Benchmark policy: warmup=" << kWarmup
+            << ", timed repeats=" << kRepeat
+            << " per backend before moving to the next backend\n";
   std::cout << "cuBLAS: " << cublas_avg_ms << " ms, " << cublas_perf
             << " GFLOPS\n";
 
-  // v1-v3 带边界判断，支持任意正方阵尺寸。
+  // v1-v4 带边界判断，支持任意正方阵尺寸。
   dim3 v1_block(16, 16);
-  dim3 v1_grid(ceil_div(n, v1_block.x), ceil_div(m, v1_block.y));
+  dim3 v1_grid(ceil_div(m, v1_block.x), ceil_div(n, v1_block.y));
   benchmark_kernel(
-      "v1 naive",
+      "v1 naive uncoalesced",
       [&]() {
-        sgemm_v1_naive<<<v1_grid, v1_block>>>(m, n, k, alpha, d_a, d_b, beta,
+        sgemm_v1_naive_uncoalesced<<<v1_grid, v1_block>>>(
+            m, n, k, alpha, d_a, d_b, beta, d_c);
+        CHECK_CUDA(cudaGetLastError());
+      },
+      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+
+  dim3 v2_block(16, 16);
+  dim3 v2_grid(ceil_div(n, v2_block.x), ceil_div(m, v2_block.y));
+  benchmark_kernel(
+      "v2 coalesced naive",
+      [&]() {
+        sgemm_v1_naive<<<v2_grid, v2_block>>>(m, n, k, alpha, d_a, d_b, beta,
                                               d_c);
         CHECK_CUDA(cudaGetLastError());
       },
       m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
 
-  dim3 v2_block(32, 32);
-  dim3 v2_grid(ceil_div(n, 32), ceil_div(m, 32));
+  dim3 v3_smem_block(32, 32);
+  dim3 v3_smem_grid(ceil_div(n, 32), ceil_div(m, 32));
   benchmark_kernel(
-      "v2 shared-memory tile",
+      "v3 shared-memory tile",
       [&]() {
-        sgemm_v2_smem<32><<<v2_grid, v2_block>>>(m, n, k, alpha, d_a, d_b,
-                                                 beta, d_c);
+        sgemm_v2_smem<32><<<v3_smem_grid, v3_smem_block>>>(
+            m, n, k, alpha, d_a, d_b, beta, d_c);
+        CHECK_CUDA(cudaGetLastError());
+      },
+      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+
+  constexpr int V4_TILE = 16;
+  dim3 v4_padded_grid(ceil_div(n, V4_TILE), ceil_div(m, V4_TILE));
+  dim3 v4_padded_block(V4_TILE * V4_TILE);
+  benchmark_kernel(
+      "v4 1D block padded smem",
+      [&]() {
+        sgemm_v4_smem_1d_padded<V4_TILE>
+            <<<v4_padded_grid, v4_padded_block>>>(m, n, k, alpha, d_a, d_b,
+                                                  beta, d_c);
         CHECK_CUDA(cudaGetLastError());
       },
       m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
@@ -680,16 +137,13 @@ int main(int argc, char** argv) {
   constexpr int V3_TN = 4;
   dim3 v3_grid(ceil_div(n, V3_BN), ceil_div(m, V3_BM));
   dim3 v3_block((V3_BM / V3_TM) * (V3_BN / V3_TN));
-  benchmark_kernel(
-      "v3 thread tile",
-      [&]() {
-        sgemm_v3_thread_tile<V3_BM, V3_BN, V3_BK, V3_TM, V3_TN>
-            <<<v3_grid, v3_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
-        CHECK_CUDA(cudaGetLastError());
-      },
-      m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+  auto launch_v6_thread_coarsening = [&]() {
+    sgemm_v3_thread_tile<V3_BM, V3_BN, V3_BK, V3_TM, V3_TN>
+        <<<v3_grid, v3_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
+    CHECK_CUDA(cudaGetLastError());
+  };
 
-  // v4-v6 是高性能路径，依赖 float4 对齐和整 tile 覆盖。
+  // v5/v9/v10 是高性能路径，依赖 float4 对齐和整 tile 覆盖。
   // 为了让核心优化代码保持清晰，非 128 倍数尺寸直接跳过。
   if (n % 128 == 0) {
     constexpr int V4_BM = 128;
@@ -699,24 +153,6 @@ int main(int argc, char** argv) {
     constexpr int V4_TN = 8;
     dim3 v4_grid(n / V4_BN, m / V4_BM);
     dim3 v4_block((V4_BM / V4_TM) * (V4_BN / V4_TN));
-    benchmark_kernel(
-        "v4 vectorized",
-        [&]() {
-          sgemm_v4_vectorized<V4_BM, V4_BN, V4_BK, V4_TM, V4_TN>
-              <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
-          CHECK_CUDA(cudaGetLastError());
-        },
-        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
-
-    benchmark_kernel(
-        "v5 double buffer",
-        [&]() {
-          sgemm_v5_double_buffer<V4_BM, V4_BN, V4_BK, V4_TM, V4_TN>
-              <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
-          CHECK_CUDA(cudaGetLastError());
-        },
-        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
-
     constexpr int V6_NUM_THREADS = 128;
     constexpr int V6_BM = 128;
     constexpr int V6_BN = 128;
@@ -736,7 +172,7 @@ int main(int argc, char** argv) {
     dim3 v6_grid(n / V6_BN, m / V6_BM);
     dim3 v6_block(V6_NUM_THREADS);
     benchmark_kernel(
-        "v6 warp tiling",
+        "v5 warp tiling",
         [&]() {
           sgemm_v6_warp_tiling<V6_BM, V6_BN, V6_BK, V6_WM, V6_WN,
                                V6_WNITER, V6_TM, V6_TN, V6_NUM_THREADS>
@@ -744,9 +180,32 @@ int main(int argc, char** argv) {
           CHECK_CUDA(cudaGetLastError());
         },
         m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+
+    benchmark_kernel("v6 thread coarsening", launch_v6_thread_coarsening, m, n,
+                     k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+
+    benchmark_kernel(
+        "v9 vectorized",
+        [&]() {
+          sgemm_v4_vectorized<V4_BM, V4_BN, V4_BK, V4_TM, V4_TN>
+              <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
+          CHECK_CUDA(cudaGetLastError());
+        },
+        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
+
+    benchmark_kernel(
+        "v10 double buffer",
+        [&]() {
+          sgemm_v5_double_buffer<V4_BM, V4_BN, V4_BK, V4_TM, V4_TN>
+              <<<v4_grid, v4_block>>>(m, n, k, alpha, d_a, d_b, beta, d_c);
+          CHECK_CUDA(cudaGetLastError());
+        },
+        m, n, k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
   } else {
-    std::cout << "v4/v5/v6: skipped because N must be a multiple of 128\n";
-    csv << "v4/v5/v6 skipped," << n << ",0,0,0,0\n";
+    std::cout << "v5/v9/v10: skipped because N must be a multiple of 128\n";
+    csv << "v5/v9/v10 skipped," << n << ",0,0,0,0\n";
+    benchmark_kernel("v6 thread coarsening", launch_v6_thread_coarsening, m, n,
+                     k, d_c, c_bytes, h_ref, h_out, csv, cublas_perf);
   }
   csv.close();
 
