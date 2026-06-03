@@ -40,5 +40,41 @@ Start with small, controlled kernels before building full attention:
 3. `QKV projection`: use cuBLAS baseline and reuse GEMM tuning lessons.
 4. `Attention`: materialized attention first, then streaming online softmax.
 
-The current `transformer_bench` target is a placeholder that prints this plan.
-It exists so the folder is wired into CMake before implementation starts.
+## Current Benchmark
+
+`transformer_bench` currently runs LayerNorm:
+
+| Version | Kernel | Main idea |
+| --- | --- | --- |
+| v1 | `layernorm_v1_naive` | One thread handles one row serially. |
+| v2 | `layernorm_v2_block_reduce` | One block handles one row with shared-memory reduction. |
+| v3 | `layernorm_v3_vectorized` | `float4` vectorized row loads/stores. |
+
+Run:
+
+```bash
+./build_cuda13/transformer_bench 1 1024 4096 32 128
+```
+
+Output:
+
+```txt
+transformer_benchmark.csv
+Operator,Version,Batch,SeqLen,Hidden,NumHeads,HeadDim,TimeMs,BandwidthGBps,Matched
+```
+
+Run the shape sweep and generate SVG figures:
+
+```bash
+BUILD_DIR=/workspace/build_cuda13 ./scripts/run_transformer_experiments.sh
+```
+
+Useful overrides:
+
+```bash
+PRESET=quick ./scripts/run_transformer_experiments.sh
+TRANSFORMER_SHAPES="1:1024:4096:32:128" TRIALS=5 ./scripts/run_transformer_experiments.sh
+```
+
+The sweep writes `results/transformer/transformer_sweep.csv`, raw per-shape
+outputs, and one latency plus one effective-bandwidth figure per hidden size.

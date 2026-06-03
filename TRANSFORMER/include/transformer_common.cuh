@@ -17,6 +17,7 @@
 
 constexpr int kTransformerWarmup = 5;
 constexpr int kTransformerRepeat = 100;
+constexpr int kTransformerBlockSize = 256;
 
 struct TransformerShape {
   int batch;
@@ -35,3 +36,5 @@ inline void print_shape(const TransformerShape& shape) {
 inline float transformer_gbytes(size_t bytes, float ms) {
   return static_cast<float>(bytes) / (ms * 1.0e6f);
 }
+
+inline float abs_float(float value) { return value < 0.0f ? -value : value; }

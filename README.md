@@ -31,7 +31,8 @@ CUDA_optimazation/
 │   ├── plot_benchmarks.py
 │   ├── run_gemm_experiments.sh
 │   ├── run_gemm_tuning.sh
-│   └── run_reduce_experiments.sh
+│   ├── run_reduce_experiments.sh
+│   └── run_transformer_experiments.sh
 ├── GEMM/
 │   ├── include/
 │   │   ├── gemm_benchmark.cuh
@@ -40,7 +41,10 @@ CUDA_optimazation/
 │   └── src/main.cu
 ├── TRANSFORMER/
 │   ├── README.md
-│   ├── include/transformer_common.cuh
+│   ├── include/
+│   │   ├── transformer_benchmark.cuh
+│   │   ├── transformer_common.cuh
+│   │   └── transformer_kernels.cuh
 │   └── src/main.cu
 └── REDUCE/
     ├── include/
@@ -107,9 +111,25 @@ still run `v1` to `v4`, `v6`, and cuBLAS.
 
 ### TRANSFORMER
 
-`TRANSFORMER/` is a scaffold for Transformer-specific optimization work. It is
-separate from GEMM because Transformer performance depends on whole operator
-pipelines and tensor layouts, not only a single matrix multiply.
+`TRANSFORMER/src/main.cu` currently benchmarks LayerNorm and is the workspace for
+Transformer-specific optimization work. It is separate from GEMM because
+Transformer performance depends on whole operator pipelines and tensor layouts,
+not only a single matrix multiply.
+
+Current LayerNorm versions:
+
+| Version | Implementation | Main idea | What to inspect |
+| --- | --- | --- | --- |
+| v1 | `layernorm_v1_naive` | One thread handles one row serially | baseline latency, no parallel reduction |
+| v2 | `layernorm_v2_block_reduce` | One block handles one row with shared-memory reduction | row reduction bandwidth |
+| v3 | `layernorm_v3_vectorized` | `float4` vectorized row loads/stores | memory instruction count, alignment |
+
+Output CSV:
+
+```txt
+transformer_benchmark.csv
+Operator,Version,Batch,SeqLen,Hidden,NumHeads,HeadDim,TimeMs,BandwidthGBps,Matched
+```
 
 Planned sequence:
 
@@ -228,6 +248,7 @@ Run the sweep script after the basic single-size checks pass:
 ```bash
 ./scripts/run_reduce_experiments.sh
 ./scripts/run_gemm_experiments.sh
+./scripts/run_transformer_experiments.sh
 ```
 
 Default sweep sizes:
@@ -235,6 +256,10 @@ Default sweep sizes:
 ```txt
 REDUCE default: 256K, 512K, 1M, 2M, 4M, 8M, 16M, 32M, 64M elements
 GEMM default:   256, 384, 512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048
+TRANSFORMER default:
+  LayerNorm B:S:H:heads:head_dim =
+  1:128:768:12:64, 1:512:768:12:64, 1:1024:768:12:64,
+  1:512:4096:32:128, 1:1024:4096:32:128, 1:2048:4096:32:128
 ```
 
 Outputs:
@@ -245,13 +270,21 @@ results/
 │   ├── reduce_sweep.csv
 │   ├── raw/
 │   └── figures/reduce_bandwidth.svg
-└── gemm/
-    ├── sgemm_sweep.csv
+├── gemm/
+│   ├── sgemm_sweep.csv
+│   ├── raw/
+│   └── figures/
+│       ├── sgemm_gflops.svg
+│       ├── sgemm_gflops_log.svg
+│       └── sgemm_ratio_to_cublas.svg
+└── transformer/
+    ├── transformer_sweep.csv
     ├── raw/
     └── figures/
-        ├── sgemm_gflops.svg
-        ├── sgemm_gflops_log.svg
-        └── sgemm_ratio_to_cublas.svg
+        ├── layernorm_bandwidth_H768.svg
+        ├── layernorm_time_H768.svg
+        ├── layernorm_bandwidth_H4096.svg
+        └── layernorm_time_H4096.svg
 ```
 
 Each experiment script automatically calls `scripts/plot_benchmarks.py` at the end. The
@@ -263,6 +296,7 @@ Override sizes when needed:
 ```bash
 REDUCE_SIZES="1048576 16777216" ./scripts/run_reduce_experiments.sh
 GEMM_SIZES="512 1024" ./scripts/run_gemm_experiments.sh
+TRANSFORMER_SHAPES="1:1024:4096:32:128" ./scripts/run_transformer_experiments.sh
 ```
 
 Use presets for different experiment budgets:
@@ -271,6 +305,7 @@ Use presets for different experiment budgets:
 BUILD_DIR=/workspace/build_cuda13 PRESET=quick ./scripts/run_gemm_experiments.sh
 BUILD_DIR=/workspace/build_cuda13 PRESET=default ./scripts/run_gemm_experiments.sh
 BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_gemm_experiments.sh
+BUILD_DIR=/workspace/build_cuda13 PRESET=quick ./scripts/run_transformer_experiments.sh
 ```
 
 Each size runs `TRIALS=3` independent process-level trials by default. The
@@ -293,6 +328,7 @@ cmake --build build_cuda13 -j
 
 BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_reduce_experiments.sh
 BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_gemm_experiments.sh
+BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_transformer_experiments.sh
 ```
 
 The default GEMM linear figures keep only key milestones to reduce visual

@@ -57,7 +57,12 @@ target_include_directories(gemm_tune_blocksize PRIVATE
 )
 target_link_libraries(gemm_tune_blocksize PRIVATE CUDA::cublas)
 
-add_executable(transformer_bench TRANSFORMER/src/main.cu)
+add_executable(transformer_bench
+  TRANSFORMER/src/main.cu
+  TRANSFORMER/include/transformer_common.cuh
+  TRANSFORMER/include/transformer_kernels.cuh
+  TRANSFORMER/include/transformer_benchmark.cuh
+)
 target_compile_options(transformer_bench PRIVATE
   $<$<COMPILE_LANGUAGE:CUDA>:-O3>
 )
@@ -65,3 +70,4 @@ target_include_directories(transformer_bench PRIVATE
   TRANSFORMER/include
   ${CUDAToolkit_INCLUDE_DIRS}
 )
+target_link_libraries(transformer_bench PRIVATE CUDA::cudart)

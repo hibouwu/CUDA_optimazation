@@ -17,6 +17,11 @@ launches of the same backend, averages the elapsed time, and only then moves to
 the next backend. This avoids interleaving different GEMM kernels inside one
 timed region.
 
+Transformer LayerNorm uses the same backend-local timing policy: warm up the
+current version, time 100 launches of that version, then move to the next
+version. The reported bandwidth is an effective logical bandwidth based on the
+LayerNorm data touched by the algorithm, not a direct DRAM counter.
+
 For REDUCE, the CPU reference uses double accumulation. A plain sequential
 `float` sum can undercount large inputs because the fractional increments become
 smaller than the FP32 spacing near the accumulated value.
@@ -99,6 +104,45 @@ Read the versions as a story:
 - `v10` tries to overlap tile loading and compute.
 - cuBLAS remains the reference for both correctness and performance.
 
+## Transformer Metrics
+
+Current primary output:
+
+```txt
+Operator,Version,Batch,SeqLen,Hidden,NumHeads,HeadDim,TimeMs,BandwidthGBps,Matched
+```
+
+LayerNorm effective bandwidth formula:
+
+```txt
+BandwidthGBps = 5 * Batch * SeqLen * Hidden * sizeof(float) / TimeMs / 1e6
+```
+
+The factor 5 counts input reads for mean/variance, gamma reads, beta reads, and
+output writes as a simple logical traffic model. Treat it as a consistent
+version-to-version comparison, not as a replacement for Nsight Compute memory
+throughput counters.
+
+Useful Nsight Compute metrics:
+
+- Global load/store throughput and instruction count.
+- Shared-memory load/store instruction count.
+- `smsp__warp_issue_stalled_barrier`.
+- `smsp__warp_issue_stalled_long_scoreboard`.
+- Register count and occupancy.
+
+Suggested profiling order:
+
+```bash
+ncu --set full ./transformer_bench 1 1024 4096 32 128
+```
+
+Read the current LayerNorm versions as a story:
+
+- `v1` exposes the serial one-thread-per-row baseline.
+- `v2` parallelizes one row with a block-level reduction.
+- `v3` keeps the block reduction but uses `float4` vectorized row traffic.
+
 ## Result Interpretation
 
 For small matrices, cuBLAS may win by a large margin because it dispatches specialized kernels. For larger square matrices, handwritten kernels should show a clear progression across the documented versions. If an optimized version is slower, inspect:
@@ -115,6 +159,7 @@ Use the repository scripts to run repeatable size sweeps and generate figures:
 ```bash
 ./scripts/run_reduce_experiments.sh
 ./scripts/run_gemm_experiments.sh
+./scripts/run_transformer_experiments.sh
 ```
 
 The REDUCE script writes `results/reduce/reduce_sweep.csv`, keeps per-size raw
@@ -127,11 +172,17 @@ charts for key-kernel GFLOPS, all-kernel log-y GFLOPS, and cuBLAS ratio.
 The key-kernel view includes cuBLAS, v2, v3, v5, v6, v9, and v10; v1 and v4
 remain in the CSV and all-kernel log figure as teaching baselines.
 
+The TRANSFORMER script writes `results/transformer/transformer_sweep.csv`, keeps
+per-shape raw outputs under `results/transformer/raw/`, and generates one
+bandwidth and one latency SVG per hidden size. Splitting by hidden size avoids
+mixing different LayerNorm row widths on the same curve.
+
 You can override the default workload without editing the script:
 
 ```bash
 REDUCE_SIZES="1048576 4194304" ./scripts/run_reduce_experiments.sh
 GEMM_SIZES="512 1024" ./scripts/run_gemm_experiments.sh
+TRANSFORMER_SHAPES="1:1024:4096:32:128" ./scripts/run_transformer_experiments.sh
 ```
 
 The scripts also support presets:

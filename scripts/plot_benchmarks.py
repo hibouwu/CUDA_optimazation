@@ -66,6 +66,38 @@ def group_series(rows, x_col, y_col):
     return {name: sorted(points, key=lambda point: point[0]) for name, points in grouped.items() if points}
 
 
+def group_transformer_series(rows, hidden, y_col):
+    samples = defaultdict(list)
+    for row in rows:
+        if row.get("Operator") != "LayerNorm":
+            continue
+        if row.get("Matched") != "1":
+            continue
+        name = row["Version"]
+        if "skipped" in name:
+            continue
+        if row.get("Hidden") != hidden:
+            continue
+        samples[(name, to_float(row["SeqLen"]))].append(to_float(row[y_col]))
+
+    grouped = defaultdict(list)
+    for (name, x), values in samples.items():
+        mean = sum(values) / len(values)
+        if len(values) > 1:
+            variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+            stddev = math.sqrt(variance)
+        else:
+            stddev = 0.0
+        grouped[name].append((x, mean, stddev))
+
+    return {name: sorted(points, key=lambda point: point[0]) for name, points in grouped.items() if points}
+
+
+def transformer_hidden_values(rows):
+    values = sorted({row.get("Hidden", "") for row in rows if row.get("Operator") == "LayerNorm"}, key=to_float)
+    return [value for value in values if value]
+
+
 def group_tuning_series(rows, kernel_filter=None):
     grouped = defaultdict(list)
     for row in rows:
@@ -301,10 +333,11 @@ def main():
     parser.add_argument("--reduce", help="Path to reduce_sweep.csv")
     parser.add_argument("--gemm", help="Path to sgemm_sweep.csv")
     parser.add_argument("--tuning", help="Path to blocksize_tuning.csv")
+    parser.add_argument("--transformer", help="Path to transformer_sweep.csv")
     parser.add_argument("--out-dir", required=True, help="Directory for SVG figures")
     args = parser.parse_args()
-    if not args.reduce and not args.gemm and not args.tuning:
-        parser.error("at least one of --reduce, --gemm, or --tuning is required")
+    if not args.reduce and not args.gemm and not args.tuning and not args.transformer:
+        parser.error("at least one of --reduce, --gemm, --tuning, or --transformer is required")
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -363,6 +396,24 @@ def main():
             "GFLOPS",
             out_dir / "tuning_best_by_kernel.svg",
         )
+
+    if args.transformer:
+        transformer_rows = read_rows(args.transformer)
+        for hidden in transformer_hidden_values(transformer_rows):
+            write_svg(
+                group_transformer_series(transformer_rows, hidden, "BandwidthGBps"),
+                f"LayerNorm Bandwidth Sweep (H={hidden})",
+                "Sequence length S",
+                "Effective bandwidth (GB/s)",
+                out_dir / f"layernorm_bandwidth_H{hidden}.svg",
+            )
+            write_svg(
+                group_transformer_series(transformer_rows, hidden, "TimeMs"),
+                f"LayerNorm Latency Sweep (H={hidden})",
+                "Sequence length S",
+                "Time (ms)",
+                out_dir / f"layernorm_time_H{hidden}.svg",
+            )
 
     print(f"Wrote figures to {out_dir}")
 

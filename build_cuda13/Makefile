@@ -155,6 +155,19 @@ gemm_tune_blocksize/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gemm_tune_blocksize.dir/build.make CMakeFiles/gemm_tune_blocksize.dir/build
 .PHONY : gemm_tune_blocksize/fast
 
+#=============================================================================
+# Target rules for targets named transformer_bench
+
+# Build rule for target.
+transformer_bench: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 transformer_bench
+.PHONY : transformer_bench
+
+# fast build rule for target.
+transformer_bench/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/transformer_bench.dir/build.make CMakeFiles/transformer_bench.dir/build
+.PHONY : transformer_bench/fast
+
 GEMM/src/main.o: GEMM/src/main.cu.o
 .PHONY : GEMM/src/main.o
 
@@ -227,6 +240,30 @@ REDUCE/src/main.cu.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/reduce_bench.dir/build.make CMakeFiles/reduce_bench.dir/REDUCE/src/main.cu.s
 .PHONY : REDUCE/src/main.cu.s
 
+TRANSFORMER/src/main.o: TRANSFORMER/src/main.cu.o
+.PHONY : TRANSFORMER/src/main.o
+
+# target to build an object file
+TRANSFORMER/src/main.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/transformer_bench.dir/build.make CMakeFiles/transformer_bench.dir/TRANSFORMER/src/main.cu.o
+.PHONY : TRANSFORMER/src/main.cu.o
+
+TRANSFORMER/src/main.i: TRANSFORMER/src/main.cu.i
+.PHONY : TRANSFORMER/src/main.i
+
+# target to preprocess a source file
+TRANSFORMER/src/main.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/transformer_bench.dir/build.make CMakeFiles/transformer_bench.dir/TRANSFORMER/src/main.cu.i
+.PHONY : TRANSFORMER/src/main.cu.i
+
+TRANSFORMER/src/main.s: TRANSFORMER/src/main.cu.s
+.PHONY : TRANSFORMER/src/main.s
+
+# target to generate assembly for a file
+TRANSFORMER/src/main.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/transformer_bench.dir/build.make CMakeFiles/transformer_bench.dir/TRANSFORMER/src/main.cu.s
+.PHONY : TRANSFORMER/src/main.cu.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -238,6 +275,7 @@ help:
 	@echo "... gemm_bench"
 	@echo "... gemm_tune_blocksize"
 	@echo "... reduce_bench"
+	@echo "... transformer_bench"
 	@echo "... GEMM/src/main.o"
 	@echo "... GEMM/src/main.i"
 	@echo "... GEMM/src/main.s"
@@ -247,6 +285,9 @@ help:
 	@echo "... REDUCE/src/main.o"
 	@echo "... REDUCE/src/main.i"
 	@echo "... REDUCE/src/main.s"
+	@echo "... TRANSFORMER/src/main.o"
+	@echo "... TRANSFORMER/src/main.i"
+	@echo "... TRANSFORMER/src/main.s"
 .PHONY : help
 
 
