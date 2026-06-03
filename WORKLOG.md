@@ -15,6 +15,7 @@ This file records the current implementation state and packaging decisions for t
 - Split GEMM and REDUCE into common definitions, kernels, benchmark helpers, and small `main.cu` entry points.
 - Added separate `scripts/run_reduce_experiments.sh` and `scripts/run_gemm_experiments.sh` sweep scripts plus `scripts/plot_benchmarks.py` for SVG figures with standard-deviation error bars.
 - Added `GEMM/src/tune_blocksize.cu` and `scripts/run_gemm_tuning.sh` for block tile / thread tile parameter sweeps.
+- Added `TRANSFORMER/` scaffold with roadmap, common CUDA helpers, and a placeholder `transformer_bench` target.
 
 ### REDUCE
 

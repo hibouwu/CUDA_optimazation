@@ -8,6 +8,7 @@ The project is intended for learning and profiling. Each version answers one que
 
 - Reduce kernels from interleaved shared-memory reduction to warp shuffle, vectorized loads, and CUB baseline.
 - SGEMM kernels following the local Matmul note path: naive, coalesced access, shared-memory tiling, 1D block with padding, warp tiling, thread coarsening, vectorized loads, double buffering, and cuBLAS baseline.
+- Transformer optimization workspace for LayerNorm, Softmax, QKV projection, Attention, FFN, and KV cache experiments.
 - Reproducible benchmark harnesses with warmup, repeated timing, correctness checks, and CSV output.
 - GEMM timing runs each backend independently: warmup first, then 100 timed launches before moving to the next backend.
 - Chinese source comments explaining the purpose of each optimization stage.
@@ -36,6 +37,10 @@ CUDA_optimazation/
 │   │   ├── gemm_benchmark.cuh
 │   │   ├── gemm_common.cuh
 │   │   └── sgemm_kernels.cuh
+│   └── src/main.cu
+├── TRANSFORMER/
+│   ├── README.md
+│   ├── include/transformer_common.cuh
 │   └── src/main.cu
 └── REDUCE/
     ├── include/
@@ -100,6 +105,24 @@ documented stages. `v5`, `v9`, and `v10` are intentionally written as
 high-performance paths and require `N` to be a multiple of 128. Other sizes
 still run `v1` to `v4`, `v6`, and cuBLAS.
 
+### TRANSFORMER
+
+`TRANSFORMER/` is a scaffold for Transformer-specific optimization work. It is
+separate from GEMM because Transformer performance depends on whole operator
+pipelines and tensor layouts, not only a single matrix multiply.
+
+Planned sequence:
+
+| Stage | Operator | Focus |
+| --- | --- | --- |
+| v1 | LayerNorm / RMSNorm | row reductions, vectorized memory traffic |
+| v2 | Softmax | max/sum reductions and numerical stability |
+| v3 | QKV projection | cuBLAS / GEMM integration |
+| v4 | Attention score | batched or strided GEMM layout |
+| v5 | Online softmax attention | FlashAttention-style streaming |
+| v6 | FFN / MLP | GEMM + activation fusion |
+| v7 | KV cache decode | cache layout and decode latency |
+
 ## Quick Start
 
 ### Option A: Docker / CUDA Container
@@ -148,6 +171,7 @@ cmake --build build_cuda13 -j
 
 ./build_cuda13/reduce_bench 16777216
 ./build_cuda13/gemm_bench 1024
+./build_cuda13/transformer_bench
 ```
 
 For a quick REDUCE-only check without CMake:
