@@ -97,12 +97,14 @@ Read the versions as a story:
 - `v1` exposes the uncoalesced naive access pattern.
 - `v2` isolates the benefit of coalesced global-memory access.
 - `v3` introduces shared-memory data reuse.
-- `v4` shows 1D block indexing and shared-memory padding.
-- `v5` improves warp-level locality with hierarchical tiling.
-- `v6` increases arithmetic intensity through per-thread output tiles.
-- `v9` reduces memory instruction count with `float4` and improves A-tile access.
-- `v10` tries to overlap tile loading and compute.
-- cuBLAS remains the reference for both correctness and performance.
+- `v3a` shows 1D block indexing without padding as a branch.
+- `v3b` adds shared-memory padding on top of v3a.
+- `v4` increases arithmetic intensity through per-thread output tiles.
+- `v5` reduces memory instruction count with `float4` and improves A-tile access.
+- `v6` adds shared-memory double buffering on top of v5.
+- `v7` adds block / warp / thread hierarchical tiling on top of v6.
+- `cublas` is the FP32 correctness and ratio reference. It uses
+  `CUBLAS_PEDANTIC_MATH` so TF32 is disabled for the SIMT FP32 comparison.
 
 ## Transformer Metrics
 
@@ -168,9 +170,9 @@ outputs under `results/reduce/raw/`, and generates
 
 The GEMM script writes `results/gemm/sgemm_sweep.csv`, keeps per-size raw
 outputs under `results/gemm/raw/`, and generates `results/gemm/figures/`
-charts for key-kernel GFLOPS, all-kernel log-y GFLOPS, and cuBLAS ratio.
-The key-kernel view includes cuBLAS, v2, v3, v5, v6, v9, and v10; v1 and v4
-remain in the CSV and all-kernel log figure as teaching baselines.
+charts for key-kernel GFLOPS and ratio to the selected FP32 reference.
+The key-kernel view includes cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, and
+v7; v1, v3a, and v3b remain available as teaching or branch baselines.
 
 The TRANSFORMER script writes `results/transformer/transformer_sweep.csv`, keeps
 per-shape raw outputs under `results/transformer/raw/`, and generates one

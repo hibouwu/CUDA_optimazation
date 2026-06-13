@@ -1,0 +1,35 @@
+# Build outputs
+build/
+build_docker/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Local binaries
+reduce_bench
+gemm_bench
+gemm_tune_blocksize
+transformer_bench
+*.out
+
+# Benchmark outputs
+*_benchmark.csv
+results/
+*.ncu-rep
+*.nsys-rep
+*.sqlite
+
+# CUDA / compiler artifacts
+*.o
+*.obj
+*.ptx
+*.cubin
+*.fatbin
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

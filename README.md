@@ -7,7 +7,7 @@ The project is intended for learning and profiling. Each version answers one que
 ## Highlights
 
 - Reduce kernels from interleaved shared-memory reduction to warp shuffle, vectorized loads, and CUB baseline.
-- SGEMM kernels following the local Matmul note path: naive, coalesced access, shared-memory tiling, 1D block with padding, warp tiling, thread coarsening, vectorized loads, double buffering, and cuBLAS baseline.
+- SGEMM kernels following the local Matmul note path: naive, coalesced access, shared-memory tiling, thread tiling, vectorized loads, double buffering, plus 1D/padding and warp-tiling branch experiments.
 - Transformer optimization workspace for LayerNorm, Softmax, QKV projection, Attention, FFN, and KV cache experiments.
 - Reproducible benchmark harnesses with warmup, repeated timing, correctness checks, and CSV output.
 - GEMM timing runs each backend independently: warmup first, then 100 timed launches before moving to the next backend.
@@ -87,15 +87,16 @@ C = alpha * A @ B + beta * C
 
 | Version | Implementation | Main idea | What to inspect |
 | --- | --- | --- | --- |
-| baseline | `cublasSgemm` | cuBLAS reference result and performance baseline | target throughput |
+| baseline | `cublasSgemm` | Default cuBLAS performance baseline plus FP32 pedantic correctness/performance reference | target throughput, TF32 impact |
 | v1 | `sgemm_v1_naive_uncoalesced` | Naive mapping with poor coalescing | global load pattern |
 | v2 | `sgemm_v1_naive` | Coalesced naive mapping | memory transaction efficiency |
 | v3 | `sgemm_v2_smem` | Shared-memory tile reuse | shared-memory throughput |
-| v4 | `sgemm_v4_smem_1d_padded` | 1D thread block plus shared-memory padding | bank conflicts, indexing overhead |
-| v5 | `sgemm_v6_warp_tiling` | block / warp / thread hierarchical tiling | eligible warps, occupancy |
-| v6 | `sgemm_v3_thread_tile` | one thread computes a `TM x TN` output tile | arithmetic intensity, register use |
-| v9 | `sgemm_v4_vectorized` | `float4` loads and transposed A tile in shared memory | memory instruction count |
-| v10 | `sgemm_v5_double_buffer` | Shared-memory ping-pong buffers plus register prefetch | long scoreboard stalls |
+| v3a | `sgemm_v3a_smem_1d` | 1D thread block shared-memory branch without padding | indexing overhead |
+| v3b | `sgemm_v4_smem_1d_padded` | 1D thread block plus shared-memory padding branch | bank conflicts, indexing overhead |
+| v4 | `sgemm_v3_thread_tile` | one thread computes a `TM x TN` output tile | arithmetic intensity, register use |
+| v5 | `sgemm_v4_vectorized` | `float4` loads and transposed A tile in shared memory | memory instruction count |
+| v6 | `sgemm_v5_double_buffer` | Shared-memory ping-pong buffers plus register prefetch | long scoreboard stalls |
+| v7 | `sgemm_v7_warp_tiling_double_buffer` | v6 plus block / warp / thread hierarchical tiling | eligible warps, occupancy |
 
 Output CSV:
 
@@ -105,9 +106,9 @@ Version,N,TimeMs,GFLOPS,RatioToCuBLAS,Matched
 ```
 
 The local note jumps from Kernel 6 to Kernel 9; this repository mirrors the
-documented stages. `v5`, `v9`, and `v10` are intentionally written as
+documented stages. `v5`, `v6`, and `v7` are intentionally written as
 high-performance paths and require `N` to be a multiple of 128. Other sizes
-still run `v1` to `v4`, `v6`, and cuBLAS.
+still run `v1` to `v4`, `v3a`, `v3b`, and cuBLAS.
 
 ### TRANSFORMER
 
@@ -237,7 +238,8 @@ ncu --set full ./gemm_bench 1024
 Recommended first comparisons:
 
 - Reduce: v0 vs v1 vs v4 vs v5 vs CUB.
-- GEMM: v1 vs v2 vs v3 vs v4 vs v5 vs v6 vs v9 vs v10 vs cuBLAS.
+- GEMM mainline: v1 vs v2 vs v3 vs v4 vs v5 vs v6 vs v7 vs cuBLAS FP32 Pedantic.
+- GEMM branches: v3a and v3b.
 
 See [docs/benchmark.md](docs/benchmark.md) for measurement rules and metric suggestions.
 
@@ -255,7 +257,7 @@ Default sweep sizes:
 
 ```txt
 REDUCE default: 256K, 512K, 1M, 2M, 4M, 8M, 16M, 32M, 64M elements
-GEMM default:   256, 384, 512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048
+GEMM default:   128, 256, 512, 1024, 2048
 TRANSFORMER default:
   LayerNorm B:S:H:heads:head_dim =
   1:128:768:12:64, 1:512:768:12:64, 1:1024:768:12:64,
@@ -332,8 +334,8 @@ BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_transformer
 ```
 
 The default GEMM linear figures keep only key milestones to reduce visual
-clutter: cuBLAS, v2, v3, v5, v6, v9, and v10. The all-kernel log-y figure
-(`sgemm_gflops_log.svg`) is kept for appendix-style inspection of v1/v4.
+clutter: cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, and v7. Branch kernels v3a and v3b remain
+available for focused sweeps and appendix-style inspection.
 
 ## GEMM Parameter Tuning
 

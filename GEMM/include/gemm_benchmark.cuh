@@ -2,6 +2,8 @@
 
 #include "gemm_common.cuh"
 
+#include <cuda_fp16.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -15,6 +17,14 @@ inline void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
   for (size_t i = 0; i < b.size(); ++i) {
     b[i] = static_cast<float>((i % 13) - 6) * 0.0625f;
   }
+}
+
+inline std::vector<half> to_half_vector(const std::vector<float>& input) {
+  std::vector<half> output(input.size());
+  for (size_t i = 0; i < input.size(); ++i) {
+    output[i] = __float2half(input[i]);
+  }
+  return output;
 }
 
 // 与 cuBLAS 结果对比。不同归约顺序会带来轻微浮点误差，所以使用相对/绝对容差。
@@ -59,11 +69,14 @@ inline void print_gemm_environment(cublasHandle_t handle) {
 // 通用 kernel benchmark。
 // 只把 kernel 调用放进 CUDA event 计时区；host/device 拷贝和校验不计入时间。
 template <typename Launch>
-float benchmark_kernel(const std::string& name, Launch launch, int m, int n,
-                       int k, float* d_c, size_t c_bytes,
+float benchmark_kernel(const std::string& backend_id, const std::string& name,
+                       const std::string& precision,
+                       const std::string& reference_name, Launch launch, int m,
+                       int n, int k, float* d_c, size_t c_bytes,
                        const std::vector<float>& ref,
                        std::vector<float>& out, std::ofstream& csv,
-                       float cublas_gflops) {
+                       float reference_gflops, float atol = 1e-2f,
+                       float rtol = 1e-3f) {
   CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
   for (int i = 0; i < kWarmup; ++i) launch();
   CHECK_CUDA(cudaDeviceSynchronize());
@@ -87,11 +100,12 @@ float benchmark_kernel(const std::string& name, Launch launch, int m, int n,
   CHECK_CUDA(cudaMemcpy(out.data(), d_c, c_bytes, cudaMemcpyDeviceToHost));
 
   const float avg_ms = total_ms / kRepeat;
-  const bool ok = compare_result(ref, out);
+  const bool ok = compare_result(ref, out, atol, rtol);
   const float perf = gflops(m, n, k, avg_ms);
   std::cout << name << ": " << avg_ms << " ms, " << perf
             << " GFLOPS, matched=" << ok << '\n';
-  csv << name << "," << n << "," << avg_ms << "," << perf << ","
-      << perf / cublas_gflops << "," << (ok ? 1 : 0) << '\n';
+  csv << backend_id << "," << name << "," << n << "," << precision << ","
+      << reference_name << "," << avg_ms << "," << perf << ","
+      << perf / reference_gflops << "," << (ok ? 1 : 0) << '\n';
   return avg_ms;
 }

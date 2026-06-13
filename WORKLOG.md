@@ -64,21 +64,22 @@ Implemented and documented:
 
 | Version | Kernel / Baseline | Purpose |
 | --- | --- | --- |
-| baseline | `cublasSgemm` | Correctness and performance reference. |
+| baseline | `cublasSgemm` | Default cuBLAS performance baseline and FP32 pedantic reference. |
 | v1 | `sgemm_v1_naive_uncoalesced` | Naive mapping with poor coalescing. |
 | v2 | `sgemm_v1_naive` | Coalesced naive mapping. |
 | v3 | `sgemm_v2_smem` | Shared-memory tile reuse. |
-| v4 | `sgemm_v4_smem_1d_padded` | 1D thread block plus shared-memory padding. |
-| v5 | `sgemm_v6_warp_tiling` | Block / warp / thread hierarchical tiling. |
-| v6 | `sgemm_v3_thread_tile` | Per-thread output tile for higher arithmetic intensity. |
-| v9 | `sgemm_v4_vectorized` | `float4` loads and transposed A tile. |
-| v10 | `sgemm_v5_double_buffer` | Shared-memory double buffering and register prefetch. |
+| v3a | `sgemm_v3a_smem_1d` | 1D thread block shared-memory branch without padding. |
+| v3b | `sgemm_v4_smem_1d_padded` | 1D thread block plus shared-memory padding branch. |
+| v4 | `sgemm_v3_thread_tile` | Per-thread output tile for higher arithmetic intensity. |
+| v5 | `sgemm_v4_vectorized` | `float4` loads and transposed A tile. |
+| v6 | `sgemm_v5_double_buffer` | Shared-memory double buffering and register prefetch. |
+| warp1 | `sgemm_v6_warp_tiling` | Block / warp / thread hierarchical tiling branch. |
 
 Note: `notes/CUDA/5_4_总结_CUDA_MATAMUL优化.md` documents Kernel 1, 2, 3, 4, 5, 6, 9, and 10. Kernel 7 and 8 are not expanded in that note, so the benchmark mirrors the documented stages instead of inventing placeholder kernels.
 
 Benchmark behavior:
 
-- Uses cuBLAS as reference output.
+- Uses cuBLAS FP32 Pedantic as reference output for handwritten FP32 kernels.
 - Uses CUDA events for timing. Each GEMM backend warms up independently and then
   runs 100 timed launches before the benchmark moves to the next backend.
 - Reports GFLOPS and ratio to cuBLAS.

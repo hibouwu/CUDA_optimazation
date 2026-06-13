@@ -20,14 +20,60 @@ COLORS = [
     "#7c3aed",
 ]
 
-KEY_GEMM_SERIES = {
-    "cuBLAS",
+KEY_GEMM_FP32_SERIES = [
+    "v2",
+    "v3",
+    "v3a",
+    "v3b",
+    "v4",
+    "v5",
+    "v6",
+    "v7",
+    "v8a",
+    "v8b",
+    "v8c",
+    "cublas",
+]
+
+KEY_GEMM_TENSOR_CORE_SERIES = [
+    "cublas_tc",
+    "tc1",
+]
+
+KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
+
+KEY_GEMM_LEGACY_FP32_SERIES = [
     "v2 coalesced naive",
     "v3 shared-memory tile",
-    "v5 warp tiling",
-    "v6 thread coarsening",
-    "v9 vectorized",
-    "v10 double buffer",
+    "v3a shared-memory tile 1D",
+    "v3b shared-memory tile 1D padded",
+    "v4 thread tile",
+    "v5 vectorized load",
+    "v6 double buffer",
+    "v7 warp tiling",
+    "v8a cp.async B tile",
+    "v8b cp.async A/B 2-stage",
+    "v8c cp.async A/B 3-stage",
+    "cuBLAS",
+    "cuBLAS FP32 Pedantic",
+]
+
+SERIES_LABELS = {
+    "cublas": "cuBLAS FP32 Pedantic",
+    "cublas_tc": "cuBLAS Tensor Core",
+    "v1": "v1 naive uncoalesced",
+    "v2": "v2 coalesced naive",
+    "v3": "v3 shared-memory tile",
+    "v3a": "v3a shared-memory tile 1D",
+    "v3b": "v3b shared-memory tile 1D padded",
+    "v4": "v4 thread tile",
+    "v5": "v5 vectorized load",
+    "v6": "v6 double buffer",
+    "v7": "v7 warp tiling",
+    "v8a": "v8a cp.async B tile",
+    "v8b": "v8b cp.async A/B 2-stage",
+    "v8c": "v8c cp.async A/B 3-stage",
+    "tc1": "tc1 wmma fp16 baseline",
 }
 
 
@@ -43,12 +89,33 @@ def to_float(value):
         return 0.0
 
 
+def backend_key(row):
+    backend_id = row.get("BackendId", "")
+    if backend_id:
+        if backend_id == "warp1":
+            return "v7"
+        return backend_id
+    version = row.get("Version", "")
+    if version == "cuBLAS":
+        return "cublas"
+    if version == "cuBLAS FP32 Pedantic":
+        return "cublas"
+    if version == "cuBLAS Tensor Core":
+        return "cublas_tc"
+    if version.startswith("warp1 "):
+        return "v7"
+    for prefix in ("v1", "v2", "v3a", "v3b", "v3", "v4", "v5", "v6", "v7", "v8a", "v8b", "v8c", "tc1"):
+        if version.startswith(prefix + " "):
+            return prefix
+    return version
+
+
 def group_series(rows, x_col, y_col):
     samples = defaultdict(list)
     for row in rows:
         if row.get("Matched") != "1":
             continue
-        name = row["Version"]
+        name = backend_key(row)
         if "skipped" in name:
             continue
         samples[(name, to_float(row[x_col]))].append(to_float(row[y_col]))
@@ -134,7 +201,15 @@ def group_tuning_best_by_kernel(rows):
 
 
 def filter_series(series, names):
-    return {name: points for name, points in series.items() if name in names}
+    return {name: series[name] for name in names if name in series}
+
+
+def filter_rows(rows, predicate):
+    return [row for row in rows if predicate(row)]
+
+
+def has_new_gemm_schema(rows):
+    return bool(rows) and "Precision" in rows[0] and "RatioToReference" in rows[0]
 
 
 def nice_range(values):
@@ -258,14 +333,12 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
         y_ticks = linear_ticks(max(all_y), 6)
         y_max = y_ticks[-1]
 
-    x_log_min = math.log2(x_min)
-    x_log_max = math.log2(x_max)
-    if abs(x_log_max - x_log_min) < 1e-9:
-        x_log_min -= 0.5
-        x_log_max += 0.5
+    if abs(x_max - x_min) < 1e-9:
+        x_min -= 0.5
+        x_max += 0.5
 
     def sx(x):
-        return left + (math.log2(x) - x_log_min) / (x_log_max - x_log_min) * plot_w
+        return left + (x - x_min) / (x_max - x_min) * plot_w
 
     def sy(y):
         if y_scale == "log":
@@ -281,7 +354,7 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
         f'<text x="{left}" y="36" font-size="24" font-family="Arial" font-weight="700" fill="#111827">{html.escape(title)}</text>',
         f'<text x="{left + plot_w / 2}" y="{height - 22}" text-anchor="middle" font-size="14" font-family="Arial" fill="#374151">{html.escape(x_title)}</text>',
         f'<text x="24" y="{top + plot_h / 2}" text-anchor="middle" transform="rotate(-90 24 {top + plot_h / 2})" font-size="14" font-family="Arial" fill="#374151">{html.escape(y_title)}</text>',
-        f'<text x="{left}" y="58" font-size="12" font-family="Arial" fill="#6b7280">x-axis: log2(size); labeled ticks: powers of two/endpoints; error bars: ±1 sample standard deviation</text>',
+        f'<text x="{left}" y="58" font-size="12" font-family="Arial" fill="#6b7280">x-axis: linear matrix size; error bars: ±1 sample standard deviation</text>',
         f'<rect x="{left}" y="{top}" width="{plot_w}" height="{plot_h}" fill="#f9fafb" stroke="#d1d5db"/>',
     ]
 
@@ -321,8 +394,9 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
     for idx, name in enumerate(series):
         y = legend_y + 24 + idx * 22
         color = COLORS[idx % len(COLORS)]
+        label = SERIES_LABELS.get(name, name)
         lines.append(f'<line x1="{legend_x}" y1="{y}" x2="{legend_x + 24}" y2="{y}" stroke="{color}" stroke-width="3"/>')
-        lines.append(f'<text x="{legend_x + 32}" y="{y + 4}" font-size="12" font-family="Arial" fill="#374151">{html.escape(name)}</text>')
+        lines.append(f'<text x="{legend_x + 32}" y="{y + 4}" font-size="12" font-family="Arial" fill="#374151">{html.escape(label)}</text>')
 
     lines.append("</svg>")
     output_path.write_text("\n".join(lines) + "\n")
@@ -354,30 +428,79 @@ def main():
 
     if args.gemm:
         gemm_rows = read_rows(args.gemm)
-        gemm_gflops = group_series(gemm_rows, "N", "GFLOPS")
-        key_gemm_gflops = filter_series(gemm_gflops, KEY_GEMM_SERIES)
-        write_svg(
-            key_gemm_gflops,
-            "SGEMM GFLOPS Sweep (Key Kernels)",
-            "Square matrix size N",
-            "GFLOPS",
-            out_dir / "sgemm_gflops.svg",
-        )
-        write_svg(
-            gemm_gflops,
-            "SGEMM GFLOPS Sweep (All Kernels, Log Y)",
-            "Square matrix size N",
-            "GFLOPS",
-            out_dir / "sgemm_gflops_log.svg",
-            y_scale="log",
-        )
-        write_svg(
-            filter_series(group_series(gemm_rows, "N", "RatioToCuBLAS"), KEY_GEMM_SERIES),
-            "SGEMM Ratio To cuBLAS",
-            "Square matrix size N",
-            "Ratio",
-            out_dir / "sgemm_ratio_to_cublas.svg",
-        )
+        if has_new_gemm_schema(gemm_rows):
+            fp32_rows = filter_rows(gemm_rows, lambda row: row.get("Precision") == "fp32")
+            tensor_core_rows = filter_rows(
+                gemm_rows, lambda row: row.get("Reference") == "cuBLAS Tensor Core"
+            )
+
+            if fp32_rows:
+                write_svg(
+                    filter_series(group_series(fp32_rows, "N", "GFLOPS"), KEY_GEMM_FP32_SERIES),
+                    "FP32 GEMM GFLOPS Sweep",
+                    "Square matrix size N",
+                    "GFLOPS",
+                    out_dir / "gemm_fp32_gflops.svg",
+                )
+                write_svg(
+                    filter_series(
+                        group_series(fp32_rows, "N", "RatioToReference"),
+                        KEY_GEMM_FP32_SERIES,
+                    ),
+                    "FP32 GEMM Ratio To cuBLAS FP32 Pedantic",
+                    "Square matrix size N",
+                    "Ratio",
+                    out_dir / "gemm_fp32_ratio_to_cublas.svg",
+                )
+            if tensor_core_rows:
+                write_svg(
+                    filter_series(
+                        group_series(tensor_core_rows, "N", "GFLOPS"),
+                        KEY_GEMM_TENSOR_CORE_SERIES,
+                    ),
+                    "Tensor Core GEMM GFLOPS Sweep",
+                    "Square matrix size N",
+                    "GFLOPS",
+                    out_dir / "gemm_tensor_core_gflops.svg",
+                )
+                write_svg(
+                    filter_series(
+                        group_series(tensor_core_rows, "N", "RatioToReference"),
+                        KEY_GEMM_TENSOR_CORE_SERIES,
+                    ),
+                    "Tensor Core GEMM Ratio To cuBLAS Tensor Core",
+                    "Square matrix size N",
+                    "Ratio",
+                    out_dir / "gemm_tensor_core_ratio_to_cublas_tc.svg",
+                )
+        else:
+            gemm_gflops = group_series(gemm_rows, "N", "GFLOPS")
+            key_gemm_gflops = filter_series(gemm_gflops, KEY_GEMM_LEGACY_FP32_SERIES)
+            write_svg(
+                key_gemm_gflops,
+                "SGEMM GFLOPS Sweep (Key Kernels)",
+                "Square matrix size N",
+                "GFLOPS",
+                out_dir / "sgemm_gflops.svg",
+            )
+            write_svg(
+                gemm_gflops,
+                "SGEMM GFLOPS Sweep (All Kernels, Log Y)",
+                "Square matrix size N",
+                "GFLOPS",
+                out_dir / "sgemm_gflops_log.svg",
+                y_scale="log",
+            )
+            write_svg(
+                filter_series(
+                    group_series(gemm_rows, "N", "RatioToCuBLAS"),
+                    KEY_GEMM_LEGACY_FP32_SERIES,
+                ),
+                "SGEMM Ratio To cuBLAS",
+                "Square matrix size N",
+                "Ratio",
+                out_dir / "sgemm_ratio_to_cublas.svg",
+            )
 
     if args.tuning:
         tuning_rows = read_rows(args.tuning)

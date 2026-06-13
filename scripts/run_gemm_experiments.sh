@@ -2,19 +2,49 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="${BUILD_DIR:-${ROOT_DIR}/build}"
-OUT_DIR="${OUT_DIR:-${ROOT_DIR}/results/gemm}"
+if [[ -z "${BUILD_DIR:-}" ]]; then
+  if [[ -f /.dockerenv ]]; then
+    BUILD_DIR="${ROOT_DIR}/build_docker"
+  else
+    BUILD_DIR="${ROOT_DIR}/build"
+  fi
+fi
+GEMM_SUITE="${GEMM_SUITE:-all}"
+case "${GEMM_SUITE}" in
+  all)
+    DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/all"
+    DEFAULT_AGG_CSV="gemm_sweep.csv"
+    ;;
+  fp32)
+    DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/fp32"
+    DEFAULT_AGG_CSV="gemm_fp32_sweep.csv"
+    ;;
+  tensor_core)
+    DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/tensor_core"
+    DEFAULT_AGG_CSV="gemm_tensor_core_sweep.csv"
+    ;;
+  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1)
+    DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/backend_${GEMM_SUITE}"
+    DEFAULT_AGG_CSV="gemm_${GEMM_SUITE}_sweep.csv"
+    ;;
+  *)
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}." >&2
+    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, or tc1." >&2
+    exit 1
+    ;;
+esac
+OUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}"
 RAW_DIR="${OUT_DIR}/raw"
 PRESET="${PRESET:-default}"
 case "${PRESET}" in
   quick)
-    DEFAULT_GEMM_SIZES="512 1024"
+    DEFAULT_GEMM_SIZES="128 256 512 1024"
     ;;
   default)
-    DEFAULT_GEMM_SIZES="256 384 512 640 768 896 1024 1280 1536 1792 2048"
+    DEFAULT_GEMM_SIZES="128 256 512 1024 2048 4096"
     ;;
   full)
-    DEFAULT_GEMM_SIZES="128 256 384 512 640 768 896 1024 1280 1536 1792 2048 2560 3072 3584 4096"
+    DEFAULT_GEMM_SIZES="128 256 512 1024 2048 4096 8192"
     ;;
   *)
     echo "Unknown PRESET=${PRESET}. Use quick, default, full, or set GEMM_SIZES explicitly." >&2
@@ -66,6 +96,14 @@ ensure_python() {
 
 build_gemm() {
   if command -v cmake >/dev/null 2>&1; then
+    if [[ -f "${BUILD_DIR}/CMakeCache.txt" ]] &&
+       ! grep -qx "CMAKE_HOME_DIRECTORY:INTERNAL=${ROOT_DIR}" \
+         "${BUILD_DIR}/CMakeCache.txt"; then
+      echo "CMake cache in ${BUILD_DIR} was created for another source path." >&2
+      echo "Remove it with: rm -rf ${BUILD_DIR}" >&2
+      echo "Or set BUILD_DIR to a clean directory." >&2
+      exit 1
+    fi
     cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCH}"
@@ -88,17 +126,29 @@ run_gemm_size() {
   echo "Running GEMM N=${n}, trial=${trial}/${TRIALS}"
   (
     cd "${run_dir}"
-    "${BUILD_DIR}/gemm_bench" "${n}" | tee "stdout.txt"
+    "${BUILD_DIR}/gemm_bench" "${n}" "${GEMM_SUITE}" | tee "stdout.txt"
   )
-  awk -v trial="${trial}" 'NR > 1 { print $0 "," trial }' \
+  awk -F, -v trial="${trial}" -v suite="${GEMM_SUITE}" '
+    NR == 1 { next }
+    suite == "all" { print $0 "," trial; next }
+    suite == "fp32" && $4 == "fp32" { print $0 "," trial; next }
+    suite == "tensor_core" && $5 == "cuBLAS Tensor Core" { print $0 "," trial; next }
+    suite == "cublas" && $1 == "cublas" { print $0 "," trial; next }
+    suite == "cublas_tc" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite ~ /^v[0-9]+[ab]?$/ && $1 == "cublas" { print $0 "," trial; next }
+    suite ~ /^v[0-9]+[ab]?$/ && $1 == suite { print $0 "," trial; next }
+    suite == "tc1" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc1" && $1 == "tc1" { print $0 "," trial; next }
+  ' \
     "${run_dir}/sgemm_benchmark.csv" >> "${AGG_CSV}"
 }
 
 build_gemm
 ensure_python
 
-AGG_CSV="${OUT_DIR}/sgemm_sweep.csv"
-printf 'Version,N,TimeMs,GFLOPS,RatioToCuBLAS,Matched,Trial\n' > "${AGG_CSV}"
+AGG_CSV="${OUT_DIR}/${DEFAULT_AGG_CSV}"
+FIG_DIR="${OUT_DIR}/figures"
+printf 'BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Trial\n' > "${AGG_CSV}"
 
 for n in ${GEMM_SIZES}; do
   for trial in $(seq 1 "${TRIALS}"); do
@@ -106,9 +156,11 @@ for n in ${GEMM_SIZES}; do
   done
 done
 
+rm -rf "${FIG_DIR}"
+mkdir -p "${FIG_DIR}"
 "${PYTHON_BIN}" "${ROOT_DIR}/scripts/plot_benchmarks.py" \
   --gemm "${AGG_CSV}" \
-  --out-dir "${OUT_DIR}/figures"
+  --out-dir "${FIG_DIR}"
 
 echo "GEMM experiment data: ${OUT_DIR}"
-echo "GEMM figures: ${OUT_DIR}/figures"
+echo "GEMM figures: ${FIG_DIR}"
