@@ -129,16 +129,29 @@ int main(int argc, char** argv) {
   float* d_c = nullptr;
   half* d_a_half = nullptr;
   half* d_b_half = nullptr;
+  CUtensorMap* d_a_tc2_map = nullptr;
+  CUtensorMap* d_b_tc2_map = nullptr;
   CHECK_CUDA(cudaMalloc(&d_a, a_bytes));
   CHECK_CUDA(cudaMalloc(&d_b, b_bytes));
   CHECK_CUDA(cudaMalloc(&d_c, c_bytes));
   CHECK_CUDA(cudaMalloc(&d_a_half, a_half_bytes));
   CHECK_CUDA(cudaMalloc(&d_b_half, b_half_bytes));
+  CHECK_CUDA(cudaMalloc(&d_a_tc2_map, sizeof(CUtensorMap)));
+  CHECK_CUDA(cudaMalloc(&d_b_tc2_map, sizeof(CUtensorMap)));
   CHECK_CUDA(cudaMemcpy(d_a, h_a.data(), a_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b, h_b.data(), b_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_a_half, h_a_half.data(), a_half_bytes,
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_half, h_b_half.data(), b_half_bytes,
+                        cudaMemcpyHostToDevice));
+  CHECK_CU(cuInit(0));
+  alignas(64) CUtensorMap h_a_tc2_map{};
+  alignas(64) CUtensorMap h_b_tc2_map{};
+  tc_encode_rowmajor_tensor_map_2d(h_a_tc2_map, d_a_half, m, k, 64, 16);
+  tc_encode_rowmajor_tensor_map_2d(h_b_tc2_map, d_b_half, k, n, 16, 32);
+  CHECK_CUDA(cudaMemcpy(d_a_tc2_map, &h_a_tc2_map, sizeof(CUtensorMap),
+                        cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_b_tc2_map, &h_b_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
 
   cublasHandle_t handle;
@@ -450,19 +463,19 @@ int main(int argc, char** argv) {
       dim3 tc2_grid(n / 32, m / 64);
       dim3 tc2_block(8 * kWarpSize);
       benchmark_kernel(
-          "tc2", "tc2 cp.async dbuf wmma 64x32x16", "fp16->fp32",
-          "cuBLAS Tensor Core",
+          "tc2", "tc2 tma wmma 64x32x16", "fp16->fp32", "cuBLAS Tensor Core",
           [&]() {
-            hgemm_tc2_cp_async_dbuf_wmma_64x32x16<<<tc2_grid, tc2_block>>>(
-                m, n, k, alpha, d_a_half, d_b_half, beta, d_c);
+            hgemm_tc2_tma_wmma_64x32x16<<<tc2_grid, tc2_block>>>(
+                m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
+                beta, d_c);
             CHECK_CUDA(cudaGetLastError());
           },
           m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
           1e-2f);
     } else if (wants_backend(backend_filter, "tc2")) {
-      std::cout << "tc2 cp.async dbuf wmma 64x32x16: skipped because N must "
-                   "be a multiple of 64\n";
-      csv << "tc2,tc2 cp.async dbuf wmma 64x32x16 skipped," << n
+      std::cout << "tc2 tma wmma 64x32x16: skipped because N must be a "
+                   "multiple of 64\n";
+      csv << "tc2,tc2 tma wmma 64x32x16 skipped," << n
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
 
@@ -476,6 +489,8 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaFree(d_b));
   CHECK_CUDA(cudaFree(d_a_half));
   CHECK_CUDA(cudaFree(d_b_half));
+  CHECK_CUDA(cudaFree(d_a_tc2_map));
+  CHECK_CUDA(cudaFree(d_b_tc2_map));
   CHECK_CUDA(cudaFree(d_c));
   return 0;
 }

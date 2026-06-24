@@ -2,10 +2,12 @@
 
 #include "gemm_common.cuh"
 
+#include <cuda/barrier>
 #include <cuda_fp16.h>
 #include <mma.h>
 
 using namespace nvcuda;
+namespace cde = cuda::device::experimental;
 
 template <typename T>
 using wmma_a_rowmajor_16 = wmma::fragment<wmma::matrix_a, 16, 16, 16, T,
@@ -44,65 +46,87 @@ struct Tc2PipelineShape {
   static constexpr int kBlockN = 32;
   static constexpr int kBlockK = 16;
   static constexpr int kWarpTilesN = 2;
-  static constexpr int kStages = 2;
-  static constexpr int kAStride = kBlockK + 8;
-  static constexpr int kBStride = kBlockN + 8;
 };
 
-__device__ __forceinline__ void tc_cp_async_ca_16(void* smem_ptr,
-                                                  const void* gmem_ptr) {
-#if __CUDA_ARCH__ >= 800
-  const unsigned int smem_addr =
-      static_cast<unsigned int>(__cvta_generic_to_shared(smem_ptr));
-  asm volatile("cp.async.ca.shared.global [%0], [%1], 16;\n" ::"r"(smem_addr),
-               "l"(gmem_ptr));
+using tc_block_barrier = cuda::barrier<cuda::thread_scope_block>;
+
+inline void tc_encode_rowmajor_tensor_map_2d(CUtensorMap& tensor_map,
+                                             half* global_address, int rows,
+                                             int cols, int box_rows,
+                                             int box_cols) {
+  const cuuint64_t global_dim[2] = {static_cast<cuuint64_t>(cols),
+                                    static_cast<cuuint64_t>(rows)};
+  const cuuint64_t global_strides[1] = {
+      static_cast<cuuint64_t>(cols * sizeof(half))};
+  const cuuint32_t box_dim[2] = {static_cast<cuuint32_t>(box_cols),
+                                 static_cast<cuuint32_t>(box_rows)};
+  const cuuint32_t element_strides[2] = {1u, 1u};
+  CHECK_CU(cuTensorMapEncodeTiled(
+      &tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, 2, global_address,
+      global_dim, global_strides, box_dim, element_strides,
+      CU_TENSOR_MAP_INTERLEAVE_NONE, CU_TENSOR_MAP_SWIZZLE_NONE,
+      CU_TENSOR_MAP_L2_PROMOTION_L2_128B, CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
+}
+
+template <int Rows, int Cols>
+__device__ __forceinline__ void tc2_copy_tile_fallback(int tid, int ld,
+                                                       const half* src,
+                                                       half* dst) {
+  for (int elem = tid; elem < Rows * Cols; elem += blockDim.x) {
+    const int row = elem / Cols;
+    const int col = elem % Cols;
+    dst[row * Cols + col] = src[row * ld + col];
+  }
+}
+
+template <int BM, int BK>
+__device__ __forceinline__ void tc2_load_a_tile_tma(int tid, int block_row,
+                                                    int tile_k,
+                                                    const half* a,
+                                                    int lda,
+                                                    const CUtensorMap* a_map,
+                                                    half* a_smem,
+                                                    tc_block_barrier& bar) {
+#if __CUDA_ARCH__ >= 900
+  if (tid == 0) {
+    cuda::device::barrier_expect_tx(bar, BM * BK * sizeof(half));
+    cde::cp_async_bulk_tensor_2d_global_to_shared(a_smem, a_map, tile_k,
+                                                  block_row, bar);
+    cde::cp_async_bulk_commit_group();
+    bar.arrive_and_wait();
+  }
+  __syncthreads();
+  cde::fence_proxy_async_shared_cta();
+  __syncthreads();
 #else
-  *reinterpret_cast<float4*>(smem_ptr) =
-      *reinterpret_cast<const float4*>(gmem_ptr);
+  tc2_copy_tile_fallback<BM, BK>(tid, lda, a + block_row * lda + tile_k, a_smem);
+  __syncthreads();
 #endif
 }
 
-__device__ __forceinline__ void tc_cp_async_commit_group() {
-#if __CUDA_ARCH__ >= 800
-  asm volatile("cp.async.commit_group;\n" ::);
-#endif
-}
-
-template <int PendingGroups>
-__device__ __forceinline__ void tc_cp_async_wait_group() {
-#if __CUDA_ARCH__ >= 800
-  asm volatile("cp.async.wait_group %0;\n" ::"n"(PendingGroups));
-#endif
-}
-
-template <int BM, int BK, int AStride>
-__device__ __forceinline__ void tc2_copy_a_tile_async(int tid, int k,
-                                                      const half* src,
-                                                      half* dst) {
-  constexpr int kChunkElems = 8;
-  constexpr int kChunks = (BM * BK) / kChunkElems;
-  static_assert((BM * BK) % kChunkElems == 0);
-  for (int chunk = tid; chunk < kChunks; chunk += blockDim.x) {
-    const int elem = chunk * kChunkElems;
-    const int row = elem / BK;
-    const int col = elem % BK;
-    tc_cp_async_ca_16(&dst[row * AStride + col], &src[row * k + col]);
+template <int BK, int BN>
+__device__ __forceinline__ void tc2_load_b_tile_tma(int tid, int block_col,
+                                                    int tile_k,
+                                                    const half* b,
+                                                    int ldb,
+                                                    const CUtensorMap* b_map,
+                                                    half* b_smem,
+                                                    tc_block_barrier& bar) {
+#if __CUDA_ARCH__ >= 900
+  if (tid == 0) {
+    cuda::device::barrier_expect_tx(bar, BK * BN * sizeof(half));
+    cde::cp_async_bulk_tensor_2d_global_to_shared(b_smem, b_map, block_col,
+                                                  tile_k, bar);
+    cde::cp_async_bulk_commit_group();
+    bar.arrive_and_wait();
   }
-}
-
-template <int BK, int BN, int BStride>
-__device__ __forceinline__ void tc2_copy_b_tile_async(int tid, int n,
-                                                      const half* src,
-                                                      half* dst) {
-  constexpr int kChunkElems = 8;
-  constexpr int kChunks = (BK * BN) / kChunkElems;
-  static_assert((BK * BN) % kChunkElems == 0);
-  for (int chunk = tid; chunk < kChunks; chunk += blockDim.x) {
-    const int elem = chunk * kChunkElems;
-    const int row = elem / BN;
-    const int col = elem % BN;
-    tc_cp_async_ca_16(&dst[row * BStride + col], &src[row * n + col]);
-  }
+  __syncthreads();
+  cde::fence_proxy_async_shared_cta();
+  __syncthreads();
+#else
+  tc2_copy_tile_fallback<BK, BN>(tid, ldb, b + tile_k * ldb + block_col, b_smem);
+  __syncthreads();
+#endif
 }
 
 // tc1: WMMA FP16 Tensor Core baseline。
@@ -136,20 +160,28 @@ __global__ void hgemm_tc1_wmma_16x16(int m, int n, int k, float alpha,
   wmma::store_matrix_sync(c + row * n + col, c_frag, n, wmma::mem_row_major);
 }
 
-// tc2: cp.async + double-buffered WMMA mainloop。
-// 这是当前 Tensor Core 主线版本：A/B tile 通过 cp.async 异步搬到
-// shared memory，用 2-stage double buffer 在计算当前 tile 时预取下一 tile。
-// 一个 256-thread CTA 含 8 个 warp，协同计算 64x32x16 的 block tile，
-// 每个 warp 负责一个 16x16 输出子块。
-__global__ void hgemm_tc2_cp_async_dbuf_wmma_64x32x16(
-    int m, int n, int k, float alpha, const half* a, const half* b, float beta,
-    float* c) {
+// tc2: TMA + WMMA。
+// A/B tile 通过 Tensor Memory Accelerator 以 2D tensor map 形式搬到
+// shared memory，计算部分仍然保持 warp-level WMMA。
+// 当前版本先聚焦最小正确的 TMA + WMMA 路径，不叠加 WGMMA / swizzle。
+__global__ void hgemm_tc2_tma_wmma_64x32x16(
+    int m, int n, int k, float alpha, const half* a,
+    const __grid_constant__ CUtensorMap* a_map, const half* b,
+    const __grid_constant__ CUtensorMap* b_map, float beta, float* c) {
   using Shape = Tc2PipelineShape;
 
-  __shared__ half as[Shape::kStages][Shape::kBlockM][Shape::kAStride];
-  __shared__ half bs[Shape::kStages][Shape::kBlockK][Shape::kBStride];
+  __shared__ half as[Shape::kBlockM][Shape::kBlockK];
+  __shared__ half bs[Shape::kBlockK][Shape::kBlockN];
+  __shared__ tc_block_barrier a_bar;
+  __shared__ tc_block_barrier b_bar;
 
   const int tid = threadIdx.x;
+  if (tid == 0) {
+    init(&a_bar, 1);
+    init(&b_bar, 1);
+  }
+  __syncthreads();
+
   const int warp_id = tid / kWarpSize;
   int warp_row = 0;
   int warp_col = 0;
@@ -172,39 +204,18 @@ __global__ void hgemm_tc2_cp_async_dbuf_wmma_64x32x16(
   }
 
   const int num_tiles = k / Shape::kBlockK;
-  tc2_copy_a_tile_async<Shape::kBlockM, Shape::kBlockK, Shape::kAStride>(
-      tid, k, a + block_row * k, &as[0][0][0]);
-  tc2_copy_b_tile_async<Shape::kBlockK, Shape::kBlockN, Shape::kBStride>(
-      tid, n, b + block_col, &bs[0][0][0]);
-  tc_cp_async_commit_group();
-  tc_cp_async_wait_group<0>();
-  __syncthreads();
-
-  int stage = 0;
   for (int tile_idx = 0; tile_idx < num_tiles; ++tile_idx) {
-    const int next_tile_idx = tile_idx + 1;
-    const int next_stage = stage ^ 1;
-    if (next_tile_idx < num_tiles) {
-      tc2_copy_a_tile_async<Shape::kBlockM, Shape::kBlockK, Shape::kAStride>(
-          tid, k, a + block_row * k + next_tile_idx * Shape::kBlockK,
-          &as[next_stage][0][0]);
-      tc2_copy_b_tile_async<Shape::kBlockK, Shape::kBlockN, Shape::kBStride>(
-          tid, n, b + next_tile_idx * Shape::kBlockK * n + block_col,
-          &bs[next_stage][0][0]);
-      tc_cp_async_commit_group();
-    }
+    tc2_load_a_tile_tma<Shape::kBlockM, Shape::kBlockK>(
+        tid, block_row, tile_idx * Shape::kBlockK, a, k, a_map, &as[0][0],
+        a_bar);
+    tc2_load_b_tile_tma<Shape::kBlockK, Shape::kBlockN>(
+        tid, block_col, tile_idx * Shape::kBlockK, b, n, b_map, &bs[0][0],
+        b_bar);
 
-    wmma::load_matrix_sync(a_frag, &as[stage][warp_row * 16][0],
-                           Shape::kAStride);
-    wmma::load_matrix_sync(b_frag, &bs[stage][0][warp_col * 16],
-                           Shape::kBStride);
+    wmma::load_matrix_sync(a_frag, &as[warp_row * 16][0], Shape::kBlockK);
+    wmma::load_matrix_sync(b_frag, &bs[0][warp_col * 16], Shape::kBlockN);
     wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
-
-    if (next_tile_idx < num_tiles) {
-      tc_cp_async_wait_group<0>();
-      __syncthreads();
-      stage = next_stage;
-    }
+    __syncthreads();
   }
 
   tc_apply_epilogue(alpha, beta, c_frag, old_c_frag);
