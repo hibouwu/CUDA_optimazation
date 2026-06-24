@@ -38,6 +38,7 @@ KEY_GEMM_FP32_SERIES = [
 KEY_GEMM_TENSOR_CORE_SERIES = [
     "cublas_tc",
     "tc1",
+    "tc2",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -73,7 +74,9 @@ SERIES_LABELS = {
     "v8a": "v8a cp.async B tile",
     "v8b": "v8b cp.async A/B 2-stage",
     "v8c": "v8c cp.async A/B 3-stage",
+    "best_backend": "Best handwritten FP32 backend",
     "tc1": "tc1 wmma fp16 baseline",
+    "tc2": "tc2 cp.async dbuf wmma 64x32x16",
 }
 
 
@@ -104,7 +107,7 @@ def backend_key(row):
         return "cublas_tc"
     if version.startswith("warp1 "):
         return "v7"
-    for prefix in ("v1", "v2", "v3a", "v3b", "v3", "v4", "v5", "v6", "v7", "v8a", "v8b", "v8c", "tc1"):
+    for prefix in ("v1", "v2", "v3a", "v3b", "v3", "v4", "v5", "v6", "v7", "v8a", "v8b", "v8c", "tc1", "tc2"):
         if version.startswith(prefix + " "):
             return prefix
     return version
@@ -206,6 +209,23 @@ def filter_series(series, names):
 
 def filter_rows(rows, predicate):
     return [row for row in rows if predicate(row)]
+
+
+def best_backend_series(rows, y_col):
+    grouped = group_series(rows, "N", y_col)
+    winners = defaultdict(list)
+    for x in sorted({point[0] for points in grouped.values() for point in points}):
+        candidates = []
+        for name, points in grouped.items():
+            if name == "cublas":
+                continue
+            for point_x, mean, stddev in points:
+                if point_x == x:
+                    candidates.append((mean, stddev, name))
+        if candidates:
+            mean, stddev, name = max(candidates, key=lambda item: item[0])
+            winners[name].append((x, mean, stddev))
+    return {name: points for name, points in winners.items() if points}
 
 
 def has_new_gemm_schema(rows):
@@ -451,6 +471,13 @@ def main():
                     "Square matrix size N",
                     "Ratio",
                     out_dir / "gemm_fp32_ratio_to_cublas.svg",
+                )
+                write_svg(
+                    best_backend_series(fp32_rows, "GFLOPS"),
+                    "FP32 GEMM Best Handwritten Backend",
+                    "Square matrix size N",
+                    "GFLOPS",
+                    out_dir / "gemm_fp32_best_backend_gflops.svg",
                 )
             if tensor_core_rows:
                 write_svg(

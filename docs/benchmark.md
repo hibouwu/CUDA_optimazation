@@ -103,6 +103,10 @@ Read the versions as a story:
 - `v5` reduces memory instruction count with `float4` and improves A-tile access.
 - `v6` adds shared-memory double buffering on top of v5.
 - `v7` adds block / warp / thread hierarchical tiling on top of v6.
+- `v8a` uses `cp.async` only for B tile staging as the minimum async-copy check.
+- `v8b` stages both A and B with `cp.async` using a copy-friendly shared layout.
+- `v8c` extends v8b to a 3-stage async-copy pipeline and uses a smaller `BK=8`
+  to keep shared memory usage under the static per-block limit.
 - `cublas` is the FP32 correctness and ratio reference. It uses
   `CUBLAS_PEDANTIC_MATH` so TF32 is disabled for the SIMT FP32 comparison.
 
@@ -171,8 +175,11 @@ outputs under `results/reduce/raw/`, and generates
 The GEMM script writes `results/gemm/sgemm_sweep.csv`, keeps per-size raw
 outputs under `results/gemm/raw/`, and generates `results/gemm/figures/`
 charts for key-kernel GFLOPS and ratio to the selected FP32 reference.
-The key-kernel view includes cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, and
-v7; v1, v3a, and v3b remain available as teaching or branch baselines.
+The key-kernel view includes cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, v7,
+v8a, v8b, and v8c; v1, v3a, and v3b remain available as teaching or branch
+baselines.
+For FP32, the plotter also writes `gemm_fp32_best_backend_gflops.svg`, keeping
+only the fastest handwritten backend at each measured matrix size.
 
 The TRANSFORMER script writes `results/transformer/transformer_sweep.csv`, keeps
 per-shape raw outputs under `results/transformer/raw/`, and generates one
@@ -196,13 +203,13 @@ PRESET=full TRIALS=5 ./scripts/run_reduce_experiments.sh
 ```
 
 Default REDUCE sizes are powers of two from 256K to 64M elements. Default GEMM
-sizes are 128-aligned from 256 to 2048 so the high-performance GEMM paths are
-included at every point.
+sizes are powers of two from 128 upward so the high-performance GEMM paths are
+included at every point while avoiding non-tile-friendly sizes.
 
 Each size uses `TRIALS=3` independent runs by default. The aggregate CSV keeps a
 `Trial` column, and the SVG plotter draws mean values with standard-deviation
-error bars. The x-axis uses log2(size) spacing, keeps every measured point, but
-only labels powers of two and endpoints to avoid crowded matrix-size ticks.
+error bars. GEMM plots use a linear matrix-size x-axis and label measured
+points.
 Increase trials for final measurements:
 
 ```bash

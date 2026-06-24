@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "candidate_id": "v7_baseline_128x128x16_warp64x64_micro8x4",
+      "kernel": "sgemm_v7_warp_tiling_double_buffer",
+      "source": "ptxas verbose build, CUDA 13.0, sm_120",
+      "template_parameters": {
+        "BM": 128,
+        "BN": 128,
+        "BK": 16,
+        "WM": 64,
+        "WN": 64,
+        "WNITER": 4,
+        "TM": 8,
+        "TN": 4,
+        "NumThreads": 128
+      },
+      "derived_parameters": {
+        "WMITER": 1,
+        "WSUBM": 64,
+        "WSUBN": 16,
+        "warps_per_block": 4,
+        "accumulators_per_thread": 128,
+        "reg_m_static": 8,
+        "reg_n_static": 16,
+        "R_static": 152
+      },
+      "ptxas": {
+        "registers_per_thread": 166,
+        "static_shared_memory_bytes": 32768,
+        "stack_frame_bytes": 0,
+        "spill_stores_bytes": 0,
+        "spill_loads_bytes": 0,
+        "barriers": 1
+      }
+    }
+  ]
+}

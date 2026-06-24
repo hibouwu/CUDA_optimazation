@@ -1,5 +1,6 @@
 #include "gemm_benchmark.cuh"
 #include "sgemm_kernels.cuh"
+#include "tc_gemm_kernels.cuh"
 
 #include <cstdlib>
 #include <fstream>
@@ -11,7 +12,7 @@ namespace {
 
 constexpr const char* kBackendUsage =
     "[all|fp32|tensor_core|cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|"
-    "v7|v8a|v8b|v8c|cublas_tc|tc1]";
+    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2]";
 
 void print_usage(const char* program) {
   std::cerr << "Usage: " << program << " [square_size] " << kBackendUsage
@@ -24,7 +25,8 @@ bool is_valid_backend_filter(const std::string& filter) {
          filter == "v3" || filter == "v3a" || filter == "v3b" ||
          filter == "v4" || filter == "v5" || filter == "v6" ||
          filter == "v7" || filter == "v8a" || filter == "v8b" ||
-         filter == "v8c" || filter == "cublas_tc" || filter == "tc1";
+         filter == "v8c" || filter == "cublas_tc" || filter == "tc1" ||
+         filter == "tc2";
 }
 
 bool wants_fp32_reference(const std::string& filter) {
@@ -37,7 +39,7 @@ bool wants_fp32_reference(const std::string& filter) {
 
 bool wants_tensor_core_reference(const std::string& filter) {
   return filter == "all" || filter == "tensor_core" ||
-         filter == "cublas_tc" || filter == "tc1";
+         filter == "cublas_tc" || filter == "tc1" || filter == "tc2";
 }
 
 bool wants_backend(const std::string& filter, const std::string& backend) {
@@ -48,7 +50,9 @@ bool wants_backend(const std::string& filter, const std::string& backend) {
            backend == "v5" || backend == "v6" || backend == "v7" ||
            backend == "v8a" || backend == "v8b" || backend == "v8c";
   }
-  if (filter == "tensor_core") return backend == "tc1";
+  if (filter == "tensor_core") {
+    return backend == "tc1" || backend == "tc2";
+  }
   return false;
 }
 
@@ -264,24 +268,32 @@ int main(int argc, char** argv) {
                        h_out, csv, cublas_perf);
     }
 
-    if (n % 128 == 0) {
-      constexpr int V5_BM = 128;
-      constexpr int V5_BN = 128;
-      constexpr int V5_BK = 8;
-      constexpr int V5_TM = 8;
-      constexpr int V5_TN = 8;
+    constexpr int V5_BM = 128;
+    constexpr int V5_BN = 128;
+    constexpr int V5_BK = 8;
+    constexpr int V5_TM = 8;
+    constexpr int V5_TN = 8;
+
+    constexpr int V7_NUM_THREADS = 128;
+    constexpr int V7_BM = 128;
+    constexpr int V7_BN = 128;
+    constexpr int V7_BK = 16;
+    constexpr int V7_WM = 64;
+    constexpr int V7_WN = 64;
+    constexpr int V7_WNITER = 4;
+    constexpr int V7_TM = 8;
+    constexpr int V7_TN = 4;
+    constexpr int V8C_BK = 8;
+
+    // These divisibility checks describe only the currently compiled 128x128
+    // baseline instances below. Future v7 tuning candidates must derive their
+    // own M/N/K constraints from their BM/BN/BK parameters.
+    const bool supports_128_tiled =
+        (m % V5_BM == 0) && (n % V5_BN == 0) && (k % V7_BK == 0);
+    if (supports_128_tiled) {
       dim3 v5_grid(n / V5_BN, m / V5_BM);
       dim3 v5_block((V5_BM / V5_TM) * (V5_BN / V5_TN));
 
-      constexpr int V7_NUM_THREADS = 128;
-      constexpr int V7_BM = 128;
-      constexpr int V7_BN = 128;
-      constexpr int V7_BK = 16;
-      constexpr int V7_WM = 64;
-      constexpr int V7_WN = 64;
-      constexpr int V7_WNITER = 4;
-      constexpr int V7_TM = 8;
-      constexpr int V7_TN = 4;
       static_assert((V7_BN % V7_WN == 0) && (V7_BM % V7_WM == 0));
       static_assert((V7_BN / V7_WN) * (V7_BM / V7_WM) ==
                     V7_NUM_THREADS / kWarpSize);
@@ -289,6 +301,9 @@ int main(int argc, char** argv) {
       static_assert((V7_NUM_THREADS * 4) % V7_BN == 0);
       static_assert((V7_BM * V7_BK) % (4 * V7_NUM_THREADS) == 0);
       static_assert((V7_BN * V7_BK) % (4 * V7_NUM_THREADS) == 0);
+      static_assert((V7_NUM_THREADS * 4) % V8C_BK == 0);
+      static_assert((V7_BM * V8C_BK) % (4 * V7_NUM_THREADS) == 0);
+      static_assert((V7_BN * V8C_BK) % (4 * V7_NUM_THREADS) == 0);
       dim3 v7_grid(n / V7_BN, m / V7_BM);
       dim3 v7_block(V7_NUM_THREADS);
 
@@ -357,7 +372,7 @@ int main(int argc, char** argv) {
             "cuBLAS FP32 Pedantic",
             [&]() {
               sgemm_v8c_cp_async_ab_3stage<
-                  V7_BM, V7_BN, V7_BK, V7_WM, V7_WN, V7_WNITER, V7_TM, V7_TN,
+                  V7_BM, V7_BN, V8C_BK, V7_WM, V7_WN, V7_WNITER, V7_TM, V7_TN,
                   V7_NUM_THREADS><<<v7_grid, v7_block>>>(
                   m, n, k, alpha, d_a, d_b, beta, d_c);
               CHECK_CUDA(cudaGetLastError());
@@ -370,7 +385,8 @@ int main(int argc, char** argv) {
                wants_backend(backend_filter, "v8a") ||
                wants_backend(backend_filter, "v8b") ||
                wants_backend(backend_filter, "v8c")) {
-      std::cout << "v5/v6/v7/v8: skipped because N must be a multiple of 128\n";
+      std::cout << "v5/v6/v7/v8: skipped because M/N must be multiples of "
+                   "128 and K must be a multiple of 16\n";
       if (wants_backend(backend_filter, "v5")) {
         csv << "v5,v5 vectorized load skipped," << n
             << ",fp32,cuBLAS FP32 Pedantic,0,0,0,0\n";
@@ -429,6 +445,27 @@ int main(int argc, char** argv) {
       csv << "tc1,tc1 wmma fp16 baseline skipped," << n
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
+
+    if (wants_backend(backend_filter, "tc2") && n % 64 == 0) {
+      dim3 tc2_grid(n / 32, m / 64);
+      dim3 tc2_block(8 * kWarpSize);
+      benchmark_kernel(
+          "tc2", "tc2 cp.async dbuf wmma 64x32x16", "fp16->fp32",
+          "cuBLAS Tensor Core",
+          [&]() {
+            hgemm_tc2_cp_async_dbuf_wmma_64x32x16<<<tc2_grid, tc2_block>>>(
+                m, n, k, alpha, d_a_half, d_b_half, beta, d_c);
+            CHECK_CUDA(cudaGetLastError());
+          },
+          m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
+          1e-2f);
+    } else if (wants_backend(backend_filter, "tc2")) {
+      std::cout << "tc2 cp.async dbuf wmma 64x32x16: skipped because N must "
+                   "be a multiple of 64\n";
+      csv << "tc2,tc2 cp.async dbuf wmma 64x32x16 skipped," << n
+          << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+    }
+
   }
 
   csv.close();

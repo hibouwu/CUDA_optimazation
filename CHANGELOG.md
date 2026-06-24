@@ -5,7 +5,8 @@
 ### Added
 
 - REDUCE benchmark with v0-v5 handwritten kernels and CUB baseline.
-- GEMM benchmark with documented v1-v6/v9-v10 handwritten kernels and cuBLAS baseline.
+- GEMM benchmark with v1-v6 mainline kernels, v3b/warp1 branch kernels, and cuBLAS baseline.
+- Changed `cublas` to use `CUBLAS_PEDANTIC_MATH` as the single strict FP32 GEMM reference.
 - CSV output for reduce and SGEMM benchmark results.
 - Extended experiment script with automatic SVG plotting.
 - Transformer optimization scaffold with CMake target, roadmap, and LayerNorm v1-v3 benchmark.

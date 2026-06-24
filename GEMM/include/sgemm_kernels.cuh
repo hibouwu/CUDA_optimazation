@@ -2,11 +2,6 @@
 
 #include "gemm_common.cuh"
 
-#include <cuda_fp16.h>
-#include <mma.h>
-
-using namespace nvcuda;
-
 __device__ __forceinline__ void cp_async_ca_16(void* smem_ptr,
                                                const void* gmem_ptr) {
 #if __CUDA_ARCH__ >= 800
@@ -31,43 +26,6 @@ __device__ __forceinline__ void cp_async_wait_group() {
 #if __CUDA_ARCH__ >= 800
   asm volatile("cp.async.wait_group %0;\n" ::"n"(PendingGroups));
 #endif
-}
-
-// tc1: WMMA FP16 Tensor Core baseline。
-// 一个 warp 计算一个 16x16 的 C tile，A/B 为 row-major FP16，累加到 FP32。
-// 这是 Tensor Core 路径的最小正确版本，先要求 m/n/k 都是 16 的倍数。
-__global__ void hgemm_tc1_wmma_16x16(int m, int n, int k, float alpha,
-                                     const half* a, const half* b, float beta,
-                                     float* c) {
-  const int row = blockIdx.y * 16;
-  const int col = blockIdx.x * 16;
-
-  wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
-  wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::row_major> b_frag;
-  wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
-  wmma::fragment<wmma::accumulator, 16, 16, 16, float> old_c_frag;
-
-  wmma::fill_fragment(c_frag, 0.0f);
-  if (beta != 0.0f) {
-    wmma::load_matrix_sync(old_c_frag, c + row * n + col, n,
-                           wmma::mem_row_major);
-  }
-
-  for (int p = 0; p < k; p += 16) {
-    wmma::load_matrix_sync(a_frag, a + row * k + p, k);
-    wmma::load_matrix_sync(b_frag, b + p * n + col, n);
-    wmma::mma_sync(c_frag, a_frag, b_frag, c_frag);
-  }
-
-  if (alpha != 1.0f || beta != 0.0f) {
-#pragma unroll
-    for (int i = 0; i < c_frag.num_elements; ++i) {
-      c_frag.x[i] = alpha * c_frag.x[i] +
-                    (beta != 0.0f ? beta * old_c_frag.x[i] : 0.0f);
-    }
-  }
-
-  wmma::store_matrix_sync(c + row * n + col, c_frag, n, wmma::mem_row_major);
 }
 
 // v1: naive SGEMM，刻意保留非合并访存的线程映射。
@@ -550,6 +508,27 @@ __global__ void __launch_bounds__(NumThreads)
     sgemm_v7_warp_tiling_double_buffer(int m, int n, int k, float alpha,
                                        const float* a, const float* b,
                                        float beta, float* c) {
+  static_assert(BM > 0);
+  static_assert(BN > 0);
+  static_assert(BK > 0);
+  static_assert(WM > 0);
+  static_assert(WN > 0);
+  static_assert(WNITER > 0);
+  static_assert(TM > 0);
+  static_assert(TN > 0);
+  static_assert(NumThreads > 0);
+  static_assert(NumThreads % kWarpSize == 0);
+  static_assert(BM % WM == 0);
+  static_assert(BN % WN == 0);
+  static_assert((BM / WM) * (BN / WN) == NumThreads / kWarpSize);
+  static_assert(BK % 4 == 0);
+  static_assert(BN % 4 == 0);
+  static_assert(TN % 4 == 0);
+  static_assert((NumThreads * 4) % BK == 0);
+  static_assert((NumThreads * 4) % BN == 0);
+  static_assert((BM * BK) % (4 * NumThreads) == 0);
+  static_assert((BN * BK) % (4 * NumThreads) == 0);
+  static_assert((WM * WN) % (kWarpSize * TM * TN * WNITER) == 0);
   const int c_row = blockIdx.y;
   const int c_col = blockIdx.x;
 
@@ -558,8 +537,14 @@ __global__ void __launch_bounds__(NumThreads)
   const int warp_row = warp_idx / (BN / WN);
 
   constexpr int WMITER = (WM * WN) / (kWarpSize * TM * TN * WNITER);
+  static_assert(WMITER >= 1);
+  static_assert(WM % WMITER == 0);
+  static_assert(WN % WNITER == 0);
   constexpr int WSUBM = WM / WMITER;
   constexpr int WSUBN = WN / WNITER;
+  static_assert(WSUBM % TM == 0);
+  static_assert(WSUBN % TN == 0);
+  static_assert((WSUBM / TM) * (WSUBN / TN) == kWarpSize);
 
   const int thread_idx_in_warp = threadIdx.x % kWarpSize;
   const int thread_col_in_warp = thread_idx_in_warp % (WSUBN / TN);
@@ -653,8 +638,9 @@ __device__ __forceinline__ void load_warp_a_transposed_from_gmem(
 template <int BM, int BK, int RowStrideA>
 __device__ __forceinline__ void cp_async_warp_a_row_major(
     int k, const float* a, float* as, int inner_row_a, int inner_col_a) {
+  constexpr int APITCH = BK + 4;
   for (int offset = 0; offset + RowStrideA <= BM; offset += RowStrideA) {
-    cp_async_ca_16(&as[(inner_row_a + offset) * BK + inner_col_a * 4],
+    cp_async_ca_16(&as[(inner_row_a + offset) * APITCH + inner_col_a * 4],
                    &a[(inner_row_a + offset) * k + inner_col_a * 4]);
   }
 }
@@ -694,6 +680,7 @@ __device__ __forceinline__ void process_warp_tile_from_smem_a_row_major(
     float* reg_m, float* reg_n, float* thread_results, const float* as,
     const float* bs, int warp_row, int warp_col, int thread_row_in_warp,
     int thread_col_in_warp) {
+  constexpr int APITCH = BK + 4;
   for (int dot_idx = 0; dot_idx < BK; ++dot_idx) {
 #pragma unroll
     for (int w_sub_row_idx = 0; w_sub_row_idx < WMITER; ++w_sub_row_idx) {
@@ -702,7 +689,7 @@ __device__ __forceinline__ void process_warp_tile_from_smem_a_row_major(
         reg_m[w_sub_row_idx * TM + i] =
             as[(warp_row * WM + w_sub_row_idx * WSUBM +
                 thread_row_in_warp * TM + i) *
-                   BK +
+                   APITCH +
                dot_idx];
       }
     }
@@ -859,7 +846,7 @@ __global__ void __launch_bounds__(NumThreads)
   const int thread_col_in_warp = thread_idx_in_warp % (WSUBN / TN);
   const int thread_row_in_warp = thread_idx_in_warp / (WSUBN / TN);
 
-  __shared__ float as[2][BM * BK];
+  __shared__ float as[2][BM * (BK + 4)];
   __shared__ float bs[2][BK * BN];
 
   a += c_row * BM * k;
@@ -928,7 +915,7 @@ __global__ void __launch_bounds__(NumThreads)
   const int thread_col_in_warp = thread_idx_in_warp % (WSUBN / TN);
   const int thread_row_in_warp = thread_idx_in_warp / (WSUBN / TN);
 
-  __shared__ float as[3][BM * BK];
+  __shared__ float as[3][BM * (BK + 4)];
   __shared__ float bs[3][BK * BN];
 
   a += c_row * BM * k;

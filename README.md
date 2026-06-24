@@ -97,6 +97,9 @@ C = alpha * A @ B + beta * C
 | v5 | `sgemm_v4_vectorized` | `float4` loads and transposed A tile in shared memory | memory instruction count |
 | v6 | `sgemm_v5_double_buffer` | Shared-memory ping-pong buffers plus register prefetch | long scoreboard stalls |
 | v7 | `sgemm_v7_warp_tiling_double_buffer` | v6 plus block / warp / thread hierarchical tiling | eligible warps, occupancy |
+| v8a | `sgemm_v8a_cp_async_b_tile` | v7 plus `cp.async` for B tile staging only | async copy overhead, B load latency |
+| v8b | `sgemm_v8b_cp_async_ab_2stage` | A/B `cp.async` staging with cp.async-friendly shared layout | shared layout tradeoff, 2-stage pipeline |
+| v8c | `sgemm_v8c_cp_async_ab_3stage` | v8b with a 3-stage async copy pipeline and smaller `BK=8` | latency hiding vs shared-memory footprint |
 
 Output CSV:
 
@@ -106,7 +109,7 @@ Version,N,TimeMs,GFLOPS,RatioToCuBLAS,Matched
 ```
 
 The local note jumps from Kernel 6 to Kernel 9; this repository mirrors the
-documented stages. `v5`, `v6`, and `v7` are intentionally written as
+documented stages. `v5`, `v6`, `v7`, and `v8*` are intentionally written as
 high-performance paths and require `N` to be a multiple of 128. Other sizes
 still run `v1` to `v4`, `v3a`, `v3b`, and cuBLAS.
 
@@ -238,7 +241,7 @@ ncu --set full ./gemm_bench 1024
 Recommended first comparisons:
 
 - Reduce: v0 vs v1 vs v4 vs v5 vs CUB.
-- GEMM mainline: v1 vs v2 vs v3 vs v4 vs v5 vs v6 vs v7 vs cuBLAS FP32 Pedantic.
+- GEMM mainline: v1 vs v2 vs v3 vs v4 vs v5 vs v6 vs v7 vs v8a/v8b/v8c vs cuBLAS FP32 Pedantic.
 - GEMM branches: v3a and v3b.
 
 See [docs/benchmark.md](docs/benchmark.md) for measurement rules and metric suggestions.
@@ -277,6 +280,7 @@ results/
 │   ├── raw/
 │   └── figures/
 │       ├── sgemm_gflops.svg
+│       ├── gemm_fp32_best_backend_gflops.svg
 │       ├── sgemm_gflops_log.svg
 │       └── sgemm_ratio_to_cublas.svg
 └── transformer/
@@ -311,9 +315,9 @@ BUILD_DIR=/workspace/build_cuda13 PRESET=quick ./scripts/run_transformer_experim
 ```
 
 Each size runs `TRIALS=3` independent process-level trials by default. The
-figures plot the mean value with standard-deviation error bars. The x-axis uses
-log2(size) spacing and only labels measured sizes; GEMM also writes a log-y
-GFLOPS chart so slow and fast kernels can be inspected in the same figure:
+figures plot the mean value with standard-deviation error bars. The GEMM x-axis
+uses linear matrix-size spacing. GEMM also writes a log-y GFLOPS chart so slow
+and fast kernels can be inspected in the same figure:
 
 ```bash
 BUILD_DIR=/workspace/build_cuda13 TRIALS=5 REDUCE_SIZES="16777216" ./scripts/run_reduce_experiments.sh
@@ -334,8 +338,10 @@ BUILD_DIR=/workspace/build_cuda13 PRESET=full TRIALS=5 ./scripts/run_transformer
 ```
 
 The default GEMM linear figures keep only key milestones to reduce visual
-clutter: cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, and v7. Branch kernels v3a and v3b remain
+clutter: cuBLAS FP32 Pedantic, v2, v3, v4, v5, v6, v7, v8a, v8b, and v8c. Branch kernels v3a and v3b remain
 available for focused sweeps and appendix-style inspection.
+The plotter also writes `gemm_fp32_best_backend_gflops.svg`, which keeps only
+the fastest handwritten FP32 backend at each matrix size.
 
 ## GEMM Parameter Tuning
 

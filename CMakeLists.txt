@@ -26,6 +26,8 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(CUDA_PTXAS_VERBOSE "Print ptxas resource usage for CUDA targets" OFF)
+
 find_package(CUDAToolkit REQUIRED)
 
 add_executable(reduce_bench REDUCE/src/main.cu)
@@ -41,11 +43,32 @@ add_executable(gemm_bench GEMM/src/main.cu)
 target_compile_options(gemm_bench PRIVATE
   $<$<COMPILE_LANGUAGE:CUDA>:-O3>
 )
+if(CUDA_PTXAS_VERBOSE)
+  target_compile_options(gemm_bench PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--ptxas-options=-v>
+  )
+endif()
 target_include_directories(gemm_bench PRIVATE
   GEMM/include
   ${CUDAToolkit_INCLUDE_DIRS}
 )
 target_link_libraries(gemm_bench PRIVATE CUDA::cublas)
+
+add_executable(v7_resource_probe GEMM/src/v7_resource_probe.cu)
+target_compile_options(v7_resource_probe PRIVATE
+  $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+)
+if(CUDA_PTXAS_VERBOSE)
+  target_compile_options(v7_resource_probe PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--ptxas-options=-v>
+  )
+endif()
+target_include_directories(v7_resource_probe PRIVATE
+  GEMM/include
+  GEMM/generated
+  ${CUDAToolkit_INCLUDE_DIRS}
+)
+target_link_libraries(v7_resource_probe PRIVATE CUDA::cudart)
 
 add_executable(gemm_tune_blocksize GEMM/src/tune_blocksize.cu)
 target_compile_options(gemm_tune_blocksize PRIVATE

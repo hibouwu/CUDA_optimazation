@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cublas_v2.h>
+#include <cuda.h>
 #include <cuda_runtime.h>
 
 #include <cstdlib>
@@ -23,6 +24,22 @@
       std::cerr << "cuBLAS error at " << __FILE__ << ":" << __LINE__         \
                 << " - status " << status__ << std::endl;                    \
       std::exit(EXIT_FAILURE);                                                \
+    }                                                                        \
+  } while (0)
+
+#define CHECK_CU(call)                                                       \
+  do {                                                                       \
+    CUresult status__ = (call);                                              \
+    if (status__ != CUDA_SUCCESS) {                                          \
+      const char* name__ = nullptr;                                          \
+      const char* desc__ = nullptr;                                          \
+      cuGetErrorName(status__, &name__);                                     \
+      cuGetErrorString(status__, &desc__);                                   \
+      std::cerr << "CUDA driver error at " << __FILE__ << ":" << __LINE__   \
+                << " - " << (name__ != nullptr ? name__ : "UNKNOWN")        \
+                << ": " << (desc__ != nullptr ? desc__ : "unknown")         \
+                << std::endl;                                                \
+      std::exit(EXIT_FAILURE);                                               \
     }                                                                        \
   } while (0)
 

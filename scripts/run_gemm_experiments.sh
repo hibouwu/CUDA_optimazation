@@ -23,13 +23,13 @@ case "${GEMM_SUITE}" in
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/tensor_core"
     DEFAULT_AGG_CSV="gemm_tensor_core_sweep.csv"
     ;;
-  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1)
+  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1|tc2)
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/backend_${GEMM_SUITE}"
     DEFAULT_AGG_CSV="gemm_${GEMM_SUITE}_sweep.csv"
     ;;
   *)
     echo "Unknown GEMM_SUITE=${GEMM_SUITE}." >&2
-    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, or tc1." >&2
+    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, or tc2." >&2
     exit 1
     ;;
 esac
@@ -139,6 +139,8 @@ run_gemm_size() {
     suite ~ /^v[0-9]+[ab]?$/ && $1 == suite { print $0 "," trial; next }
     suite == "tc1" && $1 == "cublas_tc" { print $0 "," trial; next }
     suite == "tc1" && $1 == "tc1" { print $0 "," trial; next }
+    suite == "tc2" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc2" && $1 == "tc2" { print $0 "," trial; next }
   ' \
     "${run_dir}/sgemm_benchmark.csv" >> "${AGG_CSV}"
 }
