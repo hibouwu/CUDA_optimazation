@@ -12,7 +12,7 @@ namespace {
 
 constexpr const char* kBackendUsage =
     "[all|fp32|tensor_core|cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|"
-    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2]";
+    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3a|tc3b]";
 
 void print_usage(const char* program) {
   std::cerr << "Usage: " << program << " [square_size] " << kBackendUsage
@@ -26,7 +26,7 @@ bool is_valid_backend_filter(const std::string& filter) {
          filter == "v4" || filter == "v5" || filter == "v6" ||
          filter == "v7" || filter == "v8a" || filter == "v8b" ||
          filter == "v8c" || filter == "cublas_tc" || filter == "tc1" ||
-         filter == "tc2";
+         filter == "tc2" || filter == "tc3a" || filter == "tc3b";
 }
 
 bool wants_fp32_reference(const std::string& filter) {
@@ -39,7 +39,8 @@ bool wants_fp32_reference(const std::string& filter) {
 
 bool wants_tensor_core_reference(const std::string& filter) {
   return filter == "all" || filter == "tensor_core" ||
-         filter == "cublas_tc" || filter == "tc1" || filter == "tc2";
+         filter == "cublas_tc" || filter == "tc1" || filter == "tc2" ||
+         filter == "tc3a" || filter == "tc3b";
 }
 
 bool wants_backend(const std::string& filter, const std::string& backend) {
@@ -51,9 +52,22 @@ bool wants_backend(const std::string& filter, const std::string& backend) {
            backend == "v8a" || backend == "v8b" || backend == "v8c";
   }
   if (filter == "tensor_core") {
-    return backend == "tc1" || backend == "tc2";
+    return backend == "tc1" || backend == "tc2" || backend == "tc3a" ||
+           backend == "tc3b";
   }
   return false;
+}
+
+template <int Stages, bool Persistent = false>
+void configure_tc_tma_wmma_kernel() {
+  CHECK_CUDA(cudaFuncSetAttribute(
+      hgemm_tc_tma_wmma_128x64x32<Stages, Persistent>,
+      cudaFuncAttributeMaxDynamicSharedMemorySize,
+      static_cast<int>(tc_tma_wmma_smem_bytes<Stages>())));
+  CHECK_CUDA(cudaFuncSetAttribute(
+      hgemm_tc_tma_wmma_128x64x32<Stages, Persistent>,
+      cudaFuncAttributePreferredSharedMemoryCarveout,
+      cudaSharedmemCarveoutMaxShared));
 }
 
 template <typename Launch>
@@ -147,12 +161,15 @@ int main(int argc, char** argv) {
   CHECK_CU(cuInit(0));
   alignas(64) CUtensorMap h_a_tc2_map{};
   alignas(64) CUtensorMap h_b_tc2_map{};
-  tc_encode_rowmajor_tensor_map_2d(h_a_tc2_map, d_a_half, m, k, 64, 16);
-  tc_encode_rowmajor_tensor_map_2d(h_b_tc2_map, d_b_half, k, n, 16, 32);
+  tc_encode_rowmajor_tensor_map_2d(h_a_tc2_map, d_a_half, m, k, 128, 32);
+  tc_encode_rowmajor_tensor_map_2d(h_b_tc2_map, d_b_half, k, n, 32, 64);
   CHECK_CUDA(cudaMemcpy(d_a_tc2_map, &h_a_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_tc2_map, &h_b_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
+  configure_tc_tma_wmma_kernel<2>();
+  configure_tc_tma_wmma_kernel<2, true>();
+  configure_tc_tma_wmma_kernel<4, true>();
 
   cublasHandle_t handle;
   cublasHandle_t tensor_core_handle;
@@ -160,6 +177,9 @@ int main(int argc, char** argv) {
   CHECK_CUBLAS(cublasCreate(&tensor_core_handle));
   CHECK_CUBLAS(cublasSetMathMode(handle, CUBLAS_PEDANTIC_MATH));
   print_gemm_environment(handle);
+  cudaDeviceProp device_prop;
+  CHECK_CUDA(cudaGetDeviceProperties(&device_prop, 0));
+  const int sm_count = device_prop.multiProcessorCount;
 
   // cuBLAS uses column-major semantics. Swapping A/B computes row-major C=A@B.
   auto launch_cublas = [&]() {
@@ -459,13 +479,15 @@ int main(int argc, char** argv) {
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
 
-    if (wants_backend(backend_filter, "tc2") && n % 64 == 0) {
-      dim3 tc2_grid(n / 32, m / 64);
+    if (wants_backend(backend_filter, "tc2") && n % 128 == 0) {
+      dim3 tc2_grid(n / 64, m / 128);
       dim3 tc2_block(8 * kWarpSize);
       benchmark_kernel(
-          "tc2", "tc2 tma wmma 64x32x16", "fp16->fp32", "cuBLAS Tensor Core",
+          "tc2", "tc2 tma 2-stage wmma 128x64x32", "fp16->fp32",
+          "cuBLAS Tensor Core",
           [&]() {
-            hgemm_tc2_tma_wmma_64x32x16<<<tc2_grid, tc2_block>>>(
+            hgemm_tc_tma_wmma_128x64x32<2>
+                <<<tc2_grid, tc2_block, tc_tma_wmma_smem_bytes<2>()>>>(
                 m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
                 beta, d_c);
             CHECK_CUDA(cudaGetLastError());
@@ -473,9 +495,59 @@ int main(int argc, char** argv) {
           m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
           1e-2f);
     } else if (wants_backend(backend_filter, "tc2")) {
-      std::cout << "tc2 tma wmma 64x32x16: skipped because N must be a "
-                   "multiple of 64\n";
-      csv << "tc2,tc2 tma wmma 64x32x16 skipped," << n
+      std::cout << "tc2 tma 2-stage wmma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc2,tc2 tma 2-stage wmma 128x64x32 skipped," << n
+          << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+    }
+
+    if (wants_backend(backend_filter, "tc3a") && n % 128 == 0) {
+      const int tc3_total_tiles = (m / 128) * (n / 64);
+      const int tc3a_blocks =
+          tc3_total_tiles < sm_count * 2 ? tc3_total_tiles : sm_count * 2;
+      dim3 tc3a_grid(tc3a_blocks);
+      dim3 tc3a_block(8 * kWarpSize);
+      benchmark_kernel(
+          "tc3a", "tc3a persistent tma 2-stage wmma 128x64x32", "fp16->fp32",
+          "cuBLAS Tensor Core",
+          [&]() {
+            hgemm_tc_tma_wmma_128x64x32<2, true>
+                <<<tc3a_grid, tc3a_block, tc_tma_wmma_smem_bytes<2>()>>>(
+                m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
+                beta, d_c);
+            CHECK_CUDA(cudaGetLastError());
+          },
+          m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
+          1e-2f);
+    } else if (wants_backend(backend_filter, "tc3a")) {
+      std::cout << "tc3a persistent tma 2-stage wmma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc3a,tc3a persistent tma 2-stage wmma 128x64x32 skipped," << n
+          << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+    }
+
+    if (wants_backend(backend_filter, "tc3b") && n % 128 == 0) {
+      const int tc3_total_tiles = (m / 128) * (n / 64);
+      const int tc3b_blocks =
+          tc3_total_tiles < sm_count * 2 ? tc3_total_tiles : sm_count * 2;
+      dim3 tc3b_grid(tc3b_blocks);
+      dim3 tc3b_block(8 * kWarpSize);
+      benchmark_kernel(
+          "tc3b", "tc3b persistent tma 4-stage wmma 128x64x32", "fp16->fp32",
+          "cuBLAS Tensor Core",
+          [&]() {
+            hgemm_tc_tma_wmma_128x64x32<4, true>
+                <<<tc3b_grid, tc3b_block, tc_tma_wmma_smem_bytes<4>()>>>(
+                m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
+                beta, d_c);
+            CHECK_CUDA(cudaGetLastError());
+          },
+          m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
+          1e-2f);
+    } else if (wants_backend(backend_filter, "tc3b")) {
+      std::cout << "tc3b persistent tma 4-stage wmma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc3b,tc3b persistent tma 4-stage wmma 128x64x32 skipped," << n
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
 

@@ -52,7 +52,7 @@ target_include_directories(gemm_bench PRIVATE
   GEMM/include
   ${CUDAToolkit_INCLUDE_DIRS}
 )
-target_link_libraries(gemm_bench PRIVATE CUDA::cublas)
+target_link_libraries(gemm_bench PRIVATE CUDA::cublas CUDA::cuda_driver)
 
 add_executable(v7_resource_probe GEMM/src/v7_resource_probe.cu)
 target_compile_options(v7_resource_probe PRIVATE

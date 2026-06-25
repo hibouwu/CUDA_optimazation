@@ -39,6 +39,8 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "cublas_tc",
     "tc1",
     "tc2",
+    "tc3a",
+    "tc3b",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -76,7 +78,9 @@ SERIES_LABELS = {
     "v8c": "v8c cp.async A/B 3-stage",
     "best_backend": "Best handwritten FP32 backend",
     "tc1": "tc1 wmma fp16 baseline",
-    "tc2": "tc2 cp.async dbuf wmma 64x32x16",
+    "tc2": "tc2 tma 2-stage wmma 128x64x32",
+    "tc3a": "tc3a persistent tma 2-stage wmma 128x64x32",
+    "tc3b": "tc3b persistent tma 4-stage wmma 128x64x32",
 }
 
 
@@ -107,7 +111,24 @@ def backend_key(row):
         return "cublas_tc"
     if version.startswith("warp1 "):
         return "v7"
-    for prefix in ("v1", "v2", "v3a", "v3b", "v3", "v4", "v5", "v6", "v7", "v8a", "v8b", "v8c", "tc1", "tc2"):
+    for prefix in (
+        "v1",
+        "v2",
+        "v3a",
+        "v3b",
+        "v3",
+        "v4",
+        "v5",
+        "v6",
+        "v7",
+        "v8a",
+        "v8b",
+        "v8c",
+        "tc1",
+        "tc2",
+        "tc3a",
+        "tc3b",
+    ):
         if version.startswith(prefix + " "):
             return prefix
     return version
