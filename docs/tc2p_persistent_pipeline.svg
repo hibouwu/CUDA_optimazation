@@ -1,0 +1,209 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="920" viewBox="0 0 2048 920">
+  <defs>
+    <style>
+      .title { font: 42px "Helvetica Neue", Arial, sans-serif; fill: #242a31; }
+      .sub { font: 18px "Helvetica Neue", Arial, sans-serif; fill: #5d6673; }
+      .lane { font: 17px "Helvetica Neue", Arial, sans-serif; fill: #242a31; }
+      .small { font: 15px "Helvetica Neue", Arial, sans-serif; fill: #343b44; }
+      .tiny { font: 13px "Helvetica Neue", Arial, sans-serif; fill: #4a535f; }
+      .watermark { font: 22px "Helvetica Neue", Arial, sans-serif; fill: #e5e9ef; opacity: .55; }
+      .label { font: 20px "Helvetica Neue", Arial, sans-serif; fill: #3f7f57; }
+      .pill { fill: #ece5ff; stroke: #111; stroke-width: 2.4; }
+      .smem { fill: #dff3e6; stroke: #111; stroke-width: 2.4; }
+      .load { fill: #eef3fb; stroke: #111; stroke-width: 2.2; }
+      .compute { fill: #ffe4e1; stroke: #111; stroke-width: 2.2; }
+      .store { fill: #edf2f8; stroke: #111; stroke-width: 2.2; }
+      .dashed { stroke: #111; stroke-width: 2.4; stroke-dasharray: 5 7; fill: none; }
+      .softdash { stroke: #9aa7c7; stroke-width: 3; stroke-dasharray: 5 6; fill: none; }
+      .red { stroke: #e46d6a; stroke-width: 2.4; fill: none; }
+      .greenbox { fill: none; stroke: #4a9b65; stroke-width: 4; stroke-dasharray: 7 8; }
+      .dot { fill: #222b33; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111"/>
+    </marker>
+    <marker id="redArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e46d6a"/>
+    </marker>
+  </defs>
+
+  <rect width="2048" height="920" fill="#fff"/>
+
+  <g transform="rotate(-13 1024 460)">
+    <text class="watermark" x="160" y="90">TC2P persistent pipeline</text>
+    <text class="watermark" x="520" y="155">128x64x32 CTA tile</text>
+    <text class="watermark" x="920" y="95">TMA + WMMA</text>
+    <text class="watermark" x="1290" y="165">grid-stride work tiles</text>
+    <text class="watermark" x="1640" y="95">SM static scheduling</text>
+    <text class="watermark" x="205" y="670">TC2P persistent pipeline</text>
+    <text class="watermark" x="625" y="735">128x64x32 CTA tile</text>
+    <text class="watermark" x="1130" y="685">TMA + WMMA</text>
+    <text class="watermark" x="1510" y="760">grid-stride work tiles</text>
+  </g>
+
+  <text class="title" x="58" y="76">TC2P Persistent Work Tile Pipeline</text>
+  <text class="sub" x="61" y="111">tc2p2: persistent + 2-stage TMA + WMMA 128x64x32. tc2p3: same scheduling with 3-stage TMA.</text>
+
+  <line class="dashed" x1="184" y1="210" x2="1930" y2="210" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="184" y1="325" x2="1930" y2="325" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="184" y1="430" x2="1930" y2="430" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="184" y1="585" x2="1930" y2="585" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="184" y1="760" x2="1930" y2="760" marker-end="url(#arrow)"/>
+
+  <rect class="pill" x="56" y="168" width="128" height="84" rx="42"/>
+  <text class="lane" x="86" y="216">scheduler</text>
+
+  <rect class="smem" x="70" y="291" width="100" height="60" rx="30"/>
+  <text class="lane" x="99" y="316">SMEM</text>
+  <text class="lane" x="91" y="339">ring</text>
+
+  <rect class="pill" x="56" y="388" width="128" height="84" rx="42"/>
+  <text class="lane" x="86" y="436">WMMA</text>
+
+  <rect class="pill" x="56" y="544" width="128" height="84" rx="42"/>
+  <text class="lane" x="89" y="592">store C</text>
+
+  <rect class="pill" x="56" y="719" width="128" height="84" rx="42"/>
+  <text class="lane" x="83" y="766">next tile</text>
+
+  <rect class="load" x="278" y="167" width="222" height="84"/>
+  <text class="small" x="354" y="195">TMA load</text>
+  <text class="small" x="340" y="219">K tile 0</text>
+  <text class="small" x="322" y="239">A/B to stage 0</text>
+
+  <rect class="load" x="510" y="167" width="222" height="84"/>
+  <text class="small" x="586" y="195">TMA load</text>
+  <text class="small" x="572" y="219">K tile 1</text>
+  <text class="small" x="554" y="239">A/B to stage 1</text>
+
+  <rect class="load" x="742" y="167" width="222" height="84"/>
+  <text class="small" x="818" y="195">TMA load</text>
+  <text class="small" x="804" y="219">K tile 2</text>
+  <text class="small" x="774" y="239">tc2p3: A/B to stage 2</text>
+
+  <rect class="load" x="974" y="167" width="222" height="84" opacity=".42"/>
+  <text class="small" x="1046" y="195">stage 3</text>
+  <text class="small" x="1057" y="219">unused</text>
+  <text class="small" x="1019" y="239">reserved for variants</text>
+
+  <text class="tiny" x="700" y="151">preload window</text>
+  <text class="tiny" x="279" y="277">arrive</text>
+  <text class="tiny" x="498" y="277">arrive</text>
+  <text class="tiny" x="730" y="277">arrive</text>
+  <text class="tiny" x="962" y="277">optional arrive</text>
+
+  <text class="small" x="182" y="287">stage 0</text>
+  <text class="small" x="182" y="313">stage 1</text>
+  <text class="small" x="182" y="339">stage 2</text>
+  <text class="small" x="182" y="365">stage 3</text>
+  <line class="dashed" x1="220" y1="287" x2="1450" y2="287" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="220" y1="313" x2="1450" y2="313" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="220" y1="339" x2="1450" y2="339" marker-end="url(#arrow)"/>
+  <line class="softdash" x1="220" y1="365" x2="1450" y2="365" marker-end="url(#arrow)"/>
+
+  <line class="red" x1="500" y1="287" x2="720" y2="287" marker-end="url(#redArrow)"/>
+  <line class="red" x1="732" y1="313" x2="952" y2="313" marker-end="url(#redArrow)"/>
+  <line class="red" x1="964" y1="339" x2="1185" y2="339" marker-end="url(#redArrow)"/>
+  <line class="red" x1="1196" y1="365" x2="1450" y2="365" marker-end="url(#redArrow)"/>
+
+  <line class="dashed" x1="278" y1="251" x2="278" y2="388"/>
+  <line class="dashed" x1="500" y1="251" x2="500" y2="388"/>
+  <line class="dashed" x1="732" y1="251" x2="732" y2="388"/>
+  <line class="dashed" x1="964" y1="251" x2="964" y2="388"/>
+  <line class="dashed" x1="1196" y1="251" x2="1196" y2="545"/>
+
+  <rect class="compute" x="278" y="388" width="222" height="84"/>
+  <text class="small" x="374" y="436">wait</text>
+
+  <rect class="compute" x="510" y="388" width="70" height="84"/>
+  <text class="tiny" x="529" y="416">load</text>
+  <text class="tiny" x="526" y="437">frag</text>
+  <text class="tiny" x="525" y="457">A/B</text>
+
+  <rect class="compute" x="580" y="388" width="78" height="84"/>
+  <text class="tiny" x="599" y="417">mma</text>
+  <text class="tiny" x="591" y="438">tile 0</text>
+  <text class="tiny" x="599" y="459">k0</text>
+
+  <rect class="compute" x="658" y="388" width="78" height="84"/>
+  <text class="tiny" x="677" y="417">mma</text>
+  <text class="tiny" x="669" y="438">tile 0</text>
+  <text class="tiny" x="677" y="459">k1</text>
+
+  <rect class="compute" x="760" y="388" width="70" height="84"/>
+  <text class="tiny" x="779" y="416">load</text>
+  <text class="tiny" x="776" y="437">frag</text>
+  <text class="tiny" x="775" y="457">A/B</text>
+
+  <rect class="compute" x="830" y="388" width="78" height="84"/>
+  <text class="tiny" x="849" y="417">mma</text>
+  <text class="tiny" x="841" y="438">tile 1</text>
+  <text class="tiny" x="849" y="459">k0</text>
+
+  <rect class="compute" x="908" y="388" width="78" height="84"/>
+  <text class="tiny" x="927" y="417">mma</text>
+  <text class="tiny" x="919" y="438">tile 1</text>
+  <text class="tiny" x="927" y="459">k1</text>
+
+  <rect class="compute" x="1010" y="388" width="70" height="84"/>
+  <text class="tiny" x="1029" y="416">load</text>
+  <text class="tiny" x="1026" y="437">frag</text>
+  <text class="tiny" x="1025" y="457">A/B</text>
+
+  <rect class="compute" x="1080" y="388" width="78" height="84"/>
+  <text class="tiny" x="1099" y="417">mma</text>
+  <text class="tiny" x="1091" y="438">tile 2</text>
+  <text class="tiny" x="1099" y="459">k0</text>
+
+  <rect class="compute" x="1158" y="388" width="78" height="84"/>
+  <text class="tiny" x="1177" y="417">mma</text>
+  <text class="tiny" x="1169" y="438">tile 2</text>
+  <text class="tiny" x="1177" y="459">k1</text>
+
+  <text class="tiny" x="278" y="373">wait stage, then fence async shared</text>
+  <text class="tiny" x="832" y="373">tc2p2 refills tile + 2; tc2p3 refills tile + 3</text>
+  <text class="tiny" x="1010" y="490">accumulator stays in registers</text>
+
+  <circle class="dot" cx="1285" cy="210" r="6"/>
+  <circle class="dot" cx="1337" cy="210" r="6"/>
+  <circle class="dot" cx="1389" cy="210" r="6"/>
+  <circle class="dot" cx="1441" cy="210" r="6"/>
+  <circle class="dot" cx="1285" cy="430" r="6"/>
+  <circle class="dot" cx="1337" cy="430" r="6"/>
+  <circle class="dot" cx="1389" cy="430" r="6"/>
+  <circle class="dot" cx="1441" cy="430" r="6"/>
+
+  <rect class="store" x="1258" y="544" width="250" height="84"/>
+  <text class="small" x="1344" y="581">store C</text>
+  <text class="small" x="1299" y="606">4 WMMA accumulators</text>
+
+  <line class="dashed" x1="1196" y1="472" x2="1260" y2="545" marker-end="url(#arrow)"/>
+  <text class="tiny" x="1210" y="511">after all K tiles</text>
+  <line class="dashed" x1="1508" y1="628" x2="1616" y2="720" marker-end="url(#arrow)"/>
+  <text class="tiny" x="1503" y="675">__syncthreads()</text>
+
+  <rect class="greenbox" x="1615" y="115" width="365" height="360"/>
+  <text class="label" x="1628" y="161">Next Work Tile</text>
+  <text class="small" x="1630" y="199">persistent grid-stride loop</text>
+  <text class="small" x="1630" y="226">output_tile += gridDim.x</text>
+  <text class="small" x="1630" y="253">gridDim.x = min(tiles, SMs)</text>
+  <text class="small" x="1630" y="296">same CTA reuses:</text>
+  <text class="small" x="1648" y="324">- SMEM ring buffer</text>
+  <text class="small" x="1648" y="352">- TMA barriers</text>
+  <text class="small" x="1648" y="380">- 8 warp CTA mapping</text>
+
+  <rect class="load" x="1627" y="720" width="202" height="84"/>
+  <text class="small" x="1671" y="752">compute tile id</text>
+  <text class="tiny" x="1653" y="775">tile_m = id / tiles_n</text>
+  <text class="tiny" x="1653" y="794">tile_n = id % tiles_n</text>
+
+  <line class="dashed" x1="1829" y1="762" x2="1916" y2="762" marker-end="url(#arrow)"/>
+  <line class="dashed" x1="1728" y1="720" x2="1728" y2="475" marker-end="url(#arrow)"/>
+
+  <text class="tiny" x="1214" y="286">barrier wait</text>
+  <text class="tiny" x="1214" y="315">stage reuse</text>
+  <text class="tiny" x="1214" y="344">ring modulo</text>
+  <text class="tiny" x="1214" y="373">unused stage</text>
+
+  <text class="small" x="60" y="878">Current code mapping: hgemm_tc_tma_wmma_128x64x32&lt;2, true&gt; for tc2p2; &lt;3, true&gt; for tc2p3. CTA tile = 128x64, K tile = 32, block = 8 warps.</text>
+</svg>

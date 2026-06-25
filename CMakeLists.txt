@@ -43,6 +43,12 @@ add_executable(gemm_bench GEMM/src/main.cu)
 target_compile_options(gemm_bench PRIVATE
   $<$<COMPILE_LANGUAGE:CUDA>:-O3>
 )
+string(FIND "${CMAKE_CUDA_ARCHITECTURES}" "120a" HAS_SM120A_ARCH)
+if(NOT HAS_SM120A_ARCH EQUAL -1)
+  target_compile_definitions(gemm_bench PRIVATE
+    TC3_COMPILED_SM120A_NARROW_MMA=1
+  )
+endif()
 if(CUDA_PTXAS_VERBOSE)
   target_compile_options(gemm_bench PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:--ptxas-options=-v>

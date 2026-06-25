@@ -23,13 +23,13 @@ case "${GEMM_SUITE}" in
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/tensor_core"
     DEFAULT_AGG_CSV="gemm_tensor_core_sweep.csv"
     ;;
-  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3a|tc3b)
+  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc2p2|tc2p3|tc3)
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/backend_${GEMM_SUITE}"
     DEFAULT_AGG_CSV="gemm_${GEMM_SUITE}_sweep.csv"
     ;;
   *)
     echo "Unknown GEMM_SUITE=${GEMM_SUITE}." >&2
-    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc3a, or tc3b." >&2
+    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc2p2, tc2p3, or tc3." >&2
     exit 1
     ;;
 esac
@@ -74,6 +74,20 @@ detect_cuda_arch() {
 
 CUDA_ARCH="$(detect_cuda_arch)"
 
+cuda_arch_nvcc_flags() {
+  if [[ "${CUDA_ARCH}" =~ ^[0-9]+[A-Za-z]$ ]]; then
+    printf '%s\n' "-gencode" "arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}"
+  else
+    printf '%s\n' "-arch=sm_${CUDA_ARCH}"
+  fi
+}
+
+tc3_compile_defines() {
+  if [[ "${CUDA_ARCH}" == "120a" ]]; then
+    printf '%s\n' "-DTC3_COMPILED_SM120A_NARROW_MMA=1"
+  fi
+}
+
 ensure_python() {
   if command -v python3 >/dev/null 2>&1; then
     PYTHON_BIN="python3"
@@ -95,7 +109,8 @@ ensure_python() {
 }
 
 build_gemm() {
-  if command -v cmake >/dev/null 2>&1; then
+  if command -v cmake >/dev/null 2>&1 &&
+     [[ ! "${CUDA_ARCH}" =~ [A-Za-z]$ ]]; then
     if [[ -f "${BUILD_DIR}/CMakeCache.txt" ]] &&
        ! grep -qx "CMAKE_HOME_DIRECTORY:INTERNAL=${ROOT_DIR}" \
          "${BUILD_DIR}/CMakeCache.txt"; then
@@ -109,8 +124,15 @@ build_gemm() {
       -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCH}"
     cmake --build "${BUILD_DIR}" -j --target gemm_bench
   else
-    echo "cmake not found, building gemm_bench with nvcc."
-    nvcc -O3 -std=c++17 -arch="sm_${CUDA_ARCH}" \
+    if [[ "${CUDA_ARCH}" =~ [A-Za-z]$ ]]; then
+      echo "CUDA_ARCH=${CUDA_ARCH} needs explicit -gencode, building gemm_bench with nvcc."
+    else
+      echo "cmake not found, building gemm_bench with nvcc."
+    fi
+    mapfile -t CUDA_ARCH_NVCC_FLAGS < <(cuda_arch_nvcc_flags)
+    mapfile -t TC3_COMPILE_DEFINES < <(tc3_compile_defines)
+    nvcc -O3 -std=c++17 "${CUDA_ARCH_NVCC_FLAGS[@]}" \
+      "${TC3_COMPILE_DEFINES[@]}" \
       -I"${ROOT_DIR}/GEMM/include" \
       "${ROOT_DIR}/GEMM/src/main.cu" \
       -lcublas -lcuda \
@@ -141,10 +163,12 @@ run_gemm_size() {
     suite == "tc1" && $1 == "tc1" { print $0 "," trial; next }
     suite == "tc2" && $1 == "cublas_tc" { print $0 "," trial; next }
     suite == "tc2" && $1 == "tc2" { print $0 "," trial; next }
-    suite == "tc3a" && $1 == "cublas_tc" { print $0 "," trial; next }
-    suite == "tc3a" && $1 == "tc3a" { print $0 "," trial; next }
-    suite == "tc3b" && $1 == "cublas_tc" { print $0 "," trial; next }
-    suite == "tc3b" && $1 == "tc3b" { print $0 "," trial; next }
+    suite == "tc2p2" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc2p2" && $1 == "tc2p2" { print $0 "," trial; next }
+    suite == "tc2p3" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc2p3" && $1 == "tc2p3" { print $0 "," trial; next }
+    suite == "tc3" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc3" && $1 == "tc3" { print $0 "," trial; next }
   ' \
     "${run_dir}/sgemm_benchmark.csv" >> "${AGG_CSV}"
 }
