@@ -39,8 +39,8 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "cublas_tc",
     "tc1",
     "tc2",
-    "tc2p2",
-    "tc2p3",
+    "tc3",
+    "tc4",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -79,9 +79,8 @@ SERIES_LABELS = {
     "best_backend": "Best handwritten FP32 backend",
     "tc1": "tc1 wmma fp16 baseline",
     "tc2": "tc2 tma 2-stage wmma 128x64x32",
-    "tc2p2": "tc2p2 persistent tma 2-stage wmma 128x64x32",
-    "tc2p3": "tc2p3 persistent tma 3-stage wmma 128x64x32",
-    "tc3": "tc3 sm120a f8f6f4 mma probe",
+    "tc3": "tc3 sm120a fp8 tma 2-stage mma 128x64x32",
+    "tc4": "tc4 sm120 work-tile pipeline scaffold",
 }
 
 
@@ -127,9 +126,8 @@ def backend_key(row):
         "v8c",
         "tc1",
         "tc2",
-        "tc2p2",
-        "tc2p3",
         "tc3",
+        "tc4",
     ):
         if version.startswith(prefix + " "):
             return prefix
@@ -474,7 +472,7 @@ def main():
         if has_new_gemm_schema(gemm_rows):
             fp32_rows = filter_rows(gemm_rows, lambda row: row.get("Precision") == "fp32")
             tensor_core_rows = filter_rows(
-                gemm_rows, lambda row: row.get("Reference") == "cuBLAS Tensor Core"
+                gemm_rows, lambda row: backend_key(row) in KEY_GEMM_TENSOR_CORE_SERIES
             )
 
             if fp32_rows:

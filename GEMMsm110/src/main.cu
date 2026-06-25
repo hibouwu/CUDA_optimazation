@@ -191,9 +191,10 @@ int main(int argc, char** argv) {
     }
 
     if (wants_backend(backend_filter, "tc4")) {
-      std::cout << "tc4 sm110 blackwell ws pipeline: skipped because launch "
-                   "path is still a scaffold only\n";
-      csv << "tc4,tc4 sm110 blackwell ws pipeline skipped," << n
+      std::cout << "tc4 sm110 blackwell ws pipeline: scaffold is aligned "
+                   "with the work-tile pipeline diagram, but launch is "
+                   "disabled until TCGen05 MMA/TMEM and TMA store are wired\n";
+      csv << "tc4,tc4 sm110 blackwell ws pipeline scaffold," << n
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
   }

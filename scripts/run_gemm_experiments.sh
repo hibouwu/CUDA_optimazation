@@ -23,13 +23,13 @@ case "${GEMM_SUITE}" in
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/tensor_core"
     DEFAULT_AGG_CSV="gemm_tensor_core_sweep.csv"
     ;;
-  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc2p2|tc2p3|tc3)
+  cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3|tc4)
     DEFAULT_OUT_DIR="${ROOT_DIR}/results/gemm/backend_${GEMM_SUITE}"
     DEFAULT_AGG_CSV="gemm_${GEMM_SUITE}_sweep.csv"
     ;;
   *)
     echo "Unknown GEMM_SUITE=${GEMM_SUITE}." >&2
-    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc2p2, tc2p3, or tc3." >&2
+    echo "Use all, fp32, tensor_core, cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc3, or tc4." >&2
     exit 1
     ;;
 esac
@@ -154,7 +154,7 @@ run_gemm_size() {
     NR == 1 { next }
     suite == "all" { print $0 "," trial; next }
     suite == "fp32" && $4 == "fp32" { print $0 "," trial; next }
-    suite == "tensor_core" && $5 == "cuBLAS Tensor Core" { print $0 "," trial; next }
+    suite == "tensor_core" && ($5 == "cuBLAS Tensor Core" || $1 == "tc3" || $1 == "tc4") { print $0 "," trial; next }
     suite == "cublas" && $1 == "cublas" { print $0 "," trial; next }
     suite == "cublas_tc" && $1 == "cublas_tc" { print $0 "," trial; next }
     suite ~ /^v[0-9]+[ab]?$/ && $1 == "cublas" { print $0 "," trial; next }
@@ -163,12 +163,10 @@ run_gemm_size() {
     suite == "tc1" && $1 == "tc1" { print $0 "," trial; next }
     suite == "tc2" && $1 == "cublas_tc" { print $0 "," trial; next }
     suite == "tc2" && $1 == "tc2" { print $0 "," trial; next }
-    suite == "tc2p2" && $1 == "cublas_tc" { print $0 "," trial; next }
-    suite == "tc2p2" && $1 == "tc2p2" { print $0 "," trial; next }
-    suite == "tc2p3" && $1 == "cublas_tc" { print $0 "," trial; next }
-    suite == "tc2p3" && $1 == "tc2p3" { print $0 "," trial; next }
     suite == "tc3" && $1 == "cublas_tc" { print $0 "," trial; next }
     suite == "tc3" && $1 == "tc3" { print $0 "," trial; next }
+    suite == "tc4" && $1 == "cublas_tc" { print $0 "," trial; next }
+    suite == "tc4" && $1 == "tc4" { print $0 "," trial; next }
   ' \
     "${run_dir}/sgemm_benchmark.csv" >> "${AGG_CSV}"
 }

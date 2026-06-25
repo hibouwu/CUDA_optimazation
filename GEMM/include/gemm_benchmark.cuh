@@ -2,6 +2,7 @@
 
 #include "gemm_common.cuh"
 
+#include <cuda_fp8.h>
 #include <cuda_fp16.h>
 
 #include <fstream>
@@ -25,6 +26,55 @@ inline std::vector<half> to_half_vector(const std::vector<float>& input) {
     output[i] = __float2half(input[i]);
   }
   return output;
+}
+
+inline std::vector<__nv_fp8_e4m3> to_fp8_e4m3_vector(
+    const std::vector<float>& input) {
+  std::vector<__nv_fp8_e4m3> output(input.size());
+  for (size_t i = 0; i < input.size(); ++i) {
+    output[i] = __nv_fp8_e4m3(input[i]);
+  }
+  return output;
+}
+
+inline void cpu_gemm_fp8_e4m3_reference(
+    int m, int n, int k, const std::vector<__nv_fp8_e4m3>& a,
+    const std::vector<__nv_fp8_e4m3>& b, std::vector<float>& c) {
+  for (int row = 0; row < m; ++row) {
+    for (int col = 0; col < n; ++col) {
+      float acc = 0.0f;
+      for (int kk = 0; kk < k; ++kk) {
+        acc += static_cast<float>(a[row * k + kk]) *
+               static_cast<float>(b[kk * n + col]);
+      }
+      c[row * n + col] = acc;
+    }
+  }
+}
+
+inline bool compare_gemm_fp8_e4m3_samples(
+    int m, int n, int k, const std::vector<__nv_fp8_e4m3>& a,
+    const std::vector<__nv_fp8_e4m3>& b, const std::vector<float>& got,
+    int samples = 64, float atol = 5e-1f, float rtol = 5e-2f) {
+  int errors = 0;
+  for (int s = 0; s < samples; ++s) {
+    const int row = (s * 131) % m;
+    const int col = (s * 197) % n;
+    float ref = 0.0f;
+    for (int kk = 0; kk < k; ++kk) {
+      ref += static_cast<float>(a[row * k + kk]) *
+             static_cast<float>(b[kk * n + col]);
+    }
+    const float got_value = got[row * n + col];
+    const float diff = abs_float(ref - got_value);
+    const float tol = atol + rtol * abs_float(ref);
+    if (diff > tol && ++errors <= 5) {
+      std::cerr << "FP8 sample mismatch at (" << row << ", " << col
+                << "): ref=" << ref << ", got=" << got_value
+                << ", diff=" << diff << '\n';
+    }
+  }
+  return errors == 0;
 }
 
 // 与 cuBLAS 结果对比。不同归约顺序会带来轻微浮点误差，所以使用相对/绝对容差。

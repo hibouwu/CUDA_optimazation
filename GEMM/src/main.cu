@@ -1,6 +1,7 @@
 #include "gemm_benchmark.cuh"
 #include "sgemm_kernels.cuh"
 #include "tc3_gemm_kernel.cuh"
+#include "tc4_gemm_kernel.cuh"
 #include "tc_gemm_kernels.cuh"
 
 #include <cmath>
@@ -14,7 +15,7 @@ namespace {
 
 constexpr const char* kBackendUsage =
     "[all|fp32|tensor_core|cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|"
-    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc2p2|tc2p3|tc3]";
+    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3|tc4]";
 
 void print_usage(const char* program) {
   std::cerr << "Usage: " << program << " [square_size] " << kBackendUsage
@@ -28,8 +29,7 @@ bool is_valid_backend_filter(const std::string& filter) {
          filter == "v4" || filter == "v5" || filter == "v6" ||
          filter == "v7" || filter == "v8a" || filter == "v8b" ||
          filter == "v8c" || filter == "cublas_tc" || filter == "tc1" ||
-         filter == "tc2" || filter == "tc2p2" || filter == "tc2p3" ||
-         filter == "tc3";
+         filter == "tc2" || filter == "tc3" || filter == "tc4";
 }
 
 bool wants_fp32_reference(const std::string& filter) {
@@ -43,7 +43,7 @@ bool wants_fp32_reference(const std::string& filter) {
 bool wants_tensor_core_reference(const std::string& filter) {
   return filter == "all" || filter == "tensor_core" ||
          filter == "cublas_tc" || filter == "tc1" || filter == "tc2" ||
-         filter == "tc2p2" || filter == "tc2p3" || filter == "tc3";
+         filter == "tc3" || filter == "tc4";
 }
 
 bool wants_backend(const std::string& filter, const std::string& backend) {
@@ -55,8 +55,8 @@ bool wants_backend(const std::string& filter, const std::string& backend) {
            backend == "v8a" || backend == "v8b" || backend == "v8c";
   }
   if (filter == "tensor_core") {
-    return backend == "tc1" || backend == "tc2" || backend == "tc2p2" ||
-           backend == "tc2p3";
+    return backend == "tc1" || backend == "tc2" || backend == "tc3" ||
+           backend == "tc4";
   }
   return false;
 }
@@ -130,6 +130,10 @@ int main(int argc, char** argv) {
   const size_t c_bytes = static_cast<size_t>(m) * n * sizeof(float);
   const size_t a_half_bytes = static_cast<size_t>(m) * k * sizeof(half);
   const size_t b_half_bytes = static_cast<size_t>(k) * n * sizeof(half);
+  const size_t a_fp8_bytes =
+      static_cast<size_t>(m) * k * sizeof(__nv_fp8_e4m3);
+  const size_t b_fp8_bytes =
+      static_cast<size_t>(k) * n * sizeof(__nv_fp8_e4m3);
 
   std::vector<float> h_a(static_cast<size_t>(m) * k);
   std::vector<float> h_b(static_cast<size_t>(k) * n);
@@ -140,39 +144,59 @@ int main(int argc, char** argv) {
 
   std::vector<half> h_a_half = to_half_vector(h_a);
   std::vector<half> h_b_half = to_half_vector(h_b);
+  std::vector<__nv_fp8_e4m3> h_a_fp8 = to_fp8_e4m3_vector(h_a);
+  std::vector<__nv_fp8_e4m3> h_b_fp8 = to_fp8_e4m3_vector(h_b);
 
   float* d_a = nullptr;
   float* d_b = nullptr;
   float* d_c = nullptr;
   half* d_a_half = nullptr;
   half* d_b_half = nullptr;
+  __nv_fp8_e4m3* d_a_fp8 = nullptr;
+  __nv_fp8_e4m3* d_b_fp8 = nullptr;
   CUtensorMap* d_a_tc2_map = nullptr;
   CUtensorMap* d_b_tc2_map = nullptr;
+  CUtensorMap* d_a_tc3_map = nullptr;
+  CUtensorMap* d_b_tc3_map = nullptr;
   CHECK_CUDA(cudaMalloc(&d_a, a_bytes));
   CHECK_CUDA(cudaMalloc(&d_b, b_bytes));
   CHECK_CUDA(cudaMalloc(&d_c, c_bytes));
   CHECK_CUDA(cudaMalloc(&d_a_half, a_half_bytes));
   CHECK_CUDA(cudaMalloc(&d_b_half, b_half_bytes));
+  CHECK_CUDA(cudaMalloc(&d_a_fp8, a_fp8_bytes));
+  CHECK_CUDA(cudaMalloc(&d_b_fp8, b_fp8_bytes));
   CHECK_CUDA(cudaMalloc(&d_a_tc2_map, sizeof(CUtensorMap)));
   CHECK_CUDA(cudaMalloc(&d_b_tc2_map, sizeof(CUtensorMap)));
+  CHECK_CUDA(cudaMalloc(&d_a_tc3_map, sizeof(CUtensorMap)));
+  CHECK_CUDA(cudaMalloc(&d_b_tc3_map, sizeof(CUtensorMap)));
   CHECK_CUDA(cudaMemcpy(d_a, h_a.data(), a_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b, h_b.data(), b_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_a_half, h_a_half.data(), a_half_bytes,
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_half, h_b_half.data(), b_half_bytes,
                         cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_a_fp8, h_a_fp8.data(), a_fp8_bytes,
+                        cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_b_fp8, h_b_fp8.data(), b_fp8_bytes,
+                        cudaMemcpyHostToDevice));
   CHECK_CU(cuInit(0));
   alignas(64) CUtensorMap h_a_tc2_map{};
   alignas(64) CUtensorMap h_b_tc2_map{};
+  alignas(64) CUtensorMap h_a_tc3_map{};
+  alignas(64) CUtensorMap h_b_tc3_map{};
   tc_encode_rowmajor_tensor_map_2d(h_a_tc2_map, d_a_half, m, k, 128, 32);
   tc_encode_rowmajor_tensor_map_2d(h_b_tc2_map, d_b_half, k, n, 32, 64);
+  tc3_encode_rowmajor_tensor_map_fp8(h_a_tc3_map, d_a_fp8, m, k, 128, 32);
+  tc3_encode_rowmajor_tensor_map_fp8(h_b_tc3_map, d_b_fp8, k, n, 32, 64);
   CHECK_CUDA(cudaMemcpy(d_a_tc2_map, &h_a_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_tc2_map, &h_b_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_a_tc3_map, &h_a_tc3_map, sizeof(CUtensorMap),
+                        cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_b_tc3_map, &h_b_tc3_map, sizeof(CUtensorMap),
+                        cudaMemcpyHostToDevice));
   configure_tc_tma_wmma_kernel<2>();
-  configure_tc_tma_wmma_kernel<2, true>();
-  configure_tc_tma_wmma_kernel<3, true>();
 
   cublasHandle_t handle;
   cublasHandle_t tensor_core_handle;
@@ -182,7 +206,6 @@ int main(int argc, char** argv) {
   print_gemm_environment(handle);
   cudaDeviceProp device_prop;
   CHECK_CUDA(cudaGetDeviceProperties(&device_prop, 0));
-  const int sm_count = device_prop.multiProcessorCount;
 
   // cuBLAS uses column-major semantics. Swapping A/B computes row-major C=A@B.
   auto launch_cublas = [&]() {
@@ -504,18 +527,20 @@ int main(int argc, char** argv) {
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
 
-    if (wants_backend(backend_filter, "tc3")) {
+    if (wants_backend(backend_filter, "tc3") && n % 128 == 0) {
       if (!tc3_sm120a_narrow_mma_available()) {
-        std::cout << "tc3 sm120a f8f6f4 mma probe: skipped because this "
+        std::cout << "tc3 sm120a fp8 tma 2-stage mma 128x64x32: skipped because this "
                      "binary was not built with CUDA_ARCH=120a\n";
-        csv << "tc3,tc3 sm120a f8f6f4 mma probe skipped," << n
-            << ",narrow-mma,SM120a MMA probe,0,0,0,0\n";
+        csv << "tc3,tc3 sm120a fp8 tma 2-stage mma 128x64x32 skipped," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
       } else {
-        const int probe_blocks = 256;
-        dim3 tc3_grid(probe_blocks);
-        dim3 tc3_block(kWarpSize);
+        dim3 tc3_grid(n / 64, m / 128);
+        dim3 tc3_block(8 * kWarpSize);
         auto launch_tc3 = [&]() {
-          hgemm_tc3_sm120a_f8f6f4_mma_probe<<<tc3_grid, tc3_block>>>(d_c);
+          hgemm_tc3_sm120a_fp8_tma_mma_128x64x32
+              <<<tc3_grid, tc3_block, tc3_tma_fp8_smem_bytes()>>>(
+                  m, n, k, alpha, d_a_fp8, d_a_tc3_map, d_b_fp8, d_b_tc3_map,
+                  beta, d_c);
           CHECK_CUDA(cudaGetLastError());
         };
 
@@ -535,72 +560,33 @@ int main(int argc, char** argv) {
         CHECK_CUDA(cudaEventDestroy(start));
         CHECK_CUDA(cudaEventDestroy(stop));
 
-        float probe_value = 0.0f;
-        CHECK_CUDA(cudaMemcpy(&probe_value, d_c, sizeof(float),
+        CHECK_CUDA(cudaMemcpy(h_out.data(), d_c, c_bytes,
                               cudaMemcpyDeviceToHost));
         const float avg_ms = total_ms / kRepeat;
-        const bool matched = std::abs(probe_value - 1.0f) < 1e-6f;
-        std::cout << "tc3 sm120a f8f6f4 mma probe: " << avg_ms
-                  << " ms, probe=" << probe_value
-                  << ", matched=" << matched << '\n';
-        csv << "tc3,tc3 sm120a f8f6f4 mma probe," << n
-            << ",narrow-mma,SM120a MMA probe," << avg_ms << ",0,0,"
+        const bool matched =
+            compare_gemm_fp8_e4m3_samples(m, n, k, h_a_fp8, h_b_fp8, h_out);
+        const float perf = gflops(m, n, k, avg_ms);
+        std::cout << "tc3 sm120a fp8 tma 2-stage mma 128x64x32: " << avg_ms
+                  << " ms, " << perf << " GFLOPS, matched=" << matched
+                  << '\n';
+        csv << "tc3,tc3 sm120a fp8 tma 2-stage mma 128x64x32," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU," << avg_ms << ","
+            << perf << "," << perf / cublas_tc_perf << ","
             << (matched ? 1 : 0) << '\n';
       }
+    } else if (wants_backend(backend_filter, "tc3")) {
+      std::cout << "tc3 sm120a fp8 tma 2-stage mma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc3,tc3 sm120a fp8 tma 2-stage mma 128x64x32 skipped," << n
+          << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
     }
 
-    if (wants_backend(backend_filter, "tc2p2") && n % 128 == 0) {
-      const int tc2p_total_tiles = (m / 128) * (n / 64);
-      const int tc2p2_blocks =
-          tc2p_total_tiles < sm_count ? tc2p_total_tiles : sm_count;
-      dim3 tc2p2_grid(tc2p2_blocks);
-      dim3 tc2p2_block(8 * kWarpSize);
-      benchmark_kernel(
-          "tc2p2", "tc2p2 persistent tma 2-stage wmma 128x64x32",
-          "fp16->fp32",
-          "cuBLAS Tensor Core",
-          [&]() {
-            hgemm_tc_tma_wmma_128x64x32<2, true>
-                <<<tc2p2_grid, tc2p2_block, tc_tma_wmma_smem_bytes<2>()>>>(
-                m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
-                beta, d_c);
-            CHECK_CUDA(cudaGetLastError());
-          },
-          m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
-          1e-2f);
-    } else if (wants_backend(backend_filter, "tc2p2")) {
-      std::cout << "tc2p2 persistent tma 2-stage wmma 128x64x32: skipped because N must be a "
-                   "multiple of 128\n";
-      csv << "tc2p2,tc2p2 persistent tma 2-stage wmma 128x64x32 skipped,"
-          << n
-          << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
-    }
-
-    if (wants_backend(backend_filter, "tc2p3") && n % 128 == 0) {
-      const int tc2p_total_tiles = (m / 128) * (n / 64);
-      const int tc2p3_blocks =
-          tc2p_total_tiles < sm_count ? tc2p_total_tiles : sm_count;
-      dim3 tc2p3_grid(tc2p3_blocks);
-      dim3 tc2p3_block(8 * kWarpSize);
-      benchmark_kernel(
-          "tc2p3", "tc2p3 persistent tma 3-stage wmma 128x64x32",
-          "fp16->fp32",
-          "cuBLAS Tensor Core",
-          [&]() {
-            hgemm_tc_tma_wmma_128x64x32<3, true>
-                <<<tc2p3_grid, tc2p3_block, tc_tma_wmma_smem_bytes<3>()>>>(
-                m, n, k, alpha, d_a_half, d_a_tc2_map, d_b_half, d_b_tc2_map,
-                beta, d_c);
-            CHECK_CUDA(cudaGetLastError());
-          },
-          m, n, k, d_c, c_bytes, h_ref_tc, h_out, csv, cublas_tc_perf, 1e-1f,
-          1e-2f);
-    } else if (wants_backend(backend_filter, "tc2p3")) {
-      std::cout << "tc2p3 persistent tma 3-stage wmma 128x64x32: skipped because N must be a "
-                   "multiple of 128\n";
-      csv << "tc2p3,tc2p3 persistent tma 3-stage wmma 128x64x32 skipped,"
-          << n
-          << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+    if (wants_backend(backend_filter, "tc4")) {
+      std::cout << "tc4 sm120 work-tile pipeline scaffold: launch disabled; "
+                   "SM120 producer/consumer warp-specialized pipeline is "
+                   "wired as a design boundary only\n";
+      csv << "tc4,tc4 sm120 work-tile pipeline scaffold," << n
+          << ",fp8->fp32,SM120 pipeline scaffold,0,0,0,0\n";
     }
 
   }
@@ -613,8 +599,12 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaFree(d_b));
   CHECK_CUDA(cudaFree(d_a_half));
   CHECK_CUDA(cudaFree(d_b_half));
+  CHECK_CUDA(cudaFree(d_a_fp8));
+  CHECK_CUDA(cudaFree(d_b_fp8));
   CHECK_CUDA(cudaFree(d_a_tc2_map));
   CHECK_CUDA(cudaFree(d_b_tc2_map));
+  CHECK_CUDA(cudaFree(d_a_tc3_map));
+  CHECK_CUDA(cudaFree(d_b_tc3_map));
   CHECK_CUDA(cudaFree(d_c));
   return 0;
 }

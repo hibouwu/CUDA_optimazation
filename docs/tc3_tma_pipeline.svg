@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1180" viewBox="0 0 2200 1180">
+  <defs>
+    <style>
+      .bg { fill: #fdfcf9; }
+      .title { font: 700 38px "Helvetica Neue", Arial, sans-serif; fill: #1f2937; }
+      .subtitle { font: 18px "Helvetica Neue", Arial, sans-serif; fill: #4b5563; }
+      .lane-pill { fill: #e8defa; stroke: #111827; stroke-width: 2.8; }
+      .lane-pill-green { fill: #e6f7e7; stroke: #111827; stroke-width: 2.8; }
+      .lane-pill-gray { fill: #f0f1f4; stroke: #9ca3af; stroke-width: 2.2; }
+      .lane-text { font: 500 18px "Helvetica Neue", Arial, sans-serif; fill: #374151; }
+      .lane-text-muted { font: 500 18px "Helvetica Neue", Arial, sans-serif; fill: #6b7280; }
+      .timeline { stroke: #111827; stroke-width: 2.5; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrow); }
+      .timeline-muted { stroke: #9ca3af; stroke-width: 2; stroke-dasharray: 7 6; fill: none; marker-end: url(#arrowMuted); }
+      .stage-line { stroke: #111827; stroke-width: 2.2; stroke-dasharray: 8 6; fill: none; marker-end: url(#arrow); }
+      .stage-hot { stroke: #ef4444; stroke-width: 2.6; fill: none; marker-end: url(#arrowRed); }
+      .box-load { fill: #e9eefb; stroke: #111827; stroke-width: 2.2; }
+      .box-compute { fill: #f9dedd; stroke: #111827; stroke-width: 2.2; }
+      .box-muted { fill: #f6f7f8; stroke: #9ca3af; stroke-width: 2; stroke-dasharray: 8 6; }
+      .box-next { fill: none; stroke: #55a36b; stroke-width: 3.5; stroke-dasharray: 10 8; }
+      .head { font: 500 17px "Helvetica Neue", Arial, sans-serif; fill: #111827; }
+      .label { font: 500 15px "Helvetica Neue", Arial, sans-serif; fill: #374151; }
+      .small { font: 14px "Helvetica Neue", Arial, sans-serif; fill: #4b5563; }
+      .tiny { font: 13px "Helvetica Neue", Arial, sans-serif; fill: #6b7280; }
+      .green { fill: #55a36b; }
+      .muted { fill: #9ca3af; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="2200" height="1180"/>
+
+  <text class="title" x="64" y="74">tc3 Work Tile Pipeline</text>
+  <text class="subtitle" x="64" y="108">SM120a FP8 GEMM, CTA tile 128x64x32, 2-stage TMA ping-pong, 8 MMA warps, register accumulator, direct global store</text>
+
+  <rect class="lane-pill" x="30" y="170" width="146" height="80" rx="40" ry="40"/>
+  <text class="lane-text" x="103" y="217" text-anchor="middle">Main Load</text>
+
+  <rect class="lane-pill-green" x="42" y="318" width="132" height="86" rx="38" ry="38"/>
+  <text class="lane-text" x="108" y="359" text-anchor="middle">SMEM</text>
+  <text class="lane-text" x="108" y="385" text-anchor="middle">Buffer</text>
+
+  <rect class="lane-pill" x="30" y="500" width="146" height="80" rx="40" ry="40"/>
+  <text class="lane-text" x="103" y="547" text-anchor="middle">MMA</text>
+
+  <rect class="lane-pill-gray" x="30" y="688" width="146" height="80" rx="40" ry="40"/>
+  <text class="lane-text-muted" x="103" y="723" text-anchor="middle">Epi Load</text>
+  <text class="tiny" x="103" y="748" text-anchor="middle">not in tc3</text>
+
+  <rect class="lane-pill-gray" x="30" y="876" width="146" height="80" rx="40" ry="40"/>
+  <text class="lane-text-muted" x="103" y="911" text-anchor="middle">TMEM /</text>
+  <text class="lane-text-muted" x="103" y="937" text-anchor="middle">Epilogue</text>
+
+  <path class="timeline" d="M 178 210 L 2055 210"/>
+  <path class="timeline" d="M 178 540 L 2055 540"/>
+  <path class="timeline-muted" d="M 178 728 L 2055 728"/>
+  <path class="timeline-muted" d="M 178 916 L 2055 916"/>
+
+  <text class="head" x="770" y="148">prologue</text>
+  <text class="head" x="1140" y="148">steady state ping-pong</text>
+  <text class="head" x="1630" y="148">drain + store</text>
+
+  <rect class="box-load" x="280" y="160" width="250" height="92"/>
+  <text class="head" x="405" y="193" text-anchor="middle">TMA load</text>
+  <text class="label" x="405" y="219" text-anchor="middle">work tile 0</text>
+  <text class="small" x="405" y="243" text-anchor="middle">A[128x32] + B[32x64] -&gt; stage 0</text>
+
+  <rect class="box-load" x="540" y="160" width="250" height="92"/>
+  <text class="head" x="665" y="193" text-anchor="middle">TMA load</text>
+  <text class="label" x="665" y="219" text-anchor="middle">work tile 1</text>
+  <text class="small" x="665" y="243" text-anchor="middle">A[128x32] + B[32x64] -&gt; stage 1</text>
+
+  <rect class="box-load" x="820" y="160" width="270" height="92"/>
+  <text class="head" x="955" y="193" text-anchor="middle">TMA refill</text>
+  <text class="label" x="955" y="219" text-anchor="middle">work tile 2</text>
+  <text class="small" x="955" y="243" text-anchor="middle">re-use stage 0 after tile 0 compute</text>
+
+  <rect class="box-load" x="1100" y="160" width="270" height="92"/>
+  <text class="head" x="1235" y="193" text-anchor="middle">TMA refill</text>
+  <text class="label" x="1235" y="219" text-anchor="middle">work tile 3</text>
+  <text class="small" x="1235" y="243" text-anchor="middle">re-use stage 1 after tile 1 compute</text>
+
+  <text class="label" x="180" y="330">stage 0</text>
+  <text class="label" x="180" y="358">stage 1</text>
+  <path class="stage-line" d="M 255 332 L 1510 332"/>
+  <path class="stage-line" d="M 255 360 L 1510 360"/>
+
+  <path class="stage-hot" d="M 530 332 L 818 332"/>
+  <path class="stage-hot" d="M 790 360 L 1098 360"/>
+  <path class="stage-hot" d="M 1090 332 L 1388 332"/>
+  <path class="stage-hot" d="M 1370 360 L 1510 360"/>
+
+  <text class="small" x="300" y="317">acquire stage 0</text>
+  <text class="small" x="470" y="317">arrive</text>
+  <text class="small" x="562" y="317">acquire stage 1</text>
+  <text class="small" x="730" y="317">arrive</text>
+  <text class="small" x="838" y="317">release stage 0</text>
+  <text class="small" x="1118" y="317">release stage 1</text>
+
+  <path class="stage-line" d="M 280 252 L 280 332"/>
+  <path class="stage-line" d="M 540 252 L 540 360"/>
+  <path class="stage-line" d="M 820 252 L 820 332"/>
+  <path class="stage-line" d="M 1100 252 L 1100 360"/>
+
+  <path class="stage-line" d="M 530 252 L 530 540"/>
+  <path class="stage-line" d="M 790 252 L 790 540"/>
+  <path class="stage-line" d="M 1090 252 L 1090 540"/>
+  <path class="stage-line" d="M 1370 252 L 1370 540"/>
+
+  <rect class="box-compute" x="280" y="480" width="250" height="122"/>
+  <text class="head" x="405" y="516" text-anchor="middle">compute tile 0</text>
+  <text class="label" x="405" y="544" text-anchor="middle">wait stage 0</text>
+  <text class="small" x="405" y="570" text-anchor="middle">8 MMA warps consume stage 0</text>
+  <text class="tiny" x="405" y="592" text-anchor="middle">warp_r = 0..7, each warp computes 16 rows</text>
+
+  <rect class="box-compute" x="540" y="480" width="250" height="122"/>
+  <text class="head" x="665" y="516" text-anchor="middle">compute tile 1</text>
+  <text class="label" x="665" y="544" text-anchor="middle">wait stage 1</text>
+  <text class="small" x="665" y="570" text-anchor="middle">8 MMA warps consume stage 1</text>
+  <text class="tiny" x="665" y="592" text-anchor="middle">while stage 0 is available for refill</text>
+
+  <rect class="box-compute" x="820" y="480" width="250" height="122"/>
+  <text class="head" x="945" y="516" text-anchor="middle">compute tile 2</text>
+  <text class="label" x="945" y="544" text-anchor="middle">wait stage 0</text>
+  <text class="small" x="945" y="570" text-anchor="middle">consume refilled stage 0</text>
+  <text class="tiny" x="945" y="592" text-anchor="middle">same warp mapping, next N tile</text>
+
+  <rect class="box-compute" x="1100" y="480" width="250" height="122"/>
+  <text class="head" x="1225" y="516" text-anchor="middle">compute tile 3</text>
+  <text class="label" x="1225" y="544" text-anchor="middle">wait stage 1</text>
+  <text class="small" x="1225" y="570" text-anchor="middle">consume refilled stage 1</text>
+  <text class="tiny" x="1225" y="592" text-anchor="middle">same warp mapping, next N tile</text>
+
+  <text class="small" x="378" y="464">wait</text>
+  <text class="small" x="638" y="464">wait</text>
+  <text class="small" x="918" y="464">wait</text>
+  <text class="small" x="1198" y="464">wait</text>
+
+  <rect class="box-compute" x="1405" y="420" width="345" height="232"/>
+  <text class="head" x="1577" y="454" text-anchor="middle">inside one compute tile</text>
+  <text class="small" x="1435" y="492">1. warp reads FP8 bytes from current SMEM stage</text>
+  <text class="small" x="1435" y="522">2. pack A as fp8x4 and B as fp8x2 fragments</text>
+  <text class="small" x="1435" y="552">3. sweep 8 column subtiles (N: 64 = 8 x n8)</text>
+  <text class="small" x="1435" y="582">4. issue `mma.sync.aligned.m16n8k32 ... e4m3`</text>
+  <text class="small" x="1435" y="612">5. accumulators stay in FP32 registers</text>
+
+  <text class="small" x="1435" y="652">This is the current bottleneck area:</text>
+  <text class="small" x="1455" y="680">MIO throttle + SMEM operand feed + pack overhead</text>
+
+  <circle cx="1410" cy="210" r="6" fill="#111827"/>
+  <circle cx="1465" cy="210" r="6" fill="#111827"/>
+  <circle cx="1520" cy="210" r="6" fill="#111827"/>
+  <circle cx="1575" cy="210" r="6" fill="#111827"/>
+  <circle cx="1630" cy="210" r="6" fill="#111827"/>
+
+  <circle cx="1410" cy="540" r="6" fill="#111827"/>
+  <circle cx="1465" cy="540" r="6" fill="#111827"/>
+  <circle cx="1520" cy="540" r="6" fill="#111827"/>
+  <circle cx="1575" cy="540" r="6" fill="#111827"/>
+  <circle cx="1630" cy="540" r="6" fill="#111827"/>
+
+  <rect class="box-next" x="1715" y="126" width="320" height="470"/>
+  <text x="1750" y="196" font-size="42" font-family="Helvetica Neue, Arial, sans-serif" fill="#55a36b">Next Work Tile</text>
+  <text class="small green" x="1750" y="232">same 2-stage ping-pong continues</text>
+
+  <rect class="box-muted" x="1420" y="690" width="305" height="78"/>
+  <text class="label muted" x="1572" y="723" text-anchor="middle">Epilogue Load lane</text>
+  <text class="tiny" x="1572" y="748" text-anchor="middle">not present in tc3</text>
+
+  <rect class="box-load" x="1460" y="868" width="390" height="94"/>
+  <text class="head" x="1655" y="902" text-anchor="middle">FP32 global store</text>
+  <text class="small" x="1492" y="928">all K tiles finished -&gt; write C[128x64] from registers</text>
+  <text class="small" x="1492" y="950">no TMEM path, no TMA store, no separate epilogue yet</text>
+
+  <path class="stage-line" d="M 1370 602 L 1460 868"/>
+  <text class="small" x="1385" y="760">drain pipeline</text>
+
+  <text class="head" x="250" y="1022">How to read this figure</text>
+  <text class="small" x="250" y="1050">1. Top lane is producer activity: TMA fills stage 0 and stage 1, then keeps ping-pong refilling them.</text>
+  <text class="small" x="250" y="1074">2. Middle stage lines show which SMEM stage is live at a given time. Red means the stage is currently occupied by a tile.</text>
+  <text class="small" x="250" y="1098">3. MMA lane is the consumer: each compute box waits on one stage, then all 8 warps read from that stage and issue FP8 m16n8k32 MMA.</text>
+  <text class="small" x="250" y="1122">4. Gray lanes are intentionally shown as missing pieces. They exist in your reference workflow, but tc3 has not implemented them yet.</text>
+
+  <text class="tiny" x="64" y="1150">Compared with the reference figure, tc3 currently stops at: gmem -&gt; TMA -&gt; smem(stage0/stage1) -&gt; MMA -&gt; register accumulator -&gt; global store.</text>
+</svg>
