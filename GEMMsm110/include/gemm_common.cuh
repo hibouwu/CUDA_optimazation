@@ -11,8 +11,10 @@
   do {                                                                       \
     cudaError_t err__ = (call);                                               \
     if (err__ != cudaSuccess) {                                               \
-      std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ << " - " \
-                << cudaGetErrorString(err__) << std::endl;                   \
+      std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__          \
+                << " code=" << static_cast<int>(err__)                       \
+                << " name=" << cudaGetErrorName(err__)                       \
+                << " msg=" << cudaGetErrorString(err__) << std::endl;        \
       std::exit(EXIT_FAILURE);                                                \
     }                                                                        \
   } while (0)
@@ -22,7 +24,7 @@
     cublasStatus_t status__ = (call);                                         \
     if (status__ != CUBLAS_STATUS_SUCCESS) {                                  \
       std::cerr << "cuBLAS error at " << __FILE__ << ":" << __LINE__         \
-                << " - status " << status__ << std::endl;                    \
+                << " status=" << static_cast<int>(status__) << std::endl;    \
       std::exit(EXIT_FAILURE);                                                \
     }                                                                        \
   } while (0)

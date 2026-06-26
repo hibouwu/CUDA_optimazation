@@ -1,18 +1,62 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build and run GEMMsm110 benchmarks for Thor/SM110.
+# Build and run GEMMsm110 programs for NVIDIA Thor / SM110 / sm_110a.
 #
 # Usage:
-#   ./build_and_run.sh                    # build + run N=1024 all backends
-#   ./build_and_run.sh 2048               # run N=2048
-#   ./build_and_run.sh 2048 tc3           # run N=2048 tc3 only
-#   ./build_and_run.sh build-only         # build only, don't run
-#   ./build_and_run.sh clean              # remove build artifacts
+#   ./build_and_run.sh clean
+#   ./build_and_run.sh build-only
+#   ./build_and_run.sh sanity
+#   ./build_and_run.sh tc3-minimal
+#   ./build_and_run.sh 1024 cublas_tc
+#   ./build_and_run.sh 1024 tc3
+#   ./build_and_run.sh 1024 tc5a
+#   ./build_and_run.sh 1024 tc5b
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
-BIN="${BUILD_DIR}/gemm_sm110_bench"
+BENCH_BIN="${BUILD_DIR}/gemm_sm110_bench"
+SANITY_BIN="${BUILD_DIR}/runtime_sanity"
+TC3_MINIMAL_BIN="${BUILD_DIR}/tc3_minimal"
+
+NVCC="${NVCC:-nvcc}"
+COMMON_FLAGS=(
+  -O3
+  -std=c++17
+  -DTC3_SM110_HOST_HAS_TCGEN05=1
+  -gencode arch=compute_110a,code=sm_110a
+  -I"${SCRIPT_DIR}/include"
+)
+
+build_sanity() {
+  "${NVCC}" "${COMMON_FLAGS[@]}" \
+    "${SCRIPT_DIR}/src/runtime_sanity.cu" \
+    -o "${SANITY_BIN}"
+}
+
+build_tc3_minimal() {
+  "${NVCC}" "${COMMON_FLAGS[@]}" \
+    "${SCRIPT_DIR}/src/tc3_minimal.cu" \
+    -o "${TC3_MINIMAL_BIN}"
+}
+
+build_benchmark() {
+  "${NVCC}" "${COMMON_FLAGS[@]}" \
+    "${SCRIPT_DIR}/src/main.cu" \
+    -lcublas \
+    -o "${BENCH_BIN}"
+}
+
+usage() {
+  cat <<EOF
+Usage:
+  $0 clean
+  $0 build-only
+  $0 sanity
+  $0 tc3-minimal
+  $0 [N] [all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b]
+EOF
+}
 
 ARG="${1:-1024}"
 
@@ -24,23 +68,33 @@ fi
 
 mkdir -p "${BUILD_DIR}"
 
-echo "=== Building ==="
-nvcc -O3 -std=c++17 \
-  -DTC3_SM110_HOST_HAS_TCGEN05=1 \
-  -gencode arch=compute_110a,code=sm_110a \
-  -I"${SCRIPT_DIR}/include" \
-  "${SCRIPT_DIR}/src/main.cu" \
-  -lcublas -lcuda \
-  -o "${BIN}"
-
-echo "=== Build done ==="
-
-if [[ "${ARG}" == "build-only" ]]; then
-  exit 0
-fi
-
-N="${ARG}"
-FILTER="${2:-all}"
-
-echo "=== Running N=${N} filter=${FILTER} ==="
-"${BIN}" "${N}" "${FILTER}"
+case "${ARG}" in
+  build-only)
+    echo "=== Building benchmark ==="
+    build_benchmark
+    echo "=== Build done ==="
+    ;;
+  sanity)
+    echo "=== Building runtime sanity ==="
+    build_sanity
+    echo "=== Running runtime sanity ==="
+    "${SANITY_BIN}"
+    ;;
+  tc3-minimal)
+    echo "=== Building tc3 minimal probe ==="
+    build_tc3_minimal
+    echo "=== Running tc3 minimal probe ==="
+    "${TC3_MINIMAL_BIN}"
+    ;;
+  --help|-h)
+    usage
+    ;;
+  *)
+    N="${ARG}"
+    FILTER="${2:-all}"
+    echo "=== Building benchmark ==="
+    build_benchmark
+    echo "=== Running N=${N} filter=${FILTER} ==="
+    "${BENCH_BIN}" "${N}" "${FILTER}"
+    ;;
+esac
