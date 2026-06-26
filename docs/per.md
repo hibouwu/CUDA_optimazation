@@ -6,9 +6,9 @@
 
 历史上 `tc2p2/tc2p3` 做过 persistent WMMA 对照实验：只改变 C tile 的分发方式，从普通 2D grid 改成 CTA grid-stride 静态调度。它没有做到完整 warp specialization，CTA 内 8 个 warp 仍然都参与 WMMA 计算。
 
-这组实验已经从当前 benchmark 删除。原因是它只是 `tc2` 的调度变体，不是新的 Tensor Core 指令路线；继续保留会干扰 `tc3/tc4` 的 SM120/SM110 bring-up 边界。
+这组实验已经从当前 benchmark 中移除。原因是它只是 tc2 的调度变体，不是新的 Tensor Core 指令路线；继续保留会干扰 tc3/tc4 的 SM120/SM110 bring-up 边界。
 
-缺点：静态分配容易造成负载不均衡。某些 SM 可能因为 IO 阻塞、共享资源竞争、被其他任务干扰或局部调度变慢而拖尾，但它仍然要完成预先分配的 work tile；其他提前完成的 SM 无法动态偷取剩余工作。
+缺点：静态分配容易造成负载不均衡。某些 SM 可能因为 IO 阻塞、共享资源竞争、被其他任务干扰或局部调度变慢而拖慢整体进度，但它仍然要完成预先分配的 work tile；其他提前完成的 SM 无法动态抢占剩余工作。
 
 1.2.3 Tensor Core 版本边界
 
@@ -34,7 +34,7 @@
 
 1.3 warp 类别 & pipeline
 
-下表是 CLC 之后的目标 warp-specialized mainloop 设计，不属于当前 `tc5` 的实现范围。`tc5` 只先确定 Scheduler/CLC 如何获取 work tile，并把 tile 坐标交给后续 mainloop。`tc4a/tc4b` 暂时不采用这个分工，仍然是 8 个 warp 共同完成当前 128x64 CTA tile 的 MMA。
+下表是 CLC 之后的目标 warp-specialized mainloop 设计，不属于当前 `tc5` 的实现范围。`tc5` 只先确定 Scheduler/CLC 如何获取 work tile，并把 tile 坐标交给后续 mainloop。`tc4a/tc4b` 暂时不采用这个分工，仍然是 8 个 warp 共同完成当前 128×64 CTA tile 的 MMA。
 
 | Warp 编号 | 类别 | 线程数 | 说明 |
 | --- | --- | ---: | --- |
@@ -76,7 +76,7 @@ pipeline 关系如下：
 7. GFLOPS 按完整 GEMM workload `2*M*N*K / time` 计算。
 8. correctness 使用 sampled CPU FP8 reference：抽样若干 C 元素，用同样的 FP8 e4m3 输入反量化后做 CPU dot product 对比。
 
-它仍然不是最终优化版：当前 `tc3` 已有 CTA tiling、TMA、2-stage buffering 和 SMEM staging，但还没有 SMEM swizzle、warp-specialized producer/consumer 组织或更完整的 epilogue pipeline。后续 `tc4a/tc4b` 先拆 mainloop/operand-layout 实验，`tc5` 只做 CLC/work-tile 调度实验；producer/consumer mainloop 应该另开版本。
+但它仍然不是最终优化版：当前 `tc3` 已有 CTA tiling、TMA、2-stage buffering 和 SMEM staging，但还没有 SMEM swizzle、warp-specialized producer/consumer 组织或更完整的 epilogue pipeline。后续 `tc4a/tc4b` 先做 mainloop/operand-layout 实验，`tc5` 只做 CLC/work-tile 调度实验；producer/consumer mainloop 应该另开版本。
 
 构建限制：CUDA 13.0 中，ptxas 对 plain `-arch=sm_120` 会拒绝 `.kind::f8f6f4`；同一条指令在 `compute_120a/sm_120a` family-specific 目标下可以通过。因此当前脚本需要显式指定：
 
