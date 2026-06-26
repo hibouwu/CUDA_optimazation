@@ -12,13 +12,13 @@
 // numerical GEMM kernel yet, and it does not include the full TMA->SMEM->MMA
 // descriptor path.
 
-#if defined(__CUDA_ARCH_FEAT_SM110_ALL)
+#if defined(__CUDA_ARCH_FEAT_SM110_ALL) // CUDA device 编译目标支持 sm110 全部特性
 #define TC3_SM110_HAS_TCGEN05 1
 #else
 #define TC3_SM110_HAS_TCGEN05 0
 #endif
 
-struct Tc3Sm110Shape {
+struct Tc3Sm110Shape { // 
   static constexpr int kThreads = 128;
   static constexpr unsigned int kTmemColumns = 128;
 };
@@ -39,7 +39,7 @@ __global__ void hgemm_tc3_sm110_tcgen05_tmem_probe(float* c, int tiles) {
 #if TC3_SM110_HAS_TCGEN05
   if (threadIdx.x == 0) {
     asm volatile(
-        "tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%0], %1;"
+        "tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%0], %1;" // 向
         :
         : "r"(tc3_sm110_smem_u32_ptr(&tmem_base)), "r"(Shape::kTmemColumns)
         : "memory");

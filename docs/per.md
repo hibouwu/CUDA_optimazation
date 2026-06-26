@@ -19,19 +19,22 @@
 | `tc1` | WMMA FP16 baseline | 最小 Tensor Core 正确性基线。 |
 | `tc2` | TMA + WMMA staged mainloop | 当前性能基线，使用 TMA 把 A/B 从 GMEM 搬到 SMEM，再用 WMMA 消费 SMEM。 |
 | `tc3` | SM120a FP8 MMA GEMM | 真实 FP8 e4m3 GEMM bring-up：CTA-level 128x64x32 tile，A/B 使用 TMA 2-stage pipeline 搬到 SMEM，输出 FP32，并输出 GFLOPS。 |
-| `tc4` | SM120 mainloop 重构 | producer / consumer warp-specialized pipeline，整合 TMA pipeline、SM120 narrow/block-scaled MMA 和 epilogue。 |
+| `tc4a` | SM120 3-stage + CTA prepack | 非 warp-specialized 实验：3-stage TMA，B operand 由全 CTA 预打包到 SMEM 后再被 MMA 消费，用来观察 MIO 与 barrier 的权衡。 |
+| `tc4b` | SM120 3-stage + TMA 64B swizzle/fallback | 非 warp-specialized 实验：3-stage TMA，`N >= 1024` 时 B map 使用 `CU_TENSOR_MAP_SWIZZLE_64B`，小尺寸回退到 no-swizzle map，保持 B operand prepack。 |
+| `tc5` | SM120 CLC / Cluster Launch Control | `tc5a` 是 static CLC fallback persistent scheduler；`tc5b` 是 dynamic software work queue fallback。两者都复用 `tc4b` mainloop，默认 `3` 个 CTA worker/SM。 |
 
-`tc3` 和 `tc4` 的关系：
+`tc3`、`tc4a/tc4b` 和 `tc5` 的关系：
 
 - `tc3` 先证明 SM120a narrow MMA 的真实 GEMM 路径：FP8 e4m3 A/B -> `mma.sync.aligned.kind::f8f6f4` -> FP32 C。
-- `tc3` 不做 TMA、不做完整 warp specialization、不做 Scheduler/CLC、不做 Epilogue Load warp，也不做 TMA store D。
-- `tc4` 在 `tc3` 的 GEMM 路径确认后，再重构完整 SM120 mainloop，把 producer/consumer warp、TMA pipeline、narrow/block-scaled MMA 和 epilogue 组织起来。
+- `tc3` 不做完整 warp specialization、不做 Scheduler/CLC、不做 Epilogue Load warp，也不做 TMA store D。
+- `tc4a/tc4b` 在 `tc3` 的数据路径上只研究 mainloop stage、operand layout、TMA swizzle 和同步方式。
+- `tc5` 明确只做 CLC / Cluster Launch Control 调度层：work tile 获取和 persistent worker loop。producer/consumer warp-specialized mainloop 不放在 `tc5`。
 
 注意：`tcgen05/TMEM` 属于 SM100/SM110 这类 datacenter Blackwell family-specific 目标；RTX 5070 Laptop GPU 报告为 `sm_120`，对应 CUTLASS 文档里的 SM120 GEMM 路线，应该使用 `mma.sync.aligned.kind::f8f6f4`、`mma.sync.aligned.kind::mxf8f6f4.block_scale`、`mma.sync.aligned.kind::mxf4.block_scale` 等 PTX MMA 指令，而不是 `tcgen05.mma`。
 
 1.3 warp 类别 & pipeline
 
-下表是 `tc4` 的目标 warp-specialized 设计。它把一个 CTA 内的 warp 划分为不同角色，让不同 warp 通过 pipeline/barrier 协作处理同一个 work tile，并让 mainloop 与 epilogue 尽量重叠。
+下表是 CLC 之后的目标 warp-specialized mainloop 设计，不属于当前 `tc5` 的实现范围。`tc5` 只先确定 Scheduler/CLC 如何获取 work tile，并把 tile 坐标交给后续 mainloop。`tc4a/tc4b` 暂时不采用这个分工，仍然是 8 个 warp 共同完成当前 128x64 CTA tile 的 MMA。
 
 | Warp 编号 | 类别 | 线程数 | 说明 |
 | --- | --- | ---: | --- |
@@ -73,7 +76,7 @@ pipeline 关系如下：
 7. GFLOPS 按完整 GEMM workload `2*M*N*K / time` 计算。
 8. correctness 使用 sampled CPU FP8 reference：抽样若干 C 元素，用同样的 FP8 e4m3 输入反量化后做 CPU dot product 对比。
 
-它仍然不是最终优化版：当前 `tc3` 已有 CTA tiling、TMA、2-stage buffering 和 SMEM staging，但还没有 SMEM swizzle、warp-specialized producer/consumer 组织或更完整的 epilogue pipeline。后续 `tc4` 再把这些部分系统化。
+它仍然不是最终优化版：当前 `tc3` 已有 CTA tiling、TMA、2-stage buffering 和 SMEM staging，但还没有 SMEM swizzle、warp-specialized producer/consumer 组织或更完整的 epilogue pipeline。后续 `tc4a/tc4b` 先拆 mainloop/operand-layout 实验，`tc5` 只做 CLC/work-tile 调度实验；producer/consumer mainloop 应该另开版本。
 
 构建限制：CUDA 13.0 中，ptxas 对 plain `-arch=sm_120` 会拒绝 `.kind::f8f6f4`；同一条指令在 `compute_120a/sm_120a` family-specific 目标下可以通过。因此当前脚本需要显式指定：
 
@@ -83,15 +86,29 @@ CUDA_ARCH=120a ./scripts/run_gemm_backend.sh tc3
 
 如果用默认 `sm_120` 构建，`tc3` 会明确 skip，避免把不被 ptxas 接受的 PTX 编进默认 benchmark。
 
-1.5 `tc4` Blackwell mainloop 重构
+1.5 `tc4a/tc4b` Blackwell mainloop 实验
 
-`tc4` 是完整 Blackwell 组织方式：
+`tc4a/tc4b` 是 `tc3` 之后的非 warp-specialized mainloop 实验：
 
-- Scheduler warp 负责 work tile 获取和广播。
-- Mainloop Load warp 负责 TMA load A/B/SFA/SFB。
-- MMA warp 负责 SM120 narrow/block-scaled `mma.sync`，把 accumulator 保存在寄存器。
-- Epilogue Load warp 负责 TMA load C 或后处理输入。
-- Epilogue warps 消费寄存器 accumulator，执行 `alpha/beta`、后处理或量化。
-- TMA store 把 D 从 SMEM 异步写回 GMEM。
+- `tc4a`：3-stage TMA + B operand CTA prepack。优点是减少 MMA loop 中重复的 strided B gather；缺点是引入 pack barrier。
+- `tc4b`：3-stage TMA + B 的 64B TMA swizzle/fallback + B operand prepack。`N >= 1024` 使用 64B swizzle；小尺寸下该 swizzle layout 与当前手写地址解释不稳定，因此自动回退到 no-swizzle map，保证 sweep 全尺寸可跑且 correctness 通过。
+- 两者都保持 8 个 warp 共同计算一个 128x64 CTA tile，不做 producer/consumer warp specialization。
 
-`tc4` 的关键不是简单增加 stage 数，而是把“加载、计算、后处理、写回”拆成不同 warp 角色，用 pipeline/barrier 管理依赖，让 mainloop 与 epilogue 的延迟重叠起来。
+当前实测上，`tc4b` 在 2048 workload 上略优于 `tc4a`。小尺寸使用 no-swizzle fallback 保证 correctness，大尺寸使用 64B TMA swizzle。它不是最终 CUTLASS-style layout，只是证明 TMA swizzle 可以在当前 prepack 路线上带来收益。
+
+1.6 `tc5` Blackwell CLC / Cluster Launch Control
+
+`tc5a/tc5b` 是当前已经接入的调度层 bring-up，不是 producer/consumer mainloop：
+
+- `tc5a` Static CLC fallback：启动固定数量 CTA worker，当前默认 `TC5_WORKERS_PER_SM=3`。
+- `tc5a` 每个 worker 以 `tile_id = worker_id + iteration * worker_count` 的 grid-stride 方式领取 output tile。
+- `tc5b` Dynamic CLC fallback：启动同样数量 CTA worker，但每个 worker 通过 global atomic work counter 动态领取下一个 output tile，用软件队列模拟硬件 CLC 的 work acquisition / work stealing。
+- 每个 work tile 内部复用 `tc4b` 的 3-stage TMA + 64B swizzle/fallback + B operand prepack mainloop。
+- 当前工具链或目标 GPU 如果没有暴露硬件 CLC，这个软件 fallback 先保持调度接口稳定。
+- CLCThrottlePipeline 还未实现；`tc5b` 只有软件动态队列，不等价于硬件 CLC。
+- `TC5_WORKERS_PER_SM` 可以在运行时覆盖，已测 `2048` 上 `3` 个 worker/SM 优于 `1/2/4`。
+- 当前单次验证：`2048` 上 `tc5b` 动态队列比 `tc5a` 更快；`4096` 上 `tc5b` 反而更慢，说明软件 atomic 分发只适合作为 CLC 行为探针，不应直接作为最终性能主线。
+
+`tc5` 的关键不是提高单个 CTA tile 的 MMA 吞吐，而是先把 work tile 调度从普通 2D grid 中抽出来，为后续 producer/consumer mainloop 提供稳定的 tile 获取接口。
+
+后续 producer/consumer warp-specialized mainloop 应该作为独立版本继续做，避免把“调度层 CLC”和“mainloop warp specialization”混在一个实验里。

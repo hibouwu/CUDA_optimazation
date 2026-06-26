@@ -100,3 +100,68 @@ target_include_directories(transformer_bench PRIVATE
   ${CUDAToolkit_INCLUDE_DIRS}
 )
 target_link_libraries(transformer_bench PRIVATE CUDA::cudart)
+
+function(add_gmem_to_smem_demo target_name source_path)
+  add_executable(${target_name} ${source_path})
+  target_compile_options(${target_name} PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+  )
+  target_include_directories(${target_name} PRIVATE
+    GEMMComponents/GEMMGmemToSmem/common
+    ${CUDAToolkit_INCLUDE_DIRS}
+  )
+  target_link_libraries(${target_name} PRIVATE CUDA::cudart CUDA::cuda_driver)
+endfunction()
+
+add_gmem_to_smem_demo(
+  gmem_to_smem_00_naive
+  GEMMComponents/GEMMGmemToSmem/00_naive_gmem_to_smem/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_01_coalesced
+  GEMMComponents/GEMMGmemToSmem/01_coalesced_gmem_to_smem/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_02_vectorized_float4
+  GEMMComponents/GEMMGmemToSmem/02_vectorized_float4_load/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_03_row_col_major
+  GEMMComponents/GEMMGmemToSmem/03_row_col_major_addressing/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_03_transposed_smem_store
+  GEMMComponents/GEMMGmemToSmem/03_transposed_smem_store/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_04_coalesced_transposed_store
+  GEMMComponents/GEMMGmemToSmem/04_coalesced_load_transposed_store/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_04_smem_padding
+  GEMMComponents/GEMMGmemToSmem/04_smem_padding_bank_conflict/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_05_smem_swizzle
+  GEMMComponents/GEMMGmemToSmem/05_smem_swizzle_store/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_05_transpose_padding
+  GEMMComponents/GEMMGmemToSmem/05_transpose_padding_bank_conflict/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_06_predicated_tile_load
+  GEMMComponents/GEMMGmemToSmem/06_predicated_tile_load/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_07_double_buffer
+  GEMMComponents/GEMMGmemToSmem/07_double_buffer_gmem_to_smem/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_08_cp_async
+  GEMMComponents/GEMMGmemToSmem/08_cp_async_gmem_to_smem/demo.cu
+)
+add_gmem_to_smem_demo(
+  gmem_to_smem_09_tma
+  GEMMComponents/GEMMGmemToSmem/09_tma_gmem_to_smem/demo.cu
+)

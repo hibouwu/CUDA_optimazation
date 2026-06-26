@@ -2,6 +2,7 @@
 #include "sgemm_kernels.cuh"
 #include "tc3_gemm_kernel.cuh"
 #include "tc4_gemm_kernel.cuh"
+#include "tc5_gemm_kernel.cuh"
 #include "tc_gemm_kernels.cuh"
 
 #include <cmath>
@@ -15,7 +16,7 @@ namespace {
 
 constexpr const char* kBackendUsage =
     "[all|fp32|tensor_core|cublas|v1|v2|v3|v3a|v3b|v4|v5|v6|"
-    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3|tc4]";
+    "v7|v8a|v8b|v8c|cublas_tc|tc1|tc2|tc3|tc4|tc4a|tc4b|tc5|tc5a|tc5b]";
 
 void print_usage(const char* program) {
   std::cerr << "Usage: " << program << " [square_size] " << kBackendUsage
@@ -29,7 +30,9 @@ bool is_valid_backend_filter(const std::string& filter) {
          filter == "v4" || filter == "v5" || filter == "v6" ||
          filter == "v7" || filter == "v8a" || filter == "v8b" ||
          filter == "v8c" || filter == "cublas_tc" || filter == "tc1" ||
-         filter == "tc2" || filter == "tc3" || filter == "tc4";
+         filter == "tc2" || filter == "tc3" || filter == "tc4" ||
+         filter == "tc4a" || filter == "tc4b" || filter == "tc5" ||
+         filter == "tc5a" || filter == "tc5b";
 }
 
 bool wants_fp32_reference(const std::string& filter) {
@@ -43,7 +46,9 @@ bool wants_fp32_reference(const std::string& filter) {
 bool wants_tensor_core_reference(const std::string& filter) {
   return filter == "all" || filter == "tensor_core" ||
          filter == "cublas_tc" || filter == "tc1" || filter == "tc2" ||
-         filter == "tc3" || filter == "tc4";
+         filter == "tc3" || filter == "tc4" || filter == "tc4a" ||
+         filter == "tc4b" || filter == "tc5" || filter == "tc5a" ||
+         filter == "tc5b";
 }
 
 bool wants_backend(const std::string& filter, const std::string& backend) {
@@ -56,7 +61,14 @@ bool wants_backend(const std::string& filter, const std::string& backend) {
   }
   if (filter == "tensor_core") {
     return backend == "tc1" || backend == "tc2" || backend == "tc3" ||
-           backend == "tc4";
+           backend == "tc4a" || backend == "tc4b" || backend == "tc5a" ||
+           backend == "tc5b";
+  }
+  if (filter == "tc4") {
+    return backend == "tc4a" || backend == "tc4b";
+  }
+  if (filter == "tc5") {
+    return backend == "tc5a" || backend == "tc5b";
   }
   return false;
 }
@@ -158,6 +170,8 @@ int main(int argc, char** argv) {
   CUtensorMap* d_b_tc2_map = nullptr;
   CUtensorMap* d_a_tc3_map = nullptr;
   CUtensorMap* d_b_tc3_map = nullptr;
+  CUtensorMap* d_b_tc4b_map = nullptr;
+  int* d_tc5_work_counter = nullptr;
   CHECK_CUDA(cudaMalloc(&d_a, a_bytes));
   CHECK_CUDA(cudaMalloc(&d_b, b_bytes));
   CHECK_CUDA(cudaMalloc(&d_c, c_bytes));
@@ -169,6 +183,8 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaMalloc(&d_b_tc2_map, sizeof(CUtensorMap)));
   CHECK_CUDA(cudaMalloc(&d_a_tc3_map, sizeof(CUtensorMap)));
   CHECK_CUDA(cudaMalloc(&d_b_tc3_map, sizeof(CUtensorMap)));
+  CHECK_CUDA(cudaMalloc(&d_b_tc4b_map, sizeof(CUtensorMap)));
+  CHECK_CUDA(cudaMalloc(&d_tc5_work_counter, sizeof(int)));
   CHECK_CUDA(cudaMemcpy(d_a, h_a.data(), a_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b, h_b.data(), b_bytes, cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_a_half, h_a_half.data(), a_half_bytes,
@@ -184,10 +200,13 @@ int main(int argc, char** argv) {
   alignas(64) CUtensorMap h_b_tc2_map{};
   alignas(64) CUtensorMap h_a_tc3_map{};
   alignas(64) CUtensorMap h_b_tc3_map{};
+  alignas(64) CUtensorMap h_b_tc4b_map{};
   tc_encode_rowmajor_tensor_map_2d(h_a_tc2_map, d_a_half, m, k, 128, 32);
   tc_encode_rowmajor_tensor_map_2d(h_b_tc2_map, d_b_half, k, n, 32, 64);
   tc3_encode_rowmajor_tensor_map_fp8(h_a_tc3_map, d_a_fp8, m, k, 128, 32);
   tc3_encode_rowmajor_tensor_map_fp8(h_b_tc3_map, d_b_fp8, k, n, 32, 64);
+  tc3_encode_rowmajor_tensor_map_fp8(h_b_tc4b_map, d_b_fp8, k, n, 32, 64,
+                                     CU_TENSOR_MAP_SWIZZLE_64B);
   CHECK_CUDA(cudaMemcpy(d_a_tc2_map, &h_a_tc2_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_tc2_map, &h_b_tc2_map, sizeof(CUtensorMap),
@@ -195,6 +214,8 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaMemcpy(d_a_tc3_map, &h_a_tc3_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_tc3_map, &h_b_tc3_map, sizeof(CUtensorMap),
+                        cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(d_b_tc4b_map, &h_b_tc4b_map, sizeof(CUtensorMap),
                         cudaMemcpyHostToDevice));
   configure_tc_tma_wmma_kernel<2>();
 
@@ -581,12 +602,259 @@ int main(int argc, char** argv) {
           << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
     }
 
-    if (wants_backend(backend_filter, "tc4")) {
-      std::cout << "tc4 sm120 work-tile pipeline scaffold: launch disabled; "
-                   "SM120 producer/consumer warp-specialized pipeline is "
-                   "wired as a design boundary only\n";
-      csv << "tc4,tc4 sm120 work-tile pipeline scaffold," << n
-          << ",fp8->fp32,SM120 pipeline scaffold,0,0,0,0\n";
+    if (wants_backend(backend_filter, "tc4a") && n % 128 == 0) {
+      if (!tc4_launch_available()) {
+        std::cout << "tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32: skipped because this "
+                     "binary was not built with CUDA_ARCH=120a\n";
+        csv << "tc4a,tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32 skipped," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+      } else {
+        dim3 tc4a_grid(n / 64, m / 128);
+        dim3 tc4a_block(8 * kWarpSize);
+        auto launch_tc4a = [&]() {
+          hgemm_tc4a_sm120a_fp8_tma_3stage_prepack_mma_128x64x32
+              <<<tc4a_grid, tc4a_block, tc4a_tma_fp8_smem_bytes()>>>(
+                  m, n, k, alpha, d_a_fp8, d_a_tc3_map, d_b_fp8, d_b_tc3_map,
+                  beta, d_c);
+          CHECK_CUDA(cudaGetLastError());
+        };
+
+        CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+        for (int i = 0; i < kWarmup; ++i) launch_tc4a();
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        cudaEvent_t start, stop;
+        CHECK_CUDA(cudaEventCreate(&start));
+        CHECK_CUDA(cudaEventCreate(&stop));
+        CHECK_CUDA(cudaEventRecord(start));
+        for (int i = 0; i < kRepeat; ++i) launch_tc4a();
+        CHECK_CUDA(cudaEventRecord(stop));
+        CHECK_CUDA(cudaEventSynchronize(stop));
+        float total_ms = 0.0f;
+        CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+        CHECK_CUDA(cudaEventDestroy(start));
+        CHECK_CUDA(cudaEventDestroy(stop));
+
+        CHECK_CUDA(cudaMemcpy(h_out.data(), d_c, c_bytes,
+                              cudaMemcpyDeviceToHost));
+        const float avg_ms = total_ms / kRepeat;
+        const bool matched =
+            compare_gemm_fp8_e4m3_samples(m, n, k, h_a_fp8, h_b_fp8, h_out);
+        const float perf = gflops(m, n, k, avg_ms);
+        std::cout << "tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32: " << avg_ms
+                  << " ms, " << perf << " GFLOPS, matched=" << matched
+                  << '\n';
+        csv << "tc4a,tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU," << avg_ms << ","
+            << perf << "," << perf / cublas_tc_perf << ","
+            << (matched ? 1 : 0) << '\n';
+      }
+    } else if (wants_backend(backend_filter, "tc4a")) {
+      std::cout << "tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc4a,tc4a sm120a fp8 tma 3-stage prepack mma 128x64x32 skipped," << n
+          << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+    }
+
+    if (wants_backend(backend_filter, "tc4b") && n % 128 == 0) {
+      if (!tc4_launch_available()) {
+        std::cout << "tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32: skipped because this "
+                     "binary was not built with CUDA_ARCH=120a\n";
+        csv << "tc4b,tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32 skipped," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+      } else {
+        dim3 tc4b_grid(n / 64, m / 128);
+        dim3 tc4b_block(8 * kWarpSize);
+        const CUtensorMap* d_b_tc4b_selected_map =
+            n >= 1024 ? d_b_tc4b_map : d_b_tc3_map;
+        auto launch_tc4b = [&]() {
+          hgemm_tc4b_sm120a_fp8_tma_3stage_swizzle_mma_128x64x32
+              <<<tc4b_grid, tc4b_block, tc4b_tma_fp8_smem_bytes()>>>(
+                  m, n, k, alpha, d_a_fp8, d_a_tc3_map, d_b_fp8,
+                  d_b_tc4b_selected_map, beta, d_c);
+          CHECK_CUDA(cudaGetLastError());
+        };
+
+        CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+        for (int i = 0; i < kWarmup; ++i) launch_tc4b();
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        cudaEvent_t start, stop;
+        CHECK_CUDA(cudaEventCreate(&start));
+        CHECK_CUDA(cudaEventCreate(&stop));
+        CHECK_CUDA(cudaEventRecord(start));
+        for (int i = 0; i < kRepeat; ++i) launch_tc4b();
+        CHECK_CUDA(cudaEventRecord(stop));
+        CHECK_CUDA(cudaEventSynchronize(stop));
+        float total_ms = 0.0f;
+        CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+        CHECK_CUDA(cudaEventDestroy(start));
+        CHECK_CUDA(cudaEventDestroy(stop));
+
+        CHECK_CUDA(cudaMemcpy(h_out.data(), d_c, c_bytes,
+                              cudaMemcpyDeviceToHost));
+        const float avg_ms = total_ms / kRepeat;
+        const bool matched =
+            compare_gemm_fp8_e4m3_samples(m, n, k, h_a_fp8, h_b_fp8, h_out);
+        const float perf = gflops(m, n, k, avg_ms);
+        std::cout << "tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32: " << avg_ms
+                  << " ms, " << perf << " GFLOPS, matched=" << matched
+                  << '\n';
+        csv << "tc4b,tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32," << n
+            << ",fp8->fp32,SM120a FP8 sampled CPU," << avg_ms << ","
+            << perf << "," << perf / cublas_tc_perf << ","
+            << (matched ? 1 : 0) << '\n';
+      }
+    } else if (wants_backend(backend_filter, "tc4b")) {
+      std::cout << "tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32: skipped because N must be a "
+                   "multiple of 128\n";
+      csv << "tc4b,tc4b sm120a fp8 tma 64B swizzle/fallback 3-stage prepack mma 128x64x32 skipped," << n
+          << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+    }
+
+    if ((wants_backend(backend_filter, "tc5a") ||
+         wants_backend(backend_filter, "tc5b"))) {
+      if (!tc5_launch_available()) {
+        if (wants_backend(backend_filter, "tc5a")) {
+          std::cout << "tc5a sm120a static CLC fallback persistent scheduler: "
+                       "skipped because this binary was not built with CUDA_ARCH=120a\n";
+          csv << "tc5a,tc5a sm120a static CLC fallback persistent scheduler skipped,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+        }
+        if (wants_backend(backend_filter, "tc5b")) {
+          std::cout << "tc5b sm120a dynamic CLC fallback work queue: "
+                       "skipped because this binary was not built with CUDA_ARCH=120a\n";
+          csv << "tc5b,tc5b sm120a dynamic CLC fallback work queue skipped,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+        }
+      } else if (n % 128 != 0) {
+        if (wants_backend(backend_filter, "tc5a")) {
+          std::cout << "tc5a sm120a static CLC fallback persistent scheduler: "
+                       "skipped because N must be a multiple of 128\n";
+          csv << "tc5a,tc5a sm120a static CLC fallback persistent scheduler skipped,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+        }
+        if (wants_backend(backend_filter, "tc5b")) {
+          std::cout << "tc5b sm120a dynamic CLC fallback work queue: "
+                       "skipped because N must be a multiple of 128\n";
+          csv << "tc5b,tc5b sm120a dynamic CLC fallback work queue skipped,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU,0,0,0,0\n";
+        }
+      } else {
+        const int total_tiles = (m / 128) * (n / 64);
+        int tc5_workers_per_sm = 3;
+        if (const char* env_workers = std::getenv("TC5_WORKERS_PER_SM")) {
+          const int parsed = std::atoi(env_workers);
+          if (parsed > 0) tc5_workers_per_sm = parsed;
+        }
+        if (tc5_workers_per_sm > 8) tc5_workers_per_sm = 8;
+        const int worker_count =
+            total_tiles < device_prop.multiProcessorCount * tc5_workers_per_sm
+                ? total_tiles
+                : device_prop.multiProcessorCount * tc5_workers_per_sm;
+        dim3 tc5_grid(worker_count);
+        dim3 tc5_block(10 * kWarpSize);
+        const CUtensorMap* d_b_tc5_selected_map =
+            n >= 1024 ? d_b_tc4b_map : d_b_tc3_map;
+        CHECK_CUDA(cudaFuncSetAttribute(
+            hgemm_tc5a_sm120a_fp8_clc_static_tma_swizzle_mma_128x64x32,
+            cudaFuncAttributeMaxDynamicSharedMemorySize,
+            static_cast<int>(tc5a_tma_fp8_smem_bytes())));
+        CHECK_CUDA(cudaFuncSetAttribute(
+            hgemm_tc5b_sm120a_fp8_clc_dynamic_tma_swizzle_mma_128x64x32,
+            cudaFuncAttributeMaxDynamicSharedMemorySize,
+            static_cast<int>(tc5a_tma_fp8_smem_bytes())));
+
+        if (wants_backend(backend_filter, "tc5a")) {
+          auto launch_tc5a = [&]() {
+            hgemm_tc5a_sm120a_fp8_clc_static_tma_swizzle_mma_128x64x32
+                <<<tc5_grid, tc5_block, tc5a_tma_fp8_smem_bytes()>>>(
+                    m, n, k, alpha, d_a_fp8, d_a_tc3_map, d_b_fp8,
+                    d_b_tc5_selected_map, beta, d_c);
+            CHECK_CUDA(cudaGetLastError());
+          };
+
+          CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+          for (int i = 0; i < kWarmup; ++i) launch_tc5a();
+          CHECK_CUDA(cudaDeviceSynchronize());
+
+          cudaEvent_t start, stop;
+          CHECK_CUDA(cudaEventCreate(&start));
+          CHECK_CUDA(cudaEventCreate(&stop));
+          CHECK_CUDA(cudaEventRecord(start));
+          for (int i = 0; i < kRepeat; ++i) launch_tc5a();
+          CHECK_CUDA(cudaEventRecord(stop));
+          CHECK_CUDA(cudaEventSynchronize(stop));
+          float total_ms = 0.0f;
+          CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+          CHECK_CUDA(cudaEventDestroy(start));
+          CHECK_CUDA(cudaEventDestroy(stop));
+
+          CHECK_CUDA(cudaMemcpy(h_out.data(), d_c, c_bytes,
+                                cudaMemcpyDeviceToHost));
+          const float avg_ms = total_ms / kRepeat;
+          const bool matched =
+              compare_gemm_fp8_e4m3_samples(m, n, k, h_a_fp8, h_b_fp8, h_out);
+          const float perf = gflops(m, n, k, avg_ms);
+          std::cout << "tc5a sm120a static CLC fallback persistent scheduler: "
+                    << avg_ms << " ms, " << perf << " GFLOPS, matched="
+                    << matched << ", workers=" << worker_count
+                    << ", workers_per_sm=" << tc5_workers_per_sm << '\n';
+          csv << "tc5a,tc5a sm120a static CLC fallback persistent scheduler,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU," << avg_ms << ","
+              << perf << "," << perf / cublas_tc_perf << ","
+              << (matched ? 1 : 0) << '\n';
+        }
+
+        if (wants_backend(backend_filter, "tc5b")) {
+          auto launch_tc5b = [&]() {
+            hgemm_tc5b_sm120a_fp8_clc_dynamic_tma_swizzle_mma_128x64x32
+                <<<tc5_grid, tc5_block, tc5a_tma_fp8_smem_bytes()>>>(
+                    m, n, k, alpha, d_a_fp8, d_a_tc3_map, d_b_fp8,
+                    d_b_tc5_selected_map, d_tc5_work_counter, beta, d_c);
+            CHECK_CUDA(cudaGetLastError());
+          };
+
+          CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+          for (int i = 0; i < kWarmup; ++i) {
+            CHECK_CUDA(cudaMemset(d_tc5_work_counter, 0, sizeof(int)));
+            launch_tc5b();
+          }
+          CHECK_CUDA(cudaDeviceSynchronize());
+
+          cudaEvent_t start, stop;
+          CHECK_CUDA(cudaEventCreate(&start));
+          CHECK_CUDA(cudaEventCreate(&stop));
+          float total_ms = 0.0f;
+          for (int i = 0; i < kRepeat; ++i) {
+            CHECK_CUDA(cudaMemset(d_tc5_work_counter, 0, sizeof(int)));
+            CHECK_CUDA(cudaEventRecord(start));
+            launch_tc5b();
+            CHECK_CUDA(cudaEventRecord(stop));
+            CHECK_CUDA(cudaEventSynchronize(stop));
+            float iter_ms = 0.0f;
+            CHECK_CUDA(cudaEventElapsedTime(&iter_ms, start, stop));
+            total_ms += iter_ms;
+          }
+          CHECK_CUDA(cudaEventDestroy(start));
+          CHECK_CUDA(cudaEventDestroy(stop));
+
+          CHECK_CUDA(cudaMemcpy(h_out.data(), d_c, c_bytes,
+                                cudaMemcpyDeviceToHost));
+          const float avg_ms = total_ms / kRepeat;
+          const bool matched =
+              compare_gemm_fp8_e4m3_samples(m, n, k, h_a_fp8, h_b_fp8, h_out);
+          const float perf = gflops(m, n, k, avg_ms);
+          std::cout << "tc5b sm120a dynamic CLC fallback work queue: "
+                    << avg_ms << " ms, " << perf << " GFLOPS, matched="
+                    << matched << ", workers=" << worker_count
+                    << ", workers_per_sm=" << tc5_workers_per_sm << '\n';
+          csv << "tc5b,tc5b sm120a dynamic CLC fallback work queue,"
+              << n << ",fp8->fp32,SM120a FP8 sampled CPU," << avg_ms << ","
+              << perf << "," << perf / cublas_tc_perf << ","
+              << (matched ? 1 : 0) << '\n';
+        }
+      }
     }
 
   }
@@ -605,6 +873,8 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaFree(d_b_tc2_map));
   CHECK_CUDA(cudaFree(d_a_tc3_map));
   CHECK_CUDA(cudaFree(d_b_tc3_map));
+  CHECK_CUDA(cudaFree(d_b_tc4b_map));
+  CHECK_CUDA(cudaFree(d_tc5_work_counter));
   CHECK_CUDA(cudaFree(d_c));
   return 0;
 }

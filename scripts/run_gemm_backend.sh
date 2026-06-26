@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <backend_id>" >&2
-  echo "Backend IDs: cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc3, tc4" >&2
+  echo "Backend IDs: cublas, v1, v2, v3, v3a, v3b, v4, v5, v6, v7, v8a, v8b, v8c, cublas_tc, tc1, tc2, tc3, tc4, tc4a, tc4b, tc5, tc5a, tc5b" >&2
   exit 1
 fi
 

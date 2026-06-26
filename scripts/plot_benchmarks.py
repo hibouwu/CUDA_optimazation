@@ -40,7 +40,10 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "tc1",
     "tc2",
     "tc3",
-    "tc4",
+    "tc4a",
+    "tc4b",
+    "tc5a",
+    "tc5b",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -80,7 +83,10 @@ SERIES_LABELS = {
     "tc1": "tc1 wmma fp16 baseline",
     "tc2": "tc2 tma 2-stage wmma 128x64x32",
     "tc3": "tc3 sm120a fp8 tma 2-stage mma 128x64x32",
-    "tc4": "tc4 sm120 work-tile pipeline scaffold",
+    "tc4a": "tc4a sm120a fp8 tma 3-stage prepack mma",
+    "tc4b": "tc4b sm120a fp8 TMA 64B swizzle/fallback 3-stage prepack mma",
+    "tc5a": "tc5a sm120a static CLC fallback scheduler",
+    "tc5b": "tc5b sm120a dynamic CLC fallback work queue",
 }
 
 
@@ -127,7 +133,10 @@ def backend_key(row):
         "tc1",
         "tc2",
         "tc3",
-        "tc4",
+        "tc4a",
+        "tc4b",
+        "tc5a",
+        "tc5b",
     ):
         if version.startswith(prefix + " "):
             return prefix

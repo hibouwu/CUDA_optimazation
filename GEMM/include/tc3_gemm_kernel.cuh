@@ -20,12 +20,6 @@ namespace tc3_cde = cuda::device::experimental;
 //   mma.sync.aligned.kind::mxf4.block_scale
 //
 // These are the SM120 narrow/block-scaled MMA paths documented by CUTLASS.
-// Do not use SM100/SM110 tcgen05/TMEM instructions for RTX 50-series sm_120.
-//
-// ptxas rejects kind::f8f6f4 for plain -arch=sm_120 in CUDA 13.0.  Build this
-// kernel with a family-specific target, for example:
-//
-//   CUDA_ARCH=120a ./scripts/run_gemm_backend.sh tc3
 
 #ifndef TC3_COMPILED_SM120A_NARROW_MMA
 #define TC3_COMPILED_SM120A_NARROW_MMA 0
@@ -57,7 +51,9 @@ struct alignas(tc3_block_barrier) tc3_block_barrier_storage {
 inline void tc3_encode_rowmajor_tensor_map_fp8(CUtensorMap& tensor_map,
                                                __nv_fp8_e4m3* global_address,
                                                int rows, int cols, int box_rows,
-                                               int box_cols) {
+                                               int box_cols,
+                                               CUtensorMapSwizzle swizzle =
+                                                   CU_TENSOR_MAP_SWIZZLE_NONE) {
   const cuuint64_t global_dim[2] = {static_cast<cuuint64_t>(cols),
                                     static_cast<cuuint64_t>(rows)};
   const cuuint64_t global_strides[1] = {static_cast<cuuint64_t>(cols)};
@@ -67,7 +63,7 @@ inline void tc3_encode_rowmajor_tensor_map_fp8(CUtensorMap& tensor_map,
   CHECK_CU(cuTensorMapEncodeTiled(
       &tensor_map, CU_TENSOR_MAP_DATA_TYPE_UINT8, 2, global_address,
       global_dim, global_strides, box_dim, element_strides,
-      CU_TENSOR_MAP_INTERLEAVE_NONE, CU_TENSOR_MAP_SWIZZLE_NONE,
+      CU_TENSOR_MAP_INTERLEAVE_NONE, swizzle,
       CU_TENSOR_MAP_L2_PROMOTION_L2_128B, CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 }
 
