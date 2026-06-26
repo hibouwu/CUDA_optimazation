@@ -11,9 +11,9 @@ TRIALS="${TRIALS:-3}"
 CUDA_ARCH="${CUDA_ARCH:-}"
 
 case "${GEMM_SUITE}" in
-  all|cublas_tc|tc3|tc4) ;;
+  all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b) ;;
   *)
-    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, cublas_tc, tc3, or tc4." >&2
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, cublas_tc, tc3, tc4, tc5, tc5a, or tc5b." >&2
     exit 1
     ;;
 esac
@@ -29,6 +29,7 @@ if [[ "${CUDA_ARCH}" =~ ^[0-9]+$ ]]; then
 fi
 
 nvcc -O3 -std=c++17 \
+  -DTC3_SM110_HOST_HAS_TCGEN05=1 \
   -gencode arch=compute_110a,code=sm_110a \
   "${EXTRA_GENCODE[@]}" \
   -I"${ROOT_DIR}/GEMMsm110/include" \

@@ -18,13 +18,21 @@
 #define TC3_SM110_HAS_TCGEN05 0
 #endif
 
+#ifndef TC3_SM110_HOST_HAS_TCGEN05
+#define TC3_SM110_HOST_HAS_TCGEN05 0
+#endif
+
 struct Tc3Sm110Shape { // 
   static constexpr int kThreads = 128;
   static constexpr unsigned int kTmemColumns = 128;
 };
 
 __host__ __device__ constexpr bool tc3_sm110_tcgen05_available() {
+#if defined(__CUDA_ARCH__)
   return TC3_SM110_HAS_TCGEN05 != 0;
+#else
+  return TC3_SM110_HOST_HAS_TCGEN05 != 0;
+#endif
 }
 
 __device__ __forceinline__ unsigned int tc3_sm110_smem_u32_ptr(const void* p) {

@@ -1,6 +1,7 @@
 #include "gemm_benchmark.cuh"
 #include "tc3_gemm_kernel.cuh"
 #include "tc4_gemm_kernel.cuh"
+#include "tc5_gemm_kernel.cuh"
 
 #include <cmath>
 #include <cstdlib>
@@ -11,7 +12,7 @@
 
 namespace {
 
-constexpr const char* kBackendUsage = "[all|cublas_tc|tc3|tc4]";
+constexpr const char* kBackendUsage = "[all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b]";
 
 void print_usage(const char* program) {
   std::cerr << "Usage: " << program << " [square_size] " << kBackendUsage
@@ -20,15 +21,20 @@ void print_usage(const char* program) {
 
 bool is_valid_backend_filter(const std::string& filter) {
   return filter == "all" || filter == "cublas_tc" || filter == "tc3" ||
-         filter == "tc4";
+         filter == "tc4" || filter == "tc5" || filter == "tc5a" ||
+         filter == "tc5b";
 }
 
 bool wants_reference(const std::string& filter) {
   return filter == "all" || filter == "cublas_tc" || filter == "tc3" ||
-         filter == "tc4";
+         filter == "tc4" || filter == "tc5" || filter == "tc5a" ||
+         filter == "tc5b";
 }
 
 bool wants_backend(const std::string& filter, const std::string& backend) {
+  if (filter == "tc5") {
+    return backend == "tc5a" || backend == "tc5b";
+  }
   return filter == "all" || filter == backend;
 }
 
@@ -97,9 +103,11 @@ int main(int argc, char** argv) {
   float* d_c = nullptr;
   half* d_a_half = nullptr;
   half* d_b_half = nullptr;
+  int* d_tc5_work_counter = nullptr;
   CHECK_CUDA(cudaMalloc(&d_c, c_bytes));
   CHECK_CUDA(cudaMalloc(&d_a_half, a_half_bytes));
   CHECK_CUDA(cudaMalloc(&d_b_half, b_half_bytes));
+  CHECK_CUDA(cudaMalloc(&d_tc5_work_counter, sizeof(int)));
   CHECK_CUDA(cudaMemcpy(d_a_half, h_a_half.data(), a_half_bytes,
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_half, h_b_half.data(), b_half_bytes,
@@ -112,6 +120,8 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaGetDeviceProperties(&device_prop, 0));
   const bool device_supports_tc3_sm110 =
       device_prop.major == 11 && tc3_sm110_tcgen05_available();
+  const bool device_supports_tc5_sm110 =
+      device_prop.major == 11 && tc5_sm110_launch_available();
 
   auto launch_cublas_tensor_core = [&]() {
     CHECK_CUBLAS(cublasGemmEx(
@@ -197,6 +207,130 @@ int main(int argc, char** argv) {
       csv << "tc4,tc4 sm110 blackwell ws pipeline scaffold," << n
           << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
     }
+
+    if (wants_backend(backend_filter, "tc5a") ||
+        wants_backend(backend_filter, "tc5b")) {
+      if (!device_supports_tc5_sm110) {
+        if (wants_backend(backend_filter, "tc5a")) {
+          std::cout << "tc5a sm110 static CLC persistent TCGen05/TMEM probe: "
+                       "skipped because runtime GPU is not an sm110 family "
+                       "target with tcgen05 enabled\n";
+          csv << "tc5a,tc5a sm110 static CLC persistent TCGen05/TMEM probe "
+                 "skipped,"
+              << n << ",fp16->fp32,tcgen05 probe,0,0,0,0\n";
+        }
+        if (wants_backend(backend_filter, "tc5b")) {
+          std::cout << "tc5b sm110 dynamic CLC persistent TCGen05/TMEM probe: "
+                       "skipped because runtime GPU is not an sm110 family "
+                       "target with tcgen05 enabled\n";
+          csv << "tc5b,tc5b sm110 dynamic CLC persistent TCGen05/TMEM probe "
+                 "skipped,"
+              << n << ",fp16->fp32,tcgen05 probe,0,0,0,0\n";
+        }
+      } else {
+        const int total_tiles =
+            ceil_div(m, Tc5Sm110Shape::kBlockM) *
+            ceil_div(n, Tc5Sm110Shape::kBlockN);
+        int tc5_workers_per_sm = 1;
+        if (const char* env_workers = std::getenv("TC5_SM110_WORKERS_PER_SM")) {
+          const int parsed = std::atoi(env_workers);
+          if (parsed > 0) tc5_workers_per_sm = parsed;
+        }
+        if (tc5_workers_per_sm > 8) tc5_workers_per_sm = 8;
+        const int worker_count =
+            total_tiles <
+                    device_prop.multiProcessorCount * tc5_workers_per_sm
+                ? total_tiles
+                : device_prop.multiProcessorCount * tc5_workers_per_sm;
+        dim3 tc5_grid(worker_count);
+        dim3 tc5_block(Tc5Sm110Shape::kThreads);
+
+        if (wants_backend(backend_filter, "tc5a")) {
+          auto launch_tc5a = [&]() {
+            hgemm_tc5a_sm110_clc_static_tcgen05_tmem_persistent_probe
+                <<<tc5_grid, tc5_block>>>(d_c, total_tiles);
+            CHECK_CUDA(cudaGetLastError());
+          };
+
+          CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+          for (int i = 0; i < kWarmup; ++i) launch_tc5a();
+          CHECK_CUDA(cudaDeviceSynchronize());
+
+          cudaEvent_t start, stop;
+          CHECK_CUDA(cudaEventCreate(&start));
+          CHECK_CUDA(cudaEventCreate(&stop));
+          CHECK_CUDA(cudaEventRecord(start));
+          for (int i = 0; i < kRepeat; ++i) launch_tc5a();
+          CHECK_CUDA(cudaEventRecord(stop));
+          CHECK_CUDA(cudaEventSynchronize(stop));
+          float total_ms = 0.0f;
+          CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+          CHECK_CUDA(cudaEventDestroy(start));
+          CHECK_CUDA(cudaEventDestroy(stop));
+
+          float probe_value = 0.0f;
+          CHECK_CUDA(cudaMemcpy(&probe_value, d_c, sizeof(float),
+                                cudaMemcpyDeviceToHost));
+          const float avg_ms = total_ms / kRepeat;
+          const bool matched = std::abs(probe_value - 1.0f) < 1e-6f;
+          std::cout
+              << "tc5a sm110 static CLC persistent TCGen05/TMEM probe: "
+              << avg_ms << " ms, probe=" << probe_value
+              << ", matched=" << matched << ", workers=" << worker_count
+              << ", workers_per_sm=" << tc5_workers_per_sm << '\n';
+          csv << "tc5a,tc5a sm110 static CLC persistent TCGen05/TMEM probe,"
+              << n << ",fp16->fp32,tcgen05 probe," << avg_ms
+              << ",0,0," << (matched ? 1 : 0) << '\n';
+        }
+
+        if (wants_backend(backend_filter, "tc5b")) {
+          auto launch_tc5b = [&]() {
+            hgemm_tc5b_sm110_clc_dynamic_tcgen05_tmem_persistent_probe
+                <<<tc5_grid, tc5_block>>>(d_c, total_tiles,
+                                          d_tc5_work_counter);
+            CHECK_CUDA(cudaGetLastError());
+          };
+
+          CHECK_CUDA(cudaMemset(d_c, 0, c_bytes));
+          for (int i = 0; i < kWarmup; ++i) {
+            CHECK_CUDA(cudaMemset(d_tc5_work_counter, 0, sizeof(int)));
+            launch_tc5b();
+          }
+          CHECK_CUDA(cudaDeviceSynchronize());
+
+          cudaEvent_t start, stop;
+          CHECK_CUDA(cudaEventCreate(&start));
+          CHECK_CUDA(cudaEventCreate(&stop));
+          float total_ms = 0.0f;
+          for (int i = 0; i < kRepeat; ++i) {
+            CHECK_CUDA(cudaMemset(d_tc5_work_counter, 0, sizeof(int)));
+            CHECK_CUDA(cudaEventRecord(start));
+            launch_tc5b();
+            CHECK_CUDA(cudaEventRecord(stop));
+            CHECK_CUDA(cudaEventSynchronize(stop));
+            float iter_ms = 0.0f;
+            CHECK_CUDA(cudaEventElapsedTime(&iter_ms, start, stop));
+            total_ms += iter_ms;
+          }
+          CHECK_CUDA(cudaEventDestroy(start));
+          CHECK_CUDA(cudaEventDestroy(stop));
+
+          float probe_value = 0.0f;
+          CHECK_CUDA(cudaMemcpy(&probe_value, d_c, sizeof(float),
+                                cudaMemcpyDeviceToHost));
+          const float avg_ms = total_ms / kRepeat;
+          const bool matched = std::abs(probe_value - 1.0f) < 1e-6f;
+          std::cout
+              << "tc5b sm110 dynamic CLC persistent TCGen05/TMEM probe: "
+              << avg_ms << " ms, probe=" << probe_value
+              << ", matched=" << matched << ", workers=" << worker_count
+              << ", workers_per_sm=" << tc5_workers_per_sm << '\n';
+          csv << "tc5b,tc5b sm110 dynamic CLC persistent TCGen05/TMEM probe,"
+              << n << ",fp16->fp32,tcgen05 probe," << avg_ms
+              << ",0,0," << (matched ? 1 : 0) << '\n';
+        }
+      }
+    }
   }
 
   csv.close();
@@ -204,5 +338,6 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaFree(d_c));
   CHECK_CUDA(cudaFree(d_a_half));
   CHECK_CUDA(cudaFree(d_b_half));
+  CHECK_CUDA(cudaFree(d_tc5_work_counter));
   return 0;
 }
