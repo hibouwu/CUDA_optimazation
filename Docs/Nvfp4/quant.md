@@ -6,8 +6,6 @@
 
 ## FP4
 
-
-
 | sign | exponent bits | mantissa bit |  value |
 | ---- | ------------- | ------------ | ------ |
 | 0    | 00            | 0            |   0 |

@@ -34,7 +34,7 @@ nvcc -O3 -std=c++17 \
   "${EXTRA_GENCODE[@]}" \
   -I"${ROOT_DIR}/GEMMsm110/include" \
   "${ROOT_DIR}/GEMMsm110/src/main.cu" \
-  -lcublas -lcuda \
+  -lcublas \
   -o "${BUILD_DIR}/gemm_sm110_bench"
 
 AGG_CSV="${OUT_DIR}/gemm_sm110_sweep.csv"

@@ -27,9 +27,13 @@ GEMMsm110/
 ├── include/
 │   ├── gemm_common.cuh         # CHECK_CUDA/CHECK_CUBLAS 宏、kWarmup/kRepeat 等
 │   ├── gemm_benchmark.cuh      # 输入构造、精度对比、benchmark_kernel
+│   ├── requant/                 # NVFP4/E2M1 尾处理后端
 │   ├── tc3_gemm_kernel.cuh     # TCGen05/TMEM alloc/st/ld/dealloc 最小 probe
 │   ├── tc4_gemm_kernel.cuh     # Warp-specialized pipeline scaffold
 │   └── tc5_gemm_kernel.cuh     # CLC persistent worker probe (static + dynamic)
+├── tests/
+│   ├── requant_epilogue_benchmark.cu
+│   └── run_requant_epilogue_benchmark.sh
 └── src/
     └── main.cu                 # 入口
 ```
@@ -59,6 +63,36 @@ TC5_SM110_WORKERS_PER_SM=3 ./build_and_run.sh 1024 tc5a
 ```
 
 编译产物在 `build/` 目录下，运行时在 `build/` 内生成 `sgemm_sm110_benchmark.csv`。
+
+## NVFP4 尾处理测试
+
+批量测试不同矩阵尺寸和输入分布：
+
+```bash
+./tests/run_requant_epilogue_benchmark.sh
+```
+
+可通过环境变量调整测试轮数：
+
+```bash
+WARMUP=5 ITERATIONS=50 SEED=7 \
+  ./tests/run_requant_epilogue_benchmark.sh
+```
+
+单独运行一个用例：
+
+```bash
+./tests/build/requant_epilogue_benchmark \
+  --rows 1024 \
+  --cols 1024 \
+  --distribution outlier \
+  --warmup 10 \
+  --iterations 100
+```
+
+测试覆盖 `uniform`、`normal`、`laplace`、`outlier`、`lognormal`
+和 `constant` 分布。结果包含量化值与 E4M3 block scale 的 CPU
+reference 精确匹配、RMSE、最大绝对误差、处理吞吐和有效带宽。
 
 ## 相关仓库文档
 

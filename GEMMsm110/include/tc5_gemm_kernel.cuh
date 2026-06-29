@@ -74,7 +74,9 @@ template <typename Shape>
 __device__ __forceinline__ void tc5_sm110_tmem_probe_store_load(
     unsigned int tmem_base, float* c, Tc5Sm110WorkTile work) {
 #if TC3_SM110_HAS_TCGEN05
-  if (threadIdx.x == 0 && work.valid) {
+  // tcgen05.st/ld are warp-collective operations. Restrict the probe to one
+  // complete warp; executing them from lane 0 alone is undefined.
+  if (threadIdx.x < kWarpSize && work.valid) {
     const unsigned int one_bits = 0x3f800000u;
     asm volatile("tcgen05.st.sync.aligned.16x64b.x1.b32 [%0], {%1};"
                  :
@@ -90,7 +92,9 @@ __device__ __forceinline__ void tc5_sm110_tmem_probe_store_load(
 
     float out = 0.0f;
     *reinterpret_cast<unsigned int*>(&out) = loaded;
-    c[work.tile_id] = out;
+    if ((threadIdx.x & (kWarpSize - 1)) == 0) {
+      c[work.tile_id] = out;
+    }
   }
 #else
   if (threadIdx.x == 0 && blockIdx.x == 0) {
