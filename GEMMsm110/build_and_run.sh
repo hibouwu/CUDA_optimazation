@@ -18,6 +18,8 @@ BUILD_DIR="${SCRIPT_DIR}/build"
 BENCH_BIN="${BUILD_DIR}/gemm_sm110_bench"
 SANITY_BIN="${BUILD_DIR}/runtime_sanity"
 TC3_MINIMAL_BIN="${BUILD_DIR}/tc3_minimal"
+BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS:-30}}"
+BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
 
 NVCC="${NVCC:-nvcc}"
 COMMON_FLAGS=(
@@ -47,6 +49,27 @@ build_benchmark() {
     -o "${BENCH_BIN}"
 }
 
+run_backend_with_timeout() {
+  local n="$1"
+  local backend="$2"
+  local status
+
+  echo "=== Running N=${n} backend=${backend} timeout=${BACKEND_TIMEOUT_SECONDS}s ==="
+  set +e
+  timeout --foreground --signal=TERM \
+    --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
+    "${BACKEND_TIMEOUT_SECONDS}s" \
+    "${BENCH_BIN}" "${n}" "${backend}"
+  status=$?
+  set -e
+
+  if [[ "${status}" -eq 124 || "${status}" -eq 137 ]]; then
+    echo "=== Backend ${backend} timed out after ${BACKEND_TIMEOUT_SECONDS}s and was stopped ===" >&2
+    return 124
+  fi
+  return "${status}"
+}
+
 usage() {
   cat <<EOF
 Usage:
@@ -54,7 +77,7 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b]
+  $0 [N] [all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b] [timeout_seconds]
 EOF
 }
 
@@ -91,10 +114,18 @@ case "${ARG}" in
     ;;
   *)
     N="${ARG}"
+    if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+      echo "Invalid backend timeout: ${BACKEND_TIMEOUT_SECONDS} (expected positive integer seconds)" >&2
+      exit 2
+    fi
+    if [[ ! "${BACKEND_KILL_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+      echo "Invalid backend kill grace: ${BACKEND_KILL_GRACE_SECONDS} (expected positive integer seconds)" >&2
+      exit 2
+    fi
     FILTER="${2:-all}"
     echo "=== Building benchmark ==="
     build_benchmark
-    echo "=== Running N=${N} filter=${FILTER} ==="
-    "${BENCH_BIN}" "${N}" "${FILTER}"
+    echo "Backend timeout: ${BACKEND_TIMEOUT_SECONDS}s (SIGKILL grace: ${BACKEND_KILL_GRACE_SECONDS}s)"
+    run_backend_with_timeout "${N}" "${FILTER}"
     ;;
 esac
