@@ -46,11 +46,10 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  if (!report_cuda("cudaFree(0)", cudaFree(0))) {
-    return EXIT_FAILURE;
-  }
-
-  if (!report_cuda("cudaSetDevice(0)", cudaSetDevice(0))) {
+  // CUDA 12+ defines cudaSetDevice as the explicit runtime/context
+  // initialization API. The legacy cudaFree(0) idiom is not portable to all
+  // Thor BSP/runtime combinations.
+  if (!report_cuda("cudaSetDevice(0) / runtime init", cudaSetDevice(0))) {
     return EXIT_FAILURE;
   }
 

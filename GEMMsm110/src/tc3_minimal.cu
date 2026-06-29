@@ -8,10 +8,9 @@
 #include <iostream>
 
 int main() {
-  CHECK_CUDA(cudaFree(0));
-
   int device = 0;
   CHECK_CUDA(cudaGetDevice(&device));
+  CHECK_CUDA(cudaSetDevice(device));
 
   cudaDeviceProp prop{};
   CHECK_CUDA(cudaGetDeviceProperties(&prop, device));

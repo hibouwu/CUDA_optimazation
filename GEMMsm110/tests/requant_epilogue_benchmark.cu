@@ -347,9 +347,9 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  CHECK_CUDA(cudaFree(0));
   int device = 0;
   CHECK_CUDA(cudaGetDevice(&device));
+  CHECK_CUDA(cudaSetDevice(device));
   cudaDeviceProp property{};
   CHECK_CUDA(cudaGetDeviceProperties(&property, device));
   if (property.major != 11) {

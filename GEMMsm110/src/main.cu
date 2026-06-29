@@ -113,9 +113,12 @@ int main(int argc, char** argv) {
                                  : 0);
   const size_t d_c_bytes = d_c_elements * sizeof(float);
 
-  CHECK_CUDA(cudaFree(0));
   int device = 0;
   CHECK_CUDA(cudaGetDevice(&device));
+  // CUDA 12+ initializes the runtime and primary context in cudaSetDevice.
+  // Do not use the legacy cudaFree(0) initialization idiom: it returns
+  // cudaErrorNotSupported on some Thor BSP/runtime combinations.
+  CHECK_CUDA(cudaSetDevice(device));
   cudaDeviceProp device_prop{};
   CHECK_CUDA(cudaGetDeviceProperties(&device_prop, device));
 
