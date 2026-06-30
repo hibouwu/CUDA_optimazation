@@ -9,6 +9,7 @@ set -euo pipefail
 #   ./build_and_run.sh sanity
 #   ./build_and_run.sh tc3-minimal
 #   ./build_and_run.sh 1024 cublas_tc
+#   ./build_and_run.sh 1024 cutlass
 #   ./build_and_run.sh 1024 tc3
 #   ./build_and_run.sh 1024 tc5a
 #   ./build_and_run.sh 1024 tc5b
@@ -20,14 +21,21 @@ SANITY_BIN="${BUILD_DIR}/runtime_sanity"
 TC3_MINIMAL_BIN="${BUILD_DIR}/tc3_minimal"
 BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS:-30}}"
 BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
+CUTLASS_ROOT="${CUTLASS_ROOT:-${SCRIPT_DIR}/../../third_party/cutlass}"
 
 NVCC="${NVCC:-nvcc}"
 COMMON_FLAGS=(
   -O3
   -std=c++17
+  --expt-relaxed-constexpr
+  -diag-suppress=20012
+  -diag-suppress=20013
+  -diag-suppress=20015
   -DTC3_SM110_HOST_HAS_TCGEN05=1
   -gencode arch=compute_110a,code=sm_110a
   -I"${SCRIPT_DIR}/include"
+  -I"${CUTLASS_ROOT}/include"
+  -I"${CUTLASS_ROOT}/tools/util/include"
 )
 
 build_sanity() {
@@ -43,6 +51,11 @@ build_tc3_minimal() {
 }
 
 build_benchmark() {
+  if [[ ! -f "${CUTLASS_ROOT}/include/cutlass/cutlass.h" ]]; then
+    echo "CUTLASS headers not found under ${CUTLASS_ROOT}" >&2
+    echo "Set CUTLASS_ROOT to a CUTLASS 4.5.2 checkout." >&2
+    exit 2
+  fi
   "${NVCC}" "${COMMON_FLAGS[@]}" \
     "${SCRIPT_DIR}/src/main.cu" \
     -lcublas \
@@ -77,7 +90,7 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b] [timeout_seconds]
+  $0 [N] [all|cublas_tc|cutlass|tc3|tc4|tc5|tc5a|tc5b] [timeout_seconds]
 EOF
 }
 

@@ -2,58 +2,219 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="${BUILD_DIR:-${ROOT_DIR}/build_sm110}"
+GEMM_ROOT="${ROOT_DIR}/GEMMsm110"
+BUILD_DIR="${BUILD_DIR:-${GEMM_ROOT}/build}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/results/gemm_sm110}"
 RAW_DIR="${OUT_DIR}/raw"
+FIG_DIR="${OUT_DIR}/figures"
 GEMM_SUITE="${GEMM_SUITE:-all}"
-GEMM_SIZES="${GEMM_SIZES:-128 256 512 1024 2048}"
-TRIALS="${TRIALS:-3}"
-CUDA_ARCH="${CUDA_ARCH:-}"
+PRESET="${PRESET:-default}"
+TRIALS="${TRIALS:-10}"
+BACKEND_TIMEOUT_SECONDS="${BACKEND_TIMEOUT_SECONDS:-30}"
+BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
+CUTLASS_ROOT="${CUTLASS_ROOT:-${ROOT_DIR}/../third_party/cutlass}"
+NVCC="${NVCC:-nvcc}"
 
 case "${GEMM_SUITE}" in
-  all|cublas_tc|tc3|tc4|tc5|tc5a|tc5b) ;;
+  all|cublas_tc|cutlass|tc3|tc4|tc5|tc5a|tc5b) ;;
   *)
-    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, cublas_tc, tc3, tc4, tc5, tc5a, or tc5b." >&2
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, cublas_tc, cutlass, tc3, tc4, tc5, tc5a, or tc5b." >&2
     exit 1
     ;;
 esac
 
+case "${PRESET}" in
+  quick)
+    DEFAULT_GEMM_SIZES="128 256 512 1024"
+    ;;
+  default)
+    DEFAULT_GEMM_SIZES="128 256 512 1024 2048 4096"
+    ;;
+  full)
+    DEFAULT_GEMM_SIZES="128 256 512 1024 2048 4096"
+    ;;
+  *)
+    echo "Unknown PRESET=${PRESET}. Use quick, default, full, or set GEMM_SIZES explicitly." >&2
+    exit 1
+    ;;
+esac
+GEMM_SIZES="${GEMM_SIZES:-${DEFAULT_GEMM_SIZES}}"
+
+if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Invalid BACKEND_TIMEOUT_SECONDS=${BACKEND_TIMEOUT_SECONDS}. Expected a positive integer." >&2
+  exit 1
+fi
+if [[ ! "${BACKEND_KILL_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Invalid BACKEND_KILL_GRACE_SECONDS=${BACKEND_KILL_GRACE_SECONDS}. Expected a positive integer." >&2
+  exit 1
+fi
+
 mkdir -p "${BUILD_DIR}" "${RAW_DIR}"
 
-EXTRA_GENCODE=()
-if [[ -z "${CUDA_ARCH}" ]] && command -v nvidia-smi >/dev/null 2>&1; then
-  CUDA_ARCH="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n 1 | tr -d '. ')"
-fi
-if [[ "${CUDA_ARCH}" =~ ^[0-9]+$ ]]; then
-  EXTRA_GENCODE=(-gencode "arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
-fi
+ensure_python() {
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+    return
+  fi
+  if command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+    return
+  fi
+  if [[ "${EUID}" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
+    echo "python3 not found, installing python3-minimal for plotting."
+    apt-get update
+    apt-get install -y python3-minimal
+    PYTHON_BIN="python3"
+    return
+  fi
+  echo "python3 is required for plotting. Install python3 or run inside the CUDA container as root." >&2
+  exit 1
+}
 
-nvcc -O3 -std=c++17 \
-  -DTC3_SM110_HOST_HAS_TCGEN05=1 \
-  -gencode arch=compute_110a,code=sm_110a \
-  "${EXTRA_GENCODE[@]}" \
-  -I"${ROOT_DIR}/GEMMsm110/include" \
-  "${ROOT_DIR}/GEMMsm110/src/main.cu" \
-  -lcublas \
-  -o "${BUILD_DIR}/gemm_sm110_bench"
+warn_render_access() {
+  if [[ -e /dev/dri/renderD128 ]] && [[ ! -r /dev/dri/renderD128 ]]; then
+    echo "Current shell cannot access /dev/dri/renderD128." >&2
+    echo "If benchmark launch fails, rerun with: sg render -c 'bash ${BASH_SOURCE[0]}'" >&2
+  fi
+}
+
+build_gemm_sm110() {
+  if [[ ! -f "${CUTLASS_ROOT}/include/cutlass/cutlass.h" ]]; then
+    echo "CUTLASS headers not found under ${CUTLASS_ROOT}" >&2
+    echo "Set CUTLASS_ROOT to a CUTLASS 4.5.2 checkout." >&2
+    exit 2
+  fi
+
+  "${NVCC}" \
+    -O3 \
+    -std=c++17 \
+    --expt-relaxed-constexpr \
+    -diag-suppress=20012 \
+    -diag-suppress=20013 \
+    -diag-suppress=20015 \
+    -DTC3_SM110_HOST_HAS_TCGEN05=1 \
+    -gencode arch=compute_110a,code=sm_110a \
+    -I"${GEMM_ROOT}/include" \
+    -I"${CUTLASS_ROOT}/include" \
+    -I"${CUTLASS_ROOT}/tools/util/include" \
+    "${GEMM_ROOT}/src/main.cu" \
+    -lcublas \
+    -o "${BUILD_DIR}/gemm_sm110_bench"
+}
+
+expand_suite_backends() {
+  case "$1" in
+    all)
+      printf '%s\n' cublas_tc cutlass tc3 tc4 tc5a tc5b
+      ;;
+    tc5)
+      printf '%s\n' cublas_tc tc5a tc5b
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+append_rows() {
+  local csv_path="$1"
+  local trial="$2"
+  local include_reference="$3"
+
+  if [[ ! -f "${csv_path}" ]]; then
+    return
+  fi
+
+  awk -F, -v trial="${trial}" -v include_reference="${include_reference}" '
+    NR == 1 { next }
+    include_reference == "1" { print $0 "," trial; next }
+    $1 != "cublas_tc" { print $0 "," trial }
+  ' "${csv_path}" >> "${AGG_CSV}"
+}
+
+run_backend_once() {
+  local n="$1"
+  local trial="$2"
+  local backend="$3"
+  local include_reference="$4"
+  local run_dir="${RAW_DIR}/N${n}/trial_${trial}/${backend}"
+  local status=0
+
+  mkdir -p "${run_dir}"
+  echo "Running GEMMsm110 N=${n}, backend=${backend}, trial=${trial}/${TRIALS}"
+
+  set +e
+  (
+    cd "${run_dir}"
+    timeout --foreground --signal=TERM \
+      --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
+      "${BACKEND_TIMEOUT_SECONDS}s" \
+      "${BUILD_DIR}/gemm_sm110_bench" "${n}" "${backend}" | tee stdout.txt
+  )
+  status=$?
+  set -e
+
+  append_rows "${run_dir}/sgemm_sm110_benchmark.csv" "${trial}" "${include_reference}"
+
+  if [[ "${status}" -eq 124 || "${status}" -eq 137 ]]; then
+    echo "Warning: backend ${backend} timed out after ${BACKEND_TIMEOUT_SECONDS}s for N=${n}, trial=${trial}." >&2
+    return 124
+  fi
+  if [[ "${status}" -ne 0 ]]; then
+    echo "Warning: backend ${backend} exited with status ${status} for N=${n}, trial=${trial}." >&2
+    return "${status}"
+  fi
+  if [[ ! -f "${run_dir}/sgemm_sm110_benchmark.csv" ]]; then
+    echo "Warning: backend ${backend} did not produce sgemm_sm110_benchmark.csv for N=${n}, trial=${trial}." >&2
+    return 1
+  fi
+}
+
+run_trial() {
+  local n="$1"
+  local trial="$2"
+  local backend
+  local -a backends=()
+  local include_reference
+
+  mapfile -t backends < <(expand_suite_backends "${GEMM_SUITE}")
+  for backend in "${backends[@]}"; do
+    include_reference="1"
+    if [[ "${GEMM_SUITE}" == "all" || "${GEMM_SUITE}" == "tc5" ]]; then
+      if [[ "${backend}" != "cublas_tc" ]]; then
+        include_reference="0"
+      fi
+    fi
+    if ! run_backend_once "${n}" "${trial}" "${backend}" "${include_reference}"; then
+      HAD_FAILURES=1
+    fi
+  done
+}
+
+build_gemm_sm110
+ensure_python
+warn_render_access
 
 AGG_CSV="${OUT_DIR}/gemm_sm110_sweep.csv"
+HAD_FAILURES=0
 printf 'BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Trial\n' > "${AGG_CSV}"
 
 for n in ${GEMM_SIZES}; do
   for trial in $(seq 1 "${TRIALS}"); do
-    run_dir="${RAW_DIR}/N${n}/trial_${trial}"
-    mkdir -p "${run_dir}"
-    echo "Running GEMMsm110 N=${n}, trial=${trial}/${TRIALS}"
-    (
-      cd "${run_dir}"
-      "${BUILD_DIR}/gemm_sm110_bench" "${n}" "${GEMM_SUITE}" | tee stdout.txt
-    )
-    awk -F, -v trial="${trial}" '
-      NR == 1 { next }
-      { print $0 "," trial }
-    ' "${run_dir}/sgemm_sm110_benchmark.csv" >> "${AGG_CSV}"
+    run_trial "${n}" "${trial}"
   done
 done
 
+rm -rf "${FIG_DIR}"
+mkdir -p "${FIG_DIR}"
+"${PYTHON_BIN}" "${ROOT_DIR}/scripts/plot_benchmarks.py" \
+  --gemm "${AGG_CSV}" \
+  --out-dir "${FIG_DIR}"
+
 echo "GEMMsm110 experiment data: ${OUT_DIR}"
+echo "GEMMsm110 figures: ${FIG_DIR}"
+
+if [[ "${HAD_FAILURES}" -ne 0 ]]; then
+  echo "Completed with backend failures or timeouts. See ${RAW_DIR} for partial results." >&2
+  exit 1
+fi

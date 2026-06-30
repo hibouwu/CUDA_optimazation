@@ -20,6 +20,24 @@ COLORS = [
     "#7c3aed",
 ]
 
+DASH_PATTERNS = [
+    "",
+    "10 4",
+    "3 3",
+    "12 3 3 3",
+    "8 3",
+    "2 3",
+]
+
+MARKERS = [
+    "circle",
+    "square",
+    "triangle",
+    "diamond",
+    "cross",
+    "plus",
+]
+
 KEY_GEMM_FP32_SERIES = [
     "v2",
     "v3",
@@ -37,9 +55,11 @@ KEY_GEMM_FP32_SERIES = [
 
 KEY_GEMM_TENSOR_CORE_SERIES = [
     "cublas_tc",
+    "cutlass",
     "tc1",
     "tc2",
     "tc3",
+    "tc4",
     "tc4a",
     "tc4b",
     "tc5a",
@@ -67,6 +87,7 @@ KEY_GEMM_LEGACY_FP32_SERIES = [
 SERIES_LABELS = {
     "cublas": "cuBLAS FP32 Pedantic",
     "cublas_tc": "cuBLAS Tensor Core",
+    "cutlass": "CUTLASS official auto-schedule",
     "v1": "v1 naive uncoalesced",
     "v2": "v2 coalesced naive",
     "v3": "v3 shared-memory tile",
@@ -83,10 +104,19 @@ SERIES_LABELS = {
     "tc1": "tc1 wmma fp16 baseline",
     "tc2": "tc2 tma 2-stage wmma 128x64x32",
     "tc3": "tc3 sm120a fp8 tma 2-stage mma 128x64x32",
+    "tc4": "tc4 sm110 tma staged tcgen05 gemm",
     "tc4a": "tc4a sm120a fp8 tma 3-stage prepack mma",
     "tc4b": "tc4b sm120a fp8 TMA 64B swizzle/fallback 3-stage prepack mma",
     "tc5a": "tc5a sm120a static CLC fallback scheduler",
     "tc5b": "tc5b sm120a dynamic CLC fallback work queue",
+}
+
+SM110_SERIES_LABELS = {
+    "cutlass": "CUTLASS official Blackwell auto-schedule",
+    "tc3": "tc3 custom cooperative-copy tcgen05 gemm",
+    "tc4": "tc4 custom tma tcgen05 gemm",
+    "tc5a": "tc5a custom static persistent tma tcgen05 gemm",
+    "tc5b": "tc5b custom hardware clc persistent tma tcgen05 gemm",
 }
 
 
@@ -132,7 +162,9 @@ def backend_key(row):
         "v8c",
         "tc1",
         "tc2",
+        "cutlass",
         "tc3",
+        "tc4",
         "tc4a",
         "tc4b",
         "tc5a",
@@ -347,11 +379,49 @@ def y_label(value):
     return f"{value:.1f}"
 
 
-def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
-    width = 1280
+def marker_svg(shape, x, y, color):
+    if shape == "square":
+        return (
+            f'<rect x="{x - 4:.2f}" y="{y - 4:.2f}" width="8" height="8" '
+            f'fill="#ffffff" stroke="{color}" stroke-width="2"/>'
+        )
+    if shape == "triangle":
+        points = f"{x:.2f},{y - 5:.2f} {x - 5:.2f},{y + 4:.2f} {x + 5:.2f},{y + 4:.2f}"
+        return (
+            f'<polygon points="{points}" fill="#ffffff" stroke="{color}" '
+            'stroke-width="2"/>'
+        )
+    if shape == "diamond":
+        points = f"{x:.2f},{y - 5:.2f} {x - 5:.2f},{y:.2f} {x:.2f},{y + 5:.2f} {x + 5:.2f},{y:.2f}"
+        return (
+            f'<polygon points="{points}" fill="#ffffff" stroke="{color}" '
+            'stroke-width="2"/>'
+        )
+    if shape == "cross":
+        return (
+            f'<line x1="{x - 4:.2f}" y1="{y - 4:.2f}" x2="{x + 4:.2f}" '
+            f'y2="{y + 4:.2f}" stroke="{color}" stroke-width="2.4"/>'
+            f'<line x1="{x - 4:.2f}" y1="{y + 4:.2f}" x2="{x + 4:.2f}" '
+            f'y2="{y - 4:.2f}" stroke="{color}" stroke-width="2.4"/>'
+        )
+    if shape == "plus":
+        return (
+            f'<line x1="{x - 5:.2f}" y1="{y:.2f}" x2="{x + 5:.2f}" '
+            f'y2="{y:.2f}" stroke="{color}" stroke-width="2.4"/>'
+            f'<line x1="{x:.2f}" y1="{y - 5:.2f}" x2="{x:.2f}" '
+            f'y2="{y + 5:.2f}" stroke="{color}" stroke-width="2.4"/>'
+        )
+    return (
+        f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="#ffffff" '
+        f'stroke="{color}" stroke-width="2"/>'
+    )
+
+
+def write_svg(series, title, x_title, y_title, output_path, y_scale="linear", series_labels=None):
+    width = 1500
     height = 680
     left = 92
-    right = 300
+    right = 500
     top = 72
     bottom = 86
     plot_w = width - left - right
@@ -422,11 +492,17 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
 
     for idx, (name, points) in enumerate(series.items()):
         color = COLORS[idx % len(COLORS)]
+        dash = DASH_PATTERNS[idx % len(DASH_PATTERNS)]
+        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+        marker = MARKERS[idx % len(MARKERS)]
         path = " ".join(
             f"{'M' if point_idx == 0 else 'L'} {sx(x):.2f} {sy(y):.2f}"
             for point_idx, (x, y, _) in enumerate(points)
         )
-        lines.append(f'<path d="{path}" fill="none" stroke="{color}" stroke-width="2.5"/>')
+        lines.append(
+            f'<path d="{path}" fill="none" stroke="{color}" '
+            f'stroke-width="2.5"{dash_attr}/>'
+        )
         for x, y, err in points:
             px = sx(x)
             py = sy(y)
@@ -436,7 +512,7 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
                 lines.append(f'<line x1="{px:.2f}" y1="{y_high:.2f}" x2="{px:.2f}" y2="{y_low:.2f}" stroke="{color}" stroke-width="1.6"/>')
                 lines.append(f'<line x1="{px - 5:.2f}" y1="{y_high:.2f}" x2="{px + 5:.2f}" y2="{y_high:.2f}" stroke="{color}" stroke-width="1.6"/>')
                 lines.append(f'<line x1="{px - 5:.2f}" y1="{y_low:.2f}" x2="{px + 5:.2f}" y2="{y_low:.2f}" stroke="{color}" stroke-width="1.6"/>')
-            lines.append(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="4" fill="{color}"/>')
+            lines.append(marker_svg(marker, px, py, color))
 
     legend_x = left + plot_w + 30
     legend_y = top + 4
@@ -444,8 +520,15 @@ def write_svg(series, title, x_title, y_title, output_path, y_scale="linear"):
     for idx, name in enumerate(series):
         y = legend_y + 24 + idx * 22
         color = COLORS[idx % len(COLORS)]
-        label = SERIES_LABELS.get(name, name)
-        lines.append(f'<line x1="{legend_x}" y1="{y}" x2="{legend_x + 24}" y2="{y}" stroke="{color}" stroke-width="3"/>')
+        dash = DASH_PATTERNS[idx % len(DASH_PATTERNS)]
+        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+        marker = MARKERS[idx % len(MARKERS)]
+        label = (series_labels or SERIES_LABELS).get(name, name)
+        lines.append(
+            f'<line x1="{legend_x}" y1="{y}" x2="{legend_x + 24}" '
+            f'y2="{y}" stroke="{color}" stroke-width="3"{dash_attr}/>'
+        )
+        lines.append(marker_svg(marker, legend_x + 12, y, color))
         lines.append(f'<text x="{legend_x + 32}" y="{y + 4}" font-size="12" font-family="Arial" fill="#374151">{html.escape(label)}</text>')
 
     lines.append("</svg>")
@@ -478,6 +561,9 @@ def main():
 
     if args.gemm:
         gemm_rows = read_rows(args.gemm)
+        gemm_series_labels = dict(SERIES_LABELS)
+        if "sm110" in Path(args.gemm).name.lower():
+            gemm_series_labels.update(SM110_SERIES_LABELS)
         if has_new_gemm_schema(gemm_rows):
             fp32_rows = filter_rows(gemm_rows, lambda row: row.get("Precision") == "fp32")
             tensor_core_rows = filter_rows(
@@ -491,6 +577,7 @@ def main():
                     "Square matrix size N",
                     "GFLOPS",
                     out_dir / "gemm_fp32_gflops.svg",
+                    series_labels=gemm_series_labels,
                 )
                 write_svg(
                     filter_series(
@@ -501,6 +588,7 @@ def main():
                     "Square matrix size N",
                     "Ratio",
                     out_dir / "gemm_fp32_ratio_to_cublas.svg",
+                    series_labels=gemm_series_labels,
                 )
                 write_svg(
                     best_backend_series(fp32_rows, "GFLOPS"),
@@ -508,6 +596,7 @@ def main():
                     "Square matrix size N",
                     "GFLOPS",
                     out_dir / "gemm_fp32_best_backend_gflops.svg",
+                    series_labels=gemm_series_labels,
                 )
             if tensor_core_rows:
                 write_svg(
@@ -519,6 +608,7 @@ def main():
                     "Square matrix size N",
                     "GFLOPS",
                     out_dir / "gemm_tensor_core_gflops.svg",
+                    series_labels=gemm_series_labels,
                 )
                 write_svg(
                     filter_series(
@@ -529,6 +619,7 @@ def main():
                     "Square matrix size N",
                     "Ratio",
                     out_dir / "gemm_tensor_core_ratio_to_cublas_tc.svg",
+                    series_labels=gemm_series_labels,
                 )
         else:
             gemm_gflops = group_series(gemm_rows, "N", "GFLOPS")
@@ -539,6 +630,7 @@ def main():
                 "Square matrix size N",
                 "GFLOPS",
                 out_dir / "sgemm_gflops.svg",
+                series_labels=gemm_series_labels,
             )
             write_svg(
                 gemm_gflops,
@@ -547,6 +639,7 @@ def main():
                 "GFLOPS",
                 out_dir / "sgemm_gflops_log.svg",
                 y_scale="log",
+                series_labels=gemm_series_labels,
             )
             write_svg(
                 filter_series(
@@ -557,6 +650,7 @@ def main():
                 "Square matrix size N",
                 "Ratio",
                 out_dir / "sgemm_ratio_to_cublas.svg",
+                series_labels=gemm_series_labels,
             )
 
     if args.tuning:
