@@ -10,9 +10,9 @@
 | --- | --- | --- |
 | `cutlass` | CUTLASS 官方 Blackwell Auto schedule（示例 71 默认策略） | 可运行、GFLOPS、数值校验 |
 | `tc3` | 自有 cooperative-copy + TCGen05/TMEM GEMM | 可运行、GFLOPS、数值校验 |
-| `tc4` | 自有 TMA + TCGen05/TMEM GEMM | 可运行、GFLOPS、数值校验 |
-| `tc5a` | 自有 static persistent TMA + TCGen05/TMEM GEMM | 可运行、GFLOPS、数值校验 |
-| `tc5b` | 自有硬件 CLC persistent TMA + TCGen05/TMEM GEMM | 可运行、GFLOPS、数值校验 |
+| `tc4` | 自有自适应 1-SM/2-SM TMA + TCGen05/TMEM GEMM | 3-stage 主循环、multicast、TMA epilogue |
+| `tc5a` | 自有 static persistent TMA + TCGen05/TMEM GEMM | 2-stage 主循环、TMA epilogue |
+| `tc5b` | 自有硬件 CLC persistent TMA + TCGen05/TMEM GEMM | CLC 动态调度、TMA epilogue |
 
 ## 前置条件
 

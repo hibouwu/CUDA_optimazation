@@ -114,9 +114,9 @@ SERIES_LABELS = {
 SM110_SERIES_LABELS = {
     "cutlass": "CUTLASS official Blackwell auto-schedule",
     "tc3": "tc3 custom cooperative-copy tcgen05 gemm",
-    "tc4": "tc4 custom tma tcgen05 gemm",
-    "tc5a": "tc5a custom static persistent tma tcgen05 gemm",
-    "tc5b": "tc5b custom hardware clc persistent tma tcgen05 gemm",
+    "tc4": "tc4 custom adaptive 1sm/2sm tma tcgen05 gemm",
+    "tc5a": "tc5a custom static persistent tma/epilogue tcgen05 gemm",
+    "tc5b": "tc5b custom hardware clc persistent tma/epilogue tcgen05 gemm",
 }
 
 

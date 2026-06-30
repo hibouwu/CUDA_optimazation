@@ -218,7 +218,8 @@ int main(int argc, char** argv) {
       auto launch_tc4 = [&]() { tc4_runner.launch(); };
       std::vector<float> h_tc4(static_cast<size_t>(m) * n);
       benchmark_kernel(
-          "tc4", "tc4 custom TMA TCGen05 GEMM", "fp16->fp32",
+          "tc4", "tc4 custom adaptive 1SM/2SM TMA TCGen05 GEMM",
+          "fp16->fp32",
           "cuBLAS Tensor Core", launch_tc4, m, n, k, d_c, c_bytes, h_ref_tc,
           h_tc4, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
@@ -251,7 +252,8 @@ int main(int argc, char** argv) {
         auto launch_tc5a = [&]() { tc5a_runner.launch(); };
         std::vector<float> h_tc5a(static_cast<size_t>(m) * n);
         benchmark_kernel(
-            "tc5a", "tc5a custom static persistent TMA TCGen05 GEMM",
+            "tc5a",
+            "tc5a custom static persistent TMA/epilogue TCGen05 GEMM",
             "fp16->fp32", "cuBLAS Tensor Core", launch_tc5a, m, n, k, d_c,
             c_bytes, h_ref_tc, h_tc5a, csv, cublas_tc_perf, 2e-2f, 2e-3f);
       }
@@ -263,7 +265,8 @@ int main(int argc, char** argv) {
         auto launch_tc5b = [&]() { tc5b_runner.launch(); };
         std::vector<float> h_tc5b(static_cast<size_t>(m) * n);
         benchmark_kernel(
-            "tc5b", "tc5b custom hardware CLC persistent TMA TCGen05 GEMM",
+            "tc5b",
+            "tc5b custom hardware CLC persistent TMA/epilogue TCGen05 GEMM",
             "fp16->fp32", "cuBLAS Tensor Core", launch_tc5b, m, n, k, d_c,
             c_bytes, h_ref_tc, h_tc5b, csv, cublas_tc_perf, 2e-2f, 2e-3f);
       }

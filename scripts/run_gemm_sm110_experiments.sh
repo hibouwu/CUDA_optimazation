@@ -12,6 +12,7 @@ PRESET="${PRESET:-default}"
 TRIALS="${TRIALS:-10}"
 BACKEND_TIMEOUT_SECONDS="${BACKEND_TIMEOUT_SECONDS:-30}"
 BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
+VERBOSE="${VERBOSE:-0}"
 CUTLASS_ROOT="${CUTLASS_ROOT:-${ROOT_DIR}/../third_party/cutlass}"
 NVCC="${NVCC:-nvcc}"
 
@@ -46,6 +47,10 @@ if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "${BACKEND_KILL_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "Invalid BACKEND_KILL_GRACE_SECONDS=${BACKEND_KILL_GRACE_SECONDS}. Expected a positive integer." >&2
+  exit 1
+fi
+if [[ "${VERBOSE}" != "0" && "${VERBOSE}" != "1" ]]; then
+  echo "Invalid VERBOSE=${VERBOSE}. Use VERBOSE=0 or VERBOSE=1." >&2
   exit 1
 fi
 
@@ -132,6 +137,25 @@ append_rows() {
   ' "${csv_path}" >> "${AGG_CSV}"
 }
 
+print_backend_summary() {
+  local csv_path="$1"
+  local backend="$2"
+
+  awk -F, -v backend="${backend}" '
+    $1 == backend {
+      printf "%9.4f ms | %11.1f GFLOPS | %6.3fx | matched=%s\n",
+             $6, $7, $8, $9
+      found = 1
+      exit
+    }
+    END {
+      if (!found) {
+        print "result row missing"
+      }
+    }
+  ' "${csv_path}"
+}
+
 run_backend_once() {
   local n="$1"
   local trial="$2"
@@ -141,33 +165,60 @@ run_backend_once() {
   local status=0
 
   mkdir -p "${run_dir}"
-  echo "Running GEMMsm110 N=${n}, backend=${backend}, trial=${trial}/${TRIALS}"
+  if [[ "${VERBOSE}" == "1" ]]; then
+    echo "--- N=${n} backend=${backend} trial=${trial}/${TRIALS} ---"
+  else
+    printf '  trial %02d/%02d | %-9s | ' "${trial}" "${TRIALS}" "${backend}"
+  fi
 
   set +e
-  (
-    cd "${run_dir}"
-    timeout --foreground --signal=TERM \
-      --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
-      "${BACKEND_TIMEOUT_SECONDS}s" \
-      "${BUILD_DIR}/gemm_sm110_bench" "${n}" "${backend}" | tee stdout.txt
-  )
-  status=$?
+  if [[ "${VERBOSE}" == "1" ]]; then
+    (
+      cd "${run_dir}"
+      timeout --foreground --signal=TERM \
+        --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
+        "${BACKEND_TIMEOUT_SECONDS}s" \
+        "${BUILD_DIR}/gemm_sm110_bench" "${n}" "${backend}" 2>&1 |
+        tee stdout.txt
+    )
+    status=$?
+  else
+    (
+      cd "${run_dir}"
+      timeout --foreground --signal=TERM \
+        --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
+        "${BACKEND_TIMEOUT_SECONDS}s" \
+        "${BUILD_DIR}/gemm_sm110_bench" "${n}" "${backend}" \
+        > stdout.txt 2>&1
+    )
+    status=$?
+  fi
   set -e
 
   append_rows "${run_dir}/sgemm_sm110_benchmark.csv" "${trial}" "${include_reference}"
 
   if [[ "${status}" -eq 124 || "${status}" -eq 137 ]]; then
+    [[ "${VERBOSE}" == "1" ]] || echo "TIMEOUT"
     echo "Warning: backend ${backend} timed out after ${BACKEND_TIMEOUT_SECONDS}s for N=${n}, trial=${trial}." >&2
+    [[ "${VERBOSE}" == "1" ]] || sed 's/^/    | /' "${run_dir}/stdout.txt" >&2
     return 124
   fi
   if [[ "${status}" -ne 0 ]]; then
+    [[ "${VERBOSE}" == "1" ]] || echo "FAILED (exit ${status})"
     echo "Warning: backend ${backend} exited with status ${status} for N=${n}, trial=${trial}." >&2
+    [[ "${VERBOSE}" == "1" ]] || sed 's/^/    | /' "${run_dir}/stdout.txt" >&2
     return "${status}"
   fi
   if [[ ! -f "${run_dir}/sgemm_sm110_benchmark.csv" ]]; then
+    [[ "${VERBOSE}" == "1" ]] || echo "FAILED (CSV missing)"
     echo "Warning: backend ${backend} did not produce sgemm_sm110_benchmark.csv for N=${n}, trial=${trial}." >&2
     return 1
   fi
+
+  if [[ "${VERBOSE}" == "1" ]]; then
+    printf 'summary | %-9s | ' "${backend}"
+  fi
+  print_backend_summary "${run_dir}/sgemm_sm110_benchmark.csv" "${backend}"
 }
 
 run_trial() {
@@ -191,6 +242,7 @@ run_trial() {
   done
 }
 
+echo "=== Building GEMMsm110 benchmark ==="
 build_gemm_sm110
 ensure_python
 warn_render_access
@@ -199,7 +251,11 @@ AGG_CSV="${OUT_DIR}/gemm_sm110_sweep.csv"
 HAD_FAILURES=0
 printf 'BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Trial\n' > "${AGG_CSV}"
 
+echo "=== Sweep: suite=${GEMM_SUITE}, trials=${TRIALS}, sizes=${GEMM_SIZES} ==="
 for n in ${GEMM_SIZES}; do
+  echo
+  echo "N=${n}"
+  echo "  trial       | backend   |   time       | performance   | vs cuBLAS | check"
   for trial in $(seq 1 "${TRIALS}"); do
     run_trial "${n}" "${trial}"
   done
