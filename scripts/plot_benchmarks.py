@@ -56,12 +56,18 @@ KEY_GEMM_FP32_SERIES = [
 KEY_GEMM_TENSOR_CORE_SERIES = [
     "cublas_tc",
     "cutlass",
+    "tc0",
+    "tc1a",
+    "tc1b",
+    "tc2a",
+    "tc2b",
     "tc1",
     "tc2",
     "tc3",
     "tc4",
     "tc4a",
     "tc4b",
+    "tc4c",
     "tc5a",
     "tc5b",
 ]
@@ -113,10 +119,17 @@ SERIES_LABELS = {
 
 SM110_SERIES_LABELS = {
     "cutlass": "CUTLASS official Blackwell auto-schedule",
-    "tc3": "tc3 custom cooperative-copy tcgen05 gemm",
-    "tc4": "tc4 custom adaptive 1sm/2sm tma tcgen05 gemm",
-    "tc5a": "tc5a custom static persistent tma/epilogue tcgen05 gemm",
-    "tc5b": "tc5b custom hardware clc persistent tma/epilogue tcgen05 gemm",
+    "tc0": "tc0 CUDA WMMA baseline",
+    "tc1a": "tc1a 2D TMA linear SMEM",
+    "tc1b": "tc1b 3D TMA linear SMEM",
+    "tc2a": "tc2a 2D TMA SW128",
+    "tc2b": "tc2b 3D TMA SW128",
+    "tc3": "tc3 multi-stage 2D TMA SW128 pipeline",
+    "tc4a": "tc4a warp-specialized pipeline",
+    "tc4b": "tc4b 2-SM cluster pipeline",
+    "tc4c": "tc4c warp-specialized 2-SM cluster pipeline",
+    "tc5a": "tc5a static persistent scheduler",
+    "tc5b": "tc5b hardware CLC persistent scheduler",
 }
 
 

@@ -17,9 +17,10 @@ CUTLASS_ROOT="${CUTLASS_ROOT:-${ROOT_DIR}/../third_party/cutlass}"
 NVCC="${NVCC:-nvcc}"
 
 case "${GEMM_SUITE}" in
-  all|cublas_tc|cutlass|tc3|tc4|tc5|tc5a|tc5b) ;;
+  all|references|stage0|stage1|stage2|stage3|stage4|stage5|\
+  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b) ;;
   *)
-    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, cublas_tc, cutlass, tc3, tc4, tc5, tc5a, or tc5b." >&2
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, references, stage0..stage5, or a concrete backend ID." >&2
     exit 1
     ;;
 esac
@@ -103,6 +104,7 @@ build_gemm_sm110() {
     -I"${CUTLASS_ROOT}/include" \
     -I"${CUTLASS_ROOT}/tools/util/include" \
     "${GEMM_ROOT}/src/main.cu" \
+    -lcuda \
     -lcublas \
     -o "${BUILD_DIR}/gemm_sm110_bench"
 }
@@ -110,9 +112,27 @@ build_gemm_sm110() {
 expand_suite_backends() {
   case "$1" in
     all)
-      printf '%s\n' cublas_tc cutlass tc3 tc4 tc5a tc5b
+      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b
       ;;
-    tc5)
+    references)
+      printf '%s\n' cublas_tc cutlass
+      ;;
+    stage0)
+      printf '%s\n' cublas_tc tc0
+      ;;
+    stage1)
+      printf '%s\n' cublas_tc tc1a tc1b
+      ;;
+    stage2)
+      printf '%s\n' cublas_tc tc2a tc2b
+      ;;
+    stage3)
+      printf '%s\n' cublas_tc tc3
+      ;;
+    stage4)
+      printf '%s\n' cublas_tc tc4a tc4b tc4c
+      ;;
+    stage5)
       printf '%s\n' cublas_tc tc5a tc5b
       ;;
     *)
@@ -143,6 +163,12 @@ print_backend_summary() {
 
   awk -F, -v backend="${backend}" '
     $1 == backend {
+      if ($9 != "1" && $6 == 0 && $7 == 0) {
+        printf "%9s    | %11s        | %6s  | unavailable\n",
+               "--", "--", "--"
+        found = 1
+        exit
+      }
       printf "%9.4f ms | %11.1f GFLOPS | %6.3fx | matched=%s\n",
              $6, $7, $8, $9
       found = 1
@@ -231,10 +257,8 @@ run_trial() {
   mapfile -t backends < <(expand_suite_backends "${GEMM_SUITE}")
   for backend in "${backends[@]}"; do
     include_reference="1"
-    if [[ "${GEMM_SUITE}" == "all" || "${GEMM_SUITE}" == "tc5" ]]; then
-      if [[ "${backend}" != "cublas_tc" ]]; then
-        include_reference="0"
-      fi
+    if [[ "${#backends[@]}" -gt 1 && "${backend}" != "cublas_tc" ]]; then
+      include_reference="0"
     fi
     if ! run_backend_once "${n}" "${trial}" "${backend}" "${include_reference}"; then
       HAD_FAILURES=1
