@@ -14,5 +14,4 @@ set_target_properties(smem_bank_bench PROPERTIES
   CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}")
 
 target_compile_options(smem_bank_bench PRIVATE
-  $<$<COMPILE_LANGUAGE:CUDA>:--lineinfo>)
-
+  $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)

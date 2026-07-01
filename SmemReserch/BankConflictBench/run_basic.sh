@@ -20,4 +20,4 @@ for stride in 1 2 4 8 16 32; do
 done
 
 echo "Wrote ${OUTPUT}"
-
+python3 "${SCRIPT_DIR}/parse_results.py"

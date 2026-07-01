@@ -71,11 +71,15 @@ cmake --build ../build --parallel
 ./parse_results.py
 ```
 
-`run_basic.sh` writes `results/basic_results.csv`. Set `ITERS` to shorten or
-lengthen a run, for example `ITERS=1000 ./run_basic.sh`. Each case has five
-warmups and twenty timed repetitions. `effective_GBps` counts requested bytes
-and uses average elapsed time; it is a microbenchmark-derived effective rate,
-not necessarily physical shared-memory traffic.
+`run_basic.sh` writes `results/basic_results.csv` and then invokes
+`parse_results.py` to print summary tables plus PNG charts, including
+`all_cases_avg_ms_bar.png`, `all_cases_effective_gbps_bar.png`,
+`stride_sweep_avg_ms_bar.png`, and `stride_sweep_effective_gbps_bar.png`.
+Set `ITERS` to shorten or lengthen a run, for example `ITERS=1000 ./run_basic.sh`.
+Each case has five warmups and twenty timed repetitions. `effective_GBps`
+counts requested bytes and uses average elapsed time; it is a
+microbenchmark-derived effective rate, not necessarily physical shared-memory
+traffic.
 
 `run_ncu.sh` profiles every case and each stride separately into `results/ncu/`.
 Metric availability varies by architecture and Nsight Compute release. Override
