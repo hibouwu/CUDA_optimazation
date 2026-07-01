@@ -13,16 +13,23 @@ linear_index = row * pitch + col
 bank = linear_index % 32
 ```
 
-| CLI case | Per-lane mapping within each warp | Purpose |
-|---|---|---|
-| `baseline` | `s[warp][lane]` | 32 distinct banks |
-| `stride` | `s[lane * stride + offset]` | stride 1/2/4/8/16/32 gives nominal 1/2/4/8/16/32-way conflicts |
-| `same_bank_32way_2d` | `s[lane][0]`, pitch 32 | 32 distinct words in bank 0 |
-| `broadcast` | `s[warp][0]` | all lanes load the same word |
-| `multicast_hash` | `s[warp][hash(lane) % 32]` | subsets of lanes may share addresses |
-| `v4_contiguous` | `s128[warp][lane * 4 + 0..3]` | one volatile `ld.shared.v4.f32` per lane |
-| `v2_multicast_pairs` | `s32[warp][(lane / 2) * 2 + 0..1]` | each lane pair loads the same `float2` |
-| `v4_multicast_quads` | `s32[warp][(lane / 4) * 4 + 0..3]` | each four-lane group loads the same `float4` |
+| Version | CLI case | Per-lane mapping within each warp | Purpose |
+|---|---|---|---|
+| `v0` | `baseline` | `s[warp][lane]` | No-conflict baseline: 32 lanes access 32 distinct banks |
+| `v1a` | `stride --stride 2` | `s[lane * 2 + offset]` | Nominal 2-way bank conflict |
+| `v1b` | `stride --stride 4` | `s[lane * 4 + offset]` | Nominal 4-way bank conflict |
+| `v1c` | `stride --stride 8` | `s[lane * 8 + offset]` | Nominal 8-way bank conflict |
+| `v1d` | `stride --stride 16` | `s[lane * 16 + offset]` | Nominal 16-way bank conflict |
+| `v1e` | `stride --stride 32` | `s[lane * 32 + offset]` | 32 distinct words in the same bank |
+| `v1f` | `same_bank_32way_2d` | `s[lane][0]`, pitch 32 | Two-dimensional form of a 32-way same-bank access |
+| `v2a` | `broadcast` | `s[warp][0]` | All 32 lanes load the same word |
+| `v2b` | `multicast_hash` | `s[warp][hash(lane) % 32]` | Subsets of lanes load the same words |
+| `v3` | `v4_contiguous` | `s128[warp][lane * 4 + 0..3]` | Each lane performs one contiguous `ld.shared.v4.f32` |
+| `v4a` | `v2_multicast_pairs` | `s32[warp][(lane / 2) * 2 + 0..1]` | Each lane pair loads the same `float2` |
+| `v4b` | `v4_multicast_quads` | `s32[warp][(lane / 4) * 4 + 0..3]` | Each four-lane group loads the same `float4` |
+
+`stride --stride 1` is an additional no-conflict validation case. It has no
+version number and is excluded from the numbered plots.
 
 The two-dimensional form is only an explanatory view. Bank selection always
 uses the flattened linear index. In particular,
