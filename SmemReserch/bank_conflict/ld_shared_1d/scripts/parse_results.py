@@ -4,7 +4,8 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-RESULTS_DIR = SCRIPT_DIR / "results"
+BENCH_DIR = SCRIPT_DIR.parent
+RESULTS_DIR = BENCH_DIR / "results"
 CSV_PATH = RESULTS_DIR / "basic_results.csv"
 CASE_LABELS = {
     "baseline_unique_banks": "baseline",
@@ -161,11 +162,13 @@ def plot_horizontal_bars(plt, labels, values, *, xlabel, title, output, color):
 
 def main():
     if not CSV_PATH.exists():
-        raise SystemExit(f"Missing {CSV_PATH}; run ./run_basic.sh first.")
+        raise SystemExit(f"Missing {CSV_PATH}; run scripts/run_basic.sh first.")
 
     rows = load_rows()
     if not rows:
-        raise SystemExit(f"{CSV_PATH} is empty; rerun ./run_basic.sh with a CUDA device.")
+        raise SystemExit(
+            f"{CSV_PATH} is empty; rerun scripts/run_basic.sh with a CUDA device."
+        )
     print_table(
         "All cases",
         rows,

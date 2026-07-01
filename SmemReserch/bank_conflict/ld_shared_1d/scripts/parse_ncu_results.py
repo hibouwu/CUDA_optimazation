@@ -5,7 +5,8 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-RESULTS_DIR = SCRIPT_DIR / "results" / "ncu"
+BENCH_DIR = SCRIPT_DIR.parent
+RESULTS_DIR = BENCH_DIR / "results" / "ncu"
 
 ORDERED_REPORTS = [
     ("baseline", "v0  baseline"),
@@ -103,7 +104,7 @@ def extract_metric_rows(report_path):
 
 def load_reports():
     if not RESULTS_DIR.exists():
-        raise SystemExit(f"Missing {RESULTS_DIR}; run ./run_ncu.sh first.")
+        raise SystemExit(f"Missing {RESULTS_DIR}; run scripts/run_ncu.sh first.")
 
     valid_reports = {}
     failed_reports = {}

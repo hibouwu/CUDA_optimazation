@@ -2,8 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BIN="${SCRIPT_DIR}/../build/smem_bank_bench"
-RESULT_DIR="${SCRIPT_DIR}/results/ncu"
+BENCH_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+BIN="${BENCH_DIR}/build/smem_bank_bench"
+RESULT_DIR="${BENCH_DIR}/results/ncu"
 ITERS="${ITERS:-100000}"
 WARMUPS="${WARMUPS:-0}"
 REPEATS="${REPEATS:-1}"
