@@ -230,7 +230,7 @@ void launch_case(const CaseSpec& spec, const BenchOptions& options,
 
 void print_measurement(const CaseSpec& spec, const BenchOptions& options,
                        float* device_result) {
-  for (int i = 0; i < kWarmups; ++i) {
+  for (int i = 0; i < options.num_warmups; ++i) {
     launch_case(spec, options, device_result);
   }
   CUDA_CHECK(cudaDeviceSynchronize());
@@ -240,8 +240,8 @@ void print_measurement(const CaseSpec& spec, const BenchOptions& options,
   CUDA_CHECK(cudaEventCreate(&start));
   CUDA_CHECK(cudaEventCreate(&stop));
   std::vector<float> elapsed_ms;
-  elapsed_ms.reserve(kRepeats);
-  for (int i = 0; i < kRepeats; ++i) {
+  elapsed_ms.reserve(options.num_repeats);
+  for (int i = 0; i < options.num_repeats; ++i) {
     CUDA_CHECK(cudaEventRecord(start));
     launch_case(spec, options, device_result);
     CUDA_CHECK(cudaEventRecord(stop));
@@ -288,7 +288,8 @@ int parse_int(const char* flag, const char* value) {
 void print_usage(const char* program) {
   std::cerr
       << "Usage: " << program
-      << " --case CASE [--iters N] [--stride 1|2|4|8|16|32] [--offset 0..31]\n";
+      << " --case CASE [--iters N] [--warmups N] [--repeats N]"
+      << " [--stride 1|2|4|8|16|32] [--offset 0..31]\n";
 }
 
 BenchOptions parse_options(int argc, char** argv) {
@@ -307,6 +308,10 @@ BenchOptions parse_options(int argc, char** argv) {
       options.case_name = value;
     } else if (arg == "--iters") {
       options.num_iters = parse_int("--iters", value);
+    } else if (arg == "--warmups") {
+      options.num_warmups = parse_int("--warmups", value);
+    } else if (arg == "--repeats") {
+      options.num_repeats = parse_int("--repeats", value);
     } else if (arg == "--stride") {
       options.stride = parse_int("--stride", value);
     } else if (arg == "--offset") {
@@ -317,6 +322,9 @@ BenchOptions parse_options(int argc, char** argv) {
   }
   if (options.num_iters <= 0) {
     throw std::invalid_argument("--iters must be positive");
+  }
+  if (options.num_repeats <= 0) {
+    throw std::invalid_argument("--repeats must be positive");
   }
   const std::vector<int> valid_strides = {1, 2, 4, 8, 16, 32};
   if (std::find(valid_strides.begin(), valid_strides.end(), options.stride) ==
@@ -357,4 +365,3 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
-
