@@ -10,9 +10,9 @@ set -euo pipefail
 #   ./build_and_run.sh tc3-minimal
 #   ./build_and_run.sh 1024 cublas_tc
 #   ./build_and_run.sh 1024 cutlass
-#   ./build_and_run.sh 1024 tc3
-#   ./build_and_run.sh 1024 tc5a
-#   ./build_and_run.sh 1024 tc5b
+#   ./build_and_run.sh 1024 tc0
+#   ./build_and_run.sh 1024 stage1
+#   ./build_and_run.sh 1024 tc4b
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
@@ -58,6 +58,7 @@ build_benchmark() {
   fi
   "${NVCC}" "${COMMON_FLAGS[@]}" \
     "${SCRIPT_DIR}/src/main.cu" \
+    -lcuda \
     -lcublas \
     -o "${BENCH_BIN}"
 }
@@ -90,7 +91,7 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|cublas_tc|cutlass|tc3|tc4|tc5|tc5a|tc5b] [timeout_seconds]
+  $0 [N] [all|references|stage0..stage5|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b] [timeout_seconds]
 EOF
 }
 
