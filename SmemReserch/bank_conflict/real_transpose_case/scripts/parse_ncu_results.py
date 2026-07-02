@@ -87,6 +87,17 @@ def sanitize(name):
     return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_").lower()
 
 
+def format_bar_value(value):
+    magnitude = abs(value)
+    if magnitude >= 1.0e6:
+        return f"{value / 1.0e6:.1f}M"
+    if magnitude >= 1.0e3:
+        return f"{value / 1.0e3:.1f}K"
+    if value.is_integer():
+        return f"{value:.0f}"
+    return f"{value:.3f}"
+
+
 def print_table(metric_name, rows):
     case_width = max(len("case"), *(len(name) for name, _ in rows))
     print(f"\n{metric_name}")
@@ -103,11 +114,23 @@ def plot(plt, metric_name, rows):
     labels = [name for name, _ in rows]
     values = [value for _, value in rows]
     plt.figure(figsize=(max(10.0, len(labels) * 1.15), 5.2))
-    plt.bar(labels, values, color="#4C78A8")
+    bars = plt.bar(labels, values, color="#4C78A8")
     plt.ylabel("Metric value")
     plt.title(title)
     plt.xticks(rotation=30, ha="right")
     plt.grid(axis="y", alpha=0.3)
+    max_value = max(values) if values else 0.0
+    offset = max_value * 0.015 if max_value > 0.0 else 0.01
+    for bar, value in zip(bars, values):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            value + offset,
+            format_bar_value(value),
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
+    plt.ylim(top=max_value + offset * 4 if max_value > 0.0 else 1.0)
     plt.tight_layout()
     output = RESULTS_DIR / f"{stem}.png"
     plt.savefig(output, dpi=150)
