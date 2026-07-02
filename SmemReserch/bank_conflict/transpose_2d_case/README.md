@@ -39,28 +39,28 @@ would blur the interpretation of the bank-conflict results.
 
 ### E0 Basic Pitch Effect
 
-- `E0_load_pitch32`: `tile[lane * 32 + warp]`. Classic worst case. Every lane in
-  a warp lands on the same bank.
-- `E0_load_pitch33`: `tile[lane * 33 + warp]`. `+1` padding rotates lanes across
-  all banks.
+| Case | Access | Purpose | Expected bank behavior |
+| --- | --- | --- | --- |
+| `E0_load_pitch32` | `tile[lane * 32 + warp]` | Classic transpose worst case | All 32 lanes of a warp target one bank |
+| `E0_load_pitch33` | `tile[lane * 33 + warp]` | Validate `+1` padding | Lanes rotate across 32 banks |
 
 ### E1 Pitch Sweep
 
-Cases:
-
-- `E1_load_pitch1`
-- `E1_load_pitch2`
-- `E1_load_pitch4`
-- `E1_load_pitch8`
-- `E1_load_pitch16`
-- `E1_load_pitch31`
-- `E1_load_pitch32`
-- `E1_load_pitch33`
-- `E1_load_pitch34`
-- `E1_load_pitch35`
-- `E1_load_pitch36`
-- `E1_load_pitch40`
-- `E1_load_pitch64`
+| Case | Pitch | `gcd(pitch, 32)` | Theoretical unique banks | Theoretical conflict degree |
+| --- | ---: | ---: | ---: | ---: |
+| `E1_load_pitch1` | 1 | 1 | 32 | 1 |
+| `E1_load_pitch2` | 2 | 2 | 16 | 2 |
+| `E1_load_pitch4` | 4 | 4 | 8 | 4 |
+| `E1_load_pitch8` | 8 | 8 | 4 | 8 |
+| `E1_load_pitch16` | 16 | 16 | 2 | 16 |
+| `E1_load_pitch31` | 31 | 1 | 32 | 1 |
+| `E1_load_pitch32` | 32 | 32 | 1 | 32 |
+| `E1_load_pitch33` | 33 | 1 | 32 | 1 |
+| `E1_load_pitch34` | 34 | 2 | 16 | 2 |
+| `E1_load_pitch35` | 35 | 1 | 32 | 1 |
+| `E1_load_pitch36` | 36 | 4 | 8 | 4 |
+| `E1_load_pitch40` | 40 | 8 | 4 | 8 |
+| `E1_load_pitch64` | 64 | 32 | 1 | 32 |
 
 These are the systematic check of the `gcd(pitch, 32)` rule.
 For very small pitches such as 1, 2, and 4, the logical rows intentionally
@@ -70,10 +70,12 @@ a production transpose tile shape.
 
 ### E2 Broadcast And Multicast Controls
 
-- `E2_load_broadcast_same_addr`: all lanes read `tile[0]`.
-- `E2_load_multicast_2addr`: lanes 0-15 read `tile[0]`, lanes 16-31 read `tile[1]`.
-- `E2_load_multicast_4addr`: each eight-lane group reads one of `tile[0..3]`.
-- `E2_load_conflict_same_bank_diff_addr`: lanes read `tile[lane * 32]`.
+| Case | Access | Purpose | Interpretation |
+| --- | --- | --- | --- |
+| `E2_load_broadcast_same_addr` | All lanes read `tile[0]` | Isolate broadcast | Same bank and same address |
+| `E2_load_multicast_2addr` | Lanes 0-15 read `tile[0]`, lanes 16-31 read `tile[1]` | Isolate 2-address multicast | Two repeated addresses |
+| `E2_load_multicast_4addr` | Each eight-lane group reads one of `tile[0..3]` | Isolate 4-address multicast | Four repeated addresses |
+| `E2_load_conflict_same_bank_diff_addr` | Lanes read `tile[lane * 32]` | Contrast with broadcast | Same bank and different addresses |
 
 This stage separates two concepts that are often conflated:
 
@@ -82,12 +84,14 @@ This stage separates two concepts that are often conflated:
 
 ### E3 Vector Width
 
-- `E3_load_f32_pitch32`
-- `E3_load_f32_pitch33`
-- `E3_load_f32x2_pitch32`
-- `E3_load_f32x2_pitch33`
-- `E3_load_f32x4_pitch32`
-- `E3_load_f32x4_pitch33`
+| Case | Operation | Pitch | Vector width | Note |
+| --- | --- | ---: | ---: | --- |
+| `E3_load_f32_pitch32` | `ld.shared.f32` | 32 | 1 | Scalar transpose load |
+| `E3_load_f32_pitch33` | `ld.shared.f32` | 33 | 1 | Scalar transpose load with padding |
+| `E3_load_f32x2_pitch32` | `ld.shared.v2.f32` | 32 | 2 | Aligned `float2` load |
+| `E3_load_f32x2_pitch33` | `ld.shared.v2.f32` | 33 | 2 | Uses column adjustment to keep alignment |
+| `E3_load_f32x4_pitch32` | `ld.shared.v4.f32` | 32 | 4 | Aligned `float4` load |
+| `E3_load_f32x4_pitch33` | `ld.shared.v4.f32` | 33 | 4 | Uses column adjustment to keep alignment |
 
 The vector cases use explicit volatile PTX:
 
@@ -112,7 +116,9 @@ scalar, `v2`, and `v4` cases respectively.
 
 ### E4 Software Swizzle
 
-- `E4_load_xor_swizzle_pitch32`
+| Case | Layout rule | Goal | Contrast target |
+| --- | --- | --- | --- |
+| `E4_load_xor_swizzle_pitch32` | `physical_col = warp ^ (lane & 31)` | Reduce transpose-style conflict without padding | `E0_load_pitch32` |
 
 This case keeps `pitch=32` but changes the logical-to-physical mapping:
 
@@ -133,19 +139,19 @@ universally optimal.
 
 ## CSV Output
 
-Each row includes:
-
-- `experiment`
-- `case`
-- `operation`
-- `pitch`
-- `vector_width`
-- `theoretical_unique_banks`
-- `theoretical_conflict_degree`
-- `iters`
-- `avg_ms`
-- `min_ms`
-- `effective_GBps`
+| Field | Meaning |
+| --- | --- |
+| `experiment` | Stage name such as `E0_basic_pitch_effect` |
+| `case` | Concrete case name such as `E1_load_pitch16` |
+| `operation` | Shared-load instruction form, for example `ld.shared.f32` or `ld.shared.v4.f32` |
+| `pitch` | Logical row stride used by the case |
+| `vector_width` | `1`, `2`, or `4` for `f32`, `f32x2`, or `f32x4` |
+| `theoretical_unique_banks` | Number of banks touched by one warp-level shared-load instruction |
+| `theoretical_conflict_degree` | Largest number of distinct word addresses requested from any one bank |
+| `iters` | Loop count inside one kernel launch |
+| `avg_ms` | Mean kernel time over timed repeats |
+| `min_ms` | Minimum kernel time over timed repeats |
+| `effective_GBps` | Requested bytes divided by `avg_ms`; benchmark-local derived rate |
 
 The theoretical fields are computed per warp by enumerating the word addresses
 that a single shared-memory instruction requests. That keeps broadcast,
@@ -168,6 +174,9 @@ Run everything:
 ```bash
 ./scripts/run_basic.sh
 ```
+
+This writes `results/basic_results.csv` and then invokes `parse_results.py`,
+which generates `results/avg_ms.png` and `results/effective_gbps.png`.
 
 Run one experiment stage:
 
@@ -196,7 +205,9 @@ ITERS=1000 WARMUPS=3 REPEATS=10 ./scripts/run_basic.sh --case E1
 ```
 
 The script uses `--list-cases` to expand `all`, `E0`, `E1`, `E2`, `E3`, `E4`,
-or a concrete case name into per-case NCU runs. Query metrics available on the
+or a concrete case name into per-case NCU runs. After profiling, it invokes
+`parse_ncu_results.py`, prints one table per collected metric, and writes one
+PNG bar chart per metric into `results/ncu/`. Query metrics available on the
 target machine with:
 
 ```bash

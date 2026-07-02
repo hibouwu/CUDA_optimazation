@@ -19,6 +19,7 @@ done
 "${SCRIPT_DIR}/build.sh"
 command -v ncu >/dev/null || { echo "ncu not found" >&2; exit 1; }
 mkdir -p "${RESULT_DIR}"
+rm -f "${RESULT_DIR}"/*.csv "${RESULT_DIR}"/*.png
 
 status=0
 mapfile -t cases < <("${BIN}" --case "${case_selector}" --list-cases)
@@ -28,6 +29,8 @@ for name in "${cases[@]}"; do
     "${BIN}" --case "${name}" --iters "${ITERS}" --warmups 0 --repeats 1 ||
     status=1
 done
+
+python3 "${SCRIPT_DIR}/parse_ncu_results.py" || status=1
 
 if [[ "${status}" -ne 0 ]]; then
   echo 'Query: ncu --query-metrics | grep -Ei "bank|shared|l1tex|sass_inst_executed"' >&2

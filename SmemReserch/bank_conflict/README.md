@@ -11,4 +11,4 @@ benchmark families.
 | [`cp_async`](cp_async/README.md) | 16-byte `cp.async` shared-memory destinations | Implemented, pending SM110 validation |
 | [`tma`](tma/README.md) | TMA tensor-map swizzle and shared-memory destinations | Implemented, pending SM110 validation |
 | [`tcgen05_smem_operand`](tcgen05_smem_operand/README.md) | `tcgen05.mma` SMEM descriptor/operand path | Implemented, pending SM110a validation |
-| [`transpose_2d_case`](transpose_2d_case/README.md) | Pitch-32 versus pitch-33 transpose load/store | Implemented, pending SM110 validation |
+| [`transpose_2d_case`](transpose_2d_case/README.md) | Load-only transpose bank-conflict study with E0-E4 pitch, multicast, vector, and software-swizzle cases | Implemented, pending SM110 validation |
