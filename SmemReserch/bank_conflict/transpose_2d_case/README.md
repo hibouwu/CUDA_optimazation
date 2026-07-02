@@ -132,7 +132,7 @@ different from padding:
 This XOR pattern is a targeted microbenchmark, not a claim that one swizzle is
 universally optimal.
 
-## Actual Backend Address Views
+## Address Layout And Bank Request Pressure
 
 All current backends use the same linear allocation:
 
@@ -145,9 +145,94 @@ kernel that writes a real 32x32 logical matrix, and no backend physically
 rearranges the initialized values. The differences are entirely in the word
 index returned by `base_index_for_lane()`.
 
-The `0..31` matrices below must therefore be read as **address/bank views**, not
-as the actual values stored in `tile`. Columns are lanes `L0..L31`; a cell is a
-bank number, requested word index, or physical column as stated by that view.
+### 1. Address Layout: Pitch 32 Versus Pitch 33
+
+This first figure interprets the actual address formula
+`index = row * pitch + column` as a row-major tile. Each visible cell contains
+its linear word index and bank id. It shows rows `0..7`, columns `0..7` and
+`30..31`, plus the pitch-33 padding position:
+
+![Pitch-32 and pitch-33 shared-memory address layouts](assets/backend_heatmaps/address_layout_pitch32_vs_pitch33.png)
+
+With pitch 32, every row starts at bank 0 and has the same bank ordering. With
+pitch 33, row `r` starts at bank `r % 32`; the extra word at the end of every
+row shifts the next row by one bank.
+
+This is a conceptual coordinate view of the address calculation. The
+microbenchmark still uses the common linear allocation and does not run a
+producer that writes an actual padded matrix.
+
+### 2. Fixed-column Read: Lane To Index To Bank
+
+The next figure fixes `column = 0`. The Y axis is lane/logical row, the X axis
+is bank, and each active cell contains the requested linear word index:
+
+![Pitch-32 and pitch-33 fixed-column reads](assets/backend_heatmaps/column_read_pitch32_vs_pitch33.png)
+
+- Pitch 32 produces a vertical line at bank 0: 32 different word indices
+  contend for one bank.
+- Pitch 33 produces a diagonal across banks 0–31: every lane reaches a
+  different bank.
+
+### 3. XOR Swizzle Address Mapping
+
+The E4 comparison below shows the actual eight warps and 32 lanes. Each cell is
+`physical_col`; with pitch 32 it is also the bank id because
+`lane * 32 % 32 == 0`:
+
+![Pitch-32 ordinary and XOR-swizzled load-address mappings](assets/backend_heatmaps/xor_swizzle_address_mapping.png)
+
+Without swizzle, every lane in a warp uses the same physical column and bank.
+With `physical_col = warp ^ lane`, each warp obtains a permutation of banks
+0–31 without increasing the row pitch.
+
+This is the current load-address mapping only; the microbenchmark does not
+implement the producer side of a complete swizzled matrix layout.
+
+### 4. Bank Request Pressure Per Warp And Bank
+
+The remaining figures are request statistics, not address-layout diagrams.
+They use the actual kernel launch shape:
+
+- X axis: shared-memory banks `0..31`
+- Y axis: warps `0..7`
+- Cell value: number of distinct word addresses requested from that bank by one
+  warp-level load instruction
+- `0`: unused bank; `1`: conflict-free access or broadcast/multicast;
+  values greater than `1`: bank pressure from different word addresses
+
+All plots use the same `0..32` power-normalized color scale. The nonlinear
+display keeps value `1` visible while preserving comparison with 32-way
+hotspots.
+
+#### E0 Bank Request Pressure
+
+![E0 backend bank-pressure heatmap](assets/backend_heatmaps/e0_backend_heatmaps.png)
+
+#### E1 Bank Request Pressure
+
+![E1 backend bank-pressure heatmaps](assets/backend_heatmaps/e1_backend_heatmaps.png)
+
+#### E2 Bank Request Pressure
+
+![E2 backend bank-pressure heatmaps](assets/backend_heatmaps/e2_backend_heatmaps.png)
+
+#### E3 Bank Request Pressure
+
+![E3 backend bank-pressure heatmaps](assets/backend_heatmaps/e3_backend_heatmaps.png)
+
+#### E4 Bank Request Pressure
+
+![E4 backend bank-pressure heatmap](assets/backend_heatmaps/e4_backend_heatmaps.png)
+
+Regenerate the figures without running a CUDA kernel:
+
+```bash
+python3 scripts/generate_backend_heatmaps.py
+```
+
+<details>
+<summary>Exact numeric address and bank views</summary>
 
 ### E0: Exact Pitch-32 Access
 
@@ -297,6 +382,8 @@ warp 7:  7  6  5  4  3  2  1  0 15 14 13 12 11 10  9  8 23 22 21 20 19 18 17 16 
 For each actual warp, `warp ^ lane` is a permutation of `0..31`, so its 32
 lanes touch 32 different banks. This is a load-address swizzle microbenchmark;
 it does not implement the producer side of a complete swizzled matrix layout.
+
+</details>
 
 ## CSV Output
 
