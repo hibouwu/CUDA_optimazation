@@ -11,7 +11,7 @@ REPEATS="${REPEATS:-1}"
 
 # Override with a comma-separated list if these metric names differ on your GPU:
 # METRICS="metric_a,metric_b" ./run_ncu.sh
-METRICS="${METRICS:-l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum,l1tex__t_sectors_pipe_lsu_mem_shared_op_ld.sum,smsp__sass_average_branch_targets_threads_uniform.pct}"
+METRICS="${METRICS:-l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum,smsp__inst_executed_op_shared_ld.sum}"
 
 echo "Building benchmark"
 "${SCRIPT_DIR}/build.sh"
@@ -36,14 +36,18 @@ if [[ "${EUID}" -ne 0 ]] &&
 fi
 
 mkdir -p "${RESULT_DIR}"
+rm -f "${RESULT_DIR}"/*.csv "${RESULT_DIR}"/*.png
 cases=(
-  baseline
-  same_bank_32way_2d
-  broadcast
-  multicast_hash
-  v4_contiguous
-  v2_multicast_pairs
-  v4_multicast_quads
+  v0
+  v1a
+  v1b
+  v1c
+  v1d
+  v1e
+  v2
+  v3
+  v4a
+  v4b
 )
 
 profile() {
@@ -72,10 +76,6 @@ profile() {
 status=0
 for case_name in "${cases[@]}"; do
   profile "${case_name}" --case "${case_name}" --iters "${ITERS}" || status=1
-done
-for stride in 1 2 4 8 16 32; do
-  profile "stride_${stride}" --case stride --stride "${stride}" --offset 0 \
-    --iters "${ITERS}" || status=1
 done
 python3 "${SCRIPT_DIR}/parse_ncu_results.py" || status=1
 exit "${status}"

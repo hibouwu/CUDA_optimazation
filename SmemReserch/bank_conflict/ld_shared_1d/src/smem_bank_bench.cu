@@ -70,160 +70,171 @@ __device__ __forceinline__ void initialize_shared(float (&s)[N]) {
   __syncthreads();
 }
 
-__global__ void baseline_unique_banks(float* result, int num_iters) {
+__device__ __forceinline__ float run_scalar_loads(const float* ptr,
+                                                  int num_iters) {
+  float acc0 = 0.0f;
+  float acc1 = 0.0f;
+  float acc2 = 0.0f;
+  float acc3 = 0.0f;
+#pragma unroll 1
+  for (int i = 0; i < num_iters; ++i) {
+    const float value0 = load_shared_f32(ptr);
+    const float value1 = load_shared_f32(ptr);
+    const float value2 = load_shared_f32(ptr);
+    const float value3 = load_shared_f32(ptr);
+    acc0 += value0;
+    acc1 += value1;
+    acc2 += value2;
+    acc3 += value3;
+  }
+  return (acc0 + acc1) + (acc2 + acc3);
+}
+
+__device__ __forceinline__ float run_v2_loads(const float* ptr, int num_iters) {
+  float acc0 = 0.0f;
+  float acc1 = 0.0f;
+  float acc2 = 0.0f;
+  float acc3 = 0.0f;
+#pragma unroll 1
+  for (int i = 0; i < num_iters; ++i) {
+    const float2 value0 = load_shared_v2(ptr);
+    const float2 value1 = load_shared_v2(ptr);
+    const float2 value2 = load_shared_v2(ptr);
+    const float2 value3 = load_shared_v2(ptr);
+    acc0 += value0.x + value0.y;
+    acc1 += value1.x + value1.y;
+    acc2 += value2.x + value2.y;
+    acc3 += value3.x + value3.y;
+  }
+  return (acc0 + acc1) + (acc2 + acc3);
+}
+
+__device__ __forceinline__ float run_v4_loads(const float* ptr, int num_iters) {
+  float acc0 = 0.0f;
+  float acc1 = 0.0f;
+  float acc2 = 0.0f;
+  float acc3 = 0.0f;
+#pragma unroll 1
+  for (int i = 0; i < num_iters; ++i) {
+    const float4 value0 = load_shared_v4(ptr);
+    const float4 value1 = load_shared_v4(ptr);
+    const float4 value2 = load_shared_v4(ptr);
+    const float4 value3 = load_shared_v4(ptr);
+    acc0 += value0.x + value0.y + value0.z + value0.w;
+    acc1 += value1.x + value1.y + value1.z + value1.w;
+    acc2 += value2.x + value2.y + value2.z + value2.w;
+    acc3 += value3.x + value3.y + value3.z + value3.w;
+  }
+  return (acc0 + acc1) + (acc2 + acc3);
+}
+
+__global__ void v0_unique_banks(float* result, int num_iters) {
   __shared__ float s[kWarps * kLanes];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
   const float* ptr = &s[warp * kLanes + lane];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    accumulator += load_shared_f32(ptr);
-  }
-  result[warp * kLanes + lane] = accumulator;
+  result[warp * kLanes + lane] = run_scalar_loads(ptr, num_iters);
 }
 
-__global__ void stride_conflict_sweep(float* result, int num_iters, int stride,
-                                      int offset) {
+template <int Stride>
+__global__ void v1_stride_conflict(float* result, int num_iters) {
   __shared__ float s[1024];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
-  const float* ptr = &s[lane * stride + offset];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    accumulator += load_shared_f32(ptr);
-  }
-  result[warp * kLanes + lane] = accumulator;
+  const float* ptr = &s[lane * Stride];
+  result[warp * kLanes + lane] = run_scalar_loads(ptr, num_iters);
 }
 
-__global__ void same_bank_32way_2d(float* result, int num_iters) {
-  // Row-major [32][32]: &s[lane][0] has linear index lane * 32.
-  __shared__ float s[kLanes][kLanes];
-  const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-  float* linear = &s[0][0];
-  for (int i = tid; i < kLanes * kLanes; i += kThreads) {
-    linear[i] = static_cast<float>((i % 251) + 1);
-  }
-  __syncthreads();
-  const int lane = threadIdx.x;
-  const int warp = threadIdx.y;
-  const float* ptr = &s[lane][0];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    accumulator += load_shared_f32(ptr);
-  }
-  result[warp * kLanes + lane] = accumulator;
-}
-
-__global__ void broadcast_same_address(float* result, int num_iters) {
+__global__ void v2_broadcast(float* result, int num_iters) {
   __shared__ float s[kWarps * kLanes];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
   const float* ptr = &s[warp * kLanes];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    accumulator += load_shared_f32(ptr);
-  }
-  result[warp * kLanes + lane] = accumulator;
+  result[warp * kLanes + lane] = run_scalar_loads(ptr, num_iters);
 }
 
-__global__ void multicast_hash(float* result, int num_iters) {
-  __shared__ float s[kWarps * kLanes];
-  initialize_shared(s);
-  const unsigned lane = threadIdx.x;
-  const int warp = threadIdx.y;
-  const unsigned hash = (lane * 2654435761u) >> 16;
-  const float* ptr = &s[warp * kLanes + hash % kLanes];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    accumulator += load_shared_f32(ptr);
-  }
-  result[warp * kLanes + lane] = accumulator;
-}
-
-__global__ void vectorized_v4_contiguous(float* result, int num_iters) {
+__global__ void v3_v4_contiguous(float* result, int num_iters) {
   __shared__ __align__(16) float s[kWarps * 128];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
   const float* ptr = &s[warp * 128 + lane * 4];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    const float4 value = load_shared_v4(ptr);
-    accumulator += value.x + value.y + value.z + value.w;
-  }
-  result[warp * kLanes + lane] = accumulator;
+  result[warp * kLanes + lane] = run_v4_loads(ptr, num_iters);
 }
 
-__global__ void vectorized_v2_multicast_pairs(float* result, int num_iters) {
+__global__ void v4a_v2_multicast_pairs(float* result, int num_iters) {
   __shared__ __align__(8) float s[kWarps * kLanes];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
   const float* ptr = &s[warp * kLanes + (lane / 2) * 2];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    const float2 value = load_shared_v2(ptr);
-    accumulator += value.x + value.y;
-  }
-  result[warp * kLanes + lane] = accumulator;
+  result[warp * kLanes + lane] = run_v2_loads(ptr, num_iters);
 }
 
-__global__ void vectorized_v4_multicast_quads(float* result, int num_iters) {
+__global__ void v4b_v4_multicast_quads(float* result, int num_iters) {
   __shared__ __align__(16) float s[kWarps * kLanes];
   initialize_shared(s);
   const int lane = threadIdx.x;
   const int warp = threadIdx.y;
   const float* ptr = &s[warp * kLanes + (lane / 4) * 4];
-  float accumulator = 0.0f;
-  for (int i = 0; i < num_iters; ++i) {
-    const float4 value = load_shared_v4(ptr);
-    accumulator += value.x + value.y + value.z + value.w;
-  }
-  result[warp * kLanes + lane] = accumulator;
+  result[warp * kLanes + lane] = run_v4_loads(ptr, num_iters);
 }
+
+enum class CaseId { v0, v1a, v1b, v1c, v1d, v1e, v2, v3, v4a, v4b };
 
 struct CaseSpec {
   const char* cli_name;
-  const char* output_name;
+  CaseId id;
+  int stride;
   int bytes_per_load;
 };
 
 const std::vector<CaseSpec> kCases = {
-    {"baseline", "baseline_unique_banks", 4},
-    {"stride", "stride_conflict_sweep", 4},
-    {"same_bank_32way_2d", "same_bank_32way_2d", 4},
-    {"broadcast", "broadcast_same_address", 4},
-    {"multicast_hash", "multicast_hash", 4},
-    {"v4_contiguous", "vectorized_v4_contiguous", 16},
-    {"v2_multicast_pairs", "vectorized_v2_multicast_pairs", 8},
-    {"v4_multicast_quads", "vectorized_v4_multicast_quads", 16},
+    {"v0", CaseId::v0, 1, 4},   {"v1a", CaseId::v1a, 2, 4},
+    {"v1b", CaseId::v1b, 4, 4}, {"v1c", CaseId::v1c, 8, 4},
+    {"v1d", CaseId::v1d, 16, 4},
+    {"v1e", CaseId::v1e, 32, 4},
+    {"v2", CaseId::v2, 0, 4},   {"v3", CaseId::v3, 0, 16},
+    {"v4a", CaseId::v4a, 0, 8}, {"v4b", CaseId::v4b, 0, 16},
 };
 
 void launch_case(const CaseSpec& spec, const BenchOptions& options,
                  float* device_result) {
   const dim3 block(kLanes, kWarps, 1);
-  if (std::string(spec.cli_name) == "baseline") {
-    baseline_unique_banks<<<1, block>>>(device_result, options.num_iters);
-  } else if (std::string(spec.cli_name) == "stride") {
-    stride_conflict_sweep<<<1, block>>>(device_result, options.num_iters,
-                                        options.stride, options.offset);
-  } else if (std::string(spec.cli_name) == "same_bank_32way_2d") {
-    same_bank_32way_2d<<<1, block>>>(device_result, options.num_iters);
-  } else if (std::string(spec.cli_name) == "broadcast") {
-    broadcast_same_address<<<1, block>>>(device_result, options.num_iters);
-  } else if (std::string(spec.cli_name) == "multicast_hash") {
-    multicast_hash<<<1, block>>>(device_result, options.num_iters);
-  } else if (std::string(spec.cli_name) == "v4_contiguous") {
-    vectorized_v4_contiguous<<<1, block>>>(device_result, options.num_iters);
-  } else if (std::string(spec.cli_name) == "v2_multicast_pairs") {
-    vectorized_v2_multicast_pairs<<<1, block>>>(device_result,
-                                                options.num_iters);
-  } else if (std::string(spec.cli_name) == "v4_multicast_quads") {
-    vectorized_v4_multicast_quads<<<1, block>>>(device_result,
-                                                options.num_iters);
+  switch (spec.id) {
+    case CaseId::v0:
+      v0_unique_banks<<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v1a:
+      v1_stride_conflict<2><<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v1b:
+      v1_stride_conflict<4><<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v1c:
+      v1_stride_conflict<8><<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v1d:
+      v1_stride_conflict<16><<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v1e:
+      v1_stride_conflict<32><<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v2:
+      v2_broadcast<<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v3:
+      v3_v4_contiguous<<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v4a:
+      v4a_v2_multicast_pairs<<<1, block>>>(device_result, options.num_iters);
+      break;
+    case CaseId::v4b:
+      v4b_v4_multicast_quads<<<1, block>>>(device_result, options.num_iters);
+      break;
   }
   CUDA_CHECK(cudaGetLastError());
 }
@@ -258,18 +269,14 @@ void print_measurement(const CaseSpec& spec, const BenchOptions& options,
       elapsed_ms.size();
   const double min_ms =
       *std::min_element(elapsed_ms.begin(), elapsed_ms.end());
-  const long long loads_per_thread = options.num_iters;
+  const long long loads_per_thread =
+      static_cast<long long>(options.num_iters) * kIndependentLoads;
   const long long bytes_per_thread =
       loads_per_thread * static_cast<long long>(spec.bytes_per_load);
   const long long total_bytes = bytes_per_thread * kThreads;
   const double effective_gbps = total_bytes / (avg_ms * 1.0e6);
-  const int reported_stride =
-      std::string(spec.cli_name) == "stride" ? options.stride : 0;
-  const int reported_offset =
-      std::string(spec.cli_name) == "stride" ? options.offset : 0;
-
-  std::cout << spec.output_name << ',' << reported_stride << ','
-            << reported_offset << ',' << options.num_iters << ',' << std::fixed
+  std::cout << spec.cli_name << ',' << spec.stride << ',' << options.num_iters
+            << ',' << std::fixed
             << std::setprecision(6) << avg_ms << ',' << min_ms << ','
             << loads_per_thread << ',' << bytes_per_thread << ',' << total_bytes
             << ',' << std::setprecision(3) << effective_gbps << '\n';
@@ -288,8 +295,8 @@ int parse_int(const char* flag, const char* value) {
 void print_usage(const char* program) {
   std::cerr
       << "Usage: " << program
-      << " --case CASE [--iters N] [--warmups N] [--repeats N]"
-      << " [--stride 1|2|4|8|16|32] [--offset 0..31]\n";
+      << " --case all|v0|v1a|v1b|v1c|v1d|v1e|v2|v3|v4a|v4b"
+      << " [--iters N] [--warmups N] [--repeats N]\n";
 }
 
 BenchOptions parse_options(int argc, char** argv) {
@@ -312,10 +319,6 @@ BenchOptions parse_options(int argc, char** argv) {
       options.num_warmups = parse_int("--warmups", value);
     } else if (arg == "--repeats") {
       options.num_repeats = parse_int("--repeats", value);
-    } else if (arg == "--stride") {
-      options.stride = parse_int("--stride", value);
-    } else if (arg == "--offset") {
-      options.offset = parse_int("--offset", value);
     } else {
       throw std::invalid_argument("unknown option: " + arg);
     }
@@ -325,14 +328,6 @@ BenchOptions parse_options(int argc, char** argv) {
   }
   if (options.num_repeats <= 0) {
     throw std::invalid_argument("--repeats must be positive");
-  }
-  const std::vector<int> valid_strides = {1, 2, 4, 8, 16, 32};
-  if (std::find(valid_strides.begin(), valid_strides.end(), options.stride) ==
-      valid_strides.end()) {
-    throw std::invalid_argument("--stride must be one of 1,2,4,8,16,32");
-  }
-  if (options.offset < 0 || options.offset > 31) {
-    throw std::invalid_argument("--offset must be in [0,31]");
   }
   return options;
 }
@@ -353,7 +348,7 @@ int main(int argc, char** argv) {
 
     float* device_result = nullptr;
     CUDA_CHECK(cudaMalloc(&device_result, kThreads * sizeof(float)));
-    std::cout << "case,stride,offset,iters,avg_ms,min_ms,loads_per_thread,"
+    std::cout << "case,stride,iters,avg_ms,min_ms,loads_per_thread,"
                  "bytes_per_thread,total_bytes,effective_GBps\n";
     for (const CaseSpec* spec : selected) {
       print_measurement(*spec, options, device_result);

@@ -6,10 +6,11 @@ BENCH_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_DIR="${BENCH_DIR}/src"
 BUILD_DIR="${BENCH_DIR}/build"
 
-cmake_args=(-S "${SOURCE_DIR}" -B "${BUILD_DIR}")
-if [[ -n "${CUDA_ARCH:-}" ]]; then
-  cmake_args+=("-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH}")
-fi
+cmake_args=(
+  -S "${SOURCE_DIR}"
+  -B "${BUILD_DIR}"
+  "-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH:-110}"
+)
 
 cmake "${cmake_args[@]}"
 cmake --build "${BUILD_DIR}" --parallel

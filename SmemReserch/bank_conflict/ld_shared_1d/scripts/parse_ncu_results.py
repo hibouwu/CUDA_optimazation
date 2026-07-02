@@ -9,18 +9,16 @@ BENCH_DIR = SCRIPT_DIR.parent
 RESULTS_DIR = BENCH_DIR / "results" / "ncu"
 
 ORDERED_REPORTS = [
-    ("baseline", "v0  baseline"),
-    ("stride_2", "v1a  stride = 2"),
-    ("stride_4", "v1b  stride = 4"),
-    ("stride_8", "v1c  stride = 8"),
-    ("stride_16", "v1d  stride = 16"),
-    ("stride_32", "v1e  same bank (32-way)"),
-    ("same_bank_32way_2d", "v1f  same_bank_32way_2d"),
-    ("broadcast", "v2a  broadcasts"),
-    ("multicast_hash", "v2b  multicasts"),
-    ("v4_contiguous", "v3  float4 contiguous"),
-    ("v2_multicast_pairs", "v4a  v2_multicast_pairs"),
-    ("v4_multicast_quads", "v4b  v4_multicast_quads"),
+    ("v0", "v0"),
+    ("v1a", "v1a"),
+    ("v1b", "v1b"),
+    ("v1c", "v1c"),
+    ("v1d", "v1d"),
+    ("v1e", "v1e"),
+    ("v2", "v2"),
+    ("v3", "v3"),
+    ("v4a", "v4a"),
+    ("v4b", "v4b"),
 ]
 
 METRIC_LABELS = {
@@ -28,17 +26,13 @@ METRIC_LABELS = {
         "shared_ld_bank_conflicts",
         "Shared-load bank conflicts",
     ),
-    "l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum": (
-        "shared_st_bank_conflicts",
-        "Shared-store bank conflicts",
+    "l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum": (
+        "shared_ld_wavefronts",
+        "Shared-load wavefronts",
     ),
-    "l1tex__t_sectors_pipe_lsu_mem_shared_op_ld.sum": (
-        "shared_ld_sectors",
-        "Shared-load sectors",
-    ),
-    "smsp__sass_average_branch_targets_threads_uniform.pct": (
-        "branch_uniform_pct",
-        "Uniform branch targets (%)",
+    "smsp__inst_executed_op_shared_ld.sum": (
+        "shared_ld_instructions",
+        "Executed shared-load warp instructions",
     ),
 }
 

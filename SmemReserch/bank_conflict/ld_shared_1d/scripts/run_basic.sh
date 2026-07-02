@@ -15,11 +15,6 @@ echo "Building benchmark"
 
 mkdir -p "${RESULT_DIR}"
 "${BIN}" --case all --iters "${ITERS}" --warmups "${WARMUPS}" --repeats "${REPEATS}" > "${OUTPUT}"
-for stride in 1 2 4 8 16 32; do
-  "${BIN}" --case stride --stride "${stride}" --offset 0 --iters "${ITERS}" \
-    --warmups "${WARMUPS}" --repeats "${REPEATS}" |
-    tail -n +2 >> "${OUTPUT}"
-done
 
 echo "Wrote ${OUTPUT}"
 python3 "${SCRIPT_DIR}/parse_results.py"
