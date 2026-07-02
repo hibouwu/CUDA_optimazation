@@ -58,10 +58,22 @@ def plot_metric(plt, rows, field, ylabel, output, color):
     labels = [row["case"] for row in rows]
     values = [float(row[field]) for row in rows]
     plt.figure(figsize=(max(10, len(labels) * 0.6), 5.0))
-    plt.bar(labels, values, color=color)
+    bars = plt.bar(labels, values, color=color)
     plt.ylabel(ylabel)
     plt.xticks(rotation=35, ha="right")
     plt.grid(axis="y", alpha=0.3)
+    max_value = max(values) if values else 0.0
+    offset = max_value * 0.015 if max_value > 0.0 else 0.01
+    for bar, value in zip(bars, values):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            value + offset,
+            f"{value:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
+    plt.ylim(top=max_value + offset * 4 if max_value > 0.0 else 1.0)
     plt.tight_layout()
     plt.savefig(output, dpi=150)
     plt.close()
