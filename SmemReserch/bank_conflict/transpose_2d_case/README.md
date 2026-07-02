@@ -37,12 +37,11 @@ would blur the interpretation of the bank-conflict results.
 
 ## Experiments
 
-### E0 Basic Pitch Effect
+### E0 Classic Transpose Baseline
 
 | Case | Access | Purpose | Expected bank behavior |
 | --- | --- | --- | --- |
 | `E0_load_pitch32` | `tile[lane * 32 + warp]` | Classic transpose worst case | All 32 lanes of a warp target one bank |
-| `E0_load_pitch33` | `tile[lane * 33 + warp]` | Validate `+1` padding | Lanes rotate across 32 banks |
 
 ### E1 Pitch Sweep
 
@@ -56,13 +55,9 @@ would blur the interpretation of the bank-conflict results.
 | `E1_load_pitch31` | 31 | 1 | 32 | 1 |
 | `E1_load_pitch32` | 32 | 32 | 1 | 32 |
 | `E1_load_pitch33` | 33 | 1 | 32 | 1 |
-| `E1_load_pitch34` | 34 | 2 | 16 | 2 |
-| `E1_load_pitch35` | 35 | 1 | 32 | 1 |
-| `E1_load_pitch36` | 36 | 4 | 8 | 4 |
-| `E1_load_pitch40` | 40 | 8 | 4 | 8 |
-| `E1_load_pitch64` | 64 | 32 | 1 | 32 |
 
-These are the systematic check of the `gcd(pitch, 32)` rule.
+These representative pitches cover the power-of-two conflict progression and
+the boundary behavior around pitches 31, 32, and 33.
 For very small pitches such as 1, 2, and 4, the logical rows intentionally
 overlap in the backing array. That is acceptable here because E1 is about the
 shared-memory bank mapping implied by `lane * pitch + warp`, not about modeling

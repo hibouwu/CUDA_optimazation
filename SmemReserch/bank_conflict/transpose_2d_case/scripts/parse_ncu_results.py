@@ -10,7 +10,6 @@ RESULTS_DIR = ROOT / "results" / "ncu"
 
 CASE_ORDER = [
     "E0_load_pitch32",
-    "E0_load_pitch33",
     "E1_load_pitch1",
     "E1_load_pitch2",
     "E1_load_pitch4",
@@ -19,11 +18,6 @@ CASE_ORDER = [
     "E1_load_pitch31",
     "E1_load_pitch32",
     "E1_load_pitch33",
-    "E1_load_pitch34",
-    "E1_load_pitch35",
-    "E1_load_pitch36",
-    "E1_load_pitch40",
-    "E1_load_pitch64",
     "E2_load_broadcast_same_addr",
     "E2_load_multicast_2addr",
     "E2_load_multicast_4addr",

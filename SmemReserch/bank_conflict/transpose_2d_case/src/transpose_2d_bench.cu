@@ -55,8 +55,6 @@ struct CaseSpec {
 const std::vector<CaseSpec> kCases = {
     {"E0", "E0_basic_pitch_effect", "E0_load_pitch32",
      AccessPattern::kTransposeScalar, 32, 1},
-    {"E0", "E0_basic_pitch_effect", "E0_load_pitch33",
-     AccessPattern::kTransposeScalar, 33, 1},
 
     {"E1", "E1_pitch_sweep", "E1_load_pitch1",
      AccessPattern::kTransposeScalar, 1, 1},
@@ -74,16 +72,6 @@ const std::vector<CaseSpec> kCases = {
      AccessPattern::kTransposeScalar, 32, 1},
     {"E1", "E1_pitch_sweep", "E1_load_pitch33",
      AccessPattern::kTransposeScalar, 33, 1},
-    {"E1", "E1_pitch_sweep", "E1_load_pitch34",
-     AccessPattern::kTransposeScalar, 34, 1},
-    {"E1", "E1_pitch_sweep", "E1_load_pitch35",
-     AccessPattern::kTransposeScalar, 35, 1},
-    {"E1", "E1_pitch_sweep", "E1_load_pitch36",
-     AccessPattern::kTransposeScalar, 36, 1},
-    {"E1", "E1_pitch_sweep", "E1_load_pitch40",
-     AccessPattern::kTransposeScalar, 40, 1},
-    {"E1", "E1_pitch_sweep", "E1_load_pitch64",
-     AccessPattern::kTransposeScalar, 64, 1},
 
     {"E2", "E2_broadcast_multicast", "E2_load_broadcast_same_addr",
      AccessPattern::kBroadcastSameAddr, 32, 1},
