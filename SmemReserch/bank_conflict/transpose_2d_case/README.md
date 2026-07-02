@@ -132,6 +132,172 @@ different from padding:
 This XOR pattern is a targeted microbenchmark, not a claim that one swizzle is
 universally optimal.
 
+## Actual Backend Address Views
+
+All current backends use the same linear allocation:
+
+```c++
+__shared__ __align__(16) float tile[32 * 64];
+```
+
+`initialize_tile()` fills that linear array directly. There is no producer
+kernel that writes a real 32x32 logical matrix, and no backend physically
+rearranges the initialized values. The differences are entirely in the word
+index returned by `base_index_for_lane()`.
+
+The `0..31` matrices below must therefore be read as **address/bank views**, not
+as the actual values stored in `tile`. Columns are lanes `L0..L31`; a cell is a
+bank number, requested word index, or physical column as stated by that view.
+
+### E0: Exact Pitch-32 Access
+
+The backend reads `base_index = lane * 32 + warp`. For warp 0, the requested
+word indices and banks are:
+
+```text
+lane:  0  1  2  3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31
+word:  0 32 64 96 128 160 192 224 256 288 320 352 384 416 448 480 512 544 576 608 640 672 704 736 768 800 832 864 896 928 960 992
+bank:  0  0  0  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+```
+
+Other warps have the same 32-way pattern shifted to bank `warp`.
+
+### E1: Pitch Sweep As A Bank Matrix
+
+For warp 0, lane `l` uses `bank = (l * pitch) % 32`. Each row below is one E1
+backend, and the 32 entries correspond to lanes `0..31`:
+
+```text
+lane:     0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+pitch 1:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+pitch 2:  0  2  4  6  8 10 12 14 16 18 20 22 24 26 28 30  0  2  4  6  8 10 12 14 16 18 20 22 24 26 28 30
+pitch 4:  0  4  8 12 16 20 24 28  0  4  8 12 16 20 24 28  0  4  8 12 16 20 24 28  0  4  8 12 16 20 24 28
+pitch 8:  0  8 16 24  0  8 16 24  0  8 16 24  0  8 16 24  0  8 16 24  0  8 16 24  0  8 16 24  0  8 16 24
+pitch16:  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16  0 16
+pitch31:  0 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1
+pitch32:  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+pitch33:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+```
+
+Pitch 33 can be interpreted as the padded coordinate view below. `P` represents
+the skipped word at the end of each conceptual row; the benchmark itself still
+uses the common linear allocation and does not explicitly write `P`:
+
+```text
+physical col:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+row  0:        0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31  P
+row  1:        0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31  P
+row  2:        0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31  P
+...
+row 31:        0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31  P
+```
+
+### E2: Broadcast And Multicast As A Lane-to-word Matrix
+
+The entries below are requested shared-memory word indices, not bank numbers:
+
+```text
+lane:       0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+broadcast:  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+2-address:  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1
+4-address:  0  0  0  0  0  0  0  0  1  1  1  1  1  1  1  1  2  2  2  2  2  2  2  2  3  3  3  3  3  3  3  3
+conflict:   0 32 64 96 128 160 192 224 256 288 320 352 384 416 448 480 512 544 576 608 640 672 704 736 768 800 832 864 896 928 960 992
+```
+
+The broadcast row and conflict row both target bank 0. The difference is that
+broadcast requests one repeated word, whereas conflict requests 32 distinct
+words from that bank.
+
+### E3: Exact Vector-load Address Form
+
+E3 does not rearrange the initialized tile. It changes how consecutive words
+are grouped into one instruction:
+
+```text
+scalar:  [0]       [1]       [2]       [3]       ... [31]
+float2:  [0 1]     [2 3]     [4 5]     [6 7]     ... [30 31]
+float4:  [0 1 2 3] [4 5 6 7] [8 9 10 11]         ... [28 29 30 31]
+```
+
+For warp 0, the exact bank sets requested by the six backends are:
+
+```text
+lane:
+  0       1       2       3       4       5       6       7
+  8       9      10      11      12      13      14      15
+ 16      17      18      19      20      21      22      23
+ 24      25      26      27      28      29      30      31
+
+f32, pitch32:
+ {0}     {0}     {0}     {0}     {0}     {0}     {0}     {0}
+ {0}     {0}     {0}     {0}     {0}     {0}     {0}     {0}
+ {0}     {0}     {0}     {0}     {0}     {0}     {0}     {0}
+ {0}     {0}     {0}     {0}     {0}     {0}     {0}     {0}
+
+f32, pitch33:
+ {0}     {1}     {2}     {3}     {4}     {5}     {6}     {7}
+ {8}     {9}    {10}    {11}    {12}    {13}    {14}    {15}
+{16}    {17}    {18}    {19}    {20}    {21}    {22}    {23}
+{24}    {25}    {26}    {27}    {28}    {29}    {30}    {31}
+
+f32x2, pitch32:
+ {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}
+ {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}
+ {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}
+ {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}   {0,1}
+
+f32x2, pitch33:
+ {0,1}   {2,3}   {2,3}   {4,5}   {4,5}   {6,7}   {6,7}   {8,9}
+ {8,9} {10,11} {10,11} {12,13} {12,13} {14,15} {14,15} {16,17}
+{16,17} {18,19} {18,19} {20,21} {20,21} {22,23} {22,23} {24,25}
+{24,25} {26,27} {26,27} {28,29} {28,29} {30,31} {30,31}   {0,1}
+
+f32x4, pitch32:
+ {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}
+ {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}
+ {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}
+ {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}   {0-3}
+
+f32x4, pitch33:
+ {0-3}   {4-7}   {4-7}   {4-7}   {4-7}  {8-11}  {8-11}  {8-11}
+{8-11} {12-15} {12-15} {12-15} {12-15} {16-19} {16-19} {16-19}
+{16-19} {20-23} {20-23} {20-23} {20-23} {24-27} {24-27} {24-27}
+{24-27} {28-31} {28-31} {28-31} {28-31}   {0-3}   {0-3}   {0-3}
+```
+
+The repeated sets in the pitch-33 vector rows come from the alignment
+adjustment in `vector_base_col()`. It rounds each vector base to a valid
+2-word or 4-word boundary; it does not define a new physical matrix layout.
+
+### E4: Actual XOR Address Matrix
+
+The current backend computes only the load address:
+
+```c++
+physical_col = warp ^ lane;
+base_index = lane * 32 + physical_col;
+```
+
+The block contains eight warps, so the actual matrix has rows `warp 0..7` and
+columns `lane 0..31`. Each cell below is `physical_col`; because
+`lane * 32 % 32 == 0`, it is also the bank number:
+
+```text
+lane:    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+warp 0:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+warp 1:  1  0  3  2  5  4  7  6  9  8 11 10 13 12 15 14 17 16 19 18 21 20 23 22 25 24 27 26 29 28 31 30
+warp 2:  2  3  0  1  6  7  4  5 10 11  8  9 14 15 12 13 18 19 16 17 22 23 20 21 26 27 24 25 30 31 28 29
+warp 3:  3  2  1  0  7  6  5  4 11 10  9  8 15 14 13 12 19 18 17 16 23 22 21 20 27 26 25 24 31 30 29 28
+warp 4:  4  5  6  7  0  1  2  3 12 13 14 15  8  9 10 11 20 21 22 23 16 17 18 19 28 29 30 31 24 25 26 27
+warp 5:  5  4  7  6  1  0  3  2 13 12 15 14  9  8 11 10 21 20 23 22 17 16 19 18 29 28 31 30 25 24 27 26
+warp 6:  6  7  4  5  2  3  0  1 14 15 12 13 10 11  8  9 22 23 20 21 18 19 16 17 30 31 28 29 26 27 24 25
+warp 7:  7  6  5  4  3  2  1  0 15 14 13 12 11 10  9  8 23 22 21 20 19 18 17 16 31 30 29 28 27 26 25 24
+```
+
+For each actual warp, `warp ^ lane` is a permutation of `0..31`, so its 32
+lanes touch 32 different banks. This is a load-address swizzle microbenchmark;
+it does not implement the producer side of a complete swizzled matrix layout.
+
 ## CSV Output
 
 | Field | Meaning |
