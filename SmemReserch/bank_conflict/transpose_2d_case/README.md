@@ -176,11 +176,17 @@ is bank, and each active cell contains the requested linear word index:
 
 ### 3. XOR Swizzle Address Mapping
 
-The E4 comparison below shows the actual eight warps and 32 lanes. Each cell is
-`physical_col`; with pitch 32 it is also the bank id because
-`lane * 32 % 32 == 0`:
+The E4 comparison below uses the same address-cell style as the pitch-32 versus
+pitch-33 layout figure. It covers the actual block coordinates: logical
+rows/lanes `0..31` and logical columns/warps `0..7`. Every cell contains:
 
-![Pitch-32 ordinary and XOR-swizzled load-address mappings](assets/backend_heatmaps/xor_swizzle_address_mapping.png)
+```text
+P   = physical_col
+idx = lane * 32 + physical_col
+B   = idx % 32
+```
+
+![Pitch-32 ordinary and XOR-swizzled address layouts](assets/backend_heatmaps/address_layout_pitch32_vs_xor_swizzle.png)
 
 Without swizzle, every lane in a warp uses the same physical column and bank.
 With `physical_col = warp ^ lane`, each warp obtains a permutation of banks

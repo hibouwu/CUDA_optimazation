@@ -348,6 +348,74 @@ def draw_xor_swizzle_address():
     print(f"Wrote {output}")
 
 
+def draw_xor_swizzle_address_layout():
+    figure, axes = plt.subplots(
+        1, 2, figsize=(17, 20), constrained_layout=True
+    )
+    layouts = (
+        (
+            "Ordinary pitch-32 address layout\nphysical_col = warp",
+            lambda row, logical_col: logical_col,
+        ),
+        (
+            "XOR-swizzled pitch-32 address layout\n"
+            "physical_col = warp ^ lane",
+            lambda row, logical_col: logical_col ^ row,
+        ),
+    )
+    image = None
+    for axis, (title, physical_col_fn) in zip(axes, layouts):
+        matrix = []
+        cells = {}
+        for row in range(32):
+            bank_row = []
+            for logical_col in range(8):
+                physical_col = physical_col_fn(row, logical_col)
+                index = row * 32 + physical_col
+                bank = index % 32
+                bank_row.append(bank)
+                cells[(row, logical_col)] = (physical_col, index, bank)
+            matrix.append(bank_row)
+        image = axis.imshow(
+            matrix,
+            cmap=BANK_CMAP,
+            norm=BANK_NORM,
+            interpolation="nearest",
+            aspect="auto",
+        )
+        axis.set_title(title, fontsize=14)
+        axis.set_xlabel("Warp / logical column")
+        axis.set_ylabel("Lane / logical row")
+        axis.set_xticks(range(8))
+        axis.set_yticks(range(32))
+        configure_cell_grid(axis, 8, 32)
+        for (row, logical_col), (physical_col, index, bank) in cells.items():
+            axis.text(
+                logical_col,
+                row,
+                f"P{physical_col}\nidx {index}\nB{bank}",
+                ha="center",
+                va="center",
+                color="white" if bank <= 2 or bank >= 29 else "#111111",
+                fontsize=5.4,
+            )
+    figure.colorbar(
+        image,
+        ax=axes,
+        label="Bank id",
+        ticks=range(0, 32, 4),
+        shrink=0.9,
+    )
+    figure.suptitle(
+        "E4 address view matching the actual block: 32 lanes × 8 warps",
+        fontsize=17,
+    )
+    output = OUTPUT_DIR / "address_layout_pitch32_vs_xor_swizzle.png"
+    figure.savefig(output, dpi=180)
+    plt.close(figure)
+    print(f"Wrote {output}")
+
+
 def draw_group(group_name, cases):
     columns = 2 if len(cases) > 1 else 1
     rows = ceil(len(cases) / columns)
@@ -418,6 +486,7 @@ def main():
     draw_address_layout()
     draw_column_read()
     draw_xor_swizzle_address()
+    draw_xor_swizzle_address_layout()
     for group_name, cases in GROUPS.items():
         draw_group(group_name, cases)
 
