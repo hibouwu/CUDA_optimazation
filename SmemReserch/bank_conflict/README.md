@@ -12,3 +12,4 @@ benchmark families.
 | [`tma`](tma/README.md) | TMA tensor-map swizzle and shared-memory destinations | Implemented, pending SM110 validation |
 | [`tcgen05_smem_operand`](tcgen05_smem_operand/README.md) | `tcgen05.mma` SMEM descriptor/operand path | Implemented, pending SM110a validation |
 | [`transpose_2d_case`](transpose_2d_case/README.md) | Load-only transpose bank-conflict study with E0-E4 pitch, multicast, vector, and software-swizzle cases | Implemented, pending SM110 validation |
+| [`real_transpose_case`](real_transpose_case/README.md) | End-to-end global-memory transpose: coalescing, shared tiling, padding, vectorization, and software swizzle | Implemented, pending SM110 validation |
