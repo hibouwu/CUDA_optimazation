@@ -16,11 +16,11 @@ The optimization sequence follows the algorithmic intent of the
 [reference blog](https://www.wingedge777.com/en/article/49c4e15376366f8d),
 not its code line by line. R0 represents the two one-sided coalescing choices,
 R1 introduces the shared-memory corner turn, R2 adds padding, and R3 adds
-128-bit global-memory accesses while keeping shared memory scalar. R4 isolates
-the scalar XOR-swizzled layout; unlike the blog's final packed-swizzle example,
-this backend does not claim vectorized global or shared-memory accesses. R5 is
-an additional local copy reference rather than a transpose optimization from
-the blog.
+128-bit global-memory accesses while keeping shared memory scalar. R4 follows
+the blog's final packed-swizzle structure: it combines 128-bit global-memory
+accesses with a 32x32 XOR-swizzled tile, while unpacking and repacking scalar
+shared-memory values. R5 is an additional local copy reference rather than a
+transpose optimization from the blog.
 
 ## What is being separated
 
@@ -63,7 +63,7 @@ effective_GBps = bytes / avg_seconds / 1e9
 | R1 | `R1_transpose_smem_pitch32` | Coalesced loads and stores | `float tile[32][32]`; transpose read is bank-conflicted |
 | R2 | `R2_transpose_smem_pitch33` | Coalesced loads and stores | `float tile[32][33]`; padding removes the column conflict |
 | R3 | `R3_transpose_smem_packed_pitch33` | 128-bit `float4` loads and stores when dimensions permit | Padded tile; shared-memory accesses remain scalar |
-| R4 | `R4_transpose_smem_xor_swizzle` | Coalesced loads and stores | 32x32 tile with consistent XOR mapping |
+| R4 | `R4_transpose_smem_xor_swizzle` | 128-bit `float4` loads and stores when dimensions permit | 32x32 tile; scalar shared accesses with consistent XOR mapping |
 | R5 | `R5_transpose_copy_baseline` | Coalesced copy, no transpose | None; bandwidth reference, not a strict theoretical upper bound |
 
 The two coalesced-read R0 cases intentionally have the same fundamental memory
@@ -83,15 +83,19 @@ from `(lane * 32 + column) % 32` to
 
 ### Vector alignment
 
-R3 vectorizes only global memory. A pitch of 33 floats means consecutive shared
-rows start 132 bytes apart, so row starts are not consistently 16-byte aligned.
-Forcing shared `float4` instructions would therefore be invalid or would make
-the layout substantially more complex.
+R3 and R4 vectorize global memory only. R3's pitch of 33 floats means
+consecutive shared rows start 132 bytes apart, so row starts are not
+consistently 16-byte aligned. R4 must apply a separate XOR mapping to each
+component, so its four logical values are not generally four contiguous
+physical shared words. Both kernels therefore unpack global `float4` values
+into scalar shared stores and repack scalar shared loads for the global
+`float4` output, matching the algorithmic structure shown in the blog without
+claiming vectorized shared-memory instructions.
 
-`cudaMalloc` supplies adequately aligned base pointers. R3 uses global
+`cudaMalloc` supplies adequately aligned base pointers. R3 and R4 use global
 `float4` accesses when both width and height are divisible by four, ensuring
-the input and output row strides are 16-byte compatible. Otherwise it falls
-back to scalar global accesses and records `vector_width=1` in the CSV.
+the input and output row strides are 16-byte compatible. Otherwise they fall
+back to scalar global accesses and record `vector_width=1` in the CSV.
 Boundary tiles that are not full 32x32 are handled correctly.
 
 ### Current SM110 observation
@@ -107,6 +111,42 @@ R5 moves the same logical byte count with coalesced loads and stores, but it
 does not transpose and has different address arithmetic and kernel behavior.
 It is a useful bandwidth reference, not a guaranteed upper bound for every
 transpose backend.
+
+## Measured Results
+
+The following plots are a checked-in snapshot from the current SM110 system
+using a 4096x4096 FP32 matrix. Exact timings depend on GPU clocks and system
+load; rerun the scripts below to regenerate the working copies in `results/`.
+
+### End-to-end timing
+
+![Average kernel time](docs/images/avg_ms.png)
+
+![Effective bandwidth](docs/images/effective_gbps.png)
+
+### Global-memory counters
+
+![Global-load requests](docs/images/global_load_requests.png)
+
+![Global-load sectors](docs/images/global_load_sectors.png)
+
+![Global-store requests](docs/images/global_store_requests.png)
+
+![Global-store sectors](docs/images/global_store_sectors.png)
+
+Requests and sectors should be interpreted together. A larger sectors/request
+ratio indicates a less coalesced warp-level global-memory access pattern.
+
+### Shared-memory counters
+
+![Shared-load bank conflicts](docs/images/shared_load_bank_conflicts.png)
+
+![Shared-store bank conflicts](docs/images/shared_store_bank_conflicts.png)
+
+R1 shows the expected dominant transpose-read conflict. The much smaller raw
+counter values for R2-R4 are near the conflict-free region and should not be
+read as a stable N-way conflict without also checking requests, wavefronts, and
+the instruction-level NCU source view.
 
 ## Build and run
 
@@ -175,13 +215,13 @@ For coalescing, compare sectors per global request rather than a sector count
 alone: all cases move the same logical bytes, but a strided warp access needs
 more sectors. For shared-memory behavior, compare R1 with R2 and R4.
 
-To verify R3 code generation:
+To verify R3 and R4 code generation:
 
 ```bash
 cuobjdump --dump-sass build/real_transpose_bench |
   grep -E 'LDG|STG|128|LDS|STS'
 ```
 
-Look for 128-bit global loads/stores in R3. Do not expect vectorized shared
-loads/stores: they are deliberately scalar because pitch 33 does not preserve
-16-byte row alignment.
+Look for 128-bit global loads/stores in both R3 and R4. Do not expect vectorized
+shared loads/stores: R3's pitch 33 does not preserve 16-byte row alignment, and
+R4 applies XOR mapping independently to each scalar component.

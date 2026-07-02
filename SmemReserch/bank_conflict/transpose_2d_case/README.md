@@ -132,6 +132,30 @@ different from padding:
 This XOR pattern is a targeted microbenchmark, not a claim that one swizzle is
 universally optimal.
 
+## Measured Results
+
+The following plots are a checked-in snapshot from the current SM110 system.
+Timing is useful for trends, while the NCU counters are the primary evidence
+for the shared-memory access behavior. Rerun the scripts below to regenerate
+the working copies in `results/`.
+
+### Timing trend
+
+![Average kernel time](docs/images/avg_ms.png)
+
+![Effective bandwidth](docs/images/effective_gbps.png)
+
+### Nsight Compute counters
+
+![Shared-load bank conflicts](docs/images/shared_ld_bank_conflicts.png)
+
+![Shared-load wavefronts](docs/images/shared_ld_wavefronts.png)
+
+![Executed shared-load instructions](docs/images/shared_ld_instructions.png)
+
+Compare conflicts and wavefronts against the executed instruction count rather
+than treating an absolute counter value in isolation.
+
 ## CSV Output
 
 | Field | Meaning |

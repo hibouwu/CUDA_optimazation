@@ -67,7 +67,7 @@ constexpr CaseDefinition kCases[] = {
      "none"},
     {"R3", "R3_transpose_smem_packed_pitch33", Backend::kPackedPitch33, 33,
      4, "none"},
-    {"R4", "R4_transpose_smem_xor_swizzle", Backend::kXorSwizzle, 32, 1,
+    {"R4", "R4_transpose_smem_xor_swizzle", Backend::kXorSwizzle, 32, 4,
      "xor"},
     {"R5", "R5_transpose_copy_baseline", Backend::kCopy, 0, 1, "none"},
 };
@@ -227,37 +227,70 @@ __device__ __forceinline__ int swizzled_col(int logical_row,
 }
 
 __global__ void transpose_smem_xor_swizzle(const float* input, float* output,
-                                            int width, int height) {
+                                           int width, int height,
+                                           bool use_float4) {
   __shared__ float tile[kTileDim][kTileDim];
 
-  const int input_col =
-      static_cast<int>(blockIdx.x) * kTileDim + threadIdx.x;
-  const int input_row_base =
-      static_cast<int>(blockIdx.y) * kTileDim + threadIdx.y;
+  const int linear_thread = threadIdx.y * kTileDim + threadIdx.x;
+  const int local_row = linear_thread / (kTileDim / 4);
+  const int local_col_base = (linear_thread % (kTileDim / 4)) * 4;
+  const int input_row =
+      static_cast<int>(blockIdx.y) * kTileDim + local_row;
+  const int input_col_base =
+      static_cast<int>(blockIdx.x) * kTileDim + local_col_base;
 
-  #pragma unroll
-  for (int offset = 0; offset < kTileDim; offset += kBlockRows) {
-    const int logical_row = threadIdx.y + offset;
-    const int input_row = input_row_base + offset;
-    if (input_col < width && input_row < height) {
-      tile[logical_row][swizzled_col(logical_row, threadIdx.x)] =
-          input[static_cast<size_t>(input_row) * width + input_col];
+  if (input_row < height) {
+    if (use_float4 && input_col_base + 3 < width) {
+      const float4 value = *reinterpret_cast<const float4*>(
+          input + static_cast<size_t>(input_row) * width + input_col_base);
+      tile[local_row][swizzled_col(local_row, local_col_base + 0)] = value.x;
+      tile[local_row][swizzled_col(local_row, local_col_base + 1)] = value.y;
+      tile[local_row][swizzled_col(local_row, local_col_base + 2)] = value.z;
+      tile[local_row][swizzled_col(local_row, local_col_base + 3)] = value.w;
+    } else {
+      #pragma unroll
+      for (int component = 0; component < 4; ++component) {
+        const int input_col = input_col_base + component;
+        if (input_col < width) {
+          tile[local_row][swizzled_col(local_row,
+                                       local_col_base + component)] =
+              input[static_cast<size_t>(input_row) * width + input_col];
+        }
+      }
     }
   }
   __syncthreads();
 
-  const int output_col =
-      static_cast<int>(blockIdx.y) * kTileDim + threadIdx.x;
-  const int output_row_base =
-      static_cast<int>(blockIdx.x) * kTileDim + threadIdx.y;
+  const int output_col_base =
+      static_cast<int>(blockIdx.y) * kTileDim + local_col_base;
+  const int output_row =
+      static_cast<int>(blockIdx.x) * kTileDim + local_row;
 
-  #pragma unroll
-  for (int offset = 0; offset < kTileDim; offset += kBlockRows) {
-    const int logical_col = threadIdx.y + offset;
-    const int output_row = output_row_base + offset;
-    if (output_col < height && output_row < width) {
-      output[static_cast<size_t>(output_row) * height + output_col] =
-          tile[threadIdx.x][swizzled_col(threadIdx.x, logical_col)];
+  if (output_row < width) {
+    if (use_float4 && output_col_base + 3 < height) {
+      const float4 value = {
+          tile[local_col_base + 0]
+              [swizzled_col(local_col_base + 0, local_row)],
+          tile[local_col_base + 1]
+              [swizzled_col(local_col_base + 1, local_row)],
+          tile[local_col_base + 2]
+              [swizzled_col(local_col_base + 2, local_row)],
+          tile[local_col_base + 3]
+              [swizzled_col(local_col_base + 3, local_row)],
+      };
+      *reinterpret_cast<float4*>(
+          output + static_cast<size_t>(output_row) * height +
+          output_col_base) = value;
+    } else {
+      #pragma unroll
+      for (int component = 0; component < 4; ++component) {
+        const int output_col = output_col_base + component;
+        const int logical_row = local_col_base + component;
+        if (output_col < height) {
+          output[static_cast<size_t>(output_row) * height + output_col] =
+              tile[logical_row][swizzled_col(logical_row, local_row)];
+        }
+      }
     }
   }
 }
@@ -384,7 +417,7 @@ void launch_case(const CaseDefinition& definition, const float* input,
     }
     case Backend::kXorSwizzle:
       transpose_smem_xor_swizzle<<<input_grid, block, 0, stream>>>(
-          input, output, width, height);
+          input, output, width, height, use_float4);
       break;
     case Backend::kCopy: {
       constexpr int threads = 256;
@@ -507,10 +540,13 @@ int main(int argc, char** argv) {
                  "effective_GBps,correctness\n";
     bool all_passed = true;
     for (const auto* definition : selected) {
+      const bool supports_float4 =
+          definition->backend == Backend::kPackedPitch33 ||
+          definition->backend == Backend::kXorSwizzle;
       const bool use_float4 =
-          definition->backend == Backend::kPackedPitch33 &&
+          supports_float4 &&
           options.width % 4 == 0 && options.height % 4 == 0;
-      if (definition->backend == Backend::kPackedPitch33 && !use_float4) {
+      if (supports_float4 && !use_float4) {
         std::cerr << definition->name
                   << ": width and height must both be divisible by 4 for "
                      "float4 global accesses; using scalar fallback\n";
@@ -537,7 +573,7 @@ int main(int argc, char** argv) {
       const int block_rows =
           is_copy || definition->backend == Backend::kNaive ? 0 : kBlockRows;
       const int actual_vector_width =
-          definition->backend == Backend::kPackedPitch33
+          supports_float4
               ? (use_float4 ? 4 : 1)
               : definition->vector_width;
 
