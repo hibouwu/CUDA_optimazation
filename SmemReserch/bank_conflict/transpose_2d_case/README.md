@@ -202,8 +202,11 @@ ITERS=1000 WARMUPS=3 REPEATS=10 ./scripts/run_basic.sh --case E1
 The script uses `--list-cases` to expand `all`, `E0`, `E1`, `E2`, `E3`, `E4`,
 or a concrete case name into per-case NCU runs. After profiling, it invokes
 `parse_ncu_results.py`, prints one table per collected metric, and writes one
-PNG bar chart per metric into `results/ncu/`. Query metrics available on the
-target machine with:
+annotated PNG bar chart per metric into `results/ncu/`. The default outputs are
+`shared_ld_bank_conflicts.png`, `shared_ld_wavefronts.png`, and
+`shared_ld_instructions.png`. If performance counters are admin-only,
+`run_ncu.sh` automatically uses passwordless `sudo` and restores CSV ownership.
+Query metrics available on the target machine with:
 
 ```bash
 ncu --query-metrics | grep -Ei "bank|shared|l1tex|sass_inst_executed"

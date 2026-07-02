@@ -36,17 +36,13 @@ METRIC_LABELS = {
         "shared_ld_bank_conflicts",
         "Shared-load bank conflicts",
     ),
-    "l1tex__t_requests_pipe_lsu_mem_shared_op_ld.sum": (
-        "shared_ld_requests",
-        "Shared-load requests",
+    "l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum": (
+        "shared_ld_wavefronts",
+        "Shared-load L1TEX wavefronts",
     ),
-    "l1tex__t_sectors_pipe_lsu_mem_shared_op_ld.sum": (
-        "shared_ld_sectors",
-        "Shared-load sectors",
-    ),
-    "smsp__sass_inst_executed_op_shared_ld_pred_on.sum": (
+    "smsp__inst_executed_op_shared_ld.sum": (
         "shared_ld_instructions",
-        "Executed shared-load instructions",
+        "Executed shared-load warp instructions",
     ),
 }
 
@@ -64,6 +60,17 @@ def parse_metric_value(raw_value):
 
 def sanitize_metric_name(metric_name):
     return re.sub(r"[^A-Za-z0-9]+", "_", metric_name).strip("_").lower()
+
+
+def format_bar_value(value):
+    magnitude = abs(value)
+    if magnitude >= 1.0e6:
+        return f"{value / 1.0e6:.1f}M"
+    if magnitude >= 1.0e3:
+        return f"{value / 1.0e3:.1f}K"
+    if value.is_integer():
+        return f"{value:.0f}"
+    return f"{value:.3f}"
 
 
 def extract_metric_rows(report_path):
@@ -143,7 +150,7 @@ def plot_metric_bars(plt, labels, values, *, ylabel, title, output, color):
         plt.text(
             bar.get_x() + bar.get_width() / 2.0,
             value + offset,
-            f"{value:.3f}",
+            format_bar_value(value),
             ha="center",
             va="bottom",
             fontsize=8,
