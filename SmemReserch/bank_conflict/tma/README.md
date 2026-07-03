@@ -198,7 +198,7 @@ bank conflict 为 0。32B swizzle 的 shared-memory footprint 仍为 4 KiB；
 
 #### T1 shared-load bank-conflict 结果
 
-![T1 shared-load bank conflicts](results/ncu/shared_ld_bank_conflicts.png)
+![T1 shared-load bank conflicts](assets/shared_ld_bank_conflicts.png)
 
 NCU 使用 100 次迭代。T1a 的 2800 个 conflict 正好对应
 `28 conflicts/iteration * 100 iterations`；T1b、T1c、T1d 均为 0，说明
@@ -271,7 +271,7 @@ footprint。
 
 #### T2 shared-store bank-conflict 结果
 
-![T2 shared-store bank conflicts](results/ncu/shared_st_bank_conflicts.png)
+![T2 shared-store bank conflicts](assets/shared_st_bank_conflicts.png)
 
 NCU 使用 100 次迭代。T2a 同样产生 2800 个 conflict，T2b、T2c、T2d
 均为 0。Basic 中 T2a 耗时 2.423 ms，而三个 matched-swizzle case 均约
@@ -314,7 +314,7 @@ case 使用逻辑 column 地址，因此二者用于展示“强冲突与无冲�
 以下两张图来自 `results/basic_results.csv`，配置为 10,000 iterations、
 1 次 warmup 和 3 次 repeat。所有 case 的 correctness 均为 `PASS`。
 
-![Average kernel time](results/avg_ms.png)
+![Average kernel time](assets/avg_ms.png)
 
 T0 是纯 TMA baseline。T1 在 TMA load 后增加普通 shared consumer、地址
 计算、累加和一次额外同步；T2 在 TMA store 前增加普通 shared producer、
@@ -322,7 +322,7 @@ proxy fence 和同步。因此 T1/T2 相对 T0 的时间差不能全部归因于
 conflict。bank conflict 的影响应主要通过 T1a 对比 T1b，以及 T2a 对比
 T2b 观察。
 
-![Effective TMA bandwidth](results/effective_gbps.png)
+![Effective TMA bandwidth](assets/effective_gbps.png)
 
 `effective_GBps` 只统计 TMA 搬运字节，却使用整个 kernel elapsed time。
 因此 T1/T2 的带宽下降表示端到端 consumer/producer 开销增加，并不代表
