@@ -43,3 +43,27 @@ add_custom_command(
   DEPENDS sass_lop3_template.cu
   VERBATIM)
 add_custom_target(sass_lop3_template ALL DEPENDS "${SASS_LOP3_TEMPLATE_CUBIN}")
+
+set(SASS_IMAD_TEMPLATE_CUBIN
+    "${CMAKE_CURRENT_BINARY_DIR}/sass_imad_template.sm_${CMAKE_CUDA_ARCHITECTURES}.cubin")
+add_custom_command(
+  OUTPUT "${SASS_IMAD_TEMPLATE_CUBIN}"
+  COMMAND "${CMAKE_CUDA_COMPILER}" --cubin -O3 -lineinfo
+          "-arch=sm_${CMAKE_CUDA_ARCHITECTURES}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/sass_imad_template.cu"
+          -o "${SASS_IMAD_TEMPLATE_CUBIN}"
+  DEPENDS sass_imad_template.cu
+  VERBATIM)
+add_custom_target(sass_imad_template ALL DEPENDS "${SASS_IMAD_TEMPLATE_CUBIN}")
+
+set(SASS_FMA_TEMPLATE_CUBIN
+    "${CMAKE_CURRENT_BINARY_DIR}/sass_fma_template.sm_${CMAKE_CUDA_ARCHITECTURES}.cubin")
+add_custom_command(
+  OUTPUT "${SASS_FMA_TEMPLATE_CUBIN}"
+  COMMAND "${CMAKE_CUDA_COMPILER}" --cubin -O3 -lineinfo
+          "-arch=sm_${CMAKE_CUDA_ARCHITECTURES}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/sass_fma_template.cu"
+          -o "${SASS_FMA_TEMPLATE_CUBIN}"
+  DEPENDS sass_fma_template.cu
+  VERBATIM)
+add_custom_target(sass_fma_template ALL DEPENDS "${SASS_FMA_TEMPLATE_CUBIN}")
