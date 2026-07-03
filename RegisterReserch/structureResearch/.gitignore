@@ -1,0 +1,7 @@
+/build/
+/results/*.csv
+/results/*.png
+/results/*.txt
+/results/ncu/
+/results/sass_patched/
+/results/bank_scan/
