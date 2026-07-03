@@ -13,7 +13,8 @@ RESULTS = ROOT / "results" / "bank_scan_imad"
 TEMPLATE = BUILD / "sass_imad_template.sm_110.cubin"
 MANIFEST = RESULTS / "manifest.csv"
 KERNEL = "sass_register_probe"
-EXPECTED_LOP3 = 128
+EXPECTED_INSTRUCTIONS = 128  # ADD instructions for IMAD
+INSTRUCTION_TYPE = "ADD"  # Target instruction type
 MAX_STRIDE = 16
 
 INSTRUCTION_RE = re.compile(r"/\*([0-9a-f]+)\*/\s+(.+?)\s*;")
@@ -79,13 +80,14 @@ def disassemble(path):
         if "CS2R" in instruction and "SR_CLOCKLO" in instruction:
             in_timed_region = not in_timed_region
             continue
-        if not in_timed_region or not instruction.startswith("LOP3."):
+        if not in_timed_region or not instruction.startswith(("IMAD", "IADD")):
             continue
         registers = [
             decode_register(token) for token in REGISTER_RE.findall(instruction)
         ]
-        if len(registers) != 4:
-            raise RuntimeError(f"unexpected LOP3 operands: {instruction}")
+        # IMAD.IADD has 4 operands, IADD3 has variable operands
+        if len(registers) < 3:
+            raise RuntimeError(f"unexpected IMAD/IADD operands: {instruction}")
         instructions.append(
             {
                 "address": int(address, 16),
@@ -94,9 +96,9 @@ def disassemble(path):
                 "text": instruction.strip(),
             }
         )
-    if len(instructions) != EXPECTED_LOP3:
+    if len(instructions) != EXPECTED_INSTRUCTIONS:
         raise RuntimeError(
-            f"expected {EXPECTED_LOP3} timed LOP3s, found {len(instructions)}"
+            f"expected {EXPECTED_INSTRUCTIONS} timed {INSTRUCTION_TYPE}s, found {len(instructions)}"
         )
     return instructions
 

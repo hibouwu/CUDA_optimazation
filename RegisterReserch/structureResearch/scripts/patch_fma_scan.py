@@ -13,7 +13,8 @@ RESULTS = ROOT / "results" / "bank_scan_fma"
 TEMPLATE = BUILD / "sass_fma_template.sm_110.cubin"
 MANIFEST = RESULTS / "manifest.csv"
 KERNEL = "sass_register_probe"
-EXPECTED_LOP3 = 128
+EXPECTED_INSTRUCTIONS = 128  # FMA instructions
+INSTRUCTION_TYPE = "FMA"  # Target instruction type
 MAX_STRIDE = 16
 
 INSTRUCTION_RE = re.compile(r"/\*([0-9a-f]+)\*/\s+(.+?)\s*;")
@@ -79,13 +80,13 @@ def disassemble(path):
         if "CS2R" in instruction and "SR_CLOCKLO" in instruction:
             in_timed_region = not in_timed_region
             continue
-        if not in_timed_region or not instruction.startswith("LOP3."):
+        if not in_timed_region or not instruction.startswith(("FFMA", "FMUL", "ffma", "fmul")):
             continue
         registers = [
             decode_register(token) for token in REGISTER_RE.findall(instruction)
         ]
         if len(registers) != 4:
-            raise RuntimeError(f"unexpected LOP3 operands: {instruction}")
+            raise RuntimeError(f"unexpected FMA operands: {instruction}")
         instructions.append(
             {
                 "address": int(address, 16),
@@ -94,9 +95,9 @@ def disassemble(path):
                 "text": instruction.strip(),
             }
         )
-    if len(instructions) != EXPECTED_LOP3:
+    if len(instructions) != EXPECTED_INSTRUCTIONS:
         raise RuntimeError(
-            f"expected {EXPECTED_LOP3} timed LOP3s, found {len(instructions)}"
+            f"expected {EXPECTED_INSTRUCTIONS} timed {INSTRUCTION_TYPE}s, found {len(instructions)}"
         )
     return instructions
 
