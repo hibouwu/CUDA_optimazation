@@ -23,5 +23,18 @@ has_option --repeats || args+=(--repeats "${REPEATS:-10}")
 
 "${SCRIPT_DIR}/build.sh"
 mkdir -p "${RESULT_DIR}"
+benchmark_status=0
+set +e
 "${ROOT}/build/tma_bench" "${args[@]}" > "${OUTPUT}"
-python3 "${SCRIPT_DIR}/parse_results.py"
+benchmark_status=$?
+set -e
+
+if [[ -s "${OUTPUT}" ]]; then
+  python3 "${SCRIPT_DIR}/parse_results.py"
+fi
+
+if (( benchmark_status != 0 )); then
+  echo "tma_bench exited with status ${benchmark_status}; see ${OUTPUT} for details." >&2
+fi
+
+exit "${benchmark_status}"

@@ -9,11 +9,11 @@ CSV_PATH = ROOT / "results" / "basic_results.csv"
 CASE_ORDER = [
     "T0a_gmem_to_smem_no_swizzle_copy",
     "T0b_smem_to_gmem_no_swizzle_copy",
-    "T1a_load_no_swizzle_column_consumer",
+    "T1a_load_no_swizzle_forced_conflict",
     "T1b_load_32b_swizzle_matched_consumer",
     "T1c_load_64b_swizzle_matched_consumer",
     "T1d_load_128b_swizzle_matched_consumer",
-    "T2a_column_producer_store_no_swizzle",
+    "T2a_forced_conflict_producer_store_no_swizzle",
     "T2b_matched_producer_store_32b_swizzle",
     "T2c_matched_producer_store_64b_swizzle",
     "T2d_matched_producer_store_128b_swizzle",

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -30,6 +31,7 @@ constexpr int kTileBytes = 4096;
 constexpr int kBoxXBytes = 32;
 constexpr int kBoxY = kTileBytes / kBoxXBytes;
 constexpr int kAtomBytes = 16;
+constexpr int kForcedConflictStrideBytes = 128;
 
 struct Options {
   std::string case_selector = "all";
@@ -37,6 +39,7 @@ struct Options {
   int warmups = 3;
   int repeats = 10;
   bool list_cases = false;
+  bool quiet = false;
 };
 
 enum class CaseKind {
@@ -65,8 +68,8 @@ constexpr CaseSpec kCases[] = {
     {"T0", "T0b_smem_to_gmem_no_swizzle_copy", CaseKind::kStoreOnly,
      CU_TENSOR_MAP_SWIZZLE_NONE, 0, "smem_to_gmem", "none", "none", 1},
 
-    {"T1", "T1a_load_no_swizzle_column_consumer", CaseKind::kLoadConsumer,
-     CU_TENSOR_MAP_SWIZZLE_NONE, 0, "gmem_to_smem", "column", "none", 1},
+    {"T1", "T1a_load_no_swizzle_forced_conflict", CaseKind::kLoadConsumer,
+     CU_TENSOR_MAP_SWIZZLE_NONE, 0, "gmem_to_smem", "forced_8way", "none", 1},
     {"T1", "T1b_load_32b_swizzle_matched_consumer", CaseKind::kLoadConsumer,
      CU_TENSOR_MAP_SWIZZLE_32B, 2, "gmem_to_smem", "matched_column", "none", 1},
     {"T1", "T1c_load_64b_swizzle_matched_consumer", CaseKind::kLoadConsumer,
@@ -75,8 +78,9 @@ constexpr CaseSpec kCases[] = {
      CU_TENSOR_MAP_SWIZZLE_128B, 8, "gmem_to_smem", "matched_column", "none",
      1},
 
-    {"T2", "T2a_column_producer_store_no_swizzle", CaseKind::kProducerStore,
-     CU_TENSOR_MAP_SWIZZLE_NONE, 0, "smem_to_gmem", "none", "column", 1},
+    {"T2", "T2a_forced_conflict_producer_store_no_swizzle",
+     CaseKind::kProducerStore, CU_TENSOR_MAP_SWIZZLE_NONE, 0, "smem_to_gmem",
+     "none", "forced_8way", 1},
     {"T2", "T2b_matched_producer_store_32b_swizzle",
      CaseKind::kProducerStore, CU_TENSOR_MAP_SWIZZLE_32B, 2, "smem_to_gmem",
      "none", "matched_column", 1},
@@ -192,7 +196,11 @@ __host__ __device__ __forceinline__ int swizzled_byte_offset(
     const int byte_in_row = logical_byte_offset % kBoxXBytes;
     const int atom_in_row = byte_in_row / kAtomBytes;
     const int byte_in_atom = byte_in_row % kAtomBytes;
-    const int physical_atom = (row % SwizzleAtoms) ^ atom_in_row;
+    // PTX defines the swizzle base offset from the destination shared-memory
+    // address: base_offset = (dstMem / 128) % N for 32B/64B/128B modes.
+    const int swizzle_base_offset =
+        ((row * swizzle_bytes) / 128) % SwizzleAtoms;
+    const int physical_atom = swizzle_base_offset ^ atom_in_row;
     return row * swizzle_bytes + physical_atom * kAtomBytes + byte_in_atom;
   }
 }
@@ -203,14 +211,20 @@ __device__ __forceinline__ std::uint8_t initial_tile_byte(int offset) {
 
 template <int SwizzleAtoms>
 __device__ __forceinline__ int column_atom_offset(int lane) {
-  return swizzled_byte_offset<SwizzleAtoms>(lane * kBoxXBytes);
+  if constexpr (SwizzleAtoms == 0) {
+    // LDS.128/STS.128 handles eight lanes per 128-byte transaction. A
+    // 128-byte stride maps all eight 16-byte lane accesses to the same banks.
+    return lane * kForcedConflictStrideBytes;
+  } else {
+    return swizzled_byte_offset<SwizzleAtoms>(lane * kBoxXBytes);
+  }
 }
 
 template <CaseKind Kind, int SwizzleAtoms>
 __global__ void tma_case_kernel(
     const __grid_constant__ CUtensorMap load_map,
     const __grid_constant__ CUtensorMap store_map, std::uint64_t* checksums,
-    std::uint64_t* consumer_sink, int iters) {
+    std::uint64_t* consumer_sink, std::uint8_t* linearized_output, int iters) {
   constexpr int shared_row_bytes =
       SwizzleAtoms == 0 ? kBoxXBytes : SwizzleAtoms * kAtomBytes;
   constexpr int shared_bytes = shared_row_bytes * kBoxY;
@@ -286,7 +300,13 @@ __global__ void tma_case_kernel(
   std::uint64_t checksum = 0;
   for (int logical_offset = tid; logical_offset < kTileBytes;
        logical_offset += blockDim.x) {
-    checksum += tile[swizzled_byte_offset<SwizzleAtoms>(logical_offset)];
+    const std::uint8_t logical_value =
+        tile[swizzled_byte_offset<SwizzleAtoms>(logical_offset)];
+    checksum += logical_value;
+    if constexpr (Kind == CaseKind::kLoadOnly ||
+                  Kind == CaseKind::kLoadConsumer) {
+      linearized_output[logical_offset] = logical_value;
+    }
   }
   checksums[tid] = checksum;
   consumer_sink[tid] = accumulator;
@@ -319,32 +339,33 @@ CUtensorMap make_tensor_map(CUtensorMapSwizzle swizzle, void* global_address) {
 template <CaseKind Kind, int SwizzleAtoms>
 void launch_typed(const CUtensorMap& load_map, const CUtensorMap& store_map,
                   std::uint64_t* checksums, std::uint64_t* consumer_sink,
-                  int iters) {
+                  std::uint8_t* linearized_output, int iters) {
   tma_case_kernel<Kind, SwizzleAtoms><<<1, kThreads>>>(
-      load_map, store_map, checksums, consumer_sink, iters);
+      load_map, store_map, checksums, consumer_sink, linearized_output, iters);
   CUDA_CHECK(cudaGetLastError());
 }
 
 template <CaseKind Kind>
 void launch_swizzle(const CaseSpec& spec, const CUtensorMap& load_map,
                     const CUtensorMap& store_map, std::uint64_t* checksums,
-                    std::uint64_t* consumer_sink, int iters) {
+                    std::uint64_t* consumer_sink,
+                    std::uint8_t* linearized_output, int iters) {
   switch (spec.swizzle_atoms) {
     case 0:
       launch_typed<Kind, 0>(load_map, store_map, checksums, consumer_sink,
-                            iters);
+                            linearized_output, iters);
       break;
     case 2:
       launch_typed<Kind, 2>(load_map, store_map, checksums, consumer_sink,
-                            iters);
+                            linearized_output, iters);
       break;
     case 4:
       launch_typed<Kind, 4>(load_map, store_map, checksums, consumer_sink,
-                            iters);
+                            linearized_output, iters);
       break;
     case 8:
       launch_typed<Kind, 8>(load_map, store_map, checksums, consumer_sink,
-                            iters);
+                            linearized_output, iters);
       break;
     default:
       throw std::runtime_error("unsupported swizzle atom count");
@@ -353,27 +374,33 @@ void launch_swizzle(const CaseSpec& spec, const CUtensorMap& load_map,
 
 void launch_case(const CaseSpec& spec, const CUtensorMap& load_map,
                  const CUtensorMap& store_map, std::uint64_t* checksums,
-                 std::uint64_t* consumer_sink, int iters) {
+                 std::uint64_t* consumer_sink, std::uint8_t* linearized_output,
+                 int iters) {
   switch (spec.kind) {
     case CaseKind::kLoadOnly:
       launch_swizzle<CaseKind::kLoadOnly>(
-          spec, load_map, store_map, checksums, consumer_sink, iters);
+          spec, load_map, store_map, checksums, consumer_sink,
+          linearized_output, iters);
       break;
     case CaseKind::kStoreOnly:
       launch_swizzle<CaseKind::kStoreOnly>(
-          spec, load_map, store_map, checksums, consumer_sink, iters);
+          spec, load_map, store_map, checksums, consumer_sink,
+          linearized_output, iters);
       break;
     case CaseKind::kLoadConsumer:
       launch_swizzle<CaseKind::kLoadConsumer>(
-          spec, load_map, store_map, checksums, consumer_sink, iters);
+          spec, load_map, store_map, checksums, consumer_sink,
+          linearized_output, iters);
       break;
     case CaseKind::kProducerStore:
       launch_swizzle<CaseKind::kProducerStore>(
-          spec, load_map, store_map, checksums, consumer_sink, iters);
+          spec, load_map, store_map, checksums, consumer_sink,
+          linearized_output, iters);
       break;
     case CaseKind::kRoundTrip:
       launch_swizzle<CaseKind::kRoundTrip>(
-          spec, load_map, store_map, checksums, consumer_sink, iters);
+          spec, load_map, store_map, checksums, consumer_sink,
+          linearized_output, iters);
       break;
   }
 }
@@ -401,11 +428,18 @@ std::vector<std::uint8_t> expected_store_output(const CaseSpec& spec,
     for (int lane = 0; lane < kConsumerLanes; ++lane) {
       const std::uint8_t value =
           static_cast<std::uint8_t>((lane + iters) & 0xff);
-      const int logical_offset = lane * kBoxXBytes;
+      const int logical_offset =
+          spec.swizzle == CU_TENSOR_MAP_SWIZZLE_NONE
+              ? lane * kForcedConflictStrideBytes
+              : lane * kBoxXBytes;
       std::fill_n(logical.begin() + logical_offset, kAtomBytes, value);
     }
   }
   return logical;
+}
+
+std::uint64_t checksum_bytes(const std::vector<std::uint8_t>& bytes) {
+  return std::accumulate(bytes.begin(), bytes.end(), std::uint64_t{0});
 }
 
 bool check_case(const CaseSpec& spec, int iters,
@@ -414,17 +448,69 @@ bool check_case(const CaseSpec& spec, int iters,
                 const std::vector<std::uint64_t>& checksums) {
   if (spec.kind == CaseKind::kLoadOnly ||
       spec.kind == CaseKind::kLoadConsumer) {
-    const std::uint64_t expected =
-        std::accumulate(input.begin(), input.end(), std::uint64_t{0});
-    const std::uint64_t actual =
-        std::accumulate(checksums.begin(), checksums.end(), std::uint64_t{0});
-    return actual == expected;
+    return output == input;
   }
   const std::vector<std::uint8_t> expected =
       spec.kind == CaseKind::kRoundTrip
           ? input
           : expected_store_output(spec, iters);
   return output == expected;
+}
+
+void report_failure(const CaseSpec& spec, int iters,
+                    const std::vector<std::uint8_t>& input,
+                    const std::vector<std::uint8_t>& output,
+                    const std::vector<std::uint64_t>& checksums) {
+  if (spec.kind == CaseKind::kLoadOnly ||
+      spec.kind == CaseKind::kLoadConsumer) {
+    for (std::size_t index = 0; index < input.size(); ++index) {
+      if (output[index] != input[index]) {
+        std::cerr << "correctness failure in " << spec.name << " at byte "
+                  << index << ": expected " << static_cast<int>(input[index])
+                  << ", got " << static_cast<int>(output[index]) << '\n';
+        return;
+      }
+    }
+    const std::uint64_t expected = checksum_bytes(input);
+    const std::uint64_t actual =
+        std::accumulate(checksums.begin(), checksums.end(), std::uint64_t{0});
+    std::cerr << "correctness failure in " << spec.name
+              << ": bytewise comparison failed even though checksum matched"
+              << " (expected checksum " << expected << ", got " << actual
+              << ")\n";
+    return;
+  }
+
+  const std::vector<std::uint8_t> expected =
+      spec.kind == CaseKind::kRoundTrip
+          ? input
+          : expected_store_output(spec, iters);
+  for (std::size_t index = 0; index < expected.size(); ++index) {
+    if (output[index] != expected[index]) {
+      const std::size_t row_start = (index / kBoxXBytes) * kBoxXBytes;
+      const std::size_t row_end =
+          std::min<std::size_t>(row_start + kBoxXBytes, expected.size());
+      std::ostringstream expected_row;
+      std::ostringstream actual_row;
+      expected_row << std::hex << std::setfill('0');
+      actual_row << std::hex << std::setfill('0');
+      for (std::size_t byte = row_start; byte < row_end; ++byte) {
+        expected_row << std::setw(2) << static_cast<int>(expected[byte]);
+        actual_row << std::setw(2) << static_cast<int>(output[byte]);
+        if (byte + 1 != row_end) {
+          expected_row << ' ';
+          actual_row << ' ';
+        }
+      }
+      std::cerr << "correctness failure in " << spec.name << " at byte "
+                << index << ": expected "
+                << static_cast<int>(expected[index]) << ", got "
+                << static_cast<int>(output[index]) << '\n'
+                << "expected row bytes: " << expected_row.str() << '\n'
+                << "actual row bytes:   " << actual_row.str() << '\n';
+      return;
+    }
+  }
 }
 
 const char* swizzle_name(CUtensorMapSwizzle swizzle) {
@@ -455,10 +541,11 @@ struct Timing {
 
 Timing measure_case(const CaseSpec& spec, const CUtensorMap& load_map,
                     const CUtensorMap& store_map, std::uint64_t* checksums,
-                    std::uint64_t* consumer_sink, const Options& options) {
+                    std::uint64_t* consumer_sink,
+                    std::uint8_t* linearized_output, const Options& options) {
   for (int warmup = 0; warmup < options.warmups; ++warmup) {
     launch_case(spec, load_map, store_map, checksums, consumer_sink,
-                options.iters);
+                linearized_output, options.iters);
   }
   CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -471,7 +558,7 @@ Timing measure_case(const CaseSpec& spec, const CUtensorMap& load_map,
   for (int repeat = 0; repeat < options.repeats; ++repeat) {
     CUDA_CHECK(cudaEventRecord(start));
     launch_case(spec, load_map, store_map, checksums, consumer_sink,
-                options.iters);
+                linearized_output, options.iters);
     CUDA_CHECK(cudaEventRecord(stop));
     CUDA_CHECK(cudaEventSynchronize(stop));
     float milliseconds = 0.0F;
@@ -503,11 +590,16 @@ Options parse_options(int argc, char** argv) {
     if (argument == "--help" || argument == "-h") {
       std::cout
           << "Usage: tma_bench [--case all|T0|T1|T2|T3|case-name]"
-          << " [--iters N] [--warmups N] [--repeats N] [--list-cases]\n";
+          << " [--iters N] [--warmups N] [--repeats N] [--list-cases]"
+          << " [--quiet]\n";
       std::exit(0);
     }
     if (argument == "--list-cases") {
       options.list_cases = true;
+      continue;
+    }
+    if (argument == "--quiet") {
+      options.quiet = true;
       continue;
     }
     if (++index >= argc) {
@@ -571,10 +663,12 @@ int main(int argc, char** argv) {
     CUDA_CHECK(cudaMemcpy(input, host_input.data(), kTileBytes,
                           cudaMemcpyHostToDevice));
 
-    std::cout << "experiment,case,direction,swizzle,box_x_bytes,box_y,"
-                 "shared_bytes,"
-                 "consumer,producer,tma_operations,iters,avg_ms,min_ms,"
-                 "tma_bytes,effective_GBps,correctness\n";
+    if (!options.quiet) {
+      std::cout << "experiment,case,direction,swizzle,box_x_bytes,box_y,"
+                   "shared_bytes,"
+                   "consumer,producer,tma_operations,iters,avg_ms,min_ms,"
+                   "tma_bytes,effective_GBps,correctness\n";
+    }
     bool all_passed = true;
     for (const CaseSpec* spec : selected) {
       CUDA_CHECK(cudaMemset(output, 0, kTileBytes));
@@ -586,12 +680,14 @@ int main(int argc, char** argv) {
       const CUtensorMap store_map = make_tensor_map(spec->swizzle, output);
       const Timing timing =
           measure_case(*spec, load_map, store_map, checksums, consumer_sink,
-                       options);
+                       output, options);
 
       CUDA_CHECK(cudaMemcpy(host_checksums.data(), checksums,
                             kThreads * sizeof(std::uint64_t),
                             cudaMemcpyDeviceToHost));
-      if (spec->kind == CaseKind::kStoreOnly ||
+      if (spec->kind == CaseKind::kLoadOnly ||
+          spec->kind == CaseKind::kLoadConsumer ||
+          spec->kind == CaseKind::kStoreOnly ||
           spec->kind == CaseKind::kProducerStore ||
           spec->kind == CaseKind::kRoundTrip) {
         CUDA_CHECK(cudaMemcpy(host_output.data(), output, kTileBytes,
@@ -601,20 +697,27 @@ int main(int argc, char** argv) {
           check_case(*spec, options.iters, host_input, host_output,
                      host_checksums);
       all_passed = all_passed && correct;
+      if (!correct) {
+        report_failure(*spec, options.iters, host_input, host_output,
+                       host_checksums);
+      }
 
       const long long tma_bytes =
           1LL * options.iters * kTileBytes * spec->tma_operations;
       const double effective_gbps =
           static_cast<double>(tma_bytes) / (timing.average_ms * 1.0e6);
-      std::cout << spec->experiment << ',' << spec->name << ','
-                << spec->direction << ',' << swizzle_name(spec->swizzle) << ','
-                << kBoxXBytes << ',' << kBoxY << ','
-                << shared_footprint_bytes(*spec) << ',' << spec->consumer
-                << ',' << spec->producer << ',' << spec->tma_operations << ','
-                << options.iters << ',' << std::fixed << std::setprecision(6)
-                << timing.average_ms << ',' << timing.minimum_ms << ','
-                << tma_bytes << ',' << std::setprecision(3) << effective_gbps
-                << ',' << (correct ? "PASS" : "FAIL") << '\n';
+      if (!options.quiet) {
+        std::cout << spec->experiment << ',' << spec->name << ','
+                  << spec->direction << ',' << swizzle_name(spec->swizzle)
+                  << ',' << kBoxXBytes << ',' << kBoxY << ','
+                  << shared_footprint_bytes(*spec) << ',' << spec->consumer
+                  << ',' << spec->producer << ',' << spec->tma_operations
+                  << ',' << options.iters << ',' << std::fixed
+                  << std::setprecision(6) << timing.average_ms << ','
+                  << timing.minimum_ms << ',' << tma_bytes << ','
+                  << std::setprecision(3) << effective_gbps << ','
+                  << (correct ? "PASS" : "FAIL") << '\n';
+      }
     }
 
     CUDA_CHECK(cudaFree(consumer_sink));
