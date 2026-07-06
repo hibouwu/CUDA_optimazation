@@ -1,321 +1,142 @@
-# Thor (SM110) 寄存器文件 Bank 结构研究
+# Thor（SM110）寄存器操作数路径研究
 
-## 🎯 核心发现
+本目录用 PTX 基线和 patched SASS 微基准研究 Thor 上标量指令读取物理寄存器时的可见行为。当前最强结论是：
 
-**SM110 的寄存器文件采用 2-bank 物理组织**
+> 对已测试的 `LOP3`、寄存器范围和单 warp 条件，寄存器读取路径表现为两个按物理寄存器编号奇偶划分的**有效服务组**。三个同奇偶源操作数比混合奇偶源操作数多约一个周期。
 
-```
-Physical Bank Organization:
-  ├─ Bank 0: R0, R2, R4, R6, ..., R62 (偶数 ID)
-  ├─ Bank 1: R1, R3, R5, R7, ..., R63 (奇数 ID)
-  └─ 映射规则: register_id % 2 → bank_id
+这不等价于“已经证明寄存器文件由两个物理 SRAM bank 构成”。计时无法区分寄存器阵列、读端口、operand collector 或它们组合造成的限制。完整证据和各实验是否必要见 [EVIDENCE_SUMMARY.md](EVIDENCE_SUMMARY.md)。
 
-冲突特性:
-  ├─ 冲突条件: 多个操作数映射到同一 bank
-  ├─ 冲突延迟: ~0.98 cycles/op
-  └─ 检测周期: stride % 2 == 0 时发生冲突
-```
+## 当前可复现的主实验
 
-**置信度**: ⭐⭐⭐⭐⭐ (99.99%+)  
-**证据强度**: 64+ 独立测量点，100% mod 2 拟合精度
-
-## 📊 核心证据总结
-
-| 证据来源 | 数据点 | 准确率 | 
-|---------|--------|--------|
-| LOP3 延迟测量 | 64 (4 base × 16 stride) | 100% |
-| 跨寄存器一致性 | R4-R7 全部 | 100% |
-| 周期性分析 | stride 1-16 | 100% |
-| 假设拟合度 | mod 2 vs others | 100% vs <75% |
-
-## Confirmed Thor parameters
-
-The values below are reported by the CUDA Driver API and CUDA 13 occupancy
-model on the local Thor system:
-
-| Parameter | Value |
-| --- | ---: |
-| Compute capability | 11.0 |
-| SM count | 20 |
-| 32-bit registers per SM | 65,536 |
-| Register-file capacity per SM | 256 KiB |
-| SM subpartitions | 4 |
-| Registers per subpartition | 16,384 (64 KiB) |
-| Register allocation granularity | 256 registers per warp |
-| Maximum registers per thread | 255 |
-| Maximum registers per block | 65,536 |
-| Maximum resident threads per SM | 1,536 |
-| Maximum resident warps per SM | 48 |
-| Maximum resident blocks per SM | 24 |
-
-Four SM subpartitions do not mean that the register file has four physical
-banks. The bank count, bank mapping, read/write ports, and operand-reuse-buffer
-capacity remain undocumented.
-
-## Measurement method
-
-Every probe launches one 32-lane warp in one block. Each lane loads source
-values before timing, then measures an explicitly unrolled inline-PTX region
-using two `clock64` reads:
-
-```text
-one block
-└── one warp
-    ├── load source values
-    ├── CS2R SR_CLOCKLO
-    ├── repeated register-only IMAD instructions
-    ├── CS2R SR_CLOCKLO
-    └── write cycles and checksum
-```
-
-The timed region contains no global/shared-memory operations. The output CSV
-reports median and minimum cycles per PTX operation, compiler-reported
-registers per thread, and local-memory bytes. Cases run in a rotating
-round-robin order so temporary system interference is distributed across
-them. A nonzero `local_bytes` value indicates spilling and makes that case
-unsuitable for register-file inference.
-
-The operations are expanded 32 times inside each loop iteration. This
-amortizes loop-control cost and prevents a single branch from dominating the
-measurement.
-
-## Cases
-
-| Case | Timed instructions per iteration | Purpose |
-| --- | ---: | --- |
-| `R0_imad_chain` | 32 | Dependent three-source IMAD latency |
-| `R1_imad_independent_x4` | 128 | Four independent accumulator streams |
-| `R2_reuse_hot_x4` | 128 | Shared source operands; inspect `.reuse` |
-| `R3_bank_dense_x4` | 128 | Dense virtual-source selection |
-| `R4_bank_sparse_x4` | 128 | Sparse virtual-source selection |
-
-`R0` measures dependency latency, while `R1` estimates the throughput of
-independent instructions. `R2` checks whether `ptxas` marks repeatedly used
-source operands with `.reuse`. `R3` and `R4` provide different physical
-register tuples after allocation for candidate modulo-bank analysis.
-
-CUDA/PTX register names are virtual. Only the final SASS `R<n>` identifiers are
-used for bank hypotheses.
-
-## Build and run
+正式链路是 `LOP3` patched-SASS bank scan：
 
 ```bash
 cd CUDA_optimazation/RegisterReserch/structureResearch
+CUDA_ARCH=110 ./scripts/build.sh
+ITERS=20000 WARMUPS=3 REPEATS=10 ./scripts/run_bank_scan.sh
+```
 
+`run_bank_scan.sh` 会：
+
+1. 编译 `sass_lop3_template.cu` 和 CUDA Driver API 测量程序。
+2. 把定时区内 128 条 `LOP3` 的物理寄存器字段改成目标 tuple。
+3. 清除 `.reuse` 位，并用 `nvdisasm` 逐条回读验证。
+4. 轮换执行全部 cubin，输出 CSV。
+5. 生成汇总图。
+
+输出位于：
+
+```text
+results/bank_scan/manifest.csv
+results/bank_scan/results.csv
+assets/register_bank_stride_scan.png
+```
+
+`build/` 和 `results/bank_scan/` 默认被忽略，不会提交生成的 cubin 和原始 CSV。若结果用于报告，应同时保存运行环境、CSV 和 SASS 验证信息。
+
+## LOP3 用例组成
+
+每个被 patch 的定时指令可表示为：
+
+```text
+LOP3 Rbase, R(base + stride), R(base + 2 * stride), Rbase
+```
+
+共有 87 个 cubin：
+
+| 组别 | 数量 | 作用 |
+|---|---:|---|
+| `B0`–`B3` source-count controls | 4 | 区分 1、2、3 次 RF 读取，并比较混合/同奇偶源 |
+| `M0`–`M2` slot permutations | 3 | 排除某个固定 source slot 导致的差异 |
+| `L_bXX_sYY` single-chain scan | 64 | `R4`–`R7` 四个 base × stride 1–16，暴露依赖延迟 |
+| `T_sYY` four-chain scan | 16 | 检查独立指令是否能隐藏同一延迟 |
+
+模板初始化并使用的物理寄存器范围是 `R4`–`R39`。因此当前结果不能直接外推到全部 255 个线程寄存器编号。
+
+## 已保存的结果
+
+已保存的 Thor 数据显示：
+
+| RF 源操作数模式 | Median cycles/LOP3 |
+|---|---:|
+| 1 次 RF 读取 | 2.086031 |
+| 2 次读取、同奇偶 | 2.086031 |
+| 3 次读取、混合奇偶 | 2.086031 |
+| 3 次读取、全部同奇偶 | 3.070406 |
+
+在 `R4`–`R7` 四个 base 上，奇数 stride 都约为 `2.086` cycles/op，偶数 stride 都约为 `3.070` cycles/op。可见增量约为 `0.984` cycles/op。
+
+![Thor LOP3 physical-register stride scan](assets/register_bank_stride_scan.png)
+
+正确表述是：
+
+```text
+tested effective group = physical_register_id % 2
+```
+
+不应写成：
+
+```text
+physical SRAM bank = physical_register_id % 2
+```
+
+## 其他实验和文件状态
+
+### PTX IMAD 基线
+
+`src/register_bench.cu` 包含五个 PTX 层用例：
+
+| Case | 用途 |
+|---|---|
+| `R0_imad_chain` | 依赖链延迟 |
+| `R1_imad_independent_x4` | 四条独立链吞吐 |
+| `R2_reuse_hot_x4` | 重复源和 `.reuse` 行为 |
+| `R3_bank_dense_x4` | 密集虚拟源布局 |
+| `R4_bank_sparse_x4` | 稀疏虚拟源布局 |
+
+可直接运行：
+
+```bash
 ./scripts/build.sh
-./scripts/run_basic.sh
+./build/register_bench --case all --iters 100000 --warmups 5 --repeats 20
 ```
 
-Useful overrides:
+这些用例适合作为延迟、吞吐和编译器行为基线，但 PTX 寄存器是虚拟寄存器，`ptxas` 可以重新分配物理编号，所以它们不是 bank 映射的核心证据。
 
-```bash
-ITERS=200000 WARMUPS=5 REPEATS=30 ./scripts/run_basic.sh
-CASE=bank_candidate ./scripts/run_basic.sh
-./scripts/run_basic.sh --case R3_bank_dense_x4 --iters 200000
-```
+### 其他 SASS 模板
 
-Basic results are written to:
+`sass_template.cu`、`sass_imad_template.cu` 和 `sass_fma_template.cu` 当前会被 CMake 编译，但 `run_bank_scan.sh` 只 patch 和运行 `sass_lop3_template.cu`。因此 IMAD/FMA 文件目前是后续跨指令验证的脚手架，不属于自动化结果链路。
 
-```text
-results/basic_results.csv
-results/cycles_per_op.png
-```
+`assets/register_experiment_results.png` 是早期 IMAD 试验的保留图。当前目录缺少生成该图所对应的 patched-IMAD 脚本和原始 CSV，所以它只能作为历史记录，不能作为当前可复现实验的主证据。
 
-## SASS analysis
+### NCU/CUPTI 探索代码
 
-Always inspect SASS before interpreting timing:
+`run_ncu_analysis.py`、`test_profiler.cu` 和 `src/cupti_rf_bank_profiler.cu` 是探索性原型，未接入 CMake 主实验和 `run_bank_scan.sh`。当前也没有已验证的、可直接报告寄存器 bank 冲突数的 Thor 计数器，因此 NCU/CUPTI 最多提供旁证。
 
-```bash
-./scripts/run_sass.sh
-```
+### 分析脚本
 
-The analyzer locates the region between the two `CS2R SR_CLOCKLO`
-instructions. It records the actual source registers and `.reuse` modifiers:
+`scripts/plot_bank_scan.py` 是当前结果图的正式生成脚本。其余 `analyze_*`、`sass_register_port_analysis.py` 和 `plot_stride_periodicity.py` 是早期离线分析；其中部分把有效奇偶行为过度解释成物理 bank 数，不能作为最终结论来源。
 
-```text
-results/sass_operands.csv
-results/sass_summary.txt
-```
+## 结果解释边界
 
-For candidate bank counts 2, 4, 8, and 16, it computes source-register
-collisions under the hypothesis:
+- patched cubin 使用未公开且可能变化的指令编码；换 CUDA Toolkit 或架构后必须重新执行反汇编验证。
+- `.reuse` 已从被测 `LOP3` 中清除，但仍不能单独定位限制发生在 RF、端口还是 collector。
+- 64 个 base × stride 点是系统化扫描点，不是 64 个相互独立的架构证明，不能据此直接给出“99.99% 物理 2-bank 置信度”。
+- 单链延迟结果和四链吞吐结果回答不同问题；后者可能通过指令级并行隐藏前者。
+- 结论只覆盖当前指令、寄存器范围、单 warp 和当前工具链。
 
-```text
-candidate_bank = physical_register_id % candidate_bank_count
-```
+## 目录中的已知冗余
 
-Two scores are emitted:
+以下文件没有进入当前正式链路，后续可以单独归档或删除，但本次文档合并不修改实验代码：
 
-- `all_modN_pairs` includes all source operands.
-- `rf_modN_pairs` excludes operands marked `.reuse`, since they may be served
-  by the operand-reuse path instead of rereading the main register file.
+- `check_cap`：已提交的 ARM 可执行文件。
+- `bank_scan_extended.log`：一次因访问未初始化 `R40` 而失败的旧日志。
+- `check_capability.cu`：包含“typical”硬编码值，不能用于推断 Thor bank 结构。
+- `run_ncu_analysis.py`、`test_profiler.cu`、`src/cupti_rf_bank_profiler.cu`：未集成的 profiler 原型。
+- 多个早期 `analyze_*` 脚本：与正式 plot 脚本重复，且结论口径不一致。
 
-A modulo score is only a hypothesis. Evidence for an effective `N`-bank
-pattern requires all of the following:
+## 参考资料
 
-1. Cases with different `rf_modN` scores have otherwise equivalent SASS.
-2. Higher collision scores repeatedly correlate with worse cycles/op.
-3. The relationship survives changes in iteration count and instruction mix.
-4. Competing modulo hypotheses do not explain the measurements equally well.
-
-If timing is unchanged despite different collision scores, possible
-explanations include multiple RF read ports, operand collectors hiding the
-conflict, a non-modulo mapping, or compiler scheduling that avoids the
-collision.
-
-## Direct SASS register control
-
-The second-stage experiment bypasses PTX register allocation after compiling a
-template cubin. It patches the physical register fields in each timed `IMAD`,
-clears all operand-reuse flags, and then asks `nvdisasm` to verify every
-instruction before the CUDA Driver API loads the cubin:
-
-```bash
-./scripts/run_sass_patched.sh
-```
-
-The generated files are:
-
-```text
-results/sass_patched/manifest.csv
-results/sass_patched/results.csv
-results/sass_patched/S*.cubin
-```
-
-The current `sm_110` template has 128 timed `IMAD` instructions, 29 registers
-per thread, and no local-memory spill. The patcher controls all four displayed
-register operands:
-
-```text
-IMAD Rdst, Rsrc0, Rsrc1, Rdst
-```
-
-It also clears the `.reuse` control bits. Verification fails unless all 128
-instructions disassemble to the requested `R<n>` tuples with zero `.reuse`
-operands.
-
-The four balanced cases use the same source-register set and frequency within
-each control/conflict pair:
-
-| Case | Source-pair hypothesis |
-| --- | --- |
-| `S0_mod4_control_noreuse` | `src0 % 4 != src1 % 4` |
-| `S1_mod4_conflict_noreuse` | `src0 % 4 == src1 % 4` |
-| `S2_mod8_control_noreuse` | `src0 % 8 != src1 % 8` |
-| `S3_mod8_conflict_noreuse` | `src0 % 8 == src1 % 8` |
-
-On the local Thor, the default run (`100000` iterations, 20 repeats) produced:
-
-| Case | Median cycles/op | Local bytes |
-| --- | ---: | ---: |
-| `S0_mod4_control_noreuse` | 2.085955 | 0 |
-| `S1_mod4_conflict_noreuse` | 2.085955 | 0 |
-| `S2_mod8_control_noreuse` | 2.085955 | 0 |
-| `S3_mod8_conflict_noreuse` | 2.085955 | 0 |
-
-![Thor register-file experiment results](assets/register_experiment_results.png)
-
-This removes both `ptxas` register renumbering and operand reuse as competing
-explanations. No effective serialization is visible for the tested modulo-4
-or modulo-8 source-pair hypotheses. It does not prove that the physical
-register file has neither 4 nor 8 banks: a multiported bank, operand collector,
-different mapping function, or IMAD execution throughput can still hide the
-bank organization.
-
-CUDA cubin instruction encoding is not a documented stable ABI. The patcher is
-therefore intentionally restricted to the observed CUDA 13 `sm_110` IMAD
-encoding and always performs disassembly readback. Re-run its validation after
-any CUDA toolkit or architecture change.
-
-## LOP3 bank-stride scan
-
-The third-stage experiment uses a three-source `LOP3.LUT` dependency chain to
-make register-read latency visible. Its template keeps physical registers
-`R4` through `R39` initialized and patches each instruction to:
-
-```text
-LOP3 Rbase, R(base+s), R(base+2s), Rbase
-```
-
-Run the complete scan with:
-
-```bash
-./scripts/run_bank_scan.sh
-```
-
-The script generates and verifies 87 cubins:
-
-- Four 1/2/3-source read-pressure controls.
-- Three source-slot permutations.
-- Four accumulator bases (`R4` through `R7`) by 16 strides.
-- Sixteen four-independent-chain throughput cases.
-
-Every cubin contains exactly 128 timed `LOP3` instructions with fixed physical
-registers, zero `.reuse` operands, and zero local-memory bytes.
-
-The local Thor result is:
-
-| Register sources | Median cycles/LOP3 |
-| --- | ---: |
-| One RF read | 2.086031 |
-| Two reads, same parity | 2.086031 |
-| Three reads, mixed parity | 2.086031 |
-| Three reads, all same parity | 3.070406 |
-
-All odd strides measure approximately `2.086` cycles, while all even strides
-measure approximately `3.070` cycles for every tested base register. Moving
-the same-parity pair among `(src0, src1)`, `(src0, src2)`, and `(src1, src2)`
-does not change the fast result. The three-same-parity case adds approximately
-one cycle, or `47.19%`.
-
-![Thor physical-register stride scan](assets/register_bank_stride_scan.png)
-
-This is strong evidence that the tested Thor `LOP3` register-operand path has
-**two effective banks**, selected by:
-
-```text
-effective_bank = physical_register_id % 2
-```
-
-Each effective bank can serve at least two source reads without exposing
-additional dependency latency; a third same-bank source incurs an extra
-collector/read step. Four independent chains hide that latency, which explains
-why the throughput scan and the earlier IMAD experiment remain flat.
-
-The conclusion is about the effective operand path seen by one warp in one SM
-subpartition. Timing cannot prove the number of underlying SRAM macros, nor
-whether the two-way behavior is implemented in the register array, ports, or
-operand collector. It also should not be generalized to tensor-core or uniform
-register paths without separate measurements.
-
-## Nsight Compute
-
-```bash
-./scripts/run_ncu.sh
-./scripts/run_ncu.sh --case bank_candidate --iters 10000
-```
-
-The script collects instruction/cycle totals and issue-stall metrics into
-`results/ncu/summary.csv`. Thor does not expose a direct register-bank-conflict
-counter, so NCU stall metrics are supporting evidence rather than a direct
-bank-count measurement.
-
-## Interpretation limits
-
-- `.reuse` proves that the ISA/compiler supports operand reuse, but it does not
-  reveal reuse-buffer capacity or replacement policy.
-- In the PTX cases, `ptxas` can reorder physical registers to avoid conflicts.
-- In the patched-SASS cases, private instruction encoding may change between
-  architectures or toolkits.
-- Register read-port pressure, bank conflicts, dependency latency, and
-  execution-pipeline throughput can produce similar timing effects.
-- A result applies to the tested instruction and SASS operand pattern; another
-  instruction class may use a different operand path.
-- Definitive physical parameters require NVIDIA disclosure or lower-level
-  hardware analysis. This benchmark can infer effective behavior only.
-
-## References
-
-- [CUDA compute-capability parameters](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/compute-capabilities.html)
-- [CUDA on-chip register file](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html)
-- [CUDA binary utilities](https://docs.nvidia.com/cuda/cuda-binary-utilities/)
+- [CUDA Binary Utilities](https://docs.nvidia.com/cuda/cuda-binary-utilities/)
+- [CUDA Programming Guide：Compute Capabilities](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/compute-capabilities.html)
+- [CUDA Programming Guide：On-chip Register File](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html)
