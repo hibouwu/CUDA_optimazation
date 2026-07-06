@@ -5,3 +5,5 @@
 /results/ncu/
 /results/sass_patched/
 /results/bank_scan/
+/results/tuple_scan_*/
+/results/physical_probe/

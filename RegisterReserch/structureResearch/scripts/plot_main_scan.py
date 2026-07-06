@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-RESULTS_DIR = ROOT / "results" / "bank_scan"
-RESULTS_CSV = RESULTS_DIR / "results.csv"
-MANIFEST_CSV = RESULTS_DIR / "manifest.csv"
 ASSETS = ROOT / "assets"
-OUTPUT = ASSETS / "register_bank_stride_scan.png"
+
+FAMILIES = {
+    "lop3": {
+        "result_dir": ROOT / "results" / "bank_scan",
+        "output": ASSETS / "register_bank_stride_scan.png",
+        "opcode_label": "LOP3",
+        "title": "NVIDIA Thor Physical Register Stride Scan",
+        "tuple_text": "Tuple: Rbase, R(base+s), R(base+2s)",
+    },
+    "ffma": {
+        "result_dir": ROOT / "results" / "bank_scan_ffma",
+        "output": ASSETS / "register_bank_stride_scan_ffma.png",
+        "opcode_label": "FFMA",
+        "title": "NVIDIA Thor Physical Register Stride Scan (FFMA)",
+        "tuple_text": "Tuple: Rbase, R(base+s), R(base+2s), Rbase",
+    },
+}
 
 
 def load_rows(path):
@@ -18,22 +32,20 @@ def load_rows(path):
         return list(csv.DictReader(stream))
 
 
-def main():
-    try:
-        import matplotlib.pyplot as plt
-        import numpy as np
-    except ImportError:
-        raise SystemExit("matplotlib and numpy are required for plotting")
-
-    result_by_case = {row["case"]: row for row in load_rows(RESULTS_CSV)}
-    manifest = load_rows(MANIFEST_CSV)
+def merged_rows(result_dir):
+    result_by_case = {
+        row["case"]: row for row in load_rows(result_dir / "results.csv")
+    }
     rows = []
-    for metadata in manifest:
+    for metadata in load_rows(result_dir / "manifest.csv"):
         result = result_by_case.get(metadata["case"])
         if result is None:
             raise SystemExit(f"Missing result for {metadata['case']}")
         rows.append({**metadata, **result})
+    return rows
 
+
+def row_groups(rows):
     source_rows = sorted(
         (row for row in rows if row["category"] == "source_count"),
         key=lambda row: row["case"],
@@ -46,21 +58,38 @@ def main():
         (row for row in rows if row["category"] == "throughput_stride"),
         key=lambda row: int(row["stride"]),
     )
-    latency_rows = [
-        row for row in rows if row["category"] == "latency_stride"
-    ]
+    latency_rows = [row for row in rows if row["category"] == "latency_stride"]
+    return source_rows, slot_rows, throughput_rows, latency_rows
+
+
+def latency_matrix(latency_rows, np):
     bases = sorted({int(row["base"]) for row in latency_rows})
     strides = sorted({int(row["stride"]) for row in latency_rows})
-
     matrix = np.empty((len(bases), len(strides)))
     for row in latency_rows:
         base_index = bases.index(int(row["base"]))
         stride_index = strides.index(int(row["stride"]))
-        matrix[base_index, stride_index] = float(
-            row["median_cycles_per_op"]
-        )
+        matrix[base_index, stride_index] = float(row["median_cycles_per_op"])
     row_minimum = matrix.min(axis=1, keepdims=True)
     delta_percent = (matrix / row_minimum - 1.0) * 100.0
+    return bases, strides, matrix, delta_percent
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--family", choices=sorted(FAMILIES), required=True)
+    args = parser.parse_args()
+    config = FAMILIES[args.family]
+
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except ImportError:
+        raise SystemExit("matplotlib and numpy are required for plotting")
+
+    rows = merged_rows(config["result_dir"])
+    source_rows, slot_rows, throughput_rows, latency_rows = row_groups(rows)
+    bases, strides, matrix, delta_percent = latency_matrix(latency_rows, np)
 
     plt.rcParams.update(
         {
@@ -83,30 +112,19 @@ def main():
         axis.set_facecolor("#FCFAF5")
         axis.spines[["top", "right"]].set_visible(False)
 
-    source_values = [
-        float(row["median_cycles_per_op"]) for row in source_rows
-    ]
-    source_labels = [
-        "1 RF",
-        "2 RF\nsame parity",
-        "3 RF\nmixed parity",
-        "3 RF\nsame parity",
-    ]
-    source_colors = ["#287A74", "#4F8A5B", "#D39A2C", "#C54A34"]
+    source_values = [float(row["median_cycles_per_op"]) for row in source_rows]
     bars = source_axis.bar(
-        source_labels,
+        ["1 RF", "2 RF\nsame parity", "3 RF\nmixed parity", "3 RF\nsame parity"],
         source_values,
-        color=source_colors,
+        color=["#287A74", "#4F8A5B", "#D39A2C", "#C54A34"],
         width=0.62,
         edgecolor="#FCFAF5",
         linewidth=1.4,
         zorder=3,
     )
     source_axis.grid(axis="y", color="#A8B0A8", alpha=0.28)
-    source_axis.set_ylabel("Median cycles per LOP3")
-    source_axis.set_title(
-        "Register-read pressure", loc="left", fontsize=14, pad=32
-    )
+    source_axis.set_ylabel(f"Median cycles per {config['opcode_label']}")
+    source_axis.set_title("Register-read pressure", loc="left", fontsize=14, pad=32)
     source_axis.text(
         0,
         1.01,
@@ -143,14 +161,12 @@ def main():
     throughput_axis.grid(color="#A8B0A8", alpha=0.28)
     throughput_axis.set_xticks(strides)
     throughput_axis.set_xlabel("Physical-register stride")
-    throughput_axis.set_ylabel("Median cycles per LOP3")
-    throughput_axis.set_title(
-        "Four-chain throughput scan", loc="left", fontsize=14, pad=32
-    )
+    throughput_axis.set_ylabel(f"Median cycles per {config['opcode_label']}")
+    throughput_axis.set_title("Four-chain throughput scan", loc="left", fontsize=14, pad=32)
     throughput_axis.text(
         0,
         1.01,
-        "Tuple: Rbase, R(base+s), R(base+2s)",
+        config["tuple_text"],
         transform=throughput_axis.transAxes,
         fontsize=9.5,
         color="#60706A",
@@ -161,14 +177,12 @@ def main():
         min(throughput_values) - throughput_padding,
         max(throughput_values) + throughput_padding,
     )
-    slot_values = [
-        float(row["median_cycles_per_op"]) for row in slot_rows
-    ]
+    slot_values = [float(row["median_cycles_per_op"]) for row in slot_rows]
     throughput_axis.text(
         0.98,
         0.06,
         "Mixed-parity source-slot permutations\n"
-        + " · ".join(f"{value:.4f}" for value in slot_values),
+        + " . ".join(f"{value:.4f}" for value in slot_values),
         transform=throughput_axis.transAxes,
         ha="right",
         va="bottom",
@@ -190,9 +204,7 @@ def main():
         range(len(bases)), [f"Accumulator R{base}" for base in bases]
     )
     heatmap_axis.set_xlabel("Physical-register stride")
-    heatmap_axis.set_title(
-        "Single-chain base × stride scan", loc="left", fontsize=14, pad=22
-    )
+    heatmap_axis.set_title("Single-chain base x stride scan", loc="left", fontsize=14, pad=22)
     heatmap_axis.text(
         0,
         1.01,
@@ -212,8 +224,7 @@ def main():
                 fontsize=7.3,
                 color=(
                     "white"
-                    if delta_percent[row_index, column_index]
-                    > color_limit * 0.58
+                    if delta_percent[row_index, column_index] > color_limit * 0.58
                     else "#28332F"
                 ),
             )
@@ -221,7 +232,7 @@ def main():
     colorbar.set_label("Slowdown vs. row minimum (%)")
 
     figure.suptitle(
-        "NVIDIA Thor Physical Register Stride Scan",
+        config["title"],
         x=0.045,
         y=0.985,
         ha="left",
@@ -229,18 +240,19 @@ def main():
         fontweight="bold",
         color="#1F2925",
     )
-    iterations = next(iter(result_by_case.values()))["iters"]
+    iterations = rows[0]["iters"]
     figure.text(
         0.045,
         0.018,
-        f"CUDA 13 · sm_110 · {iterations} iterations · "
-        "128 verified LOP3 per iteration · .reuse disabled · 0 local bytes",
+        f"CUDA 13 . sm_110 . {iterations} iterations . "
+        f"128 verified {config['opcode_label']} per iteration . "
+        ".reuse disabled . 0 local bytes",
         color="#60706A",
         fontsize=9,
     )
     ASSETS.mkdir(parents=True, exist_ok=True)
     figure.savefig(
-        OUTPUT,
+        config["output"],
         dpi=180,
         bbox_inches="tight",
         facecolor=figure.get_facecolor(),
@@ -249,9 +261,7 @@ def main():
 
     fastest_stride = strides[int(np.argmin(throughput_values))]
     slowest_stride = strides[int(np.argmax(throughput_values))]
-    throughput_delta = (
-        max(throughput_values) / min(throughput_values) - 1.0
-    ) * 100.0
+    throughput_delta = (max(throughput_values) / min(throughput_values) - 1.0) * 100.0
     print(
         "Source-count cycles/op: "
         + ", ".join(
@@ -271,10 +281,10 @@ def main():
         f"slowest s={slowest_stride}, spread={throughput_delta:.6f}%"
     )
     print(
-        f"Maximum single-chain row-relative slowdown: "
+        "Maximum single-chain row-relative slowdown: "
         f"{float(delta_percent.max()):.6f}%"
     )
-    print(f"Wrote {OUTPUT}")
+    print(f"Wrote {config['output']}")
 
 
 if __name__ == "__main__":

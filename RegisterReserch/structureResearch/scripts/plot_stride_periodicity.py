@@ -49,7 +49,10 @@ def generate_hypothesis_curves(base_reg=4, max_stride=32):
 
 def main():
     if not RESULTS.exists():
-        print(f"Error: {RESULTS} not found. Run: bash scripts/run_bank_scan.sh")
+        print(
+            f"Error: {RESULTS} not found. "
+            "Run: STAGE=main OPCODES=lop3 ./scripts/run_opcode_suite.sh"
+        )
         return
     
     # Parse measured data (stride 1-16)
@@ -169,8 +172,8 @@ def main():
     print(f"           stride 1-3,5-7,9-11,... should show 2.086")
     print(f"  If mod 8: stride 8,16,24,32 should show different latency")
     print(f"  If mod 16: stride 16 should show unique latency")
-    print(f"\n  ⚠ To verify: extend MAX_STRIDE in scripts/patch_bank_scan.py")
-    print(f"             and re-run bash scripts/run_bank_scan.sh")
+    print(f"\n  ⚠ To verify: extend MAX_STRIDE in scripts/patch_main_scan.py")
+    print(f"             and re-run STAGE=main OPCODES=lop3 ./scripts/run_opcode_suite.sh")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import re
 import shutil
@@ -9,12 +10,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
-RESULTS = ROOT / "results" / "bank_scan"
-TEMPLATE = BUILD / "sass_lop3_template.sm_110.cubin"
-MANIFEST = RESULTS / "manifest.csv"
 KERNEL = "sass_register_probe"
-EXPECTED_LOP3 = 128
+EXPECTED = 128
 MAX_STRIDE = 16
+
+FAMILIES = {
+    "lop3": {
+        "result_dir": ROOT / "results" / "bank_scan",
+        "template": BUILD / "sass_lop3_template.sm_110.cubin",
+        "opcode_prefix": "LOP3.",
+        "opcode_label": "LOP3",
+        "check_template_destinations": True,
+    },
+    "ffma": {
+        "result_dir": ROOT / "results" / "bank_scan_ffma",
+        "template": BUILD / "sass_fma_template.sm_110.cubin",
+        "opcode_prefix": "FFMA",
+        "opcode_label": "FFMA",
+        "check_template_destinations": False,
+    },
+}
 
 INSTRUCTION_RE = re.compile(r"/\*([0-9a-f]+)\*/\s+(.+?)\s*;")
 REGISTER_RE = re.compile(r"\b(RZ|R\d+)(?:\.reuse)?\b")
@@ -53,7 +68,7 @@ def section_location(data, wanted):
     raise RuntimeError(f"ELF section not found: {wanted}")
 
 
-def disassemble(path):
+def disassemble(path, config):
     completed = subprocess.run(
         ["nvdisasm", "-hex", str(path)],
         check=True,
@@ -79,13 +94,13 @@ def disassemble(path):
         if "CS2R" in instruction and "SR_CLOCKLO" in instruction:
             in_timed_region = not in_timed_region
             continue
-        if not in_timed_region or not instruction.startswith("LOP3."):
+        if not in_timed_region or not instruction.startswith(config["opcode_prefix"]):
             continue
-        registers = [
-            decode_register(token) for token in REGISTER_RE.findall(instruction)
-        ]
+        registers = [decode_register(token) for token in REGISTER_RE.findall(instruction)]
         if len(registers) != 4:
-            raise RuntimeError(f"unexpected LOP3 operands: {instruction}")
+            raise RuntimeError(
+                f"unexpected {config['opcode_label']} operands: {instruction}"
+            )
         instructions.append(
             {
                 "address": int(address, 16),
@@ -94,9 +109,10 @@ def disassemble(path):
                 "text": instruction.strip(),
             }
         )
-    if len(instructions) != EXPECTED_LOP3:
+    if len(instructions) != EXPECTED:
         raise RuntimeError(
-            f"expected {EXPECTED_LOP3} timed LOP3s, found {len(instructions)}"
+            f"expected {EXPECTED} timed {config['opcode_label']} ops, "
+            f"found {len(instructions)}"
         )
     return instructions
 
@@ -105,9 +121,7 @@ def patch_variant(template_data, text_offset, template_instructions, tuples):
     output = bytearray(template_data)
     expected = []
     for index, row in enumerate(template_instructions):
-        destination, source0, source1, source2 = tuples[
-            index % len(tuples)
-        ]
+        destination, source0, source1, source2 = tuples[index % len(tuples)]
         instruction_offset = text_offset + row["address"]
         output[instruction_offset + 2] = destination
         output[instruction_offset + 3] = source0
@@ -118,17 +132,19 @@ def patch_variant(template_data, text_offset, template_instructions, tuples):
     return output, expected
 
 
-def verify(path, expected):
-    actual = disassemble(path)
+def verify(path, expected, config):
+    actual = disassemble(path, config)
     for index, (row, wanted) in enumerate(zip(actual, expected)):
         got = tuple(row["registers"])
         if got != wanted:
             raise RuntimeError(
-                f"{path.name} LOP3 {index}: expected {wanted}, got {got}"
+                f"{path.name} {config['opcode_label']} {index}: "
+                f"expected {wanted}, got {got}"
             )
         if row["reuse"]:
             raise RuntimeError(
-                f"{path.name} LOP3 {index} still has .reuse: {row['text']}"
+                f"{path.name} {config['opcode_label']} {index} "
+                f"still has .reuse: {row['text']}"
             )
 
 
@@ -141,6 +157,7 @@ def tuple_text(tuples):
 
 def add_variant(
     rows,
+    config,
     template_data,
     text_offset,
     template_instructions,
@@ -152,12 +169,12 @@ def add_variant(
     stride="",
     pattern="",
 ):
-    path = RESULTS / f"{name}.cubin"
+    path = config["result_dir"] / f"{name}.cubin"
     patched, expected = patch_variant(
         template_data, text_offset, template_instructions, tuples
     )
     path.write_bytes(patched)
-    verify(path, expected)
+    verify(path, expected, config)
     rows.append(
         {
             "case": name,
@@ -174,91 +191,38 @@ def add_variant(
     )
 
 
-def main():
-    if not TEMPLATE.exists():
-        raise SystemExit(f"missing {TEMPLATE}; run scripts/build.sh first")
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    for pattern in ("B*.cubin", "L*.cubin", "M*.cubin", "T*.cubin"):
-        for stale_cubin in RESULTS.glob(pattern):
-            stale_cubin.unlink()
-    template_data = bytearray(TEMPLATE.read_bytes())
-    text_offset, text_size = section_location(
-        template_data, f".text.{KERNEL}"
-    )
-    template_instructions = disassemble(TEMPLATE)
-    if max(row["address"] for row in template_instructions) + 16 > text_size:
-        raise RuntimeError("timed instruction lies outside kernel text section")
-
-    destinations = sorted(
+def build_rows(config, template_data, text_offset, template_instructions):
+    destinations = [4, 5, 6, 7]
+    template_destinations = sorted(
         {row["registers"][0] for row in template_instructions}
     )
-    if destinations != [4, 5, 6, 7]:
+    if config["check_template_destinations"] and template_destinations != destinations:
         raise RuntimeError(
             f"expected accumulators R4..R7, got "
-            f"{[display_register(value) for value in destinations]}"
+            f"{[display_register(value) for value in template_destinations]}"
         )
 
     rows = []
-    add_variant(
-        rows,
-        template_data,
-        text_offset,
-        template_instructions,
-        "B0_chain_1rf",
-        "source_count",
-        [(4, 255, 255, 4)],
-        1,
-        pattern="accumulator only",
-    )
-    add_variant(
-        rows,
-        template_data,
-        text_offset,
-        template_instructions,
-        "B1_chain_2rf_same_bank",
-        "source_count",
-        [(4, 8, 255, 4)],
-        2,
-        pattern="two even registers",
-    )
-    add_variant(
-        rows,
-        template_data,
-        text_offset,
-        template_instructions,
-        "B2_chain_3rf_mixed",
-        "source_count",
-        [(4, 9, 8, 4)],
-        3,
-        pattern="two even, one odd",
-    )
-    add_variant(
-        rows,
-        template_data,
-        text_offset,
-        template_instructions,
-        "B3_chain_3rf_same_bank",
-        "source_count",
-        [(4, 8, 10, 4)],
-        3,
-        pattern="three even registers",
-    )
-
-    slot_cases = [
-        ("M0_same_pair_src1_src2", (4, 9, 8, 4), "same pair src1/src2"),
-        ("M1_same_pair_src0_src2", (4, 8, 9, 4), "same pair src0/src2"),
-        ("M2_same_pair_src0_src1", (4, 4, 8, 9), "same pair src0/src1"),
+    fixed_cases = [
+        ("B0_chain_1rf", "source_count", [(4, 255, 255, 4)], 1, "accumulator only"),
+        ("B1_chain_2rf_same_bank", "source_count", [(4, 8, 255, 4)], 2, "two even registers"),
+        ("B2_chain_3rf_mixed", "source_count", [(4, 9, 8, 4)], 3, "two even, one odd"),
+        ("B3_chain_3rf_same_bank", "source_count", [(4, 8, 10, 4)], 3, "three even registers"),
+        ("M0_same_pair_src1_src2", "slot_permutation", [(4, 9, 8, 4)], 3, "same pair src1/src2"),
+        ("M1_same_pair_src0_src2", "slot_permutation", [(4, 8, 9, 4)], 3, "same pair src0/src2"),
+        ("M2_same_pair_src0_src1", "slot_permutation", [(4, 4, 8, 9)], 3, "same pair src0/src1"),
     ]
-    for name, registers, pattern in slot_cases:
+    for name, category, tuples, rf_reads, pattern in fixed_cases:
         add_variant(
             rows,
+            config,
             template_data,
             text_offset,
             template_instructions,
             name,
-            "slot_permutation",
-            [registers],
-            3,
+            category,
+            tuples,
+            rf_reads,
             pattern=pattern,
         )
 
@@ -272,6 +236,7 @@ def main():
                 )
             add_variant(
                 rows,
+                config,
                 template_data,
                 text_offset,
                 template_instructions,
@@ -290,6 +255,7 @@ def main():
         ]
         add_variant(
             rows,
+            config,
             template_data,
             text_offset,
             template_instructions,
@@ -300,20 +266,46 @@ def main():
             "",
             stride,
         )
+    return rows, destinations
 
-    with MANIFEST.open("w", newline="", encoding="utf-8") as stream:
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--family", choices=sorted(FAMILIES), required=True)
+    args = parser.parse_args()
+    config = FAMILIES[args.family]
+    template = config["template"]
+    result_dir = config["result_dir"]
+    manifest = result_dir / "manifest.csv"
+
+    if not template.exists():
+        raise SystemExit(f"missing {template}; run scripts/build.sh first")
+    result_dir.mkdir(parents=True, exist_ok=True)
+    for pattern in ("B*.cubin", "L*.cubin", "M*.cubin", "T*.cubin"):
+        for stale_cubin in result_dir.glob(pattern):
+            stale_cubin.unlink()
+
+    template_data = bytearray(template.read_bytes())
+    text_offset, text_size = section_location(template_data, f".text.{KERNEL}")
+    template_instructions = disassemble(template, config)
+    if max(row["address"] for row in template_instructions) + 16 > text_size:
+        raise RuntimeError("timed instruction lies outside kernel text section")
+
+    rows, destinations = build_rows(
+        config, template_data, text_offset, template_instructions
+    )
+    with manifest.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
-    shutil.copy2(TEMPLATE, RESULTS / TEMPLATE.name)
+    shutil.copy2(template, result_dir / template.name)
     print(
-        f"Generated and verified {len(rows)} cubins: "
+        f"{args.family}: generated and verified {len(rows)} cubins: "
         f"4 source-count + 3 slot permutations + "
-        f"{len(destinations) * MAX_STRIDE} latency + "
-        f"{MAX_STRIDE} throughput cases"
+        f"{len(destinations) * MAX_STRIDE} latency + {MAX_STRIDE} throughput cases"
     )
     print("Physical scan range: accumulators R4..R7, initialized R4..R39")
-    print(f"Wrote {MANIFEST}")
+    print(f"Wrote {manifest}")
 
 
 if __name__ == "__main__":

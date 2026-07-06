@@ -114,7 +114,7 @@ def analyze_hypothesis(stride_data, base_reg=4):
 def main():
     if not RESULTS.exists():
         print(f"Error: {RESULTS} not found")
-        print("Run: bash scripts/run_bank_scan.sh")
+        print("Run: STAGE=main OPCODES=lop3 ./scripts/run_opcode_suite.sh")
         return
     
     print("\n" + "="*60)
