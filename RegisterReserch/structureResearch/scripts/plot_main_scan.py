@@ -11,6 +11,9 @@ FAMILIES = {
     "lop3": {
         "result_dir": ROOT / "results" / "bank_scan",
         "output": ASSETS / "register_bank_stride_scan.png",
+        "source_output": ASSETS / "register_bank_lop3_source_pressure.png",
+        "throughput_output": ASSETS / "register_bank_lop3_throughput_stride.png",
+        "latency_output": ASSETS / "register_bank_lop3_latency_heatmap.png",
         "opcode_label": "LOP3",
         "title": "NVIDIA Thor Physical Register Stride Scan",
         "tuple_text": "Tuple: Rbase, R(base+s), R(base+2s)",
@@ -18,6 +21,9 @@ FAMILIES = {
     "ffma": {
         "result_dir": ROOT / "results" / "bank_scan_ffma",
         "output": ASSETS / "register_bank_stride_scan_ffma.png",
+        "source_output": ASSETS / "register_bank_ffma_source_pressure.png",
+        "throughput_output": ASSETS / "register_bank_ffma_throughput_stride.png",
+        "latency_output": ASSETS / "register_bank_ffma_latency_heatmap.png",
         "opcode_label": "FFMA",
         "title": "NVIDIA Thor Physical Register Stride Scan (FFMA)",
         "tuple_text": "Tuple: Rbase, R(base+s), R(base+2s), Rbase",
@@ -75,6 +81,122 @@ def latency_matrix(latency_rows, np):
     return bases, strides, matrix, delta_percent
 
 
+def save_figure(figure, output):
+    ASSETS.mkdir(parents=True, exist_ok=True)
+    figure.savefig(
+        output,
+        dpi=180,
+        bbox_inches="tight",
+        facecolor=figure.get_facecolor(),
+    )
+
+
+def add_value_labels(axis, bars, values, padding):
+    for bar, value in zip(bars, values):
+        axis.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + padding,
+            f"{value:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+
+def plot_source_pressure(config, source_rows, plt):
+    labels = [
+        "1 RF",
+        "2 same\nparity",
+        "3 mixed\nparity",
+        "3 same\nparity",
+    ]
+    values = [float(row["median_cycles_per_op"]) for row in source_rows]
+    figure, axis = plt.subplots(figsize=(10.5, 4.8), facecolor="white")
+    axis.set_facecolor("white")
+    bars = axis.bar(labels, values, color="#4E79A7", width=0.62)
+    axis.set_title(f"{config['opcode_label']} register-read pressure", fontsize=15)
+    axis.set_ylabel("Median cycles/op")
+    axis.grid(axis="y", alpha=0.28)
+    axis.spines[["top", "right"]].set_visible(False)
+    padding = max(max(values) * 0.015, 0.02)
+    axis.set_ylim(0, max(values) + padding * 4.0)
+    add_value_labels(axis, bars, values, padding)
+    save_figure(figure, config["source_output"])
+    plt.close(figure)
+
+
+def plot_throughput_stride(config, strides, throughput_values, slot_rows, plt):
+    slot_values = [float(row["median_cycles_per_op"]) for row in slot_rows]
+    figure, axis = plt.subplots(figsize=(10.8, 4.8), facecolor="white")
+    axis.set_facecolor("white")
+    axis.plot(
+        strides,
+        throughput_values,
+        color="#4E79A7",
+        marker="o",
+        markersize=5.5,
+        linewidth=2,
+    )
+    axis.set_title(f"{config['opcode_label']} four-chain throughput scan", fontsize=15)
+    axis.set_xlabel("Physical-register stride")
+    axis.set_ylabel("Median cycles/op")
+    axis.set_xticks(strides)
+    axis.grid(alpha=0.28)
+    axis.spines[["top", "right"]].set_visible(False)
+    span = max(throughput_values) - min(throughput_values)
+    padding = max(span * 2.0, 0.01)
+    axis.set_ylim(min(throughput_values) - padding, max(throughput_values) + padding)
+    axis.text(
+        0.99,
+        0.05,
+        "slot permutations: " + ", ".join(f"{value:.4f}" for value in slot_values),
+        transform=axis.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=8.5,
+        color="#555555",
+    )
+    save_figure(figure, config["throughput_output"])
+    plt.close(figure)
+
+
+def plot_latency_heatmap(config, bases, strides, matrix, delta_percent, plt):
+    figure, axis = plt.subplots(figsize=(11.8, 4.8), facecolor="white")
+    axis.set_facecolor("white")
+    color_limit = max(float(delta_percent.max()), 0.001)
+    image = axis.imshow(
+        delta_percent,
+        cmap="YlOrRd",
+        vmin=0,
+        vmax=color_limit,
+        aspect="auto",
+        interpolation="nearest",
+    )
+    axis.set_title(f"{config['opcode_label']} single-chain base x stride scan", fontsize=15)
+    axis.set_xlabel("Physical-register stride")
+    axis.set_xticks(range(len(strides)), strides)
+    axis.set_yticks(range(len(bases)), [f"R{base}" for base in bases])
+    for row_index in range(len(bases)):
+        for column_index in range(len(strides)):
+            axis.text(
+                column_index,
+                row_index,
+                f"{matrix[row_index, column_index]:.3f}",
+                ha="center",
+                va="center",
+                fontsize=7.2,
+                color=(
+                    "white"
+                    if delta_percent[row_index, column_index] > color_limit * 0.58
+                    else "#222222"
+                ),
+            )
+    colorbar = figure.colorbar(image, ax=axis, pad=0.015)
+    colorbar.set_label("Slowdown vs. row minimum (%)")
+    save_figure(figure, config["latency_output"])
+    plt.close(figure)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--family", choices=sorted(FAMILIES), required=True)
@@ -90,6 +212,9 @@ def main():
     rows = merged_rows(config["result_dir"])
     source_rows, slot_rows, throughput_rows, latency_rows = row_groups(rows)
     bases, strides, matrix, delta_percent = latency_matrix(latency_rows, np)
+    throughput_values = [
+        float(row["median_cycles_per_op"]) for row in throughput_rows
+    ]
 
     plt.rcParams.update(
         {
@@ -101,6 +226,10 @@ def main():
             "ytick.color": "#28332F",
         }
     )
+    plot_source_pressure(config, source_rows, plt)
+    plot_throughput_stride(config, strides, throughput_values, slot_rows, plt)
+    plot_latency_heatmap(config, bases, strides, matrix, delta_percent, plt)
+
     figure = plt.figure(figsize=(15.2, 9.2), facecolor="#F5F1E8")
     grid = figure.add_gridspec(
         2, 2, height_ratios=[0.9, 1.25], hspace=0.42, wspace=0.28
@@ -146,9 +275,6 @@ def main():
             fontweight="bold",
         )
 
-    throughput_values = [
-        float(row["median_cycles_per_op"]) for row in throughput_rows
-    ]
     throughput_axis.plot(
         strides,
         throughput_values,
@@ -250,13 +376,7 @@ def main():
         color="#60706A",
         fontsize=9,
     )
-    ASSETS.mkdir(parents=True, exist_ok=True)
-    figure.savefig(
-        config["output"],
-        dpi=180,
-        bbox_inches="tight",
-        facecolor=figure.get_facecolor(),
-    )
+    save_figure(figure, config["output"])
     plt.close(figure)
 
     fastest_stride = strides[int(np.argmin(throughput_values))]
@@ -284,6 +404,9 @@ def main():
         "Maximum single-chain row-relative slowdown: "
         f"{float(delta_percent.max()):.6f}%"
     )
+    print(f"Wrote {config['source_output']}")
+    print(f"Wrote {config['throughput_output']}")
+    print(f"Wrote {config['latency_output']}")
     print(f"Wrote {config['output']}")
 
 

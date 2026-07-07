@@ -63,9 +63,15 @@ ITERS=5000 WARMUPS=2 REPEATS=5 STAGE=tuple OPCODES=lop3,imad ./scripts/run_opcod
 results/bank_scan/manifest.csv
 results/bank_scan/results.csv
 assets/register_bank_stride_scan.png
+assets/register_bank_lop3_source_pressure.png
+assets/register_bank_lop3_throughput_stride.png
+assets/register_bank_lop3_latency_heatmap.png
 results/bank_scan_ffma/manifest.csv
 results/bank_scan_ffma/results.csv
 assets/register_bank_stride_scan_ffma.png
+assets/register_bank_ffma_source_pressure.png
+assets/register_bank_ffma_throughput_stride.png
+assets/register_bank_ffma_latency_heatmap.png
 ```
 
 扩展验证：
