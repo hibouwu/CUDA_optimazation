@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="640" viewBox="0 0 1400 640">
+<style>
+text { font-family: Arial, sans-serif; fill: #1f2933; }
+.title { font-size: 22px; font-weight: 700; }
+.axis { stroke: #46515c; stroke-width: 1; }
+.grid { stroke: #d7dde3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #52606d; }
+.label { font-size: 11px; fill: #334e68; }
+.value { font-size: 10px; fill: #102a43; }
+.panel-title { font-size: 14px; font-weight: 700; fill: #243b53; }
+</style>
+<text x="700.0" y="28" text-anchor="middle" class="title">Benchmark Effective TFLOP/s</text>
+<text x="22" y="294.0" transform="rotate(-90 22 294.0)" text-anchor="middle" class="label">TFLOP/s</text>
+<text x="382.0" y="58" text-anchor="middle" class="panel-title">SingleWarp</text>
+<line x1="78.0" y1="510.0" x2="686.0" y2="510.0" class="grid"/>
+<text x="68.0" y="514.0" text-anchor="end" class="tick">0</text>
+<line x1="78.0" y1="402.0" x2="686.0" y2="402.0" class="grid"/>
+<text x="68.0" y="406.0" text-anchor="end" class="tick">15</text>
+<line x1="78.0" y1="294.0" x2="686.0" y2="294.0" class="grid"/>
+<text x="68.0" y="298.0" text-anchor="end" class="tick">30</text>
+<line x1="78.0" y1="186.0" x2="686.0" y2="186.0" class="grid"/>
+<text x="68.0" y="190.0" text-anchor="end" class="tick">44</text>
+<line x1="78.0" y1="78.0" x2="686.0" y2="78.0" class="grid"/>
+<text x="68.0" y="82.0" text-anchor="end" class="tick">59</text>
+<line x1="78.0" y1="78" x2="78.0" y2="510" class="axis"/>
+<line x1="78.0" y1="510" x2="686.0" y2="510" class="axis"/>
+<rect x="78.0" y="134.3" width="61.3" height="375.7" fill="#2878b5"/>
+<text x="108.7" y="129.3" text-anchor="middle" class="value">51.6</text>
+<text x="108.7" y="524" text-anchor="end" transform="rotate(-50 108.7 524)" class="label">FP4 M128N256K64</text>
+<rect x="146.3" y="205.7" width="61.3" height="304.3" fill="#2878b5"/>
+<text x="177.0" y="200.7" text-anchor="middle" class="value">41.8</text>
+<text x="177.0" y="524" text-anchor="end" transform="rotate(-50 177.0 524)" class="label">FP4 M128N128K64</text>
+<rect x="214.7" y="350.3" width="61.3" height="159.7" fill="#2878b5"/>
+<text x="245.3" y="345.3" text-anchor="middle" class="value">21.9</text>
+<text x="245.3" y="524" text-anchor="end" transform="rotate(-50 245.3 524)" class="label">FP4 M128N64K64</text>
+<rect x="283.0" y="322.2" width="61.3" height="187.8" fill="#c75d2c"/>
+<text x="313.7" y="317.2" text-anchor="middle" class="value">25.8</text>
+<text x="313.7" y="524" text-anchor="end" transform="rotate(-50 313.7 524)" class="label">FP8 M128N256K32</text>
+<rect x="351.3" y="347.9" width="61.3" height="162.1" fill="#c75d2c"/>
+<text x="382.0" y="342.9" text-anchor="middle" class="value">22.3</text>
+<text x="382.0" y="524" text-anchor="end" transform="rotate(-50 382.0 524)" class="label">FP8 M128N128K32</text>
+<rect x="419.7" y="424.2" width="61.3" height="85.8" fill="#c75d2c"/>
+<text x="450.3" y="419.2" text-anchor="middle" class="value">11.8</text>
+<text x="450.3" y="524" text-anchor="end" transform="rotate(-50 450.3 524)" class="label">FP8 M128N64K32</text>
+<rect x="488.0" y="416.1" width="61.3" height="93.9" fill="#2b8c5a"/>
+<text x="518.7" y="411.1" text-anchor="middle" class="value">12.9</text>
+<text x="518.7" y="524" text-anchor="end" transform="rotate(-50 518.7 524)" class="label">BF16 M128N256K16</text>
+<rect x="556.3" y="428.9" width="61.3" height="81.1" fill="#2b8c5a"/>
+<text x="587.0" y="423.9" text-anchor="middle" class="value">11.1</text>
+<text x="587.0" y="524" text-anchor="end" transform="rotate(-50 587.0 524)" class="label">BF16 M128N128K16</text>
+<rect x="624.7" y="467.1" width="61.3" height="42.9" fill="#2b8c5a"/>
+<text x="655.3" y="462.1" text-anchor="middle" class="value">5.9</text>
+<text x="655.3" y="524" text-anchor="end" transform="rotate(-50 655.3 524)" class="label">BF16 M128N64K16</text>
+<text x="1060.0" y="58" text-anchor="middle" class="panel-title">4Warp FullSM</text>
+<line x1="756.0" y1="510.0" x2="1364.0" y2="510.0" class="grid"/>
+<text x="746.0" y="514.0" text-anchor="end" class="tick">0</text>
+<line x1="756.0" y1="402.0" x2="1364.0" y2="402.0" class="grid"/>
+<text x="746.0" y="406.0" text-anchor="end" class="tick">297</text>
+<line x1="756.0" y1="294.0" x2="1364.0" y2="294.0" class="grid"/>
+<text x="746.0" y="298.0" text-anchor="end" class="tick">593</text>
+<line x1="756.0" y1="186.0" x2="1364.0" y2="186.0" class="grid"/>
+<text x="746.0" y="190.0" text-anchor="end" class="tick">890</text>
+<line x1="756.0" y1="78.0" x2="1364.0" y2="78.0" class="grid"/>
+<text x="746.0" y="82.0" text-anchor="end" class="tick">1187</text>
+<line x1="756.0" y1="78" x2="756.0" y2="510" class="axis"/>
+<line x1="756.0" y1="510" x2="1364.0" y2="510" class="axis"/>
+<rect x="756.0" y="134.3" width="61.3" height="375.7" fill="#2878b5"/>
+<text x="786.7" y="129.3" text-anchor="middle" class="value">1032.1</text>
+<text x="786.7" y="524" text-anchor="end" transform="rotate(-50 786.7 524)" class="label">FP4 M128N256K64</text>
+<rect x="824.3" y="135.8" width="61.3" height="374.2" fill="#2878b5"/>
+<text x="855.0" y="130.8" text-anchor="middle" class="value">1028.0</text>
+<text x="855.0" y="524" text-anchor="end" transform="rotate(-50 855.0 524)" class="label">FP4 M128N128K64</text>
+<rect x="892.7" y="260.9" width="61.3" height="249.1" fill="#2878b5"/>
+<text x="923.3" y="255.9" text-anchor="middle" class="value">684.4</text>
+<text x="923.3" y="524" text-anchor="end" transform="rotate(-50 923.3 524)" class="label">FP4 M128N64K64</text>
+<rect x="961.0" y="322.2" width="61.3" height="187.8" fill="#c75d2c"/>
+<text x="991.7" y="317.2" text-anchor="middle" class="value">516.1</text>
+<text x="991.7" y="524" text-anchor="end" transform="rotate(-50 991.7 524)" class="label">FP8 M128N256K32</text>
+<rect x="1029.3" y="322.9" width="61.3" height="187.1" fill="#c75d2c"/>
+<text x="1060.0" y="317.9" text-anchor="middle" class="value">514.0</text>
+<text x="1060.0" y="524" text-anchor="end" transform="rotate(-50 1060.0 524)" class="label">FP8 M128N128K32</text>
+<rect x="1097.7" y="385.4" width="61.3" height="124.6" fill="#c75d2c"/>
+<text x="1128.3" y="380.4" text-anchor="middle" class="value">342.2</text>
+<text x="1128.3" y="524" text-anchor="end" transform="rotate(-50 1128.3 524)" class="label">FP8 M128N64K32</text>
+<rect x="1166.0" y="416.1" width="61.3" height="93.9" fill="#2b8c5a"/>
+<text x="1196.7" y="411.1" text-anchor="middle" class="value">258.0</text>
+<text x="1196.7" y="524" text-anchor="end" transform="rotate(-50 1196.7 524)" class="label">BF16 M128N256K16</text>
+<rect x="1234.3" y="416.5" width="61.3" height="93.5" fill="#2b8c5a"/>
+<text x="1265.0" y="411.5" text-anchor="middle" class="value">257.0</text>
+<text x="1265.0" y="524" text-anchor="end" transform="rotate(-50 1265.0 524)" class="label">BF16 M128N128K16</text>
+<rect x="1302.7" y="447.7" width="61.3" height="62.3" fill="#2b8c5a"/>
+<text x="1333.3" y="442.7" text-anchor="middle" class="value">171.1</text>
+<text x="1333.3" y="524" text-anchor="end" transform="rotate(-50 1333.3 524)" class="label">BF16 M128N64K16</text>
+</svg>

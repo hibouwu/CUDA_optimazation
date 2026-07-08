@@ -1,0 +1,111 @@
+Thor tcgen05 dense 计算能力实测分析报告
+生成时间: 2026-07-07 05:29:34 UTC
+
+设备信息
+GPU: NVIDIA Thor
+Compute Capability: 11.0
+SM 数量: 20
+频率: 1.575 GHz
+压测 iters: 10000
+
+测试维度
+Mode: Dense only
+Precision/K: K 随 M/N shape 显式配置；当前 dense cta_group::1: BF16 K=16, FP8 K=32, FP4 K=64
+Shape(M*N*K): shape 输出会按 precision 附加 K，例如 M128N256K64 / M128N256K32 / M128N256K16
+Launch: SingleWarpBlock = <<<1, 32>>>；FullSM4WarpBlock = <<<SM数, 128>>>
+
+NVIDIA 官方 Thor dense 峰值
+FP4: 1035 TFLOPS
+FP8: 517 TFLOPS
+BF16/FP16: 258.5 TFLOPS
+SingleWarpBlock 的官方对比按 active_blocks / SM数 缩放；shape 不缩放官方峰值。
+
+MMA 指令确认
+说明: M256N128 对当前 cta_group::1 单 CTA 模板不是通用合法 shape，FP8 会触发 illegal instruction；需要 cta_group::2/cluster 版本另测。本脚本当前使用 M128N256 覆盖 256 维。
+本测试只包含 dense tcgen05 MMA，源码不包含 tcgen05.mma.sp；SASS 检查确认命中对应精度的 UTC* MMA 指令。
+SingleWarpBlock M128N64K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b10*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR16], tmem[UR9], tmem[UR14], idesc[UR15], tmem[UR12], UP0 ;  /* 0x800c0e10060075ea */
+SingleWarpBlock M128N64K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCQMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+SingleWarpBlock M128N64K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCHMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+SingleWarpBlock M128N128K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b10*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR16], tmem[UR9], tmem[UR14], idesc[UR15], tmem[UR12], UP0 ;  /* 0x800c0e10060075ea */
+SingleWarpBlock M128N128K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCQMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+SingleWarpBlock M128N128K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCHMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+SingleWarpBlock M128N256K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b10*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR16], tmem[UR9], tmem[UR14], idesc[UR15], tmem[UR12], UP0 ;  /* 0x800c0e10060075ea */
+SingleWarpBlock M128N256K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCQMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+SingleWarpBlock M128N256K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ad0*/                   @!UP3 UTCHMMA gdesc[UR12], gdesc[UR10], tmem[UR7], tmem[UR14], idesc[UR15], UP1 ;  /* 0x00ff0e0a0c00b5ea */
+FullSM4WarpBlock M128N64K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b00*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1008060075ea */
+FullSM4WarpBlock M128N64K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+FullSM4WarpBlock M128N64K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+FullSM4WarpBlock M128N128K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b00*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1008060075ea */
+FullSM4WarpBlock M128N128K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+FullSM4WarpBlock M128N128K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+FullSM4WarpBlock M128N256K64 FP4: PTX inline asm = tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16；SASS = UTCOMMA.4X；check = dense。
+  SASS sample: /*0b00*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1008060075ea */
+FullSM4WarpBlock M128N256K32 FP8: PTX inline asm = tcgen05.mma.cta_group::1.kind::f8f6f4；SASS = UTCQMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+FullSM4WarpBlock M128N256K16 BF16: PTX inline asm = tcgen05.mma.cta_group::1.kind::f16；SASS = UTCHMMA；check = dense。
+  SASS sample: /*0ae0*/                   @!UP3 UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR11], tmem[UR12], idesc[UR13], UP1 ;  /* 0x00ff0c080600b5ea */
+
+实测汇总
+| **精度** | WarpNum | Launch | **矩阵形状(M*N*K)** | **计算量(MAC/inst)** | **实际测试/TFLOP/s** | **理论峰值/TFLOP/s** | **比率** |
+| --- | ---: | --- | --- | ---: | ---: | ---: | ---: |
+| **FP4** | 1 | SingleWarpBlock | M128N256K64 | 2097152 | 51.593 | 51.750 | 99.70% |
+|  | 1 | SingleWarpBlock | M128N128K64 | 1048576 | 41.790 | 51.750 | 80.75% |
+|  | 1 | SingleWarpBlock | M128N64K64 | 524288 | 21.935 | 51.750 | 42.39% |
+|  | 4 | FullSM4WarpBlock | M128N256K64 | 2097152 | 1032.111 | 1035.000 | 99.72% |
+|  | 4 | FullSM4WarpBlock | M128N128K64 | 1048576 | 1028.016 | 1035.000 | 99.33% |
+|  | 4 | FullSM4WarpBlock | M128N64K64 | 524288 | 684.415 | 1035.000 | 66.13% |
+| **FP8** | 1 | SingleWarpBlock | M128N256K32 | 1048576 | 25.797 | 25.850 | 99.80% |
+|  | 1 | SingleWarpBlock | M128N128K32 | 524288 | 22.268 | 25.850 | 86.14% |
+|  | 1 | SingleWarpBlock | M128N64K32 | 262144 | 11.789 | 25.850 | 45.60% |
+|  | 4 | FullSM4WarpBlock | M128N256K32 | 1048576 | 516.059 | 517.000 | 99.82% |
+|  | 4 | FullSM4WarpBlock | M128N128K32 | 524288 | 514.015 | 517.000 | 99.42% |
+|  | 4 | FullSM4WarpBlock | M128N64K32 | 262144 | 342.213 | 517.000 | 66.19% |
+| **BF16** | 1 | SingleWarpBlock | M128N256K16 | 524288 | 12.899 | 12.925 | 99.80% |
+|  | 1 | SingleWarpBlock | M128N128K16 | 262144 | 11.134 | 12.925 | 86.14% |
+|  | 1 | SingleWarpBlock | M128N64K16 | 131072 | 5.894 | 12.925 | 45.60% |
+|  | 4 | FullSM4WarpBlock | M128N256K16 | 524288 | 258.030 | 258.500 | 99.82% |
+|  | 4 | FullSM4WarpBlock | M128N128K16 | 262144 | 257.008 | 258.500 | 99.42% |
+|  | 4 | FullSM4WarpBlock | M128N64K16 | 131072 | 171.106 | 258.500 | 66.19% |
+
+分析
+SingleWarpBlock M128N64K64 FP4 K=64: cycles=752912，实测 21.935 TFLOP/s，约为该 launch 缩放后官方 51.750 TFLOP/s 的 42.39%。 MAC/cycle/active-block=6963.47。
+SingleWarpBlock M128N64K32 FP8 K=32: cycles=700457，实测 11.789 TFLOP/s，约为该 launch 缩放后官方 25.850 TFLOP/s 的 45.60%。 MAC/cycle/active-block=3742.47。
+SingleWarpBlock M128N64K16 BF16 K=16: cycles=700457，实测 5.894 TFLOP/s，约为该 launch 缩放后官方 12.925 TFLOP/s 的 45.60%。 MAC/cycle/active-block=1871.24。
+SingleWarpBlock M128N128K64 FP4 K=64: cycles=790392，实测 41.790 TFLOP/s，约为该 launch 缩放后官方 51.750 TFLOP/s 的 80.75%。 MAC/cycle/active-block=13266.53。
+SingleWarpBlock M128N128K32 FP8 K=32: cycles=741667，实测 22.268 TFLOP/s，约为该 launch 缩放后官方 25.850 TFLOP/s 的 86.14%。 MAC/cycle/active-block=7069.05。
+SingleWarpBlock M128N128K16 BF16 K=16: cycles=741667，实测 11.134 TFLOP/s，约为该 launch 缩放后官方 12.925 TFLOP/s 的 86.14%。 MAC/cycle/active-block=3534.52。
+SingleWarpBlock M128N256K64 FP4 K=64: cycles=1280414，实测 51.593 TFLOP/s，约为该 launch 缩放后官方 51.750 TFLOP/s 的 99.70%。 MAC/cycle/active-block=16378.70。
+SingleWarpBlock M128N256K32 FP8 K=32: cycles=1280367，实测 25.797 TFLOP/s，约为该 launch 缩放后官方 25.850 TFLOP/s 的 99.80%。 MAC/cycle/active-block=8189.65。
+SingleWarpBlock M128N256K16 BF16 K=16: cycles=1280367，实测 12.899 TFLOP/s，约为该 launch 缩放后官方 12.925 TFLOP/s 的 99.80%。 MAC/cycle/active-block=4094.83。
+FullSM4WarpBlock M128N64K64 FP4 K=64: cycles=1930416，实测 684.415 TFLOP/s，约为该 launch 缩放后官方 1035.000 TFLOP/s 的 66.13%。 MAC/cycle/active-block=10863.73。
+FullSM4WarpBlock M128N64K32 FP8 K=32: cycles=1930386，实测 342.213 TFLOP/s，约为该 launch 缩放后官方 517.000 TFLOP/s 的 66.19%。 MAC/cycle/active-block=5431.95。
+FullSM4WarpBlock M128N64K16 BF16 K=16: cycles=1930386，实测 171.106 TFLOP/s，约为该 launch 缩放后官方 258.500 TFLOP/s 的 66.19%。 MAC/cycle/active-block=2715.97。
+FullSM4WarpBlock M128N128K64 FP4 K=64: cycles=2570400，实测 1028.016 TFLOP/s，约为该 launch 缩放后官方 1035.000 TFLOP/s 的 99.33%。 MAC/cycle/active-block=16317.71。
+FullSM4WarpBlock M128N128K32 FP8 K=32: cycles=2570364，实测 514.015 TFLOP/s，约为该 launch 缩放后官方 517.000 TFLOP/s 的 99.42%。 MAC/cycle/active-block=8158.97。
+FullSM4WarpBlock M128N128K16 BF16 K=16: cycles=2570364，实测 257.008 TFLOP/s，约为该 launch 缩放后官方 258.500 TFLOP/s 的 99.42%。 MAC/cycle/active-block=4079.48。
+FullSM4WarpBlock M128N256K64 FP4 K=64: cycles=5120404，实测 1032.111 TFLOP/s，约为该 launch 缩放后官方 1035.000 TFLOP/s 的 99.72%。 MAC/cycle/active-block=16382.71。
+FullSM4WarpBlock M128N256K32 FP8 K=32: cycles=5120363，实测 516.059 TFLOP/s，约为该 launch 缩放后官方 517.000 TFLOP/s 的 99.82%。 MAC/cycle/active-block=8191.42。
+FullSM4WarpBlock M128N256K16 BF16 K=16: cycles=5120363，实测 258.030 TFLOP/s，约为该 launch 缩放后官方 258.500 TFLOP/s 的 99.82%。 MAC/cycle/active-block=4095.71。
+
+说明
+1. 测试 CUDA 源码由本脚本生成到 ./benchmark_src，每个 launch/shape/precision 组合一个 .cu。
+2. 计时区间只循环发 dense tcgen05.mma，SMEM 初始化、TMEM alloc/dealloc 不计入 clock64 周期。
+3. K 不做独立 sweep，由 shape 的 k_by_precision 显式配置；MAC 数按 M*N*K 计算。
+4. TFLOP/s 按 1 MAC = 2 FLOP 换算，频率取 /sys/class/devfreq/gpu-gpc-0/cur_freq。
+5. SingleWarpBlock 使用一个 block、一个 warp；FullSM4WarpBlock 使用每 SM 一个 block、每 block 四个 warp。
+6. SASS 中 BF16/FP8/FP4 分别应出现 UTCHMMA/UTCQMMA/UTCOMMA，对应 tcgen05 MMA 的机器指令形态。

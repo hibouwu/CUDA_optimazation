@@ -17,6 +17,8 @@ transformer_bench
 # Benchmark outputs
 *_benchmark.csv
 results/
+ncu_reports/
+ncu_reports_key/
 *.ncu-rep
 *.nsys-rep
 *.sqlite
@@ -29,6 +31,7 @@ results/
 *.fatbin
 
 # Python cache
+.venv/
 __pycache__/
 *.py[cod]
 
