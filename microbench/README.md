@@ -1,8 +1,9 @@
-# GEMMComponentsSM110Thor
+# Microbenchmarks for SM110 Thor
 
 This directory contains small, standalone component probes for NVIDIA Thor /
 SM110 / `sm_110a`.  The goal is to isolate runtime setup, TCGen05/TMEM bring-up,
-and CLC-style persistent work scheduling before turning them into a full GEMM.
+CLC-style persistent work scheduling, and TCGen05 MMA behavior before turning
+them into a full GEMM.
 
 This is intentionally **not** an SM120, Hopper, Ampere, CUTLASS, or
 `mma.sync.aligned.kind::f8f6f4` path.
@@ -14,7 +15,8 @@ This is intentionally **not** an SM120, Hopper, Ampere, CUTLASS, or
 | `00_runtime_sanity` | Minimal CUDA Runtime validation: version, device count, `cudaFree(0)`, properties, 4-byte `cudaMalloc`. |
 | `01_tcgen05_tmem_probe` | Minimal TCGen05/TMEM path: allocate TMEM, store one FP32 bit pattern, load it back, write to global memory. |
 | `02_clc_persistent_tmem_probe` | Persistent CTA worker probe with static and dynamic CLC-style work-tile assignment, reusing one TMEM allocation per worker. |
-| `mma` | TCGen05 dense MMA throughput benchmark generation, SASS checks, NCU collection, and plotting. |
+| `mma_compute_only` | TCGen05 dense MMA completion-throughput benchmark generation, SASS checks, NCU collection, plotting, and report docs. |
+| `mma_with_cp` | Placeholder for TCGen05 MMA benchmarks that include copy pipeline / input-feed behavior in the measured workflow. |
 | `common` | Shared SM110-only helpers and kernels used by the demos. |
 
 ## Build And Run
@@ -25,9 +27,9 @@ Run each component from its own subdirectory entrypoint:
 00_runtime_sanity/build_and_run.sh run
 01_tcgen05_tmem_probe/build_and_run.sh run
 02_clc_persistent_tmem_probe/build_and_run.sh run 128 1
-mma/build_and_run.sh run --iters 10000
-mma/build_and_run.sh ncu
-mma/build_and_run.sh plot
+mma_compute_only/build_and_run.sh run --iters 10000
+mma_compute_only/build_and_run.sh ncu
+mma_compute_only/build_and_run.sh plot
 ```
 
 Build only:
@@ -79,12 +81,16 @@ These demos are probes, not full GEMM kernels:
 - No SM120 FP8 MMA path.
 - No fake fallback kernel that pretends TCGen05 passed.
 
-`01_tcgen05_tmem_probe` and `mma` both use TCGen05/TMEM allocation, but their
-roles are different:
+`01_tcgen05_tmem_probe`, `mma_compute_only`, and `mma_with_cp` all use
+TCGen05/TMEM allocation, but their roles are different:
 
 - `01_tcgen05_tmem_probe` is a minimal bring-up probe. It validates that a
   TCGen05 TMEM allocation plus `tcgen05.st`/`tcgen05.ld` can round-trip one
   FP32 value.
-- `mma` is a dense TCGen05 MMA throughput benchmark. It uses shared-memory
-  descriptors, instruction descriptors, `tcgen05.mma`, commit/wait barriers,
-  SASS checks, timing, reporting, and optional NCU/plot tooling.
+- `mma_compute_only` is a dense TCGen05 MMA completion-throughput benchmark.
+  It uses shared-memory descriptors, instruction descriptors, `tcgen05.mma`,
+  commit/wait barriers, SASS checks, timing, reporting, and optional NCU/plot
+  tooling. Its timed window excludes copy pipeline, TMA, epilogue, TMEM
+  readback, and global stores.
+- `mma_with_cp` is reserved for TCGen05 MMA benchmarks where copy pipeline or
+  input-feed behavior is part of the measured workflow.
