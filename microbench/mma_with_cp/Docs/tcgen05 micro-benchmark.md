@@ -1,50 +1,50 @@
-# Thor TCGen05 SS/TS MMA 与 tcgen05.cp 微基准设计
+# Thor TCGen05 cp + MMA pipeline microbenchmark
 
-## 测试目的与边界
+## **测试目的与背景**
 
-本文定义 `microbench/mma_with_cp` 的 TCGen05 微基准实验设计、结果口径、指标公式、表格模板和作图规划。当前目录下只有 `README.md` 与本文档，尚未包含 `benchmark_src/`、运行脚本、结果 CSV 或 NCU 报告；因此本文只给出待实现和待填充的实验定义，不写入尚未运行得到的性能数值。
+本文用 Thor/SM110 上更贴近真实 GEMM 主循环的 SS/TS 流水线实验，测量 A 操作数输入准备对 `tcgen05.mma` 完成吞吐的影响。这里的输入准备指 `tcgen05.cp` 把 A tile 从 shared memory（SMEM）搬到 Tensor Memory（TMEM），让后续 TS `tcgen05.mma` 可以从 TMEM 读取 A；B 操作数仍然通过 SMEM descriptor 读取。
 
-本实验不包含 TMA。实验只研究 `tcgen05` 内部的以下路径：
+真实 GEMM 主循环通常先把 A/B tile 搬到 SMEM，再让 Tensor Core 消费这些 tile。上一篇 compute-only MMA 报告已经给出不含 A tile SMEM->TMEM copy 的 dense SS 基线，例如 `FullSM4WarpBlock M128N256K64 FP4` 达到 `1032.111 TFLOP/s`；本文继续拆开五组动作：SS MMA-only、TS MMA-only、`tcgen05.cp`-only、TS CP+MMA Serial A1、TS CP+MMA Overlap A2。
 
-1. SS MMA-only
-2. TS MMA-only
-3. `tcgen05.cp`-only
-4. TS `tcgen05.cp` + `tcgen05.mma` 串行路径
-5. TS `tcgen05.cp` + `tcgen05.mma` 双缓冲重叠路径
-6. D-ring 对 MMA 和 cp+mma 路径的影响
+当前实验矩阵覆盖 45 个基础组合：5 类 case、3 种精度、3 种矩阵形状。矩阵形状按 `M*N*K` 顺序记录为 `M128N64`、`M128N128`、`M128N256`；K 随精度配置为 BF16 K=16、FP8 K=32、FP4 K=64。本版先固定实验动作、指标公式、结果表和图表规划，实测数据在 benchmark 实现后填入。
 
-SS 表示 A/B 均来自 SMEM descriptor；TS 表示 A 来自 TMEM、B 来自 SMEM descriptor。TS 路径中的 A tile 由 `tcgen05.cp` 从 SMEM 写入 TMEM。本文不测 GMEM、TMA、epilogue、TMEM readback、global store、sparse MMA、2CTA/cluster 路径。
+本文关注 SMEM/TMEM 输入路径对 `tcgen05.mma` 的影响。GMEM、TMA、epilogue、TMEM 读回、全局写回、sparse MMA、2CTA/cluster 路径留给后续实验；TMEM 分配、释放和 relinquish 也不放入本轮纯吞吐计时窗口。
 
 ![SS 路径流水线：tcgen05.mma 直接从 SMEM 读取 A/B tile](图片和附件/img_v3_0213d_d8abef8b-af78-405e-8b4e-ccb3557bcaag.jpg)
 
 ![TS 路径流水线：tcgen05.cp 先把 A tile 写入 TMEM，再执行 tcgen05.mma](图片和附件/img_v3_0213d_ab5d3d01-d9b6-4678-828b-01ec28efde9g.jpg)
 
-测试精度为 BF16、FP8、FP4。测试 MMA shape 为 `M128N64`、`M128N128`、`M128N256`，因此共有 9 个 precision-shape 组合。K 由精度对应的 TCGen05 指令路径决定：BF16 使用 `K_inst=16`，FP8 使用 `K_inst=32`，FP4 使用 `K_inst=64`。
+SS 图展示真实 GEMM 主循环里最直接的 Tensor Core 消费路径。黑色 TMA load 阶段把连续 K 阶段的 A/B tile 放进 SMEM，红色 `tcgen05.mma` 随后从 SMEM descriptor 读取 A/B tile，并把累加结果写入 TMEM accumulator。图中的 GMEM、TMA 和后续写回用于说明真实 kernel 背景，本轮计时窗口只覆盖 `tcgen05` 指令序列和等待完成。
 
-## 与已有 compute-only 实验的关系
+TS 图展示带 A 输入准备的主循环路径。黑色 TMA load 仍然先把 tile 放进 SMEM，蓝色 `tcgen05.cp` 把 A tile 从 SMEM 搬到 TMEM，红色 TS `tcgen05.mma` 再从 TMEM 读取 A、从 SMEM descriptor 读取 B，并更新 TMEM accumulator。蓝色 copy 阶段是本文相对上一篇 compute-only MMA 报告新增的核心实验对象。
 
-`../mma_compute_only` 已有 dense SS MMA completion throughput 微基准、`current_document/Thor MMA instruction throughput microbenchmark.md`、`benchmark_src/`、`build_and_run.sh`、`分析报告.txt` 和 plot 输出。该目录的结果可作为理解 TCGen05 dense MMA 指令吞吐的背景材料，但不能直接替代本文的新实验结果。
+## **tcgen05.mma / tcgen05.cp 指令解析**
 
-需要特别区分旧 shared-D multi-issuer stress test 与本文新基线：
+本文用 SS/TS 描述 `tcgen05.mma` 的两个操作数来源组合。第一个字母描述 A 操作数的位置，第二个字母描述 B 操作数的位置：`S` 表示 shared memory descriptor，`T` 表示 Tensor Memory address。当前 dense GEMM 路径里 B 操作数仍来自 SMEM descriptor，所以本文只比较 `SS` 和 `TS` 两种形态。
 
-|项目|旧 shared-D multi-issuer stress test|本文新实验|
-|---|---|---|
-|D tile 归属|多个 issuer warp 可能写同一个 D tile 起点|每个 MMA issuer warp 至少拥有自己的独立 D tile|
-|用途|压力测试 shared-D 写入和多 issuer 行为|拆分 SS/TS、cp-only、cp+mma overlap、D-ring 的可比路径|
-|图 5 baseline|不能作为图 5 统一 baseline|`SS MMA D1` 是图 5 统一 baseline|
-|结论迁移|只可作为背景，不直接写入新结果表|必须由 `mma_with_cp` 新 case 实测填充|
+SS 表示 A/B 都从 SMEM descriptor 读取，指令操作数是 `[d_tmem], a_desc, b_desc, idesc...`。TS 表示 A 从 TMEM 读取、B 从 SMEM descriptor 读取，指令操作数变成 `[d_tmem], [a_tmem], b_desc, idesc...`。TS 路径中的 A tile 由 `tcgen05.cp` 从 SMEM 写入 TMEM，再由后续 TS `tcgen05.mma` 作为 A 操作数读取；因此 TS case 需要额外定义 A slot 数量和 cp/mma 的先后关系。
 
-因此，本文后续所有 speedup 和 heatmap 都以同一 precision-shape 下的 `SS MMA D1` 为归一化基线，而不是以旧 compute-only shared-D case 为基线。
+`tcgen05.mma` 的 single-thread semantics 指的是发射语义：CTA 内一个发射线程执行一条 `tcgen05.mma` PTX，就足以描述并启动一个完整的 Tensor Core tile 操作。这个 tile 的数学范围由 `idesc` 中的 `M/N` 和 precision 对应的 `K` 决定，例如 `M128N256K64 FP4` 对应一条完整的 `128 * 256 * 64` MAC 指令，而不是 32 个 lane 各自提交一小片 MMA。
 
-## TCGen05 指令口径
+benchmark 中一个 CTA 共享同一组 SMEM tile、TMEM allocation 和用于确认完成的 mbarrier。参与发射的 warp 固定一个 lane 作为发射线程提交 inline PTX，其余 lane 负责初始化、同步和等待；多 warp 配置用于提高整卡指令发射压力，不改变单条 MMA 的 tile 语义。
 
-`tcgen05.mma` 执行的数学动作是：
+同一个发射线程循环中的 `tcgen05.mma` 和 `tcgen05.cp` 按程序顺序发射。也就是说，代码里写成 `mma; mma; mma` 或 `cp; wait; mma` 时，发射线程不会在同一线程内重排这些 inline PTX；异步操作的完成边界由后续 `tcgen05.commit`、mbarrier 等待或等待 copy 完成来确认。本文的计时窗口覆盖待测指令序列和最后的等待完成，所以表格中的 cycles 反映批量发射后的完成吞吐，而不是只记录提交成本。
 
-```text
-C[M,N] += A[M,K_inst] * B[K_inst,N]
-```
+本文固定 accumulator 目标策略，把变量集中在 A 操作数来源、`tcgen05.cp` copy 和 A double buffering。多个 accumulator tile 属于另一类 dependency/issue 压测，不作为本轮实验变量。
 
-SS MMA 使用 SMEM A/B descriptor：
+矩阵乘法的基本动作是把 A 和 B 的一小块矩阵相乘并累加到 C。硬件执行的数学形式可以写成 `C[M,N] += A[M,K] * B[K,N]`；这里 A 提供左侧输入，B 提供右侧输入，C/D 保存在 Tensor Memory 中。
+
+本文的 shape 始终按 `M*N*K` 解释。`M` 是 C 矩阵的行数，`N` 是 C 矩阵的列数，`K` 是 A/B 之间相乘并规约的维度；例如 `M128N256K64` 表示 `C[128,256] += A[128,64] * B[64,256]`。
+
+单条 MMA 指令的计算量来自 `M * N * K`。对 `M128N256K64 FP4` 来说，C 有 `128 * 256` 个元素，每个元素沿 K 方向做 `64` 次乘加，所以一条 MMA 指令包含 `128 * 256 * 64 = 2097152 MAC`；对 `M128N256K16 BF16` 来说，单条 MMA 指令包含 `128 * 256 * 16 = 524288 MAC`。
+
+### **tcgen05 语法和操作数**
+
+一条 `tcgen05.mma` 指令首先要把四类信息交给硬件：A 从哪里读、B 从哪里读、D/C 累加器写到哪里、这条 MMA 按什么 shape 和数据类型执行。SS 和 TS 的差异只发生在 A operand：SS 把 A 描述成 SMEM 中的一块矩阵，TS 把 A 描述成 TMEM 中的一块 A tile。B 在本文所有 dense case 中都来自 SMEM descriptor，D/C 都写入 TMEM accumulator。
+
+传给 `tcgen05.mma` 和 `tcgen05.cp` 的操作数本身都是寄存器里的标量值。`a_desc`、`b_desc`、`s_desc` 是 64-bit descriptor，描述 SMEM 中某块矩阵的起始地址和布局；`d_tmem`、`a_tmem`、`taddr` 是 32-bit TMEM 地址，指向 TMEM 中的 D accumulator 或 A slot；`idesc` 描述本条 MMA 的 M/N shape 和数据类型。硬件拿到这些寄存器值后，才知道要从哪块 SMEM/TMEM 读数据、把结果写到哪块 TMEM。
+
+SS `tcgen05.mma` 使用 SMEM A/B descriptor。硬件根据 `a_desc` 读取 A tile，根据 `b_desc` 读取 B tile，把结果累加到 `[d_tmem]` 指向的 TMEM 区域。对初学者来说，可以把 `a_desc` 和 `b_desc` 理解成“SMEM 矩阵的地址 + stride + layout”的打包描述，而不是普通指针。
 
 ```ptx
 // SS: A from SMEM, B from SMEM, D/C in TMEM.
@@ -52,7 +52,7 @@ tcgen05.mma.cta_group::1.kind::<dtype>
   [d_tmem], a_desc, b_desc, idesc, disable_output_lane, enable_input_d;
 ```
 
-TS MMA 使用 TMEM A 和 SMEM B descriptor：
+TS `tcgen05.mma` 使用 TMEM A 和 SMEM B descriptor。硬件通过 `[a_tmem]` 读取已经写入 TMEM 的 A tile，通过 `b_desc` 继续从 SMEM 读取 B tile。这里 `[a_tmem]` 不是 SMEM descriptor，而是 TMEM 地址；这也是 TS 路径必须先安排 `tcgen05.cp` 的原因。
 
 ```ptx
 // TS: A from TMEM, B from SMEM, D/C in TMEM.
@@ -60,219 +60,307 @@ tcgen05.mma.cta_group::1.kind::<dtype>
   [d_tmem], [a_tmem], b_desc, idesc, disable_output_lane, enable_input_d;
 ```
 
-FP4/block-scale 路径还需要 scale operand。FP4 SS/TS case 必须在 setup 阶段完成 scale TMEM 初始化，计时区间不能包含 scale 初始化。
-
-`tcgen05.cp` 在 TS 路径中把 A tile 从 SMEM 搬到 TMEM：
+`tcgen05.cp` 把 A tile 从 SMEM 搬到 TMEM。`s_desc` 描述源 A tile 在 SMEM 中的位置和布局，`[taddr]` 指向目标 TMEM A slot。TS MMA-only 的 setup 会先用这条指令把 A 准备好；TS cp+mma pipeline 则把这条 copy 指令放进计时窗口，观察它和后续 TS MMA 的串行或重叠成本。
 
 ```ptx
-// [taddr]: TMEM destination; s_desc: SMEM source descriptor.
+// [taddr]: TMEM 目标地址；s_desc: SMEM 源 descriptor。
 tcgen05.cp.cta_group::1.<cp-shape> [taddr], s_desc;
 ```
 
-`<cp-shape>` 描述单条 copy 指令写入 TMEM 的范围，不等同于 MMA 的 `M128N64/M128N128/M128N256` shape。cp-only 的 `effective_bytes_per_cp` 必须根据实际使用的 cp 后缀、数据类型和 A tile 有效搬运范围计算，不用 cp 后缀字符串做近似替代。
+`<cp-shape>` 描述单条 copy 指令写入 TMEM 的范围，MMA shape 描述 `M128N64/M128N128/M128N256` 的矩阵乘加范围。cp-only 的 copied bytes 根据实际 cp 后缀、数据类型和 A tile 搬运范围计算。
 
-## 测试结果定义
+下面的简化代码块展示这些寄存器操作数如何进入 `tcgen05.cp`、SS `tcgen05.mma` 和 TS `tcgen05.mma`。inline PTX 约束中，`"l"` 表示 64-bit register operand，常用于 SMEM descriptor；`"r"` 表示 32-bit register operand，常用于 TMEM 地址和 `idesc` 高 32 位字段。
 
-### 统一命名
+```C++
+uint64_t a_desc = make_smem_desc(smem_a, desc_leading, desc_stride);
+uint64_t b_desc = make_smem_desc(smem_b, desc_leading, desc_stride);
+uint64_t idesc = make_idesc_for_shape_and_precision();
 
-`A1/A2` 表示 TMEM 中 A operand slot 数量。`D1/D2` 表示每个 warp 使用的 accumulator D tile 数量。
+uint32_t d_tmem = tmem_base + d_offset;
+uint32_t a_tmem = tmem_base + a_slot_offset;
 
-A double buffering 用于 cp/mma overlap：当 A slot 数量为 2 时，`cp(A_next)` 可以与 `mma(A_current)` 在不同 TMEM A slot 上交错执行。
+// 1. SS MMA: A/B 都从 SMEM descriptor 读取。
+asm volatile(
+  "tcgen05.mma.cta_group::1.kind::<dtype> "
+  "[%0], %1, %2, %3, 0, 1;"
+  :: "r"(d_tmem), "l"(a_desc), "l"(b_desc),
+     "r"(uint32_t(idesc >> 32)));
 
-D-ring 用于隐藏同一 D 的 accumulator dependency：当 D tile 数量为 2 时，同一个 warp 在 D0、D1 之间轮换累加，避免连续写同一个 accumulator D tile。
+// 2. cp: 把 a_desc 描述的 SMEM A tile 写到 a_tmem 指向的 TMEM A slot。
+asm volatile(
+  "tcgen05.cp.cta_group::1.<cp-shape> [%0], %1;"
+  :: "r"(a_tmem), "l"(a_desc) : "memory");
 
-A double buffering 和 D-ring 不是同一个概念。A1/A2 控制 A operand slot；D1/D2 控制 accumulator D tile。
+// 3. TS MMA: A 从 TMEM A slot 读取，B 仍从 SMEM descriptor 读取。
+asm volatile(
+  "tcgen05.mma.cta_group::1.kind::<dtype> "
+  "[%0], [%1], %2, %3, 0, 1;"
+  :: "r"(d_tmem), "r"(a_tmem), "l"(b_desc),
+     "r"(uint32_t(idesc >> 32)));
+```
 
-### Case 定义
+FP4/block-scale 路径额外传入 scale operand。FP4 SS/TS case 在 setup 阶段完成 scale TMEM 初始化，计时区间从待测 MMA 或 cp 指令序列开始。也就是说，FP4 的 scale 数据是 MMA 指令需要的输入解释信息，但 scale 初始化本身不是本文要测的吞吐对象。
 
-|Case|路径|A slot|D tile/warp|计时区间|用途|
-|---|---|---:|---:|---|---|
-|SS MMA D1|SS MMA-only|-|1|SS `tcgen05.mma` 批量循环 + 最终 completion wait|每个 MMA issuer warp 使用一个独立 D tile；每个 warp 在循环中连续累加自己的同一个 D tile；作为图 5 的统一 baseline|
-|SS MMA D2|SS MMA-only|-|2|SS `tcgen05.mma` 批量循环 + D0/D1 轮换 + 最终 completion wait|每个 warp 使用两个独立 D tile，并在 D0、D1 间轮换；用于观察 D-ring 是否隐藏 accumulator dependency|
-|TS MMA D1|TS MMA-only|预驻留 A|1|TS `tcgen05.mma` 批量循环 + 最终 completion wait|A 在计时前预驻留于 TMEM，B 在 SMEM；计时区间只包含 TS MMA 和最终 wait；用于和 SS MMA D1 做纯 MMA source-mode 对比|
-|tcgen05.cp-only|cp-only|目标 A slot|无|`tcgen05.cp` 批量循环 + 最终确认 copy 完成所需的 commit/barrier wait|源 A tile 已在 SMEM，目标 A slot 位于 TMEM；测 SMEM→TMEM copy 性能，输出 bytes/cycle 和 cycles/cp|
-|TS CP+MMA Serial A1D1|TS cp+mma serial|1|1|每轮 cp 完成后执行 MMA，MMA 不再使用该 A slot 后进入下一轮；包含最终 wait|一个 TMEM A slot、一个 D tile；无 A double buffering 的串行基线|
-|TS CP+MMA Overlap A2D1|TS cp+mma overlap|2|1|`cp(A_next)` 与 `mma(A_current)` 在不同 A slot 上交错执行；包含最终 wait|两个 TMEM A slot、一个 D tile；测量 A double buffering 带来的 cp/mma overlap|
-|TS CP+MMA Overlap A2D2|TS cp+mma overlap + D-ring|2|2|A2 overlap 基础上，D0/D1 轮换；包含最终 wait|两个 TMEM A slot、两个 D tile；判断 overlap 后 accumulator dependency 是否仍限制性能|
+PTX 是源码里写的汇编形式，SASS 是 GPU 最终执行的机器指令。本文后续实现需要用 `cuobjdump --dump-sass` 检查 BF16、FP8、FP4 的目标 MMA SASS 和 `tcgen05.cp` 对应 SASS，并用 NCU 计数器核对实际指令计数。完整 `tcgen05.mma` 语法以 NVIDIA PTX ISA 文档中的 [`tcgen05.mma` 指令](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-mma-instructions-mma) 章节为准。
 
-上述 case 应覆盖 9 个 precision-shape 组合：
+## **实验环境**
 
-|Precision|MMA shapes|
+实验设备为 NVIDIA Jetson AGX Thor Developer Kit。官方 dense 理论峰值沿用上一篇 MMA throughput 报告中的 Thor dense 指标：FP4 1035 TFLOP/s、FP8 517 TFLOP/s、BF16/FP16 258.5 TFLOP/s。脚本读取 GPU GPC 当前频率作为实测频率；Peak Ratio 使用当前 precision 对应的理论峰值。
+
+硬件和片上资源口径沿用上一篇 MMA throughput 报告。SMEM 参数来自 CUDA runtime 查询；TMEM 参数来自单 CTA `tcgen05.alloc.cta_group::1` probe。
+
+|组件|参数|
 |---|---|
-|BF16|M128N64K16, M128N128K16, M128N256K16|
-|FP8|M128N64K32, M128N128K32, M128N256K32|
-|FP4|M128N64K64, M128N128K64, M128N256K64|
+|GPU|NVIDIA Thor<br>Compute capability: `11.0`<br>SM count: `20`<br>Warp size: `32`<br>L2 cache: `32768.0 KiB`|
+|Thread / block limit|Max threads/block: `1024`<br>Max threads/SM: `1536`<br>Max blocks/SM: `24`|
+|Register file|Registers/block: `65536`<br>Registers/SM: `65536`<br>上一篇 FP4 benchmark: `REG:21`|
+|SMEM|Shared memory/block 默认上限: `48.0 KiB`<br>Shared memory/block opt-in 上限: `227.0 KiB`<br>Shared memory/SM 上限: `228.0 KiB`<br>Reserved shared memory/block: `1.0 KiB`|
+|上一篇 MMA baseline SMEM 用量|`cuobjdump --dump-resource-usage` 显示 `SHARED:66572 bytes`，约 `65.0 KiB/CTA`<br>主要来自 `smem_a[32768]`、`smem_b[32768]`、`done_barrier` 和 `tmem_base`|
+|TMEM probe|`32/64/128/256/512/543` columns: OK<br>`544/768/1024` columns: illegal instruction<br>上一篇 benchmark 使用 `512` columns|
+|上一篇 MMA baseline TMEM 布局|`tmem_c = tmem_base`<br>`tsfa = tmem_base + 256`<br>`tsfb = tmem_base + 384`|
 
-## 计时规则
+## **测试动作**
 
-setup 不计时，包括：
+脚本需要生成 5 类 benchmark case。每个 case 覆盖 BF16、FP8、FP4 与 `M128N64`、`M128N128`、`M128N256` 的 9 个 precision-shape 组合，总计 45 个基础测试组合。
 
-- `tcgen05.alloc`
-- `mbarrier.init`
-- descriptor 构造
-- SMEM 初始化
-- MMA-only 中的 A 预填充
-- FP4 scale 初始化
+五组计时动作和上面的流水线图直接对应。`SS MMA-only` 对应 SS 图中红色 `tcgen05.mma` 消费 SMEM A/B 的成本；`TS MMA-only` 对应 TS 图中 A 已经在 TMEM 后红色 TS `tcgen05.mma` 的使用成本；`tcgen05.cp-only` 对应 TS 图里的蓝色 A tile 输入准备；`TS CP+MMA Serial A1` 测单 A slot 下 copy 和 MMA 依次暴露的成本；`TS CP+MMA Overlap A2` 测两个 A slot 下 copy 和 MMA 交错后仍暴露的 cycles/tile。
 
-计时必须覆盖待测指令序列，以及最后用于确认待测异步操作完成的 commit/barrier wait。`tcgen05.ld`、结果验证、`tcgen05.dealloc` 和 `tcgen05.relinquish_alloc_permit` 不计入纯吞吐时间。
+|Case|A 来源|B 来源|A slots|计时窗口|输出指标|
+|---|---|---|---:|---|---|
+|SS MMA-only|SMEM|SMEM|-|SS `tcgen05.mma` 循环 + 等待完成|TFLOP/s, Peak Ratio|
+|TS MMA-only|TMEM|SMEM|预填 A|TS `tcgen05.mma` 循环 + 等待完成|TFLOP/s, Peak Ratio|
+|tcgen05.cp-only|SMEM|-|1|`tcgen05.cp` 循环 + 等待 copy 完成|bytes/cycle, cycles/cp|
+|TS CP+MMA Serial A1|SMEM->TMEM|SMEM|1|`cp -> wait -> mma -> wait` 循环|TFLOP/s, cycles/tile|
+|TS CP+MMA Overlap A2|SMEM->TMEM|SMEM|2|`cp(A_next)` overlaps `mma(A_current)`|TFLOP/s, cycles/tile, Overlap Gain|
 
-本文不区分 startup 和 steady，不做拟合；所有 case 使用足够大的固定迭代次数测批量完成吞吐。所有对比 case 应尽量保持相同 launch、warp 角色、迭代次数、B descriptor、D 累加规则和计时方法。
+SS MMA-only 在 A/B 都来自 SMEM descriptor、D 位于 TMEM 的配置下循环发射 SS `tcgen05.mma`。这个 case 给出每个 precision-shape 的基线，图 5 的归一化 speedup 都以同 shape、同 precision 的 SS MMA-only 吞吐为分母。
 
-推荐实现约束：
+TS MMA-only 先用 `tcgen05.cp` 把 A tile 准备到 TMEM，再只对 TS `tcgen05.mma` 循环和等待完成计时。它和 SS MMA-only 使用同一 `M128N*` shape、`K_inst`、B descriptor 和计时方式，用来比较 A 操作数来源从 SMEM 改为 TMEM 后的 MMA 完成吞吐。
 
-- 同一 precision-shape 下，SS/TS/cp+mma case 使用相同 grid、block、MMA issuer warp 数和 `iters`。
-- 每个 MMA issuer warp 只由固定 lane 发射对应 inline PTX，避免不同 case 的 warp 角色变化影响结果。
-- `mma_instruction_count`、`cp_instruction_count` 必须来自 launch 配置、issuer warp 数和循环次数的显式计算；后续可用 NCU counter 交叉验证。
-- FP4 case 的 A/B scale 初始化必须在计时前完成，且所有相关 case 使用一致 scale 布局。
+tcgen05.cp-only 把源 A tile 放在 SMEM，循环发射 `tcgen05.cp` 写入 TMEM A slot，并等待 copy 完成。这个 case 输出 `bytes/cycle = total copied bytes / elapsed cycles` 和 `cycles/cp = elapsed cycles / cp instruction count`。
 
-## 指标公式
-
-### MMA TFLOP/s
-
-```text
-P = 2 * M * N * K_inst * mma_instruction_count / elapsed_seconds
-MMA TFLOP/s = P / 1e12
-```
-
-`mma_instruction_count` 是计时区间内实际发射并完成的 MMA 指令总数。对于 cp+mma case，TFLOP/s 仍只统计 MMA 的数学计算量，elapsed time 使用 cp+mma 路径的计时区间。
-
-### Peak Ratio
+TS CP+MMA Serial A1 使用一个 TMEM A slot，按 `cp -> wait -> mma -> wait` 顺序串行处理 A tile。
 
 ```text
-Peak Ratio = measured_TFLOPS / theoretical_peak_for_precision
+SMEM A
+  |
+tcgen05.cp
+  |
+TMEM A
+  |
+tcgen05.mma
 ```
 
-`theoretical_peak_for_precision` 按当前设备和 precision 的 dense 理论峰值填写。若 launch 只占用部分 SM，应在表格中明确理论峰值是否按 active SM 缩放；同一张图内必须使用一致口径。
-
-### cp bytes/cycle
+TS CP+MMA Overlap A2 使用两个 TMEM A slot，在一个 slot 上执行 `mma(A_current)`，同时向另一个 slot 发射 `cp(A_next)`。
 
 ```text
-bytes_per_cycle = cp_instruction_count * effective_bytes_per_cp / elapsed_cycles
+cp(A1) overlaps mma(A0)
+cp(A0) overlaps mma(A1)
 ```
 
-`effective_bytes_per_cp` 必须使用实际每条 `tcgen05.cp` 搬运的有效字节数计算。低精度 packed case 需要按有效 A 数据字节数和实际 cp 形态确认，不得简单用 MMA FLOP 或 TMEM address stride 代替。
-
-### cp cycles/cp
+A double buffering 的收益用 `Overlap Gain` 单独记录：
 
 ```text
-cycles_per_cp = elapsed_cycles / cp_instruction_count
+Overlap Gain =
+  Throughput(TS CP+MMA Overlap A2) /
+  Throughput(TS CP+MMA Serial A1)
 ```
 
-### 图 5 统一归一化收益
+基础测试组合如下。
+
+|Case|BF16|FP8|FP4|合计|
+|---|---:|---:|---:|---:|
+|SS MMA-only|3 shapes|3 shapes|3 shapes|9|
+|TS MMA-only|3 shapes|3 shapes|3 shapes|9|
+|tcgen05.cp-only|3 shapes|3 shapes|3 shapes|9|
+|TS CP+MMA Serial A1|3 shapes|3 shapes|3 shapes|9|
+|TS CP+MMA Overlap A2|3 shapes|3 shapes|3 shapes|9|
+|Total||||45|
+
+## **实现方案**
+
+实现入口保持和上一篇 MMA throughput benchmark 相同的自动化流程：读取 GPU 信息和频率，生成 CUDA benchmark，编译二进制，运行全部 45 个基础组合，并写出结构化结果和中文报告。
+
+生成的 benchmark 按 case、shape、precision 组织，例如：
 
 ```text
-Normalized Speedup(case) = Throughput(case) / Throughput(SS MMA D1)
+tcgen05_ss_mma_only_m128n256_fp4
+tcgen05_ts_mma_only_m128n128_fp8
+tcgen05_cp_only_m128n64_bf16
+tcgen05_ts_cp_mma_serial_a1_m128n256_fp4
+tcgen05_ts_cp_mma_overlap_a2_m128n128_fp8
 ```
 
-对于同一 precision-shape，`SS MMA D1` 行恒为 `1.00x`。大于 1 表示快于 `SS MMA D1`，小于 1 表示慢于 `SS MMA D1`。图 5 只放归一化 speedup，不混入 TFLOP/s、cycles/cp 或 bytes/cycle。
+每份 CUDA 源码固定一个 `kMacPerInst`、`kInstK` 和 shape 标签。以 `M128N256K64 FP4` 为例，`kMacPerInst = 128 * 256 * 64 = 2097152`。
 
-### 附加 speedup
+```C++
+static constexpr long long kMacPerInst = 2097152LL;
+static constexpr int kInstK = 64;
+static constexpr char kPrecision[] = "FP4";
+static constexpr char kShape[] = "M128N256K64";
+```
 
-以下指标在结果表中额外给出，但不强制放入主 heatmap：
+### **CUDA 源码执行流程**
+
+每个 benchmark kernel 在计时前完成 SMEM 初始化、mbarrier 初始化、descriptor 创建、TMEM 分配、TMEM A 初始化和 FP4 scale 初始化。计时窗口覆盖待测 `tcgen05` 指令序列和对应的等待完成；`tcgen05.ld` 读回、全局写回和 TMEM 释放放在计时窗口外。
+
+```C++
+__shared__ alignas(16) uint8_t smem_a[/* TBD */];
+__shared__ alignas(16) uint8_t smem_b[/* TBD */];
+__shared__ alignas(8) uint64_t done_barrier;
+__shared__ uint32_t tmem_base;
+```
+
+descriptor 规则沿用 compute-only 的 shape/K 口径。BF16、FP8 和 FP4 的 K 分别为 16、32、64；`M128N64`、`M128N128`、`M128N256` 通过 `idesc` 的 M/N 字段选择。
+
+|Precision|K|A bytes/element|说明|
+|---|---:|---:|---|
+|BF16|16|2|dense f16/bf16 路径|
+|FP8|32|1|dense f8/f6/f4 路径|
+|FP4|64|0.5|mxf4/nvf4 block-scale 路径|
+
+```C++
+uint64_t a_desc = make_smem_desc(smem_a, desc_leading, desc_stride);
+uint64_t b_desc = make_smem_desc(smem_b, desc_leading, desc_stride);
+uint64_t idesc = make_idesc_for_shape_and_precision();
+```
+
+计时窗口使用 `clock64()` 包住目标循环和等待完成。多 block 测试建议保存每个 block 的 cycles，并用 `max_cycles` 作为整卡完成时间口径。
+
+```C++
+unsigned long long start = clock64();
+// 目标 tcgen05 循环：mma-only、cp-only、serial cp+mma 或 overlap cp+mma
+// commit / mbarrier 等待，确认操作完成
+unsigned long long stop = clock64();
+```
+
+吞吐和 copy 指标使用以下公式：
 
 ```text
-A-double-buffer speedup =
-  Throughput(TS Overlap A2D1) / Throughput(TS Serial A1D1)
+MMA TFLOP/s =
+  2 * M * N * K_inst * mma_instruction_count / elapsed_seconds / 1e12
 
-SS D-ring speedup =
-  Throughput(SS MMA D2) / Throughput(SS MMA D1)
+Peak Ratio =
+  measured_TFLOP/s / theoretical_peak_for_precision
 
-TS pipeline D-ring speedup =
-  Throughput(TS Overlap A2D2) / Throughput(TS Overlap A2D1)
+bytes/cycle =
+  total copied bytes / elapsed cycles
+
+cycles/cp =
+  elapsed cycles / cp instruction count
+
+cycles/tile =
+  elapsed cycles / processed tile count
 ```
 
-## 结果表模板
+图 5 的归一化使用同一 precision-shape 下的 SS MMA-only：
 
-尚未运行的 case 使用 `TBD` 或空单元格，不提前写性能结论。
+```text
+Normalized Speedup =
+  Throughput(case) / Throughput(SS MMA-only)
+```
+
+## **反汇编验证**
+
+脚本需要用 `cuobjdump --dump-sass` 检查目标 MMA 和 copy 指令是否出现在二进制中。BF16 dense MMA 应命中 BF16 对应 SASS，FP8 dense MMA 应命中 FP8 对应 SASS，FP4 dense MMA 应命中 FP4/block-scale 对应 SASS；`tcgen05.cp` case 需要记录实际 copy SASS 名称。
+
+NCU 计数器用来核对硬件实际执行的 MMA/cp 指令数量。以 FullSM4WarpBlock 风格 launch 为例，如果 `grid=SM_count`、`block=128`、每 CTA 4 个发射线程、`iters=10000`，目标 MMA 指令数应为 `SM_count * 4 * 10000`；cp-only 和 cp+mma case 按各自循环中的 cp 指令数计算。
+
+后续 NCU 小指标集应至少覆盖：
+
+- cycles
+- 目标 MMA 指令数
+- 目标 cp 指令数
+- tensor pipe 计数器
+- copy / non-MMA pipe 计数器
+- warp 发射 / stall 计数器
+- launch grid、block、active warps
+
+## **实验结果**
 
 ### MMA-only TFLOP/s 与 Peak Ratio
 
-|Precision|Shape|K_inst|SS MMA D1 TFLOP/s|TS MMA D1 TFLOP/s|SS MMA D1 Peak Ratio|TS MMA D1 Peak Ratio|备注|
-|---|---|---:|---:|---:|---:|---:|---|
-|BF16|M128N64|16|TBD|TBD|TBD|TBD||
-|BF16|M128N128|16|TBD|TBD|TBD|TBD||
-|BF16|M128N256|16|TBD|TBD|TBD|TBD||
-|FP8|M128N64|32|TBD|TBD|TBD|TBD||
-|FP8|M128N128|32|TBD|TBD|TBD|TBD||
-|FP8|M128N256|32|TBD|TBD|TBD|TBD||
-|FP4|M128N64|64|TBD|TBD|TBD|TBD||
-|FP4|M128N128|64|TBD|TBD|TBD|TBD||
-|FP4|M128N256|64|TBD|TBD|TBD|TBD||
+当前还没有 `mma_with_cp` benchmark 结果。下表固定 SS/TS MMA-only 的填数口径，结果生成前使用 `TBD`。
 
-### tcgen05.cp-only
+|Precision|Shape|K|SS MMA-only TFLOP/s|TS MMA-only TFLOP/s|SS Peak Ratio|TS Peak Ratio|
+|---|---|---:|---:|---:|---:|---:|
+|BF16|M128N64|16|TBD|TBD|TBD|TBD|
+|BF16|M128N128|16|TBD|TBD|TBD|TBD|
+|BF16|M128N256|16|TBD|TBD|TBD|TBD|
+|FP8|M128N64|32|TBD|TBD|TBD|TBD|
+|FP8|M128N128|32|TBD|TBD|TBD|TBD|
+|FP8|M128N256|32|TBD|TBD|TBD|TBD|
+|FP4|M128N64|64|TBD|TBD|TBD|TBD|
+|FP4|M128N128|64|TBD|TBD|TBD|TBD|
+|FP4|M128N256|64|TBD|TBD|TBD|TBD|
 
-|Precision|Shape|cp shape / suffix|effective bytes/cp|cp instruction count|elapsed cycles|bytes/cycle|cycles/cp|备注|
-|---|---|---|---:|---:|---:|---:|---:|---|
-|BF16|M128N64|TBD|TBD|TBD|TBD|TBD|TBD||
-|BF16|M128N128|TBD|TBD|TBD|TBD|TBD|TBD||
-|BF16|M128N256|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP8|M128N64|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP8|M128N128|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP8|M128N256|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP4|M128N64|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP4|M128N128|TBD|TBD|TBD|TBD|TBD|TBD||
-|FP4|M128N256|TBD|TBD|TBD|TBD|TBD|TBD||
+图 1 规划为 SS/TS MMA-only TFLOP/s 分组柱状图。横轴为 9 个 precision-shape 组合，系列为 `SS MMA-only` 和 `TS MMA-only`。
 
-### 图 5 speedup 数据源
+图 2 规划为 SS/TS MMA-only Peak Ratio 分组柱状图。Peak Ratio 使用 `Measured TFLOP/s / Theoretical Peak`，不同 precision 使用对应理论峰值。
+
+### tcgen05.cp-only 结果
+
+cp-only 表格记录 SMEM->TMEM copy 的 bytes/cycle 和 cycles/cp。`effective bytes/cp` 使用每条 `tcgen05.cp` 的实际搬运字节数。
+
+|Precision|Shape|cp shape / suffix|effective bytes/cp|cp instruction count|elapsed cycles|bytes/cycle|cycles/cp|
+|---|---|---|---:|---:|---:|---:|---:|
+|BF16|M128N64|TBD|TBD|TBD|TBD|TBD|TBD|
+|BF16|M128N128|TBD|TBD|TBD|TBD|TBD|TBD|
+|BF16|M128N256|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N64|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N128|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N256|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N64|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N128|TBD|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N256|TBD|TBD|TBD|TBD|TBD|TBD|
+
+图 3 规划为 `tcgen05.cp`-only bytes/cycle 柱状图。图 4 规划为 `tcgen05.cp`-only cycles/cp 柱状图。
+
+### CP+MMA pipeline 结果
+
+Serial A1 和 Overlap A2 使用同一 tile 计数口径。Overlap Gain 使用 `Throughput(TS CP+MMA Overlap A2) / Throughput(TS CP+MMA Serial A1)`。
+
+|Precision|Shape|Serial A1 TFLOP/s|Serial A1 cycles/tile|Overlap A2 TFLOP/s|Overlap A2 cycles/tile|Overlap Gain|
+|---|---|---:|---:|---:|---:|---:|
+|BF16|M128N64|TBD|TBD|TBD|TBD|TBD|
+|BF16|M128N128|TBD|TBD|TBD|TBD|TBD|
+|BF16|M128N256|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N64|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N128|TBD|TBD|TBD|TBD|TBD|
+|FP8|M128N256|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N64|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N128|TBD|TBD|TBD|TBD|TBD|
+|FP4|M128N256|TBD|TBD|TBD|TBD|TBD|
+
+图 5 规划为 Pipeline performance heatmap。列为 `BF16-N64`、`BF16-N128`、`BF16-N256`、`FP8-N64`、`FP8-N128`、`FP8-N256`、`FP4-N64`、`FP4-N128`、`FP4-N256`；行为 `SS MMA-only`、`TS MMA-only`、`TS CP+MMA Serial A1`、`TS CP+MMA Overlap A2`。单元格只显示相对 `SS MMA-only` 的 normalized speedup。
 
 |Case|BF16-N64|BF16-N128|BF16-N256|FP8-N64|FP8-N128|FP8-N256|FP4-N64|FP4-N128|FP4-N256|
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-|SS MMA D1|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|
-|SS MMA D2|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
-|TS CP+MMA Serial A1D1|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
-|TS CP+MMA Overlap A2D1|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
-|TS CP+MMA Overlap A2D2|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
+|SS MMA-only|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|
+|TS MMA-only|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
+|TS CP+MMA Serial A1|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
+|TS CP+MMA Overlap A2|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
 
-### 附加 speedup 表
+### NCU 抓取结果
 
-|Metric|BF16-N64|BF16-N128|BF16-N256|FP8-N64|FP8-N128|FP8-N256|FP4-N64|FP4-N128|FP4-N256|
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-|A-double-buffer speedup|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
-|SS D-ring speedup|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
-|TS pipeline D-ring speedup|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|TBD|
+NCU 抓取结果用于确认 launch 规模、MMA/cp 指令计数和关键计数器。后续报告保留两个到三个代表 case 的截图和文字说明，例如 `M128N256K64 FP4`、`M128N64K16 BF16`、以及一个 cp+mma overlap case。
 
-## 作图规划
+## **总结**
 
-最终报告规划五张图。
+本文把 `mma_with_cp` 的实验范围收敛为 5 类 TCGen05 内部路径：SS MMA-only、TS MMA-only、tcgen05.cp-only、TS CP+MMA Serial A1 和 TS CP+MMA Overlap A2。三种精度和三种 shape 组合后共有 45 个基础 benchmark。
 
-图 1：SS/TS MMA-only TFLOP/s 分组柱状图
+SS/TS MMA-only 对比回答 A 操作数来源从 SMEM 切到 TMEM 后，MMA 完成吞吐是否变化。cp-only 表格回答 SMEM->TMEM 的 copy bytes/cycle 和 cycles/cp。Serial A1 与 Overlap A2 的对比回答 A double buffering 能否降低 cp+mma pipeline 的 cycles/tile。
 
-- 横轴：9 个 precision-shape 组合
-- 系列：`SS MMA D1`、`TS MMA D1`
-- 纵轴：TFLOP/s
+当前需要实现的 benchmark case 如下：
 
-图 2：SS/TS MMA-only Peak Ratio 分组柱状图
+|Case|Case ID|
+|---|---|
+|SS MMA-only|`ss_mma_only`|
+|TS MMA-only|`ts_mma_only`|
+|tcgen05.cp-only|`tcgen05_cp_only`|
+|TS CP+MMA Serial A1|`ts_cp_mma_serial_a1`|
+|TS CP+MMA Overlap A2|`ts_cp_mma_overlap_a2`|
 
-- 横轴：9 个 precision-shape 组合
-- 系列：`SS MMA D1`、`TS MMA D1`
-- 纵轴：Peak Ratio (%)
+## **边界**
 
-图 3：`tcgen05.cp`-only bytes/cycle 柱状图
-
-- 横轴：9 个 precision-shape 组合
-- 纵轴：bytes/cycle
-
-图 4：`tcgen05.cp`-only cycles/cp 柱状图
-
-- 横轴：9 个 precision-shape 组合
-- 纵轴：cycles/cp
-
-图 5：相对 `SS MMA D1` 的收益 heatmap
-
-- 列：`BF16-N64`、`BF16-N128`、`BF16-N256`、`FP8-N64`、`FP8-N128`、`FP8-N256`、`FP4-N64`、`FP4-N128`、`FP4-N256`
-- 行：`SS MMA D1`、`SS MMA D2`、`TS CP+MMA Serial A1D1`、`TS CP+MMA Overlap A2D1`、`TS CP+MMA Overlap A2D2`
-- 单元格显示归一化 speedup，例如 `0.96x`、`1.00x`、`1.18x`
-- 色阶以 `1.00` 为中心
-- 不把 TFLOP/s、cycles/cp、bytes/cycle 混入这张 heatmap
-
-## 实现和验证待办
-
-`mma_with_cp` 目前没有源码、脚本和结果文件。后续实现时应补齐：
-
-- `benchmark_src/`：按 case、precision、shape 生成或维护 CUDA benchmark 源码。
-- `build_and_run.sh` 或等价入口：统一 build、run、ncu、plot 命令。
-- 结果 CSV：至少包含 case、precision、shape、K_inst、iters、launch、instruction counts、elapsed cycles、elapsed seconds、TFLOP/s、Peak Ratio、bytes/cycle、cycles/cp。
-- 作图脚本：从结果 CSV 生成图 1 到图 5。
-- NCU 验证：核对目标 SASS、MMA/cp 指令计数、completion wait、tensor/copy pipe counter 与源码循环一致。
-
-在这些文件和结果出现前，本文所有数据表保持 `TBD`，不写性能结论。
+本文覆盖 `tcgen05` 内部 A 操作数来源、SMEM->TMEM copy 和 cp-mma overlap。GMEM、TMA、epilogue、TMEM 读回、全局写回、sparse MMA、2CTA/cluster 路径后续单独测；结果生成前，本文所有性能表保持 `TBD`。
