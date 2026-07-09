@@ -24,9 +24,9 @@ TS 图展示带 A 输入准备的主循环路径。黑色 TMA load 仍然先把 
 
 SS 表示 A/B 都从 SMEM descriptor 读取，指令操作数是 `[d_tmem], a_desc, b_desc, idesc...`。TS 表示 A 从 TMEM 读取、B 从 SMEM descriptor 读取，指令操作数变成 `[d_tmem], [a_tmem], b_desc, idesc...`。TS 路径中的 A tile 由 `tcgen05.cp` 从 SMEM 写入 TMEM，再由后续 TS `tcgen05.mma` 作为 A 操作数读取；因此 TS case 需要额外定义 A slot 数量和 cp/mma 的先后关系。
 
-`tcgen05.mma` 的 single-thread semantics 指的是发射语义：CTA 内一个发射线程执行一条 `tcgen05.mma` PTX，就足以描述并启动一个完整的 Tensor Core tile 操作。这个 tile 的数学范围由 `idesc` 中的 `M/N` 和 precision 对应的 `K` 决定，例如 `M128N256K64 FP4` 对应一条完整的 `128 * 256 * 64` MAC 指令，而不是 32 个 lane 各自提交一小片 MMA。
+`tcgen05.mma` 的单线程发射语义指的是：CTA 内一个发射线程执行一条 `tcgen05.mma` PTX，就足以描述并启动一个完整的 Tensor Core tile 操作。这个 tile 的数学范围由 `idesc` 中的 `M/N` 和 precision 对应的 `K` 决定，例如 `M128N256K64 FP4` 对应一条完整的 `128 * 256 * 64` MAC 指令，而不是 32 个 lane 各自提交一小片 MMA。
 
-benchmark 中一个 CTA 共享同一组 SMEM tile、TMEM allocation 和用于确认完成的 mbarrier。参与发射的 warp 固定一个 lane 作为发射线程提交 inline PTX，其余 lane 负责初始化、同步和等待；多 warp 配置用于提高整卡指令发射压力，不改变单条 MMA 的 tile 语义。
+benchmark 中一个 CTA 共享同一组 SMEM tile、TMEM allocation 和用于确认完成的 mbarrier。当前真实路径口径只让 `threadIdx.x == 0` 作为发射线程提交 inline PTX，其余线程负责初始化、同步和等待；这样每个 CTA 每轮只提交一条完整的 cp 或 MMA 指令。
 
 同一个发射线程循环中的 `tcgen05.mma` 和 `tcgen05.cp` 按程序顺序发射。也就是说，代码里写成 `mma; mma; mma` 或 `cp; wait; mma` 时，发射线程不会在同一线程内重排这些 inline PTX；异步操作的完成边界由后续 `tcgen05.commit`、mbarrier 等待或等待 copy 完成来确认。本文的计时窗口覆盖待测指令序列和最后的等待完成，所以表格中的 cycles 反映批量发射后的完成吞吐，而不是只记录提交成本。
 
@@ -101,23 +101,61 @@ asm volatile(
 
 FP4/block-scale 路径额外传入 scale operand。FP4 SS/TS case 在 setup 阶段完成 scale TMEM 初始化，计时区间从待测 MMA 或 cp 指令序列开始。也就是说，FP4 的 scale 数据是 MMA 指令需要的输入解释信息，但 scale 初始化本身不是本文要测的吞吐对象。
 
-PTX 是源码里写的汇编形式，SASS 是 GPU 最终执行的机器指令。本文后续实现需要用 `cuobjdump --dump-sass` 检查 BF16、FP8、FP4 的目标 MMA SASS 和 `tcgen05.cp` 对应 SASS，并用 NCU 计数器核对实际指令计数。完整 `tcgen05.mma` 语法以 NVIDIA PTX ISA 文档中的 [`tcgen05.mma` 指令](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-mma-instructions-mma) 章节为准。
+PTX 是源码里写的汇编形式，SASS 是 GPU 最终执行的机器指令。本文后续实现需要用 `cuobjdump --dump-sass` 检查 BF16、FP8、FP4 的目标 MMA SASS 和 `tcgen05.cp` 对应的 `UTCCP` SASS，并用 NCU 计数器核对实际指令计数。注意源码中的 `tcgen05.cp...` 不会在 SASS 中按原字符串出现；例如 `tcgen05.cp.cta_group::1.128x128b...` 会编译成 `UTCCP.T.S.128dp128bit...` 形式，所以检查应匹配 SASS opcode 和 decoded shape token，而不是匹配源码 PTX 字符串。完整 `tcgen05.mma` 语法以 NVIDIA PTX ISA 文档中的 [`tcgen05.mma` 指令](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-mma-instructions-mma) 章节为准。
 
 ## **实验环境**
 
 实验设备为 NVIDIA Jetson AGX Thor Developer Kit。官方 dense 理论峰值沿用上一篇 MMA throughput 报告中的 Thor dense 指标：FP4 1035 TFLOP/s、FP8 517 TFLOP/s、BF16/FP16 258.5 TFLOP/s。脚本读取 GPU GPC 当前频率作为实测频率；Peak Ratio 使用当前 precision 对应的理论峰值。
 
-硬件和片上资源口径沿用上一篇 MMA throughput 报告。SMEM 参数来自 CUDA runtime 查询；TMEM 参数来自单 CTA `tcgen05.alloc.cta_group::1` probe。
+硬件、软件和 benchmark 固定参数如下。
 
-|组件|参数|
+|硬件平台|参数|
 |---|---|
-|GPU|NVIDIA Thor<br>Compute capability: `11.0`<br>SM count: `20`<br>Warp size: `32`<br>L2 cache: `32768.0 KiB`|
-|Thread / block limit|Max threads/block: `1024`<br>Max threads/SM: `1536`<br>Max blocks/SM: `24`|
-|Register file|Registers/block: `65536`<br>Registers/SM: `65536`<br>上一篇 FP4 benchmark: `REG:21`|
-|SMEM|Shared memory/block 默认上限: `48.0 KiB`<br>Shared memory/block opt-in 上限: `227.0 KiB`<br>Shared memory/SM 上限: `228.0 KiB`<br>Reserved shared memory/block: `1.0 KiB`|
-|上一篇 MMA baseline SMEM 用量|`cuobjdump --dump-resource-usage` 显示 `SHARED:66572 bytes`，约 `65.0 KiB/CTA`<br>主要来自 `smem_a[32768]`、`smem_b[32768]`、`done_barrier` 和 `tmem_base`|
-|TMEM probe|`32/64/128/256/512/543` columns: OK<br>`544/768/1024` columns: illegal instruction<br>上一篇 benchmark 使用 `512` columns|
-|上一篇 MMA baseline TMEM 布局|`tmem_c = tmem_base`<br>`tsfa = tmem_base + 256`<br>`tsfb = tmem_base + 384`|
+|GPU|NVIDIA Thor|
+|Compute capability|`11.0`|
+|SM count|`20`|
+|Warp size|`32`|
+|L2 cache|`32768.0 KiB`|
+|GPU GPC frequency|`1.575 GHz`|
+
+|软件环境|参数|
+|---|---|
+|OS / kernel|Linux `6.8.12-tegra`，`aarch64`|
+|CUDA runtime / driver|`13000` / `13000`|
+|CUDA Toolkit / nvcc|`13.0` / `V13.0.88`|
+|cuobjdump|CUDA `13.0` / `V13.0.85`|
+|Python|`3.12.3`|
+|NVCC target|`arch=compute_110a,code=sm_110a`|
+
+|设备资源上限|参数|
+|---|---|
+|Max threads/block|`1024`|
+|Max threads/SM|`1536`|
+|Max blocks/SM|`24`|
+|Registers/block|`65536`|
+|Registers/SM|`65536`|
+|Shared memory/block|`48.0 KiB` (`49152 bytes`)|
+|Shared memory/block opt-in|`227.0 KiB` (`232448 bytes`)|
+|Shared memory/SM|`228.0 KiB` (`233472 bytes`)|
+|Reserved shared memory/block|`1.0 KiB` (`1024 bytes`)|
+
+|Benchmark 固定配置|参数|
+|---|---|
+|Grid size|`20` CTAs|
+|Block size|`128` threads|
+|Warps/CTA|`4`|
+|MMA / CP issuer|仅 `threadIdx.x == 0`|
+|TMEM allocation|`512 columns = 256 KiB`|
+|D accumulator|`d_tmem = tmem_base`|
+|A slot 0|`a_tmem0 = tmem_base + 256`|
+|A slot 1|`a_tmem1 = tmem_base + 320`|
+|FP4 scale A|`tsfa = tmem_base + 384`|
+|FP4 scale B|`tsfb = tmem_base + 448`|
+
+|生成 kernel 资源用量|REG|SHARED|
+|---|---:|---:|
+|MMA-only / TS MMA-only / TS CP+MMA|`21`|`66572 bytes`|
+|`tcgen05.cp-only`|`14`|`33804 bytes`|
 
 ## **测试动作**
 
@@ -262,9 +300,32 @@ Normalized Speedup =
 
 ## **反汇编验证**
 
-脚本需要用 `cuobjdump --dump-sass` 检查目标 MMA 和 copy 指令是否出现在二进制中。BF16 dense MMA 应命中 BF16 对应 SASS，FP8 dense MMA 应命中 FP8 对应 SASS，FP4 dense MMA 应命中 FP4/block-scale 对应 SASS；`tcgen05.cp` case 需要记录实际 copy SASS 名称。
+脚本需要用 `cuobjdump --dump-sass` 检查目标 MMA 和 copy 指令是否出现在二进制中。BF16 dense MMA 应命中 BF16 对应 SASS，FP8 dense MMA 应命中 FP8 对应 SASS，FP4 dense MMA 应命中 FP4/block-scale 对应 SASS；`tcgen05.cp` case 应命中 `UTCCP`，并进一步核对 PTX suffix 对应的 SASS shape/decode token。不能用“源码里包含 `tcgen05.cp`”作为反汇编检查通过条件。
 
-NCU 计数器用来核对硬件实际执行的 MMA/cp 指令数量。以 FullSM4WarpBlock 风格 launch 为例，如果 `grid=SM_count`、`block=128`、每 CTA 4 个发射线程、`iters=10000`，目标 MMA 指令数应为 `SM_count * 4 * 10000`；cp-only 和 cp+mma case 按各自循环中的 cp 指令数计算。
+当前脚本的 dense MMA SASS 检查口径如下。
+
+|Precision|PTX MMA instruction|期望 SASS token|
+|---|---|---|
+|BF16|`tcgen05.mma.cta_group::1.kind::f16`|`UTCHMMA`|
+|FP8|`tcgen05.mma.cta_group::1.kind::f8f6f4`|`UTCQMMA`|
+|FP4|`tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16`|`UTCOMMA.4X`|
+
+当前脚本的 `tcgen05.cp` SASS 检查口径按 precision 区分如下。BF16 和 FP8 当前都使用 plain `128x128b` copy；FP4 使用 packed/decode 形式，把 packed FP4 A tile 写入 TMEM A slot。
+
+|Precision|PTX cp instruction|PTX cp suffix|期望 SASS token|
+|---|---|---|---|
+|BF16|`tcgen05.cp.cta_group::1.128x128b`|`128x128b`|`UTCCP` + `128DP128BIT`|
+|FP8|`tcgen05.cp.cta_group::1.128x128b`|`128x128b`|`UTCCP` + `128DP128BIT`|
+|FP4|`tcgen05.cp.cta_group::1.128x128b.b8x16.b4x16_p64`|`128x128b.b8x16.b4x16_p64`|`UTCCP` + `128DP128BIT` + `U4X16P64`|
+
+代表性 SASS 形态如下。
+
+```sass
+UTCCP.T.S.128dp128bit tmem[...], gdesc[...];
+UTCCP.T.S.128dp128bit.U4x16P64 tmem[...], gdesc[...];
+```
+
+NCU 计数器用来核对硬件实际执行的 MMA/cp 指令数量。当前真实路径口径下，如果 `grid=SM_count`、`block=128`、每 CTA 1 个发射线程、`iters=10000`，目标 MMA 指令数应为 `SM_count * 1 * 10000`；cp-only 和 cp+mma case 按各自循环中的 cp 指令数计算。
 
 后续 NCU 小指标集应至少覆盖：
 
@@ -360,6 +421,14 @@ SS/TS MMA-only 对比回答 A 操作数来源从 SMEM 切到 TMEM 后，MMA 完�
 |tcgen05.cp-only|`tcgen05_cp_only`|
 |TS CP+MMA Serial A1|`ts_cp_mma_serial_a1`|
 |TS CP+MMA Overlap A2|`ts_cp_mma_overlap_a2`|
+
+## **附录：环境参数测量方法**
+
+GPU、thread/block limit、register file、SMEM limit 和 L2 cache 来自 CUDA runtime 查询；OS/kernel 来自系统内核版本查询；CUDA/nvcc/cuobjdump/Python 版本来自对应工具的版本输出；GPU GPC frequency 来自系统 devfreq 接口的当前频率读数。
+
+本实验 kernel 资源用量来自当前脚本生成的 45 个 CUDA benchmark，经 `nvcc -O3 -gencode arch=compute_110a,code=sm_110a` 编译后用 `cuobjdump --dump-resource-usage` 检查。结果按 case 收敛为：MMA/TS CP+MMA case 使用 `REG:21`、`SHARED:66572 bytes`；`tcgen05.cp-only` 使用 `REG:14`、`SHARED:33804 bytes`。
+
+TMEM size 来自独立 TMEM sweep probe。该 probe 对每个 column request 单独启动进程，执行 `tcgen05.alloc` 后用 `tcgen05.st/ld.sync.aligned.32x32b.x1.b32` 读写第 0 列和 `columns - 1` 最后一列；首尾都读回正确值才记为 OK。这个口径下 `512 columns = 256 KiB` 是可首尾读写的最大 allocation。
 
 ## **边界**
 

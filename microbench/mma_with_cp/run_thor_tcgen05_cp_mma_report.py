@@ -163,6 +163,20 @@ REPORT_SHAPE_ORDER = ["m128n256", "m128n128", "m128n64"]
 
 BLOCK_THREADS = 128
 WARPS_PER_BLOCK = 4
+ISSUERS_PER_BLOCK = 1
+
+CP_SASS_SHAPE_TOKENS = {
+    "4x256b": "4dp256bit",
+    "32x128b": "32dp128bit",
+    "64x128b": "64dp128bit",
+    "128x128b": "128dp128bit",
+    "128x256b": "128dp256bit",
+}
+
+CP_SASS_DECODE_TOKENS = {
+    "b8x16.b4x16_p64": "U4x16P64",
+    "b8x16.b6x16_p32": "U6x16P32",
+}
 
 
 CU_TEMPLATE = r'''
@@ -184,6 +198,7 @@ static constexpr long long kMacPerInst = {mac_per_inst}LL;
 static constexpr int kInstK = {shape_k};
 static constexpr int kBlockThreads = 128;
 static constexpr int kWarpsPerBlock = 4;
+static constexpr int kIssuerCount = 1;
 static constexpr int kCpInstructionsPerTile = {cp_instructions_per_tile};
 static constexpr int kEffectiveBytesPerCp = {effective_bytes_per_cp};
 static constexpr char kCaseId[] = "{case_id}";
@@ -196,8 +211,8 @@ __device__ __forceinline__ uint32_t smem_u32(void const* ptr) {
   return static_cast<uint32_t>(__cvta_generic_to_shared(ptr));
 }
 
-__device__ __forceinline__ bool warp_leader() {
-  return (threadIdx.x & 31) == 0;
+__device__ __forceinline__ bool issuer_thread() {
+  return threadIdx.x == 0;
 }
 
 __device__ __forceinline__ uint64_t make_smem_desc(void const* ptr, uint32_t leading_u128, uint32_t stride_u128) {
@@ -227,7 +242,7 @@ __device__ __forceinline__ void barrier_wait(uint64_t* barrier, uint32_t phase) 
 
 __device__ __forceinline__ void commit_and_wait(uint64_t* barrier, uint32_t phase) {
   uint32_t bar_addr = smem_u32(barrier);
-  if (warp_leader()) {
+  if (issuer_thread()) {
     asm volatile("tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%0];" :: "r"(bar_addr));
   }
   if (threadIdx.x == 0) {
@@ -301,7 +316,7 @@ void tcgen05_kernel(int iters, unsigned long long* cycles_out) {
   }
 
   if (threadIdx.x == 0) {
-    barrier_init(&done_barrier, kWarpsPerBlock);
+    barrier_init(&done_barrier, kIssuerCount);
   }
   __syncthreads();
 
@@ -390,6 +405,7 @@ int main(int argc, char** argv) {
   std::printf("active_blocks=%d\n", active_blocks);
   std::printf("block_threads=%d\n", kBlockThreads);
   std::printf("warps_per_block=%d\n", kWarpsPerBlock);
+  std::printf("issuer_count=%d\n", kIssuerCount);
   std::printf("iters=%d\n", iters);
   std::printf("cycles=%llu\n", max_cycles);
   std::printf("mma_instruction_count=%lld\n", mma_instruction_count);
@@ -461,7 +477,7 @@ def case_body(case_id):
         return "", """
   for (int i = 0; i < iters; ++i) {
     uint32_t scale = (i == 0) ? 0u : 1u;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_ss_mma(d_tmem, a_desc, b_desc, idesc, tsfa, tsfb, scale);
     }
   }
@@ -470,7 +486,7 @@ def case_body(case_id):
 """
     if case_id == "ts_mma_only":
         pre = """
-  if (warp_leader()) {
+  if (issuer_thread()) {
     issue_cp(a_tmem0, a_desc);
   }
   commit_and_wait(&done_barrier, phase);
@@ -479,7 +495,7 @@ def case_body(case_id):
         body = """
   for (int i = 0; i < iters; ++i) {
     uint32_t scale = (i == 0) ? 0u : 1u;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_ts_mma(d_tmem, a_tmem0, b_desc, idesc, tsfa, tsfb, scale);
     }
   }
@@ -491,7 +507,7 @@ def case_body(case_id):
         return "", """
   for (int i = 0; i < iters; ++i) {
     uint32_t dst = (i & 1) ? a_tmem1 : a_tmem0;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_cp(dst, a_desc);
     }
   }
@@ -502,12 +518,12 @@ def case_body(case_id):
         return "", """
   for (int i = 0; i < iters; ++i) {
     uint32_t scale = (i == 0) ? 0u : 1u;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_cp(a_tmem0, a_desc);
     }
     commit_and_wait(&done_barrier, phase);
     phase ^= 1;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_ts_mma(d_tmem, a_tmem0, b_desc, idesc, tsfa, tsfb, scale);
     }
     commit_and_wait(&done_barrier, phase);
@@ -516,7 +532,7 @@ def case_body(case_id):
 """
     if case_id == "ts_cp_mma_overlap_a2":
         pre = """
-  if (warp_leader()) {
+  if (issuer_thread()) {
     issue_cp(a_tmem0, a_desc);
   }
   commit_and_wait(&done_barrier, phase);
@@ -527,7 +543,7 @@ def case_body(case_id):
     uint32_t scale = (i == 0) ? 0u : 1u;
     uint32_t current = (i & 1) ? a_tmem1 : a_tmem0;
     uint32_t next = (i & 1) ? a_tmem0 : a_tmem1;
-    if (warp_leader()) {
+    if (issuer_thread()) {
       issue_cp(next, a_desc);
       issue_ts_mma(d_tmem, current, b_desc, idesc, tsfa, tsfb, scale);
     }
@@ -545,8 +561,7 @@ def make_cfg(case_id, precision, shape):
     shape_k = s["k_by_precision"][precision]
     shape_label = f"{s['label']}K{shape_k}"
     pre_body, timed_body = case_body(case_id)
-    cp_insts_per_tile = WARPS_PER_BLOCK if CASES[case_id]["needs_cp"] else 0
-    mma_insts_per_tile = WARPS_PER_BLOCK if CASES[case_id]["needs_mma"] else 0
+    cp_insts_per_tile = ISSUERS_PER_BLOCK if CASES[case_id]["needs_cp"] else 0
     cfg = {
         "case_id": case_id,
         "case_label": CASES[case_id]["label"],
@@ -575,15 +590,15 @@ def make_cfg(case_id, precision, shape):
         "pre_timing_body": pre_body,
         "timed_body": timed_body,
         "mma_instruction_count_expr": (
-            "static_cast<long long>(active_blocks) * static_cast<long long>(kWarpsPerBlock) * static_cast<long long>(iters)"
+            "static_cast<long long>(active_blocks) * static_cast<long long>(kIssuerCount) * static_cast<long long>(iters)"
             if CASES[case_id]["reports_tflops"] else "0LL"
         ),
         "cp_instruction_count_expr": (
-            "static_cast<long long>(active_blocks) * static_cast<long long>(kWarpsPerBlock) * static_cast<long long>(iters)"
+            "static_cast<long long>(active_blocks) * static_cast<long long>(kIssuerCount) * static_cast<long long>(iters)"
             if CASES[case_id]["reports_cp"] or case_id.startswith("ts_cp_mma") else "0LL"
         ),
         "processed_tiles_expr": (
-            "static_cast<long long>(active_blocks) * static_cast<long long>(kWarpsPerBlock) * static_cast<long long>(iters)"
+            "static_cast<long long>(active_blocks) * static_cast<long long>(kIssuerCount) * static_cast<long long>(iters)"
             if case_id.startswith("ts_cp_mma") else "0LL"
         ),
     }
@@ -653,23 +668,43 @@ def compile_sources(srcs, ccbin=None):
     return bins
 
 
+def cp_sass_tokens(cp_suffix):
+    parts = cp_suffix.split(".")
+    tokens = ["UTCCP"]
+    shape_token = CP_SASS_SHAPE_TOKENS.get(parts[0])
+    if shape_token:
+        tokens.append(shape_token)
+    decode_suffix = ".".join(parts[1:])
+    decode_token = CP_SASS_DECODE_TOKENS.get(decode_suffix)
+    if decode_token:
+        tokens.append(decode_token)
+    return tuple(token.upper() for token in tokens)
+
+
+def has_all_tokens(line, tokens):
+    upper = line.upper()
+    return all(token in upper for token in tokens)
+
+
 def inspect_instructions(srcs, bins):
     checks = {}
-    for key, src in srcs.items():
+    for key in srcs:
         case_id, precision, shape = key
         cfg = make_cfg(case_id, precision, shape)
         ret, sass = run(["cuobjdump", "--dump-sass", bins[key]], capture=True, check=False, echo=False)
         mma_lines = [line.strip() for line in sass.splitlines() if re.search(r"\bUTC[A-Z0-9.]*MMA", line)]
-        cp_lines = [line.strip() for line in sass.splitlines() if "TCGEN05" in line.upper() and "CP" in line.upper()]
+        cp_lines = [line.strip() for line in sass.splitlines() if re.search(r"\bUTCCP(?:\.|\s)", line)]
         expected = cfg["sass_instruction"].split(".")[0]
         needs_mma = CASES[case_id]["needs_mma"]
         needs_cp = CASES[case_id]["needs_cp"]
+        expected_cp_tokens = cp_sass_tokens(cfg["cp_suffix"]) if needs_cp else ()
         mma_ok = (not needs_mma) or any(expected in line for line in mma_lines)
-        cp_ok = (not needs_cp) or bool(cp_lines) or ("tcgen05.cp" in src.read_text())
+        cp_ok = (not needs_cp) or any(has_all_tokens(line, expected_cp_tokens) for line in cp_lines)
         status = "ok" if ret == 0 and mma_ok and cp_ok else "check_failed"
         checks[key] = {
             "status": status,
             "expected_mma_sass": cfg["sass_instruction"] if needs_mma else "",
+            "expected_cp_sass": " ".join(expected_cp_tokens),
             "mma_sample": mma_lines[:2],
             "cp_sample": cp_lines[:2],
             "cp_suffix": cfg["cp_suffix"] if needs_cp else "",
@@ -685,7 +720,7 @@ def parse_result(text):
             result[k.strip()] = v.strip()
     required = [
         "case_id", "case_label", "precision", "shape", "sm_count",
-        "active_blocks", "block_threads", "warps_per_block", "iters",
+        "active_blocks", "block_threads", "warps_per_block", "issuer_count", "iters",
         "cycles", "mma_instruction_count", "cp_instruction_count",
         "processed_tiles", "effective_bytes_per_cp", "thor_tflops",
         "bytes_per_cycle", "cycles_per_cp", "cycles_per_tile",
@@ -703,6 +738,7 @@ def parse_result(text):
         "active_blocks": int(result["active_blocks"]),
         "block_threads": int(result["block_threads"]),
         "warps_per_block": int(result["warps_per_block"]),
+        "issuer_count": int(result["issuer_count"]),
         "iters": int(result["iters"]),
         "cycles": int(result["cycles"]),
         "mma_instruction_count": int(result["mma_instruction_count"]),
@@ -750,7 +786,7 @@ def write_report(results, checks, dev_name, cc, sm_count, freq_hz, iters):
     lines.append("Case: SS MMA-only, TS MMA-only, tcgen05.cp-only, TS CP+MMA Serial A1, TS CP+MMA Overlap A2")
     lines.append("Precision/K: BF16 K=16, FP8 K=32, FP4 K=64")
     lines.append("Shape: M128N64, M128N128, M128N256")
-    lines.append("Launch: FullSM4WarpBlock 风格，每 SM 一个 CTA，每 CTA 4 个发射 warp")
+    lines.append("Launch: 每 SM 一个 CTA，每 CTA 128 个线程 / 4 个 warp，其中仅 threadIdx.x==0 发射 tcgen05 指令")
     lines.append("")
     lines.append("反汇编检查")
     for key in iter_keys():
@@ -759,7 +795,8 @@ def write_report(results, checks, dev_name, cc, sm_count, freq_hz, iters):
         cfg = make_cfg(case_id, precision, shape)
         lines.append(
             f"{CASES[case_id]['label']} {cfg['shape_label']} {precision}: "
-            f"check={c['status']}；MMA SASS={c['expected_mma_sass'] or '-'}；cp={c['cp_suffix'] or '-'}。"
+            f"check={c['status']}；MMA SASS={c['expected_mma_sass'] or '-'}；"
+            f"cp PTX={c['cp_suffix'] or '-'}；cp SASS={c['expected_cp_sass'] or '-'}。"
         )
         if c["mma_sample"]:
             lines.append(f"  MMA sample: {c['mma_sample'][0]}")
