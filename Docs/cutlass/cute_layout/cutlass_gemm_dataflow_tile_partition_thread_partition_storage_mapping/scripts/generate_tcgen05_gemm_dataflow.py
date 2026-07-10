@@ -37,106 +37,116 @@ COLORS = {
     "compute_border": "#c53030",
     "sync": "#eef2ff",
     "sync_border": "#4f46e5",
-    "loop": "#f9fafb",
+    "config": "#f4f3ff",
+    "config_border": "#7c3aed",
     "lane": "#f8fafc",
     "legend": "#ffffff",
 }
 
 NODE_STYLES = {
     "gmem": {
+        "shape": "box",
         "style": "filled,rounded",
         "fillcolor": COLORS["gmem"],
         "color": COLORS["gmem_border"],
-        "shape": "box",
     },
     "smem": {
+        "shape": "box3d",
         "style": "filled,rounded",
         "fillcolor": COLORS["smem"],
         "color": COLORS["smem_border"],
-        "shape": "box3d",
     },
     "tmem": {
+        "shape": "box3d",
         "style": "filled,rounded",
         "fillcolor": COLORS["tmem"],
         "color": COLORS["tmem_border"],
-        "shape": "box3d",
     },
     "rmem": {
+        "shape": "box",
         "style": "filled,rounded",
         "fillcolor": COLORS["rmem"],
         "color": COLORS["rmem_border"],
-        "shape": "box",
     },
     "view": {
+        "shape": "box",
         "style": "filled,rounded,dashed",
         "fillcolor": COLORS["view"],
         "color": COLORS["view_border"],
-        "shape": "box",
     },
     "descriptor": {
+        "shape": "component",
         "style": "filled,rounded",
         "fillcolor": COLORS["descriptor"],
         "color": COLORS["descriptor_border"],
-        "shape": "component",
     },
     "copy": {
-        "style": "filled,rounded",
+        "shape": "box",
+        "style": "filled,rounded,bold",
         "fillcolor": COLORS["copy"],
         "color": COLORS["copy_border"],
-        "shape": "box",
     },
     "compute": {
+        "shape": "box",
         "style": "filled,rounded,bold",
         "fillcolor": COLORS["compute"],
         "color": COLORS["compute_border"],
-        "shape": "box",
-    },
-    "loop": {
-        "style": "filled,rounded,dashed",
-        "fillcolor": COLORS["loop"],
-        "color": "#98a2b3",
-        "shape": "box",
     },
     "sync": {
+        "shape": "box",
         "style": "filled,rounded",
         "fillcolor": COLORS["sync"],
         "color": COLORS["sync_border"],
-        "shape": "box",
+    },
+    "config": {
+        "shape": "note",
+        "style": "filled",
+        "fillcolor": COLORS["config"],
+        "color": COLORS["config_border"],
     },
 }
 
 EDGE_STYLES = {
     "data": {
         "color": "#1f2937",
-        "penwidth": "2.4",
+        "penwidth": "2.2",
         "style": "solid",
-        "arrowsize": "0.9",
+        "arrowsize": "0.85",
     },
     "view": {
         "color": "#667085",
-        "penwidth": "1.5",
-        "style": "dashed",
-        "arrowsize": "0.75",
-    },
-    "consume": {
-        "color": "#c53030",
-        "penwidth": "2.0",
-        "style": "dotted",
-        "arrowsize": "0.85",
-    },
-    "loop": {
-        "color": "#475467",
-        "penwidth": "1.3",
+        "penwidth": "1.4",
         "style": "dashed",
         "arrowsize": "0.7",
     },
+    "consume": {
+        "color": "#c53030",
+        "penwidth": "1.9",
+        "style": "dotted",
+        "arrowsize": "0.8",
+    },
     "sync": {
         "color": "#4f46e5",
-        "penwidth": "1.6",
+        "penwidth": "1.5",
         "style": "dashdot",
-        "arrowsize": "0.75",
+        "arrowsize": "0.72",
+    },
+    "loop": {
+        "color": "#475467",
+        "penwidth": "1.2",
+        "style": "dashed",
+        "arrowsize": "0.65",
     },
 }
+
+
+def html_label(title: str, subtitle: str = "", shape: str = "") -> str:
+    rows = [f'<FONT POINT-SIZE="13"><B>{html.escape(title)}</B></FONT>']
+    if subtitle:
+        rows.append(f'<FONT POINT-SIZE="9">{html.escape(subtitle)}</FONT>')
+    if shape:
+        rows.append(f'<FONT POINT-SIZE="9">{html.escape(shape)}</FONT>')
+    return "<" + "<BR/>".join(rows) + ">"
 
 
 def attrs(values: dict[str, str]) -> str:
@@ -149,15 +159,6 @@ def attrs(values: dict[str, str]) -> str:
     return ", ".join(rendered)
 
 
-def label(title: str, subtitle: str = "", shape: str = "") -> str:
-    rows = [f'<FONT POINT-SIZE="14"><B>{html.escape(title)}</B></FONT>']
-    if subtitle:
-        rows.append(f'<FONT POINT-SIZE="10">{html.escape(subtitle)}</FONT>')
-    if shape:
-        rows.append(f'<FONT POINT-SIZE="10">{html.escape(shape)}</FONT>')
-    return "<" + "<BR/>".join(rows) + ">"
-
-
 class DotBuilder:
     def __init__(self) -> None:
         self.lines: list[str] = []
@@ -168,189 +169,180 @@ class DotBuilder:
     def node(self, name: str, kind: str, title: str, subtitle: str = "", shape: str = "") -> None:
         node_attrs = {
             **NODE_STYLES[kind],
-            "label": label(title, subtitle, shape),
+            "label": html_label(title, subtitle, shape),
         }
         self.add(f"    {name} [{attrs(node_attrs)}];")
 
-    def edge(self, source: str, target: str, kind: str, edge_label: str = "", **extra: str) -> None:
+    def edge(self, source: str, target: str, kind: str, label: str = "", **extra: str) -> None:
         edge_attrs = {**EDGE_STYLES[kind], **extra}
-        if edge_label:
-            edge_attrs["label"] = edge_label
-            edge_attrs["fontsize"] = "10"
+        if label:
+            edge_attrs["label"] = label
+            edge_attrs["fontsize"] = "9"
             edge_attrs["fontcolor"] = edge_attrs["color"]
         self.add(f"    {source} -> {target} [{attrs(edge_attrs)}];")
 
 
-def build_operand_path(dot: DotBuilder, operand: str) -> None:
+def build_operand_lane(dot: DotBuilder, operand: str) -> None:
     lower = operand.lower()
-    shape = {
+    data = {
         "A": {
+            "tma_info": "tma_a",
+            "atom": "tma_a.atom",
             "matrix": "(M, K)",
             "tile": "(BM, BK, k)",
             "partition": "(MMA, MMA_M, MMA_K, k)",
             "fragment": "(MMA, MMA_M, MMA_K, STAGE)",
-            "tma_atom": "tma_a.atom",
             "tma_s": "tAsA",
             "tma_g": "tAgA",
-            "copy": "copy(tma_a.atom, tAgA[k_tile], tAsA[stage])",
-            "fragment_fn": "make_fragment_A(sA)",
+            "copy_call": "copy(tma_a.atom, tAgA[k_tile], tAsA[stage])",
             "partition_fn": "thr_mma.partition_A(gA)",
-            "tma_fn": "cpasync.tma_partition(...)",
+            "fragment_fn": "tiled_mma.make_fragment_A(sA)",
+            "group_s": "group_modes(sA, 0, 3)",
+            "group_tcg": "group_modes(tCgA, 0, 3)",
         },
         "B": {
+            "tma_info": "tma_b",
+            "atom": "tma_b.atom",
             "matrix": "(N, K)",
             "tile": "(BN, BK, k)",
             "partition": "(MMA, MMA_N, MMA_K, k)",
             "fragment": "(MMA, MMA_N, MMA_K, STAGE)",
-            "tma_atom": "tma_b.atom",
             "tma_s": "tBsB",
             "tma_g": "tBgB",
-            "copy": "copy(tma_b.atom, tBgB[k_tile], tBsB[stage])",
-            "fragment_fn": "make_fragment_B(sB)",
+            "copy_call": "copy(tma_b.atom, tBgB[k_tile], tBsB[stage])",
             "partition_fn": "thr_mma.partition_B(gB)",
-            "tma_fn": "cpasync.tma_partition(...)",
+            "fragment_fn": "tiled_mma.make_fragment_B(sB)",
+            "group_s": "group_modes(sB, 0, 3)",
+            "group_tcg": "group_modes(tCgB, 0, 3)",
         },
     }[operand]
 
     dot.add(f"  subgraph cluster_operand_{lower} {{")
     dot.add(f'    label="Operand {operand} Dataflow Path";')
-    dot.add(f'    color="{COLORS["lane"]}";')
     dot.add('    style="filled,rounded";')
+    dot.add(f'    color="{COLORS["lane"]}";')
     dot.add(f'    fillcolor="{COLORS["lane"]}";')
-    dot.add("    margin=18;")
+    dot.add("    margin=14;")
 
-    dot.node(f"m{operand}", "gmem", f"m{operand}", "Original GMEM tensor", shape["matrix"])
+    dot.node(f"tmaInfo{operand}", "config", f"{data['tma_info']}: TmaInfo", "kernel argument", "")
+    dot.node(f"m{operand}", "gmem", f"m{operand}", "Original GMEM tensor", data["matrix"])
+    dot.node(f"tmaAtom{operand}", "config", data["atom"], "TMA config object", "G2S atom")
+    dot.node(f"g{operand}", "view", f"g{operand}", "CTA/local GMEM tile", data["tile"])
+    dot.node(f"tCg{operand}", "view", f"tCg{operand}", "MMA thread partition", data["partition"])
     dot.node(
-        f"tmaAtom{operand}",
-        "copy",
-        shape["tma_atom"],
-        "TMA copy atom",
-        "CopyBulkTensorTileG2SOp",
-    )
-    dot.node(f"g{operand}", "view", f"g{operand}", "CTA/local GMEM tile", shape["tile"])
-    dot.node(f"tCg{operand}", "view", f"tCg{operand}", "MMA thread partition", shape["partition"])
-    dot.node(f"s{operand}", "smem", f"s{operand}", "Physical SMEM allocation", f"staged {operand} tile")
-    dot.node(
-        f"tCr{operand}",
-        "descriptor",
-        f"tCr{operand}",
-        "SMEM descriptor tensor",
-        shape["fragment"],
-    )
-    dot.node(
-        f"tma{operand}",
+        f"tmaViews{operand}",
         "view",
-        f"{shape['tma_s']} / {shape['tma_g']}",
-        "TMA-partitioned SMEM / GMEM views",
-        "stage and K-tile indexed",
+        f"{data['tma_s']} / {data['tma_g']}",
+        "TMA SMEM / GMEM views",
+        "stage, k_tile indexed",
     )
-    dot.node(f"copy{operand}", "copy", f"TMA copy loop {operand}", shape["copy"], "GMEM -> SMEM")
+    dot.node(f"copy{operand}", "copy", f"TMA copy loop {operand}", data["copy_call"], "GMEM -> SMEM")
+    dot.node(f"s{operand}", "smem", f"s{operand}", "Physical SMEM allocation", f"staged {operand} tile")
+    dot.node(f"tCr{operand}", "descriptor", f"tCr{operand}", "SMEM descriptor tensor", data["fragment"])
 
-    dot.edge(f"m{operand}", f"tmaAtom{operand}", "view", "tma_info.tma_tensor", constraint="false")
-    dot.edge(f"m{operand}", f"g{operand}", "view", f"local_tile(m{operand}, mma_tiler_mnk, mma_coord_mnk)")
-    dot.edge(f"g{operand}", f"tCg{operand}", "view", shape["partition_fn"])
-    dot.edge(f"s{operand}", f"tCr{operand}", "view", shape["fragment_fn"])
-    dot.edge(f"tmaAtom{operand}", f"tma{operand}", "view", shape["tma_fn"], constraint="false")
-    dot.edge(f"tCg{operand}", f"tma{operand}", "view", "group_modes(tCg*, 0, 3)")
-    dot.edge(f"s{operand}", f"tma{operand}", "view", "group_modes(s*, 0, 3)", constraint="false")
-    dot.edge(f"tma{operand}", f"copy{operand}", "view", f"{shape['tma_g']}[k_tile], {shape['tma_s']}[stage]")
-    dot.edge(f"copy{operand}", f"s{operand}", "data", f"writes staged {operand}")
+    dot.edge(f"tmaInfo{operand}", f"m{operand}", "view", "tma_tensor")
+    dot.edge(f"tmaInfo{operand}", f"tmaAtom{operand}", "view", "atom")
+    dot.edge(f"m{operand}", f"g{operand}", "view", f"local_tile(m{operand}, mma_tiler_mnk, coord)")
+    dot.edge(f"g{operand}", f"tCg{operand}", "view", data["partition_fn"])
+    dot.edge(f"tmaAtom{operand}", f"tmaViews{operand}", "view", "cpasync.tma_partition(...)")
+    dot.edge(f"tCg{operand}", f"tmaViews{operand}", "view", data["group_tcg"])
+    dot.edge(f"s{operand}", f"tmaViews{operand}", "view", data["group_s"], constraint="false")
+    dot.edge(f"tmaViews{operand}", f"copy{operand}", "view", f"{data['tma_g']}[k_tile], {data['tma_s']}[stage]")
+    dot.edge(f"copy{operand}", f"s{operand}", "data", "TMA write")
     dot.edge(f"copy{operand}", f"copy{operand}", "loop", "for k_tile / stage", constraint="false")
+    dot.edge(f"s{operand}", f"tCr{operand}", "view", data["fragment_fn"])
 
     dot.add("  }")
 
 
-def build_accumulator_path(dot: DotBuilder) -> None:
+def build_accumulator_lane(dot: DotBuilder) -> None:
     dot.add("  subgraph cluster_accumulator {")
     dot.add('    label="Accumulator C/D Dataflow Path";')
-    dot.add(f'    color="{COLORS["lane"]}";')
     dot.add('    style="filled,rounded";')
+    dot.add(f'    color="{COLORS["lane"]}";')
     dot.add(f'    fillcolor="{COLORS["lane"]}";')
-    dot.add("    margin=18;")
+    dot.add("    margin=14;")
 
-    dot.node("acc_shape", "view", "acc_shape", "MMA accumulator shape", "(MMA, MMA_M, MMA_N)")
-    dot.node("tmem_alloc", "tmem", "TmemAllocator", "allocate + retrieve_ptr", "TMEM columns")
-    dot.node("tCtAcc_layout", "view", "tCtAcc layout", "Accumulator fragment layout", "(MMA, MMA_M, MMA_N)")
-    dot.node("tCtAcc", "tmem", "tCtAcc", "TMEM accumulator tensor", "(MMA, MMA_M, MMA_N[, ACC_STAGE])")
+    dot.node("acc_shape", "view", "acc_shape", "partition_shape_C", "(MMA, MMA_M, MMA_N)")
+    dot.node("tCtAcc_layout", "view", "tCtAcc layout", "make_fragment_C(acc_shape)", "(MMA, MMA_M, MMA_N)")
+    dot.node("tmem_alloc", "tmem", "TmemAllocator", "allocate / retrieve_ptr", "TMEM columns")
+    dot.node("tCtAcc", "tmem", "tCtAcc", "TMEM accumulator tensor", "(MMA, MMA_M, MMA_N)")
+
     dot.node("mC", "gmem", "mC", "Output GMEM tensor", "(M, N)")
     dot.node("gC", "view", "gC", "CTA/local output tile", "(BM, BN)")
     dot.node("tCgC", "view", "tCgC", "Epilogue GMEM partition", "(MMA, MMA_M, MMA_N)")
-    dot.node("copy_atom_t2r", "copy", "copy_atom_t2r", "Ld32x32bOp", "Repetition.x64")
-    dot.node("t2r", "copy", "tiled_copy_t2r", "TMEM -> RMEM copy object", "anchored by tCtAcc slice")
-    dot.node("thr_copy_t2r", "view", "thr_copy_t2r", "tiled_copy_t2r.get_slice(tidx)", "per-thread copy slice")
-    dot.node("tTR_tAcc", "view", "tTR_tAcc", "thr_copy_t2r.partition_S(tCtAcc)", "(T2R, T2R_M, NumTiles)")
-    dot.node("tTR_gC", "view", "tTR_gC", "thr_copy_t2r.partition_D(tCgC)", "(T2R, T2R_M, NumTiles)")
+
+    dot.node("copy_atom_t2r", "config", "copy_atom_t2r", "TMEM load config", "Ld32x32bOp")
+    dot.node("tiled_copy_t2r", "config", "tiled_copy_t2r", "T2R copy config", "anchored by tCtAcc slice")
+    dot.node("thr_copy_t2r", "view", "thr_copy_t2r", "per-thread copy slice", "get_slice(tidx)")
+    dot.node("tTR_tAcc", "view", "tTR_tAcc", "TMEM source view", "(T2R, T2R_M, NumTiles)")
+    dot.node("tTR_gC", "view", "tTR_gC", "GMEM destination view", "(T2R, T2R_M, NumTiles)")
+    dot.node("ldtm", "copy", "LDTM copy", "TMEM -> RMEM", "per NumTiles")
     dot.node("tTR_rAcc", "rmem", "tTR_rAcc", "RMEM accumulator fragment", "(T2R, T2R_M)")
-    dot.node("ldtm", "copy", "LDTM copy", "TMEM -> RMEM", "for i in NumTiles")
-    dot.node("store", "copy", "Epilogue store", "RMEM -> GMEM", "for i in NumTiles")
+    dot.node("store", "copy", "Epilogue store", "RMEM -> GMEM", "per NumTiles")
+    dot.node("gmem_output", "gmem", "GMEM output region", "updated by epilogue store", "(BM, BN) in mC")
 
     dot.edge("acc_shape", "tCtAcc_layout", "view", "tiled_mma.make_fragment_C(acc_shape)")
-    dot.edge("tmem_alloc", "tCtAcc", "view", "retrieve_ptr(Float32)")
     dot.edge("tCtAcc_layout", "tCtAcc", "view", "cute.make_tensor(tmem_ptr, layout)")
-    dot.edge("mC", "gC", "view", "local_tile(mC, mma_tiler_mnk, mma_coord_mnk)")
+    dot.edge("tmem_alloc", "tCtAcc", "view", "retrieve_ptr(Float32)")
+    dot.edge("mC", "gC", "view", "local_tile(mC, mma_tiler_mnk, coord)")
     dot.edge("gC", "tCgC", "view", "thr_mma.partition_C(gC)")
-    dot.edge("copy_atom_t2r", "t2r", "view", "tcgen05.make_tmem_copy(...)")
-    dot.edge("tCtAcc", "t2r", "view", "tCtAcc[(None,None),0,0]")
-    dot.edge("t2r", "thr_copy_t2r", "view", "get_slice(tidx)")
+
+    dot.edge("copy_atom_t2r", "tiled_copy_t2r", "view", "tcgen05.make_tmem_copy(...)")
+    dot.edge("tCtAcc", "tiled_copy_t2r", "view", "tCtAcc[(None,None),0,0]")
+    dot.edge("tiled_copy_t2r", "thr_copy_t2r", "view", "get_slice(tidx)")
     dot.edge("thr_copy_t2r", "tTR_tAcc", "view", "partition_S(tCtAcc)")
     dot.edge("thr_copy_t2r", "tTR_gC", "view", "partition_D(tCgC)")
-    dot.edge("tCgC", "tTR_gC", "view", "destination layout")
+    dot.edge("tCgC", "tTR_gC", "view", "destination coordinates")
     dot.edge("tTR_tAcc", "ldtm", "view", "source tile")
-    dot.edge("tTR_gC", "tTR_rAcc", "view", "make_rmem_tensor(tTR_gC[None,None,0].shape)", constraint="false")
-    dot.edge("ldtm", "tTR_rAcc", "data", "cute.copy(tiled_copy_t2r, tTR_tAcc[None,None,i], tTR_rAcc)")
+    dot.edge("ldtm", "tTR_rAcc", "data", "tcgen05.ld / cute.copy")
+    dot.edge("tTR_gC", "tTR_rAcc", "view", "make_rmem_tensor(...)", constraint="false")
     dot.edge("tTR_rAcc", "store", "data", "register values")
     dot.edge("tTR_gC", "store", "view", "store coordinates")
-    dot.edge("store", "mC", "data", "cute.copy(store_atom, tTR_rAcc, tTR_gC[None,None,i])", constraint="false")
+    dot.edge("store", "gmem_output", "data", "cute.copy(store_atom, ...)")
 
     dot.add("  }")
 
 
-def build_execution_and_legend(dot: DotBuilder) -> None:
-    dot.add("  subgraph cluster_execution {")
-    dot.add('    label="MMA Execution and Pipeline";')
-    dot.add(f'    color="{COLORS["legend"]}";')
-    dot.add('    style="filled,rounded";')
-    dot.add(f'    fillcolor="{COLORS["legend"]}";')
-    dot.add("    margin=18;")
-    dot.node("pipeline", "loop", "AB pipeline", "producer/consumer stages", "repeat over K tiles")
-    dot.node("accumulate", "sync", "ACCUMULATE field", "False for first K tile, True after", "tcgen05.Field.ACCUMULATE")
-    dot.node(
-        "mma",
-        "compute",
-        "tcgen05 MMA main loop",
-        "cute.gemm(...)",
-        "tCrA/B[tile_crd], tCtAcc",
-    )
-    dot.add("  }")
+def build_convergence(dot: DotBuilder) -> None:
+    dot.node("pipeline", "sync", "AB pipeline", "producer commit / consumer wait", "per K tile")
+    dot.node("accumulate", "sync", "ACCUMULATE field", "False first K tile, True after", "")
+    dot.node("mma", "compute", "tcgen05 MMA main loop", "cute.gemm(...)", "reads A/B, updates tCtAcc")
 
-    dot.add("  subgraph cluster_legend {")
-    dot.add('    label="Legend";')
-    dot.add(f'    color="{COLORS["legend"]}";')
-    dot.add('    style="filled,rounded";')
-    dot.add(f'    fillcolor="{COLORS["legend"]}";')
-    dot.add("    margin=16;")
-    dot.node("legend_data_a", "gmem", "Physical storage", "GMEM / SMEM / TMEM / RMEM", "")
-    dot.node("legend_view_a", "view", "Tensor view", "tile, partition, descriptor derivation", "owns no data")
-    dot.node("legend_desc_a", "descriptor", "Fragment descriptor", "hardware-consumable SMEM descriptor", "")
-    dot.node("legend_copy_a", "copy", "Copy operation", "TMA, LDTM, epilogue store", "")
-    dot.node("legend_sync_a", "sync", "Pipeline / control", "barrier wait, stage ready, accumulate field", "")
-    dot.node("legend_mma_a", "compute", "Compute operation", "tcgen05.mma consumes operands", "")
-    dot.edge("legend_data_a", "legend_copy_a", "data", "actual data movement")
-    dot.edge("legend_view_a", "legend_desc_a", "view", "logical view derivation")
-    dot.edge("legend_copy_a", "legend_sync_a", "sync", "control dependency")
-    dot.edge("legend_desc_a", "legend_mma_a", "consume", "hardware consumption")
-    dot.add("  }")
-
-    dot.edge("copyA", "pipeline", "sync", "producer commit: A stage full", constraint="false")
-    dot.edge("copyB", "pipeline", "sync", "producer commit: B stage full", constraint="false")
+    dot.edge("copyA", "pipeline", "sync", "A stage full", constraint="false")
+    dot.edge("copyB", "pipeline", "sync", "B stage full", constraint="false")
     dot.edge("pipeline", "mma", "sync", "ab_consumer.wait_and_advance()")
     dot.edge("accumulate", "mma", "sync", "set before cute.gemm")
-    dot.edge("tCrA", "mma", "consume", "A descriptor/view", constraint="false")
-    dot.edge("tCrB", "mma", "consume", "B descriptor/view", constraint="false")
+    dot.edge("tCrA", "mma", "consume", "A descriptor", constraint="false")
+    dot.edge("tCrB", "mma", "consume", "B descriptor", constraint="false")
     dot.edge("tCtAcc", "mma", "consume", "accumulator input", constraint="false")
-    dot.edge("mma", "tCtAcc", "data", "TMEM result update")
+    dot.edge("mma", "tCtAcc", "consume", "compute update in TMEM")
     dot.edge("mma", "mma", "loop", "for k_tile_idx", constraint="false")
-    dot.edge("mma", "t2r", "data", "after main loop")
+    dot.edge("mma", "ldtm", "sync", "main loop complete", constraint="false")
+
+
+def build_legend(dot: DotBuilder) -> None:
+    dot.add("  subgraph cluster_legend {")
+    dot.add('    label="Legend";')
+    dot.add('    style="filled,rounded";')
+    dot.add(f'    color="{COLORS["legend"]}";')
+    dot.add(f'    fillcolor="{COLORS["legend"]}";')
+    dot.add("    margin=12;")
+
+    dot.node("legend_storage", "gmem", "Physical storage", "GMEM / SMEM / TMEM / RMEM", "")
+    dot.node("legend_view", "view", "Tensor view", "tile / partition", "owns no data")
+    dot.node("legend_config", "config", "Config object", "TmaInfo, copy atom, tiled copy", "")
+    dot.node("legend_desc", "descriptor", "Descriptor", "hardware-consumable SMEM view", "")
+    dot.node("legend_copy", "copy", "Actual copy", "TMA, LDTM, store", "")
+    dot.node("legend_compute", "compute", "Compute update", "tcgen05.mma updates TMEM", "")
+    dot.node("legend_sync", "sync", "Sync / control", "pipeline and loop ordering", "")
+
+    dot.edge("legend_storage", "legend_copy", "data", "actual data movement")
+    dot.edge("legend_view", "legend_desc", "view", "logical derivation")
+    dot.edge("legend_config", "legend_view", "view", "configures view/copy")
+    dot.edge("legend_desc", "legend_compute", "consume", "operand consumption")
+    dot.edge("legend_sync", "legend_compute", "sync", "control dependency")
+    dot.add("  }")
 
 
 def build_dot() -> str:
@@ -360,21 +352,30 @@ def build_dot() -> str:
     dot.add('    rankdir="TB",')
     dot.add('    compound="true",')
     dot.add('    splines="ortho",')
-    dot.add('    nodesep="0.55",')
-    dot.add('    ranksep="0.85",')
-    dot.add('    pad="0.25",')
+    dot.add('    nodesep="0.38",')
+    dot.add('    ranksep="0.58",')
+    dot.add('    pad="0.16",')
+    dot.add('    margin="0.02",')
     dot.add('    bgcolor="white",')
     dot.add(f'    fontname="{FONT}",')
     dot.add('    labelloc="t",')
     dot.add('    label="tcgen05 GEMM Dataflow: Tile Partitioning, Thread Partitioning, and Storage Mapping",')
-    dot.add('    fontsize="20"')
+    dot.add('    fontsize="18",')
+    dot.add('    size="30,18",')
+    dot.add('    ratio="compress"')
     dot.add("  ];")
-    dot.add(f'  node [fontname="{FONT}", fontsize="11", margin="0.09,0.07"];')
-    dot.add(f'  edge [fontname="{FONT}", fontsize="10"];')
-    build_operand_path(dot, "A")
-    build_operand_path(dot, "B")
-    build_accumulator_path(dot)
-    build_execution_and_legend(dot)
+    dot.add(f'  node [fontname="{FONT}", fontsize="10", margin="0.07,0.05"];')
+    dot.add(f'  edge [fontname="{FONT}", fontsize="9"];')
+
+    build_operand_lane(dot, "A")
+    build_operand_lane(dot, "B")
+    build_accumulator_lane(dot)
+    build_convergence(dot)
+    build_legend(dot)
+
+    dot.add('  tCrA -> legend_storage [style="invis", weight="8"];')
+    dot.add('  tCrB -> legend_storage [style="invis", weight="8"];')
+    dot.add('  gmem_output -> legend_storage [style="invis", weight="8"];')
     dot.add("}")
     return "\n".join(dot.lines) + "\n"
 

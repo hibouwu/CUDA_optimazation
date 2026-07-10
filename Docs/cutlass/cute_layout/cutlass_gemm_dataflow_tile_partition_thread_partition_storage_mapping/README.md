@@ -59,9 +59,7 @@ conda install -c conda-forge graphviz
 
 ![tcgen05 GEMM dataflow](./images/tcgen05_gemm_dataflow.svg)
 
-同时生成的 PNG 文件可用于不支持 SVG 的环境：
-
-![tcgen05 GEMM dataflow PNG](./images/tcgen05_gemm_dataflow.png)
+同时生成的 PNG 文件可用于不支持 SVG 的环境：[tcgen05_gemm_dataflow.png](./images/tcgen05_gemm_dataflow.png)。
 
 ## 图例说明
 
@@ -70,10 +68,11 @@ conda install -c conda-forge graphviz
 - 橙色节点表示 TMEM accumulator，例如 `tCtAcc`。
 - 紫色节点表示 RMEM/register fragment，例如 `tTR_rAcc`。
 - 灰色虚线节点表示 logical tensor view。Tile、partition、TMA view 都是不拥有新数据的坐标域视图。
+- 紫色 note 节点表示配置对象，例如 `tma_a: TmaInfo`、`tma_a.atom`、`copy_atom_t2r`、`tiled_copy_t2r`。它们配置 copy 或 view，不是实际 copy 操作本身。
 - 黄色 component 节点表示 descriptor/fragment tensor。`tCrA` 和 `tCrB` 的元素可以是硬件可消费的 SMEM descriptor。
 - 实线粗箭头表示实际数据移动，例如 TMA GMEM -> SMEM、TMEM -> RMEM、RMEM -> GMEM。
 - 虚线箭头表示 logical view transformation，例如 `local_tile`、`partition_A/B/C`、`tma_partition`、`partition_S/D`。
-- 点线红色箭头表示硬件消费或执行依赖，例如 `tcgen05.mma` 对 A/B descriptor 和 accumulator 的消费。
+- 点线红色箭头表示硬件消费或计算更新，例如 `tcgen05.mma` 对 A/B descriptor 的消费，以及对 TMEM accumulator 的更新。
 - 蓝色点划线箭头表示 pipeline 或控制依赖，例如 producer commit、consumer wait 和 `tcgen05.Field.ACCUMULATE` 设置；它不是数据搬运。
 - 回环虚线箭头表示 K tile 或 pipeline stage 循环。
 
@@ -81,25 +80,27 @@ conda install -c conda-forge graphviz
 
 Operand A 从 `mA` 开始，它是 GMEM 中的原始 A tensor，形状记为 `(M, K)`。
 
-1. `local_tile(mA, mma_tiler, coord)` 生成 CTA/local GMEM tile `gA`，符号形状为 `(BM, BK, k)`。
-2. `thr_mma.partition_A(gA)` 生成 MMA thread partition view `tCgA`，形状为 `(MMA, MMA_M, MMA_K, k)`。
-3. `sA` 是 staged A tile 的 SMEM physical allocation。
-4. `tiled_mma.make_fragment_A(sA)` 从同一个 SMEM tensor 派生 `tCrA`，形状为 `(MMA, MMA_M, MMA_K, STAGE)`。这里生成的是 descriptor tensor/view，不是把 operand 数据复制到寄存器。
-5. `cute.nvgpu.cpasync.tma_partition(...)` 对 `sA` 和 `tCgA` 建立 TMA copy view，得到 `tAsA` 和 `tAgA`。
-6. TMA producer loop 执行 `copy(tma_a.atom, tAgA[k_tile], tAsA[stage])`，实际把 A tile 从 GMEM 搬到 `sA`。
-7. consumer 侧在 pipeline stage ready 后，`tcgen05.mma` 通过 `tCrA[stage]` 消费 A operand descriptor/view。
+1. `tma_a: TmaInfo` 提供两类配置入口：`tma_a.tma_tensor` 派生出 `mA`，`tma_a.atom` 派生出 TMA copy atom 配置对象。
+2. `local_tile(mA, mma_tiler, coord)` 生成 CTA/local GMEM tile `gA`，符号形状为 `(BM, BK, k)`。
+3. `thr_mma.partition_A(gA)` 生成 MMA thread partition view `tCgA`，形状为 `(MMA, MMA_M, MMA_K, k)`。
+4. `sA` 是 staged A tile 的 SMEM physical allocation。
+5. `tiled_mma.make_fragment_A(sA)` 从同一个 SMEM tensor 派生 `tCrA`，形状为 `(MMA, MMA_M, MMA_K, STAGE)`。这里生成的是 descriptor tensor/view，不是把 operand 数据复制到寄存器。
+6. `cute.nvgpu.cpasync.tma_partition(...)` 对 `group_modes(sA, 0, 3)` 和 `group_modes(tCgA, 0, 3)` 建立 TMA copy view，得到 `tAsA` 和 `tAgA`。
+7. TMA producer loop 执行 `copy(tma_a.atom, tAgA[k_tile], tAsA[stage])`，实际把 A tile 从 GMEM 搬到 `sA`。
+8. consumer 侧在 pipeline stage ready 后，`tcgen05.mma` 通过 `tCrA[stage]` 消费 A operand descriptor/view。
 
 ## Operand B 路径
 
 Operand B 与 A 对称，但 partition 维度对应 N 维：
 
-1. `local_tile(mB, mma_tiler, coord)` 生成 `gB`，符号形状为 `(BN, BK, k)`。
-2. `thr_mma.partition_B(gB)` 生成 `tCgB`，形状为 `(MMA, MMA_N, MMA_K, k)`。
-3. `sB` 是 staged B tile 的 SMEM physical allocation。
-4. `tiled_mma.make_fragment_B(sB)` 派生 `tCrB`，形状为 `(MMA, MMA_N, MMA_K, STAGE)`。
-5. `cute.nvgpu.cpasync.tma_partition(...)` 得到 `tBsB` 和 `tBgB`。
-6. TMA producer loop 执行 `copy(tma_b.atom, tBgB[k_tile], tBsB[stage])`，实际把 B tile 从 GMEM 搬到 `sB`。
-7. `tcgen05.mma` 通过 `tCrB[stage]` 消费 B operand descriptor/view。B operand 在该路径中来自 SMEM。
+1. `tma_b: TmaInfo` 提供两类配置入口：`tma_b.tma_tensor` 派生出 `mB`，`tma_b.atom` 派生出 TMA copy atom 配置对象。
+2. `local_tile(mB, mma_tiler, coord)` 生成 `gB`，符号形状为 `(BN, BK, k)`。
+3. `thr_mma.partition_B(gB)` 生成 `tCgB`，形状为 `(MMA, MMA_N, MMA_K, k)`。
+4. `sB` 是 staged B tile 的 SMEM physical allocation。
+5. `tiled_mma.make_fragment_B(sB)` 派生 `tCrB`，形状为 `(MMA, MMA_N, MMA_K, STAGE)`。
+6. `cute.nvgpu.cpasync.tma_partition(...)` 对 `group_modes(sB, 0, 3)` 和 `group_modes(tCgB, 0, 3)` 建立 TMA copy view，得到 `tBsB` 和 `tBgB`。
+7. TMA producer loop 执行 `copy(tma_b.atom, tBgB[k_tile], tBsB[stage])`，实际把 B tile 从 GMEM 搬到 `sB`。
+8. `tcgen05.mma` 通过 `tCrB[stage]` 消费 B operand descriptor/view。B operand 在该路径中来自 SMEM。
 
 ## Accumulator C/D 与 epilogue 路径
 
@@ -117,17 +118,22 @@ Accumulator 路径不是 A/B 那种 GMEM -> SMEM staging，而是 TMEM resident 
 10. `cute.copy(tiled_copy_t2r, tTR_tAcc[None, None, i], tTR_rAcc)` 对应 LDTM / `tcgen05.ld` 路径，实际执行 TMEM -> RMEM。
 11. `cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])` 将 register fragment 写回 GMEM output tile。
 
-## 实际数据移动 vs. 逻辑 Tensor View 派生
+## 实际数据移动、计算更新与逻辑 Tensor View 派生
 
 `local_tile`、`partition_A/B/C`、`tma_partition`、`partition_S/D` 这类操作主要改变 tensor 的坐标域、分区方式或执行单元视角。它们不表示数据被复制到新的存储空间。
 
-真正的数据移动发生在 copy 或 MMA 执行路径中：
+实际数据搬运只发生在 copy 路径中：
 
 - `copy(tma_a.atom, tAgA[k_tile], tAsA[stage])`: GMEM -> SMEM。
 - `copy(tma_b.atom, tBgB[k_tile], tBsB[stage])`: GMEM -> SMEM。
-- `tcgen05.mma`: 通过 descriptor/view 消费 staged A/B，并更新 TMEM accumulator。
 - `cute.copy(tiled_copy_t2r, tTR_tAcc, tTR_rAcc)`: TMEM -> RMEM。
 - `cute.copy(store_atom, tTR_rAcc, tTR_gC)`: RMEM -> GMEM。
+
+计算更新发生在 MMA 路径中：
+
+- `tcgen05.mma` 通过 `tCrA` / `tCrB` descriptor/view 读取 A/B operand。
+- `tcgen05.mma` 更新 TMEM accumulator `tCtAcc`。
+- `mma -> ldtm` 只是 main loop 完成后的控制依赖，不表示 MMA 把数据搬运到 T2R copy object。
 
 ## Fragment descriptor tensor 的作用
 
