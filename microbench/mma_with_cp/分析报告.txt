@@ -1,0 +1,495 @@
+Thor tcgen05 cp + MMA pipeline 微基准报告
+生成时间: 2026-07-10 08:06:45 UTC
+
+设备信息
+GPU: NVIDIA Thor
+Compute Capability: 11.0
+SM 数量: 20
+频率: 1.575 GHz
+压测 iters: 10000
+
+测试维度
+Case: SS MMA-only, TS MMA-only, SS MMA Mainloop K2/K4/K8/K16, TS CP+MMA Mainloop A2 K2/K4/K8/K16, tcgen05.cp-only, TS CP+MMA Serial A1, TS CP+MMA Overlap A2, TS CP+MMA Warp Split A2
+Precision/K: BF16 K=16, FP8 K=32, FP4 K=64
+Shape: M128N256, M128N128, M128N64
+形状策略: 默认跑 M128N64/M128N128/M128N256；可用 --primary-shape-only 快速只跑 M128N256
+Launch: 每 SM 一个 CTA，每 CTA 128 个线程 / 4 个 warp；per-tile 和 cp-only case 仅 threadIdx.x==0 发射；Warp Split A2 使用 threadIdx.x==0 发 cp、threadIdx.x==32 发 MMA
+
+使用路径真实性审查
+1. 普通 dense GEMM 主路径主要是 SS：TMA/其它 loader 把 A/B 放到 SMEM，tcgen05.mma 直接消费 A/B SMEM descriptor，accumulator 写 TMEM。
+2. SS MMA Mainloop K2/K4/K8/K16 是本报告最接近 CUTLASS/CuTe dense GEMM mainloop 的 sweep：同一 K tile 内连发多条 K-block SS MMA，再等待一次完成后才认为 SMEM stage 可复用。
+3. TS CP+MMA Mainloop A2 K2/K4/K8/K16 是 TS A-from-TMEM 的专项 mainloop-like sweep：每个 K-block 发 cp(next A panel)+mma(current A panel) 并等待，保证下一条 TS MMA 消费的 TMEM A 已完成。它比 TS MMA-only 更真实，但仍不代表普通 dense GEMM 默认路径。
+4. TS A-from-TMEM 是合法硬件路径，但更适合 FMHA、mixed-input GEMM 或其它需要 TMEM A 暂存/复用的专项算子；本文 TS CP+MMA 系列不应被解读为普通 dense GEMM 默认路径。
+5. SS/TS MMA-only 是 forced-wait 诊断微基准：每条 MMA 后立即 commit+wait，故意破坏异步流水，只暴露单指令 completion/latency 成本；它不是峰值测试，也不是高性能 GEMM mainloop。
+
+反汇编检查
+SS MMA-only M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c30*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], tmem[UR16], UP0 ;  /* 0x80101208060075ea */
+SS MMA-only M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+SS MMA-only M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+SS MMA-only M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c30*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], tmem[UR16], UP0 ;  /* 0x80101208060075ea */
+SS MMA-only M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+SS MMA-only M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+SS MMA-only M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c30*/                   UTCOMMA.4X gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], tmem[UR16], UP0 ;  /* 0x80101208060075ea */
+SS MMA-only M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCQMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+SS MMA-only M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0c10*/                   UTCHMMA gdesc[UR6], gdesc[UR8], tmem[UR14], tmem[UR16], idesc[UR17], UP0 ;  /* 0x00ff1008060075ea */
+TS MMA-only M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0dc0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1006080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;                             /* 0x00010004090079e7 */
+TS MMA-only M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCQMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+TS MMA-only M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCHMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+TS MMA-only M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0dc0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1006080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;                             /* 0x00010004090079e7 */
+TS MMA-only M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCQMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+TS MMA-only M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCHMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+TS MMA-only M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0dc0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1006080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;                             /* 0x00010004090079e7 */
+TS MMA-only M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCQMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+TS MMA-only M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0da0*/                   UTCHMMA tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR14], idesc[UR15], UP0 ;  /* 0x00ff0e06080079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;                       /* 0x00010004090079e7 */
+SS MMA Mainloop K2 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cd0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR24], idesc[UR25], tmem[UR20], UP0 ;   /* 0x801418080a0075ea */
+SS MMA Mainloop K2 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K2 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K2 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cd0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR24], idesc[UR25], tmem[UR20], UP0 ;   /* 0x801418080a0075ea */
+SS MMA Mainloop K2 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K2 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K2 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cd0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR24], idesc[UR25], tmem[UR20], UP0 ;   /* 0x801418080a0075ea */
+SS MMA Mainloop K2 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K2 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0cb0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR17], tmem[UR22], idesc[UR23], UP0 ;   /* 0x00ff16080a0075ea */
+SS MMA Mainloop K4 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0df0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR29], tmem[UR30], idesc[UR31], tmem[UR26], UP0 ;   /* 0x801a1e080a0075ea */
+SS MMA Mainloop K4 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K4 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K4 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0df0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR29], tmem[UR30], idesc[UR31], tmem[UR26], UP0 ;   /* 0x801a1e080a0075ea */
+SS MMA Mainloop K4 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K4 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K4 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0df0*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR29], tmem[UR30], idesc[UR31], tmem[UR26], UP0 ;   /* 0x801a1e080a0075ea */
+SS MMA Mainloop K4 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K4 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0dd0*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR27], tmem[UR28], idesc[UR29], UP0 ;   /* 0x00ff1c080a0075ea */
+SS MMA Mainloop K8 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f70*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR24], tmem[UR32], idesc[UR33], tmem[UR18], UP0 ;   /* 0x801220080a0075ea */
+SS MMA Mainloop K8 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f50*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K8 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f50*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K8 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f70*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR24], tmem[UR32], idesc[UR33], tmem[UR18], UP0 ;   /* 0x801220080a0075ea */
+SS MMA Mainloop K8 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f50*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K8 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*0f50*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K8 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*1030*/                   UTCOMMA.4X gdesc[UR10], gdesc[UR8], tmem[UR24], tmem[UR32], idesc[UR33], tmem[UR18], UP0 ;   /* 0x801220080a0075ea */
+SS MMA Mainloop K8 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1010*/                   UTCQMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K8 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1010*/                   UTCHMMA gdesc[UR10], gdesc[UR8], tmem[UR22], tmem[UR32], idesc[UR33], UP0 ;   /* 0x00ff20080a0075ea */
+SS MMA Mainloop K16 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*1450*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UP0 ;  /* 0x8026242a2c0075ea */
+SS MMA Mainloop K16 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1410*/                   UTCQMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+SS MMA Mainloop K16 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1410*/                   UTCHMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+SS MMA Mainloop K16 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*1390*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UP0 ;  /* 0x8026242a2c0075ea */
+SS MMA Mainloop K16 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1350*/                   UTCQMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+SS MMA Mainloop K16 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1350*/                   UTCHMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+SS MMA Mainloop K16 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=-；cp SASS=-。
+  MMA sample: /*14d0*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UP0 ;  /* 0x8026242a2c0075ea */
+SS MMA Mainloop K16 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1490*/                   UTCQMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+SS MMA Mainloop K16 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=-；cp SASS=-。
+  MMA sample: /*1490*/                   UTCHMMA gdesc[UR66], gdesc[UR68], tmem[UR7], tmem[UR70], idesc[UR71], UP0 ;  /* 0x00ff4644420075ea */
+TS CP+MMA Mainloop A2 K2 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f10*/                   UTCOMMA.4X tmem[UR20], gdesc[UR8], tmem[UR21], tmem[UR26], idesc[UR27], tmem[UR18], UP0 ;   /* 0x80121a08140079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR21+0x100], gdesc[UR4] ;                               /* 0x00010004150079e7 */
+TS CP+MMA Mainloop A2 K2 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCQMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K2 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCHMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K2 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f10*/                   UTCOMMA.4X tmem[UR20], gdesc[UR8], tmem[UR21], tmem[UR26], idesc[UR27], tmem[UR18], UP0 ;   /* 0x80121a08140079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR21+0x100], gdesc[UR4] ;                               /* 0x00010004150079e7 */
+TS CP+MMA Mainloop A2 K2 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCQMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K2 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCHMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K2 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f10*/                   UTCOMMA.4X tmem[UR20], gdesc[UR8], tmem[UR21], tmem[UR26], idesc[UR27], tmem[UR18], UP0 ;   /* 0x80121a08140079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR21+0x100], gdesc[UR4] ;                               /* 0x00010004150079e7 */
+TS CP+MMA Mainloop A2 K2 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCQMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K2 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0ef0*/                   UTCHMMA tmem[UR18], gdesc[UR8], tmem[UR19], tmem[UR24], idesc[UR25], UP0 ;   /* 0x00ff1808120079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR19+0x100], gdesc[UR4] ;                         /* 0x00010004130079e7 */
+TS CP+MMA Mainloop A2 K4 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*1030*/                   UTCOMMA.4X tmem[UR29], gdesc[UR6], tmem[UR28], tmem[UR32], idesc[UR33], tmem[UR24], UP0 ;   /* 0x801820061d0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR28+0x100], gdesc[UR6] ;                               /* 0x000100061c0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCQMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCHMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*1030*/                   UTCOMMA.4X tmem[UR29], gdesc[UR6], tmem[UR28], tmem[UR32], idesc[UR33], tmem[UR24], UP0 ;   /* 0x801820061d0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR28+0x100], gdesc[UR6] ;                               /* 0x000100061c0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCQMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCHMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*1030*/                   UTCOMMA.4X tmem[UR29], gdesc[UR6], tmem[UR28], tmem[UR32], idesc[UR33], tmem[UR24], UP0 ;   /* 0x801820061d0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR28+0x100], gdesc[UR6] ;                               /* 0x000100061c0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCQMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K4 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1010*/                   UTCHMMA tmem[UR27], gdesc[UR6], tmem[UR26], tmem[UR30], idesc[UR31], UP0 ;   /* 0x00ff1e061b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR26+0x100], gdesc[UR6] ;                         /* 0x000100061a0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*11a0*/                   UTCOMMA.4X tmem[UR46], gdesc[UR8], tmem[UR45], tmem[UR48], idesc[UR49], tmem[UR42], UP0 ;   /* 0x802a30082e0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR45+0x100], gdesc[UR6] ;                               /* 0x000100062d0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1180*/                   UTCQMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1180*/                   UTCHMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*11a0*/                   UTCOMMA.4X tmem[UR46], gdesc[UR8], tmem[UR45], tmem[UR48], idesc[UR49], tmem[UR42], UP0 ;   /* 0x802a30082e0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR45+0x100], gdesc[UR6] ;                               /* 0x000100062d0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1180*/                   UTCQMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1180*/                   UTCHMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*1260*/                   UTCOMMA.4X tmem[UR46], gdesc[UR8], tmem[UR45], tmem[UR48], idesc[UR49], tmem[UR42], UP0 ;   /* 0x802a30082e0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR45+0x100], gdesc[UR6] ;                               /* 0x000100062d0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1240*/                   UTCQMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K8 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1240*/                   UTCHMMA tmem[UR44], gdesc[UR8], tmem[UR43], tmem[UR46], idesc[UR47], UP0 ;   /* 0x00ff2e082c0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit tmem[UR43+0x100], gdesc[UR6] ;                         /* 0x000100062b0079e7 */
+TS CP+MMA Mainloop A2 K16 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*1660*/                   UTCOMMA.4X tmem[UR11], gdesc[UR68], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UP0 ;  /* 0x80464a440b0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR4] ;                               /* 0x000100040f0079e7 */
+TS CP+MMA Mainloop A2 K16 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1640*/                   UTCQMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+TS CP+MMA Mainloop A2 K16 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1640*/                   UTCHMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0b90*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+TS CP+MMA Mainloop A2 K16 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*15a0*/                   UTCOMMA.4X tmem[UR11], gdesc[UR68], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UP0 ;  /* 0x80464a440b0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR4] ;                               /* 0x000100040f0079e7 */
+TS CP+MMA Mainloop A2 K16 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1580*/                   UTCQMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+TS CP+MMA Mainloop A2 K16 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*1580*/                   UTCHMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0ad0*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+TS CP+MMA Mainloop A2 K16 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*16e0*/                   UTCOMMA.4X tmem[UR11], gdesc[UR68], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UP0 ;  /* 0x80464a440b0079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR4] ;                               /* 0x000100040f0079e7 */
+TS CP+MMA Mainloop A2 K16 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*16c0*/                   UTCQMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+TS CP+MMA Mainloop A2 K16 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*16c0*/                   UTCHMMA tmem[UR13], gdesc[UR68], tmem[UR17], tmem[UR72], idesc[UR73], UP0 ;  /* 0x00ff48440d0079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit tmem[UR17+0x100], gdesc[UR4] ;                         /* 0x00010004110079e7 */
+tcgen05.cp-only M128N64K64 FP4: check=ok；MMA SASS=-；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;  /* 0x00010004090099e7 */
+tcgen05.cp-only M128N64K32 FP8: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+tcgen05.cp-only M128N64K16 BF16: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+tcgen05.cp-only M128N128K64 FP4: check=ok；MMA SASS=-；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;  /* 0x00010004090099e7 */
+tcgen05.cp-only M128N128K32 FP8: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+tcgen05.cp-only M128N128K16 BF16: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+tcgen05.cp-only M128N256K64 FP4: check=ok；MMA SASS=-；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;  /* 0x00010004090099e7 */
+tcgen05.cp-only M128N256K32 FP8: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+tcgen05.cp-only M128N256K16 BF16: check=ok；MMA SASS=-；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  cp sample: /*0900*/                   @!UP1 UTCCP.T.S.128dp128bit tmem[UR9+0x100], gdesc[UR4] ;         /* 0x00010004090099e7 */
+TS CP+MMA Serial A1 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0db0*/                   UTCOMMA.4X tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP0 ;  /* 0x80121408110079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCQMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCHMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0db0*/                   UTCOMMA.4X tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP0 ;  /* 0x80121408110079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCQMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCHMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0db0*/                   UTCOMMA.4X tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP0 ;  /* 0x80121408110079ea */
+  cp sample: /*0c10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCQMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Serial A1 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0d90*/                   UTCHMMA tmem[UR17], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff1208110079ea */
+  cp sample: /*0bf0*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Overlap A2 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0e10*/                   UTCOMMA.4X tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR20], idesc[UR21], tmem[UR16], UP0 ;  /* 0x801014080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR12+0x100], gdesc[UR6] ;                              /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCQMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCHMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0e10*/                   UTCOMMA.4X tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR20], idesc[UR21], tmem[UR16], UP0 ;  /* 0x801014080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR12+0x100], gdesc[UR6] ;                              /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCQMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCHMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0e10*/                   UTCOMMA.4X tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR20], idesc[UR21], tmem[UR16], UP0 ;  /* 0x801014080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR12+0x100], gdesc[UR6] ;                              /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCQMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Overlap A2 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0df0*/                   UTCHMMA tmem[UR13], gdesc[UR8], tmem[UR12], tmem[UR18], idesc[UR19], UP0 ;  /* 0x00ff12080d0079ea */
+  cp sample: /*0b10*/                   UTCCP.T.S.128dp128bit tmem[UR12+0x100], gdesc[UR6] ;                        /* 0x000100060c0079e7 */
+TS CP+MMA Warp Split A2 M128N64K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f50*/                   UTCOMMA.4X tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP1 ;  /* 0x801214080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N64K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCQMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N64K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCHMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N128K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f50*/                   UTCOMMA.4X tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP1 ;  /* 0x801214080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N128K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCQMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N128K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCHMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N256K64 FP4: check=ok；MMA SASS=UTCOMMA.4X；cp PTX=128x128b.b8x16.b4x16_p64；cp SASS=UTCCP 128DP128BIT U4X16P64。
+  MMA sample: /*0f50*/                   UTCOMMA.4X tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP1 ;  /* 0x801214080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N256K32 FP8: check=ok；MMA SASS=UTCQMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCQMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+TS CP+MMA Warp Split A2 M128N256K16 BF16: check=ok；MMA SASS=UTCHMMA；cp PTX=128x128b；cp SASS=UTCCP 128DP128BIT。
+  MMA sample: /*0f30*/                   UTCHMMA tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR18], idesc[UR19], UP1 ;  /* 0x00ff12080f0079ea */
+  cp sample: /*0b20*/                   UTCCP.T.S.128dp128bit tmem[UR14+0x100], gdesc[UR6] ;                        /* 0x000100060e0079e7 */
+
+MMA-only forced-wait per-instruction completion TFLOP/s 与 Peak Ratio
+|Precision|Shape|K|SS MMA-only TFLOP/s|TS MMA-only TFLOP/s|SS Peak Ratio|TS Peak Ratio|
+|---|---|---:|---:|---:|---:|---:|
+|FP4|M128N256|64|294.902|373.198|28.49%|36.06%|
+|FP4|M128N128|64|213.080|248.331|20.59%|23.99%|
+|FP4|M128N64|64|124.165|124.166|12.00%|12.00%|
+|FP8|M128N256|32|147.451|186.599|28.52%|36.09%|
+|FP8|M128N128|32|123.933|124.166|23.97%|24.02%|
+|FP8|M128N64|32|62.083|62.083|12.01%|12.01%|
+|BF16|M128N256|16|73.726|93.300|28.52%|36.09%|
+|BF16|M128N128|16|61.966|62.083|23.97%|24.02%|
+|BF16|M128N64|16|31.041|31.041|12.01%|12.01%|
+
+CUTLASS-style SS mainloop K-block sweep throughput
+|Precision|Shape|K blocks|K tile|TFLOP/s|Peak Ratio|cycles/CTA K-tile|cycles/MMA|
+|---|---|---:|---:|---:|---:|---:|---:|
+|FP4|M128N256|2|128|537.042|51.89%|492.031|246.016|
+|FP4|M128N256|4|256|711.248|68.72%|743.035|185.759|
+|FP4|M128N256|8|512|836.181|80.79%|1264.038|158.005|
+|FP4|M128N256|16|1024|921.887|89.07%|2293.045|143.315|
+|FP4|M128N128|2|128|331.935|32.07%|398.031|199.016|
+|FP4|M128N128|4|256|452.060|43.68%|584.526|146.132|
+|FP4|M128N128|8|512|688.999|66.57%|767.029|95.879|
+|FP4|M128N128|16|1024|832.884|80.47%|1269.041|79.315|
+|FP4|M128N64|2|128|213.081|20.59%|310.024|155.012|
+|FP4|M128N64|4|256|327.819|31.67%|403.029|100.757|
+|FP4|M128N64|8|512|447.091|43.20%|591.023|73.878|
+|FP4|M128N64|16|1024|513.069|49.57%|1030.042|64.378|
+|FP8|M128N256|2|64|268.521|51.94%|492.031|246.015|
+|FP8|M128N256|4|128|356.100|68.88%|742.041|185.510|
+|FP8|M128N256|8|256|418.423|80.93%|1263.033|157.879|
+|FP8|M128N256|16|512|461.145|89.20%|2292.045|143.253|
+|FP8|M128N128|2|64|165.968|32.10%|398.031|199.015|
+|FP8|M128N128|4|128|226.030|43.72%|584.526|146.132|
+|FP8|M128N128|8|256|344.500|66.63%|767.029|95.879|
+|FP8|M128N128|16|512|416.771|80.61%|1268.041|79.253|
+|FP8|M128N64|2|64|106.541|20.61%|310.024|155.012|
+|FP8|M128N64|4|128|164.113|31.74%|402.529|100.632|
+|FP8|M128N64|8|256|223.925|43.31%|590.023|73.753|
+|FP8|M128N64|16|512|256.535|49.62%|1030.041|64.378|
+|BF16|M128N256|2|32|134.260|51.94%|492.031|246.016|
+|BF16|M128N256|4|64|178.049|68.88%|742.044|185.511|
+|BF16|M128N256|8|128|209.210|80.93%|1263.042|157.880|
+|BF16|M128N256|16|256|230.572|89.20%|2292.049|143.253|
+|BF16|M128N128|2|32|82.984|32.10%|398.031|199.015|
+|BF16|M128N128|4|64|113.015|43.72%|584.526|146.132|
+|BF16|M128N128|8|128|172.250|66.63%|767.029|95.879|
+|BF16|M128N128|16|256|208.385|80.61%|1268.041|79.253|
+|BF16|M128N64|2|32|53.270|20.61%|310.024|155.012|
+|BF16|M128N64|4|64|82.057|31.74%|402.529|100.632|
+|BF16|M128N64|8|128|111.962|43.31%|590.023|73.753|
+|BF16|M128N64|16|256|128.267|49.62%|1030.041|64.378|
+
+TS CP+MMA Mainloop A2 K-group sweep throughput
+|Precision|Shape|K blocks|K tile|TFLOP/s|Peak Ratio|cycles/CTA K-tile|cycles/MMA|cp inst/K tile|
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+|FP4|M128N256|2|128|331.221|32.00%|797.779|398.889|2|
+|FP4|M128N256|4|256|331.018|31.98%|1596.534|399.134|4|
+|FP4|M128N256|8|512|331.126|31.99%|3192.028|399.003|8|
+|FP4|M128N256|16|1024|332.272|32.10%|6362.040|397.628|16|
+|FP4|M128N128|2|128|214.647|20.74%|615.524|307.762|2|
+|FP4|M128N128|4|256|214.651|20.74%|1231.030|307.757|4|
+|FP4|M128N128|8|512|213.958|20.67%|2470.023|308.753|8|
+|FP4|M128N128|16|1024|214.654|20.74%|4924.034|307.752|16|
+|FP4|M128N64|2|128|107.324|10.37%|615.524|307.762|2|
+|FP4|M128N64|4|256|107.325|10.37%|1231.030|307.757|4|
+|FP4|M128N64|8|512|106.979|10.34%|2470.023|308.753|8|
+|FP4|M128N64|16|1024|107.196|10.36%|4930.034|308.127|16|
+|FP8|M128N256|2|64|165.145|31.94%|800.028|400.014|2|
+|FP8|M128N256|4|128|165.613|32.03%|1595.534|398.884|4|
+|FP8|M128N256|8|256|165.667|32.04%|3190.027|398.753|8|
+|FP8|M128N256|16|512|166.607|32.23%|6344.041|396.503|16|
+|FP8|M128N128|2|64|107.324|20.76%|615.524|307.762|2|
+|FP8|M128N128|4|128|107.325|20.76%|1231.030|307.757|4|
+|FP8|M128N128|8|256|107.008|20.70%|2469.356|308.669|8|
+|FP8|M128N128|16|512|107.349|20.76%|4923.034|307.690|16|
+|FP8|M128N64|2|64|53.662|10.38%|615.524|307.762|2|
+|FP8|M128N64|4|128|53.663|10.38%|1231.030|307.757|4|
+|FP8|M128N64|8|256|53.504|10.35%|2469.356|308.669|8|
+|FP8|M128N64|16|512|53.653|10.38%|4925.034|307.815|16|
+|BF16|M128N256|2|32|82.572|31.94%|800.028|400.014|2|
+|BF16|M128N256|4|64|82.806|32.03%|1595.534|398.884|4|
+|BF16|M128N256|8|128|82.834|32.04%|3190.027|398.753|8|
+|BF16|M128N256|16|256|83.304|32.23%|6344.040|396.502|16|
+|BF16|M128N128|2|32|53.662|20.76%|615.524|307.762|2|
+|BF16|M128N128|4|64|53.663|20.76%|1231.030|307.757|4|
+|BF16|M128N128|8|128|53.504|20.70%|2469.356|308.669|8|
+|BF16|M128N128|16|256|53.674|20.76%|4923.034|307.690|16|
+|BF16|M128N64|2|32|26.831|10.38%|615.524|307.762|2|
+|BF16|M128N64|4|64|26.831|10.38%|1231.030|307.757|4|
+|BF16|M128N64|8|128|26.752|10.35%|2469.356|308.669|8|
+|BF16|M128N64|16|256|26.826|10.38%|4925.034|307.815|16|
+
+tcgen05.cp-only
+|Precision|Shape|cp suffix|effective bytes/cp|cp instruction count|elapsed cycles|bytes/cycle|cycles/cp|
+|---|---|---|---:|---:|---:|---:|---:|
+|FP4|M128N256|128x128b.b8x16.b4x16_p64|2048|200000|476820|859.024|2.384|
+|FP4|M128N128|128x128b.b8x16.b4x16_p64|2048|200000|476820|859.024|2.384|
+|FP4|M128N64|128x128b.b8x16.b4x16_p64|2048|200000|476820|859.024|2.384|
+|FP8|M128N256|128x128b|2048|200000|476820|859.024|2.384|
+|FP8|M128N128|128x128b|2048|200000|476820|859.024|2.384|
+|FP8|M128N64|128x128b|2048|200000|476820|859.024|2.384|
+|BF16|M128N256|128x128b|2048|200000|476820|859.024|2.384|
+|BF16|M128N128|128x128b|2048|200000|476820|859.024|2.384|
+|BF16|M128N64|128x128b|2048|200000|476820|859.024|2.384|
+
+CP+MMA pipeline
+|Precision|Shape|Serial A1 TFLOP/s|Serial A1 cycles/tile|Overlap A2 TFLOP/s|Overlap A2 cycles/tile|Overlap Gain|Warp Split A2 TFLOP/s|Warp Split A2 cycles/tile|Warp Split Gain|
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+|FP4|M128N256|214.210|30.839|331.938|19.901|1.550x|300.601|21.976|1.403x|
+|FP4|M128N128|124.931|26.439|213.083|15.501|1.706x|150.301|21.976|1.203x|
+|FP4|M128N64|62.466|26.439|106.542|15.501|1.706x|75.150|21.976|1.203x|
+|FP8|M128N256|107.105|30.839|165.969|19.901|1.550x|150.045|22.014|1.401x|
+|FP8|M128N128|62.466|26.439|106.542|15.501|1.706x|75.022|22.014|1.201x|
+|FP8|M128N64|31.233|26.439|53.271|15.501|1.706x|37.511|22.014|1.201x|
+|BF16|M128N256|53.552|30.839|82.985|19.901|1.550x|75.022|22.014|1.401x|
+|BF16|M128N128|31.233|26.439|53.271|15.501|1.706x|37.511|22.014|1.201x|
+|BF16|M128N64|15.616|26.439|26.635|15.501|1.706x|18.756|22.014|1.201x|
+
+图 5 speedup 数据源
+|Case|BF16-N64|BF16-N128|BF16-N256|FP8-N64|FP8-N128|FP8-N256|FP4-N64|FP4-N128|FP4-N256|
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+|SS MMA-only|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|1.00x|
+|TS MMA-only|1.00x|1.00x|1.27x|1.00x|1.00x|1.27x|1.00x|1.17x|1.27x|
+|SS MMA Mainloop K2|1.72x|1.34x|1.82x|1.72x|1.34x|1.82x|1.72x|1.56x|1.82x|
+|SS MMA Mainloop K4|2.64x|1.82x|2.42x|2.64x|1.82x|2.42x|2.64x|2.12x|2.41x|
+|SS MMA Mainloop K8|3.61x|2.78x|2.84x|3.61x|2.78x|2.84x|3.60x|3.23x|2.84x|
+|SS MMA Mainloop K16|4.13x|3.36x|3.13x|4.13x|3.36x|3.13x|4.13x|3.91x|3.13x|
+|TS CP+MMA Mainloop A2 K2|0.86x|0.87x|1.12x|0.86x|0.87x|1.12x|0.86x|1.01x|1.12x|
+|TS CP+MMA Mainloop A2 K4|0.86x|0.87x|1.12x|0.86x|0.87x|1.12x|0.86x|1.01x|1.12x|
+|TS CP+MMA Mainloop A2 K8|0.86x|0.86x|1.12x|0.86x|0.86x|1.12x|0.86x|1.00x|1.12x|
+|TS CP+MMA Mainloop A2 K16|0.86x|0.87x|1.13x|0.86x|0.87x|1.13x|0.86x|1.01x|1.13x|
+|TS CP+MMA Serial A1|0.50x|0.50x|0.73x|0.50x|0.50x|0.73x|0.50x|0.59x|0.73x|
+|TS CP+MMA Overlap A2|0.86x|0.86x|1.13x|0.86x|0.86x|1.13x|0.86x|1.00x|1.13x|
+|TS CP+MMA Warp Split A2|0.60x|0.61x|1.02x|0.60x|0.61x|1.02x|0.61x|0.71x|1.02x|
+
+说明
+1. cp suffix 和 effective bytes/cp 来自脚本配置；低精度 packed copy 的有效字节口径需要结合最终 SASS/NCU 再确认。
+2. Serial A1 在每轮 cp 和 MMA 后都等待完成；Overlap A2 先预填一个 A slot，再由同一 issuer 交错发 cp(next) 和 mma(current)。
+3. SS MMA Mainloop K2/K4/K8/K16 模拟 CUTLASS/CuTe 常见主循环边界：同一 issuer 连发多个 K-block MMA，再等待一次 MMA 完成后才认为 SMEM tile 可复用；cycles/MMA 用来观察等待成本摊薄是否进入平台期。
+4. TS CP+MMA Mainloop A2 K2/K4/K8/K16 每个 K-block 都发 cp(next A panel)+mma(current A panel) 并等待；它测的是 TS A-from-TMEM 路径的稳态 K-group 成本，不是 SS dense GEMM 主路径。
+5. Warp Split A2 使用 threadIdx.x==0 发 cp(next)、threadIdx.x==32 发 mma(current)，每轮等待两个 issuer 的 commit 完成。
+6. SS/TS MMA-only 按每条 MMA 后 commit+wait 的 forced-wait completion 口径计时，目的是破坏异步流水并测单指令完成边界；删除 grouped/4Warp slice 后，所有 MMA TFLOP/s 都按完整 shape atom 统计。
+7. TFLOP/s 只按 MMA 数学计算量计算；cp-only 使用 bytes/cycle 和 cycles/cp。
+8. 生成源码中的 TS/cp PTX 语法依赖 CUDA 13.x tcgen05 支持，首次运行后需要以 cuobjdump 和 NCU 计数器校验。

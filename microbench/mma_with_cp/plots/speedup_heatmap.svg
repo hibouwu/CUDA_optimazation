@@ -1,0 +1,274 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1404" height="974" viewBox="0 0 1404 974">
+<style>
+text { font-family: Arial, sans-serif; fill: #1f2933; }
+.title { font-size: 22px; font-weight: 700; }
+.axis { stroke: #46515c; stroke-width: 1; }
+.grid { stroke: #d7dde3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #52606d; }
+.label { font-size: 11px; fill: #334e68; }
+.value { font-size: 10px; fill: #102a43; }
+.legend { font-size: 12px; fill: #334e68; }
+</style>
+<text x="702.0" y="30" text-anchor="middle" class="title">Speedup vs SS MMA-only</text>
+<text x="418.3" y="90" text-anchor="middle" class="legend">BF16</text>
+<text x="795.0" y="90" text-anchor="middle" class="legend">FP8</text>
+<line x1="606.7" y1="76" x2="606.7" y2="904.0" stroke="#c8d1dc" stroke-width="1.5"/>
+<text x="1171.7" y="90" text-anchor="middle" class="legend">FP4</text>
+<line x1="983.3" y1="76" x2="983.3" y2="904.0" stroke="#c8d1dc" stroke-width="1.5"/>
+<text x="292.8" y="118" text-anchor="middle" class="label">N64</text>
+<text x="418.3" y="118" text-anchor="middle" class="label">N128</text>
+<text x="543.9" y="118" text-anchor="middle" class="label">N256</text>
+<text x="669.4" y="118" text-anchor="middle" class="label">N64</text>
+<text x="795.0" y="118" text-anchor="middle" class="label">N128</text>
+<text x="920.6" y="118" text-anchor="middle" class="label">N256</text>
+<text x="1046.1" y="118" text-anchor="middle" class="label">N64</text>
+<text x="1171.7" y="118" text-anchor="middle" class="label">N128</text>
+<text x="1297.2" y="118" text-anchor="middle" class="label">N256</text>
+<text x="218" y="181.1" text-anchor="end" class="label">SS MMA-only</text>
+<rect x="230.0" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="355.6" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="481.1" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="606.7" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="732.2" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="857.8" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="983.3" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="1108.9" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<rect x="1234.4" y="148.0" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="181.1" text-anchor="middle" class="value">1.00x</text>
+<text x="218" y="239.2" text-anchor="end" class="label">TS MMA-only</text>
+<rect x="230.0" y="206.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="239.2" text-anchor="middle" class="value">1.00x</text>
+<rect x="355.6" y="206.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="239.2" text-anchor="middle" class="value">1.00x</text>
+<rect x="481.1" y="206.2" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="239.2" text-anchor="middle" class="value">1.27x</text>
+<rect x="606.7" y="206.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="239.2" text-anchor="middle" class="value">1.00x</text>
+<rect x="732.2" y="206.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="239.2" text-anchor="middle" class="value">1.00x</text>
+<rect x="857.8" y="206.2" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="239.2" text-anchor="middle" class="value">1.27x</text>
+<rect x="983.3" y="206.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="239.2" text-anchor="middle" class="value">1.00x</text>
+<rect x="1108.9" y="206.2" width="125.6" height="58.2" fill="#318361" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="239.2" text-anchor="middle" class="value">1.17x</text>
+<rect x="1234.4" y="206.2" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="239.2" text-anchor="middle" class="value">1.27x</text>
+<text x="218" y="297.4" text-anchor="end" class="label">SS MMA Mainloop K2</text>
+<rect x="230.0" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="297.4" text-anchor="middle" class="value">1.72x</text>
+<rect x="355.6" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="297.4" text-anchor="middle" class="value">1.34x</text>
+<rect x="481.1" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="297.4" text-anchor="middle" class="value">1.82x</text>
+<rect x="606.7" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="297.4" text-anchor="middle" class="value">1.72x</text>
+<rect x="732.2" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="297.4" text-anchor="middle" class="value">1.34x</text>
+<rect x="857.8" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="297.4" text-anchor="middle" class="value">1.82x</text>
+<rect x="983.3" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="297.4" text-anchor="middle" class="value">1.72x</text>
+<rect x="1108.9" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="297.4" text-anchor="middle" class="value">1.56x</text>
+<rect x="1234.4" y="264.3" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="297.4" text-anchor="middle" class="value">1.82x</text>
+<text x="218" y="355.5" text-anchor="end" class="label">SS MMA Mainloop K4</text>
+<rect x="230.0" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="355.5" text-anchor="middle" class="value">2.64x</text>
+<rect x="355.6" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="355.5" text-anchor="middle" class="value">1.82x</text>
+<rect x="481.1" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="355.5" text-anchor="middle" class="value">2.42x</text>
+<rect x="606.7" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="355.5" text-anchor="middle" class="value">2.64x</text>
+<rect x="732.2" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="355.5" text-anchor="middle" class="value">1.82x</text>
+<rect x="857.8" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="355.5" text-anchor="middle" class="value">2.42x</text>
+<rect x="983.3" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="355.5" text-anchor="middle" class="value">2.64x</text>
+<rect x="1108.9" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="355.5" text-anchor="middle" class="value">2.12x</text>
+<rect x="1234.4" y="322.5" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="355.5" text-anchor="middle" class="value">2.41x</text>
+<text x="218" y="413.7" text-anchor="end" class="label">SS MMA Mainloop K8</text>
+<rect x="230.0" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="413.7" text-anchor="middle" class="value">3.61x</text>
+<rect x="355.6" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="413.7" text-anchor="middle" class="value">2.78x</text>
+<rect x="481.1" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="413.7" text-anchor="middle" class="value">2.84x</text>
+<rect x="606.7" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="413.7" text-anchor="middle" class="value">3.61x</text>
+<rect x="732.2" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="413.7" text-anchor="middle" class="value">2.78x</text>
+<rect x="857.8" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="413.7" text-anchor="middle" class="value">2.84x</text>
+<rect x="983.3" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="413.7" text-anchor="middle" class="value">3.60x</text>
+<rect x="1108.9" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="413.7" text-anchor="middle" class="value">3.23x</text>
+<rect x="1234.4" y="380.6" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="413.7" text-anchor="middle" class="value">2.84x</text>
+<text x="218" y="471.8" text-anchor="end" class="label">SS MMA Mainloop K16</text>
+<rect x="230.0" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="471.8" text-anchor="middle" class="value">4.13x</text>
+<rect x="355.6" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="471.8" text-anchor="middle" class="value">3.36x</text>
+<rect x="481.1" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="471.8" text-anchor="middle" class="value">3.13x</text>
+<rect x="606.7" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="471.8" text-anchor="middle" class="value">4.13x</text>
+<rect x="732.2" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="471.8" text-anchor="middle" class="value">3.36x</text>
+<rect x="857.8" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="471.8" text-anchor="middle" class="value">3.13x</text>
+<rect x="983.3" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="471.8" text-anchor="middle" class="value">4.13x</text>
+<rect x="1108.9" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="471.8" text-anchor="middle" class="value">3.91x</text>
+<rect x="1234.4" y="438.8" width="125.6" height="58.2" fill="#207854" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="471.8" text-anchor="middle" class="value">3.13x</text>
+<text x="218" y="530.0" text-anchor="end" class="label">TS CP+MMA Mainloop A2 K2</text>
+<rect x="230.0" y="496.9" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="530.0" text-anchor="middle" class="value">0.86x</text>
+<rect x="355.6" y="496.9" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="530.0" text-anchor="middle" class="value">0.87x</text>
+<rect x="481.1" y="496.9" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="530.0" text-anchor="middle" class="value">1.12x</text>
+<rect x="606.7" y="496.9" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="530.0" text-anchor="middle" class="value">0.86x</text>
+<rect x="732.2" y="496.9" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="530.0" text-anchor="middle" class="value">0.87x</text>
+<rect x="857.8" y="496.9" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="530.0" text-anchor="middle" class="value">1.12x</text>
+<rect x="983.3" y="496.9" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="530.0" text-anchor="middle" class="value">0.86x</text>
+<rect x="1108.9" y="496.9" width="125.6" height="58.2" fill="#8ebca9" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="530.0" text-anchor="middle" class="value">1.01x</text>
+<rect x="1234.4" y="496.9" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="530.0" text-anchor="middle" class="value">1.12x</text>
+<text x="218" y="588.2" text-anchor="end" class="label">TS CP+MMA Mainloop A2 K4</text>
+<rect x="230.0" y="555.1" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="588.2" text-anchor="middle" class="value">0.86x</text>
+<rect x="355.6" y="555.1" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="588.2" text-anchor="middle" class="value">0.87x</text>
+<rect x="481.1" y="555.1" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="588.2" text-anchor="middle" class="value">1.12x</text>
+<rect x="606.7" y="555.1" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="588.2" text-anchor="middle" class="value">0.86x</text>
+<rect x="732.2" y="555.1" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="588.2" text-anchor="middle" class="value">0.87x</text>
+<rect x="857.8" y="555.1" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="588.2" text-anchor="middle" class="value">1.12x</text>
+<rect x="983.3" y="555.1" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="588.2" text-anchor="middle" class="value">0.86x</text>
+<rect x="1108.9" y="555.1" width="125.6" height="58.2" fill="#8ebca9" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="588.2" text-anchor="middle" class="value">1.01x</text>
+<rect x="1234.4" y="555.1" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="588.2" text-anchor="middle" class="value">1.12x</text>
+<text x="218" y="646.3" text-anchor="end" class="label">TS CP+MMA Mainloop A2 K8</text>
+<rect x="230.0" y="613.2" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="646.3" text-anchor="middle" class="value">0.86x</text>
+<rect x="355.6" y="613.2" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="646.3" text-anchor="middle" class="value">0.86x</text>
+<rect x="481.1" y="613.2" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="646.3" text-anchor="middle" class="value">1.12x</text>
+<rect x="606.7" y="613.2" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="646.3" text-anchor="middle" class="value">0.86x</text>
+<rect x="732.2" y="613.2" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="646.3" text-anchor="middle" class="value">0.86x</text>
+<rect x="857.8" y="613.2" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="646.3" text-anchor="middle" class="value">1.12x</text>
+<rect x="983.3" y="613.2" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="646.3" text-anchor="middle" class="value">0.86x</text>
+<rect x="1108.9" y="613.2" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="646.3" text-anchor="middle" class="value">1.00x</text>
+<rect x="1234.4" y="613.2" width="125.6" height="58.2" fill="#4e9578" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="646.3" text-anchor="middle" class="value">1.12x</text>
+<text x="218" y="704.5" text-anchor="end" class="label">TS CP+MMA Mainloop A2 K16</text>
+<rect x="230.0" y="671.4" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="704.5" text-anchor="middle" class="value">0.86x</text>
+<rect x="355.6" y="671.4" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="704.5" text-anchor="middle" class="value">0.87x</text>
+<rect x="481.1" y="671.4" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="704.5" text-anchor="middle" class="value">1.13x</text>
+<rect x="606.7" y="671.4" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="704.5" text-anchor="middle" class="value">0.86x</text>
+<rect x="732.2" y="671.4" width="125.6" height="58.2" fill="#dfeee7" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="704.5" text-anchor="middle" class="value">0.87x</text>
+<rect x="857.8" y="671.4" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="704.5" text-anchor="middle" class="value">1.13x</text>
+<rect x="983.3" y="671.4" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="704.5" text-anchor="middle" class="value">0.86x</text>
+<rect x="1108.9" y="671.4" width="125.6" height="58.2" fill="#8ebca9" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="704.5" text-anchor="middle" class="value">1.01x</text>
+<rect x="1234.4" y="671.4" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="704.5" text-anchor="middle" class="value">1.13x</text>
+<text x="218" y="762.6" text-anchor="end" class="label">TS CP+MMA Serial A1</text>
+<rect x="230.0" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="762.6" text-anchor="middle" class="value">0.50x</text>
+<rect x="355.6" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="762.6" text-anchor="middle" class="value">0.50x</text>
+<rect x="481.1" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="762.6" text-anchor="middle" class="value">0.73x</text>
+<rect x="606.7" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="762.6" text-anchor="middle" class="value">0.50x</text>
+<rect x="732.2" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="762.6" text-anchor="middle" class="value">0.50x</text>
+<rect x="857.8" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="762.6" text-anchor="middle" class="value">0.73x</text>
+<rect x="983.3" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="762.6" text-anchor="middle" class="value">0.50x</text>
+<rect x="1108.9" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="762.6" text-anchor="middle" class="value">0.59x</text>
+<rect x="1234.4" y="729.5" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="762.6" text-anchor="middle" class="value">0.73x</text>
+<text x="218" y="820.8" text-anchor="end" class="label">TS CP+MMA Overlap A2</text>
+<rect x="230.0" y="787.7" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="820.8" text-anchor="middle" class="value">0.86x</text>
+<rect x="355.6" y="787.7" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="820.8" text-anchor="middle" class="value">0.86x</text>
+<rect x="481.1" y="787.7" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="820.8" text-anchor="middle" class="value">1.13x</text>
+<rect x="606.7" y="787.7" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="820.8" text-anchor="middle" class="value">0.86x</text>
+<rect x="732.2" y="787.7" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="820.8" text-anchor="middle" class="value">0.86x</text>
+<rect x="857.8" y="787.7" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="820.8" text-anchor="middle" class="value">1.13x</text>
+<rect x="983.3" y="787.7" width="125.6" height="58.2" fill="#e5f1ec" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="820.8" text-anchor="middle" class="value">0.86x</text>
+<rect x="1108.9" y="787.7" width="125.6" height="58.2" fill="#94bfad" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="820.8" text-anchor="middle" class="value">1.00x</text>
+<rect x="1234.4" y="787.7" width="125.6" height="58.2" fill="#499173" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="820.8" text-anchor="middle" class="value">1.13x</text>
+<text x="218" y="878.9" text-anchor="end" class="label">TS CP+MMA Warp Split A2</text>
+<rect x="230.0" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="292.8" y="878.9" text-anchor="middle" class="value">0.60x</text>
+<rect x="355.6" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="418.3" y="878.9" text-anchor="middle" class="value">0.61x</text>
+<rect x="481.1" y="845.8" width="125.6" height="58.2" fill="#88b8a4" stroke="#ffffff" stroke-width="1"/>
+<text x="543.9" y="878.9" text-anchor="middle" class="value">1.02x</text>
+<rect x="606.7" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="669.4" y="878.9" text-anchor="middle" class="value">0.60x</text>
+<rect x="732.2" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="795.0" y="878.9" text-anchor="middle" class="value">0.61x</text>
+<rect x="857.8" y="845.8" width="125.6" height="58.2" fill="#88b8a4" stroke="#ffffff" stroke-width="1"/>
+<text x="920.6" y="878.9" text-anchor="middle" class="value">1.02x</text>
+<rect x="983.3" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="1046.1" y="878.9" text-anchor="middle" class="value">0.61x</text>
+<rect x="1108.9" y="845.8" width="125.6" height="58.2" fill="#ebf5f0" stroke="#ffffff" stroke-width="1"/>
+<text x="1171.7" y="878.9" text-anchor="middle" class="value">0.71x</text>
+<rect x="1234.4" y="845.8" width="125.6" height="58.2" fill="#88b8a4" stroke="#ffffff" stroke-width="1"/>
+<text x="1297.2" y="878.9" text-anchor="middle" class="value">1.02x</text>
+</svg>

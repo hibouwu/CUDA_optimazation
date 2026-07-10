@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2210" height="680" viewBox="0 0 2210 680">
+<style>
+text { font-family: Arial, sans-serif; fill: #1f2933; }
+.title { font-size: 22px; font-weight: 700; }
+.axis { stroke: #46515c; stroke-width: 1; }
+.grid { stroke: #d7dde3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #52606d; }
+.label { font-size: 11px; fill: #334e68; }
+.value { font-size: 10px; fill: #102a43; }
+.legend { font-size: 12px; fill: #334e68; }
+</style>
+<text x="1105.0" y="30" text-anchor="middle" class="title">CP+MMA Pipeline TFLOP/s and Cycles/Tile</text>
+<text x="22" y="311.0" transform="rotate(-90 22 311.0)" text-anchor="middle" class="label">TFLOP/s</text>
+<rect x="82" y="50" width="14" height="14" fill="#6d5bd0"/>
+<text x="102" y="62" class="legend">Serial A1</text>
+<rect x="242" y="50" width="14" height="14" fill="#2b8c5a"/>
+<text x="262" y="62" class="legend">Overlap A2</text>
+<rect x="402" y="50" width="14" height="14" fill="#b7791f"/>
+<text x="422" y="62" class="legend">Warp Split A2</text>
+<line x1="82" y1="530.0" x2="2174" y2="530.0" class="grid"/>
+<text x="72" y="534.0" text-anchor="end" class="tick">0.00</text>
+<line x1="82" y1="420.5" x2="2174" y2="420.5" class="grid"/>
+<text x="72" y="424.5" text-anchor="end" class="tick">95.4</text>
+<line x1="82" y1="311.0" x2="2174" y2="311.0" class="grid"/>
+<text x="72" y="315.0" text-anchor="end" class="tick">191</text>
+<line x1="82" y1="201.5" x2="2174" y2="201.5" class="grid"/>
+<text x="72" y="205.5" text-anchor="end" class="tick">286</text>
+<line x1="82" y1="92.0" x2="2174" y2="92.0" class="grid"/>
+<text x="72" y="96.0" text-anchor="end" class="tick">382</text>
+<line x1="82" y1="92" x2="82" y2="530" class="axis"/>
+<line x1="82" y1="530" x2="2174" y2="530" class="axis"/>
+<rect x="82.0" y="284.2" width="70.0" height="245.8" fill="#6d5bd0"/>
+<text x="117.0" y="267.2" text-anchor="middle" class="value">214.2</text>
+<text x="117.0" y="279.2" text-anchor="middle" class="value">30.8 cyc</text>
+<rect x="157.0" y="149.1" width="70.0" height="380.9" fill="#2b8c5a"/>
+<text x="192.0" y="132.1" text-anchor="middle" class="value">331.9</text>
+<text x="192.0" y="144.1" text-anchor="middle" class="value">19.9 cyc</text>
+<rect x="232.0" y="185.1" width="70.0" height="344.9" fill="#b7791f"/>
+<text x="267.0" y="168.1" text-anchor="middle" class="value">300.6</text>
+<text x="267.0" y="180.1" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="192.0" y="546" text-anchor="end" transform="rotate(-45 192.0 546)" class="label">FP4 M128N256</text>
+<rect x="316.0" y="386.7" width="70.0" height="143.3" fill="#6d5bd0"/>
+<text x="351.0" y="369.7" text-anchor="middle" class="value">124.9</text>
+<text x="351.0" y="381.7" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="391.0" y="285.5" width="70.0" height="244.5" fill="#2b8c5a"/>
+<text x="426.0" y="268.5" text-anchor="middle" class="value">213.1</text>
+<text x="426.0" y="280.5" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="466.0" y="357.5" width="70.0" height="172.5" fill="#b7791f"/>
+<text x="501.0" y="340.5" text-anchor="middle" class="value">150.3</text>
+<text x="501.0" y="352.5" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="426.0" y="546" text-anchor="end" transform="rotate(-45 426.0 546)" class="label">FP4 M128N128</text>
+<rect x="550.0" y="458.3" width="70.0" height="71.7" fill="#6d5bd0"/>
+<text x="585.0" y="441.3" text-anchor="middle" class="value">62.5</text>
+<text x="585.0" y="453.3" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="625.0" y="407.8" width="70.0" height="122.2" fill="#2b8c5a"/>
+<text x="660.0" y="390.8" text-anchor="middle" class="value">106.5</text>
+<text x="660.0" y="402.8" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="700.0" y="443.8" width="70.0" height="86.2" fill="#b7791f"/>
+<text x="735.0" y="426.8" text-anchor="middle" class="value">75.2</text>
+<text x="735.0" y="438.8" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="660.0" y="546" text-anchor="end" transform="rotate(-45 660.0 546)" class="label">FP4 M128N64</text>
+<rect x="784.0" y="407.1" width="70.0" height="122.9" fill="#6d5bd0"/>
+<text x="819.0" y="390.1" text-anchor="middle" class="value">107.1</text>
+<text x="819.0" y="402.1" text-anchor="middle" class="value">30.8 cyc</text>
+<rect x="859.0" y="339.6" width="70.0" height="190.4" fill="#2b8c5a"/>
+<text x="894.0" y="322.6" text-anchor="middle" class="value">166.0</text>
+<text x="894.0" y="334.6" text-anchor="middle" class="value">19.9 cyc</text>
+<rect x="934.0" y="357.8" width="70.0" height="172.2" fill="#b7791f"/>
+<text x="969.0" y="340.8" text-anchor="middle" class="value">150.0</text>
+<text x="969.0" y="352.8" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="894.0" y="546" text-anchor="end" transform="rotate(-45 894.0 546)" class="label">FP8 M128N256</text>
+<rect x="1018.0" y="458.3" width="70.0" height="71.7" fill="#6d5bd0"/>
+<text x="1053.0" y="441.3" text-anchor="middle" class="value">62.5</text>
+<text x="1053.0" y="453.3" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="1093.0" y="407.8" width="70.0" height="122.2" fill="#2b8c5a"/>
+<text x="1128.0" y="390.8" text-anchor="middle" class="value">106.5</text>
+<text x="1128.0" y="402.8" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="1168.0" y="443.9" width="70.0" height="86.1" fill="#b7791f"/>
+<text x="1203.0" y="426.9" text-anchor="middle" class="value">75.0</text>
+<text x="1203.0" y="438.9" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="1128.0" y="546" text-anchor="end" transform="rotate(-45 1128.0 546)" class="label">FP8 M128N128</text>
+<rect x="1252.0" y="494.2" width="70.0" height="35.8" fill="#6d5bd0"/>
+<text x="1287.0" y="477.2" text-anchor="middle" class="value">31.2</text>
+<text x="1287.0" y="489.2" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="1327.0" y="468.9" width="70.0" height="61.1" fill="#2b8c5a"/>
+<text x="1362.0" y="451.9" text-anchor="middle" class="value">53.3</text>
+<text x="1362.0" y="463.9" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="1402.0" y="487.0" width="70.0" height="43.0" fill="#b7791f"/>
+<text x="1437.0" y="470.0" text-anchor="middle" class="value">37.5</text>
+<text x="1437.0" y="482.0" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="1362.0" y="546" text-anchor="end" transform="rotate(-45 1362.0 546)" class="label">FP8 M128N64</text>
+<rect x="1486.0" y="468.6" width="70.0" height="61.4" fill="#6d5bd0"/>
+<text x="1521.0" y="451.6" text-anchor="middle" class="value">53.6</text>
+<text x="1521.0" y="463.6" text-anchor="middle" class="value">30.8 cyc</text>
+<rect x="1561.0" y="434.8" width="70.0" height="95.2" fill="#2b8c5a"/>
+<text x="1596.0" y="417.8" text-anchor="middle" class="value">83.0</text>
+<text x="1596.0" y="429.8" text-anchor="middle" class="value">19.9 cyc</text>
+<rect x="1636.0" y="443.9" width="70.0" height="86.1" fill="#b7791f"/>
+<text x="1671.0" y="426.9" text-anchor="middle" class="value">75.0</text>
+<text x="1671.0" y="438.9" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="1596.0" y="546" text-anchor="end" transform="rotate(-45 1596.0 546)" class="label">BF16 M128N256</text>
+<rect x="1720.0" y="494.2" width="70.0" height="35.8" fill="#6d5bd0"/>
+<text x="1755.0" y="477.2" text-anchor="middle" class="value">31.2</text>
+<text x="1755.0" y="489.2" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="1795.0" y="468.9" width="70.0" height="61.1" fill="#2b8c5a"/>
+<text x="1830.0" y="451.9" text-anchor="middle" class="value">53.3</text>
+<text x="1830.0" y="463.9" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="1870.0" y="487.0" width="70.0" height="43.0" fill="#b7791f"/>
+<text x="1905.0" y="470.0" text-anchor="middle" class="value">37.5</text>
+<text x="1905.0" y="482.0" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="1830.0" y="546" text-anchor="end" transform="rotate(-45 1830.0 546)" class="label">BF16 M128N128</text>
+<rect x="1954.0" y="512.1" width="70.0" height="17.9" fill="#6d5bd0"/>
+<text x="1989.0" y="495.1" text-anchor="middle" class="value">15.6</text>
+<text x="1989.0" y="507.1" text-anchor="middle" class="value">26.4 cyc</text>
+<rect x="2029.0" y="499.4" width="70.0" height="30.6" fill="#2b8c5a"/>
+<text x="2064.0" y="482.4" text-anchor="middle" class="value">26.6</text>
+<text x="2064.0" y="494.4" text-anchor="middle" class="value">15.5 cyc</text>
+<rect x="2104.0" y="508.5" width="70.0" height="21.5" fill="#b7791f"/>
+<text x="2139.0" y="491.5" text-anchor="middle" class="value">18.8</text>
+<text x="2139.0" y="503.5" text-anchor="middle" class="value">22.0 cyc</text>
+<text x="2064.0" y="546" text-anchor="end" transform="rotate(-45 2064.0 546)" class="label">BF16 M128N64</text>
+</svg>
