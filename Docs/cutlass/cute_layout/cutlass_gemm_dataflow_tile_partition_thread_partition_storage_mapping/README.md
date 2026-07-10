@@ -74,6 +74,7 @@ conda install -c conda-forge graphviz
 - 实线粗箭头表示实际数据移动，例如 TMA GMEM -> SMEM、TMEM -> RMEM、RMEM -> GMEM。
 - 虚线箭头表示 logical view transformation，例如 `local_tile`、`partition_A/B/C`、`tma_partition`、`partition_S/D`。
 - 点线红色箭头表示硬件消费或执行依赖，例如 `tcgen05.mma` 对 A/B descriptor 和 accumulator 的消费。
+- 蓝色点划线箭头表示 pipeline 或控制依赖，例如 producer commit、consumer wait 和 `tcgen05.Field.ACCUMULATE` 设置；它不是数据搬运。
 - 回环虚线箭头表示 K tile 或 pipeline stage 循环。
 
 ## Operand A 路径
@@ -85,7 +86,7 @@ Operand A 从 `mA` 开始，它是 GMEM 中的原始 A tensor，形状记为 `(M
 3. `sA` 是 staged A tile 的 SMEM physical allocation。
 4. `tiled_mma.make_fragment_A(sA)` 从同一个 SMEM tensor 派生 `tCrA`，形状为 `(MMA, MMA_M, MMA_K, STAGE)`。这里生成的是 descriptor tensor/view，不是把 operand 数据复制到寄存器。
 5. `cute.nvgpu.cpasync.tma_partition(...)` 对 `sA` 和 `tCgA` 建立 TMA copy view，得到 `tAsA` 和 `tAgA`。
-6. TMA producer loop 执行 `copy(tma_a.atom, tAgA[k], tAsA[stage])`，实际把 A tile 从 GMEM 搬到 `sA`。
+6. TMA producer loop 执行 `copy(tma_a.atom, tAgA[k_tile], tAsA[stage])`，实际把 A tile 从 GMEM 搬到 `sA`。
 7. consumer 侧在 pipeline stage ready 后，`tcgen05.mma` 通过 `tCrA[stage]` 消费 A operand descriptor/view。
 
 ## Operand B 路径
@@ -97,7 +98,7 @@ Operand B 与 A 对称，但 partition 维度对应 N 维：
 3. `sB` 是 staged B tile 的 SMEM physical allocation。
 4. `tiled_mma.make_fragment_B(sB)` 派生 `tCrB`，形状为 `(MMA, MMA_N, MMA_K, STAGE)`。
 5. `cute.nvgpu.cpasync.tma_partition(...)` 得到 `tBsB` 和 `tBgB`。
-6. TMA producer loop 执行 `copy(tma_b.atom, tBgB[k], tBsB[stage])`，实际把 B tile 从 GMEM 搬到 `sB`。
+6. TMA producer loop 执行 `copy(tma_b.atom, tBgB[k_tile], tBsB[stage])`，实际把 B tile 从 GMEM 搬到 `sB`。
 7. `tcgen05.mma` 通过 `tCrB[stage]` 消费 B operand descriptor/view。B operand 在该路径中来自 SMEM。
 
 ## Accumulator C/D 与 epilogue 路径
@@ -108,12 +109,13 @@ Accumulator 路径不是 A/B 那种 GMEM -> SMEM staging，而是 TMEM resident 
 2. `tiled_mma.make_fragment_C(...)` 创建 accumulator fragment layout，随后绑定 TMEM pointer，得到 `tCtAcc`。
 3. `cute.gemm(tiled_mma, tCtAcc, tCrA[stage], tCrB[stage], tCtAcc)` 在 main loop 中发出 tcgen05 MMA。`tCtAcc` 同时作为 accumulator input 和 output。
 4. 输出 GMEM tensor `mC` 经 `local_tile` 得到 `gC = (BM, BN)`，再经 `thr_mma.partition_C(gC)` 得到 `tCgC = (MMA, MMA_M, MMA_N)`。
-5. epilogue 创建 TMEM-to-RMEM copy atom，例如 `tcgen05.make_tmem_copy(copy_atom_t2r, tCtAcc[(None, None), 0, 0])`。
-6. `thr_copy_t2r.partition_S(tCtAcc)` 生成 TMEM source view `tTR_tAcc`。
-7. `thr_copy_t2r.partition_D(tCgC)` 生成 GMEM destination view `tTR_gC`。
-8. `cute.make_rmem_tensor(...)` 创建 RMEM fragment `tTR_rAcc`。
-9. `cute.copy(tiled_copy_t2r, tTR_tAcc, tTR_rAcc)` 对应 LDTM / `tcgen05.ld` 路径，实际执行 TMEM -> RMEM。
-10. `cute.copy(store_atom, tTR_rAcc, tTR_gC)` 将 register fragment 写回 GMEM output tile。
+5. epilogue 创建 `copy_atom_t2r = cute.make_copy_atom(tcgen05.Ld32x32bOp(...), acc_dtype)`。
+6. `tcgen05.make_tmem_copy(copy_atom_t2r, tCtAcc[(None, None), 0, 0])` 创建 `tiled_copy_t2r`，再通过 `get_slice(tidx)` 得到 `thr_copy_t2r`。
+7. `thr_copy_t2r.partition_S(tCtAcc)` 生成 TMEM source view `tTR_tAcc = (T2R, T2R_M, NumTiles)`。
+8. `thr_copy_t2r.partition_D(tCgC)` 生成 GMEM destination view `tTR_gC = (T2R, T2R_M, NumTiles)`。
+9. `cute.make_rmem_tensor(tTR_gC[None, None, 0].shape, acc_dtype)` 创建 RMEM fragment `tTR_rAcc = (T2R, T2R_M)`。
+10. `cute.copy(tiled_copy_t2r, tTR_tAcc[None, None, i], tTR_rAcc)` 对应 LDTM / `tcgen05.ld` 路径，实际执行 TMEM -> RMEM。
+11. `cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])` 将 register fragment 写回 GMEM output tile。
 
 ## 实际数据移动 vs. 逻辑 Tensor View 派生
 
@@ -121,8 +123,8 @@ Accumulator 路径不是 A/B 那种 GMEM -> SMEM staging，而是 TMEM resident 
 
 真正的数据移动发生在 copy 或 MMA 执行路径中：
 
-- `copy(tma_a.atom, tAgA[k], tAsA[stage])`: GMEM -> SMEM。
-- `copy(tma_b.atom, tBgB[k], tBsB[stage])`: GMEM -> SMEM。
+- `copy(tma_a.atom, tAgA[k_tile], tAsA[stage])`: GMEM -> SMEM。
+- `copy(tma_b.atom, tBgB[k_tile], tBsB[stage])`: GMEM -> SMEM。
 - `tcgen05.mma`: 通过 descriptor/view 消费 staged A/B，并更新 TMEM accumulator。
 - `cute.copy(tiled_copy_t2r, tTR_tAcc, tTR_rAcc)`: TMEM -> RMEM。
 - `cute.copy(store_atom, tTR_rAcc, tTR_gC)`: RMEM -> GMEM。

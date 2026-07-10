@@ -35,6 +35,8 @@ COLORS = {
     "copy_border": "#0987a0",
     "compute": "#ffe4e6",
     "compute_border": "#c53030",
+    "sync": "#eef2ff",
+    "sync_border": "#4f46e5",
     "loop": "#f9fafb",
     "lane": "#f8fafc",
     "legend": "#ffffff",
@@ -95,6 +97,12 @@ NODE_STYLES = {
         "color": "#98a2b3",
         "shape": "box",
     },
+    "sync": {
+        "style": "filled,rounded",
+        "fillcolor": COLORS["sync"],
+        "color": COLORS["sync_border"],
+        "shape": "box",
+    },
 }
 
 EDGE_STYLES = {
@@ -121,6 +129,12 @@ EDGE_STYLES = {
         "penwidth": "1.3",
         "style": "dashed",
         "arrowsize": "0.7",
+    },
+    "sync": {
+        "color": "#4f46e5",
+        "penwidth": "1.6",
+        "style": "dashdot",
+        "arrowsize": "0.75",
     },
 }
 
@@ -175,22 +189,26 @@ def build_operand_path(dot: DotBuilder, operand: str) -> None:
             "tile": "(BM, BK, k)",
             "partition": "(MMA, MMA_M, MMA_K, k)",
             "fragment": "(MMA, MMA_M, MMA_K, STAGE)",
+            "tma_atom": "tma_a.atom",
             "tma_s": "tAsA",
             "tma_g": "tAgA",
-            "copy": "copy(tma_a.atom, tAgA[k], tAsA[stage])",
+            "copy": "copy(tma_a.atom, tAgA[k_tile], tAsA[stage])",
             "fragment_fn": "make_fragment_A(sA)",
             "partition_fn": "thr_mma.partition_A(gA)",
+            "tma_fn": "cpasync.tma_partition(...)",
         },
         "B": {
             "matrix": "(N, K)",
             "tile": "(BN, BK, k)",
             "partition": "(MMA, MMA_N, MMA_K, k)",
             "fragment": "(MMA, MMA_N, MMA_K, STAGE)",
+            "tma_atom": "tma_b.atom",
             "tma_s": "tBsB",
             "tma_g": "tBgB",
-            "copy": "copy(tma_b.atom, tBgB[k], tBsB[stage])",
+            "copy": "copy(tma_b.atom, tBgB[k_tile], tBsB[stage])",
             "fragment_fn": "make_fragment_B(sB)",
             "partition_fn": "thr_mma.partition_B(gB)",
+            "tma_fn": "cpasync.tma_partition(...)",
         },
     }[operand]
 
@@ -202,6 +220,13 @@ def build_operand_path(dot: DotBuilder, operand: str) -> None:
     dot.add("    margin=18;")
 
     dot.node(f"m{operand}", "gmem", f"m{operand}", "Original GMEM tensor", shape["matrix"])
+    dot.node(
+        f"tmaAtom{operand}",
+        "copy",
+        shape["tma_atom"],
+        "TMA copy atom",
+        "CopyBulkTensorTileG2SOp",
+    )
     dot.node(f"g{operand}", "view", f"g{operand}", "CTA/local GMEM tile", shape["tile"])
     dot.node(f"tCg{operand}", "view", f"tCg{operand}", "MMA thread partition", shape["partition"])
     dot.node(f"s{operand}", "smem", f"s{operand}", "Physical SMEM allocation", f"staged {operand} tile")
@@ -221,12 +246,14 @@ def build_operand_path(dot: DotBuilder, operand: str) -> None:
     )
     dot.node(f"copy{operand}", "copy", f"TMA copy loop {operand}", shape["copy"], "GMEM -> SMEM")
 
-    dot.edge(f"m{operand}", f"g{operand}", "view", f"local_tile(m{operand}, mma_tiler, coord)")
+    dot.edge(f"m{operand}", f"tmaAtom{operand}", "view", "tma_info.tma_tensor", constraint="false")
+    dot.edge(f"m{operand}", f"g{operand}", "view", f"local_tile(m{operand}, mma_tiler_mnk, mma_coord_mnk)")
     dot.edge(f"g{operand}", f"tCg{operand}", "view", shape["partition_fn"])
     dot.edge(f"s{operand}", f"tCr{operand}", "view", shape["fragment_fn"])
-    dot.edge(f"tCg{operand}", f"tma{operand}", "view", "tma_partition(...)")
+    dot.edge(f"tmaAtom{operand}", f"tma{operand}", "view", shape["tma_fn"], constraint="false")
+    dot.edge(f"tCg{operand}", f"tma{operand}", "view", "group_modes(tCg*, 0, 3)")
     dot.edge(f"s{operand}", f"tma{operand}", "view", "group_modes(s*, 0, 3)", constraint="false")
-    dot.edge(f"tma{operand}", f"copy{operand}", "view", f"{shape['tma_g']}[k], {shape['tma_s']}[stage]")
+    dot.edge(f"tma{operand}", f"copy{operand}", "view", f"{shape['tma_g']}[k_tile], {shape['tma_s']}[stage]")
     dot.edge(f"copy{operand}", f"s{operand}", "data", f"writes staged {operand}")
     dot.edge(f"copy{operand}", f"copy{operand}", "loop", "for k_tile / stage", constraint="false")
 
@@ -241,30 +268,39 @@ def build_accumulator_path(dot: DotBuilder) -> None:
     dot.add(f'    fillcolor="{COLORS["lane"]}";')
     dot.add("    margin=18;")
 
-    dot.node("acc_shape", "view", "partition_shape_C", "MMA accumulator shape", "(MMA, MMA_M, MMA_N[, ACC_STAGE])")
-    dot.node("tCtAcc", "tmem", "tCtAcc", "TMEM accumulator fragment/view", "(MMA, MMA_M, MMA_N[, ACC_STAGE])")
+    dot.node("acc_shape", "view", "acc_shape", "MMA accumulator shape", "(MMA, MMA_M, MMA_N)")
+    dot.node("tmem_alloc", "tmem", "TmemAllocator", "allocate + retrieve_ptr", "TMEM columns")
+    dot.node("tCtAcc_layout", "view", "tCtAcc layout", "Accumulator fragment layout", "(MMA, MMA_M, MMA_N)")
+    dot.node("tCtAcc", "tmem", "tCtAcc", "TMEM accumulator tensor", "(MMA, MMA_M, MMA_N[, ACC_STAGE])")
     dot.node("mC", "gmem", "mC", "Output GMEM tensor", "(M, N)")
     dot.node("gC", "view", "gC", "CTA/local output tile", "(BM, BN)")
     dot.node("tCgC", "view", "tCgC", "Epilogue GMEM partition", "(MMA, MMA_M, MMA_N)")
-    dot.node("t2r", "copy", "tiled_copy_t2r", "tcgen05.make_tmem_copy(...)", "TMEM -> RMEM copy atom")
-    dot.node("tTR_tAcc", "view", "tTR_tAcc", "partition_S(tCtAcc)", "TMEM source view")
-    dot.node("tTR_gC", "view", "tTR_gC", "partition_D(tCgC)", "GMEM destination view")
-    dot.node("tTR_rAcc", "rmem", "tTR_rAcc", "RMEM accumulator fragment", "register tile")
-    dot.node("ldtm", "copy", "LDTM copy", "copy(tiled_copy_t2r, tTR_tAcc, tTR_rAcc)", "TMEM -> RMEM")
-    dot.node("store", "copy", "Epilogue store", "copy(store_atom, tTR_rAcc, tTR_gC)", "RMEM -> GMEM")
+    dot.node("copy_atom_t2r", "copy", "copy_atom_t2r", "Ld32x32bOp", "Repetition.x64")
+    dot.node("t2r", "copy", "tiled_copy_t2r", "TMEM -> RMEM copy object", "anchored by tCtAcc slice")
+    dot.node("thr_copy_t2r", "view", "thr_copy_t2r", "tiled_copy_t2r.get_slice(tidx)", "per-thread copy slice")
+    dot.node("tTR_tAcc", "view", "tTR_tAcc", "thr_copy_t2r.partition_S(tCtAcc)", "(T2R, T2R_M, NumTiles)")
+    dot.node("tTR_gC", "view", "tTR_gC", "thr_copy_t2r.partition_D(tCgC)", "(T2R, T2R_M, NumTiles)")
+    dot.node("tTR_rAcc", "rmem", "tTR_rAcc", "RMEM accumulator fragment", "(T2R, T2R_M)")
+    dot.node("ldtm", "copy", "LDTM copy", "TMEM -> RMEM", "for i in NumTiles")
+    dot.node("store", "copy", "Epilogue store", "RMEM -> GMEM", "for i in NumTiles")
 
-    dot.edge("acc_shape", "tCtAcc", "view", "make_fragment_C(...) + bind TMEM pointer")
-    dot.edge("mC", "gC", "view", "local_tile(mC, mma_tiler, coord)")
+    dot.edge("acc_shape", "tCtAcc_layout", "view", "tiled_mma.make_fragment_C(acc_shape)")
+    dot.edge("tmem_alloc", "tCtAcc", "view", "retrieve_ptr(Float32)")
+    dot.edge("tCtAcc_layout", "tCtAcc", "view", "cute.make_tensor(tmem_ptr, layout)")
+    dot.edge("mC", "gC", "view", "local_tile(mC, mma_tiler_mnk, mma_coord_mnk)")
     dot.edge("gC", "tCgC", "view", "thr_mma.partition_C(gC)")
-    dot.edge("tCtAcc", "t2r", "view", "make_tmem_copy(LdOp, tCtAcc)")
-    dot.edge("t2r", "tTR_tAcc", "view", "thr_copy_t2r.partition_S(tCtAcc)")
-    dot.edge("t2r", "tTR_gC", "view", "thr_copy_t2r.partition_D(tCgC)")
+    dot.edge("copy_atom_t2r", "t2r", "view", "tcgen05.make_tmem_copy(...)")
+    dot.edge("tCtAcc", "t2r", "view", "tCtAcc[(None,None),0,0]")
+    dot.edge("t2r", "thr_copy_t2r", "view", "get_slice(tidx)")
+    dot.edge("thr_copy_t2r", "tTR_tAcc", "view", "partition_S(tCtAcc)")
+    dot.edge("thr_copy_t2r", "tTR_gC", "view", "partition_D(tCgC)")
     dot.edge("tCgC", "tTR_gC", "view", "destination layout")
     dot.edge("tTR_tAcc", "ldtm", "view", "source tile")
-    dot.edge("ldtm", "tTR_rAcc", "data", "tcgen05.ld")
+    dot.edge("tTR_gC", "tTR_rAcc", "view", "make_rmem_tensor(tTR_gC[None,None,0].shape)", constraint="false")
+    dot.edge("ldtm", "tTR_rAcc", "data", "cute.copy(tiled_copy_t2r, tTR_tAcc[None,None,i], tTR_rAcc)")
     dot.edge("tTR_rAcc", "store", "data", "register values")
     dot.edge("tTR_gC", "store", "view", "store coordinates")
-    dot.edge("store", "mC", "data", "final GMEM store", constraint="false")
+    dot.edge("store", "mC", "data", "cute.copy(store_atom, tTR_rAcc, tTR_gC[None,None,i])", constraint="false")
 
     dot.add("  }")
 
@@ -277,12 +313,13 @@ def build_execution_and_legend(dot: DotBuilder) -> None:
     dot.add(f'    fillcolor="{COLORS["legend"]}";')
     dot.add("    margin=18;")
     dot.node("pipeline", "loop", "AB pipeline", "producer/consumer stages", "repeat over K tiles")
+    dot.node("accumulate", "sync", "ACCUMULATE field", "False for first K tile, True after", "tcgen05.Field.ACCUMULATE")
     dot.node(
         "mma",
         "compute",
         "tcgen05 MMA main loop",
-        "cute.gemm(tiled_mma, tCtAcc, tCrA[stage], tCrB[stage], tCtAcc)",
-        "D = A * B + C",
+        "cute.gemm(...)",
+        "tCrA/B[tile_crd], tCtAcc",
     )
     dot.add("  }")
 
@@ -296,15 +333,18 @@ def build_execution_and_legend(dot: DotBuilder) -> None:
     dot.node("legend_view_a", "view", "Tensor view", "tile, partition, descriptor derivation", "owns no data")
     dot.node("legend_desc_a", "descriptor", "Fragment descriptor", "hardware-consumable SMEM descriptor", "")
     dot.node("legend_copy_a", "copy", "Copy operation", "TMA, LDTM, epilogue store", "")
+    dot.node("legend_sync_a", "sync", "Pipeline / control", "barrier wait, stage ready, accumulate field", "")
     dot.node("legend_mma_a", "compute", "Compute operation", "tcgen05.mma consumes operands", "")
     dot.edge("legend_data_a", "legend_copy_a", "data", "actual data movement")
     dot.edge("legend_view_a", "legend_desc_a", "view", "logical view derivation")
+    dot.edge("legend_copy_a", "legend_sync_a", "sync", "control dependency")
     dot.edge("legend_desc_a", "legend_mma_a", "consume", "hardware consumption")
     dot.add("  }")
 
-    dot.edge("copyA", "pipeline", "data", "A stage full", constraint="false")
-    dot.edge("copyB", "pipeline", "data", "B stage full", constraint="false")
-    dot.edge("pipeline", "mma", "data", "consumer wait")
+    dot.edge("copyA", "pipeline", "sync", "producer commit: A stage full", constraint="false")
+    dot.edge("copyB", "pipeline", "sync", "producer commit: B stage full", constraint="false")
+    dot.edge("pipeline", "mma", "sync", "ab_consumer.wait_and_advance()")
+    dot.edge("accumulate", "mma", "sync", "set before cute.gemm")
     dot.edge("tCrA", "mma", "consume", "A descriptor/view", constraint="false")
     dot.edge("tCrB", "mma", "consume", "B descriptor/view", constraint="false")
     dot.edge("tCtAcc", "mma", "consume", "accumulator input", constraint="false")
