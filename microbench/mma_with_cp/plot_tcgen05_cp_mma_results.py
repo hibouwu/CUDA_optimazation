@@ -646,23 +646,23 @@ def write_outputs(out_dir, parsed):
         "TFLOP/s",
     )
     mainloop_series = [
-        ("ss_k2_tflops", "SS K2", COLORS["SS MMA Mainloop K2"], "ss_k2_peak_ratio", "% peak"),
-        ("ss_k4_tflops", "SS K4", COLORS["SS MMA Mainloop K4"], "ss_k4_peak_ratio", "% peak"),
-        ("ss_k8_tflops", "SS K8", COLORS["SS MMA Mainloop K8"], "ss_k8_peak_ratio", "% peak"),
-        ("ss_k16_tflops", "SS K16", COLORS["SS MMA Mainloop K16"], "ss_k16_peak_ratio", "% peak"),
+        ("ss_k2_tflops", "SS K2", COLORS["SS MMA Mainloop K2"]),
+        ("ss_k4_tflops", "SS K4", COLORS["SS MMA Mainloop K4"]),
+        ("ss_k8_tflops", "SS K8", COLORS["SS MMA Mainloop K8"]),
+        ("ss_k16_tflops", "SS K16", COLORS["SS MMA Mainloop K16"]),
     ]
     if parsed["ts_cp_mma_mainloop_a2_sweep"]:
         mainloop_series.extend([
-            ("ts_a2_k2_tflops", "TS A2 K2", COLORS["TS CP+MMA Mainloop A2 K2"], "ts_a2_k2_peak_ratio", "% peak"),
-            ("ts_a2_k4_tflops", "TS A2 K4", COLORS["TS CP+MMA Mainloop A2 K4"], "ts_a2_k4_peak_ratio", "% peak"),
-            ("ts_a2_k8_tflops", "TS A2 K8", COLORS["TS CP+MMA Mainloop A2 K8"], "ts_a2_k8_peak_ratio", "% peak"),
-            ("ts_a2_k16_tflops", "TS A2 K16", COLORS["TS CP+MMA Mainloop A2 K16"], "ts_a2_k16_peak_ratio", "% peak"),
+            ("ts_a2_k2_tflops", "TS A2 K2", COLORS["TS CP+MMA Mainloop A2 K2"]),
+            ("ts_a2_k4_tflops", "TS A2 K4", COLORS["TS CP+MMA Mainloop A2 K4"]),
+            ("ts_a2_k8_tflops", "TS A2 K8", COLORS["TS CP+MMA Mainloop A2 K8"]),
+            ("ts_a2_k16_tflops", "TS A2 K16", COLORS["TS CP+MMA Mainloop A2 K16"]),
         ])
     grouped_bar_svg(
         out_dir / "mma_mainloop_sweep_tflops.svg",
         pivot_mainloop_rows(parsed["mma_mainloop_sweep"], parsed["ts_cp_mma_mainloop_a2_sweep"]),
         mainloop_series,
-        "SS vs TS A2 Mainloop K-block Sweep TFLOP/s and Peak Ratio",
+        "SS vs TS A2 Mainloop K-block Sweep TFLOP/s",
         "TFLOP/s",
     )
     grouped_bar_svg(

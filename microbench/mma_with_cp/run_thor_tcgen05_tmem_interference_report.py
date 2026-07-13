@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+import statistics
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +18,7 @@ REPORT_PATH = ROOT / "tmem_interference_report.txt"
 DEFAULT_SHAPES = ["m128n256"]
 DEFAULT_PRECISIONS = ["FP4", "BF16"]
 DEFAULT_NOISE = [1, 2, 4, 8]
+DEFAULT_REPEATS = 50
 K_BLOCKS = 16
 
 
@@ -197,15 +199,15 @@ void tcgen05_kernel(int iters, unsigned long long* cycles_out) {
   uint32_t d_tmem = tmem_base;
   uint32_t a_tmem0 = tmem_base + 256;
   uint32_t a_tmem1 = tmem_base + 320;
-  {tmem_setup}
+{tmem_setup}
 
   uint32_t phase = 0;
-  {pre_timing_body}
+{pre_timing_body}
 
   __syncthreads();
   unsigned long long start = clock64();
 
-  {timed_body}
+{timed_body}
 
   unsigned long long stop = clock64();
   if (threadIdx.x == 0) {
@@ -676,11 +678,41 @@ def parse_result(text):
     return result
 
 
-def run_benchmarks(bins, iters, freq_hz):
+def median_value(values):
+    return float(statistics.median(values))
+
+
+def summarize_samples(samples):
+    first = samples[0]
+    summary = dict(first)
+    median_keys = [
+        "cycles",
+        "thor_tflops",
+        "bytes_per_cycle",
+        "cycles_per_cp",
+        "cycles_per_cta_iter",
+        "cycles_per_mma",
+    ]
+    for key in median_keys:
+        summary[key] = median_value([sample[key] for sample in samples])
+    summary["repeat_count"] = len(samples)
+    summary["thor_tflops_min"] = min(sample["thor_tflops"] for sample in samples)
+    summary["thor_tflops_max"] = max(sample["thor_tflops"] for sample in samples)
+    summary["cycles_per_mma_min"] = min(sample["cycles_per_mma"] for sample in samples)
+    summary["cycles_per_mma_max"] = max(sample["cycles_per_mma"] for sample in samples)
+    return summary
+
+
+def run_benchmarks(bins, iters, freq_hz, repeats):
     results = {}
-    for key, binary in bins.items():
-        _, out = base.run([binary, str(iters), str(freq_hz)])
-        results[key] = parse_result(out)
+    total = len(bins)
+    for idx, (key, binary) in enumerate(bins.items(), 1):
+        log(f"Running {idx}/{total}: {key} x {repeats}")
+        samples = []
+        for _ in range(repeats):
+            _, out = base.run([binary, str(iters), str(freq_hz)])
+            samples.append(parse_result(out))
+        results[key] = summarize_samples(samples)
     return results
 
 
@@ -692,7 +724,7 @@ def ratio(num, den):
     return 0.0 if den == 0 else num / den
 
 
-def write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_count, freq_hz, iters, noise_values):
+def write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_count, freq_hz, iters, repeats, noise_values):
     cases_map = case_by_id(cases)
     lines = []
     lines.append("Thor tcgen05 TMEM interference microbenchmark")
@@ -704,6 +736,8 @@ def write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_co
     lines.append(f"SM count: {sm_count}")
     lines.append(f"Frequency: {freq_hz / 1e9:.3f} GHz")
     lines.append(f"Iters: {iters}")
+    lines.append(f"Repeats: {repeats}")
+    lines.append("Reported values: median across repeats; min/max columns show the TFLOP/s sample range.")
     lines.append(f"Shapes: {', '.join(base.SHAPES[s]['label'] for s in shapes)}")
     lines.append(f"Precisions: {', '.join(precisions)}")
     lines.append(f"Noise cp per MMA: {', '.join(str(x) for x in noise_values)}")
@@ -731,8 +765,8 @@ def write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_co
         )
     lines.append("")
     lines.append("Throughput and slowdown")
-    lines.append("|Case|Precision|Shape|Path|Mode|Noise cp/MMA|TFLOP/s|Peak Ratio|cycles/CTA iter|cycles/MMA|cp inst|bytes/cycle|Slowdown vs control|")
-    lines.append("|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("|Case|Precision|Shape|Path|Mode|Noise cp/MMA|TFLOP/s|TFLOP/s min|TFLOP/s max|Peak Ratio|cycles/CTA iter|cycles/MMA|cp inst|bytes/cycle|Slowdown vs control|")
+    lines.append("|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for spec, precision, shape in iter_keys(cases, shapes, precisions):
         key = (spec["case_id"], precision, shape)
         r = results[key]
@@ -745,7 +779,8 @@ def write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_co
         lines.append(
             f"|{spec['case_id']}|{precision}|{base.SHAPES[shape]['label']}|"
             f"{r['mma_path']}|{r['issue_mode']}|{r['noise_cp_per_mma']}|"
-            f"{r['thor_tflops']:.3f}|{100.0 * r['thor_tflops'] / peak:.2f}%|"
+            f"{r['thor_tflops']:.3f}|{r['thor_tflops_min']:.3f}|{r['thor_tflops_max']:.3f}|"
+            f"{100.0 * r['thor_tflops'] / peak:.2f}%|"
             f"{r['cycles_per_cta_iter']:.3f}|{r['cycles_per_mma']:.3f}|"
             f"{r['cp_instruction_count']}|{r['bytes_per_cycle']:.3f}|{slowdown:.3f}x|"
         )
@@ -780,6 +815,7 @@ def main():
         description="Generate, build, run, and report Thor tcgen05 TMEM interference benchmarks."
     )
     parser.add_argument("--iters", type=int, default=10000, help="benchmark iterations")
+    parser.add_argument("--repeats", type=int, default=DEFAULT_REPEATS, help="runs per benchmark case; use 100 for tighter stability checks")
     parser.add_argument("--shapes", default=" ".join(DEFAULT_SHAPES), help="space/comma-separated shapes")
     parser.add_argument("--precisions", default=" ".join(DEFAULT_PRECISIONS), help="space/comma-separated precisions")
     parser.add_argument("--noise", default=" ".join(str(x) for x in DEFAULT_NOISE), help="space/comma-separated noise cp counts")
@@ -793,6 +829,8 @@ def main():
     shapes = split_words(args.shapes)
     precisions = [x.upper() for x in split_words(args.precisions)]
     noise_values = [int(x) for x in split_words(args.noise)]
+    if args.repeats < 1:
+        raise ValueError("--repeats must be positive")
     for shape in shapes:
         if shape not in base.SHAPES:
             raise ValueError(f"unknown shape: {shape}")
@@ -824,9 +862,9 @@ def main():
         return
 
     dev_name, cc, sm_count = base.device_info()
-    log(f"Running {len(cases)} cases x {len(precisions)} precisions x {len(shapes)} shapes")
-    results = run_benchmarks(bins, args.iters, freq_hz)
-    write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_count, freq_hz, args.iters, noise_values)
+    log(f"Running {len(cases)} cases x {len(precisions)} precisions x {len(shapes)} shapes x {args.repeats} repeats")
+    results = run_benchmarks(bins, args.iters, freq_hz, args.repeats)
+    write_report(cases, shapes, precisions, results, checks, dev_name, cc, sm_count, freq_hz, args.iters, args.repeats, noise_values)
 
 
 if __name__ == "__main__":

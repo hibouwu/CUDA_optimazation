@@ -175,7 +175,7 @@ void tcgen05_kernel(int iters, unsigned long long* cycles_out) {
   uint32_t d_tmem = tmem_base;
   uint32_t a_tmem0 = tmem_base + 256;
   uint32_t a_tmem1 = tmem_base + 320;
-  uint32_t tsfa = tmem_base + 384; uint32_t tsfb = tmem_base + 448;
+uint32_t tsfa = tmem_base + 384; uint32_t tsfb = tmem_base + 448;
 
   uint32_t phase = 0;
 

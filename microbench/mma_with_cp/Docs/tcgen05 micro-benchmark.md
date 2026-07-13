@@ -4,7 +4,7 @@
 
 本文在 Thor/SM110 架构下测试 `tcgen05.mma` 的 SS/TS 模式，比较不同 A 操作数来源的性能、完成同步开销，以及 `tcgen05.cp` 的 A tile 准备成本。这里的输入准备指 `tcgen05.cp` 把 A tile 从 shared memory（SMEM）搬到 Tensor Memory（TMEM），让后续 TS `tcgen05.mma` 可以从 TMEM 读取 A；B 操作数仍然通过 SMEM descriptor 读取。
 
-上一篇 compute-only MMA 报告给出不含 A tile SMEM->TMEM copy 的 dense SS 基线，例如 `FullSM4WarpBlock M128N256K64 FP4` 达到 `1032.111 TFLOP/s`；这篇报告测试十四组动作：SS MMA-only forced-wait、TS MMA-only forced-wait、SS MMA Mainloop K2/K4/K8/K16、TS CP+MMA Mainloop A2 K2/K4/K8/K16、`tcgen05.cp`-only、TS CP+MMA Serial A1、TS CP+MMA Overlap A2、TS CP+MMA Warp Split A2。
+上一篇 MMA throughput benchmark 报告给出不含 A tile SMEM->TMEM copy 的 dense SS 基线，例如 `FullSM4WarpBlock M128N256K64 FP4` 达到 `1032.111 TFLOP/s`；这篇报告测试十四组动作：SS MMA-only forced-wait、TS MMA-only forced-wait、SS MMA Mainloop K2/K4/K8/K16、TS CP+MMA Mainloop A2 K2/K4/K8/K16、`tcgen05.cp`-only、TS CP+MMA Serial A1、TS CP+MMA Overlap A2、TS CP+MMA Warp Split A2。
 
 默认 heatmap 覆盖 `M128N64/M128N128/M128N256` 三个形状，用来观察 shape 敏感性；14 类 case、3 种 precision 和 3 种矩阵形状合计 126 个基础组合。主结论以 `M128N256` 为准；快速复测时可以用 `--primary-shape-only` 只跑 N256 的 42 个组合。grouped/4Warp N-slice 会把一个逻辑 MMA tile 拆成更小 atom，容易把 atom shape 吞吐限制和 pipeline overlap 混在一起，因此更适合放到独立 issue-throughput benchmark 中解释。
 
@@ -31,24 +31,6 @@ benchmark 中一个 CTA（cooperative thread array，这里等价于一个 CUDA 
 同一个发射线程循环中的 `tcgen05.mma` 和 `tcgen05.cp` 按程序顺序发射。也就是说，代码里写成 `mma; mma; mma` 或 `cp; wait; mma` 时，发射线程不会在同一线程内重排这些 inline PTX；异步操作的完成边界由后续 `tcgen05.commit`、mbarrier 等待或等待 copy 完成来确认。本文把 forced-wait per-instruction completion、CUTLASS-style K-block mainloop sweep 和 cp+mma throughput 分开报告，避免把真实主循环里的等待成本和纯 Tensor Core 发射峰值混成一个数。
 
 本文固定逻辑 accumulator tile 策略，把变量集中在 A 操作数来源、`tcgen05.cp` copy、A double buffering 和 copy/MMA issuer 分工。所有 MMA throughput 都对应完整 shape atom，便于和 CUTLASS-style mainloop 比较。
-
-### **真实性分层**
-
-这组 case 按 dense GEMM 主路径、TS 专项路径和诊断路径分层。CUTLASS `SM100_MMA_F16BF16_SS` tutorial、CuTe tcgen05 programming guide 和高性能 dense GEMM 实现都采用同一类 SS 主循环：A/B staged 到 SMEM，`tcgen05.mma` 从 SMEM descriptor 读取 A/B，并把 accumulator 放在 TMEM。
-
-- `SS MMA Mainloop K2/K4/K8/K16` 是最接近普通 dense GEMM 主路径的 sweep。它对应 CUTLASS/CuTe 常见结构：A/B 由 TMA staged 到 SMEM，`make_fragment_A/B` 生成 SMEM descriptor；一个 K tile 内连续执行多个 K-block MMA，然后通过 `umma_arrive`/barrier 等待确认 MMA 完成，之后 SMEM stage 才能安全复用。K blocks 越多，单次 wait 的固定成本被更多 MMA 摊薄，但 SMEM、寄存器、调度窗口和真实 kernel 的 K tile 设计会限制继续增大。
-
-- `SS MMA-only` 是 SS 主路径的 forced-wait latency/completion 诊断。A/B 来源与普通 dense GEMM 一致；每条 MMA 后立即 `commit_and_wait` 会暴露单条完整 shape atom 的完成边界，和高性能 mainloop 里“多个 K-block MMA 聚合后再等待”的节奏不同。
-
-- `TS MMA-only` 是 TS MMA forced-wait 能力诊断。TS A-from-TMEM 是合法硬件路径；计时窗口内每条 TS MMA 后立即 `commit_and_wait`，测 TS MMA 单指令 completion 成本。普通 dense GEMM 主路径仍以 SS mainloop 为准。
-
-- `tcgen05.cp-only` 是 TS 特殊路径的 copy 成本诊断。它测 A SMEM->TMEM copy 的发射吞吐、bytes/cycle 和 cycles/cp。
-
-- `TS CP+MMA Mainloop A2 K2/K4/K8/K16` 是 A-from-TMEM 的 mainloop-like sweep。每个 K-block 执行 `cp(next A panel)` 和 `mma(current A panel)`，并在 K-block 边界等待完成，保证下一条 TS MMA 消费的 TMEM A 已经可用。它比 TS MMA-only 更接近真实 TS 专项路径；普通 dense GEMM 默认主路径仍以 SS mainloop 为准。
-
-- `TS CP+MMA Serial A1`、`TS CP+MMA Overlap A2` 和 `TS CP+MMA Warp Split A2` 是 A-from-TMEM 的单 tile pipeline 诊断。FMHA、mixed-input GEMM 或需要在 TMEM 中暂存/复用 A 的算子适合用这组结果解释真实 TS 路径；普通 dense GEMM 可以用这组结果评估“如果走 TS 会怎样”。
-
-后续解读以 `SS MMA Mainloop K2/K4/K8/K16` sweep 作为“最接近普通 CUTLASS-style dense GEMM 主循环”的基线；`TS CP+MMA Mainloop A2 K2/K4/K8/K16` 测真实 TS A-from-TMEM 算子的 K-group 稳态成本。TS CP+MMA 系列按“特殊场景/诊断路径”解释。纯发射上限适合放到独立 issue-throughput benchmark 中单独解释。
 
 矩阵乘法的基本动作是把 A 和 B 的一小块矩阵相乘并累加到 C。硬件执行的数学形式可以写成 `C[M,N] += A[M,K] * B[K,N]`；这里 A 提供左侧输入，B 提供右侧输入，C/D 保存在 Tensor Memory 中。
 
@@ -171,39 +153,21 @@ PTX 是源码里写的汇编形式，SASS 是 GPU 最终执行的机器指令。
 
 ## **测试动作**
 
-脚本默认生成 14 类 benchmark case。每个 case 覆盖 BF16、FP8、FP4 与 `M128N64/M128N128/M128N256` 三个形状，总计 126 个基础测试组合。需要快速只看主形状时，用 `--primary-shape-only` 限制为 `M128N256` 的 42 个组合。
+脚本默认生成 14 类 benchmark case。每个 case 覆盖 BF16、FP8、FP4 与 `M128N64/M128N128/M128N256` 三个形状，总计 126 个基础测试组合。需要快速只看主形状时，用 `--primary-shape-only` 限制为 `M128N256` 的 42 个组合。所有 MMA case 都使用当前 shape 的完整 MMA atom，例如 `M128N256` 按一个完整 tile 计数。
 
-十四组计时动作按三类口径组织。`SS MMA Mainloop K2/K4/K8/K16` 近似普通 dense GEMM 主路径：每个 K tile 连发多个 K-block SS MMA 后再等待一次。`TS CP+MMA Mainloop A2 K2/K4/K8/K16` 覆盖 TS A-from-TMEM 的专项 K-group 路径：每个 K-block 做 `cp(next A panel)` 与 `mma(current A panel)`，并在 K-block 边界等待完成。`SS MMA-only` 与 `TS MMA-only` 是 forced-wait 诊断微基准，每条完整 MMA atom 后都强制等待完成，用来测单指令 completion/latency 成本；`tcgen05.cp-only` 对应 TS 图里的蓝色 A tile 输入准备；`TS CP+MMA Serial A1` 测单 A slot 下 copy 和 MMA 依次暴露的成本；`TS CP+MMA Overlap A2` 测同一 issuer 交错提交 copy 和 MMA 后仍暴露的 cycles/tile；`TS CP+MMA Warp Split A2` 测两个 warp 分别提交 copy 和 MMA 后的 cycles/tile。所有 MMA case 都使用当前 shape 的完整 MMA atom，例如 `M128N256` 按一个完整 tile 计数。
+CUTLASS `SM100_MMA_F16BF16_SS` tutorial、CuTe tcgen05 programming guide 和高性能 dense GEMM 实现采用同一类 SS 主循环：A/B staged 到 SMEM，`tcgen05.mma` 从 SMEM descriptor 读取 A/B，并把 accumulator 放在 TMEM。后续解读以 `SS MMA Mainloop K2/K4/K8/K16` sweep 作为最接近普通 dense GEMM 主循环的基线；`TS CP+MMA Mainloop A2 K2/K4/K8/K16` 测真实 TS A-from-TMEM 算子的 K-group 稳态成本；`SS/TS MMA-only`、`tcgen05.cp-only` 和单 tile CP+MMA case 按诊断路径解释。纯发射上限适合放到独立 issue-throughput benchmark 中单独解释。
 
-case 总览如下。
+### **Case 定义**
 
-- `SS MMA-only`：A/B 都来自 SMEM descriptor。计时窗口每轮发 1 条完整 shape SS MMA，然后立刻 `commit_and_wait`。这是 forced-wait completion 诊断，输出 TFLOP/s 和 Peak Ratio；真实 mainloop 节奏看 `SS MMA Mainloop K2/K4/K8/K16`。
+共同约定是：`issuer_thread()` 为 `threadIdx.x == 0`；`commit_and_wait` 表示发射线程执行 `tcgen05.commit` 后由 CTA 等待 mbarrier 完成。所有 TS case 的 A 输入来自 TMEM，所有 SS case 的 A 输入来自 SMEM descriptor；B 输入在当前 dense 路径中都来自 SMEM descriptor。非 mainloop MMA case 用 `scale = (i == 0) ? 0 : 1` 控制首轮清 D、后续累加；mainloop sweep 只在 `i == 0 && k_block == 0` 时清 D，其余 K-block 都累加。
 
-- `TS MMA-only`：A 来自预填的 TMEM A slot，B 来自 SMEM descriptor。计时前先用 `tcgen05.cp` 预填 A；计时窗口每轮发 1 条完整 shape TS MMA，然后立刻 `commit_and_wait`。这是 TS A-from-TMEM forced-wait completion 诊断，输出 TFLOP/s 和 Peak Ratio。
+- `SS MMA Mainloop K2/K4/K8/K16`：最接近普通 dense GEMM 主路径的 sweep。计时前为同一个逻辑 K tile 准备连续 A/B SMEM panel descriptor；计时窗口中，`threadIdx.x == 0` 每轮连发 `K blocks` 条 SS MMA，`k_block` 分别读取不同 A/B K panel；每轮所有 K-block MMA 发完后只做一次 `commit_and_wait`。MMA count 为 `SM_count * K_blocks * iters`，K tile 等效 K 为 `K_inst * K_blocks`。这个动作模拟 CUTLASS/CuTe 常见 K tile 边界：同一 SMEM stage 内多个 K-block MMA 聚合完成后，才等待并允许复用 SMEM。K blocks 越多，单次 wait 的固定成本被更多 MMA 摊薄，但 SMEM、寄存器、调度窗口和真实 kernel 的 K tile 设计会限制继续增大。
 
-- `SS MMA Mainloop K2/K4/K8/K16`：A/B 都来自 SMEM descriptor。每个逻辑 K tile 连发 2、4、8 或 16 条 K-block SS MMA，然后只 wait 一次。输出 TFLOP/s、Peak Ratio、cycles/K tile 和 cycles/MMA。
-
-- `TS CP+MMA Mainloop A2 K2/K4/K8/K16`：A 来自 TMEM，B 来自 SMEM descriptor。计时前预填第一个 A panel；计时窗口中每个 K-block 发 `cp(A_next_panel)` 和完整 shape 的 `mma(A_current_panel, B_current_panel)`，两个 TMEM A slot 交替使用，并在每个 K-block 后等待完成。输出 TFLOP/s、Peak Ratio、cycles/K tile、cycles/MMA 和 cp inst/K tile。
-
-- `tcgen05.cp-only`：只发 A SMEM->TMEM copy，不发 MMA。A slot 在两个 TMEM 位置间交替。输出 bytes/cycle 和 cycles/cp。
-
-- `TS CP+MMA Serial A1`：单 A slot 串行执行 `cp -> wait -> mma -> wait`。输出 TFLOP/s 和 cycles/tile。
-
-- `TS CP+MMA Overlap A2`：两个 A slot 做 double buffering，同一个 issuer 每轮发 `cp(A_next); mma(A_current)`，然后 wait。输出 TFLOP/s、cycles/tile 和 Overlap Gain。
-
-- `TS CP+MMA Warp Split A2`：两个 A slot 做 double buffering，`threadIdx.x==0` 发 copy，`threadIdx.x==32` 发 MMA，每轮等待两个 issuer。输出 TFLOP/s、cycles/tile 和 Warp Split Gain。
-
-### **Case 详细定义**
-
-下面把每个 case 的 setup、计时窗口和计数口径展开写清楚。共同约定是：`issuer_thread()` 为 `threadIdx.x == 0`；`commit_and_wait` 表示发射线程执行 `tcgen05.commit` 后由 CTA 等待 mbarrier 完成。所有 TS case 的 A 输入来自 TMEM，所有 SS case 的 A 输入来自 SMEM descriptor；B 输入在当前 dense 路径中都来自 SMEM descriptor。非 mainloop MMA case 用 `scale = (i == 0) ? 0 : 1` 控制首轮清 D、后续累加；mainloop sweep 只在 `i == 0 && k_block == 0` 时清 D，其余 K-block 都累加。
-
-- `SS MMA-only`：计时前只创建 `a_desc`、`b_desc`、`idesc` 和 `d_tmem`，不做 A 预填。计时窗口中，`threadIdx.x == 0` 每轮发 1 条完整 shape 的 SS `tcgen05.mma(d_tmem, a_desc, b_desc)`，随后立即 `commit_and_wait`。arrive count 为 1，MMA count 为 `SM_count * iters`，不计 cp。这个动作测 A/B 都来自 SMEM 时的单条 MMA completion 成本。
+- `SS MMA-only`：SS 主路径的 forced-wait completion 诊断。计时前只创建 `a_desc`、`b_desc`、`idesc` 和 `d_tmem`，不做 A 预填；计时窗口中，`threadIdx.x == 0` 每轮发 1 条完整 shape 的 SS `tcgen05.mma(d_tmem, a_desc, b_desc)`，随后立即 `commit_and_wait`。arrive count 为 1，MMA count 为 `SM_count * iters`，不计 cp。这个动作测 A/B 都来自 SMEM 时的单条 MMA completion 成本。
 
 - `TS MMA-only`：计时前由 `threadIdx.x == 0` 发 1 条 `tcgen05.cp(a_tmem0, a_desc)` 并等待完成，这条预填 cp 不计入 timed cp count。计时窗口中，每轮发 1 条完整 shape 的 TS `tcgen05.mma(d_tmem, a_tmem0, b_desc)`，反复复用同一个 TMEM A tile，然后立即 `commit_and_wait`。MMA count 为 `SM_count * iters`，计时窗口内 cp count 为 0。这个动作测 A 改为 TMEM 后的 forced-wait MMA completion 成本。
 
-- `SS MMA Mainloop K2/K4/K8/K16`：计时前为同一个逻辑 K tile 准备连续 A/B SMEM panel descriptor。计时窗口中，`threadIdx.x == 0` 每轮连发 `K blocks` 条 SS MMA，`k_block` 分别读取不同 A/B K panel；只有 `i == 0 && k_block == 0` 清 D，其余 K-block 累加。每轮所有 K-block MMA 发完后只做一次 `commit_and_wait`。MMA count 为 `SM_count * K_blocks * iters`，K tile 等效 K 为 `K_inst * K_blocks`。这个动作模拟 CUTLASS/CuTe 常见 K tile 边界：同一 SMEM stage 内多个 K-block MMA 聚合完成后，才等待并允许复用 SMEM。
-
-- `TS CP+MMA Mainloop A2 K2/K4/K8/K16`：计时前由 `threadIdx.x == 0` 预填第 0 个 A panel 到 `a_tmem0`。计时窗口中，每个逻辑 K tile 包含 `K blocks` 个 stage；第 `k_block` 个 stage 用当前 TMEM A slot 做 TS MMA，同时把下一个 A panel copy 到另一个 TMEM A slot。每个 stage 后执行一次 `commit_and_wait`，因为下一条 TS MMA 可能马上消费刚刚 copy 完成的 TMEM A。MMA count 和 cp count 都是 `SM_count * K_blocks * iters`，K tile 等效 K 为 `K_inst * K_blocks`。这个动作测真实 TS A2 K-group 中 A copy 依赖边界和 TS MMA 合在一起后的稳态成本。
+- `TS CP+MMA Mainloop A2 K2/K4/K8/K16`：A-from-TMEM 的 mainloop-like sweep。计时前由 `threadIdx.x == 0` 预填第 0 个 A panel 到 `a_tmem0`；计时窗口中，每个逻辑 K tile 包含 `K blocks` 个 stage，第 `k_block` 个 stage 用当前 TMEM A slot 做 TS MMA，同时把下一个 A panel copy 到另一个 TMEM A slot。两个 TMEM A slot 交替使用，以 double buffering 减少 A copy 暴露成本；每个 stage 后执行一次 `commit_and_wait`，因为下一条 TS MMA 可能马上消费刚刚 copy 完成的 TMEM A。MMA count 和 cp count 都是 `SM_count * K_blocks * iters`，K tile 等效 K 为 `K_inst * K_blocks`。这个动作测真实 TS A2 K-group 中 A copy 依赖边界和 TS MMA 合在一起后的稳态成本。
 
 - `tcgen05.cp-only`：计时前只需要 A 的 SMEM descriptor 和两个 TMEM A slot。计时窗口中，`threadIdx.x == 0` 循环发 `tcgen05.cp(dst, a_desc)`，`dst` 在 `a_tmem0/a_tmem1` 间交替，不发 MMA。所有 cp 发完后做一次 `commit_and_wait`。cp count 为 `SM_count * iters`，每条 cp 的 effective bytes 当前按 2048B 计。这个动作单独测 SMEM->TMEM A copy 的发射吞吐、bytes/cycle 和 cycles/cp。
 
@@ -213,7 +177,7 @@ case 总览如下。
 
 - `TS CP+MMA Warp Split A2`：计时前由 `threadIdx.x == 0` 预填 `a_tmem0` 并等待，随后把 mbarrier arrive count 重置为 2。每轮 `threadIdx.x == 0` 发 `cp(A_next)`，`threadIdx.x == 32` 发完整 shape 的 `mma(A_current)`，两个 warp 分别提交。每轮 `commit_and_wait_warp_split` 等待两个 issuer，arrive count 为 2。MMA count 和 cp count 都是 `SM_count * iters`。这个动作测 copy issuer 和 MMA issuer 拆到不同 warp 后的 cycles/tile。
 
-Serial A1 和 A2 的时序差异可以直观看成下面两种形式：
+Serial A1 和 Overlap A2 的时序差异可以直观看成下面两种形式：
 
 ```text
 Serial A1:
@@ -238,8 +202,6 @@ Warp Split Gain =
   Throughput(TS CP+MMA Warp Split A2) /
   Throughput(TS CP+MMA Serial A1)
 ```
-
-基础测试组合按 case、precision 和 shape 展开。默认模式下，每个 case 覆盖 BF16、FP8、FP4 三种 precision，并同时跑 `M128N64`、`M128N128`、`M128N256` 三个形状，因此 14 个 case 合计 126 个组合。快速模式 `--primary-shape-only` 只保留主形状 `M128N256`，总数降为 42 个组合。
 
 ## **实现方案**
 
@@ -343,6 +305,10 @@ Normalized Speedup =
 |FP8|`tcgen05.mma.cta_group::1.kind::f8f6f4`|`UTCQMMA`|
 |FP4|`tcgen05.mma.cta_group::1.kind::mxf4nvf4.block_scale.block16`|`UTCOMMA.4X`|
 
+![FP4 SS MMA Mainloop K16 SASS 中的 UTCOMMA.4X 指令](图片和附件/ncu_ss_mainloop_k16_fp4_sass.png)
+
+`SS MMA Mainloop K16 M128N256K64 FP4` 的 Source/SASS 页面中连续出现 `UTCOMMA.4X`，说明这一路径确实命中 FP4 dense MMA SASS，而不是 sparse MMA 或其它替代路径。图中的 `TC, TENSOR` 分类也和 Tensor Core MMA 指令形态一致；具体指令数量和运行计数仍以后续 NCU Details counter 为准。
+
 当前脚本的 `tcgen05.cp` SASS 检查口径按 precision 区分如下。BF16 和 FP8 当前都使用 plain `128x128b` copy；FP4 使用 packed/decode 形式，把 packed FP4 A tile 写入 TMEM A slot。
 
 |Precision|PTX cp instruction|PTX cp suffix|期望 SASS token|
@@ -357,6 +323,10 @@ Normalized Speedup =
 UTCCP.T.S.128dp128bit tmem[...], gdesc[...];
 UTCCP.T.S.128dp128bit.U4x16P64 tmem[...], gdesc[...];
 ```
+
+![FP4 tcgen05.cp-only SASS 中的 UTCCP packed/decode 指令](图片和附件/ncu_cp_only_fp4_sass.png)
+
+FP4 `tcgen05.cp-only` 的 Source/SASS 页面中可以看到 `UTCCP.T.S.128dp128bit.U4x16P64`，说明源码里的 `tcgen05.cp.cta_group::1.128x128b.b8x16.b4x16_p64` 编译到了预期的 FP4 packed/decode copy 路径。这个截图只用于确认指令形态；copy 吞吐和 cycles/cp 仍以后续 cp-only 表格和 NCU counter 为准。
 
 NCU 计数器用来核对硬件实际执行的 MMA/cp 指令数量。forced-wait MMA-only 口径下，如果 `grid=SM_count`、`block=128`、每 CTA 1 个发射线程、`iters=10000`，目标 MMA 指令数应为 `SM_count * 1 * 10000`。`SS MMA Mainloop K2/K4/K8/K16` 的目标 MMA 指令数应为 `SM_count * K_blocks * 10000`。`TS CP+MMA Mainloop A2 K2/K4/K8/K16` 的目标 MMA 和 cp 指令数都应为 `SM_count * K_blocks * 10000`。单 tile TS CP+MMA case 的目标 cp 指令数为 `SM_count * 1 * 10000`，其中 TS MMA-only 的预填 cp 不进入计时窗口。
 
@@ -378,6 +348,10 @@ NCU 小指标集至少覆盖：
 
 下表固定 SS/TS MMA-only 的 forced-wait 口径：每条完整 shape MMA 后立即 `commit_and_wait`，主动暴露单条 MMA 的完成同步成本。Peak Ratio 反映 forced-wait completion 边界；批量发射下的 Tensor Core 利用率看后面的 SS mainloop K-block sweep。
 
+![MMA-only forced-wait TFLOP/s 与 Peak Ratio](../plots/mma_only_tflops.svg)
+
+图里最明显的是 `M128N256` 下 TS MMA-only 比 SS MMA-only 高一截，而 `M128N64` 基本没有差距；三种 precision 的比例变化也几乎同步，只是绝对 TFLOP/s 随 FP4/FP8/BF16 的单条计算量缩放。这个结果更像是在暴露 forced-wait 边界和 A operand 来源带来的固定完成成本，而不是 precision 计算管线本身的差异；N 越小，单条 MMA 的 MAC 数越少，固定等待和调度成本在吞吐里占比就越高。
+
 |Precision|Shape|K|SS MMA-only TFLOP/s|TS MMA-only TFLOP/s|SS Peak Ratio|TS Peak Ratio|
 |---|---|---:|---:|---:|---:|---:|
 |FP4|M128N256|64|294.902|373.198|28.49%|36.06%|
@@ -393,6 +367,12 @@ NCU 小指标集至少覆盖：
 ### CUTLASS-style SS mainloop K-block sweep throughput
 
 `SS MMA Mainloop K2/K4/K8/K16` 每个 K tile 连发多个 K-block SS MMA，然后只做一次 completion wait。这个口径比 forced-wait `SS MMA-only` 更接近普通 dense GEMM 的 K tile 边界，也是本文最接近真实 dense mainloop 的吞吐基线。
+
+![SS 与 TS A2 mainloop K-block sweep TFLOP/s](../plots/mma_mainloop_sweep_tflops.svg)
+
+SS mainloop 的曲线随着 K blocks 增大持续上升，`M128N256` 到 K16 时已经接近九成官方峰值；小 N shape 虽然也受益于 K-block 聚合，但上限明显低一些。原因是多个 K-block 共用一次 completion wait 后，等待成本被摊薄了；而 `M128N64` 的单条 MMA 计算量较小，cycles/MMA 没有按 MAC 数等比例下降，所以 Peak Ratio 被固定成本压住。
+
+同一张图里的 TS A2 mainloop 值不变，说明 A-from-TMEM 路径没有从增大 K blocks 中拿到同等收益。这里每个 K-block 都要处理 `cp(next A panel)` 和消费当前 A panel 的依赖边界，等待点没有像 SS 那样被合并到整个 K tile 末尾，因此 copy 与完成同步成本会稳定地进入每个 stage。
 
 |Precision|Shape|K blocks|K tile|TFLOP/s|Peak Ratio|cycles/CTA K-tile|cycles/MMA|
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -480,6 +460,10 @@ NCU 小指标集至少覆盖：
 
 cp-only 表格记录 SMEM->TMEM copy 的 bytes/cycle 和 cycles/cp。当前 cp shape 与 A copy 后缀不随 N shape 变化，因此三个 shape 的 cp-only 数值相同。
 
+![tcgen05.cp-only bytes/cycle](../plots/cp_only_bytes_per_cycle.svg)
+
+cp-only 图中不同 precision 和 N shape 的柱子基本重合，说明这组 copy 指令的吞吐没有随矩阵 N 变化。这里的 `tcgen05.cp` 后缀和 effective bytes/cp 固定为 2048B，测试对象是 SMEM 到 TMEM 的 copy 发射与写入路径，因此不会像 MMA TFLOP/s 那样跟 FP4/FP8/BF16 的计算量一起缩放。
+
 |Precision|Shape|cp suffix|effective bytes/cp|cp instruction count|elapsed cycles|bytes/cycle|cycles/cp|
 |---|---|---|---:|---:|---:|---:|---:|
 |FP4|M128N256|128x128b.b8x16.b4x16_p64|2048|200000|476820|859.024|2.384|
@@ -496,6 +480,10 @@ cp-only 表格记录 SMEM->TMEM copy 的 bytes/cycle 和 cycles/cp。当前 cp s
 
 Serial A1、Overlap A2 和 Warp Split A2 使用同一 tile 计数口径。Overlap Gain 使用 `Throughput(TS CP+MMA Overlap A2) / Throughput(TS CP+MMA Serial A1)`；Warp Split Gain 使用 `Throughput(TS CP+MMA Warp Split A2) / Throughput(TS CP+MMA Serial A1)`。
 
+![CP+MMA pipeline TFLOP/s 与 cycles/tile](../plots/pipeline_tflops.svg)
+
+pipeline 图里 Overlap A2 明显优于 Serial A1，`M128N256` 的 gain 约为 `1.55x`，N128/N64 约为 `1.71x`；但 Warp Split A2 没有超过同 issuer 的 Overlap A2。A2 双缓冲把每轮的 copy 和 MMA 放到同一个完成边界里，减少了串行路径中 `cp -> wait -> mma -> wait` 的暴露时间；拆成两个 warp 后虽然分离了 issuer，但仍要等待两个异步动作完成，额外同步和 TMEM 写入压力会抵消一部分收益。
+
 |Precision|Shape|Serial A1 TFLOP/s|Serial A1 cycles/tile|Overlap A2 TFLOP/s|Overlap A2 cycles/tile|Overlap Gain|Warp Split A2 TFLOP/s|Warp Split A2 cycles/tile|Warp Split Gain|
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 |FP4|M128N256|214.210|30.839|331.938|19.901|1.550x|300.601|21.976|1.403x|
@@ -508,7 +496,13 @@ Serial A1、Overlap A2 和 Warp Split A2 使用同一 tile 计数口径。Overla
 |BF16|M128N128|31.233|26.439|53.271|15.501|1.706x|37.511|22.014|1.201x|
 |BF16|M128N64|15.616|26.439|26.635|15.501|1.706x|18.756|22.014|1.201x|
 
-合并后的图表输出保留 6 张 SVG：`mma_only_tflops.svg`、`mma_mainloop_sweep_tflops.svg`、`cp_only_bytes_per_cycle.svg`、`pipeline_tflops.svg`、`speedup_heatmap.svg` 和 `tflops_heatmap.svg`。其中 TFLOP/s 柱状图会在柱子第二行标注 Peak Ratio 或 cycles/tile；`speedup_heatmap.svg` 默认展开 `BF16/FP8/FP4 × N64/N128/N256`，单元格显示相对同 precision-shape 下 `SS MMA-only` 的归一化加速比；`tflops_heatmap.svg` 使用同一行列布局，但单元格显示绝对 TFLOP/s，便于直接看不同 precision 和 shape 下的实际吞吐。
+合并后的图表输出保留 6 张 SVG：`mma_only_tflops.svg`、`mma_mainloop_sweep_tflops.svg`、`cp_only_bytes_per_cycle.svg`、`pipeline_tflops.svg`、`speedup_heatmap.svg` 和 `tflops_heatmap.svg`。`mma_mainloop_sweep_tflops.svg` 的柱子只标 TFLOP/s；其它柱状图会在柱子第二行标注 Peak Ratio、cycles/cp 或 cycles/tile。`speedup_heatmap.svg` 默认展开 `BF16/FP8/FP4 × N64/N128/N256`，单元格显示相对同 precision-shape 下 `SS MMA-only` 的归一化加速比；`tflops_heatmap.svg` 使用同一行列布局，但单元格显示绝对 TFLOP/s，便于直接看不同 precision 和 shape 下的实际吞吐。
+
+![全量 TFLOP/s heatmap](../plots/tflops_heatmap.svg)
+
+![相对 SS MMA-only 的 normalized speedup heatmap](../plots/speedup_heatmap.svg)
+
+绝对 TFLOP/s heatmap 主要被 precision 和 N shape 拉开：FP4 的数值最高，N256 明显高于 N128/N64，最高区域集中在 SS mainloop 的 K8/K16。归一化 heatmap 把这种计算量差异拿掉后，最突出的变化变成 SS mainloop 随 K blocks 增大持续加速，而 TS CP+MMA 系列只在 N256 上能略高于对应的 SS MMA-only baseline。这个对比说明，SS 路径的主要收益来自等待成本摊薄；TS 路径则被每个 K-block 的 A copy 依赖和 TMEM 写入成本限制，增加 K tile 很难带来同样幅度的提升。
 
 |Case|BF16-N64|BF16-N128|BF16-N256|FP8-N64|FP8-N128|FP8-N256|FP4-N64|FP4-N128|FP4-N256|
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -528,32 +522,64 @@ Serial A1、Overlap A2 和 Warp Split A2 使用同一 tile 计数口径。Overla
 
 ### NCU 抓取结果
 
-NCU 抓取结果用于确认 launch 规模、MMA/cp 指令计数和关键计数器。代表 case 建议覆盖 `M128N256K64 FP4`、一个 cp+mma overlap case 和一个 N64 小形状诊断 case。
+NCU 截图只放三类代表 case：SS K16、TS A2 K16 和 cp-only，分别覆盖主路径、A-from-TMEM 路径和单独 copy 路径。这里主要看 launch 配置、MMA/cp 指令数、pipe counter 和 cycles 是否和 benchmark 口径一致。
+
+![FP4 SS MMA Mainloop K16 NCU Details counter overview](图片和附件/ncu_ss_mainloop_k16_fp4_details.png)
+
+SS K16 这一组的 `grid=20`、`block=128`，MMA 指令数是 `3,200,000`，正好对应 `20 SM * 16 K-blocks * 10000 iters`。Tensor pipe 计数和 `sm__throughput.avg.pct_of_peak_sustained_active` 都比较高，和前面 K16 接近高吞吐区间的结果一致；截图顶部的频率 warning 不改变本文的吞吐口径，TFLOP/s 仍按 benchmark stdout 和表格记录。
+
+![FP4 TS CP+MMA Mainloop A2 K16 NCU Details counter overview](图片和附件/ncu_ts_a2_k16_fp4_details.png)
+
+TS A2 K16 的 launch 和 MMA 指令数与 SS K16 相同，但 `sm__inst_executed_pipe_adu.sum` 明显更高，能看到 A tile copy 带来的额外指令压力。它的 elapsed cycles 比 SS K16 长很多，也符合这个 case 的执行节奏：每个 K-block 都有 `cp(next A panel)`，下一次 TS MMA 又依赖刚写入的 A slot，等待成本会进入每个 stage；SS 则可以把多个 K-block 的完成等待集中到整个 K tile 末尾处理。
+
+![FP4 tcgen05.cp-only NCU Details counter overview](图片和附件/ncu_cp_only_fp4_details.png)
+
+cp-only 这一组仍是 `grid=20`、`block=128`，`sm__inst_executed_pipe_tensor.sum=0`，计时窗口里没有混入 MMA。这里的截图只用来核对 launch、cycles 和 pipe counter；具体是不是 FP4 packed/decode copy，看前面的 SASS 图，吞吐则看 `bytes/cycle` 和 `cycles/cp` 表格。
+
+### TMEM 写入干扰补充测试
+
+这组补充测试固定 `M128N256`、K16 mainloop 和 FP4/BF16，测试额外 `tcgen05.cp` 写入对 SS/TS mainloop 吞吐的影响。测试在每条 MMA 附近插入 1、2、4 或 8 条额外 copy，表中的 `noise cp/MMA` 记录这个数量；每个 case 重复 50 次，图表使用 median。主实验结论仍以 14 类 TCGen05 路径为准。
+
+SS 测试把 `tcgen05.cp` 当作无关 TMEM 写入压力：SS MMA 仍从 SMEM descriptor 读取 A/B，不消费这些 TMEM A slot。TS 测试把额外 copy 写到 next A slot：TS MMA 读取 current A slot，额外 copy 增加下一块 A 的写入压力。`same` 表示同一个发射线程提交 cp 和 MMA；`split` 表示 `threadIdx.x == 0` 发 cp、`threadIdx.x == 32` 发 MMA。
+
+`same` 和 `split` 的 baseline 分别按各自控制路径测量。SS same baseline 由 `threadIdx.x == 0` 发 MMA 并提交一次 completion，mbarrier arrive count 为 1；SS split baseline 由 `threadIdx.x == 32` 发 MMA，`threadIdx.x == 0` 参与 commit/wait，mbarrier arrive count 为 2。TS same baseline 由同一个发射线程提交 `cp(next A slot)` 和 `mma(current A slot)`；TS split baseline 把 required copy 和 MMA 拆到两个 warp。这个差异会先带来 split 控制和同步成本：FP4 下 SS baseline 从 `921.886 TFLOP/s` 降到 `910.354 TFLOP/s`，TS baseline 从 `332.272 TFLOP/s` 降到 `291.014 TFLOP/s`。因此表中的 TFLOP/s ratio 都相对各自 baseline 计算；绝对吞吐差异看后面的柱状图。
+
+性能下降可以从发射顺序和共享资源两个角度理解。`same` 模式下，同一个发射线程按程序顺序先提交额外 `tcgen05.cp`，再提交 MMA，MMA 不会越过前面的 inline PTX，所以 noise 数量会直接推迟 MMA 发射。`split` 模式把 cp 和 MMA 交给不同发射线程，但它们仍在同一个 CTA/SM 内共享 TMEM 读写带宽、端口/pipe、tcgen05 后端排队/仲裁资源和同一个完成等待边界；MMA 优先级高只影响调度倾向，额外 copy 仍会占用 TMEM 写入带宽、后端排队/仲裁资源和等待时间。TS 比 SS 更敏感，是因为 TS MMA 本身要读取 TMEM A，额外 copy 又写 next A slot，增加了 A producer 侧的 TMEM 写入压力；SS MMA 不读取这些 TMEM A slot，所以少量 noise 的影响更小。
+
+下图同时包含 `SS same`、`SS split`、`TS same` 和 `TS split` 四组，记录 baseline 和加 noise 后的绝对 TFLOP/s；下表记录相对各自基线的吞吐比例和每条 MMA 增加的 cycles。FP4 和 BF16 的趋势基本一致，50 次重复中 TFLOP/s min/max 最大差值约 0.1，说明这组测试主要反映 TMEM/cp 写入压力和发射线程分工。
+
+![SS/TS TMEM 写入干扰 TFLOP/s](../plots/tmem_interference_tflops.svg)
+
+|Path|Mode|Noise cp/MMA|FP4 TFLOP/s ratio|BF16 TFLOP/s ratio|FP4 extra cycles/MMA|BF16 extra cycles/MMA|
+|---|---|---:|---:|---:|---:|---:|
+|SS|same|1|0.982x|0.982x|2.624|2.625|
+|SS|same|2|0.797x|0.796x|36.437|36.687|
+|SS|same|4|0.577x|0.577x|105.000|105.187|
+|SS|same|8|0.338x|0.338x|280.374|280.561|
+|SS|split|1|0.971x|0.969x|4.309|4.622|
+|SS|split|2|0.558x|0.556x|115.052|115.865|
+|SS|split|4|0.445x|0.444x|181.115|181.927|
+|SS|split|8|0.288x|0.287x|358.990|359.803|
+|TS|same|1|0.900x|0.900x|44.000|44.000|
+|TS|same|2|0.819x|0.818x|88.000|88.000|
+|TS|same|4|0.690x|0.689x|178.563|178.563|
+|TS|same|8|0.529x|0.528x|354.250|355.063|
+|TS|split|1|0.903x|0.899x|48.562|50.875|
+|TS|split|2|0.823x|0.821x|97.312|98.750|
+|TS|split|4|0.707x|0.704x|188.062|189.500|
+|TS|split|8|0.543x|0.541x|381.375|383.625|
+
+这组结果显示：SS mainloop 对少量无关 TMEM 写入有一定容忍度，`SS same` 在 noise=1 时保持 `0.982x`，noise=8 时降到 `0.338x`。SS split 对高写入压力更敏感，FP4 从 noise=1 的 `0.971x` 降到 noise=8 的 `0.288x`。TS same 从 noise=1 的 `0.900x` 降到 noise=8 的 `0.529x`；TS split 与 same 的相对下降接近，noise=8 为 `0.543x`，但 FP4 baseline 已从 `332.272 TFLOP/s` 降到 `291.014 TFLOP/s`。split 发射仍然会受到 TMEM 写入干扰。
+
+SS split 在 noise=1 到 noise=2 之间下降最明显：FP4 extra cycles/MMA 从 `4.309` 增加到 `115.052`，BF16 从 `4.622` 增加到 `115.865`。这说明单条额外 copy 还能被调度空隙、TMEM 写入带宽或后端排队余量部分吸收；两条额外 copy 开始超过这部分余量，形成反压，发射端被下游拥塞拖住，MMA 发射或 completion wait 被明显拖长。noise=4 和 noise=8 之后，TMEM 写入路径进入饱和区：额外 copy 持续占用写入带宽和端口/pipe，后端排队变长，commit/wait 需要等待更多已提交操作完成，最终表现为 cycles/MMA 继续增加。
 
 ## **总结**
 
-本文的主实验范围是 14 类 TCGen05 内部路径：SS MMA-only、TS MMA-only、SS MMA Mainloop K2/K4/K8/K16、TS CP+MMA Mainloop A2 K2/K4/K8/K16、tcgen05.cp-only、TS CP+MMA Serial A1、TS CP+MMA Overlap A2 和 TS CP+MMA Warp Split A2。默认同时使用 `M128N64/M128N128/M128N256`，三种 precision 组合后共有 126 个基础 benchmark；`--primary-shape-only` 快速模式只跑 `M128N256` 的 42 个组合。
+普通 dense GEMM 的主结论看 `SS MMA Mainloop K16`。在 `M128N256` 上，FP4/FP8/BF16 都达到约 89% 官方峰值，说明多个 K-block MMA 聚合后再等待能有效摊薄 completion wait 成本。
 
-对普通 dense GEMM 来说，最有解释力的基线是 `SS MMA Mainloop K2/K4/K8/K16` sweep，因为它保留了 CUTLASS-style 主循环中“同一 SMEM stage 内多个 K-block MMA 后再等待”的完成边界。当前实测中，`M128N256` 上 K4 约为 68.7% 到 68.9% 官方峰值，K8 约为 80.8% 到 80.9%，K16 约为 89.1% 到 89.2%；它们比 forced-wait `SS MMA-only` 更接近真实主循环。grouped/4Warp N-slice 会把完整 tile 拆成更小 MMA atom，容易把 atom shape 吞吐限制和 pipeline overlap 混在一起，因此不纳入主结果口径。
+TS 路径只适合需要 A-from-TMEM 的专项算子。`TS CP+MMA Mainloop A2 K16` 在 `M128N256` 上约为 32% 官方峰值，主要受每个 K-block 的 A copy 依赖边界限制。
 
-TS 系列按专项路径解读。`TS MMA-only` 测 A-from-TMEM 的 forced-wait MMA completion 成本；`TS CP+MMA Mainloop A2 K2/K4/K8/K16` 测真实 TS A2 K-group 中 A copy 依赖边界和 TS MMA 合在一起后的稳态成本；`tcgen05.cp-only` 测 SMEM->TMEM A copy 的发射成本；Serial A1、Overlap A2 和 Warp Split A2 测 TS 路径下 copy 与 MMA 能否重叠。FMHA、mixed-input GEMM 或其它确实需要 TMEM A 的场景适合用 TS 系列评估；普通 dense GEMM 主路径使用 SS mainloop 结果解读。
-
-当前 benchmark case ID 如下。
-
-- `SS MMA-only`：`ss_mma_only`
-- `TS MMA-only`：`ts_mma_only`
-- `SS MMA Mainloop K2`：`ss_mma_mainloop_k2`
-- `SS MMA Mainloop K4`：`ss_mma_mainloop_k4`
-- `SS MMA Mainloop K8`：`ss_mma_mainloop_k8`
-- `SS MMA Mainloop K16`：`ss_mma_mainloop_k16`
-- `TS CP+MMA Mainloop A2 K2`：`ts_cp_mma_mainloop_a2_k2`
-- `TS CP+MMA Mainloop A2 K4`：`ts_cp_mma_mainloop_a2_k4`
-- `TS CP+MMA Mainloop A2 K8`：`ts_cp_mma_mainloop_a2_k8`
-- `TS CP+MMA Mainloop A2 K16`：`ts_cp_mma_mainloop_a2_k16`
-- `tcgen05.cp-only`：`tcgen05_cp_only`
-- `TS CP+MMA Serial A1`：`ts_cp_mma_serial_a1`
-- `TS CP+MMA Overlap A2`：`ts_cp_mma_overlap_a2`
-- `TS CP+MMA Warp Split A2`：`ts_cp_mma_warp_split_a2`
+TMEM 写入压力会直接压低 mainloop 吞吐。50 次重复取 median 后，`M128N256` K16 的 SS same 从 noise=1 的 `0.982x` 降到 noise=8 的 `0.338x`；SS split 从 `0.971x` 降到 `0.288x`；TS same 从 `0.900x` 降到 `0.529x`。
 
 ## **附录：环境参数测量方法**
 
@@ -562,7 +588,3 @@ GPU、thread/block limit、register file、SMEM limit 和 L2 cache 来自 CUDA r
 本实验 kernel 资源用量来自当前脚本生成的 benchmark，经 `nvcc -O3 -gencode arch=compute_110a,code=sm_110a` 编译后用 `cuobjdump --dump-resource-usage` 检查。结果按 case 收敛为：MMA-only、TS MMA-only、TS CP+MMA 单 tile 和 `SS MMA Mainloop K2/K4` 使用约 `REG:16`、`SHARED:66572 bytes`；`SS/TS Mainloop K8` 在 `M128N256` worst case 使用约 `REG:15`、`SHARED:99340 bytes`；`SS/TS Mainloop K16` 在 `M128N256` worst case 使用约 `REG:16`、`SHARED:197644 bytes`；`tcgen05.cp-only` 使用 `REG:14`、`SHARED:33804 bytes`。
 
 TMEM size 来自独立 TMEM sweep probe。probe 对每个 column request 单独启动进程，执行 `tcgen05.alloc` 后用 `tcgen05.st/ld.sync.aligned.32x32b.x1.b32` 读写第 0 列和 `columns - 1` 最后一列；首尾都读回正确值才记为 OK。这个口径下 `512 columns = 256 KiB` 是可首尾读写的最大 allocation。
-
-## **边界**
-
-本文覆盖 `tcgen05` 内部 A 操作数来源、SMEM->TMEM copy 和 cp-mma overlap。GMEM、TMA、epilogue、TMEM 读回、全局写回、sparse MMA、2CTA/cluster 路径后续单独测；当前默认三种 N shape 的结果已写入本文实验结果表。
