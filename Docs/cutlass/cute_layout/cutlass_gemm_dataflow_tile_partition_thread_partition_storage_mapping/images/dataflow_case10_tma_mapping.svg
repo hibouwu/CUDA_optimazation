@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="328" viewBox="0 0 1200 328" role="img">
+<style>
+text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
+.axis{font-size:18px}.cell{font-size:12px}.arrow{font-size:28px}
+</style>
+<rect width="1200" height="328" fill="#ffffff"/>
+<text x="300.0" y="28" class="axis" text-anchor="middle">tAgA: q=1</text>
+<text x="924.0" y="28" class="axis" text-anchor="middle">tAsA / sA: stage=1</text>
+<text x="612.0" y="191.0" class="arrow" text-anchor="middle">→</text>
+<rect x="44" y="54" width="64" height="64" fill="#ffcc66" stroke="#b34700" stroke-width="4"/>
+<text x="76.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="76.0" y="101" class="cell" text-anchor="middle">K0:7</text>
+<rect x="108" y="54" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="140.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="140.0" y="101" class="cell" text-anchor="middle">K8:15</text>
+<rect x="172" y="54" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="204.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="204.0" y="101" class="cell" text-anchor="middle">K16:23</text>
+<rect x="236" y="54" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="268.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="268.0" y="101" class="cell" text-anchor="middle">K24:31</text>
+<rect x="300" y="54" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="332.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="332.0" y="101" class="cell" text-anchor="middle">K32:39</text>
+<rect x="364" y="54" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="396.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="396.0" y="101" class="cell" text-anchor="middle">K40:47</text>
+<rect x="428" y="54" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="460.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="460.0" y="101" class="cell" text-anchor="middle">K48:55</text>
+<rect x="492" y="54" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="524.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="524.0" y="101" class="cell" text-anchor="middle">K56:63</text>
+<rect x="44" y="118" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="76.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="76.0" y="165" class="cell" text-anchor="middle">K0:7</text>
+<rect x="108" y="118" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="140.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="140.0" y="165" class="cell" text-anchor="middle">K8:15</text>
+<rect x="172" y="118" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="204.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="204.0" y="165" class="cell" text-anchor="middle">K16:23</text>
+<rect x="236" y="118" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="268.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="268.0" y="165" class="cell" text-anchor="middle">K24:31</text>
+<rect x="300" y="118" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="332.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="332.0" y="165" class="cell" text-anchor="middle">K32:39</text>
+<rect x="364" y="118" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="396.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="396.0" y="165" class="cell" text-anchor="middle">K40:47</text>
+<rect x="428" y="118" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="460.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="460.0" y="165" class="cell" text-anchor="middle">K48:55</text>
+<rect x="492" y="118" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="524.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="524.0" y="165" class="cell" text-anchor="middle">K56:63</text>
+<rect x="44" y="182" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="76.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="76.0" y="229" class="cell" text-anchor="middle">K0:7</text>
+<rect x="108" y="182" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="140.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="140.0" y="229" class="cell" text-anchor="middle">K8:15</text>
+<rect x="172" y="182" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="204.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="204.0" y="229" class="cell" text-anchor="middle">K16:23</text>
+<rect x="236" y="182" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="268.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="268.0" y="229" class="cell" text-anchor="middle">K24:31</text>
+<rect x="300" y="182" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="332.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="332.0" y="229" class="cell" text-anchor="middle">K32:39</text>
+<rect x="364" y="182" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="396.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="396.0" y="229" class="cell" text-anchor="middle">K40:47</text>
+<rect x="428" y="182" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="460.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="460.0" y="229" class="cell" text-anchor="middle">K48:55</text>
+<rect x="492" y="182" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="524.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="524.0" y="229" class="cell" text-anchor="middle">K56:63</text>
+<rect x="44" y="246" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="76.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="76.0" y="293" class="cell" text-anchor="middle">K0:7</text>
+<rect x="108" y="246" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="140.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="140.0" y="293" class="cell" text-anchor="middle">K8:15</text>
+<rect x="172" y="246" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="204.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="204.0" y="293" class="cell" text-anchor="middle">K16:23</text>
+<rect x="236" y="246" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="268.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="268.0" y="293" class="cell" text-anchor="middle">K24:31</text>
+<rect x="300" y="246" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="332.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="332.0" y="293" class="cell" text-anchor="middle">K32:39</text>
+<rect x="364" y="246" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="396.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="396.0" y="293" class="cell" text-anchor="middle">K40:47</text>
+<rect x="428" y="246" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="460.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="460.0" y="293" class="cell" text-anchor="middle">K48:55</text>
+<rect x="492" y="246" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="524.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="524.0" y="293" class="cell" text-anchor="middle">K56:63</text>
+<rect x="668" y="54" width="64" height="64" fill="#ffcc66" stroke="#b34700" stroke-width="4"/>
+<text x="700.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="700.0" y="101" class="cell" text-anchor="middle">K0:7</text>
+<rect x="732" y="54" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="764.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="764.0" y="101" class="cell" text-anchor="middle">K8:15</text>
+<rect x="796" y="54" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="828.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="828.0" y="101" class="cell" text-anchor="middle">K16:23</text>
+<rect x="860" y="54" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="892.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="892.0" y="101" class="cell" text-anchor="middle">K24:31</text>
+<rect x="924" y="54" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="956.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="956.0" y="101" class="cell" text-anchor="middle">K32:39</text>
+<rect x="988" y="54" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="1020.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="1020.0" y="101" class="cell" text-anchor="middle">K40:47</text>
+<rect x="1052" y="54" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1084.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="1084.0" y="101" class="cell" text-anchor="middle">K48:55</text>
+<rect x="1116" y="54" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1148.0" y="81" class="cell" text-anchor="middle">M0:31</text>
+<text x="1148.0" y="101" class="cell" text-anchor="middle">K56:63</text>
+<rect x="668" y="118" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="700.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="700.0" y="165" class="cell" text-anchor="middle">K0:7</text>
+<rect x="732" y="118" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="764.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="764.0" y="165" class="cell" text-anchor="middle">K8:15</text>
+<rect x="796" y="118" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="828.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="828.0" y="165" class="cell" text-anchor="middle">K16:23</text>
+<rect x="860" y="118" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="892.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="892.0" y="165" class="cell" text-anchor="middle">K24:31</text>
+<rect x="924" y="118" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="956.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="956.0" y="165" class="cell" text-anchor="middle">K32:39</text>
+<rect x="988" y="118" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="1020.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="1020.0" y="165" class="cell" text-anchor="middle">K40:47</text>
+<rect x="1052" y="118" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1084.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="1084.0" y="165" class="cell" text-anchor="middle">K48:55</text>
+<rect x="1116" y="118" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1148.0" y="145" class="cell" text-anchor="middle">M32:63</text>
+<text x="1148.0" y="165" class="cell" text-anchor="middle">K56:63</text>
+<rect x="668" y="182" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="700.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="700.0" y="229" class="cell" text-anchor="middle">K0:7</text>
+<rect x="732" y="182" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="764.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="764.0" y="229" class="cell" text-anchor="middle">K8:15</text>
+<rect x="796" y="182" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="828.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="828.0" y="229" class="cell" text-anchor="middle">K16:23</text>
+<rect x="860" y="182" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="892.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="892.0" y="229" class="cell" text-anchor="middle">K24:31</text>
+<rect x="924" y="182" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="956.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="956.0" y="229" class="cell" text-anchor="middle">K32:39</text>
+<rect x="988" y="182" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="1020.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="1020.0" y="229" class="cell" text-anchor="middle">K40:47</text>
+<rect x="1052" y="182" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1084.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="1084.0" y="229" class="cell" text-anchor="middle">K48:55</text>
+<rect x="1116" y="182" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1148.0" y="209" class="cell" text-anchor="middle">M64:95</text>
+<text x="1148.0" y="229" class="cell" text-anchor="middle">K56:63</text>
+<rect x="668" y="246" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="700.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="700.0" y="293" class="cell" text-anchor="middle">K0:7</text>
+<rect x="732" y="246" width="64" height="64" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="764.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="764.0" y="293" class="cell" text-anchor="middle">K8:15</text>
+<rect x="796" y="246" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="828.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="828.0" y="293" class="cell" text-anchor="middle">K16:23</text>
+<rect x="860" y="246" width="64" height="64" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="892.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="892.0" y="293" class="cell" text-anchor="middle">K24:31</text>
+<rect x="924" y="246" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="956.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="956.0" y="293" class="cell" text-anchor="middle">K32:39</text>
+<rect x="988" y="246" width="64" height="64" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<text x="1020.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="1020.0" y="293" class="cell" text-anchor="middle">K40:47</text>
+<rect x="1052" y="246" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1084.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="1084.0" y="293" class="cell" text-anchor="middle">K48:55</text>
+<rect x="1116" y="246" width="64" height="64" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="1148.0" y="273" class="cell" text-anchor="middle">M96:127</text>
+<text x="1148.0" y="293" class="cell" text-anchor="middle">K56:63</text>
+</svg>

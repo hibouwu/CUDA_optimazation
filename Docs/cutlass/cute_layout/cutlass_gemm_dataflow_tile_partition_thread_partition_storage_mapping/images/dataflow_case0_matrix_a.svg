@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="590" viewBox="0 0 1020 590" role="img">
+<style>
+text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
+.axis{font-size:15px}.cell{font-size:11px}.value{font-size:13px}
+</style>
+<rect width="1020" height="590" fill="#ffffff"/>
+<rect x="64" y="48" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="128" y="48" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="192" y="48" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="256" y="48" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="320" y="48" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="384" y="48" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="64" y="176" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="128" y="176" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="192" y="176" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="256" y="176" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="320" y="176" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="384" y="176" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="64" y="304" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="128" y="304" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="192" y="304" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="256" y="304" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="320" y="304" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="384" y="304" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="64" y="432" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="128" y="432" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="192" y="432" width="64" height="128" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<rect x="256" y="432" width="64" height="128" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<rect x="320" y="432" width="64" height="128" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
+<rect x="384" y="432" width="64" height="128" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<rect x="131" y="178" width="7" height="7" fill="#ffcc66" stroke="#b34700" stroke-width="2"/>
+<text x="64" y="30" class="axis" text-anchor="middle">0</text>
+<text x="128" y="30" class="axis" text-anchor="middle">64</text>
+<text x="192" y="30" class="axis" text-anchor="middle">128</text>
+<text x="256" y="30" class="axis" text-anchor="middle">192</text>
+<text x="320" y="30" class="axis" text-anchor="middle">256</text>
+<text x="384" y="30" class="axis" text-anchor="middle">320</text>
+<text x="448" y="30" class="axis" text-anchor="middle">384</text>
+<text x="50" y="53" class="axis" text-anchor="end">0</text>
+<text x="50" y="181" class="axis" text-anchor="end">128</text>
+<text x="50" y="309" class="axis" text-anchor="end">256</text>
+<text x="50" y="437" class="axis" text-anchor="end">384</text>
+<text x="50" y="565" class="axis" text-anchor="end">512</text>
+<text x="536" y="115.0" class="axis" text-anchor="end">128</text>
+<rect x="548" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="106" class="cell" text-anchor="middle">A[128,64]</text>
+<text x="576.0" y="125" class="value" text-anchor="middle">49217</text>
+<rect x="604" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="106" class="cell" text-anchor="middle">A[128,65]</text>
+<text x="632.0" y="125" class="value" text-anchor="middle">49218</text>
+<rect x="660" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="106" class="cell" text-anchor="middle">A[128,66]</text>
+<text x="688.0" y="125" class="value" text-anchor="middle">49219</text>
+<rect x="716" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="106" class="cell" text-anchor="middle">A[128,67]</text>
+<text x="744.0" y="125" class="value" text-anchor="middle">49220</text>
+<rect x="772" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="106" class="cell" text-anchor="middle">A[128,68]</text>
+<text x="800.0" y="125" class="value" text-anchor="middle">49221</text>
+<rect x="828" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="106" class="cell" text-anchor="middle">A[128,69]</text>
+<text x="856.0" y="125" class="value" text-anchor="middle">49222</text>
+<rect x="884" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="106" class="cell" text-anchor="middle">A[128,70]</text>
+<text x="912.0" y="125" class="value" text-anchor="middle">49223</text>
+<rect x="940" y="82" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="106" class="cell" text-anchor="middle">A[128,71]</text>
+<text x="968.0" y="125" class="value" text-anchor="middle">49224</text>
+<text x="536" y="171.0" class="axis" text-anchor="end">129</text>
+<rect x="548" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="162" class="cell" text-anchor="middle">A[129,64]</text>
+<text x="576.0" y="181" class="value" text-anchor="middle">49601</text>
+<rect x="604" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="162" class="cell" text-anchor="middle">A[129,65]</text>
+<text x="632.0" y="181" class="value" text-anchor="middle">49602</text>
+<rect x="660" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="162" class="cell" text-anchor="middle">A[129,66]</text>
+<text x="688.0" y="181" class="value" text-anchor="middle">49603</text>
+<rect x="716" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="162" class="cell" text-anchor="middle">A[129,67]</text>
+<text x="744.0" y="181" class="value" text-anchor="middle">49604</text>
+<rect x="772" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="162" class="cell" text-anchor="middle">A[129,68]</text>
+<text x="800.0" y="181" class="value" text-anchor="middle">49605</text>
+<rect x="828" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="162" class="cell" text-anchor="middle">A[129,69]</text>
+<text x="856.0" y="181" class="value" text-anchor="middle">49606</text>
+<rect x="884" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="162" class="cell" text-anchor="middle">A[129,70]</text>
+<text x="912.0" y="181" class="value" text-anchor="middle">49607</text>
+<rect x="940" y="138" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="162" class="cell" text-anchor="middle">A[129,71]</text>
+<text x="968.0" y="181" class="value" text-anchor="middle">49608</text>
+<text x="536" y="227.0" class="axis" text-anchor="end">130</text>
+<rect x="548" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="218" class="cell" text-anchor="middle">A[130,64]</text>
+<text x="576.0" y="237" class="value" text-anchor="middle">49985</text>
+<rect x="604" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="218" class="cell" text-anchor="middle">A[130,65]</text>
+<text x="632.0" y="237" class="value" text-anchor="middle">49986</text>
+<rect x="660" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="218" class="cell" text-anchor="middle">A[130,66]</text>
+<text x="688.0" y="237" class="value" text-anchor="middle">49987</text>
+<rect x="716" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="218" class="cell" text-anchor="middle">A[130,67]</text>
+<text x="744.0" y="237" class="value" text-anchor="middle">49988</text>
+<rect x="772" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="218" class="cell" text-anchor="middle">A[130,68]</text>
+<text x="800.0" y="237" class="value" text-anchor="middle">49989</text>
+<rect x="828" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="218" class="cell" text-anchor="middle">A[130,69]</text>
+<text x="856.0" y="237" class="value" text-anchor="middle">49990</text>
+<rect x="884" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="218" class="cell" text-anchor="middle">A[130,70]</text>
+<text x="912.0" y="237" class="value" text-anchor="middle">49991</text>
+<rect x="940" y="194" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="218" class="cell" text-anchor="middle">A[130,71]</text>
+<text x="968.0" y="237" class="value" text-anchor="middle">49992</text>
+<text x="536" y="283.0" class="axis" text-anchor="end">131</text>
+<rect x="548" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="274" class="cell" text-anchor="middle">A[131,64]</text>
+<text x="576.0" y="293" class="value" text-anchor="middle">50369</text>
+<rect x="604" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="274" class="cell" text-anchor="middle">A[131,65]</text>
+<text x="632.0" y="293" class="value" text-anchor="middle">50370</text>
+<rect x="660" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="274" class="cell" text-anchor="middle">A[131,66]</text>
+<text x="688.0" y="293" class="value" text-anchor="middle">50371</text>
+<rect x="716" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="274" class="cell" text-anchor="middle">A[131,67]</text>
+<text x="744.0" y="293" class="value" text-anchor="middle">50372</text>
+<rect x="772" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="274" class="cell" text-anchor="middle">A[131,68]</text>
+<text x="800.0" y="293" class="value" text-anchor="middle">50373</text>
+<rect x="828" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="274" class="cell" text-anchor="middle">A[131,69]</text>
+<text x="856.0" y="293" class="value" text-anchor="middle">50374</text>
+<rect x="884" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="274" class="cell" text-anchor="middle">A[131,70]</text>
+<text x="912.0" y="293" class="value" text-anchor="middle">50375</text>
+<rect x="940" y="250" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="274" class="cell" text-anchor="middle">A[131,71]</text>
+<text x="968.0" y="293" class="value" text-anchor="middle">50376</text>
+<text x="536" y="339.0" class="axis" text-anchor="end">132</text>
+<rect x="548" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="330" class="cell" text-anchor="middle">A[132,64]</text>
+<text x="576.0" y="349" class="value" text-anchor="middle">50753</text>
+<rect x="604" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="330" class="cell" text-anchor="middle">A[132,65]</text>
+<text x="632.0" y="349" class="value" text-anchor="middle">50754</text>
+<rect x="660" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="330" class="cell" text-anchor="middle">A[132,66]</text>
+<text x="688.0" y="349" class="value" text-anchor="middle">50755</text>
+<rect x="716" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="330" class="cell" text-anchor="middle">A[132,67]</text>
+<text x="744.0" y="349" class="value" text-anchor="middle">50756</text>
+<rect x="772" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="330" class="cell" text-anchor="middle">A[132,68]</text>
+<text x="800.0" y="349" class="value" text-anchor="middle">50757</text>
+<rect x="828" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="330" class="cell" text-anchor="middle">A[132,69]</text>
+<text x="856.0" y="349" class="value" text-anchor="middle">50758</text>
+<rect x="884" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="330" class="cell" text-anchor="middle">A[132,70]</text>
+<text x="912.0" y="349" class="value" text-anchor="middle">50759</text>
+<rect x="940" y="306" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="330" class="cell" text-anchor="middle">A[132,71]</text>
+<text x="968.0" y="349" class="value" text-anchor="middle">50760</text>
+<text x="536" y="395.0" class="axis" text-anchor="end">133</text>
+<rect x="548" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="386" class="cell" text-anchor="middle">A[133,64]</text>
+<text x="576.0" y="405" class="value" text-anchor="middle">51137</text>
+<rect x="604" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="386" class="cell" text-anchor="middle">A[133,65]</text>
+<text x="632.0" y="405" class="value" text-anchor="middle">51138</text>
+<rect x="660" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="386" class="cell" text-anchor="middle">A[133,66]</text>
+<text x="688.0" y="405" class="value" text-anchor="middle">51139</text>
+<rect x="716" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="386" class="cell" text-anchor="middle">A[133,67]</text>
+<text x="744.0" y="405" class="value" text-anchor="middle">51140</text>
+<rect x="772" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="386" class="cell" text-anchor="middle">A[133,68]</text>
+<text x="800.0" y="405" class="value" text-anchor="middle">51141</text>
+<rect x="828" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="386" class="cell" text-anchor="middle">A[133,69]</text>
+<text x="856.0" y="405" class="value" text-anchor="middle">51142</text>
+<rect x="884" y="362" width="56" height="56" fill="#ffcc66" stroke="#b34700" stroke-width="4"/>
+<text x="912.0" y="386" class="cell" text-anchor="middle">A[133,70]</text>
+<text x="912.0" y="405" class="value" text-anchor="middle">51143</text>
+<rect x="940" y="362" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="386" class="cell" text-anchor="middle">A[133,71]</text>
+<text x="968.0" y="405" class="value" text-anchor="middle">51144</text>
+<text x="536" y="451.0" class="axis" text-anchor="end">134</text>
+<rect x="548" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="442" class="cell" text-anchor="middle">A[134,64]</text>
+<text x="576.0" y="461" class="value" text-anchor="middle">51521</text>
+<rect x="604" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="442" class="cell" text-anchor="middle">A[134,65]</text>
+<text x="632.0" y="461" class="value" text-anchor="middle">51522</text>
+<rect x="660" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="442" class="cell" text-anchor="middle">A[134,66]</text>
+<text x="688.0" y="461" class="value" text-anchor="middle">51523</text>
+<rect x="716" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="442" class="cell" text-anchor="middle">A[134,67]</text>
+<text x="744.0" y="461" class="value" text-anchor="middle">51524</text>
+<rect x="772" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="442" class="cell" text-anchor="middle">A[134,68]</text>
+<text x="800.0" y="461" class="value" text-anchor="middle">51525</text>
+<rect x="828" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="442" class="cell" text-anchor="middle">A[134,69]</text>
+<text x="856.0" y="461" class="value" text-anchor="middle">51526</text>
+<rect x="884" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="442" class="cell" text-anchor="middle">A[134,70]</text>
+<text x="912.0" y="461" class="value" text-anchor="middle">51527</text>
+<rect x="940" y="418" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="442" class="cell" text-anchor="middle">A[134,71]</text>
+<text x="968.0" y="461" class="value" text-anchor="middle">51528</text>
+<text x="536" y="507.0" class="axis" text-anchor="end">135</text>
+<rect x="548" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="576.0" y="498" class="cell" text-anchor="middle">A[135,64]</text>
+<text x="576.0" y="517" class="value" text-anchor="middle">51905</text>
+<rect x="604" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="632.0" y="498" class="cell" text-anchor="middle">A[135,65]</text>
+<text x="632.0" y="517" class="value" text-anchor="middle">51906</text>
+<rect x="660" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="688.0" y="498" class="cell" text-anchor="middle">A[135,66]</text>
+<text x="688.0" y="517" class="value" text-anchor="middle">51907</text>
+<rect x="716" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="744.0" y="498" class="cell" text-anchor="middle">A[135,67]</text>
+<text x="744.0" y="517" class="value" text-anchor="middle">51908</text>
+<rect x="772" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="800.0" y="498" class="cell" text-anchor="middle">A[135,68]</text>
+<text x="800.0" y="517" class="value" text-anchor="middle">51909</text>
+<rect x="828" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="856.0" y="498" class="cell" text-anchor="middle">A[135,69]</text>
+<text x="856.0" y="517" class="value" text-anchor="middle">51910</text>
+<rect x="884" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="912.0" y="498" class="cell" text-anchor="middle">A[135,70]</text>
+<text x="912.0" y="517" class="value" text-anchor="middle">51911</text>
+<rect x="940" y="474" width="56" height="56" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
+<text x="968.0" y="498" class="cell" text-anchor="middle">A[135,71]</text>
+<text x="968.0" y="517" class="value" text-anchor="middle">51912</text>
+<text x="576.0" y="68" class="axis" text-anchor="middle">64</text>
+<text x="632.0" y="68" class="axis" text-anchor="middle">65</text>
+<text x="688.0" y="68" class="axis" text-anchor="middle">66</text>
+<text x="744.0" y="68" class="axis" text-anchor="middle">67</text>
+<text x="800.0" y="68" class="axis" text-anchor="middle">68</text>
+<text x="856.0" y="68" class="axis" text-anchor="middle">69</text>
+<text x="912.0" y="68" class="axis" text-anchor="middle">70</text>
+<text x="968.0" y="68" class="axis" text-anchor="middle">71</text>
+<path d="M 139 181 L 530 362 L 548 362" fill="none" stroke="#b34700" stroke-width="2"/>
+</svg>

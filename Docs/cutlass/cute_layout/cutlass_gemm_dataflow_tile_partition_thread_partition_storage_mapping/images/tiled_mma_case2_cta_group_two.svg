@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="346" height="338" viewBox="0 0 346 338" role="img">
+<style>
+text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
+.axis{font-size:22px}.cell{font-size:15px}
+</style>
+<rect width="346" height="338" fill="#ffffff"/>
+<text x="86.0" y="28" class="axis" text-anchor="middle">0</text>
+<text x="158.0" y="28" class="axis" text-anchor="middle">1</text>
+<text x="230.0" y="28" class="axis" text-anchor="middle">2</text>
+<text x="302.0" y="28" class="axis" text-anchor="middle">3</text>
+<text x="24" y="86.0" class="axis" text-anchor="middle">0</text>
+<text x="24" y="158.0" class="axis" text-anchor="middle">1</text>
+<text x="24" y="230.0" class="axis" text-anchor="middle">2</text>
+<text x="24" y="302.0" class="axis" text-anchor="middle">3</text>
+<rect x="50" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="72" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="86.0" y="95" class="cell" text-anchor="middle">Part0</text>
+<rect x="122" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="72" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="158.0" y="95" class="cell" text-anchor="middle">Part1</text>
+<rect x="194" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="72" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="230.0" y="95" class="cell" text-anchor="middle">Part2</text>
+<rect x="266" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="72" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="302.0" y="95" class="cell" text-anchor="middle">Part3</text>
+<rect x="50" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="144" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="86.0" y="167" class="cell" text-anchor="middle">Part4</text>
+<rect x="122" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="144" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="158.0" y="167" class="cell" text-anchor="middle">Part5</text>
+<rect x="194" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="144" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="230.0" y="167" class="cell" text-anchor="middle">Part6</text>
+<rect x="266" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="144" class="cell" text-anchor="middle">CTA-rank0</text>
+<text x="302.0" y="167" class="cell" text-anchor="middle">Part7</text>
+<rect x="50" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="216" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="86.0" y="239" class="cell" text-anchor="middle">Part0</text>
+<rect x="122" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="216" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="158.0" y="239" class="cell" text-anchor="middle">Part1</text>
+<rect x="194" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="216" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="230.0" y="239" class="cell" text-anchor="middle">Part2</text>
+<rect x="266" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="216" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="302.0" y="239" class="cell" text-anchor="middle">Part3</text>
+<rect x="50" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="288" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="86.0" y="311" class="cell" text-anchor="middle">Part4</text>
+<rect x="122" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="288" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="158.0" y="311" class="cell" text-anchor="middle">Part5</text>
+<rect x="194" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="288" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="230.0" y="311" class="cell" text-anchor="middle">Part6</text>
+<rect x="266" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="288" class="cell" text-anchor="middle">CTA-rank1</text>
+<text x="302.0" y="311" class="cell" text-anchor="middle">Part7</text>
+</svg>

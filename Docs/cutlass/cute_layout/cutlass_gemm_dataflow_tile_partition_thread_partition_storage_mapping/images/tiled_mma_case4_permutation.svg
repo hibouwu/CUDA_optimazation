@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="346" height="626" viewBox="0 0 346 626" role="img">
+<style>
+text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
+.axis{font-size:22px}.cell{font-size:15px}
+</style>
+<rect width="346" height="626" fill="#ffffff"/>
+<text x="86.0" y="28" class="axis" text-anchor="middle">0</text>
+<text x="158.0" y="28" class="axis" text-anchor="middle">1</text>
+<text x="230.0" y="28" class="axis" text-anchor="middle">2</text>
+<text x="302.0" y="28" class="axis" text-anchor="middle">3</text>
+<text x="24" y="86.0" class="axis" text-anchor="middle">0</text>
+<text x="24" y="158.0" class="axis" text-anchor="middle">1</text>
+<text x="24" y="230.0" class="axis" text-anchor="middle">2</text>
+<text x="24" y="302.0" class="axis" text-anchor="middle">3</text>
+<text x="24" y="374.0" class="axis" text-anchor="middle">4</text>
+<text x="24" y="446.0" class="axis" text-anchor="middle">5</text>
+<text x="24" y="518.0" class="axis" text-anchor="middle">6</text>
+<text x="24" y="590.0" class="axis" text-anchor="middle">7</text>
+<rect x="50" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="72" class="cell" text-anchor="middle">Tile0</text>
+<text x="86.0" y="95" class="cell" text-anchor="middle">Inner0</text>
+<rect x="122" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="72" class="cell" text-anchor="middle">Tile0</text>
+<text x="158.0" y="95" class="cell" text-anchor="middle">Inner1</text>
+<rect x="194" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="72" class="cell" text-anchor="middle">Tile0</text>
+<text x="230.0" y="95" class="cell" text-anchor="middle">Inner2</text>
+<rect x="266" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="72" class="cell" text-anchor="middle">Tile0</text>
+<text x="302.0" y="95" class="cell" text-anchor="middle">Inner3</text>
+<rect x="50" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="144" class="cell" text-anchor="middle">Tile0</text>
+<text x="86.0" y="167" class="cell" text-anchor="middle">Inner4</text>
+<rect x="122" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="144" class="cell" text-anchor="middle">Tile0</text>
+<text x="158.0" y="167" class="cell" text-anchor="middle">Inner5</text>
+<rect x="194" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="144" class="cell" text-anchor="middle">Tile0</text>
+<text x="230.0" y="167" class="cell" text-anchor="middle">Inner6</text>
+<rect x="266" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="144" class="cell" text-anchor="middle">Tile0</text>
+<text x="302.0" y="167" class="cell" text-anchor="middle">Inner7</text>
+<rect x="50" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="216" class="cell" text-anchor="middle">Tile1</text>
+<text x="86.0" y="239" class="cell" text-anchor="middle">Inner0</text>
+<rect x="122" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="216" class="cell" text-anchor="middle">Tile1</text>
+<text x="158.0" y="239" class="cell" text-anchor="middle">Inner1</text>
+<rect x="194" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="216" class="cell" text-anchor="middle">Tile1</text>
+<text x="230.0" y="239" class="cell" text-anchor="middle">Inner2</text>
+<rect x="266" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="216" class="cell" text-anchor="middle">Tile1</text>
+<text x="302.0" y="239" class="cell" text-anchor="middle">Inner3</text>
+<rect x="50" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="288" class="cell" text-anchor="middle">Tile1</text>
+<text x="86.0" y="311" class="cell" text-anchor="middle">Inner4</text>
+<rect x="122" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="288" class="cell" text-anchor="middle">Tile1</text>
+<text x="158.0" y="311" class="cell" text-anchor="middle">Inner5</text>
+<rect x="194" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="288" class="cell" text-anchor="middle">Tile1</text>
+<text x="230.0" y="311" class="cell" text-anchor="middle">Inner6</text>
+<rect x="266" y="258" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="288" class="cell" text-anchor="middle">Tile1</text>
+<text x="302.0" y="311" class="cell" text-anchor="middle">Inner7</text>
+<rect x="50" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="360" class="cell" text-anchor="middle">Tile0</text>
+<text x="86.0" y="383" class="cell" text-anchor="middle">Inner8</text>
+<rect x="122" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="360" class="cell" text-anchor="middle">Tile0</text>
+<text x="158.0" y="383" class="cell" text-anchor="middle">Inner9</text>
+<rect x="194" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="360" class="cell" text-anchor="middle">Tile0</text>
+<text x="230.0" y="383" class="cell" text-anchor="middle">Inner10</text>
+<rect x="266" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="360" class="cell" text-anchor="middle">Tile0</text>
+<text x="302.0" y="383" class="cell" text-anchor="middle">Inner11</text>
+<rect x="50" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="432" class="cell" text-anchor="middle">Tile0</text>
+<text x="86.0" y="455" class="cell" text-anchor="middle">Inner12</text>
+<rect x="122" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="432" class="cell" text-anchor="middle">Tile0</text>
+<text x="158.0" y="455" class="cell" text-anchor="middle">Inner13</text>
+<rect x="194" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="432" class="cell" text-anchor="middle">Tile0</text>
+<text x="230.0" y="455" class="cell" text-anchor="middle">Inner14</text>
+<rect x="266" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="432" class="cell" text-anchor="middle">Tile0</text>
+<text x="302.0" y="455" class="cell" text-anchor="middle">Inner15</text>
+<rect x="50" y="474" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="504" class="cell" text-anchor="middle">Tile1</text>
+<text x="86.0" y="527" class="cell" text-anchor="middle">Inner8</text>
+<rect x="122" y="474" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="504" class="cell" text-anchor="middle">Tile1</text>
+<text x="158.0" y="527" class="cell" text-anchor="middle">Inner9</text>
+<rect x="194" y="474" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="504" class="cell" text-anchor="middle">Tile1</text>
+<text x="230.0" y="527" class="cell" text-anchor="middle">Inner10</text>
+<rect x="266" y="474" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="504" class="cell" text-anchor="middle">Tile1</text>
+<text x="302.0" y="527" class="cell" text-anchor="middle">Inner11</text>
+<rect x="50" y="546" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="86.0" y="576" class="cell" text-anchor="middle">Tile1</text>
+<text x="86.0" y="599" class="cell" text-anchor="middle">Inner12</text>
+<rect x="122" y="546" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="158.0" y="576" class="cell" text-anchor="middle">Tile1</text>
+<text x="158.0" y="599" class="cell" text-anchor="middle">Inner13</text>
+<rect x="194" y="546" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="230.0" y="576" class="cell" text-anchor="middle">Tile1</text>
+<text x="230.0" y="599" class="cell" text-anchor="middle">Inner14</text>
+<rect x="266" y="546" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
+<text x="302.0" y="576" class="cell" text-anchor="middle">Tile1</text>
+<text x="302.0" y="599" class="cell" text-anchor="middle">Inner15</text>
+</svg>
