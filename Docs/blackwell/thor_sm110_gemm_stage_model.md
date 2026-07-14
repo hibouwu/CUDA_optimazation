@@ -195,8 +195,7 @@ d_E=128\times128\times4=65536\ \text{B}=64\ \text{KiB}.
 定义 service wave 数：
 
 \[
-N_{\text{wave}}
-=
+N_{\text{wave}} =
 \left\lceil\frac{N_{\text{CTA}}}{S}\right\rceil.
 \]
 
