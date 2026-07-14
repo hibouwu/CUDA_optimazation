@@ -536,6 +536,36 @@ TS A2 K16 的 launch 和 MMA 指令数与 SS K16 相同，但 `sm__inst_executed
 
 cp-only 这一组仍是 `grid=20`、`block=128`，`sm__inst_executed_pipe_tensor.sum=0`，计时窗口里没有混入 MMA。这里的截图只用来核对 launch、cycles 和 pipe counter；具体是不是 FP4 packed/decode copy，看前面的 SASS 图，吞吐则看 `bytes/cycle` 和 `cycles/cp` 表格。
 
+### `cta_group::2` SS mainloop 补充测试（待 Thor 实测）
+
+这组补充测试固定 BF16 `M256N128K16`，比较 `cta_group::2` 在一次完成等待前连续发射 1、4、8、16 条 SS MMA 的成本。`M256` 是一对 CTA 合作执行的完整指令 shape；cluster 中每个 CTA 对应其中 `M128` 的数据范围。因此，计数和吞吐都以 CTA pair 为单位，不能把同一条 group2 指令重复计为两条 MMA。
+
+每个 kernel 使用 `(2,1,1)` cluster 和每 CTA 128 threads。两个 CTA 都准备各自的 SMEM A/B operand、TMEM allocation 和 completion mbarrier；普通 SMEM store 通过 async-proxy fence 对 TCGen05 可见。cluster rank 0 的 elected thread 发射 group2 MMA，并用 mask `0x3` 把 completion 提交给两个 CTA，两个 CTA 分别等待自己的 mbarrier。输入 descriptor、512-column TMEM allocation request 和 SMEM 资源口径沿用 group1 BF16 测试。SMEM 初始化、TMEM allocation、relinquish 和 deallocation 位于计时窗口外；计时边界包含 MMA 发射、commit、mbarrier wait，以及安全复用 completion barrier 所需的 CTA convergence 和循环控制。旧 group1 completion-wait case 采用相同口径，因此可作对照，但这里的 cycles/MMA 不是剥离所有控制开销后的单条硬件指令延迟。
+
+设一次完成等待前连续发射的指令数为 `q`，CTA pair 数为 `P`，循环次数为 `I`。一条 BF16 `M256N128K16` 指令完成 `256 × 128 × 16` 次 MAC，按乘加各一次浮点操作计为 `1,048,576 FLOP`。统计口径为：
+
+\[
+K_{tile}=16q,\qquad N_{MMA}=PqI
+\]
+
+\[
+\text{cycles/MMA}=\frac{C_{pair,max}}{qI},\qquad
+\text{TFLOP/s}=\frac{PqI\times 1{,}048{,}576}{C_{pair,max}/f}\times 10^{-12}
+\]
+
+其中 `C_pair,max` 是一次 trial 中所有 CTA pair 的最大 cycles，`f` 是实测 GPC 频率。每个 case 重复 20 次，表格记录 trial 间的 median/min/max；以最大 pair 时间计时可以保留最慢并发 pair 对整个 kernel 完成时间的影响。Thor 有 20 个 SM 时启动 20 个 CTA，即 `P=10`，目标 timed MMA 指令数为 `10 × q × iters`。
+
+|Case|q|等效 K tile|Group2 TFLOP/s|Median cycles/MMA|Min/Max cycles|Group1 baseline|Speedup|
+|---|---:|---:|---:|---:|---:|---:|---:|
+|G2 SS Mainloop K1|1|16|待测|待测|待测|BF16 M128N128 SS forced-wait|待测|
+|G2 SS Mainloop K4|4|64|待测|待测|待测|BF16 M128N128 SS K4|待测|
+|G2 SS Mainloop K8|8|128|待测|待测|待测|BF16 M128N128 SS K8|待测|
+|G2 SS Mainloop K16|16|256|待测|待测|待测|BF16 M128N128 SS K16|待测|
+
+K1 记录每条指令都完成等待时的延迟边界；K8/K16 观察多条异步 MMA 共用一次 completion wait 后的摊薄效果。K4 的等效 K tile 为 64，和采用 `BK=64` 的 CUTLASS 主循环计算 bundle 对齐，因此是后续 stage model 校准 `t_MMA` 和计算吞吐 `P_C` 的核心 case。group1 对照使用相同数据类型和每 CTA `M128N128` 的旧结果，用于比较两个独立 group1 CTA 与一个 group2 CTA pair 的总计算吞吐。
+
+这组测试提供 CUTLASS group2 计算阶段的性能代理，不读取 TMEM accumulator，因此不验证 accumulator layout 或数值正确性。这里的 BF16 descriptor 也没有完全复现目标 kernel 的 FP16/SW128 输入布局。完整 CUTLASS kernel 仍包含 TMA load、流水线重叠、cluster residency、epilogue 和 wave 尾部效应；单独的 group2 MMA 数据不能直接预测端到端 GEMM 时间。
+
 ### TMEM 写入干扰补充测试
 
 这组补充测试固定 `M128N256`、K16 mainloop 和 FP4/BF16，测试额外 `tcgen05.cp` 写入对 SS/TS mainloop 吞吐的影响。测试在每条 MMA 附近插入 1、2、4 或 8 条额外 copy，表中的 `noise cp/MMA` 记录这个数量；每个 case 重复 50 次，图表使用 median。主实验结论仍以 14 类 TCGen05 路径为准。
