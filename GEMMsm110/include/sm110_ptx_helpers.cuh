@@ -36,6 +36,37 @@ __device__ __forceinline__ uint32_t smem_address(const void* ptr) {
   return static_cast<uint32_t>(__cvta_generic_to_shared(ptr));
 }
 
+__device__ __forceinline__ void cluster_arrive() {
+  asm volatile("barrier.cluster.arrive.aligned;" ::: "memory");
+}
+
+__device__ __forceinline__ void cluster_wait() {
+  asm volatile("barrier.cluster.wait.aligned;" ::: "memory");
+}
+
+__device__ __forceinline__ void cluster_sync() {
+  cluster_arrive();
+  cluster_wait();
+}
+
+__device__ __forceinline__ void fence_proxy_async_shared() {
+  asm volatile("fence.proxy.async.shared::cta;" ::: "memory");
+}
+
+__device__ __forceinline__ void fence_mbarrier_init_release_cluster() {
+  asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
+}
+
+__device__ __forceinline__ void tcgen05_fence_after_thread_sync() {
+  asm volatile("tcgen05.fence::after_thread_sync;" ::: "memory");
+}
+
+__device__ __forceinline__ uint32_t block_rank_in_cluster() {
+  uint32_t rank = 0;
+  asm volatile("mov.u32 %0, %%cluster_ctarank;" : "=r"(rank));
+  return rank;
+}
+
 __device__ __forceinline__ void mbarrier_init(uint32_t barrier,
                                                uint32_t arrivals) {
   asm volatile("mbarrier.init.shared::cta.b64 [%0], %1;"
@@ -132,6 +163,25 @@ __device__ __forceinline__ void mma_f16(uint32_t accumulator,
         "n"(CtaGroup));
 }
 
+__device__ __forceinline__ void mma_f16_cta_group2(
+    uint32_t accumulator, uint64_t descriptor_a, uint64_t descriptor_b,
+    uint32_t instruction_descriptor, bool accumulate) {
+  uint32_t mask[8] = {};
+  asm volatile(
+      "{\n\t"
+      ".reg .pred use_d;\n\t"
+      "setp.ne.b32 use_d, %4, 0;\n\t"
+      "tcgen05.mma.cta_group::2.kind::f16 "
+      "[%0], %1, %2, %3, "
+      "{%5, %6, %7, %8, %9, %10, %11, %12}, use_d;\n\t"
+      "}"
+      :
+      : "r"(accumulator), "l"(descriptor_a), "l"(descriptor_b),
+        "r"(instruction_descriptor), "r"(static_cast<int>(accumulate)),
+        "r"(mask[0]), "r"(mask[1]), "r"(mask[2]), "r"(mask[3]),
+        "r"(mask[4]), "r"(mask[5]), "r"(mask[6]), "r"(mask[7]));
+}
+
 template <int CtaGroup = 1>
 __device__ __forceinline__ void mma_commit(uint32_t barrier) {
   asm volatile(
@@ -139,6 +189,18 @@ __device__ __forceinline__ void mma_commit(uint32_t barrier) {
       "mbarrier::arrive::one.shared::cluster.b64 [%0];"
       :
       : "r"(barrier), "n"(CtaGroup)
+      : "memory");
+}
+
+template <int CtaGroup = 1>
+__device__ __forceinline__ void mma_commit_multicast(uint32_t barrier,
+                                                      uint16_t cta_mask) {
+  asm volatile(
+      "tcgen05.commit.cta_group::%2."
+      "mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 "
+      "[%0], %1;"
+      :
+      : "r"(barrier), "h"(cta_mask), "n"(CtaGroup)
       : "memory");
 }
 
@@ -164,6 +226,14 @@ __device__ __forceinline__ uint64_t sw128_k_major_descriptor(
   return encode_smem(smem) |
          (encode_smem(kStrideByteOffset) << 32ULL) |
          (1ULL << 46ULL) | (2ULL << 61ULL);
+}
+
+__device__ __forceinline__ uint64_t inter_k_major_descriptor(
+    uint32_t smem) {
+  constexpr uint32_t kStrideByteOffset = 8 * 16;
+  return encode_smem(smem) |
+         (encode_smem(kStrideByteOffset) << 32ULL) |
+         (1ULL << 46ULL);
 }
 
 inline void check_driver(CUresult status, const char* where) {
@@ -199,7 +269,62 @@ inline void encode_tiled_3d_sw128(CUtensorMap* tensor_map,
       "cuTensorMapEncodeTiled(3D SW128)");
 }
 
+inline void encode_tiled_3d_inter(CUtensorMap* tensor_map,
+                                  const half* base,
+                                  uint64_t global_height,
+                                  uint64_t global_width,
+                                  uint32_t tile_height,
+                                  uint32_t tile_width) {
+  constexpr uint32_t kRank = 3;
+  uint64_t global_dim[kRank] = {64, global_height, global_width / 64};
+  uint64_t global_stride[kRank - 1] = {
+      global_width * sizeof(half), 64 * sizeof(half)};
+  uint32_t box_dim[kRank] = {64, tile_height, tile_width / 64};
+  uint32_t element_stride[kRank] = {1, 1, 1};
+
+  check_driver(
+      cuTensorMapEncodeTiled(
+          tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, kRank,
+          const_cast<half*>(base), global_dim, global_stride, box_dim,
+          element_stride, CU_TENSOR_MAP_INTERLEAVE_NONE,
+          CU_TENSOR_MAP_SWIZZLE_NONE, CU_TENSOR_MAP_L2_PROMOTION_NONE,
+          CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE),
+      "cuTensorMapEncodeTiled(3D INTER)");
+}
+
+inline void encode_tiled_2d_sw128_strided(CUtensorMap* tensor_map,
+                                          const half* base,
+                                          uint64_t global_height,
+                                          uint64_t global_width,
+                                          uint64_t row_stride,
+                                          uint32_t tile_height) {
+  constexpr uint32_t kRank = 2;
+  uint64_t global_dim[kRank] = {global_width, global_height};
+  uint64_t global_stride[kRank - 1] = {
+      row_stride * sizeof(half)};
+  uint32_t box_dim[kRank] = {64, tile_height};
+  uint32_t element_stride[kRank] = {1, 1};
+
+  check_driver(
+      cuTensorMapEncodeTiled(
+          tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, kRank,
+          const_cast<half*>(base), global_dim, global_stride, box_dim,
+          element_stride, CU_TENSOR_MAP_INTERLEAVE_NONE,
+          CU_TENSOR_MAP_SWIZZLE_128B, CU_TENSOR_MAP_L2_PROMOTION_NONE,
+          CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE),
+      "cuTensorMapEncodeTiled(2D SW128 strided)");
+}
+
 inline void encode_tiled_2d_sw128(CUtensorMap* tensor_map,
+                                  const half* base,
+                                  uint64_t global_height,
+                                  uint64_t global_width,
+                                  uint32_t tile_height) {
+  encode_tiled_2d_sw128_strided(tensor_map, base, global_height,
+                                global_width, global_width, tile_height);
+}
+
+inline void encode_tiled_2d_inter(CUtensorMap* tensor_map,
                                   const half* base,
                                   uint64_t global_height,
                                   uint64_t global_width,
@@ -216,9 +341,9 @@ inline void encode_tiled_2d_sw128(CUtensorMap* tensor_map,
           tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, kRank,
           const_cast<half*>(base), global_dim, global_stride, box_dim,
           element_stride, CU_TENSOR_MAP_INTERLEAVE_NONE,
-          CU_TENSOR_MAP_SWIZZLE_128B, CU_TENSOR_MAP_L2_PROMOTION_NONE,
+          CU_TENSOR_MAP_SWIZZLE_NONE, CU_TENSOR_MAP_L2_PROMOTION_NONE,
           CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE),
-      "cuTensorMapEncodeTiled(2D SW128)");
+      "cuTensorMapEncodeTiled(2D INTER)");
 }
 
 }  // namespace gemm_sm110::ptx

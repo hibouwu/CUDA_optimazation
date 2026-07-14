@@ -70,6 +70,7 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "tc4c",
     "tc5a",
     "tc5b",
+    "tc6",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -109,12 +110,14 @@ SERIES_LABELS = {
     "best_backend": "Best handwritten FP32 backend",
     "tc1": "tc1 wmma fp16 baseline",
     "tc2": "tc2 tma 2-stage wmma 128x64x32",
-    "tc3": "tc3 sm120a fp8 tma 2-stage mma 128x64x32",
+    "tc3": "tc3 SM110 multi-stage TCGen05 pipeline",
     "tc4": "tc4 sm110 tma staged tcgen05 gemm",
-    "tc4a": "tc4a sm120a fp8 tma 3-stage prepack mma",
-    "tc4b": "tc4b sm120a fp8 TMA 64B swizzle/fallback 3-stage prepack mma",
-    "tc5a": "tc5a sm120a static CLC fallback scheduler",
-    "tc5b": "tc5b sm120a dynamic CLC fallback work queue",
+    "tc4a": "tc4a SM110 warp-specialized TCGen05 pipeline",
+    "tc4b": "tc4b SM110 2-SM cluster TCGen05 pipeline",
+    "tc4c": "tc4c SM110 warp-specialized 2-SM cluster pipeline",
+    "tc5a": "tc5a SM110 static persistent scheduler",
+    "tc5b": "tc5b SM110 software dynamic persistent scheduler",
+    "tc6": "tc6 SM110 fused NVFP4 epilogue",
 }
 
 SM110_SERIES_LABELS = {
@@ -129,7 +132,8 @@ SM110_SERIES_LABELS = {
     "tc4b": "tc4b 2-SM cluster pipeline",
     "tc4c": "tc4c warp-specialized 2-SM cluster pipeline",
     "tc5a": "tc5a static persistent scheduler",
-    "tc5b": "tc5b hardware CLC persistent scheduler",
+    "tc5b": "tc5b software dynamic persistent scheduler",
+    "tc6": "tc6 fused NVFP4 epilogue",
 }
 
 
@@ -182,6 +186,7 @@ def backend_key(row):
         "tc4b",
         "tc5a",
         "tc5b",
+        "tc6",
     ):
         if version.startswith(prefix + " "):
             return prefix

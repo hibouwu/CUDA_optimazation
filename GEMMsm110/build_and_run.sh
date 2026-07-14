@@ -13,13 +13,15 @@ set -euo pipefail
 #   ./build_and_run.sh 1024 tc0
 #   ./build_and_run.sh 1024 stage1
 #   ./build_and_run.sh 1024 tc4b
+#   ./build_and_run.sh 260 132 256 tc5a
+#   ./build_and_run.sh 1024 tc6
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
 BENCH_BIN="${BUILD_DIR}/gemm_sm110_bench"
 SANITY_BIN="${BUILD_DIR}/runtime_sanity"
 TC3_MINIMAL_BIN="${BUILD_DIR}/tc3_minimal"
-BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS:-30}}"
+BACKEND_TIMEOUT_SECONDS="${BACKEND_TIMEOUT_SECONDS:-30}"
 BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
 CUTLASS_ROOT="${CUTLASS_ROOT:-${SCRIPT_DIR}/../../third_party/cutlass}"
 
@@ -64,21 +66,20 @@ build_benchmark() {
 }
 
 run_backend_with_timeout() {
-  local n="$1"
-  local backend="$2"
+  local -a bench_args=("$@")
   local status
 
-  echo "=== Running N=${n} backend=${backend} timeout=${BACKEND_TIMEOUT_SECONDS}s ==="
+  echo "=== Running ${BENCH_BIN} ${bench_args[*]} timeout=${BACKEND_TIMEOUT_SECONDS}s ==="
   set +e
   timeout --foreground --signal=TERM \
     --kill-after="${BACKEND_KILL_GRACE_SECONDS}s" \
     "${BACKEND_TIMEOUT_SECONDS}s" \
-    "${BENCH_BIN}" "${n}" "${backend}"
+    "${BENCH_BIN}" "${bench_args[@]}"
   status=$?
   set -e
 
   if [[ "${status}" -eq 124 || "${status}" -eq 137 ]]; then
-    echo "=== Backend ${backend} timed out after ${BACKEND_TIMEOUT_SECONDS}s and was stopped ===" >&2
+    echo "=== Benchmark timed out after ${BACKEND_TIMEOUT_SECONDS}s and was stopped ===" >&2
     return 124
   fi
   return "${status}"
@@ -91,7 +92,8 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|references|stage0..stage5|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b] [timeout_seconds]
+  $0 [N] [all|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc6] [timeout_seconds]
+  $0 M N K [all|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc6] [timeout_seconds]
 EOF
 }
 
@@ -127,7 +129,21 @@ case "${ARG}" in
     usage
     ;;
   *)
-    N="${ARG}"
+    declare -a BENCH_ARGS
+    if [[ "$#" -ge 3 && "${1}" =~ ^[1-9][0-9]*$ &&
+          "${2}" =~ ^[1-9][0-9]*$ && "${3}" =~ ^[1-9][0-9]*$ ]]; then
+      M="${1}"
+      N="${2}"
+      K="${3}"
+      FILTER="${4:-all}"
+      BACKEND_TIMEOUT_SECONDS="${5:-${BACKEND_TIMEOUT_SECONDS}}"
+      BENCH_ARGS=("${M}" "${N}" "${K}" "${FILTER}")
+    else
+      N="${ARG}"
+      FILTER="${2:-all}"
+      BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS}}"
+      BENCH_ARGS=("${N}" "${FILTER}")
+    fi
     if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
       echo "Invalid backend timeout: ${BACKEND_TIMEOUT_SECONDS} (expected positive integer seconds)" >&2
       exit 2
@@ -136,10 +152,9 @@ case "${ARG}" in
       echo "Invalid backend kill grace: ${BACKEND_KILL_GRACE_SECONDS} (expected positive integer seconds)" >&2
       exit 2
     fi
-    FILTER="${2:-all}"
     echo "=== Building benchmark ==="
     build_benchmark
     echo "Backend timeout: ${BACKEND_TIMEOUT_SECONDS}s (SIGKILL grace: ${BACKEND_KILL_GRACE_SECONDS}s)"
-    run_backend_with_timeout "${N}" "${FILTER}"
+    run_backend_with_timeout "${BENCH_ARGS[@]}"
     ;;
 esac

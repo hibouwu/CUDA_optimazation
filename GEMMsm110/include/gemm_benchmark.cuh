@@ -13,10 +13,10 @@
 // 构造稳定的测试输入。避免全部填 1 导致某些索引错误不容易暴露。
 inline void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
   for (size_t i = 0; i < a.size(); ++i) {
-    a[i] = static_cast<float>((i % 17) - 8) * 0.125f;
+    a[i] = static_cast<float>(static_cast<int>(i % 17) - 8) * 0.125f;
   }
   for (size_t i = 0; i < b.size(); ++i) {
-    b[i] = static_cast<float>((i % 13) - 6) * 0.0625f;
+    b[i] = static_cast<float>(static_cast<int>(i % 13) - 6) * 0.0625f;
   }
 }
 
@@ -152,10 +152,11 @@ float benchmark_kernel(const std::string& backend_id, const std::string& name,
   const float avg_ms = total_ms / kRepeat;
   const bool ok = compare_result(ref, out, atol, rtol);
   const float perf = gflops(m, n, k, avg_ms);
+  const float ratio = reference_gflops > 0.0f ? perf / reference_gflops : 0.0f;
   std::cout << name << ": " << avg_ms << " ms, " << perf
-            << " GFLOPS, matched=" << ok << '\n';
+            << " GFLOPS, ratio=" << ratio << "x, matched=" << ok << '\n';
   csv << backend_id << "," << name << "," << n << "," << precision << ","
       << reference_name << "," << avg_ms << "," << perf << ","
-      << perf / reference_gflops << "," << (ok ? 1 : 0) << '\n';
+      << ratio << "," << (ok ? 1 : 0) << '\n';
   return avg_ms;
 }

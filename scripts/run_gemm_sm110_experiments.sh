@@ -17,10 +17,10 @@ CUTLASS_ROOT="${CUTLASS_ROOT:-${ROOT_DIR}/../third_party/cutlass}"
 NVCC="${NVCC:-nvcc}"
 
 case "${GEMM_SUITE}" in
-  all|references|stage0|stage1|stage2|stage3|stage4|stage5|\
-  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b) ;;
+  all|references|stage0|stage1|stage2|stage3|stage4|stage5|stage6|\
+  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc6) ;;
   *)
-    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, references, stage0..stage5, or a concrete backend ID." >&2
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, references, stage0..stage6, or a concrete backend ID." >&2
     exit 1
     ;;
 esac
@@ -112,7 +112,7 @@ build_gemm_sm110() {
 expand_suite_backends() {
   case "$1" in
     all)
-      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b
+      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b tc6
       ;;
     references)
       printf '%s\n' cublas_tc cutlass
@@ -134,6 +134,9 @@ expand_suite_backends() {
       ;;
     stage5)
       printf '%s\n' cublas_tc tc5a tc5b
+      ;;
+    stage6)
+      printf '%s\n' cublas_tc tc6
       ;;
     *)
       printf '%s\n' "$1"

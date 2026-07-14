@@ -5,10 +5,14 @@
 #include "backends/tc4a_warp_specialized.cuh"
 #include "backends/tc4bc_cluster.cuh"
 #include "backends/tc5_persistent.cuh"
+#include "backends/tc6_nvfp4.cuh"
 #include "cutlass_sm110_backends.cuh"
 #include "sm110_backend_registry.cuh"
+#include "requant/nvfp4_reference.cuh"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -20,7 +24,10 @@ namespace {
 using gemm_sm110::wants_backend;
 
 void print_usage(const char* program) {
-  std::cerr << "Usage: " << program << " [square_size] "
+  std::cerr << "Usage:\n"
+            << "  " << program << " [square_size] "
+            << gemm_sm110::kBackendUsage << '\n'
+            << "  " << program << " M N K "
             << gemm_sm110::kBackendUsage << '\n';
 }
 
@@ -63,6 +70,122 @@ float benchmark_reference(Launch launch, float* d_c, size_t c_bytes,
   return total_ms / kRepeat;
 }
 
+size_t count_byte_mismatches(const std::vector<std::uint8_t>& ref,
+                             const std::vector<std::uint8_t>& got) {
+  if (ref.size() != got.size()) return std::max(ref.size(), got.size());
+  size_t errors = 0;
+  for (size_t i = 0; i < ref.size(); ++i) {
+    if (ref[i] != got[i]) ++errors;
+  }
+  return errors;
+}
+
+struct Nvfp4ErrorStats {
+  double rmse = 0.0;
+  float max_abs_error = 0.0f;
+};
+
+Nvfp4ErrorStats compute_nvfp4_error(
+    const std::vector<float>& fp32_ref,
+    const std::vector<std::uint8_t>& quantized,
+    const std::vector<std::uint8_t>& block_scales, float tensor_scale) {
+  double squared_error = 0.0;
+  float max_abs_error = 0.0f;
+  for (size_t i = 0; i < fp32_ref.size(); ++i) {
+    const std::uint8_t packed = quantized[i / 2];
+    const std::uint8_t nibble =
+        (i & 1u) == 0u ? static_cast<std::uint8_t>(packed >> 4)
+                       : static_cast<std::uint8_t>(packed & 0x0fu);
+    const float block_scale = gemm_sm110::requant::decode_positive_e4m3(
+        block_scales[i / gemm_sm110::requant::kNvfp4BlockSize]);
+    const float reconstructed =
+        gemm_sm110::requant::decode_e2m1(nibble) * block_scale *
+        tensor_scale;
+    const float error = reconstructed - fp32_ref[i];
+    squared_error += static_cast<double>(error) * error;
+    max_abs_error = std::max(max_abs_error, std::fabs(error));
+  }
+
+  Nvfp4ErrorStats stats;
+  stats.rmse = std::sqrt(squared_error / fp32_ref.size());
+  stats.max_abs_error = max_abs_error;
+  return stats;
+}
+
+template <typename Launch>
+float benchmark_tc6_kernel(
+    Launch launch, int m, int n, int k, std::uint8_t* d_quantized,
+    std::uint8_t* d_block_scales,
+    const gemm_sm110::requant::Nvfp4ReferenceResult& ref,
+    const std::vector<float>& fp32_ref, std::ofstream& csv,
+    float reference_gflops) {
+  const size_t quantized_bytes = ref.quantized.size();
+  const size_t scale_bytes = ref.block_scales.size();
+  CHECK_CUDA(cudaMemset(d_quantized, 0, quantized_bytes));
+  CHECK_CUDA(cudaMemset(d_block_scales, 0, scale_bytes));
+  for (int i = 0; i < kWarmup; ++i) launch();
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  cudaEvent_t start, stop;
+  CHECK_CUDA(cudaEventCreate(&start));
+  CHECK_CUDA(cudaEventCreate(&stop));
+  CHECK_CUDA(cudaMemset(d_quantized, 0, quantized_bytes));
+  CHECK_CUDA(cudaMemset(d_block_scales, 0, scale_bytes));
+
+  CHECK_CUDA(cudaEventRecord(start));
+  for (int i = 0; i < kRepeat; ++i) {
+    launch();
+  }
+  CHECK_CUDA(cudaEventRecord(stop));
+  CHECK_CUDA(cudaEventSynchronize(stop));
+
+  float total_ms = 0.0f;
+  CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+  CHECK_CUDA(cudaEventDestroy(start));
+  CHECK_CUDA(cudaEventDestroy(stop));
+
+  std::vector<std::uint8_t> quantized(quantized_bytes);
+  std::vector<std::uint8_t> block_scales(scale_bytes);
+  CHECK_CUDA(cudaMemcpy(quantized.data(), d_quantized, quantized_bytes,
+                        cudaMemcpyDeviceToHost));
+  CHECK_CUDA(cudaMemcpy(block_scales.data(), d_block_scales, scale_bytes,
+                        cudaMemcpyDeviceToHost));
+
+  const size_t value_mismatches =
+      count_byte_mismatches(ref.quantized, quantized);
+  const size_t scale_mismatches =
+      count_byte_mismatches(ref.block_scales, block_scales);
+  const Nvfp4ErrorStats ref_error =
+      compute_nvfp4_error(fp32_ref, ref.quantized, ref.block_scales,
+                          ref.tensor_scale);
+  const Nvfp4ErrorStats got_error =
+      compute_nvfp4_error(fp32_ref, quantized, block_scales,
+                          ref.tensor_scale);
+  const bool ok =
+      got_error.rmse <= ref_error.rmse * 1.10 + 1.0e-6 &&
+      got_error.max_abs_error <= ref_error.max_abs_error * 1.25f + 1.0e-5f;
+  const float avg_ms = total_ms / kRepeat;
+  const float perf = gflops(m, n, k, avg_ms);
+  const float ratio =
+      reference_gflops > 0.0f ? perf / reference_gflops : 0.0f;
+  std::cout << "tc6 fused NVFP4 TCGen05 epilogue: " << avg_ms
+            << " ms, " << perf << " GFLOPS, ratio=" << ratio
+            << "x, matched=" << ok
+            << ", tensor_scale=" << ref.tensor_scale
+            << ", bit_exact="
+            << (value_mismatches == 0 && scale_mismatches == 0)
+            << ", value_mismatches=" << value_mismatches
+            << ", scale_mismatches=" << scale_mismatches
+            << ", rmse=" << got_error.rmse
+            << " (ref=" << ref_error.rmse << ")"
+            << ", max_abs_error=" << got_error.max_abs_error
+            << " (ref=" << ref_error.max_abs_error << ")\n";
+  csv << "tc6,fused NVFP4 TCGen05 epilogue," << n
+      << ",fp16->nvfp4,cuBLAS Tensor Core quantized," << avg_ms << ","
+      << perf << "," << ratio << "," << (ok ? 1 : 0) << '\n';
+  return avg_ms;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -71,20 +194,33 @@ int main(int argc, char** argv) {
     return EXIT_SUCCESS;
   }
 
+  int m = 1024;
   int n = 1024;
-  if (argc > 1) n = std::atoi(argv[1]);
-
+  int k = 1024;
   std::string backend_filter = "all";
-  if (argc > 2) backend_filter = argv[2];
 
-  if (n <= 0 || !gemm_sm110::is_valid_backend_filter(backend_filter)) {
+  if (argc == 2 || argc == 3) {
+    n = std::atoi(argv[1]);
+    m = n;
+    k = n;
+    if (argc == 3) backend_filter = argv[2];
+  } else if (argc == 4 || argc == 5) {
+    m = std::atoi(argv[1]);
+    n = std::atoi(argv[2]);
+    k = std::atoi(argv[3]);
+    if (argc == 5) backend_filter = argv[4];
+  } else if (argc > 5) {
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  if (m <= 0 || n <= 0 || k <= 0 ||
+      !gemm_sm110::is_valid_backend_filter(backend_filter)) {
     print_usage(argv[0]);
     return EXIT_FAILURE;
   }
 
   const bool run_reference = needs_cublas_reference(backend_filter);
-  const int m = n;
-  const int k = n;
   const float alpha = 1.0f;
   const float beta = 0.0f;
 
@@ -118,7 +254,7 @@ int main(int argc, char** argv) {
   csv << "BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,"
          "RatioToReference,Matched\n";
 
-  std::cout << "N=" << n << '\n';
+  std::cout << "M=" << m << ", N=" << n << ", K=" << k << '\n';
   std::cout << "Backend filter=" << backend_filter << '\n';
   std::cout << "Benchmark policy: warmup=" << kWarmup
             << ", timed repeats=" << kRepeat
@@ -186,6 +322,11 @@ int main(int argc, char** argv) {
                    "because runtime GPU is not an sm110 family target\n";
       csv << "cutlass,CUTLASS official Blackwell auto-schedule GEMM skipped,"
           << n << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+    } else if (m % 256 != 0 || n % 128 != 0 || k % 64 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("cutlass"), n, csv,
+          "current CUTLASS reference config requires M%256=0, N%128=0, "
+          "and K%64=0");
     } else {
       using CutlassOfficialRunner =
           gemm_sm110::cutlass_backend::Runner<
@@ -201,64 +342,92 @@ int main(int argc, char** argv) {
   }
 
   if (wants_backend(backend_filter, "tc0")) {
-    using Tc0Runner = gemm_sm110::backends::Tc0Runner;
-    Tc0Runner tc0_runner(d_a_half, d_b_half, d_c, m, n, k);
-    auto launch_tc0 = [&]() { tc0_runner.launch(); };
-    std::vector<float> h_tc0(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc0", "tc0 CUDA WMMA Tensor Core baseline", "fp16->fp32",
-        "cuBLAS Tensor Core", launch_tc0, m, n, k, d_c, c_bytes, h_ref_tc,
-        h_tc0, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (m % 16 != 0 || n % 16 != 0 || k % 16 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc0"), n, csv,
+          "requires M,N,K multiples of 16");
+    } else {
+      using Tc0Runner = gemm_sm110::backends::Tc0Runner;
+      Tc0Runner tc0_runner(d_a_half, d_b_half, d_c, m, n, k);
+      auto launch_tc0 = [&]() { tc0_runner.launch(); };
+      std::vector<float> h_tc0(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc0", "tc0 CUDA WMMA Tensor Core baseline", "fp16->fp32",
+          "cuBLAS Tensor Core", launch_tc0, m, n, k, d_c, c_bytes, h_ref_tc,
+          h_tc0, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc1a")) {
-    gemm_sm110::backends::Tc1aRunner runner(
-        d_a_half, d_b_half, d_c, m, n, k);
-    auto launch = [&]() { runner.launch(); };
-    std::vector<float> output(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc1a", "tc1a 2D TMA linear-SMEM TCGen05 minimal", "fp16->fp32",
-        "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
-        output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc1a"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc1a"), n, csv,
+          "disabled pending linear SMEM descriptor validation");
+    }
   }
 
   if (wants_backend(backend_filter, "tc1b")) {
-    gemm_sm110::backends::Tc1bRunner runner(
-        d_a_half, d_b_half, d_c, m, n, k);
-    auto launch = [&]() { runner.launch(); };
-    std::vector<float> output(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc1b", "tc1b 3D TMA linear-SMEM TCGen05 minimal", "fp16->fp32",
-        "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
-        output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc1b"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc1b"), n, csv,
+          "disabled pending linear SMEM descriptor validation");
+    }
   }
 
   if (wants_backend(backend_filter, "tc2a")) {
-    gemm_sm110::backends::Tc2aRunner runner(
-        d_a_half, d_b_half, d_c, m, n, k);
-    auto launch = [&]() { runner.launch(); };
-    std::vector<float> output(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc2a", "tc2a 2D TMA SW128-SMEM TCGen05", "fp16->fp32",
-        "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
-        output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc2a"), n, csv,
+                                "requires an SM110-family target");
+    } else if (m % 128 != 0 || n % 128 != 0 || k % 64 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc2a"), n, csv,
+          "requires M,N multiples of 128 and K a multiple of 64");
+    } else {
+      gemm_sm110::backends::Tc2aRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc2a", "tc2a 2D TMA SW128-SMEM TCGen05", "fp16->fp32",
+          "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
+          output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc2b")) {
-    gemm_sm110::backends::Tc2bRunner runner(
-        d_a_half, d_b_half, d_c, m, n, k);
-    auto launch = [&]() { runner.launch(); };
-    std::vector<float> output(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc2b", "tc2b 3D TMA SW128-SMEM TCGen05", "fp16->fp32",
-        "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
-        output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc2b"), n, csv,
+                                "requires an SM110-family target");
+    } else if (m % 128 != 0 || n % 128 != 0 || k % 64 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc2b"), n, csv,
+          "requires M,N multiples of 128 and K a multiple of 64");
+    } else {
+      gemm_sm110::backends::Tc2bRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc2b", "tc2b 3D TMA SW128-SMEM TCGen05", "fp16->fp32",
+          "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
+          output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc3")) {
     if (!device_supports_tc3_sm110) {
       write_unavailable_backend(*gemm_sm110::find_backend("tc3"), n, csv,
                                 "requires an SM110-family target");
+    } else if (m % 128 != 0 || n % 128 != 0 || k % 64 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc3"), n, csv,
+          "requires M,N multiples of 128 and K a multiple of 64");
     } else {
       using Tc3Runner = gemm_sm110::backends::Tc3Runner;
       Tc3Runner tc3_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
@@ -272,82 +441,87 @@ int main(int argc, char** argv) {
   }
 
   if (wants_backend(backend_filter, "tc4a")) {
-    gemm_sm110::backends::Tc4aRunner runner(
-        d_a_half, d_b_half, d_c, m, n, k);
-    auto launch = [&]() { runner.launch(); };
-    std::vector<float> output(static_cast<size_t>(m) * n);
-    benchmark_kernel(
-        "tc4a", "tc4a warp-specialized TMA/TCGen05 pipeline",
-        "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes,
-        h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    if (m % 128 != 0 || n % 256 != 0 || k % 128 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc4a"), n, csv,
+          "requires M%128=0, N%256=0, and K%128=0");
+    } else {
+      gemm_sm110::backends::Tc4aRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc4a", "tc4a warp-specialized TMA/TCGen05 pipeline",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc4b")) {
-    if (m % 256 != 0) {
-      write_unavailable_backend(
-          *gemm_sm110::find_backend("tc4b"), n, csv,
-          "requires M a multiple of 256");
-    } else {
-      gemm_sm110::backends::Tc4bRunner runner(
-          d_a_half, d_b_half, d_c, m, n, k);
-      auto launch = [&]() { runner.launch(); };
-      std::vector<float> output(static_cast<size_t>(m) * n);
-      benchmark_kernel(
-          "tc4b", "tc4b 2-SM cluster TMA/TCGen05 pipeline", "fp16->fp32",
-          "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
-          output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
-    }
+    write_unavailable_backend(
+        *gemm_sm110::find_backend("tc4b"), n, csv,
+        "2-SM TMEM accumulator ownership/store mapping is still under "
+        "validation");
   }
 
   if (wants_backend(backend_filter, "tc4c")) {
-    if (m % 256 != 0) {
-      write_unavailable_backend(
-          *gemm_sm110::find_backend("tc4c"), n, csv,
-          "requires M a multiple of 256");
-    } else {
-      gemm_sm110::backends::Tc4cRunner runner(
-          d_a_half, d_b_half, d_c, m, n, k);
-      auto launch = [&]() { runner.launch(); };
-      std::vector<float> output(static_cast<size_t>(m) * n);
-      benchmark_kernel(
-          "tc4c", "tc4c warp-specialized 2-SM cluster pipeline",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes,
-          h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
-    }
+    write_unavailable_backend(
+        *gemm_sm110::find_backend("tc4c"), n, csv,
+        "2-SM TMEM accumulator ownership/store mapping is still under "
+        "validation");
   }
 
   if (wants_backend(backend_filter, "tc5a")) {
-    if (m % 256 != 0 || n % 128 != 0 || k % 64 != 0) {
-      write_unavailable_backend(
-          *gemm_sm110::find_backend("tc5a"), n, csv,
-          "requires M%256=0, N%128=0, and K%64=0");
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5a"), n, csv,
+                                "requires an SM110-family target");
     } else {
       gemm_sm110::backends::Tc5aRunner runner(
-          d_a_half, d_b_half, d_c, m, n, k);
+          d_a_half, d_b_half_nk, d_c, m, n, k);
       auto launch = [&]() { runner.launch(); };
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
-          "tc5a",
-          "tc5a static persistent TMEM-double-buffer 2-SM GEMM",
+          "tc5a", "tc5a static persistent 1-SM TCGen05 GEMM",
           "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
 
   if (wants_backend(backend_filter, "tc5b")) {
-    if (m % 256 != 0 || n % 128 != 0 || k % 64 != 0) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5b"), n, csv,
+                                "requires an SM110-family target");
+    } else {
       write_unavailable_backend(
           *gemm_sm110::find_backend("tc5b"), n, csv,
-          "requires M%256=0, N%128=0, and K%64=0");
+          "disabled pending dynamic work-queue stability validation");
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc6")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc6"), n, csv,
+                                "requires an SM110-family target");
     } else {
-      gemm_sm110::backends::Tc5bRunner runner(
-          d_a_half, d_b_half, d_c, m, n, k);
+      const auto nvfp4_reference =
+          gemm_sm110::requant::make_nvfp4_reference(h_ref_tc);
+      std::uint8_t* d_tc6_values = nullptr;
+      std::uint8_t* d_tc6_scales = nullptr;
+      CHECK_CUDA(cudaMalloc(&d_tc6_values,
+                            nvfp4_reference.quantized.size()));
+      CHECK_CUDA(cudaMalloc(&d_tc6_scales,
+                            nvfp4_reference.block_scales.size()));
+
+      gemm_sm110::backends::Tc6Runner runner(
+          d_a_half, d_b_half_nk, d_tc6_values, d_tc6_scales, m, n, k,
+          1.0f / nvfp4_reference.tensor_scale);
       auto launch = [&]() { runner.launch(); };
-      std::vector<float> output(static_cast<size_t>(m) * n);
-      benchmark_kernel(
-          "tc5b", "tc5b hardware CLC persistent 2-SM GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
-          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+      benchmark_tc6_kernel(launch, m, n, k, d_tc6_values, d_tc6_scales,
+                           nvfp4_reference, h_ref_tc, csv,
+                           cublas_tc_perf);
+
+      CHECK_CUDA(cudaFree(d_tc6_values));
+      CHECK_CUDA(cudaFree(d_tc6_scales));
     }
   }
 

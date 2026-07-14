@@ -53,7 +53,7 @@ void tc3_raw_pipeline_kernel(
       ptx::mbarrier_init(tma_barrier_base + stage * sizeof(uint64_t), 1);
     }
     ptx::mbarrier_init(mma_barrier_address, 1);
-    asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
+    ptx::fence_mbarrier_init_release_cluster();
   } else if (warp == 1) {
     ptx::tmem_alloc(ptx::smem_address(&tmem_base), TileN);
   }
@@ -92,7 +92,7 @@ void tc3_raw_pipeline_kernel(
     const uint32_t barrier =
         tma_barrier_base + stage * sizeof(uint64_t);
     ptx::mbarrier_wait(barrier, tma_phase);
-    asm volatile("tcgen05.fence::after_thread_sync;" ::: "memory");
+    ptx::tcgen05_fence_after_thread_sync();
 
     if (stage == Stages - 1) tma_phase ^= 1;
     if (warp != 0 || !ptx::elect_one()) return;
@@ -133,7 +133,7 @@ void tc3_raw_pipeline_kernel(
     mma_phase ^= 1;
   }
 
-  asm volatile("tcgen05.fence::after_thread_sync;" ::: "memory");
+  ptx::tcgen05_fence_after_thread_sync();
   static_assert(kThreads == kTileM);
   for (int n_block = 0; n_block < TileN / 8; ++n_block) {
     float values[8];
