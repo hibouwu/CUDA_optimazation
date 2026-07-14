@@ -42,9 +42,10 @@ default.
 ## CTA group 2 SS mainloop supplement
 
 `run_thor_tcgen05_g2_report.py` is an independent BF16 supplement for
-`tcgen05.mma.cta_group::2`. It generates exactly four `M256N128K16` SS
-mainloop cases, with 1, 4, 8, or 16 MMA instructions per completion wait. The
-existing CTA group 1 runner and result files are not modified.
+`tcgen05.mma.cta_group::2`. It generates `M256N128K16` and `M256N256K16`
+SS mainloop cases, with 1, 4, 8, or 16 MMA instructions per completion wait
+for each shape. The existing CTA group 1 runner and result files are not
+modified.
 
 Generate the CUDA sources without compiling or running them:
 
@@ -52,7 +53,7 @@ Generate the CUDA sources without compiling or running them:
 python3 run_thor_tcgen05_g2_report.py --generate-only
 ```
 
-Generate and compile all four cases for `compute_110a/sm_110a`, run the SASS
+Generate and compile all group2 cases for `compute_110a/sm_110a`, run the SASS
 checks, but do not launch the kernels:
 
 ```bash
@@ -81,11 +82,13 @@ python3 run_thor_tcgen05_g2_report.py --iters 10000 --trials 20 --freq-hz 157500
 ```
 
 Generated sources are written to
-`benchmark_src/tcgen05_g2_ss_mainloop_k{1,4,8,16}_m256n128_bf16_benchmark.cu`,
+`benchmark_src/tcgen05_g2_ss_mainloop_k{1,4,8,16}_m256n{128,256}_bf16_benchmark.cu`,
 and binaries use the separate `build_g2/` directory; the runner inspects their
 SASS before any launch. A completed Thor run writes
 `plots/g2_ss_mainloop_sweep_results.csv` and
-`plots/g2_ss_mainloop_report.txt`. Group 1 comparisons are loaded from
+`plots/g2_ss_mainloop_report.txt`. `plot_g2_ss_mainloop_comparison.py` writes
+`plots/g2_vs_g1_tflops.svg` and `plots/g2_vs_g1_tflops_results.csv`.
+Group 1 comparisons are loaded from
 `plots/mma_only_results.csv` for K1 and
 `plots/mma_mainloop_sweep_results.csv` for K4/K8/K16.
 

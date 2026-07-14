@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="680" viewBox="0 0 1240 680">
+<style>
+text { font-family: Arial, sans-serif; fill: #1f2933; }
+.title { font-size: 22px; font-weight: 700; }
+.subtitle { font-size: 13px; fill: #52606d; }
+.axis { stroke: #46515c; stroke-width: 1; }
+.grid { stroke: #d7dde3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #52606d; }
+.label { font-size: 12px; fill: #334e68; }
+.legend { font-size: 12px; fill: #334e68; }
+.value { font-size: 10px; fill: #102a43; }
+.ratio { font-size: 10px; fill: #7c2d12; font-weight: 700; }
+</style>
+<text x="620.0" y="30" text-anchor="middle" class="title">TCGen05 BF16 SS Mainloop: cta_group::2 vs group1</text>
+<text x="620.0" y="53" text-anchor="middle" class="subtitle">K1 uses SS MMA-only; K4/K8/K16 use SS mainloop. Ratio labels are g2 / matching g1 shape.</text>
+<rect x="84" y="61" width="14" height="14" fill="#2878b5"/>
+<text x="104" y="73" class="legend">g1 M128N128</text>
+<rect x="249" y="61" width="14" height="14" fill="#c75d2c"/>
+<text x="269" y="73" class="legend">g2 M256N128</text>
+<rect x="414" y="61" width="14" height="14" fill="#0f5d3b"/>
+<text x="434" y="73" class="legend">g1 M128N256</text>
+<rect x="579" y="61" width="14" height="14" fill="#8f3f71"/>
+<text x="599" y="73" class="legend">g2 M256N256</text>
+<text x="24" y="333.0" transform="rotate(-90 24 333.0)" text-anchor="middle" class="label">TFLOP/s</text>
+<line x1="84" y1="562.0" x2="1198" y2="562.0" class="grid"/>
+<text x="74" y="566.0" text-anchor="end" class="tick">0.00</text>
+<line x1="84" y1="447.5" x2="1198" y2="447.5" class="grid"/>
+<text x="74" y="451.5" text-anchor="end" class="tick">66.9</text>
+<line x1="84" y1="333.0" x2="1198" y2="333.0" class="grid"/>
+<text x="74" y="337.0" text-anchor="end" class="tick">134</text>
+<line x1="84" y1="218.5" x2="1198" y2="218.5" class="grid"/>
+<text x="74" y="222.5" text-anchor="end" class="tick">201</text>
+<line x1="84" y1="104.0" x2="1198" y2="104.0" class="grid"/>
+<text x="74" y="108.0" text-anchor="end" class="tick">267</text>
+<line x1="84" y1="104" x2="84" y2="562" class="axis"/>
+<line x1="84" y1="562" x2="1198" y2="562" class="axis"/>
+<rect x="84.0" y="455.9" width="55.4" height="106.1" fill="#2878b5"/>
+<text x="111.7" y="449.9" text-anchor="middle" class="value">62.0</text>
+<rect x="147.4" y="486.2" width="55.4" height="75.8" fill="#c75d2c"/>
+<text x="175.1" y="480.2" text-anchor="middle" class="value">44.3</text>
+<text x="175.1" y="467.2" text-anchor="middle" class="ratio">0.71x</text>
+<rect x="210.8" y="435.8" width="55.4" height="126.2" fill="#0f5d3b"/>
+<text x="238.4" y="429.8" text-anchor="middle" class="value">73.7</text>
+<rect x="274.1" y="440.9" width="55.4" height="121.1" fill="#8f3f71"/>
+<text x="301.8" y="434.9" text-anchor="middle" class="value">70.7</text>
+<text x="301.8" y="421.9" text-anchor="middle" class="ratio">0.96x</text>
+<text x="206.8" y="584" text-anchor="middle" class="label">K1</text>
+<text x="206.8" y="602" text-anchor="middle" class="tick">K_tile 16</text>
+<text x="206.8" y="622" text-anchor="middle" class="tick">N128 0.71x / N256 0.96x</text>
+<rect x="373.5" y="368.5" width="55.4" height="193.5" fill="#2878b5"/>
+<text x="401.2" y="362.5" text-anchor="middle" class="value">113.0</text>
+<rect x="436.9" y="351.9" width="55.4" height="210.1" fill="#c75d2c"/>
+<text x="464.6" y="345.9" text-anchor="middle" class="value">122.7</text>
+<text x="464.6" y="332.9" text-anchor="middle" class="ratio">1.09x</text>
+<rect x="500.2" y="257.1" width="55.4" height="304.9" fill="#0f5d3b"/>
+<text x="527.9" y="251.1" text-anchor="middle" class="value">178.0</text>
+<rect x="563.6" y="277.3" width="55.4" height="284.7" fill="#8f3f71"/>
+<text x="591.3" y="271.3" text-anchor="middle" class="value">166.3</text>
+<text x="591.3" y="258.3" text-anchor="middle" class="ratio">0.93x</text>
+<text x="496.2" y="584" text-anchor="middle" class="label">K4</text>
+<text x="496.2" y="602" text-anchor="middle" class="tick">K_tile 64</text>
+<text x="496.2" y="622" text-anchor="middle" class="tick">N128 1.09x / N256 0.93x</text>
+<rect x="663.0" y="267.0" width="55.4" height="295.0" fill="#2878b5"/>
+<text x="690.7" y="261.0" text-anchor="middle" class="value">172.2</text>
+<rect x="726.4" y="280.6" width="55.4" height="281.4" fill="#c75d2c"/>
+<text x="754.1" y="274.6" text-anchor="middle" class="value">164.3</text>
+<text x="754.1" y="261.6" text-anchor="middle" class="ratio">0.95x</text>
+<rect x="789.8" y="203.8" width="55.4" height="358.2" fill="#0f5d3b"/>
+<text x="817.4" y="197.8" text-anchor="middle" class="value">209.2</text>
+<rect x="853.1" y="218.2" width="55.4" height="343.8" fill="#8f3f71"/>
+<text x="880.8" y="212.2" text-anchor="middle" class="value">200.8</text>
+<text x="880.8" y="199.2" text-anchor="middle" class="ratio">0.96x</text>
+<text x="785.8" y="584" text-anchor="middle" class="label">K8</text>
+<text x="785.8" y="602" text-anchor="middle" class="tick">K_tile 128</text>
+<text x="785.8" y="622" text-anchor="middle" class="tick">N128 0.95x / N256 0.96x</text>
+<rect x="952.5" y="205.2" width="55.4" height="356.8" fill="#2878b5"/>
+<text x="980.2" y="199.2" text-anchor="middle" class="value">208.4</text>
+<rect x="1015.9" y="218.2" width="55.4" height="343.8" fill="#c75d2c"/>
+<text x="1043.6" y="212.2" text-anchor="middle" class="value">200.8</text>
+<text x="1043.6" y="199.2" text-anchor="middle" class="ratio">0.96x</text>
+<rect x="1079.2" y="167.2" width="55.4" height="394.8" fill="#0f5d3b"/>
+<text x="1106.9" y="161.2" text-anchor="middle" class="value">230.6</text>
+<rect x="1142.6" y="175.3" width="55.4" height="386.7" fill="#8f3f71"/>
+<text x="1170.3" y="169.3" text-anchor="middle" class="value">225.8</text>
+<text x="1170.3" y="156.3" text-anchor="middle" class="ratio">0.98x</text>
+<text x="1075.2" y="584" text-anchor="middle" class="label">K16</text>
+<text x="1075.2" y="602" text-anchor="middle" class="tick">K_tile 256</text>
+<text x="1075.2" y="622" text-anchor="middle" class="tick">N128 0.96x / N256 0.98x</text>
+<text x="1198.0" y="656" text-anchor="end" class="tick">Sources: plots/g2_ss_mainloop_sweep_results.csv, mma_mainloop_sweep_results.csv, mma_only_results.csv</text>
+</svg>

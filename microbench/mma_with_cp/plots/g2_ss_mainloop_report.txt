@@ -1,0 +1,45 @@
+TCGen05 cta_group::2 SS mainloop report
+============================================
+
+Generated (UTC): 2026-07-14T10:26:17.722245+00:00
+Device: NVIDIA Thor
+Compute capability: 11.0
+SM count: 20
+Active CTA pairs: 10
+GPC frequency: 1575000000 Hz (/sys/class/devfreq/gpu-gpc-0/cur_freq)
+Iterations/trials: 10000 / 20
+
+Results (each trial first takes max cycles over all CTA pairs):
+
+case                           shape        K_tile  median cycles  min/max cycles       cycles/MMA  g2 TFLOP/s  peak %  g1 TFLOP/s  speedup
+-----------------------------  -----------  ------  -------------  -------------------  ----------  ----------  ------  -----------  -------
+g2_ss_mainloop_k1_m256n128     M256N128         16    3730254.000    3730254/  3730254     373.025      44.273   17.13       61.966    0.714
+g2_ss_mainloop_k4_m256n128     M256N128         64    5385266.000    5385236/  5385314     134.632     122.669   47.45      113.015    1.085
+g2_ss_mainloop_k8_m256n128     M256N128        128    8040325.500    8040218/  8040427     100.504     164.322   63.57      172.250    0.954
+g2_ss_mainloop_k16_m256n128    M256N128        256   13160565.500   13160493/ 13160698      82.254     200.783   77.67      208.385    0.964
+g2_ss_mainloop_k1_m256n256     M256N256         16    4670184.000    4670184/  4670184     467.018      70.726   27.36       73.726    0.959
+g2_ss_mainloop_k4_m256n256     M256N256         64    7945414.500    7945287/  7945538     198.635     166.285   64.33      178.049    0.934
+g2_ss_mainloop_k8_m256n256     M256N256        128   13160457.000   13160373/ 13160578     164.506     200.784   77.67      209.210    0.960
+g2_ss_mainloop_k16_m256n256    M256N256        256   23400912.000   23400841/ 23400975     146.256     225.838   87.36      230.572    0.979
+
+SASS samples:
+M256N128K16 K1: /*1250*/                   @UP3 UTCHMMA.2CTA gdesc[UR8], gdesc[UR6], tmem[UR14], tmem[UR16], idesc[UR17], UP1 ;  /* 0x00ff1006080035ea */
+M256N128K16 K4: /*14d0*/                   @UP4 UTCHMMA.2CTA gdesc[UR10], gdesc[UR8], tmem[UR7], tmem[UR24], idesc[UR25], UP3 ;   /* 0x00ff18080a0045ea */
+M256N128K16 K8: /*1640*/                   @UP3 UTCHMMA.2CTA gdesc[UR34], gdesc[UR36], tmem[UR5], tmem[UR46], idesc[UR47], UP2 ;  /* 0x00ff2e24220035ea */
+M256N128K16 K16: /*1b10*/                   @UP6 UTCHMMA.2CTA gdesc[UR56], gdesc[UR54], tmem[UR31], tmem[UR48], idesc[UR49], UP1 ;  /* 0x00ff3036380065ea */
+M256N256K16 K1: /*1250*/                   @UP3 UTCHMMA.2CTA gdesc[UR8], gdesc[UR6], tmem[UR14], tmem[UR16], idesc[UR17], UP1 ;  /* 0x00ff1006080035ea */
+M256N256K16 K4: /*14d0*/                   @UP4 UTCHMMA.2CTA gdesc[UR10], gdesc[UR8], tmem[UR7], tmem[UR24], idesc[UR25], UP3 ;   /* 0x00ff18080a0045ea */
+M256N256K16 K8: /*1640*/                   @UP3 UTCHMMA.2CTA gdesc[UR34], gdesc[UR36], tmem[UR5], tmem[UR46], idesc[UR47], UP2 ;  /* 0x00ff2e24220035ea */
+M256N256K16 K16: /*1a60*/                   @UP6 UTCHMMA.2CTA gdesc[UR56], gdesc[UR54], tmem[UR31], tmem[UR48], idesc[UR49], UP1 ;  /* 0x00ff3036380065ea */
+
+Experiment boundary:
+- One group2 PTX instruction is either M256N128K16 or M256N256K16.
+- FLOP counts are 1,048,576 and 2,097,152 per instruction respectively.
+- Counts are pair-normalized: pair_count * K_blocks * iters.
+- Both peer CTAs provide local SMEM operands; only rank0 issues MMA.
+- Setup/teardown is excluded; the timed boundary contains MMA, multicast commit,
+  mbarrier wait, and the CTA convergence/loop control needed to reuse that barrier.
+- BF16 descriptors and padded SMEM follow the legacy group1 experiment.
+- This is a CUTLASS t_MMA / P_C proxy, not an FP16/SW128-isomorphic test.
+- It does not validate accumulator layout or predict a complete CUTLASS kernel alone.
+- K4 corresponds to CUTLASS BK=64.

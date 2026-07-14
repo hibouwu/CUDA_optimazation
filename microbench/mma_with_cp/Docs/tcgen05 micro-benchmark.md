@@ -536,13 +536,13 @@ TS A2 K16 的 launch 和 MMA 指令数与 SS K16 相同，但 `sm__inst_executed
 
 cp-only 这一组仍是 `grid=20`、`block=128`，`sm__inst_executed_pipe_tensor.sum=0`，计时窗口里没有混入 MMA。这里的截图只用来核对 launch、cycles 和 pipe counter；具体是不是 FP4 packed/decode copy，看前面的 SASS 图，吞吐则看 `bytes/cycle` 和 `cycles/cp` 表格。
 
-### `cta_group::2` SS mainloop 补充测试（待 Thor 实测）
+### `cta_group::2` SS mainloop 补充测试
 
-这组补充测试固定 BF16 `M256N128K16`，比较 `cta_group::2` 在一次完成等待前连续发射 1、4、8、16 条 SS MMA 的成本。`M256` 是一对 CTA 合作执行的完整指令 shape；cluster 中每个 CTA 对应其中 `M128` 的数据范围。因此，计数和吞吐都以 CTA pair 为单位，不能把同一条 group2 指令重复计为两条 MMA。
+这组补充测试固定 BF16，覆盖 `M256N128K16` 和 `M256N256K16` 两种 `cta_group::2` SS MMA shape，比较一次完成等待前连续发射 1、4、8、16 条 MMA 的成本。`M256` 是一对 CTA 合作执行的完整指令 M 维；cluster 中每个 CTA 对应其中 `M128` 的数据范围。因此，计数和吞吐都以 CTA pair 为单位，不能把同一条 group2 指令重复计为两条 MMA。
 
-每个 kernel 使用 `(2,1,1)` cluster 和每 CTA 128 threads。两个 CTA 都准备各自的 SMEM A/B operand、TMEM allocation 和 completion mbarrier；普通 SMEM store 通过 async-proxy fence 对 TCGen05 可见。cluster rank 0 的 elected thread 发射 group2 MMA，并用 mask `0x3` 把 completion 提交给两个 CTA，两个 CTA 分别等待自己的 mbarrier。输入 descriptor、512-column TMEM allocation request 和 SMEM 资源口径沿用 group1 BF16 测试。SMEM 初始化、TMEM allocation、relinquish 和 deallocation 位于计时窗口外；计时边界包含 MMA 发射、commit、mbarrier wait，以及安全复用 completion barrier 所需的 CTA convergence 和循环控制。旧 group1 completion-wait case 采用相同口径，因此可作对照，但这里的 cycles/MMA 不是剥离所有控制开销后的单条硬件指令延迟。
+每个 kernel 使用 `(2,1,1)` cluster 和每 CTA 128 threads。两个 CTA 都准备各自的 SMEM A/B operand、TMEM allocation 和 completion mbarrier；普通 SMEM store 通过 async-proxy fence 对 TCGen05 可见。cluster rank 0 的 elected thread 发射 group2 MMA，并用 mask `0x3` 把 completion 提交给两个 CTA，两个 CTA 分别等待自己的 mbarrier。`M256N128K16` 每个 CTA 提供 local `N64` B operand，`M256N256K16` 每个 CTA 提供 local `N128` B operand。SMEM 初始化、TMEM allocation、relinquish 和 deallocation 位于计时窗口外；计时边界包含 MMA 发射、commit、mbarrier wait，以及安全复用 completion barrier 所需的 CTA convergence 和循环控制。旧 group1 completion-wait case 采用相同口径，因此可作对照，但这里的 cycles/MMA 不是剥离所有控制开销后的单条硬件指令延迟。
 
-设一次完成等待前连续发射的指令数为 `q`，CTA pair 数为 `P`，循环次数为 `I`。一条 BF16 `M256N128K16` 指令完成 `256 × 128 × 16` 次 MAC，按乘加各一次浮点操作计为 `1,048,576 FLOP`。统计口径为：
+设一次完成等待前连续发射的指令数为 `q`，CTA pair 数为 `P`，循环次数为 `I`。一条 BF16 `M256N128K16` 指令完成 `256 × 128 × 16` 次 MAC，计为 `1,048,576 FLOP`；一条 BF16 `M256N256K16` 指令完成 `256 × 256 × 16` 次 MAC，计为 `2,097,152 FLOP`。统计口径为：
 
 \[
 K_{tile}=16q,\qquad N_{MMA}=PqI
@@ -550,19 +550,31 @@ K_{tile}=16q,\qquad N_{MMA}=PqI
 
 \[
 \text{cycles/MMA}=\frac{C_{pair,max}}{qI},\qquad
-\text{TFLOP/s}=\frac{PqI\times 1{,}048{,}576}{C_{pair,max}/f}\times 10^{-12}
+\text{TFLOP/s}=\frac{PqI\times \text{FLOP}_{inst}}{C_{pair,max}/f}\times 10^{-12}
 \]
 
-其中 `C_pair,max` 是一次 trial 中所有 CTA pair 的最大 cycles，`f` 是实测 GPC 频率。每个 case 重复 20 次，表格记录 trial 间的 median/min/max；以最大 pair 时间计时可以保留最慢并发 pair 对整个 kernel 完成时间的影响。Thor 有 20 个 SM 时启动 20 个 CTA，即 `P=10`，目标 timed MMA 指令数为 `10 × q × iters`。
+其中 `C_pair,max` 是一次 trial 中所有 CTA pair 的最大 cycles，`f` 是实测 GPC 频率。每个 case 重复 20 次，CSV/report 记录 trial 间的 median/min/max；以最大 pair 时间计时可以保留最慢并发 pair 对整个 kernel 完成时间的影响。Thor 有 20 个 SM 时启动 20 个 CTA，即 `P=10`，目标 timed MMA 指令数为 `10 × q × iters`。
 
-|Case|q|等效 K tile|Group2 TFLOP/s|Median cycles/MMA|Min/Max cycles|Group1 baseline|Speedup|
-|---|---:|---:|---:|---:|---:|---:|---:|
-|G2 SS Mainloop K1|1|16|待测|待测|待测|BF16 M128N128 SS forced-wait|待测|
-|G2 SS Mainloop K4|4|64|待测|待测|待测|BF16 M128N128 SS K4|待测|
-|G2 SS Mainloop K8|8|128|待测|待测|待测|BF16 M128N128 SS K8|待测|
-|G2 SS Mainloop K16|16|256|待测|待测|待测|BF16 M128N128 SS K16|待测|
+![G2 vs G1 BF16 SS mainloop TFLOP/s](../plots/g2_vs_g1_tflops.svg)
 
-K1 记录每条指令都完成等待时的延迟边界；K8/K16 观察多条异步 MMA 共用一次 completion wait 后的摊薄效果。K4 的等效 K tile 为 64，和采用 `BK=64` 的 CUTLASS 主循环计算 bundle 对齐，因此是后续 stage model 校准 `t_MMA` 和计算吞吐 `P_C` 的核心 case。group1 对照使用相同数据类型和每 CTA `M128N128` 的旧结果，用于比较两个独立 group1 CTA 与一个 group2 CTA pair 的总计算吞吐。
+|Shape|q|等效 K tile|Group2 TFLOP/s|Median cycles/MMA|Group1 baseline|Speedup|
+|---|---:|---:|---:|---:|---:|---:|
+|M256N128K16|1|16|44.273|373.025|BF16 M128N128 SS forced-wait 61.966|0.714x|
+|M256N128K16|4|64|122.669|134.632|BF16 M128N128 SS K4 113.015|1.085x|
+|M256N128K16|8|128|164.322|100.504|BF16 M128N128 SS K8 172.250|0.954x|
+|M256N128K16|16|256|200.783|82.254|BF16 M128N128 SS K16 208.385|0.964x|
+|M256N256K16|1|16|70.726|467.018|BF16 M128N256 SS forced-wait 73.726|0.959x|
+|M256N256K16|4|64|166.285|198.635|BF16 M128N256 SS K4 178.049|0.934x|
+|M256N256K16|8|128|200.784|164.506|BF16 M128N256 SS K8 209.210|0.960x|
+|M256N256K16|16|256|225.838|146.256|BF16 M128N256 SS K16 230.572|0.979x|
+
+K1 记录每条指令都完成等待时的延迟边界；K8/K16 观察多条异步 MMA 共用一次 completion wait 后的摊薄效果。K4 的等效 K tile 为 64，和采用 `BK=64` 的 CUTLASS 主循环计算 bundle 对齐，因此是后续 stage model 校准 `t_MMA` 和计算吞吐 `P_C` 的核心 case。group1 对照使用相同数据类型和总 FLOP 对齐的旧结果：`M256N128K16` 对比 20 个独立 `M128N128K16` CTA，`M256N256K16` 对比 20 个独立 `M128N256K16` CTA。
+
+结论：
+
+- `M256N128K16` 并没有稳定超过 group1：只有 K4 比 `M128N128` 高 8.5%，K8/K16 分别低约 4.6%/3.6%，K1 只有 0.714x。说明 2CTA 的 cluster/multicast completion 和双 CTA wait 固定开销需要足够的 MMA bundle 才能摊薄，但摊薄后也没有明显超越两个独立 group1 CTA。
+- `M256N256K16` 更接近对应的 group1 `M128N256`：K1/K4/K8/K16 分别为 0.959x/0.934x/0.960x/0.979x，K16 达到 225.838 TFLOP/s，约为 BF16 标称峰值的 87.36%。N 维扩大提高了单条 2CTA 指令的计算量，因此比 `M256N128K16` 更能摊薄固定开销。
+- 在这个 microbenchmark 边界下，`cta_group::2` 的主要价值不是自动提升纯 MMA 吞吐，而是提供 cluster 协作形态；如果端到端 kernel 不能通过 TMA、主循环排布、epilogue 或 wave 形态获得额外收益，单看计算阶段它大概率接近但略低于对应 group1 大 tile。
 
 这组测试提供 CUTLASS group2 计算阶段的性能代理，不读取 TMEM accumulator，因此不验证 accumulator layout 或数值正确性。这里的 BF16 descriptor 也没有完全复现目标 kernel 的 FP16/SW128 输入布局。完整 CUTLASS kernel 仍包含 TMA load、流水线重叠、cluster residency、epilogue 和 wave 尾部效应；单独的 group2 MMA 数据不能直接预测端到端 GEMM 时间。
 
