@@ -5,6 +5,7 @@
 #include <cuda_fp8.h>
 #include <cuda_fp16.h>
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -151,6 +152,21 @@ float benchmark_kernel(const std::string& backend_id, const std::string& name,
 
   const float avg_ms = total_ms / kRepeat;
   const bool ok = compare_result(ref, out, atol, rtol);
+  if (const char* dump_row = std::getenv("GEMM_DUMP_ROW")) {
+    const int row = std::atoi(dump_row);
+    if (row >= 0 && row < m) {
+      int cols = 32;
+      if (const char* dump_cols = std::getenv("GEMM_DUMP_COLS")) {
+        cols = std::max(1, std::atoi(dump_cols));
+      }
+      cols = std::min(cols, n);
+      std::cout << "Dump row " << row << ":";
+      for (int col = 0; col < cols; ++col) {
+        std::cout << ' ' << out[static_cast<size_t>(row) * n + col];
+      }
+      std::cout << '\n';
+    }
+  }
   const float perf = gflops(m, n, k, avg_ms);
   const float ratio = reference_gflops > 0.0f ? perf / reference_gflops : 0.0f;
   std::cout << name << ": " << avg_ms << " ms, " << perf

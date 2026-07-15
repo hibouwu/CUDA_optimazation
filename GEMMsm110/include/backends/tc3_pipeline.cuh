@@ -143,10 +143,7 @@ void tc3_raw_pipeline_kernel(
     float* dst = output +
                  static_cast<size_t>(offset_m + tid) * n +
                  offset_n + n_block * 8;
-    reinterpret_cast<float4*>(dst)[0] =
-        make_float4(values[0], values[1], values[2], values[3]);
-    reinterpret_cast<float4*>(dst)[1] =
-        make_float4(values[4], values[5], values[6], values[7]);
+    ptx::store_global_l1_no_allocate_v8_f32(dst, values);
   }
 
   __syncthreads();

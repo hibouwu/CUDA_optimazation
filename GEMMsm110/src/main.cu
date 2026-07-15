@@ -263,11 +263,27 @@ int main(int argc, char** argv) {
   const size_t a_half_bytes = static_cast<size_t>(m) * k * sizeof(half);
   const size_t b_half_bytes = static_cast<size_t>(k) * n * sizeof(half);
   std::vector<float> h_a(static_cast<size_t>(m) * k);
-  std::vector<float> h_b(static_cast<size_t>(k) * n);
-  std::vector<float> h_ref_tc(static_cast<size_t>(m) * n);
-  fill_inputs(h_a, h_b);
+	  std::vector<float> h_b(static_cast<size_t>(k) * n);
+	  std::vector<float> h_ref_tc(static_cast<size_t>(m) * n);
+	  fill_inputs(h_a, h_b);
+	  if (const char* pattern = std::getenv("GEMM_INPUT_PATTERN")) {
+	    if (std::string(pattern) == "row_id") {
+	      std::fill(h_a.begin(), h_a.end(), 0.0f);
+	      std::fill(h_b.begin(), h_b.end(), 0.0f);
+	      const int diagonal = std::min(m, k);
+	      for (int row = 0; row < diagonal; ++row) {
+	        h_a[static_cast<size_t>(row) * k + row] = 1.0f;
+	      }
+	      for (int k_idx = 0; k_idx < k; ++k_idx) {
+	        const float row_value = static_cast<float>(k_idx);
+	        for (int n_idx = 0; n_idx < n; ++n_idx) {
+	          h_b[static_cast<size_t>(k_idx) * n + n_idx] = row_value;
+	        }
+	      }
+	    }
+	  }
 
-  std::vector<half> h_a_half = to_half_vector(h_a);
+	  std::vector<half> h_a_half = to_half_vector(h_a);
   std::vector<half> h_b_half = to_half_vector(h_b);
   // Raw TCGen05 kernels use K-major operands, matching learn-cuda's
   // [N,K] storage for logical B[K,N].  Keep the original KxN allocation for
@@ -458,17 +474,37 @@ int main(int argc, char** argv) {
   }
 
   if (wants_backend(backend_filter, "tc4b")) {
-    write_unavailable_backend(
-        *gemm_sm110::find_backend("tc4b"), n, csv,
-        "2-SM TMEM accumulator ownership/store mapping is still under "
-        "validation");
+    if (m % 256 != 0 || n % 256 != 0 || k % 128 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc4b"), n, csv,
+          "requires M,N multiples of 256 and K a multiple of 128");
+    } else {
+      gemm_sm110::backends::Tc4bcRunner<false> runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc4b", "tc4b 2-SM cluster TMA/TCGen05 pipeline",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc4c")) {
-    write_unavailable_backend(
-        *gemm_sm110::find_backend("tc4c"), n, csv,
-        "2-SM TMEM accumulator ownership/store mapping is still under "
-        "validation");
+    if (m % 256 != 0 || n % 256 != 0 || k % 128 != 0) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc4c"), n, csv,
+          "requires M,N multiples of 256 and K a multiple of 128");
+    } else {
+      gemm_sm110::backends::Tc4bcRunner<true> runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc4c", "tc4c warp-specialized 2-SM cluster pipeline",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "tc5a")) {
@@ -495,6 +531,196 @@ int main(int argc, char** argv) {
       write_unavailable_backend(
           *gemm_sm110::find_backend("tc5b"), n, csv,
           "disabled pending dynamic work-queue stability validation");
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5c")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5c"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5cRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5c", "tc5c static persistent M128N128K128 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5d")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5d"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5dRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5d", "tc5d static persistent M128N256K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5e")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5e"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5eRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5e", "tc5e static persistent M128N128K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5f")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5f"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5fRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5f", "tc5f static persistent M128N256K128 stage1 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5g")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5g"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5gRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5g", "tc5g static persistent M128N256K64 stage1 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5h")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5h"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5hRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5h", "tc5h overlapped epilogue M128N256K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5i")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5i"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5iRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5i", "tc5i overlapped epilogue M128N128K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5j")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5j"), n, csv,
+                                "requires an SM110-family target");
+    } else {
+      gemm_sm110::backends::Tc5jRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5j", "tc5j overlapped epilogue M128N256K128 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5k")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5k"), n, csv,
+                                "requires an SM110-family target");
+    } else if (std::getenv("TC5K_RUN_EXPERIMENT") == nullptr) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc5k"), n, csv,
+          "disabled pending M64 epilogue performance validation");
+    } else {
+      gemm_sm110::backends::Tc5kRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5k",
+          "tc5k experimental overlapped epilogue M64N256K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5l")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5l"), n, csv,
+                                "requires an SM110-family target");
+    } else if (std::getenv("TC5L_RUN_EXPERIMENT") == nullptr) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc5l"), n, csv,
+          "disabled pending B-reuse M256N256 validation");
+    } else {
+      gemm_sm110::backends::Tc5lRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5l", "tc5l experimental B-reuse M256N256K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    }
+  }
+
+  if (wants_backend(backend_filter, "tc5m")) {
+    if (!device_supports_tc3_sm110) {
+      write_unavailable_backend(*gemm_sm110::find_backend("tc5m"), n, csv,
+                                "requires an SM110-family target");
+    } else if (std::getenv("TC5M_RUN_EXPERIMENT") == nullptr) {
+      write_unavailable_backend(
+          *gemm_sm110::find_backend("tc5m"), n, csv,
+          "disabled pending overlapped B-reuse M256N128 validation");
+    } else {
+      gemm_sm110::backends::Tc5mRunner runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch = [&]() { runner.launch(); };
+      std::vector<float> output(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "tc5m",
+          "tc5m experimental overlapped B-reuse M256N128K64 TCGen05 GEMM",
+          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
 

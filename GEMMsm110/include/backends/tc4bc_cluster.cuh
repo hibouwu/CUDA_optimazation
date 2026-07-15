@@ -27,17 +27,19 @@ void tc4bc_raw_2sm_cluster_kernel(
     const __grid_constant__ CUtensorMap tensor_map_b_nk, float* output,
     int m, int n, int k) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 1000
-  constexpr int kTileM = 128;
-  constexpr int kTileN = 128;
-  constexpr int kLocalColumns = 64;
+  constexpr int kClusterTileM = 256;
+  constexpr int kLocalTileM = 128;
+  constexpr int kTileN = 256;
+  constexpr int kLocalTileN = 128;
+  constexpr int kTmemAllocColumns = 512;
   constexpr int kMmaK = 16;
   constexpr int kTmaK = 64;
   static_assert(TileK % kTmaK == 0);
   static_assert(TileK % kMmaK == 0);
 
   constexpr int kKChunks = TileK / kTmaK;
-  constexpr int kAChunkBytes = kTileM * kTmaK * sizeof(half);
-  constexpr int kBChunkBytes = kTileN * kTmaK * sizeof(half);
+  constexpr int kAChunkBytes = kLocalTileM * kTmaK * sizeof(half);
+  constexpr int kBChunkBytes = kLocalTileN * kTmaK * sizeof(half);
   constexpr int kAStageBytes = kKChunks * kAChunkBytes;
   constexpr int kBStageBytes = kKChunks * kBChunkBytes;
   constexpr int kStageBytes = kAStageBytes + kBStageBytes;
@@ -52,7 +54,8 @@ void tc4bc_raw_2sm_cluster_kernel(
 
   const int tile_m = static_cast<int>(blockIdx.x) / 2;
   const int tile_n = static_cast<int>(blockIdx.y);
-  const int offset_m = tile_m * kTileM;
+  const int offset_m = tile_m * kClusterTileM;
+  const int local_offset_m = offset_m + cluster_rank * kLocalTileM;
   const int offset_n = tile_n * kTileN;
 
   extern __shared__ __align__(1024) char dynamic_smem[];
@@ -73,22 +76,21 @@ void tc4bc_raw_2sm_cluster_kernel(
     ptx::fence_mbarrier_init_release_cluster();
   }
   if (consumer_warp) {
-    ptx::tmem_alloc<2>(ptx::smem_address(&tmem_base), kTileN);
+    ptx::tmem_alloc<2>(ptx::smem_address(&tmem_base), kTmemAllocColumns);
   }
   __syncthreads();
-  ptx::cluster_sync();
 
   constexpr uint32_t instruction_descriptor =
       (1U << 4U) |
       (static_cast<uint32_t>(kTileN) >> 3U << 17U) |
-      (static_cast<uint32_t>(kTileM) >> 4U << 24U);
+      (static_cast<uint32_t>(kClusterTileM) >> 4U << 24U);
 
   int tma_phase[Stages] = {};
   int mma_phase[Stages] = {};
   const int k_tiles = k / TileK;
 
   auto issue_load = [&](int k_tile) {
-    if (!leader_cta || !producer_warp || !ptx::elect_one()) return;
+    if (!producer_warp || !ptx::elect_one()) return;
 
     const int stage = k_tile % Stages;
     const uint32_t barrier = tma_barrier_base + stage * sizeof(uint64_t);
@@ -101,9 +103,10 @@ void tc4bc_raw_2sm_cluster_kernel(
     for (int chunk = 0; chunk < kKChunks; ++chunk) {
       const int chunk_k = offset_k + chunk * kTmaK;
       ptx::tma_load_2d(a_smem + chunk * kAChunkBytes, &tensor_map_a,
-                       chunk_k, offset_m, barrier);
+                       chunk_k, local_offset_m, barrier);
       ptx::tma_load_2d(b_smem + chunk * kBChunkBytes, &tensor_map_b_nk,
-                       chunk_k, offset_n, barrier);
+                       chunk_k, offset_n + cluster_rank * kLocalTileN,
+                       barrier);
     }
     ptx::mbarrier_arrive_expect_tx(barrier,
                                    kAStageBytes + kBStageBytes);
@@ -111,13 +114,11 @@ void tc4bc_raw_2sm_cluster_kernel(
 
   auto issue_mma = [&](int k_tile) {
     const int stage = k_tile % Stages;
-    if (leader_cta) {
-      const uint32_t tma_barrier_address =
-          tma_barrier_base + stage * sizeof(uint64_t);
-      ptx::mbarrier_wait(tma_barrier_address, tma_phase[stage]);
-      tma_phase[stage] ^= 1;
-      ptx::tcgen05_fence_after_thread_sync();
-    }
+    const uint32_t tma_barrier_address =
+        tma_barrier_base + stage * sizeof(uint64_t);
+    ptx::mbarrier_wait(tma_barrier_address, tma_phase[stage]);
+    tma_phase[stage] ^= 1;
+    ptx::tcgen05_fence_after_thread_sync();
 
     if (!leader_cta || !consumer_warp || !ptx::elect_one()) return;
 
@@ -170,24 +171,21 @@ void tc4bc_raw_2sm_cluster_kernel(
   }
 
   ptx::tcgen05_fence_after_thread_sync();
-  for (int n_block = 0; n_block < kLocalColumns / 8; ++n_block) {
+  for (int n_block = 0; n_block < kTileN / 8; ++n_block) {
     float values[8];
     const uint32_t address =
         tmem_base + ((warp * 32) << 16) + n_block * 8;
     ptx::tmem_load_32x32b_x8(address, values);
     float* dst = output +
-                 static_cast<size_t>(offset_m + tid) * n +
-                 offset_n + cluster_rank * kLocalColumns + n_block * 8;
-    reinterpret_cast<float4*>(dst)[0] =
-        make_float4(values[0], values[1], values[2], values[3]);
-    reinterpret_cast<float4*>(dst)[1] =
-        make_float4(values[4], values[5], values[6], values[7]);
+                 static_cast<size_t>(local_offset_m + tid) * n +
+                 offset_n + n_block * 8;
+    ptx::store_global_l1_no_allocate_v8_f32(dst, values);
   }
 
   __syncthreads();
-  ptx::cluster_sync();
   if (consumer_warp) {
-    ptx::tmem_dealloc<2>(tmem_base, kTileN);
+    ptx::tmem_relinquish_alloc_permit<2>();
+    ptx::tmem_dealloc<2>(tmem_base, kTmemAllocColumns);
   }
 #else
   (void)tensor_map_a;
@@ -205,31 +203,32 @@ class Tc4bcRunner {
   Tc4bcRunner(const half* a, const half* b_nk, float* d,
               int m, int n, int k)
       : output_(d), m_(m), n_(n), k_(k) {
-    if (m % kTileM != 0 || n % kTileN != 0 || k % kTileK != 0) {
+    if (m % kClusterTileM != 0 || n % kTileN != 0 || k % kTileK != 0) {
       std::fprintf(stderr,
-                   "tc4b/tc4c raw kernel requires M a multiple of 128, "
-                   "N a multiple of 128, and K a multiple of 128\n");
+                   "tc4b/tc4c raw kernel requires M a multiple of 256, "
+                   "N a multiple of 256, and K a multiple of 128\n");
       std::abort();
     }
 
-    ptx::encode_tiled_2d_sw128(&tensor_map_a_, a, m, k, kTileM);
-    ptx::encode_tiled_2d_sw128(&tensor_map_b_, b_nk, n, k, kTileN);
+    ptx::encode_tiled_2d_sw128(&tensor_map_a_, a, m, k, kLocalTileM);
+    ptx::encode_tiled_2d_sw128(&tensor_map_b_, b_nk, n, k, kLocalTileN);
 
     auto* kernel =
         &tc4bc_raw_2sm_cluster_kernel<WarpSpecialized, kTileK, kStages>;
     constexpr int smem_bytes =
-        kStages * (kTileM + kTileN) * kTileK * sizeof(half);
+        kStages * (kLocalTileM + kLocalTileN) * kTileK * sizeof(half);
     check_cuda(cudaFuncSetAttribute(
                    kernel, cudaFuncAttributeMaxDynamicSharedMemorySize,
                    smem_bytes),
                "cudaFuncSetAttribute(tc4b/tc4c raw)");
+
   }
 
   void launch() {
     auto* kernel =
         &tc4bc_raw_2sm_cluster_kernel<WarpSpecialized, kTileK, kStages>;
     constexpr int smem_bytes =
-        kStages * (kTileM + kTileN) * kTileK * sizeof(half);
+        kStages * (kLocalTileM + kLocalTileN) * kTileK * sizeof(half);
     cudaLaunchAttribute attrs[1]{};
     attrs[0].id = cudaLaunchAttributeClusterDimension;
     attrs[0].val.clusterDim.x = 2;
@@ -237,7 +236,7 @@ class Tc4bcRunner {
     attrs[0].val.clusterDim.z = 1;
 
     cudaLaunchConfig_t config{};
-    config.gridDim = dim3((m_ / kTileM) * 2, n_ / kTileN, 1);
+    config.gridDim = dim3((m_ / kClusterTileM) * 2, n_ / kTileN, 1);
     config.blockDim = dim3(128, 1, 1);
     config.dynamicSmemBytes = smem_bytes;
     config.attrs = attrs;
@@ -249,8 +248,10 @@ class Tc4bcRunner {
   }
 
  private:
-  static constexpr int kTileM = 128;
-  static constexpr int kTileN = 128;
+  static constexpr int kClusterTileM = 256;
+  static constexpr int kLocalTileM = 128;
+  static constexpr int kTileN = 256;
+  static constexpr int kLocalTileN = 128;
   static constexpr int kTileK = 128;
   static constexpr int kStages = 2;
 
