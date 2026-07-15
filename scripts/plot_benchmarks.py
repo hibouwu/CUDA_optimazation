@@ -18,6 +18,8 @@ COLORS = [
     "#be123c",
     "#65a30d",
     "#7c3aed",
+    "#0f766e",
+    "#f59e0b",
 ]
 
 DASH_PATTERNS = [
@@ -70,6 +72,7 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "tc4c",
     "tc5a",
     "tc5b",
+    "tc5h",
     "tc6",
 ]
 
@@ -117,6 +120,7 @@ SERIES_LABELS = {
     "tc4c": "tc4c SM110 warp-specialized 2-SM cluster pipeline",
     "tc5a": "tc5a SM110 static persistent scheduler",
     "tc5b": "tc5b SM110 software dynamic persistent scheduler",
+    "tc5h": "tc5h SM110 overlapped epilogue scheduler",
     "tc6": "tc6 SM110 fused NVFP4 epilogue",
 }
 
@@ -133,6 +137,7 @@ SM110_SERIES_LABELS = {
     "tc4c": "tc4c warp-specialized 2-SM cluster pipeline",
     "tc5a": "tc5a static persistent scheduler",
     "tc5b": "tc5b software dynamic persistent scheduler",
+    "tc5h": "tc5h overlapped epilogue M128N256K64",
     "tc6": "tc6 fused NVFP4 epilogue",
 }
 
