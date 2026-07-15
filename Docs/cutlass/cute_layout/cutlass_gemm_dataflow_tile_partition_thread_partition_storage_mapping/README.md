@@ -8,6 +8,8 @@ GEMM（General Matrix Multiplication，通用矩阵乘法）的数学表达十�
 D_{m,n}=\sum_k A_{m,k}B_{n,k}+C_{m,n}.
 \]
 
+本文把内存中的 B tensor 记为 `(N,K)`，因此上式的矩阵写法是 \(D=AB^{\mathsf T}+C\)。tcgen05 指令文档常把送入 MMA 的 B operand view 解释为 `(K,N)`，于是写作 `D=A×B+C`；两种写法描述的是同一组乘加，只是 B 的坐标视图不同。
+
 GPU kernel，即运行在 GPU 上的计算函数，还需要处理数据在不同存储层级之间的移动。本文讨论 tcgen05 的 SS（Shared/Shared）路径，其中 A、B 两个操作数都来自共享内存（SMEM）。TMA（Tensor Memory Accelerator）是负责异步搬运多维数据的硬件单元，它先将 A、B 从全局内存（GMEM）写入 SMEM；tcgen05 MMA（Matrix Multiply-Accumulate，矩阵乘加）指令再根据 descriptor（描述符）中记录的 SMEM 地址和排布信息读取矩阵。乘加结果累加在 Blackwell 的张量内存（TMEM）中，主循环之后的写回阶段称为 epilogue，它将结果装入线程寄存器（RMEM）并写回 GMEM。
 
 全文采用真实 F16/BF16 示例：problem shape 为 `(M,N,K)=(512,768,384)`，矩阵 A 的 shape 为 `(M,K)=(512,384)`。后文跟踪全局元素 `A[133,70]`，它在所选 CTA tile 内的局部坐标为 `(5,6)`。分析每个对象时采用三个判据：是否保存矩阵数值、如何解释逻辑坐标，以及由哪项操作实际读取或写入。
@@ -15,6 +17,8 @@ GPU kernel，即运行在 GPU 上的计算函数，还需要处理数据在不�
 本文分析 CUTLASS CuTe Python DSL 的 Blackwell GEMM kernel 中，同一矩阵 A 所对应的 `mA`、`gA`、`tCgA`、`tAgA`、`sA` 和 `tCrA`。重点在于区分三类对象：实际保存矩阵数值的存储、引用同一存储但采用不同坐标解释的 view，以及供硬件指令访问 SMEM 的 descriptor。整体数据流如下图所示。
 
 ![Blackwell tcgen05 GEMM Dataflow Overview](images/Blackwell_tcgen05_GEMM_Dataflow_Overview.jpg)
+
+手绘总图保留完整的结构脉络：上半部分从 `mA` 依次展开 `gA/tCgA`，并列出单 CTA 与 CTA-pair 两条分支；下半部分连接 TMA、`sA/tCrA`、TMEM accumulator 与 epilogue。后续规则图再用统一坐标逐步放大这条主线：橙色持续跟踪 `A[133,70]`；进入 MMA 后，橙色表示它对输出行 `D[133,:]` 的贡献，不表示 A 的数值被原样存进 accumulator。
 
 ## 贯穿全文的真实 shape 示例
 
@@ -42,6 +46,8 @@ GPU kernel，即运行在 GPU 上的计算函数，还需要处理数据在不�
 
 CTA 从 A 中取得的 tile shape 为 `(BM,BK)=(128,64)`，从 B 中取得的 tile shape 为 `(BN,BK)=(256,64)`，对应的输出 tile shape 为 `(BM,BN)=(128,256)`。pipeline stage 是环形 SMEM 缓冲中的一个可复用槽位；三个 stage 允许 TMA 写入下一批 A/B 的同时，MMA 消费已经准备完成的上一批 A/B。
 
+本文的实际目标 GPU 是 **SM110**。`tensor-layouts` 当前没有单独的 SM110 atom，因此图片只借用其 SM100 UMMA atom 中与本文相同的 `128×256×16` 指令 shape 来做粗粒度逻辑投影。这不等价于“SM100 和 SM110 的微架构或完整 layout 相同”，也不用于推断 SM110 的 TMEM bank、lane ownership 或 epilogue 线程映射；这些结论仍须由目标 kernel 的具体 CuTe layout/PTX 验证。
+
 为了给每个坐标一个可核对的标识，本文采用零基索引，并按 row-major 顺序为 A 的元素编号：
 
 \[
@@ -57,10 +63,10 @@ CTA 从 A 中取得的 tile shape 为 `(BM,BK)=(128,64)`，从 B 中取得的 ti
 编号 51143 只用于在图片之间核对同一个元素，不是该元素的 F16/BF16 输入值。实际 kernel 中 `A[133,70]` 可以保存任意合法输入值；在 GEMM 求和中，它与 `B[n,70]` 相乘，并对输出 `D[133,n]` 产生贡献。
 
 <!-- BEGIN GENERATED DIAGRAM: case0 -->
-![Real-shape matrix A with A[133,70] highlighted](images/dataflow_case0_matrix_a.svg)
+![Matrix A tile and element coordinate zoom](images/dataflow_case0_matrix_a.svg)
 <!-- END GENERATED DIAGRAM: case0 -->
 
-左图按真实 shape 绘制完整的 `A(512×384)`，粗分区对应 `4×6` 个 `(128×64)` CTA tile。右图放大 `m=128…135、k=64…71` 的 `8×8` 窗口，每个单元格的第一行是全局坐标，第二行是 row-major 元素编号。橙色边框标出 `A[133,70]`。
+左图按真实 shape 绘制完整的 `A(512×384)`，粗分区对应 `4×6` 个 `(128×64)` CTA tile。右图放大 `m=128…135、k=64…71` 的 `8×8` 窗口：行列刻度给出全局 `(m,k)`，格内数字是 row-major 元素编号。橙色点与粗边框标出 `A[133,70]`，连接线说明它来自左图的 `(m_tile,q)=(1,1)`。
 
 该元素位于 M 方向和 K 方向的第二个 CTA tile，即 `m_tile=1、k_tile=1`。它在所选 A tile 内的局部坐标为 `(5,6)`。后文固定 `m_tile=1` 并沿 K 方向迭代，跟踪该元素如何转换为 `MMA_K` 分区坐标、写入 SMEM stage，并最终由 descriptor 指向。
 
@@ -121,10 +127,10 @@ mA(133,70) = gA(5,6,1)
 坐标从全局 `(133,70)` 变成 `(tile内M=5, tile内K=6, 外层K tile=1)`，但数据仍在原来的 GMEM 地址中。
 
 <!-- BEGIN GENERATED DIAGRAM: case5 -->
-![Real A matrix CTA tile decomposition](images/dataflow_case5_local_tile.svg)
+![CTA local tile view of A](images/dataflow_case5_local_tile.svg)
 <!-- END GENERATED DIAGRAM: case5 -->
 
-图中的每个单元格表示一个真实的 `(BM,BK)=(128,64)` A tile，完整矩阵沿 M 方向分成 4 份、沿 K 方向分成 6 份。橙色单元格是 `mTile1/kTile1`，其中包含 `A[133,70]`。该图描述 CTA tile 坐标；线程分配需要由具体 TV layout 确定。
+图中的每个单元格表示一个真实的 `(BM,BK)=(128,64)` A tile，完整矩阵沿 M 方向分成 4 份、沿 K 方向分成 6 份。行头是 `m_tile`，列头 `q` 是外层 K tile；橙色点位于 `(1,1)`，旁边直接写出 `gA(5,6,1)=mA(133,70)`。虚线框强调 `gA` 只是同一 GMEM 地址的 view；此处既没有 copy，也没有线程分配。
 
 > 阶段检查：说明 `local_tile` 改变 shape 却不增加显存流量的原因。
 
@@ -150,10 +156,10 @@ tiled_mma = cute.make_tiled_mma(atom)
 主线首先采用 trivial、`CtaGroup.ONE`、无 permutation 的情形，即一个 CTA 独立负责完整的 tiler tile。
 
 <!-- BEGIN GENERATED DIAGRAM: case1 -->
-![Conceptual trivial TiledMma](images/tiled_mma_case1_cta_group_one.svg)
+![Single-CTA tcgen05 MMA atom block projection](images/tiled_mma_case1_cta_group_one.svg)
 <!-- END GENERATED DIAGRAM: case1 -->
 
-图中的 `Atom0/Element#` 表示一个 atom 内的元素层次。真实 thread ownership 由具体 `TiledMma` layout 确定。
+图把 A、B、C 三个 operand 的真实逻辑 shape 投影为块级矩形：A 为 `128×16`，B 为 `256×16`，C/D 为 `128×256`。`atom_layout_mnk=(1,1,1)` 表示这里只有一个 atom，没有 repeat 或 permutation。这里没有展开 Thread–Value 网格：`tensor-layouts` 的该 atom 将线程维折叠，不能据此声称 SM110 的逐线程 ownership。
 
 `partition_A` 根据这个 `TiledMma` 的 A-operand layout 重描述 `gA`：
 
@@ -180,10 +186,10 @@ innerK = j mod inst_K    = 6
 它属于第一个 `MMA_K` 的第 7 个 K 位置。`partition_A` 仍未加载这个元素，只是使后续代码能够按 MMA instruction tile 遍历它。
 
 <!-- BEGIN GENERATED DIAGRAM: case6 -->
-![Conceptual MMA K decomposition](images/dataflow_case6_partition_a.svg)
+![MMA K decomposition inside the A tile](images/dataflow_case6_partition_a.svg)
 <!-- END GENERATED DIAGRAM: case6 -->
 
-图中的每个单元格代表所选 `(128,64)` A tile 内的一块 `(32,8)` 坐标区域。相邻两列合成一个 `inst_K=16` 分区，因此 8 列对应四个 `MMA_K`；橙色单元格包含局部坐标 `(5,6)`。CUDA thread 映射不在该图的表达范围内。
+图中的每个大格把所选 `(128,64)` A tile 压缩为一块 `(32,8)` 坐标区域；这是为了阅读方便，不是硬件分区粒度。相邻两列合成一个 `inst_K=16` 色带，因此 8 列对应四个 `MMA_K`。橙色点给出精确局部坐标 `(5,6)`，所以 `MMA_K=0、inner_k=6`；CUDA thread 映射不在该图的表达范围内。
 
 真实 F16/BF16 示例中，只有在 trivial、`CtaGroup.ONE`、无 permutation、shape 整除时，才可以直接写：
 
@@ -243,10 +249,10 @@ sA(5,6,\text{stage}=1)\leftarrow mA(133,70).
 真实示例有三个环形 stage，外层 `q=1` 的 tile 在简化轮转关系中对应 `stage=q mod 3=1`。真实 pipeline 使用 state/count 选择 stage；`q mod STAGES` 在本文中仅用于说明环形缓冲的基本关系。
 
 <!-- BEGIN GENERATED DIAGRAM: case10 -->
-![TMA source to SMEM stage mapping](images/dataflow_case10_tma_mapping.svg)
+![TMA source and SMEM destination coordinate mapping](images/dataflow_case10_tma_mapping.svg)
 <!-- END GENERATED DIAGRAM: case10 -->
 
-图的左侧是 `tAgA` 指向的 `q=1` GMEM tile，右侧是 `tAsA` 指向的 `stage=1` SMEM tile。每个单元格压缩表示 `(32,8)` 个真实元素，左右两侧相同颜色的单元格具有相同的逻辑坐标范围。橙色单元格包含局部坐标 `(5,6)`，因此也包含全局元素 `A[133,70]`。
+图的左侧是 `tAgA` 指向的 `q=1` GMEM tile，右侧是 `tAsA` 指向的 `stage=1` SMEM tile。两侧采用相同的 `(32,8)` 压缩几何与 `MMA_K` 色带：这说明 TMA copy 前后逻辑坐标 `ξ(5,6)` 对齐；中间实线箭头说明此处确实发生数值搬运。右图只表达 SMEM **逻辑坐标**，不是物理地址图，也没有把 swizzle 画成 row-major。
 
 `sA(5,6,stage=1)` 是逻辑坐标，实际 SMEM 地址由 `sA` 的 layout 计算。其关系可以概括为
 
@@ -258,9 +264,9 @@ SMEM layout 可能包含 swizzle，因此该地址通常不能用普通 row-majo
 
 > 阶段检查：从 `mA(133,70)` 推导到 `sA(5,6,stage=1)`，并区分 `tAgA`、`tAsA` 与 `sA` 的存储关系。
 
-## 第四步：`sA → tCrA`，从矩阵数据得到 MMA descriptor
+## 第四步：`sA → tCrA`，从 SMEM allocation 得到 MMA descriptor
 
-TMA 将数值写入 `sA` 后，tcgen05 MMA 通过 descriptor 读取 A。`make_fragment_A(sA)` 根据 `sA` 的地址和 layout 生成 descriptor tensor `tCrA`：
+只要 `sA` 的 allocation、首地址与 layout 已经建立，`make_fragment_A(sA)` 就可以生成 descriptor tensor `tCrA`；构造 descriptor 不依赖 TMA 已经写入矩阵值，通常也会在 mainloop 前完成。运行时真正有 ready 依赖的是 descriptor 的**消费**：`cute.gemm` 使用某个 stage 的 `tCrA` 前，必须等待 TMA 已经把该 stage 的 A 数值写好。
 
 ```python
 # Descriptor construction; no matrix data is copied here.
@@ -274,10 +280,10 @@ tCrB = tiled_mma.make_fragment_B(sB)
 `tCrA` 保存 descriptor/fragment-level 对象。矩阵元素与 descriptor 之间是“被描述区域”关系：某个 `(MMA_K,stage)` descriptor 描述包含 `A[133,70]` 的 SMEM tile。在真实示例中，该元素由 `MMA_K=0、stage=1` 对应的 descriptor 覆盖。
 
 <!-- BEGIN GENERATED DIAGRAM: case7 -->
-![Three-stage descriptor layout](images/dataflow_case7_smem_stages.svg)
+![SMEM descriptor stage and MMA K layout](images/dataflow_case7_smem_stages.svg)
 <!-- END GENERATED DIAGRAM: case7 -->
 
-图中的 3 行对应三个 SMEM stage，4 列对应一个 `BK=64` 内的四个 `MMA_K`。橙色单元格表示 `stage=1、MMA_K=0`，其 descriptor 覆盖 `A[133,70]` 所在的 SMEM 区域。一个 descriptor 覆盖一块 SMEM 区域，而非单个 A 元素。
+图中的 3 行对应三个 SMEM stage，4 列对应一个 `BK=64` 内的四个 `MMA_K`。橙色边框选中 `stage=1、MMA_K=0` 的 `DESC`：它覆盖 `A[133,70]` 所在的 SMEM 区域，却不保存 `A[133,70]` 的数值。换言之，表格中的格子是 descriptor slot，不是矩阵元素。
 
 `tAsA` 和 `tCrA` 都关联 `sA` 中同一份矩阵数据，但语义不同：前者描述 TMA 的写入方式，后者描述 MMA 的解释与读取方式。当前 PTX shared-memory descriptor 编码地址、leading/stride offset、base offset、stride mode、swizzle 等地址解释信息；operand 类型、major mode 和 instruction shape 的完整语义还来自 `MmaOp` 与 tcgen05 instruction semantics。
 
@@ -285,7 +291,7 @@ tCrB = tiled_mma.make_fragment_B(sB)
 
 ## 第五步：`cute.gemm` 读取 descriptor，把 C/D 累加在 TMEM
 
-tcgen05 的指令语义是 `D=A×B+C`。A/B 由 `tCrA/tCrB` descriptor 指向 SMEM，C 是 MMA 前的 accumulator，D 是 MMA 后的 accumulator。C 和 D 可以绑定到同一个 `tCtAcc` TMEM tensor。
+按 tcgen05 的 `(M,K)×(K,N)` operand-view 约定，指令语义写作 `D=A×B+C`；换回本文 B tensor 的 `(N,K)` 记法，就是 \(D=AB^{\mathsf T}+C\)。A/B 由 `tCrA/tCrB` descriptor 指向 SMEM，C 是 MMA 前的 accumulator，D 是 MMA 后的 accumulator。C 和 D 可以绑定到同一个 `tCtAcc` TMEM tensor。
 
 ```python
 # Build the accumulator layout, then bind it to allocated TMEM.
@@ -295,12 +301,12 @@ tCtAcc = cute.make_tensor(tmem_ptr, tCtAcc_layout.layout)
 ```
 
 <!-- BEGIN GENERATED DIAGRAM: case8 -->
-![Conceptual accumulator modes](images/dataflow_case8_tmem_accumulator.svg)
+![TMEM accumulator logical layout and K timeline](images/dataflow_case8_tmem_accumulator.svg)
 <!-- END GENERATED DIAGRAM: case8 -->
 
-图中的 `M0/N0` 是 `(MMA_M=0,MMA_N=0)` 的缩写，表示真实示例只有一个 `(MMA_M,MMA_N)` instruction tile；`Elem0…Elem63` 连续编号图中展开的 64 个 accumulator 元素。真实 TMEM lane/column layout 由具体 accumulator layout 确定。
+左图把当前 CTA 的真实 `128×256` accumulator 压缩成 `(32×32)` 逻辑块，表示同一块 `tCtAcc` TMEM 区域，而不是虚构的逐线程元素表。橙色横线表示 `A[133,70]×B[n,70]` 对当前 N tile 的 256 个 `D[133,n]` 产生贡献；N 方向三个 CTA tile 合起来才覆盖全局 `D[133,:]` 的 768 列。右侧时间线给出同一 TMEM allocation 的生命周期：`q=0` 初始化，`q=1…5` 在原地址继续累加；其中 `q=1` 覆盖 `k=64…127`，所以包含 `k=70`。
 
-代码变量 `mC/gC/tCgC` 沿用输出矩阵的历史命名。本文示例没有从 GMEM 加载数学公式中的初始 C：第一个 K tile 关闭 accumulate，直接写入 `D=A×B`；第二个以及后续 K tile 将旧 `tCtAcc` 作为 C，再把新的 D 写回同一个 TMEM 地址。
+代码变量 `mC/gC/tCgC` 沿用输出矩阵的历史命名。本文示例没有从 GMEM 加载数学公式中的初始 C：第一个 K tile 关闭 accumulate，直接写入 \(D=AB^{\mathsf T}\)；第二个以及后续 K tile 将旧 `tCtAcc` 作为 C，再把新的 D 写回同一个 TMEM 地址。
 
 ```python
 # Simplified control-flow sketch; not a standalone synchronization template.
@@ -343,10 +349,10 @@ cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])
 第一条 `cute.copy` 发射 TMEM→RMEM 的 LDTM load；此后可以在寄存器中执行缩放、bias、activation 或类型转换；第二条 copy 才执行 RMEM→GMEM store。
 
 <!-- BEGIN GENERATED DIAGRAM: case9 -->
-![Conceptual per-thread epilogue fragment](images/dataflow_case9_t2r_epilogue.svg)
+![TMEM to registers to GMEM epilogue views](images/dataflow_case9_t2r_epilogue.svg)
 <!-- END GENERATED DIAGRAM: case9 -->
 
-图中的 `Thread#/Register#` 表示结果被切分为 per-thread register fragment。`Ld32x32bOp` 的真实 TV layout 与 thread ownership 应以具体 `tiled_copy_t2r`、`tTR_tAcc` 和 `tTR_gC` layout 为准。
+图只画当前线程的一组代表性 value token：左、中、右三栏分别是 TMEM source view、RMEM register fragment 和 GMEM destination view。token 的顺序用来说明 `partition_S`/`partition_D` 必须对齐；它们的数量不是对 `Ld32x32bOp` 的硬编码断言。确切寄存器数量与 Thread–Value ownership 应从具体 `tiled_copy_t2r`、`tTR_tAcc` 和 `tTR_gC` layout 读取。
 
 > 阶段检查：说明 epilogue 先经过 RMEM、而非直接从 TMEM 写入 GMEM 的原因。
 
@@ -374,8 +380,8 @@ cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])
 1. `mA` 是完整 A 的 GMEM tensor；`local_tile` 得到仍指向 GMEM 的 `gA`。
 2. `partition_A` 把 `gA` 改写为 per-MMA-instruction 可迭代的 `tCgA`。
 3. `tma_partition` 建立 GMEM source `tAgA` 和 SMEM destination `tAsA`。
-4. TMA copy 把数值真正写入 SMEM allocation `sA`。
-5. `make_fragment_A` 从 `sA` 派生 descriptor tensor `tCrA`。
+4. `make_fragment_A` 从 `sA` allocation 的地址/layout 派生 `tCrA`；这一步可在 TMA copy 前完成。
+5. 运行时 TMA copy 把数值写入 `sA`，consumer 等待对应 stage TMA-ready。
 6. `cute.gemm` 通过 A/B descriptor 读 SMEM，并更新 TMEM `tCtAcc`。
 7. epilogue 用 LDTM 把 `tCtAcc` 装入 `tTR_rAcc`，再写到 GMEM `mC`。
 
@@ -388,30 +394,30 @@ cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])
 `get_slice(v)` 中的小写 `v=0/1` 选择 CTA-pair 内 rank。官方示例中 pair-level `BM=256`，每个 CTA 得到 A/C 的 M 半区；B 在 MMA 语义上由两 CTA 共同消费，但加载工作可以继续分工。单 CTA partition 应根据 pair-level ownership 和实际 `partition_*` layout 推导。
 
 <!-- BEGIN GENERATED DIAGRAM: case2 -->
-![Conceptual CTA pair partition](images/tiled_mma_case2_cta_group_two.svg)
+![CTA-pair logical M partition](images/tiled_mma_case2_cta_group_two.svg)
 <!-- END GENERATED DIAGRAM: case2 -->
 
-图中的 `CTA-rank#/Part#` 表示 CTA 间的协作分区；Thread-Value layout 由具体 MMA 对象确定。
+图按官方 `CtaGroup.TWO` 示例画出 pair-level `M=256、N=256` 输出 tile：上、下两个 M 半区分别属于 CTA rank 0/1，右侧 B operand 在 MMA 语义上由两者共同消费。它是 CTA-pair 的逻辑分区图，不是对当前仓库中某个 SM110 双 SM TMEM readback 实现已经正确的证明；具体加载分工和 Thread–Value layout 仍由实际 MMA/copy 对象决定。
 
 ### `atom_layout_mnk`：增加 atom 数量
 
-`atom_layout_mnk=(M_rep,N_rep,K_rep)` 在 M/N/K 方向重复 atom，从而扩大 `TiledMma` coverage。该参数描述 MMA 结构内部的 repeat；CTA grid 和 SMEM stage 由其他对象描述。
+`atom_layout_mnk=(M_rep,N_rep,K_rep)` 在 M/N/K 方向重复 atom，从而扩大 `TiledMma` coverage。下面采用官方示例 `(2,2,1)`：由一个 `128×256×16` atom 变成 2×2 的四个 atom，覆盖 `256×512×16`。该参数描述 MMA 结构内部的 repeat；CTA grid 和 SMEM stage 由其他对象描述。
 
 <!-- BEGIN GENERATED DIAGRAM: case3 -->
-![Conceptual atom repeat](images/tiled_mma_case3_atom_layout_repeat.svg)
+![Atom layout repeat coverage](images/tiled_mma_case3_atom_layout_repeat.svg)
 <!-- END GENERATED DIAGRAM: case3 -->
 
-图中的 `M#/N#/Element#` 表示 atom repeat 层次。
+四个格子的 `(m_rep,n_rep)` 索引就是 repeat 层次；`K_rep=1`，因此 K coverage 仍为 16。图中没有把 atom 内部元素或线程 ownership 编造出来。
 
 ### `permutation_mnk`：重排映射，不增加 atom
 
-`permutation_mnk` 重排逻辑 MMA tile 到物理 M/N/K 坐标的映射，同时保持 atom 数量和 GEMM 数学结果不变。
+`permutation_mnk` 重排逻辑 MMA tile 到物理 M/N/K 坐标的映射，同时保持 atom 数量和 GEMM 数学结果不变。这里切换到 CUTLASS 官方的独立 `CtaGroup.TWO` 示例，不再沿用主线的 `CtaGroup.ONE、inst_M=128`：该例使用 `inst_M=256`、两个 M tile，总 M coverage 为 512，并以 `m_layout=(128,2,2):(1,256,128)` 将两个 tile 的两个 CTA-rank half 交错排列。
 
 <!-- BEGIN GENERATED DIAGRAM: case4 -->
-![Conceptual permutation mapping](images/tiled_mma_case4_permutation.svg)
+![Before and after MMA tile permutation](images/tiled_mma_case4_permutation.svg)
 <!-- END GENERATED DIAGRAM: case4 -->
 
-图中的 `Tile#/Inner#` 是官方 M-row interleave 的缩小概念示意。对以上三种变体，最终 shape 与 ownership 都应以实际 `partition_*` layout 输出为准。
+左图是变换前的逻辑 band 顺序，右图是 permutation 后的 band 顺序；相同名称与颜色表示同一 band，中央箭头表示整体应用该 permutation，右侧的颜色顺序显示重排结果。tile 数量和数学结果不变。对以上三种变体，最终 shape 与 ownership 都应以实际 `partition_*` layout 输出为准。
 
 ## 对象的存储与语义
 
@@ -464,7 +470,7 @@ cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])
 2. TMA copy 需要同时知道从 GMEM 的哪里读和向 SMEM 的哪里写。
 3. TMA `cute.copy`。
 4. descriptor/fragment-level 对象。
-5. accumulator 尚无需要保留的旧 C，首轮直接写 `A×B`；后续才累加旧 `tCtAcc`。
+5. accumulator 尚无需要保留的旧 C，首轮直接写 \(AB^{\mathsf T}\)；后续才累加旧 `tCtAcc`。
 6. `release()` 只确认 stage reuse 条件；TMEM completion 由独立的完成同步保证。
 7. trivial、`CtaGroup.ONE`、无 permutation、无额外 ownership split 且 shape 整除时。
 8. CTA pair 改变协作 ownership，repeat 增加 atom 数量，permutation 只重排逻辑到物理坐标的映射。
@@ -473,10 +479,12 @@ cute.copy(store_atom, tTR_rAcc, tTR_gC[None, None, i])
 
 ## 阅读边界与官方资料
 
-本文主线讨论 dense SS tcgen05 GEMM：A/B 来自 SMEM，accumulator 位于 TMEM。A-from-TMEM、block-scaled、sparse、边界 predication 和完整 pipeline kernel 留待后续讨论。彩色图片用于说明 shape 与坐标关系；实际 TV layout 和 ownership 以具体对象的 layout 输出为准。
+本文主线讨论 dense SS tcgen05 GEMM：A/B 来自 SMEM，accumulator 位于 TMEM。A-from-TMEM、block-scaled、sparse、边界 predication 和完整 pipeline kernel 留待后续讨论。SVG 网格由 `tensor-layouts` 的 `Layout`/visualization API 生成；完整 shape 会按图注明的块大小压缩。彩色图片用于说明数学坐标和逻辑 layout，实际 TV layout、TMEM bank 与 ownership 以 SM110 目标 kernel 的具体 layout/PTX 输出为准。
 
 - [CUTLASS Python DSL tcgen05 MMA Programming Guide](https://docs.nvidia.com/cutlass/latest/media/docs/pythonDSL/mma_docs/tcgen05_programming.html)
 - [CuTe Tensors：Engine 与 Layout](https://docs.nvidia.com/cutlass/latest/media/docs/cpp/cute/03_tensor.html)
 - [PTX ISA：Tensor Memory 与 tcgen05](https://docs.nvidia.com/cuda/parallel-thread-execution/)
+- [`facebookresearch/tensor-layouts` visualization API](https://github.com/facebookresearch/tensor-layouts/blob/main/docs/viz_api.md)
+- [`tensor-layouts` 的 SM100 UMMA atom 定义](https://github.com/facebookresearch/tensor-layouts/blob/main/src/tensor_layouts/atoms_nv.py)
 
-资料核对日期：2026-07-12。链接指向 NVIDIA `latest` 文档；团队分享前应固定 CUTLASS commit 与 PTX ISA 版本。
+资料核对日期：2026-07-14。链接指向 NVIDIA `latest` 文档；团队分享前应固定 CUTLASS commit、PTX ISA 与 `tensor-layouts` 版本。

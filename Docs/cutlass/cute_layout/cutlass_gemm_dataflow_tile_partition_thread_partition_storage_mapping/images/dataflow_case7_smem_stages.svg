@@ -1,50 +1,238 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="346" height="266" viewBox="0 0 346 266" role="img">
-<style>
-text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
-.axis{font-size:22px}.cell{font-size:15px}
-</style>
-<rect width="346" height="266" fill="#ffffff"/>
-<text x="86.0" y="28" class="axis" text-anchor="middle">0</text>
-<text x="158.0" y="28" class="axis" text-anchor="middle">1</text>
-<text x="230.0" y="28" class="axis" text-anchor="middle">2</text>
-<text x="302.0" y="28" class="axis" text-anchor="middle">3</text>
-<text x="24" y="86.0" class="axis" text-anchor="middle">0</text>
-<text x="24" y="158.0" class="axis" text-anchor="middle">1</text>
-<text x="24" y="230.0" class="axis" text-anchor="middle">2</text>
-<rect x="50" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="72" class="cell" text-anchor="middle">Stage0</text>
-<text x="86.0" y="95" class="cell" text-anchor="middle">MMA_K0</text>
-<rect x="122" y="42" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="72" class="cell" text-anchor="middle">Stage0</text>
-<text x="158.0" y="95" class="cell" text-anchor="middle">MMA_K1</text>
-<rect x="194" y="42" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="72" class="cell" text-anchor="middle">Stage0</text>
-<text x="230.0" y="95" class="cell" text-anchor="middle">MMA_K2</text>
-<rect x="266" y="42" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="72" class="cell" text-anchor="middle">Stage0</text>
-<text x="302.0" y="95" class="cell" text-anchor="middle">MMA_K3</text>
-<rect x="50" y="114" width="72" height="72" fill="#ffcc66" stroke="#b34700" stroke-width="4"/>
-<text x="86.0" y="144" class="cell" text-anchor="middle">Stage1</text>
-<text x="86.0" y="167" class="cell" text-anchor="middle">MMA_K0</text>
-<rect x="122" y="114" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="144" class="cell" text-anchor="middle">Stage1</text>
-<text x="158.0" y="167" class="cell" text-anchor="middle">MMA_K1</text>
-<rect x="194" y="114" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="144" class="cell" text-anchor="middle">Stage1</text>
-<text x="230.0" y="167" class="cell" text-anchor="middle">MMA_K2</text>
-<rect x="266" y="114" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="144" class="cell" text-anchor="middle">Stage1</text>
-<text x="302.0" y="167" class="cell" text-anchor="middle">MMA_K3</text>
-<rect x="50" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="216" class="cell" text-anchor="middle">Stage2</text>
-<text x="86.0" y="239" class="cell" text-anchor="middle">MMA_K0</text>
-<rect x="122" y="186" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="216" class="cell" text-anchor="middle">Stage2</text>
-<text x="158.0" y="239" class="cell" text-anchor="middle">MMA_K1</text>
-<rect x="194" y="186" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="216" class="cell" text-anchor="middle">Stage2</text>
-<text x="230.0" y="239" class="cell" text-anchor="middle">MMA_K2</text>
-<rect x="266" y="186" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="216" class="cell" text-anchor="middle">Stage2</text>
-<text x="302.0" y="239" class="cell" text-anchor="middle">MMA_K3</text>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="602.419875pt" height="348.9408pt" viewBox="0 0 602.419875 348.9408" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 348.9408
+L 602.419875 348.9408
+L 602.419875 0
+L 0 0
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 60.44375 86.798
+L 131.38375 86.798
+L 131.38375 157.738
+L 60.44375 157.738
+z
+" clip-path="url(#p34037b0518)" style="fill: #dde8ff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 131.38375 86.798
+L 202.32375 86.798
+L 202.32375 157.738
+L 131.38375 157.738
+z
+" clip-path="url(#p34037b0518)" style="fill: #ddf7e5; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 202.32375 86.798
+L 273.26375 86.798
+L 273.26375 157.738
+L 202.32375 157.738
+z
+" clip-path="url(#p34037b0518)" style="fill: #fff3c4; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 273.26375 86.798
+L 344.20375 86.798
+L 344.20375 157.738
+L 273.26375 157.738
+z
+" clip-path="url(#p34037b0518)" style="fill: #ffe0e0; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 60.44375 157.738
+L 131.38375 157.738
+L 131.38375 228.678
+L 60.44375 228.678
+z
+" clip-path="url(#p34037b0518)" style="fill: #dde8ff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 131.38375 157.738
+L 202.32375 157.738
+L 202.32375 228.678
+L 131.38375 228.678
+z
+" clip-path="url(#p34037b0518)" style="fill: #ddf7e5; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 202.32375 157.738
+L 273.26375 157.738
+L 273.26375 228.678
+L 202.32375 228.678
+z
+" clip-path="url(#p34037b0518)" style="fill: #fff3c4; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 273.26375 157.738
+L 344.20375 157.738
+L 344.20375 228.678
+L 273.26375 228.678
+z
+" clip-path="url(#p34037b0518)" style="fill: #ffe0e0; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 60.44375 228.678
+L 131.38375 228.678
+L 131.38375 299.618
+L 60.44375 299.618
+z
+" clip-path="url(#p34037b0518)" style="fill: #dde8ff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 131.38375 228.678
+L 202.32375 228.678
+L 202.32375 299.618
+L 131.38375 299.618
+z
+" clip-path="url(#p34037b0518)" style="fill: #ddf7e5; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 202.32375 228.678
+L 273.26375 228.678
+L 273.26375 299.618
+L 202.32375 299.618
+z
+" clip-path="url(#p34037b0518)" style="fill: #fff3c4; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 273.26375 228.678
+L 344.20375 228.678
+L 344.20375 299.618
+L 273.26375 299.618
+z
+" clip-path="url(#p34037b0518)" style="fill: #ffe0e0; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <g id="patch_14">
+     <path d="M 400.95575 205.473413
+L 595.219875 205.473413
+Q 598.299875 205.473413 598.299875 202.393413
+L 598.299875 184.022588
+Q 598.299875 180.942588 595.219875 180.942588
+L 400.95575 180.942588
+Q 397.87575 180.942588 397.87575 184.022588
+L 397.87575 202.393413
+Q 397.87575 205.473413 400.95575 205.473413
+z
+" style="fill: #ffffff; stroke: #7c3aed; stroke-linejoin: miter"/>
+    </g>
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; fill: #7c3aed" transform="translate(400.95575 190.709213)">selected DESC covers sA(5,6,stage=1)</text>
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; fill: #7c3aed" transform="translate(400.95575 200.563288)">address metadata only; no A value is stored</text>
+   </g>
+   <g id="text_2">
+    <g id="patch_15">
+     <path d="M 83.865938 46.885813
+L 320.781563 46.885813
+Q 323.981563 46.885813 323.981563 43.685812
+L 323.981563 33.729562
+Q 323.981563 30.529562 320.781563 30.529562
+L 83.865938 30.529562
+Q 80.665938 30.529562 80.665938 33.729562
+L 80.665938 43.685812
+Q 80.665938 46.885813 83.865938 46.885813
+z
+" style="fill: #f5eeff; stroke: #7c3aed; stroke-linejoin: miter"/>
+    </g>
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #7c3aed" x="202.32375" y="41.328" transform="rotate(-0 202.32375 41.328)">tCrA logical modes: (STAGE=3, MMA_K=4)</text>
+   </g>
+   <g id="patch_16">
+    <path d="M 60.44375 157.738
+L 131.38375 157.738
+L 131.38375 228.678
+L 60.44375 228.678
+z
+" clip-path="url(#p34037b0518)" style="fill: #ffe6b0; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="95.91375" y="124.4755" transform="rotate(-0 95.91375 124.4755)">DESC</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="166.85375" y="124.4755" transform="rotate(-0 166.85375 124.4755)">DESC</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="237.79375" y="124.4755" transform="rotate(-0 237.79375 124.4755)">DESC</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.73375" y="124.4755" transform="rotate(-0 308.73375 124.4755)">DESC</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="95.91375" y="195.4155" transform="rotate(-0 95.91375 195.4155)">DESC</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="166.85375" y="195.4155" transform="rotate(-0 166.85375 195.4155)">DESC</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="237.79375" y="195.4155" transform="rotate(-0 237.79375 195.4155)">DESC</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.73375" y="195.4155" transform="rotate(-0 308.73375 195.4155)">DESC</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="95.91375" y="266.3555" transform="rotate(-0 95.91375 266.3555)">DESC</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="166.85375" y="266.3555" transform="rotate(-0 166.85375 266.3555)">DESC</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="237.79375" y="266.3555" transform="rotate(-0 237.79375 266.3555)">DESC</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.73375" y="266.3555" transform="rotate(-0 308.73375 266.3555)">DESC</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="39.16175" y="124.613469" transform="rotate(-0 39.16175 124.613469)">stage=0</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="39.16175" y="195.553469" transform="rotate(-0 39.16175 195.553469)">stage=1</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="39.16175" y="266.493469" transform="rotate(-0 39.16175 266.493469)">stage=2</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="95.91375" y="67.668227" transform="rotate(-0 95.91375 67.668227)">MMA_K=0</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="166.85375" y="67.625063" transform="rotate(-0 166.85375 67.625063)">MMA_K=1</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="237.79375" y="67.668227" transform="rotate(-0 237.79375 67.668227)">MMA_K=2</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="308.73375" y="67.668227" transform="rotate(-0 308.73375 67.668227)">MMA_K=3</text>
+   </g>
+  </g>
+  <g id="text_22">
+   <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #172033" x="202.32375" y="16.318125" transform="rotate(-0 202.32375 16.318125)">make_fragment_A: one descriptor covers an SMEM region</text>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="202.32375" y="339.973066" transform="rotate(-0 202.32375 339.973066)">stage=q mod 3 is a teaching shorthand; the real pipeline advances state/count/phase.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p34037b0518">
+   <rect x="24.97375" y="51.328" width="354.7" height="283.76"/>
+  </clipPath>
+ </defs>
 </svg>

@@ -1,215 +1,604 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="634" height="626" viewBox="0 0 634 626" role="img">
-<style>
-text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
-.axis{font-size:22px}.cell{font-size:15px}
-</style>
-<rect width="634" height="626" fill="#ffffff"/>
-<text x="86.0" y="28" class="axis" text-anchor="middle">0</text>
-<text x="158.0" y="28" class="axis" text-anchor="middle">1</text>
-<text x="230.0" y="28" class="axis" text-anchor="middle">2</text>
-<text x="302.0" y="28" class="axis" text-anchor="middle">3</text>
-<text x="374.0" y="28" class="axis" text-anchor="middle">4</text>
-<text x="446.0" y="28" class="axis" text-anchor="middle">5</text>
-<text x="518.0" y="28" class="axis" text-anchor="middle">6</text>
-<text x="590.0" y="28" class="axis" text-anchor="middle">7</text>
-<text x="24" y="86.0" class="axis" text-anchor="middle">0</text>
-<text x="24" y="158.0" class="axis" text-anchor="middle">1</text>
-<text x="24" y="230.0" class="axis" text-anchor="middle">2</text>
-<text x="24" y="302.0" class="axis" text-anchor="middle">3</text>
-<text x="24" y="374.0" class="axis" text-anchor="middle">4</text>
-<text x="24" y="446.0" class="axis" text-anchor="middle">5</text>
-<text x="24" y="518.0" class="axis" text-anchor="middle">6</text>
-<text x="24" y="590.0" class="axis" text-anchor="middle">7</text>
-<rect x="50" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="95" class="cell" text-anchor="middle">Elem0</text>
-<rect x="122" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="95" class="cell" text-anchor="middle">Elem1</text>
-<rect x="194" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="95" class="cell" text-anchor="middle">Elem2</text>
-<rect x="266" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="95" class="cell" text-anchor="middle">Elem3</text>
-<rect x="338" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="95" class="cell" text-anchor="middle">Elem4</text>
-<rect x="410" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="95" class="cell" text-anchor="middle">Elem5</text>
-<rect x="482" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="95" class="cell" text-anchor="middle">Elem6</text>
-<rect x="554" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="95" class="cell" text-anchor="middle">Elem7</text>
-<rect x="50" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="167" class="cell" text-anchor="middle">Elem8</text>
-<rect x="122" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="167" class="cell" text-anchor="middle">Elem9</text>
-<rect x="194" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="167" class="cell" text-anchor="middle">Elem10</text>
-<rect x="266" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="167" class="cell" text-anchor="middle">Elem11</text>
-<rect x="338" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="167" class="cell" text-anchor="middle">Elem12</text>
-<rect x="410" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="167" class="cell" text-anchor="middle">Elem13</text>
-<rect x="482" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="167" class="cell" text-anchor="middle">Elem14</text>
-<rect x="554" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="167" class="cell" text-anchor="middle">Elem15</text>
-<rect x="50" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="239" class="cell" text-anchor="middle">Elem16</text>
-<rect x="122" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="239" class="cell" text-anchor="middle">Elem17</text>
-<rect x="194" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="239" class="cell" text-anchor="middle">Elem18</text>
-<rect x="266" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="239" class="cell" text-anchor="middle">Elem19</text>
-<rect x="338" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="239" class="cell" text-anchor="middle">Elem20</text>
-<rect x="410" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="239" class="cell" text-anchor="middle">Elem21</text>
-<rect x="482" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="239" class="cell" text-anchor="middle">Elem22</text>
-<rect x="554" y="186" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="216" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="239" class="cell" text-anchor="middle">Elem23</text>
-<rect x="50" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="311" class="cell" text-anchor="middle">Elem24</text>
-<rect x="122" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="311" class="cell" text-anchor="middle">Elem25</text>
-<rect x="194" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="311" class="cell" text-anchor="middle">Elem26</text>
-<rect x="266" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="311" class="cell" text-anchor="middle">Elem27</text>
-<rect x="338" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="311" class="cell" text-anchor="middle">Elem28</text>
-<rect x="410" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="311" class="cell" text-anchor="middle">Elem29</text>
-<rect x="482" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="311" class="cell" text-anchor="middle">Elem30</text>
-<rect x="554" y="258" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="288" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="311" class="cell" text-anchor="middle">Elem31</text>
-<rect x="50" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="383" class="cell" text-anchor="middle">Elem32</text>
-<rect x="122" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="383" class="cell" text-anchor="middle">Elem33</text>
-<rect x="194" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="383" class="cell" text-anchor="middle">Elem34</text>
-<rect x="266" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="383" class="cell" text-anchor="middle">Elem35</text>
-<rect x="338" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="383" class="cell" text-anchor="middle">Elem36</text>
-<rect x="410" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="383" class="cell" text-anchor="middle">Elem37</text>
-<rect x="482" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="383" class="cell" text-anchor="middle">Elem38</text>
-<rect x="554" y="330" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="360" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="383" class="cell" text-anchor="middle">Elem39</text>
-<rect x="50" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="455" class="cell" text-anchor="middle">Elem40</text>
-<rect x="122" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="455" class="cell" text-anchor="middle">Elem41</text>
-<rect x="194" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="455" class="cell" text-anchor="middle">Elem42</text>
-<rect x="266" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="455" class="cell" text-anchor="middle">Elem43</text>
-<rect x="338" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="455" class="cell" text-anchor="middle">Elem44</text>
-<rect x="410" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="455" class="cell" text-anchor="middle">Elem45</text>
-<rect x="482" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="455" class="cell" text-anchor="middle">Elem46</text>
-<rect x="554" y="402" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="432" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="455" class="cell" text-anchor="middle">Elem47</text>
-<rect x="50" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="527" class="cell" text-anchor="middle">Elem48</text>
-<rect x="122" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="527" class="cell" text-anchor="middle">Elem49</text>
-<rect x="194" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="527" class="cell" text-anchor="middle">Elem50</text>
-<rect x="266" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="527" class="cell" text-anchor="middle">Elem51</text>
-<rect x="338" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="527" class="cell" text-anchor="middle">Elem52</text>
-<rect x="410" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="527" class="cell" text-anchor="middle">Elem53</text>
-<rect x="482" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="527" class="cell" text-anchor="middle">Elem54</text>
-<rect x="554" y="474" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="504" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="527" class="cell" text-anchor="middle">Elem55</text>
-<rect x="50" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="599" class="cell" text-anchor="middle">Elem56</text>
-<rect x="122" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="599" class="cell" text-anchor="middle">Elem57</text>
-<rect x="194" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="230.0" y="599" class="cell" text-anchor="middle">Elem58</text>
-<rect x="266" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="302.0" y="599" class="cell" text-anchor="middle">Elem59</text>
-<rect x="338" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="374.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="374.0" y="599" class="cell" text-anchor="middle">Elem60</text>
-<rect x="410" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="446.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="446.0" y="599" class="cell" text-anchor="middle">Elem61</text>
-<rect x="482" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="518.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="518.0" y="599" class="cell" text-anchor="middle">Elem62</text>
-<rect x="554" y="546" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="590.0" y="576" class="cell" text-anchor="middle">M0/N0</text>
-<text x="590.0" y="599" class="cell" text-anchor="middle">Elem63</text>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="831.506486pt" height="397.728pt" viewBox="0 0 831.506486 397.728" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 397.728
+L 831.506486 397.728
+L 831.506486 -0
+L 0 -0
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 41.400733 97.516364
+L 101.162551 97.516364
+L 101.162551 157.278182
+L 41.400733 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 101.162551 97.516364
+L 160.924369 97.516364
+L 160.924369 157.278182
+L 101.162551 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 160.924369 97.516364
+L 220.686187 97.516364
+L 220.686187 157.278182
+L 160.924369 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 220.686188 97.516364
+L 280.448006 97.516364
+L 280.448006 157.278182
+L 220.686188 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 280.448006 97.516364
+L 340.209824 97.516364
+L 340.209824 157.278182
+L 280.448006 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 340.209824 97.516364
+L 399.971642 97.516364
+L 399.971642 157.278182
+L 340.209824 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 399.971642 97.516364
+L 459.73346 97.516364
+L 459.73346 157.278182
+L 399.971642 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 459.73346 97.516364
+L 519.495278 97.516364
+L 519.495278 157.278182
+L 459.73346 157.278182
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 41.400733 157.278182
+L 101.162551 157.278182
+L 101.162551 217.04
+L 41.400733 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 101.162551 157.278182
+L 160.924369 157.278182
+L 160.924369 217.04
+L 101.162551 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 160.924369 157.278182
+L 220.686187 157.278182
+L 220.686187 217.04
+L 160.924369 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 220.686188 157.278182
+L 280.448006 157.278182
+L 280.448006 217.04
+L 220.686188 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 280.448006 157.278182
+L 340.209824 157.278182
+L 340.209824 217.04
+L 280.448006 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 340.209824 157.278182
+L 399.971642 157.278182
+L 399.971642 217.04
+L 340.209824 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 399.971642 157.278182
+L 459.73346 157.278182
+L 459.73346 217.04
+L 399.971642 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 459.73346 157.278182
+L 519.495278 157.278182
+L 519.495278 217.04
+L 459.73346 217.04
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 41.400733 217.04
+L 101.162551 217.04
+L 101.162551 276.801818
+L 41.400733 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 101.162551 217.04
+L 160.924369 217.04
+L 160.924369 276.801818
+L 101.162551 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 160.924369 217.04
+L 220.686187 217.04
+L 220.686187 276.801818
+L 160.924369 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 220.686188 217.04
+L 280.448006 217.04
+L 280.448006 276.801818
+L 220.686188 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 280.448006 217.04
+L 340.209824 217.04
+L 340.209824 276.801818
+L 280.448006 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_23">
+    <path d="M 340.209824 217.04
+L 399.971642 217.04
+L 399.971642 276.801818
+L 340.209824 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 399.971642 217.04
+L 459.73346 217.04
+L 459.73346 276.801818
+L 399.971642 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 459.73346 217.04
+L 519.495278 217.04
+L 519.495278 276.801818
+L 459.73346 276.801818
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 41.400733 276.801818
+L 101.162551 276.801818
+L 101.162551 336.563636
+L 41.400733 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_27">
+    <path d="M 101.162551 276.801818
+L 160.924369 276.801818
+L 160.924369 336.563636
+L 101.162551 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_28">
+    <path d="M 160.924369 276.801818
+L 220.686187 276.801818
+L 220.686187 336.563636
+L 160.924369 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_29">
+    <path d="M 220.686188 276.801818
+L 280.448006 276.801818
+L 280.448006 336.563636
+L 220.686188 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_30">
+    <path d="M 280.448006 276.801818
+L 340.209824 276.801818
+L 340.209824 336.563636
+L 280.448006 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_31">
+    <path d="M 340.209824 276.801818
+L 399.971642 276.801818
+L 399.971642 336.563636
+L 340.209824 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_32">
+    <path d="M 399.971642 276.801818
+L 459.73346 276.801818
+L 459.73346 336.563636
+L 399.971642 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_33">
+    <path d="M 459.73346 276.801818
+L 519.495278 276.801818
+L 519.495278 336.563636
+L 459.73346 336.563636
+z
+" clip-path="url(#pebbebebc5d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <g id="patch_34">
+     <path d="M 111.768506 368.561975
+L 449.127506 368.561975
+Q 451.767506 368.561975 451.767506 365.921975
+L 451.767506 357.405225
+Q 451.767506 354.765225 449.127506 354.765225
+L 111.768506 354.765225
+Q 109.128506 354.765225 109.128506 357.405225
+L 109.128506 365.921975
+Q 109.128506 368.561975 111.768506 368.561975
+z
+" style="fill: #ffffff; stroke: #b45309; stroke-linejoin: miter"/>
+    </g>
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #b45309" x="280.448006" y="364.09185" transform="rotate(-0 280.448006 364.09185)">orange row: A[133,70] x B[n,70] contributes to this CTA tile's 256 D columns</text>
+   </g>
+   <g id="text_2">
+    <g id="patch_35">
+     <path d="M 145.681599 62.915142
+L 415.214412 62.915142
+Q 418.414412 62.915142 418.414412 59.715142
+L 418.414412 50.037017
+Q 418.414412 46.837017 415.214412 46.837017
+L 145.681599 46.837017
+Q 142.481599 46.837017 142.481599 50.037017
+L 142.481599 59.715142
+Q 142.481599 62.915142 145.681599 62.915142
+z
+" style="fill: #f0eaff; stroke: #6d4cc2; stroke-linejoin: miter"/>
+    </g>
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6d4cc2" x="280.448006" y="57.635455" transform="rotate(-0 280.448006 57.635455)">tCtAcc / TMEM: 128x256 shown as 32x32 blocks</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.285392 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.744142 134.083898)">N0</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.04721 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.50596 134.083898)">N1</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(184.809028 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(185.267778 134.083898)">N2</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(244.570847 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(245.029597 134.083898)">N3</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.332665 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.791415 134.083898)">N4</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.094483 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.553233 134.083898)">N5</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(423.856301 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(424.315051 134.083898)">N6</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(483.618119 125.125648)">M0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(484.076869 134.083898)">N7</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.285392 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.744142 193.845716)">N0</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.04721 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.50596 193.845716)">N1</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(184.809028 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(185.267778 193.845716)">N2</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(244.570847 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(245.029597 193.845716)">N3</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.332665 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.791415 193.845716)">N4</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.094483 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.553233 193.845716)">N5</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(423.856301 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(424.315051 193.845716)">N6</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(483.618119 184.887466)">M1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(484.076869 193.845716)">N7</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.285392 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.744142 253.607534)">N0</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.04721 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.50596 253.607534)">N1</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(184.809028 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(185.267778 253.607534)">N2</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(244.570847 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(245.029597 253.607534)">N3</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.332665 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.791415 253.607534)">N4</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.094483 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.553233 253.607534)">N5</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(423.856301 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(424.315051 253.607534)">N6</text>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(483.618119 244.649284)">M2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(484.076869 253.607534)">N7</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.285392 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(65.744142 313.369352)">N0</text>
+   </g>
+   <g id="text_28">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.04721 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(125.50596 313.369352)">N1</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(184.809028 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(185.267778 313.369352)">N2</text>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(244.570847 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(245.029597 313.369352)">N3</text>
+   </g>
+   <g id="text_31">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.332665 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(304.791415 313.369352)">N4</text>
+   </g>
+   <g id="text_32">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.094483 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(364.553233 313.369352)">N5</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(423.856301 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(424.315051 313.369352)">N6</text>
+   </g>
+   <g id="text_34">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(483.618119 304.411102)">M3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(484.076869 313.369352)">N7</text>
+   </g>
+   <g id="text_35">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="23.472188" y="129.742741" transform="rotate(-0 23.472188 129.742741)">Mblk=0</text>
+   </g>
+   <g id="text_36">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="23.472188" y="189.50456" transform="rotate(-0 23.472188 189.50456)">Mblk=1</text>
+   </g>
+   <g id="text_37">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="23.472188" y="249.266378" transform="rotate(-0 23.472188 249.266378)">Mblk=2</text>
+   </g>
+   <g id="text_38">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="23.472188" y="309.028196" transform="rotate(-0 23.472188 309.028196)">Mblk=3</text>
+   </g>
+   <g id="text_39">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="71.281642" y="81.933287" transform="rotate(-0 71.281642 81.933287)">Nblk=0</text>
+   </g>
+   <g id="text_40">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="131.04346" y="81.933287" transform="rotate(-0 131.04346 81.933287)">Nblk=1</text>
+   </g>
+   <g id="text_41">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="190.805278" y="81.933287" transform="rotate(-0 190.805278 81.933287)">Nblk=2</text>
+   </g>
+   <g id="text_42">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="250.567097" y="81.933287" transform="rotate(-0 250.567097 81.933287)">Nblk=3</text>
+   </g>
+   <g id="text_43">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="310.328915" y="81.933287" transform="rotate(-0 310.328915 81.933287)">Nblk=4</text>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="370.090733" y="81.933287" transform="rotate(-0 370.090733 81.933287)">Nblk=5</text>
+   </g>
+   <g id="text_45">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="429.852551" y="81.933287" transform="rotate(-0 429.852551 81.933287)">Nblk=6</text>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="489.614369" y="81.933287" transform="rotate(-0 489.614369 81.933287)">Nblk=7</text>
+   </g>
+   <g id="line2d_1">
+    <path d="M 41.400733 106.854148
+L 519.495278 106.854148
+" clip-path="url(#pebbebebc5d)" style="fill: none; stroke: #b45309; stroke-width: 2.2; stroke-linecap: square"/>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_36">
+    <path d="M 676.271642 73.52
+L 724.111642 73.52
+L 724.111642 121.36
+L 676.271642 121.36
+z
+" clip-path="url(#pada247000d)" style="fill: #e8f1ff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_37">
+    <path d="M 676.271642 121.36
+L 724.111642 121.36
+L 724.111642 169.2
+L 676.271642 169.2
+z
+" clip-path="url(#pada247000d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_38">
+    <path d="M 676.271642 169.2
+L 724.111642 169.2
+L 724.111642 217.04
+L 676.271642 217.04
+z
+" clip-path="url(#pada247000d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_39">
+    <path d="M 676.271642 217.04
+L 724.111642 217.04
+L 724.111642 264.88
+L 676.271642 264.88
+z
+" clip-path="url(#pada247000d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_40">
+    <path d="M 676.271642 264.88
+L 724.111642 264.88
+L 724.111642 312.72
+L 676.271642 312.72
+z
+" clip-path="url(#pada247000d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_41">
+    <path d="M 676.271642 312.72
+L 724.111642 312.72
+L 724.111642 360.56
+L 676.271642 360.56
+z
+" clip-path="url(#pada247000d)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_47">
+    <g id="patch_42">
+     <path d="M 576.076798 44.879687
+L 824.306486 44.879687
+Q 827.506486 44.879687 827.506486 41.679687
+L 827.506486 32.001562
+Q 827.506486 28.801562 824.306486 28.801562
+L 576.076798 28.801562
+Q 572.876798 28.801562 572.876798 32.001562
+L 572.876798 41.679687
+Q 572.876798 44.879687 576.076798 44.879687
+z
+" style="fill: #f0eaff; stroke: #6d4cc2; stroke-linejoin: miter"/>
+    </g>
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6d4cc2" x="700.191642" y="39.6" transform="rotate(-0 700.191642 39.6)">The same TMEM allocation across six K tiles</text>
+   </g>
+   <g id="patch_43">
+    <path d="M 676.271642 121.36
+L 724.111642 121.36
+L 724.111642 169.2
+L 676.271642 169.2
+z
+" clip-path="url(#pada247000d)" style="fill: #ffe6b0; stroke: #b45309; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_48">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 90.68925)">q=0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(693.866017 99.6475)">init</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(678.544142 108.60575)">ACC=False</text>
+   </g>
+   <g id="text_49">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 138.52925)">q=1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(675.904142 147.4875)">+k=64..127</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(686.312267 156.44575)">(k=70)</text>
+   </g>
+   <g id="text_50">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 190.848375)">q=2</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(676.783517 199.806625)">accumulate</text>
+   </g>
+   <g id="text_51">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 238.688375)">q=3</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(676.783517 247.646625)">accumulate</text>
+   </g>
+   <g id="text_52">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 286.528375)">q=4</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(676.783517 295.486625)">accumulate</text>
+   </g>
+   <g id="text_53">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(691.755392 334.368375)">q=5</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(676.783517 343.326625)">accumulate</text>
+   </g>
+  </g>
+  <g id="text_54">
+   <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #172033" x="490.319824" y="16.318125" transform="rotate(-0 490.319824 16.318125)">cute.gemm initializes once, then accumulates into the same tCtAcc</text>
+  </g>
+  <g id="text_55">
+   <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="490.319824" y="388.760266" transform="rotate(-0 490.319824 388.760266)">Three N-direction CTA tiles together cover global D[133,:]; no per-thread or TMEM-bank claim.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pebbebebc5d">
+   <rect x="11.519824" y="67.635455" width="537.856364" height="298.809091"/>
+  </clipPath>
+  <clipPath id="pada247000d">
+   <rect x="652.351642" y="49.6" width="95.68" height="334.88"/>
+  </clipPath>
+ </defs>
 </svg>

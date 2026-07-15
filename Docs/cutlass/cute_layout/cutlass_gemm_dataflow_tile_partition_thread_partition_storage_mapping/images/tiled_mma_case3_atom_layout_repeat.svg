@@ -1,63 +1,152 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="346" height="338" viewBox="0 0 346 338" role="img">
-<style>
-text{font-family:'Times New Roman','Noto Serif CJK SC',serif;fill:#111111}
-.axis{font-size:22px}.cell{font-size:15px}
-</style>
-<rect width="346" height="338" fill="#ffffff"/>
-<text x="86.0" y="28" class="axis" text-anchor="middle">0</text>
-<text x="158.0" y="28" class="axis" text-anchor="middle">1</text>
-<text x="230.0" y="28" class="axis" text-anchor="middle">2</text>
-<text x="302.0" y="28" class="axis" text-anchor="middle">3</text>
-<text x="24" y="86.0" class="axis" text-anchor="middle">0</text>
-<text x="24" y="158.0" class="axis" text-anchor="middle">1</text>
-<text x="24" y="230.0" class="axis" text-anchor="middle">2</text>
-<text x="24" y="302.0" class="axis" text-anchor="middle">3</text>
-<rect x="50" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="95" class="cell" text-anchor="middle">Element0</text>
-<rect x="122" y="42" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="72" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="95" class="cell" text-anchor="middle">Element1</text>
-<rect x="194" y="42" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="72" class="cell" text-anchor="middle">M0/N1</text>
-<text x="230.0" y="95" class="cell" text-anchor="middle">Element0</text>
-<rect x="266" y="42" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="72" class="cell" text-anchor="middle">M0/N1</text>
-<text x="302.0" y="95" class="cell" text-anchor="middle">Element1</text>
-<rect x="50" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="86.0" y="167" class="cell" text-anchor="middle">Element2</text>
-<rect x="122" y="114" width="72" height="72" fill="#aaaaff" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="144" class="cell" text-anchor="middle">M0/N0</text>
-<text x="158.0" y="167" class="cell" text-anchor="middle">Element3</text>
-<rect x="194" y="114" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="144" class="cell" text-anchor="middle">M0/N1</text>
-<text x="230.0" y="167" class="cell" text-anchor="middle">Element2</text>
-<rect x="266" y="114" width="72" height="72" fill="#aaffaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="144" class="cell" text-anchor="middle">M0/N1</text>
-<text x="302.0" y="167" class="cell" text-anchor="middle">Element3</text>
-<rect x="50" y="186" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="216" class="cell" text-anchor="middle">M1/N0</text>
-<text x="86.0" y="239" class="cell" text-anchor="middle">Element0</text>
-<rect x="122" y="186" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="216" class="cell" text-anchor="middle">M1/N0</text>
-<text x="158.0" y="239" class="cell" text-anchor="middle">Element1</text>
-<rect x="194" y="186" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="216" class="cell" text-anchor="middle">M1/N1</text>
-<text x="230.0" y="239" class="cell" text-anchor="middle">Element0</text>
-<rect x="266" y="186" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="216" class="cell" text-anchor="middle">M1/N1</text>
-<text x="302.0" y="239" class="cell" text-anchor="middle">Element1</text>
-<rect x="50" y="258" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="86.0" y="288" class="cell" text-anchor="middle">M1/N0</text>
-<text x="86.0" y="311" class="cell" text-anchor="middle">Element2</text>
-<rect x="122" y="258" width="72" height="72" fill="#ffffaa" stroke="#111111" stroke-width="1"/>
-<text x="158.0" y="288" class="cell" text-anchor="middle">M1/N0</text>
-<text x="158.0" y="311" class="cell" text-anchor="middle">Element3</text>
-<rect x="194" y="258" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="230.0" y="288" class="cell" text-anchor="middle">M1/N1</text>
-<text x="230.0" y="311" class="cell" text-anchor="middle">Element2</text>
-<rect x="266" y="258" width="72" height="72" fill="#ffaaaa" stroke="#111111" stroke-width="1"/>
-<text x="302.0" y="288" class="cell" text-anchor="middle">M1/N1</text>
-<text x="302.0" y="311" class="cell" text-anchor="middle">Element3</text>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="616.628006pt" height="307.1232pt" viewBox="0 0 616.628006 307.1232" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 307.1232
+L 616.628006 307.1232
+L 616.628006 0
+L 0 0
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 67.52 111.792
+L 188.16 111.792
+L 188.16 232.432
+L 67.52 232.432
+z
+" clip-path="url(#pd8355d16f3)" style="fill: #f0eaff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #172033" x="127.84" y="41.472" transform="rotate(-0 127.84 41.472)">One atom</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(108.761875 169.840375)">one atom</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(102.745 178.798625)">128x256x16</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_3">
+    <path d="M 405.610061 91.685333
+L 486.036727 91.685333
+L 486.036727 172.112
+L 405.610061 172.112
+z
+" clip-path="url(#p69f004e5df)" style="fill: #e7e0ff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 486.036727 91.685333
+L 566.463394 91.685333
+L 566.463394 172.112
+L 486.036727 172.112
+z
+" clip-path="url(#p69f004e5df)" style="fill: #dcebff; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 405.610061 172.112
+L 486.036727 172.112
+L 486.036727 252.538667
+L 405.610061 252.538667
+z
+" clip-path="url(#p69f004e5df)" style="fill: #ddf7ea; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 486.036727 172.112
+L 566.463394 172.112
+L 566.463394 252.538667
+L 486.036727 252.538667
+z
+" clip-path="url(#p69f004e5df)" style="fill: #fff0cc; stroke: #344054; stroke-width: 0.75; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="486.036727" y="285.52905" transform="rotate(-0 486.036727 285.52905)">N coverage: 2 x 256 = 512</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; fill: #596579" transform="translate(597.743806 197.735813) rotate(-90)">M coverage</text>
+    <text style="font-size: 8.8px; font-family: 'DejaVu Sans'; fill: #596579" transform="translate(607.597881 203.593313) rotate(-90)">2 x 128 = 256</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #172033" x="486.036727" y="41.472" transform="rotate(-0 486.036727 41.472)">atom_layout_mnk=(2,2,1)</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(427.475269 124.854792)">m_rep=0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(428.836519 134.035542)">n_rep=0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(420.728394 143.216292)">128x256x16</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(507.901936 124.854792)">m_rep=0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(509.263186 134.035542)">n_rep=1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(501.155061 143.216292)">128x256x16</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(427.475269 205.240833)">m_rep=1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(428.836519 214.421583)">n_rep=0</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(420.728394 223.602333)">128x256x16</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(507.901936 205.240833)">m_rep=1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(509.263186 214.421583)">n_rep=1</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'" transform="translate(501.155061 223.602333)">128x256x16</text>
+   </g>
+  </g>
+  <g id="text_10">
+   <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #172033" x="306.938364" y="16.318125" transform="rotate(-0 306.938364 16.318125)">Repeat changes coverage by adding atoms</text>
+  </g>
+  <g id="text_11">
+   <g id="patch_7">
+    <path d="M 258.342582 163.328
+L 355.534145 163.328
+Q 357.334145 163.328 357.334145 161.528
+L 357.334145 152.817688
+Q 357.334145 151.017688 355.534145 151.017688
+L 258.342582 151.017688
+Q 256.542582 151.017688 256.542582 152.817688
+L 256.542582 161.528
+Q 256.542582 163.328 258.342582 163.328
+z
+" style="fill: #ffffff; opacity: 0.95"/>
+   </g>
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6d4cc2" x="306.938364" y="159.656281" transform="rotate(-0 306.938364 159.656281)">repeat Mx2, Nx2, Kx1</text>
+  </g>
+  <g id="text_12">
+   <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #596579" x="306.938364" y="298.155466" transform="rotate(-0 306.938364 298.155466)">Four atoms, unchanged K=16. CTA grid and SMEM pipeline are separate objects.</text>
+  </g>
+  <g id="patch_8">
+   <path d="M 236.738541 172.112
+Q 306.934779 172.112 374.671343 172.112
+" style="fill: none; stroke: #6d4cc2; stroke-width: 2.2; stroke-linecap: round"/>
+   <path d="M 367.471343 168.512
+L 374.671343 172.112
+L 367.471343 175.712
+z
+" style="fill: #6d4cc2; stroke: #6d4cc2; stroke-width: 2.2; stroke-linecap: round"/>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pd8355d16f3">
+   <rect x="7.2" y="51.472" width="241.28" height="241.28"/>
+  </clipPath>
+  <clipPath id="p69f004e5df">
+   <rect x="365.396727" y="51.472" width="241.28" height="241.28"/>
+  </clipPath>
+ </defs>
 </svg>
