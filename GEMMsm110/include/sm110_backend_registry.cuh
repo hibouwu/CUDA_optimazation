@@ -13,7 +13,7 @@ struct BackendDescriptor {
   bool implemented;
 };
 
-inline constexpr std::array<BackendDescriptor, 25> kBackendDescriptors{{
+inline constexpr std::array<BackendDescriptor, 26> kBackendDescriptors{{
     {"cublas_tc", "cuBLAS Tensor Core reference", -1, true},
     {"cutlass", "CUTLASS official Blackwell auto schedule", -1, true},
     {"tc0", "CUDA WMMA Tensor Core baseline", 0, true},
@@ -49,6 +49,7 @@ inline constexpr std::array<BackendDescriptor, 25> kBackendDescriptors{{
     {"tc5l", "B-reuse 1-SM TCGen05 M256N256K64 scheduler", 5, false},
     {"tc5m", "overlapped B-reuse 1-SM TCGen05 M256N128K64 scheduler", 5,
      false},
+    {"tc5n", "hybrid 2-SM overlap for 1024 plus tc5h fallback", 5, true},
     {"tc6", "fused NVFP4 TCGen05 epilogue", 6, true},
 }};
 
@@ -106,6 +107,6 @@ inline const BackendDescriptor* find_backend(std::string_view id) {
 inline constexpr std::string_view kBackendUsage =
     "[all|references|stage0..stage6|cublas_tc|cutlass|"
     "tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|"
-    "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc6]";
+    "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6]";
 
 }  // namespace gemm_sm110
