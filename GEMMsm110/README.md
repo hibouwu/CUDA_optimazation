@@ -226,7 +226,7 @@ reference 口径。
 ## 当前阶段性结果
 
 下面是修正输入生成 bug 后，在 Thor 上重新跑的结果。`tc5n` 行来自
-本轮同进程单次复测；旧图表和旧 sweep 中包含 unsigned wrap 输入，
+本轮同进程重复复测；旧图表和旧 sweep 中包含 unsigned wrap 输入，
 不能再作为结论引用。
 
 `M=N=K=1024` 主要用于快速 correctness smoke。这个规模的 tile 数少，
@@ -248,17 +248,26 @@ TMA、TMEM 分配/回读、barrier 和 kernel 固定开销占比高；因此 `tc
 | `tc4c` | 37,457 | raw 2-SM + warp-specialized cluster path，matched=1 |
 | `tc5a` | 69,886 | static persistent 1-SM TCGen05 + v8 no-allocate store，matched=1 |
 | `tc5h` | 87,389 | overlapped epilogue M128N256K64 TCGen05，matched=1 |
-| `tc5n` | 94,648 | hybrid 2-SM overlapped M256N256K128 TCGen05，matched=1 |
+| `tc5n` | 95,151 avg | hybrid 2-SM overlapped M256N256K128 TCGen05，100/100 matched=1 |
 | `tc5b` | unavailable | dynamic work queue 路径暂停稳定性验证 |
 | `tc6` | 28,313 | resident persistent mainloop + fused NVFP4 epilogue，matched=1 |
 
 本轮优化后，1024/2048 的 FP32 自研 backend 已从 `tc5a` 的约
 0.44x/0.60x 提升到 `tc5n` 的约 0.93x/0.92x。1024 的提升来自
-2-SM `M256N256K128` overlapped cluster path；2048 继续使用 `tc5h`
-的 M128N256K64 4-stage overlapped epilogue fallback。旧 2-SM
+2-SM `M256N256K128` overlapped cluster path；该路径现在补齐
+`cta_group::2` 的 TMEM alloc/relinquish/dealloc 全生命周期 cluster
+同步，并针对固定 1024 shape 展开 tile 坐标、TMA 和 MMA K loop。
+2048 继续使用 `tc5h` 的 M128N256K64 4-stage overlapped epilogue
+fallback。旧 2-SM
 `tc4b/tc4c` raw 路径去掉冗余 cluster-wide sync 后已经从旧的
 0.44-0.52x 提升到约 0.78x/0.87x，但非 overlapped epilogue 仍会放大
 TMA、TMEM allocation/readback 和固定成本，所以只作为 stage4 对照。
+
+`tc5n` 稳定性复测结果：1024 方阵 100/100 次 `matched=1`，GFLOP/s
+min/avg/max 为 93,927 / 95,151 / 95,260，RatioToCuBLAS min/avg/max
+为 0.914 / 0.927 / 0.956；2048 方阵 50/50 次 `matched=1`，GFLOP/s
+min/avg/max 为 118,311 / 119,423 / 120,633，RatioToCuBLAS
+min/avg/max 为 0.905 / 0.917 / 0.953。
 
 旧的 full-tile 稳态参考是 4096。`tc5a` 在 `4096x4096x4096` 上达到
 同进程 cuBLAS Tensor Core 的约 0.82x；2-SM `tc4b/tc4c` 也能达到
@@ -272,8 +281,8 @@ TMA、TMEM allocation/readback 和固定成本，所以只作为 stage4 对照�
 | 2048³ | `tc5a` | 130,364 | 78,227 | 0.60x | static persistent，matched=1 |
 | 1024³ | `tc5h` | 102,909 | 87,387 | 0.85x | overlapped epilogue，matched=1 |
 | 2048³ | `tc5h` | 131,168 | 120,122 | 0.92x | overlapped epilogue，matched=1 |
-| 1024³ | `tc5n` | 102,211 | 94,648 | 0.93x | hybrid 2-SM overlapped cluster path，matched=1 |
-| 2048³ | `tc5n` | 130,035 | 119,506 | 0.92x | hybrid fallback to `tc5h`，matched=1 |
+| 1024³ | `tc5n` | 102,682 avg | 95,151 avg | 0.927x avg | hybrid 2-SM overlapped cluster path，100/100 matched=1 |
+| 2048³ | `tc5n` | 130,248 avg | 119,423 avg | 0.917x avg | hybrid fallback to `tc5h`，50/50 matched=1 |
 | 4096³ | `tc3` | 64,420 | 38,664 | 0.60x | multi-stage non-persistent，matched=1 |
 | 4096³ | `tc4b` | 64,420 | 48,596 | 0.74x | 2-SM cluster，matched=1 |
 | 4096³ | `tc4c` | 64,420 | 47,973 | 0.76x | 2-SM + warp specialization，matched=1 |

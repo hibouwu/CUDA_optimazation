@@ -79,6 +79,7 @@ void tc4bc_raw_2sm_cluster_kernel(
     ptx::tmem_alloc<2>(ptx::smem_address(&tmem_base), kTmemAllocColumns);
   }
   __syncthreads();
+  ptx::cluster_sync();
 
   constexpr uint32_t instruction_descriptor =
       (1U << 4U) |
@@ -183,8 +184,12 @@ void tc4bc_raw_2sm_cluster_kernel(
   }
 
   __syncthreads();
+  ptx::cluster_sync();
   if (consumer_warp) {
     ptx::tmem_relinquish_alloc_permit<2>();
+  }
+  ptx::cluster_sync();
+  if (consumer_warp) {
     ptx::tmem_dealloc<2>(tmem_base, kTmemAllocColumns);
   }
 #else
@@ -262,28 +267,21 @@ void tc4c_overlap_2tile_2sm_cluster_kernel(
                        kTmemColumnsPerBuffer * 2);
   }
   __syncthreads();
+  ptx::cluster_sync();
 
   constexpr uint32_t instruction_descriptor =
       (1U << 4U) |
       (static_cast<uint32_t>(kTileN) >> 3U << 17U) |
       (static_cast<uint32_t>(kClusterTileM) >> 4U << 24U);
 
-  const int k_tiles = k / TileK;
-  const int total_tiles = tiles_m * tiles_n;
+  constexpr int k_tiles = 1024 / TileK;
+  constexpr int total_tiles = 16;
   const int worker_cluster = static_cast<int>(blockIdx.x) / 2;
   const int worker_clusters = static_cast<int>(gridDim.x) / 2;
-  const int tiles_n_mask = tiles_n - 1;
-  const int tiles_n_log2 = __ffs(tiles_n) - 1;
-  const bool tiles_n_power2 = (tiles_n & tiles_n_mask) == 0;
 
   auto tile_coordinates = [&](int work_id, int& tile_m, int& tile_n) {
-    if (tiles_n_power2) {
-      tile_m = work_id >> tiles_n_log2;
-      tile_n = work_id & tiles_n_mask;
-    } else {
-      tile_m = work_id / tiles_n;
-      tile_n = work_id - tile_m * tiles_n;
-    }
+    tile_m = work_id >> 2;
+    tile_n = work_id & 3;
   };
 
   auto issue_load = [&](int k_tile, int tile_m, int tile_n,
@@ -355,6 +353,7 @@ void tc4c_overlap_2tile_2sm_cluster_kernel(
     float values_even[8];
     float values_odd[8];
     ptx::tmem_load_32x32b_x8_no_wait(base_address, values_even);
+#pragma unroll
     for (int n_block = 0; n_block < kTileN / 8; ++n_block) {
       ptx::tmem_load_wait();
       const bool use_even = (n_block & 1) == 0;
@@ -384,6 +383,7 @@ void tc4c_overlap_2tile_2sm_cluster_kernel(
       int tile_m = 0;
       int tile_n = 0;
       tile_coordinates(work_id, tile_m, tile_n);
+#pragma unroll
       for (int k_tile = 0; k_tile < k_tiles; ++k_tile) {
         ptx::mbarrier_wait(mma_barrier_base + tma_stage * sizeof(uint64_t),
                            mma_phase);
@@ -398,6 +398,7 @@ void tc4c_overlap_2tile_2sm_cluster_kernel(
     int tmem_stage = 0;
     for (int work_id = worker_cluster; work_id < total_tiles;
          work_id += worker_clusters) {
+#pragma unroll
       for (int k_tile = 0; k_tile < k_tiles; ++k_tile) {
         ptx::mbarrier_wait(tma_barrier_base +
                                tma_stage * sizeof(uint64_t),
@@ -446,6 +447,9 @@ void tc4c_overlap_2tile_2sm_cluster_kernel(
   ptx::cluster_sync();
   if (warp == kMmaWarp) {
     ptx::tmem_relinquish_alloc_permit<2>();
+  }
+  ptx::cluster_sync();
+  if (warp == kMmaWarp) {
     ptx::tmem_dealloc<2>(tmem_base, kTmemColumnsPerBuffer * 2);
   }
 #else
