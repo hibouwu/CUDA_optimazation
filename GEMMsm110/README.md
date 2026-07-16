@@ -177,14 +177,17 @@ benchmark 入口支持两种问题规模：
 
 当前边界处理在 `tc5a/tc5b/tc5h/tc5n/tc6` 上保留为有效路径。`tc5a/tc5b`
 的完整 tile fast path 要求存在 `128x256x128` 整 tile；`tc5h` 的
-完整 tile fast path 是 `128x256x64`，K tail、M/N 边界、小矩阵会由
-CUDA cleanup kernel 补齐。`tc5n` 在精确 `1024x1024x1024` 时走
-2-SM overlapped cluster path，其它 shape 复用 `tc5h`。`tc6` 的完整 tile fast
-path 要求 `M%128==0`、`N%256==0`、`K%128==0` 且 `N%16==0`，对应
-128×256×128 raw TMA + TCGen05 + fused NVFP4 epilogue。不满足这些
-条件时，`tc6` 会切到 CUDA correctness fallback：每 16 个 row-major
-输出为一组，串行计算 FP32 accumulation，生成同样的 packed E2M1 value
-和 E4M3 block scale。这些 fallback 只证明边界语义和输出格式正确，
+完整 tile fast path 是 `128x256x64`。这些 raw SW128 TMA fast path 还要求
+原始 K leading dimension 满足 64 个 half 的对齐；否则不创建 TMA descriptor，
+直接切到 CUDA cleanup kernel 做完整 correctness fallback。K tail、M/N
+边界和小矩阵也由 cleanup 补齐。`tc5n` 在精确 `1024x1024x1024` 时走
+2-SM overlapped cluster path，其它 shape 复用 `tc5h`。
+
+`tc6` 的完整 tile fast path 要求 `M%128==0`、`N%256==0`、`K%128==0` 且
+`N%16==0`，对应 128×256×128 raw TMA + TCGen05 + fused NVFP4 epilogue。
+不满足这些条件时，`tc6` 会切到 CUDA correctness fallback：每 16 个
+row-major 输出为一组，串行计算 FP32 accumulation，生成同样的 packed E2M1
+value 和 E4M3 block scale。这些 fallback 只证明边界语义和输出格式正确，
 不作为高性能路径。
 
 ### tc6 NVFP4 backend 接入点
@@ -368,6 +371,7 @@ GEMMsm110/
 
 # 指定矩形 M N K
 ./build_and_run.sh 260 132 256 tc6
+./build_and_run.sh 384 520 300 tc5n
 ./build_and_run.sh 260 132 256 all
 
 # 只跑某个 backend

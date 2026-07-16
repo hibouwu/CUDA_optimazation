@@ -28,6 +28,8 @@
 
 namespace gemm_sm110::backends {
 
+constexpr int kSw128TmaLeadingDimensionAlignment = 64;
+
 __global__ void tc5_boundary_cleanup_kernel(
     const half* a, const half* b_nk, float* output, int m, int n, int k,
     int fast_m, int fast_n, int fast_k) {
@@ -1073,7 +1075,8 @@ class Tc5Runner {
     fast_n_ = (n_ / kTileN) * kTileN;
     fast_k_ = (k_ / kTileK) * kTileK;
     has_fast_path_ =
-        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0;
+        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0 &&
+        k_ % kSw128TmaLeadingDimensionAlignment == 0;
 
     if (has_fast_path_) {
       ptx::encode_tiled_2d_sw128_strided(&tensor_map_a_, a, fast_m_,
@@ -1161,7 +1164,10 @@ class Tc5Runner {
   }
 
   void launch_cleanup() {
-    if (fast_m_ == m_ && fast_n_ == n_ && fast_k_ == k_) return;
+    if (has_fast_path_ && fast_m_ == m_ && fast_n_ == n_ &&
+        fast_k_ == k_) {
+      return;
+    }
 
     dim3 block(16, 16, 1);
     dim3 grid((n_ + static_cast<int>(block.x) - 1) /
@@ -1170,7 +1176,9 @@ class Tc5Runner {
                   static_cast<int>(block.y),
               1);
     tc5_boundary_cleanup_kernel<<<grid, block>>>(
-        a_, b_nk_, output_, m_, n_, k_, fast_m_, fast_n_, fast_k_);
+        a_, b_nk_, output_, m_, n_, k_,
+        has_fast_path_ ? fast_m_ : 0, has_fast_path_ ? fast_n_ : 0,
+        has_fast_path_ ? fast_k_ : 0);
     check_cuda(cudaGetLastError(), "tc5_boundary_cleanup_kernel launch");
   }
 
@@ -1202,7 +1210,8 @@ class Tc5OverlapRunner {
     fast_n_ = (n_ / kTileN) * kTileN;
     fast_k_ = (k_ / kTileK) * kTileK;
     has_fast_path_ =
-        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0;
+        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0 &&
+        k_ % kSw128TmaLeadingDimensionAlignment == 0;
 
     if (has_fast_path_) {
       ptx::encode_tiled_2d_sw128_strided(&tensor_map_a_, a, fast_m_,
@@ -1296,7 +1305,10 @@ class Tc5OverlapRunner {
   }
 
   void launch_cleanup() {
-    if (fast_m_ == m_ && fast_n_ == n_ && fast_k_ == k_) return;
+    if (has_fast_path_ && fast_m_ == m_ && fast_n_ == n_ &&
+        fast_k_ == k_) {
+      return;
+    }
 
     dim3 block(16, 16, 1);
     dim3 grid((n_ + static_cast<int>(block.x) - 1) /
@@ -1305,7 +1317,9 @@ class Tc5OverlapRunner {
                   static_cast<int>(block.y),
               1);
     tc5_boundary_cleanup_kernel<<<grid, block>>>(
-        a_, b_nk_, output_, m_, n_, k_, fast_m_, fast_n_, fast_k_);
+        a_, b_nk_, output_, m_, n_, k_,
+        has_fast_path_ ? fast_m_ : 0, has_fast_path_ ? fast_n_ : 0,
+        has_fast_path_ ? fast_k_ : 0);
     check_cuda(cudaGetLastError(), "tc5h cleanup kernel launch");
   }
 
@@ -1336,7 +1350,8 @@ class Tc5BReuseRunner {
     fast_n_ = (n_ / kTileN) * kTileN;
     fast_k_ = (k_ / kTileK) * kTileK;
     has_fast_path_ =
-        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0;
+        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0 &&
+        k_ % kSw128TmaLeadingDimensionAlignment == 0;
 
     if (has_fast_path_) {
       ptx::encode_tiled_2d_sw128_strided(&tensor_map_a_, a, fast_m_,
@@ -1406,7 +1421,10 @@ class Tc5BReuseRunner {
   }
 
   void launch_cleanup() {
-    if (fast_m_ == m_ && fast_n_ == n_ && fast_k_ == k_) return;
+    if (has_fast_path_ && fast_m_ == m_ && fast_n_ == n_ &&
+        fast_k_ == k_) {
+      return;
+    }
 
     dim3 block(16, 16, 1);
     dim3 grid((n_ + static_cast<int>(block.x) - 1) /
@@ -1415,7 +1433,9 @@ class Tc5BReuseRunner {
                   static_cast<int>(block.y),
               1);
     tc5_boundary_cleanup_kernel<<<grid, block>>>(
-        a_, b_nk_, output_, m_, n_, k_, fast_m_, fast_n_, fast_k_);
+        a_, b_nk_, output_, m_, n_, k_,
+        has_fast_path_ ? fast_m_ : 0, has_fast_path_ ? fast_n_ : 0,
+        has_fast_path_ ? fast_k_ : 0);
     check_cuda(cudaGetLastError(), "tc5l cleanup kernel launch");
   }
 
@@ -1444,7 +1464,8 @@ class Tc5OverlapBReuseRunner {
     fast_n_ = (n_ / kTileN) * kTileN;
     fast_k_ = (k_ / kTileK) * kTileK;
     has_fast_path_ =
-        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0;
+        fast_m_ > 0 && fast_n_ > 0 && fast_k_ > 0 && n_ % 4 == 0 &&
+        k_ % kSw128TmaLeadingDimensionAlignment == 0;
 
     if (has_fast_path_) {
       ptx::encode_tiled_2d_sw128_strided(&tensor_map_a_, a, fast_m_,
@@ -1518,7 +1539,10 @@ class Tc5OverlapBReuseRunner {
   }
 
   void launch_cleanup() {
-    if (fast_m_ == m_ && fast_n_ == n_ && fast_k_ == k_) return;
+    if (has_fast_path_ && fast_m_ == m_ && fast_n_ == n_ &&
+        fast_k_ == k_) {
+      return;
+    }
 
     dim3 block(16, 16, 1);
     dim3 grid((n_ + static_cast<int>(block.x) - 1) /
@@ -1527,7 +1551,9 @@ class Tc5OverlapBReuseRunner {
                   static_cast<int>(block.y),
               1);
     tc5_boundary_cleanup_kernel<<<grid, block>>>(
-        a_, b_nk_, output_, m_, n_, k_, fast_m_, fast_n_, fast_k_);
+        a_, b_nk_, output_, m_, n_, k_,
+        has_fast_path_ ? fast_m_ : 0, has_fast_path_ ? fast_n_ : 0,
+        has_fast_path_ ? fast_k_ : 0);
     check_cuda(cudaGetLastError(), "tc5m cleanup kernel launch");
   }
 
