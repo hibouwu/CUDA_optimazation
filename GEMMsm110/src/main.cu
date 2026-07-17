@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
   int m = 1024;
   int n = 1024;
   int k = 1024;
-  std::string backend_filter = "all";
+  std::string backend_filter = "core";
 
   if (argc == 2 || argc == 3) {
     n = std::atoi(argv[1]);

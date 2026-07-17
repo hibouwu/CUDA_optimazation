@@ -54,10 +54,10 @@ inline constexpr std::array<BackendDescriptor, 26> kBackendDescriptors{{
 }};
 
 inline bool is_backend_group(const std::string& filter) {
-  return filter == "all" || filter == "references" ||
-         filter == "stage0" || filter == "stage1" || filter == "stage2" ||
-         filter == "stage3" || filter == "stage4" || filter == "stage5" ||
-         filter == "stage6";
+  return filter == "all" || filter == "core" || filter == "unstable" ||
+         filter == "nvfp4" || filter == "references" || filter == "stage0" ||
+         filter == "stage1" || filter == "stage2" || filter == "stage3" ||
+         filter == "stage4" || filter == "stage5" || filter == "stage6";
 }
 
 inline bool is_valid_backend_filter(const std::string& filter) {
@@ -79,6 +79,20 @@ inline bool wants_backend(const std::string& filter,
   }
   if (filter == backend_id) {
     return true;
+  }
+  if (filter == "core") {
+    return backend_id == "cublas_tc" || backend_id == "cutlass" ||
+           backend_id == "tc2a" || backend_id == "tc2b" ||
+           backend_id == "tc4a" || backend_id == "tc5h" ||
+           backend_id == "tc5n";
+  }
+  if (filter == "unstable") {
+    return backend_id == "cublas_tc" || backend_id == "tc3" ||
+           backend_id == "tc4b" || backend_id == "tc4c" ||
+           backend_id == "tc5a";
+  }
+  if (filter == "nvfp4") {
+    return backend_id == "cublas_tc" || backend_id == "tc6";
   }
 
   for (const auto& backend : kBackendDescriptors) {
@@ -105,7 +119,7 @@ inline const BackendDescriptor* find_backend(std::string_view id) {
 }
 
 inline constexpr std::string_view kBackendUsage =
-    "[all|references|stage0..stage6|cublas_tc|cutlass|"
+    "[all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|"
     "tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|"
     "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6]";
 

@@ -1,0 +1,341 @@
+Precision,Stage,BackendId,BackendLabel,N,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Status,Reason,Trial
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758371,28317.1,0.274821,1,ok,,1
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,1
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166954,128628,1.29573,1,ok,,1
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0178957,120000,1.1707,1,ok,,1
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0171232,125414,1.25394,1,ok,,1
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51142,611.571,0.00454106,1,ok,,1
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26319,948.873,0.00706541,1,ok,,1
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.81012,1186.37,0.00883917,1,ok,,1
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38411,900.748,0.00668157,1,ok,,1
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.431162,4980.69,0.040575,1,ok,,1
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.410653,5229.44,0.0387208,1,ok,,1
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.528122,4066.27,0.0304899,1,ok,,1
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403904,5316.82,0.0395262,1,ok,,1
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.015952,134622,0.998395,1,ok,,1
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.69022,581.939,0.00479537,1,ok,,1
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33679,918.99,0.00746598,1,ok,,1
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80708,1188.37,0.00931447,1,ok,,1
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77727,1208.31,0.00986503,1,ok,,1
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.41817,5135.44,0.0414913,1,ok,,1
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.431021,4982.32,0.0407739,1,ok,,1
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.41625,5159.12,0.0415136,1,ok,,1
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.62641,3428.24,0.027361,1,ok,,1
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439568,4885.44,0.0388236,1,ok,,1
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235923,9102.47,0.0745734,1,ok,,1
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.211024,10176.5,0.0833118,1,ok,,1
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.24065,8923.69,0.0720317,1,ok,,1
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197296,10884.6,0.0902928,1,ok,,1
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227741,9429.51,0.0749343,1,ok,,1
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.228083,9415.35,0.0835765,1,ok,,1
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.125558,17103.5,0.145347,1,ok,,1
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136099,15778.8,0.127977,1,ok,,1
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136163,15771.4,0.134638,1,ok,,1
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.396867,5411.09,0.0444683,1,ok,,1
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0172544,124460,1.05768,1,ok,,1
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758454,28313.9,0.27482,1,ok,,2
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,2
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166061,129319,1.25952,1,ok,,2
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0177568,120939,1.17773,1,ok,,2
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0170778,125747,1.22541,1,ok,,2
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51382,611.153,0.00456619,1,ok,,2
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26085,949.855,0.00710669,1,ok,,2
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.8115,1185.47,0.00883599,1,ok,,2
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38444,900.626,0.006682,1,ok,,2
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.430749,4985.47,0.0371223,1,ok,,2
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.412931,5200.58,0.0387861,1,ok,,2
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.527341,4072.29,0.0303955,1,ok,,2
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403744,5318.92,0.0393992,1,ok,,2
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0161984,132574,0.992098,1,ok,,2
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.68971,582.02,0.00475008,1,ok,,2
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33219,920.801,0.00745736,1,ok,,2
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80388,1190.48,0.00979578,1,ok,,2
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77795,1207.84,0.00956426,1,ok,,2
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418173,5135.4,0.0413303,1,ok,,2
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.431395,4978,0.0404641,1,ok,,2
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.417213,5147.21,0.0419699,1,ok,,2
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.626243,3429.15,0.0273887,1,ok,,2
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439904,4881.71,0.0399869,1,ok,,2
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235338,9125.12,0.0746502,1,ok,,2
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.210986,10178.3,0.0827203,1,ok,,2
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.24073,8920.73,0.0725262,1,ok,,2
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197078,10896.6,0.0895806,1,ok,,2
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227789,9427.52,0.0775455,1,ok,,2
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227578,9436.27,0.0763942,1,ok,,2
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.124634,17230.4,0.142472,1,ok,,2
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136029,15787,0.123644,1,ok,,2
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136762,15702.4,0.127077,1,ok,,2
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.396621,5414.45,0.0443023,1,ok,,2
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0172864,124230,1.00759,1,ok,,2
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758691,28305.1,0.275704,1,ok,,3
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,3
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0165923,129426,1.26659,1,ok,,3
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.017912,119891,1.16728,1,ok,,3
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0168915,127134,1.23559,1,ok,,3
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51272,611.346,0.00455943,1,ok,,3
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26234,949.232,0.00709354,1,ok,,3
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.8111,1185.73,0.00891392,1,ok,,3
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38376,900.882,0.00667719,1,ok,,3
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.432026,4970.73,0.0369534,1,ok,,3
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.419171,5123.17,0.037995,1,ok,,3
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.525914,4083.34,0.0305328,1,ok,,3
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403837,5317.7,0.039723,1,ok,,3
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0160864,133497,1.00537,1,ok,,3
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.68963,582.032,0.00478747,1,ok,,3
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.3355,919.497,0.00755642,1,ok,,3
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80614,1188.99,0.00948411,1,ok,,3
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.7791,1207.06,0.0098135,1,ok,,3
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418266,5134.26,0.0420479,1,ok,,3
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.430333,4990.29,0.0401029,1,ok,,3
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.417357,5145.44,0.0419478,1,ok,,3
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.626266,3429.03,0.0284863,1,ok,,3
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439562,4885.51,0.0402437,1,ok,,3
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235971,9100.62,0.0743955,1,ok,,3
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.211264,10164.9,0.0826416,1,ok,,3
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.239395,8970.45,0.0733582,1,ok,,3
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197002,10900.8,0.0868379,1,ok,,3
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.226707,9472.5,0.0755865,1,ok,,3
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.228064,9416.15,0.0761471,1,ok,,3
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.125667,17088.7,0.13883,1,ok,,3
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.135674,15828.3,0.126728,1,ok,,3
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136166,15771,0.129066,1,ok,,3
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.397222,5406.25,0.0434457,1,ok,,3
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0182528,117652,1.0021,1,ok,,3
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758163,28324.8,0.275031,1,ok,,4
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,4
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.016688,128684,1.25093,1,ok,,4
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0179802,119436,1.16121,1,ok,,4
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.016832,127583,1.24178,1,ok,,4
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51222,611.432,0.00455735,1,ok,,4
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26076,949.895,0.00707161,1,ok,,4
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.80912,1187.03,0.00871849,1,ok,,4
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38333,901.043,0.00662468,1,ok,,4
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.430749,4985.47,0.0370035,1,ok,,4
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.415491,5168.54,0.0383084,1,ok,,4
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.526656,4077.58,0.0302588,1,ok,,4
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403626,5320.48,0.0395059,1,ok,,4
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.015904,135028,1.00141,1,ok,,4
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.68989,581.991,0.0053066,1,ok,,4
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33546,919.511,0.00748254,1,ok,,4
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80703,1188.41,0.00967777,1,ok,,4
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.78004,1206.42,0.00976335,1,ok,,4
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418656,5129.47,0.0412597,1,ok,,4
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.431834,4972.94,0.0444171,1,ok,,4
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.416355,5157.82,0.0416952,1,ok,,4
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.625408,3433.73,0.0277681,1,ok,,4
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.44016,4878.87,0.039651,1,ok,,4
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.236035,9098.15,0.0723553,1,ok,,4
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.212771,10092.9,0.0813493,1,ok,,4
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.240109,8943.79,0.0732601,1,ok,,4
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197206,10889.5,0.0890194,1,ok,,4
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.22681,9468.22,0.0771749,1,ok,,4
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.22751,9439.06,0.0755587,1,ok,,4
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.124522,17245.9,0.142009,1,ok,,4
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136493,15733.3,0.129906,1,ok,,4
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.13625,15761.4,0.130302,1,ok,,4
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.397162,5407.08,0.0445723,1,ok,,4
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0173248,123954,1.00074,1,ok,,4
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758579,28309.3,0.275348,1,ok,,5
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,5
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166602,128899,1.25535,1,ok,,5
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0178131,120556,1.174,1,ok,,5
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0172614,124409,1.24671,1,ok,,5
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51237,611.405,0.00454803,1,ok,,5
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26519,948.035,0.00705353,1,ok,,5
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.81204,1185.12,0.0088457,1,ok,,5
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38299,901.174,0.00672769,1,ok,,5
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.431133,4981.03,0.0375717,1,ok,,5
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.413421,5194.43,0.0386705,1,ok,,5
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.528422,4063.95,0.0303212,1,ok,,5
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403997,5315.6,0.0396122,1,ok,,5
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.016032,133950,0.999601,1,ok,,5
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.6898,582.006,0.00479332,1,ok,,5
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33341,920.321,0.00757142,1,ok,,5
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.8052,1189.61,0.00959895,1,ok,,5
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.78223,1204.94,0.00976576,1,ok,,5
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.419152,5123.4,0.0420048,1,ok,,5
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.426787,5031.74,0.0413433,1,ok,,5
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.416765,5152.75,0.0421456,1,ok,,5
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.625283,3434.42,0.0284083,1,ok,,5
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439386,4887.47,0.0399831,1,ok,,5
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235661,9112.6,0.0767883,1,ok,,5
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.212566,10102.6,0.0821202,1,ok,,5
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.239674,8960.04,0.0726455,1,ok,,5
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197056,10897.8,0.0874959,1,ok,,5
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227587,9435.87,0.0768831,1,ok,,5
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227962,9420.37,0.0773744,1,ok,,5
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.121392,17690.5,0.143271,1,ok,,5
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.135696,15825.7,0.12824,1,ok,,5
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136512,15731.1,0.12677,1,ok,,5
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.395776,5426.01,0.0442432,1,ok,,5
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0171808,124993,1.00931,1,ok,,5
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758326,28318.7,0.275554,1,ok,,6
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,6
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.016663,128877,1.25511,1,ok,,6
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0176467,121693,1.18474,1,ok,,6
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0168909,127139,1.23496,1,ok,,6
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51294,611.307,0.004489,1,ok,,6
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.25959,950.388,0.00705262,1,ok,,6
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.81128,1185.62,0.00885121,1,ok,,6
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38319,901.095,0.00676605,1,ok,,6
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.431066,4981.8,0.0370876,1,ok,,6
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.415267,5171.33,0.0384215,1,ok,,6
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.528874,4060.49,0.0303982,1,ok,,6
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403261,5325.3,0.0400575,1,ok,,6
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0157696,136179,1.01542,1,ok,,6
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.68942,582.065,0.00470621,1,ok,,6
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33204,920.859,0.00751821,1,ok,,6
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80636,1188.85,0.00958925,1,ok,,6
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77724,1208.33,0.0100381,1,ok,,6
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418794,5127.79,0.0422241,1,ok,,6
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.432845,4961.33,0.0406021,1,ok,,6
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.416624,5154.49,0.0418219,1,ok,,6
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.625808,3431.54,0.0282208,1,ok,,6
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439558,4885.55,0.0394942,1,ok,,6
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.23439,9162,0.0743648,1,ok,,6
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.21289,10087.3,0.0805676,1,ok,,6
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.239632,8961.59,0.0724311,1,ok,,6
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.19727,10886,0.0889257,1,ok,,6
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.226746,9470.89,0.0771967,1,ok,,6
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227962,9420.37,0.0751425,1,ok,,6
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.126096,17030.5,0.138409,1,ok,,6
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136442,15739.2,0.126812,1,ok,,6
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136499,15732.6,0.129618,1,ok,,6
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.397219,5406.29,0.044743,1,ok,,6
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0185792,115585,0.953324,1,ok,,6
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758829,28300,0.275131,1,ok,,7
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,7
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166554,128936,1.25099,1,ok,,7
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0174454,123097,1.19437,1,ok,,7
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0172838,124248,1.20599,1,ok,,7
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51258,611.37,0.00456144,1,ok,,7
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.2628,949.038,0.0070723,1,ok,,7
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.81385,1183.93,0.00883688,1,ok,,7
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38421,900.71,0.00676584,1,ok,,7
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.431213,4980.1,0.0373273,1,ok,,7
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.415741,5165.44,0.0386625,1,ok,,7
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.525952,4083.04,0.0302628,1,ok,,7
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403926,5316.52,0.039627,1,ok,,7
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0159488,134649,1.01425,1,ok,,7
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.69035,581.918,0.00470416,1,ok,,7
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33097,921.283,0.00755051,1,ok,,7
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80558,1189.36,0.0098025,1,ok,,7
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77617,1209.06,0.00978647,1,ok,,7
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418342,5133.32,0.0420632,1,ok,,7
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.431792,4973.42,0.0415904,1,ok,,7
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.416691,5153.66,0.0426292,1,ok,,7
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.625299,3434.33,0.0276911,1,ok,,7
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439392,4887.4,0.0406962,1,ok,,7
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235478,9119.66,0.0740892,1,ok,,7
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.214093,10030.6,0.0809817,1,ok,,7
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.240115,8943.56,0.0728984,1,ok,,7
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197277,10885.6,0.088128,1,ok,,7
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.22736,9445.3,0.0765236,1,ok,,7
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.22784,9425.4,0.078118,1,ok,,7
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.122842,17481.7,0.144915,1,ok,,7
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136118,15776.6,0.127959,1,ok,,7
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136877,15689.2,0.125964,1,ok,,7
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.396566,5415.19,0.0442438,1,ok,,7
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0173696,123635,1.00608,1,ok,,7
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758547,28310.5,0.275314,1,ok,,8
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,8
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166189,129220,1.25752,1,ok,,8
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0174528,123045,1.23033,1,ok,,8
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0172806,124271,1.21002,1,ok,,8
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51383,611.152,0.00463813,1,ok,,8
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26359,948.705,0.00706134,1,ok,,8
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.8118,1185.28,0.00880099,1,ok,,8
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38405,900.77,0.00674079,1,ok,,8
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.431187,4980.4,0.0375818,1,ok,,8
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.412406,5207.2,0.0390605,1,ok,,8
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.52679,4076.54,0.0301053,1,ok,,8
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.405005,5302.37,0.0397269,1,ok,,8
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0160064,134164,1.0094,1,ok,,8
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.68959,582.038,0.00476671,1,ok,,8
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33309,920.444,0.00741333,1,ok,,8
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80945,1186.82,0.00957818,1,ok,,8
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.7768,1208.62,0.00991806,1,ok,,8
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.419789,5115.63,0.0412093,1,ok,,8
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.43224,4968.27,0.040992,1,ok,,8
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.417552,5143.03,0.0413841,1,ok,,8
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.626086,3430.01,0.0278045,1,ok,,8
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.440064,4879.94,0.0395506,1,ok,,8
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.236026,9098.52,0.0735107,1,ok,,8
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.210835,10185.6,0.0803964,1,ok,,8
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.23984,8953.82,0.0823616,1,ok,,8
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197347,10881.8,0.0903504,1,ok,,8
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227194,9452.22,0.0768754,1,ok,,8
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227722,9430.3,0.0762334,1,ok,,8
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.124371,17266.7,0.140328,1,ok,,8
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.13633,15752.1,0.127174,1,ok,,8
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136813,15696.5,0.129859,1,ok,,8
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.395907,5424.21,0.0438487,1,ok,,8
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0174592,123000,1.02199,1,ok,,8
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758371,28317.1,0.27501,1,ok,,9
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,9
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0166336,129105,1.25771,1,ok,,9
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0177475,121002,1.17949,1,ok,,9
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0173651,123667,1.20975,1,ok,,9
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51249,611.386,0.00456156,1,ok,,9
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26419,948.455,0.00710894,1,ok,,9
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.81184,1185.25,0.00885023,1,ok,,9
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38431,900.673,0.00667161,1,ok,,9
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.430784,4985.06,0.0367182,1,ok,,9
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.414947,5175.32,0.0385437,1,ok,,9
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.526512,4078.7,0.0304616,1,ok,,9
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.404557,5308.24,0.0395494,1,ok,,9
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0162016,132548,0.984002,1,ok,,9
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.69063,581.874,0.00477664,1,ok,,9
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.34105,917.317,0.00756994,1,ok,,9
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80118,1192.26,0.00981577,1,ok,,9
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77482,1209.98,0.00979752,1,ok,,9
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418496,5131.43,0.0414589,1,ok,,9
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.43088,4983.95,0.040505,1,ok,,9
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.417184,5147.57,0.0414513,1,ok,,9
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.626349,3428.57,0.0273688,1,ok,,9
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439302,4888.4,0.0394735,1,ok,,9
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.234426,9160.62,0.0745721,1,ok,,9
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.213152,10074.9,0.0829005,1,ok,,9
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.239571,8963.86,0.0729971,1,ok,,9
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197478,10874.5,0.0889292,1,ok,,9
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227043,9458.48,0.076278,1,ok,,9
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227754,9428.98,0.0776699,1,ok,,9
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.124093,17305.5,0.142526,1,ok,,9
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.135798,15813.8,0.129274,1,ok,,9
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.136982,15677.1,0.129441,1,ok,,9
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.396794,5412.09,0.0444765,1,ok,,9
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.017184,124970,1.0203,1,ok,,9
+NVFP4,q0,nvfp4_q0_tc6_fused_epilogue,reuse GEMMsm110 tc6 fused NVFP4 epilogue,1024,cuBLAS Tensor Core quantized,0.0758576,28309.4,0.274253,1,ok,,10
+NVFP4,q1,nvfp4_q1_native_fp4_mainloop,planned native FP4/NVFP4 mainloop,1024,cuBLAS/cuBLASLt precision reference,,,,0,missing,planned: replace FP16 mainloop + requant with native FP4/NVFP4 path,10
+NVFP4,q2,nvfp4_q2_cutlass_72b_nvfp4,CUTLASS 72b block-scaled NVFP4 Tensor Core,1024,cuBLAS Tensor Core fp16->fp32,0.0165664,129629,1.26226,1,ok,,10
+MXFP4,q0,mxfp4_q0_cutlass_72a_mxfp4_bf16,CUTLASS 72a MXFP4 BF16 default swizzle,1024,cuBLAS Tensor Core fp16->fp32,0.0178365,120398,1.1719,1,ok,,10
+MXFP4,q1,mxfp4_q1_cutlass_72a_swizzle1,CUTLASS 72a MXFP4 BF16 swizzle tuned,1024,cuBLAS Tensor Core fp16->fp32,0.0169597,126623,1.23257,1,ok,,10
+FP8,q0,fp8_q0_cuda_naive,FP8 q0 naive CUDA baseline,1024,cuBLASLt FP8 E4M3,3.51336,611.234,0.00463511,1,ok,,10
+FP8,q1,fp8_q1_cuda_vec4cols,FP8 q1 register-tiled four-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.26095,949.815,0.00710922,1,ok,,10
+FP8,q2,fp8_q2_cuda_vec8cols,FP8 q2 register-tiled eight-column CUDA baseline,1024,cuBLASLt FP8 E4M3,1.80956,1186.75,0.00889677,1,ok,,10
+FP8,q3,fp8_q3_cuda_vec16cols,FP8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLASLt FP8 E4M3,2.38399,900.792,0.0067329,1,ok,,10
+FP8,q4,fp8_q4_mma_m16n8k32_global,FP8 q4 warp MMA M16N8K32 global-load Tensor Core,1024,cuBLASLt FP8 E4M3,0.432579,4964.37,0.037054,1,ok,,10
+FP8,q5,fp8_q5_mma_m16n8k32_smem64,FP8 q5 warp MMA M16N8K32 shared 64x64 tile,1024,cuBLASLt FP8 E4M3,0.415792,5164.8,0.0384577,1,ok,,10
+FP8,q6,fp8_q6_mma_m16n8k32_smem64x128,FP8 q6 warp MMA M16N8K32 shared 64x128 tile,1024,cuBLASLt FP8 E4M3,0.527638,4069.99,0.0305603,1,ok,,10
+FP8,q7,fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,1024,cuBLASLt FP8 E4M3,0.403718,5319.26,0.0397029,1,ok,,10
+FP8,q8,fp8_q8_cublaslt_matmul,FP8 q8 cuBLASLt matmul backend,1024,cuBLASLt FP8 E4M3,0.0158464,135519,1.00808,1,ok,,10
+INT8,q0,int8_q0_cuda_naive,INT8 q0 naive CUDA baseline,1024,cuBLAS INT8,3.69099,581.818,0.00475363,1,ok,,10
+INT8,q1,int8_q1_cuda_vec4cols,INT8 q1 register-tiled four-column CUDA baseline,1024,cuBLAS INT8,2.33315,920.422,0.00741863,1,ok,,10
+INT8,q2,int8_q2_cuda_vec8cols,INT8 q2 register-tiled eight-column CUDA baseline,1024,cuBLAS INT8,1.80877,1187.26,0.00960827,1,ok,,10
+INT8,q3,int8_q3_cuda_vec16cols,INT8 q3 register-tiled sixteen-column CUDA baseline,1024,cuBLAS INT8,1.77495,1209.89,0.00994644,1,ok,,10
+INT8,q4,int8_q4_wmma_m16n16k16,INT8 q4 WMMA M16N16K16 Tensor Core baseline,1024,cuBLAS INT8,0.418576,5130.45,0.0417186,1,ok,,10
+INT8,q5,int8_q5_wmma_m16n16k16_8warp,INT8 q5 WMMA M16N16K16 8-warps-per-block baseline,1024,cuBLAS INT8,0.432835,4961.44,0.0399968,1,ok,,10
+INT8,q6,int8_q6_wmma_m32n8k16,INT8 q6 WMMA M32N8K16 Tensor Core baseline,1024,cuBLAS INT8,0.417178,5147.65,0.0425258,1,ok,,10
+INT8,q7,int8_q7_wmma_m8n32k16,INT8 q7 WMMA M8N32K16 Tensor Core baseline,1024,cuBLAS INT8,0.626006,3430.45,0.0280023,1,ok,,10
+INT8,q8,int8_q8_wmma_m32n64k16_smem,INT8 q8 WMMA M32N64K16 shared-memory staged baseline,1024,cuBLAS INT8,0.439869,4882.1,0.0412996,1,ok,,10
+INT8,q9,int8_q9_wmma_m32n32k16_reuse_a,INT8 q9 WMMA M32N32K16 reuse-A baseline,1024,cuBLAS INT8,0.235878,9104.2,0.0740042,1,ok,,10
+INT8,q10,int8_q10_wmma_m32n64k16_reuse_a,INT8 q10 WMMA M32N64K16 reuse-A baseline,1024,cuBLAS INT8,0.212154,10122.3,0.0809828,1,ok,,10
+INT8,q11,int8_q11_wmma_m32n128k16_reuse_a,INT8 q11 WMMA M32N128K16 reuse-A pressure test,1024,cuBLAS INT8,0.239754,8957.04,0.0734354,1,ok,,10
+INT8,q12,int8_q12_wmma_m128n64k16_4warp_reuse_a,INT8 q12 WMMA M128N64K16 4-warp reuse-A CTA,1024,cuBLAS INT8,0.197718,10861.3,0.0897438,1,ok,,10
+INT8,q13,int8_q13_wmma_m128n128k16_8warp_reuse_a,INT8 q13 WMMA M128N128K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.226794,9468.89,0.0769263,1,ok,,10
+INT8,q14,int8_q14_wmma_m256n64k16_8warp_reuse_a,INT8 q14 WMMA M256N64K16 8-warp reuse-A CTA,1024,cuBLAS INT8,0.227568,9436.67,0.0786894,1,ok,,10
+INT8,q15,int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,1024,cuBLAS INT8,0.124624,17231.7,0.129696,1,ok,,10
+INT8,q16,int8_q16_wmma_m128n128k16_8warp_reuse_a_bcol,INT8 q16 WMMA M128N128K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.13633,15752.1,0.132385,1,ok,,10
+INT8,q17,int8_q17_wmma_m256n64k16_8warp_reuse_a_bcol,INT8 q17 WMMA M256N64K16 8-warp reuse-A B-col layout,1024,cuBLAS INT8,0.137738,15591.1,0.128708,1,ok,,10
+INT8,q18,int8_q18_mma_m16n8k32_smem64,INT8 q18 inline MMA M16N8K32 shared 64x64 tile,1024,cuBLAS INT8,0.396941,5410.09,0.0447664,1,ok,,10
+INT8,q19,int8_q19_cublas_gemmex,INT8 q19 cuBLAS GemmEx backend,1024,cuBLAS INT8,0.0171488,125226,1.03172,1,ok,,10

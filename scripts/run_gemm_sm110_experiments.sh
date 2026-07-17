@@ -7,20 +7,23 @@ BUILD_DIR="${BUILD_DIR:-${GEMM_ROOT}/build}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/results/gemm_sm110}"
 RAW_DIR="${OUT_DIR}/raw"
 FIG_DIR="${OUT_DIR}/figures"
-GEMM_SUITE="${GEMM_SUITE:-all}"
+GEMM_SUITE="${GEMM_SUITE:-core}"
 PRESET="${PRESET:-default}"
 TRIALS="${TRIALS:-10}"
+RESULT_TAG="${RESULT_TAG:-}"
 BACKEND_TIMEOUT_SECONDS="${BACKEND_TIMEOUT_SECONDS:-30}"
 BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
+BACKEND_ATTEMPTS="${BACKEND_ATTEMPTS:-1}"
 VERBOSE="${VERBOSE:-0}"
 CUTLASS_ROOT="${CUTLASS_ROOT:-${ROOT_DIR}/../third_party/cutlass}"
 NVCC="${NVCC:-nvcc}"
+SKIP_BUILD="${SKIP_BUILD:-0}"
 
 case "${GEMM_SUITE}" in
-  all|references|stage0|stage1|stage2|stage3|stage4|stage5|stage6|\
-  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc6) ;;
+  all|core|unstable|nvfp4|references|stage0|stage1|stage2|stage3|stage4|stage5|stage6|\
+  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5h|tc5n|tc6) ;;
   *)
-    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, references, stage0..stage6, or a concrete backend ID." >&2
+    echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, core, unstable, nvfp4, references, stage0..stage6, or a concrete backend ID." >&2
     exit 1
     ;;
 esac
@@ -42,6 +45,23 @@ case "${PRESET}" in
 esac
 GEMM_SIZES="${GEMM_SIZES:-${DEFAULT_GEMM_SIZES}}"
 
+sanitize_tag() {
+  printf '%s' "$1" | tr -c '[:alnum:]_-' '_'
+}
+
+sizes_tag() {
+  local normalized
+  normalized="$(printf '%s' "$1" | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//')"
+  case "${normalized}" in
+    "128 256 512 1024 2048 4096")
+      printf '128_4096'
+      ;;
+    *)
+      printf '%s' "${normalized}" | tr ' ' '_' | tr -cd '[:alnum:]_'
+      ;;
+  esac
+}
+
 if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "Invalid BACKEND_TIMEOUT_SECONDS=${BACKEND_TIMEOUT_SECONDS}. Expected a positive integer." >&2
   exit 1
@@ -50,8 +70,16 @@ if [[ ! "${BACKEND_KILL_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "Invalid BACKEND_KILL_GRACE_SECONDS=${BACKEND_KILL_GRACE_SECONDS}. Expected a positive integer." >&2
   exit 1
 fi
+if [[ ! "${BACKEND_ATTEMPTS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Invalid BACKEND_ATTEMPTS=${BACKEND_ATTEMPTS}. Expected a positive integer." >&2
+  exit 1
+fi
 if [[ "${VERBOSE}" != "0" && "${VERBOSE}" != "1" ]]; then
   echo "Invalid VERBOSE=${VERBOSE}. Use VERBOSE=0 or VERBOSE=1." >&2
+  exit 1
+fi
+if [[ "${SKIP_BUILD}" != "0" && "${SKIP_BUILD}" != "1" ]]; then
+  echo "Invalid SKIP_BUILD=${SKIP_BUILD}. Use SKIP_BUILD=0 or SKIP_BUILD=1." >&2
   exit 1
 fi
 
@@ -112,7 +140,16 @@ build_gemm_sm110() {
 expand_suite_backends() {
   case "$1" in
     all)
-      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b tc6
+      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b tc5h tc5n tc6
+      ;;
+    core)
+      printf '%s\n' cublas_tc cutlass tc2a tc2b tc4a tc5h tc5n
+      ;;
+    unstable)
+      printf '%s\n' cublas_tc tc3 tc4b tc4c tc5a
+      ;;
+    nvfp4)
+      printf '%s\n' cublas_tc tc6
       ;;
     references)
       printf '%s\n' cublas_tc cutlass
@@ -133,7 +170,7 @@ expand_suite_backends() {
       printf '%s\n' cublas_tc tc4a tc4b tc4c
       ;;
     stage5)
-      printf '%s\n' cublas_tc tc5a tc5b
+      printf '%s\n' cublas_tc tc5a tc5b tc5h tc5n
       ;;
     stage6)
       printf '%s\n' cublas_tc tc6
@@ -190,12 +227,16 @@ run_backend_once() {
   local trial="$2"
   local backend="$3"
   local include_reference="$4"
+  local attempt="${5:-1}"
   local run_dir="${RAW_DIR}/N${n}/trial_${trial}/${backend}"
   local status=0
 
+  if [[ "${BACKEND_ATTEMPTS}" -gt 1 ]]; then
+    run_dir="${run_dir}/attempt_${attempt}"
+  fi
   mkdir -p "${run_dir}"
   if [[ "${VERBOSE}" == "1" ]]; then
-    echo "--- N=${n} backend=${backend} trial=${trial}/${TRIALS} ---"
+    echo "--- N=${n} backend=${backend} trial=${trial}/${TRIALS} attempt=${attempt}/${BACKEND_ATTEMPTS} ---"
   else
     printf '  trial %02d/%02d | %-9s | ' "${trial}" "${TRIALS}" "${backend}"
   fi
@@ -250,6 +291,24 @@ run_backend_once() {
   print_backend_summary "${run_dir}/sgemm_sm110_benchmark.csv" "${backend}"
 }
 
+run_backend_with_retries() {
+  local n="$1"
+  local trial="$2"
+  local backend="$3"
+  local include_reference="$4"
+  local attempt
+
+  for attempt in $(seq 1 "${BACKEND_ATTEMPTS}"); do
+    if run_backend_once "${n}" "${trial}" "${backend}" "${include_reference}" "${attempt}"; then
+      return 0
+    fi
+    if [[ "${attempt}" -lt "${BACKEND_ATTEMPTS}" ]]; then
+      echo "Retrying backend ${backend} for N=${n}, trial=${trial} (${attempt}/${BACKEND_ATTEMPTS} failed)." >&2
+    fi
+  done
+  return 1
+}
+
 run_trial() {
   local n="$1"
   local trial="$2"
@@ -263,22 +322,37 @@ run_trial() {
     if [[ "${#backends[@]}" -gt 1 && "${backend}" != "cublas_tc" ]]; then
       include_reference="0"
     fi
-    if ! run_backend_once "${n}" "${trial}" "${backend}" "${include_reference}"; then
+    if ! run_backend_with_retries "${n}" "${trial}" "${backend}" "${include_reference}"; then
       HAD_FAILURES=1
     fi
   done
 }
 
-echo "=== Building GEMMsm110 benchmark ==="
-build_gemm_sm110
+if [[ "${SKIP_BUILD}" == "1" ]]; then
+  if [[ ! -x "${BUILD_DIR}/gemm_sm110_bench" ]]; then
+    echo "SKIP_BUILD=1 requested, but ${BUILD_DIR}/gemm_sm110_bench is missing or not executable." >&2
+    exit 2
+  fi
+  echo "=== Reusing existing GEMMsm110 benchmark: ${BUILD_DIR}/gemm_sm110_bench ==="
+else
+  echo "=== Building GEMMsm110 benchmark ==="
+  build_gemm_sm110
+fi
 ensure_python
 warn_render_access
 
+if [[ -n "${RESULT_TAG}" ]]; then
+  RUN_TAG="$(sanitize_tag "${RESULT_TAG}")"
+else
+  RUN_TAG="sm110_gemm_${GEMM_SUITE}_$(sizes_tag "${GEMM_SIZES}")_${TRIALS}trials"
+fi
+
 AGG_CSV="${OUT_DIR}/gemm_sm110_sweep.csv"
+NAMED_CSV="${OUT_DIR}/${RUN_TAG}.csv"
 HAD_FAILURES=0
 printf 'BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Trial\n' > "${AGG_CSV}"
 
-echo "=== Sweep: suite=${GEMM_SUITE}, trials=${TRIALS}, sizes=${GEMM_SIZES} ==="
+echo "=== Sweep: suite=${GEMM_SUITE}, trials=${TRIALS}, attempts=${BACKEND_ATTEMPTS}, sizes=${GEMM_SIZES} ==="
 for n in ${GEMM_SIZES}; do
   echo
   echo "N=${n}"
@@ -294,7 +368,18 @@ mkdir -p "${FIG_DIR}"
   --gemm "${AGG_CSV}" \
   --out-dir "${FIG_DIR}"
 
+cp -f "${AGG_CSV}" "${NAMED_CSV}"
+if [[ -f "${FIG_DIR}/gemm_tensor_core_gflops.svg" ]]; then
+  cp -f "${FIG_DIR}/gemm_tensor_core_gflops.svg" \
+    "${FIG_DIR}/${RUN_TAG}_gflops.svg"
+fi
+if [[ -f "${FIG_DIR}/gemm_tensor_core_ratio_to_cublas_tc.svg" ]]; then
+  cp -f "${FIG_DIR}/gemm_tensor_core_ratio_to_cublas_tc.svg" \
+    "${FIG_DIR}/${RUN_TAG}_ratio_to_cublas_tc.svg"
+fi
+
 echo "GEMMsm110 experiment data: ${OUT_DIR}"
+echo "GEMMsm110 named CSV: ${NAMED_CSV}"
 echo "GEMMsm110 figures: ${FIG_DIR}"
 
 if [[ "${HAD_FAILURES}" -ne 0 ]]; then

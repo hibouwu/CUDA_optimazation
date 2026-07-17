@@ -73,7 +73,18 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "tc5a",
     "tc5b",
     "tc5h",
+    "tc5n",
     "tc6",
+]
+
+SM110_PERFORMANCE_SERIES = [
+    "cublas_tc",
+    "cutlass",
+    "tc2a",
+    "tc2b",
+    "tc4a",
+    "tc5h",
+    "tc5n",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -138,6 +149,7 @@ SM110_SERIES_LABELS = {
     "tc5a": "tc5a static persistent scheduler",
     "tc5b": "tc5b software dynamic persistent scheduler",
     "tc5h": "tc5h overlapped epilogue M128N256K64",
+    "tc5n": "tc5n hybrid 2-SM overlap + tc5h fallback",
     "tc6": "tc6 fused NVFP4 epilogue",
 }
 
@@ -189,8 +201,11 @@ def backend_key(row):
         "tc4",
         "tc4a",
         "tc4b",
+        "tc4c",
         "tc5a",
         "tc5b",
+        "tc5h",
+        "tc5n",
         "tc6",
     ):
         if version.startswith(prefix + " "):
@@ -372,6 +387,8 @@ def log_ticks(min_value, max_value):
 def x_label(value):
     if abs(value - round(value)) < 1e-6:
         value = int(round(value))
+        if value <= 16_384:
+            return f"{value}"
     if value >= 1_000_000:
         return f"{value / 1_000_000:g}M"
     if value >= 1_000:
@@ -385,7 +402,7 @@ def is_power_of_two(value):
 
 
 def labeled_x_ticks(values):
-    if len(values) <= 8:
+    if len(values) <= 12:
         return values
     labeled = {values[0], values[-1]}
     labeled.update(value for value in values if is_power_of_two(value))
@@ -585,12 +602,14 @@ def main():
     if args.gemm:
         gemm_rows = read_rows(args.gemm)
         gemm_series_labels = dict(SERIES_LABELS)
+        tensor_core_plot_series = KEY_GEMM_TENSOR_CORE_SERIES
         if "sm110" in Path(args.gemm).name.lower():
             gemm_series_labels.update(SM110_SERIES_LABELS)
+            tensor_core_plot_series = SM110_PERFORMANCE_SERIES
         if has_new_gemm_schema(gemm_rows):
             fp32_rows = filter_rows(gemm_rows, lambda row: row.get("Precision") == "fp32")
             tensor_core_rows = filter_rows(
-                gemm_rows, lambda row: backend_key(row) in KEY_GEMM_TENSOR_CORE_SERIES
+                gemm_rows, lambda row: backend_key(row) in tensor_core_plot_series
             )
 
             if fp32_rows:
@@ -625,7 +644,7 @@ def main():
                 write_svg(
                     filter_series(
                         group_series(tensor_core_rows, "N", "GFLOPS"),
-                        KEY_GEMM_TENSOR_CORE_SERIES,
+                        tensor_core_plot_series,
                     ),
                     "Tensor Core GEMM GFLOPS Sweep",
                     "Square matrix size N",
@@ -636,7 +655,7 @@ def main():
                 write_svg(
                     filter_series(
                         group_series(tensor_core_rows, "N", "RatioToReference"),
-                        KEY_GEMM_TENSOR_CORE_SERIES,
+                        tensor_core_plot_series,
                     ),
                     "Tensor Core GEMM Ratio To cuBLAS Tensor Core",
                     "Square matrix size N",

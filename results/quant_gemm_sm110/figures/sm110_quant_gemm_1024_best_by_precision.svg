@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700">SM110 Quantized GEMM 1024 Best Backend Ratio by Precision</text>
+<line x1="80" y1="364" x2="860" y2="364" stroke="#111827" stroke-width="1"/>
+<line x1="80" y1="56" x2="80" y2="364" stroke="#111827" stroke-width="1"/>
+<text x="18" y="210.0" transform="rotate(-90 18 210.0)" text-anchor="middle" font-family="Arial" font-size="13">Ratio to reference</text>
+<line x1="80" y1="364.0" x2="860" y2="364.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="70" y="368.0" text-anchor="end" font-family="Arial" font-size="11" fill="#374151">0.00</text>
+<line x1="80" y1="287.0" x2="860" y2="287.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="70" y="291.0" text-anchor="end" font-family="Arial" font-size="11" fill="#374151">0.36</text>
+<line x1="80" y1="210.0" x2="860" y2="210.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="70" y="214.0" text-anchor="end" font-family="Arial" font-size="11" fill="#374151">0.73</text>
+<line x1="80" y1="133.0" x2="860" y2="133.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="70" y="137.0" text-anchor="end" font-family="Arial" font-size="11" fill="#374151">1.09</text>
+<line x1="80" y1="56.0" x2="860" y2="56.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="70" y="60.0" text-anchor="end" font-family="Arial" font-size="11" fill="#374151">1.45</text>
+<line x1="80" y1="172.9" x2="860" y2="172.9" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="856" y="166.9" text-anchor="end" font-family="Arial" font-size="11" fill="#b91c1c">0.90 target</text>
+<rect x="110.0" y="96.2" width="157.5" height="267.8" fill="#2563eb" rx="3"/>
+<text x="188.8" y="88.2" text-anchor="middle" font-family="Arial" font-size="12" fill="#111827">1.261x</text>
+<text x="188.8" y="112.2" text-anchor="middle" font-family="Arial" font-size="11" fill="white">129072 GF/s</text>
+<text x="188.8" y="388" text-anchor="middle" font-family="Arial" font-size="13" font-weight="700">NVFP4</text>
+<text x="188.8" y="407" text-anchor="middle" font-family="Arial" font-size="10" fill="#4b5563">nvfp4_q2_cutlass_72b_nvfp4</text>
+<rect x="297.5" y="102.9" width="157.5" height="261.1" fill="#16a34a" rx="3"/>
+<text x="376.2" y="94.9" text-anchor="middle" font-family="Arial" font-size="12" fill="#111827">1.230x</text>
+<text x="376.2" y="118.9" text-anchor="middle" font-family="Arial" font-size="11" fill="white">125624 GF/s</text>
+<text x="376.2" y="388" text-anchor="middle" font-family="Arial" font-size="13" font-weight="700">MXFP4</text>
+<text x="376.2" y="407" text-anchor="middle" font-family="Arial" font-size="10" fill="#4b5563">mxfp4_q1_cutlass_72a_swizzle</text>
+<rect x="485.0" y="151.0" width="157.5" height="213.0" fill="#dc2626" rx="3"/>
+<text x="563.8" y="143.0" text-anchor="middle" font-family="Arial" font-size="12" fill="#111827">1.003x</text>
+<text x="563.8" y="167.0" text-anchor="middle" font-family="Arial" font-size="11" fill="white">134273 GF/s</text>
+<text x="563.8" y="388" text-anchor="middle" font-family="Arial" font-size="13" font-weight="700">FP8</text>
+<text x="563.8" y="407" text-anchor="middle" font-family="Arial" font-size="10" fill="#4b5563">fp8_q8_cublaslt_matmul</text>
+<rect x="672.5" y="149.3" width="157.5" height="214.7" fill="#7c3aed" rx="3"/>
+<text x="751.2" y="141.3" text-anchor="middle" font-family="Arial" font-size="12" fill="#111827">1.011x</text>
+<text x="751.2" y="165.3" text-anchor="middle" font-family="Arial" font-size="11" fill="white">122770 GF/s</text>
+<text x="751.2" y="388" text-anchor="middle" font-family="Arial" font-size="13" font-weight="700">INT8</text>
+<text x="751.2" y="407" text-anchor="middle" font-family="Arial" font-size="10" fill="#4b5563">int8_q19_cublas_gemmex</text>
+<text x="80" y="438" font-family="Arial" font-size="11" fill="#6b7280">Bars use 10-trial means from Status=ok and Matched=1 rows. Missing precisions are grey placeholders.</text>
+</svg>

@@ -17,6 +17,24 @@ transformer_bench
 # Benchmark outputs
 *_benchmark.csv
 results/
+!/results/
+/results/*
+!/results/gemm_sm110/
+/results/gemm_sm110/*
+!/results/gemm_sm110/gemm_sm110_sweep.csv
+!/results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv
+!/results/gemm_sm110/figures/
+/results/gemm_sm110/figures/*
+!/results/gemm_sm110/figures/gemm_tensor_core_gflops.svg
+!/results/gemm_sm110/figures/gemm_tensor_core_ratio_to_cublas_tc.svg
+!/results/gemm_sm110/figures/sm110_gemm_core_128_4096_10trials_gflops.svg
+!/results/gemm_sm110/figures/sm110_gemm_core_128_4096_10trials_ratio_to_cublas_tc.svg
+!/results/quant_gemm_sm110/
+/results/quant_gemm_sm110/*
+!/results/quant_gemm_sm110/sm110_quant_gemm_1024_sweep.csv
+!/results/quant_gemm_sm110/figures/
+/results/quant_gemm_sm110/figures/*
+!/results/quant_gemm_sm110/figures/sm110_quant_gemm_1024_best_by_precision.svg
 ncu_reports/
 ncu_reports_key/
 *.ncu-rep

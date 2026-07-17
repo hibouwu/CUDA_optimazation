@@ -9,12 +9,14 @@ set -euo pipefail
 #   ./build_and_run.sh sanity
 #   ./build_and_run.sh tc3-minimal
 #   ./build_and_run.sh 1024 cublas_tc
+#   ./build_and_run.sh 1024 core
 #   ./build_and_run.sh 1024 cutlass
 #   ./build_and_run.sh 1024 tc0
 #   ./build_and_run.sh 1024 stage1
 #   ./build_and_run.sh 1024 tc4b
 #   ./build_and_run.sh 260 132 256 tc5a
 #   ./build_and_run.sh 1024 tc6
+#   ./build_and_run.sh 1024 all
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
@@ -92,8 +94,8 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6] [timeout_seconds]
-  $0 M N K [all|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6] [timeout_seconds]
+  $0 [N] [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6] [timeout_seconds]
+  $0 M N K [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6] [timeout_seconds]
 EOF
 }
 
@@ -135,12 +137,12 @@ case "${ARG}" in
       M="${1}"
       N="${2}"
       K="${3}"
-      FILTER="${4:-all}"
+      FILTER="${4:-core}"
       BACKEND_TIMEOUT_SECONDS="${5:-${BACKEND_TIMEOUT_SECONDS}}"
       BENCH_ARGS=("${M}" "${N}" "${K}" "${FILTER}")
     else
       N="${ARG}"
-      FILTER="${2:-all}"
+      FILTER="${2:-core}"
       BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS}}"
       BENCH_ARGS=("${N}" "${FILTER}")
     fi
