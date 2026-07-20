@@ -1,33 +1,38 @@
 # tcgen05 MMA 硬件路径标定与配置敏感性实验计划
 
-## 1. 目标与结论边界
+## 1. 目标
 
-本组实验分为两层：
+本组实验分为三层：
 
-1. 先标定 `tcgen05.mma` 的有效硬件行为；
-2. 再研究 shape、SMEM layout、TMEM columns 和 D 地址策略对性能的影响。
+1. 先验证 PTX、descriptor、TMEM 地址和同步序列正确；
+2. 再标定 `tcgen05.mma` 的 ISA 可见行为与有效硬件参数；
+3. 最后研究 shape、SMEM layout、TMEM columns 和并发访存对 GEMM 的影响。
 
-优先回答以下问题：
+优先回答：
 
-1. SMEM 到 Tensor Core 的最大有效 operand 供数率是多少；
-2. `tcgen05.mma` 对 SMEM bank pattern 的敏感性，以及可观察到的有效 bank 并行度；
-3. Tensor Core operand fetch 是否与普通 LSU `ld.shared` 竞争同一关键资源；
-4. 可以同时隐藏多少条独立 MMA，其有效在途窗口有多大；
-5. TMEM accumulator 地址、column 和 `input_d` 是否引入额外限制。
+1. `tcgen05.mma` 的隔离完成延迟和稳态边际成本分别是多少；
+2. ISA-visible collector 能减少多少 SMEM operand fetch，其复用边界是什么；
+3. collector discard 条件下，SMEM 到 Tensor Core 的最大有效供数率是多少；
+4. `tcgen05.mma` 对 SMEM layout/address pattern 的敏感性如何；
+5. 普通 LSU `ld.shared` 是否与 MMA operand fetch 竞争关键资源；
+6. TMEM D 地址复用、alias、column 占用和 `input_d` 如何限制流水线；
+7. 在合法 TMEM 容量内，需要多大的 D reuse distance 才能隐藏完成延迟。
 
-这些实验不能直接观察物理连线和内部队列，因此报告中应使用以下名称：
+## 2. 结论边界
 
-| 希望了解的硬件量 | 微基准实际报告的量 | 结论边界 |
+| 希望了解的量 | 微基准实际报告的量 | 不允许直接宣称 |
 | --- | --- | --- |
-| SMEM→Tensor Core 端口宽度 | 最大有效 operand bytes/cycle | 物理宽度的下界或性能等效值 |
-| 每周期读取的 SMEM bank 数 | 有效 bank 并行度与 bank-pattern 敏感性 | 不等同于内部物理读端口数 |
-| 每周期写入的 TMEM bank 数 | accumulator update 吞吐与地址周期性 | 不等同于物理 TMEM bank 数 |
-| 是否与 LSU 完全共享端口 | `ld.shared` 与 MMA 的干扰曲线 | 可证明共享瓶颈，通常不能证明物理端口完全相同 |
-| operand collector 深度 | 有效独立在途 MMA 窗口 | 可能同时包含 collector、scoreboard 和异步队列限制 |
+| SMEM→Tensor Core 端口宽度 | collector-discard 下最大有效 operand bytes/cycle | 物理端口宽度 |
+| 每周期读取多少 SMEM bank | layout/address-pattern 敏感性和有效 bank 并行度 | 内部物理读 bank 数 |
+| 每周期写入多少 TMEM bank | accumulator update 吞吐、alias 和地址周期性 | 物理 TMEM bank 数 |
+| 是否与 LSU 完全共享端口 | `ld.shared` 与 MMA 的干扰及归一化吞吐曲线 | 两者物理连线完全相同 |
+| operand collector 深度 | ISA-visible collector 行为和有效在途窗口 | 隐藏 collector/scoreboard entry 数 |
 
-后续文档不得仅凭 `logical bytes / cycles`，直接把结果命名为物理端口宽度、物理 bank 数或 collector entry 数。
+PTX 已暴露部分 collector 控制：默认 activation-stationary `tcgen05.mma` 可使用 A collector 的 `fill/use/lastuse/discard`；`tcgen05.mma.ws` 可使用 B collector `b0`–`b3`。这些 ISA-visible buffer 应直接测试，不通过 batch-size 拐点猜测。
 
-## 2. 建议目录结构
+`tcgen05.commit` 使 mbarrier 跟踪执行线程发出的所有先前 async-tcgen05 操作。连续 commit 对应累计 completion prefix，不等同于 `wgmma.commit_group` 的独立 group。因此本计划不再使用 `outstanding_groups` 推断 group queue 深度。
+
+## 3. 建议目录结构
 
 ```text
 microbench/mma_config/
@@ -37,68 +42,48 @@ microbench/mma_config/
 
   common/
     tcgen05_helpers.cuh
+    descriptor_builder.cuh
+    validation.cuh
     timing.cuh
     result_writer.cuh
 
-  00_instruction_baseline/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  01_effective_smem_ingress/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  02_smem_bank_pattern/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  03_ldshared_contention/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  04_inflight_window/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  05_tmem_address_pattern/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
-
-  06_shape_layout_sensitivity/
-    README.md
-    benchmark_src/
-    scripts/
-    plots/
+  00_validation/
+  01_collector_protocol/
+  02_latency_throughput/
+  03_effective_smem_ingress/
+  04_smem_layout_address/
+  05_ldshared_contention/
+  06_tmem_dependency/
+  07_config_matrix/
 ```
 
-`common/` 只保存共享的 PTX wrapper、计时、CSV 输出和参数解析。每个子目录保留独立 kernel，使指令序列和控制变量能够直接检查。
+每个实验目录包含：
 
-## 3. 统一实验口径
+```text
+README.md
+benchmark_src/
+scripts/
+plots/
+```
 
-所有子实验固定并记录：
+`common/` 只保存不会隐藏实验控制变量的 PTX wrapper、descriptor builder、正确性检查、计时和 CSV 输出。每个实验保留独立 kernel，使实际指令序列可以直接审计。
 
-- GPU 型号、compute capability、driver 和 CUDA toolkit 版本；
-- power mode、SM clock 和 memory clock；
-- kernel launch 配置、动态 SMEM、TMEM columns 和实际 occupancy；
-- CUDA event 计时方式、warmup、repeat 和迭代次数；
-- grid 至少覆盖全部 SM，同时保留单 SM 或低 grid 的诊断结果；
-- CTA thread 数默认与目标 GEMM 一致，即 128 threads；
-- BF16 与 FP16 分开记录，不混在同一条曲线中；
-- SASS/PTX 检查结果，确认编译器没有删除或移动干扰指令。
+## 4. 统一实验口径
 
-默认 shape：
+### 4.1 环境与计时
+
+所有结果记录：
+
+- GPU 型号、compute capability、driver、CUDA toolkit 和 PTX ISA 版本；
+- power mode、实际 SM clock、memory clock、温度和功耗；
+- kernel launch 配置、静态/动态 SMEM、TMEM columns 和 resident CTA 数；
+- warmup、repeat、迭代次数和 case 执行顺序；
+- 单 CTA/低 grid 与全 SM 满载两种口径；
+- PTX 和 SASS hash，确保比较时使用预期指令序列。
+
+case 顺序必须随机化，并周期性插入固定 reference kernel。报告 median、p10 和 p90，避免热状态或 DVFS 漂移伪装成性能拐点。
+
+默认 CTA 为 128 threads，默认 shape 为：
 
 ```text
 m128n64k16
@@ -106,271 +91,371 @@ m128n128k16
 m128n256k16
 ```
 
-至少提供两种计时口径：
+FP16 与 BF16 分开运行和绘图。
 
-1. 单 CTA/低 grid：观察指令延迟和资源竞争；
-2. 全 SM 满载：得到目标 GEMM 可用的稳态吞吐。
+### 4.2 正确性门槛
 
-统一 CSV 字段建议：
+任何性能数据进入图表前必须满足：
+
+1. descriptor 组合符合当前 PTX ISA 的 swizzle、alignment 和 stride 限制；
+2. A/B 使用非对称且可复现的数据，避免全零或全一掩盖 layout 错误；
+3. 等待 MMA 完成后通过 `tcgen05.ld` 读回 D；
+4. 与 CPU reference 比较，误差标准按 dtype 和累计 K 次数固定；
+5. D tile 周围的 TMEM guard 区域保持不变；
+6. kernel launch、执行和 deallocation 均无 CUDA error；
+7. SASS 中目标 MMA、commit、wait 和干扰指令数量符合预期。
+
+不满足上述任意条件的 case 只进入 `invalid_cases.csv`，不能进入性能统计。
+
+### 4.3 统一变量
 
 ```text
-experiment, gpu, cuda_version, clock_mhz,
-dtype, m, n, k, iterations,
-batch_size, outstanding_groups, wait_mode,
-smem_layout, swizzle, alignment_bytes, lda, ldb, smem_base_offset,
-tmem_columns, d_base_column, d_column_stride, d_mode, input_d,
-ldshared_mode, ldshared_bytes_per_iter, ldshared_bank_relation,
-active_warps, resident_ctas, elapsed_us,
-issue_cycles_per_mma, completion_cycles, steady_cycles_per_mma,
-logical_smem_bytes_per_mma, effective_smem_bytes_per_cycle,
-tflops, notes
+Q                       timed region 内发射的 MMA 总数
+collector_mode          discard, fill_use_lastuse
+operand_address_mode    same, pingpong, rotating
+independent_d_count     不重叠 D tile 数
+d_reuse_distance        同一 D 两次使用之间的 MMA 数
+d_tile_base_delta       相邻 D tile base 的 column 差
+d_alias_class           none, partial, full
+commit_interval         相邻 commit 之间的 MMA 数
+pending_mbarriers       已 commit 但尚未 wait 的 mbarrier 数
 ```
+
+注意：`pending_mbarriers` 表示累计 completion prefix 的数量，不表示独立硬件 group 数。
+
+### 4.4 统一 CSV 字段
+
+```text
+experiment, case_id, valid, invalid_reason,
+gpu, compute_capability, driver, cuda_version, ptx_version,
+sm_clock_mhz, mem_clock_mhz, temperature_c, power_w,
+dtype, m, n, k, Q, iterations, repeat,
+collector_mode, operand_address_mode,
+independent_d_count, d_reuse_distance,
+commit_interval, pending_mbarriers, wait_polling_mode,
+smem_layout, swizzle, alignment_bytes, lda, ldb, smem_base_offset,
+tmem_columns, d_base_column, d_tile_base_delta, d_alias_class, input_d,
+interference_mode, interference_ops_per_iter, interference_warps,
+resident_ctas, elapsed_cycles, elapsed_us,
+alpha_cycles, beta_cycles_per_mma,
+logical_smem_bytes_per_mma, effective_smem_bytes_per_cycle,
+tflops, poll_count, max_abs_error, guard_ok, sass_hash, notes
+```
+
+## 5. `00_validation`
+
+### 5.1 目的
+
+建立后续实验共用的合法 descriptor、TMEM 地址和同步模板，防止“跑得快但算错了”。
+
+### 5.2 必测项
+
+```text
+每个 shape × dtype
+每个计划使用的 swizzle/layout
+每个合法 TMEM allocation size
+input_d = 0, 1
+collector = discard, fill/use/lastuse
+```
+
+每个 case 做单条 MMA 和短累计链，读回完整 D 并检查 guard。
+
+### 5.3 输出
+
+- `valid_descriptor_cases.csv`；
+- `invalid_cases.csv`；
+- 每种 wrapper 的 PTX/SASS 指令摘要；
+- 每个 shape 的 TMEM footprint 和可容纳的最大不重叠 D tile 数。
+
+对 M128、FP32 accumulator 和 512-column allocation，预期独立 D 上限为：
+
+| Shape | D footprint | 最大不重叠 D 数 |
+| --- | ---: | ---: |
+| M128N64 | 64 columns | 8 |
+| M128N128 | 128 columns | 4 |
+| M128N256 | 256 columns | 2 |
+
+若实际 dtype/layout 的 TMEM packing 不同，以 PTX layout 和验证结果为准，不硬编码上表。
+
+## 6. `01_collector_protocol`
+
+### 6.1 要回答的问题
+
+- ISA-visible collector 的 fill/use/lastuse 成本；
+- collector reuse 能减少多少 SMEM operand fetch 成本；
+- collector 生命周期结束后，下一次 fill 是否出现额外 stall；
+- activation-stationary A collector 与 weights-stationary B collector 行为是否不同。
+
+### 6.2 基本序列
+
+```text
+discard × Q
+fill -> lastuse
+fill -> use × R -> lastuse
+fill -> use × R -> discard
+```
+
+若实现 `tcgen05.mma.ws`，分别测试：
+
+```text
+b0 only
+b0/b1 pingpong
+b0/b1/b2/b3 rotating
+```
+
+所有序列必须遵守 PTX collector 生命周期。非法 use、重复 fill 或 use-after-lastuse 不作为性能 case。
+
+### 6.3 控制变量
+
+- 固定 shape、D reuse distance、SMEM layout 和 commit interval；
+- 同时记录 same 与 pingpong operand address；
+- `discard × Q` 作为后续 SMEM ingress 的默认基线；
+- collector reuse case 不计算“每 MMA 完整读取 A/B”的物理带宽。
+
+### 6.4 判读
+
+- fill/use 明显快于 discard：collector 正在减少 operand fetch 或 descriptor 路径成本；
+- b0–b3 rotating 优于单 buffer：多个 ISA-visible B collector 能提高 weights-stationary 重用窗口；
+- collector 模式不变但地址模式影响吞吐：仍可能有 collector 之外的缓存、descriptor 或 SMEM 路径效应。
+
+## 7. `02_latency_throughput`
+
+### 7.1 要回答的问题
+
+- 单条 MMA 到完成通知的隔离延迟；
+- 长 batch 的稳态边际 cycles/MMA；
+- `commit`、最终 drain 和 wait polling 对截距的贡献；
+- D reuse distance 多大后吞吐收敛。
+
+### 7.2 方法：批长度回归
+
+对每个 shape 测：
+
+```text
+Q = 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64
+```
+
+拟合：
+
+```text
+T(Q) = alpha + beta * Q
+```
+
+其中：
+
+- `beta` 是长 batch 的边际稳态成本；
+- `alpha` 包含 loop、commit、最终 drain 和 wait 的综合固定项；
+- `Q=1` 单独报告为 forced-completion diagnostic，不用空 commit 结果简单相减。
+
+### 7.3 D 地址设计
+
+分别测试：
+
+```text
+same D, input_d=0
+same D, input_d=1
+legal independent D ring, input_d=0
+legal independent D ring, input_d=1
+```
+
+独立 D ring 大小不得超过 `00_validation` 得到的上限。超过上限时继续增加 Q，但报告真实 `independent_d_count` 和 `d_reuse_distance`，不得称为 independent-D batch。
+
+### 7.4 Completion tracking
+
+扫描：
+
+```text
+commit_interval = 1, 2, 4, 8, ...
+pending_mbarriers = 1, 2, 3, ... 在资源允许范围内
+```
+
+每个 commit 都标注其 prefix length。该实验只研究累计 completion prefix 和 mbarrier tracking 成本，不推断独立 async group queue 深度。
+
+instrumented 版本可记录 `mbarrier.try_wait` poll count，但性能主结果必须来自不计数版本。
+
+## 8. `03_effective_smem_ingress`
+
+### 8.1 要回答的问题
+
+- collector-discard 条件下最大有效 SMEM operand bytes/cycle；
+- 不同 shape 是否更接近相同 bytes/cycle roofline 或 FLOP/cycle roofline；
+- same/pingpong/rotating operand 地址是否改变结果。
+
+### 8.2 固定条件
+
+```text
+collector_mode = discard
+Q 使用 02 中已经进入线性稳态的范围
+D reuse distance 使用该 shape 可实现的最大合法值
+SMEM layout 使用 00 验证过的推荐配置
+```
+
+operand 地址模式：
+
+```text
+same
+pingpong
+rotating，在 SMEM 容量允许范围内
+```
+
+### 8.3 指标
 
 对于 A/B 都来自 SMEM 的 BF16/FP16 MMA：
 
 ```text
 logical_smem_bytes_per_mma = sizeof(dtype) * k * (m + n)
-effective_smem_bytes_per_cycle =
-    logical_smem_bytes_per_mma / steady_cycles_per_mma
+effective_smem_bytes_per_cycle = logical_smem_bytes_per_mma / beta
 ```
 
-例如 `m128n128k16` 的 FP16/BF16 逻辑 operand 流量为：
+例如 M128N128K16 FP16/BF16：
 
 ```text
-A = 128 * 16 * 2 = 4096 B
-B = 128 * 16 * 2 = 4096 B
-A + B = 8192 B/MMA
+A = 4096 B
+B = 4096 B
+A+B = 8192 B/MMA
 ```
 
-`effective_smem_bytes_per_cycle` 是有效供数率，不是未经验证的物理端口宽度。
+### 8.4 判读
 
-## 4. 第一层：硬件路径标定
+- 多 shape 在相近 bytes/cycle 饱和：支持 operand path roofline；
+- 多 shape 在相近 FLOP/cycle 饱和：更像 Tensor Core compute limit；
+- same 比 pingpong/rotating 更快：存在地址复用效应，same-address 结果不能用于端口下界；
+- 最大值只报告为有效供数率，不命名为物理端口宽度。
 
-## 4.1 `00_instruction_baseline`
+## 9. `04_smem_layout_address`
 
-### 要回答的问题
+### 9.1 方法
 
-- 一条独立 MMA 的异步完成延迟是多少；
-- 连续发射时的稳态 issue/execute 吞吐是多少；
-- `commit/wait` 本身给测量引入多少固定成本。
-
-### 必要 case
+只从 `00_validation` 的合法 descriptor 集合取 case，做成逻辑矩阵内容、总字节数和 MMA 序列相同的 pairwise 比较：
 
 ```text
-empty_loop
-commit_wait_only
-mma_then_immediate_commit_wait
-batched_independent_mma_then_commit_wait
+swizzle = legal set
+alignment = legal set
+lda/ldb = legal set
+smem_base_offset = 合法地址范围内的完整候选周期
 ```
 
-MMA case 同时比较：
+所有 case 固定 collector discard、Q、D reuse distance 和 commit interval。
 
-```text
-d_mode = same_d, alternating_d, independent_d
-input_d = 0, 1
-```
+### 9.2 判读
 
-### 判读
+- 只有整数倍退化加上稳定地址周期时，才提出 bank/fabric 冲突假设；
+- 单纯 base-offset 敏感性报告为 address/partition sensitivity，不直接解释为 bank-conflict degree；
+- 无变化只说明测试范围内 layout 不是当前瓶颈；
+- 最终报告 effective bank parallelism 或相对退化率，不声明物理 bank/cycle。
 
-- `mma_then_immediate_commit_wait` 测到的是完成延迟、同步开销和等待空泡之和；
-- batched case 收敛后的 cycles/MMA 才用于估计稳态吞吐；
-- forced-wait 下 same-D 与 independent-D 的差距用于识别 D 地址依赖污染；
-- 后续实验必须使用本节确认过的独立 D 策略和低开销 wait 方式。
+## 10. `05_ldshared_contention`
 
-## 4.2 `01_effective_smem_ingress`
+### 10.1 要回答的问题
 
-### 要回答的问题
+- `ld.shared` 与 MMA 是否竞争共享的 bank array、fabric、仲裁或 LSU/issue 资源；
+- 干扰是否依赖 shared address pattern；
+- 两条路径能否同时接近各自单独运行的吞吐。
 
-- SMEM operand path 能达到的最大有效 bytes/cycle；
-- 不同 shape 是否落在同一供数 roofline 上；
-- 小 N shape 是否更容易受到 operand feed 限制。
+### 10.2 控制组
 
-### 方法
-
-对每个 shape 连续发射足够多的 independent-D MMA，再统一完成等待：
-
-```text
-batch_size = 1, 2, 4, 8, 16, 32, 64
-```
-
-先使用推荐 swizzle、alignment 和 leading dimension。每个 case 同时报告：
-
-```text
-steady_cycles_per_mma
-logical_smem_bytes_per_mma
-effective_smem_bytes_per_cycle
-TFLOP/s
-```
-
-### 判读
-
-- 多个 shape 在相近的 effective bytes/cycle 处饱和，支持 SMEM operand path roofline 假设；
-- 多个 shape在相近 FLOP/cycle 处饱和，更像 Tensor Core compute limit；
-- 最大 effective bytes/cycle 只能作为物理端口宽度下界或等效上限；
-- 如果 shape、layout 或 D 策略改变后平台明显移动，不应提取单一端口常数。
-
-## 4.3 `02_smem_bank_pattern`
-
-### 要回答的问题
-
-- `tcgen05.mma` operand fetch 是否对 bank pattern、swizzle 和地址对齐敏感；
-- 是否存在稳定的地址模周期和 2×、4× 等吞吐退化；
-- 可以观察到多大的有效 SMEM bank 并行度。
-
-### 方法
-
-固定 shape、batch size、D 地址和 `input_d`，改变：
-
-```text
-swizzle = 128B, 64B, 32B, none
-alignment = 16B, 32B, 64B, 128B
-lda/ldb = recommended, recommended + padding
-smem_base_offset = 0, 16B, 32B, ... 至一个完整候选周期
-```
-
-优先构造逻辑矩阵内容和总字节数相同、仅物理映射不同的 pairwise case。
-
-### 判读
-
-- 有规律的整数倍退化和地址周期性支持 bank/fabric 冲突解释；
-- 只有某种 swizzle 下出现退化，说明 descriptor layout 与 operand fetch 组织耦合；
-- 无明显变化只能说明测试范围内 bank pattern 不是瓶颈，不能证明内部没有 bank；
-- 结果命名为 effective bank parallelism，不直接写成“每周期读取 X 个物理 bank”。
-
-## 4.4 `03_ldshared_contention`
-
-### 要回答的问题
-
-- 普通 LSU `ld.shared` 是否与 MMA operand fetch 共享关键资源；
-- 竞争发生在 bank array、数据 fabric、仲裁还是更上层的 warp issue；
-- 两条路径能否同时达到各自单独运行时的吞吐。
-
-### 必要控制组
+固定 active warp 数，比较：
 
 ```text
 MMA only
-ld.shared only
-MMA + register-only interference
-MMA + ld.shared interference
+interference only
+MMA + register ALU
+MMA + predicated-off load wrapper
+MMA + L1-hit ld.global
+MMA + ld.shared
 ```
 
-`register-only interference` 使用与 `ld.shared` 干扰 warp 接近的指令数量和 active warp 数，用于排除 scheduler 与 occupancy 影响。
+主 sweep 不改变 interference warp 数，通过每轮 load 数或 load/ALU 比例改变流量。active warp 数变化放入次级实验。
 
-`ld.shared` 干扰分为：
+`ld.shared` 地址模式定义为软件可见的候选关系：
 
 ```text
-ldshared_bank_relation = same_pattern, disjoint_pattern, shifted_pattern
-ldshared_bytes_per_iter = 0, 128, 256, 512, ...
-active_interference_warps = 1, 2, 3
+same_candidate_bank_subset
+shifted_candidate_bank_subset
+full_32_bank_pattern
+single/few_bank_hotspot
 ```
 
-干扰 load 的结果必须进入不可删除的寄存器归约，最终写出一个校验值，防止编译器消除。
+不得把这些名称解释为与 async-proxy MMA 逐周期真实 bank schedule 完全对齐。
 
-### 判读
+### 10.3 实现要求
 
-- 若增加 `ld.shared` 流量后 MMA 吞吐单调下降，说明两者共享某个关键资源；
-- same-pattern 比 disjoint-pattern 干扰更强，支持 bank-level 竞争；
-- same 和 disjoint 同样干扰，可能是公共 fabric、仲裁或总端口竞争；
-- register-only 也造成相同退化时，应先归因于 warp scheduling/issue，而不是 SMEM 端口；
-- 若归一化吞吐近似满足
+- 使用同一 CTA 中固定 warp 分工，并在 timed region 前同步开始；
+- 干扰 load 进入不可删除的寄存器归约并最终写出校验值；
+- generic proxy 写 SMEM 后，在 MMA async proxy 使用前执行正确的 proxy fence；
+- 分别测单 CTA 和可控 resident CTA 数；
+- 报告 MMA 与干扰路径各自完成的实际工作量。
+
+### 10.4 判读
+
+- `ld.shared` 特有退化大于 register 和其他 LSU 对照：支持 shared-memory 关键资源竞争；
+- bank hotspot 比 full/distributed pattern 干扰更强：支持 bank-level 竞争；
+- 所有 LSU load 都同样干扰：先考虑 LSU issue/dispatch；
+- register ALU 也同样干扰：先考虑 warp scheduler/occupancy；
+- 若两条路径已单独饱和且近似满足
 
 ```text
 B_mma / B_mma_only + B_ld / B_ld_only ~= 1
 ```
 
-  则支持共享饱和资源模型，但不能据此宣称物理端口完全相同；
-- 没有干扰也不能立即证明端口独立，应先确认 MMA 或 `ld.shared` 单独运行时已经饱和目标资源。
+  则支持共享饱和资源模型，但不证明物理端口完全相同。
 
-## 4.5 `04_inflight_window`
+## 11. `06_tmem_dependency`
 
-### 要回答的问题
+### 11.1 要回答的问题
 
-- 独立 MMA 数量增加到多少后 cycles/MMA 不再下降；
-- 同时保留多少个未完成 group 后不再提高吞吐；
-- completion latency 需要多大的独立工作窗口才能隐藏。
+- D 的 same/partial/non-overlap 地址关系如何影响 MMA；
+- `input_d=1` 的读改写链成本；
+- D tile base 是否存在可重复的地址周期性；
+- TMEM columns 对单 CTA 吞吐和 resident CTA 数的影响。
 
-### 方法
-
-分别扫描两个维度：
+### 11.2 变量
 
 ```text
-batch_size = 1, 2, 4, 8, 16, 32, 64
-outstanding_groups = 1, 2, 3, ... 到 ISA/实现允许的范围
-```
-
-使用 independent D；若 TMEM 容量不足，使用 alternating D，但必须单独标记。尽可能轮换 A/B descriptor，另外保留相同 A/B descriptor 的对照组。
-
-需要区分：
-
-```text
-多条 MMA -> 单次 commit -> wait
-多组 MMA -> 每组 commit -> 延后 wait
-```
-
-### 判读
-
-- batch-size 拐点给出隐藏固定完成延迟所需的有效窗口；
-- outstanding-groups 拐点给出异步 group/scoreboard 路径的有效容量；
-- 两个拐点都可能同时受 Tensor Core pipeline、collector、scoreboard、TMEM D 依赖和 commit queue 影响；
-- 最终报告 `effective independent in-flight MMA window`，不直接命名为 operand collector depth。
-
-## 4.6 `05_tmem_address_pattern`
-
-### 要回答的问题
-
-- TMEM D 地址复用是否造成 RAW/WAW 类限制；
-- D base column 和 stride 是否表现出周期性冲突；
-- 128、256、512 columns 配置的吞吐与 occupancy 是否不同；
-- `input_d=1` 的 accumulator 读改写是否增加限制。
-
-### 方法
-
-固定 shape、SMEM layout 和 batch size，扫描：
-
-```text
-d_mode = same_d, alternating_d, independent_d
+d_alias_class = full, partial, none
+d_tile_base_delta = 0, 合法部分重叠值, N, 2N, ...
 input_d = 0, 1
-d_base_column = 0, 1, 2, 4, 8, ...
-d_column_stride = 1, 2, 4, 8, ...
-tmem_columns = 128, 256, 512
-d_tiles_per_cta = 1, 2, 4
+tmem_columns = 128, 256, 512 中能容纳目标 tile 的合法值
+independent_d_count = 1 ... floor(tmem_columns / D_footprint)
+d_reuse_distance = 1 ... independent_d_count
 ```
 
-同时记录 resident CTA 数。资源限制导致 launch 失败时保留失败配置和 CUDA error，不静默跳过。
+`d_tile_base_delta` 表示不同 MMA 的 D base column 差，不是 MMA tile 内部 stride。
 
-### 判读
+### 11.3 判读
 
-- same-D 慢于 independent-D，说明 accumulator 地址依赖参与限制；
-- `input_d=1` 明显慢于 `input_d=0`，说明读旧 D 或 RAW 链存在实际成本；
-- D base/stride 出现稳定周期性，支持 TMEM 地址映射或内部并行度限制；
-- columns 增加后性能下降时，必须先区分 occupancy 变化与单 CTA accumulator path 变化；
-- 只能报告有效 accumulator update 吞吐与地址周期性，不能用完整 D tile 逻辑字节数直接推导物理 TMEM bank 写带宽。
+- `input_d=1` 与 same-D 组合变慢：支持 accumulator RAW 链限制；
+- `input_d=0` 的 full/partial alias 仍变慢：支持 WAW/alias tracking 限制；
+- non-overlap base 仍出现周期性：可以提出 TMEM partition/address mapping 假设；
+- columns 增加后性能变化必须分解为单 CTA 变化和 resident CTA 变化；
+- 不使用完整 D tile 逻辑字节数推导物理 TMEM bank 写带宽。
 
-## 5. 第二层：`06_shape_layout_sensitivity`
+## 12. `07_config_matrix`
 
-第一层确定可靠的 batch size、D 策略和 wait 方式后，再系统比较配置：
+前述实验确定合法 descriptor、collector mode、稳态 Q 和 D reuse distance 后，再扫描：
 
 ```text
 shape = m128n64k16, m128n128k16, m128n256k16
 dtype = fp16, bf16
-swizzle = 128B, 64B, 32B, none
-alignment = 16B, 32B, 64B, 128B
-lda/ldb = recommended, recommended + padding
-tmem_columns = 128, 256, 512
+swizzle/alignment/lda/ldb = validated legal set
+tmem_columns = legal set
+collector_mode = discard, reuse protocol
+operand_address_mode = same, pingpong
 ```
 
-### 要回答的问题
+本节回答：
 
 - 哪些配置处于 compute limit；
 - 哪些配置处于 SMEM operand supply limit；
-- layout 敏感性是否能由第一层发现的 bank/fabric 规律解释；
-- 现有 512-column 微基准能否代表目标 GEMM 的 128-column 配置。
+- layout 敏感性是否符合第 9 节观察到的模式；
+- collector reuse 对真实 GEMM mainloop 有多少收益；
+- 512-column 微基准能否代表目标 GEMM 的 128-column 配置。
 
-如果第一层没有支持某个物理结构假设，本节不得仅凭 shape 性能差异重新宣称该结构存在。
+第一层实验没有支持的物理结构假设，本节不得仅凭 shape 性能差异重新宣称其存在。
 
-## 6. 与 GEMM stage model 的关系
+## 13. 与 GEMM stage model 的关系
 
-`thor_sm110_gemm_stage_model.md` 中的计算吞吐参数 \(P_C\) 应优先由同构配置给出：
+`thor_sm110_gemm_stage_model.md` 中的计算吞吐参数 \(P_C\) 优先使用同构配置：
 
 ```text
 FP16/BF16
@@ -381,26 +466,25 @@ M128N128K16 atom
 grid 压力匹配 tc3
 ```
 
-模型输入应使用：
+模型分别使用：
 
-- `00_instruction_baseline` 得到的延迟与同步固定成本；
-- `01_effective_smem_ingress` 得到的稳态 MMA 吞吐与有效 operand 供数率；
-- `03_ldshared_contention` 判断 epilogue/shared load 是否可能和 MMA 竞争；
-- `04_inflight_window` 判断实际 mainloop 是否有足够在途工作隐藏完成延迟；
-- `05_tmem_address_pattern` 校准 128-column 与现有 512-column 测试的差异。
+- `02_latency_throughput` 的 `alpha`、`beta` 和 D reuse distance 曲线；
+- `03_effective_smem_ingress` 的 collector-discard 有效供数率；
+- `01_collector_protocol` 的 operand reuse 收益；
+- `05_ldshared_contention` 的共享路径竞争证据；
+- `06_tmem_dependency` 的 128/256/512-column 差异。
 
-只有当 \(P_C\) 随 layout、TMEM columns、在途窗口或 `ld.shared` 干扰系统变化时，才把对应因素展开成 stage model 的二级项。
+只有参数随这些变量系统变化时，才将对应因素展开为 stage model 的二级项。
 
-## 7. 最小执行顺序
+## 14. 最小执行顺序与停止条件
 
-建议按以下顺序实现和运行：
+1. `00_validation`：任何核心 shape 无法正确读回时停止，不运行性能实验；
+2. `01_collector_protocol`：确认 ISA-visible collector 序列和复用收益；
+3. `02_latency_throughput`：用回归分开固定项与稳态边际成本；
+4. `03_effective_smem_ingress`：只在 collector discard 和合法 D ring 下计算有效供数率；
+5. `04_smem_layout_address`：只扫描已验证的 descriptor；
+6. `05_ldshared_contention`：加入 scheduler、LSU 和 shared-memory 对照；
+7. `06_tmem_dependency`：显式标记 D alias 和 reuse distance；
+8. `07_config_matrix`：汇总为可用于 GEMM 选型的结论。
 
-1. `00_instruction_baseline`：分开 completion latency、同步成本和稳态吞吐；
-2. `01_effective_smem_ingress`：取得最大有效 SMEM operand bytes/cycle；
-3. `02_smem_bank_pattern`：检查 swizzle、alignment 和地址模周期；
-4. `03_ldshared_contention`：判断普通 LSU 与 MMA operand path 的竞争关系；
-5. `04_inflight_window`：估计有效独立在途 MMA 窗口；
-6. `05_tmem_address_pattern`：研究 accumulator 地址周期性和 TMEM column 压力；
-7. `06_shape_layout_sensitivity`：用前述标定结果解释完整配置矩阵。
-
-前五项是硬件路径标定。第六项中 TMEM 物理 bank 数最难从软件侧唯一反演，因此只在已有稳定基线后进行。最后一项用于形成对 GEMM 配置选择真正有用的结论。
+如果某项实验无法同时控制 collector、D alias、descriptor legality 和 resident CTA 数，则只报告现象，不反演端口宽度、bank 数或隐藏队列深度。
