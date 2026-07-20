@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="420" viewBox="0 0 1360 420">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="70" y="22" font-family="monospace" font-size="16">05_ldshared_contention tflops</text>
+<line x1="70" y1="350" x2="1340" y2="350" stroke="#222"/>
+<line x1="70" y1="30" x2="70" y2="350" stroke="#222"/>
+<rect x="80.0" y="331.8" width="27.8" height="18.2" fill="#2f6f73"/>
+<text x="80.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 80.0,364)">ldcont_fp16_ld_shared_op</text>
+<rect x="116.8" y="279.4" width="27.8" height="70.6" fill="#2f6f73"/>
+<text x="116.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 116.8,364)">ldcont_bf16_predicated_o</text>
+<rect x="153.5" y="209.6" width="27.8" height="140.4" fill="#2f6f73"/>
+<text x="153.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 153.5,364)">ldcont_bf16_ld_shared_op</text>
+<rect x="190.3" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="190.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 190.3,364)">ldcont_bf16_ld_shared_op</text>
+<rect x="227.1" y="276.7" width="27.8" height="73.3" fill="#2f6f73"/>
+<text x="227.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 227.1,364)">ldcont_bf16_register_alu</text>
+<rect x="263.8" y="209.6" width="27.8" height="140.4" fill="#2f6f73"/>
+<text x="263.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 263.8,364)">ldcont_fp16_ld_shared_op</text>
+<rect x="300.6" y="327.8" width="27.8" height="22.2" fill="#2f6f73"/>
+<text x="300.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 300.6,364)">ldcont_bf16_predicated_o</text>
+<rect x="337.4" y="192.2" width="27.8" height="157.8" fill="#2f6f73"/>
+<text x="337.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 337.4,364)">ldcont_bf16_register_alu</text>
+<rect x="374.1" y="296.1" width="27.8" height="53.9" fill="#2f6f73"/>
+<text x="374.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 374.1,364)">ldcont_bf16_l1_hit_globa</text>
+<rect x="410.9" y="290.0" width="27.8" height="60.0" fill="#2f6f73"/>
+<text x="410.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 410.9,364)">ldcont_fp16_ld_shared_op</text>
+<rect x="447.6" y="194.9" width="27.8" height="155.1" fill="#2f6f73"/>
+<text x="447.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 447.6,364)">ldcont_bf16_predicated_o</text>
+<rect x="484.4" y="279.4" width="27.8" height="70.6" fill="#2f6f73"/>
+<text x="484.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 484.4,364)">ldcont_fp16_predicated_o</text>
+<rect x="521.2" y="331.8" width="27.8" height="18.2" fill="#2f6f73"/>
+<text x="521.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 521.2,364)">ldcont_bf16_ld_shared_op</text>
+<rect x="557.9" y="216.1" width="27.8" height="133.9" fill="#2f6f73"/>
+<text x="557.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 557.9,364)">ldcont_bf16_l1_hit_globa</text>
+<rect x="594.7" y="276.7" width="27.8" height="73.3" fill="#2f6f73"/>
+<text x="594.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 594.7,364)">ldcont_fp16_register_alu</text>
+<rect x="631.5" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="631.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 631.5,364)">ldcont_fp16_register_alu</text>
+<rect x="668.2" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="668.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 668.2,364)">ldcont_bf16_predicated_o</text>
+<rect x="705.0" y="290.0" width="27.8" height="60.0" fill="#2f6f73"/>
+<text x="705.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 705.0,364)">ldcont_bf16_ld_shared_op</text>
+<rect x="741.8" y="334.1" width="27.8" height="15.9" fill="#2f6f73"/>
+<text x="741.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 741.8,364)">ldcont_fp16_l1_hit_globa</text>
+<rect x="778.5" y="334.1" width="27.8" height="15.9" fill="#2f6f73"/>
+<text x="778.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 778.5,364)">ldcont_bf16_l1_hit_globa</text>
+<rect x="815.3" y="327.8" width="27.8" height="22.2" fill="#2f6f73"/>
+<text x="815.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 815.3,364)">ldcont_fp16_predicated_o</text>
+<rect x="852.1" y="30.0" width="27.8" height="320.0" fill="#2f6f73"/>
+<text x="852.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 852.1,364)">ldcont_bf16_none_ops0</text>
+<rect x="888.8" y="296.1" width="27.8" height="53.9" fill="#2f6f73"/>
+<text x="888.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 888.8,364)">ldcont_fp16_l1_hit_globa</text>
+<rect x="925.6" y="30.0" width="27.8" height="320.0" fill="#2f6f73"/>
+<text x="925.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 925.6,364)">ldcont_fp16_none_ops0</text>
+<rect x="962.4" y="216.1" width="27.8" height="133.9" fill="#2f6f73"/>
+<text x="962.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 962.4,364)">ldcont_fp16_l1_hit_globa</text>
+<rect x="999.1" y="192.2" width="27.8" height="157.8" fill="#2f6f73"/>
+<text x="999.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 999.1,364)">ldcont_fp16_register_alu</text>
+<rect x="1035.9" y="326.7" width="27.8" height="23.3" fill="#2f6f73"/>
+<text x="1035.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 1035.9,364)">ldcont_fp16_register_alu</text>
+<rect x="1072.6" y="194.9" width="27.8" height="155.1" fill="#2f6f73"/>
+<text x="1072.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 1072.6,364)">ldcont_fp16_predicated_o</text>
+<rect x="1109.4" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="1109.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 1109.4,364)">ldcont_fp16_ld_shared_op</text>
+<rect x="1146.2" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="1146.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 1146.2,364)">ldcont_bf16_l1_hit_globa</text>
+<rect x="1182.9" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="1182.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 1182.9,364)">ldcont_fp16_predicated_o</text>
+<rect x="1219.7" y="326.7" width="27.8" height="23.3" fill="#2f6f73"/>
+<text x="1219.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 1219.7,364)">ldcont_bf16_register_alu</text>
+<rect x="1256.5" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="1256.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 1256.5,364)">ldcont_bf16_register_alu</text>
+<rect x="1293.2" y="53.9" width="27.8" height="296.1" fill="#2f6f73"/>
+<text x="1293.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 1293.2,364)">ldcont_fp16_l1_hit_globa</text>
+<text x="10" y="50" font-family="monospace" font-size="12">max tflops=18.387</text>
+</svg>

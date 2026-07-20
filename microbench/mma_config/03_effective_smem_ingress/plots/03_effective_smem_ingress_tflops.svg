@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="70" y="22" font-family="monospace" font-size="16">03_effective_smem_ingress tflops</text>
+<line x1="70" y1="350" x2="880" y2="350" stroke="#222"/>
+<line x1="70" y1="30" x2="70" y2="350" stroke="#222"/>
+<rect x="80.0" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="80.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 80.0,364)">ingress_fp16_m128n64k16_</text>
+<rect x="123.9" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="123.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 123.9,364)">ingress_bf16_m128n64k16_</text>
+<rect x="167.8" y="190.1" width="33.3" height="159.9" fill="#2f6f73"/>
+<text x="167.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 167.8,364)">ingress_bf16_m128n128k16</text>
+<rect x="211.7" y="30.0" width="33.3" height="320.0" fill="#2f6f73"/>
+<text x="211.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 211.7,364)">ingress_fp16_m128n256k16</text>
+<rect x="255.6" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="255.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 255.6,364)">ingress_fp16_m128n64k16_</text>
+<rect x="299.4" y="30.1" width="33.3" height="319.9" fill="#2f6f73"/>
+<text x="299.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 299.4,364)">ingress_fp16_m128n256k16</text>
+<rect x="343.3" y="190.1" width="33.3" height="159.9" fill="#2f6f73"/>
+<text x="343.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 343.3,364)">ingress_fp16_m128n128k16</text>
+<rect x="387.2" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="387.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 387.2,364)">ingress_fp16_m128n64k16_</text>
+<rect x="431.1" y="190.0" width="33.3" height="160.0" fill="#2f6f73"/>
+<text x="431.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 431.1,364)">ingress_fp16_m128n128k16</text>
+<rect x="475.0" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="475.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 475.0,364)">ingress_bf16_m128n64k16_</text>
+<rect x="518.9" y="30.1" width="33.3" height="319.9" fill="#2f6f73"/>
+<text x="518.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 518.9,364)">ingress_fp16_m128n256k16</text>
+<rect x="562.8" y="30.1" width="33.3" height="319.9" fill="#2f6f73"/>
+<text x="562.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 562.8,364)">ingress_bf16_m128n256k16</text>
+<rect x="606.7" y="190.1" width="33.3" height="159.9" fill="#2f6f73"/>
+<text x="606.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 606.7,364)">ingress_bf16_m128n128k16</text>
+<rect x="650.6" y="190.1" width="33.3" height="159.9" fill="#2f6f73"/>
+<text x="650.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 650.6,364)">ingress_bf16_m128n128k16</text>
+<rect x="694.4" y="30.0" width="33.3" height="320.0" fill="#2f6f73"/>
+<text x="694.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 694.4,364)">ingress_bf16_m128n256k16</text>
+<rect x="738.3" y="30.1" width="33.3" height="319.9" fill="#2f6f73"/>
+<text x="738.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 738.3,364)">ingress_bf16_m128n256k16</text>
+<rect x="782.2" y="270.0" width="33.3" height="80.0" fill="#2f6f73"/>
+<text x="782.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 782.2,364)">ingress_bf16_m128n64k16_</text>
+<rect x="826.1" y="190.1" width="33.3" height="159.9" fill="#2f6f73"/>
+<text x="826.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 826.1,364)">ingress_fp16_m128n128k16</text>
+<text x="10" y="50" font-family="monospace" font-size="12">max tflops=37.295</text>
+</svg>

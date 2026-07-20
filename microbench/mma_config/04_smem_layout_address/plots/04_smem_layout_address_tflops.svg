@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2160" height="420" viewBox="0 0 2160 420">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="70" y="22" font-family="monospace" font-size="16">04_smem_layout_address tflops</text>
+<line x1="70" y1="350" x2="2140" y2="350" stroke="#222"/>
+<line x1="70" y1="30" x2="70" y2="350" stroke="#222"/>
+<rect x="80.0" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="80.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 80.0,364)">layout_bf16_m128n64k16_s</text>
+<rect x="118.0" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="118.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 118.0,364)">layout_fp16_m128n64k16_s</text>
+<rect x="155.9" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="155.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 155.9,364)">layout_fp16_m128n256k16_</text>
+<rect x="193.9" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="193.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 193.9,364)">layout_fp16_m128n64k16_s</text>
+<rect x="231.9" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="231.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 231.9,364)">layout_fp16_m128n64k16_s</text>
+<rect x="269.8" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="269.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 269.8,364)">layout_fp16_m128n256k16_</text>
+<rect x="307.8" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="307.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 307.8,364)">layout_fp16_m128n256k16_</text>
+<rect x="345.7" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="345.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 345.7,364)">layout_fp16_m128n64k16_s</text>
+<rect x="383.7" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="383.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 383.7,364)">layout_fp16_m128n256k16_</text>
+<rect x="421.7" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="421.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 421.7,364)">layout_bf16_m128n128k16_</text>
+<rect x="459.6" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="459.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 459.6,364)">layout_bf16_m128n256k16_</text>
+<rect x="497.6" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="497.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 497.6,364)">layout_fp16_m128n128k16_</text>
+<rect x="535.6" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="535.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 535.6,364)">layout_bf16_m128n128k16_</text>
+<rect x="573.5" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="573.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 573.5,364)">layout_bf16_m128n64k16_s</text>
+<rect x="611.5" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="611.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 611.5,364)">layout_fp16_m128n64k16_s</text>
+<rect x="649.4" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="649.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 649.4,364)">layout_fp16_m128n256k16_</text>
+<rect x="687.4" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="687.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 687.4,364)">layout_fp16_m128n64k16_s</text>
+<rect x="725.4" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="725.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 725.4,364)">layout_fp16_m128n256k16_</text>
+<rect x="763.3" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="763.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 763.3,364)">layout_bf16_m128n64k16_s</text>
+<rect x="801.3" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="801.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 801.3,364)">layout_bf16_m128n128k16_</text>
+<rect x="839.3" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="839.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 839.3,364)">layout_fp16_m128n256k16_</text>
+<rect x="877.2" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="877.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 877.2,364)">layout_fp16_m128n128k16_</text>
+<rect x="915.2" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="915.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 915.2,364)">layout_bf16_m128n128k16_</text>
+<rect x="953.1" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="953.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 953.1,364)">layout_bf16_m128n256k16_</text>
+<rect x="991.1" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="991.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 991.1,364)">layout_fp16_m128n128k16_</text>
+<rect x="1029.1" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="1029.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 1029.1,364)">layout_bf16_m128n128k16_</text>
+<rect x="1067.0" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="1067.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 1067.0,364)">layout_fp16_m128n128k16_</text>
+<rect x="1105.0" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="1105.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 1105.0,364)">layout_bf16_m128n64k16_s</text>
+<rect x="1143.0" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="1143.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 1143.0,364)">layout_bf16_m128n128k16_</text>
+<rect x="1180.9" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="1180.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 1180.9,364)">layout_bf16_m128n256k16_</text>
+<rect x="1218.9" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="1218.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 1218.9,364)">layout_bf16_m128n256k16_</text>
+<rect x="1256.9" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="1256.9" y="364" font-family="monospace" font-size="9" transform="rotate(65 1256.9,364)">layout_fp16_m128n128k16_</text>
+<rect x="1294.8" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="1294.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 1294.8,364)">layout_bf16_m128n256k16_</text>
+<rect x="1332.8" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="1332.8" y="364" font-family="monospace" font-size="9" transform="rotate(65 1332.8,364)">layout_fp16_m128n256k16_</text>
+<rect x="1370.7" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="1370.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 1370.7,364)">layout_bf16_m128n64k16_s</text>
+<rect x="1408.7" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="1408.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 1408.7,364)">layout_bf16_m128n256k16_</text>
+<rect x="1446.7" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="1446.7" y="364" font-family="monospace" font-size="9" transform="rotate(65 1446.7,364)">layout_fp16_m128n64k16_s</text>
+<rect x="1484.6" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="1484.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 1484.6,364)">layout_bf16_m128n256k16_</text>
+<rect x="1522.6" y="30.0" width="28.6" height="320.0" fill="#2f6f73"/>
+<text x="1522.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 1522.6,364)">layout_bf16_m128n256k16_</text>
+<rect x="1560.6" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="1560.6" y="364" font-family="monospace" font-size="9" transform="rotate(65 1560.6,364)">layout_fp16_m128n128k16_</text>
+<rect x="1598.5" y="276.3" width="28.6" height="73.7" fill="#2f6f73"/>
+<text x="1598.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 1598.5,364)">layout_bf16_m128n64k16_s</text>
+<rect x="1636.5" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="1636.5" y="364" font-family="monospace" font-size="9" transform="rotate(65 1636.5,364)">layout_bf16_m128n64k16_s</text>
+<rect x="1674.4" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="1674.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 1674.4,364)">layout_fp16_m128n64k16_s</text>
+<rect x="1712.4" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="1712.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 1712.4,364)">layout_bf16_m128n128k16_</text>
+<rect x="1750.4" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="1750.4" y="364" font-family="monospace" font-size="9" transform="rotate(65 1750.4,364)">layout_bf16_m128n128k16_</text>
+<rect x="1788.3" y="197.9" width="28.6" height="152.1" fill="#2f6f73"/>
+<text x="1788.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 1788.3,364)">layout_fp16_m128n128k16_</text>
+<rect x="1826.3" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="1826.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 1826.3,364)">layout_fp16_m128n64k16_s</text>
+<rect x="1864.3" y="45.7" width="28.6" height="304.3" fill="#2f6f73"/>
+<text x="1864.3" y="364" font-family="monospace" font-size="9" transform="rotate(65 1864.3,364)">layout_bf16_m128n256k16_</text>
+<rect x="1902.2" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="1902.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 1902.2,364)">layout_fp16_m128n128k16_</text>
+<rect x="1940.2" y="55.3" width="28.6" height="294.7" fill="#2f6f73"/>
+<text x="1940.2" y="364" font-family="monospace" font-size="9" transform="rotate(65 1940.2,364)">layout_fp16_m128n256k16_</text>
+<rect x="1978.1" y="202.7" width="28.6" height="147.3" fill="#2f6f73"/>
+<text x="1978.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 1978.1,364)">layout_bf16_m128n128k16_</text>
+<rect x="2016.1" y="273.9" width="28.6" height="76.1" fill="#2f6f73"/>
+<text x="2016.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 2016.1,364)">layout_bf16_m128n64k16_s</text>
+<rect x="2054.1" y="270.0" width="28.6" height="80.0" fill="#2f6f73"/>
+<text x="2054.1" y="364" font-family="monospace" font-size="9" transform="rotate(65 2054.1,364)">layout_bf16_m128n64k16_s</text>
+<rect x="2092.0" y="190.0" width="28.6" height="160.0" fill="#2f6f73"/>
+<text x="2092.0" y="364" font-family="monospace" font-size="9" transform="rotate(65 2092.0,364)">layout_fp16_m128n128k16_</text>
+<text x="10" y="50" font-family="monospace" font-size="12">max tflops=39.940</text>
+</svg>
