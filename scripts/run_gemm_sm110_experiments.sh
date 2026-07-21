@@ -21,7 +21,7 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 
 case "${GEMM_SUITE}" in
   all|core|unstable|nvfp4|references|stage0|stage1|stage2|stage3|stage4|stage5|stage6|\
-  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5h|tc5n|tc6) ;;
+  cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6) ;;
   *)
     echo "Unknown GEMM_SUITE=${GEMM_SUITE}. Use all, core, unstable, nvfp4, references, stage0..stage6, or a concrete backend ID." >&2
     exit 1
@@ -140,13 +140,13 @@ build_gemm_sm110() {
 expand_suite_backends() {
   case "$1" in
     all)
-      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b tc5h tc5n tc6
+      printf '%s\n' cublas_tc cutlass tc0 tc1a tc1b tc2a tc2b tc3 tc4a tc4b tc4c tc5a tc5b tc5c tc5d tc5e tc5f tc5g tc5h tc5i tc5j tc6
       ;;
     core)
-      printf '%s\n' cublas_tc cutlass tc2a tc2b tc4a tc5h tc5n
+      printf '%s\n' cublas_tc cutlass tc2a tc2b tc4a tc5a tc5b
       ;;
     unstable)
-      printf '%s\n' cublas_tc tc3 tc4b tc4c tc5a
+      printf '%s\n' cublas_tc tc3 tc4b tc4c tc5c
       ;;
     nvfp4)
       printf '%s\n' cublas_tc tc6
@@ -170,7 +170,7 @@ expand_suite_backends() {
       printf '%s\n' cublas_tc tc4a tc4b tc4c
       ;;
     stage5)
-      printf '%s\n' cublas_tc tc5a tc5b tc5h tc5n
+      printf '%s\n' cublas_tc tc5a tc5b tc5c tc5d tc5e tc5f tc5g tc5h tc5i tc5j
       ;;
     stage6)
       printf '%s\n' cublas_tc tc6

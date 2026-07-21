@@ -1,481 +1,421 @@
 BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched,Trial
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00651424,643.867,1,1,1
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00563904,743.798,1,1,1
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00618176,678.497,0.903458,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618656,677.97,0.915947,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00617088,679.693,0.944099,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.006296,666.185,0.893469,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00625248,670.822,0.892676,1,1
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512426,81.852,0.110439,1,1
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512173,81.8924,0.107951,1,1
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00566304,740.645,1,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512048,81.9123,0.115127,1,1
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512058,81.9108,0.113725,1,1
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00584896,717.102,1,1,2
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00617056,679.728,0.902557,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00617408,679.341,0.95807,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619008,677.585,0.913462,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00620192,676.291,0.902791,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00621568,674.794,0.903933,1,2
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512253,81.8796,0.109833,1,2
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512006,81.919,0.110055,1,2
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00561664,746.764,1,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512211,81.8862,0.109374,1,2
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512122,81.9006,0.109486,1,2
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00561056,747.573,1,1,3
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00617312,679.446,0.913949,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0061904,677.55,0.969346,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00621664,674.69,0.903125,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619968,676.536,0.907556,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619552,676.99,0.905687,1,3
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0511949,81.9282,0.114743,1,3
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512032,81.9149,0.109468,1,3
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00563808,743.924,1,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512198,81.8883,0.109695,1,3
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512486,81.8422,0.108285,1,3
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00552064,759.75,1,1,4
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00617216,679.552,0.917099,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00617888,678.813,0.912528,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0061984,676.675,0.920392,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0062048,675.977,0.907375,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00621472,674.898,0.903043,1,4
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512432,81.8509,0.109676,1,4
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512141,81.8975,0.110551,1,4
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00562784,745.278,1,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512074,81.9082,0.110259,1,4
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512147,81.8965,0.109918,1,4
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00560736,748,1,1,5
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00620256,676.221,0.916318,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618528,678.111,0.909721,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00621024,675.385,0.899933,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619456,677.095,1.01953,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618432,678.216,0.893201,1,5
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512077,81.9077,0.109196,1,5
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512198,81.8883,0.108383,1,5
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00561952,746.381,1,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0511955,81.9272,0.108991,1,5
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512134,81.8985,0.109471,1,5
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.005624,745.787,1,1,6
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00617536,679.2,0.911441,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619328,677.235,0.907823,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618464,678.181,0.920008,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0062112,675.281,0.906286,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619392,677.165,0.94844,1,6
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512051,81.9118,0.11042,1,6
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512035,81.9144,0.110599,1,6
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00554848,755.938,1,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512141,81.8975,0.108795,1,6
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512259,81.8786,0.109832,1,6
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00823712,509.195,1,1,7
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.0061776,678.954,0.936131,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0062816,667.713,0.897351,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00629792,665.982,0.891215,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00622784,673.477,0.903864,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0062144,674.933,1.00767,1,7
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.051223,81.8832,0.109076,1,7
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512042,81.9133,0.110722,1,7
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00561344,747.19,1,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.051216,81.8944,0.110303,1,7
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512166,81.8934,0.109683,1,7
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00563712,744.051,1,1,8
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.00619168,677.41,0.903509,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618336,678.321,0.932671,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00622048,674.273,0.909563,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00625728,670.308,0.889997,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00627936,667.951,0.897009,1,8
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512115,81.9016,0.112487,1,8
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512134,81.8985,0.110983,1,8
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00562816,745.235,1,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512166,81.8934,0.110002,1,8
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.051223,81.8832,0.109819,1,8
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00558784,750.613,1,1,9
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.006168,680.01,0.912944,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619072,677.515,0.902667,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00619136,677.445,0.912239,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00620672,675.768,0.908383,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00618848,677.76,0.959564,1,9
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512147,81.8965,0.109262,1,9
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512147,81.8965,0.110693,1,9
-cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.00565984,741.064,1,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512202,81.8878,0.109207,1,9
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512074,81.9082,0.111503,1,9
+cublas_tc,cuBLAS Tensor Core,128,fp16->fp32,cuBLAS Tensor Core,0.0056976,736.153,1,1,10
 cutlass,CUTLASS official Blackwell auto schedule unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,128,fp16->fp32,cuBLAS Tensor Core,0.0061872,677.9,0.907577,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0061984,676.675,0.897625,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00622176,674.135,0.940338,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.00621504,674.864,0.900113,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,128,fp16->fp32,cuBLAS Tensor Core,0.0061936,677.2,0.989822,1,10
 tc4a,warp-specialized TMA/TCGen05 pipeline unavailable,128,fp16->fp32,cuBLAS Tensor Core,0,0,0,0,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512198,81.8883,0.110788,1,10
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512083,81.9067,0.112532,1,10
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00558624,6006.62,1,1,1
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824192,4071.19,0.678366,1,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144022,2329.81,0.401582,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00823872,4072.77,0.677426,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00824672,4068.82,0.695433,1,1
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00826304,4060.79,0.677213,1,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00834496,4020.92,0.665772,1,1
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.0082192,4082.44,0.680008,1,1
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00554272,6053.78,1,1,2
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.0082416,4071.35,0.687944,1,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144611,2320.32,0.385851,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082192,4082.44,0.675608,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00824736,4068.51,0.690801,1,2
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00823776,4073.25,0.675174,1,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00826112,4061.73,0.692787,1,2
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00826208,4061.26,0.676556,1,2
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00553696,6060.08,1,1,3
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00815616,4114,0.686755,1,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144064,2329.13,0.427477,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00823552,4074.36,0.677611,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082176,4083.24,0.671924,1,3
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0082752,4054.82,0.676643,1,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822368,4080.22,0.674229,1,3
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824128,4071.51,0.674497,1,3
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00553248,6064.99,1,1,4
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823168,4076.26,0.685624,1,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144294,2325.41,0.446731,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821984,4082.13,0.696033,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821216,4085.94,0.694658,1,4
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00822336,4080.38,0.679041,1,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822688,4078.63,0.705901,1,4
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823904,4072.61,0.689129,1,4
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00565984,5928.51,1,1,5
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00813632,4124.03,0.682412,1,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0143923,2331.41,0.387562,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.008224,4080.06,0.688444,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821568,4084.19,0.671964,1,5
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0082208,4081.65,0.686181,1,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00828,4052.47,0.686802,1,5
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00830752,4039.04,0.676091,1,5
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00568032,5907.14,1,1,6
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823904,4072.61,0.676506,1,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0143978,2330.53,0.392772,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821472,4084.67,0.681041,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.008232,4076.1,0.690534,1,6
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00825824,4063.15,0.683225,1,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.008256,4064.25,0.696938,1,6
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823264,4075.78,0.680414,1,6
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00561728,5973.43,1,1,7
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823904,4072.61,0.713481,1,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0143888,2331.98,0.389058,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822144,4081.33,0.680367,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822144,4081.33,0.699634,1,7
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00832768,4029.26,0.67284,1,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00828192,4051.53,0.682277,1,7
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00826336,4060.63,0.714015,1,7
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00559488,5997.35,1,1,8
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823744,4073.41,0.676521,1,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144051,2329.34,0.399769,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822144,4081.33,0.677876,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.008328,4029.11,0.691719,1,8
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00827968,4052.62,0.69707,1,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822688,4078.63,0.685908,1,8
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823584,4074.2,0.697789,1,8
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.0055792,6014.2,1,1,9
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00821376,4085.15,0.679367,1,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0143926,2331.36,0.390066,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821376,4085.15,0.680536,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822144,4081.33,0.687335,1,9
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00824512,4069.61,0.679849,1,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00825024,4067.09,0.675045,1,9
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00831008,4037.8,0.676345,1,9
-cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00564096,5948.35,1,1,10
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824576,4069.29,0.681659,1,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,256,fp16->fp32,cuBLAS Tensor Core,0.0144086,2328.77,0.403558,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822304,4080.54,0.679145,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822464,4079.74,0.683254,1,10
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0083056,4039.98,0.677211,1,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824608,4069.14,0.673755,1,10
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822432,4079.9,0.69472,1,10
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.0058112,46192.8,1,1,1
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00834528,32166.1,0.683193,1,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0948077,2831.37,0.0629384,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0124048,21639.6,0.461421,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123907,21664.2,0.544072,1,1
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102746,26126.2,0.5574,1,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102832,26104.3,0.563716,1,1
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102902,26086.4,0.555307,1,1
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00606048,44292.8,1,1,2
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0083504,32146.4,0.686338,1,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0949978,2825.7,0.0603197,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.012351,21733.8,0.461253,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123242,21781.2,0.460026,1,2
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0103456,25946.8,0.554593,1,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102848,26100.2,0.560485,1,2
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0103507,25934,0.573209,1,2
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00575936,46608.6,1,1,3
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082672,32469.9,0.712483,1,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0944624,2841.72,0.0610444,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123254,21779,0.460913,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123162,21795.4,0.46786,1,3
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.010287,26094.5,0.560488,1,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102608,26161.3,0.556931,1,3
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102755,26123.8,0.553673,1,3
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00577344,46494.9,1,1,4
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082976,32351,0.691631,1,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0943875,2843.97,0.0604148,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123309,21769.4,0.455831,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123578,21722,0.735719,1,4
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102934,26078.3,0.55302,1,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102739,26127.9,0.554071,1,4
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.010272,26132.7,0.557259,1,4
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00570944,47016.1,1,1,5
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00824352,32563.2,0.709445,1,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0951206,2822.05,0.0719524,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123232,21782.9,0.470527,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123158,21796,0.467768,1,5
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102854,26098.6,0.54365,1,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102858,26097.8,0.549109,1,5
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102758,26123,0.555151,1,5
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00567968,47262.4,1,1,6
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082576,32507.7,0.694633,1,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0960448,2794.9,0.0586493,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123216,21785.8,0.466225,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0122966,21830,0.460718,1,6
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.010337,25968.5,0.555304,1,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102608,26161.3,0.563106,1,6
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102717,26133.5,0.55198,1,6
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00567584,47294.4,1,1,7
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00828,32419.7,0.686068,1,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0949878,2826,0.0609526,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123238,21781.8,0.46518,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.012328,21774.5,0.464192,1,7
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102861,26097,0.552109,1,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102723,26131.9,0.556494,1,7
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102829,26105.1,0.558318,1,7
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.005784,46410,1,1,8
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00826848,32464.9,0.684198,1,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0948541,2829.98,0.0601109,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123149,21797.7,0.471832,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123178,21792.6,0.463175,1,8
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102678,26143.3,0.572693,1,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102768,26120.5,0.55952,1,8
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.010281,26110,0.557956,1,8
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.005792,46345.9,1,1,9
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00826848,32464.9,0.691358,1,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0949322,2827.66,0.0599198,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0122976,21828.3,0.469711,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123005,21823.2,0.462863,1,9
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0103328,25979,0.550697,1,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0111843,24001.1,0.528311,1,9
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102957,26072.6,0.556194,1,9
-cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00574336,46738.4,1,1,10
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082656,32476.2,0.695044,1,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,512,fp16->fp32,cuBLAS Tensor Core,0.0951843,2820.16,0.0604772,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0122982,21827.1,0.471716,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.01232,21788.6,0.468416,1,10
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0103213,26008,0.545297,1,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0103149,26024.1,0.560526,1,10
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102848,26100.2,0.572838,1,10
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208669,102913,1,1,1
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204906,104804,1.02347,1,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600511,3576.09,0.0348199,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0606595,35402.3,0.344944,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0608746,35277.2,0.343668,1,1
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307584,69817.8,0.678974,1,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.024584,87352.9,0.854488,1,1
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225562,95206.1,0.923349,1,1
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208906,102797,1,1,2
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.01893,1,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.601454,3570.48,0.0347111,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0604045,35551.7,0.345977,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607123,35371.5,0.343791,1,2
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030751,69834.5,0.678346,1,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.024584,87352.9,0.852288,1,2
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225664,95162.9,0.923681,1,2
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208842,102828,1,1,3
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204899,104807,1.02079,1,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600318,3577.24,0.0348109,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060352,35582.6,0.34658,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060608,35432.3,0.345586,1,3
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030759,69816.3,0.681124,1,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245741,87388.2,0.851603,1,3
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.022567,95160.2,0.924605,1,3
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0209264,102621,1,1,4
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204902,104805,1.01734,1,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.59955,3581.83,0.035552,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0601373,35709.7,0.347663,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0609571,35229.4,0.342436,1,4
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307594,69815.6,0.679837,1,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245734,87390.4,0.849268,1,4
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225667,95161.5,0.92554,1,4
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208829,102835,1,1,5
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.02,1,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.60127,3571.58,0.0347196,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0604358,35533.3,0.346009,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0608026,35319,0.343138,1,5
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307587,69817.1,0.679123,1,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245715,87397.3,0.851288,1,5
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.022567,95160.2,0.926831,1,5
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208448,103023,1,1,6
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.01859,1,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600185,3578.04,0.0347242,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607722,35336.6,0.345179,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060721,35366.4,0.344806,1,6
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030759,69816.3,0.68024,1,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245933,87319.9,0.848856,1,6
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225571,95202,0.92355,1,6
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208698,102899,1,1,7
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204893,104810,1.01974,1,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600512,3576.09,0.0347554,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0604858,35504,0.354596,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0606387,35414.4,0.344202,1,7
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030759,69816.3,0.678565,1,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245744,87387,0.851748,1,7
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225565,95204.7,0.926343,1,7
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208605,102945,1,1,8
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205104,104702,1.01992,1,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.601016,3573.09,0.0349871,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0602298,35654.9,0.347283,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607318,35360.1,0.345429,1,8
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307693,69793.1,0.678849,1,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245846,87350.6,0.85086,1,8
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225571,95202,0.923863,1,8
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208902,102798,1,1,9
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.020511,104699,1.01807,1,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600543,3575.9,0.0347499,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607414,35354.5,0.343984,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0600646,35752.9,0.347119,1,9
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307581,69818.5,0.677441,1,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245738,87389.3,0.848971,1,9
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225562,95206.1,0.923405,1,9
-cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0209341,102583,1,1,10
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.02048,104858,1.02081,1,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,1024,fp16->fp32,cuBLAS Tensor Core,0.600451,3576.45,0.0346417,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0602502,35642.7,0.346135,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0606701,35396.1,0.344257,1,10
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307587,69817.1,0.678863,1,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0246045,87280.2,0.847456,1,10
-tc5n,tc5n hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225776,95115.7,0.925165,1,10
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131671,130476,1,1,1
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.114945,149461,1.13819,1,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60605,3729.85,0.0284464,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345874,49670.9,0.379703,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346468,49585.7,0.381719,1,1
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178972,95991.7,0.738244,1,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.141843,121119,0.925775,1,1
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143143,120019,0.921855,1,1
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131684,130463,1,1,2
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.116983,146858,1.1344,1,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.6066,3729.41,0.0286188,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345853,49673.9,0.379056,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346499,49581.3,0.377593,1,2
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.181441,94685.7,0.720292,1,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143962,119336,0.911993,1,2
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143102,120053,0.914026,1,2
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.132063,130088,1,1,3
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.11861,144843,1.10812,1,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60685,3729.2,0.0285691,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.34614,49632.7,0.378941,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346724,49549.1,0.379791,1,3
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178757,96107.3,0.737931,1,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142723,120372,0.929149,1,3
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142621,120458,0.927248,1,3
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.133571,128620,1,1,4
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.118567,144896,1.11345,1,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60908,3727.4,0.0285468,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346479,49584.2,0.378335,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346449,49588.5,0.379538,1,4
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178809,96079.3,0.744844,1,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14255,120518,0.918825,1,4
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143645,119600,0.913373,1,4
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131068,131076,1,1,5
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.116971,146873,1.12856,1,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60442,3731.17,0.0288267,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345967,49657.5,0.380544,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346858,49529.9,0.378934,1,5
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.177167,96969.7,0.743615,1,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142181,120831,0.916528,1,5
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14305,120097,0.922507,1,5
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131209,130936,1,1,6
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.12574,136630,1.04697,1,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60578,3730.07,0.0286991,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346295,49610.5,0.382106,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346438,49590.1,0.377878,1,6
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.179308,95812,0.731034,1,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14301,120131,0.91999,1,6
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14302,120122,0.913977,1,6
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131886,130263,1,1,7
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.115085,149280,1.14206,1,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60636,3729.6,0.0287649,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346206,49623.2,0.380727,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346468,49585.8,0.378034,1,7
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.177949,96543.9,0.739686,1,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.144065,119251,0.909263,1,7
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143624,119617,0.919254,1,7
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.134479,127751,1,1,8
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.122814,139885,1.07658,1,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60477,3730.88,0.0285093,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346222,49620.9,0.37944,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346407,49594.5,0.379183,1,8
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178336,96334.1,0.739353,1,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143419,119788,0.917351,1,8
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143901,119387,0.910161,1,8
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.13141,130735,1,1,9
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.118884,144509,1.1067,1,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60964,3726.95,0.0286568,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.348325,49321.4,0.377118,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346571,49571,0.377721,1,9
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.179752,95575.6,0.729513,1,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143147,120016,0.920173,1,9
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142693,120397,0.921972,1,9
-cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131693,130454,1,1,10
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.11569,148500,1.15247,1,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,2048,fp16->fp32,cuBLAS Tensor Core,4.60742,3728.74,0.028437,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345629,49706,0.379305,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346578,49570,0.380803,1,10
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178082,96471.9,0.743375,1,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142948,120182,0.921607,1,10
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143871,119412,0.913976,1,10
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.11225,65067.6,1,1,1
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.75835,49826.6,0.753677,1,1
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5187,3763.52,0.0580503,1,1
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.0517,33921.3,0.624863,1,1
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.00952,34278.1,0.517469,1,1
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.66704,37479.5,0.554932,1,1
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.17891,63077,0.95525,1,1
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.02083,68011.1,1.03969,1,1
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.08409,65946.8,1,1,2
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.7498,49981.5,0.771885,1,2
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5127,3764.14,0.0570348,1,2
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.96931,34625.4,0.5344,1,2
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.99344,34416.1,0.51339,1,2
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.68167,37330.6,0.597891,1,2
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.29185,59968.5,0.917623,1,2
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.13982,64229.3,0.987736,1,2
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.07133,66353,1,1,3
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.67441,51390.4,0.777484,1,3
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.4934,3766.13,0.0567112,1,3
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95839,34720.9,0.61462,1,3
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95979,34708.7,0.533759,1,3
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.70151,37130.5,0.565912,1,3
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.14726,64006.5,0.97503,1,3
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.12184,64773.5,0.984129,1,3
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.08027,66067.7,1,1,4
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.67982,51286.7,0.770178,1,4
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5106,3764.36,0.056289,1,4
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95266,34771.3,0.517789,1,4
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.9238,35027,0.533258,1,4
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.86679,35543.4,0.531052,1,4
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.1512,63889.4,0.958836,1,4
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.27492,60414.7,0.904842,1,4
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.08257,65994.7,1,1,5
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.70179,50869.6,0.750004,1,5
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5134,3764.07,0.0554761,1,5
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.04125,34009,0.62486,1,5
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.99152,34432.7,0.513874,1,5
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.70108,37134.8,0.568595,1,5
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.0601,66714.7,0.999244,1,5
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.24077,61335.7,0.933504,1,5
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.07084,66368.8,1,1,6
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.65207,51823.4,0.798718,1,6
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5103,3764.39,0.0585766,1,6
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.00397,34325.7,0.637032,1,6
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.98541,34485.6,0.539411,1,6
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.48648,39420.5,0.612843,1,6
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.10757,65211.9,1.02248,1,6
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.09528,65594.7,1.01584,1,6
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.15763,63699.1,1,1,7
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.7488,49999.5,0.772334,1,7
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5105,3764.37,0.0570534,1,7
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.97765,34552.8,0.62948,1,7
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95513,34749.6,0.539726,1,7
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.63177,37843.5,0.582501,1,7
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.17159,63289.6,0.987951,1,7
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.28243,60216.1,0.943863,1,7
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.12835,64575.4,1,1,8
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.69286,51038.2,0.776544,1,8
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5028,3765.16,0.0589141,1,8
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95973,34709.1,0.632355,1,8
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95078,34787.8,0.637219,1,8
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.70774,37068.2,0.561044,1,8
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.0795,66092.1,1.0532,1,8
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.07142,66350.1,1.00953,1,8
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.11682,64927.2,1,1,9
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.77889,49458.3,0.73732,1,9
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.4976,3765.7,0.0554999,1,9
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.07241,33748.8,0.51548,1,9
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.08203,33669.3,0.518246,1,9
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.72824,36864.3,0.54593,1,9
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.22947,61646.4,0.923822,1,9
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.11314,65040.1,0.976536,1,9
-cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.0622,66646.9,1,1,10
-cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.83473,48484,0.778436,1,10
-tc0,tc0 CUDA WMMA Tensor Core baseline,4096,fp16->fp32,cuBLAS Tensor Core,36.5236,3763.02,0.0562306,1,10
-tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.00968,34276.8,0.624417,1,10
-tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.05625,33883.3,0.524687,1,10
-tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.6888,37258.4,0.566193,1,10
-tc5h,tc5h overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.14662,64025.7,0.973853,1,10
-tc5n,tc5n hybrid fallback tc5h M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.37536,57860.2,0.887875,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512205,81.8872,0.109869,1,10
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,128,fp16->fp32,cuBLAS Tensor Core,0.0512131,81.899,0.108378,1,10
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00568832,5898.83,1,1,1
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823584,4074.2,0.678984,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821536,4084.35,0.684883,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821632,4083.88,0.672418,1,1
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00821984,4082.13,0.681862,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00828288,4051.06,0.681386,1,1
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00825696,4063.78,0.682905,1,1
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00559584,5996.32,1,1,2
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.008176,4104.02,0.678434,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082304,4076.89,0.677216,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822496,4079.59,0.689842,1,2
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0083088,4038.42,0.690545,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.008264,4060.31,0.682982,1,2
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824352,4070.4,0.699468,1,2
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00566752,5920.48,1,1,3
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00812928,4127.6,0.69123,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082192,4082.44,0.676893,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082272,4078.48,0.676507,1,3
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00826368,4060.47,0.891148,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824128,4071.51,0.677759,1,3
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822848,4077.84,0.678308,1,3
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00574368,5841.97,1,1,4
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00815776,4113.19,0.684972,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822528,4079.43,0.675926,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.008224,4080.06,0.699066,1,4
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00826944,4057.64,0.699946,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00834496,4020.92,0.774944,1,4
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00826144,4061.57,0.6885,1,4
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00557824,6015.24,1,1,5
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00816128,4111.42,0.685226,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082208,4081.65,0.679875,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822688,4078.63,0.703217,1,5
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0082624,4061.1,0.677459,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00833984,4023.39,0.659926,1,5
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00835712,4015.07,0.682838,1,5
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00555488,6040.53,1,1,6
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823904,4072.61,0.680662,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.0082128,4085.63,0.682486,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00830112,4042.16,0.675918,1,6
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00826272,4060.94,0.682894,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823936,4072.46,0.684131,1,6
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824736,4068.51,0.684243,1,6
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00568192,5905.47,1,1,7
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823936,4072.46,0.747126,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822176,4081.17,0.677422,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00823584,4074.2,0.683219,1,7
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00825056,4066.93,0.667261,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00824128,4071.51,0.673798,1,7
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00826464,4060,0.696209,1,7
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00569504,5891.87,1,1,8
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00809632,4144.41,0.691198,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822048,4081.81,0.675231,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822304,4080.54,0.685216,1,8
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00929856,3608.56,0.605788,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00830112,4042.16,0.669288,1,8
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823104,4076.57,0.675297,1,8
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00566944,5918.47,1,1,9
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822432,4079.9,0.680207,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822112,4081.49,0.677436,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822144,4081.33,0.678305,1,9
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.0082704,4057.17,0.677268,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00827616,4054.35,0.674284,1,9
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00831296,4036.4,0.688121,1,9
+cublas_tc,cuBLAS Tensor Core,256,fp16->fp32,cuBLAS Tensor Core,0.00559648,5995.63,1,1,10
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823712,4073.56,0.695583,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00822496,4079.59,0.680699,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,256,fp16->fp32,cuBLAS Tensor Core,0.00821728,4083.4,0.682893,1,10
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,256,fp16->fp32,cuBLAS Tensor Core,0.00824416,4070.09,0.706478,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00823328,4075.46,0.684442,1,10
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,256,fp16->fp32,cuBLAS Tensor Core,0.00822048,4081.81,0.680836,1,10
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00585504,45846.9,1,1,1
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00828032,32418.5,0.688669,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123251,21779.5,0.478165,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123021,21820.3,0.466133,1,1
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0103018,26057.2,0.552915,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102787,26115.7,0.555711,1,1
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102826,26105.9,0.55096,1,1
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00702144,38230.8,1,1,2
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00826144,32492.6,0.690127,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123053,21814.7,0.465231,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.012329,21772.8,0.459744,1,2
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.010271,26135.2,0.555909,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102742,26127,0.561311,1,2
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102787,26115.7,0.553594,1,2
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00587456,45694.6,1,1,3
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00828,32419.7,0.694995,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123194,21789.7,0.480415,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123261,21777.8,0.463953,1,3
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102816,26108.3,0.576471,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102758,26123,0.630107,1,3
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102733,26129.5,0.561052,1,3
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00572928,46853.3,1,1,4
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082608,32495.1,0.690141,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123264,21777.3,0.466848,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123267,21776.7,0.469328,1,4
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102736,26128.7,0.557234,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102621,26158,0.55206,1,4
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102736,26128.7,0.551534,1,4
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.0058528,45864.5,1,1,5
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00825376,32522.8,0.693018,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123213,21786.3,0.464108,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123258,21778.4,0.461343,1,5
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102947,26075.1,0.569022,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102835,26103.5,0.573873,1,5
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102758,26123,0.573244,1,5
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.0057328,46824.5,1,1,6
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00829984,32342.2,0.688746,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123197,21789.2,0.46009,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123286,21773.3,0.45716,1,6
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102979,26067,0.560051,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102938,26077.5,0.553594,1,6
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102746,26126.2,0.55114,1,6
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00572288,46905.7,1,1,7
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00826176,32491.3,0.685336,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123165,21794.8,0.472395,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123062,21813,0.467431,1,7
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.01028,26112.4,0.554335,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102768,26120.5,0.551175,1,7
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102797,26113.2,0.54906,1,7
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00589728,45518.5,1,1,8
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00826496,32478.7,0.691304,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.01232,21788.6,0.464156,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123194,21789.7,0.466596,1,8
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102861,26097,0.555905,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102762,26122.2,0.555414,1,8
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102714,26134.4,0.585738,1,8
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.0056752,47299.7,1,1,9
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.00827584,32436,0.689158,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123277,21775,0.472303,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.012328,21774.5,0.467774,1,9
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102694,26139.2,0.552786,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102858,26097.8,0.550384,1,9
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.010264,26153.1,0.558504,1,9
+cublas_tc,cuBLAS Tensor Core,512,fp16->fp32,cuBLAS Tensor Core,0.00636736,42158,1,1,10
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0082672,32469.9,0.688369,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.012327,21776.1,0.468278,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,512,fp16->fp32,cuBLAS Tensor Core,0.0123504,21735,0.470838,1,10
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,512,fp16->fp32,cuBLAS Tensor Core,0.0102778,26118.1,0.553179,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0102813,26109.1,0.560241,1,10
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,512,fp16->fp32,cuBLAS Tensor Core,0.0103085,26040.3,0.554355,1,10
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208858,102820,1,1,1
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204902,104805,1.02588,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0605878,35444.1,0.344713,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0606086,35432,0.344944,1,1
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307587,69817.1,0.679227,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.024584,87352.9,0.849919,1,1
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225667,95161.5,0.928121,1,1
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208752,102872,1,1,2
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205216,104645,1.01865,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060609,35431.8,0.344926,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607517,35348.5,0.344216,1,2
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307587,69817.1,0.679581,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245843,87351.8,0.84871,1,2
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225568,95203.4,0.929394,1,2
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208816,102841,1,1,3
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.02215,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0605978,35438.3,0.346078,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0610592,35170.5,0.352471,1,3
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307594,69815.6,0.678381,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.024585,87349.5,0.917673,1,3
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225664,95162.9,0.927595,1,3
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0209085,102709,1,1,4
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204902,104805,1.01848,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607523,35348.2,0.343859,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0605875,35444.3,0.345888,1,4
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0320067,67094.8,0.680107,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245731,87391.6,0.849488,1,4
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225568,95203.4,0.924925,1,4
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0209242,102632,1,1,5
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.02198,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0600659,35752.1,0.347698,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060895,35265.3,0.342869,1,5
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307587,69817.1,0.67827,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245738,87389.3,0.850064,1,5
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.022567,95160.2,0.924562,1,5
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.020961,102452,1,1,6
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204909,104802,1.01785,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0608333,35301.1,0.345337,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0605779,35449.9,0.34412,1,6
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030759,69816.3,0.679418,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245843,87351.8,0.847513,1,6
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225568,95203.4,0.925777,1,6
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0208605,102945,1,1,7
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205005,104753,1.01971,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607709,35337.4,0.343954,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060209,35667.2,0.347467,1,7
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307581,69818.5,0.678482,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245843,87351.8,0.850311,1,7
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225568,95203.4,0.925167,1,7
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.020913,102687,1,1,8
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205008,104751,1.01772,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0604147,35545.7,0.345579,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0608954,35265.1,0.342216,1,8
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307379,69864.3,0.679468,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245843,87351.8,0.851118,1,8
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.022567,95160.2,0.928604,1,8
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.020929,102608,1,1,9
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0204902,104805,1.01824,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0605782,35449.8,0.35257,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607414,35354.5,0.343373,1,9
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.0307594,69815.6,0.699375,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245738,87389.3,0.876512,1,9
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225674,95158.8,0.926251,1,9
+cublas_tc,cuBLAS Tensor Core,1024,fp16->fp32,cuBLAS Tensor Core,0.0209056,102723,1,1,10
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0205107,104701,1.0205,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.0607731,35336.1,0.343852,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,1024,fp16->fp32,cuBLAS Tensor Core,0.060455,35522,0.345492,1,10
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,1024,fp16->fp32,cuBLAS Tensor Core,0.030759,69816.3,0.678325,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0245738,87389.3,0.853997,1,10
+tc5b,tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM,1024,fp16->fp32,cuBLAS Tensor Core,0.0225536,95216.9,0.925922,1,10
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.132086,130065,1,1,1
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.118103,145465,1.12522,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345802,49681.2,0.379788,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.34653,49576.9,0.378481,1,1
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178614,96184.1,0.739472,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142958,120174,0.94551,1,1
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142475,120581,0.917731,1,1
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.132204,129949,1,1,2
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.117554,146145,1.12465,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345526,49720.9,0.381345,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346149,49631.5,0.381476,1,2
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.179162,95890.2,0.731432,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14353,119695,0.912104,1,2
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143469,119746,0.918158,1,2
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.133317,128865,1,1,3
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.121025,141953,1.08991,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346082,49641,0.379744,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346745,49546.1,0.378039,1,3
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178953,96002.3,0.733457,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142966,120167,0.918361,1,3
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142437,120614,0.927273,1,3
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.13138,130764,1,1,4
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.112014,153373,1.17078,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346232,49619.5,0.379465,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.348926,49236.4,0.377887,1,4
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.179751,95575.9,0.736662,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.146768,117055,0.897974,1,4
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143502,119719,0.925179,1,4
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.132568,129593,1,1,5
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.117369,146375,1.11937,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345413,49737.2,0.381381,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346571,49571.1,0.378636,1,5
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.177642,96710.9,0.742178,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14307,120080,0.914682,1,5
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142099,120901,0.920882,1,5
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.130645,131500,1,1,6
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.110775,155088,1.186,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345813,49679.6,0.383346,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346273,49613.7,0.38394,1,6
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178052,96488,0.736431,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143818,119455,0.915983,1,6
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143317,119873,0.918277,1,6
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131411,130734,1,1,7
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.125418,136981,1.04505,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346345,49603.3,0.384006,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346458,49587.1,0.380636,1,7
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.180252,95310,0.729752,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.14346,119753,0.916433,1,7
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143593,119643,0.921231,1,7
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.13194,130210,1,1,8
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.11666,147264,1.13139,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345412,49737.3,0.381016,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346673,49556.4,0.378458,1,8
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.177846,96599.5,0.740605,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143092,120062,0.921219,1,8
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143685,119566,0.91607,1,8
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131402,130743,1,1,9
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.118977,144397,1.10741,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346171,49628.2,0.384181,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346873,49527.8,0.380757,1,9
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.179881,95506.9,0.730997,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143737,119523,0.914302,1,9
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143727,119531,0.909435,1,9
+cublas_tc,cuBLAS Tensor Core,2048,fp16->fp32,cuBLAS Tensor Core,0.131252,130892,1,1,10
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.114922,149492,1.14263,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.345783,49684,0.383242,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,2048,fp16->fp32,cuBLAS Tensor Core,0.346765,49543.2,0.378642,1,10
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,2048,fp16->fp32,cuBLAS Tensor Core,0.178574,96206,0.739373,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.143716,119540,0.911793,1,10
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,2048,fp16->fp32,cuBLAS Tensor Core,0.142314,120718,0.926093,1,10
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.15505,63775.3,1,1,1
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.76993,49618.3,0.770346,1,1
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.91347,35119.5,0.525604,1,1
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.92797,34989.8,0.559058,1,1
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.60096,38167.4,0.58065,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.24064,61339,0.95577,1,1
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.03712,67467.2,1.03536,1,1
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.12176,64775.8,1,1,2
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.77194,49582.3,0.757951,1,2
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.91524,35103.6,0.524388,1,2
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95139,34782.4,0.530689,1,2
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.76211,36532.4,0.563285,1,2
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.12566,64657.1,1.0289,1,2
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.19319,62666.2,0.964947,1,2
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.13754,64297.7,1,1,3
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.78345,49377.3,0.753443,1,3
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.02469,34149,0.521192,1,3
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.98397,34498,0.528669,1,3
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.92207,35042.4,0.518466,1,3
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.16505,63480.7,0.943966,1,3
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.16708,63421.3,0.964854,1,3
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.13292,64436.9,1,1,4
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.67296,51418.3,0.820122,1,4
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.92869,34983.4,0.578239,1,4
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.90285,35215,0.566726,1,4
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.61151,38055.8,0.612859,1,4
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,1.99862,68766.9,1.07348,1,4
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.2056,62313.6,1.0081,1,4
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.1834,62947.1,1,1,5
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.7599,49798.5,0.771962,1,5
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.02148,34176.2,0.532787,1,5
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.97565,34570.2,0.516541,1,5
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.64139,37743.6,0.570092,1,5
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.09405,65633.1,0.997926,1,5
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.15445,63793,0.968117,1,5
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.10547,65276.9,1,1,6
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.86446,47980.7,0.721387,1,6
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.89046,35327.2,0.5228,1,6
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.93564,34921.6,0.534658,1,6
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.76084,36544.7,0.571676,1,6
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.07556,66217.6,1.00289,1,6
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.02965,67715.7,1.02112,1,6
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.12187,64772.5,1,1,7
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.73283,50291.8,0.767303,1,7
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.95937,34712.4,0.534841,1,7
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.98215,34513.8,0.522924,1,7
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.57685,38424.6,0.576554,1,7
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.39071,57488.7,0.867036,1,7
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.4863,55278.5,0.850328,1,7
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.06312,66617.1,1,1,8
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.72893,50363.7,0.752968,1,8
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.91429,35112.1,0.527649,1,8
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.88643,35363.8,0.52491,1,8
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.59035,38280.1,0.56964,1,8
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.16904,63364.1,0.949511,1,8
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.23633,61457.4,0.919088,1,8
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.07119,66357.6,1,1,9
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.71627,50598.4,0.787766,1,9
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.00152,34346.7,0.545932,1,9
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,4.01297,34248.7,0.542851,1,9
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.60677,38105.8,0.596965,1,9
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.22071,61889.7,0.955535,1,9
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.38209,57696.8,0.904802,1,9
+cublas_tc,cuBLAS Tensor Core,4096,fp16->fp32,cuBLAS Tensor Core,2.16892,63367.3,1,1,10
+cutlass,CUTLASS official Blackwell auto-schedule GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.85372,48161.3,0.730136,1,10
+tc2a,tc2a 2D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.96523,34661,0.536032,1,10
+tc2b,tc2b 3D TMA SW128-SMEM TCGen05,4096,fp16->fp32,cuBLAS Tensor Core,3.89627,35274.5,0.535179,1,10
+tc4a,tc4a warp-specialized TMA/TCGen05 pipeline,4096,fp16->fp32,cuBLAS Tensor Core,3.70187,37126.9,0.584949,1,10
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.37383,57897.5,0.909019,1,10
+tc5b,tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLAS Tensor Core,2.19345,62658.8,0.969583,1,10

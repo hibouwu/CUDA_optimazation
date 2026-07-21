@@ -72,8 +72,14 @@ KEY_GEMM_TENSOR_CORE_SERIES = [
     "tc4c",
     "tc5a",
     "tc5b",
+    "tc5c",
+    "tc5d",
+    "tc5e",
+    "tc5f",
+    "tc5g",
     "tc5h",
-    "tc5n",
+    "tc5i",
+    "tc5j",
     "tc6",
 ]
 
@@ -83,8 +89,8 @@ SM110_PERFORMANCE_SERIES = [
     "tc2a",
     "tc2b",
     "tc4a",
-    "tc5h",
-    "tc5n",
+    "tc5a",
+    "tc5b",
 ]
 
 KEY_GEMM_SERIES = KEY_GEMM_FP32_SERIES + KEY_GEMM_TENSOR_CORE_SERIES
@@ -129,9 +135,16 @@ SERIES_LABELS = {
     "tc4a": "tc4a SM110 warp-specialized TCGen05 pipeline",
     "tc4b": "tc4b SM110 2-SM cluster TCGen05 pipeline",
     "tc4c": "tc4c SM110 warp-specialized 2-SM cluster pipeline",
-    "tc5a": "tc5a SM110 static persistent scheduler",
-    "tc5b": "tc5b SM110 software dynamic persistent scheduler",
-    "tc5h": "tc5h SM110 overlapped epilogue scheduler",
+    "tc5a": "tc5a SM110 overlapped epilogue scheduler",
+    "tc5b": "tc5b SM110 hybrid 2-SM overlap + tc5a fallback",
+    "tc5c": "tc5c SM110 static persistent scheduler",
+    "tc5d": "tc5d SM110 M128N128K128 persistent scheduler",
+    "tc5e": "tc5e SM110 M128N256K64 persistent scheduler",
+    "tc5f": "tc5f SM110 M128N128K64 persistent scheduler",
+    "tc5g": "tc5g SM110 M128N256K128 stage1 scheduler",
+    "tc5h": "tc5h SM110 M128N256K64 stage1 scheduler",
+    "tc5i": "tc5i SM110 M128N128K64 overlap scheduler",
+    "tc5j": "tc5j SM110 M128N256K128 overlap scheduler",
     "tc6": "tc6 SM110 fused NVFP4 epilogue",
 }
 
@@ -146,10 +159,16 @@ SM110_SERIES_LABELS = {
     "tc4a": "tc4a warp-specialized pipeline",
     "tc4b": "tc4b 2-SM cluster pipeline",
     "tc4c": "tc4c warp-specialized 2-SM cluster pipeline",
-    "tc5a": "tc5a static persistent scheduler",
-    "tc5b": "tc5b software dynamic persistent scheduler",
-    "tc5h": "tc5h overlapped epilogue M128N256K64",
-    "tc5n": "tc5n hybrid 2-SM overlap + tc5h fallback",
+    "tc5a": "tc5a overlapped epilogue M128N256K64",
+    "tc5b": "tc5b hybrid 2-SM overlap + tc5a fallback",
+    "tc5c": "tc5c static persistent scheduler",
+    "tc5d": "tc5d M128N128K128 persistent",
+    "tc5e": "tc5e M128N256K64 persistent",
+    "tc5f": "tc5f M128N128K64 persistent",
+    "tc5g": "tc5g M128N256K128 stage1",
+    "tc5h": "tc5h M128N256K64 stage1",
+    "tc5i": "tc5i overlapped epilogue M128N128K64",
+    "tc5j": "tc5j overlapped epilogue M128N256K128",
     "tc6": "tc6 fused NVFP4 epilogue",
 }
 
@@ -204,8 +223,14 @@ def backend_key(row):
         "tc4c",
         "tc5a",
         "tc5b",
+        "tc5c",
+        "tc5d",
+        "tc5e",
+        "tc5f",
+        "tc5g",
         "tc5h",
-        "tc5n",
+        "tc5i",
+        "tc5j",
         "tc6",
     ):
         if version.startswith(prefix + " "):

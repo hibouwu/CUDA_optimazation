@@ -4,8 +4,9 @@
 > **路径**：tcgen05/TMEM（非 SM120 的 `mma.sync.aligned.kind::f8f6f4` 路径）  
 > **当前状态**：FP32 主报告集合已整理为 `GEMM_SUITE=core`，覆盖
 > `128 256 512 1024 2048 4096`，每个尺寸 10 轮。1024 方阵的稳定推荐
-> 是 `tc5n`，10 轮平均达到同进程 cuBLAS Tensor Core 的 0.931x；
-> 2048 方阵的稳定推荐是 `tc5h`，10 轮平均达到 0.914x、最小 0.902x。
+> 是 `tc5b`，10 轮平均达到同进程 cuBLAS Tensor Core 的 0.927x；
+> 2048 方阵的推荐 fast path 是 `tc5a`，10 轮平均达到 0.917x，
+> 但本轮最低单轮为 0.898x。
 > `tc6` 输出 NVFP4，不再混入 FP32 主图，改由 `GEMM_SUITE=nvfp4`
 > 单独复测。所有有效 FP32 结果都以 cuBLAS Tensor Core 输出为参考。
 
@@ -75,52 +76,54 @@ leader CTA 发 `tcgen05.mma.cta_group::2`，两个 CTA 各自从 TMEM 读回
 512 column capacity 申请和释放。这个路径已经通过 finite-input
 correctness。去掉每个 K tile 的 cluster-wide sync 后，`tc4c` 明显快于
 旧 2-SM raw 路径，但在 1024/2048 上因为 cluster tile 数较少且没有
-overlapped epilogue，仍不能替代 1024 的 hybrid `tc5n` 路径或 2048 的
-`tc5h` 路径。
+overlapped epilogue，仍不能替代 1024 的 hybrid `tc5b` 路径或 2048 的
+`tc5a` 路径。
 
 ### 阶段 5：persistent scheduling
 
 | Backend | 实验变量 | 目的 |
 | --- | --- | --- |
-| `tc5a` | `tc4a` 计算路径 + resident persistent workers + static grid stride | 静态 persistent 调度 |
-| `tc5b` | `tc5a` 的计算路径 + software dynamic work queue | 动态领取 tile 的实验路径；当前暂停计入有效结果 |
-| `tc5c/tc5d/tc5e` | `tc5a` 主循环的 TileN/TileK tuning 变体 | 隔离小尺寸 tile 数、resident CTA 和 TMA/wait 开销 |
-| `tc5f/tc5g` | stage1 tuning 变体 | 验证少 stage 换更多 resident CTA 是否值得；实测不占优 |
-| `tc5h` | 6-warp、4-stage、双 TMEM buffer、overlapped epilogue | 2048+ 推荐 FP32 fallback |
-| `tc5i/tc5j` | `tc5h` 的 N128/K128 tuning 变体 | 验证 tile shape 对 1024/2048 的影响 |
-| `tc5k` | M64 overlap 实验 | 当前暂停；已能 matched=1，但 M64 panel epilogue 性能不占优 |
-| `tc5n` | 1024 专用 2-SM overlapped cluster path + `tc5h` fallback | 1024 推荐 FP32 backend |
+| `tc5a` | 6-warp、4-stage、双 TMEM buffer、overlapped epilogue | 2048+ 推荐 FP32 fallback，进入主图 |
+| `tc5b` | 1024 专用 2-SM overlapped cluster path + `tc5a` fallback | 1024 推荐 FP32 backend，进入主图 |
+| `tc5c` | `tc4a` 计算路径 + resident persistent workers + static grid stride | 静态 persistent 调度 |
+| `tc5d/tc5e/tc5f` | `tc5c` 主循环的 TileN/TileK tuning 变体 | 隔离小尺寸 tile 数、resident CTA 和 TMA/wait 开销 |
+| `tc5g/tc5h` | stage1 tuning 变体 | 验证少 stage 换更多 resident CTA 是否值得；实测不占优 |
+| `tc5i/tc5j` | `tc5a` 的 N128/K128 tuning 变体 | 验证 tile shape 对 1024/2048 的影响 |
 
-`tc5a/tc5b` 不依赖 2-SM `cta_group::2` 路径，而是复用已经通过
-finite-input correctness 的 `tc4a` 1-SM mainloop。这样阶段 5 先把
-persistent 调度做成可验证实现；2-SM 路径作为 stage4 对照单独评估，
-不混入 `tc5a` 的静态 persistent 结论。
+`tc5` 公开列表按主图优先排序：进入 `GEMM_SUITE=core` 主图的
+`tc5a/tc5b` 放在最前；不进入主图、只用于调参或阶段解释的
+`tc5c/tc5d/tc5e/tc5f/tc5g/tc5h/tc5i/tc5j` 放在后面。它们不依赖
+2-SM `cta_group::2` 路径作为基础，而是先复用已经通过 finite-input
+correctness 的 `tc4a` 1-SM mainloop；2-SM 路径作为 stage4 对照单独评估，
+不混入 `tc5c` 的静态 persistent 结论。
 
-当前 FP32 性能推荐按尺寸区分：1024 方阵推荐 `tc5n`，2048 方阵推荐
-`tc5h`。`tc5n` 在 1024 走 2-SM `M256N256K128` cluster path，并让每个
+命名整理后，旧文档和旧图里的 `tc5h` 对应现在的 `tc5a`，旧 `tc5n`
+对应现在的 `tc5b`；原来的 static persistent `tc5a` 后移为 `tc5c`，
+其它不进入主图的调参版本按顺序后移。
+
+当前 FP32 性能推荐按尺寸区分：1024 方阵推荐 `tc5b`，2048 方阵推荐
+`tc5a`。`tc5b` 在 1024 走 2-SM `M256N256K128` cluster path，并让每个
 persistent cluster 最多处理两个 output tile，使 tile0 的 epilogue 和
-tile1 的 mainloop 重叠；其它尺寸虽然会回退到 `tc5h`，但主报告按
-实测稳定性把 2048 的推荐线直接写成 `tc5h`。`tc5h` 在 `tc5a` 的 raw
+tile1 的 mainloop 重叠；其它尺寸虽然会回退到 `tc5a`，但主报告按
+实测稳定性把 2048 的推荐线直接写成 `tc5a`。`tc5a` 在 `tc5c` 的 raw
 TCGen05/TMA 基础上增加 6-warp 分工：4 个 epilogue warp、1 个 TMA
 warp、1 个 MMA warp；同时使用双 TMEM accumulator buffer，让上一个
 tile 的 TMEM readback/GMEM store 与下一个 tile 的 mainloop 重叠。
 FP32 store 使用 `st.global.L1::no_allocate.L2::evict_first.v8.f32`，
 避免旧的两个 `float4` store 成为 1024/2048 的主要尾部成本。
-`tc5b` 保留为“动态 persistent 调度是否值得”的源码实验；在 `4096`
-复测中出现过 timeout，主 benchmark 暂停把它计入有效结果。
 
 `tc4b/tc4c` 的 2-SM accumulator ownership 已重新验证：2SM
 `cta_group::2` 的 CTA 分区不能按 N 方向左右切输出，而是每个 CTA
 负责本 CTA 的 M half，并通过 B 的 N half 分区共同形成完整 N 输出。
 因此它们保留为 stage4/`GEMM_SUITE=unstable` 对照，但不进入
 `GEMM_SUITE=core` 主报告集合。当前 FP32 推荐按尺寸区分：1024 方阵
-用 `tc5n`，2048 方阵用 `tc5h`。
+用 `tc5b`，2048 方阵用 `tc5a`。
 
 ### 阶段 6：fused NVFP4 epilogue
 
 | Backend | 实验变量 | 目的 |
 | --- | --- | --- |
-| `tc6` | `tc5a` 同款 resident persistent mainloop + fused NVFP4 store | 在 TMEM readback 阶段直接输出 packed E2M1 和 E4M3 block scale |
+| `tc6` | `tc5c` 同款 resident persistent mainloop + fused NVFP4 store | 在 TMEM readback 阶段直接输出 packed E2M1 和 E4M3 block scale |
 
 ### 性能 reference
 
@@ -140,15 +143,13 @@ FP32 store 使用 `st.global.L1::no_allocate.L2::evict_first.v8.f32`，
 | `tc3` | 已实现；自有 raw CUDA/inline-PTX，固定 128×128×64、2-stage、2D TMA SW128 pipeline |
 | `tc4a` | 已实现；raw CUDA/inline-PTX，固定 128×256×128、2-stage，warp0 MMA consumer、warp1 TMA producer |
 | `tc4b`、`tc4c` | 已验证；raw inline-PTX 2-SM `cta_group::2`，固定 256×256×128 cluster tile |
-| `tc5a` | 已验证；`tc4a` 计算路径 + resident static persistent scheduler |
-| `tc5b` | 暂停计入结果；software dynamic work queue 在 4096 复测中出现 timeout |
-| `tc5c/tc5d/tc5e` | 已验证；`tc5a` 的 M128N128/N256、K64/K128 tuning 变体 |
-| `tc5f/tc5g` | 已验证；stage1 tuning 变体，性能不占优 |
-| `tc5h` | 已验证；6-warp 4-stage M128N256K64 + 双 TMEM buffer + overlapped epilogue，2048+ fallback |
-| `tc5i/tc5j` | 已验证；`tc5h` 的 N128/K128 tuning 变体，性能不占优 |
-| `tc5k` | 暂停计入结果；M64 TCGen05/TMEM layout 已可 matched=1，但 epilogue 性能不占优，主 benchmark 标为 unavailable |
-| `tc5n` | 已验证；1024 专用 2-SM overlapped cluster path + `tc5h` fallback，1024 推荐 |
-| `tc6` | 已验证；复用 `tc5a` 的 128×256×128 resident persistent TCGen05 mainloop，TMEM readback 直接写 packed NVFP4 |
+| `tc5a` | 已验证；6-warp 4-stage M128N256K64 + 双 TMEM buffer + overlapped epilogue，2048+ fallback |
+| `tc5b` | 已验证；1024 专用 2-SM overlapped cluster path + `tc5a` fallback，1024 推荐 |
+| `tc5c` | 已验证；`tc4a` 计算路径 + resident static persistent scheduler |
+| `tc5d/tc5e/tc5f` | 已验证；`tc5c` 的 M128N128/N256、K64/K128 tuning 变体 |
+| `tc5g/tc5h` | 已验证；stage1 tuning 变体，性能不占优 |
+| `tc5i/tc5j` | 已验证；`tc5a` 的 N128/K128 tuning 变体，性能不占优 |
+| `tc6` | 已验证；复用 `tc5c` 的 128×256×128 resident persistent TCGen05 mainloop，TMEM readback 直接写 packed NVFP4 |
 
 本轮修正了 benchmark 输入生成中的无符号下溢问题：原先
 `(i % 17) - 8` 在 `size_t` 上会先发生 unsigned wrap，可能生成
@@ -178,13 +179,13 @@ benchmark 入口支持两种问题规模：
 - `./build/gemm_sm110_bench N backend`：方阵 `M=N=K`。
 - `./build/gemm_sm110_bench M N K backend`：矩形 GEMM。
 
-当前边界处理在 `tc5a/tc5b/tc5h/tc5n/tc6` 上保留为有效路径。`tc5a/tc5b`
-的完整 tile fast path 要求存在 `128x256x128` 整 tile；`tc5h` 的
+当前边界处理在 `tc5c/tc5a/tc5b/tc6` 上保留为有效路径。`tc5c`
+的完整 tile fast path 要求存在 `128x256x128` 整 tile；`tc5a` 的
 完整 tile fast path 是 `128x256x64`。这些 raw SW128 TMA fast path 还要求
 原始 K leading dimension 满足 64 个 half 的对齐；否则不创建 TMA descriptor，
 直接切到 CUDA cleanup kernel 做完整 correctness fallback。K tail、M/N
-边界和小矩阵也由 cleanup 补齐。`tc5n` 在精确 `1024x1024x1024` 时走
-2-SM overlapped cluster path，其它 shape 复用 `tc5h`。
+边界和小矩阵也由 cleanup 补齐。`tc5b` 在精确 `1024x1024x1024` 时走
+2-SM overlapped cluster path，其它 shape 复用 `tc5a`。
 
 `tc6` 的完整 tile fast path 要求 `M%128==0`、`N%256==0`、`K%128==0` 且
 `N%16==0`，对应 128×256×128 raw TMA + TCGen05 + fused NVFP4 epilogue。
@@ -205,7 +206,7 @@ readback 阶段直接完成 NVFP4 store。现有
 - 把两个 FP32 accumulator 按 tensor scale 和 block scale 转为 packed
   E2M1：`sm110_requant_nvfp4_e2m1x2`。
 
-当前实现复用已验证的 `tc5a` resident persistent mainloop：warp0 发
+当前实现复用已验证的 `tc5c` resident persistent mainloop：warp0 发
 MMA，warp1 发 TMA，所有 128 个线程按行读取 TMEM accumulator。每
 16 个连续 row-major 输出生成一个 `uint8` E4M3 block scale，每两个
 E2M1 输出 packed 到一个 `uint8` value buffer。整 tile fast path 在
@@ -236,89 +237,74 @@ reference 口径。
 unsigned wrap 输入和混合 trial，不能再作为结论引用。
 
 `M=N=K=1024` 主要用于快速 correctness smoke。这个规模的 tile 数少，
-TMA、TMEM 分配/回读、barrier 和 kernel 固定开销占比高；因此 `tc5n`
+TMA、TMEM 分配/回读、barrier 和 kernel 固定开销占比高；因此 `tc5b`
 在这个尺寸专门选择 2-SM overlapped cluster path，让 tile0 epilogue
 和 tile1 mainloop 重叠。
 
 | Backend | 1024 结果 | 配对结论 |
 | --- | ---: | --- |
-| `cublas_tc` | 102,162 avg GFLOP/s | cuBLAS Tensor Core reference，10/10 matched=1 |
-| `cutlass` | 104,086 avg GFLOP/s | CUTLASS official Blackwell auto-schedule reference，10/10 matched=1 |
+| `cublas_tc` | 102,729 avg GFLOP/s | cuBLAS Tensor Core reference，10/10 matched=1 |
+| `cutlass` | 104,757 avg GFLOP/s | CUTLASS official Blackwell auto-schedule reference，10/10 matched=1 |
 | `tc0` | 3,575 avg GFLOP/s | WMMA correctness-only baseline，10/10 matched=1；不进入 SM110 性能主图 |
 | `tc1a/tc1b` | unavailable | linear SMEM descriptor 路径暂停验证 |
-| `tc2a` | 35,440 avg GFLOP/s | raw SW128 single-stage TCGen05，10/10 matched=1 |
-| `tc2b` | 35,366 avg GFLOP/s | raw 3D TMA + SW128 single-stage TCGen05，10/10 matched=1 |
+| `tc2a` | 35,439 avg GFLOP/s | raw SW128 single-stage TCGen05，10/10 matched=1 |
+| `tc2b` | 35,392 avg GFLOP/s | raw 3D TMA + SW128 single-stage TCGen05，10/10 matched=1 |
 | `tc3` | unstable suite | raw 2D TMA/TCGen05 2-stage pipeline，4096 复测出现 timeout |
-| `tc4a` | 69,816 avg GFLOP/s | raw 2D TMA/TCGen05 warp-specialized pipeline，10/10 matched=1 |
+| `tc4a` | 69,549 avg GFLOP/s | raw 2D TMA/TCGen05 warp-specialized pipeline，10/10 matched=1 |
 | `tc4b/tc4c` | unstable suite | raw 2-SM cluster 对照，2048/4096 复测出现 timeout |
-| `tc5a` | unstable suite | static persistent 1-SM TCGen05 路径，4096 复测出现 timeout |
-| `tc5h` | 87,293 avg GFLOP/s | overlapped epilogue M128N256K64 TCGen05，10/10 matched=1 |
-| `tc5n` | 95,071 avg GFLOP/s | hybrid 2-SM overlapped M256N256K128 TCGen05，10/10 matched=1 |
-| `tc5b` | unavailable | dynamic work queue 路径暂停稳定性验证 |
+| `tc5c` | unstable suite | static persistent 1-SM TCGen05 路径，4096 复测出现 timeout |
+| `tc5a` | 87,367 avg GFLOP/s | overlapped epilogue M128N256K64 TCGen05，10/10 matched=1 |
+| `tc5b` | 95,183 avg GFLOP/s | hybrid 2-SM overlapped M256N256K128 TCGen05，10/10 matched=1 |
 | `tc6` | nvfp4 suite | resident persistent mainloop + fused NVFP4 epilogue，不进入 FP32 主图 |
 
-本轮优化后，1024/2048 的 FP32 自研 backend 已从 `tc5a` 的约
-0.44x/0.60x 提升到稳定超过 0.90x cuBLAS Tensor Core。1024 的提升来自
+本轮优化后，1024/2048 的 FP32 自研 backend 已从 `tc5c` 的约
+0.44x/0.60x 提升到接近或超过 0.90x cuBLAS Tensor Core。1024 的提升来自
 2-SM `M256N256K128` overlapped cluster path；该路径现在补齐
 `cta_group::2` 的 TMEM alloc/relinquish/dealloc 全生命周期 cluster
 同步，并针对固定 1024 shape 展开 tile 坐标、TMA 和 MMA K loop。
-2048 继续使用 `tc5h` 的 M128N256K64 4-stage overlapped epilogue
+2048 继续使用 `tc5a` 的 M128N256K64 4-stage overlapped epilogue
 fallback。旧 2-SM
 `tc4b/tc4c` raw 路径去掉冗余 cluster-wide sync 后已经从旧的
 0.44-0.52x 提升到约 0.78x/0.87x，但非 overlapped epilogue 仍会放大
 TMA、TMEM allocation/readback 和固定成本，所以只作为 stage4 对照。
 
-当前 `core` sweep 的稳定性复测结果：1024 方阵推荐 `tc5n`，10/10 次
-`matched=1`，平均 95,071 GFLOP/s，RatioToCuBLAS 平均 0.931、最小
-0.918；2048 方阵推荐 `tc5h`，10/10 次 `matched=1`，平均 118,918
-GFLOP/s，RatioToCuBLAS 平均 0.914、最小 0.902。`tc5n` 在 2048 的平均
-ratio 也有 0.918，但最小轮次为 0.898，因此主报告按更保守口径推荐
-`tc5h`。
+当前 `core` sweep 的稳定性复测结果：1024 方阵推荐 `tc5b`，10/10 次
+`matched=1`，平均 95,183 GFLOP/s，RatioToCuBLAS 平均 0.927、最小
+0.925；2048 方阵推荐 fast path 是 `tc5a`，10/10 次 `matched=1`，
+平均 119,550 GFLOP/s，RatioToCuBLAS 平均 0.917、最小 0.898。
+`tc5b` 在 2048 不是独立新 kernel，而是同一个 `tc5a` fallback 的
+单独运行；这轮它平均 120,089 GFLOP/s、RatioToCuBLAS 平均 0.920、
+最小 0.909，因此两条 2048 线的差异应解释为运行波动，而不是不同算法收益。
 
-旧的 full-tile 稳态参考是 4096。`tc5a` 在 `4096x4096x4096` 上达到
+旧的 full-tile 稳态参考是 4096。`tc5c` 在 `4096x4096x4096` 上达到
 同进程 cuBLAS Tensor Core 的约 0.82x；2-SM `tc4b/tc4c` 也能达到
-约 0.74x/0.76x，但仍低于 `tc5a`。
+约 0.74x/0.76x，但仍低于 `tc5c`。
 
 | Shape | Backend | cuBLAS GFLOP/s | Backend GFLOP/s | Ratio | 结论 |
 | --- | --- | ---: | ---: | ---: | --- |
 | 2048³ | `tc4a` | 130,364 | 74,969 | 0.57x | warp-specialized non-persistent，matched=1 |
 | 1024³ | `tc4c` | 102,876 | 80,261 | 0.78x | 旧 2-SM + warp specialization raw path，matched=1 |
 | 2048³ | `tc4c` | 130,232 | 113,868 | 0.87x | 旧 2-SM + warp specialization raw path，matched=1 |
-| 2048³ | `tc5a` | 130,364 | 78,227 | 0.60x | static persistent，matched=1 |
-| 1024³ | `tc5h` | 102,909 | 87,387 | 0.85x | overlapped epilogue，matched=1 |
-| 2048³ | `tc5h` | 131,168 | 120,122 | 0.92x | overlapped epilogue，matched=1 |
-| 1024³ | `tc5n` | 102,162 avg | 95,071 avg | 0.931x avg | hybrid 2-SM overlapped cluster path，10/10 matched=1 |
-| 2048³ | `tc5h` | 129,925 avg | 118,918 avg | 0.914x avg | overlapped epilogue M128N256K64，10/10 matched=1 |
+| 2048³ | `tc5c` | 130,364 | 78,227 | 0.60x | static persistent，matched=1 |
+| 1024³ | `tc5a` | 102,909 | 87,387 | 0.85x | overlapped epilogue，matched=1 |
+| 2048³ | `tc5a` | 131,168 | 120,122 | 0.92x | overlapped epilogue，matched=1 |
+| 1024³ | `tc5b` | 102,729 avg | 95,183 avg | 0.927x avg | hybrid 2-SM overlapped cluster path，10/10 matched=1 |
+| 2048³ | `tc5a` | 130,332 avg | 119,550 avg | 0.917x avg | overlapped epilogue M128N256K64，10/10 matched=1；最低单轮 0.898x |
 | 4096³ | `tc3` | 64,420 | 38,664 | 0.60x | multi-stage non-persistent，matched=1 |
 | 4096³ | `tc4b` | 64,420 | 48,596 | 0.74x | 2-SM cluster，matched=1 |
 | 4096³ | `tc4c` | 64,420 | 47,973 | 0.76x | 2-SM + warp specialization，matched=1 |
-| 4096³ | `tc5a` | 64,420 | 53,073 | 0.82x | 旧 large-shape baseline，matched=1 |
-
-`tc5b` 的动态 work queue 在临时复测中可以产出 matched=1 的结果，但
-也出现过 timeout，因此不再作为有效性能 backend 统计。这个结论对面试
-解释很重要：当前完整调度策略是 `tc5a` 的 resident static persistent，
-不是尚未稳定的动态领取。
+| 4096³ | `tc5c` | 64,420 | 53,073 | 0.82x | 旧 large-shape baseline，matched=1 |
 
 几条看似能改善 1024/2048 的路线已经实测后否定，当前不作为推荐
 backend。第一，split-K 可以把 1024/2048 的 work item 数量放大，但每个
 partial K 太短，TMA、TMEM allocation/readback 和 FP32 partial reduction
-成本被放大；`SplitK=2/4` 都显著慢于 `tc5a`。第二，把 `tc5a` 从
+成本被放大；`SplitK=2/4` 都显著慢于 `tc5c`。第二，把 `tc5c` 从
 `TileK=128, Stages=2` 改成 `TileK=256, Stages=1` 虽然能让单次 wait
 覆盖更多 K-block，但失去双缓冲后 1024/2048 都变慢。第三，降低
 `TileK` 或 `TileN` 以换取 2-3 个 resident CTA/SM 也不占优：更多
-CTA 没有抵消更频繁的 TMA/wait 和更低效的 MMA shape。第四，`tc5h`
-的 N128/K128 变体和 stage1 变体均不占优；因此 `tc5n` fallback 继续
+CTA 没有抵消更频繁的 TMA/wait 和更低效的 MMA shape。第四，`tc5a`
+的 N128/K128 变体和 stage1 变体均不占优；因此 `tc5b` fallback 继续
 保留 M128N256K64、4-stage 和 overlapped epilogue。
-
-真正可能增加 1024 小尺寸并行度的路线之一是 `M64`，但当前 `tc5k`
-还不是答案。CUTLASS/CuTe 底层 trait 显示 1SM F16/BF16 MMA 支持
-`M=64`，但 M64 的 epilogue 不能沿用 M128 的 `32x32b.x8` TMEM load；
-当前 `16x256b` panel 读回已经可以在 1024/2048 上 `matched=1`，并且
-把 `x16` 读回拆成 `x8` 后资源从 `REG:118` 降到 `REG:80 STACK:0`。
-但 `tc5k` 的 1024/2048 仍只有约 0.56x cuBLAS，因此继续在 registry
-和 main benchmark 中标为 unavailable，避免 stage5 混入明显慢于
-`tc5h` 的结果。后续需要重做 M64 epilogue 的 TMEM panel 到 GMEM
-store 打包，而不是只降低寄存器。
 
 `tc6` 的 GFLOP/s 仍按 GEMM 数学量报告，方便观察 fused epilogue 开销；
 但它输出 packed NVFP4 value 和 E4M3 block scale，不写 FP32 `D` 矩阵，
@@ -352,7 +338,7 @@ GEMMsm110/
 │   │   ├── tc3_pipeline.cuh
 │   │   ├── tc4a_warp_specialized.cuh
 │   │   ├── tc4bc_cluster.cuh   # tc4b/tc4c 共用模板
-│   │   ├── tc5_persistent.cuh  # tc5a static / tc5b dynamic persistent scheduler
+│   │   ├── tc5_persistent.cuh  # tc5 persistent and overlapped epilogue schedulers
 │   │   └── tc6_nvfp4.cuh       # fused NVFP4 epilogue backend
 │   ├── requant/                # NVFP4/E2M1 尾处理后端和 CPU reference
 │   └── tc3_gemm_kernel.cuh     # 独立 TMEM minimal sanity probe
@@ -374,7 +360,7 @@ GEMMsm110/
 
 # 指定矩形 M N K
 ./build_and_run.sh 260 132 256 tc6
-./build_and_run.sh 384 520 300 tc5n
+./build_and_run.sh 384 520 300 tc5b
 ./build_and_run.sh 260 132 256 all
 ./build_and_run.sh 1024 all
 
@@ -392,8 +378,14 @@ GEMMsm110/
 ./build_and_run.sh 1024 tc4c
 ./build_and_run.sh 1024 tc5a
 ./build_and_run.sh 1024 tc5b
+./build_and_run.sh 1024 tc5c
+./build_and_run.sh 1024 tc5d
+./build_and_run.sh 1024 tc5e
+./build_and_run.sh 1024 tc5f
+./build_and_run.sh 1024 tc5g
 ./build_and_run.sh 1024 tc5h
-./build_and_run.sh 1024 tc5n
+./build_and_run.sh 1024 tc5i
+./build_and_run.sh 1024 tc5j
 ./build_and_run.sh 1024 tc6
 
 # 仅编译不运行
@@ -429,7 +421,7 @@ SKIP_BUILD=1 bash scripts/run_sm110_gemm_core_sweep.sh
 `BACKEND_ATTEMPTS=1`。
 
 主报告性能集合包含 `cublas_tc`、`cutlass`、`tc2a`、`tc2b`、`tc4a`、
-`tc5h` 和 `tc5n`。`tc0` 保留在 `stage0` 和显式 `tc0` 入口里，只做
+`tc5a` 和 `tc5b`。`tc0` 保留在 `stage0` 和显式 `tc0` 入口里，只做
 WMMA correctness 对照。不稳定但有阶段说明价值的 backend 可单独跑：
 
 ```bash

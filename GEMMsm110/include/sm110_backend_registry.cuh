@@ -13,7 +13,7 @@ struct BackendDescriptor {
   bool implemented;
 };
 
-inline constexpr std::array<BackendDescriptor, 26> kBackendDescriptors{{
+inline constexpr std::array<BackendDescriptor, 22> kBackendDescriptors{{
     {"cublas_tc", "cuBLAS Tensor Core reference", -1, true},
     {"cutlass", "CUTLASS official Blackwell auto schedule", -1, true},
     {"tc0", "CUDA WMMA Tensor Core baseline", 0, true},
@@ -25,31 +25,24 @@ inline constexpr std::array<BackendDescriptor, 26> kBackendDescriptors{{
     {"tc4a", "warp-specialized TMA/TCGen05 pipeline", 4, true},
     {"tc4b", "2-SM cluster TMA/TCGen05 pipeline", 4, true},
     {"tc4c", "warp-specialized 2-SM cluster pipeline", 4, true},
-    {"tc5a", "static persistent 1-SM TCGen05 scheduler", 5, true},
-    {"tc5b", "software dynamic persistent 1-SM TCGen05 scheduler", 5,
-     false},
-    {"tc5c", "static persistent 1-SM TCGen05 M128N128K128 scheduler", 5,
+    {"tc5a", "overlapped epilogue 1-SM TCGen05 M128N256K64 scheduler", 5,
      true},
-    {"tc5d", "static persistent 1-SM TCGen05 M128N256K64 scheduler", 5,
+    {"tc5b", "hybrid 2-SM overlap for 1024 plus tc5a fallback", 5, true},
+    {"tc5c", "static persistent 1-SM TCGen05 scheduler", 5, true},
+    {"tc5d", "static persistent 1-SM TCGen05 M128N128K128 scheduler", 5,
      true},
-    {"tc5e", "static persistent 1-SM TCGen05 M128N128K64 scheduler", 5,
+    {"tc5e", "static persistent 1-SM TCGen05 M128N256K64 scheduler", 5,
      true},
-    {"tc5f", "static persistent 1-SM TCGen05 M128N256K128 stage1 scheduler",
+    {"tc5f", "static persistent 1-SM TCGen05 M128N128K64 scheduler", 5,
+     true},
+    {"tc5g", "static persistent 1-SM TCGen05 M128N256K128 stage1 scheduler",
      5, true},
-    {"tc5g", "static persistent 1-SM TCGen05 M128N256K64 stage1 scheduler",
+    {"tc5h", "static persistent 1-SM TCGen05 M128N256K64 stage1 scheduler",
      5, true},
-    {"tc5h", "overlapped epilogue 1-SM TCGen05 M128N256K64 scheduler", 5,
-     true},
     {"tc5i", "overlapped epilogue 1-SM TCGen05 M128N128K64 scheduler", 5,
      true},
     {"tc5j", "overlapped epilogue 1-SM TCGen05 M128N256K128 scheduler", 5,
      true},
-    {"tc5k", "overlapped epilogue 1-SM TCGen05 M64N256K64 scheduler", 5,
-     false},
-    {"tc5l", "B-reuse 1-SM TCGen05 M256N256K64 scheduler", 5, false},
-    {"tc5m", "overlapped B-reuse 1-SM TCGen05 M256N128K64 scheduler", 5,
-     false},
-    {"tc5n", "hybrid 2-SM overlap for 1024 plus tc5h fallback", 5, true},
     {"tc6", "fused NVFP4 TCGen05 epilogue", 6, true},
 }};
 
@@ -83,13 +76,13 @@ inline bool wants_backend(const std::string& filter,
   if (filter == "core") {
     return backend_id == "cublas_tc" || backend_id == "cutlass" ||
            backend_id == "tc2a" || backend_id == "tc2b" ||
-           backend_id == "tc4a" || backend_id == "tc5h" ||
-           backend_id == "tc5n";
+           backend_id == "tc4a" || backend_id == "tc5a" ||
+           backend_id == "tc5b";
   }
   if (filter == "unstable") {
     return backend_id == "cublas_tc" || backend_id == "tc3" ||
            backend_id == "tc4b" || backend_id == "tc4c" ||
-           backend_id == "tc5a";
+           backend_id == "tc5c";
   }
   if (filter == "nvfp4") {
     return backend_id == "cublas_tc" || backend_id == "tc6";
@@ -121,6 +114,6 @@ inline const BackendDescriptor* find_backend(std::string_view id) {
 inline constexpr std::string_view kBackendUsage =
     "[all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|"
     "tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|"
-    "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc5k|tc5l|tc5m|tc5n|tc6]";
+    "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6]";
 
 }  // namespace gemm_sm110
