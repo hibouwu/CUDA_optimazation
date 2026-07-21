@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="70" y="24" font-family="monospace" font-size="16">Static calibration Q sweep</text>
+<line x1="70" y1="400" x2="870" y2="400" stroke="#222"/>
+<line x1="70" y1="40" x2="70" y2="400" stroke="#222"/>
+<text x="420.0" y="448" font-family="monospace" font-size="12">Q</text>
+<text x="10" y="60" font-family="monospace" font-size="12">cycles/MMA</text>
+<path d="M70.0,66.7 L203.3,217.0 L336.7,292.2 L470.0,324.4 L603.3,335.8 L736.7,344.2 L870.0,349.0" fill="none" stroke="#1b6f8a" stroke-width="2"/>
+<circle cx="70.0" cy="66.7" r="3" fill="#1b6f8a"/>
+<circle cx="203.3" cy="217.0" r="3" fill="#1b6f8a"/>
+<circle cx="336.7" cy="292.2" r="3" fill="#1b6f8a"/>
+<circle cx="470.0" cy="324.4" r="3" fill="#1b6f8a"/>
+<circle cx="603.3" cy="335.8" r="3" fill="#1b6f8a"/>
+<circle cx="736.7" cy="344.2" r="3" fill="#1b6f8a"/>
+<circle cx="870.0" cy="349.0" r="3" fill="#1b6f8a"/>
+<text x="690" y="58" font-family="monospace" font-size="12" fill="#1b6f8a">BF16 N128</text>
+<path d="M70.0,66.7 L203.3,171.4 L336.7,242.6 L470.0,265.6 L603.3,285.4 L736.7,295.3 L870.0,300.0" fill="none" stroke="#b44b3a" stroke-width="2"/>
+<circle cx="70.0" cy="66.7" r="3" fill="#b44b3a"/>
+<circle cx="203.3" cy="171.4" r="3" fill="#b44b3a"/>
+<circle cx="336.7" cy="242.6" r="3" fill="#b44b3a"/>
+<circle cx="470.0" cy="265.6" r="3" fill="#b44b3a"/>
+<circle cx="603.3" cy="285.4" r="3" fill="#b44b3a"/>
+<circle cx="736.7" cy="295.3" r="3" fill="#b44b3a"/>
+<circle cx="870.0" cy="300.0" r="3" fill="#b44b3a"/>
+<text x="690" y="76" font-family="monospace" font-size="12" fill="#b44b3a">BF16 N256</text>
+<text x="65.0" y="416" font-family="monospace" font-size="10">1</text>
+<text x="198.3" y="416" font-family="monospace" font-size="10">2</text>
+<text x="331.7" y="416" font-family="monospace" font-size="10">4</text>
+<text x="465.0" y="416" font-family="monospace" font-size="10">8</text>
+<text x="598.3" y="416" font-family="monospace" font-size="10">16</text>
+<text x="731.7" y="416" font-family="monospace" font-size="10">32</text>
+<text x="865.0" y="416" font-family="monospace" font-size="10">64</text>
+</svg>

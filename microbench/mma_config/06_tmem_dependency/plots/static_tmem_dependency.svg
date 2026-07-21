@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="306" viewBox="0 0 980 306">
+<style>text{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#1f2933}.title{font-size:18px;font-weight:700}.axis{stroke:#9aa5b1;stroke-width:1}.bar{fill:#2f80ed}.bar2{fill:#27ae60}.grid{stroke:#e3e8ee;stroke-width:1}</style>
+<text x="20" y="28" class="title">Static TMEM D dependency, Q16 discard</text>
+<line x1="260" y1="44" x2="870" y2="44" class="axis"/>
+<text x="16" y="75">BF16 N128 ring input_d=0</text>
+<rect x="260" y="62" width="342.0" height="17" class="bar"/>
+<text x="608.0" y="75">86.796</text>
+<text x="16" y="101">BF16 N128 ring input_d=1</text>
+<rect x="260" y="88" width="341.7" height="17" class="bar2"/>
+<text x="607.7" y="101">86.721</text>
+<text x="16" y="127">BF16 N128 same input_d=0</text>
+<rect x="260" y="114" width="341.7" height="17" class="bar"/>
+<text x="607.7" y="127">86.723</text>
+<text x="16" y="153">BF16 N128 same input_d=1</text>
+<rect x="260" y="140" width="342.0" height="17" class="bar2"/>
+<text x="608.0" y="153">86.799</text>
+<text x="16" y="179">BF16 N256 ring input_d=0</text>
+<rect x="260" y="166" width="609.7" height="17" class="bar"/>
+<text x="875.7" y="179">154.746</text>
+<text x="16" y="205">BF16 N256 ring input_d=1</text>
+<rect x="260" y="192" width="609.7" height="17" class="bar2"/>
+<text x="875.7" y="205">154.758</text>
+<text x="16" y="231">BF16 N256 same input_d=0</text>
+<rect x="260" y="218" width="610.0" height="17" class="bar"/>
+<text x="876.0" y="231">154.828</text>
+<text x="16" y="257">BF16 N256 same input_d=1</text>
+<rect x="260" y="244" width="609.8" height="17" class="bar2"/>
+<text x="875.8" y="257">154.771</text>
+<text x="260" y="294">cycles/MMA, p50 clock64 timed window</text>
+</svg>

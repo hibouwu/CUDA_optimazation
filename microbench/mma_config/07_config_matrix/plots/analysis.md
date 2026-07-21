@@ -1,10 +1,11 @@
-# 07_config_matrix analysis
+# 07_config_matrix 分析
 
-## Observation
-- valid cases: 192
-- invalid cases: 64
-- fastest median cycles case: `cfg_bf16_m128n256k16_c256_sw32_discard_same` = 2891088.000 cycles
-- best TFLOP/s case: `cfg_bf16_m128n256k16_c256_sw32_discard_same` = 46.796040
+## 观察
+
+- 有效 cases: 192
+- 无效 cases: 64
+- 最快 median cycles case: `cfg_bf16_m128n256k16_c256_sw32_discard_same` = 2891088.000 cycles
+- 最高 TFLOP/s case: `cfg_bf16_m128n256k16_c256_sw32_discard_same` = 46.796040
 - Top config `cfg_bf16_m128n256k16_c256_sw32_discard_same`: 46.796040 TFLOP/s, beta 705.832 cycles/MMA.
 - Top config `cfg_fp16_m128n256k16_c256_sw32_discard_pingpong`: 46.796040 TFLOP/s, beta 705.832 cycles/MMA.
 - Top config `cfg_bf16_m128n256k16_c256_sw32_discard_pingpong`: 46.795991 TFLOP/s, beta 705.833 cycles/MMA.
@@ -12,9 +13,11 @@
 - Top config `cfg_fp16_m128n256k16_c256_sw32_fill_use_lastuse_same`: 45.225567 TFLOP/s, beta 730.342 cycles/MMA.
 - invalid reason counts: max_abs_error>0.05:32, max_abs_error>0.25:32
 
-## Inference
-- Rows report software-visible behavior only. `pending_mbarriers` is treated as cumulative completion-prefix tracking, not as an independent async group queue.
-- Effective SMEM rates, when present, are logical operand bytes per measured cycle under collector-discard conditions and are not physical port widths.
+## 推断
 
-## Unsupported Claim
-- These results do not identify physical SMEM bank count, physical TMEM bank width, or hidden collector depth.
+- row 只报告软件可见行为。`pending_mbarriers` 被视为累计 completion-prefix tracking，而不是独立 async group queue。
+- 如存在 effective SMEM rate，它只表示 collector-discard 条件下 logical operand bytes / measured cycle，不是物理 port width。
+
+## 不支持的说法
+
+- 这些结果不能识别物理 SMEM bank count、物理 TMEM bank width 或 hidden collector depth。

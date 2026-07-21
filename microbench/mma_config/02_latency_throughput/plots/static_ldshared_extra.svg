@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="70" y="24" font-family="monospace" font-size="16">Static ld.shared/control extra cycles</text>
+<line x1="70" y1="400" x2="870" y2="400" stroke="#222"/>
+<line x1="70" y1="40" x2="70" y2="400" stroke="#222"/>
+<text x="420.0" y="448" font-family="monospace" font-size="12">case index</text>
+<text x="10" y="60" font-family="monospace" font-size="12">extra cycles/MMA</text>
+<path d="M70.0,94.9 L322.4,95.5 L470.0,400.0 L574.7,96.2 L656.0,95.7 L722.4,66.7 L778.5,95.6 L827.1,75.5 L870.0,95.9" fill="none" stroke="#1b6f8a" stroke-width="2"/>
+<circle cx="70.0" cy="94.9" r="3" fill="#1b6f8a"/>
+<circle cx="322.4" cy="95.5" r="3" fill="#1b6f8a"/>
+<circle cx="470.0" cy="400.0" r="3" fill="#1b6f8a"/>
+<circle cx="574.7" cy="96.2" r="3" fill="#1b6f8a"/>
+<circle cx="656.0" cy="95.7" r="3" fill="#1b6f8a"/>
+<circle cx="722.4" cy="66.7" r="3" fill="#1b6f8a"/>
+<circle cx="778.5" cy="95.6" r="3" fill="#1b6f8a"/>
+<circle cx="827.1" cy="75.5" r="3" fill="#1b6f8a"/>
+<circle cx="870.0" cy="95.9" r="3" fill="#1b6f8a"/>
+<text x="690" y="58" font-family="monospace" font-size="12" fill="#1b6f8a">extra vs none</text>
+<text x="65.0" y="416" font-family="monospace" font-size="10">1</text>
+<text x="317.4" y="416" font-family="monospace" font-size="10">2</text>
+<text x="465.0" y="416" font-family="monospace" font-size="10">3</text>
+<text x="569.7" y="416" font-family="monospace" font-size="10">4</text>
+<text x="651.0" y="416" font-family="monospace" font-size="10">5</text>
+<text x="717.4" y="416" font-family="monospace" font-size="10">6</text>
+<text x="773.5" y="416" font-family="monospace" font-size="10">7</text>
+<text x="822.1" y="416" font-family="monospace" font-size="10">8</text>
+<text x="865.0" y="416" font-family="monospace" font-size="10">9</text>
+</svg>

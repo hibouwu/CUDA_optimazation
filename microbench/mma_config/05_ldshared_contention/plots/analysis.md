@@ -1,20 +1,33 @@
-# 05_ldshared_contention analysis
+# 05_ldshared_contention 分析
 
-## Observation
-- valid cases: 42
-- invalid cases: 0
-- fastest median cycles case: `ldcont_bf16_interference_only_ops0` = 3212295.000 cycles
-- best TFLOP/s case: `ldcont_bf16_none_ops0` = 18.387145
-- Fixed active interference warp count; modes present: interference_only, l1_hit_global, ld_shared, none, predicated_off_load, register_alu.
-- none TFLOP/s median range: 18.387015 to 18.387145.
-- register_alu TFLOP/s median range: 1.340939 to 17.012779.
-- predicated_off_load TFLOP/s median range: 1.275401 to 17.012770.
-- l1_hit_global TFLOP/s median range: 0.912927 to 17.012766.
-- ld_shared TFLOP/s median range: 1.048234 to 17.012753.
+## 静态重新标定（主证据）
 
-## Inference
-- Rows report software-visible behavior only. `pending_mbarriers` is treated as cumulative completion-prefix tracking, not as an independent async group queue.
-- Effective SMEM rates, when present, are logical operand bytes per measured cycle under collector-discard conditions and are not physical port widths.
+- CSV: `plots/static_ldshared_benchmark.csv`.
+- 图: `plots/static_ldshared_extra.svg`.
+- aggregate rows: 11 valid, 0 invalid.
+- 固定控制变量：warp 0 发 MMA；warp 1-3 执行 interference。主比较中的 active warp count 固定。
 
-## Unsupported Claim
-- These results do not identify physical SMEM bank count, physical TMEM bank width, or hidden collector depth.
+BF16 N128 Q16, ops=32：
+
+| Mode | cycles/MMA | Delta vs register ALU |
+| --- | ---: | ---: |
+| register ALU | 163.809 | 0.000 |
+| predicated-off ld.shared | 163.882 | +0.073 |
+| ld.shared | 163.714 | -0.095 |
+| L1-hit ld.global | 171.210 | +7.401 |
+
+MMA-only baseline 是 `86.727 cycles/MMA`。
+
+## 推断
+
+- 本次运行中 ld.shared 不比 register-ALU control 更慢。
+- L1-hit global load 比 register ALU 和 ld.shared 更慢，因此观察到的 interference 更适合解释为 active-warp/scheduler/control pressure 和 general load/LSU pressure，而不是已证明的 shared-memory-specific port conflict。
+- 这个实验不能证明普通 LSU `ld.shared` 与 tcgen05 operand ingress 完全或部分共享物理资源。
+
+## 不支持的说法
+
+- 只有当 shared-specific degradation 明显超过 register、predicated-off、L1-hit global 和 interference-only controls，并且随 shared address/bank pattern 系统变化时，才能声称 SMEM-port sharing。
+
+## 旧 Runtime-Dispatch 负控制
+
+旧 runtime-dispatch ld.shared sweep 保留用于审计，但它在 warp 0 内使用 lane-level divergence，因此不能隔离 port contention。

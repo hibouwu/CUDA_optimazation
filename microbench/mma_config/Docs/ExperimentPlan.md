@@ -68,6 +68,42 @@ plots/
 
 `common/` 只保存不会隐藏实验控制变量的 PTX wrapper、descriptor builder、正确性检查、计时和 CSV 输出。每个实验保留独立 kernel，使实际指令序列可以直接审计。
 
+## 3.1 2026-07-20 静态校准修正
+
+当前主结论必须来自 compile-time single-case kernel，不能再使用一个万能
+runtime-dispatch kernel 作为主要计时对象。旧 runtime-dispatch 结果只保留
+为负控制，因为它在 timed loop 内混入 descriptor 构造、operand slot 选择、
+SMEM 地址计算、D ring 地址计算、collector/shape/protocol 动态分派、
+wait 和 CTA 同步。
+
+静态校准 kernel 的规则：
+
+```text
+dtype, shape, Q, D mode, input_d, operand address mode,
+collector protocol, wait hint, active block request,
+interference mode
+```
+
+以上变量必须在编译期固定。descriptor、SMEM 地址、静态 D 地址、TMEM
+allocation/init/guard 和 TMA prefill 尽量移出 timed loop。每个 case 生成
+独立 binary，SASS 中目标 `UTCHMMA` 数量应与 Q 或控制模式一致，并记录
+commit、try_wait、ld/shared/global、barrier 指令计数和 SASS hash。
+
+静态校准至少分开测：
+
+```text
+empty/control loop
+commit + already-completed mbarrier wait
+single-MMA forced wait
+Q MMA + one commit/wait
+CTA-wide __syncthreads control
+```
+
+`mbarrier.try_wait` 的 suspend hint 至少测试 0、小值和 0x989680。报告中必须
+区分 `clock64` timed-window throughput 与 CUDA event end-to-end throughput。
+若 `nvidia-smi` 无法读取 memory clock、温度或功耗，CSV 和 audit 必须记录
+`unavailable`，不能标为 done。
+
 ## 4. 统一实验口径
 
 ### 4.1 环境与计时
@@ -77,6 +113,9 @@ plots/
 - GPU 型号、compute capability、driver、CUDA toolkit 和 PTX ISA 版本；
 - power mode、实际 SM clock、memory clock、温度和功耗；
 - kernel launch 配置、静态/动态 SMEM、TMEM columns 和 resident CTA 数；
+- active block request、实际 launch blocks、以及 occupancy API 给出的理论
+  active blocks/SM 必须分开记录；若没有查询 occupancy API，不得把
+  `active_blocks` 或 launch block 数命名为 `resident_ctas`；
 - warmup、repeat、迭代次数和 case 执行顺序；
 - 单 CTA/低 grid 与全 SM 满载两种口径；
 - PTX 和 SASS hash，确保比较时使用预期指令序列。
@@ -246,6 +285,9 @@ T(Q) = alpha + beta * Q
 - `beta` 是长 batch 的边际稳态成本；
 - `alpha` 包含 loop、commit、最终 drain 和 wait 的综合固定项；
 - `Q=1` 单独报告为 forced-completion diagnostic，不用空 commit 结果简单相减。
+
+主回归必须使用静态 single-case binary。旧 runtime-dispatch kernel 只能作为
+负控制，不得用于 beta、SMEM ingress 或 collector depth 推断。
 
 ### 7.3 D 地址设计
 
@@ -479,12 +521,21 @@ grid 压力匹配 tc3
 ## 14. 最小执行顺序与停止条件
 
 1. `00_validation`：任何核心 shape 无法正确读回时停止，不运行性能实验；
-2. `01_collector_protocol`：确认 ISA-visible collector 序列和复用收益；
-3. `02_latency_throughput`：用回归分开固定项与稳态边际成本；
-4. `03_effective_smem_ingress`：只在 collector discard 和合法 D ring 下计算有效供数率；
+2. 静态 `02_latency_throughput` 最小校准：BF16/FP16、M128N128K16、
+   M128N256K16、Q=1/2/4/8/16/32/64、same-D、input_d、合法 D ring、
+   active_blocks=1/full-grid、wait_hint=0/小值/0x989680。若 BF16 N128 Q4
+   仍远离已知可信 K4 mainloop 量级，先诊断 SASS、descriptor、wait 和
+   D dependency，不继续解释硬件带宽；
+3. `01_collector_protocol`：固定相同 Q、commit interval、D 模式和总 MMA
+   指令数，直接比较 discard、fill、use、lastuse 的增量成本；
+4. `03_effective_smem_ingress`：只在 collector discard、descriptor 合法、
+   D 依赖受控时计算 logical effective bytes/cycle；
 5. `04_smem_layout_address`：只扫描已验证的 descriptor；
-6. `05_ldshared_contention`：加入 scheduler、LSU 和 shared-memory 对照；
-7. `06_tmem_dependency`：显式标记 D alias 和 reuse distance；
-8. `07_config_matrix`：汇总为可用于 GEMM 选型的结论。
+6. `05_ldshared_contention`：warp 0 只发 MMA，warp 1-3 做干扰；固定 active
+   warp 数并加入 register ALU、predicated-off load、L1-hit global 和
+   interference-only 控制组；
+7. `06_tmem_dependency`：显式标记 D alias、实际 independent D 上限和
+   reuse distance；
+8. `07_config_matrix`：只重跑必要组合，汇总为可用于 GEMM 选型的结论。
 
 如果某项实验无法同时控制 collector、D alias、descriptor legality 和 resident CTA 数，则只报告现象，不反演端口宽度、bank 数或隐藏队列深度。

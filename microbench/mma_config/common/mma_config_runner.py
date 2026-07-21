@@ -807,10 +807,10 @@ def stage_observation_lines(stage, valid, invalid_rows):
     lines = []
     if stage == "00_validation":
         lines += [
-            "- Descriptor, TMA load, MMA issue, commit/wait, full D readback, guard columns, and CUDA error checks are all exercised before later stages run.",
-            "- TMEM D footprint for M128 FP32 accumulators under the tested shapes:",
+            "- 后续 stage 运行前已经覆盖 descriptor、TMA load、MMA issue、commit/wait、完整 D readback、guard columns 和 CUDA error 检查。",
+            "- tested shape 下 M128 FP32 accumulator 的 TMEM D footprint：",
             "",
-            "| Shape | D footprint columns | Max non-overlap D tiles in 512 columns |",
+            "| Shape | D footprint columns | 512 columns 中最大不重叠 D tiles |",
             "| --- | ---: | ---: |",
         ]
         for shape, meta in SHAPES.items():
@@ -821,54 +821,54 @@ def stage_observation_lines(stage, valid, invalid_rows):
             by_shape[(r.get("dtype"), r.get("n"))] += 1
         if by_shape:
             summary = ", ".join(f"{dt}/N{n}:{count}" for (dt, n), count in sorted(by_shape.items()))
-            lines.append(f"- Valid descriptor rows by dtype/N: {summary}.")
+            lines.append(f"- 按 dtype/N 统计的 valid descriptor rows: {summary}.")
     elif stage == "01_collector_protocol":
         discard = [row_cycles_per_mma(r) for r in valid if r.get("collector_mode") == "discard"]
         reuse = [row_cycles_per_mma(r) for r in valid if r.get("collector_mode") != "discard"]
         ws = [r for r in valid if "collector_ws" in r.get("case_id", "")]
         if discard:
-            lines.append(f"- discard median cycles/MMA range: {min(discard):.3f} to {max(discard):.3f}.")
+            lines.append(f"- discard median cycles/MMA 范围: {min(discard):.3f} 到 {max(discard):.3f}.")
         if reuse:
-            lines.append(f"- fill/use/lastuse median cycles/MMA range: {min(reuse):.3f} to {max(reuse):.3f}.")
+            lines.append(f"- fill/use/lastuse median cycles/MMA 范围: {min(reuse):.3f} 到 {max(reuse):.3f}.")
         if ws:
             buffers = sorted({r.get("case_id", "").split("_")[2] for r in ws})
-            lines.append(f"- weights-stationary B collector cases executed for {', '.join(buffers)}.")
+            lines.append(f"- 已执行 weights-stationary B collector cases: {', '.join(buffers)}.")
     elif stage == "02_latency_throughput":
         betas = [fnum(r.get("beta_cycles_per_mma")) for r in valid if r.get("case_id", "").startswith("lat_")]
         betas = [x for x in betas if math.isfinite(x)]
         q1 = [row_cycles_per_mma(r) for r in valid if r.get("case_id", "").startswith("lat_") and str(r.get("Q")) == "1"]
         if betas:
-            lines.append(f"- Fitted beta range over latency rows: {min(betas):.3f} to {max(betas):.3f} cycles/MMA.")
+            lines.append(f"- latency rows 的 fitted beta 范围: {min(betas):.3f} 到 {max(betas):.3f} cycles/MMA.")
         if q1:
-            lines.append(f"- Q=1 forced-completion diagnostic cycles/MMA range: {min(q1):.3f} to {max(q1):.3f}.")
+            lines.append(f"- Q=1 forced-completion diagnostic cycles/MMA 范围: {min(q1):.3f} 到 {max(q1):.3f}.")
         commit_rows = [r for r in valid if r.get("case_id", "").startswith("commit_prefix")]
         if commit_rows:
-            lines.append(f"- commit-prefix scan rows: {len(commit_rows)}; `pending_mbarriers` is recorded as completion-prefix tracking count.")
+            lines.append(f"- commit-prefix scan rows: {len(commit_rows)}；`pending_mbarriers` 记录为 completion-prefix tracking count。")
     elif stage == "03_effective_smem_ingress":
         rates = [fnum(r.get("effective_smem_bytes_per_cycle")) for r in valid if r.get("collector_mode") == "discard"]
         rates = [x for x in rates if math.isfinite(x)]
         if rates:
-            lines.append(f"- collector-discard logical effective SMEM operand rate range: {min(rates):.3f} to {max(rates):.3f} bytes/cycle.")
+            lines.append(f"- collector-discard logical effective SMEM operand rate 范围: {min(rates):.3f} 到 {max(rates):.3f} bytes/cycle.")
     elif stage == "04_smem_layout_address":
         offsets = sorted({r.get("smem_base_offset") for r in valid})
         if offsets:
-            lines.append(f"- Valid SMEM base offsets in this run: {', '.join(map(str, offsets))}.")
+            lines.append(f"- 本次运行中的 valid SMEM base offsets: {', '.join(map(str, offsets))}.")
         if invalid_rows:
             invalid_offsets = sorted({r.get("smem_base_offset") for r in invalid_rows})
-            lines.append(f"- Invalid SMEM base offsets/descriptors are isolated in invalid_cases.csv: {', '.join(map(str, invalid_offsets))}.")
+            lines.append(f"- invalid SMEM base offsets/descriptors 已隔离到 invalid_cases.csv: {', '.join(map(str, invalid_offsets))}.")
     elif stage == "05_ldshared_contention":
         modes = sorted({r.get("interference_mode") for r in valid})
-        lines.append(f"- Fixed active interference warp count; modes present: {', '.join(modes)}.")
+        lines.append(f"- 固定 active interference warp count；包含的 modes: {', '.join(modes)}.")
         for mode in ["none", "register_alu", "predicated_off_load", "l1_hit_global", "ld_shared", "interference_only"]:
             vals = [fnum(r.get("tflops")) for r in valid if r.get("interference_mode") == mode and r.get("tflops") not in ("", None)]
             vals = [x for x in vals if math.isfinite(x)]
             if vals:
-                lines.append(f"- {mode} TFLOP/s median range: {min(vals):.6f} to {max(vals):.6f}.")
+                lines.append(f"- {mode} TFLOP/s median 范围: {min(vals):.6f} 到 {max(vals):.6f}.")
     elif stage == "06_tmem_dependency":
         alias = sorted({r.get("d_alias_class") for r in valid})
         cols = sorted({r.get("tmem_columns") for r in valid}, key=lambda x: int(float(x)))
-        lines.append(f"- D alias classes present: {', '.join(alias)}.")
-        lines.append(f"- TMEM column allocations present: {', '.join(map(str, cols))}; independent_d_count is clamped to actual capacity.")
+        lines.append(f"- 包含的 D alias classes: {', '.join(alias)}.")
+        lines.append(f"- 包含的 TMEM column allocations: {', '.join(map(str, cols))}；independent_d_count 按实际容量 clamp。")
     elif stage == "07_config_matrix":
         best = sorted(valid, key=lambda r: fnum(r.get("tflops"), -1), reverse=True)[:5]
         for r in best:
@@ -882,18 +882,18 @@ def stage_observation_lines(stage, valid, invalid_rows):
 def write_analysis(stage, rows, invalid_rows):
     valid = [r for r in rows if str(r.get("valid")) == "1"]
     lines = [
-        f"# {stage} analysis",
+        f"# {stage} 分析",
         "",
-        "## Observation",
-        f"- valid cases: {len(valid)}",
-        f"- invalid cases: {len(invalid_rows)}",
+        "## 观察",
+        f"- 有效 cases: {len(valid)}",
+        f"- 无效 cases: {len(invalid_rows)}",
     ]
     if valid:
         best = max(valid, key=lambda r: fnum(r.get("tflops"), -1))
         fastest = min(valid, key=lambda r: fnum(r.get("elapsed_cycles"), math.inf))
-        lines.append(f"- fastest median cycles case: `{fastest['case_id']}` = {fnum(fastest.get('elapsed_cycles')):.3f} cycles")
+        lines.append(f"- 最快 median cycles case: `{fastest['case_id']}` = {fnum(fastest.get('elapsed_cycles')):.3f} cycles")
         if best.get("tflops") not in ("", None):
-            lines.append(f"- best TFLOP/s case: `{best['case_id']}` = {fnum(best.get('tflops')):.6f}")
+            lines.append(f"- 最高 TFLOP/s case: `{best['case_id']}` = {fnum(best.get('tflops')):.6f}")
     extra = stage_observation_lines(stage, valid, invalid_rows)
     if extra:
         lines.extend(extra)
@@ -904,12 +904,12 @@ def write_analysis(stage, rows, invalid_rows):
         lines.append("- invalid reason counts: " + ", ".join(f"{k}:{v}" for k, v in sorted(reasons.items())))
     lines += [
         "",
-        "## Inference",
-        "- Rows report software-visible behavior only. `pending_mbarriers` is treated as cumulative completion-prefix tracking, not as an independent async group queue.",
-        "- Effective SMEM rates, when present, are logical operand bytes per measured cycle under collector-discard conditions and are not physical port widths.",
+        "## 推断",
+        "- row 只报告软件可见行为。`pending_mbarriers` 被视为累计 completion-prefix tracking，而不是独立 async group queue。",
+        "- 如存在 effective SMEM rate，它只表示 collector-discard 条件下 logical operand bytes / measured cycle，不是物理 port width。",
         "",
-        "## Unsupported Claim",
-        "- These results do not identify physical SMEM bank count, physical TMEM bank width, or hidden collector depth.",
+        "## 不支持的说法",
+        "- 这些结果不能识别物理 SMEM bank count、物理 TMEM bank width 或 hidden collector depth。",
     ]
     (stage_dir(stage) / "plots" / "analysis.md").write_text("\n".join(lines) + "\n")
 
@@ -920,11 +920,11 @@ def write_stage_readme(stage):
         return
     path.write_text(
         f"# {stage}\n\n"
-        "This directory is an independent tcgen05 MMA configuration microbenchmark stage.\n\n"
-        "- `benchmark_src/`: CUDA source for this stage.\n"
-        "- `scripts/run.py`: builds and runs only this stage.\n"
-        "- `plots/`: raw CSV, aggregate CSV, SVG plots, SASS summary, and analysis.\n\n"
-        "Run from the repository root or this directory:\n\n"
+        "本目录是独立的 tcgen05 MMA 配置微基准 stage。\n\n"
+        "- `benchmark_src/`: 本 stage 的 CUDA 源码。\n"
+        "- `scripts/run.py`: 只构建并运行本 stage。\n"
+        "- `plots/`: raw CSV、aggregate CSV、SVG 图、SASS 摘要和分析文档。\n\n"
+        "从仓库根目录或本目录运行：\n\n"
         f"```bash\npython3 microbench/mma_config/{stage}/scripts/run.py --quick\n```\n"
     )
 
@@ -959,11 +959,11 @@ def generate_final_report(stages=STAGES):
     all_rows = {stage: read_stage_rows(stage) for stage in stages}
     first = next((rows[0] for rows in all_rows.values() if rows), {})
     lines = [
-        "# tcgen05 MMA hardware-path calibration report",
+        "# tcgen05 MMA 硬件路径标定报告",
         "",
-        "This report is generated from the latest CSV artifacts under `microbench/mma_config/*/plots/`.",
+        "本报告由 `microbench/mma_config/*/plots/` 下最新 CSV artifact 生成。",
         "",
-        "## Reproduction",
+        "## 复现命令",
         "",
         "```bash",
         "python3 microbench/mma_config/scripts/run_all.py",
@@ -971,7 +971,7 @@ def generate_final_report(stages=STAGES):
         "python3 microbench/mma_config/scripts/run_all.py --stage 02_latency_throughput --case-id lat_bf16_m128n128k16_legal_ring_in0_q16 --repeats 5",
         "```",
         "",
-        "## Environment",
+        "## 环境",
         "",
         f"- GPU: {first.get('gpu', '')}",
         f"- Compute capability: {first.get('compute_capability', '')}",
@@ -981,9 +981,9 @@ def generate_final_report(stages=STAGES):
         f"- Memory clock MHz: {first.get('mem_clock_mhz', '')}",
         f"- Temperature C / power W: {first.get('temperature_c', '')} / {first.get('power_w', '')}",
         "",
-        "## Artifact Index",
+        "## Artifact 索引",
         "",
-        "| Stage | Benchmark source | Raw CSV | Aggregate CSV | Invalid CSV | Plot | Analysis |",
+        "| Stage | Benchmark source | Raw CSV | Aggregate CSV | Invalid CSV | 图 | 分析 |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for stage in stages:
@@ -999,9 +999,9 @@ def generate_final_report(stages=STAGES):
         )
     lines += [
         "",
-        "## Observation",
+        "## 观察",
         "",
-        "| Stage | Valid aggregate cases | Invalid aggregate cases | Key measured field |",
+        "| Stage | Valid aggregate cases | Invalid aggregate cases | 关键测量字段 |",
         "| --- | ---: | ---: | --- |",
     ]
     for stage, rows in all_rows.items():
@@ -1029,19 +1029,19 @@ def generate_final_report(stages=STAGES):
     betas = [fnum(r.get("beta_cycles_per_mma")) for r in rows02 if r.get("case_id", "").startswith("lat_")]
     betas = [x for x in betas if math.isfinite(x)]
     if betas:
-        lines.append(f"- `02_latency_throughput` fitted beta range: {min(betas):.3f} to {max(betas):.3f} cycles/MMA.")
+        lines.append(f"- `02_latency_throughput` fitted beta 范围: {min(betas):.3f} 到 {max(betas):.3f} cycles/MMA.")
     rows03 = all_rows.get("03_effective_smem_ingress", [])
     rates = [fnum(r.get("effective_smem_bytes_per_cycle")) for r in rows03 if str(r.get("valid")) == "1"]
     rates = [x for x in rates if math.isfinite(x)]
     if rates:
-        lines.append(f"- `03_effective_smem_ingress` reports logical effective operand supply: {min(rates):.3f} to {max(rates):.3f} bytes/cycle.")
+        lines.append(f"- `03_effective_smem_ingress` 报告 logical effective operand supply: {min(rates):.3f} 到 {max(rates):.3f} bytes/cycle.")
     rows05 = all_rows.get("05_ldshared_contention", [])
     modes = sorted({r.get("interference_mode") for r in rows05 if str(r.get("valid")) == "1"})
     if modes:
-        lines.append(f"- `05_ldshared_contention` includes controls: {', '.join(modes)}.")
+        lines.append(f"- `05_ldshared_contention` 包含 controls: {', '.join(modes)}.")
     lines += [
         "",
-        "### Invalid Case Summary",
+        "### Invalid Case 摘要",
         "",
         "| Stage | Invalid reasons |",
         "| --- | --- |",
@@ -1056,31 +1056,31 @@ def generate_final_report(stages=STAGES):
         lines.append(f"| {stage} | {summary} |")
     lines += [
         "",
-        "## Inference",
+        "## 推断",
         "",
-        "- `tcgen05.commit` is analyzed as cumulative completion-prefix tracking for prior async tcgen05 operations. The CSV field `pending_mbarriers` is not interpreted as an independent async group queue.",
-        "- `Q`, `independent_d_count`, and `d_reuse_distance` are separate CSV fields. When D capacity is exhausted, the run records the clamped independent D count and the reuse distance instead of labeling the sequence as independent-D.",
-        "- Effective SMEM bytes/cycle is only reported as logical operand bytes divided by measured cycles under validated collector-discard cases. It is not a physical port-width measurement.",
-        "- ld.shared contention conclusions must be read relative to the register ALU, predicated-off load, L1-hit global-load, MMA-only, and interference-only controls.",
+        "- `tcgen05.commit` 按先前 async tcgen05 操作的累计 completion-prefix tracking 分析。CSV 字段 `pending_mbarriers` 不解释为独立 async group queue。",
+        "- `Q`、`independent_d_count` 和 `d_reuse_distance` 是独立 CSV 字段。D 容量耗尽时，run 记录 clamp 后的 independent D count 和 reuse distance，不把序列标为 independent-D。",
+        "- Effective SMEM bytes/cycle 只在 validated collector-discard case 下报告 logical operand bytes / measured cycles，不是物理 port-width 测量。",
+        "- ld.shared contention 结论必须相对 register ALU、predicated-off load、L1-hit global-load、MMA-only 和 interference-only controls 解读。",
         "",
-        "## Unsupported Claim",
+        "## 不支持的说法",
         "",
-        "- These microbenchmarks do not prove physical SMEM port width, physical bank count, physical TMEM bank width, hidden collector depth, or hidden async group queue depth.",
-        "- Shape or layout performance differences are reported as software-visible sensitivity unless corroborated by the controlled experiments listed above.",
+        "- 这些 microbenchmark 不能证明物理 SMEM port width、physical bank count、physical TMEM bank width、hidden collector depth 或 hidden async group queue depth。",
+        "- 除非由上述 controlled experiments 交叉验证，否则 shape 或 layout 性能差异只报告为软件可见敏感性。",
         "",
-        "## Deliverable Audit",
+        "## 交付审计",
         "",
-        "| Requirement | Status | Evidence |",
+        "| 要求 | 状态 | 证据 |",
         "| --- | --- | --- |",
-        "| One independent subfolder per experiment | done | `microbench/mma_config/00_validation` through `07_config_matrix` each contain `benchmark_src`, `scripts`, and `plots` |",
-        "| Validation before performance stages | done | top-level runner stops after `00_validation` if core sw128/512 rows are missing; current core pass is recorded above |",
-        "| Raw and aggregate CSV | done | each stage has `raw_results.csv`, `benchmark_results.csv`, and `invalid_cases.csv` |",
-        "| Numeric and legality checks | done | valid rows require CUDA success, status ok, guard_ok=1, and max_abs_error within dtype tolerance |",
-        "| PTX/SASS audit trail | done | each stage writes `sass_summary.txt` with SASS/PTX hashes and instruction counts |",
-        "| Randomized performance order | done | non-validation stages shuffle cases with a recorded `run_order` field |",
-        "| p10/p90/median timing | done | aggregate CSV records median `elapsed_cycles` plus `elapsed_cycles_p10` and `elapsed_cycles_p90`; raw CSV keeps all repeats |",
-        "| Plots and short analyses | done | each stage has an SVG plot and `analysis.md` |",
-        "| Final report with claim boundaries | done | this file separates observation, inference, and unsupported claims |",
+        "| 每个实验一个独立子目录 | 完成 | `microbench/mma_config/00_validation` 到 `07_config_matrix` 都包含 `benchmark_src`、`scripts` 和 `plots` |",
+        "| 性能 stage 前先做 validation | 完成 | 若 core sw128/512 row 缺失，top-level runner 会在 `00_validation` 后停止；当前 core pass 已记录在上文 |",
+        "| Raw 和 aggregate CSV | 完成 | 每个 stage 都有 `raw_results.csv`、`benchmark_results.csv` 和 `invalid_cases.csv` |",
+        "| 数值和合法性检查 | 完成 | valid row 需要 CUDA success、status ok、guard_ok=1 且 max_abs_error 在 dtype tolerance 内 |",
+        "| PTX/SASS audit trail | 完成 | 每个 stage 写出 `sass_summary.txt`，包含 SASS/PTX hash 和 instruction count |",
+        "| 随机化性能执行顺序 | 完成 | 非 validation stage 会 shuffle cases，并记录 `run_order` 字段 |",
+        "| p10/p90/median timing | 完成 | aggregate CSV 记录 median `elapsed_cycles`、`elapsed_cycles_p10` 和 `elapsed_cycles_p90`；raw CSV 保留所有 repeats |",
+        "| 图和简短分析 | 完成 | 每个 stage 都有 SVG plot 和 `analysis.md` |",
+        "| 带 claim boundary 的最终报告 | 完成 | 本文件区分观察、推断和不支持的说法 |",
     ]
     report.write_text("\n".join(lines) + "\n")
     return report

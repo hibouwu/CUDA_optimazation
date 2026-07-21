@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="70" y="24" font-family="monospace" font-size="16">Static ingress address modes</text>
+<line x1="70" y1="400" x2="870" y2="400" stroke="#222"/>
+<line x1="70" y1="40" x2="70" y2="400" stroke="#222"/>
+<text x="420.0" y="448" font-family="monospace" font-size="12">1 same, 2 pingpong, 3 rotating</text>
+<text x="10" y="60" font-family="monospace" font-size="12">cycles/MMA</text>
+<path d="M70.0,213.4 L574.7,213.1 L870.0,213.3" fill="none" stroke="#1b6f8a" stroke-width="2"/>
+<circle cx="70.0" cy="213.4" r="3" fill="#1b6f8a"/>
+<circle cx="574.7" cy="213.1" r="3" fill="#1b6f8a"/>
+<circle cx="870.0" cy="213.3" r="3" fill="#1b6f8a"/>
+<text x="690" y="58" font-family="monospace" font-size="12" fill="#1b6f8a">BF16 N128</text>
+<path d="M70.0,66.7 L574.7,66.8 L870.0,66.7" fill="none" stroke="#b44b3a" stroke-width="2"/>
+<circle cx="70.0" cy="66.7" r="3" fill="#b44b3a"/>
+<circle cx="574.7" cy="66.8" r="3" fill="#b44b3a"/>
+<circle cx="870.0" cy="66.7" r="3" fill="#b44b3a"/>
+<text x="690" y="76" font-family="monospace" font-size="12" fill="#b44b3a">BF16 N256</text>
+<text x="65.0" y="416" font-family="monospace" font-size="10">1</text>
+<text x="569.7" y="416" font-family="monospace" font-size="10">2</text>
+<text x="865.0" y="416" font-family="monospace" font-size="10">3</text>
+</svg>

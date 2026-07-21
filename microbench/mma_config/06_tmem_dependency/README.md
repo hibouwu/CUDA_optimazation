@@ -1,12 +1,12 @@
 # 06_tmem_dependency
 
-This directory is an independent tcgen05 MMA configuration microbenchmark stage.
+本目录是独立的 tcgen05 MMA 配置微基准 stage。
 
-- `benchmark_src/`: CUDA source for this stage.
-- `scripts/run.py`: builds and runs only this stage.
-- `plots/`: raw CSV, aggregate CSV, SVG plots, SASS summary, and analysis.
+- `benchmark_src/`: 本 stage 的 CUDA 源码。
+- `scripts/run.py`: 只构建并运行本 stage。
+- `plots/`: raw CSV、aggregate CSV、SVG 图、SASS 摘要和分析文档。
 
-Run from the repository root or this directory:
+从仓库根目录或本目录运行：
 
 ```bash
 python3 microbench/mma_config/06_tmem_dependency/scripts/run.py --quick

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="514" viewBox="0 0 980 514">
+<style>text{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#1f2933}.title{font-size:18px;font-weight:700}.axis{stroke:#9aa5b1;stroke-width:1}.bar{fill:#2f80ed}.bar2{fill:#27ae60}</style>
+<text x="20" y="28" class="title">Static collector protocol, Q16 ring-D input_d=1</text>
+<line x1="260" y1="44" x2="870" y2="44" class="axis"/>
+<text x="16" y="75">BF16 N128 pingpong discard</text>
+<rect x="260" y="62" width="342.1" height="17" class="bar"/>
+<text x="608.1" y="75">86.778</text>
+<text x="16" y="101">BF16 N128 pingpong fill_lastuse</text>
+<rect x="260" y="88" width="337.1" height="17" class="bar2"/>
+<text x="603.1" y="101">85.506</text>
+<text x="16" y="127">BF16 N128 pingpong fill_use_discard</text>
+<rect x="260" y="114" width="353.7" height="17" class="bar"/>
+<text x="619.7" y="127">89.721</text>
+<text x="16" y="153">BF16 N128 pingpong fill_use_lastuse</text>
+<rect x="260" y="140" width="353.6" height="17" class="bar2"/>
+<text x="619.6" y="153">89.683</text>
+<text x="16" y="179">BF16 N128 same discard</text>
+<rect x="260" y="166" width="342.0" height="17" class="bar"/>
+<text x="608.0" y="179">86.752</text>
+<text x="16" y="205">BF16 N128 same fill_lastuse</text>
+<rect x="260" y="192" width="337.0" height="17" class="bar2"/>
+<text x="603.0" y="205">85.471</text>
+<text x="16" y="231">BF16 N128 same fill_use_discard</text>
+<rect x="260" y="218" width="354.0" height="17" class="bar"/>
+<text x="620.0" y="231">89.777</text>
+<text x="16" y="257">BF16 N128 same fill_use_lastuse</text>
+<rect x="260" y="244" width="353.9" height="17" class="bar2"/>
+<text x="619.9" y="257">89.766</text>
+<text x="16" y="283">BF16 N256 pingpong discard</text>
+<rect x="260" y="270" width="610.0" height="17" class="bar"/>
+<text x="876.0" y="283">154.718</text>
+<text x="16" y="309">BF16 N256 pingpong fill_lastuse</text>
+<rect x="260" y="296" width="594.7" height="17" class="bar2"/>
+<text x="860.7" y="309">150.838</text>
+<text x="16" y="335">BF16 N256 pingpong fill_use_discard</text>
+<rect x="260" y="322" width="586.0" height="17" class="bar"/>
+<text x="852.0" y="335">148.635</text>
+<text x="16" y="361">BF16 N256 pingpong fill_use_lastuse</text>
+<rect x="260" y="348" width="585.9" height="17" class="bar2"/>
+<text x="851.9" y="361">148.616</text>
+<text x="16" y="387">BF16 N256 same discard</text>
+<rect x="260" y="374" width="610.0" height="17" class="bar"/>
+<text x="876.0" y="387">154.707</text>
+<text x="16" y="413">BF16 N256 same fill_lastuse</text>
+<rect x="260" y="400" width="594.8" height="17" class="bar2"/>
+<text x="860.8" y="413">150.867</text>
+<text x="16" y="439">BF16 N256 same fill_use_discard</text>
+<rect x="260" y="426" width="586.1" height="17" class="bar"/>
+<text x="852.1" y="439">148.654</text>
+<text x="16" y="465">BF16 N256 same fill_use_lastuse</text>
+<rect x="260" y="452" width="586.0" height="17" class="bar2"/>
+<text x="852.0" y="465">148.624</text>
+<text x="260" y="502">cycles/MMA, p50 clock64 timed window</text>
+</svg>
