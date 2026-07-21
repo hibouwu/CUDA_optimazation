@@ -1,4 +1,4 @@
-# Accurate Models of NVIDIA Tensor Cores
+z# Accurate Models of NVIDIA Tensor Cores
 
 > **作者**：Faizan A. Khattak、Mantas Mikaitis，英国利兹大学计算机科学学院  
 > **软件**：MATLAB Tensor Core v0.5，<https://github.com/northnumerical-computing/MATLAB-tensor-core>  
@@ -167,56 +167,70 @@ RTX PRO 6000 同样是第五代 Tensor Core，但其 fp8 输入通过 `mma.sync.
 | fp64 | WMMA | H100/H200/B200/RTX PRO/A100 | DMMA.884 |
 
 普通 `wgmma` 是 Hopper 专用，`tcgen05.mma` 是 Blackwell 数据中心 GPU 专用。通过对比九块 GPU 的随机输出，模型可进一步发现初始 GNFT 未覆盖的特征并迭代修正。
-N _ {\mathrm{ens}} = 1 0 ^ {7}, a _ {\mathrm{min}} = b _ {\mathrm{min}} = c _ {\mathrm{min}} = - 2 ^ {7}, a _ {\mathrm{max}} = b _ {\mathrm{max}} = c _ {\mathrm{max}} = 2 ^ {7}
+（a）对常规范围进行测试：
+
+$$
+N_{\mathrm{ens}}=10^7,\quad a_{\min}=b_{\min}=c_{\min}=-2^7,\quad a_{\max}=b_{\max}=c_{\max}=2^7
+$$
+
+（b）扩大输入动态范围，同时令累加项覆盖更大的数值范围：
+
+$$
+N_{\mathrm{ens}}=10^7,\quad a_{\min}=b_{\min}=-2^{15},\quad a_{\max}=b_{\max}=2^{15},\quad c_{\min}=-2^{100},\quad c_{\max}=2^{100}
+$$
+
+（c）测试非规格化输入和极小乘积：
+
+$$
+N_{\mathrm{ens}}=10^7,\quad a_{\min}=b_{\min}=-2^{-15},\quad a_{\max}=b_{\max}=2^{-15},\quad c_{\min}=-2^{-126},\quad c_{\max}=2^{-126}
+$$
+
+与 bf16 和 tf19 的测试类似，这三组 ensemble 用于覆盖 fp16 与 fp8-e5m2 的正规数和非规格化数区域。
+
+- 对 fp8-e4m3 输入（$L=32$），使用以下两组范围：
+
+$$
+N_{\mathrm{ens}}=10^7,\quad a_{\min}=b_{\min}=-2^7,\quad a_{\max}=b_{\max}=2^7,\quad c_{\min}=-2^{100},\quad c_{\max}=2^{100}
 $$
 
 $$
-\mathrm{(b)} N _ {\mathrm{ens}} = 1 0 ^ {7}, a _ {\mathrm{min}} = b _ {\mathrm{min}} = - 2 ^ {1 5}, a _ {\mathrm{max}} = b _ {\mathrm{max}} = 2 ^ {1 5}, c _ {\mathrm{min}} = - 2 ^ {1 0 0}, c _ {\mathrm{max}} = 2 ^ {1 0 0}
+N_{\mathrm{ens}}=10^7,\quad a_{\min}=b_{\min}=-2^{-6},\quad a_{\max}=b_{\max}=2^{-6},\quad c_{\min}=-2^{-126},\quad c_{\max}=2^{-126}
 $$
 
-$$
-(c) N _ {\mathrm{ens}} = 1 0 ^ {7}, a _ {\mathrm{min}} = b _ {\mathrm{min}} = - 2 ^ {- 1 5}, a _ {\mathrm{max}} = b _ {\mathrm{max}} = 2 ^ {- 1 5}, c _ {\mathrm{min}} = - 2 ^ {- 1 2 6}, c _ {\mathrm{max}} = 2 ^ {- 1 2 6}
-$$
-
-Similar to the bf16 and tf19 case, these three cases test fp16 and fp8-e5m2 in normal and subnormal regions. 
-
-<sub>•</sub> In fp8-e4m3 input format, for which $L = 3 2 ,$ , we have 
+- 对 Ampere、Hopper 和 Blackwell GPU 的 bf16 格式，额外生成 $k=16$、$N_{\mathrm{ens}}=10^8$ 的 ensemble：
 
 $$
-N _ {\mathrm{ens}} = 1 0 ^ {7}, a _ {\mathrm{min}} = b _ {\mathrm{min}} = - 2 ^ {7}, a _ {\mathrm{max}} = b _ {\mathrm{max}} = 2 ^ {7}, c _ {\mathrm{min}} = - 2 ^ {1 0 0}, c _ {\mathrm{max}} = 2 ^ {1 0 0}
+a_{\min}=b_{\min}=-2^{63},\quad a_{\max}=b_{\max}=2^{63},\quad c_{\min}=-2^{122},\quad c_{\max}=2^{122}
 $$
 
-$$
-N _ {\mathrm{ens}} = 1 0 ^ {7}, a _ {\mathrm{min}} = b _ {\mathrm{min}} = - 2 ^ {- 6}, a _ {\mathrm{max}} = b _ {\mathrm{max}} = 2 ^ {- 6}, c _ {\mathrm{min}} = - 2 ^ {- 1 2 6}, c _ {\mathrm{max}} = 2 ^ {- 1 2 6}
-$$
+该设置可以覆盖所有可能的输出类别，包括 Inf、NaN、正规数和非规格化数。
 
-<sub>•</sub> In bf16 format, we generate an extended ensemble with $k = 1 6$ for Ampere, Hopper, and Blackwell GPUs with $N _ { \mathrm { e n s } } = 1 0 ^ { 8 } , a _ { \mathrm { m i n } } = b _ { \mathrm { m i n } } = - 2 ^ { 6 3 } , a _ { \mathrm { m a x } } = b _ { \mathrm { m a x } } = 2 ^ { 6 3 } , c _ { \mathrm { m i n } } = - 2 ^ { 1 2 2 }$ $c _ { \operatorname* { m a x } } = 2 ^ { 1 2 2 }$ . This setup enables testing of the model across all possible output categories, including Inf, NaN, normal, and subnormal values. 
+（2）对所有输入格式，使用算法 2 从正态分布中抽取 $N_{\mathrm{ens}}=10^5$ 个样本，并补充以下定向测试：
 
-(2) $N _ { \mathrm { e n s } } = 1 0 ^ { 5 }$ samples drawn via Algorithm 2 from a normal distribution in all input formats. 
+- 针对 $\pm$Inf 和 NaN 输入的测试向量；
+- $c=0$，或部分/全部部分积为零的场景；
+- 极端动态范围，例如 $c=\pm2^{127}$，而乘积满足 $-2^{-126}\le p_i\le2^{-126}$，以及反向情况；
+- 非规格化场景，其中累加项为 0 或 fp32 非规格化值，且 $p_i\in[-2^{-126},2^{-126}]$；
+- 部分积超过 $2^{128}$、但最终和小于 $2^{128}$ 的情况；
+- 同时包含零、正规数、非规格化数和特殊值的混合输入；
+- 选择 $a$、$b$ 和 $c$，使点积累加过程中产生尽可能多的进位（见文献 [2]）。
 
-<sub>•</sub> Test vectors to evaluate behaviour for <sub>±Inf</sub> and <sub>NaN</sub> inputs. 
+**算法 2：随机测试 Tensor Core 模型的 ensemble 生成伪代码**
 
-<sub>•</sub> Scenarios where $c = 0 ,$ or where some or all partial products are zero. 
+1. 根据输入格式和 GPU 模型选择 $k$。
+2. 使用种子为 0 的 Mersenne Twister 随机数生成器 `mt19937 rng(0)`。
+3. 设置 $N_{\mathrm{ens}}$、$a_{\min}$、$a_{\max}$、$b_{\min}$、$b_{\max}$、$c_{\min}$ 和 $c_{\max}$。
+4. 对 $i=1,\ldots,N_{\mathrm{ens}}$ 重复：
+   - 对 $\ell=1,\ldots,k$，独立采样 $a_\ell\sim\mathcal{U}(a_{\min},a_{\max})$；
+   - 对 $\ell=1,\ldots,k$，独立采样 $b_\ell\sim\mathcal{U}(b_{\min},b_{\max})$；
+   - 独立采样 $c\sim\mathcal{U}(c_{\min},c_{\max})$。
+5. 结束循环。
 
-<sub>•</sub> Extreme dynamic range cases, e.g., $c = \pm 2 ^ { 1 2 7 }$ with products $- 2 ^ { - 1 2 6 } \leq p _ { i } \leq 2 ^ { - 1 2 6 }$ , and vice versa. 
+硬件执行使用 CUDA 的 `WMMA` API、`mma.sync`、`wgmma.mma_async` 和 `tcgen05.mma` 指令。为进一步确认 Tensor Core 确实被激活，作者用 `cuobjdump` 检查编译后的二进制文件，确认其中存在 `HMMA`、`QMMA`、`QGMMA`、`UTCHMMA`、`UTCQMMA` 和 `DMMA` 指令。
 
-<sub>•</sub> Subnormal cases, with ?? <sub>=</sub> 0 or a subnormal value in fp32 format and $p _ { i } \in [ - 2 ^ { - 1 2 6 } , 2 ^ { - 1 2 6 } ]$ 
+作者特别指出，`DMMA` 操作没有通过随机测试进行建模或验证，也没有纳入模型软件包。这是因为 Fasi 等人 [9] 报告，`DMMA` 的行为等价于顺序执行的 FMA，并且完全符合 IEEE 规范。因此，模拟 `DMMA` 时可以直接使用 MATLAB 内置的 `fma` 命令。
 
-<sub>•</sub> Cases where partial products exceed $2 ^ { 1 2 8 }$ , but the final sum is less than $2 ^ { 1 2 8 }$ 
-
-<sub>•</sub> Mixed input configurations involving zero, normal, subnormal, and special values. 
-
-<sub>•</sub> Choose ??, ??, and ?? such dot product generates the maximum number of carries during accumulation (see [2]). 
-
-Algorithm 2 Ensemble generation psuedo-code for randomized testing of tensor core models
-1: Choose k as per input format and GPU model
-2: mt19937 rng(0) % Mersenne Twister with seed 0
-3: choose $N_{ens}$ , $a_{min}$ , $a_{max}$ , $b_{min}$ , $b_{max}$ , $c_{min}$ , $c_{max}$ 4: for i = 1 : $N_{ens}$ do
-5: $a_{\ell} \stackrel{\text{i.i.d.}}{\sim} \mathcal{U}(a_{\text{min}}, a_{\text{max}})$ , $\ell = 1, \ldots, k$ 6: $b_{\ell} \stackrel{\text{i.i.d.}}{\sim} \mathcal{U}(b_{\text{min}}, b_{\text{max}})$ , $\ell = 1, \ldots, k$ 7: $c \stackrel{\text{i.i.d.}}{\sim} \mathcal{U}(c_{\text{min}}, c_{\text{max}})$ 8: end for 
-
-For the hardware execution, <sub>WMMA</sub> API, <sub>mma.sync</sub>, <sub>wgmma.mma_async</sub>, and <sub>tcgen05.mma</sub> instructions were invoked in CUDA. To further verify that tensor cores were active, the <sub>cuobjdump</sub> tool was used to inspect the compiled binary and confirm the presence of <sub>HMMA</sub>, <sub>QMMA</sub>, <sub>QGMMA</sub>, <sub>UTCHMMA</sub>, <sub>UTCQMMA</sub>, <sub>DMMA</sub> instructions. Finally, we note that <sub>DMMA</sub> operations are not modelled or tested via randomized testing, nor are they included in the model package, since, as reported by Fasi et al. [9], they behave as sequential FMAs and are fully IEEE compliant. Therefore, one can directly rely on MATLAB’s built-in <sub>fma</sub> command to emulate the behaviour of <sub>DMMA</sub>. 
-
-For Ada GPUs, CUDA toolkit 12.9 was used, while for all other GPUs, we used CUDA toolkit 12.8, while the GCC version for Ada GPUs and B200 was 14.2.0, and 13.1.0, respectively, while for remaining GPUs, it was 11.5.0. 
+Ada GPU 使用 CUDA Toolkit 12.9，其余 GPU 使用 CUDA Toolkit 12.8。Ada GPU 和 B200 使用的 GCC 版本分别为 14.2.0 和 13.1.0，其余 GPU 使用 GCC 11.5.0。
 
 ### 4.2.1 模型迭代细化
 
