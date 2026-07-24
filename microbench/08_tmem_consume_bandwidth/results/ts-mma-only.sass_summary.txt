@@ -1,0 +1,18 @@
+		Function : _Z14tcgen05_kerneliPy
+        /*0880*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                            /* 0x00000004000475e3 */
+        /*08e0*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                            /* 0x00000004000475e3 */
+        /*0b10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR9+0x100], gdesc[UR4] ;                             /* 0x00010004090079e7 */
+        /*0bc0*/                   UTCBAR [UR4], URZ ;                                                                      /* 0x000000ff040073e9 */
+        /*0c60*/                   CS2R R2, SR_CLOCKLO ;                                                                    /* 0x0000000000027805 */
+        /*0dc0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1006080079ea */
+        /*0e70*/                   UTCBAR [UR16], URZ ;                                                                     /* 0x000000ff100073e9 */
+        /*0f60*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UPT ;  /* 0x800e1006080079ea */
+        /*1010*/                   UTCBAR [UR16], URZ ;                                                                     /* 0x000000ff100073e9 */
+        /*10f0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UPT ;  /* 0x800e1006080079ea */
+        /*11a0*/                   UTCBAR [UR16], URZ ;                                                                     /* 0x000000ff100073e9 */
+        /*1290*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UPT ;  /* 0x800e1006080079ea */
+        /*1340*/                   UTCBAR [UR16], URZ ;                                                                     /* 0x000000ff100073e9 */
+        /*14c0*/                   UTCOMMA.4X tmem[UR8], gdesc[UR6], tmem[UR9], tmem[UR16], idesc[UR17], tmem[UR14], UP0 ;  /* 0x800e1006080079ea */
+        /*1570*/                   UTCBAR [UR13], URZ ;                                                                     /* 0x000000ff0d0073e9 */
+        /*1630*/                   CS2R R4, SR_CLOCKLO ;                                                                    /* 0x0000000000047805 */
+        /*18b0*/                   UTCATOMSWS.AND URZ, UR4 ;                                                                /* 0x0000000400ff79e3 */

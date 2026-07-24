@@ -1,0 +1,7 @@
+case,count_UTCCP,count_UTCOMMA,count_tmem,role
+cp-only,29,,,component-cp-ingress
+ts-mma-only,,5,6,component-tmem-consume
+serial-a1,5,5,10,serial-cp-mma
+overlap-a2,6,5,11,double-buffer-overlap
+warp-split-a2,6,5,11,split-issuer-overlap
+mainloop-a2-k16,17,16,33,steady-state-overlap

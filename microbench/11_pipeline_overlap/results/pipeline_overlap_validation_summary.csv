@@ -1,0 +1,7 @@
+case,role,tflops_median,tflops_min,tflops_max,cp_bytes_per_cycle_median,estimated_tmem_consume_bytes_per_cycle_median,cycles_per_tile_median,repeat_count
+cp-only,component-cp-ingress,0.0,0.0,0.0,859.02437,0.0,0.0,3
+ts-mma-only,component-tmem-consume,373.197613,373.197613,373.197719,0.0,115.698665,0.0,3
+serial-a1,serial-cp-mma,214.209763,214.209728,214.209763,66.409277,66.409277,30.839065,3
+overlap-a2,double-buffer-overlap,331.938061,331.937977,331.938061,102.907385,102.907385,19.90139,3
+warp-split-a2,split-issuer-overlap,300.601077,300.601077,300.601077,93.192298,93.192298,21.976065,3
+mainloop-a2-k16,steady-state-overlap,332.272282,332.272271,332.272287,103.011,103.011,318.10195,3

@@ -1,0 +1,93 @@
+		Function : _Z11gmem_kernelIL4Mode2EEvP5uint4S2_miPjPy
+        /*0160*/              @!P0 CS2R R2, SR_CLOCKLO ;                                 /* 0x0000000000028805 */
+        /*0590*/                   LDG.E.128.STRONG.GPU R4, desc[UR8][R32.64] ;          /* 0x0000000820047981 */
+        /*05c0*/                   LDG.E.128.STRONG.GPU R24, desc[UR8][R28.64] ;         /* 0x000000081c187981 */
+        /*0680*/                   LDG.E.128.STRONG.GPU R40, desc[UR8][R40.64] ;         /* 0x0000000828287981 */
+        /*06d0*/                   LDG.E.128.STRONG.GPU R36, desc[UR8][R36.64] ;         /* 0x0000000824247981 */
+        /*0700*/                   LDG.E.128.STRONG.GPU R48, desc[UR8][R48.64] ;         /* 0x0000000830307981 */
+        /*0740*/                   LDG.E.128.STRONG.GPU R44, desc[UR8][R44.64] ;         /* 0x000000082c2c7981 */
+        /*0770*/                   LDG.E.128.STRONG.GPU R56, desc[UR8][R56.64] ;         /* 0x0000000838387981 */
+        /*0790*/                   LDG.E.128.STRONG.GPU R52, desc[UR8][R52.64] ;         /* 0x0000000834347981 */
+        /*07c0*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R4 ;          /* 0x000000040c007986 */
+        /*07d0*/                   STG.E.128.STRONG.GPU desc[UR8][R14.64], R24 ;         /* 0x000000180e007986 */
+        /*0880*/                   STG.E.128.STRONG.GPU desc[UR8][R16.64], R36 ;         /* 0x0000002410007986 */
+        /*08a0*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R40 ;         /* 0x000000280c007986 */
+        /*08b0*/                   STG.E.128.STRONG.GPU desc[UR8][R14.64], R44 ;         /* 0x0000002c0e007986 */
+        /*0920*/                   STG.E.128.STRONG.GPU desc[UR8][R16.64], R48 ;         /* 0x0000003010007986 */
+        /*0960*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R52 ;         /* 0x000000340c007986 */
+        /*0980*/                   STG.E.128.STRONG.GPU desc[UR8][R14.64], R56 ;         /* 0x000000380e007986 */
+        /*0c30*/                   LDG.E.128.STRONG.GPU R4, desc[UR8][R4.64] ;           /* 0x0000000804047981 */
+        /*0c40*/                   LDG.E.128.STRONG.GPU R8, desc[UR8][R8.64] ;           /* 0x0000000808087981 */
+        /*0e40*/                   LDG.E.128.STRONG.GPU R16, desc[UR8][R16.64] ;         /* 0x0000000810107981 */
+        /*0e70*/                   LDG.E.128.STRONG.GPU R12, desc[UR8][R12.64] ;         /* 0x000000080c0c7981 */
+        /*0e80*/                   LDG.E.128.STRONG.GPU R20, desc[UR8][R20.64] ;         /* 0x0000000814147981 */
+        /*0e90*/                   LDG.E.128.STRONG.GPU R24, desc[UR8][R24.64] ;         /* 0x0000000818187981 */
+        /*0ec0*/                   LDG.E.128.STRONG.GPU R28, desc[UR8][R28.64] ;         /* 0x000000081c1c7981 */
+        /*0f30*/                   LDG.E.128.STRONG.GPU R32, desc[UR8][R32.64] ;         /* 0x0000000820207981 */
+        /*0f40*/                   STG.E.128.STRONG.GPU desc[UR8][R48.64], R4 ;          /* 0x0000000430007986 */
+        /*10a0*/                   STG.E.128.STRONG.GPU desc[UR8][R44.64], R12 ;         /* 0x0000000c2c007986 */
+        /*10c0*/                   STG.E.128.STRONG.GPU desc[UR8][R50.64], R20 ;         /* 0x0000001432007986 */
+        /*1170*/                   STG.E.128.STRONG.GPU desc[UR8][R4.64], R28 ;          /* 0x0000001c04007986 */
+        /*1200*/                   STG.E.128.STRONG.GPU desc[UR8][R6.64], R8 ;           /* 0x0000000806007986 */
+        /*1230*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R16 ;         /* 0x000000100c007986 */
+        /*1250*/                   STG.E.128.STRONG.GPU desc[UR8][R14.64], R24 ;         /* 0x000000180e007986 */
+        /*1280*/                   STG.E.128.STRONG.GPU desc[UR8][R4.64], R32 ;          /* 0x0000002004007986 */
+        /*15f0*/                   LDG.E.128.STRONG.GPU R28, desc[UR8][R28.64] ;         /* 0x000000081c1c7981 */
+        /*1630*/                   LDG.E.128.STRONG.GPU R32, desc[UR8][R32.64] ;         /* 0x0000000820207981 */
+        /*1680*/                   LDG.E.128.STRONG.GPU R16, desc[UR8][R16.64] ;         /* 0x0000000810107981 */
+        /*16b0*/                   LDG.E.128.STRONG.GPU R20, desc[UR8][R20.64] ;         /* 0x0000000814147981 */
+        /*16c0*/                   LDG.E.128.STRONG.GPU R4, desc[UR8][R4.64] ;           /* 0x0000000804047981 */
+        /*16d0*/                   LDG.E.128.STRONG.GPU R12, desc[UR8][R12.64] ;         /* 0x000000080c0c7981 */
+        /*16e0*/                   LDG.E.128.STRONG.GPU R24, desc[UR8][R24.64] ;         /* 0x0000000818187981 */
+        /*16f0*/                   LDG.E.128.STRONG.GPU R8, desc[UR8][R8.64] ;           /* 0x0000000808087981 */
+        /*1800*/                   STG.E.128.STRONG.GPU desc[UR8][R36.64], R32 ;         /* 0x0000002024007986 */
+        /*1820*/                   STG.E.128.STRONG.GPU desc[UR8][R38.64], R28 ;         /* 0x0000001c26007986 */
+        /*1880*/                   STG.E.128.STRONG.GPU desc[UR8][R40.64], R24 ;         /* 0x0000001828007986 */
+        /*18b0*/                   STG.E.128.STRONG.GPU desc[UR8][R42.64], R20 ;         /* 0x000000142a007986 */
+        /*18c0*/                   STG.E.128.STRONG.GPU desc[UR8][R44.64], R16 ;         /* 0x000000102c007986 */
+        /*18e0*/                   STG.E.128.STRONG.GPU desc[UR8][R46.64], R12 ;         /* 0x0000000c2e007986 */
+        /*1900*/                   STG.E.128.STRONG.GPU desc[UR8][R48.64], R8 ;          /* 0x0000000830007986 */
+        /*1920*/                   STG.E.128.STRONG.GPU desc[UR8][R50.64], R4 ;          /* 0x0000000432007986 */
+        /*1940*/                   MEMBAR.SC.GPU ;                                       /* 0x0000000000007992 */
+        /*19b0*/                   CS2R R4, SR_CLOCKLO ;                                 /* 0x0000000000047805 */
+		Function : _Z11gmem_kernelIL4Mode1EEvP5uint4S2_miPjPy
+        /*01c0*/              @!P0 CS2R R8, SR_CLOCKLO ;                                 /* 0x0000000000088805 */
+        /*0500*/                   STG.E.128.STRONG.GPU desc[UR8][R40.64], R8 ;          /* 0x0000000828007986 */
+        /*0540*/                   STG.E.128.STRONG.GPU desc[UR8][R30.64], R12 ;         /* 0x0000000c1e007986 */
+        /*0700*/                   STG.E.128.STRONG.GPU desc[UR8][R44.64], R16 ;         /* 0x000000102c007986 */
+        /*0730*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R8 ;          /* 0x000000080c007986 */
+        /*08a0*/                   STG.E.128.STRONG.GPU desc[UR8][R10.64], R16 ;         /* 0x000000100a007986 */
+        /*0910*/                   STG.E.128.STRONG.GPU desc[UR8][R8.64], R12 ;          /* 0x0000000c08007986 */
+        /*0a50*/                   STG.E.128.STRONG.GPU desc[UR8][R40.64], R8 ;          /* 0x0000000828007986 */
+        /*0aa0*/                   STG.E.128.STRONG.GPU desc[UR8][R12.64], R16 ;         /* 0x000000100c007986 */
+        /*0ba0*/                   MEMBAR.SC.GPU ;                                       /* 0x0000000000007992 */
+        /*0c10*/                   CS2R R10, SR_CLOCKLO ;                                /* 0x00000000000a7805 */
+		Function : _Z11gmem_kernelIL4Mode0EEvP5uint4S2_miPjPy
+        /*0100*/              @!P0 CS2R R2, SR_CLOCKLO ;                                 /* 0x0000000000028805 */
+        /*0490*/                   LDG.E.128.STRONG.GPU R32, desc[UR10][R32.64] ;        /* 0x0000000a20207981 */
+        /*04c0*/                   LDG.E.128.STRONG.GPU R12, desc[UR10][R12.64] ;        /* 0x0000000a0c0c7981 */
+        /*04f0*/                   LDG.E.128.STRONG.GPU R16, desc[UR10][R16.64] ;        /* 0x0000000a10107981 */
+        /*0520*/                   LDG.E.128.STRONG.GPU R8, desc[UR10][R8.64] ;          /* 0x0000000a08087981 */
+        /*0580*/                   LDG.E.128.STRONG.GPU R20, desc[UR10][R20.64] ;        /* 0x0000000a14147981 */
+        /*05e0*/                   LDG.E.128.STRONG.GPU R24, desc[UR10][R24.64] ;        /* 0x0000000a18187981 */
+        /*0600*/                   LDG.E.128.STRONG.GPU R36, desc[UR10][R36.64] ;        /* 0x0000000a24247981 */
+        /*0610*/                   LDG.E.128.STRONG.GPU R28, desc[UR10][R28.64] ;        /* 0x0000000a1c1c7981 */
+        /*0890*/                   LDG.E.128.STRONG.GPU R12, desc[UR10][R12.64] ;        /* 0x0000000a0c0c7981 */
+        /*0950*/                   LDG.E.128.STRONG.GPU R24, desc[UR10][R24.64] ;        /* 0x0000000a18187981 */
+        /*09e0*/                   LDG.E.128.STRONG.GPU R16, desc[UR10][R16.64] ;        /* 0x0000000a10107981 */
+        /*0a10*/                   LDG.E.128.STRONG.GPU R32, desc[UR10][R32.64] ;        /* 0x0000000a20207981 */
+        /*0a20*/                   LDG.E.128.STRONG.GPU R28, desc[UR10][R28.64] ;        /* 0x0000000a1c1c7981 */
+        /*0a30*/                   LDG.E.128.STRONG.GPU R20, desc[UR10][R20.64] ;        /* 0x0000000a14147981 */
+        /*0a40*/                   LDG.E.128.STRONG.GPU R36, desc[UR10][R36.64] ;        /* 0x0000000a24247981 */
+        /*0a50*/                   LDG.E.128.STRONG.GPU R40, desc[UR10][R40.64] ;        /* 0x0000000a28287981 */
+        /*0e20*/                   LDG.E.128.STRONG.GPU R16, desc[UR10][R16.64] ;        /* 0x0000000a10107981 */
+        /*0e90*/                   LDG.E.128.STRONG.GPU R12, desc[UR10][R12.64] ;        /* 0x0000000a0c0c7981 */
+        /*0ed0*/                   LDG.E.128.STRONG.GPU R20, desc[UR10][R20.64] ;        /* 0x0000000a14147981 */
+        /*0f00*/                   LDG.E.128.STRONG.GPU R8, desc[UR10][R8.64] ;          /* 0x0000000a08087981 */
+        /*0f30*/                   LDG.E.128.STRONG.GPU R24, desc[UR10][R24.64] ;        /* 0x0000000a18187981 */
+        /*0f60*/                   LDG.E.128.STRONG.GPU R28, desc[UR10][R28.64] ;        /* 0x0000000a1c1c7981 */
+        /*0f90*/                   LDG.E.128.STRONG.GPU R36, desc[UR10][R36.64] ;        /* 0x0000000a24247981 */
+        /*0fa0*/                   LDG.E.128.STRONG.GPU R32, desc[UR10][R32.64] ;        /* 0x0000000a20207981 */
+        /*1120*/                   CS2R R8, SR_CLOCKLO ;                                 /* 0x0000000000087805 */
+		Function : _Z11init_kernelP5uint4m
+        /*01c0*/                   STG.E.128 desc[UR6][R2.64], R4 ;                      /* 0x0000000402007986 */

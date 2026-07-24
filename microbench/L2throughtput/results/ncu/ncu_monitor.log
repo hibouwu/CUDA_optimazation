@@ -1,0 +1,6 @@
+[2026-07-23 08:45:12 UTC] attempt=1 exclusive candidate; idle_for=0.0s/300.0s
+[2026-07-23 08:45:42 UTC] attempt=2 exclusive candidate; idle_for=30.1s/300.0s
+[2026-07-23 08:46:12 UTC] attempt=3 exclusive candidate; idle_for=60.2s/300.0s
+[2026-07-23 08:46:42 UTC] attempt=4 exclusive candidate; idle_for=90.3s/300.0s
+[2026-07-23 08:47:07 UTC] attempt=1 exclusive window found after 0.0s idle
+[2026-07-23 08:47:18 UTC] NCU validation complete: /xplorer/shijy/CUDA_optimazation/microbench/L2throughtput/results/ncu/ncu_l2_validation_report.md

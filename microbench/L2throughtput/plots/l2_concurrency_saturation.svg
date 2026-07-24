@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620">
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#111827}
+.axis{stroke:#374151;stroke-width:1}
+.grid{stroke:#e5e7eb;stroke-width:1}
+.label{font-size:13px}
+.small{font-size:12px;fill:#4b5563}
+.title{font-size:20px;font-weight:700}
+.legend{font-size:12px}
+</style>
+<rect x="0" y="0" width="1040" height="620" fill="#fff"/>
+<text class="title" x="520.0" y="30" text-anchor="middle">L2 吞吐随活跃 Warp 数饱和曲线</text>
+<line class="axis" x1="76.0" y1="544" x2="509.0" y2="544"/>
+<line class="axis" x1="76.0" y1="64" x2="76.0" y2="544"/>
+<line class="grid" x1="76.0" y1="544.0" x2="509.0" y2="544.0"/>
+<text class="small" x="68.0" y="548.0" text-anchor="end">0</text>
+<line class="grid" x1="76.0" y1="424.0" x2="509.0" y2="424.0"/>
+<text class="small" x="68.0" y="428.0" text-anchor="end">250</text>
+<line class="grid" x1="76.0" y1="304.0" x2="509.0" y2="304.0"/>
+<text class="small" x="68.0" y="308.0" text-anchor="end">500</text>
+<line class="grid" x1="76.0" y1="184.0" x2="509.0" y2="184.0"/>
+<text class="small" x="68.0" y="188.0" text-anchor="end">750</text>
+<line class="grid" x1="76.0" y1="64.0" x2="509.0" y2="64.0"/>
+<text class="small" x="68.0" y="68.0" text-anchor="end">1000</text>
+<text class="label" x="292.5" y="586" text-anchor="middle">active warps / SM</text>
+<text class="label" transform="translate(28.0,304.0) rotate(-90)" text-anchor="middle">B/cycle (全 GPU)</text>
+<text class="label" x="292.5" y="46" text-anchor="middle">read-unique</text>
+<line class="grid" x1="76.0" y1="64" x2="76.0" y2="544"/>
+<text class="small" x="76.0" y="562" text-anchor="middle">0</text>
+<line class="grid" x1="184.25" y1="64" x2="184.25" y2="544"/>
+<text class="small" x="184.25" y="562" text-anchor="middle">8</text>
+<line class="grid" x1="292.5" y1="64" x2="292.5" y2="544"/>
+<text class="small" x="292.5" y="562" text-anchor="middle">16</text>
+<line class="grid" x1="400.75" y1="64" x2="400.75" y2="544"/>
+<text class="small" x="400.75" y="562" text-anchor="middle">24</text>
+<line class="grid" x1="509.0" y1="64" x2="509.0" y2="544"/>
+<text class="small" x="509.0" y="562" text-anchor="middle">32</text>
+<polyline points="103.1,403.8 130.1,272.4 157.2,173.7 184.2,118.8 211.3,111.3 238.4,104.6 265.4,101.1 292.5,97.6 319.6,94.9 346.6,94.6 373.7,92.7 400.8,88.3 427.8,93.1 454.9,90.5 481.9,90.0 509.0,89.9" fill="none" stroke="#6f42c1" stroke-width="2.5"/>
+<circle cx="103.1" cy="403.8" r="3" fill="#6f42c1"/>
+<circle cx="130.1" cy="272.4" r="3" fill="#6f42c1"/>
+<circle cx="157.2" cy="173.7" r="3" fill="#6f42c1"/>
+<circle cx="184.2" cy="118.8" r="3" fill="#6f42c1"/>
+<circle cx="211.3" cy="111.3" r="3" fill="#6f42c1"/>
+<circle cx="238.4" cy="104.6" r="3" fill="#6f42c1"/>
+<circle cx="265.4" cy="101.1" r="3" fill="#6f42c1"/>
+<circle cx="292.5" cy="97.6" r="3" fill="#6f42c1"/>
+<circle cx="319.6" cy="94.9" r="3" fill="#6f42c1"/>
+<circle cx="346.6" cy="94.6" r="3" fill="#6f42c1"/>
+<circle cx="373.7" cy="92.7" r="3" fill="#6f42c1"/>
+<circle cx="400.8" cy="88.3" r="3" fill="#6f42c1"/>
+<circle cx="427.8" cy="93.1" r="3" fill="#6f42c1"/>
+<circle cx="454.9" cy="90.5" r="3" fill="#6f42c1"/>
+<circle cx="481.9" cy="90.0" r="3" fill="#6f42c1"/>
+<circle cx="509.0" cy="89.9" r="3" fill="#6f42c1"/>
+<polyline points="130.1,272.7 184.2,120.0 238.4,101.8 292.5,97.0 346.6,93.4 400.8,88.0 454.9,93.6 509.0,91.2" fill="none" stroke="#0a7f5a" stroke-width="2.5"/>
+<circle cx="130.1" cy="272.7" r="3" fill="#0a7f5a"/>
+<circle cx="184.2" cy="120.0" r="3" fill="#0a7f5a"/>
+<circle cx="238.4" cy="101.8" r="3" fill="#0a7f5a"/>
+<circle cx="292.5" cy="97.0" r="3" fill="#0a7f5a"/>
+<circle cx="346.6" cy="93.4" r="3" fill="#0a7f5a"/>
+<circle cx="400.8" cy="88.0" r="3" fill="#0a7f5a"/>
+<circle cx="454.9" cy="93.6" r="3" fill="#0a7f5a"/>
+<circle cx="509.0" cy="91.2" r="3" fill="#0a7f5a"/>
+<polyline points="184.2,117.0 292.5,96.4 400.8,87.1 509.0,90.1" fill="none" stroke="#b45309" stroke-width="2.5"/>
+<circle cx="184.2" cy="117.0" r="3" fill="#b45309"/>
+<circle cx="292.5" cy="96.4" r="3" fill="#b45309"/>
+<circle cx="400.8" cy="87.1" r="3" fill="#b45309"/>
+<circle cx="509.0" cy="90.1" r="3" fill="#b45309"/>
+<line class="axis" x1="571.0" y1="544" x2="1004.0" y2="544"/>
+<line class="axis" x1="571.0" y1="64" x2="571.0" y2="544"/>
+<line class="grid" x1="571.0" y1="544.0" x2="1004.0" y2="544.0"/>
+<text class="small" x="563.0" y="548.0" text-anchor="end">0</text>
+<line class="grid" x1="571.0" y1="424.0" x2="1004.0" y2="424.0"/>
+<text class="small" x="563.0" y="428.0" text-anchor="end">250</text>
+<line class="grid" x1="571.0" y1="304.0" x2="1004.0" y2="304.0"/>
+<text class="small" x="563.0" y="308.0" text-anchor="end">500</text>
+<line class="grid" x1="571.0" y1="184.0" x2="1004.0" y2="184.0"/>
+<text class="small" x="563.0" y="188.0" text-anchor="end">750</text>
+<line class="grid" x1="571.0" y1="64.0" x2="1004.0" y2="64.0"/>
+<text class="small" x="563.0" y="68.0" text-anchor="end">1000</text>
+<text class="label" x="787.5" y="586" text-anchor="middle">active warps / SM</text>
+<text class="label" transform="translate(523.0,304.0) rotate(-90)" text-anchor="middle">B/cycle (全 GPU)</text>
+<text class="label" x="787.5" y="46" text-anchor="middle">write-unique</text>
+<line class="grid" x1="571.0" y1="64" x2="571.0" y2="544"/>
+<text class="small" x="571.0" y="562" text-anchor="middle">0</text>
+<line class="grid" x1="679.25" y1="64" x2="679.25" y2="544"/>
+<text class="small" x="679.25" y="562" text-anchor="middle">8</text>
+<line class="grid" x1="787.5" y1="64" x2="787.5" y2="544"/>
+<text class="small" x="787.5" y="562" text-anchor="middle">16</text>
+<line class="grid" x1="895.75" y1="64" x2="895.75" y2="544"/>
+<text class="small" x="895.75" y="562" text-anchor="middle">24</text>
+<line class="grid" x1="1004.0" y1="64" x2="1004.0" y2="544"/>
+<text class="small" x="1004.0" y="562" text-anchor="middle">32</text>
+<polyline points="598.1,406.0 625.1,410.2 652.2,385.6 679.2,409.2 706.3,400.9 733.4,417.6 760.4,381.9 787.5,382.4 814.6,369.4 841.6,406.9 868.7,389.5 895.8,397.9 922.8,378.6 949.9,400.8 976.9,397.7 1004.0,403.7 1031.1,389.3 1058.1,405.0 1085.2,405.7 1112.2,387.1" fill="none" stroke="#6f42c1" stroke-width="2.5"/>
+<circle cx="598.1" cy="406.0" r="3" fill="#6f42c1"/>
+<circle cx="625.1" cy="410.2" r="3" fill="#6f42c1"/>
+<circle cx="652.2" cy="385.6" r="3" fill="#6f42c1"/>
+<circle cx="679.2" cy="409.2" r="3" fill="#6f42c1"/>
+<circle cx="706.3" cy="400.9" r="3" fill="#6f42c1"/>
+<circle cx="733.4" cy="417.6" r="3" fill="#6f42c1"/>
+<circle cx="760.4" cy="381.9" r="3" fill="#6f42c1"/>
+<circle cx="787.5" cy="382.4" r="3" fill="#6f42c1"/>
+<circle cx="814.6" cy="369.4" r="3" fill="#6f42c1"/>
+<circle cx="841.6" cy="406.9" r="3" fill="#6f42c1"/>
+<circle cx="868.7" cy="389.5" r="3" fill="#6f42c1"/>
+<circle cx="895.8" cy="397.9" r="3" fill="#6f42c1"/>
+<circle cx="922.8" cy="378.6" r="3" fill="#6f42c1"/>
+<circle cx="949.9" cy="400.8" r="3" fill="#6f42c1"/>
+<circle cx="976.9" cy="397.7" r="3" fill="#6f42c1"/>
+<circle cx="1004.0" cy="403.7" r="3" fill="#6f42c1"/>
+<circle cx="1031.1" cy="389.3" r="3" fill="#6f42c1"/>
+<circle cx="1058.1" cy="405.0" r="3" fill="#6f42c1"/>
+<circle cx="1085.2" cy="405.7" r="3" fill="#6f42c1"/>
+<circle cx="1112.2" cy="387.1" r="3" fill="#6f42c1"/>
+<polyline points="625.1,425.4 679.2,426.6 733.4,423.1 787.5,428.4 841.6,408.1 895.8,410.1 949.9,404.8 1004.0,412.5 1058.1,385.4 1112.2,371.1" fill="none" stroke="#0a7f5a" stroke-width="2.5"/>
+<circle cx="625.1" cy="425.4" r="3" fill="#0a7f5a"/>
+<circle cx="679.2" cy="426.6" r="3" fill="#0a7f5a"/>
+<circle cx="733.4" cy="423.1" r="3" fill="#0a7f5a"/>
+<circle cx="787.5" cy="428.4" r="3" fill="#0a7f5a"/>
+<circle cx="841.6" cy="408.1" r="3" fill="#0a7f5a"/>
+<circle cx="895.8" cy="410.1" r="3" fill="#0a7f5a"/>
+<circle cx="949.9" cy="404.8" r="3" fill="#0a7f5a"/>
+<circle cx="1004.0" cy="412.5" r="3" fill="#0a7f5a"/>
+<circle cx="1058.1" cy="385.4" r="3" fill="#0a7f5a"/>
+<circle cx="1112.2" cy="371.1" r="3" fill="#0a7f5a"/>
+<polyline points="679.2,390.9 787.5,377.4 895.8,383.8 1004.0,393.0 1112.2,359.5" fill="none" stroke="#b45309" stroke-width="2.5"/>
+<circle cx="679.2" cy="390.9" r="3" fill="#b45309"/>
+<circle cx="787.5" cy="377.4" r="3" fill="#b45309"/>
+<circle cx="895.8" cy="383.8" r="3" fill="#b45309"/>
+<circle cx="1004.0" cy="393.0" r="3" fill="#b45309"/>
+<circle cx="1112.2" cy="359.5" r="3" fill="#b45309"/>
+<line x1="84" y1="598" x2="112" y2="598" stroke="#6f42c1" stroke-width="3"/>
+<text class="legend" x="120" y="602">每 block 64 线程</text>
+<line x1="209" y1="598" x2="237" y2="598" stroke="#0a7f5a" stroke-width="3"/>
+<text class="legend" x="245" y="602">每 block 128 线程</text>
+<line x1="334" y1="598" x2="362" y2="598" stroke="#b45309" stroke-width="3"/>
+<text class="legend" x="370" y="602">每 block 256 线程</text>
+</svg>

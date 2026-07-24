@@ -1,0 +1,7 @@
+mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_active_block_bytes_per_cycle,sm_count,launched_blocks,active_remote_blocks,clusters,cluster_size,resident_cluster_limit,cuda_max_active_clusters,threads,iters,unroll,shared_bytes,working_set_elements,occupancy_limited
+ring-read-d1,2684354560,23723955,113.149539,5.657477,20,20,20,5,4,5,14,256,4096,8,65536,4096,0
+ring-read-d2,2684354560,22438002,119.634295,5.981715,20,20,20,5,4,5,14,256,4096,8,65536,4096,0
+fanin-read-root0,2013265920,38160898,52.757299,3.517153,20,20,15,5,4,5,14,256,4096,8,65536,4096,0
+ring-write-d1,2684354560,21095264,127.249157,6.362458,20,20,20,5,4,5,14,256,4096,8,65536,4096,0
+ring-write-d2,2684354560,18921739,141.866166,7.093308,20,20,20,5,4,5,14,256,4096,8,65536,4096,0
+fanin-write-root0,2013265920,27927232,72.089705,4.805980,20,20,15,5,4,5,14,256,4096,8,65536,4096,0

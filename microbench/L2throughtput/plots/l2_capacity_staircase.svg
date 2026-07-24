@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#111827}
+.axis{stroke:#374151;stroke-width:1}
+.grid{stroke:#e5e7eb;stroke-width:1}
+.label{font-size:13px}
+.small{font-size:12px;fill:#4b5563}
+.title{font-size:20px;font-weight:700}
+.legend{font-size:12px}
+</style>
+<rect x="0" y="0" width="960" height="560" fill="#fff"/>
+<text class="title" x="480.0" y="30" text-anchor="middle">L2 容量阶跃</text>
+<line class="axis" x1="82" y1="468" x2="902" y2="468"/>
+<line class="axis" x1="82" y1="68" x2="82" y2="468"/>
+<line class="grid" x1="82" y1="468.0" x2="902" y2="468.0"/>
+<text class="small" x="74" y="472.0" text-anchor="end">0</text>
+<line class="grid" x1="82" y1="368.0" x2="902" y2="368.0"/>
+<text class="small" x="74" y="372.0" text-anchor="end">250</text>
+<line class="grid" x1="82" y1="268.0" x2="902" y2="268.0"/>
+<text class="small" x="74" y="272.0" text-anchor="end">500</text>
+<line class="grid" x1="82" y1="168.0" x2="902" y2="168.0"/>
+<text class="small" x="74" y="172.0" text-anchor="end">750</text>
+<line class="grid" x1="82" y1="68.0" x2="902" y2="68.0"/>
+<text class="small" x="74" y="72.0" text-anchor="end">1000</text>
+<text class="label" x="492.0" y="510" text-anchor="middle">工作集 (MiB, log2)</text>
+<text class="label" transform="translate(34,268.0) rotate(-90)" text-anchor="middle">B/cycle (全 GPU)</text>
+<line class="grid" x1="82.0" y1="68" x2="82.0" y2="468"/>
+<text class="small" x="82.0" y="486" text-anchor="middle">0.0625</text>
+<line class="grid" x1="231.0909090909091" y1="68" x2="231.0909090909091" y2="468"/>
+<text class="small" x="231.0909090909091" y="486" text-anchor="middle">0.25</text>
+<line class="grid" x1="380.1818181818182" y1="68" x2="380.1818181818182" y2="468"/>
+<text class="small" x="380.1818181818182" y="486" text-anchor="middle">1</text>
+<line class="grid" x1="529.2727272727273" y1="68" x2="529.2727272727273" y2="468"/>
+<text class="small" x="529.2727272727273" y="486" text-anchor="middle">4</text>
+<line class="grid" x1="678.3636363636364" y1="68" x2="678.3636363636364" y2="468"/>
+<text class="small" x="678.3636363636364" y="486" text-anchor="middle">16</text>
+<line class="axis" x1="752.9090909090909" y1="68" x2="752.9090909090909" y2="468"/>
+<text class="small" x="752.9090909090909" y="486" text-anchor="middle">32</text>
+<line class="grid" x1="827.4545454545455" y1="68" x2="827.4545454545455" y2="468"/>
+<text class="small" x="827.4545454545455" y="486" text-anchor="middle">64</text>
+<line class="grid" x1="902.0" y1="68" x2="902.0" y2="468"/>
+<text class="small" x="902.0" y="486" text-anchor="middle">128</text>
+<text class="small" x="758.9090909090909" y="84">32 MiB L2</text>
+<polyline points="82.0,86.4 156.5,87.1 231.1,90.7 305.6,91.2 380.2,91.6 454.7,90.6 529.3,90.7 603.8,89.8 678.4,89.5 752.9,92.5 827.5,318.3 902.0,400.3" fill="none" stroke="#1f6feb" stroke-width="2.5"/>
+<circle cx="82.0" cy="86.4" r="3" fill="#1f6feb"/>
+<circle cx="156.5" cy="87.1" r="3" fill="#1f6feb"/>
+<circle cx="231.1" cy="90.7" r="3" fill="#1f6feb"/>
+<circle cx="305.6" cy="91.2" r="3" fill="#1f6feb"/>
+<circle cx="380.2" cy="91.6" r="3" fill="#1f6feb"/>
+<circle cx="454.7" cy="90.6" r="3" fill="#1f6feb"/>
+<circle cx="529.3" cy="90.7" r="3" fill="#1f6feb"/>
+<circle cx="603.8" cy="89.8" r="3" fill="#1f6feb"/>
+<circle cx="678.4" cy="89.5" r="3" fill="#1f6feb"/>
+<circle cx="752.9" cy="92.5" r="3" fill="#1f6feb"/>
+<circle cx="827.5" cy="318.3" r="3" fill="#1f6feb"/>
+<circle cx="902.0" cy="400.3" r="3" fill="#1f6feb"/>
+<polyline points="82.0,205.9 156.5,305.1 231.1,305.2 305.6,305.5 380.2,305.8 454.7,306.9 529.3,306.5 603.8,308.1 678.4,352.5 752.9,399.5 827.5,423.6 902.0,429.6" fill="none" stroke="#d14" stroke-width="2.5"/>
+<circle cx="82.0" cy="205.9" r="3" fill="#d14"/>
+<circle cx="156.5" cy="305.1" r="3" fill="#d14"/>
+<circle cx="231.1" cy="305.2" r="3" fill="#d14"/>
+<circle cx="305.6" cy="305.5" r="3" fill="#d14"/>
+<circle cx="380.2" cy="305.8" r="3" fill="#d14"/>
+<circle cx="454.7" cy="306.9" r="3" fill="#d14"/>
+<circle cx="529.3" cy="306.5" r="3" fill="#d14"/>
+<circle cx="603.8" cy="308.1" r="3" fill="#d14"/>
+<circle cx="678.4" cy="352.5" r="3" fill="#d14"/>
+<circle cx="752.9" cy="399.5" r="3" fill="#d14"/>
+<circle cx="827.5" cy="423.6" r="3" fill="#d14"/>
+<circle cx="902.0" cy="429.6" r="3" fill="#d14"/>
+<line x1="82" y1="532" x2="110" y2="532" stroke="#1f6feb" stroke-width="3"/>
+<text class="legend" x="118" y="536">read-unique</text>
+<line x1="252" y1="532" x2="280" y2="532" stroke="#d14" stroke-width="3"/>
+<text class="legend" x="288" y="536">write-unique</text>
+</svg>

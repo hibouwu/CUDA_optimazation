@@ -1,0 +1,4 @@
+mode,requested_bytes,elapsed_cycles,bytes_per_cycle,ops,bytes_per_op,sm_count,blocks,blocks_per_sm,threads_per_block,iters,unroll,occupancy_blocks_per_sm,l2_cache_bytes,working_set_bytes,touched_footprint_bytes,index_stride_elements,stream_period_iters,requested_to_working_set_ratio
+read-same,10737418240,336560,31903.429522,671088640,16,20,80,4,256,4096,8,6,33554432,16777216,16,0,0,640.000000
+read-unique,10737418240,11341929,946.701239,671088640,16,20,80,4,256,4096,8,4,33554432,16777216,16777216,163841,1048576,640.000000
+write-unique,10737418240,35866390,299.372706,671088640,16,20,80,4,256,4096,8,5,33554432,16777216,16777216,163841,1048576,640.000000

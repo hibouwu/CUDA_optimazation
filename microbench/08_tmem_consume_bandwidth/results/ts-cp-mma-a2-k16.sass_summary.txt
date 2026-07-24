@@ -1,0 +1,56 @@
+		Function : _Z14tcgen05_kerneliPy
+        /*09c0*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                               /* 0x00000004000475e3 */
+        /*0a20*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                               /* 0x00000004000475e3 */
+        /*0c10*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR4] ;                               /* 0x000100040f0079e7 */
+        /*0cc0*/                   UTCBAR [UR4], URZ ;                                                                         /* 0x000000ff040073e9 */
+        /*0d60*/                   CS2R R2, SR_CLOCKLO ;                                                                       /* 0x0000000000027805 */
+        /*1650*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR64] ;                              /* 0x000140400f0079e7 */
+        /*16e0*/                   UTCOMMA.4X tmem[UR11], gdesc[UR68], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UP0 ;  /* 0x80464a440b0079ea */
+        /*1790*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*1870*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR60] ;                              /* 0x0001003c0f0079e7 */
+        /*1900*/                   UTCOMMA.4X tmem[UR5], gdesc[UR62], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a3e050079ea */
+        /*19b0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*1a80*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR56] ;                              /* 0x000140380f0079e7 */
+        /*1b10*/                   UTCOMMA.4X tmem[UR11], gdesc[UR58], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a3a0b0079ea */
+        /*1bc0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*1ca0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR52] ;                              /* 0x000100340f0079e7 */
+        /*1d30*/                   UTCOMMA.4X tmem[UR5], gdesc[UR54], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a36050079ea */
+        /*1de0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*1eb0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR48] ;                              /* 0x000140300f0079e7 */
+        /*1f40*/                   UTCOMMA.4X tmem[UR11], gdesc[UR50], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a320b0079ea */
+        /*1ff0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*20d0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR44] ;                              /* 0x0001002c0f0079e7 */
+        /*2160*/                   UTCOMMA.4X tmem[UR5], gdesc[UR46], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a2e050079ea */
+        /*2210*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*22e0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR40] ;                              /* 0x000140280f0079e7 */
+        /*2370*/                   UTCOMMA.4X tmem[UR11], gdesc[UR42], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a2a0b0079ea */
+        /*2420*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2500*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR36] ;                              /* 0x000100240f0079e7 */
+        /*2590*/                   UTCOMMA.4X tmem[UR5], gdesc[UR38], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a26050079ea */
+        /*2640*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2710*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR34] ;                              /* 0x000140220f0079e7 */
+        /*27b0*/                   UTCOMMA.4X tmem[UR11], gdesc[UR76], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a4c0b0079ea */
+        /*2860*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2940*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR30] ;                              /* 0x0001001e0f0079e7 */
+        /*29d0*/                   UTCOMMA.4X tmem[UR5], gdesc[UR32], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a20050079ea */
+        /*2a80*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2b50*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR26] ;                              /* 0x0001401a0f0079e7 */
+        /*2be0*/                   UTCOMMA.4X tmem[UR11], gdesc[UR28], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a1c0b0079ea */
+        /*2c90*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2d80*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR74] ;                              /* 0x0001004a0f0079e7 */
+        /*2e10*/                   UTCOMMA.4X tmem[UR5], gdesc[UR24], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a18050079ea */
+        /*2ec0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*2fa0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR74] ;                              /* 0x0001404a0f0079e7 */
+        /*3030*/                   UTCOMMA.4X tmem[UR11], gdesc[UR20], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a140b0079ea */
+        /*30e0*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*31d0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR74] ;                              /* 0x0001004a0f0079e7 */
+        /*3260*/                   UTCOMMA.4X tmem[UR5], gdesc[UR16], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;   /* 0x80464a10050079ea */
+        /*3310*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*33f0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x140], gdesc[UR74] ;                              /* 0x0001404a0f0079e7 */
+        /*3480*/                   UTCOMMA.4X tmem[UR11], gdesc[UR12], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;  /* 0x80464a0c0b0079ea */
+        /*3530*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*3610*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR15+0x100], gdesc[UR66] ;                              /* 0x000100420f0079e7 */
+        /*36a0*/                   UTCOMMA.4X tmem[UR5], gdesc[UR8], tmem[UR15], tmem[UR74], idesc[UR75], tmem[UR70], UPT ;    /* 0x80464a08050079ea */
+        /*3750*/                   UTCBAR [UR9], URZ ;                                                                         /* 0x000000ff090073e9 */
+        /*3800*/                   CS2R R4, SR_CLOCKLO ;                                                                       /* 0x0000000000047805 */
+        /*3a80*/                   UTCATOMSWS.AND URZ, UR4 ;                                                                   /* 0x0000000400ff79e3 */

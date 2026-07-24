@@ -1,0 +1,4 @@
+case,role,tflops_median,tflops_min,tflops_max,estimated_tmem_consume_bytes_per_cycle_median,estimated_tmem_consume_bytes_per_cycle_min,estimated_tmem_consume_bytes_per_cycle_max,repeat_count
+ss-mma-mainloop-k16,smem-baseline,921.885316,921.882622,921.887969,0.0,0.0,0.0,3
+ts-cp-mma-a2-k16,tmem-consume-plus-cp,332.272271,332.272261,332.272271,103.010997,103.010994,103.010997,3
+ts-mma-only,tmem-consume,373.197719,373.197613,373.197719,115.698698,115.698665,115.698698,3

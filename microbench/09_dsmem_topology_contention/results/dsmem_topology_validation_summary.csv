@@ -1,0 +1,7 @@
+mode,bytes_per_cycle_median,bytes_per_cycle_min,bytes_per_cycle_max,repeat_count
+ring-read-d1,113.682709,113.149534,113.870224,3
+ring-read-d2,119.506815,118.667188,119.603235,3
+fanin-read-root0,52.757297,52.757236,52.757297,3
+ring-write-d1,127.252813,127.249103,127.377717,3
+ring-write-d2,141.866166,141.866166,141.866166,3
+fanin-write-root0,72.089191,72.089191,72.08929,3

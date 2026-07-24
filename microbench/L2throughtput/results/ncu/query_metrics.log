@@ -1,0 +1,45 @@
+NCU metric 查询成功。
+
+支持的候选 metrics：
+- gpu__time_duration.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_ld_lookup_hit.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_ld_lookup_miss.sum
+- l1tex__m_xbar2l1tex_read_bytes_mem_lg_op_ld.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_st.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_st_lookup_hit.sum
+- l1tex__t_bytes_pipe_lsu_mem_global_op_st_lookup_miss.sum
+- l1tex__m_l1tex2xbar_write_bytes_mem_lg_op_st.sum
+- lts__t_bytes.sum
+- lts__t_bytes.sum.per_second
+- lts__t_bytes.sum.per_cycle_elapsed
+- lts__t_bytes.sum.pct_of_peak_sustained_elapsed
+- lts__t_request_hit_rate.pct
+- lts__throughput.avg.pct_of_peak_sustained_elapsed
+- lts__throughput.max.pct_of_peak_sustained_elapsed
+- lts__throughput.sum.pct_of_peak_sustained_elapsed
+- lts__t_requests_lookup_hit.sum
+- lts__t_requests_lookup_miss.sum
+- lts__t_requests_op_read.sum
+- lts__t_requests_op_read_lookup_hit.sum
+- lts__t_requests_op_read_lookup_miss.sum
+- lts__t_requests_op_write.sum
+- lts__t_requests_op_write_lookup_hit.sum
+- lts__t_requests_op_write_lookup_miss.sum
+- lts__t_sectors_op_read.sum
+- lts__t_sectors_op_read.sum.per_second
+- lts__t_sectors_op_read.sum.per_cycle_elapsed
+- lts__t_sectors_op_read.sum.pct_of_peak_sustained_elapsed
+- lts__t_sectors_op_read_lookup_hit.sum
+- lts__t_sectors_op_read_lookup_miss.sum
+- lts__t_sectors_op_write.sum
+- lts__t_sectors_op_write.sum.per_second
+- lts__t_sectors_op_write.sum.per_cycle_elapsed
+- lts__t_sectors_op_write.sum.pct_of_peak_sustained_elapsed
+- lts__t_sectors_op_write_lookup_hit.sum
+- lts__t_sectors_op_write_lookup_miss.sum
+
+缺失的候选 metrics：
+- dram__bytes.sum
+- dram__bytes_read.sum
+- dram__bytes_write.sum

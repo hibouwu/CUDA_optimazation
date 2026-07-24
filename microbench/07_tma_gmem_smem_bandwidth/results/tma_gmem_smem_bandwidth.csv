@@ -1,0 +1,3 @@
+mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink
+l2-hit,2684354560,3470654,773.443437,38.672172,20,20,1,128,4096,32,32768,4,16777216,512,1,653262848
+dram-stream,2684354560,17231788,155.779224,7.788961,20,20,1,128,4096,32,32768,4,2705326080,82560,1,594542592

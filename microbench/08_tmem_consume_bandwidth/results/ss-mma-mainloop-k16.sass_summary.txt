@@ -1,0 +1,23 @@
+		Function : _Z14tcgen05_kerneliPy
+        /*09c0*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                                /* 0x00000004000475e3 */
+        /*0a20*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                                /* 0x00000004000475e3 */
+        /*0b90*/                   CS2R R2, SR_CLOCKLO ;                                                                        /* 0x0000000000027805 */
+        /*14d0*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UP0 ;  /* 0x8026242a2c0075ea */
+        /*1570*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*1610*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*16b0*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*1750*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*17f0*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*1890*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*1930*/                   UTCOMMA.4X gdesc[UR44], gdesc[UR42], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242a2c0075ea */
+        /*19d0*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1a70*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1b10*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1bb0*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1c50*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1cf0*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1d90*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1e30*/                   UTCOMMA.4X gdesc[UR42], gdesc[UR44], tmem[UR48], tmem[UR36], idesc[UR37], tmem[UR38], UPT ;  /* 0x8026242c2a0075ea */
+        /*1ee0*/                   UTCBAR [UR36], URZ ;                                                                         /* 0x000000ff240073e9 */
+        /*1fb0*/                   CS2R R4, SR_CLOCKLO ;                                                                        /* 0x0000000000047805 */
+        /*2230*/                   UTCATOMSWS.AND URZ, UR4 ;                                                                    /* 0x0000000400ff79e3 */

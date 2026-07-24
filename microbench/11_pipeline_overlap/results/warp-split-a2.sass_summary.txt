@@ -1,0 +1,21 @@
+		Function : _Z14tcgen05_kerneliPy
+        /*0880*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                              /* 0x00000004000475e3 */
+        /*08e0*/                   UTCATOMSWS.FIND_AND_SET.ALIGN UP0, UR4, UR4 ;                                              /* 0x00000004000475e3 */
+        /*0b20*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+        /*0bd0*/                   UTCBAR [UR4], URZ ;                                                                        /* 0x000000ff040073e9 */
+        /*0e60*/                   @!UP1 UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x140], gdesc[UR6] ;                        /* 0x000140060e0099e7 */
+        /*0f50*/                   UTCOMMA.4X tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP1 ;  /* 0x801214080f0079ea */
+        /*1050*/                   @!UP1 UTCBAR [UR17], URZ ;                                                                 /* 0x000000ff110093e9 */
+        /*1200*/                   UTCOMMA.4X tmem[UR16], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UPT ;  /* 0x80121408100079ea */
+        /*1270*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+        /*1370*/                   @!UP1 UTCBAR [UR17], URZ ;                                                                 /* 0x000000ff110093e9 */
+        /*1520*/                   UTCOMMA.4X tmem[UR15], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UPT ;  /* 0x801214080f0079ea */
+        /*1590*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x140], gdesc[UR6] ;                              /* 0x000140060e0079e7 */
+        /*1690*/                   @!UP1 UTCBAR [UR17], URZ ;                                                                 /* 0x000000ff110093e9 */
+        /*1830*/                   UTCOMMA.4X tmem[UR16], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UPT ;  /* 0x80121408100079ea */
+        /*18a0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR14+0x100], gdesc[UR6] ;                              /* 0x000100060e0079e7 */
+        /*19a0*/                   @!UP1 UTCBAR [UR17], URZ ;                                                                 /* 0x000000ff110093e9 */
+        /*1c30*/                   UTCOMMA.4X tmem[UR11], gdesc[UR8], tmem[UR14], tmem[UR20], idesc[UR21], tmem[UR18], UP2 ;  /* 0x801214080b0079ea */
+        /*1ca0*/                   UTCCP.T.S.128dp128bit.U4x16P64 tmem[UR17], gdesc[UR6] ;                                    /* 0x00000006110079e7 */
+        /*1da0*/                   @!UP2 UTCBAR [UR11], URZ ;                                                                 /* 0x000000ff0b00a3e9 */
+        /*2160*/                   UTCATOMSWS.AND URZ, UR4 ;                                                                  /* 0x0000000400ff79e3 */

@@ -1,0 +1,4 @@
+case,role,repeat,iters,cycles,tflops,mma_instruction_count,cycles_per_mma,cp_instruction_count,cp_bytes_per_cycle,estimated_tmem_consume_bytes_per_mma,estimated_tmem_consume_bytes_per_cycle
+ts-mma-only,tmem-consume,0,10000,3540230,373.197719,200000,17.701150,0,0.000000,2048,115.698698
+ts-cp-mma-a2-k16,tmem-consume-plus-cp,0,10000,63620388,332.272292,3200000,19.881371,3200000,103.011003,2048,103.011003
+ss-mma-mainloop-k16,smem-baseline,0,10000,22930500,921.885356,3200000,7.165781,0,0.000000,0,0.000000

@@ -1,0 +1,215 @@
+		Function : _Z21dsmem_topology_kernelIL4Mode5EEvimPjPy
+        /*01e0*/                   STS.128 [R8], R4 ;                                     /* 0x0000000408007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0270*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0280*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0290*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*02a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0310*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0340*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0490*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*04a0*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*04b0*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04c0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*0500*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0530*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0550*/              @!P0 CS2R R12, SR_CLOCKLO ;                                 /* 0x00000000000c8805 */
+        /*05a0*/              @!P0 STS.64 [R5], R12 ;                                     /* 0x0000000c05008388 */
+        /*05b0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*08e0*/                   ST.E.128 desc[UR6][R16.64], R12 ;                      /* 0x0000000c10007985 */
+        /*0ab0*/                   ST.E.128 desc[UR6][R24.64], R12 ;                      /* 0x0000000c18007985 */
+        /*0b20*/                   ST.E.128 desc[UR6][R42.64], R16 ;                      /* 0x000000102a007985 */
+        /*0c20*/                   ST.E.128 desc[UR6][R52.64], R24 ;                      /* 0x0000001834007985 */
+        /*0d00*/                   ST.E.128 desc[UR6][R18.64], R12 ;                      /* 0x0000000c12007985 */
+        /*0e70*/                   ST.E.128 desc[UR6][R50.64], R24 ;                      /* 0x0000001832007985 */
+        /*0fe0*/                   ST.E.128 desc[UR6][R40.64], R12 ;                      /* 0x0000000c28007985 */
+        /*1020*/                   ST.E.128 desc[UR6][R38.64], R16 ;                      /* 0x0000001026007985 */
+        /*10b0*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*10c0*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*10d0*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*10e0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*1120*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*1150*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*11a0*/               @P1 CS2R R10, SR_CLOCKLO ;                                 /* 0x00000000000a1805 */
+        /*11e0*/               @P1 LDS.64 R4, [R5] ;                                      /* 0x0000000005041984 */
+		Function : _Z21dsmem_topology_kernelIL4Mode4EEvimPjPy
+        /*01e0*/                   STS.128 [R3], R8 ;                                     /* 0x0000000803007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0260*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0270*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0280*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*0290*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02d0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0300*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0330*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0470*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0480*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0490*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*04e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0510*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0530*/              @!P0 CS2R R8, SR_CLOCKLO ;                                  /* 0x0000000000088805 */
+        /*05a0*/              @!P0 STS.64 [R11], R8 ;                                     /* 0x000000080b008388 */
+        /*05b0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*05d0*/                   CS2R.32 R38, SR_CgaSize ;                              /* 0x0000000000267805 */
+        /*09e0*/                   ST.E.128 desc[UR6][R36.64], R16 ;                      /* 0x0000001024007985 */
+        /*0a20*/                   ST.E.128 desc[UR6][R34.64], R20 ;                      /* 0x0000001422007985 */
+        /*0c90*/                   ST.E.128 desc[UR6][R48.64], R16 ;                      /* 0x0000001030007985 */
+        /*0ce0*/                   ST.E.128 desc[UR6][R46.64], R20 ;                      /* 0x000000142e007985 */
+        /*0e50*/                   ST.E.128 desc[UR6][R40.64], R20 ;                      /* 0x0000001428007985 */
+        /*0ea0*/                   ST.E.128 desc[UR6][R38.64], R16 ;                      /* 0x0000001026007985 */
+        /*1020*/                   ST.E.128 desc[UR6][R38.64], R20 ;                      /* 0x0000001426007985 */
+        /*10b0*/                   ST.E.128 desc[UR6][R28.64], R16 ;                      /* 0x000000101c007985 */
+        /*11b0*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*11c0*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*11d0*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*11e0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*1220*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*1250*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*1280*/                   CS2R R10, SR_CLOCKLO ;                                 /* 0x00000000000a7805 */
+        /*12d0*/                   LDS.64 R8, [UR4] ;                                     /* 0x00000004ff087984 */
+		Function : _Z21dsmem_topology_kernelIL4Mode3EEvimPjPy
+        /*01e0*/                   STS.128 [R3], R8 ;                                     /* 0x0000000803007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0260*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0270*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0280*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*0290*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02d0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0300*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0330*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0470*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0480*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0490*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*04e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0510*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0530*/              @!P0 CS2R R8, SR_CLOCKLO ;                                  /* 0x0000000000088805 */
+        /*05a0*/              @!P0 STS.64 [R11], R8 ;                                     /* 0x000000080b008388 */
+        /*05b0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*05d0*/                   CS2R.32 R38, SR_CgaSize ;                              /* 0x0000000000267805 */
+        /*09e0*/                   ST.E.128 desc[UR6][R36.64], R16 ;                      /* 0x0000001024007985 */
+        /*0a20*/                   ST.E.128 desc[UR6][R34.64], R20 ;                      /* 0x0000001422007985 */
+        /*0c90*/                   ST.E.128 desc[UR6][R48.64], R16 ;                      /* 0x0000001030007985 */
+        /*0ce0*/                   ST.E.128 desc[UR6][R46.64], R20 ;                      /* 0x000000142e007985 */
+        /*0e50*/                   ST.E.128 desc[UR6][R40.64], R20 ;                      /* 0x0000001428007985 */
+        /*0ea0*/                   ST.E.128 desc[UR6][R38.64], R16 ;                      /* 0x0000001026007985 */
+        /*1020*/                   ST.E.128 desc[UR6][R38.64], R20 ;                      /* 0x0000001426007985 */
+        /*10b0*/                   ST.E.128 desc[UR6][R28.64], R16 ;                      /* 0x000000101c007985 */
+        /*11b0*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*11c0*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*11d0*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*11e0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*1220*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*1250*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*1280*/                   CS2R R10, SR_CLOCKLO ;                                 /* 0x00000000000a7805 */
+        /*12d0*/                   LDS.64 R8, [UR4] ;                                     /* 0x00000004ff087984 */
+		Function : _Z21dsmem_topology_kernelIL4Mode2EEvimPjPy
+        /*01e0*/                   STS.128 [R5], R12 ;                                    /* 0x0000000c05007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0270*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0280*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0290*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*02a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0310*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0340*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0480*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0490*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*04a0*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04b0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*04f0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0520*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0540*/              @!P0 CS2R R14, SR_CLOCKLO ;                                 /* 0x00000000000e8805 */
+        /*0590*/              @!P0 STS.64 [R3], R14 ;                                     /* 0x0000000e03008388 */
+        /*05a0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*07f0*/                   LD.E.128 R8, desc[UR8][R10.64] ;                       /* 0x000000080a087980 */
+        /*0830*/                   LD.E.128 R20, desc[UR8][R20.64] ;                      /* 0x0000000814147980 */
+        /*0880*/                   LD.E.128 R24, desc[UR8][R24.64] ;                      /* 0x0000000818187980 */
+        /*08d0*/                   LD.E.128 R12, desc[UR8][R12.64] ;                      /* 0x000000080c0c7980 */
+        /*0920*/                   LD.E.128 R16, desc[UR8][R16.64] ;                      /* 0x0000000810107980 */
+        /*0970*/                   LD.E.128 R28, desc[UR8][R28.64] ;                      /* 0x000000081c1c7980 */
+        /*09b0*/                   LD.E.128 R32, desc[UR8][R32.64] ;                      /* 0x0000000820207980 */
+        /*09d0*/                   LD.E.128 R36, desc[UR8][R36.64] ;                      /* 0x0000000824247980 */
+        /*0f40*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0f50*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0f60*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*0f70*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*0fb0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0fe0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*1010*/                   CS2R R10, SRZ ;                                        /* 0x00000000000a7805 */
+        /*1020*/               @P1 CS2R R6, SR_CLOCKLO ;                                  /* 0x0000000000061805 */
+        /*1060*/               @P1 LDS.64 R4, [R4] ;                                      /* 0x0000000004041984 */
+		Function : _Z21dsmem_topology_kernelIL4Mode1EEvimPjPy
+        /*01e0*/                   STS.128 [R10], R4 ;                                    /* 0x000000040a007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0260*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0270*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0280*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*0290*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02d0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0300*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0330*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0470*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0480*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0490*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*04e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0510*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0530*/              @!P0 CS2R R12, SR_CLOCKLO ;                                 /* 0x00000000000c8805 */
+        /*05a0*/              @!P0 STS.64 [R11], R12 ;                                    /* 0x0000000c0b008388 */
+        /*05b0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*05d0*/                   CS2R.32 R57, SR_CgaSize ;                              /* 0x0000000000397805 */
+        /*08e0*/                   LD.E.128 R8, desc[UR8][R8.64] ;                        /* 0x0000000808087980 */
+        /*0930*/                   LD.E.128 R12, desc[UR8][R12.64] ;                      /* 0x000000080c0c7980 */
+        /*0980*/                   LD.E.128 R16, desc[UR8][R16.64] ;                      /* 0x0000000810107980 */
+        /*09b0*/                   LD.E.128 R20, desc[UR8][R20.64] ;                      /* 0x0000000814147980 */
+        /*0a10*/                   LD.E.128 R24, desc[UR8][R24.64] ;                      /* 0x0000000818187980 */
+        /*0a60*/                   LD.E.128 R28, desc[UR8][R28.64] ;                      /* 0x000000081c1c7980 */
+        /*0ab0*/                   LD.E.128 R32, desc[UR8][R32.64] ;                      /* 0x0000000820207980 */
+        /*0ac0*/                   LD.E.128 R36, desc[UR8][R36.64] ;                      /* 0x0000000824247980 */
+        /*1070*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*1080*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*1090*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*10a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*10e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*1110*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*1140*/                   CS2R R4, SR_CLOCKLO ;                                  /* 0x0000000000047805 */
+        /*1190*/                   LDS.64 R2, [UR4] ;                                     /* 0x00000004ff027984 */
+		Function : _Z21dsmem_topology_kernelIL4Mode0EEvimPjPy
+        /*01e0*/                   STS.128 [R10], R4 ;                                    /* 0x000000040a007388 */
+        /*0230*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0260*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0270*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0280*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*0290*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*02d0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0300*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0330*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0470*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*0480*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*0490*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*04a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*04e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*0510*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*0530*/              @!P0 CS2R R12, SR_CLOCKLO ;                                 /* 0x00000000000c8805 */
+        /*05a0*/              @!P0 STS.64 [R11], R12 ;                                    /* 0x0000000c0b008388 */
+        /*05b0*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*05d0*/                   CS2R.32 R57, SR_CgaSize ;                              /* 0x0000000000397805 */
+        /*08e0*/                   LD.E.128 R8, desc[UR8][R8.64] ;                        /* 0x0000000808087980 */
+        /*0930*/                   LD.E.128 R12, desc[UR8][R12.64] ;                      /* 0x000000080c0c7980 */
+        /*0980*/                   LD.E.128 R16, desc[UR8][R16.64] ;                      /* 0x0000000810107980 */
+        /*09b0*/                   LD.E.128 R20, desc[UR8][R20.64] ;                      /* 0x0000000814147980 */
+        /*0a10*/                   LD.E.128 R24, desc[UR8][R24.64] ;                      /* 0x0000000818187980 */
+        /*0a60*/                   LD.E.128 R28, desc[UR8][R28.64] ;                      /* 0x000000081c1c7980 */
+        /*0ab0*/                   LD.E.128 R32, desc[UR8][R32.64] ;                      /* 0x0000000820207980 */
+        /*0ac0*/                   LD.E.128 R36, desc[UR8][R36.64] ;                      /* 0x0000000824247980 */
+        /*1070*/                   MEMBAR.ALL.GPU ;                                       /* 0x0000000000007992 */
+        /*1080*/                   ERRBAR;                                                /* 0x00000000000079ab */
+        /*1090*/                   CGAERRBAR ;                                            /* 0x00000000000075ab */
+        /*10a0*/                   UCGABAR_ARV ;                                          /* 0x00000000000079c7 */
+        /*10e0*/                   UCGABAR_WAIT ;                                         /* 0x0000000000007dc7 */
+        /*1110*/                   BAR.SYNC.DEFER_BLOCKING 0x0 ;                          /* 0x0000000000007b1d */
+        /*1140*/                   CS2R R4, SR_CLOCKLO ;                                  /* 0x0000000000047805 */
+        /*1190*/                   LDS.64 R2, [UR4] ;                                     /* 0x00000004ff027984 */

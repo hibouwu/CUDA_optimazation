@@ -1,0 +1,4 @@
+case,role,app_tflops,estimated_tmem_consume_bytes_per_cycle,rough_consume_upper_from_sm_peak_bytes_per_cycle,sm_throughput_pct_peak,tensor_inst,tensor_inst_per_cycle,tensor_inst_pct_peak,tc_inst,tc_inst_per_cycle,tc_inst_pct_peak,tmem_pipe_inst,tmem_pipe_inst_per_cycle,tmem_pipe_inst_pct_peak,issue_active_pct,eligible_warps_per_cycle,wait_stall_pct,dispatch_stall_pct,missing_metric_count,missing_metrics
+ts-mma-only,tmem-consume,373.197613,115.698665,258.4290037971856,44.77,200000.0,0.06,0.56,400080.0,0.11,0.56,0.0,0.0,0.0,3.38,0.03,363.89,0.0,0,
+ts-cp-mma-a2-k16,tmem-consume-plus-cp,332.272282,103.011000,200.87948517940714,51.28,3200000.0,0.05,0.5,9600080.0,0.15,0.75,0.0,0.0,0.0,3.27,0.03,388.11,0.0,0,
+ss-mma-mainloop-k16,smem-baseline,921.885316,0.000000,,91.78,3200000.0,0.14,1.39,3400040.0,0.15,0.74,0.0,0.0,0.0,2.47,0.02,319.22,0.0,0,

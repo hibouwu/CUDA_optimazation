@@ -1,0 +1,13 @@
+		Function : _Z10tma_kernel14CUtensorMap_stiiiiiPyPj
+        /*02f0*/              @!P0 CS2R R4, SR_CLOCKLO ;                               /* 0x0000000000048805 */
+        /*0550*/                   UTMALDG.3D [UR8], [UR20] ;                          /* 0x00000008140075b4 */
+        /*06d0*/              @!P0 CS2R R6, SR_CLOCKLO ;                               /* 0x0000000000068805 */
+        /*0890*/                   UTMALDG.3D [UR8], [UR20] ;                          /* 0x00000008140075b4 */
+        /*09e0*/              @!P0 CS2R R8, SR_CLOCKLO ;                               /* 0x0000000000088805 */
+        /*0bb0*/                   UTMALDG.3D [UR8], [UR20] ;                          /* 0x00000008140075b4 */
+        /*0cf0*/              @!P0 CS2R R4, SR_CLOCKLO ;                               /* 0x0000000000048805 */
+        /*0eb0*/                   UTMALDG.3D [UR8], [UR20] ;                          /* 0x00000008140075b4 */
+        /*1120*/              @!P0 CS2R R6, SR_CLOCKLO ;                               /* 0x0000000000068805 */
+        /*1310*/                   UTMALDG.3D [UR8], [UR24] ;                          /* 0x00000008180075b4 */
+        /*14a0*/              @!P1 CS2R R4, SR_CLOCKLO ;                               /* 0x0000000000049805 */
+		Function : _Z11init_kernelPjm

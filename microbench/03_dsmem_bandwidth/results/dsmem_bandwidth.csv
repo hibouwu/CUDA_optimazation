@@ -1,0 +1,5 @@
+mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_active_block_bytes_per_cycle,sm_count,active_blocks,clusters,cluster_size,resident_cluster_limit,cuda_max_active_clusters,threads,iters,unroll,shared_bytes,working_set_elements,index_stride_elements,stream_period_iters,occupancy_limited
+local-read,2684354560,1118392,2400.191132,120.009557,20,20,10,2,10,40,256,4096,8,32768,2048,2049,2048,0
+local-write,2684354560,1235129,2173.339433,108.666972,20,20,10,2,10,50,256,4096,8,32768,2048,2049,2048,0
+remote-read,2684354560,11223108,239.181033,11.959052,20,20,10,2,10,40,256,4096,8,32768,2048,2049,2048,0
+remote-write,2684354560,9481451,283.116430,14.155822,20,20,10,2,10,40,256,4096,8,32768,2048,2049,2048,0

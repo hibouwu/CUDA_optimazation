@@ -1,0 +1,4 @@
+case,count_UTCCP,count_UTCOMMA,count_gdesc,count_tmem
+ts-mma-only,,5,,6
+ts-cp-mma-a2-k16,17,16,,33
+ss-mma-mainloop-k16,,16,16,

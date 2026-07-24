@@ -1,0 +1,4 @@
+mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,ops,bytes_per_op,sm_count,blocks,blocks_per_sm,threads,iters,unroll,working_set_bytes,working_set_mib,requested_to_working_set_ratio,index_stride_elements,stream_period_iters,occupancy_blocks_per_sm
+read-stream,10737418240,85210388,126.010672,6.300534,671088640,16,20,80,4,256,4096,8,268435456,256.000,40.000000,163841,16777216,4
+write-stream,10737418240,152456557,70.429363,3.521468,671088640,16,20,80,4,256,4096,8,268435456,256.000,40.000000,163841,16777216,5
+copy-stream,21474836480,268450843,79.995415,3.999771,671088640,32,20,80,4,256,4096,8,268435456,256.000,80.000000,163841,16777216,4
