@@ -21,6 +21,17 @@ inline void fill_inputs(std::vector<float>& a, std::vector<float>& b) {
   }
 }
 
+inline void fill_epilogue_inputs(std::vector<float>& bias,
+                                 std::vector<float>& residual) {
+  for (size_t i = 0; i < bias.size(); ++i) {
+    bias[i] = static_cast<float>(static_cast<int>(i % 19) - 9) * 0.03125f;
+  }
+  for (size_t i = 0; i < residual.size(); ++i) {
+    residual[i] =
+        static_cast<float>(static_cast<int>((i * 7) % 23) - 11) * 0.015625f;
+  }
+}
+
 inline std::vector<half> to_half_vector(const std::vector<float>& input) {
   std::vector<half> output(input.size());
   for (size_t i = 0; i < input.size(); ++i) {

@@ -1,0 +1,15 @@
+Category,M,N,K,Note
+square,1024,1024,1024,SQ1024_tc5b_2sm_overlap_target
+square,2048,2048,2048,SQ2048_tc5a_overlap_target
+ragged,260,132,256,RG_SMALL_cleanup_dominant
+ragged,384,520,300,RG_MNK_tail_cleanup
+tail_k,1024,1024,1000,TK_square_with_K_tail
+tail_mn,1152,768,1024,TMN_regular_K_with_MN_tail
+skinny_n,4096,64,4096,SN64_long_K_low_N
+skinny_n,8192,128,4096,SN128_more_rows
+skinny_m,64,4096,4096,SM64_long_K_low_M
+skinny_m,128,8192,4096,SM128_large_N
+gemv_like_m,1,4096,4096,GV_M1_single_row_decode
+gemv_like_n,4096,1,4096,GV_N1_single_column
+decode_ffn,1,11008,4096,LLM_decode_FFN_up_proj
+prefill_ffn,128,11008,4096,LLM_prefill_small_M_large_N

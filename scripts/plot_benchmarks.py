@@ -113,7 +113,7 @@ KEY_GEMM_LEGACY_FP32_SERIES = [
 
 SERIES_LABELS = {
     "cublas": "cuBLAS FP32 Pedantic",
-    "cublas_tc": "cuBLAS Tensor Core",
+    "cublas_tc": "cuBLASLt Matmul heuristic",
     "cutlass": "CUTLASS official auto-schedule",
     "v1": "v1 naive uncoalesced",
     "v2": "v2 coalesced naive",
@@ -196,7 +196,7 @@ def backend_key(row):
         return "cublas"
     if version == "cuBLAS FP32 Pedantic":
         return "cublas"
-    if version == "cuBLAS Tensor Core":
+    if version in ("cuBLAS Tensor Core", "cuBLASLt Matmul heuristic"):
         return "cublas_tc"
     if version.startswith("warp1 "):
         return "v7"
@@ -682,7 +682,7 @@ def main():
                         group_series(tensor_core_rows, "N", "RatioToReference"),
                         tensor_core_plot_series,
                     ),
-                    "Tensor Core GEMM Ratio To cuBLAS Tensor Core",
+                    "Tensor Core GEMM Ratio To Tensor Core Reference",
                     "Square matrix size N",
                     "Ratio",
                     out_dir / "gemm_tensor_core_ratio_to_cublas_tc.svg",

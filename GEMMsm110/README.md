@@ -8,7 +8,9 @@
 > 2048 方阵的推荐 fast path 是 `tc5a`，10 轮平均达到 0.917x，
 > 但本轮最低单轮为 0.898x。
 > `tc6` 输出 NVFP4，不再混入 FP32 主图，改由 `GEMM_SUITE=nvfp4`
-> 单独复测。所有有效 FP32 结果都以 cuBLAS Tensor Core 输出为参考。
+> 单独复测。已归档 CSV 的这些 ratio 来自旧 `cublasGemmEx` Tensor Core
+> reference；当前源码已切换为 cuBLASLt Matmul heuristic，重新编译和重跑后
+> 新 CSV 的 `Reference` 字段会显示 `cuBLASLt Matmul heuristic`。
 
 ## Backend 实验路线
 
@@ -129,7 +131,7 @@ FP32 store 使用 `st.global.L1::no_allocate.L2::evict_first.v8.f32`，
 
 | Backend | 定位 |
 | --- | --- |
-| `cublas_tc` | cuBLAS Tensor Core reference，同时生成数值参考 |
+| `cublas_tc` | cuBLASLt Matmul heuristic reference，同时生成数值参考 |
 | `cutlass` | CUTLASS 官方 Blackwell Auto Schedule reference |
 
 ## 实现状态与旧代码迁移

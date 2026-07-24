@@ -133,6 +133,7 @@ build_gemm_sm110() {
     -I"${CUTLASS_ROOT}/tools/util/include" \
     "${GEMM_ROOT}/src/main.cu" \
     -lcuda \
+    -lcublasLt \
     -lcublas \
     -o "${BUILD_DIR}/gemm_sm110_bench"
 }

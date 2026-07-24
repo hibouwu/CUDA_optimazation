@@ -1,0 +1,5 @@
+Category,M,N,K,Note
+square,1024,1024,1024,SQ1024_tc5b_target
+ragged,384,520,300,RG_MNK_tail_cleanup
+skinny_n,4096,64,4096,SN64_long_K_low_N
+gemv_like_m,1,4096,4096,GV_M1_single_row_decode

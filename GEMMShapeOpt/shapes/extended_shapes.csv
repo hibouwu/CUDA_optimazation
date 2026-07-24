@@ -1,0 +1,15 @@
+Category,M,N,K,Note
+decode_attn,1,4096,4096,LLM_decode_attention_out_proj
+decode_ffn,1,11008,4096,LLM_decode_FFN_up_proj
+decode_ffn,1,4096,11008,LLM_decode_FFN_down_proj
+decode_batch,8,11008,4096,LLM_decode_micro_batch_up_proj
+decode_batch,8,4096,11008,LLM_decode_micro_batch_down_proj
+prefill_attn,128,4096,4096,LLM_prefill_attention_out_proj
+prefill_ffn,128,11008,4096,LLM_prefill_small_M_large_N
+prefill_ffn,128,4096,11008,LLM_prefill_small_M_large_K
+prefill_long,1024,11008,4096,LLM_prefill_large_M_large_N
+prefill_long,1024,4096,11008,LLM_prefill_large_M_large_K
+ragged_llm,113,11008,4096,LLM_ragged_token_count_up_proj
+ragged_llm,257,4096,11008,LLM_ragged_token_count_down_proj
+vision_patch,196,3072,768,ViT_patch_projection_like
+vision_patch,197,768,3072,ViT_ragged_patch_mlp_down

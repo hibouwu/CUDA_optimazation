@@ -2,6 +2,8 @@
 
 本文记录 Thor/SM110 上 FP16 x FP16 -> FP32 TCGen05 GEMM 的对抗式审查和优化过程。报告按阶段逐段写出测量口径、技术思路、收益来源和失败点；没有重新验证的历史结论不会混成最终结论。本轮已经闭环的是脚本清理、图表重跑、1024/2048 两个硬目标是否达到 cuBLAS Tensor Core 90%，以及主报告集合与不稳定实验集合的命名整理。
 
+后续 reference 口径已经升级：`cublas_tc` 源码从 `cublasGemmEx` 改为 cuBLASLt Matmul heuristic，并通过 `cublasLtMatmulAlgoGetHeuristic` 选择算法。当前已归档 CSV 和图还没有在这个新口径下重跑，因此已有 0.927x/0.917x 数字仍按旧 `cublasGemmEx` reference 解释；重新编译并重跑后，新 CSV 的 `Reference` 字段会变为 `cuBLASLt Matmul heuristic`。
+
 第一步审查的是数据本身，而不是 kernel。原来的 `results/gemm_sm110/figures/gemm_tensor_core_gflops.svg` 虽然标题是 Tensor Core GEMM sweep，但对应的 CSV 不是一次干净的全量运行：128/256/512 主要来自少量 trial，1024/2048/4096 混有多轮和手工追加行；更关键的是，脚本的 `all` 集合没有包含后续推荐路径 `tc5a/tc5b`，而 plotter 只是在图例里后来补了 `tc5b`。这会造成一个很危险的错觉：图看起来像在比较最终版本，其实最终版本并不是由同一个 sweep 机制稳定产出的。因此我先修改 `scripts/run_gemm_sm110_experiments.sh`，让它显式支持 `core`、`unstable` 和 `nvfp4` 三种集合；`core` 只放 FP32 主报告里要反复比较的版本，`unstable` 保留那些有教学价值但会 timeout 或 launch failure 的阶段，`nvfp4` 单独放 `tc6`，避免把 packed NVFP4 输出和 FP32 输出混在同一条验收线上。
 
 第二步是反向验证哪些版本应该从主图里移走。原始 `all` 全量跑在 1024 上复现了 `tc4c` 的 `cudaErrorLaunchFailure`，也出现过 `tc5b` 的 2-SM cluster path 偶发 launch failure；2048/4096 上 `tc4b/tc4c` 多次进入 120 秒 timeout，`tc5c` 在 4096 也出现过 timeout。后来收窄后的 `core` 仍暴露了 `tc3` 在 4096 的偶发 timeout，`tc6` 在 4096 第 9 轮和 retry 中也 timeout。这个审查结论很重要：这些版本不是被删除源码，而是从主报告集合中移出。`tc3/tc4b/tc4c/tc5c` 仍然保留为阶段性实验和教学材料，`tc6` 保留为 NVFP4 fused epilogue 路线；但它们不再参与 FP32 主图的稳定性结论。对应代码也做了清理：批量脚本、C++ backend registry 和 `build_and_run.sh` 的默认入口都以 `core` 为主，`all` 只作为显式诊断入口保留；主图另加 `scripts/run_sm110_gemm_core_sweep.sh` 这个明确命名的包装脚本，避免后续复现时误选 suite。

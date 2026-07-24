@@ -9,12 +9,14 @@ set -euo pipefail
 #   ./build_and_run.sh sanity
 #   ./build_and_run.sh tc3-minimal
 #   ./build_and_run.sh 1024 cublas_tc
+#   ./build_and_run.sh 1024 shapeopt
 #   ./build_and_run.sh 1024 core
 #   ./build_and_run.sh 1024 cutlass
 #   ./build_and_run.sh 1024 tc0
 #   ./build_and_run.sh 1024 stage1
 #   ./build_and_run.sh 1024 tc4b
 #   ./build_and_run.sh 260 132 256 tc5a
+#   ./build_and_run.sh 2048 2048 2048 shapeopt bias
 #   ./build_and_run.sh 1024 tc6
 #   ./build_and_run.sh 1024 all
 
@@ -26,6 +28,7 @@ TC3_MINIMAL_BIN="${BUILD_DIR}/tc3_minimal"
 BACKEND_TIMEOUT_SECONDS="${BACKEND_TIMEOUT_SECONDS:-30}"
 BACKEND_KILL_GRACE_SECONDS="${BACKEND_KILL_GRACE_SECONDS:-5}"
 CUTLASS_ROOT="${CUTLASS_ROOT:-${SCRIPT_DIR}/../../third_party/cutlass}"
+ENABLE_CUTLASS="${ENABLE_CUTLASS:-1}"
 
 NVCC="${NVCC:-nvcc}"
 COMMON_FLAGS=(
@@ -36,11 +39,16 @@ COMMON_FLAGS=(
   -diag-suppress=20013
   -diag-suppress=20015
   -DTC3_SM110_HOST_HAS_TCGEN05=1
+  -DGEMM_SM110_ENABLE_CUTLASS="${ENABLE_CUTLASS}"
   -gencode arch=compute_110a,code=sm_110a
   -I"${SCRIPT_DIR}/include"
-  -I"${CUTLASS_ROOT}/include"
-  -I"${CUTLASS_ROOT}/tools/util/include"
 )
+if [[ "${ENABLE_CUTLASS}" == "1" ]]; then
+  COMMON_FLAGS+=(
+    -I"${CUTLASS_ROOT}/include"
+    -I"${CUTLASS_ROOT}/tools/util/include"
+  )
+fi
 
 build_sanity() {
   "${NVCC}" "${COMMON_FLAGS[@]}" \
@@ -55,14 +63,21 @@ build_tc3_minimal() {
 }
 
 build_benchmark() {
-  if [[ ! -f "${CUTLASS_ROOT}/include/cutlass/cutlass.h" ]]; then
+  if [[ "${ENABLE_CUTLASS}" != "0" && "${ENABLE_CUTLASS}" != "1" ]]; then
+    echo "Invalid ENABLE_CUTLASS=${ENABLE_CUTLASS} (expected 0 or 1)" >&2
+    exit 2
+  fi
+  if [[ "${ENABLE_CUTLASS}" == "1" &&
+        ! -f "${CUTLASS_ROOT}/include/cutlass/cutlass.h" ]]; then
     echo "CUTLASS headers not found under ${CUTLASS_ROOT}" >&2
     echo "Set CUTLASS_ROOT to a CUTLASS 4.5.2 checkout." >&2
+    echo "Or set ENABLE_CUTLASS=0 to build only cuBLASLt and tc* backends." >&2
     exit 2
   fi
   "${NVCC}" "${COMMON_FLAGS[@]}" \
     "${SCRIPT_DIR}/src/main.cu" \
     -lcuda \
+    -lcublasLt \
     -lcublas \
     -o "${BENCH_BIN}"
 }
@@ -94,8 +109,8 @@ Usage:
   $0 build-only
   $0 sanity
   $0 tc3-minimal
-  $0 [N] [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6] [timeout_seconds]
-  $0 M N K [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6] [timeout_seconds]
+  $0 [N] [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|shapeopt|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6] [none|bias|relu|gelu|residual]
+  $0 M N K [all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|shapeopt|cutlass|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6] [none|bias|relu|gelu|residual]
 EOF
 }
 
@@ -138,13 +153,25 @@ case "${ARG}" in
       N="${2}"
       K="${3}"
       FILTER="${4:-core}"
-      BACKEND_TIMEOUT_SECONDS="${5:-${BACKEND_TIMEOUT_SECONDS}}"
-      BENCH_ARGS=("${M}" "${N}" "${K}" "${FILTER}")
+      if [[ "${5:-}" =~ ^[1-9][0-9]*$ ]]; then
+        EPILOGUE="none"
+        BACKEND_TIMEOUT_SECONDS="${5}"
+      else
+        EPILOGUE="${5:-none}"
+        BACKEND_TIMEOUT_SECONDS="${6:-${BACKEND_TIMEOUT_SECONDS}}"
+      fi
+      BENCH_ARGS=("${M}" "${N}" "${K}" "${FILTER}" "${EPILOGUE}")
     else
       N="${ARG}"
       FILTER="${2:-core}"
-      BACKEND_TIMEOUT_SECONDS="${3:-${BACKEND_TIMEOUT_SECONDS}}"
-      BENCH_ARGS=("${N}" "${FILTER}")
+      if [[ "${3:-}" =~ ^[1-9][0-9]*$ ]]; then
+        EPILOGUE="none"
+        BACKEND_TIMEOUT_SECONDS="${3}"
+      else
+        EPILOGUE="${3:-none}"
+        BACKEND_TIMEOUT_SECONDS="${4:-${BACKEND_TIMEOUT_SECONDS}}"
+      fi
+      BENCH_ARGS=("${N}" "${FILTER}" "${EPILOGUE}")
     fi
     if [[ ! "${BACKEND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
       echo "Invalid backend timeout: ${BACKEND_TIMEOUT_SECONDS} (expected positive integer seconds)" >&2

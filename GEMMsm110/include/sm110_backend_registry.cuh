@@ -13,8 +13,9 @@ struct BackendDescriptor {
   bool implemented;
 };
 
-inline constexpr std::array<BackendDescriptor, 22> kBackendDescriptors{{
-    {"cublas_tc", "cuBLAS Tensor Core reference", -1, true},
+inline constexpr std::array<BackendDescriptor, 23> kBackendDescriptors{{
+    {"cublas_tc", "cuBLASLt Matmul heuristic reference", -1, true},
+    {"shapeopt", "ShapeOpt cuBLASLt fallback router", 7, true},
     {"cutlass", "CUTLASS official Blackwell auto schedule", -1, true},
     {"tc0", "CUDA WMMA Tensor Core baseline", 0, true},
     {"tc1a", "2D TMA linear-SMEM TCGen05 minimal", 1, false},
@@ -74,7 +75,8 @@ inline bool wants_backend(const std::string& filter,
     return true;
   }
   if (filter == "core") {
-    return backend_id == "cublas_tc" || backend_id == "cutlass" ||
+    return backend_id == "cublas_tc" || backend_id == "shapeopt" ||
+           backend_id == "cutlass" ||
            backend_id == "tc2a" || backend_id == "tc2b" ||
            backend_id == "tc4a" || backend_id == "tc5a" ||
            backend_id == "tc5b";
@@ -113,7 +115,7 @@ inline const BackendDescriptor* find_backend(std::string_view id) {
 
 inline constexpr std::string_view kBackendUsage =
     "[all|core|unstable|nvfp4|references|stage0..stage6|cublas_tc|cutlass|"
-    "tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|"
+    "shapeopt|tc0|tc1a|tc1b|tc2a|tc2b|tc3|tc4a|tc4b|tc4c|"
     "tc5a|tc5b|tc5c|tc5d|tc5e|tc5f|tc5g|tc5h|tc5i|tc5j|tc6]";
 
 }  // namespace gemm_sm110

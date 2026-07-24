@@ -1,0 +1,10 @@
+Suite,Case,M,N,K,Backend,Epilogue,KernelName,LaunchSkip,LaunchCount,Notes
+shapeopt,shapeopt_square_bias,2048,2048,2048,shapeopt,bias,,5,1,cuBLASLt fallback with bias epilogue
+shapeopt,shapeopt_square_residual,2048,2048,2048,shapeopt,residual,,5,1,cuBLASLt fallback with residual C input
+shapeopt,shapeopt_ragged_relu,384,520,300,shapeopt,relu,,5,1,cuBLASLt fallback on ragged shape
+shapeopt,shapeopt_gemv_gelu,1,4096,4096,shapeopt,gelu,,5,1,decode GEMV-like GELU epilogue
+shapeopt,shapeopt_gemv_micro_gelu,13,17,2048,shapeopt,gelu,,5,1,micro GEMV-like 13x17x2048 GELU epilogue
+shapeopt,shapeopt_gemv_micro_residual,13,17,2048,shapeopt,residual,,5,1,micro GEMV-like 13x17x2048 residual epilogue
+gemm_sm110,tc5a_square,2048,2048,2048,tc5a,none,regex:.*tc5.*,0,1,handwritten TCGen05 square baseline
+gemm_sm110,tc5a_tail_mn,1152,768,1024,tc5a,none,regex:.*tc5.*,0,1,handwritten TCGen05 M/N tail case
+gemm_sm110,tc5b_square_1024,1024,1024,1024,tc5b,none,regex:.*tc4.*|.*tc5.*,0,1,hybrid 2-SM path or tc5 fallback

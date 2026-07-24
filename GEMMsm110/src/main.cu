@@ -6,9 +6,17 @@
 #include "backends/tc4bc_cluster.cuh"
 #include "backends/tc5_persistent.cuh"
 #include "backends/tc6_nvfp4.cuh"
-#include "cutlass_sm110_backends.cuh"
+#include "cublaslt_reference.cuh"
 #include "sm110_backend_registry.cuh"
 #include "requant/nvfp4_reference.cuh"
+
+#ifndef GEMM_SM110_ENABLE_CUTLASS
+#define GEMM_SM110_ENABLE_CUTLASS 1
+#endif
+
+#if GEMM_SM110_ENABLE_CUTLASS
+#include "cutlass_sm110_backends.cuh"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -16,6 +24,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,12 +32,15 @@ namespace {
 
 using gemm_sm110::wants_backend;
 
+constexpr const char* kTensorCoreReferenceName =
+    "cuBLASLt Matmul heuristic";
+
 void print_usage(const char* program) {
   std::cerr << "Usage:\n"
             << "  " << program << " [square_size] "
-            << gemm_sm110::kBackendUsage << '\n'
+            << gemm_sm110::kBackendUsage << " [none|bias|relu|gelu|residual]\n"
             << "  " << program << " M N K "
-            << gemm_sm110::kBackendUsage << '\n';
+            << gemm_sm110::kBackendUsage << " [none|bias|relu|gelu|residual]\n";
 }
 
 bool needs_cublas_reference(const std::string& filter) {
@@ -42,7 +54,7 @@ void write_unavailable_backend(const gemm_sm110::BackendDescriptor& backend,
   std::cout << backend.id << " " << backend.label
             << ": unavailable (" << reason << ")\n";
   csv << backend.id << "," << backend.label << " unavailable," << n
-      << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+      << ",fp16->fp32," << kTensorCoreReferenceName << ",0,0,0,0\n";
 }
 
 template <typename Launch>
@@ -198,18 +210,49 @@ int main(int argc, char** argv) {
   int n = 1024;
   int k = 1024;
   std::string backend_filter = "core";
+  gemm_sm110::references::EpilogueMode epilogue_mode =
+      gemm_sm110::references::EpilogueMode::kNone;
 
-  if (argc == 2 || argc == 3) {
-    n = std::atoi(argv[1]);
-    m = n;
-    k = n;
-    if (argc == 3) backend_filter = argv[2];
-  } else if (argc == 4 || argc == 5) {
+  auto is_positive_integer = [](const char* value) {
+    if (value == nullptr || value[0] == '\0') return false;
+    for (const char* ptr = value; *ptr != '\0'; ++ptr) {
+      if (*ptr < '0' || *ptr > '9') return false;
+    }
+    return std::atoi(value) > 0;
+  };
+
+  if (argc >= 4 && is_positive_integer(argv[1]) &&
+      is_positive_integer(argv[2]) && is_positive_integer(argv[3])) {
     m = std::atoi(argv[1]);
     n = std::atoi(argv[2]);
     k = std::atoi(argv[3]);
-    if (argc == 5) backend_filter = argv[4];
-  } else if (argc > 5) {
+    if (argc >= 5) backend_filter = argv[4];
+    if (argc >= 6 &&
+        !gemm_sm110::references::parse_epilogue_mode(argv[5],
+                                                     &epilogue_mode)) {
+      print_usage(argv[0]);
+      return EXIT_FAILURE;
+    }
+    if (argc > 6) {
+      print_usage(argv[0]);
+      return EXIT_FAILURE;
+    }
+  } else if (argc >= 2 && is_positive_integer(argv[1])) {
+    n = std::atoi(argv[1]);
+    m = n;
+    k = n;
+    if (argc >= 3) backend_filter = argv[2];
+    if (argc >= 4 &&
+        !gemm_sm110::references::parse_epilogue_mode(argv[3],
+                                                     &epilogue_mode)) {
+      print_usage(argv[0]);
+      return EXIT_FAILURE;
+    }
+    if (argc > 4) {
+      print_usage(argv[0]);
+      return EXIT_FAILURE;
+    }
+  } else if (argc > 1) {
     print_usage(argv[0]);
     return EXIT_FAILURE;
   }
@@ -221,8 +264,6 @@ int main(int argc, char** argv) {
   }
 
   const bool run_reference = needs_cublas_reference(backend_filter);
-  const float alpha = 1.0f;
-  const float beta = 0.0f;
 
   const size_t c_bytes = static_cast<size_t>(m) * n * sizeof(float);
   const size_t d_c_elements = static_cast<size_t>(m) * n;
@@ -244,6 +285,8 @@ int main(int argc, char** argv) {
   half* d_a_half = nullptr;
   half* d_b_half = nullptr;
   half* d_b_half_nk = nullptr;
+  float* d_bias = nullptr;
+  float* d_residual = nullptr;
   if (d_c_bytes > 0) {
     CHECK_CUDA(cudaMalloc(&d_c, d_c_bytes));
   }
@@ -256,16 +299,22 @@ int main(int argc, char** argv) {
 
   std::cout << "M=" << m << ", N=" << n << ", K=" << k << '\n';
   std::cout << "Backend filter=" << backend_filter << '\n';
+  std::cout << "Epilogue="
+            << gemm_sm110::references::to_string(epilogue_mode) << '\n';
   std::cout << "Benchmark policy: warmup=" << kWarmup
             << ", timed repeats=" << kRepeat
             << " per backend before moving to the next backend\n";
 
   const size_t a_half_bytes = static_cast<size_t>(m) * k * sizeof(half);
   const size_t b_half_bytes = static_cast<size_t>(k) * n * sizeof(half);
+  const size_t bias_bytes = static_cast<size_t>(n) * sizeof(float);
   std::vector<float> h_a(static_cast<size_t>(m) * k);
 	  std::vector<float> h_b(static_cast<size_t>(k) * n);
 	  std::vector<float> h_ref_tc(static_cast<size_t>(m) * n);
+  std::vector<float> h_bias(static_cast<size_t>(n));
+  std::vector<float> h_residual(static_cast<size_t>(m) * n);
 	  fill_inputs(h_a, h_b);
+  fill_epilogue_inputs(h_bias, h_residual);
 	  if (const char* pattern = std::getenv("GEMM_INPUT_PATTERN")) {
 	    if (std::string(pattern) == "row_id") {
 	      std::fill(h_a.begin(), h_a.end(), 0.0f);
@@ -299,6 +348,16 @@ int main(int argc, char** argv) {
   CHECK_CUDA(cudaMalloc(&d_a_half, a_half_bytes));
   CHECK_CUDA(cudaMalloc(&d_b_half, b_half_bytes));
   CHECK_CUDA(cudaMalloc(&d_b_half_nk, b_half_bytes));
+  if (epilogue_mode == gemm_sm110::references::EpilogueMode::kBias) {
+    CHECK_CUDA(cudaMalloc(&d_bias, bias_bytes));
+    CHECK_CUDA(cudaMemcpy(d_bias, h_bias.data(), bias_bytes,
+                          cudaMemcpyHostToDevice));
+  }
+  if (epilogue_mode == gemm_sm110::references::EpilogueMode::kResidual) {
+    CHECK_CUDA(cudaMalloc(&d_residual, d_c_bytes));
+    CHECK_CUDA(cudaMemcpy(d_residual, h_residual.data(), d_c_bytes,
+                          cudaMemcpyHostToDevice));
+  }
   CHECK_CUDA(cudaMemcpy(d_a_half, h_a_half.data(), a_half_bytes,
                         cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(d_b_half, h_b_half.data(), b_half_bytes,
@@ -307,37 +366,79 @@ int main(int argc, char** argv) {
                         cudaMemcpyHostToDevice));
 
   float cublas_tc_perf = 0.0f;
+  float cublas_avg_ms = 0.0f;
+  std::unique_ptr<gemm_sm110::references::CublasLtMatmulReference>
+      cublaslt_reference;
   if (run_reference) {
-    cublasHandle_t tensor_core_handle = nullptr;
-    CHECK_CUBLAS(cublasCreate(&tensor_core_handle));
-    print_gemm_environment(tensor_core_handle);
+    cublasHandle_t version_handle = nullptr;
+    CHECK_CUBLAS(cublasCreate(&version_handle));
+    print_gemm_environment(version_handle);
+    CHECK_CUBLAS(cublasDestroy(version_handle));
 
+    cublaslt_reference =
+        std::make_unique<gemm_sm110::references::CublasLtMatmulReference>(
+            d_a_half, d_b_half, d_c, m, n, k, epilogue_mode, d_bias,
+            d_residual);
+    std::cout << "cuBLASLt heuristic algorithms returned="
+              << cublaslt_reference->returned_algorithms()
+              << ", selected workspace="
+              << cublaslt_reference->selected_workspace_bytes()
+              << " bytes, workspace limit="
+              << cublaslt_reference->workspace_bytes() << " bytes\n";
     auto launch_cublas_tensor_core = [&]() {
-      CHECK_CUBLAS(cublasGemmEx(
-          tensor_core_handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
-          d_b_half, CUDA_R_16F, n, d_a_half, CUDA_R_16F, k, &beta, d_c,
-          CUDA_R_32F, n, CUBLAS_COMPUTE_32F_FAST_16F, CUBLAS_GEMM_DEFAULT));
+      cublaslt_reference->launch();
     };
 
-    const float cublas_avg_ms =
+    cublas_avg_ms =
         benchmark_reference(launch_cublas_tensor_core, d_c, c_bytes, h_ref_tc);
     cublas_tc_perf = gflops(m, n, k, cublas_avg_ms);
 
     std::cout << "Tensor Core reference:\n";
-    std::cout << "cuBLAS Tensor Core: " << cublas_avg_ms << " ms, "
+    std::cout << kTensorCoreReferenceName << ": " << cublas_avg_ms << " ms, "
               << cublas_tc_perf << " GFLOPS\n";
-    csv << "cublas_tc,cuBLAS Tensor Core," << n
-        << ",fp16->fp32,cuBLAS Tensor Core," << cublas_avg_ms << ","
+    csv << "cublas_tc," << kTensorCoreReferenceName << "," << n
+        << ",fp16->fp32," << kTensorCoreReferenceName << "," << cublas_avg_ms << ","
         << cublas_tc_perf << ",1,1\n";
-    CHECK_CUBLAS(cublasDestroy(tensor_core_handle));
+  }
+
+  if (wants_backend(backend_filter, "shapeopt")) {
+    std::unique_ptr<gemm_sm110::references::CublasLtMatmulReference>
+        owned_shapeopt_reference;
+    auto* shapeopt_reference = cublaslt_reference.get();
+    if (shapeopt_reference == nullptr) {
+      owned_shapeopt_reference =
+          std::make_unique<gemm_sm110::references::CublasLtMatmulReference>(
+              d_a_half, d_b_half, d_c, m, n, k, epilogue_mode, d_bias,
+              d_residual);
+      shapeopt_reference = owned_shapeopt_reference.get();
+    }
+    auto launch_shapeopt = [&]() { shapeopt_reference->launch(); };
+    if (shapeopt_reference == cublaslt_reference.get()) {
+      std::cout << "ShapeOpt cuBLASLt heuristic fallback router: "
+                << cublas_avg_ms << " ms, " << cublas_tc_perf
+                << " GFLOPS, ratio=1x, matched=1"
+                << " (same selected cuBLASLt heuristic as reference)\n";
+      csv << "shapeopt,ShapeOpt cuBLASLt heuristic fallback router," << n
+          << ",fp16->fp32," << kTensorCoreReferenceName << ","
+          << cublas_avg_ms << "," << cublas_tc_perf << ",1,1\n";
+    } else {
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "shapeopt", "ShapeOpt cuBLASLt heuristic fallback router",
+          "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+          d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+          2e-3f);
+    }
   }
 
   if (wants_backend(backend_filter, "cutlass")) {
+#if GEMM_SM110_ENABLE_CUTLASS
     if (!device_supports_tc3_sm110) {
       std::cout << "CUTLASS official Blackwell auto-schedule GEMM: skipped "
                    "because runtime GPU is not an sm110 family target\n";
       csv << "cutlass,CUTLASS official Blackwell auto-schedule GEMM skipped,"
-          << n << ",fp16->fp32,cuBLAS Tensor Core,0,0,0,0\n";
+          << n << ",fp16->fp32," << kTensorCoreReferenceName
+          << ",0,0,0,0\n";
     } else if (m % 256 != 0 || n % 128 != 0 || k % 64 != 0) {
       write_unavailable_backend(
           *gemm_sm110::find_backend("cutlass"), n, csv,
@@ -352,9 +453,13 @@ int main(int argc, char** argv) {
       std::vector<float> h_cutlass(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "cutlass", "CUTLASS official Blackwell auto-schedule GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch_cutlass, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch_cutlass, m, n, k, d_c,
           c_bytes, h_ref_tc, h_cutlass, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
+#else
+    write_unavailable_backend(*gemm_sm110::find_backend("cutlass"), n, csv,
+                              "disabled at build time");
+#endif
   }
 
   if (wants_backend(backend_filter, "tc0")) {
@@ -369,7 +474,7 @@ int main(int argc, char** argv) {
       std::vector<float> h_tc0(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc0", "tc0 CUDA WMMA Tensor Core baseline", "fp16->fp32",
-          "cuBLAS Tensor Core", launch_tc0, m, n, k, d_c, c_bytes, h_ref_tc,
+          kTensorCoreReferenceName, launch_tc0, m, n, k, d_c, c_bytes, h_ref_tc,
           h_tc0, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -411,7 +516,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc2a", "tc2a 2D TMA SW128-SMEM TCGen05", "fp16->fp32",
-          "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
+          kTensorCoreReferenceName, launch, m, n, k, d_c, c_bytes, h_ref_tc,
           output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -431,7 +536,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc2b", "tc2b 3D TMA SW128-SMEM TCGen05", "fp16->fp32",
-          "cuBLAS Tensor Core", launch, m, n, k, d_c, c_bytes, h_ref_tc,
+          kTensorCoreReferenceName, launch, m, n, k, d_c, c_bytes, h_ref_tc,
           output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -451,7 +556,7 @@ int main(int argc, char** argv) {
       std::vector<float> h_tc3(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc3", "tc3 multi-stage 2D TMA SW128 TCGen05 pipeline",
-          "fp16->fp32", "cuBLAS Tensor Core", launch_tc3, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch_tc3, m, n, k, d_c,
           c_bytes, h_ref_tc, h_tc3, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -468,7 +573,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc4a", "tc4a warp-specialized TMA/TCGen05 pipeline",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -485,7 +590,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc4b", "tc4b 2-SM cluster TMA/TCGen05 pipeline",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -502,7 +607,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc4c", "tc4c warp-specialized 2-SM cluster pipeline",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -518,7 +623,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5a", "tc5a overlapped epilogue M128N256K64 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -535,7 +640,7 @@ int main(int argc, char** argv) {
       benchmark_kernel(
           "tc5b",
           "tc5b hybrid 2-SM overlapped M256N256K128 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     } else {
       gemm_sm110::backends::Tc5aRunner runner(
@@ -545,7 +650,7 @@ int main(int argc, char** argv) {
       benchmark_kernel(
           "tc5b",
           "tc5b hybrid fallback tc5a M128N256K64 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -561,7 +666,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5c", "tc5c static persistent 1-SM TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -577,7 +682,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5d", "tc5d static persistent M128N128K128 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -593,7 +698,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5e", "tc5e static persistent M128N256K64 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -609,7 +714,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5f", "tc5f static persistent M128N128K64 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -625,7 +730,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5g", "tc5g static persistent M128N256K128 stage1 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -641,7 +746,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5h", "tc5h static persistent M128N256K64 stage1 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -657,7 +762,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5i", "tc5i overlapped epilogue M128N128K64 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -673,7 +778,7 @@ int main(int argc, char** argv) {
       std::vector<float> output(static_cast<size_t>(m) * n);
       benchmark_kernel(
           "tc5j", "tc5j overlapped epilogue M128N256K128 TCGen05 GEMM",
-          "fp16->fp32", "cuBLAS Tensor Core", launch, m, n, k, d_c,
+          "fp16->fp32", kTensorCoreReferenceName, launch, m, n, k, d_c,
           c_bytes, h_ref_tc, output, csv, cublas_tc_perf, 2e-2f, 2e-3f);
     }
   }
@@ -710,5 +815,7 @@ int main(int argc, char** argv) {
   if (d_a_half != nullptr) CHECK_CUDA(cudaFree(d_a_half));
   if (d_b_half != nullptr) CHECK_CUDA(cudaFree(d_b_half));
   if (d_b_half_nk != nullptr) CHECK_CUDA(cudaFree(d_b_half_nk));
+  if (d_bias != nullptr) CHECK_CUDA(cudaFree(d_bias));
+  if (d_residual != nullptr) CHECK_CUDA(cudaFree(d_residual));
   return 0;
 }

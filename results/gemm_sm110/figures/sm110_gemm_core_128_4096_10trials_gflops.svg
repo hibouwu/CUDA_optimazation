@@ -197,7 +197,7 @@
 <text x="1030" y="76" font-size="14" font-family="Arial" font-weight="700" fill="#111827">Versions</text>
 <line x1="1030" y1="100" x2="1054" y2="100" stroke="#2563eb" stroke-width="3"/>
 <circle cx="1042.00" cy="100.00" r="4" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
-<text x="1062" y="104" font-size="12" font-family="Arial" fill="#374151">cuBLAS Tensor Core</text>
+<text x="1062" y="104" font-size="12" font-family="Arial" fill="#374151">cuBLASLt Matmul heuristic</text>
 <line x1="1030" y1="122" x2="1054" y2="122" stroke="#dc2626" stroke-width="3" stroke-dasharray="10 4"/>
 <rect x="1038.00" y="118.00" width="8" height="8" fill="#ffffff" stroke="#dc2626" stroke-width="2"/>
 <text x="1062" y="126" font-size="12" font-family="Arial" fill="#374151">CUTLASS official Blackwell auto-schedule</text>
