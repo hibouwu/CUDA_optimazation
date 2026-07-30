@@ -163,7 +163,8 @@ __device__ __forceinline__ void tma_load_b_2d(
 
 // 用带标签的数据实测 TMA 32B swizzle 的落址。
 //
-// Host 会在未 swizzle 的 global source cells 1、8、6、7 中分别写入不同的
+// Host 会在未 swizzle 的 global source cells 1、8、6、7、17、18 中分别
+// 写入不同的
 // 16-bit 标签。此 kernel 执行与正式实验相同的 16x16 BF16 TMA load，然后
 // 通过 generic shared-memory load 扫描目标区域，打印每个标签最终所在的：
 //   - physical cell：相对 B_storage 的 16B cell 编号
@@ -201,9 +202,9 @@ __global__ void print_tma_32b_swizzle_addresses(
 
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kTmaSourceCells[4] = {1, 8, 6, 7};
-        constexpr uint16_t kProbeTags[4] = {
-            0x5101, 0x5108, 0x5106, 0x5107
+        constexpr int kTmaSourceCells[6] = {1, 8, 6, 7, 17, 18};
+        constexpr uint16_t kProbeTags[6] = {
+            0x5101, 0x5108, 0x5106, 0x5107, 0x5117, 0x5118
         };
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
@@ -211,7 +212,7 @@ __global__ void print_tma_32b_swizzle_addresses(
         printf("\n=== TMA 32B swizzle physical-address probe ===\n");
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
 
-        for (int probe = 0; probe < 4; ++probe) {
+        for (int probe = 0; probe < 6; ++probe) {
             int physical_cell = -1;
 
             // TMA tile 共 512B，即 32 个 16B cells。每个 source cell 的 8 个
@@ -509,15 +510,16 @@ int main() {
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
     // 先做一次不会参与 MMA 的独立落址探针。线性编号的 16B TMA source
-    // cells 1、8、6、7
+    // cells 1、8、6、7、17、18。后两个用于直接检查相对 B_storage 的
+    // 0x110/0x120 附近，而 6、7 保留作为编号空间差异的对照。
     // 使用不同的 raw 16-bit 标签，kernel 会在 TMA 完成后扫描 swizzled SMEM，
     // 打印它们各自的真实 physical cell/offset/address。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeTmaSourceCells[4] = {1, 8, 6, 7};
-    constexpr uint16_t kProbeTags[4] = {
-        0x5101, 0x5108, 0x5106, 0x5107
+    constexpr int kProbeTmaSourceCells[6] = {1, 8, 6, 7, 17, 18};
+    constexpr uint16_t kProbeTags[6] = {
+        0x5101, 0x5108, 0x5106, 0x5107, 0x5117, 0x5118
     };
-    for (int probe = 0; probe < 4; ++probe) {
+    for (int probe = 0; probe < 6; ++probe) {
         for (int i = 0; i < 8; ++i) {
             h_probe[kProbeTmaSourceCells[probe] * 8 + i] = kProbeTags[probe];
         }
