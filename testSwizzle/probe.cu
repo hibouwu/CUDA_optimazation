@@ -158,10 +158,10 @@ __global__ void kernel(
     }
     __syncthreads();
 
-    // The 16x16 BF16 global staging tile contains ones in logical 16B cells
-    // 1, 3 and 17.  A 32B TMA swizzle maps them to physical cells 1, 2 and 17
-    // relative to the 256B-aligned B_storage base, i.e. byte offsets
-    // 0x010, 0x020 and 0x110 observed on Thor.
+    // Thor end-to-end probing of this exact tensor map and MMA descriptor
+    // shows that TMA source cells 1, 2 and 17 feed N0..7, N8..15 and N16..23.
+    // Keep this as an empirical property of the complete TMA+MMA path rather
+    // than inferring it from the cell labels in the swizzle diagram.
     if (threadIdx.x == 0) {
         constexpr uint32_t kTmaBytes = 16 * 16 * sizeof(uint16_t);
         tma_load_b_2d(B_storage, &tensor_map_b, &tma_barrier);
@@ -281,12 +281,12 @@ int main() {
     CUDA_CHECK(cudaMalloc(&d_b, 16 * 16 * sizeof(uint16_t)));
     CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
 
-    // The TMA source is an unswizzled 16x16 BF16 tile.  Each 16B logical cell
-    // contains eight BF16 elements.  For 32B swizzling, logical cells 1, 3
-    // and 17 land in physical cells 1, 2 and 17 respectively.
+    // The TMA source is an unswizzled 16x16 BF16 tile.  Each 16B source cell
+    // contains eight BF16 elements.  Thor end-to-end probing verified that
+    // source cells 1, 2 and 17 produce the required three output groups.
     uint16_t h_b[16 * 16] = {};
-    constexpr int one_logical_cells[3] = {1, 3, 17};
-    for (int cell : one_logical_cells) {
+    constexpr int tma_source_one_cells[3] = {1, 2, 17};
+    for (int cell : tma_source_one_cells) {
         for (int i = 0; i < 8; ++i) {
             h_b[cell * 8 + i] = 0x3f80;
         }
