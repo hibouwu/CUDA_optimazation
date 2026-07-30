@@ -201,7 +201,7 @@ __global__ void print_tma_32b_swizzle_addresses(
 
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kLogicalCells[4] = {1, 8, 6, 7};
+        constexpr int kTmaSourceCells[4] = {1, 8, 6, 7};
         constexpr uint16_t kProbeTags[4] = {
             0x5101, 0x5108, 0x5106, 0x5107
         };
@@ -226,15 +226,15 @@ __global__ void print_tma_32b_swizzle_addresses(
             if (physical_cell >= 0) {
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
                 printf(
-                    "logical cell %d -> physical cell %d, "
+                    "TMA source cell %d -> physical cell %d, "
                     "offset=0x%x, smem=0x%x\n",
-                    kLogicalCells[probe],
+                    kTmaSourceCells[probe],
                     physical_cell,
                     byte_offset,
                     smem_u32(B_storage + byte_offset));
             } else {
-                printf("logical cell %d -> tag not found\n",
-                       kLogicalCells[probe]);
+                printf("TMA source cell %d -> tag not found\n",
+                       kTmaSourceCells[probe]);
             }
         }
     }
@@ -508,17 +508,18 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 先做一次不会参与 MMA 的独立落址探针。逻辑 16B source cells 1、8、6、7
+    // 先做一次不会参与 MMA 的独立落址探针。线性编号的 16B TMA source
+    // cells 1、8、6、7
     // 使用不同的 raw 16-bit 标签，kernel 会在 TMA 完成后扫描 swizzled SMEM，
     // 打印它们各自的真实 physical cell/offset/address。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeLogicalCells[4] = {1, 8, 6, 7};
+    constexpr int kProbeTmaSourceCells[4] = {1, 8, 6, 7};
     constexpr uint16_t kProbeTags[4] = {
         0x5101, 0x5108, 0x5106, 0x5107
     };
     for (int probe = 0; probe < 4; ++probe) {
         for (int i = 0; i < 8; ++i) {
-            h_probe[kProbeLogicalCells[probe] * 8 + i] = kProbeTags[probe];
+            h_probe[kProbeTmaSourceCells[probe] * 8 + i] = kProbeTags[probe];
         }
     }
     CUDA_CHECK(cudaMemcpy(
