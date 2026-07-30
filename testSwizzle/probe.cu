@@ -161,138 +161,6 @@ __device__ __forceinline__ void tma_load_b_2d(
         : "memory");
 }
 
-// 用嵌入数据的编号标签实测全部 TMA 16B chunks 的物理落址。
-//
-// 图中的每个小格是一个规范化后的 128-bit（16B）cell，其中包含 8 个
-// BF16。但图中的 tcgen logical-cell 编号与 TMA source 的线性 chunk 编号
-// 不是同一个编号空间。本探针只报告可直接观测的 TMA source -> physical
-// SMEM 映射，不再人工附加 tcgen logical 编号。
-//
-// Host 在生成 global tile 时，将 chunk index 编码进该 chunk 的数据：
-//   tag(chunk) = 0x6000 + chunk
-// 并把同一标签写入 chunk 内的 8 个 BF16 word。TMA 只搬运原始位模式，
-// 因此标签会随 chunk 一起经过32B swizzle。kernel 在 TMA 完成后扫描 SMEM，
-// 解码标签并打印：
-//   - source chunk index 及其 repeat/lane/col
-//   - physical chunk index 及其 repeat/lane/col
-// 这里按每个32B swizzle repeat的2x8视图分解编号：
-//   repeat = chunk / 16, lane = (chunk % 16) / 8, col = chunk % 8
-//   - byte offset ：相对 B_storage 的字节偏移
-//   - smem address：硬件使用的绝对 shared-memory 地址
-//
-// 这里必须在 TMA barrier 完成后执行 async-proxy fence。否则直接用普通
-// C++ load 观察 TMA async proxy 写入的数据，不构成正确的跨 proxy 同步。
-__global__ void print_tma_32b_swizzle_addresses(
-    const __grid_constant__ CUtensorMap tensor_map_b) {
-
-    extern __shared__ uint8_t smem[];
-    __shared__ alignas(8) uint64_t barrier;
-
-    uint32_t raw = smem_u32(smem);
-    uint32_t aligned = (raw + 255) & ~255;
-    uint8_t* B_storage = smem + (aligned - raw);
-
-    if (threadIdx.x == 0) {
-        mbarrier_init(&barrier, 1);
-        asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
-    }
-    __syncthreads();
-
-    if (threadIdx.x == 0) {
-        constexpr uint32_t kTmaBytes = 16 * 16 * sizeof(uint16_t);
-        tma_load_b_2d(B_storage, &tensor_map_b, &barrier);
-        mbarrier_arrive_expect_tx(&barrier, kTmaBytes);
-        mbarrier_wait(&barrier, 0);
-    }
-    __syncthreads();
-
-    asm volatile("fence.proxy.async.shared::cta;" ::: "memory");
-    __syncthreads();
-
-    if (threadIdx.x == 0) {
-        constexpr uint16_t kTagBase = 0x6000;
-        constexpr int kCellCount = 32;
-        const volatile uint16_t* words =
-            reinterpret_cast<const volatile uint16_t*>(B_storage);
-        int chunk_to_physical[kCellCount];
-
-        for (int chunk = 0; chunk < kCellCount; ++chunk) {
-            chunk_to_physical[chunk] = -1;
-        }
-
-        // 每个 physical cell 的第一个16-bit word 中保存着生成时写入的
-        // source chunk 标签。先反向建立 chunk index -> physical 映射。
-        for (int physical = 0; physical < kCellCount; ++physical) {
-            uint16_t tag = words[physical * 8];
-            if (tag >= kTagBase && tag < kTagBase + kCellCount) {
-                int chunk = int(tag - kTagBase);
-                chunk_to_physical[chunk] = physical;
-            }
-        }
-
-        printf("\n=== TMA 32B swizzle full 16B-chunk mapping ===\n");
-        printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
-        printf("B_start   smem = 0x%x\n", smem_u32(B_storage + 0x10));
-
-        for (int chunk = 0; chunk < kCellCount; ++chunk) {
-            int source_repeat = chunk / 16;
-            int source_lane = (chunk % 16) / 8;
-            int source_col = chunk % 8;
-            int physical_cell = chunk_to_physical[chunk];
-
-            if (physical_cell >= 0) {
-                int physical_repeat = physical_cell / 16;
-                int physical_lane = (physical_cell % 16) / 8;
-                int physical_col = physical_cell % 8;
-                uint32_t byte_offset = uint32_t(physical_cell) * 16;
-                int32_t offset_from_b_start = int32_t(byte_offset) - 0x10;
-
-                if (offset_from_b_start >= 0) {
-                    printf(
-                        "chunk index %d (repeat=%d, lane=%d, col=%d) "
-                        "-> physical chunk %d (repeat=%d, lane=%d, col=%d), "
-                        "B_storage+0x%x, B_start+0x%x, smem=0x%x\n",
-                        chunk,
-                        source_repeat,
-                        source_lane,
-                        source_col,
-                        physical_cell,
-                        physical_repeat,
-                        physical_lane,
-                        physical_col,
-                        byte_offset,
-                        uint32_t(offset_from_b_start),
-                        smem_u32(B_storage + byte_offset));
-                } else {
-                    printf(
-                        "chunk index %d (repeat=%d, lane=%d, col=%d) "
-                        "-> physical chunk %d (repeat=%d, lane=%d, col=%d), "
-                        "B_storage+0x%x, B_start-0x%x, smem=0x%x\n",
-                        chunk,
-                        source_repeat,
-                        source_lane,
-                        source_col,
-                        physical_cell,
-                        physical_repeat,
-                        physical_lane,
-                        physical_col,
-                        byte_offset,
-                        uint32_t(-offset_from_b_start),
-                        smem_u32(B_storage + byte_offset));
-                }
-            } else {
-                printf(
-                    "chunk index %d (repeat=%d, lane=%d, col=%d) "
-                    "-> tag not found\n",
-                    chunk,
-                    source_repeat,
-                    source_lane,
-                    source_col);
-            }
-        }
-    }
-}
-
 // ============================================================================
 // Kernel：TMA 搬运 B -> tcgen05 MMA -> TMEM 读回第 0 行
 // ============================================================================
@@ -375,8 +243,7 @@ __global__ void kernel(
         mbarrier_arrive_expect_tx(&tma_barrier, kTmaBytes);
         mbarrier_wait(&tma_barrier, 0);
 
-        // 这里只打印两个基址。TMA swizzle 后的实际物理落址由独立的
-        // print_tma_32b_swizzle_addresses kernel 使用标签数据测量。
+        // 正式验证时打印两个基址；签名实验运行时关闭这些重复日志。
         if (verbose) {
             printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
             printf("B_start   smem = 0x%x\n", smem_u32(B_start));
@@ -566,32 +433,92 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 为全部32个16B source chunks 写入嵌入式编号标签。标签是原始16-bit
-    // 位模式，只用于追踪搬运，不会参与后面的正式 MMA。
-    uint16_t h_probe[16 * 16] = {};
-    constexpr uint16_t kProbeTagBase = 0x6000;
-    for (int chunk_index = 0; chunk_index < 32; ++chunk_index) {
-        uint16_t tag = uint16_t(kProbeTagBase + chunk_index);
-        for (int word_in_chunk = 0; word_in_chunk < 8; ++word_in_chunk) {
-            h_probe[chunk_index * 8 + word_in_chunk] = tag;
-        }
-    }
-    CUDA_CHECK(cudaMemcpy(
-        d_b,
-        h_probe,
-        sizeof(h_probe),
-        cudaMemcpyHostToDevice));
-    print_tma_32b_swizzle_addresses<<<1, 32, 1024>>>(tensor_map_b);
-    CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaDeviceSynchronize());
+    // ------------------------------------------------------------------------
+    // tcgen05 输入位置签名实验
+    // ------------------------------------------------------------------------
+    // 一次运行最多使用16个互不重叠的二进制权重：
+    //   input cell (base + bit) 的8个 BF16 全部设为 2^bit。
+    // A 全为1，因此 MMA 输出是若干 2^bit 的和；将结果视为整数位掩码，
+    // 就能直接解码该输出读取了哪些 TMA input cells。
+    //
+    // 分别测试 cells 0..15 和16..31，只需两次 MMA。最后把具有相同掩码的
+    // 连续 N columns 合并打印，避免逐地址、逐输出产生大量日志。
+    auto run_input_signature = [&](int base_cell, uint32_t masks[24]) {
+        uint16_t h_signature[16 * 16] = {};
 
-    // 恢复正式 MMA 实验使用的 0/1 source tile。tensor map 仍引用同一个 d_b，
-    // 因此只需更新其内容，不需要重新编码 tensor map。
+        for (int bit = 0; bit < 16; ++bit) {
+            int input_cell = base_cell + bit;
+            // BF16 2^bit：符号位为0，指数为127+bit，尾数为0。
+            uint16_t value = uint16_t((127 + bit) << 7);
+            for (int word = 0; word < 8; ++word) {
+                h_signature[input_cell * 8 + word] = value;
+            }
+        }
+
+        CUDA_CHECK(cudaMemcpy(
+            d_b,
+            h_signature,
+            sizeof(h_signature),
+            cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
+        kernel<<<1,128, 16384>>>(tensor_map_b, d, 24, 0);
+        CUDA_CHECK(cudaGetLastError());
+        CUDA_CHECK(cudaDeviceSynchronize());
+
+        float h_signature_out[24];
+        CUDA_CHECK(cudaMemcpy(
+            h_signature_out,
+            d,
+            sizeof(h_signature_out),
+            cudaMemcpyDeviceToHost));
+        for (int n = 0; n < 24; ++n) {
+            // 所有输入均为非负2的整数次幂，且总和小于2^16，可被FP32精确表示。
+            masks[n] = uint32_t(h_signature_out[n]);
+        }
+    };
+
+    uint32_t low_masks[24];
+    uint32_t high_masks[24];
+    run_input_signature(0, low_masks);
+    run_input_signature(16, high_masks);
+
+    printf("\n=== tcgen05 input-cell signature ===\n");
+    for (int first_n = 0; first_n < 24;) {
+        int last_n = first_n;
+        while (last_n + 1 < 24 &&
+               low_masks[last_n + 1] == low_masks[first_n] &&
+               high_masks[last_n + 1] == high_masks[first_n]) {
+            ++last_n;
+        }
+
+        printf("N%d..%d reads TMA input cells {", first_n, last_n);
+        bool first_item = true;
+        for (int bit = 0; bit < 16; ++bit) {
+            if (low_masks[first_n] & (1u << bit)) {
+                printf("%s%d", first_item ? "" : ",", bit);
+                first_item = false;
+            }
+        }
+        for (int bit = 0; bit < 16; ++bit) {
+            if (high_masks[first_n] & (1u << bit)) {
+                printf("%s%d", first_item ? "" : ",", 16 + bit);
+                first_item = false;
+            }
+        }
+        printf("} (mask_lo=0x%04x mask_hi=0x%04x)\n",
+               low_masks[first_n],
+               high_masks[first_n]);
+
+        first_n = last_n + 1;
+    }
+
+    // 签名实验结束后恢复正式0/1 B tile。
     CUDA_CHECK(cudaMemcpy(
         d_b,
         h_b,
         sizeof(h_b),
         cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
 
     // 动态 shared memory 为 16KiB，足以容纳：
     //   最多 255B 的对齐补偿 + 4096B B 区域 + 4096B A 区域。
