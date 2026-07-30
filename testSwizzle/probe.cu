@@ -245,6 +245,22 @@ __global__ void kernel(
         if (verbose) {
             printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
             printf("B_start   smem = 0x%x\n", smem_u32(B_start));
+
+            printf("\n=== source cell -> physical SMEM address ===\n");
+            for (int source_cell = 0; source_cell < 32; ++source_cell) {
+                // 当前 TMA 目标以256B对齐，32B swizzle 以16B cell为单位：
+                // physical = source XOR ((source >> 3) & 1)。
+                int physical_cell =
+                    source_cell ^ ((source_cell >> 3) & 1);
+                uint32_t byte_offset = uint32_t(physical_cell) * 16;
+                printf(
+                    "source cell %2d -> physical cell %2d, "
+                    "B_storage+0x%03x, smem=0x%x\n",
+                    source_cell,
+                    physical_cell,
+                    byte_offset,
+                    smem_u32(B_storage + byte_offset));
+            }
         }
     }
 
