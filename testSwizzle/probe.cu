@@ -116,14 +116,16 @@ __global__ void kernel(float* out) {
 
     __syncthreads();
 
-    // Each drawn cell is a 16B chunk.  The top-row green cells are one
-    // complete one-hot set for N0..N23; setting the lower green row too would
-    // add a second identical contribution and make C equal 2.
+    // The numbers shown inside the diagram's cells are logical indices after
+    // the 32B swizzle, not linear SMEM cell indices.  Place the three groups
+    // of eight bf16 ones at physical SMEM offsets 0x10, 0x110 and 0x120 from
+    // the 256B-aligned B_storage base.  Since B_start is B_storage + 0x10,
+    // their physical 16B-cell indices relative to B_start are 0, 16 and 17.
     if (threadIdx.x == 0) {
-        constexpr int green_cells[4] = {1, 9, 17, 25};
+        constexpr int one_cells[3] = {0, 16, 17};
 
-        for (int i = 0; i < 4; ++i) {
-            set_b_cell(B_start, green_cells[i], uint16_t(0x3f80));
+        for (int i = 0; i < 3; ++i) {
+            set_b_cell(B_start, one_cells[i], uint16_t(0x3f80));
         }
     }
 
