@@ -535,10 +535,10 @@ int main() {
     // 负对照验收条件：C 的第0行 N0..N23 必须精确等于0。
     // BF16 0/1 和FP32零都可精确表示，因此使用精确比较。
     printf("\n=== global memory result ===\n");
-    int mismatches = 0;
+    int nonzero_outputs = 0;
     for (int i = 0; i < 24; ++i) {
         if (h_baseline[i] != 0.0f) {
-            ++mismatches;
+            ++nonzero_outputs;
         }
     }
 
@@ -555,9 +555,14 @@ int main() {
                h_baseline[first_n]);
         first_n = last_n + 1;
     }
-    printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
+    // “不可见位置”判断成立或被否定都是有效实验结果，不应让进程以错误码
+    // 退出。只有 CUDA/API 失败才由 CUDA_CHECK/CU_CHECK 终止程序。
+    printf(
+        "hypothesis=%s nonzero_outputs=%d\n",
+        nonzero_outputs == 0 ? "CONFIRMED" : "REJECTED",
+        nonzero_outputs);
 
     CUDA_CHECK(cudaFree(d));
     CUDA_CHECK(cudaFree(d_b));
-    return mismatches == 0 ? 0 : 1;
+    return 0;
 }
