@@ -339,10 +339,18 @@ __device__ __forceinline__ void store_global_l1_no_allocate_v8_f32(
 __device__ __forceinline__ void store_global_l1_no_allocate_v2_f32(
     float* dst, float value0, float value1) {
   asm volatile(
-      "st.global.L1::no_allocate.v2.f32 [%0], {%1, %2};"
+    "st.global.L1::no_allocate.v2.f32 [%0], {%1, %2};"
       :
       : "l"(dst), "f"(value0), "f"(value1)
       : "memory");
+}
+
+__device__ __forceinline__ void store_global_l1_no_allocate_f32(
+    float* dst, float value) {
+  asm volatile("st.global.L1::no_allocate.f32 [%0], %1;"
+               :
+               : "l"(dst), "f"(value)
+               : "memory");
 }
 
 __host__ __device__ constexpr uint64_t encode_smem(uint64_t value) {

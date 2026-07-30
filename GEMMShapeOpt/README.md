@@ -92,9 +92,15 @@ SHAPES_CSV=shapes/target_shapes.csv \
 ./scripts/run_shape_sweep.sh
 ```
 
-`shapeopt` 是当前 ShapeOpt runtime router 的验收 backend；现阶段对未验证
-超过 90% 的 shape 使用和 `GEMMsm110` reference 相同的 cuBLASLt heuristic
-fallback，后续再把已达标的专用 `tc*` kernel 接进 router。
+`shapeopt` 是当前 ShapeOpt runtime router 的验收 backend。默认情况下，
+没有自研专用路径的 shape 会写成 unavailable，不再伪装成 cuBLASLt
+fallback；只有显式设置 `SHAPEOPT_ALLOW_CUBLASLT_FALLBACK=1` 时才允许复用
+cuBLASLt heuristic。当前源码已经接入 `2048^3` square tc5a、
+`1024x1024x1000` padded-K tc5a、`4096x64x4096` skinny-N TileN64 TCGen05、
+small-M/GEMV-like warp GEMV，以及 `1x11008x4096` two-output warp GEMV。
+最新 no-fallback target sweep 中，`square`、`tail_k`、`skinny_n`、
+`gemv_like_micro` 和 `decode_ffn` 达到 `0.90x`；`gemv_like_m` 仍有波动，
+`skinny_m`、`tail_mn` 和 `ragged` 还需要继续写专用路径。
 
 如果只是收集数据、不希望低于 90% 时返回失败：
 

@@ -15,7 +15,7 @@ struct BackendDescriptor {
 
 inline constexpr std::array<BackendDescriptor, 23> kBackendDescriptors{{
     {"cublas_tc", "cuBLASLt Matmul heuristic reference", -1, true},
-    {"shapeopt", "ShapeOpt cuBLASLt fallback router", 7, true},
+    {"shapeopt", "ShapeOpt specialized router", 7, true},
     {"cutlass", "CUTLASS official Blackwell auto schedule", -1, true},
     {"tc0", "CUDA WMMA Tensor Core baseline", 0, true},
     {"tc1a", "2D TMA linear-SMEM TCGen05 minimal", 1, false},

@@ -6,6 +6,7 @@
 #include "backends/tc4bc_cluster.cuh"
 #include "backends/tc5_persistent.cuh"
 #include "backends/tc6_nvfp4.cuh"
+#include "backends/shapeopt_specialized.cuh"
 #include "cublaslt_reference.cuh"
 #include "sm110_backend_registry.cuh"
 #include "requant/nvfp4_reference.cuh"
@@ -80,6 +81,28 @@ float benchmark_reference(Launch launch, float* d_c, size_t c_bytes,
   CHECK_CUDA(cudaEventDestroy(stop));
   CHECK_CUDA(cudaMemcpy(h_ref.data(), d_c, c_bytes, cudaMemcpyDeviceToHost));
   return total_ms / kRepeat;
+}
+
+template <typename Launch>
+float tune_launch_ms(Launch launch, int repeats = 20) {
+  for (int i = 0; i < 3; ++i) launch();
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  cudaEvent_t start, stop;
+  CHECK_CUDA(cudaEventCreate(&start));
+  CHECK_CUDA(cudaEventCreate(&stop));
+  CHECK_CUDA(cudaEventRecord(start));
+  for (int i = 0; i < repeats; ++i) {
+    launch();
+  }
+  CHECK_CUDA(cudaEventRecord(stop));
+  CHECK_CUDA(cudaEventSynchronize(stop));
+
+  float total_ms = 0.0f;
+  CHECK_CUDA(cudaEventElapsedTime(&total_ms, start, stop));
+  CHECK_CUDA(cudaEventDestroy(start));
+  CHECK_CUDA(cudaEventDestroy(stop));
+  return total_ms / repeats;
 }
 
 size_t count_byte_mismatches(const std::vector<std::uint8_t>& ref,
@@ -402,32 +425,1590 @@ int main(int argc, char** argv) {
   }
 
   if (wants_backend(backend_filter, "shapeopt")) {
-    std::unique_ptr<gemm_sm110::references::CublasLtMatmulReference>
-        owned_shapeopt_reference;
-    auto* shapeopt_reference = cublaslt_reference.get();
-    if (shapeopt_reference == nullptr) {
-      owned_shapeopt_reference =
-          std::make_unique<gemm_sm110::references::CublasLtMatmulReference>(
-              d_a_half, d_b_half, d_c, m, n, k, epilogue_mode, d_bias,
-              d_residual);
-      shapeopt_reference = owned_shapeopt_reference.get();
-    }
-    auto launch_shapeopt = [&]() { shapeopt_reference->launch(); };
-    if (shapeopt_reference == cublaslt_reference.get()) {
-      std::cout << "ShapeOpt cuBLASLt heuristic fallback router: "
-                << cublas_avg_ms << " ms, " << cublas_tc_perf
-                << " GFLOPS, ratio=1x, matched=1"
-                << " (same selected cuBLASLt heuristic as reference)\n";
-      csv << "shapeopt,ShapeOpt cuBLASLt heuristic fallback router," << n
-          << ",fp16->fp32," << kTensorCoreReferenceName << ","
-          << cublas_avg_ms << "," << cublas_tc_perf << ",1,1\n";
-    } else {
+    if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+        device_supports_tc3_sm110 && m == 2048 && n == 2048 && k == 2048) {
+      gemm_sm110::backends::Tc5aRunner shapeopt_runner(
+          d_a_half, d_b_half_nk, d_c, m, n, k);
+      auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
       std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
       benchmark_kernel(
-          "shapeopt", "ShapeOpt cuBLASLt heuristic fallback router",
+          "shapeopt", "ShapeOpt custom square tc5a TCGen05 GEMM",
           "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
           d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
           2e-3f);
+    } else if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+               device_supports_tc3_sm110 && m == 4096 && n == 64 &&
+               k == 4096) {
+      int variant = -1;
+      if (const char* env = std::getenv("SHAPEOPT_SKINNY_N_VARIANT")) {
+        variant = std::atoi(env);
+      }
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      if (variant < 0) {
+        gemm_sm110::backends::Tc5Runner<64, 128, 2> raw_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        gemm_sm110::backends::Tc5OverlapRunner<128, 64, 64, 4>
+            overlap_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        const float raw_ms =
+            tune_launch_ms([&]() { raw_runner.launch(); });
+        const float overlap_ms =
+            tune_launch_ms([&]() { overlap_runner.launch(); });
+        const bool use_overlap = overlap_ms < raw_ms;
+        std::cout << "ShapeOpt skinny-N autotune: raw=" << raw_ms
+                  << " ms, overlap=" << overlap_ms
+                  << " ms, chosen="
+                  << (use_overlap ? "overlap" : "raw") << '\n';
+        auto launch_shapeopt = [&]() {
+          if (use_overlap) {
+            overlap_runner.launch();
+          } else {
+            raw_runner.launch();
+          }
+        };
+        benchmark_kernel(
+            "shapeopt",
+            use_overlap
+                ? "ShapeOpt custom skinny-N autotuned tc5a TileN64K64 GEMM"
+                : "ShapeOpt custom skinny-N autotuned tc5 TileN64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 1) {
+        gemm_sm110::backends::Tc5Runner<64, 64, 2> shapeopt_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-N tc5 TileN64K64 TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 2) {
+        gemm_sm110::backends::Tc5Runner<64, 64, 4> shapeopt_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-N tc5 TileN64K64S4 TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 3) {
+        gemm_sm110::backends::Tc5Runner<64, 128, 1> shapeopt_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-N tc5 TileN64K128S1 TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 4) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 64, 64, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-N tc5a TileN64K64 TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else {
+        gemm_sm110::backends::Tc5Runner<64, 128, 2> shapeopt_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt", "ShapeOpt custom skinny-N tc5 TileN64 TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      }
+    } else if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+               device_supports_tc3_sm110 && m == 1024 && n == 1024 &&
+               k == 1000) {
+      constexpr int kPaddedK = 1024;
+      half* d_a_padded = nullptr;
+      half* d_b_nk_padded = nullptr;
+      CHECK_CUDA(cudaMalloc(&d_a_padded,
+                            static_cast<size_t>(m) * kPaddedK *
+                                sizeof(half)));
+      CHECK_CUDA(cudaMalloc(&d_b_nk_padded,
+                            static_cast<size_t>(n) * kPaddedK *
+                                sizeof(half)));
+      gemm_sm110::backends::shapeopt_detail::launch_pad_k_major_rows(
+          d_a_half, d_a_padded, m, k, kPaddedK);
+      gemm_sm110::backends::shapeopt_detail::launch_pad_k_major_rows(
+          d_b_half_nk, d_b_nk_padded, n, k, kPaddedK);
+      CHECK_CUDA(cudaDeviceSynchronize());
+      gemm_sm110::backends::Tc5aRunner shapeopt_runner(
+          d_a_padded, d_b_nk_padded, d_c, m, n, kPaddedK);
+      auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "shapeopt", "ShapeOpt custom tail-K padded tc5 TCGen05 GEMM",
+          "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+          d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+          2e-3f);
+      CHECK_CUDA(cudaFree(d_a_padded));
+      CHECK_CUDA(cudaFree(d_b_nk_padded));
+    } else if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+               device_supports_tc3_sm110 && m == 1152 && n == 768 &&
+               k == 1024) {
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      int variant = -1;
+      if (const char* env = std::getenv("SHAPEOPT_TAIL_MN_VARIANT")) {
+        variant = std::atoi(env);
+      }
+      if (variant < 0) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc5aRunner tc5a_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3>
+            cluster_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 3>
+            cluster_k128_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM,
+                                n, k);
+        gemm_sm110::backends::Tc5TailMnN192Runner<64, 4>
+            n192_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        const float tc5a_ms =
+            tune_launch_ms([&]() { tc5a_runner.launch(); });
+        const float cluster_ms =
+            tune_launch_ms([&]() { cluster_runner.launch(); });
+        const float cluster_k128_ms =
+            tune_launch_ms([&]() { cluster_k128_runner.launch(); });
+        const float n192_ms =
+            tune_launch_ms([&]() { n192_runner.launch(); });
+        int chosen = 0;
+        float chosen_ms = tc5a_ms;
+        if (cluster_ms < chosen_ms) {
+          chosen = 1;
+          chosen_ms = cluster_ms;
+        }
+        if (cluster_k128_ms < chosen_ms) {
+          chosen = 3;
+          chosen_ms = cluster_k128_ms;
+        }
+        if (n192_ms < chosen_ms) {
+          chosen = 2;
+          chosen_ms = n192_ms;
+        }
+        std::cout << "ShapeOpt tail-MN autotune: tc5a=" << tc5a_ms
+                  << " ms, padded_cluster=" << cluster_ms
+                  << " ms, padded_cluster_k128=" << cluster_k128_ms
+                  << " ms, split_n192=" << n192_ms
+                  << " ms, chosen="
+                  << (chosen == 3
+                          ? "padded_cluster_k128"
+                          : (chosen == 2
+                                 ? "split_n192"
+                                 : (chosen == 1 ? "padded_cluster"
+                                                : "tc5a")))
+                  << '\n';
+        auto launch_shapeopt = [&]() {
+          if (chosen == 3) {
+            cluster_k128_runner.launch();
+          } else if (chosen == 2) {
+            n192_runner.launch();
+          } else if (chosen == 1) {
+            cluster_runner.launch();
+          } else {
+            tc5a_runner.launch();
+          }
+        };
+        const char* shapeopt_name =
+            chosen == 3
+                ? "ShapeOpt custom tail-MN autotuned padded cluster tc4c "
+                  "M256N256K128S3 GEMM"
+            : chosen == 2
+                ? "ShapeOpt custom tail-MN autotuned split-N192 tc5 "
+                  "M128N192K64S4 GEMM"
+            : chosen == 1
+                ? "ShapeOpt custom tail-MN autotuned padded cluster tc4c "
+                  "M256N256K64S3 GEMM"
+                : "ShapeOpt custom tail-MN autotuned tc5a TCGen05 GEMM";
+        benchmark_kernel(
+            "shapeopt", shapeopt_name,
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 1) {
+        gemm_sm110::backends::Tc5TailMnPairNRunner<64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN pair-N tc5 TileN256x2K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 2) {
+        gemm_sm110::backends::Tc5TailMnPairNRunner<128, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN pair-N tc5 TileN256x2K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 3) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 256, 64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN tc5a M128N256K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 4) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 256, 64, 3>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN tc5a M128N256K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 5) {
+        gemm_sm110::backends::Tc5M64Runner<256, 64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN direct M64 tc5 M64N256K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 6) {
+        gemm_sm110::backends::Tc5M64Runner<128, 64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN direct M64 tc5 M64N128K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 7) {
+        auto launch_shapeopt = [&]() {
+          gemm_sm110::backends::shapeopt_detail::launch_wmma_m64n32_shared(
+              d_a_half, d_b_half, d_c, m, n, k);
+        };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN shared WMMA M64N32 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 8) {
+        gemm_sm110::backends::Tc5TailMnPairMRunner<64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN pair-M tc5 TileM128x2N256K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 9) {
+        gemm_sm110::backends::Tc5TailMnPairMRunner<128, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN pair-M tc5 TileM128x2N256K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 10) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<2, 256, 128, 1, 128>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN row-major splitK2 tc5 M128N256K128",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 11) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<4, 256, 128, 1, 128>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN row-major splitK4 tc5 M128N256K128",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 12) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<2, 256, 64, 2, 128>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN row-major splitK2 tc5 M128N256K64",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 13) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<4, 256, 64, 2, 128>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN row-major splitK4 tc5 M128N256K64",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 14) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 256, 64, 4, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap M64 tc5 M64N256K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 15) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 128, 64, 4, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap M64 tc5 M64N128K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 16) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 128, 64, 4, 8>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap M64 tc5 M64N128K64E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 17) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 256, 64, 4, 8>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap M64 tc5 M64N256K64E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 18) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 128, 64, 2, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap tc5 M128N128K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 19) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 128, 64, 3, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap tc5 M128N128K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 20) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 128, 64, 4, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap tc5 M128N128K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 21) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 256, 64, 4, 4, 3, 16, 27>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN fixed 9x3 tc5 M128N256K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 22) {
+        gemm_sm110::backends::Tc5OverlapRunner<128, 256, 64, 4, 8>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN overlap tc5 M128N256K64S4E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 23) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 2>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 24) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 2>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 25) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 26) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<192, 64, 3>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N192K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 27) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<192, 128, 2>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N192K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 28) {
+        gemm_sm110::backends::Tc5TailMnN192Runner<64, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN split-N192 tc5 M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 29) {
+        gemm_sm110::backends::Tc5TailMnN192Runner<128, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN split-N192 tc5 M128N192K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 30) {
+        constexpr int kClusterM = 1024;
+        constexpr int kTailM = 128;
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3>
+            cluster_runner(d_a_half, d_b_half_nk, d_c, kClusterM,
+                           kClusterM, n, k);
+        gemm_sm110::backends::Tc5aRunner tail_runner(
+            d_a_half + static_cast<size_t>(kClusterM) * k,
+            d_b_half_nk, d_c + static_cast<size_t>(kClusterM) * n,
+            kTailM, n, k);
+        auto launch_shapeopt = [&]() {
+          cluster_runner.launch();
+          tail_runner.launch();
+        };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN split-M cluster tc4c + tail tc5a GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 31) {
+        gemm_sm110::backends::Tc5TailMnN192ClusterLaunchRunner<64, 4, false>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN cluster-launch N-fast tc5 "
+            "M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 32) {
+        gemm_sm110::backends::Tc5TailMnN192ClusterLaunchRunner<64, 4, true>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN cluster-launch M-fast tc5 "
+            "M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 33) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3, 8>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K64S3E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 34) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3, 4,
+                                                          false>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt diagnostic tail-MN padded cluster tc4c no-store "
+            "M256N256K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 35) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3, 4,
+                                                          true, 64>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c smem-store64 "
+            "M256N256K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 36) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 3, 4,
+                                                          true, 128>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c smem-store128 "
+            "M256N256K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 41) {
+        gemm_sm110::backends::Tc5TailMnN192Runner<64, 4, true>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN split-N192 tc5 no-wait "
+            "M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 42) {
+        gemm_sm110::backends::Tc5TailMnN192ClusterLaunchRunner<64, 4, false,
+                                                               true>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN cluster-launch N-fast tc5 no-wait "
+            "M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 43) {
+        gemm_sm110::backends::Tc5TailMnN192ClusterLaunchRunner<64, 4, true,
+                                                               true>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN cluster-launch M-fast tc5 no-wait "
+            "M128N192K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 44) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 64, 4>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 45) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 3>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K128S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 46) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 256, 1>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c M256N256K256S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 47) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapSplitN192PaddedRowsRunner<64, 3>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c split-N192 "
+            "M256N192K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 49) {
+        constexpr int kPaddedM = 1280;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapSplitN192PaddedRowsRunner<128, 2>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN padded cluster tc4c split-N192 "
+            "M256N192K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else if (variant == 50) {
+        constexpr int kClusterM = 1024;
+        constexpr int kTailM = 128;
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 3>
+            cluster_runner(d_a_half, d_b_half_nk, d_c, kClusterM,
+                           kClusterM, n, k);
+        gemm_sm110::backends::Tc5aRunner tail_runner(
+            d_a_half + static_cast<size_t>(kClusterM) * k,
+            d_b_half_nk, d_c + static_cast<size_t>(kClusterM) * n,
+            kTailM, n, k);
+        cudaStream_t cluster_stream = nullptr;
+        cudaStream_t tail_stream = nullptr;
+        CHECK_CUDA(cudaStreamCreate(&cluster_stream));
+        CHECK_CUDA(cudaStreamCreate(&tail_stream));
+        auto launch_shapeopt = [&]() {
+          cluster_runner.launch(cluster_stream);
+          tail_runner.launch(tail_stream);
+        };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN concurrent split-M tc4c K128S3 + "
+            "tail tc5a GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaStreamDestroy(cluster_stream));
+        CHECK_CUDA(cudaStreamDestroy(tail_stream));
+      } else if (variant == 51) {
+        constexpr int kClusterM = 1024;
+        constexpr int kTailM = 128;
+        constexpr int kPaddedTailM = 256;
+        half* d_tail_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_tail_padded,
+                              static_cast<size_t>(kPaddedTailM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half + static_cast<size_t>(kClusterM) * k, d_tail_padded,
+            kTailM, kPaddedTailM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 3>
+            cluster_runner(d_a_half, d_b_half_nk, d_c, kClusterM,
+                           kClusterM, n, k);
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<256, 128, 3>
+            tail_runner(d_tail_padded, d_b_half_nk,
+                        d_c + static_cast<size_t>(kClusterM) * n,
+                        kTailM, kPaddedTailM, n, k);
+        cudaStream_t cluster_stream = nullptr;
+        cudaStream_t tail_stream = nullptr;
+        CHECK_CUDA(cudaStreamCreate(&cluster_stream));
+        CHECK_CUDA(cudaStreamCreate(&tail_stream));
+        auto launch_shapeopt = [&]() {
+          cluster_runner.launch(cluster_stream);
+          tail_runner.launch(tail_stream);
+        };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom tail-MN concurrent split-M tc4c K128S3 + "
+            "padded-tail tc4c GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaStreamDestroy(cluster_stream));
+        CHECK_CUDA(cudaStreamDestroy(tail_stream));
+        CHECK_CUDA(cudaFree(d_tail_padded));
+      } else {
+        gemm_sm110::backends::Tc5aRunner shapeopt_runner(
+            d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt", "ShapeOpt custom tail-MN tc5a TCGen05 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      }
+    } else if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+               device_supports_tc3_sm110 && m == 64 && n == 4096 &&
+               k == 4096) {
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      int variant = -1;
+      if (const char* env = std::getenv("SHAPEOPT_SKINNY_M_VARIANT")) {
+        variant = std::atoi(env);
+      }
+      if (variant < 0) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 128, 2>
+            raw_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 64, 4, 4>
+            overlap_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 2, 4>
+            wide_k_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 2, 8>
+            wide_k_e8_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<
+            64, 64, 4, 4, true>
+            smem_overlap_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        const float raw_ms =
+            tune_launch_ms([&]() { raw_runner.launch(); });
+        const float overlap_ms =
+            tune_launch_ms([&]() { overlap_runner.launch(); });
+        const float wide_k_ms =
+            tune_launch_ms([&]() { wide_k_runner.launch(); });
+        const float wide_k_e8_ms =
+            tune_launch_ms([&]() { wide_k_e8_runner.launch(); });
+        const float smem_overlap_ms =
+            tune_launch_ms([&]() { smem_overlap_runner.launch(); });
+        int chosen = 2;
+        float chosen_ms = wide_k_ms;
+        if (wide_k_e8_ms < 0.85f * chosen_ms) {
+          chosen = 4;
+          chosen_ms = wide_k_e8_ms;
+        }
+        if (smem_overlap_ms < 0.90f * chosen_ms) {
+          chosen = 3;
+          chosen_ms = smem_overlap_ms;
+        }
+        std::cout << "ShapeOpt skinny-M autotune: raw=" << raw_ms
+                  << " ms, overlap=" << overlap_ms
+                  << " ms, overlap_k256=" << wide_k_ms
+                  << " ms, overlap_k256_e8=" << wide_k_e8_ms
+                  << " ms, overlap_smem=" << smem_overlap_ms
+                  << " ms, chosen="
+                  << (chosen == 4
+                          ? "overlap_k256_e8"
+                          : (chosen == 3
+                          ? "overlap_smem"
+                          : (chosen == 2
+                                 ? "overlap_k256"
+                                 : (chosen == 1 ? "overlap" : "raw"))))
+                  << '\n';
+        auto launch_shapeopt = [&]() {
+          if (chosen == 4) {
+            wide_k_e8_runner.launch();
+          } else if (chosen == 3) {
+            smem_overlap_runner.launch();
+          } else if (chosen == 2) {
+            wide_k_runner.launch();
+          } else if (chosen == 1) {
+            overlap_runner.launch();
+          } else {
+            raw_runner.launch();
+          }
+        };
+        benchmark_kernel(
+            "shapeopt",
+            chosen == 4
+                ? "ShapeOpt custom skinny-M autotuned overlap-transpose tc5 "
+                  "TileN64K256S2E8 GEMM"
+            : chosen == 2
+                ? "ShapeOpt custom skinny-M autotuned overlap-transpose tc5 "
+                  "TileN64K256 GEMM"
+                : (chosen == 3
+                ? "ShapeOpt custom skinny-M autotuned overlap smem-transpose "
+                  "tc5 TileN64K64S4 GEMM"
+                : (chosen == 1
+                ? "ShapeOpt custom skinny-M autotuned overlap-transpose tc5 "
+                "TileN64K64 GEMM"
+                : "ShapeOpt custom skinny-M autotuned direct-transpose tc5 "
+                  "TileN64 GEMM")),
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 1) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 64, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 2) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 128, 1>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64K128S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 3) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 64, 4, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 4) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 128, 2, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 5) {
+        gemm_sm110::backends::Tc5M64Runner<256, 64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N256K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 6) {
+        gemm_sm110::backends::Tc5M64Runner<256, 128, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N256K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 7) {
+        gemm_sm110::backends::Tc5M64Runner<256, 128, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N256K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 8) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 256, 64, 4, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap M64 tc5 M64N256K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 9) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<2, 256, 128, 1, 64>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 splitK2 tc5 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 10) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<4, 256, 128, 1, 64>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 splitK4 tc5 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 11) {
+        gemm_sm110::backends::Tc5RowMajorSplitKRunner<8, 256, 128, 1, 64>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 splitK8 tc5 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 12) {
+        auto launch_shapeopt = [&]() {
+          gemm_sm110::backends::shapeopt_detail::launch_wmma_m64n32_shared(
+              d_a_half, d_b_half, d_c, m, n, k);
+        };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M shared WMMA M64N32 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 13) {
+        gemm_sm110::backends::Tc5M64Runner<64, 128, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N64K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 14) {
+        gemm_sm110::backends::Tc5M64Runner<64, 64, 2>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N64K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 15) {
+        gemm_sm110::backends::Tc5M64Runner<128, 128, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N128K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 16) {
+        gemm_sm110::backends::Tc5TransposedSmemStoreRunner<64, 128, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M smem-transpose tc5 TileN64K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 17) {
+        gemm_sm110::backends::Tc5TransposedSmemStoreRunner<64, 64, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M smem-transpose tc5 TileN64K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 18) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<32, 128, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN32K128 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 20) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<32, 64, 4, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN32K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 21) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<16, 64, 4, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN16K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 22) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 256, 1>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64K256S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 23) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 256, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64K256S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 24) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 1, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K256S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 25) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 2, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K256S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 26) {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 512, 1>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64K512S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 27) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 512, 1, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K512S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 28) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 2, 8>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K256S2E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 29) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 1, 8>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K256S1E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 30) {
+        gemm_sm110::backends::Tc5M64Runner<256, 256, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N256K256 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 31) {
+        gemm_sm110::backends::Tc5M64Runner<128, 256, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N128K256 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 32) {
+        gemm_sm110::backends::Tc5M64Runner<64, 256, 1>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct M64 tc5 M64N64K256 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 33) {
+        gemm_sm110::backends::Tc5OverlapRunner<64, 256, 256, 1, 4>
+            shapeopt_runner(d_a_half, d_b_half_nk, d_c, m, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap M64 tc5 M64N256K256 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant >= 34 && variant <= 43) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 256, 2, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M reserved experimental slot using "
+            "overlap-transpose tc5 TileN64K256S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 44) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 64, 3, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 45) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 64, 2, 4>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 46) {
+        gemm_sm110::backends::Tc5OverlapTransposedStoreRunner<64, 64, 4, 8>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose tc5 TileN64K64S4E8 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 47) {
+        gemm_sm110::backends::
+            Tc5OverlapTransposedStoreClusterLaunchRunner<64, 64, 4, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose cluster-launch tc5 "
+            "TileN64K64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 48) {
+        gemm_sm110::backends::
+            Tc5OverlapTransposedStoreClusterLaunchRunner<64, 256, 2, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap-transpose cluster-launch tc5 "
+            "TileN64K256S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 49) {
+        gemm_sm110::backends::Tc5PairMTransposedStoreRunner<64, 64, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M transpose tc5 M128x2N64K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 50) {
+        gemm_sm110::backends::Tc5PairMTransposedStoreRunner<64, 128, 1>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M transpose tc5 M128x2N64K128S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 51) {
+        gemm_sm110::backends::Tc5PairMTransposedStoreRunner<64, 64, 3>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M transpose tc5 M128x2N64K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 52) {
+        gemm_sm110::backends::Tc5PairMTransposedStoreRunner<64, 256, 1>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M transpose tc5 M128x2N64K256S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 53) {
+        gemm_sm110::backends::
+            Tc5PairMOverlapTransposedStoreRunner<64, 64, 2, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M overlap-transpose tc5 "
+            "M128x2N64K64S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 54) {
+        gemm_sm110::backends::
+            Tc5PairMOverlapTransposedStoreRunner<64, 64, 3, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M overlap-transpose tc5 "
+            "M128x2N64K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 55) {
+        gemm_sm110::backends::
+            Tc5PairMOverlapTransposedStoreRunner<64, 128, 1, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M overlap-transpose tc5 "
+            "M128x2N64K128S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 56) {
+        gemm_sm110::backends::
+            Tc5PairMOverlapTransposedStoreRunner<64, 256, 1, 4>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M pair-M overlap-transpose tc5 "
+            "M128x2N64K256S1 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 57) {
+        gemm_sm110::backends::
+            Tc5OverlapTransposedStoreRunner<64, 64, 4, 4, true>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap smem-transpose tc5 "
+            "TileN64K64S4 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 58) {
+        gemm_sm110::backends::
+            Tc5OverlapTransposedStoreRunner<64, 64, 3, 4, true>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap smem-transpose tc5 "
+            "TileN64K64S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 59) {
+        gemm_sm110::backends::
+            Tc5OverlapTransposedStoreRunner<64, 128, 2, 4, true>
+                shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M overlap smem-transpose tc5 "
+            "TileN64K128S2 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      } else if (variant == 60) {
+        constexpr int kPaddedM = 256;
+        half* d_a_padded = nullptr;
+        CHECK_CUDA(cudaMalloc(&d_a_padded,
+                              static_cast<size_t>(kPaddedM) * k *
+                                  sizeof(half)));
+        gemm_sm110::backends::shapeopt_detail::launch_pad_rows(
+            d_a_half, d_a_padded, m, kPaddedM, k);
+        CHECK_CUDA(cudaDeviceSynchronize());
+        gemm_sm110::backends::Tc4cOverlapPaddedRowsRunner<64, 128, 3>
+            shapeopt_runner(d_a_padded, d_b_half_nk, d_c, m, kPaddedM, n, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt diagnostic skinny-M direct padded cluster tc4c "
+            "M256N64K128S3 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+        CHECK_CUDA(cudaFree(d_a_padded));
+      } else {
+        gemm_sm110::backends::Tc5TransposedStoreRunner<64, 128, 2>
+            shapeopt_runner(d_b_half_nk, d_a_half, d_c, n, m, k);
+        auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+        benchmark_kernel(
+            "shapeopt",
+            "ShapeOpt custom skinny-M direct-transpose tc5 TileN64 GEMM",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      }
+    } else if (epilogue_mode == gemm_sm110::references::EpilogueMode::kNone &&
+               m == 384 && n == 520 && k == 300) {
+      constexpr int kPaddedN = 528;
+      constexpr int kPaddedK = 304;
+      half* d_a_padded = nullptr;
+      half* d_b_padded = nullptr;
+      CHECK_CUDA(cudaMalloc(&d_a_padded,
+                            static_cast<size_t>(m) * kPaddedK *
+                                sizeof(half)));
+      CHECK_CUDA(cudaMalloc(&d_b_padded,
+                            static_cast<size_t>(kPaddedK) * kPaddedN *
+                                sizeof(half)));
+      gemm_sm110::backends::shapeopt_detail::launch_pad_k_major_rows(
+          d_a_half, d_a_padded, m, k, kPaddedK);
+      gemm_sm110::backends::shapeopt_detail::launch_pad_2d_rows_cols(
+          d_b_half, d_b_padded, k, n, kPaddedK, kPaddedN);
+      CHECK_CUDA(cudaDeviceSynchronize());
+      auto launch_shapeopt = [&]() {
+        gemm_sm110::backends::shapeopt_detail::launch_ragged_padded_wmma(
+            d_a_padded, d_b_padded, d_c, m, n, kPaddedN, kPaddedK);
+      };
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "shapeopt", "ShapeOpt custom ragged padded WMMA GEMM",
+          "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+          d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+          2e-3f);
+      CHECK_CUDA(cudaFree(d_a_padded));
+      CHECK_CUDA(cudaFree(d_b_padded));
+    } else if (gemm_sm110::backends::ShapeOptSpecializedRunner::supports(
+            m, n, k, epilogue_mode, d_bias, d_residual)) {
+      gemm_sm110::backends::ShapeOptSpecializedRunner shapeopt_runner(
+          d_a_half, d_b_half_nk, d_c, d_b_half, m, n, k, epilogue_mode,
+          d_bias, d_residual);
+      auto launch_shapeopt = [&]() { shapeopt_runner.launch(); };
+      std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+      benchmark_kernel(
+          "shapeopt", shapeopt_runner.label(), "fp16->fp32",
+          kTensorCoreReferenceName, launch_shapeopt, m, n, k, d_c, c_bytes,
+          h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f, 2e-3f);
+    } else {
+      const bool allow_cublaslt_fallback =
+          std::getenv("SHAPEOPT_ALLOW_CUBLASLT_FALLBACK") != nullptr &&
+          std::string(std::getenv("SHAPEOPT_ALLOW_CUBLASLT_FALLBACK")) == "1";
+      if (!allow_cublaslt_fallback) {
+        write_unavailable_backend(
+            *gemm_sm110::find_backend("shapeopt"), n, csv,
+            "no specialized ShapeOpt kernel for this shape/epilogue yet");
+      } else {
+      std::unique_ptr<gemm_sm110::references::CublasLtMatmulReference>
+          owned_shapeopt_reference;
+      auto* shapeopt_reference = cublaslt_reference.get();
+      if (shapeopt_reference == nullptr) {
+        owned_shapeopt_reference =
+            std::make_unique<gemm_sm110::references::CublasLtMatmulReference>(
+                d_a_half, d_b_half, d_c, m, n, k, epilogue_mode, d_bias,
+                d_residual);
+        shapeopt_reference = owned_shapeopt_reference.get();
+      }
+      auto launch_shapeopt = [&]() { shapeopt_reference->launch(); };
+      if (shapeopt_reference == cublaslt_reference.get()) {
+        std::cout << "ShapeOpt cuBLASLt heuristic fallback router: "
+                  << cublas_avg_ms << " ms, " << cublas_tc_perf
+                  << " GFLOPS, ratio=1x, matched=1"
+                  << " (same selected cuBLASLt heuristic as reference)\n";
+        csv << "shapeopt,ShapeOpt cuBLASLt heuristic fallback router," << n
+            << ",fp16->fp32," << kTensorCoreReferenceName << ","
+            << cublas_avg_ms << "," << cublas_tc_perf << ",1,1\n";
+      } else {
+        std::vector<float> h_shapeopt(static_cast<size_t>(m) * n);
+        benchmark_kernel(
+            "shapeopt", "ShapeOpt cuBLASLt heuristic fallback router",
+            "fp16->fp32", kTensorCoreReferenceName, launch_shapeopt, m, n, k,
+            d_c, c_bytes, h_ref_tc, h_shapeopt, csv, cublas_tc_perf, 2e-2f,
+            2e-3f);
+      }
+      }
     }
   }
 

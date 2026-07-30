@@ -26,6 +26,7 @@ fi
 if [[ "${ALLOW_STALE_BENCH}" != "1" &&
       ( "${ROOT_DIR}/GEMMsm110/src/main.cu" -nt "${BENCH_BIN}" ||
         "${ROOT_DIR}/GEMMsm110/include/cublaslt_reference.cuh" -nt "${BENCH_BIN}" ||
+        "${ROOT_DIR}/GEMMsm110/include/backends/shapeopt_specialized.cuh" -nt "${BENCH_BIN}" ||
         "${ROOT_DIR}/GEMMsm110/include/gemm_benchmark.cuh" -nt "${BENCH_BIN}" ||
         "${ROOT_DIR}/GEMMsm110/include/sm110_backend_registry.cuh" -nt "${BENCH_BIN}" ) ]]; then
   echo "Benchmark binary is older than GEMMsm110 cuBLASLt reference sources." >&2

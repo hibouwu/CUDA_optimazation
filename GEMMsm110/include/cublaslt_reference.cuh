@@ -207,6 +207,7 @@ class CublasLtMatmulReference {
         algo_ = results[i].algo;
         selected_workspace_bytes_ = results[i].workspaceSize;
         algorithm_ready_ = true;
+        dump_algorithm_config_if_requested(i);
         return;
       }
     }
@@ -217,6 +218,48 @@ class CublasLtMatmulReference {
                  "(returned=%d)\n",
                  m_, n_, k_, workspace_bytes_, returned_algorithms_);
     std::abort();
+  }
+
+  void dump_algorithm_config_if_requested(int heuristic_index) {
+    const char* dump = std::getenv("CUBLASLT_DUMP_ALGO");
+    if (dump == nullptr || dump[0] == '\0' || dump[0] == '0') return;
+
+    auto get_i32 = [&](cublasLtMatmulAlgoConfigAttributes_t attr) {
+      int32_t value = 0;
+      size_t written = 0;
+      CHECK_CUBLAS(cublasLtMatmulAlgoConfigGetAttribute(
+          &algo_, attr, &value, sizeof(value), &written));
+      return value;
+    };
+    auto get_u32 = [&](cublasLtMatmulAlgoConfigAttributes_t attr) {
+      uint32_t value = 0;
+      size_t written = 0;
+      CHECK_CUBLAS(cublasLtMatmulAlgoConfigGetAttribute(
+          &algo_, attr, &value, sizeof(value), &written));
+      return value;
+    };
+    auto get_u16 = [&](cublasLtMatmulAlgoConfigAttributes_t attr) {
+      uint16_t value = 0;
+      size_t written = 0;
+      CHECK_CUBLAS(cublasLtMatmulAlgoConfigGetAttribute(
+          &algo_, attr, &value, sizeof(value), &written));
+      return value;
+    };
+
+    std::printf(
+        "cuBLASLt selected algo: heuristic_index=%d id=%d tile=%u "
+        "splitK=%d reduction=%u swizzle=%u custom=%u stages=%u "
+        "inner=%u cluster=%u\n",
+        heuristic_index, get_i32(CUBLASLT_ALGO_CONFIG_ID),
+        get_u32(CUBLASLT_ALGO_CONFIG_TILE_ID),
+        get_i32(CUBLASLT_ALGO_CONFIG_SPLITK_NUM),
+        get_u32(CUBLASLT_ALGO_CONFIG_REDUCTION_SCHEME),
+        get_u32(CUBLASLT_ALGO_CONFIG_CTA_SWIZZLING),
+        get_u32(CUBLASLT_ALGO_CONFIG_CUSTOM_OPTION),
+        get_u32(CUBLASLT_ALGO_CONFIG_STAGES_ID),
+        static_cast<unsigned>(get_u16(CUBLASLT_ALGO_CONFIG_INNER_SHAPE_ID)),
+        static_cast<unsigned>(
+            get_u16(CUBLASLT_ALGO_CONFIG_CLUSTER_SHAPE_ID)));
   }
 
   const half* a_ = nullptr;
