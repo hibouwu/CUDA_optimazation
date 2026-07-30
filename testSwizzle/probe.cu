@@ -161,13 +161,16 @@ __device__ __forceinline__ void tma_load_b_2d(
         : "memory");
 }
 
-// 用带标签的数据实测 TMA 32B swizzle 的落址。
+// 用带标签的数据实测 TMA 32B swizzle 后单个 BF16 元素的落址。
 //
-// Host 会在未 swizzle 的 global source cells 1、8、6、7、17、18 中分别
-// 写入不同的
-// 16-bit 标签。此 kernel 执行与正式实验相同的 16x16 BF16 TMA load，然后
+// 图中的每个小格是一个 2B BF16 元素，格内数字是逻辑 BF16 index；
+// 连续 8 个小格合起来才是一个 16B physical cell。Host 在未 swizzle 的
+// global source BF16 indices 1、8、6、7 中分别写入不同的 16-bit 标签。
+// 此 kernel 执行与正式实验相同的 16x16 BF16 TMA load，然后
 // 通过 generic shared-memory load 扫描目标区域，打印每个标签最终所在的：
-//   - physical cell：相对 B_storage 的 16B cell 编号
+//   - physical word：相对 B_storage 的 2B BF16 位置
+//   - physical cell：该 BF16 所在的 16B cell 编号
+//   - lane in cell：该 BF16 在 16B cell 内的 0..7 位置
 //   - byte offset ：相对 B_storage 的字节偏移
 //   - smem address：硬件使用的绝对 shared-memory 地址
 //
@@ -202,58 +205,43 @@ __global__ void print_tma_32b_swizzle_addresses(
 
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kTmaSourceCells[6] = {1, 8, 6, 7, 17, 18};
-        // 导师使用的 tcgen/MMA logical-cell 编号与 TMA source 的线性编号
-        // 不是同一个编号空间。这里只标注当前已明确的对应关系：
-        //   source 1  -> tcgen logical 0
-        //   source 17 -> tcgen logical 6
-        //   source 18 -> tcgen logical 7
-        // 其余项尚未建立对应关系，使用 -1（打印为 n/a）。
-        constexpr int kTcgenLogicalCells[6] = {0, -1, -1, -1, 6, 7};
-        constexpr uint16_t kProbeTags[6] = {
-            0x5101, 0x5108, 0x5106, 0x5107, 0x5117, 0x5118
+        constexpr int kLogicalBf16Indices[4] = {1, 8, 6, 7};
+        constexpr uint16_t kProbeTags[4] = {
+            0x5101, 0x5108, 0x5106, 0x5107
         };
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
 
-        printf("\n=== TMA 32B swizzle physical-address probe ===\n");
+        printf("\n=== TMA 32B swizzle BF16-element address probe ===\n");
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
 
-        for (int probe = 0; probe < 6; ++probe) {
-            int physical_cell = -1;
+        for (int probe = 0; probe < 4; ++probe) {
+            int physical_word = -1;
 
-            // TMA tile 共 512B，即 32 个 16B cells。每个 source cell 的 8 个
-            // BF16 都填相同标签，因此检查 physical cell 的第一个 word 即可。
-            for (int cell = 0; cell < 32; ++cell) {
-                if (words[cell * 8] == kProbeTags[probe]) {
-                    physical_cell = cell;
+            // TMA tile 共 256 个 BF16。标签只占一个 BF16，因此逐 word 扫描。
+            for (int word = 0; word < 16 * 16; ++word) {
+                if (words[word] == kProbeTags[probe]) {
+                    physical_word = word;
                     break;
                 }
             }
 
-            if (physical_cell >= 0) {
-                uint32_t byte_offset = uint32_t(physical_cell) * 16;
-                if (kTcgenLogicalCells[probe] >= 0) {
-                    printf(
-                        "TMA source cell %d (tcgen logical cell %d) "
-                        "-> physical cell %d, offset=0x%x, smem=0x%x\n",
-                        kTmaSourceCells[probe],
-                        kTcgenLogicalCells[probe],
-                        physical_cell,
-                        byte_offset,
-                        smem_u32(B_storage + byte_offset));
-                } else {
-                    printf(
-                        "TMA source cell %d (tcgen logical cell n/a) "
-                        "-> physical cell %d, offset=0x%x, smem=0x%x\n",
-                        kTmaSourceCells[probe],
-                        physical_cell,
-                        byte_offset,
-                        smem_u32(B_storage + byte_offset));
-                }
+            if (physical_word >= 0) {
+                int physical_cell = physical_word / 8;
+                int lane_in_cell = physical_word % 8;
+                uint32_t byte_offset = uint32_t(physical_word) * sizeof(uint16_t);
+                printf(
+                    "logical BF16 index %d -> physical word %d, "
+                    "physical cell %d, lane %d, offset=0x%x, smem=0x%x\n",
+                    kLogicalBf16Indices[probe],
+                    physical_word,
+                    physical_cell,
+                    lane_in_cell,
+                    byte_offset,
+                    smem_u32(B_storage + byte_offset));
             } else {
-                printf("TMA source cell %d -> tag not found\n",
-                       kTmaSourceCells[probe]);
+                printf("logical BF16 index %d -> tag not found\n",
+                       kLogicalBf16Indices[probe]);
             }
         }
     }
@@ -527,20 +515,17 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 先做一次不会参与 MMA 的独立落址探针。线性编号的 16B TMA source
-    // cells 1、8、6、7、17、18。后两个用于直接检查相对 B_storage 的
-    // 0x110/0x120 附近，而 6、7 保留作为编号空间差异的对照。
-    // 使用不同的 raw 16-bit 标签，kernel 会在 TMA 完成后扫描 swizzled SMEM，
-    // 打印它们各自的真实 physical cell/offset/address。
+    // 先做一次不会参与 MMA 的独立落址探针。这里的 1、8、6、7 是图中
+    // 小格里的 BF16 logical indices，不是 16B source-cell 编号。
+    // 每个 logical BF16 只写一个不同标签；kernel 在 TMA 完成后逐个 BF16
+    // 扫描 swizzled SMEM，打印 physical word/cell/lane/offset/address。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeTmaSourceCells[6] = {1, 8, 6, 7, 17, 18};
-    constexpr uint16_t kProbeTags[6] = {
-        0x5101, 0x5108, 0x5106, 0x5107, 0x5117, 0x5118
+    constexpr int kProbeLogicalBf16Indices[4] = {1, 8, 6, 7};
+    constexpr uint16_t kProbeTags[4] = {
+        0x5101, 0x5108, 0x5106, 0x5107
     };
-    for (int probe = 0; probe < 6; ++probe) {
-        for (int i = 0; i < 8; ++i) {
-            h_probe[kProbeTmaSourceCells[probe] * 8 + i] = kProbeTags[probe];
-        }
+    for (int probe = 0; probe < 4; ++probe) {
+        h_probe[kProbeLogicalBf16Indices[probe]] = kProbeTags[probe];
     }
     CUDA_CHECK(cudaMemcpy(
         d_b,
@@ -565,8 +550,12 @@ int main() {
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    float h[24];
-    CUDA_CHECK(cudaMemcpy(h, d, 24 * sizeof(float), cudaMemcpyDeviceToHost));
+    float h_baseline[24];
+    CUDA_CHECK(cudaMemcpy(
+        h_baseline,
+        d,
+        sizeof(h_baseline),
+        cudaMemcpyDeviceToHost));
 
     // 当前实验的验收条件：C 的第 0 行 N0..23 必须精确等于 1。
     // 输入只有可精确表示的 BF16 0/1，且每个输出预期只有一个非零贡献，
@@ -575,11 +564,72 @@ int main() {
     int mismatches = 0;
     for (int i = 0; i < 24; i++)
     {
-        printf("h[%d]=%f\n", i, h[i]);
-        if (h[i] != 1.0f)
+        printf("h[%d]=%f\n", i, h_baseline[i]);
+        if (h_baseline[i] != 1.0f)
             ++mismatches;
     }
     printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
+
+    // ------------------------------------------------------------------------
+    // BF16 logical indices 1、6、7 置零对照
+    // ------------------------------------------------------------------------
+    // 注意：这里的编号与图中小格一致，一个 index 只代表一个 2B BF16。
+    // 当前正式 h_b 的非零区域是 16B source cells 1、2、17，因此 h_b[1]、
+    // h_b[6]、h_b[7] 原本就都是 0。仍然显式构造并运行一次 zero-control，
+    // 用硬件输出确认“再次写 0”不会改变结果。
+    uint16_t h_b_zero_167[16 * 16];
+    for (int i = 0; i < 16 * 16; ++i) {
+        h_b_zero_167[i] = h_b[i];
+    }
+    h_b_zero_167[1] = 0;
+    h_b_zero_167[6] = 0;
+    h_b_zero_167[7] = 0;
+
+    printf("\n=== zero logical BF16 indices 1, 6, 7 ===\n");
+    printf(
+        "before: idx1=0x%04x idx6=0x%04x idx7=0x%04x idx8=0x%04x\n",
+        unsigned(h_b[1]),
+        unsigned(h_b[6]),
+        unsigned(h_b[7]),
+        unsigned(h_b[8]));
+    printf(
+        "after : idx1=0x%04x idx6=0x%04x idx7=0x%04x idx8=0x%04x\n",
+        unsigned(h_b_zero_167[1]),
+        unsigned(h_b_zero_167[6]),
+        unsigned(h_b_zero_167[7]),
+        unsigned(h_b_zero_167[8]));
+
+    CUDA_CHECK(cudaMemcpy(
+        d_b,
+        h_b_zero_167,
+        sizeof(h_b_zero_167),
+        cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
+    kernel<<<1,128, 16384>>>(tensor_map_b, d);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    float h_zero_167[24];
+    CUDA_CHECK(cudaMemcpy(
+        h_zero_167,
+        d,
+        sizeof(h_zero_167),
+        cudaMemcpyDeviceToHost));
+
+    int changed = 0;
+    for (int i = 0; i < 24; ++i) {
+        float delta = h_zero_167[i] - h_baseline[i];
+        if (delta != 0.0f) {
+            ++changed;
+        }
+        printf(
+            "n=%d baseline=%f zero_167=%f delta=%f\n",
+            i,
+            h_baseline[i],
+            h_zero_167[i],
+            delta);
+    }
+    printf("zero_167_changed_outputs=%d\n", changed);
 
     CUDA_CHECK(cudaFree(d));
     CUDA_CHECK(cudaFree(d_b));
