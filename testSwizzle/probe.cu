@@ -161,15 +161,18 @@ __device__ __forceinline__ void tma_load_b_2d(
         : "memory");
 }
 
-// 用带标签的数据实测 TMA source 16B cells 的物理落址。
+// 用嵌入数据的编号标签实测全部 TMA source 16B cells 的物理落址。
 //
 // 图中的每个小格是一个规范化后的 128-bit（16B）cell，其中包含 8 个
 // BF16。但图中的 tcgen logical-cell 编号与 TMA source 的线性 cell 编号
 // 不是同一个编号空间。本探针只报告可直接观测的 TMA source -> physical
 // SMEM 映射，不再人工附加 tcgen logical 编号。
 //
-// 每个 source cell 的 8 个 BF16 都写入相同标签。kernel 执行 TMA load 后
-// 通过 generic shared-memory load 扫描目标区域，打印每个标签最终所在的：
+// Host 在生成 global tile 时，将 source cell 编号编码进该 cell 的数据：
+//   tag(cell) = 0x6000 + cell
+// 并把同一标签写入 cell 内的 8 个 BF16 word。TMA 只搬运原始位模式，因此
+// 标签会随 cell 一起经过32B swizzle。kernel 在 TMA 完成后扫描 SMEM，
+// 解码标签并打印：
 //   - TMA source cell
 //   - physical cell（相对 B_storage 的16B编号）
 //   - byte offset ：相对 B_storage 的字节偏移
@@ -205,45 +208,57 @@ __global__ void print_tma_32b_swizzle_addresses(
     __syncthreads();
 
     if (threadIdx.x == 0) {
-        // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kTmaSourceCells[6] = {1, 6, 7, 8, 17, 18};
-        constexpr uint16_t kProbeTags[6] = {
-            0x5101, 0x5106, 0x5107, 0x5108, 0x5117, 0x5118
-        };
+        constexpr uint16_t kTagBase = 0x6000;
+        constexpr int kCellCount = 32;
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
+        int logical_to_physical[kCellCount];
 
-        printf("\n=== TMA 32B swizzle 16B-cell address probe ===\n");
+        for (int logical = 0; logical < kCellCount; ++logical) {
+            logical_to_physical[logical] = -1;
+        }
+
+        // 每个 physical cell 的第一个16-bit word 中保存着生成时写入的
+        // source-cell 标签。先反向建立 source logical -> physical 映射。
+        for (int physical = 0; physical < kCellCount; ++physical) {
+            uint16_t tag = words[physical * 8];
+            if (tag >= kTagBase && tag < kTagBase + kCellCount) {
+                int logical = int(tag - kTagBase);
+                logical_to_physical[logical] = physical;
+            }
+        }
+
+        printf("\n=== TMA 32B swizzle full 16B-cell mapping ===\n");
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
         printf("B_start   smem = 0x%x\n", smem_u32(B_storage + 0x10));
 
-        for (int probe = 0; probe < 6; ++probe) {
-            int physical_cell = -1;
-
-            // TMA tile 共 512B，即32个16B physical cells。每个被探测的
-            // source cell 都用同一标签填满，因此检查每格的第一个 BF16 即可。
-            for (int cell = 0; cell < 32; ++cell) {
-                if (words[cell * 8] == kProbeTags[probe]) {
-                    physical_cell = cell;
-                    break;
-                }
-            }
-
+        for (int logical = 0; logical < kCellCount; ++logical) {
+            int physical_cell = logical_to_physical[logical];
             if (physical_cell >= 0) {
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
                 int32_t offset_from_b_start = int32_t(byte_offset) - 0x10;
-                printf(
-                    "TMA source cell %d -> physical cell %d, B_storage+0x%x, "
-                    "B_start+0x%x, smem=0x%x\n",
-                    kTmaSourceCells[probe],
-                    physical_cell,
-                    byte_offset,
-                    uint32_t(offset_from_b_start),
-                    smem_u32(B_storage + byte_offset));
+
+                if (offset_from_b_start >= 0) {
+                    printf(
+                        "source logical cell %d -> physical cell %d, "
+                        "B_storage+0x%x, B_start+0x%x, smem=0x%x\n",
+                        logical,
+                        physical_cell,
+                        byte_offset,
+                        uint32_t(offset_from_b_start),
+                        smem_u32(B_storage + byte_offset));
+                } else {
+                    printf(
+                        "source logical cell %d -> physical cell %d, "
+                        "B_storage+0x%x, B_start-0x%x, smem=0x%x\n",
+                        logical,
+                        physical_cell,
+                        byte_offset,
+                        uint32_t(-offset_from_b_start),
+                        smem_u32(B_storage + byte_offset));
+                }
             } else {
-                printf(
-                    "TMA source cell %d -> tag not found\n",
-                    kTmaSourceCells[probe]);
+                printf("source logical cell %d -> tag not found\n", logical);
             }
         }
     }
@@ -522,17 +537,14 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 独立落址探针只打印实际 TMA source-cell 编号，不附加未经验证的
-    // tcgen logical-cell 别名。
+    // 为全部32个16B source cells 写入嵌入式编号标签。标签是原始16-bit
+    // 位模式，只用于追踪搬运，不会参与后面的正式 MMA。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeTmaSourceCells[6] = {1, 6, 7, 8, 17, 18};
-    constexpr uint16_t kProbeTags[6] = {
-        0x5101, 0x5106, 0x5107, 0x5108, 0x5117, 0x5118
-    };
-    for (int probe = 0; probe < 6; ++probe) {
-        int source_cell = kProbeTmaSourceCells[probe];
+    constexpr uint16_t kProbeTagBase = 0x6000;
+    for (int source_cell = 0; source_cell < 32; ++source_cell) {
+        uint16_t tag = uint16_t(kProbeTagBase + source_cell);
         for (int lane = 0; lane < 8; ++lane) {
-            h_probe[source_cell * 8 + lane] = kProbeTags[probe];
+            h_probe[source_cell * 8 + lane] = tag;
         }
     }
     CUDA_CHECK(cudaMemcpy(
