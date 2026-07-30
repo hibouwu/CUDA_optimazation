@@ -161,20 +161,22 @@ __device__ __forceinline__ void tma_load_b_2d(
         : "memory");
 }
 
-// 用嵌入数据的编号标签实测全部 TMA source 16B cells 的物理落址。
+// 用嵌入数据的编号标签实测全部 TMA 16B chunks 的物理落址。
 //
 // 图中的每个小格是一个规范化后的 128-bit（16B）cell，其中包含 8 个
-// BF16。但图中的 tcgen logical-cell 编号与 TMA source 的线性 cell 编号
+// BF16。但图中的 tcgen logical-cell 编号与 TMA source 的线性 chunk 编号
 // 不是同一个编号空间。本探针只报告可直接观测的 TMA source -> physical
 // SMEM 映射，不再人工附加 tcgen logical 编号。
 //
-// Host 在生成 global tile 时，将 source cell 编号编码进该 cell 的数据：
-//   tag(cell) = 0x6000 + cell
-// 并把同一标签写入 cell 内的 8 个 BF16 word。TMA 只搬运原始位模式，因此
-// 标签会随 cell 一起经过32B swizzle。kernel 在 TMA 完成后扫描 SMEM，
+// Host 在生成 global tile 时，将 chunk index 编码进该 chunk 的数据：
+//   tag(chunk) = 0x6000 + chunk
+// 并把同一标签写入 chunk 内的 8 个 BF16 word。TMA 只搬运原始位模式，
+// 因此标签会随 chunk 一起经过32B swizzle。kernel 在 TMA 完成后扫描 SMEM，
 // 解码标签并打印：
-//   - TMA source cell
-//   - physical cell（相对 B_storage 的16B编号）
+//   - source chunk index 及其 repeat/lane/col
+//   - physical chunk index 及其 repeat/lane/col
+// 这里按每个32B swizzle repeat的2x8视图分解编号：
+//   repeat = chunk / 16, lane = (chunk % 16) / 8, col = chunk % 8
 //   - byte offset ：相对 B_storage 的字节偏移
 //   - smem address：硬件使用的绝对 shared-memory 地址
 //
@@ -212,53 +214,80 @@ __global__ void print_tma_32b_swizzle_addresses(
         constexpr int kCellCount = 32;
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
-        int logical_to_physical[kCellCount];
+        int chunk_to_physical[kCellCount];
 
-        for (int logical = 0; logical < kCellCount; ++logical) {
-            logical_to_physical[logical] = -1;
+        for (int chunk = 0; chunk < kCellCount; ++chunk) {
+            chunk_to_physical[chunk] = -1;
         }
 
         // 每个 physical cell 的第一个16-bit word 中保存着生成时写入的
-        // source-cell 标签。先反向建立 source logical -> physical 映射。
+        // source chunk 标签。先反向建立 chunk index -> physical 映射。
         for (int physical = 0; physical < kCellCount; ++physical) {
             uint16_t tag = words[physical * 8];
             if (tag >= kTagBase && tag < kTagBase + kCellCount) {
-                int logical = int(tag - kTagBase);
-                logical_to_physical[logical] = physical;
+                int chunk = int(tag - kTagBase);
+                chunk_to_physical[chunk] = physical;
             }
         }
 
-        printf("\n=== TMA 32B swizzle full 16B-cell mapping ===\n");
+        printf("\n=== TMA 32B swizzle full 16B-chunk mapping ===\n");
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
         printf("B_start   smem = 0x%x\n", smem_u32(B_storage + 0x10));
 
-        for (int logical = 0; logical < kCellCount; ++logical) {
-            int physical_cell = logical_to_physical[logical];
+        for (int chunk = 0; chunk < kCellCount; ++chunk) {
+            int source_repeat = chunk / 16;
+            int source_lane = (chunk % 16) / 8;
+            int source_col = chunk % 8;
+            int physical_cell = chunk_to_physical[chunk];
+
             if (physical_cell >= 0) {
+                int physical_repeat = physical_cell / 16;
+                int physical_lane = (physical_cell % 16) / 8;
+                int physical_col = physical_cell % 8;
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
                 int32_t offset_from_b_start = int32_t(byte_offset) - 0x10;
 
                 if (offset_from_b_start >= 0) {
                     printf(
-                        "source logical cell %d -> physical cell %d, "
+                        "chunk index %d (repeat=%d, lane=%d, col=%d) "
+                        "-> physical chunk %d (repeat=%d, lane=%d, col=%d), "
                         "B_storage+0x%x, B_start+0x%x, smem=0x%x\n",
-                        logical,
+                        chunk,
+                        source_repeat,
+                        source_lane,
+                        source_col,
                         physical_cell,
+                        physical_repeat,
+                        physical_lane,
+                        physical_col,
                         byte_offset,
                         uint32_t(offset_from_b_start),
                         smem_u32(B_storage + byte_offset));
                 } else {
                     printf(
-                        "source logical cell %d -> physical cell %d, "
+                        "chunk index %d (repeat=%d, lane=%d, col=%d) "
+                        "-> physical chunk %d (repeat=%d, lane=%d, col=%d), "
                         "B_storage+0x%x, B_start-0x%x, smem=0x%x\n",
-                        logical,
+                        chunk,
+                        source_repeat,
+                        source_lane,
+                        source_col,
                         physical_cell,
+                        physical_repeat,
+                        physical_lane,
+                        physical_col,
                         byte_offset,
                         uint32_t(-offset_from_b_start),
                         smem_u32(B_storage + byte_offset));
                 }
             } else {
-                printf("source logical cell %d -> tag not found\n", logical);
+                printf(
+                    "chunk index %d (repeat=%d, lane=%d, col=%d) "
+                    "-> tag not found\n",
+                    chunk,
+                    source_repeat,
+                    source_lane,
+                    source_col);
             }
         }
     }
@@ -537,14 +566,14 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 为全部32个16B source cells 写入嵌入式编号标签。标签是原始16-bit
+    // 为全部32个16B source chunks 写入嵌入式编号标签。标签是原始16-bit
     // 位模式，只用于追踪搬运，不会参与后面的正式 MMA。
     uint16_t h_probe[16 * 16] = {};
     constexpr uint16_t kProbeTagBase = 0x6000;
-    for (int source_cell = 0; source_cell < 32; ++source_cell) {
-        uint16_t tag = uint16_t(kProbeTagBase + source_cell);
-        for (int lane = 0; lane < 8; ++lane) {
-            h_probe[source_cell * 8 + lane] = tag;
+    for (int chunk_index = 0; chunk_index < 32; ++chunk_index) {
+        uint16_t tag = uint16_t(kProbeTagBase + chunk_index);
+        for (int word_in_chunk = 0; word_in_chunk < 8; ++word_in_chunk) {
+            h_probe[chunk_index * 8 + word_in_chunk] = tag;
         }
     }
     CUDA_CHECK(cudaMemcpy(
