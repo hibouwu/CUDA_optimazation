@@ -117,15 +117,22 @@ __global__ void kernel(float* out) {
     __syncthreads();
 
     // The numbers shown inside the diagram's cells are logical indices after
-    // the 32B swizzle, not linear SMEM cell indices.  Place the three groups
-    // of eight bf16 ones at physical SMEM offsets 0x10, 0x110 and 0x120 from
-    // the 256B-aligned B_storage base.  Since B_start is B_storage + 0x10,
-    // their physical 16B-cell indices relative to B_start are 0, 16 and 17.
+    // the 32B swizzle.  The arrows identify the final physical SMEM locations
+    // at which the three groups of eight bf16 ones must be placed.  Express
+    // those locations directly as byte offsets from the 256B-aligned
+    // B_storage base; these are physical offsets, not swizzle indices.
     if (threadIdx.x == 0) {
-        constexpr int one_cells[3] = {0, 16, 17};
+        constexpr uint32_t one_physical_offsets[3] = {
+            0x010,
+            0x110,
+            0x120
+        };
 
         for (int i = 0; i < 3; ++i) {
-            set_b_cell(B_start, one_cells[i], uint16_t(0x3f80));
+            set_b_cell(
+                B_storage + one_physical_offsets[i],
+                0,
+                uint16_t(0x3f80));
         }
 
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
