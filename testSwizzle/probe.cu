@@ -19,8 +19,8 @@ __device__ __forceinline__ uint32_t smem_u32(void const* p) {
 // ===== descriptor (关键) =====
 __device__ __forceinline__ uint64_t make_desc(
     void* ptr,
-    int leading,
-    int stride,
+    uint32_t leading_bytes,
+    uint32_t stride_bytes,
     int base_offset,
     int swizzle_code)
 {
@@ -28,8 +28,8 @@ __device__ __forceinline__ uint64_t make_desc(
 
     uint64_t d = 0;
     d |= uint64_t((addr >> 4) & 0x3fff);
-    d |= uint64_t(leading & 0x3fff) << 16;
-    d |= uint64_t(stride  & 0x3fff) << 32;
+    d |= uint64_t((leading_bytes >> 4) & 0x3fff) << 16;
+    d |= uint64_t((stride_bytes  >> 4) & 0x3fff) << 32;
     d |= (uint64_t(1) << 46); // version
     d |= uint64_t(base_offset & 0x7) << 49;
     d |= uint64_t(swizzle_code & 0x7) << 61;
@@ -37,18 +37,18 @@ __device__ __forceinline__ uint64_t make_desc(
     return d;
 }
 
-__device__ uint64_t make_idesc() {
+__device__ __forceinline__ uint32_t make_idesc() {
     uint32_t d = 0;
-    d |= 1 << 4;
-    d |= 1 << 7;
-    d |= 1 << 10;
+    d |= 1u << 4;  // D type: FP32
+    d |= 1u << 7;  // A type: BF16
+    d |= 1u << 10; // B type: BF16
 
-    d |= (24 >> 3) << 17; // N=24
-    d |= (128 >> 4) << 24; // M=128
+    d |= (24u >> 3) << 17;  // N=24
+    d |= (128u >> 4) << 24; // M=128
 
-    d |= (1 << 16); // transpose B
+    d |= 1u << 16; // B is N/MN-major (transpose B)
 
-    return uint64_t(d) << 32;
+    return d;
 }
 
 __device__ __forceinline__ void set_b_cell(
@@ -127,6 +127,12 @@ __global__ void kernel(float* out) {
         for (int i = 0; i < 3; ++i) {
             set_b_cell(B_start, one_cells[i], uint16_t(0x3f80));
         }
+
+        printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
+        printf("B_start   smem = 0x%x\n", smem_u32(B_start));
+        printf("one addr N0..7   = 0x%x\n", smem_u32(B_start));
+        printf("one addr N8..15  = 0x%x\n", smem_u32(B_start + 0x100));
+        printf("one addr N16..23 = 0x%x\n", smem_u32(B_start + 0x110));
     }
 
     __syncthreads();
@@ -150,10 +156,10 @@ __global__ void kernel(float* out) {
 
     __syncthreads();
 
-    uint64_t desc_a = make_desc(A,       16,  8, 0, 0); // no swizzle
-    uint64_t desc_b = make_desc(B_start, 16, 32, 0, 6); // 32B swizzle
+    uint64_t desc_a = make_desc(A,       256, 128, 0, 0); // no swizzle
+    uint64_t desc_b = make_desc(B_start, 256, 512, 0, 6); // 32B swizzle
 
-    uint64_t idesc = make_idesc();
+    uint32_t idesc = make_idesc();
 
     asm volatile("tcgen05.fence::after_thread_sync;" ::: "memory");
 
@@ -171,7 +177,7 @@ __global__ void kernel(float* out) {
             : "r"(tmem_base),
               "l"(desc_a),
               "l"(desc_b),
-              "r"(uint32_t(idesc >> 32)),
+              "r"(idesc),
               "r"(use_d),
               "r"(0), "r"(0), "r"(0), "r"(0)
             : "memory");
