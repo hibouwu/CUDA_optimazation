@@ -490,7 +490,7 @@ int main() {
             ++last_n;
         }
 
-        printf("N%d..%d reads TMA input cells {", first_n, last_n);
+        printf("N%d..%d: source labels {", first_n, last_n);
         bool first_item = true;
         for (int bit = 0; bit < 16; ++bit) {
             if (low_masks[first_n] & (1u << bit)) {
@@ -501,6 +501,28 @@ int main() {
         for (int bit = 0; bit < 16; ++bit) {
             if (high_masks[first_n] & (1u << bit)) {
                 printf("%s%d", first_item ? "" : ",", 16 + bit);
+                first_item = false;
+            }
+        }
+        // 对当前256B对齐目标和32B swizzle，16B-cell 编号的地址变换为
+        // physical = source XOR ((source >> 3) & 1)。
+        printf("} -> physical SMEM cells {");
+        first_item = true;
+        for (int bit = 0; bit < 16; ++bit) {
+            if (low_masks[first_n] & (1u << bit)) {
+                int source_cell = bit;
+                int physical_cell =
+                    source_cell ^ ((source_cell >> 3) & 1);
+                printf("%s%d", first_item ? "" : ",", physical_cell);
+                first_item = false;
+            }
+        }
+        for (int bit = 0; bit < 16; ++bit) {
+            if (high_masks[first_n] & (1u << bit)) {
+                int source_cell = 16 + bit;
+                int physical_cell =
+                    source_cell ^ ((source_cell >> 3) & 1);
+                printf("%s%d", first_item ? "" : ",", physical_cell);
                 first_item = false;
             }
         }
