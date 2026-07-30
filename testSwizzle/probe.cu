@@ -1,3 +1,4 @@
+#include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_bf16.h>
 #include <cstdint>
@@ -8,6 +9,16 @@
   auto err = (x); \
   if (err != cudaSuccess) { \
     printf("CUDA error: %s\n", cudaGetErrorString(err)); \
+    exit(1); \
+  } \
+} while(0)
+
+#define CU_CHECK(x) do { \
+  CUresult err = (x); \
+  if (err != CUDA_SUCCESS) { \
+    const char* message = "unknown CUDA driver error"; \
+    cuGetErrorString(err, &message); \
+    printf("CUDA driver error: %s\n", message); \
     exit(1); \
   } \
 } while(0)
@@ -51,18 +62,6 @@ __device__ __forceinline__ uint32_t make_idesc() {
     return d;
 }
 
-__device__ __forceinline__ void set_b_cell(
-    uint8_t* group_base,
-    int cell_index,
-    uint16_t value)
-{
-    uint16_t* cell = reinterpret_cast<uint16_t*>(group_base + cell_index * 16);
-    #pragma unroll
-    for (int i = 0; i < 8; ++i) {
-        cell[i] = value;
-    }
-}
-
 __device__ __forceinline__ void mbarrier_init(uint64_t* barrier, uint32_t count) {
     asm volatile(
         "mbarrier.init.shared::cta.b64 [%0], %1;"
@@ -89,11 +88,43 @@ __device__ __forceinline__ void mbarrier_wait(uint64_t* barrier, uint32_t phase)
         : "memory");
 }
 
+__device__ __forceinline__ void mbarrier_arrive_expect_tx(
+    uint64_t* barrier,
+    uint32_t bytes)
+{
+    asm volatile(
+        "mbarrier.arrive.expect_tx.release.cta.shared::cluster.b64 "
+        "_, [%0], %1;"
+        :
+        : "r"(smem_u32(barrier)), "r"(bytes)
+        : "memory");
+}
+
+__device__ __forceinline__ void tma_load_b_2d(
+    uint8_t* dst,
+    const CUtensorMap* tensor_map,
+    uint64_t* barrier)
+{
+    asm volatile(
+        "cp.async.bulk.tensor.2d.shared::cta.global."
+        "mbarrier::complete_tx::bytes "
+        "[%0], [%1, {%2, %3}], [%4];"
+        :
+        : "r"(smem_u32(dst)),
+          "l"(tensor_map),
+          "r"(0), "r"(0),
+          "r"(smem_u32(barrier))
+        : "memory");
+}
+
 // ===== kernel =====
-__global__ void kernel(float* out) {
+__global__ void kernel(
+    const __grid_constant__ CUtensorMap tensor_map_b,
+    float* out) {
 
     extern __shared__ uint8_t smem[];
     __shared__ uint32_t tmem_base;
+    __shared__ alignas(8) uint64_t tma_barrier;
     __shared__ alignas(8) uint64_t done_barrier;
 
     uint8_t* base = smem;
@@ -116,39 +147,39 @@ __global__ void kernel(float* out) {
 
     __syncthreads();
 
-    // The numbers shown inside the diagram's cells are logical indices after
-    // the 32B swizzle.  The arrows identify the final physical SMEM locations
-    // at which the three groups of eight bf16 ones must be placed.  Express
-    // those locations directly as byte offsets from the 256B-aligned
-    // B_storage base; these are physical offsets, not swizzle indices.
-    if (threadIdx.x == 0) {
-        constexpr uint32_t one_physical_offsets[3] = {
-            0x010,
-            0x110,
-            0x120
-        };
-
-        for (int i = 0; i < 3; ++i) {
-            set_b_cell(
-                B_storage + one_physical_offsets[i],
-                0,
-                uint16_t(0x3f80));
-        }
-
-        printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
-        printf("B_start   smem = 0x%x\n", smem_u32(B_start));
-        printf("one addr N0..7   = 0x%x\n", smem_u32(B_start));
-        printf("one addr N8..15  = 0x%x\n", smem_u32(B_start + 0x100));
-        printf("one addr N16..23 = 0x%x\n", smem_u32(B_start + 0x110));
-    }
-
-    __syncthreads();
-
+    // A was produced through the generic proxy and will be consumed by the
+    // tcgen05 async proxy.
     asm volatile("fence.proxy.async.shared::cta;" ::: "memory");
     __syncthreads();
 
     if (threadIdx.x == 0) {
+        mbarrier_init(&tma_barrier, 1);
+        asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
+    }
+    __syncthreads();
+
+    // The 16x16 BF16 global staging tile contains ones in logical 16B cells
+    // 1, 3 and 17.  A 32B TMA swizzle maps them to physical cells 1, 2 and 17
+    // relative to the 256B-aligned B_storage base, i.e. byte offsets
+    // 0x010, 0x020 and 0x110 observed on Thor.
+    if (threadIdx.x == 0) {
+        constexpr uint32_t kTmaBytes = 16 * 16 * sizeof(uint16_t);
+        tma_load_b_2d(B_storage, &tensor_map_b, &tma_barrier);
+        mbarrier_arrive_expect_tx(&tma_barrier, kTmaBytes);
+        mbarrier_wait(&tma_barrier, 0);
+
+        printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
+        printf("B_start   smem = 0x%x\n", smem_u32(B_start));
+        printf("TMA one addr N0..7   = 0x%x\n", smem_u32(B_storage + 0x010));
+        printf("TMA one addr N8..15  = 0x%x\n", smem_u32(B_storage + 0x020));
+        printf("TMA one addr N16..23 = 0x%x\n", smem_u32(B_storage + 0x110));
+    }
+
+    __syncthreads();
+
+    if (threadIdx.x == 0) {
         mbarrier_init(&done_barrier, 1);
+        asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
     }
     __syncthreads();
 
@@ -245,10 +276,50 @@ __global__ void kernel(float* out) {
 
 int main() {
     float* d;
+    uint16_t* d_b;
     CUDA_CHECK(cudaMalloc(&d, 24 * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_b, 16 * 16 * sizeof(uint16_t)));
     CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
 
-    kernel<<<1,128, 16384>>>(d);
+    // The TMA source is an unswizzled 16x16 BF16 tile.  Each 16B logical cell
+    // contains eight BF16 elements.  For 32B swizzling, logical cells 1, 3
+    // and 17 land in physical cells 1, 2 and 17 respectively.
+    uint16_t h_b[16 * 16] = {};
+    constexpr int one_logical_cells[3] = {1, 3, 17};
+    for (int cell : one_logical_cells) {
+        for (int i = 0; i < 8; ++i) {
+            h_b[cell * 8 + i] = 0x3f80;
+        }
+    }
+    CUDA_CHECK(cudaMemcpy(
+        d_b,
+        h_b,
+        sizeof(h_b),
+        cudaMemcpyHostToDevice));
+
+    CUtensorMap tensor_map_b{};
+    constexpr uint32_t rank = 2;
+    uint64_t global_dim[rank] = {16, 16};
+    uint64_t global_stride[rank - 1] = {
+        16 * sizeof(uint16_t)
+    };
+    uint32_t box_dim[rank] = {16, 16};
+    uint32_t element_stride[rank] = {1, 1};
+    CU_CHECK(cuTensorMapEncodeTiled(
+        &tensor_map_b,
+        CU_TENSOR_MAP_DATA_TYPE_BFLOAT16,
+        rank,
+        d_b,
+        global_dim,
+        global_stride,
+        box_dim,
+        element_stride,
+        CU_TENSOR_MAP_INTERLEAVE_NONE,
+        CU_TENSOR_MAP_SWIZZLE_32B,
+        CU_TENSOR_MAP_L2_PROMOTION_NONE,
+        CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
+
+    kernel<<<1,128, 16384>>>(tensor_map_b, d);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -266,5 +337,6 @@ int main() {
     printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
 
     CUDA_CHECK(cudaFree(d));
+    CUDA_CHECK(cudaFree(d_b));
     return mismatches == 0 ? 0 : 1;
 }
