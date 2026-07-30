@@ -607,13 +607,13 @@ int main() {
 
     printf("\n=== zero tcgen logical cells 1, 6, 7 ===\n");
     printf(
-        "before: logical1/source2=0x%04x "
+        "before: logical1/source1=0x%04x "
         "logical6/source17=0x%04x logical7/source18=0x%04x\n",
         unsigned(h_b[1 * 8]),
         unsigned(h_b[17 * 8]),
         unsigned(h_b[18 * 8]));
     printf(
-        "after : logical1/source2=0x%04x "
+        "after : logical1/source1=0x%04x "
         "logical6/source17=0x%04x logical7/source18=0x%04x\n",
         unsigned(h_b_zero_167[1 * 8]),
         unsigned(h_b_zero_167[17 * 8]),
