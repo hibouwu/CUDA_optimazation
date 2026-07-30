@@ -73,21 +73,21 @@ __device__ __forceinline__ uint64_t make_desc(
 }
 
 // 构造 tcgen05.mma.kind::f16 使用的 32 位 instruction descriptor。
-// 最终编码值为 0x08070490：
+// N=24 时最终编码值为 0x08070490：
 //   bits  4..5  : D/accumulator 为 FP32
 //   bits  7..9  : A 为 BF16
 //   bits 10..12 : B 为 BF16
 //   bit  16     : transpose B=1，即 B 使用 N/MN-major
-//   bits 17..22 : N >> 3 = 3
+//   bits 17..22 : N >> 3
 //   bits 24..28 : M >> 4 = 8
 // K=16 由 kind::f16 和数据类型组合确定，不需要单独编码。
-__device__ __forceinline__ uint32_t make_idesc() {
+__device__ __forceinline__ uint32_t make_idesc(uint32_t n) {
     uint32_t d = 0;
     d |= 1u << 4;  // D type: FP32
     d |= 1u << 7;  // A type: BF16
     d |= 1u << 10; // B type: BF16
 
-    d |= (24u >> 3) << 17;  // N=24
+    d |= (n >> 3) << 17;
     d |= (128u >> 4) << 24; // M=128
 
     d |= 1u << 16; // B is N/MN-major (transpose B)
@@ -161,24 +161,16 @@ __device__ __forceinline__ void tma_load_b_2d(
         : "memory");
 }
 
-// 用带标签的数据实测图中 16B logical cells 的 TMA 落址。
+// 用带标签的数据实测 TMA source 16B cells 的物理落址。
 //
 // 图中的每个小格是一个规范化后的 128-bit（16B）cell，其中包含 8 个
-// BF16；格内数字是 tcgen/UMMA 视角的 logical-cell 编号，不是单个 BF16
-// element index。对于当前 B_start = B_storage + 0x10 的布局，使用以下
-// TMA source-cell 编号承载要检查的 logical cells：
-//   tcgen logical 1 -> TMA source 1
-//   tcgen logical 8 -> TMA source 2
-//   tcgen logical 6 -> TMA source 17
-//   tcgen logical 7 -> TMA source 18
-//
-// 这里 logical 1 正好位于 B_start；logical 6 比 logical 1 增加一个
-// leading byte offset（256B），所以位于 B_start + 0x100。
+// BF16。但图中的 tcgen logical-cell 编号与 TMA source 的线性 cell 编号
+// 不是同一个编号空间。本探针只报告可直接观测的 TMA source -> physical
+// SMEM 映射，不再人工附加 tcgen logical 编号。
 //
 // 每个 source cell 的 8 个 BF16 都写入相同标签。kernel 执行 TMA load 后
 // 通过 generic shared-memory load 扫描目标区域，打印每个标签最终所在的：
 //   - TMA source cell
-//   - tcgen logical cell（图中的编号）
 //   - physical cell（相对 B_storage 的16B编号）
 //   - byte offset ：相对 B_storage 的字节偏移
 //   - smem address：硬件使用的绝对 shared-memory 地址
@@ -214,10 +206,9 @@ __global__ void print_tma_32b_swizzle_addresses(
 
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kTmaSourceCells[4] = {1, 2, 17, 18};
-        constexpr int kTcgenLogicalCells[4] = {1, 8, 6, 7};
-        constexpr uint16_t kProbeTags[4] = {
-            0x5101, 0x5108, 0x5106, 0x5107
+        constexpr int kTmaSourceCells[6] = {1, 6, 7, 8, 17, 18};
+        constexpr uint16_t kProbeTags[6] = {
+            0x5101, 0x5106, 0x5107, 0x5108, 0x5117, 0x5118
         };
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
@@ -226,7 +217,7 @@ __global__ void print_tma_32b_swizzle_addresses(
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
         printf("B_start   smem = 0x%x\n", smem_u32(B_storage + 0x10));
 
-        for (int probe = 0; probe < 4; ++probe) {
+        for (int probe = 0; probe < 6; ++probe) {
             int physical_cell = -1;
 
             // TMA tile 共 512B，即32个16B physical cells。每个被探测的
@@ -242,10 +233,8 @@ __global__ void print_tma_32b_swizzle_addresses(
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
                 int32_t offset_from_b_start = int32_t(byte_offset) - 0x10;
                 printf(
-                    "tcgen logical cell %d (TMA source cell %d) "
-                    "-> physical cell %d, B_storage+0x%x, "
+                    "TMA source cell %d -> physical cell %d, B_storage+0x%x, "
                     "B_start+0x%x, smem=0x%x\n",
-                    kTcgenLogicalCells[probe],
                     kTmaSourceCells[probe],
                     physical_cell,
                     byte_offset,
@@ -253,9 +242,7 @@ __global__ void print_tma_32b_swizzle_addresses(
                     smem_u32(B_storage + byte_offset));
             } else {
                 printf(
-                    "tcgen logical cell %d (TMA source cell %d) "
-                    "-> tag not found\n",
-                    kTcgenLogicalCells[probe],
+                    "TMA source cell %d -> tag not found\n",
                     kTmaSourceCells[probe]);
             }
         }
@@ -267,7 +254,9 @@ __global__ void print_tma_32b_swizzle_addresses(
 // ============================================================================
 __global__ void kernel(
     const __grid_constant__ CUtensorMap tensor_map_b,
-    float* out) {
+    float* out,
+    int n_cols,
+    int verbose) {
 
     extern __shared__ uint8_t smem[];
 
@@ -344,8 +333,10 @@ __global__ void kernel(
 
         // 这里只打印两个基址。TMA swizzle 后的实际物理落址由独立的
         // print_tma_32b_swizzle_addresses kernel 使用标签数据测量。
-        printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
-        printf("B_start   smem = 0x%x\n", smem_u32(B_start));
+        if (verbose) {
+            printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
+            printf("B_start   smem = 0x%x\n", smem_u32(B_start));
+        }
     }
 
     __syncthreads();
@@ -376,7 +367,7 @@ __global__ void kernel(
     uint64_t desc_a = make_desc(A,       256, 128, 0, 0); // no swizzle
     uint64_t desc_b = make_desc(B_start, 256, 512, 0, 6); // 32B swizzle
 
-    uint32_t idesc = make_idesc();
+    uint32_t idesc = make_idesc(uint32_t(n_cols));
 
     // 将前面的线程同步/TMA completion 排序到随后的异步 tcgen05.mma 之前。
     asm volatile("tcgen05.fence::after_thread_sync;" ::: "memory");
@@ -432,7 +423,7 @@ __global__ void kernel(
         // warp，其中 thread 0 获得需要导出的 m=0 行。
         uint32_t addr = tmem_base + (0 << 16);
 
-        for (int i = 0; i < 24; i += 8) {
+        for (int i = 0; i < n_cols; i += 8) {
             asm volatile(
                 "tcgen05.ld.sync.aligned.32x32b.x8.b32 "
                 "{%0,%1,%2,%3,%4,%5,%6,%7}, [%8];"
@@ -448,7 +439,8 @@ __global__ void kernel(
             if (threadIdx.x == 0) {
                 for (int j = 0; j < 8; j++) {
                     out[i + j] = v[j];
-                    printf("n=%d val=%f\n", i+j, v[j]);
+                    if (verbose)
+                        printf("n=%d val=%f\n", i+j, v[j]);
                 }
             }
         }
@@ -530,14 +522,14 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 独立落址探针：图中的 logical cells 1、8、6、7 分别由 TMA source
-    // cells 1、2、17、18 承载。每格用不同标签填满，便于 TMA 后扫描。
+    // 独立落址探针只打印实际 TMA source-cell 编号，不附加未经验证的
+    // tcgen logical-cell 别名。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeTmaSourceCells[4] = {1, 2, 17, 18};
-    constexpr uint16_t kProbeTags[4] = {
-        0x5101, 0x5108, 0x5106, 0x5107
+    constexpr int kProbeTmaSourceCells[6] = {1, 6, 7, 8, 17, 18};
+    constexpr uint16_t kProbeTags[6] = {
+        0x5101, 0x5106, 0x5107, 0x5108, 0x5117, 0x5118
     };
-    for (int probe = 0; probe < 4; ++probe) {
+    for (int probe = 0; probe < 6; ++probe) {
         int source_cell = kProbeTmaSourceCells[probe];
         for (int lane = 0; lane < 8; ++lane) {
             h_probe[source_cell * 8 + lane] = kProbeTags[probe];
@@ -562,7 +554,7 @@ int main() {
 
     // 动态 shared memory 为 16KiB，足以容纳：
     //   最多 255B 的对齐补偿 + 4096B B 区域 + 4096B A 区域。
-    kernel<<<1,128, 16384>>>(tensor_map_b, d);
+    kernel<<<1,128, 16384>>>(tensor_map_b, d, 24, 1);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -585,71 +577,6 @@ int main() {
             ++mismatches;
     }
     printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
-
-    // ------------------------------------------------------------------------
-    // tcgen logical cells 1、6、7 置零对照
-    // ------------------------------------------------------------------------
-    // 按上面的编号转换，它们由 TMA source cells 1、17、18 承载。这里把
-    // 这三个完整的16B cells（每格8个 BF16）清零，再执行同一个 MMA。
-    // 当前 baseline 中 source cells 1、17 为1，18原本为0，因此该对照应当
-    // 移除 N0..7 和 N16..23 的贡献；source cell 2（logical 8）保持为1，
-    // 所以 N8..15 应保持不变。实际变化由 Thor 输出确认。
-    uint16_t h_b_zero_167[16 * 16];
-    for (int i = 0; i < 16 * 16; ++i) {
-        h_b_zero_167[i] = h_b[i];
-    }
-    constexpr int kZeroTmaSourceCells[3] = {1, 17, 18};
-    for (int cell : kZeroTmaSourceCells) {
-        for (int lane = 0; lane < 8; ++lane) {
-            h_b_zero_167[cell * 8 + lane] = 0;
-        }
-    }
-
-    printf("\n=== zero tcgen logical cells 1, 6, 7 ===\n");
-    printf(
-        "before: logical1/source1=0x%04x "
-        "logical6/source17=0x%04x logical7/source18=0x%04x\n",
-        unsigned(h_b[1 * 8]),
-        unsigned(h_b[17 * 8]),
-        unsigned(h_b[18 * 8]));
-    printf(
-        "after : logical1/source1=0x%04x "
-        "logical6/source17=0x%04x logical7/source18=0x%04x\n",
-        unsigned(h_b_zero_167[1 * 8]),
-        unsigned(h_b_zero_167[17 * 8]),
-        unsigned(h_b_zero_167[18 * 8]));
-
-    CUDA_CHECK(cudaMemcpy(
-        d_b,
-        h_b_zero_167,
-        sizeof(h_b_zero_167),
-        cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemset(d, 0, 24 * sizeof(float)));
-    kernel<<<1,128, 16384>>>(tensor_map_b, d);
-    CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaDeviceSynchronize());
-
-    float h_zero_167[24];
-    CUDA_CHECK(cudaMemcpy(
-        h_zero_167,
-        d,
-        sizeof(h_zero_167),
-        cudaMemcpyDeviceToHost));
-
-    int changed = 0;
-    for (int i = 0; i < 24; ++i) {
-        float delta = h_zero_167[i] - h_baseline[i];
-        if (delta != 0.0f) {
-            ++changed;
-        }
-        printf(
-            "n=%d baseline=%f zero_167=%f delta=%f\n",
-            i,
-            h_baseline[i],
-            h_zero_167[i],
-            delta);
-    }
-    printf("zero_167_changed_outputs=%d\n", changed);
 
     CUDA_CHECK(cudaFree(d));
     CUDA_CHECK(cudaFree(d_b));
