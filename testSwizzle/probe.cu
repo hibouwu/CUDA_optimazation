@@ -238,13 +238,16 @@ __global__ void print_tma_32b_swizzle_addresses(
 
             if (physical_cell >= 0) {
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
+                int32_t offset_from_b_start = int32_t(byte_offset) - 0x10;
                 printf(
                     "tcgen logical cell %d (TMA source cell %d) "
-                    "-> physical cell %d, offset=0x%x, smem=0x%x\n",
+                    "-> physical cell %d, B_storage+0x%x, "
+                    "B_start+0x%x, smem=0x%x\n",
                     kTcgenLogicalCells[probe],
                     kTmaSourceCells[probe],
                     physical_cell,
                     byte_offset,
+                    uint32_t(offset_from_b_start),
                     smem_u32(B_storage + byte_offset));
             } else {
                 printf(
@@ -582,33 +585,36 @@ int main() {
     printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
 
     // ------------------------------------------------------------------------
-    // BF16 logical indices 1、6、7 置零对照
+    // tcgen logical cells 1、6、7 置零对照
     // ------------------------------------------------------------------------
-    // 注意：这里的编号与图中小格一致，一个 index 只代表一个 2B BF16。
-    // 当前正式 h_b 的非零区域是 16B source cells 1、2、17，因此 h_b[1]、
-    // h_b[6]、h_b[7] 原本就都是 0。仍然显式构造并运行一次 zero-control，
-    // 用硬件输出确认“再次写 0”不会改变结果。
+    // 按上面的编号转换，它们由 TMA source cells 2、17、18 承载。这里把
+    // 这三个完整的16B cells（每格8个 BF16）清零，再执行同一个 MMA。
+    // 当前 baseline 中 source cells 2、17 为1，18原本为0，因此该对照应当
+    // 至少移除 N8..15 和 N16..23 的贡献；实际变化由 Thor 输出确认。
     uint16_t h_b_zero_167[16 * 16];
     for (int i = 0; i < 16 * 16; ++i) {
         h_b_zero_167[i] = h_b[i];
     }
-    h_b_zero_167[1] = 0;
-    h_b_zero_167[6] = 0;
-    h_b_zero_167[7] = 0;
+    constexpr int kZeroTmaSourceCells[3] = {2, 17, 18};
+    for (int cell : kZeroTmaSourceCells) {
+        for (int lane = 0; lane < 8; ++lane) {
+            h_b_zero_167[cell * 8 + lane] = 0;
+        }
+    }
 
-    printf("\n=== zero logical BF16 indices 1, 6, 7 ===\n");
+    printf("\n=== zero tcgen logical cells 1, 6, 7 ===\n");
     printf(
-        "before: idx1=0x%04x idx6=0x%04x idx7=0x%04x idx8=0x%04x\n",
-        unsigned(h_b[1]),
-        unsigned(h_b[6]),
-        unsigned(h_b[7]),
-        unsigned(h_b[8]));
+        "before: logical1/source2=0x%04x "
+        "logical6/source17=0x%04x logical7/source18=0x%04x\n",
+        unsigned(h_b[2 * 8]),
+        unsigned(h_b[17 * 8]),
+        unsigned(h_b[18 * 8]));
     printf(
-        "after : idx1=0x%04x idx6=0x%04x idx7=0x%04x idx8=0x%04x\n",
-        unsigned(h_b_zero_167[1]),
-        unsigned(h_b_zero_167[6]),
-        unsigned(h_b_zero_167[7]),
-        unsigned(h_b_zero_167[8]));
+        "after : logical1/source2=0x%04x "
+        "logical6/source17=0x%04x logical7/source18=0x%04x\n",
+        unsigned(h_b_zero_167[2 * 8]),
+        unsigned(h_b_zero_167[17 * 8]),
+        unsigned(h_b_zero_167[18 * 8]));
 
     CUDA_CHECK(cudaMemcpy(
         d_b,
