@@ -11,8 +11,9 @@
 //   - B 的 shared-memory descriptor 使用 32B swizzle
 //   - B 由 TMA 从 global memory 搬入 shared memory
 //   - A 全为1
-//   - B 只在假设“tcgen05 不会读取”的 cells 0、2、4、6、8、10、12、14 中为1
-//   - 若该不可见集合判断正确，C 的第0行 N0..N23 应全部等于0
+//   - B 只在签名实验测得的未读 source cells
+//     0、18、20、22、24、26、28、30 中为1
+//   - C 的第0行 N0..N23 应全部等于0
 //
 // TMA source cell 与 tcgen05 读取位置之间的对应关系来自 Thor 上对本程序
 // “修改一个 source cell -> 观察输出分组”的端到端实测，不把截图中的逻辑
@@ -380,16 +381,18 @@ int main() {
 
     // 构造未 swizzle 的 16x16 BF16 TMA source tile：
     //   - 一个 16B source cell 包含 8 个 BF16
-    //   - 前两个128B行中，偶数编号 cells 0、2、4、6、8、10、12、14 填1
-    //   - 第三个和第四个128B行（cells 16..31）全部为0
+    //   - source cells 0、18、20、22、24、26、28、30 填1
     //   - 其余元素保持 0
     //
-    // 这是不可见位置负对照：若 tcgen05 只读取前两行的奇数编号集合，并按
-    // descriptor 读取后两行所需位置，那么这些1不应贡献到任何输出。
+    // tcgen05 输入签名实验测得的读取集合为：
+    //   N0..7   : {1,3,5,7,9,11,13,15}
+    //   N8..15  : {2,4,6,8,10,12,14,16}
+    //   N16..23 : {17,19,21,23,25,27,29,31}
+    // 上述三个集合均不包含这里置1的8个 cells，因此它们不应贡献到输出。
     uint16_t h_b[16 * 16] = {};
     constexpr int tma_source_one_cells[8] = {
-        0, 2, 4, 6,
-        8, 10, 12, 14
+        0, 18, 20, 22,
+        24, 26, 28, 30
     };
     for (int cell : tma_source_one_cells) {
         for (int i = 0; i < 8; ++i) {
