@@ -10,7 +10,9 @@
 //   - M=128、N=24、K=16，B 为 N/MN-major（instruction descriptor 中 transpose B=1）
 //   - B 的 shared-memory descriptor 使用 32B swizzle
 //   - B 由 TMA 从 global memory 搬入 shared memory
-//   - A 全为 1；正确布局下，C 的第 0 行 N0..N23 应全部等于 1
+//   - A 全为1
+//   - B 只在假设“tcgen05 不会读取”的 cells 0、2、4、6、8、10、12、14 中为1
+//   - 若该不可见集合判断正确，C 的第0行 N0..N23 应全部等于0
 //
 // TMA source cell 与 tcgen05 读取位置之间的对应关系来自 Thor 上对本程序
 // “修改一个 source cell -> 观察输出分组”的端到端实测，不把截图中的逻辑
@@ -226,14 +228,9 @@ __global__ void kernel(
 
     // 发射一次 16x16 BF16 TMA load，总 transaction 大小为 512B。
     //
-    // 对本程序的 tensor map、B_storage/B_start 地址和 tcgen05 descriptor，
-    // Thor 端到端实测得到：
-    //   TMA source cell  1 -> 输出 N0..7
-    //   TMA source cell  2 -> 输出 N8..15
-    //   TMA source cell 17 -> 输出 N16..23
-    //
-    // 这是完整 TMA+MMA 路径的实测关系。不要把 source cell 编号、图中显示的
-    // swizzle logical index 和最终 physical cell 编号混为一谈。
+    // TMA 会搬运完整512B；B_start/LBO/SBO 和 tcgen05 swizzle descriptor
+    // 决定其中哪些位置真正被 MMA 消费。Host 端既会运行输入签名实验，也会
+    // 运行“只在预期不可见位置填1”的负对照。
     if (threadIdx.x == 0) {
         constexpr uint32_t kTmaBytes = 16 * 16 * sizeof(uint16_t);
 
@@ -350,8 +347,6 @@ __global__ void kernel(
             if (threadIdx.x == 0) {
                 for (int j = 0; j < 8; j++) {
                     out[i + j] = v[j];
-                    if (verbose)
-                        printf("n=%d val=%f\n", i+j, v[j]);
                 }
             }
         }
@@ -385,13 +380,17 @@ int main() {
 
     // 构造未 swizzle 的 16x16 BF16 TMA source tile：
     //   - 一个 16B source cell 包含 8 个 BF16
-    //   - source cells 1、2、17 全部填 1
+    //   - 前两个128B行中，偶数编号 cells 0、2、4、6、8、10、12、14 填1
+    //   - 第三个和第四个128B行（cells 16..31）全部为0
     //   - 其余元素保持 0
     //
-    // 对当前 tensor map 和 MMA descriptor，Thor 实测这三个 source cells
-    // 分别产生 N0..7、N8..15、N16..23 三组输出。
+    // 这是不可见位置负对照：若 tcgen05 只读取前两行的奇数编号集合，并按
+    // descriptor 读取后两行所需位置，那么这些1不应贡献到任何输出。
     uint16_t h_b[16 * 16] = {};
-    constexpr int tma_source_one_cells[3] = {1, 2, 17};
+    constexpr int tma_source_one_cells[8] = {
+        0, 2, 4, 6,
+        8, 10, 12, 14
+    };
     for (int cell : tma_source_one_cells) {
         for (int i = 0; i < 8; ++i) {
             h_b[cell * 8 + i] = 0x3f80;
@@ -533,16 +532,28 @@ int main() {
         sizeof(h_baseline),
         cudaMemcpyDeviceToHost));
 
-    // 当前实验的验收条件：C 的第 0 行 N0..23 必须精确等于 1。
-    // 输入只有可精确表示的 BF16 0/1，且每个输出预期只有一个非零贡献，
-    // 所以这里使用精确比较，而不是容差比较。
+    // 负对照验收条件：C 的第0行 N0..N23 必须精确等于0。
+    // BF16 0/1 和FP32零都可精确表示，因此使用精确比较。
     printf("\n=== global memory result ===\n");
     int mismatches = 0;
-    for (int i = 0; i < 24; i++)
-    {
-        printf("h[%d]=%f\n", i, h_baseline[i]);
-        if (h_baseline[i] != 1.0f)
+    for (int i = 0; i < 24; ++i) {
+        if (h_baseline[i] != 0.0f) {
             ++mismatches;
+        }
+    }
+
+    // 将连续且数值相同的N columns合并打印。
+    for (int first_n = 0; first_n < 24;) {
+        int last_n = first_n;
+        while (last_n + 1 < 24 &&
+               h_baseline[last_n + 1] == h_baseline[first_n]) {
+            ++last_n;
+        }
+        printf("N%d..%d = %f\n",
+               first_n,
+               last_n,
+               h_baseline[first_n]);
+        first_n = last_n + 1;
     }
     printf("status=%s mismatches=%d\n", mismatches == 0 ? "PASS" : "FAIL", mismatches);
 
