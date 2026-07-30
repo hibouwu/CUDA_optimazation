@@ -203,6 +203,13 @@ __global__ void print_tma_32b_swizzle_addresses(
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
         constexpr int kTmaSourceCells[6] = {1, 8, 6, 7, 17, 18};
+        // 导师使用的 tcgen/MMA logical-cell 编号与 TMA source 的线性编号
+        // 不是同一个编号空间。这里只标注当前已明确的对应关系：
+        //   source 1  -> tcgen logical 0
+        //   source 17 -> tcgen logical 6
+        //   source 18 -> tcgen logical 7
+        // 其余项尚未建立对应关系，使用 -1（打印为 n/a）。
+        constexpr int kTcgenLogicalCells[6] = {0, -1, -1, -1, 6, 7};
         constexpr uint16_t kProbeTags[6] = {
             0x5101, 0x5108, 0x5106, 0x5107, 0x5117, 0x5118
         };
@@ -226,13 +233,24 @@ __global__ void print_tma_32b_swizzle_addresses(
 
             if (physical_cell >= 0) {
                 uint32_t byte_offset = uint32_t(physical_cell) * 16;
-                printf(
-                    "TMA source cell %d -> physical cell %d, "
-                    "offset=0x%x, smem=0x%x\n",
-                    kTmaSourceCells[probe],
-                    physical_cell,
-                    byte_offset,
-                    smem_u32(B_storage + byte_offset));
+                if (kTcgenLogicalCells[probe] >= 0) {
+                    printf(
+                        "TMA source cell %d (tcgen logical cell %d) "
+                        "-> physical cell %d, offset=0x%x, smem=0x%x\n",
+                        kTmaSourceCells[probe],
+                        kTcgenLogicalCells[probe],
+                        physical_cell,
+                        byte_offset,
+                        smem_u32(B_storage + byte_offset));
+                } else {
+                    printf(
+                        "TMA source cell %d (tcgen logical cell n/a) "
+                        "-> physical cell %d, offset=0x%x, smem=0x%x\n",
+                        kTmaSourceCells[probe],
+                        physical_cell,
+                        byte_offset,
+                        smem_u32(B_storage + byte_offset));
+                }
             } else {
                 printf("TMA source cell %d -> tag not found\n",
                        kTmaSourceCells[probe]);
