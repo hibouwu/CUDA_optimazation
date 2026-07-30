@@ -167,11 +167,13 @@ __device__ __forceinline__ void tma_load_b_2d(
 // BF16；格内数字是 tcgen/UMMA 视角的 logical-cell 编号，不是单个 BF16
 // element index。对于当前 B_start = B_storage + 0x10 的布局，使用以下
 // TMA source-cell 编号承载要检查的 logical cells：
-//   tcgen logical 0 -> TMA source 1
-//   tcgen logical 1 -> TMA source 2
-//   tcgen logical 8 -> TMA source 3
+//   tcgen logical 1 -> TMA source 1
+//   tcgen logical 8 -> TMA source 2
 //   tcgen logical 6 -> TMA source 17
 //   tcgen logical 7 -> TMA source 18
+//
+// 这里 logical 1 正好位于 B_start；logical 6 比 logical 1 增加一个
+// leading byte offset（256B），所以位于 B_start + 0x100。
 //
 // 每个 source cell 的 8 个 BF16 都写入相同标签。kernel 执行 TMA load 后
 // 通过 generic shared-memory load 扫描目标区域，打印每个标签最终所在的：
@@ -212,10 +214,10 @@ __global__ void print_tma_32b_swizzle_addresses(
 
     if (threadIdx.x == 0) {
         // 标签值必须和 Host 端 kProbeTags 保持一致。
-        constexpr int kTmaSourceCells[5] = {1, 2, 3, 17, 18};
-        constexpr int kTcgenLogicalCells[5] = {0, 1, 8, 6, 7};
-        constexpr uint16_t kProbeTags[5] = {
-            0x5100, 0x5101, 0x5108, 0x5106, 0x5107
+        constexpr int kTmaSourceCells[4] = {1, 2, 17, 18};
+        constexpr int kTcgenLogicalCells[4] = {1, 8, 6, 7};
+        constexpr uint16_t kProbeTags[4] = {
+            0x5101, 0x5108, 0x5106, 0x5107
         };
         const volatile uint16_t* words =
             reinterpret_cast<const volatile uint16_t*>(B_storage);
@@ -224,7 +226,7 @@ __global__ void print_tma_32b_swizzle_addresses(
         printf("B_storage smem = 0x%x\n", smem_u32(B_storage));
         printf("B_start   smem = 0x%x\n", smem_u32(B_storage + 0x10));
 
-        for (int probe = 0; probe < 5; ++probe) {
+        for (int probe = 0; probe < 4; ++probe) {
             int physical_cell = -1;
 
             // TMA tile 共 512B，即32个16B physical cells。每个被探测的
@@ -528,14 +530,14 @@ int main() {
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 
-    // 独立落址探针：图中的 logical cells 0、1、8、6、7 分别由 TMA source
-    // cells 1、2、3、17、18 承载。每格用不同标签填满，便于 TMA 后扫描。
+    // 独立落址探针：图中的 logical cells 1、8、6、7 分别由 TMA source
+    // cells 1、2、17、18 承载。每格用不同标签填满，便于 TMA 后扫描。
     uint16_t h_probe[16 * 16] = {};
-    constexpr int kProbeTmaSourceCells[5] = {1, 2, 3, 17, 18};
-    constexpr uint16_t kProbeTags[5] = {
-        0x5100, 0x5101, 0x5108, 0x5106, 0x5107
+    constexpr int kProbeTmaSourceCells[4] = {1, 2, 17, 18};
+    constexpr uint16_t kProbeTags[4] = {
+        0x5101, 0x5108, 0x5106, 0x5107
     };
-    for (int probe = 0; probe < 5; ++probe) {
+    for (int probe = 0; probe < 4; ++probe) {
         int source_cell = kProbeTmaSourceCells[probe];
         for (int lane = 0; lane < 8; ++lane) {
             h_probe[source_cell * 8 + lane] = kProbeTags[probe];
@@ -587,15 +589,16 @@ int main() {
     // ------------------------------------------------------------------------
     // tcgen logical cells 1、6、7 置零对照
     // ------------------------------------------------------------------------
-    // 按上面的编号转换，它们由 TMA source cells 2、17、18 承载。这里把
+    // 按上面的编号转换，它们由 TMA source cells 1、17、18 承载。这里把
     // 这三个完整的16B cells（每格8个 BF16）清零，再执行同一个 MMA。
-    // 当前 baseline 中 source cells 2、17 为1，18原本为0，因此该对照应当
-    // 至少移除 N8..15 和 N16..23 的贡献；实际变化由 Thor 输出确认。
+    // 当前 baseline 中 source cells 1、17 为1，18原本为0，因此该对照应当
+    // 移除 N0..7 和 N16..23 的贡献；source cell 2（logical 8）保持为1，
+    // 所以 N8..15 应保持不变。实际变化由 Thor 输出确认。
     uint16_t h_b_zero_167[16 * 16];
     for (int i = 0; i < 16 * 16; ++i) {
         h_b_zero_167[i] = h_b[i];
     }
-    constexpr int kZeroTmaSourceCells[3] = {2, 17, 18};
+    constexpr int kZeroTmaSourceCells[3] = {1, 17, 18};
     for (int cell : kZeroTmaSourceCells) {
         for (int lane = 0; lane < 8; ++lane) {
             h_b_zero_167[cell * 8 + lane] = 0;
@@ -606,13 +609,13 @@ int main() {
     printf(
         "before: logical1/source2=0x%04x "
         "logical6/source17=0x%04x logical7/source18=0x%04x\n",
-        unsigned(h_b[2 * 8]),
+        unsigned(h_b[1 * 8]),
         unsigned(h_b[17 * 8]),
         unsigned(h_b[18 * 8]));
     printf(
         "after : logical1/source2=0x%04x "
         "logical6/source17=0x%04x logical7/source18=0x%04x\n",
-        unsigned(h_b_zero_167[2 * 8]),
+        unsigned(h_b_zero_167[1 * 8]),
         unsigned(h_b_zero_167[17 * 8]),
         unsigned(h_b_zero_167[18 * 8]));
 
