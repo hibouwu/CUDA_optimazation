@@ -55,6 +55,9 @@ divides by an FP16 cuBLAS result.
 Do not launch this concurrently with the compute-only or component campaign.
 All three runners take the same non-blocking global GPU lock and will reject a
 concurrent launch, so sequential execution is enforced mechanically.
+To collect all three campaigns with one foreground command, prefer
+`microbench/run_sm110_closure_suite.sh`; it waits for and audits each detached
+runner before launching the next one.
 
 From the repository root on Thor:
 

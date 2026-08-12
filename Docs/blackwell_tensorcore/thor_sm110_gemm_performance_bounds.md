@@ -857,6 +857,8 @@ NCU artifact 之前，不把它们升级为新的已观测值。
 
 compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因此 Thor 上
 只能串行运行；这把“不要并发争抢 GPU”从操作约定升级为 runner 的机械约束。
+推荐用固定提交检查、逐批等待和逐批审计的总协调器运行：
+[`run_sm110_closure_suite.sh`](../../microbench/run_sm110_closure_suite.sh)。
 
 ### 12.8 硬件和软件环境来源
 
