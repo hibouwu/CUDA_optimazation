@@ -37,6 +37,12 @@ __device__ __forceinline__ uint32_t smem_u32(void const* ptr) {
   return static_cast<uint32_t>(__cvta_generic_to_shared(ptr));
 }
 
+__device__ __forceinline__ unsigned long long global_nanoseconds() {
+  unsigned long long value;
+  asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(value));
+  return value;
+}
+
 __device__ __forceinline__ void mbarrier_init(uint32_t addr, uint32_t count) {
   asm volatile("mbarrier.init.shared::cta.b64 [%0], %1;"
                :
@@ -94,6 +100,9 @@ void tma_kernel(const __grid_constant__ CUtensorMap map,
                 int tile_words,
                 int total_tiles,
                 unsigned long long* cycles,
+                unsigned long long* start_ns,
+                unsigned long long* stop_ns,
+                uint32_t* smids,
                 uint32_t* sink) {
   extern __shared__ __align__(1024) unsigned char smem[];
   __shared__ alignas(16) uint64_t barrier_storage;
@@ -118,6 +127,7 @@ void tma_kernel(const __grid_constant__ CUtensorMap map,
   for (int i = 0; i < total_iters; ++i) {
     if (i == warmup_iters && tid == 0) {
       start_clock = clock64();
+      start_ns[blockIdx.x] = global_nanoseconds();
     }
     const int slot = i & (slots - 1);
     const int tile = (blockIdx.x * total_iters + i) % total_tiles;
@@ -137,6 +147,8 @@ void tma_kernel(const __grid_constant__ CUtensorMap map,
 
   if (tid == 0) {
     stop_clock = clock64();
+    stop_ns[blockIdx.x] = global_nanoseconds();
+    asm volatile("mov.u32 %0, %%smid;" : "=r"(smids[blockIdx.x]));
   }
   __syncthreads();
 
@@ -244,7 +256,7 @@ void encode_tma_3d(CUtensorMap* map, void* base, int tile_words, int total_tiles
 int main(int argc, char** argv) {
   Options o = parse_args(argc, argv);
   if (o.csv_header) {
-    std::puts("mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink");
+    std::puts("mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink,globaltimer_start_min_ns,globaltimer_stop_max_ns,globaltimer_elapsed_ns,globaltimer_gbytes_per_second,unique_smid_count");
     if (argc == 2) return 0;
   }
 
@@ -282,9 +294,15 @@ int main(int argc, char** argv) {
   CU_CHECK(cuInit(0));
   uint32_t* d_data = nullptr;
   unsigned long long* d_cycles = nullptr;
+  unsigned long long* d_start_ns = nullptr;
+  unsigned long long* d_stop_ns = nullptr;
+  uint32_t* d_smids = nullptr;
   uint32_t* d_sink = nullptr;
   CUDA_CHECK(cudaMalloc(&d_data, working_set_bytes));
   CUDA_CHECK(cudaMalloc(&d_cycles, sizeof(unsigned long long) * sm_count * o.blocks_per_sm));
+  CUDA_CHECK(cudaMalloc(&d_start_ns, sizeof(unsigned long long) * blocks));
+  CUDA_CHECK(cudaMalloc(&d_stop_ns, sizeof(unsigned long long) * blocks));
+  CUDA_CHECK(cudaMalloc(&d_smids, sizeof(uint32_t) * blocks));
   CUDA_CHECK(cudaMalloc(&d_sink, sizeof(uint32_t)));
   CUDA_CHECK(cudaMemset(d_sink, 0, sizeof(uint32_t)));
 
@@ -307,37 +325,78 @@ int main(int argc, char** argv) {
   CUDA_CHECK(cudaFuncSetAttribute(tma_kernel, cudaFuncAttributeMaxDynamicSharedMemorySize,
                                   static_cast<int>(smem_bytes)));
   tma_kernel<<<blocks, o.threads, smem_bytes>>>(map, o.slots, o.iters, o.warmup_iters,
-                                                tile_words, total_tiles, d_cycles, d_sink);
+                                                tile_words, total_tiles, d_cycles,
+                                                d_start_ns, d_stop_ns, d_smids, d_sink);
   CUDA_CHECK(cudaGetLastError());
   CUDA_CHECK(cudaDeviceSynchronize());
 
   std::vector<unsigned long long> h_cycles(blocks);
+  std::vector<unsigned long long> h_start_ns(blocks);
+  std::vector<unsigned long long> h_stop_ns(blocks);
+  std::vector<uint32_t> h_smids(blocks);
   uint32_t h_sink = 0;
   CUDA_CHECK(cudaMemcpy(h_cycles.data(), d_cycles, h_cycles.size() * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(h_start_ns.data(), d_start_ns,
+                        h_start_ns.size() * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(h_stop_ns.data(), d_stop_ns,
+                        h_stop_ns.size() * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(h_smids.data(), d_smids,
+                        h_smids.size() * sizeof(uint32_t),
                         cudaMemcpyDeviceToHost));
   CUDA_CHECK(cudaMemcpy(&h_sink, d_sink, sizeof(uint32_t), cudaMemcpyDeviceToHost));
   unsigned long long elapsed = 0;
   for (auto c : h_cycles) elapsed = std::max(elapsed, c);
+  unsigned long long start_min_ns = ~0ull;
+  unsigned long long stop_max_ns = 0;
+  for (int i = 0; i < blocks; ++i) {
+    start_min_ns = std::min(start_min_ns, h_start_ns[i]);
+    stop_max_ns = std::max(stop_max_ns, h_stop_ns[i]);
+  }
+  const unsigned long long globaltimer_elapsed_ns = stop_max_ns - start_min_ns;
+  int unique_smid_count = 0;
+  for (int i = 0; i < blocks; ++i) {
+    bool first = true;
+    for (int j = 0; j < i; ++j) {
+      if (h_smids[j] == h_smids[i]) first = false;
+    }
+    if (first) ++unique_smid_count;
+  }
   const unsigned long long requested =
       static_cast<unsigned long long>(blocks) * static_cast<unsigned long long>(o.iters) *
       static_cast<unsigned long long>(o.tile_bytes);
   const double bpc = elapsed ? static_cast<double>(requested) / static_cast<double>(elapsed) : 0.0;
+  const double globaltimer_gbytes_per_second = globaltimer_elapsed_ns
+      ? static_cast<double>(requested) / static_cast<double>(globaltimer_elapsed_ns)
+      : 0.0;
 
   int occupancy = 0;
   CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &occupancy, tma_kernel, o.threads, smem_bytes));
 
   if (o.csv) {
-    std::printf("%s,%llu,%llu,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%d,%d,%u\n",
+    std::printf("%s,%llu,%llu,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%d,%d,%u,%llu,%llu,%llu,%.6f,%d\n",
                 mode_name(o.mode), requested, elapsed, bpc, bpc / sm_count, sm_count,
                 blocks, o.blocks_per_sm, o.threads, o.iters, o.warmup_iters,
-                o.tile_bytes, o.slots, working_set_bytes, total_tiles, occupancy, h_sink);
+                o.tile_bytes, o.slots, working_set_bytes, total_tiles, occupancy, h_sink,
+                start_min_ns, stop_max_ns, globaltimer_elapsed_ns,
+                globaltimer_gbytes_per_second, unique_smid_count);
   } else {
-    std::printf("mode=%s\nrequested_bytes=%llu\nelapsed_cycles=%llu\nbytes_per_cycle=%.6f\nsink=%u\n",
-                mode_name(o.mode), requested, elapsed, bpc, h_sink);
+    std::printf("mode=%s\nsm_count=%d\nblocks=%d\nrequested_bytes=%llu\nelapsed_cycles=%llu\n"
+                "bytes_per_cycle=%.6f\nglobaltimer_start_min_ns=%llu\n"
+                "globaltimer_stop_max_ns=%llu\nglobaltimer_elapsed_ns=%llu\n"
+                "globaltimer_gbytes_per_second=%.6f\nunique_smid_count=%d\nsink=%u\n",
+                mode_name(o.mode), sm_count, blocks, requested, elapsed, bpc, start_min_ns,
+                stop_max_ns, globaltimer_elapsed_ns,
+                globaltimer_gbytes_per_second, unique_smid_count, h_sink);
   }
 
   CUDA_CHECK(cudaFree(d_sink));
+  CUDA_CHECK(cudaFree(d_smids));
+  CUDA_CHECK(cudaFree(d_stop_ns));
+  CUDA_CHECK(cudaFree(d_start_ns));
   CUDA_CHECK(cudaFree(d_cycles));
   CUDA_CHECK(cudaFree(d_data));
   return 0;

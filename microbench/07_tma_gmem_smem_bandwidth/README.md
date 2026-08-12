@@ -9,10 +9,13 @@ Modes:
 - `dram-stream`: backing storage is rounded up to at least one unique tile per
   CTA iteration, intended to exceed L2 and avoid timed-loop reuse.
 
-Each CTA owns one tensor-map tile per iteration.  One issuer thread launches one
+Each CTA owns one tensor-map tile per iteration. One issuer thread launches one
 TMA load into shared memory, arrives with expected transaction bytes, waits on
-the shared-memory mbarrier, then advances to the next slot.  Reported bandwidth
-is requested TMA payload bytes divided by the maximum per-CTA `clock64()` span.
+the shared-memory mbarrier, then advances to the next slot. The legacy
+`bytes_per_cycle` field remains requested payload divided by the maximum
+per-CTA `clock64()` span. The closure-qualified whole-GPU rate is instead
+`globaltimer_gbytes_per_second`: total requested payload divided by the interval
+from the earliest CTA `%globaltimer` start to the latest CTA stop.
 
 ```bash
 ./build_and_run.sh run
@@ -24,6 +27,9 @@ Interpretation boundaries:
 
 - This measures the end-to-end TMA ingress path, including issue, completion,
   mbarrier wait, and shared-memory destination effects.
+- A Thor/T5000 full-GPU observation is accepted only when
+  `unique_smid_count == sm_count == 20`; otherwise its issued-byte accounting
+  is not promoted into the empirical envelope.
 - It is not a pure DRAM pin bandwidth test and not a pure shared-memory write
   port peak.
 - NCU direct `dram__bytes*` counters may be unavailable on this machine; when

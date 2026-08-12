@@ -13,6 +13,23 @@ COMMON_FLAGS=(
   -lcuda
 )
 
+# Optional local Fedora/CUDA-header compatibility controls. They are omitted on
+# Thor unless explicitly requested, and the unified campaign records them.
+if [[ -n "${NVCC_HOST_COMPILER:-}" ]]; then
+  COMMON_FLAGS+=( -ccbin "${NVCC_HOST_COMPILER}" )
+fi
+if [[ "${NVCC_HOST_UNDEF_GNU_SOURCE:-0}" == 1 ]]; then
+  COMMON_FLAGS+=(
+    -Xcompiler=-U_GNU_SOURCE
+    -D_DEFAULT_SOURCE
+    -D_POSIX_C_SOURCE=200809L
+    -D_XOPEN_SOURCE=700
+    -D_XOPEN_SOURCE_EXTENDED=1
+    -D_LARGEFILE64_SOURCE=1
+    -D_ATFILE_SOURCE=1
+  )
+fi
+
 BIN="${BUILD_DIR}/tma_gmem_smem_bandwidth"
 CSV="${RESULT_DIR}/tma_gmem_smem_bandwidth.csv"
 

@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "problem_contract": {
+    "layout": "NN",
+    "epilogue": "none",
+    "beta": 0,
+    "output_mode": "accumulator",
+    "work": "2*M*N*K",
+    "required_trials": 10
+  },
+  "precisions": [
+    {
+      "precision_id": "fp16_f32",
+      "input_type": "fp16",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "ready_for_closure_campaign",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["tc5a", "tc5b", "cutlass"],
+        "source_paths": ["GEMMsm110/src/main.cu", "GEMMsm110/include/backends/tc5_persistent.cuh"]
+      },
+      "numerical_reference": {
+        "backend_id": "cublas_tc",
+        "source_path": "GEMMsm110/include/cublas_reference.cuh",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "cublas_tc",
+        "same_precision": true,
+        "status": "ready"
+      },
+      "blockers": []
+    },
+    {
+      "precision_id": "bf16_f32",
+      "input_type": "bf16",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No repository full-GEMM BF16-input path; BF16 compute-only tcgen05 is not a full GEMM."]
+    },
+    {
+      "precision_id": "tf32_f32",
+      "input_type": "tf32",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No repository full-GEMM TF32 path or same-contract reference harness."]
+    },
+    {
+      "precision_id": "e4m3_f32",
+      "input_type": "fp8_e4m3",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "ready_for_closure_campaign",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["fp8_q4_mma_m16n8k32_global", "fp8_q5_mma_m16n8k32_smem64", "fp8_q6_mma_m16n8k32_smem64x128", "fp8_q7_mma_m16n8k32_smem128x64"],
+        "source_paths": ["GEMMquant_sm110/src/quant_gemm_bench.cu"]
+      },
+      "numerical_reference": {
+        "backend_id": "fp8_q8_cublaslt_matmul",
+        "source_path": "GEMMquant_sm110/src/quant_gemm_bench.cu",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "fp8_q8_cublaslt_matmul",
+        "same_precision": true,
+        "status": "ready"
+      },
+      "blockers": []
+    },
+    {
+      "precision_id": "e5m2_f32",
+      "input_type": "fp8_e5m2",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["Existing FP8 full GEMM is E4M3 only; E5M2 may not inherit its numerical or throughput result."]
+    },
+    {
+      "precision_id": "e3m2_f32",
+      "input_type": "fp6_e3m2_packed",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No packed FP6 E3M2 full-GEMM implementation, unpack path, or same-contract reference."]
+    },
+    {
+      "precision_id": "e2m3_f32",
+      "input_type": "fp6_e2m3_packed",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No packed FP6 E2M3 full-GEMM implementation, unpack path, or same-contract reference."]
+    },
+    {
+      "precision_id": "e2m1_f32",
+      "input_type": "fp4_e2m1_packed_unscaled",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No raw unscaled E2M1 full-GEMM path; NVFP4/MXFP4 block-scaled results are different contracts."]
+    },
+    {
+      "precision_id": "mxfp4_f32",
+      "input_type": "mxfp4_e2m1_ue8m0_block32",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "partial",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["mxfp4_q0_cutlass_72a_mxfp4_bf16", "mxfp4_q1_cutlass_72a_swizzle1"],
+        "source_paths": ["GEMMquant_sm110/build_and_run.sh", "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"],
+        "external_source": "CUTLASS 4.3.4 example 72a, rewritten from NVFP4 to MXFP4 at build time"
+      },
+      "numerical_reference": {
+        "backend_id": "CUTLASS host reference inside generated example",
+        "source_path": null,
+        "same_input_precision": true,
+        "same_output_type": false
+      },
+      "performance_denominator": {
+        "backend_id": "cublas_tc",
+        "same_precision": false,
+        "status": "invalid_cross_precision"
+      },
+      "blockers": ["Current CUTLASS 72a path outputs BF16, not the model's FP32 output contract.", "Generated external source is not captured in the historical result bundle.", "Historical ratio denominator is FP16 cuBLAS, not MXFP4."]
+    },
+    {
+      "precision_id": "nvfp4_f32",
+      "input_type": "nvfp4_e2m1_ue4m3_block16",
+      "accumulator_type": "fp32",
+      "output_type": "fp32",
+      "work_unit": "flop",
+      "status": "partial",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["nvfp4_q2_cutlass_72b_nvfp4"],
+        "source_paths": ["GEMMquant_sm110/build_and_run.sh", "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"],
+        "external_source": "CUTLASS 4.3.4 example 72b"
+      },
+      "numerical_reference": {
+        "backend_id": "CUTLASS host reference inside generated example",
+        "source_path": null,
+        "same_input_precision": true,
+        "same_output_type": false
+      },
+      "performance_denominator": {
+        "backend_id": "cublas_tc",
+        "same_precision": false,
+        "status": "invalid_cross_precision"
+      },
+      "excluded_backend": {
+        "backend_id": "nvfp4_q0_tc6_fused_epilogue",
+        "reason": "FP16 mainloop plus NVFP4 requant output is not an NVFP4-input GEMM."
+      },
+      "blockers": ["Current CUTLASS 72b path outputs narrow NVFP4 rather than FP32.", "Generated external source is not captured in the historical result bundle.", "Historical ratio denominator is FP16 cuBLAS, not NVFP4."]
+    },
+    {
+      "precision_id": "s8_s32",
+      "input_type": "signed_int8",
+      "accumulator_type": "signed_int32",
+      "output_type": "signed_int32",
+      "work_unit": "operation",
+      "status": "ready_for_closure_campaign",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["int8_q18_mma_m16n8k32_smem64"],
+        "source_paths": ["GEMMquant_sm110/src/quant_gemm_bench.cu"]
+      },
+      "numerical_reference": {
+        "backend_id": "int8_q19_cublas_gemmex",
+        "source_path": "GEMMquant_sm110/src/quant_gemm_bench.cu",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "int8_q19_cublas_gemmex",
+        "same_precision": true,
+        "status": "ready"
+      },
+      "normalization_note": "Existing CSV column is named GFLOPS; the closure campaign must recompute 2MNK/time and label it OP/s.",
+      "blockers": []
+    },
+    {
+      "precision_id": "u8_s32",
+      "input_type": "unsigned_int8",
+      "accumulator_type": "signed_int32",
+      "output_type": "signed_int32",
+      "work_unit": "operation",
+      "status": "missing",
+      "native_mainloop": false,
+      "implementation": {"backend_ids": [], "source_paths": []},
+      "numerical_reference": null,
+      "performance_denominator": null,
+      "blockers": ["No unsigned INT8 full-GEMM path; signed INT8 output cannot be reused as U8 evidence."]
+    }
+  ]
+}

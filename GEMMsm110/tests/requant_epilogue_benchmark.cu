@@ -206,7 +206,7 @@ __device__ __forceinline__ unsigned int shared_u32_address(const void* ptr) {
 __global__ void sm110_nvfp4_epilogue_benchmark_kernel(
     const float* input, std::uint8_t* quantized,
     std::uint8_t* block_scales, float inverse_tensor_scale,
-    int total_chunks) {
+    int total_chunks, unsigned int* smids) {
   __shared__ unsigned int tmem_base;
 
 #if GEMM_SM110_HAS_NATIVE_REQUANT
@@ -218,6 +218,10 @@ __global__ void sm110_nvfp4_epilogue_benchmark_kernel(
         : "memory");
   }
   __syncthreads();
+
+  if (threadIdx.x == 0) {
+    asm volatile("mov.u32 %0, %%smid;" : "=r"(smids[blockIdx.x]));
+  }
 
   const int lane = static_cast<int>(threadIdx.x);
   constexpr unsigned int kFullWarpMask = 0xffffffffu;
@@ -374,6 +378,7 @@ int main(int argc, char** argv) {
   float* device_input = nullptr;
   std::uint8_t* device_quantized = nullptr;
   std::uint8_t* device_scales = nullptr;
+  unsigned int* device_smids = nullptr;
   CHECK_CUDA(cudaMalloc(&device_input, padded_elements * sizeof(float)));
   CHECK_CUDA(cudaMalloc(&device_quantized, quantized_bytes));
   CHECK_CUDA(cudaMalloc(&device_scales, scale_bytes));
@@ -385,12 +390,15 @@ int main(int argc, char** argv) {
       static_cast<int>(padded_elements / kElementsPerCta);
   const int worker_count =
       std::min(total_chunks, property.multiProcessorCount * 4);
+  CHECK_CUDA(cudaMalloc(&device_smids,
+                        static_cast<std::size_t>(worker_count) *
+                            sizeof(unsigned int)));
   const dim3 grid(static_cast<unsigned int>(worker_count));
   const dim3 block(kWarpThreads);
   auto launch = [&]() {
     sm110_nvfp4_epilogue_benchmark_kernel<<<grid, block>>>(
         device_input, device_quantized, device_scales, inverse_tensor_scale,
-        total_chunks);
+        total_chunks, device_smids);
     CHECK_CUDA(cudaGetLastError());
   };
 
@@ -412,10 +420,26 @@ int main(int argc, char** argv) {
 
   std::vector<std::uint8_t> quantized(quantized_bytes);
   std::vector<std::uint8_t> scales(scale_bytes);
+  std::vector<unsigned int> smids(static_cast<std::size_t>(worker_count));
   CHECK_CUDA(cudaMemcpy(quantized.data(), device_quantized, quantized_bytes,
                         cudaMemcpyDeviceToHost));
   CHECK_CUDA(cudaMemcpy(scales.data(), device_scales, scale_bytes,
                         cudaMemcpyDeviceToHost));
+  CHECK_CUDA(cudaMemcpy(smids.data(), device_smids,
+                        smids.size() * sizeof(unsigned int),
+                        cudaMemcpyDeviceToHost));
+
+  int unique_smid_count = 0;
+  for (int i = 0; i < worker_count; ++i) {
+    bool first = true;
+    for (int j = 0; j < i; ++j) {
+      if (smids[static_cast<std::size_t>(j)] ==
+          smids[static_cast<std::size_t>(i)]) {
+        first = false;
+      }
+    }
+    if (first) ++unique_smid_count;
+  }
 
   std::size_t value_mismatches = 0;
   for (std::size_t i = 0; i < quantized.size(); ++i) {
@@ -446,6 +470,9 @@ int main(int argc, char** argv) {
             << "average_ms=" << average_ms
             << " gelements_per_second=" << gelements_per_second
             << " effective_gbps=" << effective_gbps << '\n'
+            << "sm_count=" << property.multiProcessorCount
+            << " worker_count=" << worker_count
+            << " unique_smid_count=" << unique_smid_count << '\n'
             << "value_mismatches=" << value_mismatches
             << " scale_mismatches=" << scale_mismatches
             << " rmse=" << rmse
@@ -456,6 +483,7 @@ int main(int argc, char** argv) {
              scale_mismatches, rmse, max_abs_error);
 
   CHECK_CUDA(cudaFree(device_input));
+  CHECK_CUDA(cudaFree(device_smids));
   CHECK_CUDA(cudaFree(device_quantized));
   CHECK_CUDA(cudaFree(device_scales));
   return value_mismatches == 0 && scale_mismatches == 0 ? EXIT_SUCCESS

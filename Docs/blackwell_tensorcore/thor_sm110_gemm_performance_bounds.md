@@ -482,9 +482,14 @@ Table 42/Table 44 encoder 和反例测试，在重跑前模型把旧数字标为
 - L2 unique read 和 end-to-end store path；
 - TMA L2-hit 和 DRAM-stream ingress。
 
+上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。新的 closure
+campaign 已把计时改为整网格最早 `%globaltimer` start 到最晚 stop，并要求 20 个
+不同 SM ID；Thor 返回结果前，旧数字不升级为 `closure_qualified`。
+
 当前公共资源硬缺口：
 
-- 同构 TMEM accumulator readback；
+- 同构 TMEM accumulator readback 的 Thor 结果；其新源码已静态编译为
+  `LDTM.x8`/`LDTM.x16`，但静态 lowering 不等于带宽实测；
 - 各输出语义的 epilogue；
 - launch/TMEM alloc/barrier 固定成本；
 - TMA+MMA、MMA+readback+store 等联合容量外边界或稳定经验模型；
@@ -717,7 +722,9 @@ cd microbench/05_gmem_dram_bandwidth
 - 已引用实测：L2-hit 773.443437 B/cycle/GPU；DRAM-stream
   155.779224 B/cycle/GPU。
 - 边界：这是包含 issue、completion、mbarrier 和 SMEM destination 的端到端
-  TMA ingress，不是纯 DRAM 或纯 SMEM port peak。
+  TMA ingress，不是纯 DRAM 或纯 SMEM port peak。历史结果用各 CTA 最大
+  `clock64()` span；新的整卡 closure rate 必须来自后述 unified component
+  campaign 的 `globaltimer_gbytes_per_second`。
 
 基本命令：
 
@@ -728,7 +735,7 @@ cd microbench/07_tma_gmem_smem_bandwidth
 ./build_and_run.sh ncu
 ```
 
-### 12.5 TMEM ingress、consume 与联合 overlap
+### 12.5 TMEM ingress、consume、readback 与联合 overlap
 
 - `tcgen05.cp` 说明与结果：
   [`microbench/06_tmem_cp_bandwidth/README.md`](../../microbench/06_tmem_cp_bandwidth/README.md)、
@@ -739,13 +746,21 @@ cd microbench/07_tma_gmem_smem_bandwidth
 - CP/MMA overlap 说明与结果：
   [`microbench/11_pipeline_overlap/README.md`](../../microbench/11_pipeline_overlap/README.md)、
   [`results/pipeline_overlap_results.csv`](../../microbench/11_pipeline_overlap/results/pipeline_overlap_results.csv)
+- accumulator readback 源码与说明：
+  [`tmem_readback_bandwidth.cu`](../../microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu)、
+  [`README.md`](../../microbench/12_tmem_readback_bandwidth/README.md)
+- unified component campaign、运行合同和独立审计：
+  [`sm110_gemm_component_campaign`](../../microbench/sm110_gemm_component_campaign/README.md)
 - 各目录的 `results/sass_summary*` 和 `results/ncu/*` 保存 SASS/NCU 证据。
 - 当前 headline：`tcgen05.cp` ingress 859.024 B/cycle/GPU；TS MMA consume
   115.699 B/cycle/GPU；steady CP/MMA pipeline 约 89% component-overlap
   efficiency。
 - 边界：这些是特定 TS/CP 数据路径的需求率或经验工作点，不是 raw TMEM bank
-  read/write peak，也不是联合容量外边界；当前尚无同构 accumulator readback
-  参数可进入完整经验包络。
+  read/write peak，也不是联合容量外边界。`08_tmem_consume_bandwidth` 测的是
+  TS MMA 从 TMEM 消费 A operand，不是 GEMM 尾部的 accumulator readback；两者
+  不能共享参数。新 readback microbenchmark 明确发出 `tcgen05.ld` 并以 SASS
+  `LDTM.x8`/`LDTM.x16` 为静态锚点，但只有 Thor 的 10-trial/20-SM 审计通过后
+  才能进入经验包络。
 
 基本命令：
 
@@ -753,6 +768,7 @@ cd microbench/07_tma_gmem_smem_bandwidth
 cd microbench/06_tmem_cp_bandwidth && ./build_and_run.sh summarize
 cd ../08_tmem_consume_bandwidth && ./build_and_run.sh run
 cd ../11_pipeline_overlap && ./build_and_run.sh run
+bash ../../microbench/sm110_gemm_component_campaign/launch_component_campaign.sh <run-id>
 ```
 
 ### 12.6 SMEM、L1、DSMEM 与拓扑补充
@@ -772,6 +788,11 @@ miss-sector proxy 的证据边界。
 
 ### 12.7 完整 GEMM 已观测值
 
+- 全精度实现/正确性 reference/同精度 denominator 覆盖合同：
+  [`support_manifest.json`](../../microbench/sm110_full_gemm_campaign/support_manifest.json)
+- 覆盖合同审计：
+  [`audit_support_manifest.py`](../../microbench/sm110_full_gemm_campaign/audit_support_manifest.py)
+
 - FP16→FP32 10-trial sweep：
   [`results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv`](../../results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv)
 - 量化 1024 sweep：
@@ -788,6 +809,10 @@ miss-sector proxy 的证据边界。
 当前工具只接收至少 10 个 trial 且全部 matched 的 backend series，再按最高
 median 选择稳定最好实现。NVFP4/MXFP4 的性能 denominator 是 FP16 cuBLAS，
 因此只保留绝对 GFLOP/s 和 correctness 状态，不使用历史 ratio 证明同精度胜负。
+覆盖合同当前只有 FP16→FP32、E4M3→FP32 和 S8→S32 达到“可启动 closure
+campaign”的实现条件；BF16、TF32、E5M2、两种 FP6、raw E2M1、U8 尚无完整
+路径，MXFP4/NVFP4 则因输出合同、外部生成源码留存和跨精度 denominator 只能
+标为 `partial`。这里的 `ready_for_closure_campaign` 仍不表示硬件闭环完成。
 
 ### 12.8 硬件和软件环境来源
 
