@@ -6,6 +6,7 @@
 #include <cuda_fp16.h>
 
 #include <cstdlib>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -38,6 +39,41 @@ inline std::vector<half> to_half_vector(const std::vector<float>& input) {
     output[i] = __float2half(input[i]);
   }
   return output;
+}
+
+inline bool validate_fp16_reference_samples(
+    int m, int n, int k, const std::vector<half>& a,
+    const std::vector<half>& b, const std::vector<float>& reference,
+    int samples = 64, float atol = 2e-2f, float rtol = 2e-3f) {
+  int mismatch_count = 0;
+  float max_abs_error = 0.0f;
+  float max_tolerance_ratio = 0.0f;
+  for (int sample = 0; sample < samples; ++sample) {
+    const int row = (sample * 131) % m;
+    const int col = (sample * 197) % n;
+    float expected = 0.0f;
+    for (int kk = 0; kk < k; ++kk) {
+      expected += __half2float(a[static_cast<size_t>(row) * k + kk]) *
+                  __half2float(b[static_cast<size_t>(kk) * n + col]);
+    }
+    const float observed = reference[static_cast<size_t>(row) * n + col];
+    const float difference = abs_float(expected - observed);
+    const float tolerance = atol + rtol * abs_float(expected);
+    const bool finite = std::isfinite(expected) && std::isfinite(observed) &&
+                        std::isfinite(difference) && std::isfinite(tolerance);
+    max_abs_error = std::max(max_abs_error, difference);
+    max_tolerance_ratio =
+        std::max(max_tolerance_ratio, difference / tolerance);
+    if (!finite || difference > tolerance) ++mismatch_count;
+  }
+  std::cout << "reference_contract=fp16_f32_cpu_samples"
+            << " reference_sample_count=" << samples
+            << " reference_mismatch_count=" << mismatch_count
+            << " reference_max_abs_error=" << max_abs_error
+            << " reference_max_tolerance_ratio=" << max_tolerance_ratio
+            << " reference_atol=" << atol
+            << " reference_rtol=" << rtol << '\n';
+  return mismatch_count == 0;
 }
 
 inline std::vector<__nv_fp8_e4m3> to_fp8_e4m3_vector(
@@ -94,14 +130,27 @@ inline bool compare_result(const std::vector<float>& ref,
                            const std::vector<float>& got, float atol = 1e-2f,
                            float rtol = 1e-3f) {
   int errors = 0;
+  float max_abs_error = 0.0f;
+  float max_tolerance_ratio = 0.0f;
   for (size_t i = 0; i < ref.size(); ++i) {
     const float diff = abs_float(ref[i] - got[i]);
     const float tol = atol + rtol * abs_float(ref[i]);
-    if (diff > tol && ++errors <= 5) {
+    const bool finite = std::isfinite(ref[i]) && std::isfinite(got[i]) &&
+                        std::isfinite(diff) && std::isfinite(tol);
+    max_abs_error = std::max(max_abs_error, diff);
+    if (tol > 0.0f) {
+      max_tolerance_ratio = std::max(max_tolerance_ratio, diff / tol);
+    }
+    if ((!finite || diff > tol) && ++errors <= 5) {
       std::cerr << "Mismatch at " << i << ": ref=" << ref[i]
                 << ", got=" << got[i] << ", diff=" << diff << '\n';
     }
   }
+  std::cout << "numerical_contract=fp_accumulator"
+            << " mismatch_count=" << errors
+            << " max_abs_error=" << max_abs_error
+            << " max_tolerance_ratio=" << max_tolerance_ratio
+            << " atol=" << atol << " rtol=" << rtol << '\n';
   return errors == 0;
 }
 

@@ -19,6 +19,7 @@
       "native_mainloop": true,
       "implementation": {
         "backend_ids": ["tc5a", "tc5b", "cutlass"],
+        "closure_candidate_backend_ids": ["tc5a", "tc5b"],
         "source_paths": ["GEMMsm110/src/main.cu", "GEMMsm110/include/backends/tc5_persistent.cuh"]
       },
       "numerical_reference": {
@@ -70,6 +71,7 @@
       "native_mainloop": true,
       "implementation": {
         "backend_ids": ["fp8_q4_mma_m16n8k32_global", "fp8_q5_mma_m16n8k32_smem64", "fp8_q6_mma_m16n8k32_smem64x128", "fp8_q7_mma_m16n8k32_smem128x64"],
+        "closure_candidate_backend_ids": ["fp8_q7_mma_m16n8k32_smem128x64"],
         "source_paths": ["GEMMquant_sm110/src/quant_gemm_bench.cu"]
       },
       "numerical_reference": {
@@ -202,7 +204,8 @@
       "status": "ready_for_closure_campaign",
       "native_mainloop": true,
       "implementation": {
-        "backend_ids": ["int8_q18_mma_m16n8k32_smem64"],
+        "backend_ids": ["int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol", "int8_q18_mma_m16n8k32_smem64"],
+        "closure_candidate_backend_ids": ["int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"],
         "source_paths": ["GEMMquant_sm110/src/quant_gemm_bench.cu"]
       },
       "numerical_reference": {

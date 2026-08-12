@@ -6,6 +6,10 @@
 T5000 的 20-SM 配置；full-SM case 会回读每个 block 的 `%smid`，只有 20 个
 block 覆盖 20 个不同 SM 才接收其全 GPU work accounting。
 
+compute、component、full-GEMM 三个 campaign 必须串行运行。三个 runner 共享同一
+个非阻塞 GPU 文件锁；如果另一个 campaign 尚未退出，新启动会立即拒绝，而不是
+在后台同时占用 Thor。
+
 ## Thor 端命令
 
 从仓库根目录运行：

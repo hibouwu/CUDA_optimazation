@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -1392,28 +1393,120 @@ float benchmark_cublas_int8_reference(int n, const int8_t* d_a,
 bool compare_fp8_outputs(const std::vector<float>& ref,
                          const std::vector<float>& got) {
   int errors = 0;
+  float max_abs_error = 0.0f;
+  float max_tolerance_ratio = 0.0f;
   for (size_t i = 0; i < ref.size(); ++i) {
     const float diff = std::fabs(ref[i] - got[i]);
     const float tol = 5.0e-1f + 5.0e-2f * std::fabs(ref[i]);
-    if (diff > tol && ++errors <= 5) {
+    const bool finite = std::isfinite(ref[i]) && std::isfinite(got[i]) &&
+                        std::isfinite(diff) && std::isfinite(tol);
+    max_abs_error = std::max(max_abs_error, diff);
+    max_tolerance_ratio = std::max(max_tolerance_ratio, diff / tol);
+    if ((!finite || diff > tol) && ++errors <= 5) {
       std::cerr << "FP8 mismatch at " << i << ": ref=" << ref[i]
                 << ", got=" << got[i] << ", diff=" << diff
                 << ", tol=" << tol << '\n';
     }
   }
+  std::cout << "numerical_contract=fp8_e4m3_f32"
+            << " mismatch_count=" << errors
+            << " max_abs_error=" << max_abs_error
+            << " max_tolerance_ratio=" << max_tolerance_ratio
+            << " atol=0.5 rtol=0.05\n";
   return errors == 0;
 }
 
 bool compare_int8_outputs(const std::vector<int32_t>& ref,
                           const std::vector<int32_t>& got) {
   int errors = 0;
+  std::int64_t max_abs_error = 0;
   for (size_t i = 0; i < ref.size(); ++i) {
+    const std::int64_t difference =
+        static_cast<std::int64_t>(ref[i]) - static_cast<std::int64_t>(got[i]);
+    const std::int64_t absolute_difference =
+        difference < 0 ? -difference : difference;
+    max_abs_error = std::max(max_abs_error, absolute_difference);
     if (ref[i] != got[i] && ++errors <= 5) {
       std::cerr << "INT8 mismatch at " << i << ": ref=" << ref[i]
                 << ", got=" << got[i] << '\n';
     }
   }
+  std::cout << "numerical_contract=s8_s32_exact"
+            << " mismatch_count=" << errors
+            << " max_abs_error=" << max_abs_error << '\n';
   return errors == 0;
+}
+
+bool validate_fp8_reference_samples(
+    int n, const std::vector<__nv_fp8_e4m3>& a,
+    const std::vector<__nv_fp8_e4m3>& b,
+    const std::vector<float>& reference, int samples = 64) {
+  int errors = 0;
+  float max_abs_error = 0.0f;
+  float max_tolerance_ratio = 0.0f;
+  for (int sample = 0; sample < samples; ++sample) {
+    const int row = (sample * 131) % n;
+    const int col = (sample * 197) % n;
+    float expected = 0.0f;
+    for (int kk = 0; kk < n; ++kk) {
+      expected += static_cast<float>(a[static_cast<std::size_t>(row) * n + kk]) *
+                  static_cast<float>(b[static_cast<std::size_t>(kk) * n + col]);
+    }
+    const float observed = reference[static_cast<std::size_t>(row) * n + col];
+    const float difference = std::fabs(expected - observed);
+    const float tolerance = 5.0e-1f + 5.0e-2f * std::fabs(expected);
+    const bool finite = std::isfinite(expected) && std::isfinite(observed) &&
+                        std::isfinite(difference) && std::isfinite(tolerance);
+    max_abs_error = std::max(max_abs_error, difference);
+    max_tolerance_ratio =
+        std::max(max_tolerance_ratio, difference / tolerance);
+    if (!finite || difference > tolerance) ++errors;
+  }
+  std::cout << "reference_contract=fp8_e4m3_f32_cpu_samples"
+            << " reference_sample_count=" << samples
+            << " reference_mismatch_count=" << errors
+            << " reference_max_abs_error=" << max_abs_error
+            << " reference_max_tolerance_ratio=" << max_tolerance_ratio
+            << " reference_atol=0.5 reference_rtol=0.05\n";
+  return errors == 0;
+}
+
+bool validate_s8_reference_samples(
+    int n, const std::vector<int8_t>& a, const std::vector<int8_t>& b,
+    const std::vector<int32_t>& reference, int samples = 64) {
+  int errors = 0;
+  std::int64_t max_abs_error = 0;
+  for (int sample = 0; sample < samples; ++sample) {
+    const int row = (sample * 131) % n;
+    const int col = (sample * 197) % n;
+    std::int32_t expected = 0;
+    for (int kk = 0; kk < n; ++kk) {
+      expected += static_cast<std::int32_t>(
+                      a[static_cast<std::size_t>(row) * n + kk]) *
+                  static_cast<std::int32_t>(
+                      b[static_cast<std::size_t>(kk) * n + col]);
+    }
+    const std::int64_t difference =
+        static_cast<std::int64_t>(expected) -
+        reference[static_cast<std::size_t>(row) * n + col];
+    const std::int64_t absolute_difference =
+        difference < 0 ? -difference : difference;
+    max_abs_error = std::max(max_abs_error, absolute_difference);
+    if (difference != 0) ++errors;
+  }
+  std::cout << "reference_contract=s8_s32_cpu_samples"
+            << " reference_sample_count=" << samples
+            << " reference_mismatch_count=" << errors
+            << " reference_max_abs_error=" << max_abs_error << '\n';
+  return errors == 0;
+}
+
+bool require_reference_or_exit(bool valid, const char* message) {
+  if (!valid) {
+    std::cerr << message << '\n';
+    std::exit(EXIT_FAILURE);
+  }
+  return true;
 }
 
 void write_csv_row(std::ofstream& csv, const std::string& backend_id,
@@ -1426,7 +1519,16 @@ void write_csv_row(std::ofstream& csv, const std::string& backend_id,
             << " GFLOP/s, reference=" << reference_perf
             << " GFLOP/s, ratio=" << ratio
             << "x, matched=" << matched << '\n';
-  csv << backend_id << ',' << version << ',' << n << ',' << precision << ','
+  const bool integer_work = precision == "int8->int32";
+  std::cout << "backend_id=" << backend_id
+            << std::setprecision(17)
+            << " time_ms=" << avg_ms
+            << " work_unit=" << (integer_work ? "operation" : "flop")
+            << " rate_per_second=" << static_cast<double>(perf) * 1.0e9
+            << " reference_rate_per_second="
+            << static_cast<double>(reference_perf) * 1.0e9
+            << " matched=" << matched << '\n';
+  csv << std::setprecision(17) << backend_id << ',' << version << ',' << n << ',' << precision << ','
       << reference << ',' << avg_ms << ',' << perf << ',' << ratio << ','
       << (matched ? 1 : 0) << '\n';
 }
@@ -1827,6 +1929,10 @@ void run_fp8_q7(int n, std::ofstream& csv) {
   const float ref_ms = benchmark_cublaslt_fp8_reference(n, d_a, d_b, d_ref);
   const float ref_perf = gflops(n, ref_ms);
   CHECK_CUDA(cudaMemcpy(h_ref.data(), d_ref, out_bytes, cudaMemcpyDeviceToHost));
+  const bool reference_valid = require_reference_or_exit(
+      validate_fp8_reference_samples(n, h_a, h_b, h_ref),
+      "cuBLASLt E4M3 reference failed independent CPU samples");
+  std::cout << std::setprecision(17) << "reference_time_ms=" << ref_ms << '\n';
   std::cout << "cuBLASLt FP8 E4M3 reference: " << ref_ms << " ms, "
             << ref_perf << " GFLOP/s\n";
 
@@ -1838,7 +1944,7 @@ void run_fp8_q7(int n, std::ofstream& csv) {
   };
   const float avg_ms = benchmark_cuda_launch(launch);
   CHECK_CUDA(cudaMemcpy(h_out.data(), d_out, out_bytes, cudaMemcpyDeviceToHost));
-  const bool matched = compare_fp8_outputs(h_ref, h_out);
+  const bool matched = reference_valid && compare_fp8_outputs(h_ref, h_out);
   write_csv_row(csv, "fp8_q7_mma_m16n8k32_smem128x64",
                 "FP8 q7 warp MMA M16N8K32 shared 128x64 tile", n,
                 "fp8_e4m3->fp32", "cuBLASLt FP8 E4M3", avg_ms,
@@ -2661,6 +2767,10 @@ void run_int8_q15(int n, std::ofstream& csv) {
   const float ref_ms = benchmark_cublas_int8_reference(n, d_a, d_b, d_ref);
   const float ref_perf = gflops(n, ref_ms);
   CHECK_CUDA(cudaMemcpy(h_ref.data(), d_ref, out_bytes, cudaMemcpyDeviceToHost));
+  const bool reference_valid = require_reference_or_exit(
+      validate_s8_reference_samples(n, h_a, h_b, h_ref),
+      "cuBLAS S8 reference failed independent CPU samples");
+  std::cout << std::setprecision(17) << "reference_time_ms=" << ref_ms << '\n';
   std::cout << "cuBLAS INT8 reference: " << ref_ms << " ms, " << ref_perf
             << " GFLOP/s\n";
 
@@ -2673,7 +2783,7 @@ void run_int8_q15(int n, std::ofstream& csv) {
   };
   const float avg_ms = benchmark_cuda_launch(launch);
   CHECK_CUDA(cudaMemcpy(h_out.data(), d_out, out_bytes, cudaMemcpyDeviceToHost));
-  const bool matched = compare_int8_outputs(h_ref, h_out);
+  const bool matched = reference_valid && compare_int8_outputs(h_ref, h_out);
   write_csv_row(csv, "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol",
                 "INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout", n,
                 "int8->int32", "cuBLAS INT8", avg_ms, gflops(n, avg_ms),
@@ -2980,6 +3090,7 @@ int main(int argc, char** argv) {
             << ", timed repeats=" << kRepeat << '\n';
 
   std::ofstream csv("quant_sm110_benchmark.csv");
+  csv << std::setprecision(17);
   csv << "BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,"
          "RatioToReference,Matched\n";
 

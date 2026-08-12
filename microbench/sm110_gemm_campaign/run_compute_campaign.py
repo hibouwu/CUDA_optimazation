@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -451,6 +452,11 @@ def main() -> int:
     )
     run_dir = output_root / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+    global_lock = (REPO_ROOT / "results" / ".sm110_gpu_campaign.lock").open("w")
+    try:
+        fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        raise RuntimeError("another SM110 GPU campaign holds the global lock") from error
     prior_status_path = run_dir / "campaign_status.json"
     if prior_status_path.is_file():
         prior = json.loads(prior_status_path.read_text())
@@ -476,6 +482,7 @@ def main() -> int:
         "residency": "compute_oracle_smem_operands",
         "trials": args.trials,
         "iters": args.iters,
+        "static_only": args.static_only,
         "host_compiler": args.host_compiler,
         "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
         "ncu_policy": "one full-SM M128N256 case per precision",

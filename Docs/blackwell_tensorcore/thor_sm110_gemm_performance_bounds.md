@@ -792,6 +792,14 @@ miss-sector proxy 的证据边界。
   [`support_manifest.json`](../../microbench/sm110_full_gemm_campaign/support_manifest.json)
 - 覆盖合同审计：
   [`audit_support_manifest.py`](../../microbench/sm110_full_gemm_campaign/audit_support_manifest.py)
+- 首批 closure runner：
+  [`run_full_gemm_campaign.py`](../../microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py)
+- detached/resume launcher：
+  [`launch_full_gemm_campaign.sh`](../../microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh)
+- 独立结果审计：
+  [`audit_campaign.py`](../../microbench/sm110_full_gemm_campaign/audit_campaign.py)
+- Git 往返运行合同：
+  [`README.md`](../../microbench/sm110_full_gemm_campaign/README.md)
 
 - FP16→FP32 10-trial sweep：
   [`results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv`](../../results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv)
@@ -813,6 +821,25 @@ median 选择稳定最好实现。NVFP4/MXFP4 的性能 denominator 是 FP16 cuB
 campaign”的实现条件；BF16、TF32、E5M2、两种 FP6、raw E2M1、U8 尚无完整
 路径，MXFP4/NVFP4 则因输出合同、外部生成源码留存和跨精度 denominator 只能
 标为 `partial`。这里的 `ready_for_closure_campaign` 仍不表示硬件闭环完成。
+
+首批新 campaign 把可闭环的三种合同冻结为 9 个 square `NN` case：每种精度
+`N=1024,2048,4096`，其中前两点是 calibration，4096 是预先保留的 holdout。
+FP16 使用 `tc5b`（1024）和 `tc5a`（2048/4096），E4M3 使用 `q7`，S8 使用
+`q15`；这些是仓库历史 sweep 中的强自研候选，而不是把库实现冒充自研 GEMM。
+每个外层 case 运行 10 个独立 trial；每个 trial 内候选和同精度库 reference
+使用同一输入，FP16 内层计时 100 次、E4M3/S8 内层计时 10 次。runner 独立从
+`2N^3/time` 重算吞吐，S8 明确使用 OP/s。
+
+数值证据包含两级门禁：先用实际量化后的输入在 CPU 上抽样 64 个输出，检查
+cuBLAS/cuBLASLt reference；再把候选的完整输出矩阵与该 reference 比较。S8→S32
+要求 bit-exact，浮点累加按显式 `atol`/`rtol` 合同判断。静态证据也不是二进制级
+mnemonic 搜索：审计在被测 kernel 的 SASS 函数块内检查 `UTCHMMA`、FP8
+`HMMA.16816.F32` 或 `IMMA.16816.S8.S8` 及 store。当前 CUDA 13.0 本地静态
+门禁 9/9 通过；在 Thor 返回 90 个 trial、环境和可选 NCU artifact 之前，不把
+它们升级为新的已观测值。
+
+compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因此 Thor 上
+只能串行运行；这把“不要并发争抢 GPU”从操作约定升级为 runner 的机械约束。
 
 ### 12.8 硬件和软件环境来源
 

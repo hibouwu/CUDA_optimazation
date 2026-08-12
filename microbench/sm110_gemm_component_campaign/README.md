@@ -13,6 +13,8 @@ requires all 20 SM IDs plus bit-exact packed-value and scale agreement with the
 host reference.
 Every case has ten external trials, source/binary/SASS hashes, the exact compile
 command, raw stdout, environment snapshots, and an independent auditor.
+The compute, component, and full-GEMM campaigns must run sequentially. All
+three runners share one non-blocking GPU file lock and reject concurrent work.
 The launcher returns immediately and records `launcher.pid`, `launcher.log`,
 `campaign_status.json`, and append-only `progress.jsonl`. Reusing the same run
 ID safely skips only cases whose ten trials and source/binary/SASS hashes still

@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -317,6 +318,7 @@ int main(int argc, char** argv) {
   const bool device_supports_tc3_sm110 = device_prop.major == 11;
 
   std::ofstream csv("sgemm_sm110_benchmark.csv");
+  csv << std::setprecision(17);
   csv << "BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,"
          "RatioToReference,Matched\n";
 
@@ -415,6 +417,11 @@ int main(int argc, char** argv) {
     cublas_avg_ms =
         benchmark_reference(launch_cublas_tensor_core, d_c, c_bytes, h_ref_tc);
     cublas_tc_perf = gflops(m, n, k, cublas_avg_ms);
+    if (!validate_fp16_reference_samples(m, n, k, h_a_half, h_b_half,
+                                         h_ref_tc)) {
+      std::cerr << "cuBLASLt FP16 reference failed independent CPU samples\n";
+      return EXIT_FAILURE;
+    }
 
     std::cout << "Tensor Core reference:\n";
     std::cout << kTensorCoreReferenceName << ": " << cublas_avg_ms << " ms, "

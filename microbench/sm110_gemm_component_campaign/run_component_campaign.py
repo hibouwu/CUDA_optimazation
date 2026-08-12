@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -234,10 +235,18 @@ def main() -> int:
         parser.error("invalid run-id")
     run_dir = RESULT_ROOT / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+    global_lock = (REPO / "results" / ".sm110_gpu_campaign.lock").open("w")
+    try:
+        fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        raise RuntimeError("another SM110 GPU campaign holds the global lock") from error
     spec = {
         "schema_version": 1, "run_id": args.run_id,
         "campaign": "sm110_gemm_component_closure",
         "expected_sm_count": EXPECTED_SMS, "trials": TRIALS,
+        "static_only": args.static_only,
+        "host_compiler": args.host_compiler,
+        "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
         "timing": "earliest CTA globaltimer start to latest CTA stop for TMA/TMEM; CUDA events for epilogue",
         "generator": str(Path(__file__).relative_to(REPO)),
         "generator_sha256": sha256(Path(__file__)),
@@ -337,5 +346,22 @@ def main() -> int:
     return 0
 
 
+def mark_failed_from_argv(message: str) -> None:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--run-id")
+    args, _ = parser.parse_known_args()
+    if not args.run_id or not re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
+        return
+    run_dir = RESULT_ROOT / args.run_id
+    if run_dir.is_dir():
+        write_status(run_dir, "failed", error=message)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:
+        mark_failed_from_argv(str(exc))
+        raise
