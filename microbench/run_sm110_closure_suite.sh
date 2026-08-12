@@ -65,20 +65,28 @@ wait_and_audit() {
   local auditor=$3
   shift 3
   local pid_file="$run_dir/launcher.pid"
-  if [[ ! -f $pid_file ]]; then
-    echo "$label launcher did not create $pid_file" >&2
-    exit 1
+  local current_status=""
+  if [[ -f $run_dir/campaign_status.json ]]; then
+    current_status=$(python3 -c \
+      'import json,sys; print(json.load(open(sys.argv[1])).get("status", ""))' \
+      "$run_dir/campaign_status.json")
   fi
-  local runner_pid
-  runner_pid=$(<"$pid_file")
-  if [[ ! $runner_pid =~ ^[0-9]+$ ]]; then
-    echo "$label launcher wrote invalid PID: $runner_pid" >&2
-    exit 1
+  if [[ $current_status != complete ]]; then
+    if [[ ! -f $pid_file ]]; then
+      echo "$label launcher did not create $pid_file" >&2
+      exit 1
+    fi
+    local runner_pid
+    runner_pid=$(<"$pid_file")
+    if [[ ! $runner_pid =~ ^[0-9]+$ ]]; then
+      echo "$label launcher wrote invalid PID: $runner_pid" >&2
+      exit 1
+    fi
+    echo "$label running: pid=$runner_pid log=$run_dir/launcher.log"
+    while kill -0 "$runner_pid" 2>/dev/null; do
+      sleep 5
+    done
   fi
-  echo "$label running: pid=$runner_pid log=$run_dir/launcher.log"
-  while kill -0 "$runner_pid" 2>/dev/null; do
-    sleep 5
-  done
   if [[ ! -f $run_dir/campaign_status.json ]]; then
     echo "$label has no campaign_status.json" >&2
     tail -n 80 "$run_dir/launcher.log" >&2 || true
@@ -96,6 +104,33 @@ wait_and_audit() {
   echo "$label audit passed"
 }
 
+launch_or_attach() {
+  local label=$1
+  local run_dir=$2
+  shift 2
+  local status_file="$run_dir/campaign_status.json"
+  if [[ -f $status_file ]]; then
+    local prior_status
+    prior_status=$(python3 -c \
+      'import json,sys; print(json.load(open(sys.argv[1])).get("status", ""))' \
+      "$status_file")
+    if [[ $prior_status == complete ]]; then
+      echo "$label already complete; proceeding to independent audit"
+      return
+    fi
+  fi
+  local pid_file="$run_dir/launcher.pid"
+  if [[ -f $pid_file ]]; then
+    local prior_pid
+    prior_pid=$(<"$pid_file")
+    if [[ $prior_pid =~ ^[0-9]+$ ]] && kill -0 "$prior_pid" 2>/dev/null; then
+      echo "$label already running; attaching to pid=$prior_pid"
+      return
+    fi
+  fi
+  "$@"
+}
+
 compute_args=()
 compute_audit_args=()
 full_args=()
@@ -105,23 +140,29 @@ if [[ $collect_ncu -eq 1 ]]; then
   full_args+=(--ncu)
 fi
 
-bash microbench/sm110_gemm_campaign/launch_compute_campaign.sh \
+compute_dir="results/sm110_gemm_campaign/$compute_id"
+launch_or_attach compute "$compute_dir" \
+  bash microbench/sm110_gemm_campaign/launch_compute_campaign.sh \
   "$compute_id" "${compute_args[@]}"
 wait_and_audit compute \
-  "results/sm110_gemm_campaign/$compute_id" \
+  "$compute_dir" \
   microbench/sm110_gemm_campaign/audit_campaign.py \
   "${compute_audit_args[@]}"
 
-bash microbench/sm110_gemm_component_campaign/launch_component_campaign.sh \
+component_dir="results/sm110_gemm_component_campaign/$component_id"
+launch_or_attach component "$component_dir" \
+  bash microbench/sm110_gemm_component_campaign/launch_component_campaign.sh \
   "$component_id"
 wait_and_audit component \
-  "results/sm110_gemm_component_campaign/$component_id" \
+  "$component_dir" \
   microbench/sm110_gemm_component_campaign/audit_campaign.py
 
-bash microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh \
+full_dir="results/sm110_full_gemm_campaign/$full_id"
+launch_or_attach full-gemm "$full_dir" \
+  bash microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh \
   "$full_id" "${full_args[@]}"
 wait_and_audit full-gemm \
-  "results/sm110_full_gemm_campaign/$full_id" \
+  "$full_dir" \
   microbench/sm110_full_gemm_campaign/audit_campaign.py
 
 cat <<EOF
