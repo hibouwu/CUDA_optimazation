@@ -1,0 +1,41 @@
+[
+  {
+    "schedule_id": "generic_m128n128k64_stage2",
+    "bm": 128,
+    "bn": 128,
+    "bk": 64,
+    "stages": 2,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "pad",
+    "fixed_seconds": 0.0
+  },
+  {
+    "schedule_id": "generic_m128n256k64_stage2",
+    "bm": 128,
+    "bn": 256,
+    "bk": 64,
+    "mma_m": 128,
+    "mma_n": 256,
+    "stages": 2,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "pad",
+    "tmem_columns": 256,
+    "fixed_seconds": 0.0
+  },
+  {
+    "schedule_id": "generic_m128n64k64_exact_tail",
+    "bm": 128,
+    "bn": 64,
+    "bk": 64,
+    "mma_m": 128,
+    "mma_n": 64,
+    "stages": 2,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "exact",
+    "tmem_columns": 64,
+    "fixed_seconds": 0.0
+  }
+]

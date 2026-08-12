@@ -1,0 +1,14 @@
+[
+  {"workload_id": "n1024_fp16_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "fp16_f32"},
+  {"workload_id": "n1024_bf16_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "bf16_f32"},
+  {"workload_id": "n1024_tf32_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "tf32_f32"},
+  {"workload_id": "n1024_e4m3_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "e4m3_f32"},
+  {"workload_id": "n1024_e5m2_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "e5m2_f32"},
+  {"workload_id": "n1024_e3m2_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "e3m2_f32"},
+  {"workload_id": "n1024_e2m3_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "e2m3_f32"},
+  {"workload_id": "n1024_e2m1_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "e2m1_f32"},
+  {"workload_id": "n1024_mxfp4_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "mxfp4_f32"},
+  {"workload_id": "n1024_nvfp4_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "nvfp4_f32"},
+  {"workload_id": "n1024_s8_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "s8_s32"},
+  {"workload_id": "n1024_u8_cold", "m": 1024, "n": 1024, "k": 1024, "precision_id": "u8_s32"}
+]
