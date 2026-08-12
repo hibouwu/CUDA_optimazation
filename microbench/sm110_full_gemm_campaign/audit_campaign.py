@@ -10,14 +10,13 @@ import io
 import json
 import math
 import re
+import runpy
 import statistics
 from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-EXPECTED_PRECISIONS = {"fp16_f32", "e4m3_f32", "s8_s32"}
 EXPECTED_SHAPES = {1024, 2048, 4096}
-EXPECTED_CASES = 9
 
 
 def digest(path: Path) -> str:
@@ -88,25 +87,58 @@ def main() -> int:
         "layout": "NN", "epilogue": "none", "beta": 0,
         "output_mode": "accumulator", "work": "2*M*N*K",
     }, "problem contract changed")
+    expected_generator = (REPO / "microbench/sm110_full_gemm_campaign/"
+                          "run_full_gemm_campaign.py")
     generator = REPO / str(spec.get("generator", ""))
+    add(errors, generator.resolve() == expected_generator.resolve(),
+        "generator path is not the canonical campaign runner")
     add(errors, generator.is_file() and digest(generator) == spec.get("generator_sha256"),
         "generator hash mismatch")
+    expected_manifest = (REPO / "microbench/sm110_full_gemm_campaign/"
+                         "support_manifest.json")
     manifest = REPO / str(spec.get("support_manifest", ""))
+    add(errors, manifest.resolve() == expected_manifest.resolve(),
+        "support manifest path is not canonical")
     add(errors, manifest.is_file() and digest(manifest) == spec.get("support_manifest_sha256"),
         "support manifest hash mismatch")
+    try:
+        manifest_data = json.loads(manifest.read_text())
+        expected_precisions = {
+            row["precision_id"] for row in manifest_data["precisions"]
+            if row.get("status") == "ready_for_closure_campaign"
+        }
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        expected_precisions = set()
+        errors.append("support manifest is not parseable")
+    expected_cases = len(expected_precisions) * len(EXPECTED_SHAPES)
+    add(errors, bool(expected_precisions), "support manifest has no ready precisions")
     for relative, expected in spec.get("source_dependencies", {}).items():
         path = REPO / relative
         add(errors, path.is_file() and digest(path) == expected,
             f"source dependency hash mismatch:{relative}")
 
     cases = spec.get("cases", [])
-    add(errors, len(cases) == EXPECTED_CASES, "spec case cardinality mismatch")
+    try:
+        canonical_runner = runpy.run_path(str(expected_generator))
+        canonical_cases = canonical_runner["CASES"]
+        canonical_dependencies = {
+            str(path.relative_to(REPO)): digest(path)
+            for path in canonical_runner["source_dependencies"]()
+        }
+    except (OSError, KeyError, RuntimeError, SyntaxError):
+        canonical_cases = None
+        canonical_dependencies = None
+        errors.append("canonical runner cases cannot be loaded")
+    add(errors, cases == canonical_cases, "spec cases differ from canonical runner")
+    add(errors, spec.get("source_dependencies") == canonical_dependencies,
+        "source dependency set differs from canonical runner")
+    add(errors, len(cases) == expected_cases, "spec case cardinality mismatch")
     pairs = {(case.get("precision_id"), case.get("n")) for case in cases}
-    expected_pairs = {(precision, n) for precision in EXPECTED_PRECISIONS
+    expected_pairs = {(precision, n) for precision in expected_precisions
                       for n in EXPECTED_SHAPES}
     add(errors, pairs == expected_pairs, "precision/shape matrix is incomplete")
     add(errors, summary.get("status") == "complete", "summary is not complete")
-    add(errors, summary.get("case_count") == EXPECTED_CASES,
+    add(errors, summary.get("case_count") == expected_cases,
         "summary case cardinality mismatch")
     status = json.loads((root / "campaign_status.json").read_text())
     add(errors, status.get("status") == "complete", "campaign status is not complete")
@@ -128,7 +160,7 @@ def main() -> int:
     add(errors, len(identities) == 1, "GPU identity changed during campaign")
 
     by_id = {row.get("case_id"): row for row in summary.get("results", [])}
-    add(errors, len(by_id) == EXPECTED_CASES, "summary result IDs are not unique")
+    add(errors, len(by_id) == expected_cases, "summary result IDs are not unique")
     for case in cases:
         case_id = str(case["id"])
         result = by_id.get(case_id)
@@ -141,7 +173,8 @@ def main() -> int:
                     "internal_repeats"):
             add(errors, result.get(key) == case.get(key),
                 f"{case_id}: result/spec mismatch for {key}")
-        expected_unit = "operation" if case["precision_id"] == "s8_s32" else "flop"
+        expected_unit = ("operation" if case["precision_id"] in {"s8_s32", "u8_s32"}
+                         else "flop")
         add(errors, case.get("work_unit") == expected_unit,
             f"{case_id}: wrong work unit")
         expected_split = "holdout" if case["n"] == 4096 else "calibration"
@@ -176,6 +209,24 @@ def main() -> int:
             compile_command = []
         add(errors, "arch=compute_110a,code=sm_110a" in compile_command,
             f"{case_id}: compile target is not sm_110a")
+        if case["binary"] == "extended":
+            self_test_path = root / str(result.get("self_test_path", ""))
+            add(errors, self_test_path.is_file() and
+                digest(self_test_path) == result.get("self_test_sha256") and
+                "self_test=pass" in self_test_path.read_text(),
+                f"{case_id}: extended host self-test evidence missing")
+            self_test_command_path = root / str(
+                result.get("self_test_command_path", ""))
+            try:
+                self_test_command = json.loads(self_test_command_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                self_test_command = None
+            add(errors, self_test_command_path.is_file() and
+                digest(self_test_command_path) ==
+                result.get("self_test_command_sha256") and
+                self_test_command == [str(root / "build" / "extended"),
+                                      "--self-test"],
+                f"{case_id}: extended host self-test command mismatch")
 
         trials_path = root / "cases" / case_id / "trials.jsonl"
         trials = ([json.loads(line) for line in trials_path.read_text().splitlines()
@@ -205,8 +256,10 @@ def main() -> int:
                 except ValueError:
                     actual = -1
                 add(errors, actual == expected, f"{prefix}: {field}={actual}")
-            csv_name = ("sgemm_sm110_benchmark.csv" if case["binary"] == "fp16"
-                        else "quant_sm110_benchmark.csv")
+            csv_name = ({"fp16": "sgemm_sm110_benchmark.csv",
+                         "quant": "quant_sm110_benchmark.csv",
+                         "extended": "extended_sm110_benchmark.csv"}
+                        [str(case["binary"])])
             csv_path = trial_dir / csv_name
             add(errors, csv_path.is_file(), f"{prefix}: CSV missing")
             raw_csv = csv_path.read_text() if csv_path.is_file() else ""
@@ -290,7 +343,8 @@ def main() -> int:
         "NCU request flag mismatch")
     ncu_results = summary.get("ncu_results", [])
     if ncu_requested:
-        add(errors, len(ncu_results) == 3, "expected three NCU reports")
+        add(errors, len(ncu_results) == len(expected_precisions),
+            f"expected {len(expected_precisions)} NCU reports")
         add(errors, {row.get("case_id") for row in ncu_results} ==
             {case["id"] for case in cases if case["n"] == 4096},
             "NCU precision coverage mismatch")

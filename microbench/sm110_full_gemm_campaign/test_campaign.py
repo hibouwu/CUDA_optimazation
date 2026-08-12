@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 import run_full_gemm_campaign as campaign
+
+
+REPO = Path(__file__).resolve().parents[2]
+AUDITOR = Path(__file__).with_name("audit_campaign.py")
 
 
 class CampaignEvidenceTests(unittest.TestCase):
@@ -86,6 +92,98 @@ class CampaignEvidenceTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "no function block"):
             campaign.matching_sass_evidence(fake, case)
+
+    def test_extended_precision_shape_matrix_and_units(self) -> None:
+        expected = {
+            "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "s8_s32",
+        }
+        pairs = {(case["precision_id"], case["n"]) for case in campaign.CASES}
+        self.assertEqual(pairs, {(precision, n) for precision in expected
+                                 for n in (1024, 2048, 4096)})
+        for case in campaign.CASES:
+            expected_unit = ("operation" if case["precision_id"] in
+                             {"s8_s32"} else "flop")
+            self.assertEqual(case["work_unit"], expected_unit)
+            self.assertEqual(case["split"],
+                             "holdout" if case["n"] == 4096 else "calibration")
+
+    def test_extended_sass_contracts_are_distinct(self) -> None:
+        tokens = {case["precision_id"]: tuple(case["sass_tokens"])
+                  for case in campaign.CASES}
+        self.assertIn("HMMA.16816.F32.BF16", tokens["bf16_f32"])
+        self.assertIn("HMMA.1684.F32.TF32", tokens["tf32_f32"])
+        self.assertNotIn("e5m2_f32", tokens)
+        self.assertNotIn("u8_s32", tokens)
+
+    def test_hardware_auditor_rejects_static_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            spec = {
+                "schema_version": 1,
+                "campaign": "sm110_full_gemm_closure",
+                "trials": 10,
+                "static_only": True,
+                "problem_contract": {
+                    "layout": "NN", "epilogue": "none", "beta": 0,
+                    "output_mode": "accumulator", "work": "2*M*N*K",
+                },
+            }
+            (root / "run_spec.json").write_text(json.dumps(spec))
+            (root / "summary.json").write_text(json.dumps({"status": "static_complete"}))
+            (root / "campaign_status.json").write_text(
+                json.dumps({"status": "static_complete"}))
+            (root / "progress.jsonl").write_text("{}\n")
+            (root / "environment.json").write_text("{}\n")
+            (root / "environment_snapshots.jsonl").write_text("{}\n")
+            (root / "COMPLETE").write_text("forged\n")
+            proc = subprocess.run(
+                ["python3", str(AUDITOR), str(root)], cwd=REPO,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False,
+            )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("static-only artifact cannot pass", proc.stdout)
+
+    def test_hardware_auditor_rejects_noncanonical_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fake_generator = root / "fake_runner.py"
+            fake_manifest = root / "fake_manifest.json"
+            fake_generator.write_text("CASES = []\n")
+            fake_manifest.write_text(json.dumps({"precisions": []}))
+            spec = {
+                "schema_version": 1,
+                "campaign": "sm110_full_gemm_closure",
+                "trials": 10,
+                "static_only": False,
+                "problem_contract": {
+                    "layout": "NN", "epilogue": "none", "beta": 0,
+                    "output_mode": "accumulator", "work": "2*M*N*K",
+                },
+                "generator": str(fake_generator),
+                "generator_sha256": campaign.sha256(fake_generator),
+                "support_manifest": str(fake_manifest),
+                "support_manifest_sha256": campaign.sha256(fake_manifest),
+                "source_dependencies": {}, "cases": [],
+            }
+            for name, payload in {
+                "run_spec.json": spec,
+                "summary.json": {"status": "complete"},
+                "campaign_status.json": {"status": "complete"},
+            }.items():
+                (root / name).write_text(json.dumps(payload))
+            (root / "progress.jsonl").write_text("{}\n")
+            (root / "environment.json").write_text("{}\n")
+            (root / "environment_snapshots.jsonl").write_text("{}\n")
+            (root / "COMPLETE").write_text("forged\n")
+            proc = subprocess.run(
+                ["python3", str(AUDITOR), str(root)], cwd=REPO,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False,
+            )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("generator path is not the canonical", proc.stdout)
+        self.assertIn("support manifest path is not canonical", proc.stdout)
 
 
 if __name__ == "__main__":

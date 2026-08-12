@@ -6,11 +6,19 @@ performance denominator. `support_manifest.json` is the machine-readable source
 of truth. It intentionally reports gaps instead of substituting a nearby data
 type.
 
-The first hardware batch contains nine square `NN`, `beta=0`, no-epilogue,
-accumulator-output cases: FP16→FP32, E4M3→FP32, and signed INT8→INT32 at
+The hardware batch contains 15 square `NN`, `beta=0`, no-epilogue,
+accumulator-output cases: FP16→FP32, BF16→FP32, TF32→FP32, E4M3→FP32,
+and signed INT8→INT32 at
 `N=1024,2048,4096`. `N=1024,2048` are calibration points; `N=4096` is frozen as
 a holdout point. Each external trial contains the benchmark's own warmups and
 timed repetitions, and the campaign stores ten independent external trials.
+The TF32 inputs are explicitly rounded round-to-nearest-even to the TF32
+mantissa contract before both candidate and reference, with exact halfway cases
+checked by a host-only bit-level self-test. The compute-only campaign proves an
+SM110 U8 instruction path, but U8 is excluded from this full-GEMM batch: the
+official cuBLAS GemmEx support table only admits signed `CUDA_R_8I` inputs for
+`CUBLAS_COMPUTE_32I`, so an attempted U8 library call is not a valid closure
+reference.
 
 Correctness fails closed on two distinct checks:
 
@@ -32,9 +40,11 @@ Audit the current implementation coverage:
 python3 microbench/sm110_full_gemm_campaign/audit_support_manifest.py
 ```
 
-Current closure-ready paths are FP16→FP32, FP8 E4M3→FP32, and signed
-INT8→INT32. BF16, TF32, E5M2, both FP6 encodings, raw unscaled E2M1, and U8
-still need complete implementations and references. The current MXFP4 and
+Current closure-ready paths are FP16→FP32, BF16→FP32, TF32→FP32, FP8
+E4M3→FP32, and signed INT8→INT32. E5M2×E5M2 has a native candidate but no
+supported cuBLASLt same-contract reference; the official FP8 type table does not
+list that A/B pair. Both FP6 encodings, raw unscaled E2M1, and unsigned INT8
+still need complete references. The current MXFP4 and
 NVFP4 CUTLASS example paths are marked partial because their output contracts
 do not match the model's FP32 output contract, their generated external source
 was not captured in the historical result bundle, and the historical runner
@@ -83,7 +93,7 @@ git push -u origin "thor-results/$RUN_ID"
 
 Return the pushed branch name. The result bundle includes the immutable run
 specification; environment snapshots; exact compile commands and logs; source,
-binary, and SASS hashes; full disassembly; raw stdout and CSV for all 90 trials;
+binary, and SASS hashes; full disassembly; raw stdout and CSV for all 150 trials;
 per-case aggregates; optional NCU reports; and a hash-bound `COMPLETE` marker.
 The binaries themselves are removed after hashing to avoid committing large
 rebuildable executables.

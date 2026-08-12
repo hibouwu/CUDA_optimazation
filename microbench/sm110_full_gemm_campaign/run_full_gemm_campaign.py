@@ -90,6 +90,38 @@ CASES = [
         }
         for n in SHAPES
     ],
+    *[
+        {
+            "id": f"bf16_f32_n{n}_q0", "precision_id": "bf16_f32",
+            "binary": "extended", "n": n,
+            "split": "holdout" if n == 4096 else "calibration",
+            "backend_id": "bf16_q0_wmma_m128n64k16", "args": [str(n), "bf16"],
+            "work_unit": "flop", "internal_repeats": 10,
+            "csv_precision": "bf16->fp32",
+            "reference_contract": "bf16_f32_cpu_samples",
+            "numerical_contract": "bf16_f32",
+            "function_substring": "wmma_m128n64_kernelI13__nv_bfloat16fLi16",
+            "sass_tokens": ["HMMA.16816.F32.BF16", "STG"],
+            "ncu_kernel_regex": "wmma_m128n64_kernel.*bfloat16",
+        }
+        for n in SHAPES
+    ],
+    *[
+        {
+            "id": f"tf32_f32_n{n}_q0", "precision_id": "tf32_f32",
+            "binary": "extended", "n": n,
+            "split": "holdout" if n == 4096 else "calibration",
+            "backend_id": "tf32_q0_wmma_m64n64k8", "args": [str(n), "tf32"],
+            "work_unit": "flop", "internal_repeats": 10,
+            "csv_precision": "tf32->fp32",
+            "reference_contract": "tf32_f32_cpu_samples",
+            "numerical_contract": "tf32_f32",
+            "function_substring": "tf32_wmma_m64n64_kernel",
+            "sass_tokens": ["HMMA.1684.F32.TF32", "ST.E"],
+            "ncu_kernel_regex": "tf32_wmma_m64n64_kernel",
+        }
+        for n in SHAPES
+    ],
 ]
 
 
@@ -134,7 +166,10 @@ def write_status(run_dir: Path, status: str, **extra: object) -> None:
 def source_dependencies() -> list[Path]:
     fp16 = [REPO / "GEMMsm110/src/main.cu"]
     fp16.extend(sorted((REPO / "GEMMsm110/include").rglob("*.cuh")))
-    return fp16 + [REPO / "GEMMquant_sm110/src/quant_gemm_bench.cu"]
+    return fp16 + [
+        REPO / "GEMMquant_sm110/src/quant_gemm_bench.cu",
+        REPO / "GEMMquant_sm110/src/extended_gemm_bench.cu",
+    ]
 
 
 def environment() -> dict[str, object]:
@@ -236,6 +271,13 @@ def compile_binaries(run_dir: Path, host_compiler: str | None,
             str(REPO / "GEMMquant_sm110/src/quant_gemm_bench.cu"),
             "-lcublas", "-lcublasLt",
         ],
+        "extended": [
+            nvcc, "-O3", "-std=c++17", *compat,
+            "--expt-relaxed-constexpr",
+            "-gencode", "arch=compute_110a,code=sm_110a",
+            str(REPO / "GEMMquant_sm110/src/extended_gemm_bench.cu"),
+            "-lcublas",
+        ],
     }
     artifacts: dict[str, dict[str, object]] = {}
     for name, base_command in specs.items():
@@ -247,6 +289,22 @@ def compile_binaries(run_dir: Path, host_compiler: str | None,
         (build / f"{name}.compile.log").write_text(proc.stdout)
         if proc.returncode:
             raise RuntimeError(f"{name} compile failed; see {name}.compile.log")
+        self_test_path = None
+        self_test_hash = None
+        self_test_command_path = None
+        self_test_command_hash = None
+        if name == "extended":
+            self_test_command = [str(binary), "--self-test"]
+            self_test_command_path = build / "extended.self_test_command.json"
+            self_test_command_path.write_text(
+                json.dumps(self_test_command, indent=2) + "\n")
+            self_test_command_hash = sha256(self_test_command_path)
+            self_test = run(self_test_command, check=False)
+            self_test_path = build / "extended.self_test.log"
+            self_test_path.write_text(self_test.stdout)
+            if self_test.returncode or "self_test=pass" not in self_test.stdout:
+                raise RuntimeError("extended host self-test failed")
+            self_test_hash = sha256(self_test_path)
         sass_proc = run([cuobjdump, "--dump-sass", str(binary)], check=False)
         sass_path = build / f"{name}.sass.txt"
         sass_path.write_text(sass_proc.stdout)
@@ -258,6 +316,10 @@ def compile_binaries(run_dir: Path, host_compiler: str | None,
         artifacts[name] = {
             "binary": binary, "binary_sha256": binary_hash,
             "sass_path": sass_path, "sass_sha256": sha256(sass_path),
+            "self_test_path": self_test_path,
+            "self_test_sha256": self_test_hash,
+            "self_test_command_path": self_test_command_path,
+            "self_test_command_sha256": self_test_command_hash,
         }
     return artifacts
 
@@ -296,8 +358,10 @@ def parse_trial(case: dict[str, object], trial_dir: Path,
         raise RuntimeError(f"{case['id']}: independent CPU reference mismatch")
     if int(fields.get("mismatch_count", "-1")) != 0:
         raise RuntimeError(f"{case['id']}: full-output numerical mismatch")
-    csv_name = ("sgemm_sm110_benchmark.csv" if case["binary"] == "fp16"
-                else "quant_sm110_benchmark.csv")
+    csv_name = ({"fp16": "sgemm_sm110_benchmark.csv",
+                 "quant": "quant_sm110_benchmark.csv",
+                 "extended": "extended_sm110_benchmark.csv"}
+                [str(case["binary"])])
     csv_path = trial_dir / csv_name
     if not csv_path.is_file():
         raise RuntimeError(f"{case['id']}: missing {csv_name}")
@@ -473,6 +537,14 @@ def main() -> int:
             "sass_path": f"build/{case['binary']}.sass.txt",
             "sass_evidence": sass_evidence[str(case["id"])],
         }
+        if artifact["self_test_path"] is not None:
+            base["self_test_path"] = str(
+                Path(artifact["self_test_path"]).relative_to(run_dir))
+            base["self_test_sha256"] = artifact["self_test_sha256"]
+            base["self_test_command_path"] = str(
+                Path(artifact["self_test_command_path"]).relative_to(run_dir))
+            base["self_test_command_sha256"] = artifact[
+                "self_test_command_sha256"]
         if args.static_only:
             results.append({**base, "status": "static_ok"})
             continue

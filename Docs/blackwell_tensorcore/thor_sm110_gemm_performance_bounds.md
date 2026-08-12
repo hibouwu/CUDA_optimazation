@@ -452,10 +452,10 @@ TFLOP/s 是按 2:1 稀疏倍率推得的 `derived_upper`，不是官方直接列
 | 精度 | compute 条件上界 | compute 实测 | 完整 GEMM | 同精度性能 denominator | 当前闭环 |
 | --- | --- | --- | --- | --- | --- |
 | FP16 | 有（推导） | 缺 | 有 | 有 | 否 |
-| BF16 | 有 | 有 | 缺 | 缺 | 否 |
-| TF32 | 缺 | 缺 | 缺 | 缺 | 否 |
+| BF16 | 有 | 有 | 有（待 Thor） | 有（待 Thor） | 否 |
+| TF32 | 缺 | 缺 | 有（待 Thor） | 有（待 Thor） | 否 |
 | FP8 E4M3 | 有 | 有（快照） | 有（快照） | 有 | 否 |
-| FP8 E5M2 | 有 | 缺 | 缺 | 缺 | 否 |
+| FP8 E5M2 | 有 | 缺 | 有（静态候选） | 缺 | 否 |
 | FP6 E3M2 | 缺 | 缺 | 缺 | 缺 | 否 |
 | FP6 E2M3 | 缺 | 缺 | 缺 | 缺 | 否 |
 | raw FP4 E2M1 | 缺 | 缺 | 缺 | 缺 | 否 |
@@ -794,6 +794,8 @@ miss-sector proxy 的证据边界。
   [`audit_support_manifest.py`](../../microbench/sm110_full_gemm_campaign/audit_support_manifest.py)
 - 首批 closure runner：
   [`run_full_gemm_campaign.py`](../../microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py)
+- BF16/TF32 完整 GEMM、E5M2 静态候选与 host 自检源码：
+  [`extended_gemm_bench.cu`](../../GEMMquant_sm110/src/extended_gemm_bench.cu)
 - detached/resume launcher：
   [`launch_full_gemm_campaign.sh`](../../microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh)
 - 独立结果审计：
@@ -817,26 +819,41 @@ miss-sector proxy 的证据边界。
 当前工具只接收至少 10 个 trial 且全部 matched 的 backend series，再按最高
 median 选择稳定最好实现。NVFP4/MXFP4 的性能 denominator 是 FP16 cuBLAS，
 因此只保留绝对 GFLOP/s 和 correctness 状态，不使用历史 ratio 证明同精度胜负。
-覆盖合同当前只有 FP16→FP32、E4M3→FP32 和 S8→S32 达到“可启动 closure
-campaign”的实现条件；BF16、TF32、E5M2、两种 FP6、raw E2M1、U8 尚无完整
-路径，MXFP4/NVFP4 则因输出合同、外部生成源码留存和跨精度 denominator 只能
-标为 `partial`。这里的 `ready_for_closure_campaign` 仍不表示硬件闭环完成。
+覆盖合同当前有 FP16→FP32、BF16→FP32、TF32→FP32、E4M3→FP32 和
+S8→S32 达到“可启动 closure campaign”的实现条件；E5M2×E5M2 已有原生
+kernel，但 [`cublasLtMatmul` 官方 FP8 类型表](https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmul)
+没有列出这一 A/B 组合，因此尚缺合法独立 reference 和 denominator。两种 FP6、
+raw E2M1 和 U8 也尚无完整路径，MXFP4/NVFP4 因输出合同、外部生成源码留存和
+跨精度 denominator 只能标为 `partial`。这里的 `ready_for_closure_campaign`
+仍不表示硬件闭环完成。
 
-首批新 campaign 把可闭环的三种合同冻结为 9 个 square `NN` case：每种精度
+U8 被排除不是因为 PTX/SASS 不存在 U8 Tensor Core；compute-only campaign
+已经覆盖该指令合同。缺口在完整 GEMM reference：
+[`cublasGemmEx` 官方支持表](https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex)
+把 `CUBLAS_COMPUTE_32I` 的 A/B 类型限定为 signed `CUDA_R_8I`，没有列出
+`CUDA_R_8U`。因此 U8 指令的静态存在不能充当同语义 cuBLAS reference；在独立
+U8 full-GEMM candidate、reference 和 denominator 完成前，
+模型宁可保留缺口。
+
+新版 campaign 把可闭环的五种合同冻结为 15 个 square `NN` case：每种精度
 `N=1024,2048,4096`，其中前两点是 calibration，4096 是预先保留的 holdout。
 FP16 使用 `tc5b`（1024）和 `tc5a`（2048/4096），E4M3 使用 `q7`，S8 使用
-`q15`；这些是仓库历史 sweep 中的强自研候选，而不是把库实现冒充自研 GEMM。
-每个外层 case 运行 10 个独立 trial；每个 trial 内候选和同精度库 reference
-使用同一输入，FP16 内层计时 100 次、E4M3/S8 内层计时 10 次。runner 独立从
-`2N^3/time` 重算吞吐，S8 明确使用 OP/s。
+`q15`；BF16 使用原生 BF16 WMMA，TF32 使用原生 TF32 WMMA。这些候选都与
+同精度 cuBLAS/cuBLASLt reference 成对，
+不是把库实现冒充自研 GEMM。每个外层 case 运行 10 个独立 trial；每个 trial 内
+候选和 reference 使用同一输入，FP16 内层计时 100 次，其余内层计时 10 次。
+runner 独立从 `2N^3/time` 重算吞吐，S8 明确使用 OP/s。
 
 数值证据包含两级门禁：先用实际量化后的输入在 CPU 上抽样 64 个输出，检查
 cuBLAS/cuBLASLt reference；再把候选的完整输出矩阵与该 reference 比较。S8→S32
-要求 bit-exact，浮点累加按显式 `atol`/`rtol` 合同判断。静态证据也不是二进制级
-mnemonic 搜索：审计在被测 kernel 的 SASS 函数块内检查 `UTCHMMA`、FP8
-`HMMA.16816.F32` 或 `IMMA.16816.S8.S8` 及 store。当前 CUDA 13.0 本地静态
-门禁 9/9 通过；在 Thor 返回 90 个 trial、环境和可选 NCU artifact 之前，不把
-它们升级为新的已观测值。
+要求 bit-exact，浮点累加按显式 `atol`/`rtol` 合同判断。TF32 输入在 candidate
+和 reference 之前都显式按 round-to-nearest-even 截到 TF32 的 10 个 fraction
+bits；host-only 自检覆盖 retained-LSB 为偶/奇的两个 halfway case，并确认 Inf 和
+NaN payload 不被改写。静态证据也不是二进制级 mnemonic 搜索：审计在被测
+kernel 的 SASS 函数块内检查 `UTCHMMA`、`HMMA.16816.F32.BF16`、
+`HMMA.1684.F32.TF32`、FP8 `HMMA.16816.F32` 或 `IMMA.16816.S8.S8` 及 store。
+当前 CUDA 13.0 本地静态门禁 15/15 通过；在 Thor 返回 150 个 trial、环境和可选
+NCU artifact 之前，不把它们升级为新的已观测值。
 
 compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因此 Thor 上
 只能串行运行；这把“不要并发争抢 GPU”从操作约定升级为 runner 的机械约束。

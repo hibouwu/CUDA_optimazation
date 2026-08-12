@@ -41,12 +41,25 @@
       "accumulator_type": "fp32",
       "output_type": "fp32",
       "work_unit": "flop",
-      "status": "missing",
-      "native_mainloop": false,
-      "implementation": {"backend_ids": [], "source_paths": []},
-      "numerical_reference": null,
-      "performance_denominator": null,
-      "blockers": ["No repository full-GEMM BF16-input path; BF16 compute-only tcgen05 is not a full GEMM."]
+      "status": "ready_for_closure_campaign",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["bf16_q0_wmma_m128n64k16"],
+        "closure_candidate_backend_ids": ["bf16_q0_wmma_m128n64k16"],
+        "source_paths": ["GEMMquant_sm110/src/extended_gemm_bench.cu"]
+      },
+      "numerical_reference": {
+        "backend_id": "cublas_bf16_gemmex",
+        "source_path": "GEMMquant_sm110/src/extended_gemm_bench.cu",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "cublas_bf16_gemmex",
+        "same_precision": true,
+        "status": "ready"
+      },
+      "blockers": []
     },
     {
       "precision_id": "tf32_f32",
@@ -54,12 +67,26 @@
       "accumulator_type": "fp32",
       "output_type": "fp32",
       "work_unit": "flop",
-      "status": "missing",
-      "native_mainloop": false,
-      "implementation": {"backend_ids": [], "source_paths": []},
-      "numerical_reference": null,
-      "performance_denominator": null,
-      "blockers": ["No repository full-GEMM TF32 path or same-contract reference harness."]
+      "status": "ready_for_closure_campaign",
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["tf32_q0_wmma_m64n64k8"],
+        "closure_candidate_backend_ids": ["tf32_q0_wmma_m64n64k8"],
+        "source_paths": ["GEMMquant_sm110/src/extended_gemm_bench.cu"]
+      },
+      "numerical_reference": {
+        "backend_id": "cublas_tf32_gemmex",
+        "source_path": "GEMMquant_sm110/src/extended_gemm_bench.cu",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "cublas_tf32_gemmex",
+        "same_precision": true,
+        "status": "ready"
+      },
+      "input_rounding": "Host inputs are explicitly rounded round-to-nearest-even to the TF32 10-bit fraction contract before both candidate and reference.",
+      "blockers": []
     },
     {
       "precision_id": "e4m3_f32",
@@ -94,11 +121,23 @@
       "output_type": "fp32",
       "work_unit": "flop",
       "status": "missing",
-      "native_mainloop": false,
-      "implementation": {"backend_ids": [], "source_paths": []},
+      "native_mainloop": true,
+      "implementation": {
+        "backend_ids": ["e5m2_q0_mma_m16n8k32_smem128x64"],
+        "closure_candidate_backend_ids": [],
+        "source_paths": ["GEMMquant_sm110/src/extended_gemm_bench.cu"]
+      },
       "numerical_reference": null,
       "performance_denominator": null,
-      "blockers": ["Existing FP8 full GEMM is E4M3 only; E5M2 may not inherit its numerical or throughput result."]
+      "static_candidate": {
+        "backend_id": "e5m2_q0_mma_m16n8k32_smem128x64",
+        "evidence": "CUDA 13 accepts mma.sync ... e5m2.e5m2 and cuobjdump shows HMMA in the selected function; this is static lowering only."
+      },
+      "reference_constraint_source": "https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmul",
+      "blockers": [
+        "The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.",
+        "A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required."
+      ]
     },
     {
       "precision_id": "e3m2_f32",
@@ -230,10 +269,18 @@
       "work_unit": "operation",
       "status": "missing",
       "native_mainloop": false,
-      "implementation": {"backend_ids": [], "source_paths": []},
+      "implementation": {
+        "backend_ids": [],
+        "closure_candidate_backend_ids": [],
+        "source_paths": []
+      },
       "numerical_reference": null,
       "performance_denominator": null,
-      "blockers": ["No unsigned INT8 full-GEMM path; signed INT8 output cannot be reused as U8 evidence."]
+      "reference_constraint_source": "https://docs.nvidia.com/cuda/cublas/index.html#cublasgemmex",
+      "blockers": [
+        "The official cuBLAS GemmEx support table allows CUBLAS_COMPUTE_32I with CUDA_R_8I inputs, not CUDA_R_8U inputs.",
+        "A same-contract U8 numerical reference and performance denominator must be implemented before closure collection."
+      ]
     }
   ]
 }
