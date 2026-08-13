@@ -79,8 +79,23 @@ def bounded_run(command: list[str], timeout_seconds: int) -> dict[str, object]:
     )
     timed_out = False
     termination_failed = False
+    interrupted = False
     try:
         output, _ = proc.communicate(timeout=timeout_seconds)
+    except KeyboardInterrupt:
+        interrupted = True
+        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            output, _ = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired as term_timeout:
+            os.killpg(proc.pid, signal.SIGKILL)
+            try:
+                output, _ = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired as kill_timeout:
+                termination_failed = True
+                output = kill_timeout.stdout or term_timeout.stdout or ""
+                if isinstance(output, bytes):
+                    output = output.decode(errors="backslashreplace")
     except subprocess.TimeoutExpired as initial_timeout:
         timed_out = True
         os.killpg(proc.pid, signal.SIGTERM)
@@ -100,7 +115,8 @@ def bounded_run(command: list[str], timeout_seconds: int) -> dict[str, object]:
     return {
         "command": command, "started_at_utc": started,
         "finished_at_utc": utc_now(), "timeout_seconds": timeout_seconds,
-        "timed_out": timed_out, "termination_failed": termination_failed,
+        "timed_out": timed_out, "interrupted": interrupted,
+        "termination_failed": termination_failed,
         "returncode": proc.returncode,
         "output": output,
     }
@@ -119,6 +135,8 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--timeout-seconds", type=int, default=30)
+    parser.add_argument("--max-blocks-per-sm", type=int, choices=(1, 2, 3, 4),
+                        default=4)
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
         parser.error("invalid --run-id")
@@ -148,7 +166,21 @@ def main() -> int:
         raise RuntimeError("MAXN power mode is not proven")
 
     run_dir = RESULT_ROOT / args.run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
+    summary_path = run_dir / "summary.json"
+    if run_dir.exists():
+        if summary_path.is_file():
+            prior = json.loads(summary_path.read_text())
+            if (prior.get("pass") is True
+                    and prior.get("expected_commit") == args.expected_commit
+                    and prior.get("source_sha256") == sha256(SOURCE)
+                    and prior.get("timeout_seconds") == args.timeout_seconds
+                    and prior.get("max_blocks_per_sm") == args.max_blocks_per_sm):
+                print(json.dumps({"run_dir": str(run_dir), "pass": True,
+                                  "cached": True}, indent=2))
+                return 0
+        raise RuntimeError(
+            f"run-id already exists without an exact passing result: {run_dir}")
+    run_dir.mkdir(parents=True)
     build = run_dir / "build"
     build.mkdir()
     binary = build / "epilogue"
@@ -181,6 +213,7 @@ def main() -> int:
         ("smoke_bps3", 256, 256, 3, 1, 1),
         ("smoke_bps4", 256, 256, 4, 1, 1),
     ]
+    profiles = [row for row in profiles if row[3] <= args.max_blocks_per_sm]
     results = []
     for profile_id, rows, cols, blocks_per_sm, warmup, iterations in profiles:
         command = [
@@ -212,9 +245,11 @@ def main() -> int:
         print(json.dumps({"profile_id": profile_id,
                           "returncode": row["returncode"],
                           "timed_out": row["timed_out"],
+                          "interrupted": row["interrupted"],
                           "termination_failed": row["termination_failed"]}),
               flush=True)
-        if (row["timed_out"] or row["termination_failed"]
+        if (row["timed_out"] or row["interrupted"]
+                or row["termination_failed"]
                 or row["returncode"] or validation_errors):
             break
 
@@ -226,15 +261,17 @@ def main() -> int:
         "source_sha256": sha256(SOURCE), "binary_sha256": sha256(binary),
         "sass_sha256": sha256(build / "sass.txt"),
         "timeout_seconds": args.timeout_seconds,
+        "max_blocks_per_sm": args.max_blocks_per_sm,
         "environment_before": before, "environment_after": after,
         "profiles": results,
         "pass": len(results) == len(profiles) and all(
-            not row["timed_out"] and not row["termination_failed"]
+            not row["timed_out"] and not row["interrupted"]
+            and not row["termination_failed"]
             and row["returncode"] == 0
             and not row["validation_errors"]
             for row in results),
     }
-    (run_dir / "summary.json").write_text(
+    summary_path.write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"run_dir": str(run_dir), "pass": summary["pass"]},
                      indent=2))

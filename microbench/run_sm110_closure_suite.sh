@@ -41,7 +41,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "$script_dir/.." && pwd)
 cd -- "$repo_root"
 
-expected_branch=codex/thor-sm110-gemm-bounds
+expected_branch=codex/thor-sm110-gemm-bounds-v2
 actual_branch=$(git branch --show-current)
 actual_commit=$(git rev-parse HEAD)
 if [[ $actual_branch != "$expected_branch" || $actual_commit != "$expected_commit" ]]; then
@@ -58,6 +58,7 @@ fi
 compute_id="${suite_id}-compute"
 component_id="${suite_id}-components"
 full_id="${suite_id}-full"
+epilogue_preflight_id="${suite_id}-epilogue-preflight"
 
 wait_and_audit() {
   local label=$1
@@ -140,6 +141,13 @@ if [[ $collect_ncu -eq 1 ]]; then
   full_args+=(--ncu)
 fi
 
+python3 microbench/sm110_gemm_component_campaign/run_epilogue_probe.py \
+  --run-id "$epilogue_preflight_id" \
+  --expected-commit "$expected_commit" \
+  --timeout-seconds 30 \
+  --max-blocks-per-sm 1
+echo "bounded epilogue preflight passed"
+
 compute_dir="results/sm110_gemm_campaign/$compute_id"
 launch_or_attach compute "$compute_dir" \
   bash microbench/sm110_gemm_campaign/launch_compute_campaign.sh \
@@ -167,6 +175,7 @@ wait_and_audit full-gemm \
 
 cat <<EOF
 SUITE_COMPLETE
+epilogue_preflight_dir=results/sm110_epilogue_probe/$epilogue_preflight_id
 compute_dir=results/sm110_gemm_campaign/$compute_id
 component_dir=results/sm110_gemm_component_campaign/$component_id
 full_gemm_dir=results/sm110_full_gemm_campaign/$full_id

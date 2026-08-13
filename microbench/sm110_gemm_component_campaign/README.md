@@ -63,7 +63,8 @@ RUN_ID=thor-t5000-epilogue-bounded-20260813-a
 python3 microbench/sm110_gemm_component_campaign/run_epilogue_probe.py \
   --run-id "$RUN_ID" \
   --expected-commit "$EXPECTED_COMMIT" \
-  --timeout-seconds 30
+  --timeout-seconds 30 \
+  --max-blocks-per-sm 4
 ```
 
 The probe records the exact command, source/binary/SASS hashes, raw stdout,
@@ -72,3 +73,13 @@ profile under `results/sm110_epilogue_probe/$RUN_ID`. Both the measurement
 timeout and TERM/KILL escalation waits are bounded. `termination_failed=true`
 means the process survived the bounded escalation and the machine must be
 rebooted before any further GPU work.
+The closure suite uses `--max-blocks-per-sm 1` as a safe termination and
+correctness preflight.  Use `4` only for the standalone diagnostic residency
+sweep; a failure at a higher residency is evidence, not a reason to run the
+formal closure at that residency.
+
+For the full closure, use `microbench/launch_sm110_closure_suite.sh` instead of
+keeping the orchestrator attached to an interactive terminal.  It records a
+suite-level PID and log under `results/sm110_closure_suite/<suite-id>/`.
+Interrupting `tail -f` then only stops log viewing; it does not interrupt the
+suite orchestrator or any active campaign.

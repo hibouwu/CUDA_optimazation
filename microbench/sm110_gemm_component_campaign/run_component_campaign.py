@@ -11,6 +11,7 @@ import os
 import platform
 import re
 import shutil
+import signal
 import statistics
 import subprocess
 import sys
@@ -92,14 +93,43 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(command: list[str], check: bool = True,
-        timeout_seconds: int | None = None) -> subprocess.CompletedProcess[str]:
+def run(command: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, cwd=REPO, text=True, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, check=False,
-                            timeout=timeout_seconds)
+                            stderr=subprocess.STDOUT, check=False)
     if check and result.returncode:
         raise RuntimeError(f"command failed ({result.returncode}): {' '.join(command)}\n{result.stdout}")
     return result
+
+
+def run_bounded_trial(command: list[str], timeout_seconds: int) -> dict[str, object]:
+    """Run one GPU trial without any unbounded post-timeout wait."""
+    proc = subprocess.Popen(
+        command, cwd=REPO, text=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, start_new_session=True)
+    timed_out = False
+    termination_failed = False
+    try:
+        output, _ = proc.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as initial_timeout:
+        timed_out = True
+        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            output, _ = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired as term_timeout:
+            os.killpg(proc.pid, signal.SIGKILL)
+            try:
+                output, _ = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired as kill_timeout:
+                termination_failed = True
+                output = (kill_timeout.stdout or term_timeout.stdout
+                          or initial_timeout.stdout or "")
+                if isinstance(output, bytes):
+                    output = output.decode(errors="backslashreplace")
+    return {
+        "returncode": proc.returncode, "stdout": output,
+        "timed_out": timed_out,
+        "termination_failed": termination_failed,
+    }
 
 
 def executable(name: str) -> str:
@@ -322,26 +352,26 @@ def main() -> int:
         rows, rates = [], []
         for trial in range(1, TRIALS + 1):
             command = [str(artifacts[name]["binary"]), *case["args"]]
-            try:
-                proc = run(command, check=False,
-                           timeout_seconds=args.trial_timeout_seconds)
-            except subprocess.TimeoutExpired as error:
-                captured_stdout = error.stdout or ""
-                if isinstance(captured_stdout, bytes):
-                    captured_stdout = captured_stdout.decode(
-                        errors="backslashreplace")
+            outcome = run_bounded_trial(
+                command, args.trial_timeout_seconds)
+            if outcome["timed_out"]:
                 timeout_record = {
                     "case_id": case["id"], "trial": trial,
                     "captured_at_utc": utc_now(), "command": command,
                     "timeout_seconds": args.trial_timeout_seconds,
-                    "stdout": captured_stdout,
+                    "termination_failed": outcome["termination_failed"],
+                    "returncode": outcome["returncode"],
+                    "stdout": outcome["stdout"],
                 }
                 (case_dir / "timeout.json").write_text(
                     json.dumps(timeout_record, indent=2, sort_keys=True) + "\n")
                 raise RuntimeError(
                     f"{case['id']} trial {trial} exceeded "
-                    f"{args.trial_timeout_seconds}s; see {case_dir / 'timeout.json'}"
-                ) from error
+                    f"{args.trial_timeout_seconds}s "
+                    f"(termination_failed={outcome['termination_failed']}); "
+                    f"see {case_dir / 'timeout.json'}")
+            proc = subprocess.CompletedProcess(
+                command, outcome["returncode"], outcome["stdout"], None)
             fields = parse_kv(proc.stdout)
             if proc.returncode:
                 raise RuntimeError(f"{case['id']} trial {trial} failed: {proc.stdout}")
