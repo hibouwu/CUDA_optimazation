@@ -23,6 +23,7 @@ CAMPAIGN = Path(__file__).resolve().parent
 RESULT_ROOT = REPO / "results" / "sm110_gemm_component_campaign"
 EXPECTED_SMS = 20
 TRIALS = 10
+DEFAULT_TRIAL_TIMEOUT_SECONDS = 120
 SOURCE_DEPENDENCIES = [
     "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
     "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
@@ -66,7 +67,7 @@ CASES = [
             "id": f"nvfp4_requant_4096x1024_{distribution}",
             "resource": "epilogue.nvfp4_requant",
             "binary": "epilogue",
-            "args": ["--rows", "4096", "--cols", "1024", "--distribution", distribution, "--seed", "1234", "--warmup", "10", "--iterations", "100"],
+            "args": ["--rows", "4096", "--cols", "1024", "--blocks-per-sm", "1", "--distribution", distribution, "--seed", "1234", "--warmup", "10", "--iterations", "100"],
             "sass": ["LDTM.x2", "STTM.x2"],
         }
         for distribution in ("normal", "outlier", "constant")
@@ -91,9 +92,11 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def run(command: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
+def run(command: list[str], check: bool = True,
+        timeout_seconds: int | None = None) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, cwd=REPO, text=True, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, check=False)
+                            stderr=subprocess.STDOUT, check=False,
+                            timeout=timeout_seconds)
     if check and result.returncode:
         raise RuntimeError(f"command failed ({result.returncode}): {' '.join(command)}\n{result.stdout}")
     return result
@@ -230,9 +233,13 @@ def main() -> int:
     parser.add_argument("--static-only", action="store_true")
     parser.add_argument("--host-compiler")
     parser.add_argument("--nvcc-host-undef-gnu-source", action="store_true")
+    parser.add_argument("--trial-timeout-seconds", type=int,
+                        default=DEFAULT_TRIAL_TIMEOUT_SECONDS)
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
         parser.error("invalid run-id")
+    if args.trial_timeout_seconds <= 0:
+        parser.error("--trial-timeout-seconds must be positive")
     run_dir = RESULT_ROOT / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     global_lock = (REPO / "results" / ".sm110_gpu_campaign.lock").open("w")
@@ -244,6 +251,7 @@ def main() -> int:
         "schema_version": 1, "run_id": args.run_id,
         "campaign": "sm110_gemm_component_closure",
         "expected_sm_count": EXPECTED_SMS, "trials": TRIALS,
+        "trial_timeout_seconds": args.trial_timeout_seconds,
         "static_only": args.static_only,
         "host_compiler": args.host_compiler,
         "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
@@ -313,7 +321,27 @@ def main() -> int:
                 continue
         rows, rates = [], []
         for trial in range(1, TRIALS + 1):
-            proc = run([str(artifacts[name]["binary"]), *case["args"]], check=False)
+            command = [str(artifacts[name]["binary"]), *case["args"]]
+            try:
+                proc = run(command, check=False,
+                           timeout_seconds=args.trial_timeout_seconds)
+            except subprocess.TimeoutExpired as error:
+                captured_stdout = error.stdout or ""
+                if isinstance(captured_stdout, bytes):
+                    captured_stdout = captured_stdout.decode(
+                        errors="backslashreplace")
+                timeout_record = {
+                    "case_id": case["id"], "trial": trial,
+                    "captured_at_utc": utc_now(), "command": command,
+                    "timeout_seconds": args.trial_timeout_seconds,
+                    "stdout": captured_stdout,
+                }
+                (case_dir / "timeout.json").write_text(
+                    json.dumps(timeout_record, indent=2, sort_keys=True) + "\n")
+                raise RuntimeError(
+                    f"{case['id']} trial {trial} exceeded "
+                    f"{args.trial_timeout_seconds}s; see {case_dir / 'timeout.json'}"
+                ) from error
             fields = parse_kv(proc.stdout)
             if proc.returncode:
                 raise RuntimeError(f"{case['id']} trial {trial} failed: {proc.stdout}")

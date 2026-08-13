@@ -32,7 +32,9 @@ def main() -> int:
         print(json.dumps({"pass": False, "errors": errors}, indent=2)); return 1
     spec = json.loads((root / "run_spec.json").read_text())
     summary = json.loads((root / "summary.json").read_text())
-    if spec.get("trials") != 10 or spec.get("expected_sm_count") != 20:
+    if (spec.get("trials") != 10 or spec.get("expected_sm_count") != 20
+            or not isinstance(spec.get("trial_timeout_seconds"), int)
+            or spec.get("trial_timeout_seconds", 0) <= 0):
         errors.append("invalid campaign contract")
     generator = REPO / str(spec.get("generator", ""))
     if not generator.is_file() or digest(generator) != spec.get("generator_sha256"):
@@ -59,6 +61,14 @@ def main() -> int:
     by_id = {row.get("case_id"): row for row in summary.get("results", [])}
     for case in spec.get("cases", []):
         cid = case["id"]; result = by_id.get(cid)
+        if case["resource"] == "epilogue.nvfp4_requant":
+            args = case.get("args", [])
+            try:
+                blocks_per_sm = int(args[args.index("--blocks-per-sm") + 1])
+            except (ValueError, IndexError):
+                blocks_per_sm = 0
+            if blocks_per_sm != 1:
+                errors.append(f"{cid}: unsafe or missing blocks-per-sm contract")
         if not result or result.get("status") != "ok" or result.get("trial_count") != 10:
             errors.append(f"{cid}: incomplete result"); continue
         source = REPO / result["source_path"]
@@ -108,6 +118,8 @@ def main() -> int:
             else:
                 if int(fields.get("sm_count", 0)) != 20 or int(fields.get("unique_smid_count", 0)) != 20:
                     errors.append(f"{cid}: incomplete SM coverage")
+                if int(fields.get("blocks_per_sm", 0)) != 1:
+                    errors.append(f"{cid}: blocks-per-sm result mismatch")
                 if int(fields.get("value_mismatches", -1)) or int(fields.get("scale_mismatches", -1)):
                     errors.append(f"{cid}: numerical mismatch")
                 try:

@@ -31,6 +31,7 @@ constexpr float kE4M3Max = 448.0f;
 struct Options {
   int rows = 256;
   int cols = 256;
+  int blocks_per_sm = 1;
   int warmup = 10;
   int iterations = 100;
   unsigned int seed = 1234;
@@ -49,6 +50,7 @@ void print_usage(const char* program) {
       << "Usage: " << program << " [options]\n"
       << "  --rows N\n"
       << "  --cols N\n"
+      << "  --blocks-per-sm N\n"
       << "  --distribution uniform|normal|laplace|outlier|lognormal|constant\n"
       << "  --seed N\n"
       << "  --warmup N\n"
@@ -76,6 +78,8 @@ bool parse_options(int argc, char** argv, Options* options) {
       if (!parse_positive_int(value, &options->rows)) return false;
     } else if (arg == "--cols") {
       if (!parse_positive_int(value, &options->cols)) return false;
+    } else if (arg == "--blocks-per-sm") {
+      if (!parse_positive_int(value, &options->blocks_per_sm)) return false;
     } else if (arg == "--warmup") {
       if (!parse_positive_int(value, &options->warmup)) return false;
     } else if (arg == "--iterations") {
@@ -92,8 +96,9 @@ bool parse_options(int argc, char** argv, Options* options) {
   }
 
   const std::string& d = options->distribution;
-  return d == "uniform" || d == "normal" || d == "laplace" ||
-         d == "outlier" || d == "lognormal" || d == "constant";
+  return options->blocks_per_sm <= 4 &&
+         (d == "uniform" || d == "normal" || d == "laplace" ||
+          d == "outlier" || d == "lognormal" || d == "constant");
 }
 
 std::vector<float> make_input(std::size_t logical_elements,
@@ -330,12 +335,13 @@ void append_csv(const Options& options, std::size_t logical_elements,
     std::exit(EXIT_FAILURE);
   }
   if (write_header) {
-    csv << "rows,cols,logical_elements,padded_elements,distribution,seed,"
+    csv << "rows,cols,logical_elements,padded_elements,blocks_per_sm,distribution,seed,"
            "warmup,iterations,average_ms,gelements_per_second,effective_gbps,"
            "value_mismatches,scale_mismatches,rmse,max_abs_error\n";
   }
   csv << options.rows << ',' << options.cols << ',' << logical_elements << ','
-      << padded_elements << ',' << options.distribution << ',' << options.seed
+      << padded_elements << ',' << options.blocks_per_sm << ','
+      << options.distribution << ',' << options.seed
       << ',' << options.warmup << ',' << options.iterations << ','
       << average_ms << ',' << gelements_per_second << ',' << effective_gbps
       << ',' << value_mismatches << ',' << scale_mismatches << ',' << rmse
@@ -388,8 +394,21 @@ int main(int argc, char** argv) {
 
   const int total_chunks =
       static_cast<int>(padded_elements / kElementsPerCta);
-  const int worker_count =
-      std::min(total_chunks, property.multiProcessorCount * 4);
+  int occupancy_blocks_per_sm = 0;
+  CHECK_CUDA(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &occupancy_blocks_per_sm, sm110_nvfp4_epilogue_benchmark_kernel,
+      kWarpThreads, 0));
+  if (options.blocks_per_sm > occupancy_blocks_per_sm) {
+    std::cerr << "blocks_per_sm=" << options.blocks_per_sm
+              << " exceeds CUDA occupancy=" << occupancy_blocks_per_sm
+              << '\n';
+    return EXIT_FAILURE;
+  }
+  const int worker_count = std::min(
+      total_chunks, property.multiProcessorCount * options.blocks_per_sm);
+  // This controls the grid size, not CUDA block-to-SM affinity.  The reported
+  // unique_smid_count is the evidence that a one-worker-per-SM probe actually
+  // covered every SM.
   CHECK_CUDA(cudaMalloc(&device_smids,
                         static_cast<std::size_t>(worker_count) *
                             sizeof(unsigned int)));
@@ -471,6 +490,8 @@ int main(int argc, char** argv) {
             << " gelements_per_second=" << gelements_per_second
             << " effective_gbps=" << effective_gbps << '\n'
             << "sm_count=" << property.multiProcessorCount
+            << " blocks_per_sm=" << options.blocks_per_sm
+            << " occupancy_blocks_per_sm=" << occupancy_blocks_per_sm
             << " worker_count=" << worker_count
             << " unique_smid_count=" << unique_smid_count << '\n'
             << "value_mismatches=" << value_mismatches
