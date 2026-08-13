@@ -68,4 +68,7 @@ python3 microbench/sm110_gemm_component_campaign/run_epilogue_probe.py \
 
 The probe records the exact command, source/binary/SASS hashes, raw stdout,
 MAXN/identity/clock state, and OC counters immediately before and after every
-profile under `results/sm110_epilogue_probe/$RUN_ID`.
+profile under `results/sm110_epilogue_probe/$RUN_ID`. Both the measurement
+timeout and TERM/KILL escalation waits are bounded. `termination_failed=true`
+means the process survived the bounded escalation and the machine must be
+rebooted before any further GPU work.

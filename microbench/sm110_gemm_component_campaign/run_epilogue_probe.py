@@ -78,20 +78,30 @@ def bounded_run(command: list[str], timeout_seconds: int) -> dict[str, object]:
         stderr=subprocess.STDOUT, start_new_session=True,
     )
     timed_out = False
+    termination_failed = False
     try:
         output, _ = proc.communicate(timeout=timeout_seconds)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as initial_timeout:
         timed_out = True
         os.killpg(proc.pid, signal.SIGTERM)
         try:
             output, _ = proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as term_timeout:
             os.killpg(proc.pid, signal.SIGKILL)
-            output, _ = proc.communicate()
+            try:
+                output, _ = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired as kill_timeout:
+                termination_failed = True
+                partial = (kill_timeout.stdout or term_timeout.stdout
+                           or initial_timeout.stdout or "")
+                if isinstance(partial, bytes):
+                    partial = partial.decode(errors="backslashreplace")
+                output = partial
     return {
         "command": command, "started_at_utc": started,
         "finished_at_utc": utc_now(), "timeout_seconds": timeout_seconds,
-        "timed_out": timed_out, "returncode": proc.returncode,
+        "timed_out": timed_out, "termination_failed": termination_failed,
+        "returncode": proc.returncode,
         "output": output,
     }
 
@@ -201,8 +211,11 @@ def main() -> int:
             json.dumps(row, indent=2, sort_keys=True) + "\n")
         print(json.dumps({"profile_id": profile_id,
                           "returncode": row["returncode"],
-                          "timed_out": row["timed_out"]}), flush=True)
-        if row["timed_out"] or row["returncode"] or validation_errors:
+                          "timed_out": row["timed_out"],
+                          "termination_failed": row["termination_failed"]}),
+              flush=True)
+        if (row["timed_out"] or row["termination_failed"]
+                or row["returncode"] or validation_errors):
             break
 
     after = environment()
@@ -216,7 +229,8 @@ def main() -> int:
         "environment_before": before, "environment_after": after,
         "profiles": results,
         "pass": len(results) == len(profiles) and all(
-            not row["timed_out"] and row["returncode"] == 0
+            not row["timed_out"] and not row["termination_failed"]
+            and row["returncode"] == 0
             and not row["validation_errors"]
             for row in results),
     }
