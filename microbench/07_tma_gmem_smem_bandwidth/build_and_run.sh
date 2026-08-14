@@ -57,6 +57,7 @@ run_default() {
     --threads "${THREADS:-128}"
     --tile-bytes "${TILE_BYTES:-32768}"
     --slots "${SLOTS:-4}"
+    --inflight "${INFLIGHT:-1}"
   )
   "${BIN}" --csv-header | tee "${CSV}"
   "${BIN}" --mode l2-hit --bytes "${L2_BYTES:-16777216}" "${common_args[@]}" --csv | tee -a "${CSV}"

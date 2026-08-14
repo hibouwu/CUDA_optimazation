@@ -837,7 +837,6 @@ def _resource_demands(
 
     if empirical:
         if workload.residency != "compute_oracle" and schedule.uses_tma:
-            demands["tma.l2"] = (work.tma_input_bytes, "byte")
             if workload.residency == "cold_hbm":
                 demands["tma.hbm"] = (work.tma_unique_input_bytes, "byte")
         tmem_warps = schedule.threads // 32
@@ -891,6 +890,62 @@ def _evaluate_layer(
         seconds[resource] = quantity / cap.rate_per_second
         if cap.condition:
             conditions.append(f"{cap.capacity_id}: {cap.condition}")
+
+    if not strict:
+        # An empirical resource point proves that the recorded kernel sustained
+        # a rate; it does not remove any independently established physical
+        # ceiling.  Intersect every empirical schedule with all applicable
+        # conditional uppers.  This is especially important for cold-HBM GEMM:
+        # separate read and write probes may overlap, but their combined traffic
+        # must still respect the shared LPDDR bandwidth ceiling.
+        ceiling_demands = _resource_demands(
+            workload, schedule, work, precision, empirical=False
+        )
+        for resource, (quantity, unit) in ceiling_demands.items():
+            cap = _select_capacity(capacities, resource, strict=True)
+            if cap is None:
+                continue
+            if cap.work_unit != unit:
+                raise ModelError(
+                    f"{cap.capacity_id}: capacity unit {cap.work_unit} does not "
+                    f"match {resource} ceiling demand unit {unit}"
+                )
+            seconds[f"hard_upper:{resource}"] = (
+                quantity / cap.rate_per_second
+            )
+            if cap.condition:
+                conditions.append(f"{cap.capacity_id}: {cap.condition}")
+
+        if workload.residency != "compute_oracle" and schedule.uses_tma:
+            ingress_resource = "tma.smem_ingress.per_sm"
+            ingress_cap = _select_capacity(
+                capacities, ingress_resource, strict=False
+            )
+            if ingress_cap is None:
+                missing.append(ingress_resource)
+            else:
+                if ingress_cap.work_unit != "byte":
+                    raise ModelError(
+                        f"{ingress_cap.capacity_id}: per-SM TMA ingress "
+                        f"capacity unit {ingress_cap.work_unit} is not byte"
+                    )
+                service_sms = max(1, hardware.sm_count // schedule.cta_group)
+                task_bytes = work.tma_input_bytes / work.task_count
+                per_group_rate = (
+                    ingress_cap.rate_per_second * schedule.cta_group
+                )
+                seconds["tma.per_sm_parallel_span"] = (
+                    task_bytes / per_group_rate
+                )
+                seconds["tma.per_sm_parallel_makespan"] = (
+                    ceil_div(work.task_count, service_sms)
+                    * task_bytes / per_group_rate
+                )
+                if ingress_cap.condition:
+                    conditions.append(
+                        f"{ingress_cap.capacity_id}: "
+                        f"{ingress_cap.condition}"
+                    )
 
     empirical_compute_resource = (
         f"{precision.compute_resource}.m{schedule.mma_m}n{schedule.mma_n}")

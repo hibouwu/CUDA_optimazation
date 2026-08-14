@@ -276,10 +276,14 @@ def build_closure_analysis(
                 "conditional_upper_status": strict.status,
                 "conditional_upper_per_second": strict.performance_per_second,
                 "conditional_bottlenecks": strict.bottlenecks,
+                "conditional_resource_seconds": strict.resource_seconds,
+                "conditional_conditions": strict.conditions,
                 "conditional_schedule_id": envelope.conditional_schedule_id,
                 "empirical_status": empirical.status,
                 "empirical_ideal_per_second": empirical.performance_per_second,
                 "empirical_bottlenecks": empirical.bottlenecks,
+                "empirical_resource_seconds": empirical.resource_seconds,
+                "empirical_conditions": empirical.conditions,
                 "empirical_schedule_id": envelope.empirical_schedule_id,
             }
         strict_rates = _finite(

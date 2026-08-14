@@ -95,6 +95,7 @@ __global__ void init_kernel(uint32_t* data, size_t words) {
 __global__ __launch_bounds__(128, 1)
 void tma_kernel(const __grid_constant__ CUtensorMap map,
                 int slots,
+                int inflight,
                 int iters,
                 int warmup_iters,
                 int tile_words,
@@ -105,46 +106,79 @@ void tma_kernel(const __grid_constant__ CUtensorMap map,
                 uint32_t* smids,
                 uint32_t* sink) {
   extern __shared__ __align__(1024) unsigned char smem[];
-  __shared__ alignas(16) uint64_t barrier_storage;
+  __shared__ alignas(16) uint64_t barrier_storage[8];
   __shared__ unsigned long long start_clock;
   __shared__ unsigned long long stop_clock;
 
   const int tid = static_cast<int>(threadIdx.x);
   if (tid == 0) {
-    mbarrier_init(smem_u32(&barrier_storage), 1);
+    for (int slot = 0; slot < slots; ++slot) {
+      mbarrier_init(smem_u32(&barrier_storage[slot]), 1);
+    }
     asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
     start_clock = 0;
     stop_clock = 0;
   }
   __syncthreads();
 
-  const uint32_t barrier = smem_u32(&barrier_storage);
-  uint32_t phase = 0;
+  uint32_t phases[8] = {};
   uint32_t checksum = 0;
   const int total_iters = warmup_iters + iters;
   const int tile_words_per_slot = tile_words;
 
-  for (int i = 0; i < total_iters; ++i) {
-    if (i == warmup_iters && tid == 0) {
-      start_clock = clock64();
-      start_ns[blockIdx.x] = global_nanoseconds();
+  auto wait_for = [&](int operation, bool consume) {
+    const int slot = operation & (slots - 1);
+    const uint32_t barrier = smem_u32(&barrier_storage[slot]);
+    mbarrier_wait(barrier, phases[slot]);
+    phases[slot] ^= 1;
+    if (consume && tid < 32) {
+      uint32_t* words = reinterpret_cast<uint32_t*>(
+          smem + static_cast<size_t>(slot) * tile_words_per_slot
+              * sizeof(uint32_t));
+      checksum ^= words[(tid * 17 + operation) &
+                        (tile_words_per_slot - 1)];
     }
-    const int slot = i & (slots - 1);
-    const int tile = (blockIdx.x * total_iters + i) % total_tiles;
-    unsigned char* dst = smem + static_cast<size_t>(slot) * tile_words_per_slot * sizeof(uint32_t);
+  };
+
+  auto issue = [&](int operation) {
+    const int slot = operation & (slots - 1);
+    const int tile =
+        (blockIdx.x * total_iters + operation) % total_tiles;
+    unsigned char* dst =
+        smem + static_cast<size_t>(slot) * tile_words_per_slot
+            * sizeof(uint32_t);
+    const uint32_t barrier = smem_u32(&barrier_storage[slot]);
     if (tid == 0) {
       tma_load_3d(smem_u32(dst), &map, 0, 0, tile, barrier);
-      mbarrier_arrive_expect_tx(barrier, static_cast<uint32_t>(tile_words_per_slot * sizeof(uint32_t)));
+      mbarrier_arrive_expect_tx(
+          barrier,
+          static_cast<uint32_t>(tile_words_per_slot * sizeof(uint32_t)));
     }
-    mbarrier_wait(barrier, phase);
-    phase ^= 1;
+  };
 
-    uint32_t* words = reinterpret_cast<uint32_t*>(dst);
-    if ((i >= warmup_iters) && tid < 32) {
-      checksum ^= words[(tid * 17 + i) & (tile_words_per_slot - 1)];
+  auto run_window = [&](int begin, int count, bool consume) {
+    for (int local = 0; local < count; ++local) {
+      if (local >= inflight) {
+        wait_for(begin + local - inflight, consume);
+      }
+      issue(begin + local);
     }
+    const int drain_begin = count > inflight ? count - inflight : 0;
+    for (int local = drain_begin; local < count; ++local) {
+      wait_for(begin + local, consume);
+    }
+  };
+
+  run_window(0, warmup_iters, false);
+  __syncthreads();
+  if (tid == 0) {
+    start_clock = clock64();
+    start_ns[blockIdx.x] = global_nanoseconds();
   }
+  __syncthreads();
 
+  run_window(warmup_iters, iters, true);
+  __syncthreads();
   if (tid == 0) {
     stop_clock = clock64();
     stop_ns[blockIdx.x] = global_nanoseconds();
@@ -180,6 +214,7 @@ struct Options {
   size_t bytes = 16ull << 20;
   int tile_bytes = 32768;
   int slots = 4;
+  int inflight = 1;
   int threads = 128;
   int blocks_per_sm = 1;
   int iters = 4096;
@@ -191,7 +226,7 @@ struct Options {
 void usage(const char* argv0) {
   std::fprintf(stderr,
                "Usage: %s [--mode l2-hit|dram-stream] [--bytes N] [--tile-bytes N]\n"
-               "          [--slots N] [--threads N] [--blocks-per-sm N]\n"
+               "          [--slots N] [--inflight N] [--threads N] [--blocks-per-sm N]\n"
                "          [--iters N] [--warmup-iters N] [--csv] [--csv-header]\n",
                argv0);
 }
@@ -207,6 +242,8 @@ Options parse_args(int argc, char** argv) {
       o.tile_bytes = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--slots") == 0 && i + 1 < argc) {
       o.slots = std::atoi(argv[++i]);
+    } else if (std::strcmp(argv[i], "--inflight") == 0 && i + 1 < argc) {
+      o.inflight = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--threads") == 0 && i + 1 < argc) {
       o.threads = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--blocks-per-sm") == 0 && i + 1 < argc) {
@@ -256,7 +293,7 @@ void encode_tma_3d(CUtensorMap* map, void* base, int tile_words, int total_tiles
 int main(int argc, char** argv) {
   Options o = parse_args(argc, argv);
   if (o.csv_header) {
-    std::puts("mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink,globaltimer_start_min_ns,globaltimer_stop_max_ns,globaltimer_elapsed_ns,globaltimer_gbytes_per_second,unique_smid_count");
+    std::puts("mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,inflight,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink,globaltimer_start_min_ns,globaltimer_stop_max_ns,globaltimer_elapsed_ns,globaltimer_gbytes_per_second,unique_smid_count");
     if (argc == 2) return 0;
   }
 
@@ -271,8 +308,13 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "tile-bytes must be power-of-two for checksum indexing\n");
     return 2;
   }
-  if (o.slots <= 0 || (o.slots & (o.slots - 1)) != 0) {
-    std::fprintf(stderr, "slots must be a positive power of two\n");
+  if (o.slots <= 0 || o.slots > 8
+      || (o.slots & (o.slots - 1)) != 0) {
+    std::fprintf(stderr, "slots must be a power of two in [1, 8]\n");
+    return 2;
+  }
+  if (o.inflight <= 0 || o.inflight > o.slots) {
+    std::fprintf(stderr, "inflight must be in [1, slots]\n");
     return 2;
   }
   if (o.threads != 128) {
@@ -324,7 +366,8 @@ int main(int argc, char** argv) {
   }
   CUDA_CHECK(cudaFuncSetAttribute(tma_kernel, cudaFuncAttributeMaxDynamicSharedMemorySize,
                                   static_cast<int>(smem_bytes)));
-  tma_kernel<<<blocks, o.threads, smem_bytes>>>(map, o.slots, o.iters, o.warmup_iters,
+  tma_kernel<<<blocks, o.threads, smem_bytes>>>(map, o.slots, o.inflight,
+                                                o.iters, o.warmup_iters,
                                                 tile_words, total_tiles, d_cycles,
                                                 d_start_ns, d_stop_ns, d_smids, d_sink);
   CUDA_CHECK(cudaGetLastError());
@@ -377,20 +420,24 @@ int main(int argc, char** argv) {
       &occupancy, tma_kernel, o.threads, smem_bytes));
 
   if (o.csv) {
-    std::printf("%s,%llu,%llu,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%d,%d,%u,%llu,%llu,%llu,%.6f,%d\n",
+    std::printf("%s,%llu,%llu,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%d,%d,%u,%llu,%llu,%llu,%.6f,%d\n",
                 mode_name(o.mode), requested, elapsed, bpc, bpc / sm_count, sm_count,
                 blocks, o.blocks_per_sm, o.threads, o.iters, o.warmup_iters,
-                o.tile_bytes, o.slots, working_set_bytes, total_tiles, occupancy, h_sink,
+                o.tile_bytes, o.slots, o.inflight, working_set_bytes, total_tiles,
+                occupancy, h_sink,
                 start_min_ns, stop_max_ns, globaltimer_elapsed_ns,
                 globaltimer_gbytes_per_second, unique_smid_count);
   } else {
     std::printf("mode=%s\nsm_count=%d\nblocks=%d\nrequested_bytes=%llu\nelapsed_cycles=%llu\n"
                 "bytes_per_cycle=%.6f\nglobaltimer_start_min_ns=%llu\n"
                 "globaltimer_stop_max_ns=%llu\nglobaltimer_elapsed_ns=%llu\n"
-                "globaltimer_gbytes_per_second=%.6f\nunique_smid_count=%d\nsink=%u\n",
+                "globaltimer_gbytes_per_second=%.6f\nunique_smid_count=%d\n"
+                "tile_bytes=%d\nblocks_per_sm=%d\nslots=%d\ninflight=%d\n"
+                "sink=%u\n",
                 mode_name(o.mode), sm_count, blocks, requested, elapsed, bpc, start_min_ns,
                 stop_max_ns, globaltimer_elapsed_ns,
-                globaltimer_gbytes_per_second, unique_smid_count, h_sink);
+                globaltimer_gbytes_per_second, unique_smid_count, o.tile_bytes,
+                o.blocks_per_sm, o.slots, o.inflight, h_sink);
   }
 
   CUDA_CHECK(cudaFree(d_sink));

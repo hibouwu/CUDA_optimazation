@@ -120,7 +120,7 @@ bash microbench/sm110_closure_campaign.sh finish "$SUITE_ID"
 5. 生成
    `results/sm110_model_closure/$SUITE_ID/model_inputs.json`；
 6. 运行模型 provenance audit 和 precision/resource coverage audit；
-7. 生成 36 个 shape-qualified compute capacity、14 个 component capacity、15 个
+7. 生成 36 个 shape-qualified compute capacity、18 个 component capacity、15 个
    candidate/reference 对比、条件上界检查和 N=4096 holdout 经验预测偏差；
 8. 保存关键 artifact 的 SHA-256 清单。
 
@@ -180,7 +180,7 @@ closure suite；不要人为制造跨提交的组合证据。
 若一个旧提交已经完整取得 epilogue preflight、36 个 compute capacity、15 个
 full-GEMM observation 和对应 NCU，而新提交只改变 component microbenchmark、模型
 工作量或导入/报告代码，则不需要重复 compute 和 full-GEMM。使用
-`sm110_component_supplement.sh` 采集新的 14-case component campaign；组合导入器会：
+`sm110_component_supplement.sh` 采集新的 18-case component campaign；组合导入器会：
 
 - 以 `BASE_EXPECTED_COMMIT` 重新审计基础 compute/full 的环境、源码、生成器、
   二进制、SASS、NCU 和平台区间；
@@ -227,7 +227,7 @@ watch -n 10 bash microbench/sm110_component_supplement.sh status "$SUPPLEMENT_ID
 tail -f "results/sm110_closure_suite/$SUPPLEMENT_ID/supplement_launcher.log"
 ```
 
-退出 `watch` 或 `tail -f` 的 `Ctrl-C` 不会中止 detached supervisor。14 个 case 各
+退出 `watch` 或 `tail -f` 的 `Ctrl-C` 不会中止 detached supervisor。18 个 case 各
 10 次，正常运行应按数分钟预留；每个 trial 的独立硬超时仍是 120 秒。只有日志
 出现独立一行 `COMPONENT_SUPPLEMENT_COMPLETE` 后执行：
 
@@ -255,3 +255,68 @@ git push -u origin "$RESULT_BRANCH"
 
 回传结果分支名和 commit 后，即可按第 7 节恢复 120W mode 1。后续不再需要保持
 MAXN 或 GPU 锁频。
+
+## 9. `d382b57` 已完成基础证据的定向恢复
+
+suite `thor-t5000-closure-maxn-20260814-d382b57-a` 已在 commit
+`d382b57eae289b458c5290e3d2b7e0daf1b7d7c8` 完成 epilogue preflight、compute、
+旧 14-case component 和 full-GEMM，三批独立 auditor、50 capacity/15 observation
+导入和 campaign coverage 均通过；`oc_after.tsv` 已冻结，日志包含
+`SUITE_COMPLETE`。最终报告暴露了两个模型问题：经验 read/write 绕过共享
+`hbm.total`，以及串行 TMA L2 probe 低估 tc5a 四 stage、A/B 双请求的 per-SM
+ingress。前者是纯模型修复；后者需要新的 18-case component campaign。旧
+component 不复用，但 compute/full 不应重跑。
+
+拉取发布该修复的提交后，在 Thor 仓库根目录执行以下定向 supplement。当前提交
+必须由 `git rev-parse HEAD` 取得，交付消息会同时给出其精确 40 位 hash：
+
+```bash
+unset BASE_SUITE_ID BASE_EXPECTED_COMMIT SUPPLEMENT_ID EXPECTED_COMMIT
+
+BASE_SUITE_ID=thor-t5000-closure-maxn-20260814-d382b57-a
+BASE_EXPECTED_COMMIT=d382b57eae289b458c5290e3d2b7e0daf1b7d7c8
+SUPPLEMENT_ID=thor-t5000-tma-ingress-supplement-maxn-20260814-a
+EXPECTED_COMMIT=$(git rev-parse HEAD)
+
+test "$(git branch --show-current)" = \
+  "codex/thor-sm110-gemm-bounds-v2"
+test "$(git status --short --untracked-files=no)" = ""
+test -f "results/sm110_closure_suite/$BASE_SUITE_ID/oc_after.tsv"
+grep -x 'SUITE_COMPLETE' \
+  "results/sm110_closure_suite/$BASE_SUITE_ID/suite_launcher.log"
+test ! -e "results/sm110_closure_suite/$SUPPLEMENT_ID"
+test ! -e \
+  "results/sm110_gemm_component_campaign/$SUPPLEMENT_ID-components"
+```
+
+配置平台并启动：
+
+```bash
+sudo /usr/sbin/nvpmodel -m 0
+sudo /usr/bin/jetson_clocks
+/usr/sbin/nvpmodel -q
+sudo /usr/bin/jetson_clocks --show
+
+bash microbench/sm110_component_supplement.sh start \
+  "$SUPPLEMENT_ID" "$BASE_SUITE_ID" "$BASE_EXPECTED_COMMIT"
+```
+
+状态、持续状态和日志：
+
+```bash
+bash microbench/sm110_component_supplement.sh status "$SUPPLEMENT_ID"
+watch -n 10 bash microbench/sm110_component_supplement.sh status "$SUPPLEMENT_ID"
+tail -f \
+  "results/sm110_closure_suite/$SUPPLEMENT_ID/supplement_launcher.log"
+```
+
+只有日志出现独立一行 `COMPONENT_SUPPLEMENT_COMPLETE` 后执行：
+
+```bash
+bash microbench/sm110_component_supplement.sh finish "$SUPPLEMENT_ID"
+```
+
+`finish` 会用旧 commit 的 compute/full 和当前 commit 的 18 个 component
+capacity 重新生成组合报告。成功后严格按第 8 节的结果分支命令提交基础证据、
+supplement 证据和组合 `sm110_model_closure/$SUPPLEMENT_ID`；不要把结果提交到代码
+分支。结果推送完成后按第 7 节恢复 120W mode 1。

@@ -45,14 +45,42 @@ CASES = [
         "id": "tma_l2_hit_32k",
         "resource": "tma.l2_hit_ingress",
         "binary": "tma",
-        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "1", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
         "id": "tma_dram_stream_32k",
         "resource": "tma.dram_stream_ingress",
         "binary": "tma",
-        "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "1", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "sass": ["UTMALDG.3D"],
+    },
+    {
+        "id": "tma_l2_hit_32k_inflight4",
+        "resource": "tma.l2_hit_ingress",
+        "binary": "tma",
+        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "sass": ["UTMALDG.3D"],
+    },
+    {
+        "id": "tma_dram_stream_32k_inflight4",
+        "resource": "tma.dram_stream_ingress",
+        "binary": "tma",
+        "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "sass": ["UTMALDG.3D"],
+    },
+    {
+        "id": "tma_l2_hit_16k_inflight8",
+        "resource": "tma.l2_hit_ingress",
+        "binary": "tma",
+        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "sass": ["UTMALDG.3D"],
+    },
+    {
+        "id": "tma_dram_stream_16k_inflight8",
+        "resource": "tma.dram_stream_ingress",
+        "binary": "tma",
+        "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
@@ -271,6 +299,22 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
         elapsed_ns = int(fields["globaltimer_elapsed_ns"])
         reported = float(fields["globaltimer_gbytes_per_second"]) * 1e9
         recalculated = requested * 1e9 / elapsed_ns
+        args = list(case["args"])
+        expected_inflight = int(args[args.index("--inflight") + 1])
+        expected_slots = int(args[args.index("--slots") + 1])
+        expected_tile_bytes = int(args[args.index("--tile-bytes") + 1])
+        expected_blocks_per_sm = int(
+            args[args.index("--blocks-per-sm") + 1])
+        if int(fields.get("inflight", "0")) != expected_inflight:
+            raise RuntimeError(f"{case['id']}: TMA inflight contract mismatch")
+        if int(fields.get("slots", "0")) != expected_slots:
+            raise RuntimeError(f"{case['id']}: TMA slot contract mismatch")
+        if (int(fields.get("tile_bytes", "0")) != expected_tile_bytes
+                or int(fields.get("blocks_per_sm", "0"))
+                != expected_blocks_per_sm
+                or int(fields.get("blocks", "0"))
+                != EXPECTED_SMS * expected_blocks_per_sm):
+            raise RuntimeError(f"{case['id']}: TMA launch/payload mismatch")
     elif resource == "tmem.accumulator_readback":
         if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
             raise RuntimeError(f"{case['id']}: incomplete SM coverage")

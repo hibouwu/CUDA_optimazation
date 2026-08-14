@@ -12,11 +12,15 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-EXPECTED_CASES = 14
+EXPECTED_CASES = 18
 MEMORY_RESOURCES = {"hbm.read", "hbm.write", "l2.read", "l2.write"}
 EXPECTED_CASE_RESOURCES = {
     "tma_l2_hit_32k": "tma.l2_hit_ingress",
     "tma_dram_stream_32k": "tma.dram_stream_ingress",
+    "tma_l2_hit_32k_inflight4": "tma.l2_hit_ingress",
+    "tma_dram_stream_32k_inflight4": "tma.dram_stream_ingress",
+    "tma_l2_hit_16k_inflight8": "tma.l2_hit_ingress",
+    "tma_dram_stream_16k_inflight8": "tma.dram_stream_ingress",
     "tmem_scale_ingress_32x128b_warpx4": "tmem.scale_ingress",
     "hbm_read_aggregate": "hbm.read",
     "hbm_write_aggregate": "hbm.write",
@@ -128,6 +132,26 @@ def main() -> int:
                     errors.append(f"{cid}: incomplete SM coverage")
                 try:
                     if case["resource"].startswith("tma."):
+                        args = case.get("args", [])
+                        expected_inflight = int(
+                            args[args.index("--inflight") + 1])
+                        expected_slots = int(
+                            args[args.index("--slots") + 1])
+                        expected_tile_bytes = int(
+                            args[args.index("--tile-bytes") + 1])
+                        expected_blocks_per_sm = int(
+                            args[args.index("--blocks-per-sm") + 1])
+                        if (int(fields.get("inflight", 0))
+                                != expected_inflight
+                                or int(fields.get("slots", 0))
+                                != expected_slots
+                                or int(fields.get("tile_bytes", 0))
+                                != expected_tile_bytes
+                                or int(fields.get("blocks_per_sm", 0))
+                                != expected_blocks_per_sm
+                                or int(fields.get("blocks", 0))
+                                != 20 * expected_blocks_per_sm):
+                            raise ValueError("invalid TMA inflight contract")
                         recalculated = (int(fields["requested_bytes"]) * 1e9 /
                                         int(fields["globaltimer_elapsed_ns"]))
                     elif case["resource"] == "tmem.accumulator_readback":

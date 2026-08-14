@@ -9,7 +9,7 @@ usage:
   microbench/sm110_component_supplement.sh finish SUPPLEMENT_ID
 
 The supplement preserves an already audited base suite's compute/full-GEMM
-evidence and collects only the current 14-case component campaign.  The final
+evidence and collects only the current 18-case component campaign.  The final
 composite import independently audits both source commits and platform
 intervals; it does not relabel the two runs as one execution.
 EOF

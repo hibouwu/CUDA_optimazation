@@ -258,12 +258,35 @@ cache reuse 下只计一次的 A/B 物理输入并集，单位为 B。它按
 scale bytes，并在 `tail_policy=pad` 时使用补齐后的
 \(N_MB_M\)、\(N_NB_N\) 和 \(N_KB_K\) 范围。于是当前经验层明确区分：
 
-- `hot_l2`：\(Q_{\mathrm{TMA}}\) 同时约束 `tma.l2` payload 和 `l2.read`
+- `hot_l2`：完整的 \(Q_{\mathrm{TMA}}\) 约束整 GPU 共享的 `l2.read`
   request；没有 HBM read 约束；
 - `cold_hbm`：\(Q_{\mathrm{TMA,unique}}\) 约束首次 `tma.hbm` ingress 和
-  `hbm.read`，而完整的 \(Q_{\mathrm{TMA}}\) 仍约束 `tma.l2` 与 `l2.read`；
+  `hbm.read`，而完整的 \(Q_{\mathrm{TMA}}\) 仍约束共享的 `l2.read`；
 - C read 另加到对应的 HBM/L2 read 工作量，用户可见 D store 另由
   \(Q_D^{\mathrm{LB}}\) 约束 write path。
+
+L2 总线与 SM 本地出口不是同一个资源。定义
+\(N_{\mathrm{task}}=N_MN_N\) 为 output-tile task 数，单位 task；定义
+\(Q_{\mathrm{TMA/task}}=Q_{\mathrm{TMA}}/N_{\mathrm{task}}\) 为一个 task 在
+整个 K loop 发出的 TMA payload，单位 B/task；定义
+\(\widehat C_{\mathrm{TMA,SM}}\) 为一个 SM 的 TMA→SMEM sustained ingress，
+单位 B/s/SM；定义 \(S\) 为可用 SM 数。CTA-group-1、每 SM 一个 persistent
+worker 的本地出口 makespan 为：
+
+\[
+\widehat T_{\mathrm{TMA,local}}
+=
+\left\lceil\frac{N_{\mathrm{task}}}{S}\right\rceil
+\frac{Q_{\mathrm{TMA/task}}}
+     {\widehat C_{\mathrm{TMA,SM}}}.
+\]
+
+同时，完整 \(Q_{\mathrm{TMA}}\) 仍受整 GPU 共享 `l2.read` rate 约束。Thor
+上 NCU 给出的 L2 read model peak 是 1024 B/cycle/GPU，不是 1024
+B/cycle/SM。component campaign 的 L2-hit TMA 全网格 rate 只有在证明 20 个
+SM 各一个 CTA 后才除以 20，形成
+`tma.smem_ingress.per_sm`；不能把整卡 aggregate rate 原样当作每 SM 出口，
+也不能把每 SM rate 再当作共享 L2 总线。
 
 这等价于允许理想 schedule 进行完美的跨 CTA L2 reuse，但没有把入口冷数据
 凭空变成 L2 resident。不同接口的时间在资源层取最大值，表示理想流水重叠；若
@@ -354,6 +377,12 @@ payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 实测 rate；旧 `snapshot_only` 即使数值更高也不再混入选择。只有该资源尚无
 closure 点时，快照才继续作为显式的暂定校准值。严格条件上界不使用任何实测
 capacity，仍取所有同时成立 rate upper 的最小值。
+
+`tma.smem_ingress.per_sm` 是明确的每 SM rate。当前 closure case 固定 20 个
+不同 SM ID、每 SM 一个 CTA 和相同工作量，先用全网格 `%globaltimer` 算
+aggregate rate，再除以 20；模型按 task waves 使用该值，而不是把 aggregate
+payload 直接除以一个伪造的全局 TMA-L2 资源。`l2.read` 仍独立表示共享 L2
+总线。
 
 “同合同点”不是只看名称相似。当前 schedule 固定 `threads=128`，即 4 warp，并
 选择 `LDTM.x16` accumulator readback；因此 unified component campaign 中只有
@@ -554,9 +583,25 @@ P_{\mathrm{ub}}=\frac{W_{\mathrm{use}}}{T_{\mathrm{ub}}^{\mathrm{LB}}}.
 这里的最大值明确假设不同约束可以完美重叠；只有依赖图证明两个阶段必须串行时，
 它们的时间才应先沿同一 critical path 相加，再作为
 \(\widehat T_{\mathrm{span}}\) 进入最大值。当前可执行 v1 已实现逐资源时间、由
-compute rate 推出的单任务 span/有限 wave makespan，以及 `fixed_seconds` 独立
-约束；尚未实现通用 pipeline DAG 和联合容量外边界，因此不会声称已经搜索了所有
-因果重叠关系。
+compute rate 推出的单任务 span/有限 wave makespan、由 per-SM TMA ingress
+推出的最慢 SM wave makespan，以及 `fixed_seconds` 独立约束；尚未实现通用
+pipeline DAG 和联合容量外边界，因此不会声称已经搜索了所有因果重叠关系。
+
+经验测得的 sustained rate 不是物理 rate upper。对同一 schedule，经验层还会
+把所有适用的 `specified_upper`、`derived_upper` 和 `profiler_model_peak` 作为
+`hard_upper:*` 时间约束取交集。例如 cold-HBM 同时使用方向独立的
+`hbm.read`/`hbm.write` 实测值和共享 `hbm.total` 上界：
+
+\[
+\widehat T_{\mathrm{HBM}}
+=\max\left(
+\frac{Q_{\mathrm{read}}}{\widehat C_{\mathrm{read}}},
+\frac{Q_{\mathrm{write}}}{\widehat C_{\mathrm{write}}},
+\frac{Q_{\mathrm{read}}+Q_{\mathrm{write}}}{U_{\mathrm{HBM,total}}}
+\right).
+\]
+
+因此读写 probe 即使分别很快，也不能合成超过共享 LPDDR5X 总带宽的经验包络。
 
 定义 \(\mathcal X_{\mathrm{manifest}}\) 为通过当前 v1 已实现的 descriptor、
 MMA shape、单 CTA SMEM/TMEM、thread 和显式精度白名单检查的 schedule 集合。
@@ -658,12 +703,16 @@ Table 42/Table 44 encoder 和反例测试，在重跑前模型把旧数字标为
 - L2 unique read 和 end-to-end store path；
 - TMA L2-hit 和 DRAM-stream ingress。
 
-上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。新的 closure
-campaign 已把计时改为整网格最早 `%globaltimer` start 到最晚 stop，并要求 20 个
-不同 SM ID；Thor 返回结果前，旧数字不升级为 `closure_qualified`。
+上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。对 L2-hit 项，历史
+aggregate 数字只有在除以 20 后才作为 `tma.smem_ingress.per_sm` 快照使用；它
+不能替代共享 `l2.read`。新的 closure campaign 已把计时改为整网格最早
+`%globaltimer` start 到最晚 stop，要求 20 个不同 SM ID，并同时冻结
+`32 KiB × inflight=1`、`32 KiB × inflight=4` 和
+`16 KiB × inflight=8`；新结果返回前，旧数字不升级为
+`closure_qualified`。
 HBM/L2 四个旧快照也采用相同处理：新的 unified component campaign 已加入
 `hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case；在
-14-case campaign 回传并通过独立审计前，模型仍保留旧值的 `snapshot_only` 资格。
+18-case campaign 回传并通过独立审计前，模型仍保留旧值的 `snapshot_only` 资格。
 
 当前公共资源硬缺口：
 
@@ -975,8 +1024,12 @@ cd microbench/05_gmem_dram_bandwidth
   155.779224 B/cycle/GPU。
 - 边界：这是包含 issue、completion、mbarrier 和 SMEM destination 的端到端
   TMA ingress，不是纯 DRAM 或纯 SMEM port peak。历史结果用各 CTA 最大
-  `clock64()` span；新的整卡 closure rate 必须来自后述 unified component
-  campaign 的 `globaltimer_gbytes_per_second`。
+  `clock64()` span；新的 closure 同时保留 issue→wait 的 `inflight=1`、四个
+  slot 的 `inflight=4` 和八个 slot 的 `inflight=8`。八请求点对应 tc5a 四个
+  stage 各发 A/B 两个请求的最大并发数，但不把等大小 probe tile 冒充 tc5a 的
+  16-KiB/32-KiB 请求对。L2-hit 全网格 rate 在证明 20 个 SM 各一 CTA 后除以
+  20，形成每 SM ingress；整 GPU 共享 L2 read 仍由 1024
+  B/cycle/GPU 的独立约束建模。DRAM-stream rate 保留为端到端 aggregate 条件。
 
 基本命令：
 

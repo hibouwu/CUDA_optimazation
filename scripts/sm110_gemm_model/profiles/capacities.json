@@ -231,8 +231,8 @@
   },
   {
     "capacity_id": "tma_l2_hit_measured",
-    "resource": "tma.l2",
-    "rate_per_second": 1218173413275.0,
+    "resource": "tma.smem_ingress.per_sm",
+    "rate_per_second": 60908670663.75,
     "work_unit": "byte",
     "evidence_kind": "measured_sustained",
     "source_id": "tma_l2_hit",
@@ -240,7 +240,7 @@
     "source_locator": "mode=l2-hit,bytes_per_cycle",
     "original_value": 773.443437,
     "original_unit": "B/cycle/GPU",
-    "condition": "32 KiB TMA tiles, one CTA/SM, 16 MiB backing; converted with 1.575 GHz snapshot"
+    "condition": "32 KiB TMA tiles, one CTA/SM, 16 MiB backing; legacy full-grid aggregate divided by 20 SMs; serialized inflight=1 snapshot converted with 1.575 GHz"
   },
   {
     "capacity_id": "tma_hbm_stream_measured",

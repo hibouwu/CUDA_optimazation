@@ -23,7 +23,7 @@ SUITE_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 COMPUTE_SELECTION = CAMPAIGN_COMPUTE_SELECTION
 COMPONENT_RESOURCES = {
-    "tma.l2_hit_ingress": "tma.l2",
+    "tma.l2_hit_ingress": "tma.smem_ingress.per_sm",
     "tma.dram_stream_ingress": "tma.hbm",
     "tmem.scale_ingress": "tmem.scale_ingress",
     "hbm.read": "hbm.read",
@@ -398,19 +398,41 @@ def capacities_from_component(
                      paths.relative(case_dir / "trials.jsonl"),
                      paths.relative(paths.component / f"build/{binary}.sass.txt"),
                      str(result["source_path"]))
+        rate_per_second = float(result["rate_per_second_median"])
+        original_value = None
+        original_unit = None
+        condition_scope = (
+            "20-SM component campaign; case-declared blocks per SM; "
+            "aggregate globaltimer span"
+        )
+        if resource == "tma.smem_ingress.per_sm":
+            expected_sms = int(spec.get("expected_sm_count", 0))
+            if expected_sms != 20:
+                raise ModelError(
+                    f"{case_id}: per-SM TMA normalization requires the "
+                    "frozen 20-SM campaign contract"
+                )
+            original_value = rate_per_second
+            original_unit = "B/s/GPU at one CTA per SM"
+            rate_per_second /= expected_sms
+            condition_scope = (
+                "20-SM component campaign; exactly one CTA per SM and all "
+                "20 SM IDs; aggregate globaltimer rate divided by 20 to "
+                "form a per-SM ingress rate"
+            )
         capacities.append(Capacity(
             capacity_id=f"{identity_id}.component.{case_id}",
             resource=resource,
-            rate_per_second=float(result["rate_per_second_median"]),
+            rate_per_second=rate_per_second,
             work_unit=work_unit,
             evidence_kind=EvidenceKind.MEASURED_SUSTAINED,
             source_id=paths.suite_id,
             source_path=paths.relative(paths.component / "summary.json"),
             source_locator=f'"case_id": "{case_id}"',
+            original_value=original_value,
+            original_unit=original_unit,
             condition=(f"case_id={case_id}; args={case_arguments}; "
-                       "20-SM component campaign; case-declared blocks per SM; "
-                       "aggregate globaltimer span, except CUDA-event NVFP4 "
-                       "epilogue"),
+                       f"{condition_scope}, except CUDA-event NVFP4 epilogue"),
             qualification=qualification,
             trial_count=int(result["trial_count"]),
             artifact_paths=artifacts,

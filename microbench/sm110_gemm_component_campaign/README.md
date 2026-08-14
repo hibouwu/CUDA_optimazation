@@ -3,7 +3,8 @@
 This Git-round-trip campaign collects five component families without
 conflating them:
 
-- TMA GMEM→SMEM ingress for L2-hit and DRAM-stream residency;
+- serial, four-request and eight-request-inflight TMA GMEM→SMEM ingress for
+  L2-hit and DRAM-stream residency;
 - aggregate HBM/L2 read and write paths under explicit working-set contracts;
 - block-scale SFA/SFB SMEM→TMEM ingress through
   `tcgen05.cp .32x128b.warpx4`;
@@ -15,7 +16,7 @@ start through the latest CTA stop and require exactly 20 distinct SM IDs on the
 20-SM T5000 contract. The epilogue uses CUDA-event timing and additionally
 requires all 20 SM IDs plus bit-exact packed-value and scale agreement with the
 host reference.
-The exact 14-case matrix has ten external trials per case, source/binary/SASS
+The exact 18-case matrix has ten external trials per case, source/binary/SASS
 hashes, the exact compile
 command, raw stdout, environment snapshots, and an independent auditor.
 Every external trial has a 120-second default host timeout. A timeout is a
@@ -31,7 +32,7 @@ The launcher returns immediately and records `launcher.pid`, `launcher.log`,
 ID safely skips only cases whose ten trials and source/binary/SASS hashes still
 match the immutable run contract.
 
-Do not launch the 14 cases directly for closure qualification: a bare component
+Do not launch the 18 cases directly for closure qualification: a bare component
 directory does not contain the suite-level branch/commit, locked-clock and
 overcurrent interval required by the importer.  Use the same-commit commands
 in `THOR_CLOSURE_RUNBOOK.md`: either the complete
@@ -51,6 +52,18 @@ places a device-scope fence before its stop timestamp.  The block-scale copy
 uses 32 distinct four-column TMEM destination slots per commit batch, so the
 reported ingress is not an artifact of overlapping asynchronous writes to two
 addresses.
+The two original TMA cases freeze `32 KiB × inflight=1`; two cases freeze
+`32 KiB × inflight=4`, and two saturation cases freeze
+`16 KiB × inflight=8`. Each slot has an independent mbarrier and every launch
+uses one CTA/SM. The eight-request point reflects tc5a's four stages with A and
+B TMA requests per stage without claiming that equal-size probe tiles reproduce
+the GEMM's exact 16-KiB/32-KiB request pair.
+This separates serialized request latency from the sustained ingress available
+to a four-stage GEMM pipeline. The model selects the largest closure-qualified
+rate for `tma.smem_ingress.per_sm` after the verified 20-SM aggregate is divided
+by 20. The model applies that local rate through task waves; shared `l2.read`
+and conditional hard ceilings remain separate and active. DRAM-stream retains
+its end-to-end `tma.hbm` aggregate condition.
 
 After any prior GPU fence hang, reboot Thor before running this probe.  Keep the
 machine in MAXN with clocks locked, then run the six bounded profiles.  The

@@ -421,7 +421,7 @@ class WorkAccountingTest(unittest.TestCase):
         self.assertEqual(demands["hbm.read"][0], work.tma_unique_input_bytes)
         self.assertEqual(demands["tma.hbm"][0], work.tma_unique_input_bytes)
         self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
-        self.assertEqual(demands["tma.l2"][0], work.tma_input_bytes)
+        self.assertNotIn("tma.l2", demands)
 
     def test_hot_schedule_has_no_hbm_demand(self) -> None:
         workload = Workload(
@@ -437,7 +437,48 @@ class WorkAccountingTest(unittest.TestCase):
         self.assertNotIn("hbm.read", demands)
         self.assertNotIn("tma.hbm", demands)
         self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
-        self.assertEqual(demands["tma.l2"][0], work.tma_input_bytes)
+        self.assertNotIn("tma.l2", demands)
+
+    def test_per_sm_tma_ingress_uses_slowest_wave_makespan(self) -> None:
+        workload = Workload(
+            "tc5a-like", 2048, 2048, 2048, "fp16_f32",
+            residency="hot_l2")
+        schedule = Schedule(
+            "tc5a", 128, 256, 64, 4,
+            mma_n=256, tmem_columns=256)
+        per_sm_rate = 80e9
+        capacities = [
+            Capacity(
+                "compute", "tensor.fp16.m128n256", 1e30, "flop",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "compute"),
+            Capacity(
+                "l2_read", "l2.read", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-read"),
+            Capacity(
+                "l2_write", "l2.write", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-write"),
+            Capacity(
+                "tma_per_sm", "tma.smem_ingress.per_sm", per_sm_rate,
+                "byte", EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "tma-per-sm"),
+            Capacity(
+                "readback", "tmem.readback", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "readback"),
+        ]
+        result = evaluate(
+            workload, schedule, Hardware("thor", 20, 1.575e9), capacities)
+        work = result.work
+        self.assertEqual(work.task_count, 128)
+        task_bytes = work.tma_input_bytes / work.task_count
+        self.assertEqual(
+            result.empirical_envelope.resource_seconds[
+                "tma.per_sm_parallel_makespan"],
+            7 * task_bytes / per_sm_rate,
+        )
 
     def test_tmem_capacity_key_matches_instruction_and_warp_contract(self) -> None:
         workload = Workload(
@@ -656,6 +697,134 @@ class ComputeCampaignTest(unittest.TestCase):
 
 
 class EvidenceSemanticsTest(unittest.TestCase):
+    def test_empirical_cold_hbm_intersects_shared_total_upper(self) -> None:
+        def capacity(
+            capacity_id: str,
+            resource: str,
+            rate: float,
+            unit: str,
+            evidence_kind: EvidenceKind,
+        ) -> Capacity:
+            return Capacity(
+                capacity_id,
+                resource,
+                rate,
+                unit,
+                evidence_kind,
+                "test",
+                "source.json",
+                capacity_id,
+                qualification=(
+                    "closure_qualified"
+                    if evidence_kind.is_empirical_rate
+                    else "snapshot_only"
+                ),
+                trial_count=(10 if evidence_kind.is_empirical_rate else 1),
+                artifact_paths=(
+                    ("source.json",)
+                    if evidence_kind.is_empirical_rate
+                    else ()
+                ),
+            )
+
+        capacities = [
+            capacity(
+                "compute_upper", "tensor.bf16", 1e30, "flop",
+                EvidenceKind.DERIVED_UPPER),
+            capacity(
+                "hbm_total_upper", "hbm.total", 100.0, "byte",
+                EvidenceKind.DERIVED_UPPER),
+            capacity(
+                "compute", "tensor.bf16.m128n128", 1e30, "flop",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "hbm_read", "hbm.read", 1000.0, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "hbm_write", "hbm.write", 1000.0, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "l2_read", "l2.read", 1000.0, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "l2_write", "l2.write", 1000.0, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "tma_per_sm", "tma.smem_ingress.per_sm", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "tma_hbm", "tma.hbm", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+            capacity(
+                "readback", "tmem.readback", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED),
+        ]
+        result = evaluate(
+            Workload(
+                "shared-hbm", 128, 128, 64, "bf16_f32",
+                residency="cold_hbm"),
+            Schedule("s", 128, 128, 64, 2),
+            Hardware("h", 20, 1.0),
+            capacities,
+        )
+        strict = result.conditional_upper
+        empirical = result.empirical_envelope
+        self.assertEqual(strict.status, "ok")
+        self.assertEqual(empirical.status, "ok")
+        self.assertEqual(empirical.bottlenecks, ["hard_upper:hbm.total"])
+        self.assertEqual(
+            empirical.resource_seconds["hard_upper:hbm.total"],
+            strict.resource_seconds["hbm.total"],
+        )
+        self.assertLessEqual(
+            empirical.performance_per_second,
+            strict.performance_per_second,
+        )
+
+    def test_hot_l2_does_not_receive_hbm_total_ceiling(self) -> None:
+        capacities = [
+            Capacity(
+                "compute_upper", "tensor.bf16", 1e30, "flop",
+                EvidenceKind.DERIVED_UPPER,
+                "test", "source.json", "compute-upper"),
+            Capacity(
+                "hbm_total_upper", "hbm.total", 1.0, "byte",
+                EvidenceKind.DERIVED_UPPER,
+                "test", "source.json", "hbm-upper"),
+            Capacity(
+                "compute", "tensor.bf16.m128n128", 1e30, "flop",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "compute"),
+            Capacity(
+                "l2_read", "l2.read", 1e12, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-read"),
+            Capacity(
+                "l2_write", "l2.write", 1e12, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-write"),
+            Capacity(
+                "tma_per_sm", "tma.smem_ingress.per_sm", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "tma-l2"),
+            Capacity(
+                "readback", "tmem.readback", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "readback"),
+        ]
+        result = evaluate(
+            Workload(
+                "hot-l2", 128, 128, 64, "bf16_f32",
+                residency="hot_l2"),
+            Schedule("s", 128, 128, 64, 2),
+            Hardware("h", 20, 1.0),
+            capacities,
+        )
+        self.assertFalse(any(
+            key.endswith("hbm.total")
+            for key in result.empirical_envelope.resource_seconds
+        ))
+
     def test_closure_capacity_supersedes_faster_legacy_snapshot(self) -> None:
         snapshot = Capacity(
             "snapshot", "tensor.bf16", 200.0, "flop",

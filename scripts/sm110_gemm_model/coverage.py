@@ -30,7 +30,7 @@ COMMON_REQUIRED_EMPIRICAL_RESOURCES = (
     "l2.read",
     "l2.write",
     "tma.hbm",
-    "tma.l2",
+    "tma.smem_ingress.per_sm",
     "tmem.scale_ingress",
     "tmem.readback",
 )
@@ -44,8 +44,12 @@ CAMPAIGN_FULL_PRECISIONS = (
 )
 
 CAMPAIGN_COMPONENT_CASE_RESOURCES = {
-    "tma_l2_hit_32k": "tma.l2",
+    "tma_l2_hit_32k": "tma.smem_ingress.per_sm",
     "tma_dram_stream_32k": "tma.hbm",
+    "tma_l2_hit_32k_inflight4": "tma.smem_ingress.per_sm",
+    "tma_dram_stream_32k_inflight4": "tma.hbm",
+    "tma_l2_hit_16k_inflight8": "tma.smem_ingress.per_sm",
+    "tma_dram_stream_16k_inflight8": "tma.hbm",
     "tmem_scale_ingress_32x128b_warpx4": "tmem.scale_ingress",
     "hbm_read_aggregate": "hbm.read",
     "hbm_write_aggregate": "hbm.write",

@@ -36,6 +36,14 @@ component capacity is absent it emits no numeric performance. The repository
 snapshot does not yet contain valid numeric capacity evidence for every
 precision named by the project goal. The executable exposes that gap instead
 of substituting another precision's rate.
+Measured sustained rates are not treated as physical upper bounds. Every
+empirical schedule is additionally intersected with all conditional hard
+ceilings applicable to the same workload and schedule. In particular,
+direction-specific `hbm.read` and `hbm.write` points cannot bypass the shared
+`hbm.total` LPDDR ceiling.
+Likewise, the 1024-B/cycle/GPU L2 bus remains a shared `l2.read` constraint,
+while the verified one-CTA-per-SM TMA grid is normalized to
+`tma.smem_ingress.per_sm` and applied with a slowest-wave makespan.
 
 The schedule manifest separates executable transport contracts. Standard
 FP16/BF16/TF32/FP8/INT8 schedules use their native logical payload; raw
@@ -67,7 +75,7 @@ bash microbench/sm110_closure_campaign.sh finish "$SUITE_ID"
 The output is
 `results/sm110_model_closure/<suite-id>/model_inputs.json`. It contains 36
 shape-qualified full-SM compute capacities (12 precisions times M128N64,
-M128N128, and M128N256), 14 component capacities, paired full-GEMM
+M128N128, and M128N256), 18 component capacities, paired full-GEMM
 observations, exact artifact paths, platform qualification and independent
 audit results. A positive overcurrent delta is preserved as a warning because
 it describes the sustained MAXN platform condition; it does not by itself
