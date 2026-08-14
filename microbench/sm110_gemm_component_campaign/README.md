@@ -21,6 +21,10 @@ host reference.
 The exact 18-case matrix has ten external trials per case, source/binary/SASS
 hashes, the exact compile
 command, raw stdout, environment snapshots, and an independent auditor.
+The text output and CSV output expose the same launch-contract fields,
+including `threads`, measured `iters`, `warmup_iters`, and
+`occupancy_blocks_per_sm`; both the runner and the independent auditor reject
+missing fields instead of inferring them from the command line.
 Every external trial has a 120-second default host timeout. A timeout is a
 failed hardware/protocol observation, is recorded in `timeout.json`, and never
 silently becomes a low throughput result. The NVFP4 epilogue closure case

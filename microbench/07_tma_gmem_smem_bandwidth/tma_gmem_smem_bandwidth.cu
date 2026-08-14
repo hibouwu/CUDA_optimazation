@@ -692,7 +692,9 @@ int main(int argc, char** argv) {
                 "tile_bytes=%d\nworking_set_bytes=%zu\nallocation_bytes=%zu\n"
                 "total_tiles=%d\ntotal_tiles_b=%d\n"
                 "requested_blocks=%d\nblocks_per_sm=%d\n"
+                "threads=%d\niters=%d\nwarmup_iters=%d\n"
                 "slots=%d\ninflight=%d\n"
+                "occupancy_blocks_per_sm=%d\n"
                 "sink=%u\n",
                 mode_name(o.mode), o.tc5a_ab ? "tc5a-ab" : "uniform",
                 o.tc5a_ab ? 4 : o.slots, o.tc5a_ab ? 2 : 1,
@@ -705,7 +707,8 @@ int main(int argc, char** argv) {
                 globaltimer_gbytes_per_second, unique_smid_count, o.tile_bytes,
                 working_set_bytes, allocation_bytes, total_tiles, total_tiles_b,
                 o.blocks, o.blocks_per_sm,
-                o.slots, o.inflight, h_sink);
+                o.threads, o.iters, o.warmup_iters,
+                o.slots, o.inflight, occupancy, h_sink);
   }
 
   CUDA_CHECK(cudaFree(d_sink));

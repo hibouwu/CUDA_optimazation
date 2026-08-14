@@ -175,6 +175,37 @@ class ClosureConversionTest(unittest.TestCase):
             EXPECTED_CASE_RESOURCES,
         )
 
+    def test_tma_text_output_exposes_every_audited_launch_field(self) -> None:
+        source = (ROOT / "microbench/07_tma_gmem_smem_bandwidth/"
+                  "tma_gmem_smem_bandwidth.cu").read_text()
+        text_output = source[source.index('std::printf("mode=%s\\npattern=%s'):]
+        for field in (
+            "threads", "iters", "warmup_iters", "occupancy_blocks_per_sm",
+        ):
+            self.assertIn(f'{field}=%d\\n', text_output)
+
+    def test_tma_launch_mismatch_names_missing_output_fields(self) -> None:
+        case = next(
+            row for row in COMPONENT_CASES if row["id"] == "tma_l2_hit_32k")
+        fields = {
+            "sm_count": "20", "unique_smid_count": "1",
+            "requested_bytes": "134217728",
+            "globaltimer_elapsed_ns": "1000000",
+            "globaltimer_gbytes_per_second": "134.217728",
+            "mode": "l2-hit", "pattern": "uniform", "stage_count": "4",
+            "requests_per_stage": "1", "barrier_count": "4",
+            "tensor_map": "3d-none", "row_stride_elements": "0",
+            "smem_bytes": "131072", "preferred_smem_carveout": "default",
+            "tile_bytes": "32768", "blocks_per_sm": "1", "blocks": "1",
+            "requested_blocks": "1", "slots": "4", "inflight": "1",
+        }
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"iters expected=4096 actual=<missing>.*"
+                r"warmup_iters expected=512 actual=<missing>.*"
+                r"threads expected=128 actual=<missing>"):
+            validate_component_fields(case, fields)
+
     def test_per_sm_tma_import_rejects_a_concurrent_full_grid_probe(self) -> None:
         cases = json.loads(json.dumps(COMPONENT_CASES))
         target = next(
@@ -236,6 +267,7 @@ class ClosureConversionTest(unittest.TestCase):
             per_sm = case_id.startswith("tma_l2_hit")
             args = list(by_id[case_id]["args"])
             expected_warmup = args[args.index("--warmup-iters") + 1]
+            expected_iters = args[args.index("--iters") + 1]
             expected_threads = args[args.index("--threads") + 1]
             expected_pattern = (
                 args[args.index("--pattern") + 1]
@@ -287,11 +319,13 @@ class ClosureConversionTest(unittest.TestCase):
                 "total_tiles_b": str(total_tiles),
                 "working_set_bytes": str(working_set),
                 "allocation_bytes": str(allocation),
+                "iters": str(expected_iters),
                 "warmup_iters": str(expected_warmup),
                 "requested_blocks": "1" if per_sm else "0",
                 "blocks_per_sm": "1",
                 "threads": str(expected_threads),
                 "blocks": "1" if per_sm else "20",
+                "occupancy_blocks_per_sm": "1",
             }
             with self.subTest(case_id=case_id):
                 self.assertEqual(

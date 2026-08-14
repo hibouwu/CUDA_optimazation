@@ -169,6 +169,8 @@ def main() -> int:
                             args[args.index("--bytes") + 1])
                         expected_warmup_iters = int(
                             args[args.index("--warmup-iters") + 1])
+                        expected_iters = int(
+                            args[args.index("--iters") + 1])
                         expected_blocks_per_sm = int(
                             args[args.index("--blocks-per-sm") + 1])
                         expected_threads = int(
@@ -195,6 +197,8 @@ def main() -> int:
                                 != expected_slots
                                 or int(fields.get("tile_bytes", 0))
                                 != expected_tile_bytes
+                                or int(fields.get("iters", 0))
+                                != expected_iters
                                 or int(fields.get("warmup_iters", 0))
                                 != expected_warmup_iters
                                 or int(fields.get("blocks_per_sm", 0))
@@ -205,7 +209,9 @@ def main() -> int:
                                 != expected_unique_sms
                                 or int(fields.get("requested_blocks", 0))
                                 != (1 if case["resource"]
-                                    .startswith("tma.l2_hit_ingress") else 0)):
+                                    .startswith("tma.l2_hit_ingress") else 0)
+                                or int(fields.get(
+                                    "occupancy_blocks_per_sm", 0)) <= 0):
                             raise ValueError("invalid TMA inflight contract")
                         warmup_bytes = expected_warmup_iters * (
                             49152 if expected_pattern == "tc5a-ab"

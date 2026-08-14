@@ -325,6 +325,7 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
         expected_backing_bytes = int(args[args.index("--bytes") + 1])
         expected_warmup_iters = int(
             args[args.index("--warmup-iters") + 1])
+        expected_iters = int(args[args.index("--iters") + 1])
         expected_blocks_per_sm = int(
             args[args.index("--blocks-per-sm") + 1])
         expected_threads = int(args[args.index("--threads") + 1])
@@ -332,30 +333,38 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
             raise RuntimeError(f"{case['id']}: TMA inflight contract mismatch")
         if int(fields.get("slots", "0")) != expected_slots:
             raise RuntimeError(f"{case['id']}: TMA slot contract mismatch")
-        if (fields.get("mode") != expected_mode
-                or fields.get("pattern") != expected_pattern
-                or int(fields.get("stage_count", "0"))
-                != expected_stage_count
-                or int(fields.get("requests_per_stage", "0"))
-                != expected_requests_per_stage
-                or int(fields.get("barrier_count", "0"))
-                != expected_barrier_count
-                or fields.get("tensor_map") != expected_tensor_map
-                or int(fields.get("row_stride_elements", "-1"))
-                != expected_row_stride
-                or int(fields.get("smem_bytes", "0")) != expected_smem_bytes
-                or fields.get("preferred_smem_carveout")
-                != expected_carveout
-                or int(fields.get("tile_bytes", "0")) != expected_tile_bytes
-                or int(fields.get("warmup_iters", "0"))
-                != expected_warmup_iters
-                or int(fields.get("blocks_per_sm", "0"))
-                != expected_blocks_per_sm
-                or int(fields.get("threads", "0")) != expected_threads
-                or int(fields.get("blocks", "0")) != expected_blocks
-                or int(fields.get("requested_blocks", "0"))
-                != (1 if resource.startswith("tma.l2_hit_ingress") else 0)):
-            raise RuntimeError(f"{case['id']}: TMA launch/payload mismatch")
+        expected_launch = {
+            "mode": expected_mode,
+            "pattern": expected_pattern,
+            "stage_count": str(expected_stage_count),
+            "requests_per_stage": str(expected_requests_per_stage),
+            "barrier_count": str(expected_barrier_count),
+            "tensor_map": expected_tensor_map,
+            "row_stride_elements": str(expected_row_stride),
+            "smem_bytes": str(expected_smem_bytes),
+            "preferred_smem_carveout": expected_carveout,
+            "tile_bytes": str(expected_tile_bytes),
+            "iters": str(expected_iters),
+            "warmup_iters": str(expected_warmup_iters),
+            "blocks_per_sm": str(expected_blocks_per_sm),
+            "threads": str(expected_threads),
+            "blocks": str(expected_blocks),
+            "requested_blocks": str(
+                1 if resource.startswith("tma.l2_hit_ingress") else 0),
+        }
+        launch_mismatches = [
+            f"{name} expected={expected} "
+            f"actual={fields.get(name, '<missing>')}"
+            for name, expected in expected_launch.items()
+            if fields.get(name) != expected
+        ]
+        if launch_mismatches:
+            raise RuntimeError(
+                f"{case['id']}: TMA launch/payload mismatch: "
+                + "; ".join(launch_mismatches))
+        if int(fields.get("occupancy_blocks_per_sm", "0")) <= 0:
+            raise RuntimeError(
+                f"{case['id']}: TMA occupancy is missing or nonpositive")
         warmup_bytes = expected_warmup_iters * (
             49152 if expected_pattern == "tc5a-ab"
             else expected_tile_bytes)
