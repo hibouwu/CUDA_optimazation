@@ -5,10 +5,17 @@ import argparse
 import json
 from pathlib import Path
 
-from .io import load_capacities, load_hardware, load_schedules, load_workloads
+from .closure_import import import_closure
+from .io import (
+    load_capacities,
+    load_closure_inputs,
+    load_hardware,
+    load_schedules,
+    load_workloads,
+)
 from .coverage import common_resource_coverage, precision_coverage
-from .model import audit_inputs, evaluate_manifest, precision_specs
-from .observations import summarize_observed_csvs
+from .model import ModelError, audit_inputs, evaluate_manifest, precision_specs
+from .observations import audit_observations, summarize_observed_csvs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,10 +24,12 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate_parser = sub.add_parser("evaluate", help="evaluate workload/schedule pairs")
     for name in ("hardware", "capacities", "workloads", "schedules"):
         evaluate_parser.add_argument(f"--{name}", type=Path, required=True)
+    evaluate_parser.add_argument("--closure-import", type=Path)
     evaluate_parser.add_argument("--output", type=Path)
 
     audit_parser = sub.add_parser("audit", help="audit capacity provenance and semantics")
     audit_parser.add_argument("--capacities", type=Path, required=True)
+    audit_parser.add_argument("--closure-import", type=Path)
     audit_parser.add_argument("--repo-root", type=Path, required=True)
     sub.add_parser("list-precisions", help="print the v1 precision contract")
     observed_parser = sub.add_parser(
@@ -34,8 +43,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     coverage_parser.add_argument("--repo-root", type=Path, required=True)
     coverage_parser.add_argument("--capacities", type=Path, required=True)
-    coverage_parser.add_argument("--observed-input", type=Path, action="append", required=True)
+    coverage_parser.add_argument("--observed-input", type=Path, action="append")
+    coverage_parser.add_argument("--closure-import", type=Path)
     coverage_parser.add_argument("--minimum-trials", type=int, default=10)
+    import_parser = sub.add_parser(
+        "import-closure",
+        help="independently audit a returned closure suite and emit model inputs",
+    )
+    import_parser.add_argument("--repo-root", type=Path, required=True)
+    import_parser.add_argument("--suite-id", required=True)
+    import_parser.add_argument("--expected-commit", required=True)
+    import_parser.add_argument("--output", type=Path, required=True)
     return parser
 
 
@@ -44,10 +62,39 @@ def main() -> int:
     if args.command == "list-precisions":
         print(json.dumps({k: v.__dict__ for k, v in precision_specs().items()}, indent=2))
         return 0
+    if args.command == "import-closure":
+        try:
+            imported = import_closure(
+                repo_root=args.repo_root,
+                suite_id=args.suite_id,
+                expected_commit=args.expected_commit,
+            )
+        except ModelError as error:
+            print(json.dumps({"pass": False, "error": str(error)}, indent=2))
+            return 1
+        output = json.dumps(imported, indent=2, sort_keys=True) + "\n"
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(output, encoding="utf-8")
+        print(json.dumps({
+            "pass": True,
+            "output": str(args.output),
+            "qualification": imported["qualification"],
+            "capacity_count": len(imported["capacities"]),
+            "observation_count": len(imported["observed_best"]),
+            "overcurrent_deltas": imported["platform_evidence"]["overcurrent_deltas"],
+        }, indent=2, sort_keys=True))
+        return 0
     if args.command == "audit":
-        findings = audit_inputs(
-            load_capacities(args.capacities), repo_root=args.repo_root.resolve()
-        )
+        capacities = load_capacities(args.capacities)
+        observations = []
+        if args.closure_import:
+            imported_capacities, observations = load_closure_inputs(
+                args.closure_import)
+            capacities.extend(imported_capacities)
+        findings = [
+            *audit_inputs(capacities, repo_root=args.repo_root.resolve()),
+            *audit_observations(observations, repo_root=args.repo_root.resolve()),
+        ]
         print(json.dumps({"findings": findings}, indent=2))
         return 1 if any(row["severity"] == "error" for row in findings) else 0
     if args.command == "summarize-observed":
@@ -60,11 +107,21 @@ def main() -> int:
         return 0
     if args.command == "coverage":
         capacities = load_capacities(args.capacities)
-        observed = summarize_observed_csvs(
-            args.observed_input,
-            repo_root=args.repo_root,
-            minimum_trials=args.minimum_trials,
-        )
+        observed = []
+        if args.observed_input:
+            observed.extend(summarize_observed_csvs(
+                args.observed_input,
+                repo_root=args.repo_root,
+                minimum_trials=args.minimum_trials,
+            ))
+        if args.closure_import:
+            imported_capacities, imported_observations = load_closure_inputs(
+                args.closure_import)
+            capacities.extend(imported_capacities)
+            observed.extend(imported_observations)
+        if not observed:
+            raise SystemExit(
+                "coverage requires --observed-input or --closure-import")
         rows = precision_coverage(capacities, observed)
         common = common_resource_coverage(capacities)
         print(
@@ -82,6 +139,9 @@ def main() -> int:
 
     hardware = load_hardware(args.hardware)
     capacities = load_capacities(args.capacities)
+    if args.closure_import:
+        imported_capacities, _ = load_closure_inputs(args.closure_import)
+        capacities.extend(imported_capacities)
     rows = []
     schedules = load_schedules(args.schedules)
     for workload in load_workloads(args.workloads):

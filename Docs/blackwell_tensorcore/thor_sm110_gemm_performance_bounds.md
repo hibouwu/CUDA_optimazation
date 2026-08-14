@@ -2,7 +2,7 @@
 
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
-> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；全精度硬件数值闭环尚未完成。
+> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；NVFP4 requant bounded preflight 已在 Thor 上通过，但完整 compute/component/full-GEMM closure 及其 Git 证据回传尚未完成。
 >
 > **可信度纪律**：可证明上界、microbenchmark 经验包络和完整 GEMM 实测值分别报告，任何一层都不能冒充另一层。
 >
@@ -38,17 +38,17 @@ GEMM 超过 \(\widehat P_{\mathrm{env}}\)，说明经验模型需要重校准；
 ## 2. 冻结第一版 GEMM 语义
 
 定义 \(M\) 为输出矩阵的行数，单位为 element；定义 \(N\) 为输出矩阵的列数，
-单位为 element；定义 \(K\) 为 reduction 维度，单位为 element。第一版 workload
-计算：
+单位为 element；定义 \(K\) 为 reduction 维度，单位为 element。定义 \(A\) 和
+\(B\) 为两个输入矩阵，定义 \(C\) 为可选的输入累加矩阵，定义 \(D\) 为输出
+矩阵；定义 \(\operatorname{op}(\cdot)\) 为保持原布局或取转置的矩阵操作；定义
+\(\alpha\) 为矩阵乘积的无量纲标量系数，定义 \(\beta\) 为矩阵 C 的无量纲标量
+系数。在这些参数定义下，第一版 workload 计算：
 
 \[
 D=\alpha\operatorname{op}(A)\operatorname{op}(B)+\beta C.
 \]
 
-在上式中，\(A\) 是输入矩阵 A，\(B\) 是输入矩阵 B，\(C\) 是可选的输入累加
-矩阵，\(D\) 是输出矩阵；\(\operatorname{op}(\cdot)\) 表示保持原布局或转置；
-\(\alpha\) 是矩阵乘积的标量系数；\(\beta\) 是矩阵 C 的标量系数。当
-\(\beta=0\) 时，理想实现不必读取 C。
+当 \(\beta=0\) 时，理想实现不必读取 C。
 
 第一版固定以下边界：
 
@@ -125,16 +125,17 @@ workload 才把它称为 2 FLOP，整数 workload 写成 2 OP。
 \(N_N=\lceil N/B_N\rceil\) 和 \(N_K=\lceil K/B_K\rceil\)，分别表示三个方向
 的 tile 数。
 
-若 schedule 用完整 tile padding 边界，定义 \(W_{\mathrm{issue}}\) 为实际发射
-的计算工作，单位与 \(W_{\mathrm{use}}\) 相同：
+定义 \(W_{\mathrm{reduce}}\) 为 split-K 最终 reduction 增加的计算工作，单位
+同 workload；当前 v1 因 `split_k=1` 而令其为 0。若 schedule 用完整 tile
+padding 边界，定义 \(W_{\mathrm{issue}}\) 为实际发射的计算工作，单位与
+\(W_{\mathrm{use}}\) 相同：
 
 \[
 W_{\mathrm{issue}}
 =2(N_MB_M)(N_NB_N)(N_KB_K)+W_{\mathrm{reduce}}.
 \]
 
-定义 \(W_{\mathrm{reduce}}\) 为 split-K 最终 reduction 增加的计算工作，单位
-同 workload。若使用恰好覆盖边界的专用 tail kernel，则 padding 项可以消失，但 tail
+若使用恰好覆盖边界的专用 tail kernel，则 padding 项可以消失，但 tail
 kernel 的合法指令粒度和固定成本仍需单独建模。当前 v1 对非整除 shape 的 `exact`
 schedule 直接拒绝；只有加入该 tail kernel 的显式 manifest 后才会放行，避免凭空
 假设任意尺寸的无 padding 指令。
@@ -156,7 +157,7 @@ Q_{\mathrm{in,val}}^{\mathrm{LB}}=(MK+KN)s_{\mathrm{in}}.
 
 对 block-scaled 精度，定义 \(b_s\) 为一个 scale 覆盖的 value 个数，单位为
 element/scale；定义 \(s_s\) 为单个 scale 的字节数，单位为 B/scale。输入
-scale 的字节数下界为：
+scale 的字节数下界定义为 \(Q_{\mathrm{in,scale}}^{\mathrm{LB}}\)，单位为 B：
 
 \[
 Q_{\mathrm{in,scale}}^{\mathrm{LB}}
@@ -238,13 +239,18 @@ accumulator 输出时 \(Q_D^{\mathrm{LB}}=MN s_{\mathrm{out}}\)；packed quantiz
 | `evidence_kind` | 第 5.1 节定义的逻辑证据等级 |
 | `source_id` | 来源记录的稳定标识，无单位 |
 | `source_path`, `source_locator` | 仓库内文件路径及文件内可机械定位条件 |
-| `source_url` | 可选外部一手来源 URL |
+| `source_url` | 外部一手来源 URL；`specified_upper` 必填 HTTPS URL，其余证据可选 |
 | `original_value`, `original_unit` | 来源中的未换算数值及单位 |
 | `condition` | 容量成立所需的 workload、功耗、频率或工具条件 |
 | `uncertainty_fraction` | 相对不确定度，范围 \([0,1)\)，无量纲；v1 保存但尚不传播到中心值 |
 | `qualification` | `snapshot_only`、`closure_qualified` 或 `quarantined` |
 | `trial_count` | 支持该记录的独立 trial 数，单位 trial |
 | `artifact_paths` | closure 所依赖的源码、原始结果、SASS/NCU、环境或 hash 路径集合 |
+
+同一资源若已有 `closure_qualified` capacity，经验包络只在这些同合同点中取最大
+实测 rate；旧 `snapshot_only` 即使数值更高也不再混入选择。只有该资源尚无
+closure 点时，快照才继续作为显式的暂定校准值。严格条件上界不使用任何实测
+capacity，仍取所有同时成立 rate upper 的最小值。
 
 ## 5. 第一层：条件可证明性能上界
 
@@ -253,6 +259,7 @@ accumulator 输出时 \(Q_D^{\mathrm{LB}}=MN s_{\mathrm{out}}\)；packed quantiz
 \(r\) 上完成的工作，单位可能是 FLOP、B、instruction 或 transaction；定义
 \(U_r\) 为资源 \(r\) 的服务率上界，单位与 \(Q_r^{\mathrm{LB}}\) 每秒对应。
 
+定义 \(T_r^{\mathrm{LB}}\) 为资源 \(r\) 单独给出的执行时间下界，单位为 s。
 只有当证据能支持“真实服务率不大于 \(U_r\)”时，才有：
 
 \[
@@ -266,7 +273,9 @@ T_{\mathrm{resource}}^{\mathrm{LB}}
 =\max_{r\in\mathcal R}T_r^{\mathrm{LB}}.
 \]
 
-取最大值代表允许资源完美重叠，是一个乐观时间下界。若两个资源共享端口或不能
+若同一资源有多个同时成立的服务率上界，严格层取其中最小的 \(U_r\)，即这些
+上界约束的交集；取最大的上界虽然仍安全，却不是当前证据能给出的最紧约束。
+资源时间取最大值代表允许资源完美重叠，是一个乐观时间下界。若两个资源共享端口或不能
 同时达到各自峰值，必须增加联合容量约束，而不是把两个时间任意相加。
 
 ### 5.1 证据等级
@@ -291,10 +300,11 @@ sustained 值冒充 \(U_r\) 会产生虚假的低上界，可能被真实 GEMM �
 
 定义 \(n_t\) 为不可再分割的任务数，单位为 task；定义 \(p_i\) 为第 \(i\) 个
 任务的最小服务时间，单位为 s；定义 \(U_t\) 为能同时服务这类任务的等价硬件
-单元数，单位为 service unit。有限并行时间至少满足：
+单元数，单位为 service unit；定义 \(T_{\mathrm{parallel}}\) 为该任务集合的实际
+makespan，单位为 s。有限并行调度满足：
 
 \[
-T_{\mathrm{parallel}}^{\mathrm{LB}}
+T_{\mathrm{parallel}}
 \ge
 \max\left(
 \frac{\sum_{i=1}^{n_t}p_i}{U_t},
@@ -302,7 +312,12 @@ T_{\mathrm{parallel}}^{\mathrm{LB}}
 \right).
 \]
 
-若全部任务同构且每个耗时 \(p\)，理想 makespan 才能写成：
+定义 \(T_{\mathrm{parallel}}^{\mathrm{LB}}\) 为上式右侧，即当前任务分解能够证明
+的有限并行时间下界。
+
+若全部任务同构，定义 \(p\) 为每个任务共同的最小服务时间，单位为 s；定义
+\(T_{\mathrm{parallel,identical}}\) 为这一同构、理想调度条件下的 makespan，
+单位为 s，则：
 
 \[
 T_{\mathrm{parallel,identical}}
@@ -333,14 +348,16 @@ work/span 形式，避免把 `tc3` 的固定阶段顺序误当成所有 GEMM 的
 ### 5.4 联合容量区域
 
 定义资源吞吐向量 \(\mathbf y\) 为同一时刻 TMA、L2、SMEM、TMEM、Tensor Core
-等资源的服务率组合；定义矩阵 \(A\) 为联合资源线性约束的系数矩阵；定义向量
-\(\mathbf b\) 为每条联合约束的容量上限。若能证明硬件容量外边界满足：
+等资源的服务率组合；定义矩阵 \(\mathbf H\) 为联合资源线性约束的系数矩阵；
+定义向量 \(\mathbf c\) 为每条联合约束的容量上限。这里改用
+\(\mathbf H,\mathbf c\)，避免与 GEMM 输入矩阵 \(A,B\) 混淆。若能证明硬件
+容量外边界满足：
 
 \[
-A\mathbf y\le\mathbf b,
+\mathbf H\mathbf y\le\mathbf c,
 \]
 
-则 \(A\) 和 \(\mathbf b\) 的每一行都能生成一条联合时间下界。定义
+则 \(\mathbf H\) 和 \(\mathbf c\) 的每一行都能生成一条联合时间下界。定义
 \(T_{\mathrm{joint}}^{\mathrm{LB}}\) 为所有已证明联合容量约束给出的最大时间下界，
 单位为 s；没有有效外边界时该项为 0。
 
@@ -354,7 +371,8 @@ A\mathbf y\le\mathbf b,
 同步固定时间下界，单位为 s。实测 launch latency 默认不是“不可更短”的证明；
 没有可信下界时严格层令这一项为 0。
 
-条件总时间下界为：
+定义 \(T_{\mathrm{ub}}^{\mathrm{LB}}\) 为所有当前可证明时间约束的联合下界，
+单位为 s：
 
 \[
 T_{\mathrm{ub}}^{\mathrm{LB}}
@@ -374,6 +392,10 @@ T_{\mathrm{fixed}}^{\mathrm{LB}}
 P_{\mathrm{ub}}=\frac{W_{\mathrm{use}}}{T_{\mathrm{ub}}^{\mathrm{LB}}}.
 \]
 
+如果没有任何有效约束而使 \(T_{\mathrm{ub}}^{\mathrm{LB}}=0\)，模型不得执行除法
+或输出有限数值；它必须返回 `insufficient_evidence`。若只有部分资源具有合法
+上界，则可以输出状态为 `partial` 的较松条件上界，同时列出缺失约束。
+
 ## 6. 第二层：microbenchmark 驱动的经验理想包络
 
 定义 \(\widehat C_r\) 为资源 \(r\) 在匹配精度、shape、CTA group、频率、cache
@@ -384,18 +406,46 @@ residency 和计时边界的集合；定义 schedule 描述 \(x\) 为 tile、MMA
 stage、CTA group、split/stream-K、persistent、tail 和资源 footprint 的集合。
 
 对一个合法 schedule，定义 \(Q_r(x,w)\) 为 schedule \(x\) 执行 workload \(w\)
-时向资源 \(r\) 发出的工作量，单位与 \(\widehat C_r\) 的分子一致。经验时间估计记为：
+时向资源 \(r\) 发出的工作量，单位与 \(\widehat C_r\) 的分子一致。定义
+\(\widehat T_{\mathrm{resource}}(x,w)\) 为经验资源时间，单位为 s：
 
 \[
-\widehat T(x,w)
+\widehat T_{\mathrm{resource}}(x,w)
 =
 \max_r\frac{Q_r(x,w)}{\widehat C_r},
 \]
 
-其中还需加入该 schedule 的 dependency span、有限并行 makespan、固定成本和
-已测得的联合资源修正。定义 \(\mathcal X_{\mathrm{manifest}}\) 为已经通过 PTX、
-descriptor、SMEM/TMEM/register、occupancy 和 launch 合法性检查的 schedule
-集合。经验理想包络为：
+定义 \(\widehat T_{\mathrm{parallel}}(x,w)\)、
+\(\widehat T_{\mathrm{span}}(x,w)\)、
+\(\widehat T_{\mathrm{joint}}(x,w)\) 和
+\(\widehat T_{\mathrm{fixed}}(x,w)\) 分别为有限并行、依赖链、联合资源和固定成本
+给出的经验时间约束，单位均为 s。定义 \(\widehat T(x,w)\) 为 schedule \(x\)
+执行 workload \(w\) 的经验理想时间，单位为 s：
+
+\[
+\widehat T(x,w)=
+\max\left(
+\widehat T_{\mathrm{resource}},
+\widehat T_{\mathrm{parallel}},
+\widehat T_{\mathrm{span}},
+\widehat T_{\mathrm{joint}},
+\widehat T_{\mathrm{fixed}}
+\right).
+\]
+
+这里的最大值明确假设不同约束可以完美重叠；只有依赖图证明两个阶段必须串行时，
+它们的时间才应先沿同一 critical path 相加，再作为
+\(\widehat T_{\mathrm{span}}\) 进入最大值。当前可执行 v1 已实现逐资源时间、由
+compute rate 推出的单任务 span/有限 wave makespan，以及 `fixed_seconds` 独立
+约束；尚未实现通用 pipeline DAG 和联合容量外边界，因此不会声称已经搜索了所有
+因果重叠关系。
+
+定义 \(\mathcal X_{\mathrm{manifest}}\) 为通过当前 v1 已实现的 descriptor、
+MMA shape、单 CTA SMEM/TMEM、thread 和显式精度白名单检查的 schedule 集合。
+register-derived occupancy、CTA-group 2、split/stream-K、persistent 和专用 tail
+kernel 尚未形成完整可执行合法性证明；相应 schedule 不得被称为已覆盖。
+定义 \(\widehat T_{\mathrm{env}}(w)\) 为 manifest 内合法 schedule 经验理想时间的
+最小值，单位为 s；经验理想包络为：
 
 \[
 \widehat T_{\mathrm{env}}(w)
@@ -415,14 +465,15 @@ descriptor、SMEM/TMEM/register、occupancy 和 launch 合法性检查的 schedu
 ## 7. 第三层：完整 GEMM 已观测最好值
 
 定义一个 eligible backend series 为同一 workload 上至少 10 个 trial、全部
-`Matched=1`、没有 missing/timeout/launch failure 且 GFLOP/s 为正的完整 GEMM
-结果序列。
+`Matched=1`、没有 missing/timeout/launch failure 且性能率为正的完整 GEMM
+结果序列；浮点性能率单位为 FLOP/s，整数性能率单位为 OP/s。
 
 定义 \(b\) 为 backend 的索引，定义 \(j\) 为同一 backend series 内 trial 的索引，
 定义 \(P_{b,j}\) 为第 \(j\) 次 trial 的性能，单位与 workload 相同。为降低单个
 噪声尖峰的影响，当前工具先计算每个 backend series 的 median，
 再选择 median 最大的 backend 作为稳定最好实现；同时保留该 series 的 minimum
-和 maximum。选择规则为：
+和 maximum。定义 \(P_{\mathrm{obs,median}}\) 为所有 eligible backend series
+中最大的 trial median，单位与 workload 相同。选择规则为：
 
 \[
 P_{\mathrm{obs,median}}
@@ -490,7 +541,14 @@ campaign 已把计时改为整网格最早 `%globaltimer` start 到最晚 stop�
 
 - 同构 TMEM accumulator readback 的 Thor 结果；其新源码已静态编译为
   `LDTM.x8`/`LDTM.x16`，但静态 lowering 不等于带宽实测；
-- 各输出语义的 epilogue；
+- 各输出语义的正式 10-trial epilogue capacity。NVFP4 requant 的 bounded
+  preflight 已在 Thor 上以 commit
+  `9278fc63b7c2d0d44630e8c13258d3a11b3db7f3`、run ID
+  `thor-t5000-epilogue-signedzero-maxn-20260814-e` 返回 `pass=true`：单 CTA、
+  20-SM smoke 和 `4096x1024` production shape 均为
+  `value_mismatches=0`、`scale_mismatches=0`。但该 operator 回传尚未作为 Git
+  artifact 导入仓库，也不是 unified component campaign 的 10 个外部 trial，
+  因此只能证明协议和数值 preflight，不能先行升级为 `closure_qualified` rate；
 - launch/TMEM alloc/barrier 固定成本；
 - TMA+MMA、MMA+readback+store 等联合容量外边界或稳定经验模型；
 - calibration/holdout 上的完整预测误差。
@@ -510,6 +568,14 @@ python3 -m scripts.sm110_gemm_model.cli audit \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
   --repo-root .
 ```
+
+统一 closure 结果不能手工抄写成模型参数。完成的 evidence tree 必须经过
+[`closure_import.py`](../../scripts/sm110_gemm_model/closure_import.py) 再次调用三批
+独立 auditor，并联合检查 epilogue preflight、固定 commit、MAXN/锁频、suite
+完成标志和运行前后 OC counter。导入后才生成 `model_inputs.json`。OC counter
+增加作为 MAXN 运行条件 warning，不单独否定数据；若 counter 倒退、artifact
+缺失、hash/NCU/SASS/数值检查失败或 commit 不一致，导入失败。完整的随提交运行指令见
+[`THOR_CLOSURE_RUNBOOK.md`](THOR_CLOSURE_RUNBOOK.md)。
 
 精度和公共资源覆盖：
 
@@ -580,11 +646,17 @@ schedule-specific case study。
 后续 Thor 运行必须使用稳定 campaign ID、逐 case `result.json`、run fingerprint、
 持久日志、PID/status 和安全 resume；目录存在或任务已启动不算完成。
 
+正式 closure 固定所有 GPU-facing compute/component/full-GEMM trial 的 host
+timeout 为 120 s，NCU holdout timeout 为 300 s；超时后按完整进程组执行
+`SIGTERM`→5 s→`SIGKILL`→5 s，并记录 `timeout.json`。任何 timeout 或
+`termination_failed=true` 都不能进入成功证据。总协调器必须使用 detached
+launcher，避免交互终端的 `Ctrl-C` 中断实际 campaign。
+
 ## 12. Microbenchmark 与完整 GEMM 来源
 
 本节是本文参数和验证数据的来源附录。路径均相对仓库根目录。
 
-### 12.0 新的全精度 compute campaign（等待 Thor 回传）
+### 12.0 新的全精度 compute campaign（等待完整 Thor closure 回传）
 
 - runner：
   [`microbench/sm110_gemm_campaign/run_compute_campaign.py`](../../microbench/sm110_gemm_campaign/run_compute_campaign.py)
@@ -751,6 +823,16 @@ cd microbench/07_tma_gmem_smem_bandwidth
   [`README.md`](../../microbench/12_tmem_readback_bandwidth/README.md)
 - unified component campaign、运行合同和独立审计：
   [`sm110_gemm_component_campaign`](../../microbench/sm110_gemm_component_campaign/README.md)
+- bounded epilogue preflight runner：
+  [`run_epilogue_probe.py`](../../microbench/sm110_gemm_component_campaign/run_epilogue_probe.py)
+- NVFP4 requant benchmark：
+  [`requant_epilogue_benchmark.cu`](../../GEMMsm110/tests/requant_epilogue_benchmark.cu)
+- E2M1 RNE/signed-zero reference：
+  [`e2m1_encode.cuh`](../../GEMMsm110/include/requant/e2m1_encode.cuh)
+- E2M1 packing、scale policy 和 SM110 TMEM epilogue：
+  [`pack_fp4.cuh`](../../GEMMsm110/include/requant/pack_fp4.cuh)、
+  [`scale_policy.cuh`](../../GEMMsm110/include/requant/scale_policy.cuh)、
+  [`sm110_tcgen05_epilogue.cuh`](../../GEMMsm110/include/requant/sm110_tcgen05_epilogue.cuh)
 - 各目录的 `results/sass_summary*` 和 `results/ncu/*` 保存 SASS/NCU 证据。
 - 当前 headline：`tcgen05.cp` ingress 859.024 B/cycle/GPU；TS MMA consume
   115.699 B/cycle/GPU；steady CP/MMA pipeline 约 89% component-overlap
@@ -855,6 +937,13 @@ kernel 的 SASS 函数块内检查 `UTCHMMA`、`HMMA.16816.F32.BF16`、
 当前 CUDA 13.0 本地静态门禁 15/15 通过；在 Thor 返回 150 个 trial、环境和可选
 NCU artifact 之前，不把它们升级为新的已观测值。
 
+compute-only 和 full-GEMM runner 的成功 trial 都保存 120 s timeout 合同；选中的
+NCU 记录保存 300 s timeout 合同。两个独立 auditor 均拒绝旧 schema、缺失
+timeout 字段、`timed_out=true` 或 `termination_failed=true` 的证据。component
+runner 同样对每个外部 trial 使用 120 s timeout。对应总协调器会先运行 30 s
+bounded epilogue preflight，再串行启动并审计 compute、component 和 full-GEMM，
+任何一级失败都不会继续到下一级。
+
 compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因此 Thor 上
 只能串行运行；这把“不要并发争抢 GPU”从操作约定升级为 runner 的机械约束。
 推荐用固定提交检查、逐批等待和逐批审计的总协调器运行：
@@ -868,6 +957,16 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`scripts/sm110_gemm_model/profiles/thor_sm110.json`](../../scripts/sm110_gemm_model/profiles/thor_sm110.json)
 - 当前参数与逐项 locator：
   [`scripts/sm110_gemm_model/profiles/capacities.json`](../../scripts/sm110_gemm_model/profiles/capacities.json)
+- bounded closure detached launcher：
+  [`microbench/launch_sm110_closure_suite.sh`](../../microbench/launch_sm110_closure_suite.sh)
+- 固定提交、串行等待和逐级独立审计协调器：
+  [`microbench/run_sm110_closure_suite.sh`](../../microbench/run_sm110_closure_suite.sh)
+- 从当前 `HEAD` 冻结合同、保存平台证据、detached 启动并完成模型导入的统一入口：
+  [`microbench/sm110_closure_campaign.sh`](../../microbench/sm110_closure_campaign.sh)
+- 与 runner 同提交维护的 Thor 操作手册：
+  [`Docs/blackwell_tensorcore/THOR_CLOSURE_RUNBOOK.md`](THOR_CLOSURE_RUNBOOK.md)
+- closure evidence 到模型 `Capacity`/`ObservedBest` 的 fail-closed 导入器：
+  [`scripts/sm110_gemm_model/closure_import.py`](../../scripts/sm110_gemm_model/closure_import.py)
 
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和

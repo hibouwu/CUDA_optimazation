@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import statistics
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -35,10 +36,82 @@ class ObservedBest:
     minimum_per_second: float
     performance_unit: str
     source_path: str
+    source_locator: str = ""
+    artifact_paths: tuple[str, ...] = ()
+    run_id: str = ""
+    reference_median_per_second: float | None = None
+    ratio_of_paired_medians: float | None = None
     residency: str = "warm_repeated_unspecified"
     timed_scope: str = "device_kernel"
     qualification: str = "snapshot_only"
     selection_rule: str = "largest median among fully matched backends"
+
+    def validate(self, *, repo_root: Path | None = None) -> None:
+        if min(self.m, self.n, self.k) <= 0:
+            raise ModelError(f"{self.observation_id}: dimensions must be positive")
+        if self.trial_count <= 0 or self.matched_count != self.trial_count:
+            raise ModelError(
+                f"{self.observation_id}: all declared trials must be matched")
+        values = (
+            self.minimum_per_second,
+            self.median_per_second,
+            self.maximum_per_second,
+        )
+        if (not all(math.isfinite(value) and value > 0 for value in values)
+                or not self.minimum_per_second <= self.median_per_second
+                <= self.maximum_per_second):
+            raise ModelError(
+                f"{self.observation_id}: invalid min/median/max performance")
+        if self.performance_unit not in {"flop/s", "operation/s"}:
+            raise ModelError(
+                f"{self.observation_id}: invalid performance unit")
+        if self.qualification not in {"snapshot_only", "closure_qualified"}:
+            raise ModelError(
+                f"{self.observation_id}: invalid qualification")
+        if self.qualification == "closure_qualified":
+            if self.trial_count < 10:
+                raise ModelError(
+                    f"{self.observation_id}: closure requires at least 10 trials")
+            if (not self.run_id or not self.source_locator
+                    or not self.artifact_paths):
+                raise ModelError(
+                    f"{self.observation_id}: closure provenance is incomplete")
+            if self.performance_reference_relation != "same_precision":
+                raise ModelError(
+                    f"{self.observation_id}: closure requires same-precision denominator")
+            if (self.reference_median_per_second is None
+                    or not math.isfinite(self.reference_median_per_second)
+                    or self.reference_median_per_second <= 0):
+                raise ModelError(
+                    f"{self.observation_id}: closure reference median is invalid")
+            expected_ratio = (
+                self.median_per_second / self.reference_median_per_second)
+            if (self.ratio_of_paired_medians is None
+                    or not math.isclose(
+                        self.ratio_of_paired_medians, expected_ratio,
+                        rel_tol=1e-12)):
+                raise ModelError(
+                    f"{self.observation_id}: paired-median ratio is invalid")
+        if repo_root is not None:
+            source = repo_root / self.source_path
+            if not source.is_file():
+                raise ModelError(
+                    f"{self.observation_id}: source path is missing")
+            if (self.source_locator
+                    and self.source_locator not in source.read_text(
+                        encoding="utf-8", errors="replace")):
+                raise ModelError(
+                    f"{self.observation_id}: source locator does not match")
+            if self.qualification == "closure_qualified":
+                missing = [path for path in self.artifact_paths
+                           if not (repo_root / path).is_file()]
+                if missing:
+                    raise ModelError(
+                        f"{self.observation_id}: missing closure artifacts {missing}")
+
+    @property
+    def is_closure_qualified(self) -> bool:
+        return self.qualification == "closure_qualified"
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -208,3 +281,25 @@ def audit_observed_against_upper(
             }
         ]
     return []
+
+
+def audit_observations(
+    observations: Iterable[ObservedBest], *, repo_root: Path | None = None
+) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for observation in observations:
+        if observation.observation_id in seen:
+            findings.append({
+                "severity": "error", "code": "duplicate_observation_id",
+                "message": observation.observation_id,
+            })
+        seen.add(observation.observation_id)
+        try:
+            observation.validate(repo_root=repo_root)
+        except ModelError as error:
+            findings.append({
+                "severity": "error", "code": "invalid_observation",
+                "message": str(error),
+            })
+    return findings

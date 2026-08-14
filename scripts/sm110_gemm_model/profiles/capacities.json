@@ -77,10 +77,11 @@
     "evidence_kind": "specified_upper",
     "source_id": "thor_product_bandwidth_snapshot",
     "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_stage_model.md",
-    "source_locator": "section 2.2, 273 GB/s LPDDR5X",
+    "source_locator": "Jetson T5000 为 10 TPC、2560 CUDA cores、273 GB/s LPDDR5X",
     "original_value": 273.0,
     "original_unit": "GB/s",
-    "condition": "aggregate LPDDR5X specification; workload starts cold in device memory"
+    "condition": "aggregate LPDDR5X specification; workload starts cold in device memory",
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
   },
   {
     "capacity_id": "l2_read_ncu_model_peak",
@@ -90,7 +91,7 @@
     "evidence_kind": "profiler_model_peak",
     "source_id": "l2_ncu_read_peak",
     "source_path": "microbench/L2throughtput/README.md",
-    "source_locator": "conclusion: 1024 B/cycle/GPU model peak",
+    "source_locator": "L2 read peak model**：约 `1024 B/cycle/GPU`",
     "original_value": 1024.0,
     "original_unit": "B/cycle/GPU",
     "condition": "NCU pct_of_peak model multiplied by the recorded 1.575 GHz snapshot"
@@ -103,7 +104,7 @@
     "evidence_kind": "profiler_model_peak",
     "source_id": "l2_ncu_write_peak",
     "source_path": "microbench/L2throughtput/README.md",
-    "source_locator": "conclusion: 512 B/cycle/GPU model peak",
+    "source_locator": "L2 write peak model**：约 `512 B/cycle/GPU`",
     "original_value": 512.0,
     "original_unit": "B/cycle/GPU",
     "condition": "NCU pct_of_peak model multiplied by the recorded 1.575 GHz snapshot"

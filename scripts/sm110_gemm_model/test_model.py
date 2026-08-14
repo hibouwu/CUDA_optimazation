@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,6 +18,7 @@ from scripts.sm110_gemm_model.model import (
     evaluate,
     evaluate_manifest,
     precision_specs,
+    _select_capacity,
 )
 from scripts.sm110_gemm_model.observations import (
     ObservedBest,
@@ -32,14 +36,116 @@ from scripts.sm110_gemm_model.tcgen05_descriptors import (
     encode_unscaled,
 )
 from microbench.sm110_gemm_campaign.run_compute_campaign import (
+    DEFAULT_NCU_TIMEOUT_SECONDS as COMPUTE_NCU_TIMEOUT,
+    DEFAULT_TRIAL_TIMEOUT_SECONDS as COMPUTE_TRIAL_TIMEOUT,
     PRECISIONS as CAMPAIGN_PRECISIONS,
+    SCHEMA_VERSION as COMPUTE_SCHEMA_VERSION,
     make_manifest as make_compute_campaign_manifest,
+    run_bounded as run_compute_bounded,
     source_for as make_compute_campaign_source,
 )
+from microbench.sm110_gemm_campaign.audit_campaign import audit as audit_compute_bundle
 
 
 ROOT = Path(__file__).resolve().parents[2]
 CAPACITY_PATH = Path(__file__).resolve().parent / "profiles" / "capacities.json"
+DOCUMENT_PATH = (ROOT / "Docs/blackwell_tensorcore/"
+                 "thor_sm110_gemm_performance_bounds.md")
+
+
+class DocumentContractTest(unittest.TestCase):
+    def test_core_symbols_are_defined_at_first_use(self) -> None:
+        text = DOCUMENT_PATH.read_text()
+        definitions = {
+            r"\(P_{\mathrm{obs}}\)": r"定义 \(P_{\mathrm{obs}}\)",
+            r"\(P^\star\)": r"定义 \(P^\star\)",
+            r"\(P_{\mathrm{ub}}\)": r"定义 \(P_{\mathrm{ub}}\)",
+            r"\(\widehat P_{\mathrm{env}}\)":
+                r"定义 \(\widehat P_{\mathrm{env}}\)",
+            r"\(M\)": r"定义 \(M\)",
+            r"\(N\)": r"定义 \(N\)",
+            r"\(K\)": r"定义 \(K\)",
+            r"\(A\)": r"定义 \(A\)",
+            r"\(B\)": "定义 \\(A\\) 和\n\\(B\\)",
+            r"\(C\)": r"定义 \(C\)",
+            r"\(D\)": r"定义 \(D\)",
+            r"\(\operatorname{op}(\cdot)\)":
+                r"定义 \(\operatorname{op}(\cdot)\)",
+            r"\(\alpha\)": "定义\n\\(\\alpha\\)",
+            r"\(\beta\)": r"定义 \(\beta\)",
+            r"\(s_{\mathrm{in}}\)": r"定义 \(s_{\mathrm{in}}\)",
+            r"\(s_{\mathrm{acc}}\)": r"定义 \(s_{\mathrm{acc}}\)",
+            r"\(s_{\mathrm{out}}\)": r"定义 \(s_{\mathrm{out}}\)",
+            r"\(K_{\mathrm{mma}}\)": r"定义 \(K_{\mathrm{mma}}\)",
+            r"\(W_{\mathrm{use}}\)": r"定义 \(W_{\mathrm{use}}\)",
+            r"\(B_M\)": r"定义 \(B_M\)",
+            r"W_{\mathrm{reduce}}": r"定义 \(W_{\mathrm{reduce}}\)",
+            r"W_{\mathrm{issue}}": r"定义 \(W_{\mathrm{issue}}\)",
+            r"\(\eta_{\mathrm{shape}}\)":
+                r"定义形状效率 \(\eta_{\mathrm{shape}}\)",
+            r"Q_{\mathrm{in,val}}^{\mathrm{LB}}":
+                r"定义 \(Q_{\mathrm{in,val}}^{\mathrm{LB}}\)",
+            r"\(b_s\)": r"定义 \(b_s\)",
+            r"\(s_s\)": r"定义 \(s_s\)",
+            r"Q_{\mathrm{in,scale}}^{\mathrm{LB}}":
+                r"定义为 \(Q_{\mathrm{in,scale}}^{\mathrm{LB}}\)",
+            r"Q_C^{\mathrm{LB}}": r"定义 \(Q_C^{\mathrm{LB}}\)",
+            r"Q_D^{\mathrm{LB}}": r"定义 \(Q_D^{\mathrm{LB}}\)",
+            r"\(\mathcal R\)": r"定义资源集合 \(\mathcal R\)",
+            r"Q_r^{\mathrm{LB}}": r"定义 \(Q_r^{\mathrm{LB}}\)",
+            r"\(U_r\)": "定义\n\\(U_r\\)",
+            r"T_r^{\mathrm{LB}}": r"定义 \(T_r^{\mathrm{LB}}\)",
+            r"T_{\mathrm{resource}}^{\mathrm{LB}}":
+                r"定义 \(T_{\mathrm{resource}}^{\mathrm{LB}}\)",
+            r"\(n_t\)": r"定义 \(n_t\)",
+            r"\(p_i\)": r"定义 \(p_i\)",
+            r"\(U_t\)": r"定义 \(U_t\)",
+            r"\(T_{\mathrm{parallel}}\)":
+                r"定义 \(T_{\mathrm{parallel}}\)",
+            r"T_{\mathrm{parallel}}^{\mathrm{LB}}":
+                r"定义 \(T_{\mathrm{parallel}}^{\mathrm{LB}}\)",
+            r"\(p\)": r"定义 \(p\)",
+            r"T_{\mathrm{parallel,identical}}":
+                "定义\n\\(T_{\\mathrm{parallel,identical}}\\)",
+            r"\(G=(V,E)\)": r"定义执行依赖图 \(G=(V,E)\)",
+            r"T_{\mathrm{span}}^{\mathrm{LB}}":
+                "定义\n\\(T_{\\mathrm{span}}^{\\mathrm{LB}}\\)",
+            r"\(\mathbf y\)": r"定义资源吞吐向量 \(\mathbf y\)",
+            r"\(\mathbf H\)": r"定义矩阵 \(\mathbf H\)",
+            r"\(\mathbf c\)": r"定义向量 \(\mathbf c\)",
+            r"T_{\mathrm{joint}}^{\mathrm{LB}}":
+                "定义\n\\(T_{\\mathrm{joint}}^{\\mathrm{LB}}\\)",
+            r"T_{\mathrm{fixed}}^{\mathrm{LB}}":
+                r"定义 \(T_{\mathrm{fixed}}^{\mathrm{LB}}\)",
+            r"T_{\mathrm{ub}}^{\mathrm{LB}}":
+                r"定义 \(T_{\mathrm{ub}}^{\mathrm{LB}}\)",
+            r"\(\widehat C_r\)": r"定义 \(\widehat C_r\)",
+            r"\(w\)": r"定义 workload 描述 \(w\)",
+            r"\(x\)": r"定义 schedule 描述 \(x\)",
+            r"\(Q_r(x,w)\)": r"定义 \(Q_r(x,w)\)",
+            r"\widehat T_{\mathrm{resource}}(x,w)":
+                "定义\n\\(\\widehat T_{\\mathrm{resource}}(x,w)\\)",
+            r"\(\widehat T(x,w)\)": r"定义 \(\widehat T(x,w)\)",
+            r"\(\mathcal X_{\mathrm{manifest}}\)":
+                r"定义 \(\mathcal X_{\mathrm{manifest}}\)",
+            r"\widehat T_{\mathrm{env}}(w)":
+                r"定义 \(\widehat T_{\mathrm{env}}(w)\)",
+            r"\(b\)": r"定义 \(b\)",
+            r"\(j\)": r"定义 \(j\)",
+            r"\(P_{b,j}\)": r"定义 \(P_{b,j}\)",
+            r"P_{\mathrm{obs,median}}":
+                r"定义 \(P_{\mathrm{obs,median}}\)",
+        }
+        for symbol, definition in definitions.items():
+            with self.subTest(symbol=symbol):
+                first_use = text.find(symbol)
+                definition_start = text.find(definition)
+                self.assertGreaterEqual(first_use, 0, f"missing symbol {symbol}")
+                self.assertGreaterEqual(
+                    definition_start, 0, f"missing definition for {symbol}")
+                self.assertLessEqual(
+                    definition_start, first_use,
+                    f"{symbol} appears before its definition")
 
 
 class WorkAccountingTest(unittest.TestCase):
@@ -198,6 +304,51 @@ class Tcgen05DescriptorTest(unittest.TestCase):
 
 
 class ComputeCampaignTest(unittest.TestCase):
+    def test_bounded_contract_and_process_escalation(self) -> None:
+        self.assertEqual(COMPUTE_SCHEMA_VERSION, 2)
+        self.assertEqual(COMPUTE_TRIAL_TIMEOUT, 120)
+        self.assertEqual(COMPUTE_NCU_TIMEOUT, 300)
+        normal = run_compute_bounded(
+            [sys.executable, "-c", "print('ok')"],
+            cwd=ROOT, timeout_seconds=2)
+        self.assertEqual(normal["returncode"], 0)
+        self.assertFalse(normal["timed_out"])
+        self.assertFalse(normal["termination_failed"])
+        timed_out = run_compute_bounded(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            cwd=ROOT, timeout_seconds=1)
+        self.assertTrue(timed_out["timed_out"])
+        self.assertFalse(timed_out["termination_failed"])
+        self.assertIsNotNone(timed_out["returncode"])
+
+    def test_auditor_rejects_unbounded_compute_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payloads = {
+                "run_spec.json": {
+                    "schema_version": 1, "manifest": [], "trials": 10,
+                    "expected_sm_count": 20,
+                    "trial_timeout_seconds": None,
+                    "ncu_timeout_seconds": None,
+                    "termination_grace_seconds": None,
+                },
+                "summary.json": {
+                    "schema_version": 1, "status": "complete", "results": []},
+                "campaign_status.json": {"status": "complete"},
+                "environment.json": {},
+            }
+            for name, payload in payloads.items():
+                (root / name).write_text(json.dumps(payload))
+            (root / "environment_snapshots.jsonl").write_text("{}\n")
+            (root / "progress.jsonl").write_text("{}\n")
+            (root / "COMPLETE").write_text("forged\n")
+            findings = audit_compute_bundle(root, require_ncu=False)
+        codes = {finding["code"] for finding in findings}
+        self.assertIn("invalid_schema_version", codes)
+        self.assertIn("invalid_trial_timeout_contract", codes)
+        self.assertIn("invalid_ncu_timeout_contract", codes)
+        self.assertIn("invalid_termination_grace_contract", codes)
+
     def test_manifest_has_all_72_unique_cases(self) -> None:
         manifest = make_compute_campaign_manifest()
         ids = [row["case_id"] for row in manifest]
@@ -234,6 +385,20 @@ class ComputeCampaignTest(unittest.TestCase):
 
 
 class EvidenceSemanticsTest(unittest.TestCase):
+    def test_closure_capacity_supersedes_faster_legacy_snapshot(self) -> None:
+        snapshot = Capacity(
+            "snapshot", "tensor.bf16", 200.0, "flop",
+            EvidenceKind.MEASURED_SUSTAINED, "old", "old.csv", "row=1",
+            qualification="snapshot_only")
+        closure = Capacity(
+            "closure", "tensor.bf16", 100.0, "flop",
+            EvidenceKind.MEASURED_SUSTAINED, "new", "new.json", "case",
+            qualification="closure_qualified", trial_count=10,
+            artifact_paths=("new.json",))
+        selected = _select_capacity(
+            [snapshot, closure], "tensor.bf16", strict=False)
+        self.assertEqual(selected, closure)
+
     def test_unimplemented_epilogue_fails_closed(self) -> None:
         with self.assertRaisesRegex(Exception, "work and I/O contract is not implemented"):
             evaluate(
@@ -308,6 +473,26 @@ class EvidenceSemanticsTest(unittest.TestCase):
             slow.conditional_upper.performance_per_second,
         )
 
+    def test_multiple_proven_uppers_use_their_tightest_intersection(self) -> None:
+        workload = Workload(
+            "w", 128, 128, 64, "bf16_f32", residency="compute_oracle")
+        schedule = Schedule("s", 128, 128, 64, 2)
+        hardware = Hardware("h", 20, 1.0)
+
+        def cap(name: str, rate: float) -> Capacity:
+            return Capacity(
+                name, "tensor.bf16", rate, "flop",
+                EvidenceKind.DERIVED_UPPER, "source", "source.csv", "row=1")
+
+        tight = evaluate(
+            workload, schedule, hardware, [cap("tight", 100.0)])
+        intersection = evaluate(
+            workload, schedule, hardware,
+            [cap("tight", 100.0), cap("loose", 200.0)])
+        self.assertEqual(
+            intersection.conditional_upper.performance_per_second,
+            tight.conditional_upper.performance_per_second)
+
     def test_strict_layer_does_not_infer_per_group_rate_from_gpu_rate(self) -> None:
         capacity = Capacity(
             "gpu_upper",
@@ -361,6 +546,27 @@ class EvidenceSemanticsTest(unittest.TestCase):
         )
         findings = audit_inputs([capacity])
         self.assertIn("conditional_peak_without_condition", {row["code"] for row in findings})
+
+    def test_specified_upper_requires_primary_source_url(self) -> None:
+        capacity = Capacity(
+            "vendor", "tensor.bf16", 100.0, "flop",
+            EvidenceKind.SPECIFIED_UPPER, "source", "source.md", "exact text")
+        findings = audit_inputs([capacity])
+        self.assertIn("invalid_capacity", {row["code"] for row in findings})
+
+    def test_markdown_locator_must_match_source_text(self) -> None:
+        capacity = Capacity(
+            "bad_markdown_locator",
+            "l2.read",
+            100.0,
+            "byte",
+            EvidenceKind.MEASURED_SUSTAINED,
+            "source",
+            "microbench/L2throughtput/README.md",
+            "this exact locator does not exist",
+        )
+        findings = audit_inputs([capacity], repo_root=ROOT)
+        self.assertIn("text_locator_no_match", {row["code"] for row in findings})
 
     def test_repo_capacity_sources_exist(self) -> None:
         findings = audit_inputs(load_capacities(CAPACITY_PATH), repo_root=ROOT)

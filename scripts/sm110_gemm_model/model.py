@@ -354,10 +354,15 @@ class Capacity:
     def validate(self) -> None:
         if self.rate_per_second <= 0 or not math.isfinite(self.rate_per_second):
             raise ModelError(f"{self.capacity_id}: rate_per_second must be finite and positive")
-        if self.work_unit not in {"flop", "byte", "operation"}:
+        if self.work_unit not in {"flop", "byte", "operation", "element"}:
             raise ModelError(f"{self.capacity_id}: unsupported work unit {self.work_unit}")
         if not self.source_id or not self.source_path or not self.source_locator:
             raise ModelError(f"{self.capacity_id}: provenance fields cannot be empty")
+        if (self.evidence_kind == EvidenceKind.SPECIFIED_UPPER
+                and not self.source_url.startswith("https://")):
+            raise ModelError(
+                f"{self.capacity_id}: specified upper requires an HTTPS primary-source URL"
+            )
         if not 0.0 <= self.uncertainty_fraction < 1.0:
             raise ModelError(f"{self.capacity_id}: invalid uncertainty_fraction")
         if self.qualification not in {
@@ -388,6 +393,11 @@ class Capacity:
     @property
     def is_closure_qualified(self) -> bool:
         return self.qualification == "closure_qualified"
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["evidence_kind"] = self.evidence_kind.value
+        return data
 
 
 @dataclass(frozen=True)
@@ -593,7 +603,18 @@ def _select_capacity(
     ]
     if not candidates:
         return None
-    return max(candidates, key=lambda cap: cap.rate_per_second)
+    if not strict:
+        qualified = [cap for cap in candidates if cap.is_closure_qualified]
+        if qualified:
+            candidates = qualified
+    # Every proven upper applies simultaneously, so their intersection is the
+    # smallest rate upper.  Empirical capacities mean "hardware has sustained
+    # at least this rate" under the recorded condition, so the best comparable
+    # point is the largest rate.  Once a resource has closure-qualified points,
+    # weaker snapshots with legacy timing/provenance contracts are not mixed
+    # back into that resource's calibration set.
+    selector = min if strict else max
+    return selector(candidates, key=lambda cap: cap.rate_per_second)
 
 
 def _resource_demands(
@@ -910,4 +931,27 @@ def audit_inputs(
                                 ),
                             }
                         )
+        elif repo_root is not None:
+            source_text = (repo_root / cap.source_path).read_text(
+                encoding="utf-8", errors="replace")
+            if cap.source_locator not in source_text:
+                findings.append(
+                    {
+                        "severity": "error",
+                        "code": "text_locator_no_match",
+                        "message": (
+                            f"{cap.capacity_id}: {cap.source_locator}"
+                        ),
+                    }
+                )
+        if repo_root is not None and cap.is_closure_qualified:
+            for artifact_path in cap.artifact_paths:
+                if not (repo_root / artifact_path).is_file():
+                    findings.append(
+                        {
+                            "severity": "error",
+                            "code": "missing_closure_artifact",
+                            "message": f"{cap.capacity_id}: {artifact_path}",
+                        }
+                    )
     return findings

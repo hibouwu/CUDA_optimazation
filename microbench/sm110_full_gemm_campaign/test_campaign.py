@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,22 @@ AUDITOR = Path(__file__).with_name("audit_campaign.py")
 
 
 class CampaignEvidenceTests(unittest.TestCase):
+    def test_bounded_contract_and_process_escalation(self) -> None:
+        self.assertEqual(campaign.DEFAULT_TRIAL_TIMEOUT_SECONDS, 120)
+        self.assertEqual(campaign.DEFAULT_NCU_TIMEOUT_SECONDS, 300)
+        normal = campaign.run_bounded(
+            [sys.executable, "-c", "print('ok')"],
+            cwd=REPO, timeout_seconds=2)
+        self.assertEqual(normal["returncode"], 0)
+        self.assertFalse(normal["timed_out"])
+        self.assertFalse(normal["termination_failed"])
+        timed_out = campaign.run_bounded(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            cwd=REPO, timeout_seconds=1)
+        self.assertTrue(timed_out["timed_out"])
+        self.assertFalse(timed_out["termination_failed"])
+        self.assertIsNotNone(timed_out["returncode"])
+
     def fp16_case(self) -> dict[str, object]:
         return next(case for case in campaign.CASES
                     if case["id"] == "fp16_f32_n1024_tc5b")
@@ -119,9 +136,12 @@ class CampaignEvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             spec = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "campaign": "sm110_full_gemm_closure",
                 "trials": 10,
+                "trial_timeout_seconds": 120,
+                "ncu_timeout_seconds": 300,
+                "termination_grace_seconds": 5,
                 "static_only": True,
                 "problem_contract": {
                     "layout": "NN", "epilogue": "none", "beta": 0,
@@ -129,7 +149,8 @@ class CampaignEvidenceTests(unittest.TestCase):
                 },
             }
             (root / "run_spec.json").write_text(json.dumps(spec))
-            (root / "summary.json").write_text(json.dumps({"status": "static_complete"}))
+            (root / "summary.json").write_text(json.dumps({
+                "schema_version": 2, "status": "static_complete"}))
             (root / "campaign_status.json").write_text(
                 json.dumps({"status": "static_complete"}))
             (root / "progress.jsonl").write_text("{}\n")
@@ -144,6 +165,43 @@ class CampaignEvidenceTests(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("static-only artifact cannot pass", proc.stdout)
 
+    def test_hardware_auditor_rejects_unbounded_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            spec = {
+                "schema_version": 2,
+                "campaign": "sm110_full_gemm_closure",
+                "trials": 10,
+                "trial_timeout_seconds": 0,
+                "ncu_timeout_seconds": 0,
+                "termination_grace_seconds": 0,
+                "static_only": True,
+                "problem_contract": {
+                    "layout": "NN", "epilogue": "none", "beta": 0,
+                    "output_mode": "accumulator", "work": "2*M*N*K",
+                },
+            }
+            for name, payload in {
+                "run_spec.json": spec,
+                "summary.json": {
+                    "schema_version": 2, "status": "static_complete"},
+                "campaign_status.json": {"status": "static_complete"},
+            }.items():
+                (root / name).write_text(json.dumps(payload))
+            (root / "progress.jsonl").write_text("{}\n")
+            (root / "environment.json").write_text("{}\n")
+            (root / "environment_snapshots.jsonl").write_text("{}\n")
+            (root / "COMPLETE").write_text("forged\n")
+            proc = subprocess.run(
+                ["python3", str(AUDITOR), str(root)], cwd=REPO,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                check=False,
+            )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("trial timeout contract is not 120 seconds", proc.stdout)
+        self.assertIn("NCU timeout contract is not 300 seconds", proc.stdout)
+        self.assertIn("termination grace contract is not 5 seconds", proc.stdout)
+
     def test_hardware_auditor_rejects_noncanonical_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -152,9 +210,12 @@ class CampaignEvidenceTests(unittest.TestCase):
             fake_generator.write_text("CASES = []\n")
             fake_manifest.write_text(json.dumps({"precisions": []}))
             spec = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "campaign": "sm110_full_gemm_closure",
                 "trials": 10,
+                "trial_timeout_seconds": 120,
+                "ncu_timeout_seconds": 300,
+                "termination_grace_seconds": 5,
                 "static_only": False,
                 "problem_contract": {
                     "layout": "NN", "epilogue": "none", "beta": 0,
@@ -168,7 +229,7 @@ class CampaignEvidenceTests(unittest.TestCase):
             }
             for name, payload in {
                 "run_spec.json": spec,
-                "summary.json": {"status": "complete"},
+                "summary.json": {"schema_version": 2, "status": "complete"},
                 "campaign_status.json": {"status": "complete"},
             }.items():
                 (root / name).write_text(json.dumps(payload))
