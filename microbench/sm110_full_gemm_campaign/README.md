@@ -34,6 +34,15 @@ the same inputs and precision contract. The SASS proof is function-scoped: the
 auditor requires the selected kernel's function block to contain its expected
 Tensor Core and store instructions.
 
+Every external custom/reference trial has a 120-second host timeout. Each NCU
+holdout collection has a separate 300-second timeout. Timeout handling targets
+the complete process group, escalates from `SIGTERM` to `SIGKILL` after five
+seconds, records `timeout.json`, and fails the campaign. A recorded
+`termination_failed=true` means the process group survived both bounded waits;
+reboot the machine before running more GPU work. Successful trial and NCU
+records retain the timeout contract so the independent auditor can reject
+unbounded or contract-changing evidence.
+
 Audit the current implementation coverage:
 
 ```bash

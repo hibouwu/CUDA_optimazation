@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import re
+import signal
 import shutil
 import statistics
 import subprocess
@@ -29,7 +30,10 @@ from scripts.sm110_gemm_model.tcgen05_descriptors import (  # noqa: E402
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+DEFAULT_TRIAL_TIMEOUT_SECONDS = 120
+DEFAULT_NCU_TIMEOUT_SECONDS = 300
+TERMINATION_GRACE_SECONDS = 5
 PTX_SOURCE_URL = (
     "https://docs.nvidia.com/cuda/archive/13.0.0/"
     "parallel-thread-execution/index.html#tcgen05-instruction-descriptor"
@@ -264,6 +268,45 @@ def run(command: list[str], *, cwd: Path = REPO_ROOT, check: bool = True) -> sub
     return proc
 
 
+def run_bounded(command: list[str], *, cwd: Path = REPO_ROOT,
+                timeout_seconds: int) -> dict[str, object]:
+    """Run a GPU-facing process with bounded TERM/KILL escalation."""
+    started_at_utc = utc_now()
+    proc = subprocess.Popen(
+        command, cwd=cwd, text=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, start_new_session=True)
+    timed_out = False
+    termination_failed = False
+    try:
+        output, _ = proc.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as initial_timeout:
+        timed_out = True
+        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            output, _ = proc.communicate(timeout=TERMINATION_GRACE_SECONDS)
+        except subprocess.TimeoutExpired as term_timeout:
+            os.killpg(proc.pid, signal.SIGKILL)
+            try:
+                output, _ = proc.communicate(
+                    timeout=TERMINATION_GRACE_SECONDS)
+            except subprocess.TimeoutExpired as kill_timeout:
+                termination_failed = True
+                output = (kill_timeout.stdout or term_timeout.stdout
+                          or initial_timeout.stdout or "")
+                if isinstance(output, bytes):
+                    output = output.decode(errors="backslashreplace")
+    return {
+        "command": command,
+        "started_at_utc": started_at_utc,
+        "finished_at_utc": utc_now(),
+        "timeout_seconds": timeout_seconds,
+        "timed_out": timed_out,
+        "termination_failed": termination_failed,
+        "returncode": proc.returncode,
+        "stdout": output,
+    }
+
+
 def tool(name: str) -> str:
     found = shutil.which(name)
     if not found:
@@ -424,6 +467,14 @@ def main() -> int:
     parser.add_argument("--iters", type=int, default=10000)
     parser.add_argument("--ncu", action="store_true")
     parser.add_argument("--static-only", action="store_true")
+    parser.add_argument(
+        "--trial-timeout-seconds", type=int,
+        default=DEFAULT_TRIAL_TIMEOUT_SECONDS,
+        help="host timeout for each compute-only hardware trial")
+    parser.add_argument(
+        "--ncu-timeout-seconds", type=int,
+        default=DEFAULT_NCU_TIMEOUT_SECONDS,
+        help="host timeout for each selected NCU collection")
     parser.add_argument("--output-root", type=Path)
     parser.add_argument(
         "--host-compiler",
@@ -439,6 +490,10 @@ def main() -> int:
         parser.error("run-id may contain only letters, digits, dot, underscore, and hyphen")
     if args.trials < 10 or args.iters <= 0:
         parser.error("trials must be >=10 and iters must be positive")
+    if args.trial_timeout_seconds <= 0:
+        parser.error("--trial-timeout-seconds must be positive")
+    if args.ncu_timeout_seconds <= 0:
+        parser.error("--ncu-timeout-seconds must be positive")
     nvcc, cuobjdump = tool("nvcc"), tool("cuobjdump")
     if not args.static_only:
         tool("nvidia-smi")
@@ -485,6 +540,9 @@ def main() -> int:
         "static_only": args.static_only,
         "host_compiler": args.host_compiler,
         "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
+        "trial_timeout_seconds": args.trial_timeout_seconds,
+        "ncu_timeout_seconds": args.ncu_timeout_seconds,
+        "termination_grace_seconds": TERMINATION_GRACE_SECONDS,
         "ncu_policy": "one full-SM M128N256 case per precision",
         "ptx_primary_source": PTX_SOURCE_URL,
         "generator_path": str(Path(__file__).resolve().relative_to(REPO_ROOT)),
@@ -596,13 +654,32 @@ def main() -> int:
         trials_path = case_dir / "trials.jsonl"
         with trials_path.open("w") as handle:
             for trial in range(1, args.trials + 1):
-                proc = run([str(binary), str(args.iters), str(freq)], check=False)
-                fields = parse_kv(proc.stdout)
-                row = {"trial": trial, "returncode": proc.returncode,
-                       "captured_at_utc": utc_now(), "raw_stdout": proc.stdout, "fields": fields}
+                command = [str(binary), str(args.iters), str(freq)]
+                outcome = run_bounded(
+                    command, timeout_seconds=args.trial_timeout_seconds)
+                fields = parse_kv(str(outcome["stdout"]))
+                row = {
+                    "trial": trial,
+                    "returncode": outcome["returncode"],
+                    "captured_at_utc": utc_now(),
+                    "raw_stdout": outcome["stdout"],
+                    "fields": fields,
+                    "timeout_seconds": args.trial_timeout_seconds,
+                    "timed_out": outcome["timed_out"],
+                    "termination_failed": outcome["termination_failed"],
+                }
                 handle.write(json.dumps(row, sort_keys=True) + "\n")
                 handle.flush()
-                if proc.returncode or fields.get("case_id") != case_id:
+                if outcome["timed_out"]:
+                    timeout_path = case_dir / f"trial_{trial:02d}_timeout.json"
+                    timeout_path.write_text(
+                        json.dumps(outcome, indent=2, sort_keys=True) + "\n")
+                    raise RuntimeError(
+                        f"trial {trial} for {case_id} exceeded "
+                        f"{args.trial_timeout_seconds}s "
+                        f"(termination_failed={outcome['termination_failed']}); "
+                        f"see {timeout_path}")
+                if outcome["returncode"] or fields.get("case_id") != case_id:
                     raise RuntimeError(f"trial {trial} failed for {case_id}")
                 expected_unique = (
                     20 if entry["launch"] == "full_sm_4warp_block" else 1
@@ -665,14 +742,26 @@ def main() -> int:
                 "sm__inst_executed_pipe_tensor.sum.per_cycle_active,"
                 "sm__throughput.avg.pct_of_peak_sustained_active"
             )
-            proc = run(["ncu", "--metrics", metrics, "--target-processes", "all",
-                        "--force-overwrite", "--export", str(report), str(binary),
-                        str(ncu_iters), str(freq)], check=False)
-            (ncu_dir / "profile.log").write_text(proc.stdout)
+            ncu_command = [
+                "ncu", "--metrics", metrics, "--target-processes", "all",
+                "--force-overwrite", "--export", str(report), str(binary),
+                str(ncu_iters), str(freq),
+            ]
+            outcome = run_bounded(
+                ncu_command, timeout_seconds=args.ncu_timeout_seconds)
+            (ncu_dir / "profile.log").write_text(str(outcome["stdout"]))
+            if outcome["timed_out"]:
+                timeout_path = ncu_dir / "timeout.json"
+                timeout_path.write_text(
+                    json.dumps(outcome, indent=2, sort_keys=True) + "\n")
+                raise RuntimeError(
+                    f"NCU for {case_id} exceeded {args.ncu_timeout_seconds}s "
+                    f"(termination_failed={outcome['termination_failed']}); "
+                    f"see {timeout_path}")
             report_path = ncu_dir / "profile.ncu-rep"
             ncu_ok = (
-                proc.returncode == 0
-                and "ERR_NVGPUCTRPERM" not in proc.stdout
+                outcome["returncode"] == 0
+                and "ERR_NVGPUCTRPERM" not in str(outcome["stdout"])
                 and report_path.is_file()
             )
             result["ncu"] = {
@@ -680,8 +769,11 @@ def main() -> int:
                 "policy": spec["ncu_policy"],
                 "metrics": metrics.split(","),
                 "iters": ncu_iters,
-                "returncode": proc.returncode,
-                "permission_denied": "ERR_NVGPUCTRPERM" in proc.stdout,
+                "returncode": outcome["returncode"],
+                "permission_denied": "ERR_NVGPUCTRPERM" in str(outcome["stdout"]),
+                "timeout_seconds": args.ncu_timeout_seconds,
+                "timed_out": False,
+                "termination_failed": False,
                 "report_path": "ncu/profile.ncu-rep",
                 "log_sha256": sha256_path(ncu_dir / "profile.log"),
                 "report_sha256": sha256_path(report_path) if report_path.is_file() else None,

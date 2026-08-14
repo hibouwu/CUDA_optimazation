@@ -10,6 +10,13 @@ compute、component、full-GEMM 三个 campaign 必须串行运行。三个 runn
 个非阻塞 GPU 文件锁；如果另一个 campaign 尚未退出，新启动会立即拒绝，而不是
 在后台同时占用 Thor。
 
+每个 compute-only hardware trial 有 120 秒 host timeout，每个被选中的 NCU
+采集有独立的 300 秒 timeout。超时处理针对完整进程组，先发 `SIGTERM`，五秒后
+仍未退出则发 `SIGKILL`，再等待五秒，并把现场写入 `timeout.json`。如果记录中的
+`termination_failed=true`，说明两阶段有界终止都失败；重启机器后才能继续 GPU
+工作。成功 trial 和 NCU 结果也保留 timeout 字段，独立审计会拒绝缺失或改变该
+运行合同的证据。
+
 ## Thor 端命令
 
 从仓库根目录运行：

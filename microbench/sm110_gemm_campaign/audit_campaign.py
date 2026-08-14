@@ -60,6 +60,20 @@ def audit(run_dir: Path, *, require_ncu: bool) -> list[dict[str, str]]:
         rows.append(finding("error", "summary_manifest_mismatch", "case IDs differ"))
     if spec.get("trials", 0) < 10:
         rows.append(finding("error", "insufficient_declared_trials", str(spec.get("trials"))))
+    if spec.get("schema_version") != 2 or summary.get("schema_version") != 2:
+        rows.append(finding("error", "invalid_schema_version", "expected schema 2"))
+    if spec.get("trial_timeout_seconds") != 120:
+        rows.append(finding(
+            "error", "invalid_trial_timeout_contract",
+            str(spec.get("trial_timeout_seconds"))))
+    if spec.get("ncu_timeout_seconds") != 300:
+        rows.append(finding(
+            "error", "invalid_ncu_timeout_contract",
+            str(spec.get("ncu_timeout_seconds"))))
+    if spec.get("termination_grace_seconds") != 5:
+        rows.append(finding(
+            "error", "invalid_termination_grace_contract",
+            str(spec.get("termination_grace_seconds"))))
     if spec.get("expected_sm_count") != 20:
         rows.append(finding("error", "unexpected_sm_contract", str(spec.get("expected_sm_count"))))
     generator_path = CAMPAIGN_DIR / "run_compute_campaign.py"
@@ -227,7 +241,11 @@ def audit(run_dir: Path, *, require_ncu: bool) -> list[dict[str, str]]:
                 and math.isclose(elapsed, nanoseconds * 1e-9, rel_tol=2e-9)
                 and math.isclose(rate, issued / elapsed, rel_tol=2e-9)
             )
-            if (trial.get("returncode") != 0 or fields.get("case_id") != case_id
+            if (trial.get("returncode") != 0
+                    or trial.get("timeout_seconds") != 120
+                    or trial.get("timed_out") is not False
+                    or trial.get("termination_failed") is not False
+                    or fields.get("case_id") != case_id
                     or fields.get("precision_id") != result.get("precision_id")
                     or fields.get("work_unit") != result.get("work_unit")
                     or not math.isfinite(rate) or rate <= 0
@@ -263,6 +281,9 @@ def audit(run_dir: Path, *, require_ncu: bool) -> list[dict[str, str]]:
             report = case_dir / "ncu" / "profile.ncu-rep"
             log = case_dir / "ncu" / "profile.log"
             if (ncu.get("returncode") != 0 or ncu.get("permission_denied")
+                    or ncu.get("timeout_seconds") != 300
+                    or ncu.get("timed_out") is not False
+                    or ncu.get("termination_failed") is not False
                     or not report.is_file() or not log.is_file()):
                 rows.append(finding("error", "invalid_ncu_evidence", case_id))
             elif (ncu.get("report_sha256") != sha256_path(report)

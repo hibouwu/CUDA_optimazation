@@ -132,9 +132,9 @@ launch_or_attach() {
   "$@"
 }
 
-compute_args=()
+compute_args=(--trial-timeout-seconds 120 --ncu-timeout-seconds 300)
 compute_audit_args=()
-full_args=()
+full_args=(--trial-timeout-seconds 120 --ncu-timeout-seconds 300)
 if [[ $collect_ncu -eq 1 ]]; then
   compute_args+=(--ncu)
   compute_audit_args+=(--require-ncu)

@@ -77,10 +77,16 @@ def main() -> int:
 
     spec = json.loads((root / "run_spec.json").read_text())
     summary = json.loads((root / "summary.json").read_text())
-    add(errors, spec.get("schema_version") == 1, "invalid spec schema")
+    add(errors, spec.get("schema_version") == 2, "invalid spec schema")
     add(errors, spec.get("campaign") == "sm110_full_gemm_closure",
         "invalid campaign name")
     add(errors, spec.get("trials") == 10, "trial contract is not 10")
+    add(errors, spec.get("trial_timeout_seconds") == 120,
+        "trial timeout contract is not 120 seconds")
+    add(errors, spec.get("ncu_timeout_seconds") == 300,
+        "NCU timeout contract is not 300 seconds")
+    add(errors, spec.get("termination_grace_seconds") == 5,
+        "termination grace contract is not 5 seconds")
     add(errors, spec.get("static_only") is False,
         "static-only artifact cannot pass the hardware-result audit")
     add(errors, spec.get("problem_contract") == {
@@ -138,6 +144,8 @@ def main() -> int:
                       for n in EXPECTED_SHAPES}
     add(errors, pairs == expected_pairs, "precision/shape matrix is incomplete")
     add(errors, summary.get("status") == "complete", "summary is not complete")
+    add(errors, summary.get("schema_version") == 2,
+        "invalid summary schema")
     add(errors, summary.get("case_count") == expected_cases,
         "summary case cardinality mismatch")
     status = json.loads((root / "campaign_status.json").read_text())
@@ -240,6 +248,14 @@ def main() -> int:
             stdout_path = trial_dir / "stdout.log"
             add(errors, stdout_path.is_file(), f"{prefix}: stdout missing")
             stdout = stdout_path.read_text() if stdout_path.is_file() else ""
+            add(errors, trial.get("returncode") == 0,
+                f"{prefix}: nonzero return code")
+            add(errors, trial.get("timeout_seconds") == 120,
+                f"{prefix}: timeout contract changed")
+            add(errors, trial.get("timed_out") is False,
+                f"{prefix}: timed out trial cannot pass")
+            add(errors, trial.get("termination_failed") is False,
+                f"{prefix}: termination failure cannot pass")
             fields = parse_kv(stdout)
             add(errors, fields == trial.get("fields"), f"{prefix}: parsed fields changed")
             add(errors, fields.get("reference_contract") ==
@@ -353,6 +369,14 @@ def main() -> int:
             add(errors, path.is_file() and path.stat().st_size > 0 and
                 digest(path) == row.get("report_sha256"),
                 f"{row.get('case_id')}: NCU report hash mismatch")
+            add(errors, row.get("returncode") == 0,
+                f"{row.get('case_id')}: NCU return code is nonzero")
+            add(errors, row.get("timeout_seconds") == 300,
+                f"{row.get('case_id')}: NCU timeout contract changed")
+            add(errors, row.get("timed_out") is False,
+                f"{row.get('case_id')}: timed out NCU cannot pass")
+            add(errors, row.get("termination_failed") is False,
+                f"{row.get('case_id')}: NCU termination failure cannot pass")
     else:
         add(errors, not ncu_results, "unexpected NCU results")
 

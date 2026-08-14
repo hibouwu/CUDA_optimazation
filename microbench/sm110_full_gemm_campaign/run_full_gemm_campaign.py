@@ -12,6 +12,7 @@ import math
 import os
 import platform
 import re
+import signal
 import shutil
 import statistics
 import subprocess
@@ -25,6 +26,9 @@ CAMPAIGN = Path(__file__).resolve().parent
 RESULT_ROOT = REPO / "results" / "sm110_full_gemm_campaign"
 TRIALS = 10
 SHAPES = (1024, 2048, 4096)
+DEFAULT_TRIAL_TIMEOUT_SECONDS = 120
+DEFAULT_NCU_TIMEOUT_SECONDS = 300
+TERMINATION_GRACE_SECONDS = 5
 
 CASES = [
     {
@@ -143,6 +147,45 @@ def run(command: list[str], *, cwd: Path = REPO,
             f"command failed ({result.returncode}): {' '.join(command)}\n"
             f"{result.stdout}")
     return result
+
+
+def run_bounded(command: list[str], *, cwd: Path,
+                timeout_seconds: int) -> dict[str, object]:
+    """Run a GPU-facing process with bounded TERM/KILL escalation."""
+    started_at_utc = utc_now()
+    proc = subprocess.Popen(
+        command, cwd=cwd, text=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, start_new_session=True)
+    timed_out = False
+    termination_failed = False
+    try:
+        output, _ = proc.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as initial_timeout:
+        timed_out = True
+        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            output, _ = proc.communicate(timeout=TERMINATION_GRACE_SECONDS)
+        except subprocess.TimeoutExpired as term_timeout:
+            os.killpg(proc.pid, signal.SIGKILL)
+            try:
+                output, _ = proc.communicate(
+                    timeout=TERMINATION_GRACE_SECONDS)
+            except subprocess.TimeoutExpired as kill_timeout:
+                termination_failed = True
+                output = (kill_timeout.stdout or term_timeout.stdout
+                          or initial_timeout.stdout or "")
+                if isinstance(output, bytes):
+                    output = output.decode(errors="backslashreplace")
+    return {
+        "command": command,
+        "started_at_utc": started_at_utc,
+        "finished_at_utc": utc_now(),
+        "timeout_seconds": timeout_seconds,
+        "timed_out": timed_out,
+        "termination_failed": termination_failed,
+        "returncode": proc.returncode,
+        "stdout": output,
+    }
 
 
 def executable(name: str) -> str:
@@ -420,7 +463,8 @@ def parse_trial(case: dict[str, object], trial_dir: Path,
     }
 
 
-def collect_ncu(run_dir: Path, artifacts: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+def collect_ncu(run_dir: Path, artifacts: dict[str, dict[str, object]],
+                timeout_seconds: int) -> list[dict[str, object]]:
     ncu = executable("ncu")
     output: list[dict[str, object]] = []
     for case in CASES:
@@ -437,14 +481,29 @@ def collect_ncu(run_dir: Path, artifacts: dict[str, dict[str, object]]) -> list[
             *[str(arg) for arg in case["args"]],
         ]
         (profile_dir / "command.json").write_text(json.dumps(command, indent=2) + "\n")
-        proc = run(command, cwd=profile_dir, check=False)
-        (profile_dir / "stdout.log").write_text(proc.stdout)
+        outcome = run_bounded(
+            command, cwd=profile_dir, timeout_seconds=timeout_seconds)
+        (profile_dir / "stdout.log").write_text(str(outcome["stdout"]))
+        if outcome["timed_out"]:
+            (profile_dir / "timeout.json").write_text(
+                json.dumps(outcome, indent=2, sort_keys=True) + "\n")
+            raise RuntimeError(
+                f"NCU for {case['id']} exceeded {timeout_seconds}s "
+                f"(termination_failed={outcome['termination_failed']}); "
+                f"see {profile_dir / 'timeout.json'}")
         report = report_base.with_suffix(".ncu-rep")
-        if proc.returncode or not report.is_file() or report.stat().st_size == 0:
+        if (outcome["returncode"] or not report.is_file()
+                or report.stat().st_size == 0):
             raise RuntimeError(f"NCU failed for {case['id']}; see {profile_dir}")
-        output.append({"case_id": case["id"], "report_path":
-                       str(report.relative_to(run_dir)),
-                       "report_sha256": sha256(report), "returncode": proc.returncode})
+        output.append({
+            "case_id": case["id"],
+            "report_path": str(report.relative_to(run_dir)),
+            "report_sha256": sha256(report),
+            "returncode": outcome["returncode"],
+            "timeout_seconds": timeout_seconds,
+            "timed_out": False,
+            "termination_failed": False,
+        })
     return output
 
 
@@ -456,11 +515,23 @@ def main() -> int:
                         help="also collect one N=4096 NCU report per precision")
     parser.add_argument("--host-compiler")
     parser.add_argument("--nvcc-host-undef-gnu-source", action="store_true")
+    parser.add_argument(
+        "--trial-timeout-seconds", type=int,
+        default=DEFAULT_TRIAL_TIMEOUT_SECONDS,
+        help="host timeout for each complete custom/reference GEMM trial")
+    parser.add_argument(
+        "--ncu-timeout-seconds", type=int,
+        default=DEFAULT_NCU_TIMEOUT_SECONDS,
+        help="host timeout for each NCU holdout collection")
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
         parser.error("invalid run-id")
     if args.static_only and args.ncu:
         parser.error("--ncu cannot be combined with --static-only")
+    if args.trial_timeout_seconds <= 0:
+        parser.error("--trial-timeout-seconds must be positive")
+    if args.ncu_timeout_seconds <= 0:
+        parser.error("--ncu-timeout-seconds must be positive")
 
     RESULT_ROOT.mkdir(parents=True, exist_ok=True)
     lock_handle = (REPO / "results" / ".sm110_gpu_campaign.lock").open("w")
@@ -473,13 +544,16 @@ def main() -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
     dependencies = source_dependencies()
     spec = {
-        "schema_version": 1, "run_id": args.run_id,
+        "schema_version": 2, "run_id": args.run_id,
         "campaign": "sm110_full_gemm_closure",
         "problem_contract": {"layout": "NN", "epilogue": "none", "beta": 0,
                              "output_mode": "accumulator", "work": "2*M*N*K"},
         "trials": TRIALS, "timing": "CUDA events around kernel launches only",
         "ncu_requested": args.ncu, "host_compiler": args.host_compiler,
         "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
+        "trial_timeout_seconds": args.trial_timeout_seconds,
+        "ncu_timeout_seconds": args.ncu_timeout_seconds,
+        "termination_grace_seconds": TERMINATION_GRACE_SECONDS,
         "generator": str(Path(__file__).relative_to(REPO)),
         "generator_sha256": sha256(Path(__file__)),
         "support_manifest": str((CAMPAIGN / "support_manifest.json").relative_to(REPO)),
@@ -565,19 +639,32 @@ def main() -> int:
         for trial in range(1, TRIALS + 1):
             trial_dir = case_dir / f"trial_{trial:02d}"
             trial_dir.mkdir(exist_ok=True)
-            proc = run([str(artifact["binary"]),
-                        *[str(arg) for arg in case["args"]]],
-                       cwd=trial_dir, check=False)
-            (trial_dir / "stdout.log").write_text(proc.stdout)
-            if proc.returncode:
+            command = [str(artifact["binary"]),
+                       *[str(arg) for arg in case["args"]]]
+            outcome = run_bounded(
+                command, cwd=trial_dir,
+                timeout_seconds=args.trial_timeout_seconds)
+            (trial_dir / "stdout.log").write_text(str(outcome["stdout"]))
+            if outcome["timed_out"]:
+                (trial_dir / "timeout.json").write_text(
+                    json.dumps(outcome, indent=2, sort_keys=True) + "\n")
+                raise RuntimeError(
+                    f"{case['id']} trial {trial} exceeded "
+                    f"{args.trial_timeout_seconds}s "
+                    f"(termination_failed={outcome['termination_failed']}); "
+                    f"see {trial_dir / 'timeout.json'}")
+            if outcome["returncode"]:
                 raise RuntimeError(
                     f"{case['id']} trial {trial} failed; see {trial_dir / 'stdout.log'}")
-            parsed = parse_trial(case, trial_dir, proc.stdout)
+            parsed = parse_trial(case, trial_dir, str(outcome["stdout"]))
             custom_rates.append(float(parsed["custom_rate_per_second"]))
             reference_rates.append(float(parsed["reference_rate_per_second"]))
             trial_rows.append({
                 "trial": trial, "captured_at_utc": utc_now(),
-                "returncode": proc.returncode, **parsed,
+                "returncode": outcome["returncode"],
+                "timeout_seconds": args.trial_timeout_seconds,
+                "timed_out": False, "termination_failed": False,
+                **parsed,
             })
         trials_path.write_text("".join(
             json.dumps(row, sort_keys=True) + "\n" for row in trial_rows))
@@ -597,10 +684,11 @@ def main() -> int:
     if args.ncu and not args.static_only:
         write_status(run_dir, "running_ncu", current_case=None,
                      completed_cases=len(results), total_cases=len(CASES))
-        ncu_results = collect_ncu(run_dir, artifacts)
+        ncu_results = collect_ncu(
+            run_dir, artifacts, args.ncu_timeout_seconds)
     status = "static_complete" if args.static_only else "complete"
     summary = {
-        "schema_version": 1, "run_id": args.run_id, "status": status,
+        "schema_version": 2, "run_id": args.run_id, "status": status,
         "case_count": len(results), "results": results,
         "ncu_requested": args.ncu, "ncu_results": ncu_results,
         "updated_at_utc": utc_now(),
