@@ -46,6 +46,33 @@ struct ReferenceResult {
   float tensor_scale = 1.0f;
 };
 
+bool validate_e2m1_reference_primitives() {
+  struct TestCase {
+    float input;
+    std::uint8_t expected;
+  };
+  const TestCase cases[] = {
+      {0.0f, 0x0u},   {-0.0f, 0x8u},  {0.25f, 0x0u},
+      {-0.25f, 0x8u}, {0.75f, 0x2u},  {-0.75f, 0xau},
+      {1.25f, 0x2u},  {-1.25f, 0xau}, {1.75f, 0x4u},
+      {-1.75f, 0xcu}, {2.5f, 0x4u},   {-2.5f, 0xcu},
+      {3.5f, 0x6u},   {-3.5f, 0xeu},  {5.0f, 0x6u},
+      {-5.0f, 0xeu},
+  };
+  for (const TestCase& test : cases) {
+    if (gemm_sm110::requant::encode_e2m1_rn(test.input) != test.expected) {
+      return false;
+    }
+  }
+  return gemm_sm110::requant::encode_e2m1_rn(
+             std::numeric_limits<float>::infinity()) == 0x7u &&
+         gemm_sm110::requant::encode_e2m1_rn(
+             -std::numeric_limits<float>::infinity()) == 0xfu &&
+         gemm_sm110::requant::encode_e2m1_rn(
+             std::numeric_limits<float>::quiet_NaN()) == 0x0u &&
+         gemm_sm110::requant::pack_e2m1x2(0x2u, 0xbu) == 0x2bu;
+}
+
 void print_usage(const char* program) {
   std::cerr
       << "Usage: " << program << " [options]\n"
@@ -361,6 +388,10 @@ int main(int argc, char** argv) {
   Options options;
   if (!parse_options(argc, argv, &options)) {
     print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+  if (!validate_e2m1_reference_primitives()) {
+    std::cerr << "E2M1 reference primitive self-check failed\n";
     return EXIT_FAILURE;
   }
 

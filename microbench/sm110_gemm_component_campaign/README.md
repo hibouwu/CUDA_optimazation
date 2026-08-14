@@ -75,6 +75,10 @@ profile under `results/sm110_epilogue_probe/$RUN_ID`. Both the measurement
 timeout and TERM/KILL escalation waits are bounded. `termination_failed=true`
 means the process survived the bounded escalation and the machine must be
 rebooted before any further GPU work.
+The source-dependency manifest includes the benchmark and every requant header
+that determines E2M1 encoding, packing, scaling, or TMEM readback. The host
+reference retains E2M1 signed zero (`-0` is nibble `0x8`) and self-checks all
+RNE midpoint boundaries before launching a GPU kernel.
 The closure suite uses `--max-blocks-per-sm 1` as a safe termination and
 correctness preflight; this runs the one-CTA isolation profile, the full-GPU
 one-CTA-per-SM profile, and the production shape. Use `4` only for the

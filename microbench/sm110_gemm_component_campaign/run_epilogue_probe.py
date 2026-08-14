@@ -22,6 +22,15 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 RESULT_ROOT = REPO / "results" / "sm110_epilogue_probe"
 SOURCE = REPO / "GEMMsm110/tests/requant_epilogue_benchmark.cu"
+SOURCE_DEPENDENCIES = (
+    SOURCE,
+    REPO / "GEMMsm110/include/gemm_common.cuh",
+    REPO / "GEMMsm110/include/requant/e2m1_encode.cuh",
+    REPO / "GEMMsm110/include/requant/pack_fp4.cuh",
+    REPO / "GEMMsm110/include/requant/requant_backend.cuh",
+    REPO / "GEMMsm110/include/requant/scale_policy.cuh",
+    REPO / "GEMMsm110/include/requant/sm110_tcgen05_epilogue.cuh",
+)
 
 
 def utc_now() -> str:
@@ -30,6 +39,13 @@ def utc_now() -> str:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def source_dependency_hashes() -> dict[str, str]:
+    return {
+        str(path.relative_to(REPO)): sha256(path)
+        for path in SOURCE_DEPENDENCIES
+    }
 
 
 def capture(command: list[str], timeout_seconds: int | None = None) -> dict[str, object]:
@@ -172,7 +188,8 @@ def main() -> int:
             prior = json.loads(summary_path.read_text())
             if (prior.get("pass") is True
                     and prior.get("expected_commit") == args.expected_commit
-                    and prior.get("source_sha256") == sha256(SOURCE)
+                    and prior.get("source_dependencies")
+                    == source_dependency_hashes()
                     and prior.get("timeout_seconds") == args.timeout_seconds
                     and prior.get("max_blocks_per_sm") == args.max_blocks_per_sm):
                 print(json.dumps({"run_dir": str(run_dir), "pass": True,
@@ -263,10 +280,11 @@ def main() -> int:
 
     after = environment()
     summary = {
-        "schema_version": 2, "run_id": args.run_id,
+        "schema_version": 3, "run_id": args.run_id,
         "expected_commit": args.expected_commit,
         "source_path": str(SOURCE.relative_to(REPO)),
         "source_sha256": sha256(SOURCE), "binary_sha256": sha256(binary),
+        "source_dependencies": source_dependency_hashes(),
         "sass_sha256": sha256(build / "sass.txt"),
         "timeout_seconds": args.timeout_seconds,
         "max_blocks_per_sm": args.max_blocks_per_sm,
