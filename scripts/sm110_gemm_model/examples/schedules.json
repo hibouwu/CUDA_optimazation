@@ -54,6 +54,24 @@
     "fixed_seconds": 0.0
   },
   {
+    "schedule_id": "tc5a_m128n256k64_stage4",
+    "bm": 128,
+    "bn": 256,
+    "bk": 64,
+    "mma_m": 128,
+    "mma_n": 256,
+    "stages": 4,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "pad",
+    "tmem_load_registers": 8,
+    "supported_precisions": ["fp16_f32", "bf16_f32"],
+    "tmem_columns": 512,
+    "threads": 192,
+    "tmem_consumer_warps": 4,
+    "fixed_seconds": 0.0
+  },
+  {
     "schedule_id": "direct_smem_byte_container_m128n256k64_stage2",
     "bm": 128,
     "bn": 256,

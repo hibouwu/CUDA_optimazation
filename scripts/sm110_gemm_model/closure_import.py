@@ -25,6 +25,13 @@ COMPUTE_SELECTION = CAMPAIGN_COMPUTE_SELECTION
 COMPONENT_RESOURCES = {
     "tma.l2_hit_ingress": "tma.smem_ingress.per_sm",
     "tma.dram_stream_ingress": "tma.hbm",
+    "tma.l2_hit_ingress.serial32k":
+        "tma.smem_ingress.diagnostic.serial32k.per_sm",
+    "tma.dram_stream_ingress.serial32k":
+        "tma.hbm.diagnostic.serial32k",
+    "tma.l2_hit_ingress.inflight4":
+        "tma.smem_ingress.per_sm.inflight4",
+    "tma.dram_stream_ingress.inflight4": "tma.hbm.inflight4",
     "tmem.scale_ingress": "tmem.scale_ingress",
     "hbm.read": "hbm.read",
     "hbm.write": "hbm.write",
@@ -405,21 +412,70 @@ def capacities_from_component(
             "20-SM component campaign; case-declared blocks per SM; "
             "aggregate globaltimer span"
         )
+        if raw_resource.startswith("tma.l2_hit_ingress"):
+            condition_scope = (
+                "20-SM target contract; exactly one CTA launched and one "
+                "SM ID observed; directly isolated per-SM L2-hit ingress"
+            )
         if resource == "tma.smem_ingress.per_sm":
             expected_sms = int(spec.get("expected_sm_count", 0))
             if expected_sms != 20:
                 raise ModelError(
-                    f"{case_id}: per-SM TMA normalization requires the "
+                    f"{case_id}: per-SM TMA isolation requires the "
                     "frozen 20-SM campaign contract"
                 )
-            original_value = rate_per_second
-            original_unit = "B/s/GPU at one CTA per SM"
-            rate_per_second /= expected_sms
+            arguments = list(case_specs[case_id].get("args", []))
+            try:
+                requested_blocks = int(
+                    arguments[arguments.index("--blocks") + 1])
+                mode = str(arguments[arguments.index("--mode") + 1])
+                pattern = str(
+                    arguments[arguments.index("--pattern") + 1])
+                slots = int(arguments[arguments.index("--slots") + 1])
+                inflight = int(
+                    arguments[arguments.index("--inflight") + 1])
+                threads = int(
+                    arguments[arguments.index("--threads") + 1])
+            except (ValueError, IndexError) as error:
+                raise ModelError(
+                    f"{case_id}: per-SM TMA case lacks an explicit launch "
+                    "and residency contract"
+                ) from error
+            if (requested_blocks != 1 or mode != "l2-hit"
+                    or pattern != "tc5a-ab" or slots != 8
+                    or inflight != 8 or threads != 192):
+                raise ModelError(
+                    f"{case_id}: per-SM TMA capacity must come from an "
+                    "isolated one-CTA exact tc5a L2-hit case"
+                )
             condition_scope = (
-                "20-SM component campaign; exactly one CTA per SM and all "
-                "20 SM IDs; aggregate globaltimer rate divided by 20 to "
-                "form a per-SM ingress rate"
+                "20-SM target contract; exactly one CTA launched and one "
+                "SM ID observed; rate is a directly isolated per-SM ingress "
+                "measurement and is not divided by the device SM count"
             )
+        elif resource == "tma.hbm":
+            arguments = list(case_specs[case_id].get("args", []))
+            try:
+                mode = str(arguments[arguments.index("--mode") + 1])
+                pattern = str(
+                    arguments[arguments.index("--pattern") + 1])
+                slots = int(arguments[arguments.index("--slots") + 1])
+                inflight = int(
+                    arguments[arguments.index("--inflight") + 1])
+                threads = int(
+                    arguments[arguments.index("--threads") + 1])
+            except (ValueError, IndexError) as error:
+                raise ModelError(
+                    f"{case_id}: exact tc5a DRAM TMA case lacks its "
+                    "pipeline contract"
+                ) from error
+            if (mode != "dram-stream" or pattern != "tc5a-ab"
+                    or slots != 8 or inflight != 8 or threads != 192
+                    or "--blocks" in arguments):
+                raise ModelError(
+                    f"{case_id}: tma.hbm must come from the full-grid exact "
+                    "tc5a DRAM-stream case"
+                )
         capacities.append(Capacity(
             capacity_id=f"{identity_id}.component.{case_id}",
             resource=resource,

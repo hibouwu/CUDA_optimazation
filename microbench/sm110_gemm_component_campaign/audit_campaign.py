@@ -15,12 +15,12 @@ REPO = Path(__file__).resolve().parents[2]
 EXPECTED_CASES = 18
 MEMORY_RESOURCES = {"hbm.read", "hbm.write", "l2.read", "l2.write"}
 EXPECTED_CASE_RESOURCES = {
-    "tma_l2_hit_32k": "tma.l2_hit_ingress",
-    "tma_dram_stream_32k": "tma.dram_stream_ingress",
-    "tma_l2_hit_32k_inflight4": "tma.l2_hit_ingress",
-    "tma_dram_stream_32k_inflight4": "tma.dram_stream_ingress",
-    "tma_l2_hit_16k_inflight8": "tma.l2_hit_ingress",
-    "tma_dram_stream_16k_inflight8": "tma.dram_stream_ingress",
+    "tma_l2_hit_32k": "tma.l2_hit_ingress.serial32k",
+    "tma_dram_stream_32k": "tma.dram_stream_ingress.serial32k",
+    "tma_l2_hit_32k_inflight4": "tma.l2_hit_ingress.inflight4",
+    "tma_dram_stream_32k_inflight4": "tma.dram_stream_ingress.inflight4",
+    "tma_l2_hit_tc5a_ab_inflight8": "tma.l2_hit_ingress",
+    "tma_dram_stream_tc5a_ab_inflight8": "tma.dram_stream_ingress",
     "tmem_scale_ingress_32x128b_warpx4": "tmem.scale_ingress",
     "hbm_read_aggregate": "hbm.read",
     "hbm_write_aggregate": "hbm.write",
@@ -128,7 +128,12 @@ def main() -> int:
             fields = row.get("fields", {})
             if (case["resource"].startswith(("tma.", "tmem."))
                     or case["resource"] in MEMORY_RESOURCES):
-                if int(fields.get("sm_count", 0)) != 20 or int(fields.get("unique_smid_count", 0)) != 20:
+                expected_unique_sms = (
+                    1 if case["resource"].startswith("tma.l2_hit_ingress")
+                    else 20)
+                if (int(fields.get("sm_count", 0)) != 20
+                        or int(fields.get("unique_smid_count", 0))
+                        != expected_unique_sms):
                     errors.append(f"{cid}: incomplete SM coverage")
                 try:
                     if case["resource"].startswith("tma."):
@@ -139,19 +144,110 @@ def main() -> int:
                             args[args.index("--slots") + 1])
                         expected_tile_bytes = int(
                             args[args.index("--tile-bytes") + 1])
+                        expected_pattern = (
+                            str(args[args.index("--pattern") + 1])
+                            if "--pattern" in args else "uniform")
+                        expected_stage_count = (
+                            4 if expected_pattern == "tc5a-ab"
+                            else expected_slots)
+                        expected_requests_per_stage = (
+                            2 if expected_pattern == "tc5a-ab" else 1)
+                        expected_tensor_map = (
+                            "2d-sw128" if expected_pattern == "tc5a-ab"
+                            else "3d-none")
+                        expected_row_stride = (
+                            2048 if expected_pattern == "tc5a-ab" else 0)
+                        expected_smem_bytes = (
+                            4 * 49152 if expected_pattern == "tc5a-ab"
+                            else expected_tile_bytes * expected_slots)
+                        expected_carveout = (
+                            "max" if expected_pattern == "tc5a-ab"
+                            else "default")
+                        expected_mode = str(
+                            args[args.index("--mode") + 1])
+                        expected_backing_bytes = int(
+                            args[args.index("--bytes") + 1])
+                        expected_warmup_iters = int(
+                            args[args.index("--warmup-iters") + 1])
                         expected_blocks_per_sm = int(
                             args[args.index("--blocks-per-sm") + 1])
-                        if (int(fields.get("inflight", 0))
+                        expected_threads = int(
+                            args[args.index("--threads") + 1])
+                        if (fields.get("mode") != expected_mode
+                                or fields.get("pattern") != expected_pattern
+                                or int(fields.get("stage_count", 0))
+                                != expected_stage_count
+                                or int(fields.get("requests_per_stage", 0))
+                                != expected_requests_per_stage
+                                or int(fields.get("barrier_count", 0))
+                                != expected_stage_count
+                                or fields.get("tensor_map")
+                                != expected_tensor_map
+                                or int(fields.get("row_stride_elements", -1))
+                                != expected_row_stride
+                                or int(fields.get("smem_bytes", 0))
+                                != expected_smem_bytes
+                                or fields.get("preferred_smem_carveout")
+                                != expected_carveout
+                                or int(fields.get("inflight", 0))
                                 != expected_inflight
                                 or int(fields.get("slots", 0))
                                 != expected_slots
                                 or int(fields.get("tile_bytes", 0))
                                 != expected_tile_bytes
+                                or int(fields.get("warmup_iters", 0))
+                                != expected_warmup_iters
                                 or int(fields.get("blocks_per_sm", 0))
                                 != expected_blocks_per_sm
+                                or int(fields.get("threads", 0))
+                                != expected_threads
                                 or int(fields.get("blocks", 0))
-                                != 20 * expected_blocks_per_sm):
+                                != expected_unique_sms
+                                or int(fields.get("requested_blocks", 0))
+                                != (1 if case["resource"]
+                                    .startswith("tma.l2_hit_ingress") else 0)):
                             raise ValueError("invalid TMA inflight contract")
+                        warmup_bytes = expected_warmup_iters * (
+                            49152 if expected_pattern == "tc5a-ab"
+                            else expected_tile_bytes)
+                        if (case["resource"].startswith(
+                                "tma.l2_hit_ingress")
+                                and warmup_bytes < int(
+                                    fields.get("working_set_bytes", 0))):
+                            raise ValueError("incomplete L2 warmup")
+                        total_tiles = int(fields.get("total_tiles", 0))
+                        total_tiles_b = int(fields.get("total_tiles_b", 0))
+                        working_set = int(fields.get("working_set_bytes", 0))
+                        allocation = int(fields.get("allocation_bytes", 0))
+                        if expected_pattern == "tc5a-ab":
+                            expected_total_tiles = max(
+                                1, expected_backing_bytes // 49152)
+                            if (total_tiles != expected_total_tiles
+                                    or total_tiles_b != total_tiles
+                                    or working_set != total_tiles * 49152
+                                    or allocation
+                                    != total_tiles * 384 * 2048 * 2):
+                                raise ValueError(
+                                    "invalid tc5a logical/physical backing")
+                        else:
+                            expected_total_tiles = max(
+                                expected_backing_bytes // expected_tile_bytes,
+                                expected_unique_sms,
+                            )
+                            if expected_mode == "dram-stream":
+                                expected_total_tiles = max(
+                                    expected_total_tiles,
+                                    expected_unique_sms
+                                    * (expected_warmup_iters + int(
+                                        args[args.index("--iters") + 1])),
+                                )
+                            if (total_tiles != expected_total_tiles
+                                    or total_tiles_b != total_tiles
+                                    or working_set
+                                    != total_tiles * expected_tile_bytes
+                                    or allocation != working_set):
+                                raise ValueError(
+                                    "invalid uniform TMA backing")
                         recalculated = (int(fields["requested_bytes"]) * 1e9 /
                                         int(fields["globaltimer_elapsed_ns"]))
                     elif case["resource"] == "tmem.accumulator_readback":

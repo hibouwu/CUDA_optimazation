@@ -30,6 +30,8 @@ SOURCE_DEPENDENCIES = [
     "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
     "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
     "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+    "GEMMsm110/include/backends/tc5_persistent.cuh",
+    "GEMMsm110/include/sm110_ptx_helpers.cuh",
     "GEMMsm110/tests/requant_epilogue_benchmark.cu",
     "GEMMsm110/include/gemm_common.cuh",
     "GEMMsm110/include/requant/requant_backend.cuh",
@@ -43,45 +45,45 @@ SOURCE_DEPENDENCIES = [
 CASES = [
     {
         "id": "tma_l2_hit_32k",
-        "resource": "tma.l2_hit_ingress",
+        "resource": "tma.l2_hit_ingress.serial32k",
         "binary": "tma",
-        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "1", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "1", "--iters", "4096", "--warmup-iters", "512", "--blocks", "1", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
         "id": "tma_dram_stream_32k",
-        "resource": "tma.dram_stream_ingress",
+        "resource": "tma.dram_stream_ingress.serial32k",
         "binary": "tma",
         "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "1", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
         "id": "tma_l2_hit_32k_inflight4",
-        "resource": "tma.l2_hit_ingress",
+        "resource": "tma.l2_hit_ingress.inflight4",
         "binary": "tma",
-        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
+        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "4", "--iters", "4096", "--warmup-iters", "512", "--blocks", "1", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
         "id": "tma_dram_stream_32k_inflight4",
-        "resource": "tma.dram_stream_ingress",
+        "resource": "tma.dram_stream_ingress.inflight4",
         "binary": "tma",
         "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--inflight", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
     {
-        "id": "tma_l2_hit_16k_inflight8",
+        "id": "tma_l2_hit_tc5a_ab_inflight8",
         "resource": "tma.l2_hit_ingress",
         "binary": "tma",
-        "args": ["--mode", "l2-hit", "--bytes", str(16 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
-        "sass": ["UTMALDG.3D"],
+        "args": ["--mode", "l2-hit", "--pattern", "tc5a-ab", "--bytes", str(16 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "1024", "--blocks", "1", "--blocks-per-sm", "1", "--threads", "192"],
+        "sass": ["UTMALDG.2D"],
     },
     {
-        "id": "tma_dram_stream_16k_inflight8",
+        "id": "tma_dram_stream_tc5a_ab_inflight8",
         "resource": "tma.dram_stream_ingress",
         "binary": "tma",
-        "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
-        "sass": ["UTMALDG.3D"],
+        "args": ["--mode", "dram-stream", "--pattern", "tc5a-ab", "--bytes", str(256 << 20), "--tile-bytes", "16384", "--slots", "8", "--inflight", "8", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "192"],
+        "sass": ["UTMALDG.2D"],
     },
     {
         "id": "tmem_scale_ingress_32x128b_warpx4",
@@ -293,8 +295,11 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
         raise RuntimeError(f"{case['id']}: expected {EXPECTED_SMS} SMs")
     resource = str(case["resource"])
     if resource.startswith("tma."):
-        if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
-            raise RuntimeError(f"{case['id']}: incomplete SM coverage")
+        expected_blocks = (1 if resource.startswith("tma.l2_hit_ingress")
+                           else EXPECTED_SMS)
+        expected_unique_sms = expected_blocks
+        if int(fields.get("unique_smid_count", "0")) != expected_unique_sms:
+            raise RuntimeError(f"{case['id']}: TMA SM-scope mismatch")
         requested = int(fields["requested_bytes"])
         elapsed_ns = int(fields["globaltimer_elapsed_ns"])
         reported = float(fields["globaltimer_gbytes_per_second"]) * 1e9
@@ -303,18 +308,93 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
         expected_inflight = int(args[args.index("--inflight") + 1])
         expected_slots = int(args[args.index("--slots") + 1])
         expected_tile_bytes = int(args[args.index("--tile-bytes") + 1])
+        expected_pattern = (
+            str(args[args.index("--pattern") + 1])
+            if "--pattern" in args else "uniform")
+        expected_stage_count = 4 if expected_pattern == "tc5a-ab" else expected_slots
+        expected_requests_per_stage = 2 if expected_pattern == "tc5a-ab" else 1
+        expected_barrier_count = expected_stage_count
+        expected_tensor_map = (
+            "2d-sw128" if expected_pattern == "tc5a-ab" else "3d-none")
+        expected_row_stride = 2048 if expected_pattern == "tc5a-ab" else 0
+        expected_smem_bytes = (
+            4 * 49152 if expected_pattern == "tc5a-ab"
+            else expected_tile_bytes * expected_slots)
+        expected_carveout = "max" if expected_pattern == "tc5a-ab" else "default"
+        expected_mode = str(args[args.index("--mode") + 1])
+        expected_backing_bytes = int(args[args.index("--bytes") + 1])
+        expected_warmup_iters = int(
+            args[args.index("--warmup-iters") + 1])
         expected_blocks_per_sm = int(
             args[args.index("--blocks-per-sm") + 1])
+        expected_threads = int(args[args.index("--threads") + 1])
         if int(fields.get("inflight", "0")) != expected_inflight:
             raise RuntimeError(f"{case['id']}: TMA inflight contract mismatch")
         if int(fields.get("slots", "0")) != expected_slots:
             raise RuntimeError(f"{case['id']}: TMA slot contract mismatch")
-        if (int(fields.get("tile_bytes", "0")) != expected_tile_bytes
+        if (fields.get("mode") != expected_mode
+                or fields.get("pattern") != expected_pattern
+                or int(fields.get("stage_count", "0"))
+                != expected_stage_count
+                or int(fields.get("requests_per_stage", "0"))
+                != expected_requests_per_stage
+                or int(fields.get("barrier_count", "0"))
+                != expected_barrier_count
+                or fields.get("tensor_map") != expected_tensor_map
+                or int(fields.get("row_stride_elements", "-1"))
+                != expected_row_stride
+                or int(fields.get("smem_bytes", "0")) != expected_smem_bytes
+                or fields.get("preferred_smem_carveout")
+                != expected_carveout
+                or int(fields.get("tile_bytes", "0")) != expected_tile_bytes
+                or int(fields.get("warmup_iters", "0"))
+                != expected_warmup_iters
                 or int(fields.get("blocks_per_sm", "0"))
                 != expected_blocks_per_sm
-                or int(fields.get("blocks", "0"))
-                != EXPECTED_SMS * expected_blocks_per_sm):
+                or int(fields.get("threads", "0")) != expected_threads
+                or int(fields.get("blocks", "0")) != expected_blocks
+                or int(fields.get("requested_blocks", "0"))
+                != (1 if resource.startswith("tma.l2_hit_ingress") else 0)):
             raise RuntimeError(f"{case['id']}: TMA launch/payload mismatch")
+        warmup_bytes = expected_warmup_iters * (
+            49152 if expected_pattern == "tc5a-ab"
+            else expected_tile_bytes)
+        if (resource.startswith("tma.l2_hit_ingress")
+                and warmup_bytes < int(fields.get("working_set_bytes", "0"))):
+            raise RuntimeError(
+                f"{case['id']}: L2-hit warmup does not cover the backing set")
+        total_tiles = int(fields.get("total_tiles", "0"))
+        total_tiles_b = int(fields.get("total_tiles_b", "0"))
+        working_set_bytes = int(fields.get("working_set_bytes", "0"))
+        allocation_bytes = int(fields.get("allocation_bytes", "0"))
+        if expected_pattern == "tc5a-ab":
+            expected_total_tiles = max(
+                1, expected_backing_bytes // 49152)
+            if (total_tiles != expected_total_tiles
+                    or total_tiles_b != total_tiles
+                    or working_set_bytes != total_tiles * 49152
+                    or allocation_bytes != total_tiles * 384 * 2048 * 2):
+                raise RuntimeError(
+                    f"{case['id']}: tc5a logical/physical backing mismatch")
+        else:
+            expected_total_tiles = max(
+                expected_backing_bytes // expected_tile_bytes,
+                expected_blocks,
+            )
+            if expected_mode == "dram-stream":
+                expected_total_tiles = max(
+                    expected_total_tiles,
+                    expected_blocks
+                    * (expected_warmup_iters
+                       + int(args[args.index("--iters") + 1])),
+                )
+            if (total_tiles != expected_total_tiles
+                    or total_tiles_b != total_tiles
+                    or working_set_bytes
+                    != total_tiles * expected_tile_bytes
+                    or allocation_bytes != working_set_bytes):
+                raise RuntimeError(
+                    f"{case['id']}: uniform TMA backing mismatch")
     elif resource == "tmem.accumulator_readback":
         if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
             raise RuntimeError(f"{case['id']}: incomplete SM coverage")

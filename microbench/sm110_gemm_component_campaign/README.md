@@ -11,9 +11,11 @@ conflating them:
 - explicit TMEM accumulator readback through `tcgen05.ld` / `LDTM`;
 - the NVFP4-specific TMEM→register→E2M1+scale requant epilogue.
 
-TMA, HBM/L2, and TMEM use the full-grid interval from the earliest CTA `%globaltimer`
-start through the latest CTA stop and require exactly 20 distinct SM IDs on the
-20-SM T5000 contract. The epilogue uses CUDA-event timing and additionally
+The L2-hit TMA ingress cases launch exactly one CTA and directly time one SM's
+local TMA-to-SMEM outlet. DRAM-stream TMA, HBM/L2, and TMEM use the full-grid
+interval from the earliest CTA `%globaltimer` start through the latest CTA stop
+and require exactly 20 distinct SM IDs on the 20-SM T5000 contract. The
+epilogue uses CUDA-event timing and additionally
 requires all 20 SM IDs plus bit-exact packed-value and scale agreement with the
 host reference.
 The exact 18-case matrix has ten external trials per case, source/binary/SASS
@@ -53,15 +55,19 @@ uses 32 distinct four-column TMEM destination slots per commit batch, so the
 reported ingress is not an artifact of overlapping asynchronous writes to two
 addresses.
 The two original TMA cases freeze `32 KiB × inflight=1`; two cases freeze
-`32 KiB × inflight=4`, and two saturation cases freeze
-`16 KiB × inflight=8`. Each slot has an independent mbarrier and every launch
-uses one CTA/SM. The eight-request point reflects tc5a's four stages with A and
-B TMA requests per stage without claiming that equal-size probe tiles reproduce
-the GEMM's exact 16-KiB/32-KiB request pair.
+`32 KiB × inflight=4`, and two tc5a cases freeze four stages of exact
+`A=16 KiB + B=32 KiB` destinations. Each stage uses one 48 KiB mbarrier shared
+by its two 2D SW128 requests: four barriers, eight requests in flight. The mixed
+pattern occupies 192 KiB of SMEM, matching the `M128N256K64` FP16 tc5a ingress
+contract. L2-hit launches one CTA total;
+DRAM-stream launches one CTA/SM.
 This separates serialized request latency from the sustained ingress available
-to a four-stage GEMM pipeline. The model selects the largest closure-qualified
-rate for `tma.smem_ingress.per_sm` after the verified 20-SM aggregate is divided
-by 20. The model applies that local rate through task waves; shared `l2.read`
+to a four-stage GEMM pipeline. The serial result is retained under a diagnostic
+resource ID. The uniform-four-request result supplies the explicit
+`.inflight4` capacity for shallow schedules, while only the exact mixed point
+supplies the stage-four `tma.smem_ingress.per_sm`; the two contracts cannot
+override each other merely because one numeric rate is larger. No
+device-SM-count division is applied. The model applies the selected local rate through task waves; shared `l2.read`
 and conditional hard ceilings remain separate and active. DRAM-stream retains
 its end-to-end `tma.hbm` aggregate condition.
 

@@ -419,7 +419,10 @@ class WorkAccountingTest(unittest.TestCase):
         self.assertEqual(work.tma_unique_input_bytes, 2 * 256 * 64 * 2)
         self.assertEqual(work.tma_input_bytes, 4 * 2 * 128 * 64 * 2)
         self.assertEqual(demands["hbm.read"][0], work.tma_unique_input_bytes)
-        self.assertEqual(demands["tma.hbm"][0], work.tma_unique_input_bytes)
+        self.assertEqual(
+            demands["tma.hbm.inflight4"][0],
+            work.tma_unique_input_bytes,
+        )
         self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
         self.assertNotIn("tma.l2", demands)
 
@@ -531,8 +534,8 @@ class WorkAccountingTest(unittest.TestCase):
     def test_example_manifest_has_an_executable_path_for_every_precision(self) -> None:
         schedules = load_schedules(SCHEDULE_PATH)
         expected_valid_counts = {
-            "fp16_f32": 3,
-            "bf16_f32": 3,
+            "fp16_f32": 4,
+            "bf16_f32": 4,
             "tf32_f32": 3,
             "e4m3_f32": 3,
             "e5m2_f32": 3,
@@ -750,10 +753,10 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 "l2_write", "l2.write", 1000.0, "byte",
                 EvidenceKind.MEASURED_SUSTAINED),
             capacity(
-                "tma_per_sm", "tma.smem_ingress.per_sm", 1e30, "byte",
+                "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 1e30, "byte",
                 EvidenceKind.MEASURED_SUSTAINED),
             capacity(
-                "tma_hbm", "tma.hbm", 1e30, "byte",
+                "tma_hbm", "tma.hbm.inflight4", 1e30, "byte",
                 EvidenceKind.MEASURED_SUSTAINED),
             capacity(
                 "readback", "tmem.readback", 1e30, "byte",
@@ -804,7 +807,7 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 EvidenceKind.MEASURED_SUSTAINED,
                 "test", "source.json", "l2-write"),
             Capacity(
-                "tma_per_sm", "tma.smem_ingress.per_sm", 1e30, "byte",
+                "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 1e30, "byte",
                 EvidenceKind.MEASURED_SUSTAINED,
                 "test", "source.json", "tma-l2"),
             Capacity(

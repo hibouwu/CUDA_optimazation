@@ -17,9 +17,14 @@ mbarriers and uses a prefill/rolling-reclaim/drain window, so a CTA can keep fou
 TMA requests outstanding like the four-stage tc5a mainloop instead of measuring
 the latency of an issue-immediately-wait loop. The legacy
 `bytes_per_cycle` field remains requested payload divided by the maximum
-per-CTA `clock64()` span. The closure-qualified whole-GPU rate is instead
+per-CTA `clock64()` span. The closure-qualified launch-scope rate is instead
 `globaltimer_gbytes_per_second`: total requested payload divided by the interval
 from the earliest CTA `%globaltimer` start to the latest CTA stop.
+
+By default the grid contains `sm_count * blocks_per_sm` CTAs. `--blocks N`
+overrides that grid size. The formal L2-hit ingress cases use `--blocks 1` to
+isolate one SM's local TMA-to-SMEM outlet without concurrent traffic contending
+for the shared L2 bus; full-GPU L2 capacity is measured by a separate probe.
 
 ```bash
 ./build_and_run.sh run
@@ -35,9 +40,9 @@ Interpretation boundaries:
   is the saturation candidate used by the GEMM model; retaining the serial case
   makes the concurrency gain auditable instead of silently changing the old
   capacity's meaning.
-- A Thor/T5000 full-GPU observation is accepted only when
-  `unique_smid_count == sm_count == 20`; otherwise its issued-byte accounting
-  is not promoted into the empirical envelope.
+- A Thor/T5000 L2-hit per-SM observation requires `sm_count == 20`,
+  `blocks == unique_smid_count == 1`; DRAM-stream aggregate observations require
+  `blocks == unique_smid_count == sm_count == 20`.
 - It is not a pure DRAM pin bandwidth test and not a pure shared-memory write
   port peak.
 - NCU direct `dram__bytes*` counters may be unavailable on this machine; when
@@ -59,16 +64,27 @@ Formal closure measures both concurrency contracts with ten external trials:
 ```bash
 ./tma_gmem_smem_bandwidth --mode l2-hit --bytes $((16 << 20)) \
   --tile-bytes 32768 --slots 4 --inflight 1 --iters 4096 \
-  --warmup-iters 32 --blocks-per-sm 1 --threads 128
+  --warmup-iters 512 --blocks 1 --blocks-per-sm 1 --threads 128
 ./tma_gmem_smem_bandwidth --mode l2-hit --bytes $((16 << 20)) \
   --tile-bytes 32768 --slots 4 --inflight 4 --iters 4096 \
-  --warmup-iters 32 --blocks-per-sm 1 --threads 128
+  --warmup-iters 512 --blocks 1 --blocks-per-sm 1 --threads 128
 ```
 
-The formal campaign also includes `16 KiB × inflight=8`; tc5a has four stages
-and issues separate A/B TMA requests per stage, so this point checks whether
-eight outstanding requests are needed to saturate the per-SM exit. It does not
-claim that equal 16 KiB probe requests reproduce tc5a's exact 16 KiB/32 KiB
-pair. The DRAM-stream cases use the same three concurrency points with a 256 MiB
-unique working-set contract. A pipeline rate is not a specification upper: the
+The formal campaign also includes `--pattern tc5a-ab`: four SMEM stages, each
+with a 16 KiB A destination and a 32 KiB B destination. Each stage sends both
+2D SW128 requests to one 48 KiB `expect_tx` mbarrier, so four stages keep eight
+TMA requests in flight while using four barriers. Its 192 KiB staging footprint,
+descriptor and completion sequence match the `M128N256K64` FP16 tc5a mainloop's
+TMA ingress contract. It also uses tc5a's six-warp/192-thread CTA launch. The
+DRAM-stream cases use the same three concurrency points. Uniform cases expand
+the backing so every CTA iteration is unique; `tc5a-ab` cycles over a logical
+256 MiB touched set, already larger than L2. A pipeline rate is not a
+specification upper: the
 empirical layer still intersects it with all applicable hard ceilings.
+
+For `tc5a-ab`, `row_stride_elements=2048` matches the calibrated N=K=2048
+production case. `working_set_bytes` counts only the logical A/B bytes touched
+by TMA. `allocation_bytes` includes the untouched leading-dimension padding;
+it is 32 times larger for this descriptor and must not be used as transferred
+payload. The DRAM tc5a case therefore touches about 256 MiB through an about
+8 GiB allocation; the timed byte numerator remains the exact TMA payload.

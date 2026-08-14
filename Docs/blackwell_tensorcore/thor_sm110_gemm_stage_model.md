@@ -205,13 +205,26 @@ N_{\text{wave}} =
 
 ### 5.2 Load stage 时间
 
-令 \(B_L\) 为 20 个 SM 满载、使用相同 tile、相同 TMA descriptor、相同 cache 状态时测得的有效逻辑 TMA 带宽。一个满 service wave 包含 \(S\) 份 CTA load，所以：
+L2 共享总线和每个 SM 的 TMA→SMEM 出口是两个资源，不能压成一个
+aggregate \(B_L\)。定义 \(B_{\mathrm{L2}}\) 为整 GPU 共享 L2 read rate，单位
+byte/s/GPU；定义 \(C_{\mathrm{TMA,SM}}\) 为用单 CTA 隔离测得的一个 SM 的
+TMA→SMEM ingress，单位 byte/s/SM。一个满 service wave 包含 \(S\) 份 CTA
+load，所以理想重叠下至少需要：
 
 \[
-t_L=\frac{Sd_L}{B_L}.
+t_L=\max\left(
+\frac{Sd_L}{B_{\mathrm{L2}}},
+\frac{d_L}{C_{\mathrm{TMA,SM}}}
+\right).
 \]
 
-分子是 byte，分母是 byte/s，结果是 s。这里不能直接把 273 GB/s LPDDR5X 峰值代入，因为 TMA 请求可能命中 L2，且仓库 benchmark 在 warmup 后重复使用相同 A/B；逻辑 TMA 字节与 DRAM 实际字节不是同一个量。
+每一项都是 byte 除以 byte/s，结果为 s。Thor 上的 1024 B/cycle L2 read
+model peak 是整 GPU 共享值，不能乘以 SM 数；反过来，也不能用 20-SM TMA
+aggregate 除以 20 来声称已经隔离了每 SM 出口，因为该 aggregate 测量本身
+可能先被共享 L2 限制。这里仍不能直接把 273 GB/s LPDDR5X 峰值代入 L2-hit
+项，因为 TMA 请求可能命中 L2，且仓库 benchmark 在 warmup 后重复使用相同
+A/B；逻辑 TMA 字节与 DRAM 实际字节不是同一个量。冷入口还必须额外与共享
+LPDDR total/read 约束取最大值。通用、可执行的资源公式以性能上限文档为准。
 
 ### 5.3 Compute stage 时间
 

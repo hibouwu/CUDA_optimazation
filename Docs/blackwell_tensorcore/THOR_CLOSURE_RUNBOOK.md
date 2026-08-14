@@ -267,6 +267,12 @@ suite `thor-t5000-closure-maxn-20260814-d382b57-a` 已在 commit
 ingress。前者是纯模型修复；后者需要新的 18-case component campaign。旧
 component 不复用，但 compute/full 不应重跑。
 
+本节的 `-b` supplement 替代未充分隔离的早期 `-a` 指令：L2-hit TMA 容量只
+启动一个 CTA，避免共享 L2 总线污染 per-SM 出口测量；正式 tc5a case 使用四个
+stage 的 A=16 KiB、B=32 KiB、2D SW128、四个 48 KiB stage barrier 和八笔
+在途 TMA 精确混合请求。串行和 uniform
+inflight=4 结果只保留为 diagnostic resource，不能覆盖正式 tc5a 容量。
+
 拉取发布该修复的提交后，在 Thor 仓库根目录执行以下定向 supplement。当前提交
 必须由 `git rev-parse HEAD` 取得，交付消息会同时给出其精确 40 位 hash：
 
@@ -275,7 +281,7 @@ unset BASE_SUITE_ID BASE_EXPECTED_COMMIT SUPPLEMENT_ID EXPECTED_COMMIT
 
 BASE_SUITE_ID=thor-t5000-closure-maxn-20260814-d382b57-a
 BASE_EXPECTED_COMMIT=d382b57eae289b458c5290e3d2b7e0daf1b7d7c8
-SUPPLEMENT_ID=thor-t5000-tma-ingress-supplement-maxn-20260814-a
+SUPPLEMENT_ID=thor-t5000-tma-ingress-supplement-maxn-20260814-b
 EXPECTED_COMMIT=$(git rev-parse HEAD)
 
 test "$(git branch --show-current)" = \

@@ -231,7 +231,7 @@
   },
   {
     "capacity_id": "tma_l2_hit_measured",
-    "resource": "tma.smem_ingress.per_sm",
+    "resource": "tma.smem_ingress.diagnostic.serial32k.per_sm",
     "rate_per_second": 60908670663.75,
     "work_unit": "byte",
     "evidence_kind": "measured_sustained",
@@ -244,7 +244,7 @@
   },
   {
     "capacity_id": "tma_hbm_stream_measured",
-    "resource": "tma.hbm",
+    "resource": "tma.hbm.diagnostic.serial32k",
     "rate_per_second": 245352277800.0,
     "work_unit": "byte",
     "evidence_kind": "measured_sustained",

@@ -209,6 +209,7 @@ class Schedule:
     tmem_columns: int = 128
     threads: int = 128
     tmem_load_registers: int = 16
+    tmem_consumer_warps: int | None = None
     registers_per_thread: int | None = None
     uses_tma: bool = True
     input_transport_layout: str = "logical_packed"
@@ -325,6 +326,14 @@ class Schedule:
         if self.tmem_load_registers not in {8, 16}:
             raise ModelError(
                 f"{self.schedule_id}: v1 TMEM readback must use LDTM.x8 or LDTM.x16")
+        if self.tmem_consumer_warps is not None and (
+                not isinstance(self.tmem_consumer_warps, int)
+                or isinstance(self.tmem_consumer_warps, bool)
+                or self.tmem_consumer_warps <= 0
+                or self.tmem_consumer_warps > self.threads // 32):
+            raise ModelError(
+                f"{self.schedule_id}: tmem_consumer_warps must be a positive "
+                "integer no greater than the CTA warp count")
         if (
             self.tmem_columns > 512
             or self.tmem_columns % 32 != 0
@@ -838,8 +847,17 @@ def _resource_demands(
     if empirical:
         if workload.residency != "compute_oracle" and schedule.uses_tma:
             if workload.residency == "cold_hbm":
-                demands["tma.hbm"] = (work.tma_unique_input_bytes, "byte")
-        tmem_warps = schedule.threads // 32
+                tma_hbm_resource = (
+                    "tma.hbm" if schedule.stages >= 4
+                    else "tma.hbm.inflight4"
+                )
+                demands[tma_hbm_resource] = (
+                    work.tma_unique_input_bytes, "byte")
+        tmem_warps = (
+            schedule.tmem_consumer_warps
+            if schedule.tmem_consumer_warps is not None
+            else schedule.threads // 32
+        )
         tmem_resource = (
             "tmem.readback"
             if schedule.tmem_load_registers == 16 and tmem_warps == 4
@@ -917,7 +935,11 @@ def _evaluate_layer(
                 conditions.append(f"{cap.capacity_id}: {cap.condition}")
 
         if workload.residency != "compute_oracle" and schedule.uses_tma:
-            ingress_resource = "tma.smem_ingress.per_sm"
+            ingress_resource = (
+                "tma.smem_ingress.per_sm"
+                if schedule.stages >= 4
+                else "tma.smem_ingress.per_sm.inflight4"
+            )
             ingress_cap = _select_capacity(
                 capacities, ingress_resource, strict=False
             )

@@ -84,6 +84,19 @@ __device__ __forceinline__ void tma_load_3d(uint32_t dst,
       : "memory");
 }
 
+__device__ __forceinline__ void tma_load_2d(uint32_t dst,
+                                            const CUtensorMap* map,
+                                            int x,
+                                            int y,
+                                            uint32_t barrier) {
+  asm volatile(
+      "cp.async.bulk.tensor.2d.shared::cta.global."
+      "mbarrier::complete_tx::bytes [%0], [%1, {%2, %3}], [%4];"
+      :
+      : "r"(dst), "l"(map), "r"(x), "r"(y), "r"(barrier)
+      : "memory");
+}
+
 __global__ void init_kernel(uint32_t* data, size_t words) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   size_t stride = blockDim.x * gridDim.x;
@@ -194,6 +207,117 @@ void tma_kernel(const __grid_constant__ CUtensorMap map,
   }
 }
 
+__global__ __launch_bounds__(192, 1)
+void tma_tc5a_ab_kernel(const __grid_constant__ CUtensorMap map_a,
+                        const __grid_constant__ CUtensorMap map_b,
+                        int iters,
+                        int warmup_iters,
+                        int total_tiles,
+                        unsigned long long* cycles,
+                        unsigned long long* start_ns,
+                        unsigned long long* stop_ns,
+                        uint32_t* smids,
+                        uint32_t* sink) {
+  constexpr int kStages = 4;
+  constexpr int kABytes = 16384;
+  constexpr int kBBytes = 32768;
+  constexpr int kStageBytes = kABytes + kBBytes;
+  extern __shared__ __align__(1024) unsigned char smem[];
+  __shared__ alignas(16) uint64_t barrier_storage[kStages];
+  __shared__ unsigned long long start_clock;
+  __shared__ unsigned long long stop_clock;
+
+  const int tid = static_cast<int>(threadIdx.x);
+  constexpr int kControllerThread = 4 * 32;
+  if (tid == kControllerThread) {
+    for (int stage = 0; stage < kStages; ++stage) {
+      mbarrier_init(smem_u32(&barrier_storage[stage]), 1);
+    }
+    asm volatile("fence.mbarrier_init.release.cluster;" ::: "memory");
+    start_clock = 0;
+    stop_clock = 0;
+  }
+  __syncthreads();
+
+  uint32_t phases[kStages] = {};
+  uint32_t checksum = 0;
+  const int total_iters = warmup_iters + iters;
+
+  auto wait_for = [&](int operation, bool consume) {
+    const int stage = operation & (kStages - 1);
+    const uint32_t barrier = smem_u32(&barrier_storage[stage]);
+    mbarrier_wait(barrier, phases[stage]);
+    phases[stage] ^= 1;
+    if (consume) {
+      uint32_t* a_words = reinterpret_cast<uint32_t*>(
+          smem + static_cast<size_t>(stage) * kStageBytes);
+      uint32_t* b_words = reinterpret_cast<uint32_t*>(
+          smem + static_cast<size_t>(stage) * kStageBytes + kABytes);
+      checksum ^= a_words[operation & (4096 - 1)];
+      checksum ^= b_words[operation & (8192 - 1)];
+    }
+  };
+
+  auto issue = [&](int operation) {
+    const int stage = operation & (kStages - 1);
+    const int tile =
+        (blockIdx.x * total_iters + operation) % total_tiles;
+    unsigned char* stage_smem =
+        smem + static_cast<size_t>(stage) * kStageBytes;
+    const uint32_t barrier = smem_u32(&barrier_storage[stage]);
+    if (tid == kControllerThread) {
+      tma_load_2d(
+          smem_u32(stage_smem), &map_a, 0, tile * 128, barrier);
+      tma_load_2d(
+          smem_u32(stage_smem + kABytes),
+          &map_b,
+          0,
+          tile * 256,
+          barrier);
+      mbarrier_arrive_expect_tx(barrier, kStageBytes);
+    }
+  };
+
+  auto run_window = [&](int begin, int count, bool consume) {
+    for (int local = 0; local < count; ++local) {
+      if (local >= kStages) {
+        wait_for(begin + local - kStages, consume);
+      }
+      issue(begin + local);
+    }
+    const int drain_begin = count > kStages ? count - kStages : 0;
+    for (int local = drain_begin; local < count; ++local) {
+      wait_for(begin + local, consume);
+    }
+  };
+
+  if (tid == kControllerThread) {
+    run_window(0, warmup_iters, false);
+  }
+  __syncthreads();
+  if (tid == kControllerThread) {
+    start_clock = clock64();
+    start_ns[blockIdx.x] = global_nanoseconds();
+  }
+  __syncthreads();
+
+  if (tid == kControllerThread) {
+    run_window(warmup_iters, iters, true);
+  }
+  __syncthreads();
+  if (tid == kControllerThread) {
+    stop_clock = clock64();
+    stop_ns[blockIdx.x] = global_nanoseconds();
+    asm volatile("mov.u32 %0, %%smid;" : "=r"(smids[blockIdx.x]));
+  }
+  __syncthreads();
+  if (tid == kControllerThread) atomicXor(sink, checksum);
+  __syncthreads();
+  if (tid == kControllerThread) {
+    cycles[blockIdx.x] = stop_clock - start_clock;
+  }
+}
+
 const char* mode_name(Mode mode) {
   switch (mode) {
     case Mode::kL2Hit: return "l2-hit";
@@ -217,6 +341,8 @@ struct Options {
   int inflight = 1;
   int threads = 128;
   int blocks_per_sm = 1;
+  int blocks = 0;
+  bool tc5a_ab = false;
   int iters = 4096;
   int warmup_iters = 32;
   bool csv = false;
@@ -227,6 +353,8 @@ void usage(const char* argv0) {
   std::fprintf(stderr,
                "Usage: %s [--mode l2-hit|dram-stream] [--bytes N] [--tile-bytes N]\n"
                "          [--slots N] [--inflight N] [--threads N] [--blocks-per-sm N]\n"
+               "          [--blocks N]\n"
+               "          [--pattern uniform|tc5a-ab]\n"
                "          [--iters N] [--warmup-iters N] [--csv] [--csv-header]\n",
                argv0);
 }
@@ -248,6 +376,18 @@ Options parse_args(int argc, char** argv) {
       o.threads = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--blocks-per-sm") == 0 && i + 1 < argc) {
       o.blocks_per_sm = std::atoi(argv[++i]);
+    } else if (std::strcmp(argv[i], "--blocks") == 0 && i + 1 < argc) {
+      o.blocks = std::atoi(argv[++i]);
+    } else if (std::strcmp(argv[i], "--pattern") == 0 && i + 1 < argc) {
+      const char* pattern = argv[++i];
+      if (std::strcmp(pattern, "uniform") == 0) {
+        o.tc5a_ab = false;
+      } else if (std::strcmp(pattern, "tc5a-ab") == 0) {
+        o.tc5a_ab = true;
+      } else {
+        std::fprintf(stderr, "pattern must be uniform or tc5a-ab\n");
+        std::exit(2);
+      }
     } else if (std::strcmp(argv[i], "--iters") == 0 && i + 1 < argc) {
       o.iters = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--warmup-iters") == 0 && i + 1 < argc) {
@@ -290,16 +430,49 @@ void encode_tma_3d(CUtensorMap* map, void* base, int tile_words, int total_tiles
       CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
 }
 
+void encode_tma_2d_sw128(CUtensorMap* map,
+                         void* base,
+                         int total_tiles,
+                         int tile_height,
+                         int row_stride_elements) {
+  const uint32_t rank = 2;
+  uint64_t global_dim[rank] = {
+      static_cast<uint64_t>(row_stride_elements),
+      static_cast<uint64_t>(total_tiles * tile_height)};
+  uint64_t global_stride[rank - 1] = {
+      static_cast<uint64_t>(row_stride_elements) * sizeof(uint16_t)};
+  uint32_t box_dim[rank] = {64u, static_cast<uint32_t>(tile_height)};
+  uint32_t element_stride[rank] = {1u, 1u};
+  CU_CHECK(cuTensorMapEncodeTiled(
+      map,
+      CU_TENSOR_MAP_DATA_TYPE_FLOAT16,
+      rank,
+      base,
+      global_dim,
+      global_stride,
+      box_dim,
+      element_stride,
+      CU_TENSOR_MAP_INTERLEAVE_NONE,
+      CU_TENSOR_MAP_SWIZZLE_128B,
+      CU_TENSOR_MAP_L2_PROMOTION_NONE,
+      CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
+}
+
 int main(int argc, char** argv) {
   Options o = parse_args(argc, argv);
   if (o.csv_header) {
-    std::puts("mode,requested_bytes,elapsed_cycles,bytes_per_cycle,per_sm_bytes_per_cycle,sm_count,blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,inflight,working_set_bytes,total_tiles,occupancy_blocks_per_sm,sink,globaltimer_start_min_ns,globaltimer_stop_max_ns,globaltimer_elapsed_ns,globaltimer_gbytes_per_second,unique_smid_count");
+    std::puts("mode,pattern,stage_count,requests_per_stage,barrier_count,tensor_map,row_stride_elements,smem_bytes,preferred_smem_carveout,requested_bytes,elapsed_cycles,bytes_per_cycle,sm_count,blocks,requested_blocks,blocks_per_sm,threads,iters,warmup_iters,tile_bytes,slots,inflight,working_set_bytes,allocation_bytes,total_tiles,total_tiles_b,occupancy_blocks_per_sm,sink,globaltimer_start_min_ns,globaltimer_stop_max_ns,globaltimer_elapsed_ns,globaltimer_gbytes_per_second,unique_smid_count");
     if (argc == 2) return 0;
   }
 
   int sm_count = 0;
   CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, 0));
-  const int blocks = sm_count * o.blocks_per_sm;
+  if (o.blocks < 0 || o.blocks_per_sm <= 0) {
+    std::fprintf(stderr,
+                 "blocks must be nonnegative and blocks-per-sm must be positive\n");
+    return 2;
+  }
+  const int blocks = o.blocks > 0 ? o.blocks : sm_count * o.blocks_per_sm;
   if (o.tile_bytes <= 0 || (o.tile_bytes % 1024) != 0) {
     std::fprintf(stderr, "tile-bytes must be positive and 1024B aligned\n");
     return 2;
@@ -317,18 +490,54 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "inflight must be in [1, slots]\n");
     return 2;
   }
-  if (o.threads != 128) {
-    std::fprintf(stderr, "this kernel is launch-bounds tuned for 128 threads\n");
+  if (o.tc5a_ab
+      && (o.tile_bytes != 16384 || o.slots != 8 || o.inflight != 8
+          || (o.iters & 1) != 0 || (o.warmup_iters & 1) != 0)) {
+    std::fprintf(
+        stderr,
+        "tc5a-ab requires tile-bytes=16384, slots=8, inflight=8, "
+        "and even iteration counts\n");
+    return 2;
+  }
+  const int required_threads = o.tc5a_ab ? 192 : 128;
+  if (o.threads != required_threads) {
+    std::fprintf(stderr,
+                 "pattern requires exactly %d threads\n",
+                 required_threads);
     return 2;
   }
 
   const int tile_words = o.tile_bytes / static_cast<int>(sizeof(uint32_t));
-  int total_tiles = static_cast<int>(o.bytes / static_cast<size_t>(o.tile_bytes));
-  total_tiles = std::max(total_tiles, blocks);
-  if (o.mode == Mode::kDramStream) {
-    total_tiles = std::max(total_tiles, blocks * (o.warmup_iters + o.iters));
+  int total_tiles = 0;
+  int total_tiles_b = 0;
+  size_t operand_a_bytes = 0;
+  size_t working_set_bytes = 0;
+  size_t allocation_bytes = 0;
+  if (o.tc5a_ab) {
+    const int resident_tiles = std::max(
+        1, static_cast<int>(o.bytes / static_cast<size_t>(49152)));
+    total_tiles = resident_tiles;
+    total_tiles_b = total_tiles;
+    constexpr size_t kRowStrideElements = 2048;
+    operand_a_bytes = static_cast<size_t>(total_tiles) * 128
+        * kRowStrideElements * sizeof(uint16_t);
+    allocation_bytes = operand_a_bytes
+        + static_cast<size_t>(total_tiles_b) * 256
+            * kRowStrideElements * sizeof(uint16_t);
+    working_set_bytes = static_cast<size_t>(total_tiles) * 49152;
+  } else {
+    total_tiles =
+        static_cast<int>(o.bytes / static_cast<size_t>(o.tile_bytes));
+    total_tiles = std::max(total_tiles, blocks);
+    if (o.mode == Mode::kDramStream) {
+      total_tiles =
+          std::max(total_tiles, blocks * (o.warmup_iters + o.iters));
+    }
+    total_tiles_b = total_tiles;
+    operand_a_bytes = static_cast<size_t>(total_tiles) * o.tile_bytes;
+    working_set_bytes = operand_a_bytes;
+    allocation_bytes = working_set_bytes;
   }
-  size_t working_set_bytes = static_cast<size_t>(total_tiles) * o.tile_bytes;
   if (working_set_bytes != o.bytes && !o.csv) {
     std::fprintf(stderr, "rounded working set to %zu bytes\n", working_set_bytes);
   }
@@ -340,23 +549,38 @@ int main(int argc, char** argv) {
   unsigned long long* d_stop_ns = nullptr;
   uint32_t* d_smids = nullptr;
   uint32_t* d_sink = nullptr;
-  CUDA_CHECK(cudaMalloc(&d_data, working_set_bytes));
-  CUDA_CHECK(cudaMalloc(&d_cycles, sizeof(unsigned long long) * sm_count * o.blocks_per_sm));
+  CUDA_CHECK(cudaMalloc(&d_data, allocation_bytes));
+  CUDA_CHECK(cudaMalloc(&d_cycles, sizeof(unsigned long long) * blocks));
   CUDA_CHECK(cudaMalloc(&d_start_ns, sizeof(unsigned long long) * blocks));
   CUDA_CHECK(cudaMalloc(&d_stop_ns, sizeof(unsigned long long) * blocks));
   CUDA_CHECK(cudaMalloc(&d_smids, sizeof(uint32_t) * blocks));
   CUDA_CHECK(cudaMalloc(&d_sink, sizeof(uint32_t)));
   CUDA_CHECK(cudaMemset(d_sink, 0, sizeof(uint32_t)));
 
-  int init_blocks = std::min(4096, std::max(1, static_cast<int>((working_set_bytes / sizeof(uint32_t) + 255) / 256)));
-  init_kernel<<<init_blocks, 256>>>(d_data, working_set_bytes / sizeof(uint32_t));
+  int init_blocks = std::min(4096, std::max(
+      1, static_cast<int>(
+          (allocation_bytes / sizeof(uint32_t) + 255) / 256)));
+  init_kernel<<<init_blocks, 256>>>(
+      d_data, allocation_bytes / sizeof(uint32_t));
   CUDA_CHECK(cudaGetLastError());
   CUDA_CHECK(cudaDeviceSynchronize());
 
   CUtensorMap map;
-  encode_tma_3d(&map, d_data, tile_words, total_tiles);
+  CUtensorMap map_b;
+  if (o.tc5a_ab) {
+    encode_tma_2d_sw128(&map, d_data, total_tiles, 128, 2048);
+    encode_tma_2d_sw128(
+        &map_b,
+        reinterpret_cast<unsigned char*>(d_data) + operand_a_bytes,
+        total_tiles_b, 256, 2048);
+  } else {
+    encode_tma_3d(&map, d_data, tile_words, total_tiles);
+    map_b = map;
+  }
 
-  const size_t smem_bytes = static_cast<size_t>(o.tile_bytes) * o.slots;
+  const size_t smem_bytes = o.tc5a_ab
+      ? static_cast<size_t>(4 * 49152)
+      : static_cast<size_t>(o.tile_bytes) * o.slots;
   int max_optin_smem = 0;
   CUDA_CHECK(cudaDeviceGetAttribute(&max_optin_smem, cudaDevAttrMaxSharedMemoryPerBlockOptin, 0));
   if (smem_bytes > static_cast<size_t>(max_optin_smem)) {
@@ -364,12 +588,28 @@ int main(int argc, char** argv) {
                  smem_bytes, max_optin_smem);
     return 2;
   }
-  CUDA_CHECK(cudaFuncSetAttribute(tma_kernel, cudaFuncAttributeMaxDynamicSharedMemorySize,
-                                  static_cast<int>(smem_bytes)));
-  tma_kernel<<<blocks, o.threads, smem_bytes>>>(map, o.slots, o.inflight,
-                                                o.iters, o.warmup_iters,
-                                                tile_words, total_tiles, d_cycles,
-                                                d_start_ns, d_stop_ns, d_smids, d_sink);
+  if (o.tc5a_ab) {
+    CUDA_CHECK(cudaFuncSetAttribute(
+        tma_tc5a_ab_kernel,
+        cudaFuncAttributeMaxDynamicSharedMemorySize,
+        static_cast<int>(smem_bytes)));
+    CUDA_CHECK(cudaFuncSetAttribute(
+        tma_tc5a_ab_kernel,
+        cudaFuncAttributePreferredSharedMemoryCarveout,
+        cudaSharedmemCarveoutMaxShared));
+    tma_tc5a_ab_kernel<<<blocks, o.threads, smem_bytes>>>(
+        map, map_b, o.iters, o.warmup_iters, total_tiles, d_cycles,
+        d_start_ns, d_stop_ns, d_smids, d_sink);
+  } else {
+    CUDA_CHECK(cudaFuncSetAttribute(
+        tma_kernel,
+        cudaFuncAttributeMaxDynamicSharedMemorySize,
+        static_cast<int>(smem_bytes)));
+    tma_kernel<<<blocks, o.threads, smem_bytes>>>(
+        map, o.slots, o.inflight, o.iters, o.warmup_iters,
+        tile_words, total_tiles, d_cycles, d_start_ns,
+        d_stop_ns, d_smids, d_sink);
+  }
   CUDA_CHECK(cudaGetLastError());
   CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -407,37 +647,65 @@ int main(int argc, char** argv) {
     }
     if (first) ++unique_smid_count;
   }
-  const unsigned long long requested =
-      static_cast<unsigned long long>(blocks) * static_cast<unsigned long long>(o.iters) *
-      static_cast<unsigned long long>(o.tile_bytes);
+  const unsigned long long requested = static_cast<unsigned long long>(blocks)
+      * static_cast<unsigned long long>(o.iters)
+      * static_cast<unsigned long long>(
+          o.tc5a_ab ? 49152 : o.tile_bytes);
   const double bpc = elapsed ? static_cast<double>(requested) / static_cast<double>(elapsed) : 0.0;
   const double globaltimer_gbytes_per_second = globaltimer_elapsed_ns
       ? static_cast<double>(requested) / static_cast<double>(globaltimer_elapsed_ns)
       : 0.0;
 
   int occupancy = 0;
-  CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &occupancy, tma_kernel, o.threads, smem_bytes));
+  if (o.tc5a_ab) {
+    CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &occupancy, tma_tc5a_ab_kernel, o.threads, smem_bytes));
+  } else {
+    CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &occupancy, tma_kernel, o.threads, smem_bytes));
+  }
 
   if (o.csv) {
-    std::printf("%s,%llu,%llu,%.6f,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%d,%d,%u,%llu,%llu,%llu,%.6f,%d\n",
-                mode_name(o.mode), requested, elapsed, bpc, bpc / sm_count, sm_count,
-                blocks, o.blocks_per_sm, o.threads, o.iters, o.warmup_iters,
-                o.tile_bytes, o.slots, o.inflight, working_set_bytes, total_tiles,
-                occupancy, h_sink,
+    std::printf("%s,%s,%d,%d,%d,%s,%d,%zu,%s,%llu,%llu,%.6f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%zu,%zu,%d,%d,%d,%u,%llu,%llu,%llu,%.6f,%d\n",
+                mode_name(o.mode), o.tc5a_ab ? "tc5a-ab" : "uniform",
+                o.tc5a_ab ? 4 : o.slots, o.tc5a_ab ? 2 : 1,
+                o.tc5a_ab ? 4 : o.slots,
+                o.tc5a_ab ? "2d-sw128" : "3d-none",
+                o.tc5a_ab ? 2048 : 0,
+                smem_bytes, o.tc5a_ab ? "max" : "default",
+                requested, elapsed, bpc, sm_count,
+                blocks, o.blocks, o.blocks_per_sm, o.threads, o.iters, o.warmup_iters,
+                o.tile_bytes, o.slots, o.inflight, working_set_bytes,
+                allocation_bytes, total_tiles,
+                total_tiles_b, occupancy, h_sink,
                 start_min_ns, stop_max_ns, globaltimer_elapsed_ns,
                 globaltimer_gbytes_per_second, unique_smid_count);
   } else {
-    std::printf("mode=%s\nsm_count=%d\nblocks=%d\nrequested_bytes=%llu\nelapsed_cycles=%llu\n"
+    std::printf("mode=%s\npattern=%s\nstage_count=%d\nrequests_per_stage=%d\n"
+                "barrier_count=%d\ntensor_map=%s\n"
+                "row_stride_elements=%d\n"
+                "smem_bytes=%zu\npreferred_smem_carveout=%s\n"
+                "sm_count=%d\nblocks=%d\nrequested_bytes=%llu\nelapsed_cycles=%llu\n"
                 "bytes_per_cycle=%.6f\nglobaltimer_start_min_ns=%llu\n"
                 "globaltimer_stop_max_ns=%llu\nglobaltimer_elapsed_ns=%llu\n"
                 "globaltimer_gbytes_per_second=%.6f\nunique_smid_count=%d\n"
-                "tile_bytes=%d\nblocks_per_sm=%d\nslots=%d\ninflight=%d\n"
+                "tile_bytes=%d\nworking_set_bytes=%zu\nallocation_bytes=%zu\n"
+                "total_tiles=%d\ntotal_tiles_b=%d\n"
+                "requested_blocks=%d\nblocks_per_sm=%d\n"
+                "slots=%d\ninflight=%d\n"
                 "sink=%u\n",
-                mode_name(o.mode), sm_count, blocks, requested, elapsed, bpc, start_min_ns,
+                mode_name(o.mode), o.tc5a_ab ? "tc5a-ab" : "uniform",
+                o.tc5a_ab ? 4 : o.slots, o.tc5a_ab ? 2 : 1,
+                o.tc5a_ab ? 4 : o.slots,
+                o.tc5a_ab ? "2d-sw128" : "3d-none",
+                o.tc5a_ab ? 2048 : 0,
+                smem_bytes, o.tc5a_ab ? "max" : "default",
+                sm_count, blocks, requested, elapsed, bpc, start_min_ns,
                 stop_max_ns, globaltimer_elapsed_ns,
                 globaltimer_gbytes_per_second, unique_smid_count, o.tile_bytes,
-                o.blocks_per_sm, o.slots, o.inflight, h_sink);
+                working_set_bytes, allocation_bytes, total_tiles, total_tiles_b,
+                o.blocks, o.blocks_per_sm,
+                o.slots, o.inflight, h_sink);
   }
 
   CUDA_CHECK(cudaFree(d_sink));

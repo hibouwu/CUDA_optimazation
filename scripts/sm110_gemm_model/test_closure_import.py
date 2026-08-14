@@ -141,6 +141,10 @@ class ClosureConversionTest(unittest.TestCase):
         resources = {row.resource for row in capacities}
         self.assertEqual(resources, {
             "tma.smem_ingress.per_sm", "tma.hbm", "hbm.read", "hbm.write",
+            "tma.smem_ingress.diagnostic.serial32k.per_sm",
+            "tma.smem_ingress.per_sm.inflight4",
+            "tma.hbm.diagnostic.serial32k",
+            "tma.hbm.inflight4",
             "l2.read", "l2.write", "tmem.scale_ingress", "tmem.readback",
             "tmem.readback.x8.warps1",
             "tmem.readback.x8.warps4",
@@ -156,20 +160,68 @@ class ClosureConversionTest(unittest.TestCase):
             row for row in capacities
             if row.resource == "tma.smem_ingress.per_sm"
         ]
-        self.assertEqual(len(tma_per_sm), 3)
+        self.assertEqual(len(tma_per_sm), 1)
         for row in tma_per_sm:
             case_index = next(
                 index for index, case in enumerate(COMPONENT_CASES, 1)
                 if row.capacity_id.endswith(str(case["id"]))
             )
-            self.assertEqual(row.rate_per_second, case_index / 20)
-            self.assertEqual(row.original_value, float(case_index))
+            self.assertEqual(row.rate_per_second, float(case_index))
+            self.assertIsNone(row.original_value)
 
     def test_component_manifest_and_auditor_freeze_the_same_case_matrix(self) -> None:
         self.assertEqual(
             {str(row["id"]): str(row["resource"]) for row in COMPONENT_CASES},
             EXPECTED_CASE_RESOURCES,
         )
+
+    def test_per_sm_tma_import_rejects_a_concurrent_full_grid_probe(self) -> None:
+        cases = json.loads(json.dumps(COMPONENT_CASES))
+        target = next(
+            row for row in cases
+            if row["id"] == "tma_l2_hit_tc5a_ab_inflight8")
+        args = target["args"]
+        args[args.index("--blocks") + 1] = "20"
+        result = {
+            "case_id": target["id"],
+            "resource": target["resource"],
+            "rate_unit": "B/s",
+            "source_path": "source.cu",
+            "trial_count": 10,
+            "rate_per_second_median": 100.0,
+        }
+        with self.assertRaisesRegex(
+                ModelError, "isolated one-CTA exact tc5a L2-hit case"):
+            capacities_from_component(
+                {"results": [result]},
+                {"cases": cases, "expected_sm_count": 20},
+                paths=self.paths,
+                qualification="closure_qualified",
+            )
+
+    def test_tma_hbm_import_rejects_a_non_tc5a_pipeline(self) -> None:
+        cases = json.loads(json.dumps(COMPONENT_CASES))
+        target = next(
+            row for row in cases
+            if row["id"] == "tma_dram_stream_tc5a_ab_inflight8")
+        args = target["args"]
+        args[args.index("--pattern") + 1] = "uniform"
+        result = {
+            "case_id": target["id"],
+            "resource": target["resource"],
+            "rate_unit": "B/s",
+            "source_path": "source.cu",
+            "trial_count": 10,
+            "rate_per_second_median": 100.0,
+        }
+        with self.assertRaisesRegex(
+                ModelError, "full-grid exact tc5a DRAM-stream case"):
+            capacities_from_component(
+                {"results": [result]},
+                {"cases": cases, "expected_sm_count": 20},
+                paths=self.paths,
+                qualification="closure_qualified",
+            )
 
     def test_tma_runtime_fields_freeze_serial_and_inflight_contracts(self) -> None:
         by_id = {str(row["id"]): row for row in COMPONENT_CASES}
@@ -178,20 +230,68 @@ class ClosureConversionTest(unittest.TestCase):
             ("tma_dram_stream_32k", 32768, 1, 4),
             ("tma_l2_hit_32k_inflight4", 32768, 4, 4),
             ("tma_dram_stream_32k_inflight4", 32768, 4, 4),
-            ("tma_l2_hit_16k_inflight8", 16384, 8, 8),
-            ("tma_dram_stream_16k_inflight8", 16384, 8, 8),
+            ("tma_l2_hit_tc5a_ab_inflight8", 16384, 8, 8),
+            ("tma_dram_stream_tc5a_ab_inflight8", 16384, 8, 8),
         ):
+            per_sm = case_id.startswith("tma_l2_hit")
+            args = list(by_id[case_id]["args"])
+            expected_warmup = args[args.index("--warmup-iters") + 1]
+            expected_threads = args[args.index("--threads") + 1]
+            expected_pattern = (
+                args[args.index("--pattern") + 1]
+                if "--pattern" in args else "uniform")
+            expected_stage_count = 4 if expected_pattern == "tc5a-ab" else expected_slots
+            exact = expected_pattern == "tc5a-ab"
+            mode = args[args.index("--mode") + 1]
+            backing_bytes = int(args[args.index("--bytes") + 1])
+            expected_blocks = 1 if per_sm else 20
+            if exact:
+                total_tiles = max(1, backing_bytes // 49152)
+                working_set = total_tiles * 49152
+                allocation = total_tiles * 384 * 2048 * 2
+            else:
+                total_tiles = max(
+                    backing_bytes // expected_tile, expected_blocks)
+                if mode == "dram-stream":
+                    total_tiles = max(
+                        total_tiles,
+                        expected_blocks * (
+                            int(expected_warmup)
+                            + int(args[args.index("--iters") + 1])),
+                    )
+                working_set = total_tiles * expected_tile
+                allocation = working_set
             fields = {
                 "sm_count": "20",
-                "unique_smid_count": "20",
+                "mode": str(mode),
+                "unique_smid_count": "1" if per_sm else "20",
                 "requested_bytes": "4096",
                 "globaltimer_elapsed_ns": "8",
                 "globaltimer_gbytes_per_second": "512.0",
                 "slots": str(expected_slots),
                 "inflight": str(expected_inflight),
                 "tile_bytes": str(expected_tile),
+                "pattern": str(expected_pattern),
+                "stage_count": str(expected_stage_count),
+                "requests_per_stage": (
+                    "2" if expected_pattern == "tc5a-ab" else "1"),
+                "barrier_count": str(expected_stage_count),
+                "tensor_map": (
+                    "2d-sw128" if expected_pattern == "tc5a-ab"
+                    else "3d-none"),
+                "row_stride_elements": "2048" if exact else "0",
+                "smem_bytes": str(4 * 49152 if exact
+                                  else expected_tile * expected_slots),
+                "preferred_smem_carveout": "max" if exact else "default",
+                "total_tiles": str(total_tiles),
+                "total_tiles_b": str(total_tiles),
+                "working_set_bytes": str(working_set),
+                "allocation_bytes": str(allocation),
+                "warmup_iters": str(expected_warmup),
+                "requested_blocks": "1" if per_sm else "0",
                 "blocks_per_sm": "1",
-                "blocks": "20",
+                "threads": str(expected_threads),
+                "blocks": "1" if per_sm else "20",
             }
             with self.subTest(case_id=case_id):
                 self.assertEqual(
@@ -788,10 +888,10 @@ class ClosureReportTest(unittest.TestCase):
                           EvidenceKind.MEASURED_SUSTAINED),
             self.capacity("l2_write", "l2.write", 500e9, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("tma_hbm", "tma.hbm", 80e9, "byte",
+            self.capacity("tma_hbm", "tma.hbm.inflight4", 80e9, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
             self.capacity(
-                "tma_per_sm", "tma.smem_ingress.per_sm", 40e9, "byte",
+                "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 40e9, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
             self.capacity("tmem", "tmem.readback", 1e12, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),

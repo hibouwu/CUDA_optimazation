@@ -42,8 +42,12 @@ ceilings applicable to the same workload and schedule. In particular,
 direction-specific `hbm.read` and `hbm.write` points cannot bypass the shared
 `hbm.total` LPDDR ceiling.
 Likewise, the 1024-B/cycle/GPU L2 bus remains a shared `l2.read` constraint,
-while the verified one-CTA-per-SM TMA grid is normalized to
-`tma.smem_ingress.per_sm` and applied with a slowest-wave makespan.
+while a single-CTA L2-hit probe directly measures
+`tma.smem_ingress.per_sm`, which is applied with a slowest-wave makespan. It is
+not inferred by dividing a concurrent full-GPU TMA result by the SM count.
+Schedules with fewer than four stages use the separately named `.inflight4`
+component capacities. Four-stage schedules use the exact tc5a A/B mixed
+contract, so a faster shallow or serial diagnostic cannot silently replace it.
 
 The schedule manifest separates executable transport contracts. Standard
 FP16/BF16/TF32/FP8/INT8 schedules use their native logical payload; raw

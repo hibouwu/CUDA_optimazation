@@ -283,10 +283,11 @@ worker 的本地出口 makespan 为：
 
 同时，完整 \(Q_{\mathrm{TMA}}\) 仍受整 GPU 共享 `l2.read` rate 约束。Thor
 上 NCU 给出的 L2 read model peak 是 1024 B/cycle/GPU，不是 1024
-B/cycle/SM。component campaign 的 L2-hit TMA 全网格 rate 只有在证明 20 个
-SM 各一个 CTA 后才除以 20，形成
-`tma.smem_ingress.per_sm`；不能把整卡 aggregate rate 原样当作每 SM 出口，
-也不能把每 SM rate 再当作共享 L2 总线。
+B/cycle/SM。component campaign 用单个 CTA、单个观测 SM 直接隔离
+`tma.smem_ingress.per_sm`；该 rate 不除以设备 SM 数。若让 20 个 SM 同时发起
+TMA，再把 aggregate rate 除以 20，测量本身可能已经被共享 L2 总线限速，因而
+不能独立证明每 SM 出口。整卡 `l2.read` 继续由单独的全网格 memory-path case
+测量。
 
 这等价于允许理想 schedule 进行完美的跨 CTA L2 reuse，但没有把入口冷数据
 凭空变成 L2 resident。不同接口的时间在资源层取最大值，表示理想流水重叠；若
@@ -344,6 +345,7 @@ payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 | `tmem_columns` | 分配的 TMEM column 数，单位 column/CTA；当前 block-scaled schedule 为 accumulator 与 SFA/SFB 固定使用 512-column 合同 |
 | `threads` | CTA 线程数，单位 thread/CTA |
 | `tmem_load_registers` | 每个参与 warp 的 TMEM readback 指令写入寄存器数，只能为 8 或 16，单位 32-bit register/thread；分别对应 `LDTM.x8`/`LDTM.x16` |
+| `tmem_consumer_warps` | 可选的 TMEM readback 消费 warp 数，单位 warp/CTA；省略时默认 `threads/32`。tc5a 的 CTA 有 6 个 warp，但只有 4 个 epilogue warp 消费 TMEM，因此必须显式设为 4 |
 | `registers_per_thread` | 可选寄存器占用，单位 32-bit register/thread |
 | `uses_tma` | 是否声明使用 TMA data path 的布尔值；v1 只实现 true，false 在缺少另一套 ingress 合同时 fail closed |
 | `input_transport_layout` | 输入物理搬运布局；`logical_packed` 是精度合同允许的紧凑 payload，`byte_padded` 是 raw FP6/FP4 direct-SMEM 的 b8 container，`b6x16_p32`/`b4x16_p64` 是显式 `tcgen05.cp` 物理格式 |
@@ -378,17 +380,19 @@ payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 closure 点时，快照才继续作为显式的暂定校准值。严格条件上界不使用任何实测
 capacity，仍取所有同时成立 rate upper 的最小值。
 
-`tma.smem_ingress.per_sm` 是明确的每 SM rate。当前 closure case 固定 20 个
-不同 SM ID、每 SM 一个 CTA 和相同工作量，先用全网格 `%globaltimer` 算
-aggregate rate，再除以 20；模型按 task waves 使用该值，而不是把 aggregate
-payload 直接除以一个伪造的全局 TMA-L2 资源。`l2.read` 仍独立表示共享 L2
-总线。
+`tma.smem_ingress.per_sm` 是明确的每 SM rate。当前 closure 的 L2-hit TMA case
+只启动一个 CTA，并要求 `sm_count=20`、`blocks=1`、
+`unique_smid_count=1`；其 `%globaltimer` rate 直接作为单 SM 出口证据。模型按
+task waves 使用该值，而不是把 aggregate payload 直接除以一个伪造的全局
+TMA-L2 资源。`l2.read` 仍独立表示共享 L2 read 总线。DRAM-stream TMA case
+仍启动 20 个 CTA、覆盖 20 个 SM，用于测量冷入口的整卡 aggregate rate。
 
-“同合同点”不是只看名称相似。当前 schedule 固定 `threads=128`，即 4 warp，并
-选择 `LDTM.x16` accumulator readback；因此 unified component campaign 中只有
-`tmem_ld_32x32b_x16_warps4` 映射到包络消费的 `tmem.readback`。另外三个
-对照点分别保留为 `tmem.readback.x8.warps1`、`tmem.readback.x8.warps4` 和
-`tmem.readback.x16.warps1`。模型根据 `tmem_load_registers` 与 `threads/32`
+“同合同点”不是只看名称相似。通用 schedule 使用 `threads=128`、4 warp 和
+`LDTM.x16`，因此选择 `tmem.readback`；tc5a schedule 使用 192 threads、6
+CTA warp，但显式声明 4 个 epilogue consumer warp 和 `LDTM.x8`，因此选择
+`tmem.readback.x8.warps4`。其余对照点保留为
+`tmem.readback.x8.warps1` 与 `tmem.readback.x16.warps1`。模型根据
+`tmem_load_registers` 和 `tmem_consumer_warps`（省略时才用 `threads/32`）
 机械选择资源，不得因另一合同数值更快而跨合同替换容量。
 
 Tensor Core compute capacity 同样按指令 shape 精确绑定。定义经验层 compute
@@ -704,12 +708,17 @@ Table 42/Table 44 encoder 和反例测试，在重跑前模型把旧数字标为
 - TMA L2-hit 和 DRAM-stream ingress。
 
 上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。对 L2-hit 项，历史
-aggregate 数字只有在除以 20 后才作为 `tma.smem_ingress.per_sm` 快照使用；它
-不能替代共享 `l2.read`。新的 closure campaign 已把计时改为整网格最早
-`%globaltimer` start 到最晚 stop，要求 20 个不同 SM ID，并同时冻结
-`32 KiB × inflight=1`、`32 KiB × inflight=4` 和
-`16 KiB × inflight=8`；新结果返回前，旧数字不升级为
+aggregate 数字只有在除以 20 后才作为 `tma.smem_ingress.per_sm` 的低资格
+`snapshot_only` 使用；它不能替代共享 `l2.read`，也不能替代新的单-SM 隔离
+测量。新的 closure campaign 对 L2-hit ingress 使用单 CTA 的 device
+`%globaltimer`，对 aggregate 路径使用整网格最早 start 到最晚 stop，并同时冻结
+`32 KiB × inflight=1`、`32 KiB × inflight=4` 和四 stage 的精确
+`A=16 KiB + B=32 KiB, inflight=8`；新结果返回前，旧数字不升级为
 `closure_qualified`。
+其中串行 32 KiB case 只进入带 `diagnostic` 的资源 ID；uniform inflight=4
+提供两级/浅流水 schedule 使用的 `.inflight4` capacity，精确 tc5a A/B 混合
+case 提供四级 schedule 使用的 `tma.smem_ingress.per_sm` 与 `tma.hbm`。模型按
+`stages` 选择对应合同，因此较快但异合同的数字不会互相覆盖。
 HBM/L2 四个旧快照也采用相同处理：新的 unified component campaign 已加入
 `hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case；在
 18-case campaign 回传并通过独立审计前，模型仍保留旧值的 `snapshot_only` 资格。
@@ -826,6 +835,10 @@ python3 -m unittest -v scripts.sm110_gemm_model.test_model
 [`thor_sm110_gemm_stage_model.md`](./thor_sm110_gemm_stage_model.md) 对固定 FP16
 `tc3` kernel 的 load/compute/epilogue 顺序做了代码对应分析，它仍然是有价值的
 schedule-specific case study。
+
+该文档的 load stage 已同步采用“共享 L2 总线 + 每 SM 独立 TMA→SMEM 出口”
+两条约束；若两份文档在容量资格或通用公式上出现差异，以本文的 fail-closed
+closure 合同为准。
 
 本文不是把 `tc3` 的参数换成变量名，而是改变建模层级：
 
@@ -1010,6 +1023,10 @@ cd microbench/05_gmem_dram_bandwidth
 
 - 源码：
   [`microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu)
+- tc5a 生产 mainloop 的 stage、A/B 双请求、barrier 与 192-thread 来源：
+  [`GEMMsm110/include/backends/tc5_persistent.cuh`](../../GEMMsm110/include/backends/tc5_persistent.cuh)
+- tc5a 2D SW128 tensor-map 编码来源：
+  [`GEMMsm110/include/sm110_ptx_helpers.cuh`](../../GEMMsm110/include/sm110_ptx_helpers.cuh)
 - 说明：
   [`microbench/07_tma_gmem_smem_bandwidth/README.md`](../../microbench/07_tma_gmem_smem_bandwidth/README.md)
 - 原始结果：
@@ -1025,10 +1042,15 @@ cd microbench/05_gmem_dram_bandwidth
 - 边界：这是包含 issue、completion、mbarrier 和 SMEM destination 的端到端
   TMA ingress，不是纯 DRAM 或纯 SMEM port peak。历史结果用各 CTA 最大
   `clock64()` span；新的 closure 同时保留 issue→wait 的 `inflight=1`、四个
-  slot 的 `inflight=4` 和八个 slot 的 `inflight=8`。八请求点对应 tc5a 四个
-  stage 各发 A/B 两个请求的最大并发数，但不把等大小 probe tile 冒充 tc5a 的
-  16-KiB/32-KiB 请求对。L2-hit 全网格 rate 在证明 20 个 SM 各一 CTA 后除以
-  20，形成每 SM ingress；整 GPU 共享 L2 read 仍由 1024
+  slot 的 `inflight=4` 和八个 slot 的 `inflight=8`。八请求点精确使用 tc5a
+  四个 stage 的 A=16 KiB、B=32 KiB destination、2D SW128 descriptor、四个
+  48 KiB completion barrier 和 192 KiB SMEM staging；每个 stage 的 A/B 两笔
+  TMA 共用一个 barrier，因此总计八笔请求在途。descriptor 固定
+  `row_stride_elements=2048`，对应 calibration 的 N=K=2048；报告区分逻辑
+  `working_set_bytes` 与包含 stride padding 的 `allocation_bytes`，后者不计入
+  TMA payload。CTA 使用与 tc5a 相同的 192 threads/6 warps。
+  L2-hit case 只启动一个 CTA 并直接形成每 SM
+  ingress；整 GPU 共享 L2 read 仍由单独的全网格 memory-path case 和 1024
   B/cycle/GPU 的独立约束建模。DRAM-stream rate 保留为端到端 aggregate 条件。
 
 基本命令：
