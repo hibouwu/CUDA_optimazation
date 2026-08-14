@@ -28,6 +28,8 @@ DEFAULT_TRIAL_TIMEOUT_SECONDS = 120
 SOURCE_DEPENDENCIES = [
     "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
     "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+    "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
+    "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
     "GEMMsm110/tests/requant_epilogue_benchmark.cu",
     "GEMMsm110/include/gemm_common.cuh",
     "GEMMsm110/include/requant/requant_backend.cuh",
@@ -53,6 +55,31 @@ CASES = [
         "args": ["--mode", "dram-stream", "--bytes", str(256 << 20), "--tile-bytes", "32768", "--slots", "4", "--iters", "4096", "--warmup-iters", "32", "--blocks-per-sm", "1", "--threads", "128"],
         "sass": ["UTMALDG.3D"],
     },
+    {
+        "id": "tmem_scale_ingress_32x128b_warpx4",
+        "resource": "tmem.scale_ingress",
+        "binary": "scale",
+        "args": ["--iters", "16384", "--copies-per-commit", "32", "--blocks-per-sm", "1"],
+        "sass": ["UTCCP.T.S.4x32dp128bit", "LDTM.x4"],
+    },
+    *[
+        {
+            "id": f"{residency}_{direction}_aggregate",
+            "resource": f"{residency}.{direction}",
+            "binary": "memory",
+            "args": [
+                "--residency", residency,
+                "--direction", direction,
+                "--bytes", str((16 if residency == "l2" else 256) << 20),
+                "--iters", str(4096 if residency == "l2" else 1024),
+                "--warmup-iters", "64",
+                "--blocks-per-sm", "4",
+                "--threads", "256",
+            ],
+            "sass": ["LDG.E.128" if direction == "read" else "STG.E.128"],
+        }
+        for residency in ("hbm", "l2") for direction in ("read", "write")
+    ],
     *[
         {
             "id": f"tmem_ld_32x32b_x{registers}_warps{warps}",
@@ -186,6 +213,14 @@ def compile_binaries(run_dir: Path, host_compiler: str | None,
             "source": REPO / "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
             "include": [], "libs": [],
         },
+        "scale": {
+            "source": REPO / "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
+            "include": [], "libs": [],
+        },
+        "memory": {
+            "source": REPO / "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+            "include": [], "libs": [],
+        },
         "epilogue": {
             "source": REPO / "GEMMsm110/tests/requant_epilogue_benchmark.cu",
             "include": [f"-I{REPO / 'GEMMsm110/include'}"], "libs": [],
@@ -243,6 +278,43 @@ def validate_fields(case: dict[str, object], fields: dict[str, str]) -> float:
         elapsed_ns = int(fields["globaltimer_elapsed_ns"])
         reported = float(fields["bytes_per_second"])
         recalculated = issued * 1e9 / elapsed_ns
+    elif resource == "tmem.scale_ingress":
+        if fields.get("case_id") != case["id"]:
+            raise RuntimeError(f"{case['id']}: scale case identity mismatch")
+        if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
+            raise RuntimeError(f"{case['id']}: incomplete SM coverage")
+        if int(fields.get("source_bytes_per_instruction", "0")) != 512:
+            raise RuntimeError(f"{case['id']}: scale source atom is not 512 B")
+        if int(fields.get("multicast_partitions", "0")) != 4:
+            raise RuntimeError(f"{case['id']}: scale multicast contract mismatch")
+        if (int(fields.get("destination_slots", "0")) != 32
+                or int(fields.get("destination_columns_per_copy", "0")) != 4):
+            raise RuntimeError(
+                f"{case['id']}: scale destination slots do not match 32x4 contract")
+        if int(fields.get("value_mismatches", "-1")) != 0:
+            raise RuntimeError(f"{case['id']}: scale S2T value mismatch")
+        issued = int(fields["issued_source_bytes"])
+        elapsed_ns = int(fields["globaltimer_elapsed_ns"])
+        reported = float(fields["bytes_per_second"])
+        recalculated = issued * 1e9 / elapsed_ns
+    elif resource in {"hbm.read", "hbm.write", "l2.read", "l2.write"}:
+        if fields.get("case_id") != case["id"]:
+            raise RuntimeError(f"{case['id']}: memory-path case identity mismatch")
+        if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
+            raise RuntimeError(f"{case['id']}: incomplete SM coverage")
+        expected_residency, expected_direction = resource.split(".")
+        if (fields.get("residency") != expected_residency
+                or fields.get("direction") != expected_direction):
+            raise RuntimeError(f"{case['id']}: memory-path mode mismatch")
+        if int(fields.get("blocks_per_sm", "0")) != 4:
+            raise RuntimeError(f"{case['id']}: memory-path launch mismatch")
+        expected_bytes = (16 if expected_residency == "l2" else 256) << 20
+        if int(fields.get("working_set_bytes", "0")) != expected_bytes:
+            raise RuntimeError(f"{case['id']}: working-set contract mismatch")
+        requested = int(fields["requested_bytes"])
+        elapsed_ns = int(fields["globaltimer_elapsed_ns"])
+        reported = float(fields["bytes_per_second"])
+        recalculated = requested * 1e9 / elapsed_ns
     else:
         if int(fields.get("unique_smid_count", "0")) != EXPECTED_SMS:
             raise RuntimeError(f"{case['id']}: incomplete epilogue SM coverage")
@@ -285,7 +357,7 @@ def main() -> int:
         "static_only": args.static_only,
         "host_compiler": args.host_compiler,
         "nvcc_host_undef_gnu_source": args.nvcc_host_undef_gnu_source,
-        "timing": "earliest CTA globaltimer start to latest CTA stop for TMA/TMEM; CUDA events for epilogue",
+        "timing": "earliest CTA globaltimer start to latest CTA stop for TMA/TMEM/HBM/L2; CUDA events for epilogue",
         "generator": str(Path(__file__).relative_to(REPO)),
         "generator_sha256": sha256(Path(__file__)),
         "source_dependencies": {

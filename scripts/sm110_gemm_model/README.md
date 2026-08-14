@@ -37,6 +37,13 @@ snapshot does not yet contain valid numeric capacity evidence for every
 precision named by the project goal. The executable exposes that gap instead
 of substituting another precision's rate.
 
+The schedule manifest separates executable transport contracts. Standard
+FP16/BF16/TF32/FP8/INT8 schedules use their native logical payload; raw
+E3M2/E2M3/E2M1 direct-SMEM schedules use the byte containers encoded by the
+closure compute campaign; MXFP4/NVFP4 schedules reserve the v1 512-column TMEM
+layout for the accumulator and SFA/SFB operands. Fractional logical storage is
+therefore never silently treated as an executable direct-SMEM TMA layout.
+
 ## Importing a returned closure suite
 
 Thor execution instructions are versioned with the runner in
@@ -58,8 +65,9 @@ bash microbench/sm110_closure_campaign.sh finish "$SUITE_ID"
 ```
 
 The output is
-`results/sm110_model_closure/<suite-id>/model_inputs.json`. It contains the
-selected full-SM compute capacities, component capacities, paired full-GEMM
+`results/sm110_model_closure/<suite-id>/model_inputs.json`. It contains 36
+shape-qualified full-SM compute capacities (12 precisions times M128N64,
+M128N128, and M128N256), 14 component capacities, paired full-GEMM
 observations, exact artifact paths, platform qualification and independent
 audit results. A positive overcurrent delta is preserved as a warning because
 it describes the sustained MAXN platform condition; it does not by itself
@@ -76,3 +84,53 @@ python3 -m scripts.sm110_gemm_model.cli import-closure \
   --expected-commit "$(git rev-parse HEAD)" \
   --output "results/sm110_model_closure/$SUITE_ID/model_inputs.json"
 ```
+
+If compute/full-GEMM were already collected at an earlier immutable commit and
+only the component contract changed, use the bounded component-supplement flow
+in the runbook instead of rerunning unchanged GPU work. Its lower-level import
+is deliberately multi-commit rather than a relaxed single-suite import:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-composite-closure \
+  --repo-root . \
+  --composite-id "$SUPPLEMENT_ID" \
+  --base-suite-id "$BASE_SUITE_ID" \
+  --base-expected-commit "$BASE_EXPECTED_COMMIT" \
+  --component-expected-commit "$EXPECTED_COMMIT" \
+  --output "results/sm110_model_closure/$SUPPLEMENT_ID/model_inputs.json"
+```
+
+The importer does not trust an old `model_inputs.json`. It re-runs the current
+independent compute and full-GEMM auditors against the raw base artifacts,
+audits the new component artifacts separately, validates each campaign's
+environment against its own commit, and validates MAXN/1.575-GHz/overcurrent
+evidence for both time intervals. The resulting `campaign_sources` field makes
+the split explicit. Capacity and observation IDs belong to the composite ID,
+while `source_id`, `run_id`, and artifact paths retain the actual producer.
+
+Render the final numerical tables and model comparisons without copying rates
+by hand:
+
+```bash
+MODEL_DIR="results/sm110_model_closure/$SUITE_ID"
+python3 -m scripts.sm110_gemm_model.cli report-closure \
+  --closure-import "$MODEL_DIR/model_inputs.json" \
+  --repo-root . \
+  --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --output-json "$MODEL_DIR/closure_analysis.json" \
+  --output-markdown "$MODEL_DIR/closure_summary.md"
+```
+
+The report preserves N=1024/2048 as the predeclared calibration points and
+N=4096 as holdout, but does not infer cache residency from that split. It
+evaluates both hot-L2 and cold-HBM scenarios: the conditional check uses the
+larger (safe) performance upper and the empirical result remains an interval.
+Exceeding both empirical scenarios is a calibration warning because a measured
+component rate is not a physical rate upper.
+
+`closure_analysis.json` separately reports `pass`, bounded-campaign measurement
+closure, all-precision numeric closure, and common-resource closure. A successful
+five-precision campaign therefore does not silently claim that every one of the
+twelve declared precision contracts has a proven compute upper and full GEMM.

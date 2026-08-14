@@ -1,17 +1,22 @@
 # Thor/SM110 GEMM component closure campaign
 
-This Git-round-trip campaign collects three resources without conflating them:
+This Git-round-trip campaign collects five component families without
+conflating them:
 
 - TMA GMEM→SMEM ingress for L2-hit and DRAM-stream residency;
+- aggregate HBM/L2 read and write paths under explicit working-set contracts;
+- block-scale SFA/SFB SMEM→TMEM ingress through
+  `tcgen05.cp .32x128b.warpx4`;
 - explicit TMEM accumulator readback through `tcgen05.ld` / `LDTM`;
 - the NVFP4-specific TMEM→register→E2M1+scale requant epilogue.
 
-TMA and TMEM use the full-grid interval from the earliest CTA `%globaltimer`
+TMA, HBM/L2, and TMEM use the full-grid interval from the earliest CTA `%globaltimer`
 start through the latest CTA stop and require exactly 20 distinct SM IDs on the
 20-SM T5000 contract. The epilogue uses CUDA-event timing and additionally
 requires all 20 SM IDs plus bit-exact packed-value and scale agreement with the
 host reference.
-Every case has ten external trials, source/binary/SASS hashes, the exact compile
+The exact 14-case matrix has ten external trials per case, source/binary/SASS
+hashes, the exact compile
 command, raw stdout, environment snapshots, and an independent auditor.
 Every external trial has a 120-second default host timeout. A timeout is a
 failed hardware/protocol observation, is recorded in `timeout.json`, and never
@@ -26,31 +31,26 @@ The launcher returns immediately and records `launcher.pid`, `launcher.log`,
 ID safely skips only cases whose ten trials and source/binary/SASS hashes still
 match the immutable run contract.
 
-On Thor, from the repository root:
-
-```bash
-RUN_ID=thor-t5000-components-maxn-20260812-a
-git fetch origin
-git switch codex/thor-sm110-gemm-bounds-v2
-git pull --ff-only
-bash microbench/sm110_gemm_component_campaign/launch_component_campaign.sh "$RUN_ID"
-```
-
-After the background process finishes:
-
-```bash
-python3 microbench/sm110_gemm_component_campaign/audit_campaign.py \
-  "results/sm110_gemm_component_campaign/$RUN_ID"
-git switch -c "thor-results/$RUN_ID"
-git add -f "results/sm110_gemm_component_campaign/$RUN_ID"
-git commit -m "results: Thor SM110 GEMM components $RUN_ID"
-git push -u origin "thor-results/$RUN_ID"
-```
+Do not launch the 14 cases directly for closure qualification: a bare component
+directory does not contain the suite-level branch/commit, locked-clock and
+overcurrent interval required by the importer.  Use the same-commit commands
+in `THOR_CLOSURE_RUNBOOK.md`: either the complete
+`sm110_closure_campaign.sh` flow, or the bounded
+`sm110_component_supplement.sh` flow when an unchanged compute/full-GEMM base
+suite already exists.  The low-level `launch_component_campaign.sh` remains a
+diagnostic/resume helper, not a substitute for those platform contracts.
 
 The existing `08_tmem_consume_bandwidth` and `11_pipeline_overlap` experiments
 remain useful measured joint points, but they use a different timer contract
 and measure TS MMA consuming TMEM—not accumulator readback. They are not
 silently promoted into this closure campaign.
+
+The HBM/L2 read helper consumes all four 32-bit lanes from every 16-B load and
+the campaign requires `LDG.E.128`; the write helper requires `STG.E.128` and
+places a device-scope fence before its stop timestamp.  The block-scale copy
+uses 32 distinct four-column TMEM destination slots per commit batch, so the
+reported ingress is not an artifact of overlapping asynchronous writes to two
+addresses.
 
 After any prior GPU fence hang, reboot Thor before running this probe.  Keep the
 machine in MAXN with clocks locked, then run the six bounded profiles.  The
@@ -85,8 +85,11 @@ one-CTA-per-SM profile, and the production shape. Use `4` only for the
 standalone diagnostic residency sweep; a failure at a higher residency is
 evidence, not a reason to run the formal closure at that residency.
 
-For the full closure, use `microbench/launch_sm110_closure_suite.sh` instead of
+For the full closure, use `microbench/sm110_closure_campaign.sh start` instead of
 keeping the orchestrator attached to an interactive terminal.  It records a
 suite-level PID and log under `results/sm110_closure_suite/<suite-id>/`.
 Interrupting `tail -f` then only stops log viewing; it does not interrupt the
 suite orchestrator or any active campaign.
+The versioned, same-commit start/status/finish/result-upload and platform
+restore commands are maintained in
+[`THOR_CLOSURE_RUNBOOK.md`](../../Docs/blackwell_tensorcore/THOR_CLOSURE_RUNBOOK.md).

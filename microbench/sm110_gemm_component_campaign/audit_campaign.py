@@ -12,7 +12,24 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-EXPECTED_CASES = 9
+EXPECTED_CASES = 14
+MEMORY_RESOURCES = {"hbm.read", "hbm.write", "l2.read", "l2.write"}
+EXPECTED_CASE_RESOURCES = {
+    "tma_l2_hit_32k": "tma.l2_hit_ingress",
+    "tma_dram_stream_32k": "tma.dram_stream_ingress",
+    "tmem_scale_ingress_32x128b_warpx4": "tmem.scale_ingress",
+    "hbm_read_aggregate": "hbm.read",
+    "hbm_write_aggregate": "hbm.write",
+    "l2_read_aggregate": "l2.read",
+    "l2_write_aggregate": "l2.write",
+    "tmem_ld_32x32b_x8_warps1": "tmem.accumulator_readback",
+    "tmem_ld_32x32b_x8_warps4": "tmem.accumulator_readback",
+    "tmem_ld_32x32b_x16_warps1": "tmem.accumulator_readback",
+    "tmem_ld_32x32b_x16_warps4": "tmem.accumulator_readback",
+    "nvfp4_requant_4096x1024_normal": "epilogue.nvfp4_requant",
+    "nvfp4_requant_4096x1024_outlier": "epilogue.nvfp4_requant",
+    "nvfp4_requant_4096x1024_constant": "epilogue.nvfp4_requant",
+}
 
 
 def digest(path: Path) -> str:
@@ -45,6 +62,12 @@ def main() -> int:
             errors.append(f"source dependency hash mismatch:{relative}")
     if len(spec.get("cases", [])) != EXPECTED_CASES or summary.get("case_count") != EXPECTED_CASES:
         errors.append("case cardinality mismatch")
+    actual_case_resources = {
+        str(case.get("id")): str(case.get("resource"))
+        for case in spec.get("cases", [])
+    }
+    if actual_case_resources != EXPECTED_CASE_RESOURCES:
+        errors.append("case/resource matrix mismatch")
     if summary.get("status") != "complete": errors.append("summary is not complete")
     status = json.loads((root / "campaign_status.json").read_text())
     if status.get("status") != "complete": errors.append("campaign status is not complete")
@@ -99,15 +122,37 @@ def main() -> int:
             errors.append(f"{cid}: aggregate mismatch")
         for row in trials:
             fields = row.get("fields", {})
-            if case["resource"].startswith(("tma.", "tmem.")):
+            if (case["resource"].startswith(("tma.", "tmem."))
+                    or case["resource"] in MEMORY_RESOURCES):
                 if int(fields.get("sm_count", 0)) != 20 or int(fields.get("unique_smid_count", 0)) != 20:
                     errors.append(f"{cid}: incomplete SM coverage")
                 try:
                     if case["resource"].startswith("tma."):
                         recalculated = (int(fields["requested_bytes"]) * 1e9 /
                                         int(fields["globaltimer_elapsed_ns"]))
-                    else:
+                    elif case["resource"] == "tmem.accumulator_readback":
                         recalculated = (int(fields["issued_bytes"]) * 1e9 /
+                                        int(fields["globaltimer_elapsed_ns"]))
+                    elif case["resource"] == "tmem.scale_ingress":
+                        if (fields["case_id"] != cid
+                                or int(fields["source_bytes_per_instruction"]) != 512
+                                or int(fields["multicast_partitions"]) != 4
+                                or int(fields["destination_slots"]) != 32
+                                or int(fields["destination_columns_per_copy"]) != 4
+                                or int(fields["value_mismatches"]) != 0):
+                            raise ValueError("invalid scale S2T contract")
+                        recalculated = (int(fields["issued_source_bytes"]) * 1e9 /
+                                        int(fields["globaltimer_elapsed_ns"]))
+                    else:
+                        expected_residency, expected_direction = case["resource"].split(".")
+                        expected_bytes = (16 if expected_residency == "l2" else 256) << 20
+                        if (fields["case_id"] != cid
+                                or fields["residency"] != expected_residency
+                                or fields["direction"] != expected_direction
+                                or int(fields["blocks_per_sm"]) != 4
+                                or int(fields["working_set_bytes"]) != expected_bytes):
+                            raise ValueError("invalid memory-path contract")
+                        recalculated = (int(fields["requested_bytes"]) * 1e9 /
                                         int(fields["globaltimer_elapsed_ns"]))
                     if not math.isclose(recalculated,
                                         float(row["audited_rate_per_second"]),

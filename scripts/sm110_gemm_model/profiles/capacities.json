@@ -28,6 +28,34 @@
     "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
   },
   {
+    "capacity_id": "s8_vendor_peak_conditional",
+    "resource": "tensor.s8",
+    "rate_per_second": 517500000000000.0,
+    "work_unit": "operation",
+    "evidence_kind": "derived_upper",
+    "source_id": "thor_official_sparse_int8_to_dense_s8",
+    "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md",
+    "source_locator": "sparse INT8 为 1035 TOPS",
+    "original_value": 1035.0,
+    "original_unit": "sparse TOPS",
+    "condition": "conditional dense signed-INT8 rate inferred as one half of NVIDIA's 1035-TOPS sparse INT8 T5000 MAXN figure; the product table does not separately list dense or signed INT8",
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+  },
+  {
+    "capacity_id": "u8_vendor_peak_conditional",
+    "resource": "tensor.u8",
+    "rate_per_second": 517500000000000.0,
+    "work_unit": "operation",
+    "evidence_kind": "derived_upper",
+    "source_id": "thor_official_sparse_int8_to_dense_u8",
+    "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md",
+    "source_locator": "sparse INT8 为 1035 TOPS",
+    "original_value": 1035.0,
+    "original_unit": "sparse TOPS",
+    "condition": "conditional dense unsigned-INT8 rate inferred as one half of NVIDIA's 1035-TOPS sparse INT8 T5000 MAXN figure; the product table does not distinguish signed and unsigned INT8",
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+  },
+  {
     "capacity_id": "e4m3_vendor_peak_snapshot",
     "resource": "tensor.e4m3",
     "rate_per_second": 517000000000000.0,
@@ -111,7 +139,7 @@
   },
   {
     "capacity_id": "bf16_compute_measured",
-    "resource": "tensor.bf16",
+    "resource": "tensor.bf16.m128n256",
     "rate_per_second": 258030000000000.0,
     "work_unit": "flop",
     "evidence_kind": "measured_sustained",
@@ -124,7 +152,7 @@
   },
   {
     "capacity_id": "e4m3_compute_measured",
-    "resource": "tensor.e4m3",
+    "resource": "tensor.e4m3.m128n256",
     "rate_per_second": 516059000000000.0,
     "work_unit": "flop",
     "evidence_kind": "measured_sustained",
@@ -137,7 +165,7 @@
   },
   {
     "capacity_id": "nvfp4_compute_measured",
-    "resource": "tensor.nvfp4",
+    "resource": "tensor.nvfp4.m128n256",
     "rate_per_second": 1032111000000000.0,
     "work_unit": "flop",
     "evidence_kind": "unknown",

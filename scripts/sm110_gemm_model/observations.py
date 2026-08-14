@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
-from .model import ModelError
+from .model import ModelError, resolve_repo_artifact
 
 
 PRECISION_MAP = {
@@ -47,9 +47,15 @@ class ObservedBest:
     selection_rule: str = "largest median among fully matched backends"
 
     def validate(self, *, repo_root: Path | None = None) -> None:
-        if min(self.m, self.n, self.k) <= 0:
-            raise ModelError(f"{self.observation_id}: dimensions must be positive")
-        if self.trial_count <= 0 or self.matched_count != self.trial_count:
+        if (any(not isinstance(value, int) or isinstance(value, bool)
+                for value in (self.m, self.n, self.k))
+                or min(self.m, self.n, self.k) <= 0):
+            raise ModelError(
+                f"{self.observation_id}: dimensions must be positive integers")
+        if (any(not isinstance(value, int) or isinstance(value, bool)
+                for value in (self.trial_count, self.matched_count))
+                or self.trial_count <= 0
+                or self.matched_count != self.trial_count):
             raise ModelError(
                 f"{self.observation_id}: all declared trials must be matched")
         values = (
@@ -93,21 +99,24 @@ class ObservedBest:
                 raise ModelError(
                     f"{self.observation_id}: paired-median ratio is invalid")
         if repo_root is not None:
-            source = repo_root / self.source_path
-            if not source.is_file():
+            try:
+                source = resolve_repo_artifact(repo_root, self.source_path)
+            except ModelError as error:
                 raise ModelError(
-                    f"{self.observation_id}: source path is missing")
+                    f"{self.observation_id}: invalid source path: {error}") from error
             if (self.source_locator
                     and self.source_locator not in source.read_text(
                         encoding="utf-8", errors="replace")):
                 raise ModelError(
                     f"{self.observation_id}: source locator does not match")
             if self.qualification == "closure_qualified":
-                missing = [path for path in self.artifact_paths
-                           if not (repo_root / path).is_file()]
-                if missing:
-                    raise ModelError(
-                        f"{self.observation_id}: missing closure artifacts {missing}")
+                for artifact_path in self.artifact_paths:
+                    try:
+                        resolve_repo_artifact(repo_root, artifact_path)
+                    except ModelError as error:
+                        raise ModelError(
+                            f"{self.observation_id}: invalid closure artifact: "
+                            f"{error}") from error
 
     @property
     def is_closure_qualified(self) -> bool:

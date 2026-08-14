@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.sm110_gemm_model.io import load_capacities
+from scripts.sm110_gemm_model.io import load_capacities, load_schedules
 from scripts.sm110_gemm_model.model import (
     Capacity,
     EvidenceKind,
@@ -18,6 +18,7 @@ from scripts.sm110_gemm_model.model import (
     evaluate,
     evaluate_manifest,
     precision_specs,
+    _resource_demands,
     _select_capacity,
 )
 from scripts.sm110_gemm_model.observations import (
@@ -26,6 +27,7 @@ from scripts.sm110_gemm_model.observations import (
     summarize_observed_csvs,
 )
 from scripts.sm110_gemm_model.coverage import (
+    campaign_measurement_coverage,
     common_resource_coverage,
     precision_coverage,
 )
@@ -49,6 +51,7 @@ from microbench.sm110_gemm_campaign.audit_campaign import audit as audit_compute
 
 ROOT = Path(__file__).resolve().parents[2]
 CAPACITY_PATH = Path(__file__).resolve().parent / "profiles" / "capacities.json"
+SCHEDULE_PATH = Path(__file__).resolve().parent / "examples" / "schedules.json"
 DOCUMENT_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                  "thor_sm110_gemm_performance_bounds.md")
 
@@ -79,6 +82,11 @@ class DocumentContractTest(unittest.TestCase):
             r"\(K_{\mathrm{mma}}\)": r"定义 \(K_{\mathrm{mma}}\)",
             r"\(W_{\mathrm{use}}\)": r"定义 \(W_{\mathrm{use}}\)",
             r"\(B_M\)": r"定义 \(B_M\)",
+            r"\(B_N\)": r"定义 \(B_N\)",
+            r"\(B_K\)": r"定义 \(B_K\)",
+            r"\(N_M=": "定义\n\\(N_M=",
+            r"\(N_N=": "定义\n\\(N_N=",
+            r"\(N_K=": "定义\n\\(N_K=",
             r"W_{\mathrm{reduce}}": r"定义 \(W_{\mathrm{reduce}}\)",
             r"W_{\mathrm{issue}}": r"定义 \(W_{\mathrm{issue}}\)",
             r"\(\eta_{\mathrm{shape}}\)":
@@ -91,13 +99,31 @@ class DocumentContractTest(unittest.TestCase):
                 r"定义为 \(Q_{\mathrm{in,scale}}^{\mathrm{LB}}\)",
             r"Q_C^{\mathrm{LB}}": r"定义 \(Q_C^{\mathrm{LB}}\)",
             r"Q_D^{\mathrm{LB}}": r"定义 \(Q_D^{\mathrm{LB}}\)",
+            r"Q_{\mathrm{TMA}}(x,w)":
+                r"定义 \(Q_{\mathrm{TMA}}(x,w)\)",
+            r"\(a_s=128\)": "定义\n\\(a_s=128\\)",
+            r"\(g_s=4\)": "定义\n\\(g_s=4\\)",
+            r"\(S(X,B_K,b_s,s_s)\)":
+                "继续定义\n\\(S(X,B_K,b_s,s_s)\\)",
+            r"Q_{\mathrm{TMA,scale/tile}}":
+                "定义\n\\(Q_{\\mathrm{TMA,scale/tile}}\\)",
+            r"Q_{\mathrm{TMA,scale}}(x,w)":
+                r"定义 \(Q_{\mathrm{TMA,scale}}(x,w)",
+            r"Q_{\mathrm{tmem,scale}}(x,w)":
+                r"定义 \(Q_{\mathrm{tmem,scale}}(x,w)\)",
+            r"Q_{\mathrm{TMA,unique}}(x,w)":
+                r"定义 \(Q_{\mathrm{TMA,unique}}(x,w)\)",
+            r"Q_{\mathrm{tmem}}(x,w)":
+                r"定义 \(Q_{\mathrm{tmem}}(x,w)\)",
             r"\(\mathcal R\)": r"定义资源集合 \(\mathcal R\)",
+            r"\(r\in\mathcal R\)": "定义\n\\(r\\in\\mathcal R\\)",
             r"Q_r^{\mathrm{LB}}": r"定义 \(Q_r^{\mathrm{LB}}\)",
             r"\(U_r\)": "定义\n\\(U_r\\)",
             r"T_r^{\mathrm{LB}}": r"定义 \(T_r^{\mathrm{LB}}\)",
             r"T_{\mathrm{resource}}^{\mathrm{LB}}":
                 r"定义 \(T_{\mathrm{resource}}^{\mathrm{LB}}\)",
             r"\(n_t\)": r"定义 \(n_t\)",
+            r"\(i\)": r"定义 \(i\)",
             r"\(p_i\)": r"定义 \(p_i\)",
             r"\(U_t\)": r"定义 \(U_t\)",
             r"\(T_{\mathrm{parallel}}\)":
@@ -108,6 +134,8 @@ class DocumentContractTest(unittest.TestCase):
             r"T_{\mathrm{parallel,identical}}":
                 "定义\n\\(T_{\\mathrm{parallel,identical}}\\)",
             r"\(G=(V,E)\)": r"定义执行依赖图 \(G=(V,E)\)",
+            r"\(V\)": r"其中 \(V\)",
+            r"\(E\)": r"\(E\) 是生产者到消费者的真实依赖",
             r"T_{\mathrm{span}}^{\mathrm{LB}}":
                 "定义\n\\(T_{\\mathrm{span}}^{\\mathrm{LB}}\\)",
             r"\(\mathbf y\)": r"定义资源吞吐向量 \(\mathbf y\)",
@@ -125,6 +153,14 @@ class DocumentContractTest(unittest.TestCase):
             r"\(Q_r(x,w)\)": r"定义 \(Q_r(x,w)\)",
             r"\widehat T_{\mathrm{resource}}(x,w)":
                 "定义\n\\(\\widehat T_{\\mathrm{resource}}(x,w)\\)",
+            r"\widehat T_{\mathrm{parallel}}(x,w)":
+                r"定义 \(\widehat T_{\mathrm{parallel}}(x,w)\)",
+            r"\widehat T_{\mathrm{span}}(x,w)":
+                r"定义 \(\widehat T_{\mathrm{parallel}}(x,w)\)",
+            r"\widehat T_{\mathrm{joint}}(x,w)":
+                r"定义 \(\widehat T_{\mathrm{parallel}}(x,w)\)",
+            r"\widehat T_{\mathrm{fixed}}(x,w)":
+                r"定义 \(\widehat T_{\mathrm{parallel}}(x,w)\)",
             r"\(\widehat T(x,w)\)": r"定义 \(\widehat T(x,w)\)",
             r"\(\mathcal X_{\mathrm{manifest}}\)":
                 r"定义 \(\mathcal X_{\mathrm{manifest}}\)",
@@ -171,14 +207,27 @@ class WorkAccountingTest(unittest.TestCase):
 
     def test_fp6_packed_storage_is_three_quarters_byte(self) -> None:
         workload = Workload("fp6", 128, 128, 64, "e3m2_f32")
-        work = account_work(workload, self.schedule, self.precisions["e3m2_f32"])
+        work = account_work(
+            workload,
+            Schedule("fp6-byte", 128, 128, 64, 2,
+                     tail_policy="pad", input_transport_layout="byte_padded"),
+            self.precisions["e3m2_f32"],
+        )
         self.assertEqual(work.input_value_bytes_min, (128 * 64 + 64 * 128) * 0.75)
 
-    def test_fp6_decompression_padding_is_not_charged_as_logical_storage(self) -> None:
+    def test_fp6_transport_padding_is_not_charged_as_logical_storage(self) -> None:
         workload = Workload("fp6-cp", 128, 128, 64, "e3m2_f32")
-        packed = account_work(
+        byte_container = account_work(
             workload,
-            self.schedule,
+            Schedule(
+                "fp6-byte",
+                128,
+                128,
+                64,
+                2,
+                tail_policy="pad",
+                input_transport_layout="byte_padded",
+            ),
             self.precisions["e3m2_f32"],
         )
         decompressed = account_work(
@@ -194,8 +243,10 @@ class WorkAccountingTest(unittest.TestCase):
             ),
             self.precisions["e3m2_f32"],
         )
-        self.assertEqual(decompressed.input_value_bytes_min, packed.input_value_bytes_min)
-        self.assertGreater(decompressed.tma_input_bytes, packed.tma_input_bytes)
+        self.assertEqual(
+            decompressed.input_value_bytes_min,
+            byte_container.input_value_bytes_min,
+        )
         self.assertEqual(
             decompressed.tma_input_bytes,
             128 * 64 + 64 * 128,
@@ -222,10 +273,45 @@ class WorkAccountingTest(unittest.TestCase):
             (Schedule("g2", 128, 128, 64, 2, cta_group=2), "CTA-group-2"),
             (Schedule("split", 128, 128, 64, 2, split_k=2), "split-K"),
             (Schedule("persistent", 128, 128, 64, 2, persistent=True), "persistent"),
+            (Schedule("non-tma", 128, 128, 64, 2, uses_tma=False), "non-TMA"),
         ):
             with self.subTest(schedule=schedule.schedule_id):
                 with self.assertRaisesRegex(Exception, pattern):
                     account_work(workload, schedule, self.precisions["fp16_f32"])
+
+    def test_fractional_direct_smem_requires_byte_container(self) -> None:
+        workload = Workload("fp6", 128, 256, 64, "e3m2_f32")
+        with self.assertRaisesRegex(Exception, "uses byte containers"):
+            account_work(
+                workload,
+                Schedule("packed", 128, 256, 64, 2, mma_n=256,
+                         tmem_columns=256),
+                self.precisions["e3m2_f32"],
+            )
+        work = account_work(
+            workload,
+            Schedule("byte", 128, 256, 64, 2, mma_n=256,
+                     tmem_columns=256, input_transport_layout="byte_padded"),
+            self.precisions["e3m2_f32"],
+        )
+        self.assertEqual(work.input_value_bytes_min, (128 + 256) * 64 * 0.75)
+        self.assertEqual(work.tma_unique_input_bytes, (128 + 256) * 64)
+
+    def test_block_scaled_schedule_reserves_accumulator_and_scale_tmem(self) -> None:
+        workload = Workload("nv", 128, 256, 64, "nvfp4_f32")
+        with self.assertRaisesRegex(Exception, "512-column TMEM"):
+            account_work(
+                workload,
+                Schedule("small-tmem", 128, 256, 64, 2, mma_n=256,
+                         tmem_columns=256),
+                self.precisions["nvfp4_f32"],
+            )
+        account_work(
+            workload,
+            Schedule("full-tmem", 128, 256, 64, 2, mma_n=256,
+                     tmem_columns=512),
+            self.precisions["nvfp4_f32"],
+        )
 
     def test_int8_n_shape_uses_table39_nonuniform_rule(self) -> None:
         workload = Workload("i8", 128, 40, 32, "s8_s32")
@@ -238,9 +324,194 @@ class WorkAccountingTest(unittest.TestCase):
 
     def test_quantized_scale_bytes_are_separate_from_values(self) -> None:
         workload = Workload("nv", 128, 128, 64, "nvfp4_f32")
-        work = account_work(workload, self.schedule, self.precisions["nvfp4_f32"])
+        schedule = Schedule(
+            "nv", 128, 128, 64, 2, tail_policy="pad", tmem_columns=512)
+        work = account_work(workload, schedule, self.precisions["nvfp4_f32"])
         self.assertGreater(work.input_scale_bytes_min, 0)
         self.assertEqual(work.accumulator_readback_bytes, 128 * 128 * 4)
+
+    def test_block_scales_do_not_cross_k_vectors(self) -> None:
+        workload = Workload("nv-irregular", 2, 3, 17, "nvfp4_f32")
+        schedule = Schedule(
+            "nv-pad",
+            128,
+            128,
+            64,
+            2,
+            tail_policy="pad",
+            tmem_columns=512,
+        )
+        work = account_work(workload, schedule, self.precisions["nvfp4_f32"])
+        self.assertEqual(work.input_scale_bytes_min, (2 + 3) * 2)
+        self.assertEqual(
+            work.tma_input_bytes,
+            128 * 64 * 0.5 + 64 * 128 * 0.5 + (128 + 128) * 4,
+        )
+        self.assertEqual(
+            work.tma_unique_input_bytes,
+            128 * 64 * 0.5 + 64 * 128 * 0.5 + (128 + 128) * 4,
+        )
+        self.assertEqual(work.tma_scale_input_bytes, (128 + 128) * 4)
+        self.assertEqual(
+            work.tmem_scale_ingress_bytes,
+            work.tma_scale_input_bytes,
+        )
+
+    def test_nvfp4_scale_transport_pads_n64_to_128_vectors(self) -> None:
+        workload = Workload("nv-n64", 128, 64, 64, "nvfp4_f32")
+        schedule = Schedule(
+            "nv-n64",
+            128,
+            64,
+            64,
+            2,
+            mma_n=64,
+            tail_policy="exact",
+            tmem_columns=512,
+        )
+        work = account_work(workload, schedule, self.precisions["nvfp4_f32"])
+        # Each SFA/SFB tile is physically 128 vectors x 4 scale groups.
+        self.assertEqual(work.input_scale_bytes_min, (128 + 64) * 4)
+        self.assertEqual(work.tma_scale_input_bytes, 512 + 512)
+        self.assertEqual(work.tmem_scale_ingress_bytes, 1024)
+
+    def test_mxfp4_scale_transport_pads_two_groups_to_four(self) -> None:
+        workload = Workload("mx-n256", 128, 256, 64, "mxfp4_f32")
+        schedule = Schedule(
+            "mx-n256",
+            128,
+            256,
+            64,
+            2,
+            mma_n=256,
+            tail_policy="exact",
+            tmem_columns=512,
+        )
+        work = account_work(workload, schedule, self.precisions["mxfp4_f32"])
+        # MXFP4 has two logical K scale groups at BK=64, but the physical
+        # Swizzle32x4x4 atom pads that mode to four groups.
+        self.assertEqual(work.input_scale_bytes_min, (128 + 256) * 2)
+        self.assertEqual(work.tma_scale_input_bytes, 512 + 1024)
+        self.assertEqual(work.tmem_scale_ingress_bytes, 1536)
+
+    def test_padded_tail_charges_issued_tmem_readback_but_useful_store(self) -> None:
+        workload = Workload("tail-readback", 129, 130, 64, "fp16_f32")
+        work = account_work(workload, self.schedule, self.precisions["fp16_f32"])
+        self.assertEqual(work.accumulator_readback_bytes, 256 * 256 * 4)
+        self.assertEqual(work.output_value_bytes_min, 129 * 130 * 4)
+
+    def test_exact_shape_tmem_readback_equals_useful_output_extent(self) -> None:
+        workload = Workload("exact-readback", 128, 128, 64, "fp16_f32")
+        schedule = Schedule("exact", 128, 128, 64, 2, tail_policy="exact")
+        work = account_work(workload, schedule, self.precisions["fp16_f32"])
+        self.assertEqual(work.accumulator_readback_bytes, 128 * 128 * 4)
+
+    def test_cold_schedule_separates_unique_hbm_from_repeated_l2_tma(self) -> None:
+        workload = Workload("reuse", 256, 256, 64, "fp16_f32")
+        work = account_work(workload, self.schedule, self.precisions["fp16_f32"])
+        demands = _resource_demands(
+            workload,
+            self.schedule,
+            work,
+            self.precisions["fp16_f32"],
+            empirical=True,
+        )
+        self.assertEqual(work.tma_unique_input_bytes, 2 * 256 * 64 * 2)
+        self.assertEqual(work.tma_input_bytes, 4 * 2 * 128 * 64 * 2)
+        self.assertEqual(demands["hbm.read"][0], work.tma_unique_input_bytes)
+        self.assertEqual(demands["tma.hbm"][0], work.tma_unique_input_bytes)
+        self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
+        self.assertEqual(demands["tma.l2"][0], work.tma_input_bytes)
+
+    def test_hot_schedule_has_no_hbm_demand(self) -> None:
+        workload = Workload(
+            "hot-reuse", 256, 256, 64, "fp16_f32", residency="hot_l2")
+        work = account_work(workload, self.schedule, self.precisions["fp16_f32"])
+        demands = _resource_demands(
+            workload,
+            self.schedule,
+            work,
+            self.precisions["fp16_f32"],
+            empirical=True,
+        )
+        self.assertNotIn("hbm.read", demands)
+        self.assertNotIn("tma.hbm", demands)
+        self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
+        self.assertEqual(demands["tma.l2"][0], work.tma_input_bytes)
+
+    def test_tmem_capacity_key_matches_instruction_and_warp_contract(self) -> None:
+        workload = Workload(
+            "tmem-contract", 128, 128, 64, "fp16_f32",
+            residency="compute_oracle")
+        schedule = Schedule(
+            "x8-one-warp", 128, 128, 64, 2,
+            threads=32, tmem_load_registers=8)
+        work = account_work(workload, schedule, self.precisions["fp16_f32"])
+        demands = _resource_demands(
+            workload,
+            schedule,
+            work,
+            self.precisions["fp16_f32"],
+            empirical=True,
+        )
+        self.assertIn("tmem.readback.x8.warps1", demands)
+        self.assertNotIn("tmem.readback", demands)
+
+    def test_block_scaled_empirical_layer_requires_scale_tmem_ingress(self) -> None:
+        capacities = [
+            Capacity(
+                "compute", "tensor.nvfp4.m128n256", 1e15, "flop",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "compute"),
+            Capacity(
+                "readback", "tmem.readback", 1e12, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "readback"),
+        ]
+        result = evaluate(
+            Workload(
+                "nv-scale", 128, 256, 64, "nvfp4_f32",
+                residency="compute_oracle"),
+            Schedule(
+                "nv-scale", 128, 256, 64, 2,
+                mma_n=256, tmem_columns=512),
+            Hardware("thor", 20, 1.575e9),
+            capacities,
+        )
+        self.assertEqual(
+            result.empirical_envelope.status,
+            "insufficient_evidence",
+        )
+        self.assertIn(
+            "tmem.scale_ingress",
+            result.empirical_envelope.missing_resources,
+        )
+
+    def test_example_manifest_has_an_executable_path_for_every_precision(self) -> None:
+        schedules = load_schedules(SCHEDULE_PATH)
+        expected_valid_counts = {
+            "fp16_f32": 3,
+            "bf16_f32": 3,
+            "tf32_f32": 3,
+            "e4m3_f32": 3,
+            "e5m2_f32": 3,
+            "e3m2_f32": 1,
+            "e2m3_f32": 1,
+            "e2m1_f32": 1,
+            "mxfp4_f32": 1,
+            "nvfp4_f32": 1,
+            "s8_s32": 3,
+            "u8_s32": 3,
+        }
+        for precision_id, expected_count in expected_valid_counts.items():
+            envelope = evaluate_manifest(
+                Workload(precision_id, 1024, 1024, 1024, precision_id),
+                schedules,
+                Hardware("thor", 20, 1.575e9),
+                [],
+            )
+            with self.subTest(precision_id=precision_id):
+                self.assertEqual(envelope.valid_schedule_count, expected_count)
 
 
 class Tcgen05DescriptorTest(unittest.TestCase):
@@ -420,7 +691,7 @@ class EvidenceSemanticsTest(unittest.TestCase):
         capacities = [
             Capacity(
                 "measured",
-                "tensor.bf16",
+                "tensor.bf16.m128n128",
                 100.0,
                 "flop",
                 EvidenceKind.MEASURED_SUSTAINED,
@@ -448,6 +719,81 @@ class EvidenceSemanticsTest(unittest.TestCase):
         self.assertEqual(result.conditional_upper.status, "insufficient_evidence")
         self.assertIsNone(result.conditional_upper.performance_per_second)
         self.assertIsNotNone(result.empirical_envelope.performance_per_second)
+
+    def test_empirical_compute_capacity_is_not_reused_across_mma_shapes(self) -> None:
+        capacities = [
+            Capacity(
+                "compute_n256",
+                "tensor.bf16.m128n256",
+                100.0,
+                "flop",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "source",
+                "source.csv",
+                "row=1",
+            ),
+            Capacity(
+                "readback",
+                "tmem.readback",
+                100.0,
+                "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "source",
+                "source.csv",
+                "row=2",
+            ),
+        ]
+        workload = Workload(
+            "shape-contract", 128, 256, 64, "bf16_f32",
+            residency="compute_oracle")
+        wrong_shape = evaluate(
+            workload,
+            Schedule("n128", 128, 256, 64, 2, mma_n=128,
+                     tmem_columns=256),
+            Hardware("h", 20, 1.0),
+            capacities,
+        )
+        matching_shape = evaluate(
+            workload,
+            Schedule("n256", 128, 256, 64, 2, mma_n=256,
+                     tmem_columns=256),
+            Hardware("h", 20, 1.0),
+            capacities,
+        )
+        self.assertEqual(
+            wrong_shape.empirical_envelope.status, "insufficient_evidence")
+        self.assertIn(
+            "tensor.bf16.m128n128",
+            wrong_shape.empirical_envelope.missing_resources,
+        )
+        self.assertEqual(matching_shape.empirical_envelope.status, "ok")
+
+    def test_generic_compute_upper_applies_to_each_mma_shape(self) -> None:
+        capacity = Capacity(
+            "compute_upper",
+            "tensor.bf16",
+            100.0,
+            "flop",
+            EvidenceKind.DERIVED_UPPER,
+            "source",
+            "source.csv",
+            "row=1",
+        )
+        workload = Workload(
+            "upper-shape-contract", 128, 256, 64, "bf16_f32",
+            residency="compute_oracle")
+        for mma_n in (64, 128, 256):
+            result = evaluate(
+                workload,
+                Schedule(
+                    f"n{mma_n}", 128, 256, 64, 2,
+                    mma_n=mma_n, tmem_columns=256),
+                Hardware("h", 20, 1.0),
+                [capacity],
+            )
+            self.assertEqual(result.conditional_upper.status, "ok")
+            self.assertEqual(
+                result.conditional_upper.performance_per_second, 100.0)
 
     def test_larger_proven_rate_cannot_lower_performance_upper(self) -> None:
         workload = Workload("w", 128, 128, 64, "bf16_f32", residency="compute_oracle")
@@ -506,7 +852,7 @@ class EvidenceSemanticsTest(unittest.TestCase):
         )
         measured = Capacity(
             "gpu_measured",
-            "tensor.bf16",
+            "tensor.bf16.m128n128",
             90.0,
             "flop",
             EvidenceKind.MEASURED_SUSTAINED,
@@ -588,6 +934,14 @@ class EvidenceSemanticsTest(unittest.TestCase):
         findings = audit_inputs([capacity], repo_root=ROOT)
         self.assertIn("csv_original_value_mismatch", {row["code"] for row in findings})
 
+    def test_capacity_evidence_cannot_escape_repository(self) -> None:
+        capacity = Capacity(
+            "outside", "tensor.bf16", 100.0, "flop",
+            EvidenceKind.MEASURED_SUSTAINED,
+            "source", "../outside.txt", "locator")
+        findings = audit_inputs([capacity], repo_root=ROOT)
+        self.assertIn("invalid_source_path", {row["code"] for row in findings})
+
 
 class SnapshotEvaluationTest(unittest.TestCase):
     def test_bf16_snapshot_exposes_incomplete_empirical_layer(self) -> None:
@@ -630,7 +984,7 @@ class SnapshotEvaluationTest(unittest.TestCase):
         capacities = [
             Capacity(
                 "compute",
-                "tensor.bf16",
+                "tensor.bf16.m128n128",
                 100.0,
                 "flop",
                 EvidenceKind.MEASURED_SUSTAINED,
@@ -707,6 +1061,14 @@ class ObservationTest(unittest.TestCase):
         findings = audit_observed_against_upper(row, 100.0, relative_tolerance=0.01)
         self.assertEqual(findings[0]["code"], "observed_exceeds_conditional_upper")
 
+    def test_observation_evidence_cannot_escape_repository(self) -> None:
+        row = ObservedBest(
+            "outside", "bf16_f32", 128, 128, 128,
+            "backend", "reference", "same_precision", 10, 10,
+            100.0, 101.0, 99.0, "flop/s", "../outside.txt")
+        with self.assertRaisesRegex(Exception, "escapes repository root"):
+            row.validate(repo_root=ROOT)
+
     def test_snapshot_coverage_exposes_missing_precisions(self) -> None:
         capacities = load_capacities(CAPACITY_PATH)
         observed = summarize_observed_csvs(
@@ -726,6 +1088,8 @@ class ObservationTest(unittest.TestCase):
         )
         common = common_resource_coverage(capacities)
         self.assertFalse(common["tmem.readback"])
+        campaign = campaign_measurement_coverage(capacities, observed)
+        self.assertFalse(campaign["all_campaign_measurements_closed"])
 
 
 if __name__ == "__main__":

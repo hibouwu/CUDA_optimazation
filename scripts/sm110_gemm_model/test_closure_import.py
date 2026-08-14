@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 from unittest import mock
 
@@ -15,19 +17,43 @@ from microbench.sm110_gemm_campaign.run_compute_campaign import (
 )
 from microbench.sm110_gemm_component_campaign.run_component_campaign import (
     CASES as COMPONENT_CASES,
+    validate_fields as validate_component_fields,
+)
+from microbench.sm110_gemm_component_campaign.audit_campaign import (
+    EXPECTED_CASE_RESOURCES,
 )
 from scripts.sm110_gemm_model.closure_import import (
     ClosurePaths,
+    _audit_commit_environment,
     _audit_platform,
     _parse_counter_tsv,
     capacities_from_component,
     capacities_from_compute,
     observations_from_full,
     import_closure,
+    import_composite_closure,
     reference_denominators_from_manifest,
 )
-from scripts.sm110_gemm_model.io import capacities_from_rows
-from scripts.sm110_gemm_model.model import ModelError, precision_specs
+from scripts.sm110_gemm_model.io import (
+    capacities_from_rows,
+    load_capacities,
+    load_schedules,
+    observations_from_rows,
+)
+from scripts.sm110_gemm_model.model import (
+    Capacity,
+    EvidenceKind,
+    Hardware,
+    ModelError,
+    Schedule,
+    precision_specs,
+)
+from scripts.sm110_gemm_model.observations import ObservedBest
+from scripts.sm110_gemm_model.closure_report import (
+    build_closure_analysis,
+    render_closure_markdown,
+)
+from scripts.sm110_gemm_model.coverage import campaign_measurement_coverage
 
 
 COMMIT = "1" * 40
@@ -51,12 +77,12 @@ class ClosureConversionTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def test_compute_selection_emits_all_twelve_precision_capacities(self) -> None:
+    def test_compute_selection_emits_three_shapes_for_all_twelve_precisions(self) -> None:
         manifest = make_compute_manifest()
         selected = [
             row for row in manifest
             if row["launch"] == "full_sm_4warp_block"
-            and row["m"] == 128 and row["n"] == 256
+            and row["m"] == 128 and row["n"] in {64, 128, 256}
         ]
         results = []
         for index, row in enumerate(selected, 1):
@@ -67,7 +93,7 @@ class ClosureConversionTest(unittest.TestCase):
                 "work_unit": precision["work_unit"],
                 "trial_count": 10,
                 "rate_per_second_median": float(index),
-                "ncu": {"selected": True},
+                "ncu": {"selected": row["n"] == 256},
             })
         capacities = capacities_from_compute(
             {"results": results},
@@ -75,15 +101,23 @@ class ClosureConversionTest(unittest.TestCase):
             paths=self.paths,
             qualification="closure_qualified",
         )
-        self.assertEqual(len(capacities), len(precision_specs()))
+        self.assertEqual(len(capacities), 3 * len(precision_specs()))
         self.assertEqual(
             {row.resource for row in capacities},
-            {row.compute_resource for row in precision_specs().values()},
+            {
+                f"{row.compute_resource}.m128n{n}"
+                for row in precision_specs().values()
+                for n in (64, 128, 256)
+            },
         )
+        self.assertEqual(
+            len({row.capacity_id for row in capacities}), len(capacities))
         self.assertTrue(all(row.trial_count == 10 for row in capacities))
-        self.assertTrue(all(any("profile.ncu-rep" in artifact
-                                for artifact in row.artifact_paths)
-                            for row in capacities))
+        self.assertTrue(all(
+            any("profile.ncu-rep" in artifact for artifact in row.artifact_paths)
+            == row.resource.endswith("n256")
+            for row in capacities
+        ))
 
     def test_component_mapping_preserves_byte_and_element_units(self) -> None:
         results = [{
@@ -101,10 +135,14 @@ class ClosureConversionTest(unittest.TestCase):
             paths=self.paths,
             qualification="closure_qualified",
         )
-        self.assertEqual(len(capacities), 9)
+        self.assertEqual(len(capacities), 14)
         resources = {row.resource for row in capacities}
         self.assertEqual(resources, {
-            "tma.l2", "tma.hbm", "tmem.readback",
+            "tma.l2", "tma.hbm", "hbm.read", "hbm.write",
+            "l2.read", "l2.write", "tmem.scale_ingress", "tmem.readback",
+            "tmem.readback.x8.warps1",
+            "tmem.readback.x8.warps4",
+            "tmem.readback.x16.warps1",
             "epilogue.nvfp4_requant",
         })
         epilogues = [row for row in capacities
@@ -112,6 +150,61 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertTrue(all(row.work_unit == "element" for row in epilogues))
         self.assertTrue(all(row.work_unit == "byte" for row in capacities
                             if row not in epilogues))
+
+    def test_component_manifest_and_auditor_freeze_the_same_case_matrix(self) -> None:
+        self.assertEqual(
+            {str(row["id"]): str(row["resource"]) for row in COMPONENT_CASES},
+            EXPECTED_CASE_RESOURCES,
+        )
+
+    def test_memory_runtime_fields_match_all_four_frozen_case_ids(self) -> None:
+        by_id = {str(row["id"]): row for row in COMPONENT_CASES}
+        for residency in ("hbm", "l2"):
+            for direction in ("read", "write"):
+                case_id = f"{residency}_{direction}_aggregate"
+                requested = 4096
+                elapsed = 8
+                rate = requested * 1e9 / elapsed
+                fields = {
+                    "case_id": case_id,
+                    "sm_count": "20",
+                    "unique_smid_count": "20",
+                    "residency": residency,
+                    "direction": direction,
+                    "blocks_per_sm": "4",
+                    "working_set_bytes": str(
+                        (16 if residency == "l2" else 256) << 20),
+                    "requested_bytes": str(requested),
+                    "globaltimer_elapsed_ns": str(elapsed),
+                    "bytes_per_second": str(rate),
+                }
+                with self.subTest(case_id=case_id):
+                    self.assertEqual(
+                        validate_component_fields(by_id[case_id], fields),
+                        rate,
+                    )
+
+    def test_scale_runtime_fields_include_nonoverlapping_destination_contract(self) -> None:
+        case = next(
+            row for row in COMPONENT_CASES
+            if row["id"] == "tmem_scale_ingress_32x128b_warpx4")
+        issued = 4096
+        elapsed = 8
+        rate = issued * 1e9 / elapsed
+        fields = {
+            "case_id": str(case["id"]),
+            "sm_count": "20",
+            "unique_smid_count": "20",
+            "source_bytes_per_instruction": "512",
+            "multicast_partitions": "4",
+            "destination_slots": "32",
+            "destination_columns_per_copy": "4",
+            "value_mismatches": "0",
+            "issued_source_bytes": str(issued),
+            "globaltimer_elapsed_ns": str(elapsed),
+            "bytes_per_second": str(rate),
+        }
+        self.assertEqual(validate_component_fields(case, fields), rate)
 
     def test_full_gemm_conversion_emits_fifteen_same_precision_pairs(self) -> None:
         results = []
@@ -166,7 +259,7 @@ class ClosureConversionTest(unittest.TestCase):
                 "ncu": {"selected": True},
             } for entry in make_compute_manifest()
              if entry["launch"] == "full_sm_4warp_block"
-             and entry["m"] == 128 and entry["n"] == 256]},
+             and entry["m"] == 128 and entry["n"] in {64, 128, 256}]},
             {"manifest": make_compute_manifest()},
             paths=self.paths,
             qualification="closure_qualified",
@@ -182,7 +275,10 @@ class ClosureConversionTest(unittest.TestCase):
         self, run_dir: Path, summary: dict[str, object], spec: dict[str, object]
     ) -> None:
         run_dir.mkdir(parents=True, exist_ok=True)
-        environment = {"git_head": {"returncode": 0, "output": COMMIT + "\n"}}
+        environment = {
+            "git_head": {"returncode": 0, "output": COMMIT + "\n"},
+            "git_status": {"returncode": 0, "output": ""},
+        }
         self.write_json(run_dir / "environment.json", environment)
         (run_dir / "environment_snapshots.jsonl").write_text(
             json.dumps(environment) + "\n")
@@ -201,7 +297,10 @@ class ClosureConversionTest(unittest.TestCase):
             "created_at_utc": "test",
         })
         (self.paths.suite / "preflight.txt").write_text(
-            f"{COMMIT}\nNV Power Mode: MAXN\n"
+            "=== git ===\n"
+            "codex/thor-sm110-gemm-bounds-v2\n"
+            f"{COMMIT}\n"
+            "=== nvpmodel ===\nNV Power Mode: MAXN\n"
             "min_freq=1575000000\nmax_freq=1575000000\n"
             "CurrentFreq=1575000000\ngovernor=performance\n")
         (self.paths.suite / "oc_before.tsv").write_text("oc3\t7\n")
@@ -225,7 +324,7 @@ class ClosureConversionTest(unittest.TestCase):
         manifest = make_compute_manifest()
         selected = [row for row in manifest
                     if row["launch"] == "full_sm_4warp_block"
-                    and row["m"] == 128 and row["n"] == 256]
+                    and row["m"] == 128 and row["n"] in {64, 128, 256}]
         compute_results = []
         for index, entry in enumerate(selected, 1):
             case_id = entry["case_id"]
@@ -235,16 +334,17 @@ class ClosureConversionTest(unittest.TestCase):
                 "work_unit": entry["precision"]["work_unit"],
                 "trial_count": 10,
                 "rate_per_second_median": float(index),
-                "ncu": {"selected": True},
+                "ncu": {"selected": entry["n"] == 256},
             }
             compute_results.append(result)
             case_dir = self.paths.compute / "cases" / case_id
             self.write_json(case_dir / "result.json", result)
             (case_dir / "trials.jsonl").write_text("{}\n")
             (case_dir / "sass.txt").write_text("SASS\n")
-            (case_dir / "ncu").mkdir(parents=True)
-            (case_dir / "ncu/profile.ncu-rep").write_text("NCU\n")
-            (case_dir / "ncu/profile.log").write_text("NCU\n")
+            if entry["n"] == 256:
+                (case_dir / "ncu").mkdir(parents=True)
+                (case_dir / "ncu/profile.ncu-rep").write_text("NCU\n")
+                (case_dir / "ncu/profile.log").write_text("NCU\n")
         self.create_common_run_files(
             self.paths.compute,
             {"results": compute_results},
@@ -330,14 +430,164 @@ class ClosureConversionTest(unittest.TestCase):
             imported = import_closure(
                 repo_root=self.root, suite_id=SUITE, expected_commit=COMMIT)
         self.assertTrue(imported["closure_qualified"])
-        self.assertEqual(len(imported["capacities"]), 21)
+        self.assertEqual(len(imported["capacities"]), 50)
+        resource_counts = Counter(
+            row["resource"] for row in imported["capacities"])
+        self.assertEqual(resource_counts["tmem.readback"], 1)
+        self.assertEqual(resource_counts["tmem.readback.x8.warps1"], 1)
+        self.assertEqual(resource_counts["tmem.readback.x8.warps4"], 1)
+        self.assertEqual(resource_counts["tmem.readback.x16.warps1"], 1)
+        self.assertEqual(resource_counts["tmem.scale_ingress"], 1)
         self.assertEqual(len(imported["observed_best"]), 15)
         self.assertTrue(imported["model_input_audit"]["pass"])
+        self.assertEqual(
+            imported["campaign_contract"]["full_gemm_observation_count"], 15)
+        self.assertEqual(imported["campaign_contract"]["compute_case_count"], 36)
         self.assertTrue(
             imported["platform_evidence"]["overcurrent_events_observed"])
         self.assertIn(
             "overcurrent_events_observed",
             {row["code"] for row in imported["model_input_audit"]["findings"]},
+        )
+        analysis = build_closure_analysis(
+            metadata=imported,
+            base_capacities=load_capacities(
+                ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
+            closure_capacities=capacities_from_rows(imported["capacities"]),
+            observations=observations_from_rows(imported["observed_best"]),
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=load_schedules(
+                ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
+        )
+        self.assertFalse(any(
+            finding["severity"] == "error"
+            for finding in analysis["findings"]
+        ))
+        self.assertTrue(analysis["pass"])
+        self.assertEqual(analysis["capacity_count"], 50)
+        self.assertEqual(analysis["observation_count"], 15)
+        self.assertTrue(
+            analysis["campaign_measurement_coverage"]
+                    ["all_campaign_measurements_closed"])
+        self.assertTrue(analysis["all_common_resources_closed"])
+        self.assertFalse(analysis["all_precisions_closed"])
+        campaign = campaign_measurement_coverage(
+            capacities_from_rows(imported["capacities"]),
+            observations_from_rows(imported["observed_best"]),
+        )
+        self.assertTrue(campaign["all_campaign_measurements_closed"])
+        self.assertTrue(all(
+            all(shape_status.values())
+            for shape_status in campaign["compute_shape_closed"].values()
+        ))
+        incomplete_capacities = [
+            row for row in capacities_from_rows(imported["capacities"])
+            if row.resource != "tensor.bf16.m128n64"
+        ]
+        incomplete = campaign_measurement_coverage(
+            incomplete_capacities,
+            observations_from_rows(imported["observed_best"]),
+        )
+        self.assertFalse(incomplete["precision_closed"]["bf16_f32"])
+        self.assertFalse(incomplete["all_campaign_measurements_closed"])
+
+        tampered_rows = [dict(row) for row in imported["capacities"]]
+        epilogue_rows = [
+            row for row in tampered_rows
+            if row["resource"] == "epilogue.nvfp4_requant"
+        ]
+        epilogue_rows[0]["capacity_id"] = (
+            f"{SUITE}.component.nvfp4_requant_4096x1024_duplicate")
+        tampered_analysis = build_closure_analysis(
+            metadata=imported,
+            base_capacities=load_capacities(
+                ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
+            closure_capacities=capacities_from_rows(tampered_rows),
+            observations=observations_from_rows(imported["observed_best"]),
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=load_schedules(
+                ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
+        )
+        self.assertIn(
+            "closure_capacity_matrix_incomplete",
+            {row["code"] for row in tampered_analysis["findings"]},
+        )
+
+        supplement_id = "thor-component-supplement"
+        supplement_paths = ClosurePaths(self.root, supplement_id)
+        shutil.copytree(self.paths.component, supplement_paths.component)
+        supplement_paths.suite.mkdir(parents=True)
+        self.write_json(supplement_paths.suite / "run_contract.json", {
+            "schema_version": 2,
+            "kind": "component_supplement",
+            "supplement_id": supplement_id,
+            "component_run_id": f"{supplement_id}-components",
+            "expected_branch": "codex/thor-sm110-gemm-bounds-v2",
+            "expected_commit": COMMIT,
+            "base_suite_id": SUITE,
+            "base_expected_commit": COMMIT,
+            "created_at_utc": "test",
+        })
+        (supplement_paths.suite / "preflight.txt").write_text(
+            "=== git ===\n"
+            "codex/thor-sm110-gemm-bounds-v2\n"
+            f"{COMMIT}\n"
+            "=== nvpmodel ===\nNV Power Mode: MAXN\n"
+            "min_freq=1575000000\nmax_freq=1575000000\n"
+            "CurrentFreq=1575000000\ngovernor=performance\n")
+        (supplement_paths.suite / "oc_before.tsv").write_text("oc3\t9\n")
+        (supplement_paths.suite / "oc_after.tsv").write_text("oc3\t9\n")
+        (supplement_paths.suite / "supplement_launcher.log").write_text(
+            "COMPONENT_SUPPLEMENT_COMPLETE\n")
+        with mock.patch(
+            "scripts.sm110_gemm_model.closure_import._run_auditor",
+            return_value={"pass": True},
+        ):
+            composite = import_composite_closure(
+                repo_root=self.root,
+                composite_id=supplement_id,
+                base_suite_id=SUITE,
+                base_expected_commit=COMMIT,
+                component_expected_commit=COMMIT,
+            )
+        self.assertTrue(composite["closure_qualified"])
+        self.assertEqual(composite["composition"],
+                         "base_compute_full_plus_component_supplement")
+        self.assertEqual(len(composite["capacities"]), 50)
+        self.assertEqual(len(composite["observed_best"]), 15)
+        self.assertTrue(all(
+            row["capacity_id"].startswith(f"{supplement_id}.")
+            for row in composite["capacities"]))
+        compute_sources = {
+            row["source_id"] for row in composite["capacities"]
+            if ".compute." in row["capacity_id"]
+        }
+        component_sources = {
+            row["source_id"] for row in composite["capacities"]
+            if ".component." in row["capacity_id"]
+        }
+        self.assertEqual(compute_sources, {SUITE})
+        self.assertEqual(component_sources, {supplement_id})
+        self.assertTrue(all(
+            row["run_id"] == SUITE for row in composite["observed_best"]))
+        self.assertEqual(
+            set(composite["platform_evidence"]["overcurrent_deltas"]),
+            {SUITE, supplement_id},
+        )
+        composite_analysis = build_closure_analysis(
+            metadata=composite,
+            base_capacities=load_capacities(
+                ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
+            closure_capacities=capacities_from_rows(composite["capacities"]),
+            observations=observations_from_rows(composite["observed_best"]),
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=load_schedules(
+                ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
+        )
+        self.assertTrue(composite_analysis["pass"])
+        self.assertEqual(
+            composite_analysis["campaign_sources"],
+            composite["campaign_sources"],
         )
 
 
@@ -356,7 +606,10 @@ class PlatformEvidenceTest(unittest.TestCase):
             "created_at_utc": "test",
         }))
         (self.paths.suite / "preflight.txt").write_text(
-            f"{COMMIT}\nNV Power Mode: MAXN\n"
+            "=== git ===\n"
+            "codex/thor-sm110-gemm-bounds-v2\n"
+            f"{COMMIT}\n"
+            "=== nvpmodel ===\nNV Power Mode: MAXN\n"
             "min_freq=1575000000\nmax_freq=1575000000\n"
             "CurrentFreq=1575000000\ngovernor=performance\n")
         (self.paths.suite / "suite_launcher.log").write_text("SUITE_COMPLETE\n")
@@ -389,6 +642,36 @@ class PlatformEvidenceTest(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "invalid counter row"):
             _parse_counter_tsv(bad)
 
+    def test_dirty_or_wrong_branch_preflight_is_rejected(self) -> None:
+        self.write_counters(10, 10)
+        (self.paths.suite / "preflight.txt").write_text(
+            "=== git ===\nwrong-branch\n"
+            f"{COMMIT}\n M tracked.py\n"
+            "=== nvpmodel ===\nNV Power Mode: MAXN\n"
+            "min_freq=1575000000\nmax_freq=1575000000\n"
+            "CurrentFreq=1575000000\ngovernor=performance\n")
+        with self.assertRaisesRegex(ModelError, "clean expected checkout"):
+            _audit_platform(self.paths, COMMIT)
+
+    def test_campaign_environment_requires_successful_git_probes(self) -> None:
+        run_dir = self.root / "run"
+        run_dir.mkdir()
+        valid = {
+            "git_head": {"returncode": 0, "output": f"{COMMIT}\n"},
+            "git_status": {"returncode": 0, "output": "?? results/run\n"},
+        }
+        (run_dir / "environment.json").write_text(json.dumps(valid))
+        (run_dir / "environment_snapshots.jsonl").write_text(
+            json.dumps(valid) + "\n")
+        _audit_commit_environment(run_dir, COMMIT)
+
+        missing_status = dict(valid)
+        missing_status.pop("git_status")
+        (run_dir / "environment_snapshots.jsonl").write_text(
+            json.dumps(missing_status) + "\n")
+        with self.assertRaisesRegex(ModelError, "does not prove Git status"):
+            _audit_commit_environment(run_dir, COMMIT)
+
 
 class CommittedRunbookTest(unittest.TestCase):
     def test_wrapper_derives_commit_from_head_and_runbook_uses_wrapper(self) -> None:
@@ -403,6 +686,262 @@ class CommittedRunbookTest(unittest.TestCase):
             'sm110_closure_campaign.sh start "$SUITE_ID"', runbook)
         self.assertIn(
             'sm110_closure_campaign.sh finish "$SUITE_ID"', runbook)
+
+    def test_component_supplement_instructions_ship_with_runner(self) -> None:
+        wrapper = (
+            ROOT / "microbench/sm110_component_supplement.sh").read_text()
+        supervisor = (
+            ROOT / "microbench/run_sm110_component_supplement.sh").read_text()
+        runbook = (
+            ROOT / "Docs/blackwell_tensorcore/THOR_CLOSURE_RUNBOOK.md").read_text()
+        self.assertIn("expected_commit=$(git rev-parse HEAD)", wrapper)
+        self.assertIn("COMPONENT_SUPPLEMENT_COMPLETE", supervisor)
+        self.assertIn(
+            'sm110_component_supplement.sh start \\\n  "$SUPPLEMENT_ID" "$BASE_SUITE_ID" "$BASE_EXPECTED_COMMIT"',
+            runbook,
+        )
+        self.assertIn(
+            'sm110_component_supplement.sh finish "$SUPPLEMENT_ID"',
+            runbook,
+        )
+        self.assertIn("import-composite-closure", wrapper)
+
+
+class ClosureReportTest(unittest.TestCase):
+    @staticmethod
+    def capacity(
+        name: str, resource: str, rate: float, unit: str,
+        evidence: EvidenceKind, *, qualification: str = "snapshot_only",
+    ) -> Capacity:
+        return Capacity(
+            name, resource, rate, unit, evidence, "test", "source.json", name,
+            source_url=("https://example.com/spec"
+                        if evidence == EvidenceKind.SPECIFIED_UPPER else ""),
+            qualification=qualification,
+            trial_count=10 if qualification == "closure_qualified" else 1,
+            artifact_paths=("source.json",) if qualification == "closure_qualified"
+            else (),
+        )
+
+    def test_report_separates_data_split_from_residency_scenarios(self) -> None:
+        base = [
+            self.capacity("compute_upper", "tensor.bf16", 100e12, "flop",
+                          EvidenceKind.DERIVED_UPPER),
+            self.capacity("hbm_upper", "hbm.total", 200e9, "byte",
+                          EvidenceKind.SPECIFIED_UPPER),
+            self.capacity("l2_read_upper", "l2.read", 1e12, "byte",
+                          EvidenceKind.PROFILER_MODEL_PEAK),
+            self.capacity("l2_write_upper", "l2.write", 1e12, "byte",
+                          EvidenceKind.PROFILER_MODEL_PEAK),
+        ]
+        closure = [
+            self.capacity("compute", "tensor.bf16.m128n128", 80e12, "flop",
+                          EvidenceKind.MEASURED_SUSTAINED,
+                          qualification="closure_qualified"),
+            self.capacity("hbm_read", "hbm.read", 90e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("hbm_write", "hbm.write", 80e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("l2_read", "l2.read", 900e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("l2_write", "l2.write", 500e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("tma_hbm", "tma.hbm", 80e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("tma_l2", "tma.l2", 800e9, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+            self.capacity("tmem", "tmem.readback", 1e12, "byte",
+                          EvidenceKind.MEASURED_SUSTAINED),
+        ]
+        observations = []
+        for n in (1024, 2048, 4096):
+            observations.append(ObservedBest(
+                observation_id=f"bf16_n{n}",
+                precision_id="bf16_f32",
+                m=n, n=n, k=n,
+                backend_id="candidate",
+                reference="cublas_bf16_gemmex",
+                performance_reference_relation="same_precision",
+                trial_count=10,
+                matched_count=10,
+                median_per_second=1e12,
+                maximum_per_second=1.01e12,
+                minimum_per_second=0.99e12,
+                performance_unit="flop/s",
+                source_path="summary.json",
+                source_locator="case",
+                artifact_paths=("summary.json",),
+                run_id="suite",
+                reference_median_per_second=1.1e12,
+                ratio_of_paired_medians=1e12 / 1.1e12,
+                qualification="closure_qualified",
+            ))
+        analysis = build_closure_analysis(
+            metadata={
+                "suite_id": "suite", "expected_commit": COMMIT,
+                "qualification": "closure_qualified"},
+            base_capacities=base,
+            closure_capacities=closure,
+            observations=observations,
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[Schedule("s", 128, 128, 64, 2, tail_policy="pad")],
+            require_complete_contract=False,
+        )
+        by_n = {row["n"]: row for row in analysis["observations"]}
+        self.assertEqual(
+            by_n[1024]["modeled_residencies"], ["hot_l2", "cold_hbm"])
+        self.assertEqual(by_n[2048]["split"], "calibration")
+        self.assertEqual(by_n[4096]["split"], "holdout")
+        self.assertIn("hot_l2", by_n[4096]["residency_scenarios"])
+        self.assertIn("cold_hbm", by_n[4096]["residency_scenarios"])
+        self.assertLessEqual(
+            by_n[4096]["conditional_upper_min_per_second"],
+            by_n[4096]["conditional_upper_max_per_second"],
+        )
+        self.assertFalse(any(row["severity"] == "error"
+                             for row in analysis["findings"]))
+        markdown = render_closure_markdown(analysis)
+        self.assertIn("hot-L2", markdown)
+        self.assertIn("cold-HBM", markdown)
+        self.assertIn("cublas_bf16_gemmex", markdown)
+
+    def test_report_flags_observation_above_conditional_upper(self) -> None:
+        observation = ObservedBest(
+            "impossible", "bf16_f32", 1024, 1024, 1024,
+            "candidate", "reference", "same_precision", 10, 10,
+            1e18, 1.01e18, 0.99e18, "flop/s", "summary.json")
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=[self.capacity(
+                "compute_upper", "tensor.bf16", 100e12, "flop",
+                EvidenceKind.DERIVED_UPPER)],
+            closure_capacities=[],
+            observations=[observation],
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[Schedule("s", 128, 128, 64, 2, tail_policy="pad")],
+            require_complete_contract=False,
+        )
+        self.assertIn(
+            "observed_exceeds_conditional_upper",
+            {row["code"] for row in analysis["findings"]},
+        )
+
+    def test_report_rejects_empirical_prediction_above_conditional_upper(self) -> None:
+        base = [
+            self.capacity(
+                "compute_upper", "tensor.bf16", 100.0, "flop",
+                EvidenceKind.DERIVED_UPPER),
+            self.capacity(
+                "hbm_total_upper", "hbm.total", 1e30, "byte",
+                EvidenceKind.DERIVED_UPPER),
+        ]
+        closure = [self.capacity(
+            "compute_measured", "tensor.bf16.m128n128", 200.0, "flop",
+            EvidenceKind.MEASURED_SUSTAINED)]
+        for resource in (
+            "hbm.read", "hbm.write", "l2.read", "l2.write",
+            "tma.hbm", "tma.l2", "tmem.readback",
+        ):
+            closure.append(self.capacity(
+                f"{resource}.measured", resource, 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED))
+        observation = ObservedBest(
+            "empirical-contradiction", "bf16_f32", 128, 128, 64,
+            "candidate", "reference", "same_precision", 10, 10,
+            50.0, 50.0, 50.0, "flop/s", "summary.json")
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=base,
+            closure_capacities=closure,
+            observations=[observation],
+            hardware=Hardware("one-sm-test", 1, 1.0),
+            schedules=[Schedule(
+                "s", 128, 128, 64, 2,
+                tail_policy="exact", fixed_seconds=0.0)],
+            require_complete_contract=False,
+        )
+        self.assertIn(
+            "empirical_exceeds_conditional_upper",
+            {row["code"] for row in analysis["findings"]},
+        )
+
+    def test_report_uses_maximum_trial_for_upper_violation(self) -> None:
+        observation = ObservedBest(
+            "maximum-only", "bf16_f32", 128, 128, 64,
+            "candidate", "reference", "same_precision", 10, 10,
+            99.0, 103.0, 98.0, "flop/s", "summary.json")
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=[self.capacity(
+                "compute_upper", "tensor.bf16", 100.0, "flop",
+                EvidenceKind.DERIVED_UPPER)],
+            closure_capacities=[],
+            observations=[observation],
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[Schedule(
+                "s", 128, 128, 64, 2,
+                tail_policy="exact", fixed_seconds=0.0)],
+            require_complete_contract=False,
+        )
+        row = analysis["observations"][0]
+        self.assertLess(row["observed_median_to_conditional_upper"], 1.0)
+        self.assertGreater(row["observed_maximum_to_conditional_upper"], 1.02)
+        self.assertIn(
+            "observed_exceeds_conditional_upper",
+            {finding["code"] for finding in analysis["findings"]},
+        )
+
+    def test_report_rejects_incomplete_closure_contract(self) -> None:
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=[],
+            closure_capacities=[],
+            observations=[],
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[],
+        )
+        codes = {finding["code"] for finding in analysis["findings"]}
+        self.assertIn("closure_metadata_not_qualified", codes)
+        self.assertIn("closure_capacity_matrix_incomplete", codes)
+        self.assertIn("full_gemm_observation_matrix_incomplete", codes)
+
+    def test_report_materializes_observation_iterable_once(self) -> None:
+        observation = ObservedBest(
+            "generator", "bf16_f32", 128, 128, 64,
+            "candidate", "reference", "same_precision", 10, 10,
+            1.0, 1.0, 1.0, "flop/s", "summary.json")
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=[self.capacity(
+                "compute_upper", "tensor.bf16", 100.0, "flop",
+                EvidenceKind.DERIVED_UPPER)],
+            closure_capacities=[],
+            observations=(row for row in [observation]),
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[Schedule(
+                "s", 128, 128, 64, 2,
+                tail_policy="exact", fixed_seconds=0.0)],
+            require_complete_contract=False,
+        )
+        self.assertEqual(len(analysis["observations"]), 1)
+
+    def test_report_deduplicates_identical_findings(self) -> None:
+        finding = {
+            "severity": "warning",
+            "code": "same",
+            "message": "same message",
+        }
+        analysis = build_closure_analysis(
+            metadata={"model_input_audit": {"findings": [finding]}},
+            base_capacities=[],
+            closure_capacities=[],
+            observations=[],
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[],
+            require_complete_contract=False,
+            input_findings=[finding, finding],
+        )
+        self.assertEqual(analysis["findings"], [finding])
 
 
 if __name__ == "__main__":

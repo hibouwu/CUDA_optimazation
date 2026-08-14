@@ -8,6 +8,11 @@
     "cta_group": 1,
     "split_k": 1,
     "tail_policy": "pad",
+    "tmem_load_registers": 16,
+    "supported_precisions": [
+      "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
+      "s8_s32", "u8_s32"
+    ],
     "fixed_seconds": 0.0
   },
   {
@@ -21,6 +26,11 @@
     "cta_group": 1,
     "split_k": 1,
     "tail_policy": "pad",
+    "tmem_load_registers": 16,
+    "supported_precisions": [
+      "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
+      "s8_s32", "u8_s32"
+    ],
     "tmem_columns": 256,
     "fixed_seconds": 0.0
   },
@@ -35,7 +45,46 @@
     "cta_group": 1,
     "split_k": 1,
     "tail_policy": "exact",
+    "tmem_load_registers": 16,
+    "supported_precisions": [
+      "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
+      "s8_s32", "u8_s32"
+    ],
     "tmem_columns": 64,
+    "fixed_seconds": 0.0
+  },
+  {
+    "schedule_id": "direct_smem_byte_container_m128n256k64_stage2",
+    "bm": 128,
+    "bn": 256,
+    "bk": 64,
+    "mma_m": 128,
+    "mma_n": 256,
+    "stages": 2,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "pad",
+    "tmem_load_registers": 16,
+    "supported_precisions": ["e3m2_f32", "e2m3_f32", "e2m1_f32"],
+    "tmem_columns": 256,
+    "input_transport_layout": "byte_padded",
+    "fixed_seconds": 0.0
+  },
+  {
+    "schedule_id": "block_scaled_m128n256k64_stage2",
+    "bm": 128,
+    "bn": 256,
+    "bk": 64,
+    "mma_m": 128,
+    "mma_n": 256,
+    "stages": 2,
+    "cta_group": 1,
+    "split_k": 1,
+    "tail_policy": "pad",
+    "tmem_load_registers": 16,
+    "supported_precisions": ["mxfp4_f32", "nvfp4_f32"],
+    "tmem_columns": 512,
+    "input_transport_layout": "logical_packed",
     "fixed_seconds": 0.0
   }
 ]

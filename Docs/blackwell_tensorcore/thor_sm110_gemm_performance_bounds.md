@@ -120,10 +120,11 @@ W_{\mathrm{use}}=2MNK.
 这里一次 multiply-add 按一次乘法和一次加法计为 2 个标量操作；只有浮点
 workload 才把它称为 2 FLOP，整数 workload 写成 2 OP。
 
-定义 \(B_M\)、\(B_N\) 和 \(B_K\) 分别为 schedule 的 CTA tile 在 M、N、K
-方向的元素数，单位均为 element；定义 \(N_M=\lceil M/B_M\rceil\)、
-\(N_N=\lceil N/B_N\rceil\) 和 \(N_K=\lceil K/B_K\rceil\)，分别表示三个方向
-的 tile 数。
+定义 \(B_M\) 为 schedule 的 CTA tile 在 M 方向的元素数，定义 \(B_N\) 为其在
+N 方向的元素数，定义 \(B_K\) 为其在 K 方向的元素数，单位均为 element；定义
+\(N_M=\lceil M/B_M\rceil\) 为 M 方向 tile 数，定义
+\(N_N=\lceil N/B_N\rceil\) 为 N 方向 tile 数，定义
+\(N_K=\lceil K/B_K\rceil\) 为 K 方向 tile 数，三者单位均为 tile。
 
 定义 \(W_{\mathrm{reduce}}\) 为 split-K 最终 reduction 增加的计算工作，单位
 同 workload；当前 v1 因 `split_k=1` 而令其为 0。若 schedule 用完整 tile
@@ -162,12 +163,16 @@ scale 的字节数下界定义为 \(Q_{\mathrm{in,scale}}^{\mathrm{LB}}\)，单�
 \[
 Q_{\mathrm{in,scale}}^{\mathrm{LB}}
 =
-\left\lceil\frac{MK}{b_s}\right\rceil s_s
+\left(
+M\left\lceil\frac{K}{b_s}\right\rceil
 +
-\left\lceil\frac{KN}{b_s}\right\rceil s_s.
+N\left\lceil\frac{K}{b_s}\right\rceil
+\right)s_s.
 \]
 
-无 scale 的精度令这一项为 0。
+这里每个 A 行向量和每个 B 列向量都在自己的 K 方向上独立分块；一个 scale
+block 不允许跨过两个 K 向量的边界。因此不能先把 \(MK\) 或 \(KN\) 展平再只做
+一次向上取整。无 scale 的精度令这一项为 0。
 
 定义 \(Q_C^{\mathrm{LB}}\) 为 C 的最小读取量，单位为 B：
 
@@ -187,6 +192,103 @@ accumulator 输出时 \(Q_D^{\mathrm{LB}}=MN s_{\mathrm{out}}\)；packed quantiz
 可能因 output tile 重用边界、CTA group、split-K 和 cache 行为显著增加。不能
 把 `TMA payload bytes`、`L2 request bytes` 和 `DRAM physical bytes` 当作同一
 个量。
+
+定义 schedule 描述 \(x\) 为 tile、MMA atom、stage、CTA group、split/stream-K、
+persistent、tail 和资源 footprint 的集合；定义 workload 描述 \(w\) 为尺寸、
+精度、转置、\(\alpha/\beta\)、epilogue、residency 和计时边界的集合。对当前
+NN、CTA-group-1、完整 tile 的 schedule，定义 \(Q_{\mathrm{TMA}}(x,w)\) 为
+schedule \(x\) 执行 workload \(w\) 发出的 TMA 输入 payload，单位为 B。
+每个 output tile 的每个 K tile 都搬运一份 A/B tile；value 部分按
+`input_transport_layout` 所声明的物理布局计数。对 block-scaled 输入，定义
+\(a_s=128\) 为 scale transport atom 在 M/N 方向覆盖的 vector 数，定义
+\(g_s=4\) 为该 atom 在 K 方向容纳的 scale-group 数；二者来自 Blackwell
+`128 x 4` scale-factor storage atom。继续定义
+\(S(X,B_K,b_s,s_s)\) 为一个外维为 \(X\)、K tile 为 \(B_K\) 的 SFA 或
+SFB 物理 transport payload，单位为 B：
+
+\[
+S(X,B_K,b_s,s_s)
+=
+\left\lceil\frac{X}{a_s}\right\rceil a_s
+\left\lceil
+  \frac{\left\lceil B_K/b_s\right\rceil}{g_s}
+\right\rceil g_s s_s.
+\]
+
+定义
+\(Q_{\mathrm{TMA,scale/tile}}\) 为一个 output/K tile 的 scale
+transport payload，单位为 B：
+
+\[
+Q_{\mathrm{TMA,scale/tile}}
+=S(B_M,B_K,b_s,s_s)+S(B_N,B_K,b_s,s_s).
+\]
+
+因此不能把逻辑 scale 数直接当成 transport bytes。例如 NVFP4 的
+\(B_M=128,B_N=64,B_K=64,b_s=16,s_s=1\) 虽然只有 768 B 逻辑 scale，
+但 SFA 与 SFB 都各占一个 512 B atom，transport payload 是 1024 B；MXFP4
+在同一 \(B_K=64\) 下只有两个逻辑 K scale group，也必须补齐为四个。
+
+因此 \(Q_{\mathrm{TMA}}(x,w)=N_MN_NN_K\) 乘以单 tile 的 value bytes 与上式
+scale bytes 之和。该量是请求给 TMA data path 的 payload，不自动等于 L2
+request bytes 或 DRAM physical bytes。
+
+定义 \(Q_{\mathrm{TMA,scale}}(x,w)=N_MN_NN_K
+Q_{\mathrm{TMA,scale/tile}}\) 为所有 output/K tile 的 scale TMA payload，单位
+为 B。对 block-scaled MMA，这些 scale 到达 SMEM 后仍必须按 PTX 规定的 SFA/SFB
+layout 进入 TMEM；定义 \(Q_{\mathrm{tmem,scale}}(x,w)\) 为这条 scale ingress
+按**唯一 SMEM source payload**归一化的 bytes。当前 CTA-local schedule 不跨
+output tile 共享 TMEM scale，故
+\(Q_{\mathrm{tmem,scale}}=Q_{\mathrm{TMA,scale}}\)。PTX ISA 9.0 对 block16
+明确要求每行四个 scale 位于 4-byte-aligned TMEM sub-column；它证明这条 TMEM
+operand 路径存在，但没有给出服务率。CUTLASS 的同构 S2T atom 使用
+`tcgen05.cp.cta_group::1.32x128b.warpx4`：每条指令读取一个 512 B source atom，
+并把它 multicast 到四个 32-lane TMEM partition。模型和 capacity 均以 512 B
+source payload 计费，不能把 2048 B multicast destination footprint 再乘一次。
+因此在同构 `tmem.scale_ingress` capacity
+实测完成前，MXFP4/NVFP4 的经验包络必须显示 `insufficient_evidence`，不能用
+TMA rate 或 accumulator readback rate 代替它。布局来源见
+[NVIDIA PTX ISA 9.0 block-scaling SFA/SFB layout](https://docs.nvidia.com/cuda/archive/13.0.0/parallel-thread-execution/index.html#tcgen05-mma-scale-factor-a-layout-4x)，
+S2T atom 来源见
+[NVIDIA CUTLASS tcgen05 programming guide](https://docs.nvidia.com/cutlass/latest/media/docs/pythonDSL/mma_docs/tcgen05_programming.html#block-scaled-mma)。
+
+定义 \(Q_{\mathrm{TMA,unique}}(x,w)\) 为该 schedule 在完美跨 output-tile
+cache reuse 下只计一次的 A/B 物理输入并集，单位为 B。它按
+`input_transport_layout` 统计 value bytes，按“每个 K 向量独立分块”的规则统计
+scale bytes，并在 `tail_policy=pad` 时使用补齐后的
+\(N_MB_M\)、\(N_NB_N\) 和 \(N_KB_K\) 范围。于是当前经验层明确区分：
+
+- `hot_l2`：\(Q_{\mathrm{TMA}}\) 同时约束 `tma.l2` payload 和 `l2.read`
+  request；没有 HBM read 约束；
+- `cold_hbm`：\(Q_{\mathrm{TMA,unique}}\) 约束首次 `tma.hbm` ingress 和
+  `hbm.read`，而完整的 \(Q_{\mathrm{TMA}}\) 仍约束 `tma.l2` 与 `l2.read`；
+- C read 另加到对应的 HBM/L2 read 工作量，用户可见 D store 另由
+  \(Q_D^{\mathrm{LB}}\) 约束 write path。
+
+这等价于允许理想 schedule 进行完美的跨 CTA L2 reuse，但没有把入口冷数据
+凭空变成 L2 resident。不同接口的时间在资源层取最大值，表示理想流水重叠；若
+后续联合 microbenchmark 证明这些路径不能同时达到各自 rate，再增加联合容量
+约束。
+
+`hbm.*` 和 `cold_hbm` 是模型中沿用的通用“外部 DRAM 边界”资源名，不是在断言
+Jetson Thor 使用 HBM 器件；Thor T5000 的物理内存是 LPDDR5X。本文在 Thor 上
+出现 HBM 字样时，均应读作 LPDDR5X/DRAM 冷入口场景。
+
+定义 \(Q_{\mathrm{tmem}}(x,w)\) 为 accumulator 从 TMEM 回读到寄存器的 issued
+payload，单位为 B。当前 `tail_policy=pad` 的 schedule 使用完整输出 tile 的
+固定宽度 TMEM load，再只对用户可见范围执行有效 GMEM store；`tail_policy=exact`
+只在 shape 被 tile 恰好整除时合法。因此：
+
+\[
+Q_{\mathrm{tmem}}(x,w)=
+\begin{cases}
+(N_MB_M)(N_NB_N)s_{\mathrm{acc}},&\texttt{tail\_policy=pad},\\
+MN s_{\mathrm{acc}},&\texttt{tail\_policy=exact}.
+\end{cases}
+\]
+
+这里 \(Q_D^{\mathrm{LB}}\) 仍只统计用户可见的有效输出 store；TMEM issued
+payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 
 ### 4.3 可执行输入参数合同
 
@@ -213,14 +315,15 @@ accumulator 输出时 \(Q_D^{\mathrm{LB}}=MN s_{\mathrm{out}}\)；packed quantiz
 | `mma_m`, `mma_n` | 一条 MMA atom 的 M/N 尺寸，单位 element/instruction |
 | `cta_group` | 一条操作协作的 CTA 数，只能为 1 或 2，单位 CTA/group；v1 只执行 1 |
 | `split_k` | K 方向独立 partial 数，单位 partition；v1 只执行 1 |
-| `tail_policy` | `pad` 或 `exact`；非整除 `exact` 在 v1 中 fail closed |
+| `tail_policy` | `pad` 或 `exact`；`pad` 发射完整 compute tile 和完整宽度 TMEM readback，但可屏蔽越界 GMEM store；非整除 `exact` 在 v1 中 fail closed |
 | `supported_precisions` | schedule 显式允许的 `precision_id` 集合 |
 | `smem_limit_bytes` | 单 CTA 可用于该 schedule 的 SMEM 上限，单位 B/CTA |
-| `tmem_columns` | 分配的 TMEM column 数，单位 column/CTA |
+| `tmem_columns` | 分配的 TMEM column 数，单位 column/CTA；当前 block-scaled schedule 为 accumulator 与 SFA/SFB 固定使用 512-column 合同 |
 | `threads` | CTA 线程数，单位 thread/CTA |
+| `tmem_load_registers` | 每个参与 warp 的 TMEM readback 指令写入寄存器数，只能为 8 或 16，单位 32-bit register/thread；分别对应 `LDTM.x8`/`LDTM.x16` |
 | `registers_per_thread` | 可选寄存器占用，单位 32-bit register/thread |
-| `uses_tma` | 是否声明使用 TMA data path 的布尔值 |
-| `input_transport_layout` | 输入物理搬运布局；`logical_packed`、`byte_padded`、`b6x16_p32` 或 `b4x16_p64` |
+| `uses_tma` | 是否声明使用 TMA data path 的布尔值；v1 只实现 true，false 在缺少另一套 ingress 合同时 fail closed |
+| `input_transport_layout` | 输入物理搬运布局；`logical_packed` 是精度合同允许的紧凑 payload，`byte_padded` 是 raw FP6/FP4 direct-SMEM 的 b8 container，`b6x16_p32`/`b4x16_p64` 是显式 `tcgen05.cp` 物理格式 |
 | `persistent` | 是否声明 persistent 调度的布尔值；v1 对 true fail closed |
 | `fixed_seconds` | 经验层已测固定成本，单位 s；严格层不使用实测固定成本 |
 
@@ -252,10 +355,26 @@ accumulator 输出时 \(Q_D^{\mathrm{LB}}=MN s_{\mathrm{out}}\)；packed quantiz
 closure 点时，快照才继续作为显式的暂定校准值。严格条件上界不使用任何实测
 capacity，仍取所有同时成立 rate upper 的最小值。
 
+“同合同点”不是只看名称相似。当前 schedule 固定 `threads=128`，即 4 warp，并
+选择 `LDTM.x16` accumulator readback；因此 unified component campaign 中只有
+`tmem_ld_32x32b_x16_warps4` 映射到包络消费的 `tmem.readback`。另外三个
+对照点分别保留为 `tmem.readback.x8.warps1`、`tmem.readback.x8.warps4` 和
+`tmem.readback.x16.warps1`。模型根据 `tmem_load_registers` 与 `threads/32`
+机械选择资源，不得因另一合同数值更快而跨合同替换容量。
+
+Tensor Core compute capacity 同样按指令 shape 精确绑定。定义经验层 compute
+资源键 `tensor.<format>.m<MM>n<NN>`：`<format>` 是本节 `resource` 中的输入格式
+标识，`<MM>` 与 `<NN>` 分别是该 `tcgen05.mma` 合同一次发出的 M、N 维度，单位
+element。比如 `tensor.bf16.m128n64` 的实测率只能服务 `mma_m=128,mma_n=64`
+的 schedule；它不能替代 `tensor.bf16.m128n128` 或
+`tensor.bf16.m128n256`。严格层的产品级 rate upper 仍使用通用
+`tensor.<format>` 键，因为其条件声明覆盖整个对应格式，而不是某一个实测 shape。
+
 ## 5. 第一层：条件可证明性能上界
 
-定义资源集合 \(\mathcal R\) 为模型采用的硬件资源约束集合。对其中每个资源
-\(r\in\mathcal R\)，定义 \(Q_r^{\mathrm{LB}}\) 为任何合法实现至少需要在资源
+定义资源集合 \(\mathcal R\) 为模型采用的硬件资源约束集合。定义
+\(r\in\mathcal R\) 为其中一个资源的索引，无单位；定义 \(Q_r^{\mathrm{LB}}\)
+为任何合法实现至少需要在资源
 \(r\) 上完成的工作，单位可能是 FLOP、B、instruction 或 transaction；定义
 \(U_r\) 为资源 \(r\) 的服务率上界，单位与 \(Q_r^{\mathrm{LB}}\) 每秒对应。
 
@@ -298,8 +417,9 @@ sustained 值冒充 \(U_r\) 会产生虚假的低上界，可能被真实 GEMM �
 
 ### 5.2 有限并行与尾部
 
-定义 \(n_t\) 为不可再分割的任务数，单位为 task；定义 \(p_i\) 为第 \(i\) 个
-任务的最小服务时间，单位为 s；定义 \(U_t\) 为能同时服务这类任务的等价硬件
+定义 \(n_t\) 为不可再分割的任务数，单位为 task；定义 \(i\) 为任务索引，
+无单位；定义 \(p_i\) 为第 \(i\) 个任务的最小服务时间，单位为 s；定义 \(U_t\)
+为能同时服务这类任务的等价硬件
 单元数，单位为 service unit；定义 \(T_{\mathrm{parallel}}\) 为该任务集合的实际
 makespan，单位为 s。有限并行调度满足：
 
@@ -401,9 +521,7 @@ P_{\mathrm{ub}}=\frac{W_{\mathrm{use}}}{T_{\mathrm{ub}}^{\mathrm{LB}}}.
 定义 \(\widehat C_r\) 为资源 \(r\) 在匹配精度、shape、CTA group、频率、cache
 状态和 occupancy 条件下测得的经验服务率，单位与资源工作每秒对应。
 
-定义 workload 描述 \(w\) 为尺寸、精度、转置、\(\alpha/\beta\)、epilogue、
-residency 和计时边界的集合；定义 schedule 描述 \(x\) 为 tile、MMA atom、
-stage、CTA group、split/stream-K、persistent、tail 和资源 footprint 的集合。
+沿用第 4.2 节定义的 workload 描述 \(w\) 和 schedule 描述 \(x\)。
 
 对一个合法 schedule，定义 \(Q_r(x,w)\) 为 schedule \(x\) 执行 workload \(w\)
 时向资源 \(r\) 发出的工作量，单位与 \(\widehat C_r\) 的分子一致。定义
@@ -444,6 +562,12 @@ compute rate 推出的单任务 span/有限 wave makespan，以及 `fixed_second
 MMA shape、单 CTA SMEM/TMEM、thread 和显式精度白名单检查的 schedule 集合。
 register-derived occupancy、CTA-group 2、split/stream-K、persistent 和专用 tail
 kernel 尚未形成完整可执行合法性证明；相应 schedule 不得被称为已覆盖。
+当前示例 manifest 把数据通路拆成三类：普通 FP16/BF16/TF32/FP8/INT8 使用
+`logical_packed`；raw E3M2/E2M3/E2M1 direct-SMEM 使用 `byte_padded`，与 closure
+compute campaign 的 8-bit descriptor container 一致；MXFP4/NVFP4 使用紧凑
+4-bit value、独立 scale bytes 和 512-column accumulator+SFA+SFB TMEM 合同。
+因此不会把 6-bit 的逻辑 0.75 B/element 直接冒充可执行的 direct-SMEM TMA
+payload，也不会把普通 accumulator 的 TMEM allocation 套到 block-scaled MMA。
 定义 \(\widehat T_{\mathrm{env}}(w)\) 为 manifest 内合法 schedule 经验理想时间的
 最小值，单位为 s；经验理想包络为：
 
@@ -493,14 +617,15 @@ CSV 的性能 denominator 仍是 FP16 cuBLAS。工具将这种情况标记为
 下面状态来自可执行 `coverage` 命令，不是人工印象：
 
 Thor T5000 的条件规格锚点来自 NVIDIA 的官方产品表：MAXN 下 dense FP4 为
-1035 TFLOP/s、dense FP8 为 517 TFLOP/s、sparse FP16 为 517 TFLOP/s，内存带宽
-273 GB/s、最大 GPU 频率 1.57 GHz。本文只把表中明确的 dense 数字当
+1035 TFLOP/s、dense FP8 为 517 TFLOP/s、sparse INT8 为 1035 TOPS、sparse
+FP16 为 517 TFLOP/s，内存带宽 273 GB/s、最大 GPU 频率 1.57 GHz。本文只把表中明确的 dense 数字当
 `specified_upper`；但产品表没有把 FP8 拆成 E4M3/E5M2，也没有指明 FP4 的具体
 encoding，因此映射到某个 PTX 精度合同仍是显式条件。BF16/FP16 的 258.5
-TFLOP/s 是按 2:1 稀疏倍率推得的 `derived_upper`，不是官方直接列出的 dense 项。规格来源见
+TFLOP/s 与 S8/U8 的 517.5 TOPS 都是按 2:1 稀疏倍率推得的
+`derived_upper`，不是官方直接列出的 dense 项；INT8 表也没有区分 signed/unsigned。规格来源见
 [NVIDIA Jetson Thor 官方介绍](https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/)。
 
-| 精度 | compute 条件上界 | compute 实测 | 完整 GEMM | 同精度性能 denominator | 当前闭环 |
+| 精度 | compute 条件上界 | compute 实测 | 完整 GEMM | 同精度性能 denominator | 全证据闭环 |
 | --- | --- | --- | --- | --- | --- |
 | FP16 | 有（推导） | 缺 | 有 | 有 | 否 |
 | BF16 | 有 | 有 | 有（待 Thor） | 有（待 Thor） | 否 |
@@ -512,8 +637,8 @@ TFLOP/s 是按 2:1 稀疏倍率推得的 `derived_upper`，不是官方直接列
 | raw FP4 E2M1 | 缺 | 缺 | 缺 | 缺 | 否 |
 | MXFP4 | 缺 | 缺 | 有 | 跨精度 | 否 |
 | NVFP4 | 有 | **隔离** | 有（快照） | 跨精度 | 否 |
-| signed INT8 | 缺 | 缺 | 有 | 有 | 否 |
-| unsigned INT8 | 缺 | 缺 | 缺 | 缺 | 否 |
+| signed INT8 | 有（推导） | 缺 | 有 | 有 | 否 |
+| unsigned INT8 | 有（推导） | 缺 | 缺 | 缺 | 否 |
 
 这里的“快照”定义为：仓库只有一个汇总数字，或者没有同一运行合同下至少 10 次
 原始 trial、源码/SASS/hash/环境的闭合证据。快照可以帮助提出假设，但不能获得
@@ -536,11 +661,18 @@ Table 42/Table 44 encoder 和反例测试，在重跑前模型把旧数字标为
 上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。新的 closure
 campaign 已把计时改为整网格最早 `%globaltimer` start 到最晚 stop，并要求 20 个
 不同 SM ID；Thor 返回结果前，旧数字不升级为 `closure_qualified`。
+HBM/L2 四个旧快照也采用相同处理：新的 unified component campaign 已加入
+`hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case；在
+14-case campaign 回传并通过独立审计前，模型仍保留旧值的 `snapshot_only` 资格。
 
 当前公共资源硬缺口：
 
 - 同构 TMEM accumulator readback 的 Thor 结果；其新源码已静态编译为
   `LDTM.x8`/`LDTM.x16`，但静态 lowering 不等于带宽实测；
+- block-scaled SFA/SFB 从 SMEM 进入 PTX 规定 TMEM layout 的同构
+  `tmem.scale_ingress` capacity；新的 source-payload-normalized
+  `.32x128b.warpx4` microbenchmark 已加入 unified component campaign，但在
+  Thor 10-trial/20-SM/value-check 回传前仍不能升级为 capacity；
 - 各输出语义的正式 10-trial epilogue capacity。NVFP4 requant 的 bounded
   preflight 已在 Thor 上以 commit
   `9278fc63b7c2d0d44630e8c13258d3a11b3db7f3`、run ID
@@ -553,8 +685,10 @@ campaign 已把计时改为整网格最早 `%globaltimer` start 到最晚 stop�
 - TMA+MMA、MMA+readback+store 等联合容量外边界或稳定经验模型；
 - calibration/holdout 上的完整预测误差。
 
-因此当前 `all_precisions_closed=false`、`all_common_resources_closed=false` 是
-预期且正确的结果，目标尚未完成。
+因此当前 `all_precisions_closed=false`、`all_common_resources_closed=false` 和
+`campaign_measurement_coverage.all_campaign_measurements_closed=false` 都是预期且
+正确的结果。前两个字段描述全部声明精度/公共资源的证据完备性，第三个字段才描述
+本轮有界 campaign 自己的 5-precision + component 测量矩阵；三者不得互相替代。
 
 ## 9. 自动化接口和反证规则
 
@@ -587,6 +721,21 @@ python3 -m scripts.sm110_gemm_model.cli coverage \
   --observed-input results/quant_gemm_sm110/sm110_quant_gemm_1024_sweep.csv
 ```
 
+统一 closure 完成后，数值表、两种 residency 场景、最大 trial 上界反证和三个互不
+混淆的完成状态由报告器直接生成：
+
+```bash
+MODEL_DIR="results/sm110_model_closure/$SUITE_ID"
+python3 -m scripts.sm110_gemm_model.cli report-closure \
+  --closure-import "$MODEL_DIR/model_inputs.json" \
+  --repo-root . \
+  --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --output-json "$MODEL_DIR/closure_analysis.json" \
+  --output-markdown "$MODEL_DIR/closure_summary.md"
+```
+
 模型测试：
 
 ```bash
@@ -601,16 +750,27 @@ python3 -m unittest -v scripts.sm110_gemm_model.test_model
 - source path 不存在时审计失败；
 - \(\beta=0\) 时最小工作量不得读取 C；
 - padding 的 issued compute work 不得小于 useful compute work；
-- scale bytes、accumulator bytes 和 output bytes 必须分开；
+- block scale 不得跨 K 向量边界，scale bytes、accumulator bytes 和 output bytes
+  必须分开；
+- cold-entry 去重 DRAM bytes、重复 L2/TMA request bytes 和 TMEM readback bytes
+  必须处在各自资源边界；
+- raw FP6/raw E2M1 direct-SMEM 必须按 b8 container 搬运，block-scaled schedule
+  必须满足 scale TMEM allocation 合同；
 - 增大一个有效 rate upper 不能降低性能上界；
-- 完整 GEMM 最大 trial 超过同语义条件上界时审计失败；
+- 完整 GEMM 的 median 用于稳定性能中心值，最大合法 trial 超过同语义条件上界时
+  审计失败；
+- 同一 residency 下经验理想包络超过条件性能上界时同样审计失败；这表示 capacity
+  语义、工作量计数或上界适用条件至少有一项互相矛盾，不能靠 clamp 掩盖；
 - 完整 GEMM 超过经验包络时只触发重校准，不写成物理违规；
 - 跨精度 denominator 不能用于同精度效率结论；
 - 浮点路径用 FLOP/s，S8/U8 路径用 OP/s，二者禁止隐式互换；
 - `closure_qualified` 必须有至少 10 次 trial 和可定位的原始 artifact；
+- evidence path 必须保持在仓库根目录内，不能借绝对路径、`..` 或 symlink 逃逸；
 - `unknown` 证据必须显式 `quarantined`，且不能参与任一数值层；
 - residency 或 timed scope 不相同的观测不得直接作上界违规判定；
-- 任何精度缺 compute、完整 GEMM 或同精度 denominator 时不得标为数值闭环。
+- `numeric_closure` 要求 strict compute upper、closure-qualified compute、完整
+  GEMM 和同精度 denominator 全部存在；campaign 测量闭环不把 measured compute
+  冒充 strict upper，而使用独立的 `campaign_measurement_coverage` 字段。
 
 ## 10. 与 `tc3` 阶段模型的关系
 
@@ -627,20 +787,35 @@ schedule-specific case study。
 固定 kernel 的 TMA/MMA 双缓冲公式可以成为 \(\widehat T(x,w)\) 的一个 schedule
 实例，但不能直接代表所有 GEMM。
 
-## 11. 还需要完成的硬件闭环
+## 11. 硬件闭环的三个不同完成状态
 
-每一种精度必须依次通过：
+不能用一个布尔值同时表示模型正确、一次 campaign 完成和所有产品精度都有完整
+证据。本文分别报告：
 
-1. PTX/descriptor 合法性；
-2. 预期 SASS 指令；
-3. compute-only 10-trial；
-4. 同构 TMA+MMA mainloop 10-trial；
-5. 同构 readback/epilogue 10-trial；
-6. 独立 correctness reference 的完整 GEMM 10-trial；
-7. 同语义 cuBLAS/cuBLASLt/CUTLASS 或明确的性能 denominator；
-8. calibration 和 holdout 分离；
-9. 无条件上界违规；
-10. run spec、环境、源码、binary、SASS、NCU 和结果 hash 完整。
+1. **campaign 测量闭环**：预声明的 FP16、BF16、TF32、E4M3、S8 五种
+   full-GEMM 合同均有与候选 schedule 的 MMA M/N shape 精确匹配的
+   closure-qualified compute rate、10-trial 全矩阵
+   correctness、同精度 denominator、1024/2048 calibration 和 4096 holdout；
+   TMA L2/HBM、HBM/L2 read/write、block-scale TMEM ingress、TMEM readback 与
+   NVFP4 epilogue component case 也全部完成。
+2. **严格上界证据完备**：每个声明精度都具有适用的 compute rate upper，公共
+   资源具有外边界证据。缺一项时仍可由其余约束给出方向正确但较松的 `partial`
+   上界，不能把 measured rate 补成 rate upper。
+3. **全部 12 精度产品覆盖**：除 compute-only 外，还要求每种精度有独立完整
+   GEMM、correctness reference 和同语义性能 denominator。当前只有上述五种进入
+   本轮 full-GEMM campaign，其他精度必须继续显示为 coverage gap。
+
+一次 campaign 的逐精度测量合同依次要求：PTX/descriptor 合法、目标函数块 SASS、
+compute-only 10 trial、兼容的公共 data-movement/readback capacity、完整 GEMM
+10 trial、独立 correctness reference、同精度 denominator、预声明
+calibration/holdout、没有条件上界反证，以及 run spec、环境、源码、binary、SASS、
+NCU 和结果 hash 完整。公共 component capacity 可以由兼容精度共享，不要求为每种
+精度复制同一带宽实验。
+
+TMA+MMA 或 MMA+readback 的联合 microbenchmark 是增加联合容量约束时的必要
+证据，但不是当前“各独立资源允许完美重叠”基础包络的前置门禁。完整 GEMM holdout
+若系统性超过或偏离基础包络，再据此增加联合模型；不能为了形式上的全绿先加入
+一个没有外边界意义的 measured joint 点。
 
 当前本地环境不能访问 NVIDIA driver，因此新的 SM110 数值不能在此机器生成。
 后续 Thor 运行必须使用稳定 campaign ID、逐 case `result.json`、run fingerprint、
@@ -688,6 +863,11 @@ host-observed 整 kernel 时间作交叉检查，避免把单点频率采样直�
 counter 权限可用，每种
 精度另选一个 full-SM M128N256 case 保存 NCU 报告。runner 保存实际源码、idesc 字段、精确编译
 命令、SASS、原始 stdout、environment、binary/SASS/source hash 和不可变 run spec。
+closure importer 从 72 个执行 case 中只生成 36 个经验 compute capacity：12 种
+精度各取 full-SM、4-warp 的 M128N64、M128N128、M128N256 三个点，并把 shape
+写进 `capacity_id`、`resource` 与 `condition`。其余 36 个 single-warp case 是
+拓扑/启动方式对照证据，不能冒充全 GPU schedule capacity；M128N256 的 NCU
+artifact 是每种精度的结构证据，也不把该 shape 的吞吐外推到另外两个 shape。
 本地 CUDA 13.0 `sm_110a` 静态门禁已经 72/72 通过；这只证明生成和 SASS 路径，
 不替代 Thor 上的吞吐与数值验证。
 
@@ -821,8 +1001,18 @@ cd microbench/07_tma_gmem_smem_bandwidth
 - accumulator readback 源码与说明：
   [`tmem_readback_bandwidth.cu`](../../microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu)、
   [`README.md`](../../microbench/12_tmem_readback_bandwidth/README.md)
+- block-scale SFA/SFB ingress 源码与说明：
+  [`tmem_scale_ingress_bandwidth.cu`](../../microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu)、
+  [`README.md`](../../microbench/13_tmem_scale_ingress_bandwidth/README.md)
+- closure-compatible HBM/L2 读写源码与说明：
+  [`memory_path_bandwidth.cu`](../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu)、
+  [`README.md`](../../microbench/14_memory_path_bandwidth/README.md)
 - unified component campaign、运行合同和独立审计：
   [`sm110_gemm_component_campaign`](../../microbench/sm110_gemm_component_campaign/README.md)
+- 复用不可变 compute/full 基础证据时的 bounded component supervisor 与组合导入：
+  [`sm110_component_supplement.sh`](../../microbench/sm110_component_supplement.sh)、
+  [`run_sm110_component_supplement.sh`](../../microbench/run_sm110_component_supplement.sh)、
+  [`closure_import.py`](../../scripts/sm110_gemm_model/closure_import.py)
 - bounded epilogue preflight runner：
   [`run_epilogue_probe.py`](../../microbench/sm110_gemm_component_campaign/run_epilogue_probe.py)
 - NVFP4 requant benchmark：
@@ -842,7 +1032,14 @@ cd microbench/07_tma_gmem_smem_bandwidth
   TS MMA 从 TMEM 消费 A operand，不是 GEMM 尾部的 accumulator readback；两者
   不能共享参数。新 readback microbenchmark 明确发出 `tcgen05.ld` 并以 SASS
   `LDTM.x8`/`LDTM.x16` 为静态锚点，但只有 Thor 的 10-trial/20-SM 审计通过后
-  才能进入经验包络。
+  才能进入经验包络。scale ingress 使用 `UTCCP.T.S.4x32dp128bit` 静态锚点和
+  `LDTM.x4` value-check；rate 按每条 cp 的 512 B 唯一 source scale payload
+  归一化，不按四分区 multicast 后的 2048 B destination footprint 夸大；每个
+  commit batch 使用 32 个互不重叠的四列 TMEM slot，避免重复写同一异步目标造成
+  人工 hazard。新的 HBM/L2 read case 让每个 16 B load 的四个 32-bit lane 全部
+  进入最终 checksum，并要求 SASS 中存在 `LDG.E.128`；write case 要求
+  `STG.E.128`，stop timestamp 之前执行 device-scope fence。因而四个 rate 都按
+  实际保活的 16 B request 计数，而不是按源代码类型名猜测 transaction 宽度。
 
 基本命令：
 
@@ -934,8 +1131,8 @@ bits；host-only 自检覆盖 retained-LSB 为偶/奇的两个 halfway case，�
 NaN payload 不被改写。静态证据也不是二进制级 mnemonic 搜索：审计在被测
 kernel 的 SASS 函数块内检查 `UTCHMMA`、`HMMA.16816.F32.BF16`、
 `HMMA.1684.F32.TF32`、FP8 `HMMA.16816.F32` 或 `IMMA.16816.S8.S8` 及 store。
-当前 CUDA 13.0 本地静态门禁 15/15 通过；在 Thor 返回 150 个 trial、环境和可选
-NCU artifact 之前，不把它们升级为新的已观测值。
+当前 CUDA 13.0 本地静态门禁 15/15 通过；在 Thor 返回 150 个 trial、环境和
+必需的 NCU artifact 之前，不把它们升级为新的已观测值。
 
 compute-only 和 full-GEMM runner 的成功 trial 都保存 120 s timeout 合同；选中的
 NCU 记录保存 300 s timeout 合同。两个独立 auditor 均拒绝旧 schema、缺失
@@ -967,6 +1164,8 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`Docs/blackwell_tensorcore/THOR_CLOSURE_RUNBOOK.md`](THOR_CLOSURE_RUNBOOK.md)
 - closure evidence 到模型 `Capacity`/`ObservedBest` 的 fail-closed 导入器：
   [`scripts/sm110_gemm_model/closure_import.py`](../../scripts/sm110_gemm_model/closure_import.py)
+- 从已审计输入机械生成容量表、完整 GEMM 对比、上界反证和 holdout 分析：
+  [`scripts/sm110_gemm_model/closure_report.py`](../../scripts/sm110_gemm_model/closure_report.py)
 
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和
