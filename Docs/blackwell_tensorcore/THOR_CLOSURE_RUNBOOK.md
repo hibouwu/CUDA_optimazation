@@ -328,3 +328,33 @@ bash microbench/sm110_component_supplement.sh finish "$SUPPLEMENT_ID"
 capacity 重新生成组合报告。成功后严格按第 8 节的结果分支命令提交基础证据、
 supplement 证据和组合 `sm110_model_closure/$SUPPLEMENT_ID`；不要把结果提交到代码
 分支。结果推送完成后按第 7 节恢复 120W mode 1。
+
+## 10. 结果分支异路径复审
+
+结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 已完成 Thor 采集，不需要再次
+运行 GPU。后续 auditor 必须允许把该结果分支 checkout 到不同绝对目录，同时继续
+验证原始 self-test 命令确实指向同一个 run ID 下的
+`results/sm110_full_gemm_campaign/<run-id>/build/extended --self-test`。不能把原始
+Thor 仓库前缀与复审 checkout 前缀作字符串相等比较。
+
+在任意干净 checkout 中复审已有结果时执行：
+
+```bash
+BASE_SUITE_ID=thor-t5000-closure-maxn-20260814-d382b57-a
+SUPPLEMENT_ID=thor-t5000-tma-ingress-supplement-maxn-20260814-c
+
+python3 microbench/sm110_gemm_campaign/audit_campaign.py \
+  "results/sm110_gemm_campaign/$BASE_SUITE_ID-compute" \
+  --require-ncu
+python3 microbench/sm110_gemm_component_campaign/audit_campaign.py \
+  "results/sm110_gemm_component_campaign/$SUPPLEMENT_ID-components"
+python3 microbench/sm110_full_gemm_campaign/audit_campaign.py \
+  "results/sm110_full_gemm_campaign/$BASE_SUITE_ID-full"
+sha256sum -c \
+  "results/sm110_model_closure/$SUPPLEMENT_ID/artifact_sha256.txt"
+```
+
+这一提交只修复离线审计的路径可移植性并更新最终报告，不改变任何 GPU-facing
+源码、case、工作量或容量语义，因此**无需 Thor 重跑**。已有 evidence 仍分别绑定
+到 `d382b57eae289b458c5290e3d2b7e0daf1b7d7c8` 和
+`25d8cf71fa566150b64f2eb1dc7f814ce70fa354`。

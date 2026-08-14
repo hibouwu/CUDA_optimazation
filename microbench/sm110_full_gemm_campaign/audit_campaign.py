@@ -23,6 +23,23 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def valid_recorded_extended_self_test_command(
+    command: object, *, run_id: str,
+) -> bool:
+    """Validate launch identity without binding evidence to one checkout."""
+    if (not isinstance(command, list) or len(command) != 2
+            or command[1] != "--self-test"
+            or not isinstance(command[0], str)):
+        return False
+    executable = Path(command[0])
+    expected_suffix = (
+        "results", "sm110_full_gemm_campaign", run_id,
+        "build", "extended",
+    )
+    return (executable.is_absolute()
+            and executable.parts[-len(expected_suffix):] == expected_suffix)
+
+
 def parse_kv(text: str) -> dict[str, str]:
     fields: dict[str, str] = {}
     for line in text.splitlines():
@@ -232,8 +249,8 @@ def main() -> int:
             add(errors, self_test_command_path.is_file() and
                 digest(self_test_command_path) ==
                 result.get("self_test_command_sha256") and
-                self_test_command == [str(root / "build" / "extended"),
-                                      "--self-test"],
+                valid_recorded_extended_self_test_command(
+                    self_test_command, run_id=root.name),
                 f"{case_id}: extended host self-test command mismatch")
 
         trials_path = root / "cases" / case_id / "trials.jsonl"

@@ -882,6 +882,26 @@ class CommittedRunbookTest(unittest.TestCase):
         )
         self.assertIn("import-composite-closure", wrapper)
 
+    def test_final_bounds_document_records_returned_closure_evidence(self) -> None:
+        document = (
+            ROOT / "Docs/blackwell_tensorcore/"
+            "thor_sm110_gemm_performance_bounds.md").read_text()
+        self.assertIn(
+            "ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c", document)
+        self.assertIn("193.366 GB/s", document)
+        self.assertIn("128.436 TFLOP/s", document)
+        self.assertIn("`all_common_resources_closed=true`", document)
+        self.assertIn(
+            "`campaign_measurement_coverage.all_campaign_measurements_closed=true`",
+            document,
+        )
+        for stale in (
+            "等待完整 Thor closure 回传",
+            "新结果返回前",
+            "18-case campaign 回传并通过独立审计前",
+        ):
+            self.assertNotIn(stale, document)
+
 
 class ClosureReportTest(unittest.TestCase):
     @staticmethod

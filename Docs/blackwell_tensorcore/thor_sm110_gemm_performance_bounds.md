@@ -2,7 +2,7 @@
 
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
-> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；NVFP4 requant bounded preflight 已在 Thor 上通过，但完整 compute/component/full-GEMM closure 及其 Git 证据回传尚未完成。
+> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前冻结 campaign 的全部测量和全部公共资源已闭合；全部 12 种声明精度的产品级数值闭环仍未完成。
 >
 > **可信度纪律**：可证明上界、microbenchmark 经验包络和完整 GEMM 实测值分别报告，任何一层都不能冒充另一层。
 >
@@ -661,9 +661,14 @@ P_{\mathrm{obs,median}}
 CSV 的性能 denominator 仍是 FP16 cuBLAS。工具将这种情况标记为
 `cross_precision_denominator`，禁止把 ratio 解读为同精度库胜负。
 
-## 8. 当前仓库证据状态
+## 8. 最终 closure 证据状态
 
-下面状态来自可执行 `coverage` 命令，不是人工印象：
+下面状态来自结果提交
+`ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 中的可执行 `coverage`、三批独立
+auditor 和 `report-closure`，不是人工印象。该结果把已完成基础 suite
+`thor-t5000-closure-maxn-20260814-d382b57-a` 的 compute/full-GEMM 与新
+supplement `thor-t5000-tma-ingress-supplement-maxn-20260814-c` 的 component
+证据分别绑定到原始提交，不把跨提交运行伪装成一次采集。
 
 Thor T5000 的条件规格锚点来自 NVIDIA 的官方产品表：MAXN 下 dense FP4 为
 1035 TFLOP/s、dense FP8 为 517 TFLOP/s、sparse INT8 为 1035 TOPS、sparse
@@ -674,25 +679,27 @@ TFLOP/s 与 S8/U8 的 517.5 TOPS 都是按 2:1 稀疏倍率推得的
 `derived_upper`，不是官方直接列出的 dense 项；INT8 表也没有区分 signed/unsigned。规格来源见
 [NVIDIA Jetson Thor 官方介绍](https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/)。
 
-| 精度 | compute 条件上界 | compute 实测 | 完整 GEMM | 同精度性能 denominator | 全证据闭环 |
+| 精度 | compute 条件上界 | closure compute 实测 | 完整 GEMM | 同精度性能 denominator | `numeric_closure` |
 | --- | --- | --- | --- | --- | --- |
-| FP16 | 有（推导） | 缺 | 有 | 有 | 否 |
-| BF16 | 有 | 有 | 有（待 Thor） | 有（待 Thor） | 否 |
-| TF32 | 缺 | 缺 | 有（待 Thor） | 有（待 Thor） | 否 |
-| FP8 E4M3 | 有 | 有（快照） | 有（快照） | 有 | 否 |
-| FP8 E5M2 | 有 | 缺 | 有（静态候选） | 缺 | 否 |
-| FP6 E3M2 | 缺 | 缺 | 缺 | 缺 | 否 |
-| FP6 E2M3 | 缺 | 缺 | 缺 | 缺 | 否 |
-| raw FP4 E2M1 | 缺 | 缺 | 缺 | 缺 | 否 |
-| MXFP4 | 缺 | 缺 | 有 | 跨精度 | 否 |
-| NVFP4 | 有 | **隔离** | 有（快照） | 跨精度 | 否 |
-| signed INT8 | 有（推导） | 缺 | 有 | 有 | 否 |
-| unsigned INT8 | 有（推导） | 缺 | 缺 | 缺 | 否 |
+| FP16 | 有（推导） | 有 | 有 | 有 | 是 |
+| BF16 | 有（推导） | 有 | 有 | 有 | 是 |
+| TF32 | **缺** | 有 | 有 | 有 | 否 |
+| FP8 E4M3 | 有（条件映射） | 有 | 有 | 有 | 是 |
+| FP8 E5M2 | 有（条件映射） | 有 | 缺 | 缺 | 否 |
+| FP6 E3M2 | **缺** | 有 | 缺 | 缺 | 否 |
+| FP6 E2M3 | **缺** | 有 | 缺 | 缺 | 否 |
+| raw FP4 E2M1 | **缺** | 有 | 缺 | 缺 | 否 |
+| MXFP4 | **缺** | 有 | 缺 | 缺 | 否 |
+| NVFP4 | 有（条件映射） | 有 | 缺 | 缺 | 否 |
+| signed INT8 | 有（推导） | 有 | 有 | 有 | 是 |
+| unsigned INT8 | 有（推导） | 有 | 缺 | 缺 | 否 |
 
-这里的“快照”定义为：仓库只有一个汇总数字，或者没有同一运行合同下至少 10 次
-原始 trial、源码/SASS/hash/环境的闭合证据。快照可以帮助提出假设，但不能获得
-`closure_qualified` 资格。因此 E4M3 也没有数值闭环；整个经验 GEMM 数据流还缺少
-同构 `tmem.readback` 和 epilogue capacity。
+这里的 `numeric_closure` 同时要求独立 compute 条件上界、closure-qualified
+compute rate、完整 GEMM observation 和同精度 denominator。12 种 compute
+合同都已取得三个 M/N shape、每项 10 trial 的 closure-qualified 实测；但只有
+FP16、BF16、E4M3 和 S8 同时满足其余条件。TF32 已完成 campaign 测量，仍因缺少
+独立 strict compute upper 而保持 `false`。这一区分禁止把 measured compute rate
+冒充任何实现都不能突破的物理 rate upper。
 
 历史 NVFP4 的 1032.111 TFLOP/s 被明确隔离：旧生成器把 PTX ISA Table 42 中
 raw E2M1 的 type code `5` 写进了 Table 44 的 `mxf4nvf4` descriptor；Table 44
@@ -701,52 +708,75 @@ raw E2M1 的 type code `5` 写进了 Table 44 的 `mxf4nvf4` descriptor；Table 
 Table 42/Table 44 encoder 和反例测试，在重跑前模型把旧数字标为 `unknown`、
 `quarantined`，不让它进入经验包络。
 
-当前公共资源已有经验数据：
+当前公共资源已有 closure-qualified 经验数据：
 
 - HBM/LPDDR streaming read 和 write；
 - L2 unique read 和 end-to-end store path；
 - TMA L2-hit 和 DRAM-stream ingress。
 
-上述 TMA 数字仍是旧 `max(clock64 per CTA)` 合同下的快照。对 L2-hit 项，历史
-aggregate 数字只有在除以 20 后才作为 `tma.smem_ingress.per_sm` 的低资格
-`snapshot_only` 使用；它不能替代共享 `l2.read`，也不能替代新的单-SM 隔离
-测量。新的 closure campaign 对 L2-hit ingress 使用单 CTA 的 device
-`%globaltimer`，对 aggregate 路径使用整网格最早 start 到最晚 stop，并同时冻结
-`32 KiB × inflight=1`、`32 KiB × inflight=4` 和四 stage 的精确
-`A=16 KiB + B=32 KiB, inflight=8`；新结果返回前，旧数字不升级为
-`closure_qualified`。
+旧 `max(clock64 per CTA)` 数字仍只保留为 `snapshot_only` 对照。新的 closure
+campaign 对 L2-hit ingress 使用单 CTA 的 device `%globaltimer`，对 aggregate
+路径使用整网格最早 start 到最晚 stop，并同时冻结 `32 KiB × inflight=1`、
+`32 KiB × inflight=4` 和四 stage 的精确
+`A=16 KiB + B=32 KiB, inflight=8`。新结果已经通过 10-trial、源码、binary、
+SASS、运行环境、SM coverage 和独立 auditor 门禁，获得 `closure_qualified`。
 其中串行 32 KiB case 只进入带 `diagnostic` 的资源 ID；uniform inflight=4
 提供两级/浅流水 schedule 使用的 `.inflight4` capacity，精确 tc5a A/B 混合
 case 提供四级 schedule 使用的 `tma.smem_ingress.per_sm` 与 `tma.hbm`。模型按
 `stages` 选择对应合同，因此较快但异合同的数字不会互相覆盖。
-HBM/L2 四个旧快照也采用相同处理：新的 unified component campaign 已加入
-`hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case；在
-18-case campaign 回传并通过独立审计前，模型仍保留旧值的 `snapshot_only` 资格。
+HBM/L2 四个旧快照也采用相同处理：新 unified component campaign 的
+`hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case 已回传
+并通过独立审计；同资源经验层优先选择这些 closure-qualified 点，不再混入较弱
+快照。
 
-当前公共资源硬缺口：
+定义本节所有 GB/s 为十进制 \(10^9\) B/s。最终 component 中位数为：
 
-- 同构 TMEM accumulator readback 的 Thor 结果；其新源码已静态编译为
-  `LDTM.x8`/`LDTM.x16`，但静态 lowering 不等于带宽实测；
-- block-scaled SFA/SFB 从 SMEM 进入 PTX 规定 TMEM layout 的同构
-  `tmem.scale_ingress` capacity；新的 source-payload-normalized
-  `.32x128b.warpx4` microbenchmark 已加入 unified component campaign，但在
-  Thor 10-trial/20-SM/value-check 回传前仍不能升级为 capacity；
-- 各输出语义的正式 10-trial epilogue capacity。NVFP4 requant 的 bounded
-  preflight 已在 Thor 上以 commit
-  `9278fc63b7c2d0d44630e8c13258d3a11b3db7f3`、run ID
-  `thor-t5000-epilogue-signedzero-maxn-20260814-e` 返回 `pass=true`：单 CTA、
-  20-SM smoke 和 `4096x1024` production shape 均为
-  `value_mismatches=0`、`scale_mismatches=0`。但该 operator 回传尚未作为 Git
-  artifact 导入仓库，也不是 unified component campaign 的 10 个外部 trial，
-  因此只能证明协议和数值 preflight，不能先行升级为 `closure_qualified` rate；
+| 资源 | 精确 case 合同 | 中位数 |
+| --- | --- | ---: |
+| `tma.smem_ingress.diagnostic.serial32k.per_sm` | 单 CTA，32 KiB，inflight=1 | 68.615 GB/s |
+| `tma.smem_ingress.per_sm.inflight4` | 单 CTA，32 KiB，inflight=4 | 129.398 GB/s |
+| `tma.smem_ingress.per_sm` | 单 CTA，tc5a A16 KiB+B32 KiB，四 stage/八请求 | 193.366 GB/s |
+| `tma.hbm.diagnostic.serial32k` | 20 SM，32 KiB，inflight=1 | 261.556 GB/s |
+| `tma.hbm.inflight4` | 20 SM，32 KiB，inflight=4 | 259.193 GB/s |
+| `tma.hbm` | 20 SM，tc5a A16 KiB+B32 KiB，四 stage/八请求 | 185.509 GB/s |
+| `hbm.read` | 256 MiB stream，全 GPU | 253.588 GB/s |
+| `hbm.write` | 256 MiB stream，全 GPU | 201.158 GB/s |
+| `l2.read` | 16 MiB hot working set，全 GPU | 1505.112 GB/s |
+| `l2.write` | 16 MiB hot working set，全 GPU | 545.416 GB/s |
+
+对 FP16 \(N=2048\) 的完整 GEMM，定义候选/参考比为候选中位性能除以同精度
+cuBLAS 中位性能。tc5a 实测为 120.039 TFLOP/s，cuBLAS 为
+130.633 TFLOP/s，候选/参考比为 91.89%。hot-L2 与 cold-HBM 两场景的经验理想
+包络都为 128.436 TFLOP/s，实测达到 93.46%。精确
+`tc5a_m128n256k64_stage4` 与最佳 generic schedule 在该 shape 上并列，二者均由
+共享 `l2.read` 而非 per-SM TMA ingress 限制；tc5a 的
+`tma.per_sm_parallel_makespan` 为 56.939 us，小于 `l2.read` 的 133.762 us。
+这正是新 microbenchmark 要验证的边界：旧模型把每 SM TMA 出口压成瓶颈，新证据
+证明在该 schedule/shape 下共享 L2 总线先成为经验瓶颈。
+
+完整 15 个 observation、两种 residency 的逐资源时间、条件上界和经验包络位于
+结果提交的
+[`closure_analysis.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_analysis.json)
+与
+[`closure_summary.md`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_summary.md)。
+报告 `pass=true`，没有上界矛盾；唯一 finding 是基础 suite 区间
+`oc3_event_cnt +179` 的 warning。新 component supplement 区间三个 OC counter
+增量均为 0。该 warning 不否定 artifact/数值审计，但基础 compute/full-GEMM
+经验值必须保留“MAXN 区间观察到 overcurrent event”的平台条件。
+
+当前 baseline v1 的公共资源已全部闭合。若要把模型扩展为更紧的非理想流水预测，
+仍有以下增强项；它们不是当前“允许独立资源完美重叠”的条件上界前置门禁：
+
 - launch/TMEM alloc/barrier 固定成本；
 - TMA+MMA、MMA+readback+store 等联合容量外边界或稳定经验模型；
-- calibration/holdout 上的完整预测误差。
+- 非 NVFP4 输出语义各自的正式 epilogue capacity；
+- 全部 12 种精度的完整 GEMM、correctness reference 和同精度 denominator。
 
-因此当前 `all_precisions_closed=false`、`all_common_resources_closed=false` 和
-`campaign_measurement_coverage.all_campaign_measurements_closed=false` 都是预期且
-正确的结果。前两个字段描述全部声明精度/公共资源的证据完备性，第三个字段才描述
-本轮有界 campaign 自己的 5-precision + component 测量矩阵；三者不得互相替代。
+因此最终状态是 `all_precisions_closed=false`、
+`all_common_resources_closed=true` 和
+`campaign_measurement_coverage.all_campaign_measurements_closed=true`。第一个字段
+描述全部声明精度的产品级证据完备性；后两个字段分别描述公共资源和本轮有界
+5-precision + 18-component 测量矩阵，三者不得互相替代。
 
 ## 9. 自动化接口和反证规则
 
@@ -879,9 +909,10 @@ TMA+MMA 或 MMA+readback 的联合 microbenchmark 是增加联合容量约束时
 若系统性超过或偏离基础包络，再据此增加联合模型；不能为了形式上的全绿先加入
 一个没有外边界意义的 measured joint 点。
 
-当前本地环境不能访问 NVIDIA driver，因此新的 SM110 数值不能在此机器生成。
-后续 Thor 运行必须使用稳定 campaign ID、逐 case `result.json`、run fingerprint、
-持久日志、PID/status 和安全 resume；目录存在或任务已启动不算完成。
+本地环境不能生成新的 SM110 数值；本轮 Thor 数值已经由上述结果提交回传。未来若
+修改 GPU-facing 源码、case 合同、审计器或模型工作量，仍必须使用新的稳定
+campaign ID、逐 case `result.json`、run fingerprint、持久日志、PID/status 和
+安全 resume；目录存在或任务已启动不算完成。
 
 正式 closure 固定所有 GPU-facing compute/component/full-GEMM trial 的 host
 timeout 为 120 s，NCU holdout timeout 为 300 s；超时后按完整进程组执行
@@ -893,7 +924,7 @@ launcher，避免交互终端的 `Ctrl-C` 中断实际 campaign。
 
 本节是本文参数和验证数据的来源附录。路径均相对仓库根目录。
 
-### 12.0 新的全精度 compute campaign（等待完整 Thor closure 回传）
+### 12.0 全精度 compute campaign 与最终 composite closure
 
 - runner：
   [`microbench/sm110_gemm_campaign/run_compute_campaign.py`](../../microbench/sm110_gemm_campaign/run_compute_campaign.py)
@@ -903,6 +934,10 @@ launcher，避免交互终端的 `Ctrl-C` 中断实际 campaign。
   [`microbench/sm110_gemm_campaign/audit_campaign.py`](../../microbench/sm110_gemm_campaign/audit_campaign.py)
 - Git 往返说明：
   [`microbench/sm110_gemm_campaign/README.md`](../../microbench/sm110_gemm_campaign/README.md)
+- 最终 composite model inputs：
+  [`model_inputs.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/model_inputs.json)
+- 最终 artifact SHA-256 清单：
+  [`artifact_sha256.txt`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/artifact_sha256.txt)
 - descriptor 一致性实现：
   [`scripts/sm110_gemm_model/tcgen05_descriptors.py`](../../scripts/sm110_gemm_model/tcgen05_descriptors.py)
 - descriptor 与 shape 的规范来源：
@@ -930,8 +965,9 @@ closure importer 从 72 个执行 case 中只生成 36 个经验 compute capacit
 写进 `capacity_id`、`resource` 与 `condition`。其余 36 个 single-warp case 是
 拓扑/启动方式对照证据，不能冒充全 GPU schedule capacity；M128N256 的 NCU
 artifact 是每种精度的结构证据，也不把该 shape 的吞吐外推到另外两个 shape。
-本地 CUDA 13.0 `sm_110a` 静态门禁已经 72/72 通过；这只证明生成和 SASS 路径，
-不替代 Thor 上的吞吐与数值验证。
+本地 CUDA 13.0 `sm_110a` 静态门禁已经 72/72 通过；Thor 基础 suite 的 72 个
+执行 case、三 shape closure capacity、NCU 结构证据和 full-GEMM observation 也已
+通过独立审计。静态门禁与 Thor 运行证据仍是两个不同层次，不能互相替代。
 
 ### 12.1 Tensor Core compute-only
 
@@ -1037,8 +1073,12 @@ cd microbench/05_gmem_dram_bandwidth
   [`microbench/07_tma_gmem_smem_bandwidth/results/ncu/ncu_tma_summary.csv`](../../microbench/07_tma_gmem_smem_bandwidth/results/ncu/ncu_tma_summary.csv)
 - 对抗式审查：
   [`microbench/07_tma_gmem_smem_bandwidth/results/adversarial_review.md`](../../microbench/07_tma_gmem_smem_bandwidth/results/adversarial_review.md)
-- 已引用实测：L2-hit 773.443437 B/cycle/GPU；DRAM-stream
-  155.779224 B/cycle/GPU。
+- 历史快照实测：L2-hit 773.443437 B/cycle/GPU；DRAM-stream
+  155.779224 B/cycle/GPU。二者不具有新 campaign 的隔离/全网格计时合同。
+- closure-qualified 18-case component summary：
+  [`summary.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/summary.json)
+- closure-qualified component 独立审计：
+  [`component_audit.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_closure_suite/thor-t5000-tma-ingress-supplement-maxn-20260814-c/component_audit.json)
 - 边界：这是包含 issue、completion、mbarrier 和 SMEM destination 的端到端
   TMA ingress，不是纯 DRAM 或纯 SMEM port peak。历史结果用各 CTA 最大
   `clock64()` span；新的 closure 同时保留 issue→wait 的 `inflight=1`、四个

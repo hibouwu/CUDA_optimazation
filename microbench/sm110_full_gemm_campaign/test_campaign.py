@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 import run_full_gemm_campaign as campaign
+import audit_campaign as auditor
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -18,6 +19,22 @@ AUDITOR = Path(__file__).with_name("audit_campaign.py")
 
 
 class CampaignEvidenceTests(unittest.TestCase):
+    def test_self_test_command_audit_is_checkout_relocation_safe(self) -> None:
+        command = [
+            "/xplorer/shijy/CUDA_optimazation/results/"
+            "sm110_full_gemm_campaign/thor-run-full/build/extended",
+            "--self-test",
+        ]
+        self.assertTrue(auditor.valid_recorded_extended_self_test_command(
+            command, run_id="thor-run-full"))
+        self.assertFalse(auditor.valid_recorded_extended_self_test_command(
+            command, run_id="different-run"))
+        self.assertFalse(auditor.valid_recorded_extended_self_test_command(
+            ["build/extended", "--self-test"], run_id="thor-run-full"))
+        self.assertFalse(auditor.valid_recorded_extended_self_test_command(
+            [command[0], "--self-test", "--extra"],
+            run_id="thor-run-full"))
+
     def test_bounded_contract_and_process_escalation(self) -> None:
         self.assertEqual(campaign.DEFAULT_TRIAL_TIMEOUT_SECONDS, 120)
         self.assertEqual(campaign.DEFAULT_NCU_TIMEOUT_SECONDS, 300)
