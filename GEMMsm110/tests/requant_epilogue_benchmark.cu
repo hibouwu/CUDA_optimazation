@@ -32,6 +32,7 @@ struct Options {
   int rows = 256;
   int cols = 256;
   int blocks_per_sm = 1;
+  int workers = 0;
   int warmup = 10;
   int iterations = 100;
   unsigned int seed = 1234;
@@ -51,6 +52,7 @@ void print_usage(const char* program) {
       << "  --rows N\n"
       << "  --cols N\n"
       << "  --blocks-per-sm N\n"
+      << "  --workers N (optional grid-size cap)\n"
       << "  --distribution uniform|normal|laplace|outlier|lognormal|constant\n"
       << "  --seed N\n"
       << "  --warmup N\n"
@@ -80,6 +82,8 @@ bool parse_options(int argc, char** argv, Options* options) {
       if (!parse_positive_int(value, &options->cols)) return false;
     } else if (arg == "--blocks-per-sm") {
       if (!parse_positive_int(value, &options->blocks_per_sm)) return false;
+    } else if (arg == "--workers") {
+      if (!parse_positive_int(value, &options->workers)) return false;
     } else if (arg == "--warmup") {
       if (!parse_positive_int(value, &options->warmup)) return false;
     } else if (arg == "--iterations") {
@@ -215,13 +219,15 @@ __global__ void sm110_nvfp4_epilogue_benchmark_kernel(
   __shared__ unsigned int tmem_base;
 
 #if GEMM_SM110_HAS_NATIVE_REQUANT
-  if (threadIdx.x == 0) {
-    asm volatile(
-        "tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%0], %1;"
-        :
-        : "r"(shared_u32_address(&tmem_base)), "r"(kTmemColumns)
-        : "memory");
-  }
+  // The .sync.aligned TMEM management instructions are warp collectives.
+  // This kernel has exactly one complete warp, so every lane must execute
+  // them with identical operands.  Lane-0-only execution is undefined and
+  // can leave the warp blocked forever at allocation.
+  asm volatile(
+      "tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%0], %1;"
+      :
+      : "r"(shared_u32_address(&tmem_base)), "r"(kTmemColumns)
+      : "memory");
   __syncthreads();
 
   if (threadIdx.x == 0) {
@@ -279,12 +285,13 @@ __global__ void sm110_nvfp4_epilogue_benchmark_kernel(
     __syncwarp();
   }
 
-  if (threadIdx.x == 0) {
-    asm volatile("tcgen05.dealloc.cta_group::1.sync.aligned.b32 %0, %1;"
-                 :
-                 : "r"(tmem_base), "r"(kTmemColumns)
-                 : "memory");
-  }
+  asm volatile("tcgen05.dealloc.cta_group::1.sync.aligned.b32 %0, %1;"
+               :
+               : "r"(tmem_base), "r"(kTmemColumns)
+               : "memory");
+  asm volatile(
+      "tcgen05.relinquish_alloc_permit.cta_group::1.sync.aligned;"
+      ::: "memory");
 #else
   if (threadIdx.x == 0) {
     quantized[blockIdx.x * kWarpThreads] = 0u;
@@ -404,8 +411,11 @@ int main(int argc, char** argv) {
               << '\n';
     return EXIT_FAILURE;
   }
-  const int worker_count = std::min(
+  int worker_count = std::min(
       total_chunks, property.multiProcessorCount * options.blocks_per_sm);
+  if (options.workers > 0) {
+    worker_count = std::min(worker_count, options.workers);
+  }
   // This controls the grid size, not CUDA block-to-SM affinity.  The reported
   // unique_smid_count is the evidence that a one-worker-per-SM probe actually
   // covered every SM.
@@ -492,6 +502,7 @@ int main(int argc, char** argv) {
             << "sm_count=" << property.multiProcessorCount
             << " blocks_per_sm=" << options.blocks_per_sm
             << " occupancy_blocks_per_sm=" << occupancy_blocks_per_sm
+            << " requested_workers=" << options.workers
             << " worker_count=" << worker_count
             << " unique_smid_count=" << unique_smid_count << '\n'
             << "value_mismatches=" << value_mismatches

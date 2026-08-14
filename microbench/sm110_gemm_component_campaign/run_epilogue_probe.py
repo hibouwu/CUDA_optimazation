@@ -207,21 +207,27 @@ def main() -> int:
         raise RuntimeError("cuobjdump failed or required TMEM SASS is absent")
 
     profiles = [
-        ("smoke_bps1", 256, 256, 1, 1, 1),
-        ("production_shape_bps1", 4096, 1024, 1, 1, 1),
-        ("smoke_bps2", 256, 256, 2, 1, 1),
-        ("smoke_bps3", 256, 256, 3, 1, 1),
-        ("smoke_bps4", 256, 256, 4, 1, 1),
+        # One CTA distinguishes an instruction/protocol failure from a
+        # multi-CTA allocation-permit or placement interaction.
+        ("single_cta_smoke", 256, 256, 1, 1, 1, 1, 1),
+        ("full_gpu_smoke_bps1", 256, 256, 1, None, 20, 1, 1),
+        ("production_shape_bps1", 4096, 1024, 1, None, 20, 1, 1),
+        ("full_gpu_smoke_bps2", 256, 256, 2, None, 20, 1, 1),
+        ("full_gpu_smoke_bps3", 256, 256, 3, None, 20, 1, 1),
+        ("full_gpu_smoke_bps4", 256, 256, 4, None, 20, 1, 1),
     ]
     profiles = [row for row in profiles if row[3] <= args.max_blocks_per_sm]
     results = []
-    for profile_id, rows, cols, blocks_per_sm, warmup, iterations in profiles:
+    for (profile_id, rows, cols, blocks_per_sm, workers,
+         expected_unique_sms, warmup, iterations) in profiles:
         command = [
             str(binary), "--rows", str(rows), "--cols", str(cols),
             "--blocks-per-sm", str(blocks_per_sm),
             "--distribution", "normal", "--seed", "1234",
             "--warmup", str(warmup), "--iterations", str(iterations),
         ]
+        if workers is not None:
+            command += ["--workers", str(workers)]
         row = {"profile_id": profile_id, "environment_before": environment(),
                **bounded_run(command, args.timeout_seconds),
                "environment_after": environment()}
@@ -229,8 +235,10 @@ def main() -> int:
         validation_errors = []
         if not row["timed_out"] and row["returncode"] == 0:
             expected = {
-                "sm_count": "20", "unique_smid_count": "20",
+                "sm_count": "20",
+                "unique_smid_count": str(expected_unique_sms),
                 "blocks_per_sm": str(blocks_per_sm),
+                "worker_count": str(workers or 20 * blocks_per_sm),
                 "value_mismatches": "0", "scale_mismatches": "0",
             }
             for name, value in expected.items():
@@ -255,7 +263,7 @@ def main() -> int:
 
     after = environment()
     summary = {
-        "schema_version": 1, "run_id": args.run_id,
+        "schema_version": 2, "run_id": args.run_id,
         "expected_commit": args.expected_commit,
         "source_path": str(SOURCE.relative_to(REPO)),
         "source_sha256": sha256(SOURCE), "binary_sha256": sha256(binary),

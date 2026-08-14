@@ -31,7 +31,7 @@ On Thor, from the repository root:
 ```bash
 RUN_ID=thor-t5000-components-maxn-20260812-a
 git fetch origin
-git switch codex/thor-sm110-gemm-bounds
+git switch codex/thor-sm110-gemm-bounds-v2
 git pull --ff-only
 bash microbench/sm110_gemm_component_campaign/launch_component_campaign.sh "$RUN_ID"
 ```
@@ -53,9 +53,11 @@ and measure TS MMA consuming TMEM—not accumulator readback. They are not
 silently promoted into this closure campaign.
 
 After any prior GPU fence hang, reboot Thor before running this probe.  Keep the
-machine in MAXN with clocks locked, then run the five bounded profiles.  They
-start with a one-CTA-per-SM-sized grid and only then test larger grids; the first
-timeout or correctness/coverage failure stops the sweep.
+machine in MAXN with clocks locked, then run the six bounded profiles.  The
+first profile uses exactly one CTA to isolate the warp-level TMEM protocol.
+The next profile expands to a one-CTA-per-SM-sized grid, followed by the
+production shape and higher-residency diagnostics.  The first timeout or
+correctness/coverage failure stops the sweep.
 
 ```bash
 EXPECTED_COMMIT=$(git rev-parse HEAD)
@@ -74,9 +76,10 @@ timeout and TERM/KILL escalation waits are bounded. `termination_failed=true`
 means the process survived the bounded escalation and the machine must be
 rebooted before any further GPU work.
 The closure suite uses `--max-blocks-per-sm 1` as a safe termination and
-correctness preflight.  Use `4` only for the standalone diagnostic residency
-sweep; a failure at a higher residency is evidence, not a reason to run the
-formal closure at that residency.
+correctness preflight; this runs the one-CTA isolation profile, the full-GPU
+one-CTA-per-SM profile, and the production shape. Use `4` only for the
+standalone diagnostic residency sweep; a failure at a higher residency is
+evidence, not a reason to run the formal closure at that residency.
 
 For the full closure, use `microbench/launch_sm110_closure_suite.sh` instead of
 keeping the orchestrator attached to an interactive terminal.  It records a
