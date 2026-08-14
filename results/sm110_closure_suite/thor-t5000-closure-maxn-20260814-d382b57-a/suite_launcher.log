@@ -1,0 +1,41 @@
+{"profile_id": "single_cta_smoke", "returncode": 0, "timed_out": false, "interrupted": false, "termination_failed": false}
+{"profile_id": "full_gpu_smoke_bps1", "returncode": 0, "timed_out": false, "interrupted": false, "termination_failed": false}
+{"profile_id": "production_shape_bps1", "returncode": 0, "timed_out": false, "interrupted": false, "termination_failed": false}
+{
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_epilogue_probe/thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight",
+  "pass": true
+}
+bounded epilogue preflight passed
+launched run_id=thor-t5000-closure-maxn-20260814-d382b57-a-compute pid=1172061
+log=/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/launcher.log
+compute running: pid=1172061 log=results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/launcher.log
+{
+  "finding_count": 0,
+  "findings": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute"
+}
+compute audit passed
+launched run_id=thor-t5000-closure-maxn-20260814-d382b57-a-components pid=1190236
+log=/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_component_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-components/launcher.log
+component running: pid=1190236 log=results/sm110_gemm_component_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-components/launcher.log
+{
+  "errors": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_component_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-components"
+}
+component audit passed
+launched run_id=thor-t5000-closure-maxn-20260814-d382b57-a-full pid=1193202
+log=/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/launcher.log
+full-gemm running: pid=1193202 log=results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/launcher.log
+{
+  "errors": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full"
+}
+full-gemm audit passed
+SUITE_COMPLETE
+epilogue_preflight_dir=results/sm110_epilogue_probe/thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight
+compute_dir=results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute
+component_dir=results/sm110_gemm_component_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-components
+full_gemm_dir=results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full

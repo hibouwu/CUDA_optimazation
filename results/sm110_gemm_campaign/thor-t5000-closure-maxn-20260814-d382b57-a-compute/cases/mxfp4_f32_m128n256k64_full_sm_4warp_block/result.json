@@ -1,0 +1,43 @@
+{
+  "binary_sha256": "df77442cd767badb2ca557f7e166ded4806a0cb3180bdf43889d975fac8f88ac",
+  "case_id": "mxfp4_f32_m128n256k64_full_sm_4warp_block",
+  "completed_at_utc": "2026-08-14T06:18:47.480248+00:00",
+  "descriptor_u32": 146801792,
+  "expected_sass": "UTCOMMA",
+  "expected_sass_found": true,
+  "fingerprint": "25ffc8ef07af0669203ee1d8e9cd9cd29b4664e35219d31037229fdd22f943a0",
+  "ncu": {
+    "iters": 1000,
+    "log_sha256": "0ab23ab31a6bfe145920efa4aebfc8aa90802179b86afaf659d3f782e34ba090",
+    "metrics": [
+      "gpu__time_duration.avg",
+      "sm__cycles_elapsed.avg",
+      "sm__cycles_elapsed.avg.per_second",
+      "sm__inst_executed_pipe_tensor.sum",
+      "sm__inst_executed_pipe_tensor.sum.per_cycle_active",
+      "sm__throughput.avg.pct_of_peak_sustained_active"
+    ],
+    "permission_denied": false,
+    "policy": "one full-SM M128N256 case per precision",
+    "report_path": "ncu/profile.ncu-rep",
+    "report_sha256": "a264bc358d2eb6f380d9f19a85fefa39de8aaf8fe6bb62e9c564dae6a1610f15",
+    "returncode": 0,
+    "selected": true,
+    "termination_failed": false,
+    "timed_out": false,
+    "timeout_seconds": 300
+  },
+  "precision_id": "mxfp4_f32",
+  "rate_per_second_max": 1032103626000000.0,
+  "rate_per_second_mean": 1032093467300000.0,
+  "rate_per_second_median": 1032093467000000.0,
+  "rate_per_second_min": 1032083309000000.0,
+  "residency": "compute_oracle_smem_operands",
+  "sass_sha256": "aa8ae0b7098ac1ca498ae8c7fcbb6f3cc1af9fa7b0fb635ba44eedb359cbedcb",
+  "source_dense": true,
+  "source_sha256": "74e3bc2398a5770dad35ee5e21c9c30ec8b7ef29c0b408740a612214783f883b",
+  "status": "ok",
+  "timed_scope": "device_globaltimer_mma_issue_to_completion_barrier",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

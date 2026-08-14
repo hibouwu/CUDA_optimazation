@@ -1,0 +1,18 @@
+{
+  "binary_hash_path": "build/tmem.binary.sha256",
+  "binary_sha256": "246b3a9b79adfd4616d63375ffaac8658b10acfd5de428a5fc490922b2164bd3",
+  "case_id": "tmem_ld_32x32b_x8_warps1",
+  "rate_per_second_max": 686106346483.705,
+  "rate_per_second_median": 686032800943.295,
+  "rate_per_second_min": 685738776384.8708,
+  "rate_unit": "B/s",
+  "resource": "tmem.accumulator_readback",
+  "sass_sha256": "042a9ce10efa319943d3dc1e960b4f89cfffb8bfece14a62bb3ee374b2431a95",
+  "sass_tokens": [
+    "LDTM.x8"
+  ],
+  "source_path": "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+  "source_sha256": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+  "status": "ok",
+  "trial_count": 10
+}

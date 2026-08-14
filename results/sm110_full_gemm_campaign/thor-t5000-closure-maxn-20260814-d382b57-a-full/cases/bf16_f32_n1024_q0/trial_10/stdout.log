@@ -1,0 +1,4 @@
+GPU=NVIDIA Thor compute_capability=11.0 N=1024 mode=bf16
+reference_contract=bf16_f32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=0 reference_max_tolerance_ratio=0 reference_atol=0.05 reference_rtol=0.005
+numerical_contract=bf16_f32 mismatch_count=0 max_abs_error=0 max_tolerance_ratio=0 atol=0.05 rtol=0.005
+backend_id=bf16_q0_wmma_m128n64k16 N=1024 time_ms=0.25239360332489014 reference_time_ms=0.021894399076700211 work_unit=flop rate_per_second=8508470974344.3125 reference_rate_per_second=98083698962321.812 matched=1

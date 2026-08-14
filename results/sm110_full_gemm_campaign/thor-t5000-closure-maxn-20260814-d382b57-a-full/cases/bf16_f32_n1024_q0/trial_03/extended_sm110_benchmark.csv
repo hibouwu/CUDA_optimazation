@@ -1,0 +1,2 @@
+BackendId,N,Precision,Reference,TimeMs,ReferenceTimeMs,RatePerSecond,ReferenceRatePerSecond,Matched
+bf16_q0_wmma_m128n64k16,1024,bf16->fp32,cuBLAS BF16,0.25223040580749512,0.022115198895335197,8513976105002.1143,97104423892519.141,1

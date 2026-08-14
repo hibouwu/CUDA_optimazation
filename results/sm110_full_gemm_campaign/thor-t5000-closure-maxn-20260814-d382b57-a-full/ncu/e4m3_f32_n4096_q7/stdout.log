@@ -1,0 +1,13 @@
+==PROF== Connected to process 1199042 (/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/quant)
+==PROF== Profiling "<unnamed>::fp8_mma_m16n8k32_smem128x64_kernel(const __nv_fp8_e4m3 *, const __nv_fp8_e4m3 *, float *, int)": 0%....50%....100% - 10 passes
+GPU: NVIDIA Thor (sm_110)
+N=4096, backend=fp8_q7_mma_m16n8k32_smem128x64
+Benchmark policy: warmup=3, timed repeats=10
+reference_contract=fp8_e4m3_f32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=0 reference_max_tolerance_ratio=0 reference_atol=0.5 reference_rtol=0.05
+reference_time_ms=0.64929598569869995
+cuBLASLt FP8 E4M3 reference: 0.64929598569869995 ms, 211673.796875 GFLOP/s
+numerical_contract=fp8_e4m3_f32 mismatch_count=0 max_abs_error=0 max_tolerance_ratio=0 atol=0.5 rtol=0.05
+fp8_q7_mma_m16n8k32_smem128x64: 22.188594818115234 ms, 6194.12646484375 GFLOP/s, reference=211673.796875 GFLOP/s, ratio=0.0292626041918993x, matched=1
+backend_id=fp8_q7_mma_m16n8k32_smem128x64 time_ms=22.188594818115234 work_unit=flop rate_per_second=6194126464843.75 reference_rate_per_second=211673796875000 matched=1
+==PROF== Disconnected from process 1199042
+==PROF== Report: /xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/ncu/e4m3_f32_n4096_q7/profile.ncu-rep

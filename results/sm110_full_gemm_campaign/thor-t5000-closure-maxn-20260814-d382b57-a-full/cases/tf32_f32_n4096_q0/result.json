@@ -1,0 +1,34 @@
+{
+  "backend_id": "tf32_q0_wmma_m64n64k8",
+  "binary_hash_path": "build/extended.binary.sha256",
+  "binary_sha256": "47ccc94dcd73d8e45b86a1f947d237e06f04a236952b1b78ef454f571b2fd3a1",
+  "case_id": "tf32_f32_n4096_q0",
+  "custom_rate_per_second_max": 2359326100725.8276,
+  "custom_rate_per_second_median": 2337106618051.9453,
+  "custom_rate_per_second_min": 2313713930831.577,
+  "internal_repeats": 10,
+  "n": 4096,
+  "precision_id": "tf32_f32",
+  "ratio_of_paired_medians": 0.1260510646016314,
+  "reference_rate_per_second_median": 18540951045816.85,
+  "sass_evidence": {
+    "function_substring": "tf32_wmma_m64n64_kernel",
+    "matching_function_headers": [
+      "Function : _ZN51_GLOBAL__N__805b4c3f_22_extended_gemm_bench_cu_main23tf32_wmma_m64n64_kernelEPKfS1_Pfi"
+    ],
+    "sass_tokens": [
+      "HMMA.1684.F32.TF32",
+      "ST.E"
+    ]
+  },
+  "sass_path": "build/extended.sass.txt",
+  "sass_sha256": "b42b7e4bfc4284bb92ca88a14aa1c916569227c9e93ff64b2936021281eba768",
+  "self_test_command_path": "build/extended.self_test_command.json",
+  "self_test_command_sha256": "b94b5e7a168eb2c351cf42cb2af68d17ab2ecc7847e843d11677c4653d078bb5",
+  "self_test_path": "build/extended.self_test.log",
+  "self_test_sha256": "660d9fda648bcc447304e6aa4c39f24ee794ba81d36013970a010b764f5cd5d8",
+  "split": "holdout",
+  "status": "ok",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

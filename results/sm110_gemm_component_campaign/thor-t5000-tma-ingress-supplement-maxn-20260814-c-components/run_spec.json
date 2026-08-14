@@ -1,0 +1,469 @@
+{
+  "campaign": "sm110_gemm_component_closure",
+  "cases": [
+    {
+      "args": [
+        "--mode",
+        "l2-hit",
+        "--bytes",
+        "16777216",
+        "--tile-bytes",
+        "32768",
+        "--slots",
+        "4",
+        "--inflight",
+        "1",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "512",
+        "--blocks",
+        "1",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "128"
+      ],
+      "binary": "tma",
+      "id": "tma_l2_hit_32k",
+      "resource": "tma.l2_hit_ingress.serial32k",
+      "sass": [
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "args": [
+        "--mode",
+        "dram-stream",
+        "--bytes",
+        "268435456",
+        "--tile-bytes",
+        "32768",
+        "--slots",
+        "4",
+        "--inflight",
+        "1",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "32",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "128"
+      ],
+      "binary": "tma",
+      "id": "tma_dram_stream_32k",
+      "resource": "tma.dram_stream_ingress.serial32k",
+      "sass": [
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "args": [
+        "--mode",
+        "l2-hit",
+        "--bytes",
+        "16777216",
+        "--tile-bytes",
+        "32768",
+        "--slots",
+        "4",
+        "--inflight",
+        "4",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "512",
+        "--blocks",
+        "1",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "128"
+      ],
+      "binary": "tma",
+      "id": "tma_l2_hit_32k_inflight4",
+      "resource": "tma.l2_hit_ingress.inflight4",
+      "sass": [
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "args": [
+        "--mode",
+        "dram-stream",
+        "--bytes",
+        "268435456",
+        "--tile-bytes",
+        "32768",
+        "--slots",
+        "4",
+        "--inflight",
+        "4",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "32",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "128"
+      ],
+      "binary": "tma",
+      "id": "tma_dram_stream_32k_inflight4",
+      "resource": "tma.dram_stream_ingress.inflight4",
+      "sass": [
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "args": [
+        "--mode",
+        "l2-hit",
+        "--pattern",
+        "tc5a-ab",
+        "--bytes",
+        "16777216",
+        "--tile-bytes",
+        "16384",
+        "--slots",
+        "8",
+        "--inflight",
+        "8",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "1024",
+        "--blocks",
+        "1",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "192"
+      ],
+      "binary": "tma",
+      "id": "tma_l2_hit_tc5a_ab_inflight8",
+      "resource": "tma.l2_hit_ingress",
+      "sass": [
+        "UTMALDG.2D"
+      ]
+    },
+    {
+      "args": [
+        "--mode",
+        "dram-stream",
+        "--pattern",
+        "tc5a-ab",
+        "--bytes",
+        "268435456",
+        "--tile-bytes",
+        "16384",
+        "--slots",
+        "8",
+        "--inflight",
+        "8",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "32",
+        "--blocks-per-sm",
+        "1",
+        "--threads",
+        "192"
+      ],
+      "binary": "tma",
+      "id": "tma_dram_stream_tc5a_ab_inflight8",
+      "resource": "tma.dram_stream_ingress",
+      "sass": [
+        "UTMALDG.2D"
+      ]
+    },
+    {
+      "args": [
+        "--iters",
+        "16384",
+        "--copies-per-commit",
+        "32",
+        "--blocks-per-sm",
+        "1"
+      ],
+      "binary": "scale",
+      "id": "tmem_scale_ingress_32x128b_warpx4",
+      "resource": "tmem.scale_ingress",
+      "sass": [
+        "UTCCP.T.S.4x32dp128bit",
+        "LDTM.x4"
+      ]
+    },
+    {
+      "args": [
+        "--residency",
+        "hbm",
+        "--direction",
+        "read",
+        "--bytes",
+        "268435456",
+        "--iters",
+        "1024",
+        "--warmup-iters",
+        "64",
+        "--blocks-per-sm",
+        "4",
+        "--threads",
+        "256"
+      ],
+      "binary": "memory",
+      "id": "hbm_read_aggregate",
+      "resource": "hbm.read",
+      "sass": [
+        "LDG.E.128"
+      ]
+    },
+    {
+      "args": [
+        "--residency",
+        "hbm",
+        "--direction",
+        "write",
+        "--bytes",
+        "268435456",
+        "--iters",
+        "1024",
+        "--warmup-iters",
+        "64",
+        "--blocks-per-sm",
+        "4",
+        "--threads",
+        "256"
+      ],
+      "binary": "memory",
+      "id": "hbm_write_aggregate",
+      "resource": "hbm.write",
+      "sass": [
+        "STG.E.128"
+      ]
+    },
+    {
+      "args": [
+        "--residency",
+        "l2",
+        "--direction",
+        "read",
+        "--bytes",
+        "16777216",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "64",
+        "--blocks-per-sm",
+        "4",
+        "--threads",
+        "256"
+      ],
+      "binary": "memory",
+      "id": "l2_read_aggregate",
+      "resource": "l2.read",
+      "sass": [
+        "LDG.E.128"
+      ]
+    },
+    {
+      "args": [
+        "--residency",
+        "l2",
+        "--direction",
+        "write",
+        "--bytes",
+        "16777216",
+        "--iters",
+        "4096",
+        "--warmup-iters",
+        "64",
+        "--blocks-per-sm",
+        "4",
+        "--threads",
+        "256"
+      ],
+      "binary": "memory",
+      "id": "l2_write_aggregate",
+      "resource": "l2.write",
+      "sass": [
+        "STG.E.128"
+      ]
+    },
+    {
+      "args": [
+        "--registers",
+        "8",
+        "--warps",
+        "1",
+        "--iters",
+        "10000",
+        "--blocks-per-sm",
+        "1"
+      ],
+      "binary": "tmem",
+      "id": "tmem_ld_32x32b_x8_warps1",
+      "resource": "tmem.accumulator_readback",
+      "sass": [
+        "LDTM.x8"
+      ]
+    },
+    {
+      "args": [
+        "--registers",
+        "8",
+        "--warps",
+        "4",
+        "--iters",
+        "10000",
+        "--blocks-per-sm",
+        "1"
+      ],
+      "binary": "tmem",
+      "id": "tmem_ld_32x32b_x8_warps4",
+      "resource": "tmem.accumulator_readback",
+      "sass": [
+        "LDTM.x8"
+      ]
+    },
+    {
+      "args": [
+        "--registers",
+        "16",
+        "--warps",
+        "1",
+        "--iters",
+        "10000",
+        "--blocks-per-sm",
+        "1"
+      ],
+      "binary": "tmem",
+      "id": "tmem_ld_32x32b_x16_warps1",
+      "resource": "tmem.accumulator_readback",
+      "sass": [
+        "LDTM.x16"
+      ]
+    },
+    {
+      "args": [
+        "--registers",
+        "16",
+        "--warps",
+        "4",
+        "--iters",
+        "10000",
+        "--blocks-per-sm",
+        "1"
+      ],
+      "binary": "tmem",
+      "id": "tmem_ld_32x32b_x16_warps4",
+      "resource": "tmem.accumulator_readback",
+      "sass": [
+        "LDTM.x16"
+      ]
+    },
+    {
+      "args": [
+        "--rows",
+        "4096",
+        "--cols",
+        "1024",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "normal",
+        "--seed",
+        "1234",
+        "--warmup",
+        "10",
+        "--iterations",
+        "100"
+      ],
+      "binary": "epilogue",
+      "id": "nvfp4_requant_4096x1024_normal",
+      "resource": "epilogue.nvfp4_requant",
+      "sass": [
+        "LDTM.x2",
+        "STTM.x2"
+      ]
+    },
+    {
+      "args": [
+        "--rows",
+        "4096",
+        "--cols",
+        "1024",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "outlier",
+        "--seed",
+        "1234",
+        "--warmup",
+        "10",
+        "--iterations",
+        "100"
+      ],
+      "binary": "epilogue",
+      "id": "nvfp4_requant_4096x1024_outlier",
+      "resource": "epilogue.nvfp4_requant",
+      "sass": [
+        "LDTM.x2",
+        "STTM.x2"
+      ]
+    },
+    {
+      "args": [
+        "--rows",
+        "4096",
+        "--cols",
+        "1024",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "constant",
+        "--seed",
+        "1234",
+        "--warmup",
+        "10",
+        "--iterations",
+        "100"
+      ],
+      "binary": "epilogue",
+      "id": "nvfp4_requant_4096x1024_constant",
+      "resource": "epilogue.nvfp4_requant",
+      "sass": [
+        "LDTM.x2",
+        "STTM.x2"
+      ]
+    }
+  ],
+  "expected_sm_count": 20,
+  "generator": "microbench/sm110_gemm_component_campaign/run_component_campaign.py",
+  "generator_sha256": "de61ad1a7f09e9ef86a0dcbc5ca2aac21e6388647ea32ab42ebd9525b4153c24",
+  "host_compiler": null,
+  "nvcc_host_undef_gnu_source": true,
+  "run_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c-components",
+  "schema_version": 1,
+  "source_dependencies": {
+    "GEMMsm110/include/backends/tc5_persistent.cuh": "ea13ecf4d98624dc27f117230dc05f4ada3d2e135bd5e6672de5e3960c9f4464",
+    "GEMMsm110/include/gemm_common.cuh": "c3a9eb45393f11949fd64dfb91e07cb890b745286a41e9c16092cc626710e77c",
+    "GEMMsm110/include/requant/e2m1_encode.cuh": "d87b61157aec9f89886eba17af65e7570dcea48ad2f47ff1cbedee38071da1e6",
+    "GEMMsm110/include/requant/pack_fp4.cuh": "8ceaf44d30d094ebc7c60fd5bdb113c1ba00e38e0dc25961992a3a691e36dbd0",
+    "GEMMsm110/include/requant/requant_backend.cuh": "5c49c170623152a0de7aadfdef2da26a44bf067ad45562e81886666c77023cb8",
+    "GEMMsm110/include/requant/scale_policy.cuh": "5b74b0ad62dc621cf7c8728d8684a8a9d844b5fb5fe9ccb53d3d31288cd1afd9",
+    "GEMMsm110/include/requant/sm110_tcgen05_epilogue.cuh": "f59f1c6b2cc36b4869060939e516b8f6243112acf770bc8af89d5c51c7ac7ece",
+    "GEMMsm110/include/sm110_ptx_helpers.cuh": "78b391416252a6a913c358625e57cff9dc42a2441e424707bb5664309344adf0",
+    "GEMMsm110/tests/requant_epilogue_benchmark.cu": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+    "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+    "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+    "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu": "e6345041d5c6147709fe8d3df63157e3c3de1bc402a05e901d62bfbbc8f8e5c8",
+    "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c"
+  },
+  "static_only": false,
+  "timing": "earliest CTA globaltimer start to latest CTA stop for TMA/TMEM/HBM/L2; CUDA events for epilogue",
+  "trial_timeout_seconds": 120,
+  "trials": 10
+}

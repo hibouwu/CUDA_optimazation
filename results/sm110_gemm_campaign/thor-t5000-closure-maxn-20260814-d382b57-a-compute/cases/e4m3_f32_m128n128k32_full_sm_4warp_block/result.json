@@ -1,0 +1,26 @@
+{
+  "binary_sha256": "ad916229bc7ab812705353de64502cc2f872293ad58eedf805845169ff0a4a0d",
+  "case_id": "e4m3_f32_m128n128k32_full_sm_4warp_block",
+  "completed_at_utc": "2026-08-14T06:16:47.396566+00:00",
+  "descriptor_u32": 136314896,
+  "expected_sass": "UTCQMMA",
+  "expected_sass_found": true,
+  "fingerprint": "971ee4e0e236dbb57db53bf1682944af0658463269f52e47ae0544ee7d1d1ef6",
+  "ncu": {
+    "policy": "one full-SM M128N256 case per precision",
+    "selected": false
+  },
+  "precision_id": "e4m3_f32",
+  "rate_per_second_max": 439337668400000.0,
+  "rate_per_second_mean": 414492825410000.0,
+  "rate_per_second_median": 411732646500000.0,
+  "rate_per_second_min": 411722946400000.0,
+  "residency": "compute_oracle_smem_operands",
+  "sass_sha256": "4e66d0b91d272edfb48ec825bc2720123e61d1a2ac062ba7bc5dfa8d25767ec0",
+  "source_dense": true,
+  "source_sha256": "1fdccd86c49cc08a52e8667814d01443288ec61327c2b73d299c5de4d000de39",
+  "status": "ok",
+  "timed_scope": "device_globaltimer_mma_issue_to_completion_barrier",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

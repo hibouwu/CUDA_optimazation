@@ -1,0 +1,19 @@
+{
+  "binary_hash_path": "build/scale.binary.sha256",
+  "binary_sha256": "643d1a83d7a42bc18d2a8dcb9aeda926e973da09c306825fba7c7034802ff641",
+  "case_id": "tmem_scale_ingress_32x128b_warpx4",
+  "rate_per_second_max": 239258887418.42743,
+  "rate_per_second_median": 239258887418.42743,
+  "rate_per_second_min": 239247969334.6719,
+  "rate_unit": "B/s",
+  "resource": "tmem.scale_ingress",
+  "sass_sha256": "8a32d658c5177b29d9ab66f5730a67813a8386fca8d8bebf03ad266d086f534c",
+  "sass_tokens": [
+    "UTCCP.T.S.4x32dp128bit",
+    "LDTM.x4"
+  ],
+  "source_path": "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
+  "source_sha256": "e6345041d5c6147709fe8d3df63157e3c3de1bc402a05e901d62bfbbc8f8e5c8",
+  "status": "ok",
+  "trial_count": 10
+}

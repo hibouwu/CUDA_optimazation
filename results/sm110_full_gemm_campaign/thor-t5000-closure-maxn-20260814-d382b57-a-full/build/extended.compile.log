@@ -1,0 +1,6 @@
+/xplorer/shijy/CUDA_optimazation/GEMMquant_sm110/src/extended_gemm_bench.cu(201): warning #177-D: function "<unnamed>::e5m2_mma_m16n8k32_smem128x64_kernel" was declared but never referenced
+  __attribute__((global)) void e5m2_mma_m16n8k32_smem128x64_kernel(
+                               ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+

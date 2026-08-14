@@ -1,0 +1,14 @@
+{
+  "a_scale_data_id": null,
+  "a_type": "bf16",
+  "b_scale_data_id": null,
+  "b_type": "bf16",
+  "d_type": "f32",
+  "kind": "f16",
+  "m": 128,
+  "n": 128,
+  "primary_source": "https://docs.nvidia.com/cuda/archive/13.0.0/parallel-thread-execution/index.html#tcgen05-instruction-descriptor",
+  "saturate": false,
+  "scale_type": null,
+  "value_u32": 136316048
+}

@@ -1,0 +1,17 @@
+[
+  "/usr/local/cuda/bin/nvcc",
+  "-O3",
+  "-std=c++17",
+  "-Xcompiler=-U_GNU_SOURCE",
+  "-D_DEFAULT_SOURCE",
+  "-D_POSIX_C_SOURCE=200809L",
+  "-D_XOPEN_SOURCE=700",
+  "-D_XOPEN_SOURCE_EXTENDED=1",
+  "-D_LARGEFILE64_SOURCE=1",
+  "-D_ATFILE_SOURCE=1",
+  "-gencode",
+  "arch=compute_110a,code=sm_110a",
+  "/xplorer/shijy/CUDA_optimazation/microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
+  "-o",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/scale"
+]

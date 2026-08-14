@@ -1,0 +1,12 @@
+[
+  "/usr/local/cuda/bin/nvcc",
+  "-O3",
+  "-std=c++17",
+  "--expt-relaxed-constexpr",
+  "-gencode",
+  "arch=compute_110a,code=sm_110a",
+  "/xplorer/shijy/CUDA_optimazation/GEMMquant_sm110/src/extended_gemm_bench.cu",
+  "-lcublas",
+  "-o",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/extended"
+]

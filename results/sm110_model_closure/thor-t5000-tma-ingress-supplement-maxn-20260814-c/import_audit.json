@@ -1,0 +1,37 @@
+{
+  "campaign_sources": {
+    "base": {
+      "expected_commit": "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8",
+      "provides": [
+        "epilogue_preflight",
+        "compute",
+        "full_gemm"
+      ],
+      "suite_id": "thor-t5000-closure-maxn-20260814-d382b57-a"
+    },
+    "component_supplement": {
+      "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
+      "provides": [
+        "component"
+      ],
+      "suite_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c"
+    }
+  },
+  "capacity_count": 54,
+  "observation_count": 15,
+  "output": "results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/model_inputs.json",
+  "overcurrent_deltas": {
+    "thor-t5000-closure-maxn-20260814-d382b57-a": {
+      "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc2_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc3_event_cnt": 179
+    },
+    "thor-t5000-tma-ingress-supplement-maxn-20260814-c": {
+      "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc2_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc3_event_cnt": 0
+    }
+  },
+  "pass": true,
+  "qualification": "closure_qualified"
+}

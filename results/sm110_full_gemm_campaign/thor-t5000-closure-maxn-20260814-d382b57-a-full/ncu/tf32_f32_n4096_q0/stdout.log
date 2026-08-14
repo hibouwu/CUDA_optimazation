@@ -1,0 +1,8 @@
+==PROF== Connected to process 1199365 (/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/extended)
+==PROF== Profiling "<unnamed>::tf32_wmma_m64n64_kernel(const float *, const float *, float *, int)": 0%....50%....100% - 10 passes
+GPU=NVIDIA Thor compute_capability=11.0 N=4096 mode=tf32
+reference_contract=tf32_f32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=1.03712e-05 reference_max_tolerance_ratio=0.000202218 reference_atol=0.05 reference_rtol=0.005
+numerical_contract=tf32_f32 mismatch_count=0 max_abs_error=1.23382e-05 max_tolerance_ratio=0.000238621 atol=0.05 rtol=0.005
+backend_id=tf32_q0_wmma_m64n64k8 N=4096 time_ms=59.642986297607422 reference_time_ms=7.4255485534667969 work_unit=flop rate_per_second=2304360696934.3413 reference_rate_per_second=18508929337999.32 matched=1
+==PROF== Disconnected from process 1199365
+==PROF== Report: /xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/ncu/tf32_f32_n4096_q0/profile.ncu-rep

@@ -1,0 +1,20 @@
+[
+  "/usr/local/cuda/bin/nvcc",
+  "-O3",
+  "-std=c++17",
+  "--expt-relaxed-constexpr",
+  "-diag-suppress=20012",
+  "-diag-suppress=20013",
+  "-diag-suppress=20015",
+  "-DTC3_SM110_HOST_HAS_TCGEN05=1",
+  "-DGEMM_SM110_ENABLE_CUTLASS=0",
+  "-gencode",
+  "arch=compute_110a,code=sm_110a",
+  "-I/xplorer/shijy/CUDA_optimazation/GEMMsm110/include",
+  "/xplorer/shijy/CUDA_optimazation/GEMMsm110/src/main.cu",
+  "-lcuda",
+  "-lcublasLt",
+  "-lcublas",
+  "-o",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/fp16"
+]

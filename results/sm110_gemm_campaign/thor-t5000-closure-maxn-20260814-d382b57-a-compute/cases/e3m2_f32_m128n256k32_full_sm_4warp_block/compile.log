@@ -1,0 +1,10 @@
+/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/e3m2_f32_m128n256k32_full_sm_4warp_block/source.cu(66): warning #177-D: variable "tsa" was declared but never referenced
+      unsigned tsa=tmem+256, tsb=tmem+384;
+               ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/e3m2_f32_m128n256k32_full_sm_4warp_block/source.cu(66): warning #177-D: variable "tsb" was declared but never referenced
+      unsigned tsa=tmem+256, tsb=tmem+384;
+                             ^
+

@@ -1,0 +1,3 @@
+BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched
+cublas_tc,cuBLASLt Matmul heuristic,4096,fp16->fp32,cuBLASLt Matmul heuristic,2.1464862823486328,64029.73828125,1,1
+tc5a,tc5a overlapped epilogue M128N256K64 TCGen05 GEMM,4096,fp16->fp32,cuBLASLt Matmul heuristic,2.3678956031799316,58042.66015625,0.90649533271789551,1

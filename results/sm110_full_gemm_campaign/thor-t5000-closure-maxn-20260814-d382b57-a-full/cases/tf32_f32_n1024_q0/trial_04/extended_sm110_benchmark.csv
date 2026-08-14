@@ -1,0 +1,2 @@
+BackendId,N,Precision,Reference,TimeMs,ReferenceTimeMs,RatePerSecond,ReferenceRatePerSecond,Matched
+tf32_q0_wmma_m64n64k8,1024,tf32->fp32,cuBLAS TF32,0.82388162612915039,0.052243202924728394,2606543925599.5303,41105512828033.875,1

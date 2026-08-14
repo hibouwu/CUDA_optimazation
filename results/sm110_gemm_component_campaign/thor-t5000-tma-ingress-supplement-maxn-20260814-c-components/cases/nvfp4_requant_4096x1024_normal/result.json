@@ -1,0 +1,19 @@
+{
+  "binary_hash_path": "build/epilogue.binary.sha256",
+  "binary_sha256": "b2e79733a751b2e719077061fa61ad5057408de796d7497c5909b09d24f15d3a",
+  "case_id": "nvfp4_requant_4096x1024_normal",
+  "rate_per_second_max": 2460106000.0,
+  "rate_per_second_median": 2459707500.0,
+  "rate_per_second_min": 2458722000.0,
+  "rate_unit": "element/s",
+  "resource": "epilogue.nvfp4_requant",
+  "sass_sha256": "19d14ef7fdecc29344bf507f4d8400d52eb6213f2c020580a687092544e0003e",
+  "sass_tokens": [
+    "LDTM.x2",
+    "STTM.x2"
+  ],
+  "source_path": "GEMMsm110/tests/requant_epilogue_benchmark.cu",
+  "source_sha256": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+  "status": "ok",
+  "trial_count": 10
+}

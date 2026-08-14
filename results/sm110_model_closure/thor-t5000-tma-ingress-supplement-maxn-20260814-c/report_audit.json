@@ -1,0 +1,6 @@
+{
+  "finding_count": 1,
+  "output_json": "results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_analysis.json",
+  "output_markdown": "results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_summary.md",
+  "pass": true
+}

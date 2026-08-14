@@ -1,0 +1,30 @@
+{
+  "backend_id": "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol",
+  "binary_hash_path": "build/quant.binary.sha256",
+  "binary_sha256": "8de1bdb990fb1d2050477460d2a02a50dfa4f685724b055d84e30a696fec0ba2",
+  "case_id": "s8_s32_n1024_q15",
+  "custom_rate_per_second_max": 17727873962546.57,
+  "custom_rate_per_second_median": 17332733614519.78,
+  "custom_rate_per_second_min": 16887404879307.723,
+  "internal_repeats": 10,
+  "n": 1024,
+  "precision_id": "s8_s32",
+  "ratio_of_paired_medians": 0.14045081705159507,
+  "reference_rate_per_second_median": 123407851790228.77,
+  "sass_evidence": {
+    "function_substring": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+    "matching_function_headers": [
+      "Function : _ZN48_GLOBAL__N__a92d5bf9_19_quant_gemm_bench_cu_main46int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernelEPKaS1_Pii"
+    ],
+    "sass_tokens": [
+      "IMMA.16816.S8.S8",
+      "STG"
+    ]
+  },
+  "sass_path": "build/quant.sass.txt",
+  "sass_sha256": "d6d461d3e5918bf0736e15bf0a106353474496bf6e984eea55cec38f6a7e9015",
+  "split": "calibration",
+  "status": "ok",
+  "trial_count": 10,
+  "work_unit": "operation"
+}

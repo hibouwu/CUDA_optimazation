@@ -1,0 +1,2 @@
+BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched
+fp8_q7_mma_m16n8k32_smem128x64,FP8 q7 warp MMA M16N8K32 shared 128x64 tile,4096,fp8_e4m3->fp32,cuBLASLt FP8 E4M3,22.181272506713867,6196.1708984375,0.028557425364851952,1

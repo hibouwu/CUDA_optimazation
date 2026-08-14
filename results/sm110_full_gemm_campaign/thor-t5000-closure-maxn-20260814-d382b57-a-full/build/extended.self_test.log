@@ -1,0 +1,1 @@
+self_test=pass tf32_tie_even_down=1 tf32_tie_odd_up=1 tf32_infinity_unchanged=1 tf32_nan_payload_unchanged=1

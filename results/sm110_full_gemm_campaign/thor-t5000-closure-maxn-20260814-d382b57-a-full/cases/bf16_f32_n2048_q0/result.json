@@ -1,0 +1,34 @@
+{
+  "backend_id": "bf16_q0_wmma_m128n64k16",
+  "binary_hash_path": "build/extended.binary.sha256",
+  "binary_sha256": "47ccc94dcd73d8e45b86a1f947d237e06f04a236952b1b78ef454f571b2fd3a1",
+  "case_id": "bf16_f32_n2048_q0",
+  "custom_rate_per_second_max": 9238729910178.742,
+  "custom_rate_per_second_median": 9175069232890.215,
+  "custom_rate_per_second_min": 9056037332068.17,
+  "internal_repeats": 10,
+  "n": 2048,
+  "precision_id": "bf16_f32",
+  "ratio_of_paired_medians": 0.0704607941318489,
+  "reference_rate_per_second_median": 130215240204665.84,
+  "sass_evidence": {
+    "function_substring": "wmma_m128n64_kernelI13__nv_bfloat16fLi16",
+    "matching_function_headers": [
+      "Function : _ZN51_GLOBAL__N__805b4c3f_22_extended_gemm_bench_cu_main19wmma_m128n64_kernelI13__nv_bfloat16fLi16EEEvPKT_S4_PT0_i"
+    ],
+    "sass_tokens": [
+      "HMMA.16816.F32.BF16",
+      "STG"
+    ]
+  },
+  "sass_path": "build/extended.sass.txt",
+  "sass_sha256": "b42b7e4bfc4284bb92ca88a14aa1c916569227c9e93ff64b2936021281eba768",
+  "self_test_command_path": "build/extended.self_test_command.json",
+  "self_test_command_sha256": "b94b5e7a168eb2c351cf42cb2af68d17ab2ecc7847e843d11677c4653d078bb5",
+  "self_test_path": "build/extended.self_test.log",
+  "self_test_sha256": "660d9fda648bcc447304e6aa4c39f24ee794ba81d36013970a010b764f5cd5d8",
+  "split": "calibration",
+  "status": "ok",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

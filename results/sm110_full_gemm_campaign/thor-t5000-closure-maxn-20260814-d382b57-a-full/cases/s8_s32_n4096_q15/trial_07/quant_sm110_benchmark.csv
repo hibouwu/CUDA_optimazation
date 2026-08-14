@@ -1,0 +1,2 @@
+BackendId,Version,N,Precision,Reference,TimeMs,GFLOPS,RatioToReference,Matched
+int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol,INT8 q15 WMMA M128N64K16 4-warp reuse-A B-col layout,4096,int8->int32,cuBLAS INT8,6.6330819129943848,20720.224609375,0.091465882956981659,1

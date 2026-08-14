@@ -1,0 +1,11 @@
+{
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components",
+  "status": "complete",
+  "case_count": 18
+}
+{
+  "errors": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components"
+}
+COMPONENT_SUPPLEMENT_COMPLETE

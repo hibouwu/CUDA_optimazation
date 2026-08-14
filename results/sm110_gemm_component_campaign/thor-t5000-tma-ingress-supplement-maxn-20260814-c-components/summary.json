@@ -1,0 +1,337 @@
+{
+  "case_count": 18,
+  "results": [
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_l2_hit_32k",
+      "rate_per_second_max": 68689266647.01451,
+      "rate_per_second_median": 68615102753.6069,
+      "rate_per_second_min": 68562386595.83163,
+      "rate_unit": "B/s",
+      "resource": "tma.l2_hit_ingress.serial32k",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.3D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_dram_stream_32k",
+      "rate_per_second_max": 262051463077.1009,
+      "rate_per_second_median": 261555926044.65308,
+      "rate_per_second_min": 257118931875.16473,
+      "rate_unit": "B/s",
+      "resource": "tma.dram_stream_ingress.serial32k",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.3D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_l2_hit_32k_inflight4",
+      "rate_per_second_max": 129417877750.00772,
+      "rate_per_second_median": 129397914481.39693,
+      "rate_per_second_min": 129385939476.20076,
+      "rate_unit": "B/s",
+      "resource": "tma.l2_hit_ingress.inflight4",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.3D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_dram_stream_32k_inflight4",
+      "rate_per_second_max": 260761151020.9918,
+      "rate_per_second_median": 259193015662.5542,
+      "rate_per_second_min": 251165704054.34943,
+      "rate_unit": "B/s",
+      "resource": "tma.dram_stream_ingress.inflight4",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.3D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_l2_hit_tc5a_ab_inflight8",
+      "rate_per_second_max": 194528971615.85553,
+      "rate_per_second_median": 193366116675.77954,
+      "rate_per_second_min": 190523166373.93253,
+      "rate_unit": "B/s",
+      "resource": "tma.l2_hit_ingress",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.2D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tma.binary.sha256",
+      "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+      "case_id": "tma_dram_stream_tc5a_ab_inflight8",
+      "rate_per_second_max": 205028922266.7236,
+      "rate_per_second_median": 185509218948.45618,
+      "rate_per_second_min": 171957138191.20544,
+      "rate_unit": "B/s",
+      "resource": "tma.dram_stream_ingress",
+      "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+      "sass_tokens": [
+        "UTMALDG.2D"
+      ],
+      "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+      "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/scale.binary.sha256",
+      "binary_sha256": "643d1a83d7a42bc18d2a8dcb9aeda926e973da09c306825fba7c7034802ff641",
+      "case_id": "tmem_scale_ingress_32x128b_warpx4",
+      "rate_per_second_max": 239258887418.42743,
+      "rate_per_second_median": 239258887418.42743,
+      "rate_per_second_min": 239247969334.6719,
+      "rate_unit": "B/s",
+      "resource": "tmem.scale_ingress",
+      "sass_sha256": "8a32d658c5177b29d9ab66f5730a67813a8386fca8d8bebf03ad266d086f534c",
+      "sass_tokens": [
+        "UTCCP.T.S.4x32dp128bit",
+        "LDTM.x4"
+      ],
+      "source_path": "microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu",
+      "source_sha256": "e6345041d5c6147709fe8d3df63157e3c3de1bc402a05e901d62bfbbc8f8e5c8",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/memory.binary.sha256",
+      "binary_sha256": "7388a6f19f0965a3729ccd6a3a684a45c9f06bae9a75b51f8dd7ad3dd82cbec1",
+      "case_id": "hbm_read_aggregate",
+      "rate_per_second_max": 260905514137.5782,
+      "rate_per_second_median": 253588195732.17868,
+      "rate_per_second_min": 251743077417.08957,
+      "rate_unit": "B/s",
+      "resource": "hbm.read",
+      "sass_sha256": "720b5559efa56e4556ec6d94e3820932d3bd844ed58f3aca2252983e219fd9af",
+      "sass_tokens": [
+        "LDG.E.128"
+      ],
+      "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+      "source_sha256": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/memory.binary.sha256",
+      "binary_sha256": "7388a6f19f0965a3729ccd6a3a684a45c9f06bae9a75b51f8dd7ad3dd82cbec1",
+      "case_id": "hbm_write_aggregate",
+      "rate_per_second_max": 201583328527.21225,
+      "rate_per_second_median": 201157941794.02274,
+      "rate_per_second_min": 193239147210.92822,
+      "rate_unit": "B/s",
+      "resource": "hbm.write",
+      "sass_sha256": "720b5559efa56e4556ec6d94e3820932d3bd844ed58f3aca2252983e219fd9af",
+      "sass_tokens": [
+        "STG.E.128"
+      ],
+      "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+      "source_sha256": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/memory.binary.sha256",
+      "binary_sha256": "7388a6f19f0965a3729ccd6a3a684a45c9f06bae9a75b51f8dd7ad3dd82cbec1",
+      "case_id": "l2_read_aggregate",
+      "rate_per_second_max": 1514756519815.635,
+      "rate_per_second_median": 1505111656194.0369,
+      "rate_per_second_min": 1504662807226.8086,
+      "rate_unit": "B/s",
+      "resource": "l2.read",
+      "sass_sha256": "720b5559efa56e4556ec6d94e3820932d3bd844ed58f3aca2252983e219fd9af",
+      "sass_tokens": [
+        "LDG.E.128"
+      ],
+      "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+      "source_sha256": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/memory.binary.sha256",
+      "binary_sha256": "7388a6f19f0965a3729ccd6a3a684a45c9f06bae9a75b51f8dd7ad3dd82cbec1",
+      "case_id": "l2_write_aggregate",
+      "rate_per_second_max": 556683500454.5786,
+      "rate_per_second_median": 545416182338.70905,
+      "rate_per_second_min": 517842479389.35065,
+      "rate_unit": "B/s",
+      "resource": "l2.write",
+      "sass_sha256": "720b5559efa56e4556ec6d94e3820932d3bd844ed58f3aca2252983e219fd9af",
+      "sass_tokens": [
+        "STG.E.128"
+      ],
+      "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+      "source_sha256": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tmem.binary.sha256",
+      "binary_sha256": "246b3a9b79adfd4616d63375ffaac8658b10acfd5de428a5fc490922b2164bd3",
+      "case_id": "tmem_ld_32x32b_x8_warps1",
+      "rate_per_second_max": 686106346483.705,
+      "rate_per_second_median": 686032800943.295,
+      "rate_per_second_min": 685738776384.8708,
+      "rate_unit": "B/s",
+      "resource": "tmem.accumulator_readback",
+      "sass_sha256": "042a9ce10efa319943d3dc1e960b4f89cfffb8bfece14a62bb3ee374b2431a95",
+      "sass_tokens": [
+        "LDTM.x8"
+      ],
+      "source_path": "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+      "source_sha256": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tmem.binary.sha256",
+      "binary_sha256": "246b3a9b79adfd4616d63375ffaac8658b10acfd5de428a5fc490922b2164bd3",
+      "case_id": "tmem_ld_32x32b_x8_warps4",
+      "rate_per_second_max": 19783616692426.586,
+      "rate_per_second_median": 19768339768339.77,
+      "rate_per_second_min": 19753086419753.086,
+      "rate_unit": "B/s",
+      "resource": "tmem.accumulator_readback",
+      "sass_sha256": "042a9ce10efa319943d3dc1e960b4f89cfffb8bfece14a62bb3ee374b2431a95",
+      "sass_tokens": [
+        "LDTM.x8"
+      ],
+      "source_path": "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+      "source_sha256": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tmem.binary.sha256",
+      "binary_sha256": "246b3a9b79adfd4616d63375ffaac8658b10acfd5de428a5fc490922b2164bd3",
+      "case_id": "tmem_ld_32x32b_x16_warps1",
+      "rate_per_second_max": 1343690951081.2512,
+      "rate_per_second_median": 1343479405431.9258,
+      "rate_per_second_min": 1343267918984.1536,
+      "rate_unit": "B/s",
+      "resource": "tmem.accumulator_readback",
+      "sass_sha256": "042a9ce10efa319943d3dc1e960b4f89cfffb8bfece14a62bb3ee374b2431a95",
+      "sass_tokens": [
+        "LDTM.x16"
+      ],
+      "source_path": "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+      "source_sha256": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/tmem.binary.sha256",
+      "binary_sha256": "246b3a9b79adfd4616d63375ffaac8658b10acfd5de428a5fc490922b2164bd3",
+      "case_id": "tmem_ld_32x32b_x16_warps4",
+      "rate_per_second_max": 34316353887399.465,
+      "rate_per_second_median": 34270414993306.56,
+      "rate_per_second_min": 34270414993306.56,
+      "rate_unit": "B/s",
+      "resource": "tmem.accumulator_readback",
+      "sass_sha256": "042a9ce10efa319943d3dc1e960b4f89cfffb8bfece14a62bb3ee374b2431a95",
+      "sass_tokens": [
+        "LDTM.x16"
+      ],
+      "source_path": "microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu",
+      "source_sha256": "0572f78fab534a569b73b80f30d15779d66717175e83376126ac0c78b1012ec4",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/epilogue.binary.sha256",
+      "binary_sha256": "b2e79733a751b2e719077061fa61ad5057408de796d7497c5909b09d24f15d3a",
+      "case_id": "nvfp4_requant_4096x1024_normal",
+      "rate_per_second_max": 2460106000.0,
+      "rate_per_second_median": 2459707500.0,
+      "rate_per_second_min": 2458722000.0,
+      "rate_unit": "element/s",
+      "resource": "epilogue.nvfp4_requant",
+      "sass_sha256": "19d14ef7fdecc29344bf507f4d8400d52eb6213f2c020580a687092544e0003e",
+      "sass_tokens": [
+        "LDTM.x2",
+        "STTM.x2"
+      ],
+      "source_path": "GEMMsm110/tests/requant_epilogue_benchmark.cu",
+      "source_sha256": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/epilogue.binary.sha256",
+      "binary_sha256": "b2e79733a751b2e719077061fa61ad5057408de796d7497c5909b09d24f15d3a",
+      "case_id": "nvfp4_requant_4096x1024_outlier",
+      "rate_per_second_max": 2460369000.0,
+      "rate_per_second_median": 2459751000.0,
+      "rate_per_second_min": 2459426000.0,
+      "rate_unit": "element/s",
+      "resource": "epilogue.nvfp4_requant",
+      "sass_sha256": "19d14ef7fdecc29344bf507f4d8400d52eb6213f2c020580a687092544e0003e",
+      "sass_tokens": [
+        "LDTM.x2",
+        "STTM.x2"
+      ],
+      "source_path": "GEMMsm110/tests/requant_epilogue_benchmark.cu",
+      "source_sha256": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+      "status": "ok",
+      "trial_count": 10
+    },
+    {
+      "binary_hash_path": "build/epilogue.binary.sha256",
+      "binary_sha256": "b2e79733a751b2e719077061fa61ad5057408de796d7497c5909b09d24f15d3a",
+      "case_id": "nvfp4_requant_4096x1024_constant",
+      "rate_per_second_max": 2460171000.0,
+      "rate_per_second_median": 2459871500.0,
+      "rate_per_second_min": 2459561000.0,
+      "rate_unit": "element/s",
+      "resource": "epilogue.nvfp4_requant",
+      "sass_sha256": "19d14ef7fdecc29344bf507f4d8400d52eb6213f2c020580a687092544e0003e",
+      "sass_tokens": [
+        "LDTM.x2",
+        "STTM.x2"
+      ],
+      "source_path": "GEMMsm110/tests/requant_epilogue_benchmark.cu",
+      "source_sha256": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+      "status": "ok",
+      "trial_count": 10
+    }
+  ],
+  "run_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c-components",
+  "schema_version": 1,
+  "status": "complete",
+  "updated_at_utc": "2026-08-14T10:19:44.964052+00:00"
+}

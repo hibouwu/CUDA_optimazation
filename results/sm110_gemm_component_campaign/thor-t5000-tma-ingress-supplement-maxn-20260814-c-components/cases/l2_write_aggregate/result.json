@@ -1,0 +1,18 @@
+{
+  "binary_hash_path": "build/memory.binary.sha256",
+  "binary_sha256": "7388a6f19f0965a3729ccd6a3a684a45c9f06bae9a75b51f8dd7ad3dd82cbec1",
+  "case_id": "l2_write_aggregate",
+  "rate_per_second_max": 556683500454.5786,
+  "rate_per_second_median": 545416182338.70905,
+  "rate_per_second_min": 517842479389.35065,
+  "rate_unit": "B/s",
+  "resource": "l2.write",
+  "sass_sha256": "720b5559efa56e4556ec6d94e3820932d3bd844ed58f3aca2252983e219fd9af",
+  "sass_tokens": [
+    "STG.E.128"
+  ],
+  "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+  "source_sha256": "a09120b44507fba88ef3626c84e72af14b0745f5d2a15b53142609823715f18c",
+  "status": "ok",
+  "trial_count": 10
+}

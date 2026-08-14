@@ -1,0 +1,33 @@
+{
+  "backend_id": "tc5a",
+  "binary_hash_path": "build/fp16.binary.sha256",
+  "binary_sha256": "614944d365a0221d9f04d57385bf212106b810310fc84b2239297aa4e66e66ac",
+  "case_id": "fp16_f32_n2048_tc5a",
+  "custom_rate_per_second_max": 121023725163054.3,
+  "custom_rate_per_second_median": 120038915791893.6,
+  "custom_rate_per_second_min": 119321889306338.36,
+  "internal_repeats": 100,
+  "n": 2048,
+  "precision_id": "fp16_f32",
+  "ratio_of_paired_medians": 0.9189050833649917,
+  "reference_rate_per_second_median": 130632551680219.4,
+  "sass_evidence": {
+    "function_substring": "tc5a_overlap_epilogue_1sm_kernelILi128ELi256ELi64ELi4ELi4E",
+    "matching_function_headers": [
+      "Function : _ZN10gemm_sm1108backends32tc5a_overlap_epilogue_1sm_kernelILi128ELi256ELi64ELi4ELi4ELb0ELi3ELi16ELi27ELb0EEEv14CUtensorMap_stS2_Pfiiiii",
+      "Function : _ZN10gemm_sm1108backends32tc5a_overlap_epilogue_1sm_kernelILi128ELi256ELi64ELi4ELi4ELb0ELi0ELi0ELi0ELb0EEEv14CUtensorMap_stS2_Pfiiiii"
+    ],
+    "sass_tokens": [
+      "UTMALDG",
+      "UTCHMMA",
+      "LDTM",
+      "STG"
+    ]
+  },
+  "sass_path": "build/fp16.sass.txt",
+  "sass_sha256": "71e91964468724405a04f66d4b7ece223fa09642fe4d0b773ac2544bcdc66172",
+  "split": "calibration",
+  "status": "ok",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

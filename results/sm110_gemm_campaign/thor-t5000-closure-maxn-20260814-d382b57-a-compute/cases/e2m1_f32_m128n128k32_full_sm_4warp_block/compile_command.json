@@ -1,0 +1,10 @@
+[
+  "/usr/local/cuda/bin/nvcc",
+  "-O3",
+  "-std=c++17",
+  "-gencode",
+  "arch=compute_110a,code=sm_110a",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/e2m1_f32_m128n128k32_full_sm_4warp_block/source.cu",
+  "-o",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/e2m1_f32_m128n128k32_full_sm_4warp_block/benchmark"
+]

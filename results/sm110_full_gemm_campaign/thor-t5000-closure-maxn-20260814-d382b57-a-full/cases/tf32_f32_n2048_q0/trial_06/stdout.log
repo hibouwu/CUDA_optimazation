@@ -1,0 +1,4 @@
+GPU=NVIDIA Thor compute_capability=11.0 N=2048 mode=tf32
+reference_contract=tf32_f32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=1.72853e-06 reference_max_tolerance_ratio=3.2628e-05 reference_atol=0.05 reference_rtol=0.005
+numerical_contract=tf32_f32 mismatch_count=0 max_abs_error=2.71201e-06 max_tolerance_ratio=5.24968e-05 atol=0.05 rtol=0.005
+backend_id=tf32_q0_wmma_m64n64k8 N=2048 time_ms=6.5331649780273438 reference_time_ms=0.27744960784912109 work_unit=flop rate_per_second=2629639576190.1265 reference_rate_per_second=61920682884304.258 matched=1

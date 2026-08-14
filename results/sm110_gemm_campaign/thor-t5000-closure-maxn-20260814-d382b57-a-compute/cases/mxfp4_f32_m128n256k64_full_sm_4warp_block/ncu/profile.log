@@ -1,0 +1,24 @@
+==PROF== Connected to process 1185727 (/xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/mxfp4_f32_m128n256k64_full_sm_4warp_block/benchmark)
+==PROF== Profiling "benchmark" - 0: 0%....50%....100% - 11 passes
+==PROF== Profiling "benchmark" - 1: 0%....50%....100% - 11 passes
+case_id=mxfp4_f32_m128n256k64_full_sm_4warp_block
+precision_id=mxfp4_f32
+work_unit=flop
+sm_count=20
+logical_input_bits=4
+descriptor_storage_bits=4
+clock_hz=1575000000
+blocks=20
+unique_smid_count=20
+warps_per_block=4
+iters=1000
+cycles=512423
+globaltimer_start_min=591667985343456
+globaltimer_stop_max=591667985668832
+globaltimer_nanoseconds=325376
+elapsed_seconds=3.253760000e-04
+host_kernel_elapsed_seconds=1.096355820e-01
+issued_work=335544320000
+rate_per_second=1.031250983e+15
+==PROF== Disconnected from process 1185727
+==PROF== Report: /xplorer/shijy/CUDA_optimazation/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/cases/mxfp4_f32_m128n256k64_full_sm_4warp_block/ncu/profile.ncu-rep

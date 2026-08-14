@@ -1,0 +1,19 @@
+[
+  "/usr/local/cuda/bin/ncu",
+  "--force-overwrite",
+  "-o",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/ncu/e4m3_f32_n4096_q7/profile",
+  "--set",
+  "basic",
+  "--target-processes",
+  "all",
+  "--kernel-name-base",
+  "demangled",
+  "--kernel-name",
+  "regex:fp8_mma_m16n8k32_smem128x64_kernel",
+  "--launch-count",
+  "1",
+  "/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/quant",
+  "4096",
+  "fp8_q7_mma_m16n8k32_smem128x64"
+]

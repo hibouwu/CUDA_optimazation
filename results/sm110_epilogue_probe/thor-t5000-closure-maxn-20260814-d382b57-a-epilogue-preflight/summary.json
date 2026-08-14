@@ -1,0 +1,441 @@
+{
+  "binary_sha256": "ff48df6b9976ceab51ffe69beb4c5ac18cad713379c8f6dd9c2743671678d104",
+  "environment_after": {
+    "captured_at_utc": "2026-08-14T06:15:25.090094+00:00",
+    "gpu_devfreq": {
+      "cur_freq": "1575000000",
+      "governor": "performance",
+      "max_freq": "1575000000",
+      "min_freq": "1575000000"
+    },
+    "gpu_identity": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,uuid,compute_cap,driver_version",
+        "--format=csv,noheader"
+      ],
+      "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+      "returncode": 0,
+      "timed_out": false
+    },
+    "hostname": "thor-6642",
+    "oc_event_counters": {
+      "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+      "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+    },
+    "power_mode": {
+      "command": [
+        "/usr/sbin/nvpmodel",
+        "-q"
+      ],
+      "output": "NV Power Mode: MAXN\n0\n",
+      "returncode": 0,
+      "timed_out": false
+    }
+  },
+  "environment_before": {
+    "captured_at_utc": "2026-08-14T06:15:20.867104+00:00",
+    "gpu_devfreq": {
+      "cur_freq": "1575000000",
+      "governor": "performance",
+      "max_freq": "1575000000",
+      "min_freq": "1575000000"
+    },
+    "gpu_identity": {
+      "command": [
+        "nvidia-smi",
+        "--query-gpu=name,uuid,compute_cap,driver_version",
+        "--format=csv,noheader"
+      ],
+      "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+      "returncode": 0,
+      "timed_out": false
+    },
+    "hostname": "thor-6642",
+    "oc_event_counters": {
+      "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+      "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+      "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+    },
+    "power_mode": {
+      "command": [
+        "/usr/sbin/nvpmodel",
+        "-q"
+      ],
+      "output": "NV Power Mode: MAXN\n0\n",
+      "returncode": 0,
+      "timed_out": false
+    }
+  },
+  "expected_commit": "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8",
+  "max_blocks_per_sm": 1,
+  "pass": true,
+  "profiles": [
+    {
+      "command": [
+        "/xplorer/shijy/CUDA_optimazation/results/sm110_epilogue_probe/thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight/build/epilogue",
+        "--rows",
+        "256",
+        "--cols",
+        "256",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "normal",
+        "--seed",
+        "1234",
+        "--warmup",
+        "1",
+        "--iterations",
+        "1",
+        "--workers",
+        "1"
+      ],
+      "environment_after": {
+        "captured_at_utc": "2026-08-14T06:15:24.338494+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "environment_before": {
+        "captured_at_utc": "2026-08-14T06:15:24.097303+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "fields": {
+        "average_ms": "0.534112",
+        "blocks_per_sm": "1",
+        "distribution": "normal",
+        "effective_gbps": "0.559823",
+        "gelements_per_second": "0.122701",
+        "max_abs_error": "0.549871",
+        "occupancy_blocks_per_sm": "1",
+        "padded_elements": "65536",
+        "requested_workers": "1",
+        "rmse": "0.099918",
+        "scale_mismatches": "0",
+        "shape": "256x256",
+        "sm_count": "20",
+        "tensor_scale": "0.001645",
+        "unique_smid_count": "1",
+        "value_mismatches": "0",
+        "worker_count": "1"
+      },
+      "finished_at_utc": "2026-08-14T06:15:24.335150+00:00",
+      "interrupted": false,
+      "output": "distribution=normal shape=256x256 padded_elements=65536 tensor_scale=0.001645\naverage_ms=0.534112 gelements_per_second=0.122701 effective_gbps=0.559823\nsm_count=20 blocks_per_sm=1 occupancy_blocks_per_sm=1 requested_workers=1 worker_count=1 unique_smid_count=1\nvalue_mismatches=0 scale_mismatches=0 rmse=0.099918 max_abs_error=0.549871\n",
+      "profile_id": "single_cta_smoke",
+      "returncode": 0,
+      "started_at_utc": "2026-08-14T06:15:24.109822+00:00",
+      "termination_failed": false,
+      "timed_out": false,
+      "timeout_seconds": 30,
+      "validation_errors": []
+    },
+    {
+      "command": [
+        "/xplorer/shijy/CUDA_optimazation/results/sm110_epilogue_probe/thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight/build/epilogue",
+        "--rows",
+        "256",
+        "--cols",
+        "256",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "normal",
+        "--seed",
+        "1234",
+        "--warmup",
+        "1",
+        "--iterations",
+        "1"
+      ],
+      "environment_after": {
+        "captured_at_utc": "2026-08-14T06:15:24.598435+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "environment_before": {
+        "captured_at_utc": "2026-08-14T06:15:24.354916+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "fields": {
+        "average_ms": "0.035808",
+        "blocks_per_sm": "1",
+        "distribution": "normal",
+        "effective_gbps": "8.350313",
+        "gelements_per_second": "1.830206",
+        "max_abs_error": "0.549871",
+        "occupancy_blocks_per_sm": "1",
+        "padded_elements": "65536",
+        "requested_workers": "0",
+        "rmse": "0.099918",
+        "scale_mismatches": "0",
+        "shape": "256x256",
+        "sm_count": "20",
+        "tensor_scale": "0.001645",
+        "unique_smid_count": "20",
+        "value_mismatches": "0",
+        "worker_count": "20"
+      },
+      "finished_at_utc": "2026-08-14T06:15:24.594929+00:00",
+      "interrupted": false,
+      "output": "distribution=normal shape=256x256 padded_elements=65536 tensor_scale=0.001645\naverage_ms=0.035808 gelements_per_second=1.830206 effective_gbps=8.350313\nsm_count=20 blocks_per_sm=1 occupancy_blocks_per_sm=1 requested_workers=0 worker_count=20 unique_smid_count=20\nvalue_mismatches=0 scale_mismatches=0 rmse=0.099918 max_abs_error=0.549871\n",
+      "profile_id": "full_gpu_smoke_bps1",
+      "returncode": 0,
+      "started_at_utc": "2026-08-14T06:15:24.367271+00:00",
+      "termination_failed": false,
+      "timed_out": false,
+      "timeout_seconds": 30,
+      "validation_errors": []
+    },
+    {
+      "command": [
+        "/xplorer/shijy/CUDA_optimazation/results/sm110_epilogue_probe/thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight/build/epilogue",
+        "--rows",
+        "4096",
+        "--cols",
+        "1024",
+        "--blocks-per-sm",
+        "1",
+        "--distribution",
+        "normal",
+        "--seed",
+        "1234",
+        "--warmup",
+        "1",
+        "--iterations",
+        "1"
+      ],
+      "environment_after": {
+        "captured_at_utc": "2026-08-14T06:15:25.073873+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "environment_before": {
+        "captured_at_utc": "2026-08-14T06:15:24.614852+00:00",
+        "gpu_devfreq": {
+          "cur_freq": "1575000000",
+          "governor": "performance",
+          "max_freq": "1575000000",
+          "min_freq": "1575000000"
+        },
+        "gpu_identity": {
+          "command": [
+            "nvidia-smi",
+            "--query-gpu=name,uuid,compute_cap,driver_version",
+            "--format=csv,noheader"
+          ],
+          "output": "NVIDIA Thor, GPU-a7c66ad2-6dbb-0ab8-c1a2-37ba6dba3600, 11.0, 580.00\n",
+          "returncode": 0,
+          "timed_out": false
+        },
+        "hostname": "thor-6642",
+        "oc_event_counters": {
+          "/sys/class/hwmon/hwmon5/oc1_event_cnt": 0,
+          "/sys/class/hwmon/hwmon5/oc2_event_cnt": 1,
+          "/sys/class/hwmon/hwmon5/oc3_event_cnt": 344
+        },
+        "power_mode": {
+          "command": [
+            "/usr/sbin/nvpmodel",
+            "-q"
+          ],
+          "output": "NV Power Mode: MAXN\n0\n",
+          "returncode": 0,
+          "timed_out": false
+        }
+      },
+      "fields": {
+        "average_ms": "1.709632",
+        "blocks_per_sm": "1",
+        "distribution": "normal",
+        "effective_gbps": "11.193351",
+        "gelements_per_second": "2.453337",
+        "max_abs_error": "0.744407",
+        "occupancy_blocks_per_sm": "1",
+        "padded_elements": "4194304",
+        "requested_workers": "0",
+        "rmse": "0.100374",
+        "scale_mismatches": "0",
+        "shape": "4096x1024",
+        "sm_count": "20",
+        "tensor_scale": "0.002012",
+        "unique_smid_count": "20",
+        "value_mismatches": "0",
+        "worker_count": "20"
+      },
+      "finished_at_utc": "2026-08-14T06:15:25.070284+00:00",
+      "interrupted": false,
+      "output": "distribution=normal shape=4096x1024 padded_elements=4194304 tensor_scale=0.002012\naverage_ms=1.709632 gelements_per_second=2.453337 effective_gbps=11.193351\nsm_count=20 blocks_per_sm=1 occupancy_blocks_per_sm=1 requested_workers=0 worker_count=20 unique_smid_count=20\nvalue_mismatches=0 scale_mismatches=0 rmse=0.100374 max_abs_error=0.744407\n",
+      "profile_id": "production_shape_bps1",
+      "returncode": 0,
+      "started_at_utc": "2026-08-14T06:15:24.627963+00:00",
+      "termination_failed": false,
+      "timed_out": false,
+      "timeout_seconds": 30,
+      "validation_errors": []
+    }
+  ],
+  "run_id": "thor-t5000-closure-maxn-20260814-d382b57-a-epilogue-preflight",
+  "sass_sha256": "19d14ef7fdecc29344bf507f4d8400d52eb6213f2c020580a687092544e0003e",
+  "schema_version": 3,
+  "source_dependencies": {
+    "GEMMsm110/include/gemm_common.cuh": "c3a9eb45393f11949fd64dfb91e07cb890b745286a41e9c16092cc626710e77c",
+    "GEMMsm110/include/requant/e2m1_encode.cuh": "d87b61157aec9f89886eba17af65e7570dcea48ad2f47ff1cbedee38071da1e6",
+    "GEMMsm110/include/requant/pack_fp4.cuh": "8ceaf44d30d094ebc7c60fd5bdb113c1ba00e38e0dc25961992a3a691e36dbd0",
+    "GEMMsm110/include/requant/requant_backend.cuh": "5c49c170623152a0de7aadfdef2da26a44bf067ad45562e81886666c77023cb8",
+    "GEMMsm110/include/requant/scale_policy.cuh": "5b74b0ad62dc621cf7c8728d8684a8a9d844b5fb5fe9ccb53d3d31288cd1afd9",
+    "GEMMsm110/include/requant/sm110_tcgen05_epilogue.cuh": "f59f1c6b2cc36b4869060939e516b8f6243112acf770bc8af89d5c51c7ac7ece",
+    "GEMMsm110/tests/requant_epilogue_benchmark.cu": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7"
+  },
+  "source_path": "GEMMsm110/tests/requant_epilogue_benchmark.cu",
+  "source_sha256": "f06f45e11cbd4dfd71acd279f3716b15c7b152134f85591a6e77643b13fdb5d7",
+  "timeout_seconds": 30
+}

@@ -1,0 +1,3 @@
+/sys/class/hwmon/hwmon5/oc1_event_cnt	0
+/sys/class/hwmon/hwmon5/oc2_event_cnt	1
+/sys/class/hwmon/hwmon5/oc3_event_cnt	344

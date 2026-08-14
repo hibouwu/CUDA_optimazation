@@ -1,0 +1,13 @@
+==PROF== Connected to process 1199149 (/xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/build/quant)
+==PROF== Profiling "<unnamed>::int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel(const signed char *, const signed char *, int *, int)": 0%....50%....100% - 10 passes
+GPU: NVIDIA Thor (sm_110)
+N=4096, backend=int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol
+Benchmark policy: warmup=3, timed repeats=10
+reference_contract=s8_s32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=0
+reference_time_ms=0.60766083002090454
+cuBLAS INT8 reference: 0.60766083002090454 ms, 226177.09375 GFLOP/s
+numerical_contract=s8_s32_exact mismatch_count=0 max_abs_error=0
+int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol: 6.6399612426757812 ms, 20698.759765625 GFLOP/s, reference=226177.09375 GFLOP/s, ratio=0.091515719890594482x, matched=1
+backend_id=int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol time_ms=6.6399612426757812 work_unit=operation rate_per_second=20698759765625 reference_rate_per_second=226177093750000 matched=1
+==PROF== Disconnected from process 1199149
+==PROF== Report: /xplorer/shijy/CUDA_optimazation/results/sm110_full_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-full/ncu/s8_s32_n4096_q15/profile.ncu-rep

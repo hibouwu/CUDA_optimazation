@@ -1,0 +1,18 @@
+{
+  "binary_hash_path": "build/tma.binary.sha256",
+  "binary_sha256": "ca5c05c7fb2dd4fc54f618056698acdbb721f272c8eff801a5128ef43289c086",
+  "case_id": "tma_dram_stream_32k",
+  "rate_per_second_max": 262051463077.1009,
+  "rate_per_second_median": 261555926044.65308,
+  "rate_per_second_min": 257118931875.16473,
+  "rate_unit": "B/s",
+  "resource": "tma.dram_stream_ingress.serial32k",
+  "sass_sha256": "51ad4135e8533af7afa5e63c97633eac5ae55e85cc26d3cc5755914e779aec1e",
+  "sass_tokens": [
+    "UTMALDG.3D"
+  ],
+  "source_path": "microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu",
+  "source_sha256": "95b4293210a06a4f88044b13ef1736d3cc9c3b682bdce802dcfbc41421593d3f",
+  "status": "ok",
+  "trial_count": 10
+}

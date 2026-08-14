@@ -1,0 +1,30 @@
+{
+  "backend_id": "fp8_q7_mma_m16n8k32_smem128x64",
+  "binary_hash_path": "build/quant.binary.sha256",
+  "binary_sha256": "8de1bdb990fb1d2050477460d2a02a50dfa4f685724b055d84e30a696fec0ba2",
+  "case_id": "e4m3_f32_n4096_q7",
+  "custom_rate_per_second_max": 6198977301309.772,
+  "custom_rate_per_second_median": 6195785627814.439,
+  "custom_rate_per_second_min": 6190555902983.889,
+  "internal_repeats": 10,
+  "n": 4096,
+  "precision_id": "e4m3_f32",
+  "ratio_of_paired_medians": 0.029233703003696782,
+  "reference_rate_per_second_median": 211939815733605.28,
+  "sass_evidence": {
+    "function_substring": "fp8_mma_m16n8k32_smem128x64_kernel",
+    "matching_function_headers": [
+      "Function : _ZN48_GLOBAL__N__a92d5bf9_19_quant_gemm_bench_cu_main34fp8_mma_m16n8k32_smem128x64_kernelEPK13__nv_fp8_e4m3S2_Pfi"
+    ],
+    "sass_tokens": [
+      "HMMA.16816.F32",
+      "STG"
+    ]
+  },
+  "sass_path": "build/quant.sass.txt",
+  "sass_sha256": "d6d461d3e5918bf0736e15bf0a106353474496bf6e984eea55cec38f6a7e9015",
+  "split": "holdout",
+  "status": "ok",
+  "trial_count": 10,
+  "work_unit": "flop"
+}

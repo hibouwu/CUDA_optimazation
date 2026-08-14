@@ -1,0 +1,11 @@
+{
+  "base_expected_commit": "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8",
+  "base_suite_id": "thor-t5000-closure-maxn-20260814-d382b57-a",
+  "component_run_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c-components",
+  "created_at_utc": "2026-08-14T10:18:32.657893+00:00",
+  "expected_branch": "codex/thor-sm110-gemm-bounds-v2",
+  "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
+  "kind": "component_supplement",
+  "schema_version": 2,
+  "supplement_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c"
+}

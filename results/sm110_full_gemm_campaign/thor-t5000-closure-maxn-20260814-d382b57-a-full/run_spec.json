@@ -1,0 +1,407 @@
+{
+  "campaign": "sm110_full_gemm_closure",
+  "cases": [
+    {
+      "args": [
+        "1024",
+        "tc5b",
+        "none"
+      ],
+      "backend_id": "tc5b",
+      "binary": "fp16",
+      "csv_precision": "fp16->fp32",
+      "function_substring": "tc4bc_raw_2sm_cluster_kernelILb1ELi128ELi2E",
+      "id": "fp16_f32_n1024_tc5b",
+      "internal_repeats": 100,
+      "n": 1024,
+      "ncu_kernel_regex": "tc4bc_raw_2sm_cluster_kernel",
+      "numerical_contract": "fp_accumulator",
+      "precision_id": "fp16_f32",
+      "reference_contract": "fp16_f32_cpu_samples",
+      "sass_tokens": [
+        "UTMALDG",
+        "UTCHMMA",
+        "LDTM",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "2048",
+        "tc5a",
+        "none"
+      ],
+      "backend_id": "tc5a",
+      "binary": "fp16",
+      "csv_precision": "fp16->fp32",
+      "function_substring": "tc5a_overlap_epilogue_1sm_kernelILi128ELi256ELi64ELi4ELi4E",
+      "id": "fp16_f32_n2048_tc5a",
+      "internal_repeats": 100,
+      "n": 2048,
+      "ncu_kernel_regex": "tc5a_overlap_epilogue_1sm_kernel",
+      "numerical_contract": "fp_accumulator",
+      "precision_id": "fp16_f32",
+      "reference_contract": "fp16_f32_cpu_samples",
+      "sass_tokens": [
+        "UTMALDG",
+        "UTCHMMA",
+        "LDTM",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "4096",
+        "tc5a",
+        "none"
+      ],
+      "backend_id": "tc5a",
+      "binary": "fp16",
+      "csv_precision": "fp16->fp32",
+      "function_substring": "tc5a_overlap_epilogue_1sm_kernelILi128ELi256ELi64ELi4ELi4E",
+      "id": "fp16_f32_n4096_tc5a",
+      "internal_repeats": 100,
+      "n": 4096,
+      "ncu_kernel_regex": "tc5a_overlap_epilogue_1sm_kernel",
+      "numerical_contract": "fp_accumulator",
+      "precision_id": "fp16_f32",
+      "reference_contract": "fp16_f32_cpu_samples",
+      "sass_tokens": [
+        "UTMALDG",
+        "UTCHMMA",
+        "LDTM",
+        "STG"
+      ],
+      "split": "holdout",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "1024",
+        "fp8_q7_mma_m16n8k32_smem128x64"
+      ],
+      "backend_id": "fp8_q7_mma_m16n8k32_smem128x64",
+      "binary": "quant",
+      "csv_precision": "fp8_e4m3->fp32",
+      "function_substring": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "id": "e4m3_f32_n1024_q7",
+      "internal_repeats": 10,
+      "n": 1024,
+      "ncu_kernel_regex": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "numerical_contract": "fp8_e4m3_f32",
+      "precision_id": "e4m3_f32",
+      "reference_contract": "fp8_e4m3_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "2048",
+        "fp8_q7_mma_m16n8k32_smem128x64"
+      ],
+      "backend_id": "fp8_q7_mma_m16n8k32_smem128x64",
+      "binary": "quant",
+      "csv_precision": "fp8_e4m3->fp32",
+      "function_substring": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "id": "e4m3_f32_n2048_q7",
+      "internal_repeats": 10,
+      "n": 2048,
+      "ncu_kernel_regex": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "numerical_contract": "fp8_e4m3_f32",
+      "precision_id": "e4m3_f32",
+      "reference_contract": "fp8_e4m3_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "4096",
+        "fp8_q7_mma_m16n8k32_smem128x64"
+      ],
+      "backend_id": "fp8_q7_mma_m16n8k32_smem128x64",
+      "binary": "quant",
+      "csv_precision": "fp8_e4m3->fp32",
+      "function_substring": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "id": "e4m3_f32_n4096_q7",
+      "internal_repeats": 10,
+      "n": 4096,
+      "ncu_kernel_regex": "fp8_mma_m16n8k32_smem128x64_kernel",
+      "numerical_contract": "fp8_e4m3_f32",
+      "precision_id": "e4m3_f32",
+      "reference_contract": "fp8_e4m3_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32",
+        "STG"
+      ],
+      "split": "holdout",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "1024",
+        "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"
+      ],
+      "backend_id": "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol",
+      "binary": "quant",
+      "csv_precision": "int8->int32",
+      "function_substring": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "id": "s8_s32_n1024_q15",
+      "internal_repeats": 10,
+      "n": 1024,
+      "ncu_kernel_regex": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "numerical_contract": "s8_s32_exact",
+      "precision_id": "s8_s32",
+      "reference_contract": "s8_s32_cpu_samples",
+      "sass_tokens": [
+        "IMMA.16816.S8.S8",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "operation"
+    },
+    {
+      "args": [
+        "2048",
+        "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"
+      ],
+      "backend_id": "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol",
+      "binary": "quant",
+      "csv_precision": "int8->int32",
+      "function_substring": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "id": "s8_s32_n2048_q15",
+      "internal_repeats": 10,
+      "n": 2048,
+      "ncu_kernel_regex": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "numerical_contract": "s8_s32_exact",
+      "precision_id": "s8_s32",
+      "reference_contract": "s8_s32_cpu_samples",
+      "sass_tokens": [
+        "IMMA.16816.S8.S8",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "operation"
+    },
+    {
+      "args": [
+        "4096",
+        "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"
+      ],
+      "backend_id": "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol",
+      "binary": "quant",
+      "csv_precision": "int8->int32",
+      "function_substring": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "id": "s8_s32_n4096_q15",
+      "internal_repeats": 10,
+      "n": 4096,
+      "ncu_kernel_regex": "int8_wmma_m128n64k16_4warp_reuse_a_bcol_kernel",
+      "numerical_contract": "s8_s32_exact",
+      "precision_id": "s8_s32",
+      "reference_contract": "s8_s32_cpu_samples",
+      "sass_tokens": [
+        "IMMA.16816.S8.S8",
+        "STG"
+      ],
+      "split": "holdout",
+      "work_unit": "operation"
+    },
+    {
+      "args": [
+        "1024",
+        "bf16"
+      ],
+      "backend_id": "bf16_q0_wmma_m128n64k16",
+      "binary": "extended",
+      "csv_precision": "bf16->fp32",
+      "function_substring": "wmma_m128n64_kernelI13__nv_bfloat16fLi16",
+      "id": "bf16_f32_n1024_q0",
+      "internal_repeats": 10,
+      "n": 1024,
+      "ncu_kernel_regex": "wmma_m128n64_kernel.*bfloat16",
+      "numerical_contract": "bf16_f32",
+      "precision_id": "bf16_f32",
+      "reference_contract": "bf16_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32.BF16",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "2048",
+        "bf16"
+      ],
+      "backend_id": "bf16_q0_wmma_m128n64k16",
+      "binary": "extended",
+      "csv_precision": "bf16->fp32",
+      "function_substring": "wmma_m128n64_kernelI13__nv_bfloat16fLi16",
+      "id": "bf16_f32_n2048_q0",
+      "internal_repeats": 10,
+      "n": 2048,
+      "ncu_kernel_regex": "wmma_m128n64_kernel.*bfloat16",
+      "numerical_contract": "bf16_f32",
+      "precision_id": "bf16_f32",
+      "reference_contract": "bf16_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32.BF16",
+        "STG"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "4096",
+        "bf16"
+      ],
+      "backend_id": "bf16_q0_wmma_m128n64k16",
+      "binary": "extended",
+      "csv_precision": "bf16->fp32",
+      "function_substring": "wmma_m128n64_kernelI13__nv_bfloat16fLi16",
+      "id": "bf16_f32_n4096_q0",
+      "internal_repeats": 10,
+      "n": 4096,
+      "ncu_kernel_regex": "wmma_m128n64_kernel.*bfloat16",
+      "numerical_contract": "bf16_f32",
+      "precision_id": "bf16_f32",
+      "reference_contract": "bf16_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.16816.F32.BF16",
+        "STG"
+      ],
+      "split": "holdout",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "1024",
+        "tf32"
+      ],
+      "backend_id": "tf32_q0_wmma_m64n64k8",
+      "binary": "extended",
+      "csv_precision": "tf32->fp32",
+      "function_substring": "tf32_wmma_m64n64_kernel",
+      "id": "tf32_f32_n1024_q0",
+      "internal_repeats": 10,
+      "n": 1024,
+      "ncu_kernel_regex": "tf32_wmma_m64n64_kernel",
+      "numerical_contract": "tf32_f32",
+      "precision_id": "tf32_f32",
+      "reference_contract": "tf32_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.1684.F32.TF32",
+        "ST.E"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "2048",
+        "tf32"
+      ],
+      "backend_id": "tf32_q0_wmma_m64n64k8",
+      "binary": "extended",
+      "csv_precision": "tf32->fp32",
+      "function_substring": "tf32_wmma_m64n64_kernel",
+      "id": "tf32_f32_n2048_q0",
+      "internal_repeats": 10,
+      "n": 2048,
+      "ncu_kernel_regex": "tf32_wmma_m64n64_kernel",
+      "numerical_contract": "tf32_f32",
+      "precision_id": "tf32_f32",
+      "reference_contract": "tf32_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.1684.F32.TF32",
+        "ST.E"
+      ],
+      "split": "calibration",
+      "work_unit": "flop"
+    },
+    {
+      "args": [
+        "4096",
+        "tf32"
+      ],
+      "backend_id": "tf32_q0_wmma_m64n64k8",
+      "binary": "extended",
+      "csv_precision": "tf32->fp32",
+      "function_substring": "tf32_wmma_m64n64_kernel",
+      "id": "tf32_f32_n4096_q0",
+      "internal_repeats": 10,
+      "n": 4096,
+      "ncu_kernel_regex": "tf32_wmma_m64n64_kernel",
+      "numerical_contract": "tf32_f32",
+      "precision_id": "tf32_f32",
+      "reference_contract": "tf32_f32_cpu_samples",
+      "sass_tokens": [
+        "HMMA.1684.F32.TF32",
+        "ST.E"
+      ],
+      "split": "holdout",
+      "work_unit": "flop"
+    }
+  ],
+  "generator": "microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py",
+  "generator_sha256": "b3a72c09a06255b6beb4f7a4abb336ba13f3b7ee7211e382d664ba915d171ccf",
+  "host_compiler": null,
+  "ncu_requested": true,
+  "ncu_timeout_seconds": 300,
+  "nvcc_host_undef_gnu_source": false,
+  "problem_contract": {
+    "beta": 0,
+    "epilogue": "none",
+    "layout": "NN",
+    "output_mode": "accumulator",
+    "work": "2*M*N*K"
+  },
+  "run_id": "thor-t5000-closure-maxn-20260814-d382b57-a-full",
+  "schema_version": 2,
+  "source_dependencies": {
+    "GEMMquant_sm110/src/extended_gemm_bench.cu": "45044eece51d92f0c6b6740330bd3047e69b03bebc47c3e3d47ce50034fd9db7",
+    "GEMMquant_sm110/src/quant_gemm_bench.cu": "1c52d3d70ea9ad53032c2267385b8bb405186757df30c4e7a7a7fb79e7a0d63e",
+    "GEMMsm110/include/backends/shapeopt_specialized.cuh": "e0e1932a55aaa3042390f249d7b61dfc6bc1f1f1100bdd663d732e959a8785cd",
+    "GEMMsm110/include/backends/tc0_baseline.cuh": "f6aace135de5540159113182cbbf86a1b0f24b488d05fdc2d223dda608578f4d",
+    "GEMMsm110/include/backends/tc1_tc2_tma.cuh": "83801470166bd368f0491e79c6d8093b7bee3305697f02521f77308f65f04c1f",
+    "GEMMsm110/include/backends/tc3_pipeline.cuh": "3ce27ebe569e8135bf1974f84c39c21e04c6c6bb5e40fcef492ef251fe8be0a6",
+    "GEMMsm110/include/backends/tc4a_warp_specialized.cuh": "ed00a1020c0294b85728de790728607be4db8fcc5273dad26f3b031c9d74dd48",
+    "GEMMsm110/include/backends/tc4bc_cluster.cuh": "8447fed2a2ab1a709e6781ab1becc9e101cadb97c0979f909365962e4d3e1e6a",
+    "GEMMsm110/include/backends/tc5_persistent.cuh": "ea13ecf4d98624dc27f117230dc05f4ada3d2e135bd5e6672de5e3960c9f4464",
+    "GEMMsm110/include/backends/tc6_nvfp4.cuh": "8b7d805f095ee389ea92e95017050b84dc6e0a37380d57e83e4e403b6cbcc9bf",
+    "GEMMsm110/include/cublaslt_reference.cuh": "04d0e99b5670fd7b3505ae9651617f310b46450e8466036648da4ede39657083",
+    "GEMMsm110/include/cutlass_sm110_backends.cuh": "f69beb7deb1e867f9a78d1a216e1dc699590fd14d1d131be6a522f0b6542b143",
+    "GEMMsm110/include/gemm_benchmark.cuh": "ba39cc540f689f9cdd17f51c7999c365377f4f8b302a1c8694a806c7f64b0526",
+    "GEMMsm110/include/gemm_common.cuh": "c3a9eb45393f11949fd64dfb91e07cb890b745286a41e9c16092cc626710e77c",
+    "GEMMsm110/include/requant/e2m1_encode.cuh": "d87b61157aec9f89886eba17af65e7570dcea48ad2f47ff1cbedee38071da1e6",
+    "GEMMsm110/include/requant/nvfp4_reference.cuh": "cb592cb6997ee1b0b0051fbc489d39bee9b88c3de06bd4985eab1556b87f4690",
+    "GEMMsm110/include/requant/pack_fp4.cuh": "8ceaf44d30d094ebc7c60fd5bdb113c1ba00e38e0dc25961992a3a691e36dbd0",
+    "GEMMsm110/include/requant/requant_backend.cuh": "5c49c170623152a0de7aadfdef2da26a44bf067ad45562e81886666c77023cb8",
+    "GEMMsm110/include/requant/scale_policy.cuh": "5b74b0ad62dc621cf7c8728d8684a8a9d844b5fb5fe9ccb53d3d31288cd1afd9",
+    "GEMMsm110/include/requant/sm110_tcgen05_epilogue.cuh": "f59f1c6b2cc36b4869060939e516b8f6243112acf770bc8af89d5c51c7ac7ece",
+    "GEMMsm110/include/sm110_backend_registry.cuh": "8a17f8aca0370a46ec64f24636949472dfd41401aca1bbc3b5d33f17f53daf3c",
+    "GEMMsm110/include/sm110_ptx_helpers.cuh": "78b391416252a6a913c358625e57cff9dc42a2441e424707bb5664309344adf0",
+    "GEMMsm110/include/tc3_gemm_kernel.cuh": "4fd88be4e41f6f260de3c87322aa7e928263915d1bed0b4f1e3e84f74c2c9f99",
+    "GEMMsm110/src/main.cu": "784b81075c435aab4ec0a1b5e580380b73ed147a1348fad28deeffe4e5fee0be"
+  },
+  "static_only": false,
+  "support_manifest": "microbench/sm110_full_gemm_campaign/support_manifest.json",
+  "support_manifest_sha256": "8f84b8e9460ac319f5e18c5259e2d7f102f61a150cbefc17c51b21ab8715d44a",
+  "termination_grace_seconds": 5,
+  "timing": "CUDA events around kernel launches only",
+  "trial_timeout_seconds": 120,
+  "trials": 10
+}

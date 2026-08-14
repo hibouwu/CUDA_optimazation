@@ -1,0 +1,9 @@
+GPU: NVIDIA Thor (sm_110)
+N=1024, backend=int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol
+Benchmark policy: warmup=3, timed repeats=10
+reference_contract=s8_s32_cpu_samples reference_sample_count=64 reference_mismatch_count=0 reference_max_abs_error=0
+reference_time_ms=0.017526399344205856
+cuBLAS INT8 reference: 0.017526399344205856 ms, 122528.515625 GFLOP/s
+numerical_contract=s8_s32_exact mismatch_count=0 max_abs_error=0
+int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol: 0.12395520508289337 ms, 17324.67578125 GFLOP/s, reference=122528.515625 GFLOP/s, ratio=0.14139300584793091x, matched=1
+backend_id=int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol time_ms=0.12395520508289337 work_unit=operation rate_per_second=17324675781250 reference_rate_per_second=122528515625000 matched=1
