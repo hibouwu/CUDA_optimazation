@@ -358,3 +358,135 @@ sha256sum -c \
 源码、case、工作量或容量语义，因此**无需 Thor 重跑**。已有 evidence 仍分别绑定
 到 `d382b57eae289b458c5290e3d2b7e0daf1b7d7c8` 和
 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354`。
+
+## 11. 当前严格模型的精确 TMA resource supplement
+
+本节只补采 generic、byte-container、block-scaled 和 tc5a schedule 的精确 TMA
+resource capacity。它不重跑已知的共享 L2 `1024 B/cycle` read、`512 B/cycle`
+write 上限，也不重跑历史 compute/full-GEMM。它包含 54 个 case、每 case 10 个
+外部 trial，以及 18 份 NCU report。它会关闭 resource-envelope 的实验输入缺口，
+但不会单独关闭 causal DAG 或缺失精度的 full-GEMM/reference/denominator 缺口。
+
+### 11.1 拉取并固定同一提交
+
+交付消息会给出唯一的 40 位 `EXPECTED_COMMIT`。在 Thor 仓库根目录执行：
+
+```bash
+unset EXPECTED_COMMIT SUITE_ID RESULT_BRANCH
+git fetch origin
+git switch codex/sm110-all-precision-closure
+git pull --ff-only
+
+EXPECTED_COMMIT=<交付消息中的40位提交>
+test "$(git branch --show-current)" = \
+  "codex/sm110-all-precision-closure"
+test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+test "$(git status --short --untracked-files=no)" = ""
+```
+
+不要用旧 shell 中遗留的 hash，也不要在结果分支或带 tracked 修改的 checkout 上
+启动。
+
+### 11.2 配置 Thor 并启动
+
+```bash
+sudo /usr/sbin/nvpmodel -m 0
+sudo /usr/bin/jetson_clocks
+/usr/sbin/nvpmodel -q
+sudo /usr/bin/jetson_clocks --show
+
+SUITE_ID=thor-t5000-exact-resource-maxn-YYYYMMDD-a
+test ! -e "results/sm110_resource_suite/$SUITE_ID"
+test ! -e \
+  "results/sm110_gemm_resource_campaign/$SUITE_ID-resources"
+bash microbench/sm110_resource_supplement.sh start "$SUITE_ID"
+```
+
+`start` 会冻结 branch/commit、MAXN、GPU 1.575 GHz min/max/current、performance
+governor 和 OC counter 基线，然后 detached 串行运行全部 case。每个普通 trial 的
+进程组 timeout 为 120 s；NCU 为 300 s；失败会保存 timeout 证据并停止，不能把
+timeout 当成低吞吐结果。supervisor 在最后一个独立 auditor 通过后立即冻结
+`oc_after.tsv`，尽量避免把等待人工 `finish` 的空闲时间计入 OC 区间。
+
+### 11.3 查看状态
+
+一次性查看、持续查看和只看日志分别为：
+
+```bash
+bash microbench/sm110_resource_supplement.sh status "$SUITE_ID"
+watch -n 10 bash microbench/sm110_resource_supplement.sh status "$SUITE_ID"
+tail -f "results/sm110_resource_suite/$SUITE_ID/suite_launcher.log"
+```
+
+退出 `watch`/`tail -f` 只停止查看，不会中止 detached supervisor。只有日志中出现
+独立一行 `RESOURCE_SUPPLEMENT_COMPLETE` 才能进入 finish。
+
+若 supervisor 因 shell/主机进程异常退出、但 GPU/driver 未重启、OC counter 未
+reset 且 `oc_after.tsv` 尚未生成，可在同一冻结 checkout 恢复：
+
+```bash
+bash microbench/sm110_resource_supplement.sh resume "$SUITE_ID"
+```
+
+`resume` 会再次验证 MAXN/锁频/clean commit，保存新的 preflight 与 OC snapshot，
+并只复用 fingerprint 完整的 case。若检测到 counter reset、已有活进程或已关闭
+证据区间，它会拒绝恢复；此时必须换新 `SUITE_ID`，不能拼接跨 reboot 的区间。
+
+### 11.4 finish 与双层独立审计
+
+```bash
+bash microbench/sm110_resource_supplement.sh finish "$SUITE_ID"
+```
+
+`finish` 不覆盖已存在的 `oc_after.tsv`。它会：
+
+1. 核对当前 checkout 与冻结 commit；
+2. 保存 OC counter 终点并拒绝 counter reset；
+3. 用 campaign auditor 从冻结 Git blob 独立重建 54-case matrix；
+4. 验证 540 个 raw trial、18 份 NCU、retained binary、function-scoped SASS、
+   environment/progress/COMPLETE 和逐文件 SHA-256；
+5. 用 platform auditor 验证 branch、MAXN、锁频和 OC interval；
+6. 把非零 OC 增量保留为 warning，而不是隐藏为全绿。
+
+也可手工重放两层审计：
+
+```bash
+python3 microbench/sm110_gemm_resource_campaign/audit_campaign.py \
+  "results/sm110_gemm_resource_campaign/$SUITE_ID-resources" \
+  --require-ncu --expected-commit "$EXPECTED_COMMIT"
+python3 \
+  microbench/sm110_gemm_resource_campaign/audit_resource_suite.py \
+  "results/sm110_resource_suite/$SUITE_ID" \
+  --expected-commit "$EXPECTED_COMMIT"
+```
+
+### 11.5 提交并回传结果
+
+只有 `finish` 成功后执行：
+
+```bash
+RESULT_BRANCH="thor-results/$SUITE_ID"
+git switch -c "$RESULT_BRANCH"
+git add -f \
+  "results/sm110_resource_suite/$SUITE_ID" \
+  "results/sm110_gemm_resource_campaign/$SUITE_ID-resources"
+git commit -m "results: Thor SM110 exact resources $SUITE_ID"
+git push -u origin "$RESULT_BRANCH"
+git rev-parse HEAD
+```
+
+回传 `RESULT_BRANCH`、结果 commit 和 `suite_audit.json` 的 `pass/warnings`。不要把
+结果提交到代码分支。
+
+### 11.6 恢复默认平台设置
+
+结果 push 完成后，本组不再需要 MAXN/锁频。按本机既有默认 120W mode 1 恢复：
+
+```bash
+sudo /usr/sbin/nvpmodel -m 1
+/usr/sbin/nvpmodel -q
+sudo /usr/bin/jetson_clocks --show
+```
+
+应看到 120W mode，不再是 MAXN，GPU min/max 也不应继续都固定为 1.575 GHz；若
+mode 切换后锁频仍残留且没有对应 `jetson_clocks --store` 快照，再重启恢复。

@@ -4149,7 +4149,84 @@ auditor 和本地静态 preflight 同一个 commit 推送后再运行。当前�
 因此现在的正确行动不是让 Thor 手工跑几个临时 binary。先把补测合同写成可审计
 campaign，才能让返回结果真正关闭模型参数，而不是产生另一批无法复审的数字。
 
-## 9.14 可执行本地审计入口
+## 9.14 精确 resource campaign 已经冻结了什么
+
+第 9.12 节 B 组所需的采集程序现在已经冻结为
+[`sm110_gemm_resource_campaign`](../../microbench/sm110_gemm_resource_campaign/README.md)。
+这里定义 (F_{mathrm{transport}}=9) 为互不混用的 transport family 数，单位
+family；定义 (N_{mathrm{stride}}=3) 为待测 row-stride 数，单位 stride；定义
+(N_{mathrm{residency}}=2) 为 hot-L2/cold-DRAM 两种驻留作用域数，单位 scope。
+因此正式 case 数为：
+
+\[
+N_{mathrm{case}}
+=F_{mathrm{transport}}N_{mathrm{stride}}N_{mathrm{residency}}
+=9\times3\times2
+=54\ \mathrm{case}.
+\]
+
+定义 (N_{mathrm{trial}}=10) 为每个 case 的独立外部 trial 数，单位 trial/case，
+所以正式 raw trial 总数为：
+
+\[
+N_{mathrm{raw}}
+=N_{mathrm{case}}N_{mathrm{trial}}
+=54\times10
+=540\ \mathrm{trial}.
+\]
+
+九个 family 覆盖 generic M128N64/N128/N256 的 8-bit 与 TF32 32-bit transport、
+FP6/raw-E2M1 使用的 byte container、MXFP4/NVFP4 value+scale transport，以及
+现有 tc5a FP16/BF16 anchor。每个 family 分别使用 (K=1024,2048,4096) 的
+row stride，并分成：
+
+- 单 CTA、唯一 SM ID 的 per-SM L2-hit TMA→SMEM ingress；
+- 20 CTA、必须覆盖 20 个 SM、用全网格最早开始到最晚结束计时的 cold-entry
+  TMA/DRAM ingress。
+
+定义 (N_{mathrm{NCU}}=18) 为 NCU 归因 case 数，单位 report；它等于九个 family
+在 (K=2048) 下的两个 residency scope。NCU hot-L2 case 虽缩小 profile working
+set，warmup 仍机械覆盖全部 tile，不能把未预热的 DRAM miss 冒充 per-SM ingress。
+
+这批实验**不会**重测或替代已知的共享 L2 物理上限：
+
+- shared `l2.read` 仍为 1024 B/cycle/GPU；
+- shared `l2.write` 仍为 512 B/cycle/GPU；
+- 每个 SM 的 TMA ingress 出口仍作为独立本地资源建模。
+
+新实验只回答“某个冻结 schedule 合同在该出口/路径上实际持续达到多少”，其
+`measured_sustained` 结果必须继续与上述 hard ceiling 相交。它不能因为数值接近
+1024 或 512 B/cycle 就升级成 `specified_upper`。
+
+当前已完成的本地证据是：54/54 个 `--contract-only` 合同通过；`sm_110a` 编译
+通过；目标函数 SASS 含 `UTMALDG.2D` 且不含 `UTMASTG`；普通 8-bit 与带 scale 的
+4-bit case 在本机 SM120 上完成小规模运行时冒烟。最后一项只证明 kernel、tensor
+map、barrier 和 scale atom 能运行，**不是 Thor 性能证据**。
+
+在 Thor 结果返回前，这 54 条 resource capacity 仍不存在，模型必须继续输出原有
+`tma_*_capacity_contract` 缺口。不能把本地静态通过、SM120 冒烟或计划中的 resource
+ID 写进 `capacities.json` 冒充实测值。Thor 的版本化 start/status/finish、MAXN、
+锁频、OC counter、NCU、结果提交和恢复命令统一放在
+[`THOR_CLOSURE_RUNBOOK.md`](./THOR_CLOSURE_RUNBOOK.md) 第 11 节。
+
+本组新增证据入口为：
+
+- CUDA source：
+  [`tma_ab_contract_bandwidth.cu`](../../microbench/15_tma_ab_contract_bandwidth/tma_ab_contract_bandwidth.cu)；
+- 54-case manifest：
+  [`contract_manifest.json`](../../microbench/sm110_gemm_resource_campaign/contract_manifest.json)；
+- bounded/resumable runner：
+  [`run_resource_campaign.py`](../../microbench/sm110_gemm_resource_campaign/run_resource_campaign.py)；
+- relocation-safe independent auditor：
+  [`audit_campaign.py`](../../microbench/sm110_gemm_resource_campaign/audit_campaign.py)；
+- platform interval auditor：
+  [`audit_resource_suite.py`](../../microbench/sm110_gemm_resource_campaign/audit_resource_suite.py)。
+
+这只完成了 B 组的“可采集、可审计”准备。A 组 causal DAG 和 C 组缺失的完整
+GEMM/reference/denominator 仍保持未完成，不能因 resource runner 就绪而把
+`causal_pipeline_dag_implemented` 或 `all_precisions_closed` 改成 true。
+
+## 9.15 可执行本地审计入口
 
 模型单元测试：
 
@@ -4184,7 +4261,24 @@ python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
 加入 `--require-all-closed` 后，当前必须非零退出。这正是目标尚未完成的机械事实，
 不是命令失败。
 
-## 9.15 本课预测题
+精确 resource campaign 的计划与单元测试：
+
+```bash
+python3 microbench/sm110_gemm_resource_campaign/run_resource_campaign.py \
+  --run-id inspect --plan
+python3 -m unittest -v \
+  microbench/sm110_gemm_resource_campaign/test_campaign.py
+```
+
+正式结果的独立审计入口（只有 Thor 返回后才应成功）：
+
+```bash
+python3 microbench/sm110_gemm_resource_campaign/audit_campaign.py \
+  "results/sm110_gemm_resource_campaign/$RUN_ID" \
+  --require-ncu --expected-commit "$EXPECTED_COMMIT"
+```
+
+## 9.16 本课预测题
 
 某个 stage2 FP8 schedule 每 stage 发 A=8 KiB、B=16 KiB，两条 request，128
 threads。仓库已有 stage2、32 KiB、inflight4、128 threads 的 TMA rate。
@@ -4211,7 +4305,7 @@ strict upper 违规。正确做法是把实际 candidate 合同冻结成 microbe
 
 </details>
 
-## 9.16 本课掌握标准
+## 9.17 本课掌握标准
 
 完成本教程后，应当能够：
 
@@ -4239,6 +4333,7 @@ Thor 结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c`，用于查看本�
 | `tensor.<precision>.m128n64/128/256` | [`run_compute_campaign.py`](../../microbench/sm110_gemm_campaign/run_compute_campaign.py) 生成并保存 12 精度 tcgen05 source | [`compute auditor`](../../microbench/sm110_gemm_campaign/audit_campaign.py) | [compute summary](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_campaign/thor-t5000-closure-maxn-20260814-d382b57-a-compute/summary.json) |
 | `hbm.read/write`、`l2.read/write` | [`memory_path_bandwidth.cu`](../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu) | [`component runner`](../../microbench/sm110_gemm_component_campaign/run_component_campaign.py) / [`auditor`](../../microbench/sm110_gemm_component_campaign/audit_campaign.py) | [component summary](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/summary.json) |
 | TMA serial/inflight4/tc5a L2-hit 与 DRAM | [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu) | 同上 component runner/auditor | [TMA SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tma.sass.txt) |
+| generic/FP6/block-scale/tc5a 的精确 row-stride TMA resource 合同 | [`tma_ab_contract_bandwidth.cu`](../../microbench/15_tma_ab_contract_bandwidth/tma_ab_contract_bandwidth.cu) | [`resource runner`](../../microbench/sm110_gemm_resource_campaign/run_resource_campaign.py) / [`campaign auditor`](../../microbench/sm110_gemm_resource_campaign/audit_campaign.py) / [`platform auditor`](../../microbench/sm110_gemm_resource_campaign/audit_resource_suite.py) | **待 Thor 采集；当前只有 54/54 静态合同与本机非 Thor 冒烟，不提供 capacity 数值** |
 | `tmem.readback.*` | [`tmem_readback_bandwidth.cu`](../../microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu) | 同上 component runner/auditor | [TMEM SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tmem.sass.txt) |
 | `tmem.scale_ingress` | [`tmem_scale_ingress_bandwidth.cu`](../../microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu) | 同上 component runner/auditor | [scale SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/scale.sass.txt) |
 | NVFP4 requant epilogue diagnostics | [`requant_epilogue_benchmark.cu`](../../GEMMsm110/tests/requant_epilogue_benchmark.cu) | [`run_epilogue_probe.py`](../../microbench/sm110_gemm_component_campaign/run_epilogue_probe.py) | [epilogue SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/epilogue.sass.txt) |

@@ -1359,10 +1359,19 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`scripts/sm110_gemm_model/precision_report.py`](../../scripts/sm110_gemm_model/precision_report.py)
 - 当前 12 精度机器生成证据矩阵：
   [`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)
+- generic/byte-container/block-scale/tc5a 的 54-case 精确 TMA resource 合同：
+  [`contract_manifest.json`](../../microbench/sm110_gemm_resource_campaign/contract_manifest.json)
+- 对应 CUDA source、bounded/resumable runner 和双层独立 auditor：
+  [`tma_ab_contract_bandwidth.cu`](../../microbench/15_tma_ab_contract_bandwidth/tma_ab_contract_bandwidth.cu)、
+  [`run_resource_campaign.py`](../../microbench/sm110_gemm_resource_campaign/run_resource_campaign.py)、
+  [`audit_campaign.py`](../../microbench/sm110_gemm_resource_campaign/audit_campaign.py)、
+  [`audit_resource_suite.py`](../../microbench/sm110_gemm_resource_campaign/audit_resource_suite.py)
 
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和
 运行时间戳。本轮 bounded compute/component/full-GEMM bundle 已保存这些 campaign
 级证据；更早的零散 snapshot 仍缺少统一 manifest，只能保留为 `snapshot_only`。
-当前目标未完成的主要原因是逐 schedule TMA 合同、causal DAG、缺失精度完整 GEMM
-与部分 strict compute upper，而不是把已有环境字段重复抄写一遍。
+逐 schedule TMA 合同的采集程序已经通过 54/54 本地静态合同与非 Thor 运行时冒烟，
+但 Thor capacity 尚未返回，因此仍是证据缺口，不能先写入模型。当前目标其余未完成
+原因是 causal DAG、缺失精度完整 GEMM 与部分 strict compute upper，而不是把已有
+环境字段重复抄写一遍。

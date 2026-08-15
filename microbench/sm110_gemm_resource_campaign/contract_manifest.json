@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "expected_sm_count": 20,
+  "row_stride_elements": [
+    1024,
+    2048,
+    4096
+  ],
+  "residencies": {
+    "cold_dram": {
+      "binary_mode": "dram-stream",
+      "blocks": "one_per_sm",
+      "target_working_set_bytes": 67108864,
+      "target_requested_bytes_per_trial": 536870912,
+      "warmup_iters": 64
+    },
+    "hot_l2": {
+      "binary_mode": "l2-hit",
+      "blocks": 1,
+      "iters": 4096,
+      "target_working_set_bytes": 16777216,
+      "warmup_policy": "cover_working_set"
+    }
+  },
+  "families": [
+    {
+      "family_id": "generic_m128n64k64_s2_v8",
+      "bm": 128,
+      "bn": 64,
+      "bk": 64,
+      "value_bits": 8,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "e4m3_f32",
+        "e5m2_f32",
+        "s8_s32",
+        "u8_s32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "generic_m128n128k64_s2_v8",
+      "bm": 128,
+      "bn": 128,
+      "bk": 64,
+      "value_bits": 8,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "e4m3_f32",
+        "e5m2_f32",
+        "s8_s32",
+        "u8_s32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "generic_m128n256k64_s2_v8",
+      "bm": 128,
+      "bn": 256,
+      "bk": 64,
+      "value_bits": 8,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "e4m3_f32",
+        "e5m2_f32",
+        "e3m2_f32",
+        "e2m3_f32",
+        "e2m1_f32",
+        "s8_s32",
+        "u8_s32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed",
+        "byte_padded"
+      ]
+    },
+    {
+      "family_id": "generic_m128n64k64_s2_v32",
+      "bm": 128,
+      "bn": 64,
+      "bk": 64,
+      "value_bits": 32,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "tf32_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "generic_m128n128k64_s2_v32",
+      "bm": 128,
+      "bn": 128,
+      "bk": 64,
+      "value_bits": 32,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "tf32_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "generic_m128n256k64_s2_v32",
+      "bm": 128,
+      "bn": 256,
+      "bk": 64,
+      "value_bits": 32,
+      "scale_block": 0,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "tf32_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "block_m128n256k64_s2_v4_scale16",
+      "bm": 128,
+      "bn": 256,
+      "bk": 64,
+      "value_bits": 4,
+      "scale_block": 16,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "nvfp4_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "block_m128n256k64_s2_v4_scale32",
+      "bm": 128,
+      "bn": 256,
+      "bk": 64,
+      "value_bits": 4,
+      "scale_block": 32,
+      "stages": 2,
+      "threads": 128,
+      "controller_thread": 0,
+      "precision_ids": [
+        "mxfp4_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    },
+    {
+      "family_id": "tc5a_m128n256k64_s4_v16",
+      "bm": 128,
+      "bn": 256,
+      "bk": 64,
+      "value_bits": 16,
+      "scale_block": 0,
+      "stages": 4,
+      "threads": 192,
+      "controller_thread": 128,
+      "precision_ids": [
+        "fp16_f32",
+        "bf16_f32"
+      ],
+      "input_transport_layouts": [
+        "logical_packed"
+      ]
+    }
+  ]
+}
