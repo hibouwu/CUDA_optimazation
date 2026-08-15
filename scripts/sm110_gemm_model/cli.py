@@ -6,11 +6,14 @@ import json
 from pathlib import Path
 
 from .closure_import import import_closure, import_composite_closure
+from .causal_import import import_causal_profile
+from .resource_import import import_resource_capacities
 from .closure_report import build_closure_analysis, write_closure_report
 from .io import (
     load_capacities,
     load_closure_inputs,
     load_hardware,
+    load_pipeline_profiles,
     load_schedules,
     load_workloads,
     read_json,
@@ -20,7 +23,13 @@ from .coverage import (
     common_resource_coverage,
     precision_coverage,
 )
-from .model import ModelError, audit_inputs, evaluate_manifest, precision_specs
+from .model import (
+    ModelError,
+    audit_inputs,
+    audit_pipeline_profiles,
+    evaluate_manifest,
+    precision_specs,
+)
 from .observations import audit_observations, summarize_observed_csvs
 from .precision_report import (
     build_precision_evidence_analysis,
@@ -35,11 +44,15 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("hardware", "capacities", "workloads", "schedules"):
         evaluate_parser.add_argument(f"--{name}", type=Path, required=True)
     evaluate_parser.add_argument("--closure-import", type=Path)
+    evaluate_parser.add_argument("--resource-import", type=Path, action="append")
+    evaluate_parser.add_argument("--pipeline-profiles", type=Path)
     evaluate_parser.add_argument("--output", type=Path)
 
     audit_parser = sub.add_parser("audit", help="audit capacity provenance and semantics")
     audit_parser.add_argument("--capacities", type=Path, required=True)
     audit_parser.add_argument("--closure-import", type=Path)
+    audit_parser.add_argument("--resource-import", type=Path, action="append")
+    audit_parser.add_argument("--pipeline-profiles", type=Path)
     audit_parser.add_argument("--repo-root", type=Path, required=True)
     sub.add_parser("list-precisions", help="print the v1 precision contract")
     observed_parser = sub.add_parser(
@@ -55,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     coverage_parser.add_argument("--capacities", type=Path, required=True)
     coverage_parser.add_argument("--observed-input", type=Path, action="append")
     coverage_parser.add_argument("--closure-import", type=Path)
+    coverage_parser.add_argument("--resource-import", type=Path, action="append")
     coverage_parser.add_argument("--minimum-trials", type=int, default=10)
     import_parser = sub.add_parser(
         "import-closure",
@@ -75,6 +89,24 @@ def build_parser() -> argparse.ArgumentParser:
     composite_parser.add_argument("--base-expected-commit", required=True)
     composite_parser.add_argument("--component-expected-commit", required=True)
     composite_parser.add_argument("--output", type=Path, required=True)
+    causal_import_parser = sub.add_parser(
+        "import-causal-profile",
+        help=("independently audit a returned tc5a causal campaign and emit "
+              "a model pipeline profile"),
+    )
+    causal_import_parser.add_argument("--repo-root", type=Path, required=True)
+    causal_import_parser.add_argument("--run-id", required=True)
+    causal_import_parser.add_argument("--expected-commit", required=True)
+    causal_import_parser.add_argument("--output", type=Path, required=True)
+    resource_import_parser = sub.add_parser(
+        "import-resource-capacities",
+        help=("independently audit a returned exact-resource suite and emit "
+              "54 schedule/stride-qualified model capacities"),
+    )
+    resource_import_parser.add_argument("--repo-root", type=Path, required=True)
+    resource_import_parser.add_argument("--suite-id", required=True)
+    resource_import_parser.add_argument("--expected-commit", required=True)
+    resource_import_parser.add_argument("--output", type=Path, required=True)
     report_parser = sub.add_parser(
         "report-closure",
         help="render audited closure capacities, observations, and model comparisons",
@@ -84,6 +116,8 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument("--capacities", type=Path, required=True)
     report_parser.add_argument("--hardware", type=Path, required=True)
     report_parser.add_argument("--schedules", type=Path, required=True)
+    report_parser.add_argument("--pipeline-profiles", type=Path)
+    report_parser.add_argument("--resource-import", type=Path, action="append")
     report_parser.add_argument("--output-json", type=Path, required=True)
     report_parser.add_argument("--output-markdown", type=Path, required=True)
     precision_report_parser = sub.add_parser(
@@ -96,6 +130,9 @@ def build_parser() -> argparse.ArgumentParser:
     precision_report_parser.add_argument("--closure-import", type=Path, required=True)
     precision_report_parser.add_argument("--hardware", type=Path, required=True)
     precision_report_parser.add_argument("--schedules", type=Path, required=True)
+    precision_report_parser.add_argument("--pipeline-profiles", type=Path)
+    precision_report_parser.add_argument(
+        "--resource-import", type=Path, action="append")
     precision_report_parser.add_argument(
         "--support-manifest", type=Path, required=True)
     precision_report_parser.add_argument("--output-json", type=Path, required=True)
@@ -107,6 +144,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit nonzero unless every declared precision is end-to-end closed",
     )
     return parser
+
+
+def load_resource_imports(paths: list[Path] | None) -> list:
+    capacities = []
+    for path in paths or []:
+        imported, observations = load_closure_inputs(path)
+        if observations:
+            raise ModelError(
+                f"{path}: resource import must not contain GEMM observations"
+            )
+        capacities.extend(imported)
+    return capacities
 
 
 def main() -> int:
@@ -162,26 +211,89 @@ def main() -> int:
                                               ["overcurrent_deltas"],
         }, indent=2, sort_keys=True))
         return 0
+    if args.command == "import-causal-profile":
+        try:
+            imported = import_causal_profile(
+                repo_root=args.repo_root,
+                run_id=args.run_id,
+                expected_commit=args.expected_commit,
+            )
+        except ModelError as error:
+            print(json.dumps({"pass": False, "error": str(error)}, indent=2))
+            return 1
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(imported, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps({
+            "pass": True,
+            "output": str(args.output),
+            "run_id": imported["run_id"],
+            "qualification": imported["qualification"],
+            "profile_qualified": imported["profile_qualified"],
+        }, indent=2, sort_keys=True))
+        return 0
+    if args.command == "import-resource-capacities":
+        try:
+            imported = import_resource_capacities(
+                repo_root=args.repo_root,
+                suite_id=args.suite_id,
+                expected_commit=args.expected_commit,
+            )
+        except ModelError as error:
+            print(json.dumps({"pass": False, "error": str(error)}, indent=2))
+            return 1
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(imported, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps({
+            "pass": True,
+            "output": str(args.output),
+            "suite_id": imported["suite_id"],
+            "qualification": imported["qualification"],
+            "capacity_count": len(imported["capacities"]),
+            "overcurrent_deltas": imported["platform_evidence"]
+                                               ["overcurrent_deltas"],
+        }, indent=2, sort_keys=True))
+        return 0
     if args.command == "report-closure":
         try:
             closure_capacities, observations = load_closure_inputs(
                 args.closure_import)
             base_capacities = load_capacities(args.capacities)
+            resource_capacities = load_resource_imports(args.resource_import)
+            pipeline_profiles = (
+                load_pipeline_profiles(args.pipeline_profiles)
+                if args.pipeline_profiles else []
+            )
             input_findings = [
                 *audit_inputs(
-                    [*base_capacities, *closure_capacities],
+                    [
+                        *base_capacities,
+                        *closure_capacities,
+                        *resource_capacities,
+                    ],
                     repo_root=args.repo_root.resolve(),
                 ),
                 *audit_observations(
                     observations, repo_root=args.repo_root.resolve()),
+                *audit_pipeline_profiles(
+                    pipeline_profiles, repo_root=args.repo_root.resolve()),
             ]
             analysis = build_closure_analysis(
                 metadata=read_json(args.closure_import),
                 base_capacities=base_capacities,
-                closure_capacities=closure_capacities,
+                closure_capacities=[
+                    *closure_capacities,
+                    *resource_capacities,
+                ],
                 observations=observations,
                 hardware=load_hardware(args.hardware),
                 schedules=load_schedules(args.schedules),
+                pipeline_profiles=pipeline_profiles,
                 input_findings=input_findings,
             )
             write_closure_report(
@@ -206,16 +318,32 @@ def main() -> int:
         try:
             closure_capacities, observations = load_closure_inputs(
                 args.closure_import)
+            pipeline_profiles = (
+                load_pipeline_profiles(args.pipeline_profiles)
+                if args.pipeline_profiles else []
+            )
+            profile_errors = [
+                row for row in audit_pipeline_profiles(
+                    pipeline_profiles, repo_root=args.repo_root.resolve()
+                )
+                if row["severity"] == "error"
+            ]
+            if profile_errors:
+                raise ModelError(
+                    f"pipeline profile audit failed: {profile_errors}"
+                )
             analysis = build_precision_evidence_analysis(
                 capacities=[
                     *load_capacities(args.capacities),
                     *closure_capacities,
+                    *load_resource_imports(args.resource_import),
                 ],
                 observations=observations,
                 support_manifest=read_json(args.support_manifest),
                 repo_root=args.repo_root.resolve(),
                 hardware=load_hardware(args.hardware),
                 schedules=load_schedules(args.schedules),
+                pipeline_profiles=pipeline_profiles,
                 metadata=read_json(args.closure_import),
             )
             args.output_json.parent.mkdir(parents=True, exist_ok=True)
@@ -251,14 +379,21 @@ def main() -> int:
         return 1 if args.require_all_closed and not closed else 0
     if args.command == "audit":
         capacities = load_capacities(args.capacities)
+        pipeline_profiles = (
+            load_pipeline_profiles(args.pipeline_profiles)
+            if args.pipeline_profiles else []
+        )
         observations = []
         if args.closure_import:
             imported_capacities, observations = load_closure_inputs(
                 args.closure_import)
             capacities.extend(imported_capacities)
+        capacities.extend(load_resource_imports(args.resource_import))
         findings = [
             *audit_inputs(capacities, repo_root=args.repo_root.resolve()),
             *audit_observations(observations, repo_root=args.repo_root.resolve()),
+            *audit_pipeline_profiles(
+                pipeline_profiles, repo_root=args.repo_root.resolve()),
         ]
         print(json.dumps({"findings": findings}, indent=2))
         return 1 if any(row["severity"] == "error" for row in findings) else 0
@@ -284,6 +419,7 @@ def main() -> int:
                 args.closure_import)
             capacities.extend(imported_capacities)
             observed.extend(imported_observations)
+        capacities.extend(load_resource_imports(args.resource_import))
         if not observed:
             raise SystemExit(
                 "coverage requires --observed-input or --closure-import")
@@ -311,11 +447,18 @@ def main() -> int:
     if args.closure_import:
         imported_capacities, _ = load_closure_inputs(args.closure_import)
         capacities.extend(imported_capacities)
+    capacities.extend(load_resource_imports(args.resource_import))
     rows = []
     schedules = load_schedules(args.schedules)
+    pipeline_profiles = (
+        load_pipeline_profiles(args.pipeline_profiles)
+        if args.pipeline_profiles else []
+    )
     for workload in load_workloads(args.workloads):
         rows.append(
-            evaluate_manifest(workload, schedules, hardware, capacities).to_dict()
+            evaluate_manifest(
+                workload, schedules, hardware, capacities, pipeline_profiles
+            ).to_dict()
         )
     output = json.dumps({"envelopes": rows}, indent=2)
     if args.output:

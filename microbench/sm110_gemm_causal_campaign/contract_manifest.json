@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "schedule_id": "tc5a_m128n256k64_stage4",
+  "precision_ids": [
+    "fp16_f32"
+  ],
+  "expected_sm_count": 20,
+  "threads": 192,
+  "tile": {
+    "m": 128,
+    "n": 256,
+    "k": 64
+  },
+  "payload": {
+    "a_bytes_per_k_tile": 16384,
+    "b_bytes_per_k_tile": 32768,
+    "bytes_per_k_tile": 49152,
+    "tma_requests_per_k_tile": 2,
+    "mma_instructions_per_k_tile": 4,
+    "output_bytes_per_task": 131072
+  },
+  "accumulator_buffers": 2,
+  "residency": "hot_l2",
+  "initialization": "cuda_memset_zero",
+  "external_trials_per_case": 10,
+  "warmup_launches": 3,
+  "trial_timeout_seconds": 120,
+  "ncu_timeout_seconds": 300,
+  "calibration_k_tiles": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "holdout_k_tiles": [
+    64
+  ],
+  "full_output_task_sweep": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "families": [
+    {
+      "family_id": "tma_s1",
+      "mode": "tma-only",
+      "stages": 1,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "tma_s2",
+      "mode": "tma-only",
+      "stages": 2,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "tma_s4",
+      "mode": "tma-only",
+      "stages": 4,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "mma_s4",
+      "mode": "mma-only",
+      "stages": 4,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "overlap_s1",
+      "mode": "overlap",
+      "stages": 1,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "overlap_s2",
+      "mode": "overlap",
+      "stages": 2,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "overlap_s4",
+      "mode": "overlap",
+      "stages": 4,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "full_s4_o1",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 1
+    },
+    {
+      "family_id": "full_s4_o2",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 2
+    },
+    {
+      "family_id": "full_s4_o4",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 4
+    },
+    {
+      "family_id": "full_s4_o8",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 8
+    },
+    {
+      "family_id": "full_s4_o16",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 16
+    },
+    {
+      "family_id": "full_s4_o32",
+      "mode": "full",
+      "stages": 4,
+      "output_tasks": 32
+    }
+  ],
+  "ncu_cases": [
+    "tma_s4_k16",
+    "mma_s4_k16",
+    "overlap_s4_k16",
+    "full_s4_o4_k16"
+  ],
+  "fit_contract": {
+    "calibration_points": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "holdout_points": [
+      64
+    ],
+    "calibration_output_tasks": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "epilogue_calibration_output_tasks": [
+      1
+    ],
+    "holdout_output_tasks": [
+      32
+    ],
+    "maximum_holdout_relative_error": 0.1,
+    "minimum_r_squared": 0.98,
+    "profile_stages": 4,
+    "profile_accumulator_buffers": 2,
+    "profile_resident_ctas_per_sm": 1
+  }
+}

@@ -429,7 +429,10 @@ bash microbench/sm110_resource_supplement.sh resume "$SUITE_ID"
 ```
 
 `resume` 会再次验证 MAXN/锁频/clean commit，保存新的 preflight 与 OC snapshot，
-并只复用 fingerprint 完整的 case。若检测到 counter reset、已有活进程或已关闭
+不会重新编译首次运行冻结的 binary。runner 会先复核 source dependency、原 compile
+command、binary/hash record、函数级 SASS，并重放 54 个 `--contract-only` 合同；
+全部一致后才复用 fingerprint、10 个 trial 和 NCU artifact 都完整可复审的 case。
+若检测到 retained artifact 改变、counter reset、已有活进程或已关闭
 证据区间，它会拒绝恢复；此时必须换新 `SUITE_ID`，不能拼接跨 reboot 的区间。
 
 ### 11.4 finish 与双层独立审计
@@ -447,6 +450,10 @@ bash microbench/sm110_resource_supplement.sh finish "$SUITE_ID"
    environment/progress/COMPLETE 和逐文件 SHA-256；
 5. 用 platform auditor 验证 branch、MAXN、锁频和 OC interval；
 6. 把非零 OC 增量保留为 warning，而不是隐藏为全绿。
+7. 重新审计后生成
+   `results/sm110_model_closure/$SUITE_ID/resource_capacities.json`，其中 54 个
+   capacity 都保留 family、A/B packed row stride 和 hot-per-SM/cold-device
+   scope；不会把实测速率提升成物理上界。
 
 也可手工重放两层审计：
 
@@ -469,7 +476,8 @@ RESULT_BRANCH="thor-results/$SUITE_ID"
 git switch -c "$RESULT_BRANCH"
 git add -f \
   "results/sm110_resource_suite/$SUITE_ID" \
-  "results/sm110_gemm_resource_campaign/$SUITE_ID-resources"
+  "results/sm110_gemm_resource_campaign/$SUITE_ID-resources" \
+  "results/sm110_model_closure/$SUITE_ID/resource_capacities.json"
 git commit -m "results: Thor SM110 exact resources $SUITE_ID"
 git push -u origin "$RESULT_BRANCH"
 git rev-parse HEAD
@@ -478,9 +486,22 @@ git rev-parse HEAD
 回传 `RESULT_BRANCH`、结果 commit 和 `suite_audit.json` 的 `pass/warnings`。不要把
 结果提交到代码分支。
 
+拉回结果分支后，在 evaluate/report 命令中显式附加：
+
+```bash
+--resource-import \
+  "results/sm110_model_closure/$SUITE_ID/resource_capacities.json"
+```
+
+模型只在 packed、非转置且 `K=N` 时使用本轮共同 A/B row-stride 合同：A 的
+leading dimension 为 `K`，B 的 leading dimension 为 `N`。`K != N` 或 stride
+不在 1024/2048/4096 时会返回 `insufficient_evidence`，不会借用邻近尺寸数据。
+
 ### 11.6 恢复默认平台设置
 
-结果 push 完成后，本组不再需要 MAXN/锁频。按本机既有默认 120W mode 1 恢复：
+若还要立即执行第 12 节 causal suite，先保持 MAXN/锁频并直接进入第 12 节；两个
+suite 不能并行，但可以顺序复用平台设置。只有本轮不再运行其他 GPU evidence 时，
+才按本机既有默认 120W mode 1 恢复：
 
 ```bash
 sudo /usr/sbin/nvpmodel -m 1
@@ -490,3 +511,160 @@ sudo /usr/bin/jetson_clocks --show
 
 应看到 120W mode，不再是 MAXN，GPU min/max 也不应继续都固定为 1.575 GHz；若
 mode 切换后锁频仍残留且没有对应 `jetson_clocks --store` 快照，再重启恢复。
+
+## 12. tc5a persistent-worker causal pipeline suite
+
+本节采集与 FP16 `tc5a_m128n256k64_stage4` 完全匹配的因果时序 profile。manifest、
+CSV 和导入后的 `PipelineProfile` 都冻结 `precision_ids=["fp16_f32"]`，源码使用
+`ptx::mma_f16`；该结果不能直接用于 BF16。它不是另一个
+带宽峰值实验：91 个 case 用 raw `%globaltimer` 事件分离 TMA-only、MMA-only、
+joint overlap 和完整 persistent worker 的 startup、稳态 interval、双 accumulator
+复用与 readback/store drain；每 case 10 个外部 trial，共 910 条 raw trial，另有
+四份预声明 NCU report。
+
+本组与第 11 节 resource suite 共用 `results/sm110_campaign.lock`。两组必须串行：
+先等一个 suite 的日志出现完成 marker 并执行 `finish`，再启动另一个。不要通过删除
+lock 文件强行并行；活进程持有的是内核文件锁，删除 pathname 只会破坏证据纪律。
+
+### 12.1 拉取并固定同一提交
+
+在 Thor 仓库根目录执行：
+
+```bash
+unset EXPECTED_COMMIT CAUSAL_SUITE_ID CAUSAL_RUN_ID RESULT_BRANCH
+git fetch origin
+git switch codex/sm110-all-precision-closure
+git pull --ff-only
+
+EXPECTED_COMMIT=<交付消息中的40位提交>
+test "$(git branch --show-current)" = \
+  "codex/sm110-all-precision-closure"
+test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+test "$(git status --short --untracked-files=no)" = ""
+```
+
+### 12.2 配置平台并启动
+
+如果第 11 节 resource suite 刚刚完成且尚未恢复默认设置，可复用当前 MAXN/锁频；
+仍必须运行查询命令确认。否则重新配置：
+
+```bash
+sudo /usr/sbin/nvpmodel -m 0
+sudo /usr/bin/jetson_clocks
+/usr/sbin/nvpmodel -q
+sudo /usr/bin/jetson_clocks --show
+
+CAUSAL_SUITE_ID=thor-t5000-tc5a-causal-maxn-YYYYMMDD-a
+CAUSAL_RUN_ID="$CAUSAL_SUITE_ID-causal"
+test ! -e "results/sm110_causal_suite/$CAUSAL_SUITE_ID"
+test ! -e "results/sm110_gemm_causal_campaign/$CAUSAL_RUN_ID"
+bash microbench/sm110_causal_suite.sh start "$CAUSAL_SUITE_ID"
+```
+
+`start` 冻结 clean branch/commit、MAXN、GPU 1.575 GHz min/max/current、performance
+governor 和 OC counter 基线，并 detached 启动 supervisor。普通 trial 的进程组
+timeout 为 120 s，NCU 为 300 s；超时或 NCU 权限失败会保留证据并停止。
+
+### 12.3 状态与安全恢复
+
+```bash
+bash microbench/sm110_causal_suite.sh status "$CAUSAL_SUITE_ID"
+watch -n 10 bash microbench/sm110_causal_suite.sh status "$CAUSAL_SUITE_ID"
+tail -f \
+  "results/sm110_causal_suite/$CAUSAL_SUITE_ID/suite_launcher.log"
+```
+
+退出 `watch` 或 `tail -f` 不会停止 detached supervisor。日志只有出现独立一行
+`CAUSAL_SUITE_COMPLETE` 才算 campaign、独立审计和立即 OC 终点采集全部完成。
+
+若 supervisor 意外退出，但 GPU/driver 未重启、OC counter 未 reset 且
+`oc_after.tsv` 尚未生成，可执行：
+
+```bash
+bash microbench/sm110_causal_suite.sh resume "$CAUSAL_SUITE_ID"
+```
+
+恢复不会重新编译已经冻结的 binary：两次相同 `nvcc` 调用的字节级 binary hash 不作
+可复现性假设。runner 会重新核对 source/helper/manifest、原 compile command、
+retained binary hash、stage-1/2/4 函数级 SASS、CSV header 和 binary 自身的 header
+输出；全部一致后，才复用 fingerprint、10 条 raw trial、derived timestamp
+arithmetic 和必需 NCU artifact 都可复审的 case。任一 retained artifact 改变都会
+fail closed。若 counter reset、checkout 改变、已有活进程或 OC 区间已经关闭，必须
+换新 suite ID。
+
+### 12.4 finish、双层独立审计与 profile 门禁
+
+```bash
+bash microbench/sm110_causal_suite.sh finish "$CAUSAL_SUITE_ID"
+```
+
+`finish` 会验证 91-case/910-trial/4-NCU、binary/SASS/env/hash、不可变 Git blob、
+MAXN/clock/OC interval，并重新构建 component linear fit 与 full-worker validation。
+profile 的预声明门槛为：TMA/MMA/joint 三个 fit 的决定系数均不低于 0.98，且
+calibration/holdout 最大相对误差都不超过 10%。
+
+注意两个不同结论：
+
+- `suite_audit.json.pass=true` 表示 raw acquisition 和审计合同完整；
+- `profile_qualified=true` 才表示 fit 可进入最终经验理想模型。
+
+若第一项为 true、第二项为 false，结果仍应完整回传；auditor 会保留
+`quarantined` profile 和 warning，禁止模型用它预测，但 raw 数据可用于分析下一版
+模型。不得调宽阈值后原地篡改同一 run ID。
+
+也可手工重放：
+
+```bash
+python3 microbench/sm110_gemm_causal_campaign/audit_campaign.py \
+  "results/sm110_gemm_causal_campaign/$CAUSAL_RUN_ID" \
+  --require-ncu --expected-commit "$EXPECTED_COMMIT"
+python3 \
+  microbench/sm110_gemm_causal_campaign/audit_causal_suite.py \
+  "results/sm110_causal_suite/$CAUSAL_SUITE_ID" \
+  --expected-commit "$EXPECTED_COMMIT"
+```
+
+### 12.5 提交并回传结果
+
+只有 `finish` 成功后执行：
+
+```bash
+RESULT_BRANCH="thor-results/$CAUSAL_SUITE_ID"
+git switch -c "$RESULT_BRANCH"
+git add -f \
+  "results/sm110_causal_suite/$CAUSAL_SUITE_ID" \
+  "results/sm110_gemm_causal_campaign/$CAUSAL_RUN_ID"
+git commit -m "results: Thor SM110 tc5a causal profile $CAUSAL_SUITE_ID"
+git push -u origin "$RESULT_BRANCH"
+git rev-parse HEAD
+```
+
+回传 `RESULT_BRANCH`、结果 commit、`suite_audit.json` 的 `pass/warnings`、
+`pipeline_profile.json` 的 `qualification` 和 `profile_qualified`。结果分支拉回分析
+checkout 后，模型导入命令为：
+
+```bash
+MODEL_DIR="results/sm110_model_closure/$CAUSAL_SUITE_ID"
+mkdir -p "$MODEL_DIR"
+python3 -m scripts.sm110_gemm_model.cli import-causal-profile \
+  --repo-root . \
+  --run-id "$CAUSAL_RUN_ID" \
+  --expected-commit "$EXPECTED_COMMIT" \
+  --output "$MODEL_DIR/pipeline_profiles.json"
+```
+
+导入器会再次运行 campaign independent auditor，并逐条验证 profile gate、validation
+算术和 repository-relative artifact path；不能手工把 `pipeline_profile.json` 复制到
+默认 profile 文件。
+
+### 12.6 恢复默认平台设置
+
+如果第 11、12 节需要顺序执行，应在两组都完成并 push 后再恢复。最终执行：
+
+```bash
+sudo /usr/sbin/nvpmodel -m 1
+/usr/sbin/nvpmodel -q
+sudo /usr/bin/jetson_clocks --show
+```
+
+应看到本机默认 120W mode 1，且 GPU min/max 不再都固定为 1.575 GHz。

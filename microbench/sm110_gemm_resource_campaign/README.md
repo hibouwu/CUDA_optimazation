@@ -90,6 +90,13 @@ python3 microbench/sm110_gemm_resource_campaign/audit_campaign.py \
   --expected-commit "$EXPECTED_COMMIT"
 ```
 
+Resume does not recompile a completed run's binary.  Identical `nvcc` command
+lines are not assumed to produce byte-identical executables.  The runner
+instead freezes the first binary and reaudits source-dependency hashes, compile
+command, binary hash record, retained function-scoped SASS, and all 54
+`--contract-only` rows before reusing any case fingerprint.  A changed retained
+artifact fails closed.
+
 ## Plan and local preflight
 
 The plan command performs no compilation or GPU work:

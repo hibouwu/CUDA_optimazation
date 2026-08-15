@@ -10,6 +10,7 @@ from .model import (
     EvidenceKind,
     Hardware,
     ModelError,
+    PipelineProfile,
     Schedule,
     Workload,
     evaluate_manifest,
@@ -55,6 +56,7 @@ def build_precision_evidence_analysis(
     repo_root: Path,
     hardware: Hardware | None = None,
     schedules: Iterable[Schedule] = (),
+    pipeline_profiles: Iterable[PipelineProfile] = (),
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Merge executable numeric coverage with the implementation support map.
@@ -95,6 +97,7 @@ def build_precision_evidence_analysis(
         for row in precision_coverage(capacities, observations)
     }
     schedules = list(schedules)
+    pipeline_profiles = list(pipeline_profiles)
     rows: list[dict[str, Any]] = []
     for precision_id in specs:
         numeric: PrecisionCoverage = numeric_by_id[precision_id]
@@ -168,6 +171,13 @@ def build_precision_evidence_analysis(
                             "hardware_or_schedule_manifest"
                         ],
                         "closure_qualified": False,
+                        "causal_status": "model_inputs_missing",
+                        "causal_schedule_id": None,
+                        "causal_closure_qualified": False,
+                        "ideal_status": "model_inputs_missing",
+                        "ideal_schedule_id": None,
+                        "ideal_performance_per_second": None,
+                        "ideal_closure_qualified": False,
                     })
                     continue
                 envelope = evaluate_manifest(
@@ -182,28 +192,64 @@ def build_precision_evidence_analysis(
                     schedules,
                     hardware,
                     capacities,
+                    pipeline_profiles,
                 )
-                layer = envelope.empirical_ideal_envelope
-                qualified = bool(
-                    layer.status == "ok"
-                    and layer.performance_per_second is not None
+                resource_layer = (
+                    envelope.manifest_empirical_resource_envelope
+                )
+                causal_layer = envelope.causal_pipeline_envelope
+                ideal_layer = envelope.empirical_ideal_envelope
+                resource_qualified = bool(
+                    resource_layer.status == "ok"
+                    and resource_layer.performance_per_second is not None
                     and _empirical_capacity_selection_is_closure_qualified(
-                        layer
+                        resource_layer
+                    )
+                )
+                causal_qualified = bool(
+                    causal_layer.status == "ok"
+                    and causal_layer.performance_per_second is not None
+                    and _empirical_capacity_selection_is_closure_qualified(
+                        causal_layer
+                    )
+                )
+                ideal_qualified = bool(
+                    ideal_layer.status == "ok"
+                    and ideal_layer.performance_per_second is not None
+                    and _empirical_capacity_selection_is_closure_qualified(
+                        ideal_layer
                     )
                 )
                 envelope_scenarios.append({
                     "scenario_id": scenario_id,
                     "n": n,
                     "residency": residency,
-                    "status": layer.status,
-                    "schedule_id": envelope.empirical_schedule_id,
-                    "performance_per_second": layer.performance_per_second,
+                    "status": resource_layer.status,
+                    "schedule_id": envelope.empirical_resource_schedule_id,
+                    "performance_per_second":
+                        resource_layer.performance_per_second,
                     "selected_capacity_ids":
-                        layer.selected_capacity_ids,
+                        resource_layer.selected_capacity_ids,
                     "selected_capacity_qualifications":
-                        layer.selected_capacity_qualifications,
-                    "missing_resources": layer.missing_resources,
-                    "closure_qualified": qualified,
+                        resource_layer.selected_capacity_qualifications,
+                    "missing_resources": resource_layer.missing_resources,
+                    "closure_qualified": resource_qualified,
+                    "causal_status": causal_layer.status,
+                    "causal_schedule_id":
+                        envelope.causal_pipeline_schedule_id,
+                    "causal_performance_per_second":
+                        causal_layer.performance_per_second,
+                    "causal_selected_profile_ids":
+                        causal_layer.selected_capacity_ids,
+                    "causal_missing_resources":
+                        causal_layer.missing_resources,
+                    "causal_closure_qualified": causal_qualified,
+                    "ideal_status": ideal_layer.status,
+                    "ideal_schedule_id": envelope.empirical_schedule_id,
+                    "ideal_performance_per_second":
+                        ideal_layer.performance_per_second,
+                    "ideal_missing_resources": ideal_layer.missing_resources,
+                    "ideal_closure_qualified": ideal_qualified,
                 })
         qualified_envelope_scenarios = tuple(
             row["scenario_id"]
@@ -218,9 +264,33 @@ def build_precision_evidence_analysis(
         resource_envelope_matrix_complete = (
             bool(envelope_scenarios) and not missing_envelope_scenarios
         )
+        qualified_causal_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if row["causal_closure_qualified"]
+        )
+        missing_causal_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if not row["causal_closure_qualified"]
+        )
         causal_pipeline_model_complete = bool(
             CAUSAL_PIPELINE_DAG_IMPLEMENTED
-            and resource_envelope_matrix_complete
+            and envelope_scenarios
+            and not missing_causal_scenarios
+        )
+        qualified_ideal_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if row["ideal_closure_qualified"]
+        )
+        missing_ideal_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if not row["ideal_closure_qualified"]
+        )
+        empirical_ideal_matrix_complete = bool(
+            envelope_scenarios and not missing_ideal_scenarios
         )
         model_gaps: list[str] = []
         if not resource_envelope_matrix_complete:
@@ -228,12 +298,15 @@ def build_precision_evidence_analysis(
                 "closure_qualified_empirical_envelope_matrix"
             )
         if not causal_pipeline_model_complete:
-            model_gaps.append("causal_pipeline_dag")
+            model_gaps.append("closure_qualified_causal_pipeline_profile_matrix")
+        if not empirical_ideal_matrix_complete:
+            model_gaps.append("integrated_empirical_ideal_envelope_matrix")
         end_to_end_closed = bool(
             implementation_ready
             and numeric.numeric_closure
             and resource_envelope_matrix_complete
             and causal_pipeline_model_complete
+            and empirical_ideal_matrix_complete
         )
         rows.append({
             "precision_id": precision_id,
@@ -269,12 +342,22 @@ def build_precision_evidence_analysis(
                 resource_envelope_matrix_complete,
             "causal_pipeline_model_complete":
                 causal_pipeline_model_complete,
+            "qualified_causal_pipeline_scenarios":
+                list(qualified_causal_scenarios),
+            "missing_causal_pipeline_scenarios":
+                list(missing_causal_scenarios),
+            "empirical_ideal_matrix_complete":
+                empirical_ideal_matrix_complete,
+            "qualified_empirical_ideal_scenarios":
+                list(qualified_ideal_scenarios),
+            "missing_empirical_ideal_scenarios":
+                list(missing_ideal_scenarios),
             "model_gaps": model_gaps,
             "end_to_end_closed": end_to_end_closed,
         })
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "suite_id": metadata.get("suite_id"),
         "expected_commit": metadata.get("expected_commit"),
         "composition": metadata.get("composition"),
@@ -291,6 +374,9 @@ def build_precision_evidence_analysis(
         ),
         "causal_pipeline_closed_count": sum(
             bool(row["causal_pipeline_model_complete"]) for row in rows
+        ),
+        "empirical_ideal_closed_count": sum(
+            bool(row["empirical_ideal_matrix_complete"]) for row in rows
         ),
         "end_to_end_closed_count": sum(
             bool(row["end_to_end_closed"]) for row in rows
@@ -347,12 +433,14 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
         f"`{analysis.get('resource_envelope_closed_count')}`",
         "- causal pipeline closed："
         f"`{analysis.get('causal_pipeline_closed_count')}`",
+        "- integrated empirical ideal envelopes："
+        f"`{analysis.get('empirical_ideal_closed_count')}`",
         f"- end-to-end closed：`{analysis.get('end_to_end_closed_count')}`",
         "- all precisions end-to-end closed："
         f"`{str(bool(analysis.get('all_precisions_end_to_end_closed'))).lower()}`",
         "",
-        "| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | resource envelope | causal DAG | end-to-end |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | resource envelope | causal DAG | integrated ideal | end-to-end |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in analysis.get("precisions", []):
         numeric = row["numeric_evidence"]
@@ -375,6 +463,7 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
             f"{_mark(numeric['same_precision_performance_denominator'])} | "
             f"{_mark(row['resource_envelope_matrix_complete'])} | "
             f"{_mark(row['causal_pipeline_model_complete'])} | "
+            f"{_mark(row['empirical_ideal_matrix_complete'])} | "
             f"{_mark(row['end_to_end_closed'])} |"
         )
 
@@ -399,6 +488,10 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
             f"`{', '.join(str(v) for v in numeric['missing_full_gemm_shapes']) or 'none'}`",
             "- missing empirical envelope scenarios："
             f"`{', '.join(row['missing_empirical_envelope_scenarios']) or 'none'}`",
+            "- missing causal profile scenarios："
+            f"`{', '.join(row['missing_causal_pipeline_scenarios']) or 'none'}`",
+            "- missing integrated ideal scenarios："
+            f"`{', '.join(row['missing_empirical_ideal_scenarios']) or 'none'}`",
         ])
         for blocker in row.get("support_blockers", []):
             lines.append(f"- blocker：{blocker}")
@@ -417,7 +510,8 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
         "6. hot-L2/cold-HBM × N=1024/2048/4096 六个 resource envelope 都只选择",
         "   closure-qualified 且与 schedule 显式匹配的 capacity；",
         "7. latency、initiation interval、TMA/MMA/TMEM 依赖和 startup/drain 的",
-        "   causal pipeline DAG 已实现并闭环；",
+        "   causal pipeline DAG 已实现，并且每个选中 schedule 有独立审计通过的",
+        "   closure-qualified joint profile；",
         "8. trial、源码、编译命令、binary hash、function-scoped SASS、NCU、环境和",
         "   硬件身份通过独立 auditor。",
         "",

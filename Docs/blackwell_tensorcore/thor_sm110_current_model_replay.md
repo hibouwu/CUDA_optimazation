@@ -16,6 +16,10 @@ commit、raw trial 和环境 artifact 为准。
 - capacity：54 项
 - base/profile capacity：19 项
 - full-GEMM observation：15 项
+- causal DAG solver implemented：`True`
+- loaded pipeline profiles：0 项
+- closure-qualified pipeline profiles：0 项
+- resource/causal/integrated complete observations：2/0/0
 - overcurrent delta：`{"thor-t5000-closure-maxn-20260814-d382b57-a": {"/sys/class/hwmon/hwmon5/oc1_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc2_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc3_event_cnt": 179}, "thor-t5000-tma-ingress-supplement-maxn-20260814-c": {"/sys/class/hwmon/hwmon5/oc1_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc2_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc3_event_cnt": 0}}`
 
 ## Closure-qualified compute/component capacities
@@ -105,36 +109,70 @@ commit、raw trial 和环境 artifact 为准。
 
 ## Full-GEMM 与模型
 
-1024/2048 是预声明的 calibration，4096 是 holdout；该划分不证明 cache residency。报告同时计算 hot-L2 和 cold-HBM：严格上界采用两者中更松的 performance upper，经验包络保留两场景区间。
+1024/2048 是预声明的 calibration，4096 是 holdout；该划分不证明 cache residency。报告同时计算 hot-L2 和 cold-HBM：严格上界采用两者中更松的 performance upper；resource envelope、causal profile 和二者合并后的最终经验理想包络分别报告，不能互相顶替。
 条件上界反证容差为 2.00%，经验重校准容差为 2.00%。
 
-| Precision | N | Split | Candidate | Candidate median | Reference | Reference median | Observed-best backend | Cand/ref | Upper status (L2/HBM) | Conditional upper range | Candidate median/max upper | Observed-best max trial/max upper | Empirical range | Candidate/empirical | Observed-best/empirical |
-| --- | ---: | --- | --- | ---: | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `bf16_f32` | 1024 | calibration | `bf16_q0_wmma_m128n64k16` | 8.515 TFLOP/s | `cublas_bf16_gemmex` | 97.118 TFLOP/s | `cublas_bf16_gemmex` | 8.77% | `ok/ok` | 69.888 TFLOP/s–258.500 TFLOP/s | 3.29% | 37.94% | 69.888 TFLOP/s–128.436 TFLOP/s | 6.63%–12.18% | 75.62%–138.96% |
-| `bf16_f32` | 2048 | calibration | `bf16_q0_wmma_m128n64k16` | 9.175 TFLOP/s | `cublas_bf16_gemmex` | 130.215 TFLOP/s | `cublas_bf16_gemmex` | 7.05% | `ok/ok` | 139.776 TFLOP/s–258.500 TFLOP/s | 3.55% | 50.63% | 128.436 TFLOP/s–128.436 TFLOP/s | 7.14%–7.14% | 101.39%–101.39% |
-| `bf16_f32` | 4096 | holdout | `bf16_q0_wmma_m128n64k16` | 8.481 TFLOP/s | `cublas_bf16_gemmex` | 64.559 TFLOP/s | `cublas_bf16_gemmex` | 13.14% | `ok/ok` | 258.500 TFLOP/s–258.500 TFLOP/s | 3.28% | 25.63% | 128.436 TFLOP/s–128.436 TFLOP/s | 6.60%–6.60% | 50.27%–50.27% |
-| `e4m3_f32` | 1024 | calibration | `fp8_q7_mma_m16n8k32_smem128x64` | 5.314 TFLOP/s | `fp8_q8_cublaslt_matmul` | 134.204 TFLOP/s | `fp8_q8_cublaslt_matmul` | 3.96% | `ok/ok` | 93.184 TFLOP/s–412.877 TFLOP/s | 1.29% | 32.88% | —–— | —–— | —–— |
-| `e4m3_f32` | 2048 | calibration | `fp8_q7_mma_m16n8k32_smem128x64` | 6.034 TFLOP/s | `fp8_q8_cublaslt_matmul` | 226.013 TFLOP/s | `fp8_q8_cublaslt_matmul` | 2.67% | `ok/ok` | 186.368 TFLOP/s–517.000 TFLOP/s | 1.17% | 44.66% | —–— | —–— | —–— |
-| `e4m3_f32` | 4096 | holdout | `fp8_q7_mma_m16n8k32_smem128x64` | 6.196 TFLOP/s | `fp8_q8_cublaslt_matmul` | 211.940 TFLOP/s | `fp8_q8_cublaslt_matmul` | 2.92% | `ok/ok` | 372.736 TFLOP/s–517.000 TFLOP/s | 1.20% | 41.97% | —–— | —–— | —–— |
-| `fp16_f32` | 1024 | calibration | `tc5b` | 90.752 TFLOP/s | `cublas_tc` | 102.721 TFLOP/s | `cublas_tc` | 88.35% | `ok/ok` | 69.888 TFLOP/s–258.500 TFLOP/s | 35.11% | 39.88% | 69.888 TFLOP/s–128.436 TFLOP/s | 70.66%–129.85% | 79.98%–146.98% |
-| `fp16_f32` | 2048 | calibration | `tc5a` | 120.039 TFLOP/s | `cublas_tc` | 130.633 TFLOP/s | `cublas_tc` | 91.89% | `ok/ok` | 139.776 TFLOP/s–258.500 TFLOP/s | 46.44% | 50.74% | 128.436 TFLOP/s–128.436 TFLOP/s | 93.46%–93.46% | 101.71%–101.71% |
-| `fp16_f32` | 4096 | holdout | `tc5a` | 62.868 TFLOP/s | `cublas_tc` | 64.231 TFLOP/s | `cublas_tc` | 97.88% | `ok/ok` | 258.500 TFLOP/s–258.500 TFLOP/s | 24.32% | 25.63% | 128.436 TFLOP/s–128.436 TFLOP/s | 48.95%–48.95% | 50.01%–50.01% |
-| `s8_s32` | 1024 | calibration | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 17.333 TOP/s | `int8_q19_cublas_gemmex` | 123.408 TOP/s | `int8_q19_cublas_gemmex` | 14.05% | `ok/ok` | 93.184 TOP/s–412.877 TOP/s | 4.20% | 30.32% | —–— | —–— | —–— |
-| `s8_s32` | 2048 | calibration | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 19.566 TOP/s | `int8_q19_cublas_gemmex` | 205.030 TOP/s | `int8_q19_cublas_gemmex` | 9.54% | `ok/ok` | 186.368 TOP/s–517.500 TOP/s | 3.78% | 41.56% | —–— | —–— | —–— |
-| `s8_s32` | 4096 | holdout | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 20.743 TOP/s | `int8_q19_cublas_gemmex` | 225.688 TOP/s | `int8_q19_cublas_gemmex` | 9.19% | `ok/ok` | 372.736 TOP/s–517.500 TOP/s | 4.01% | 44.42% | —–— | —–— | —–— |
-| `tf32_f32` | 1024 | calibration | `tf32_q0_wmma_m64n64k8` | 2.606 TFLOP/s | `cublas_tf32_gemmex` | 41.347 TFLOP/s | `cublas_tf32_gemmex` | 6.30% | `partial/partial` | 46.592 TFLOP/s–412.877 TFLOP/s | 0.63% | 10.06% | —–— | —–— | —–— |
-| `tf32_f32` | 2048 | calibration | `tf32_q0_wmma_m64n64k8` | 2.630 TFLOP/s | `cublas_tf32_gemmex` | 60.197 TFLOP/s | `cublas_tf32_gemmex` | 4.37% | `partial/partial` | 93.184 TFLOP/s–825.754 TFLOP/s | 0.32% | 7.50% | —–— | —–— | —–— |
-| `tf32_f32` | 4096 | holdout | `tf32_q0_wmma_m64n64k8` | 2.337 TFLOP/s | `cublas_tf32_gemmex` | 18.541 TFLOP/s | `cublas_tf32_gemmex` | 12.61% | `partial/partial` | 186.368 TFLOP/s–1651.507 TFLOP/s | 0.14% | 1.13% | —–— | —–— | —–— |
+| Precision | N | Split | Candidate | Candidate median | Reference | Reference median | Observed-best backend | Cand/ref | Upper status (L2/HBM) | Conditional upper range | Candidate median/max upper | Observed-best max trial/max upper | Resource status | Resource range | Causal status | Causal range | Integrated ideal range | Candidate/integrated | Observed-best/integrated |
+| --- | ---: | --- | --- | ---: | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `bf16_f32` | 1024 | calibration | `bf16_q0_wmma_m128n64k16` | 8.515 TFLOP/s | `cublas_bf16_gemmex` | 97.118 TFLOP/s | `cublas_bf16_gemmex` | 8.77% | `ok/ok` | 69.888 TFLOP/s–258.500 TFLOP/s | 3.29% | 37.94% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `bf16_f32` | 2048 | calibration | `bf16_q0_wmma_m128n64k16` | 9.175 TFLOP/s | `cublas_bf16_gemmex` | 130.215 TFLOP/s | `cublas_bf16_gemmex` | 7.05% | `ok/ok` | 139.776 TFLOP/s–258.500 TFLOP/s | 3.55% | 50.63% | `ok/ok` | 128.436 TFLOP/s–128.436 TFLOP/s | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `bf16_f32` | 4096 | holdout | `bf16_q0_wmma_m128n64k16` | 8.481 TFLOP/s | `cublas_bf16_gemmex` | 64.559 TFLOP/s | `cublas_bf16_gemmex` | 13.14% | `ok/ok` | 258.500 TFLOP/s–258.500 TFLOP/s | 3.28% | 25.63% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `e4m3_f32` | 1024 | calibration | `fp8_q7_mma_m16n8k32_smem128x64` | 5.314 TFLOP/s | `fp8_q8_cublaslt_matmul` | 134.204 TFLOP/s | `fp8_q8_cublaslt_matmul` | 3.96% | `ok/ok` | 93.184 TFLOP/s–412.877 TFLOP/s | 1.29% | 32.88% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `e4m3_f32` | 2048 | calibration | `fp8_q7_mma_m16n8k32_smem128x64` | 6.034 TFLOP/s | `fp8_q8_cublaslt_matmul` | 226.013 TFLOP/s | `fp8_q8_cublaslt_matmul` | 2.67% | `ok/ok` | 186.368 TFLOP/s–517.000 TFLOP/s | 1.17% | 44.66% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `e4m3_f32` | 4096 | holdout | `fp8_q7_mma_m16n8k32_smem128x64` | 6.196 TFLOP/s | `fp8_q8_cublaslt_matmul` | 211.940 TFLOP/s | `fp8_q8_cublaslt_matmul` | 2.92% | `ok/ok` | 372.736 TFLOP/s–517.000 TFLOP/s | 1.20% | 41.97% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `fp16_f32` | 1024 | calibration | `tc5b` | 90.752 TFLOP/s | `cublas_tc` | 102.721 TFLOP/s | `cublas_tc` | 88.35% | `ok/ok` | 69.888 TFLOP/s–258.500 TFLOP/s | 35.11% | 39.88% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `fp16_f32` | 2048 | calibration | `tc5a` | 120.039 TFLOP/s | `cublas_tc` | 130.633 TFLOP/s | `cublas_tc` | 91.89% | `ok/ok` | 139.776 TFLOP/s–258.500 TFLOP/s | 46.44% | 50.74% | `ok/ok` | 128.436 TFLOP/s–128.436 TFLOP/s | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `fp16_f32` | 4096 | holdout | `tc5a` | 62.868 TFLOP/s | `cublas_tc` | 64.231 TFLOP/s | `cublas_tc` | 97.88% | `ok/ok` | 258.500 TFLOP/s–258.500 TFLOP/s | 24.32% | 25.63% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `s8_s32` | 1024 | calibration | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 17.333 TOP/s | `int8_q19_cublas_gemmex` | 123.408 TOP/s | `int8_q19_cublas_gemmex` | 14.05% | `ok/ok` | 93.184 TOP/s–412.877 TOP/s | 4.20% | 30.32% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `s8_s32` | 2048 | calibration | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 19.566 TOP/s | `int8_q19_cublas_gemmex` | 205.030 TOP/s | `int8_q19_cublas_gemmex` | 9.54% | `ok/ok` | 186.368 TOP/s–517.500 TOP/s | 3.78% | 41.56% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `s8_s32` | 4096 | holdout | `int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol` | 20.743 TOP/s | `int8_q19_cublas_gemmex` | 225.688 TOP/s | `int8_q19_cublas_gemmex` | 9.19% | `ok/ok` | 372.736 TOP/s–517.500 TOP/s | 4.01% | 44.42% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `tf32_f32` | 1024 | calibration | `tf32_q0_wmma_m64n64k8` | 2.606 TFLOP/s | `cublas_tf32_gemmex` | 41.347 TFLOP/s | `cublas_tf32_gemmex` | 6.30% | `partial/partial` | 46.592 TFLOP/s–412.877 TFLOP/s | 0.63% | 10.06% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `tf32_f32` | 2048 | calibration | `tf32_q0_wmma_m64n64k8` | 2.630 TFLOP/s | `cublas_tf32_gemmex` | 60.197 TFLOP/s | `cublas_tf32_gemmex` | 4.37% | `partial/partial` | 93.184 TFLOP/s–825.754 TFLOP/s | 0.32% | 7.50% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
+| `tf32_f32` | 4096 | holdout | `tf32_q0_wmma_m64n64k8` | 2.337 TFLOP/s | `cublas_tf32_gemmex` | 18.541 TFLOP/s | `cublas_tf32_gemmex` | 12.61% | `partial/partial` | 186.368 TFLOP/s–1651.507 TFLOP/s | 0.14% | 1.13% | `insufficient_evidence/insufficient_evidence` | —–— | `insufficient_evidence/insufficient_evidence` | —–— | —–— | —–— | —–— |
 
 ## Findings
 
 - **warning `overcurrent_events_observed`**：{"deltas": {"/sys/class/hwmon/hwmon5/oc1_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc2_event_cnt": 0, "/sys/class/hwmon/hwmon5/oc3_event_cnt": 179}, "interval": "thor-t5000-closure-maxn-20260814-d382b57-a"}
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n1024_q7: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n2048_q7: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n4096_q7: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n1024_q15: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n2048_q15: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n4096_q15: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n1024_q0: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n2048_q0: missing scenario prediction
-- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n4096_q0: missing scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n1024_q0: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n1024_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n1024_q0: missing integrated resource-plus-causal scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n2048_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n2048_q0: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n4096_q0: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n4096_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.bf16_f32_n4096_q0: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n1024_q7: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n1024_q7: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n1024_q7: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n2048_q7: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n2048_q7: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n2048_q7: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n4096_q7: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n4096_q7: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.e4m3_f32_n4096_q7: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n1024_tc5b: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n1024_tc5b: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n1024_tc5b: missing integrated resource-plus-causal scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n2048_tc5a: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n2048_tc5a: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n4096_tc5a: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n4096_tc5a: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.fp16_f32_n4096_tc5a: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n1024_q15: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n1024_q15: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n1024_q15: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n2048_q15: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n2048_q15: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n2048_q15: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n4096_q15: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n4096_q15: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.s8_s32_n4096_q15: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n1024_q0: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n1024_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n1024_q0: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n2048_q0: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n2048_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n2048_q0: missing integrated resource-plus-causal scenario prediction
+- **error `residency_empirical_resource_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n4096_q0: missing resource-layer scenario prediction
+- **error `residency_causal_pipeline_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n4096_q0: missing causal-profile scenario prediction
+- **error `residency_empirical_prediction_incomplete`**：thor-t5000-tma-ingress-supplement-maxn-20260814-c.full.tf32_f32_n4096_q0: missing integrated resource-plus-causal scenario prediction

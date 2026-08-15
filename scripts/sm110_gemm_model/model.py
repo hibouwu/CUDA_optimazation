@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import csv
+import re
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -12,11 +13,10 @@ class ModelError(ValueError):
     """Raised when an input would make the model semantically ambiguous."""
 
 
-# The executable currently combines throughput-resource and finite-wave
-# constraints, but it does not yet solve a latency-weighted TMA/MMA/TMEM DAG.
-# Keep this capability explicit so a report cannot silently call the whole
-# three-layer model complete.
-CAUSAL_PIPELINE_DAG_IMPLEMENTED = False
+# The executable has a latency-weighted persistent-worker DAG solver.  This
+# flag means the algorithm exists; it does not mean that every schedule has a
+# closure-qualified timing profile.  Per-schedule evidence remains fail-closed.
+CAUSAL_PIPELINE_DAG_IMPLEMENTED = True
 
 
 class EvidenceKind(str, Enum):
@@ -221,6 +221,11 @@ class Schedule:
     uses_tma: bool = True
     tma_ingress_capacity_resource: str | None = None
     tma_hbm_capacity_resource: str | None = None
+    tma_contract_family_by_precision: dict[str, str] = field(
+        default_factory=dict
+    )
+    tma_contract_row_stride_elements: tuple[int, ...] = ()
+    causal_pipeline_resource: str | None = None
     input_transport_layout: str = "logical_packed"
     persistent: bool = False
     fixed_seconds: float = 0.0
@@ -261,10 +266,10 @@ class Schedule:
                 f"{self.schedule_id}: split-K partial-storage and reduction contract "
                 "is not implemented in model v1"
             )
-        if self.persistent:
+        if self.persistent and self.causal_pipeline_resource is None:
             raise ModelError(
-                f"{self.schedule_id}: persistent scheduling contract is not implemented "
-                "in model v1"
+                f"{self.schedule_id}: persistent scheduling requires an exact "
+                "causal_pipeline_resource contract"
             )
         if not isinstance(self.uses_tma, bool):
             raise ModelError(f"{self.schedule_id}: uses_tma must be boolean")
@@ -273,9 +278,15 @@ class Schedule:
                 f"{self.schedule_id}: non-TMA input paths require a separate "
                 "issued-traffic and ingress-capacity contract not implemented in model v1"
             )
+        if self.causal_pipeline_resource is not None and not self.persistent:
+            raise ModelError(
+                f"{self.schedule_id}: causal pipeline binding requires the "
+                "persistent worker contract"
+            )
         for resource, label in (
             (self.tma_ingress_capacity_resource, "TMA ingress"),
             (self.tma_hbm_capacity_resource, "TMA HBM"),
+            (self.causal_pipeline_resource, "causal pipeline"),
         ):
             if resource is not None and (
                 not isinstance(resource, str) or not resource.strip()
@@ -284,6 +295,62 @@ class Schedule:
                     f"{self.schedule_id}: {label} capacity resource must be "
                     "a nonempty string when declared"
                 )
+        if not isinstance(self.tma_contract_family_by_precision, dict):
+            raise ModelError(
+                f"{self.schedule_id}: tma_contract_family_by_precision must "
+                "be an object"
+            )
+        if bool(self.tma_contract_family_by_precision) != bool(
+            self.tma_contract_row_stride_elements
+        ):
+            raise ModelError(
+                f"{self.schedule_id}: exact TMA family mapping and row-stride "
+                "set must be declared together"
+            )
+        if self.tma_contract_family_by_precision and (
+            self.tma_ingress_capacity_resource is not None
+            or self.tma_hbm_capacity_resource is not None
+        ):
+            raise ModelError(
+                f"{self.schedule_id}: exact TMA family mapping cannot be mixed "
+                "with legacy fixed TMA resource IDs"
+            )
+        for precision_id, family_id in (
+            self.tma_contract_family_by_precision.items()
+        ):
+            if (
+                not isinstance(precision_id, str)
+                or not precision_id
+                or not isinstance(family_id, str)
+                or re.fullmatch(r"[a-z0-9_]+", family_id) is None
+            ):
+                raise ModelError(
+                    f"{self.schedule_id}: invalid exact TMA family mapping"
+                )
+            if (
+                self.supported_precisions
+                and precision_id not in self.supported_precisions
+            ):
+                raise ModelError(
+                    f"{self.schedule_id}: TMA family is mapped for unsupported "
+                    f"precision {precision_id}"
+                )
+        if any(
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value <= 0
+            for value in self.tma_contract_row_stride_elements
+        ):
+            raise ModelError(
+                f"{self.schedule_id}: exact TMA row strides must be positive "
+                "integers"
+            )
+        if len(set(self.tma_contract_row_stride_elements)) != len(
+            self.tma_contract_row_stride_elements
+        ):
+            raise ModelError(
+                f"{self.schedule_id}: exact TMA row strides must be unique"
+            )
         if self.tail_policy not in {"exact", "pad"}:
             raise ModelError(f"{self.schedule_id}: tail_policy must be exact or pad")
         if self.input_transport_layout not in {
@@ -507,6 +574,426 @@ class Capacity:
 
 
 @dataclass(frozen=True)
+class PipelineProfile:
+    profile_id: str
+    resource: str
+    schedule_id: str
+    precision_ids: tuple[str, ...]
+    evidence_kind: EvidenceKind
+    qualification: str
+    trial_count_per_case: int
+    source_id: str
+    expected_commit: str
+    source_path: str
+    source_locator: str
+    input_residency: str
+    stages: int
+    accumulator_buffers: int
+    resident_ctas_per_sm: int
+    maximum_k_tiles: int
+    maximum_output_tasks_per_worker: int
+    tma_first_completion_seconds: float
+    tma_completion_interval_seconds: float
+    mma_first_completion_seconds: float
+    mma_completion_interval_seconds: float
+    joint_first_mma_completion_seconds: float
+    joint_completion_interval_seconds: float
+    epilogue_latency_seconds: float
+    component_r_squared: dict[str, float]
+    max_calibration_relative_error: float
+    max_holdout_relative_error: float
+    fit_contract: dict[str, Any]
+    validation: tuple[dict[str, Any], ...]
+    closure_qualified: bool
+    artifact_paths: tuple[str, ...] = ()
+
+    def validate(self) -> None:
+        if not self.profile_id or not self.resource or not self.schedule_id:
+            raise ModelError("pipeline profile identity fields cannot be empty")
+        if (
+            not isinstance(self.precision_ids, tuple)
+            or not self.precision_ids
+            or any(not isinstance(value, str) or not value
+                   for value in self.precision_ids)
+            or len(set(self.precision_ids)) != len(self.precision_ids)
+        ):
+            raise ModelError(
+                f"{self.profile_id}: precision_ids must be a nonempty tuple "
+                "of unique precision IDs"
+            )
+        unknown_precisions = sorted(
+            set(self.precision_ids) - set(precision_specs())
+        )
+        if unknown_precisions:
+            raise ModelError(
+                f"{self.profile_id}: unknown causal profile precisions "
+                f"{unknown_precisions}"
+            )
+        if self.evidence_kind != EvidenceKind.MEASURED_JOINT:
+            raise ModelError(
+                f"{self.profile_id}: causal profile must use measured_joint evidence"
+            )
+        if self.qualification not in {"closure_qualified", "quarantined"}:
+            raise ModelError(
+                f"{self.profile_id}: unsupported profile qualification"
+            )
+        if self.closure_qualified != (
+            self.qualification == "closure_qualified"
+        ):
+            raise ModelError(
+                f"{self.profile_id}: qualification boolean is inconsistent"
+            )
+        integer_fields = (
+            self.trial_count_per_case, self.stages, self.accumulator_buffers,
+            self.resident_ctas_per_sm, self.maximum_k_tiles,
+            self.maximum_output_tasks_per_worker,
+        )
+        if any(
+            not isinstance(value, int) or isinstance(value, bool) or value <= 0
+            for value in integer_fields
+        ):
+            raise ModelError(
+                f"{self.profile_id}: count and topology fields must be positive integers"
+            )
+        if self.closure_qualified and self.trial_count_per_case < 10:
+            raise ModelError(
+                f"{self.profile_id}: closure qualification requires ten trials per case"
+            )
+        if not re.fullmatch(r"[0-9a-f]{40}", self.expected_commit):
+            raise ModelError(
+                f"{self.profile_id}: expected_commit is not a 40-hex Git commit"
+            )
+        if not self.source_id or not self.source_path or not self.source_locator:
+            raise ModelError(
+                f"{self.profile_id}: provenance fields cannot be empty"
+            )
+        if self.input_residency != "hot_l2":
+            raise ModelError(
+                f"{self.profile_id}: v1 causal calibration must use hot_l2 inputs"
+            )
+        timing_fields = (
+            self.tma_first_completion_seconds,
+            self.tma_completion_interval_seconds,
+            self.mma_first_completion_seconds,
+            self.mma_completion_interval_seconds,
+            self.joint_first_mma_completion_seconds,
+            self.joint_completion_interval_seconds,
+            self.epilogue_latency_seconds,
+        )
+        if any(not math.isfinite(value) or value <= 0 for value in timing_fields):
+            raise ModelError(
+                f"{self.profile_id}: timing fields must be finite and positive"
+            )
+        if set(self.component_r_squared) != {"tma", "mma", "joint"}:
+            raise ModelError(
+                f"{self.profile_id}: component R-squared set is incomplete"
+            )
+        # R-squared may legitimately be negative when the frozen linear model
+        # is worse than a constant predictor.  Such a profile must remain
+        # importable as quarantined evidence, so only non-finite values and
+        # values above the mathematical maximum are structurally invalid.
+        if any(
+            not math.isfinite(value) or value > 1.0
+            for value in self.component_r_squared.values()
+        ):
+            raise ModelError(
+                f"{self.profile_id}: component R-squared values are invalid"
+            )
+        for value, label in (
+            (self.max_calibration_relative_error, "calibration"),
+            (self.max_holdout_relative_error, "holdout"),
+        ):
+            if not math.isfinite(value) or value < 0:
+                raise ModelError(
+                    f"{self.profile_id}: {label} error must be finite and nonnegative"
+                )
+        required_fit_fields = {
+            "calibration_points",
+            "holdout_points",
+            "calibration_output_tasks",
+            "epilogue_calibration_output_tasks",
+            "holdout_output_tasks",
+            "minimum_r_squared",
+            "maximum_holdout_relative_error",
+            "profile_stages",
+            "profile_accumulator_buffers",
+            "profile_resident_ctas_per_sm",
+        }
+        if not required_fit_fields.issubset(self.fit_contract):
+            raise ModelError(
+                f"{self.profile_id}: fit contract is missing "
+                f"{sorted(required_fit_fields - set(self.fit_contract))}"
+            )
+        minimum_r2 = self.fit_contract["minimum_r_squared"]
+        maximum_error = self.fit_contract["maximum_holdout_relative_error"]
+        if (
+            not isinstance(minimum_r2, (int, float))
+            or isinstance(minimum_r2, bool)
+            or not math.isfinite(float(minimum_r2))
+            or not 0.0 <= float(minimum_r2) <= 1.0
+            or not isinstance(maximum_error, (int, float))
+            or isinstance(maximum_error, bool)
+            or not math.isfinite(float(maximum_error))
+            or not 0.0 <= float(maximum_error) < 1.0
+        ):
+            raise ModelError(f"{self.profile_id}: fit thresholds are invalid")
+        topology = (
+            ("profile_stages", self.stages),
+            ("profile_accumulator_buffers", self.accumulator_buffers),
+            ("profile_resident_ctas_per_sm", self.resident_ctas_per_sm),
+        )
+        for field_name, expected in topology:
+            if self.fit_contract[field_name] != expected:
+                raise ModelError(
+                    f"{self.profile_id}: {field_name} disagrees with profile topology"
+                )
+        sweep_fields = (
+            "calibration_points",
+            "holdout_points",
+            "calibration_output_tasks",
+            "epilogue_calibration_output_tasks",
+            "holdout_output_tasks",
+        )
+        sweeps: dict[str, tuple[int, ...]] = {}
+        for field_name in sweep_fields:
+            raw = self.fit_contract[field_name]
+            if (
+                not isinstance(raw, (list, tuple))
+                or not raw
+                or any(
+                    not isinstance(value, int)
+                    or isinstance(value, bool)
+                    or value <= 0
+                    for value in raw
+                )
+                or len(set(raw)) != len(raw)
+            ):
+                raise ModelError(
+                    f"{self.profile_id}: {field_name} must be a nonempty "
+                    "unique positive-integer sequence"
+                )
+            sweeps[field_name] = tuple(raw)
+        calibration_k = set(sweeps["calibration_points"])
+        holdout_k = set(sweeps["holdout_points"])
+        calibration_output = set(sweeps["calibration_output_tasks"])
+        epilogue_output = set(sweeps["epilogue_calibration_output_tasks"])
+        holdout_output = set(sweeps["holdout_output_tasks"])
+        if calibration_k & holdout_k:
+            raise ModelError(
+                f"{self.profile_id}: calibration and holdout K points overlap"
+            )
+        if calibration_output & holdout_output:
+            raise ModelError(
+                f"{self.profile_id}: calibration and holdout output tasks overlap"
+            )
+        if not epilogue_output.issubset(calibration_output):
+            raise ModelError(
+                f"{self.profile_id}: epilogue calibration tasks must be a "
+                "subset of calibration output tasks"
+            )
+        all_k = calibration_k | holdout_k
+        all_output = calibration_output | holdout_output
+        if max(all_k) != self.maximum_k_tiles:
+            raise ModelError(
+                f"{self.profile_id}: maximum_k_tiles disagrees with fit sweep"
+            )
+        if max(all_output) != self.maximum_output_tasks_per_worker:
+            raise ModelError(
+                f"{self.profile_id}: maximum output-task range disagrees with fit sweep"
+            )
+        if self.joint_completion_interval_seconds < max(
+            self.tma_completion_interval_seconds,
+            self.mma_completion_interval_seconds,
+        ) and not math.isclose(
+            self.joint_completion_interval_seconds,
+            max(
+                self.tma_completion_interval_seconds,
+                self.mma_completion_interval_seconds,
+            ),
+            rel_tol=1e-12,
+            abs_tol=0.0,
+        ):
+            raise ModelError(
+                f"{self.profile_id}: joint interval is faster than an isolated component"
+            )
+        if not self.validation:
+            raise ModelError(f"{self.profile_id}: validation rows cannot be empty")
+        recomputed_errors: dict[str, list[float]] = {
+            "calibration": [],
+            "holdout": [],
+        }
+        expected_coordinates = {
+            (k_tiles, output_tasks)
+            for k_tiles in all_k
+            for output_tasks in all_output
+        }
+        observed_coordinates: set[tuple[int, int]] = set()
+        case_ids: set[str] = set()
+        for index, row in enumerate(self.validation):
+            if not isinstance(row, dict):
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} is not an object"
+                )
+            split = row.get("split")
+            if split not in recomputed_errors:
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} has invalid split"
+                )
+            case_id = row.get("case_id")
+            if not isinstance(case_id, str) or not case_id or case_id in case_ids:
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} has a missing "
+                    "or duplicate case_id"
+                )
+            case_ids.add(case_id)
+            k_tiles = row.get("k_tiles")
+            output_tasks = row.get("output_tasks")
+            if (
+                not isinstance(k_tiles, int)
+                or isinstance(k_tiles, bool)
+                or not isinstance(output_tasks, int)
+                or isinstance(output_tasks, bool)
+                or (k_tiles, output_tasks) not in expected_coordinates
+                or (k_tiles, output_tasks) in observed_coordinates
+            ):
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} has an invalid "
+                    "or duplicate K/output coordinate"
+                )
+            observed_coordinates.add((k_tiles, output_tasks))
+            expected_split = (
+                "calibration"
+                if k_tiles in calibration_k and output_tasks in calibration_output
+                else "holdout"
+            )
+            if split != expected_split:
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} split disagrees "
+                    "with the frozen sweep"
+                )
+            try:
+                actual = float(row["actual_median_ns"])
+                predicted = float(row["predicted_ns"])
+                recorded_error = float(row["relative_error"])
+            except (KeyError, TypeError, ValueError) as error:
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} is incomplete"
+                ) from error
+            if (
+                not math.isfinite(actual)
+                or not math.isfinite(predicted)
+                or not math.isfinite(recorded_error)
+                or actual <= 0
+                or predicted <= 0
+                or recorded_error < 0
+            ):
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} is invalid"
+                )
+            previous_mma_done = 0.0
+            epilogue_done: list[float] = []
+            for task in range(output_tasks):
+                first_mma_done = (
+                    self.joint_first_mma_completion_seconds
+                    if task == 0
+                    else previous_mma_done
+                    + self.joint_completion_interval_seconds
+                )
+                if task >= self.accumulator_buffers:
+                    first_mma_done = max(
+                        first_mma_done,
+                        epilogue_done[task - self.accumulator_buffers]
+                        + self.joint_completion_interval_seconds,
+                    )
+                last_mma_done = (
+                    first_mma_done
+                    + (k_tiles - 1)
+                    * self.joint_completion_interval_seconds
+                )
+                epilogue_start = max(
+                    last_mma_done,
+                    epilogue_done[-1] if epilogue_done else 0.0,
+                )
+                epilogue_done.append(
+                    epilogue_start + self.epilogue_latency_seconds
+                )
+                previous_mma_done = last_mma_done
+            parameter_prediction_ns = epilogue_done[-1] * 1e9
+            if not math.isclose(
+                parameter_prediction_ns,
+                predicted,
+                rel_tol=1e-12,
+                abs_tol=1e-9,
+            ):
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} prediction "
+                    "does not match profile parameters"
+                )
+            recomputed = abs(predicted - actual) / actual
+            if not math.isclose(
+                recomputed, recorded_error, rel_tol=1e-12, abs_tol=1e-15
+            ):
+                raise ModelError(
+                    f"{self.profile_id}: validation row {index} error arithmetic mismatch"
+                )
+            recomputed_errors[split].append(recomputed)
+        if observed_coordinates != expected_coordinates:
+            raise ModelError(
+                f"{self.profile_id}: validation coordinate grid is incomplete"
+            )
+        if any(not values for values in recomputed_errors.values()):
+            raise ModelError(
+                f"{self.profile_id}: calibration and holdout validation are both required"
+            )
+        if not math.isclose(
+            max(recomputed_errors["calibration"]),
+            self.max_calibration_relative_error,
+            rel_tol=1e-12,
+            abs_tol=1e-15,
+        ) or not math.isclose(
+            max(recomputed_errors["holdout"]),
+            self.max_holdout_relative_error,
+            rel_tol=1e-12,
+            abs_tol=1e-15,
+        ):
+            raise ModelError(
+                f"{self.profile_id}: summarized validation maxima do not match rows"
+            )
+        gates_pass = bool(
+            all(
+                value >= float(minimum_r2)
+                for value in self.component_r_squared.values()
+            )
+            and self.max_calibration_relative_error <= float(maximum_error)
+            and self.max_holdout_relative_error <= float(maximum_error)
+        )
+        if self.closure_qualified != gates_pass:
+            raise ModelError(
+                f"{self.profile_id}: qualification disagrees with predeclared fit gates"
+            )
+        if len(set(self.artifact_paths)) != len(self.artifact_paths) or any(
+            not path or Path(path).is_absolute() or ".." in Path(path).parts
+            for path in self.artifact_paths
+        ):
+            raise ModelError(
+                f"{self.profile_id}: artifact paths must be unique repository-relative files"
+            )
+        if self.closure_qualified and not self.artifact_paths:
+            raise ModelError(
+                f"{self.profile_id}: qualified profile requires artifact paths"
+            )
+
+    @property
+    def is_closure_qualified(self) -> bool:
+        return self.closure_qualified
+
+    def to_dict(self) -> dict[str, Any]:
+        result = asdict(self)
+        result["evidence_kind"] = self.evidence_kind.value
+        return result
+
+
+@dataclass(frozen=True)
 class WorkAccounting:
     useful_compute_work: float
     issued_compute_work: float
@@ -558,6 +1045,8 @@ class ModelResult:
     work: WorkAccounting
     conditional_upper: LayerResult
     empirical_envelope: LayerResult
+    causal_pipeline: LayerResult
+    empirical_ideal_envelope: LayerResult
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -566,6 +1055,8 @@ class ModelResult:
             "work": asdict(self.work),
             "conditional_upper": asdict(self.conditional_upper),
             "empirical_envelope": asdict(self.empirical_envelope),
+            "causal_pipeline": asdict(self.causal_pipeline),
+            "empirical_ideal_envelope": asdict(self.empirical_ideal_envelope),
         }
 
 
@@ -579,6 +1070,24 @@ class WorkloadEnvelope:
     conditional_schedule_id: str | None
     empirical_schedule_id: str | None
     rejected: list[dict[str, str]]
+    manifest_empirical_resource_envelope: LayerResult = field(
+        default_factory=lambda: LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit="unknown/s",
+        )
+    )
+    empirical_resource_schedule_id: str | None = None
+    causal_pipeline_envelope: LayerResult = field(
+        default_factory=lambda: LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit="unknown/s",
+        )
+    )
+    causal_pipeline_schedule_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -799,10 +1308,27 @@ def account_work(workload: Workload, schedule: Schedule, precision: PrecisionSpe
 def _select_capacity(
     capacities: Iterable[Capacity], resource: str, *, strict: bool
 ) -> Capacity | None:
+    # The historical closure campaign already measured the exact tc5a stage-4
+    # contract at packed row stride 2048, before resource IDs encoded the row
+    # stride.  These one-way aliases preserve that valid point for N=K=2048;
+    # they never let the legacy result satisfy 1024/4096 or another family.
+    legacy_empirical_aliases = {
+        (
+            "tma.smem_ingress.contract."
+            "tc5a_m128n256k64_s4_v16.stride2048.per_sm"
+        ): ("tma.smem_ingress.per_sm",),
+        (
+            "tma.hbm.contract."
+            "tc5a_m128n256k64_s4_v16.stride2048"
+        ): ("tma.hbm",),
+    }
+    candidate_resources = {resource}
+    if not strict:
+        candidate_resources.update(legacy_empirical_aliases.get(resource, ()))
     candidates = [
         cap
         for cap in capacities
-        if cap.resource == resource
+        if cap.resource in candidate_resources
         and (
             cap.evidence_kind.is_rate_upper_bound
             if strict
@@ -825,6 +1351,61 @@ def _select_capacity(
     return selector(candidates, key=lambda cap: cap.rate_per_second)
 
 
+def _resolve_tma_capacity_resources(
+    workload: Workload,
+    schedule: Schedule,
+    precision: PrecisionSpec,
+) -> tuple[str | None, str | None, str | None]:
+    """Resolve an exact schedule/precision/leading-dimension TMA contract.
+
+    Model v1 accepts only non-transposed packed matrices, so A's physical row
+    stride is K elements and B's is N elements.  The frozen resource campaign
+    uses one common row stride for both tensor maps.  It is therefore an exact
+    match only when ``K == N`` and that common stride was predeclared.  Any
+    other shape fails closed instead of borrowing a nearby measurement.
+    """
+
+    families = schedule.tma_contract_family_by_precision
+    if not families:
+        return (
+            schedule.tma_ingress_capacity_resource,
+            schedule.tma_hbm_capacity_resource,
+            None,
+        )
+    family = families.get(precision.precision_id)
+    if family is None:
+        return (
+            None,
+            None,
+            (
+                f"tma_transport_family_contract:{schedule.schedule_id}:"
+                f"{precision.precision_id}"
+            ),
+        )
+    if workload.k != workload.n:
+        return (
+            None,
+            None,
+            (
+                f"tma_equal_ab_row_stride_contract:{schedule.schedule_id}:"
+                f"a_ld={workload.k}:b_ld={workload.n}"
+            ),
+        )
+    stride = workload.k
+    if stride not in schedule.tma_contract_row_stride_elements:
+        return (
+            None,
+            None,
+            f"tma_row_stride_contract:{schedule.schedule_id}:{stride}",
+        )
+    stem = f"{family}.stride{stride}"
+    return (
+        f"tma.smem_ingress.contract.{stem}.per_sm",
+        f"tma.hbm.contract.{stem}",
+        None,
+    )
+
+
 def _resource_demands(
     workload: Workload,
     schedule: Schedule,
@@ -833,6 +1414,9 @@ def _resource_demands(
     *,
     empirical: bool,
 ) -> dict[str, tuple[float, str]]:
+    _, resolved_tma_hbm, _ = _resolve_tma_capacity_resources(
+        workload, schedule, precision
+    )
     read_min = work.input_value_bytes_min + work.input_scale_bytes_min + work.c_read_bytes_min
     write_min = work.output_value_bytes_min + work.output_scale_bytes_min
     compute_resource = (
@@ -881,9 +1465,9 @@ def _resource_demands(
         if workload.residency != "compute_oracle" and schedule.uses_tma:
             if (
                 workload.residency == "cold_hbm"
-                and schedule.tma_hbm_capacity_resource is not None
+                and resolved_tma_hbm is not None
             ):
-                demands[schedule.tma_hbm_capacity_resource] = (
+                demands[resolved_tma_hbm] = (
                     work.tma_unique_input_bytes, "byte")
         tmem_warps = (
             schedule.tmem_consumer_warps
@@ -919,6 +1503,9 @@ def _evaluate_layer(
     *,
     strict: bool,
 ) -> LayerResult:
+    resolved_tma_ingress, resolved_tma_hbm, tma_contract_gap = (
+        _resolve_tma_capacity_resources(workload, schedule, precision)
+    )
     demands = _resource_demands(
         workload, schedule, work, precision, empirical=not strict
     )
@@ -927,13 +1514,16 @@ def _evaluate_layer(
     conditions: list[str] = []
     selected: dict[str, Capacity] = {}
     if not strict and workload.residency != "compute_oracle" and schedule.uses_tma:
-        if schedule.tma_ingress_capacity_resource is None:
+        if tma_contract_gap is not None:
+            missing.append(tma_contract_gap)
+        elif resolved_tma_ingress is None:
             missing.append(
                 f"tma_ingress_capacity_contract:{schedule.schedule_id}"
             )
         if (
             workload.residency == "cold_hbm"
-            and schedule.tma_hbm_capacity_resource is None
+            and tma_contract_gap is None
+            and resolved_tma_hbm is None
         ):
             missing.append(
                 f"tma_hbm_capacity_contract:{schedule.schedule_id}"
@@ -981,7 +1571,7 @@ def _evaluate_layer(
                 conditions.append(f"{cap.capacity_id}: {cap.condition}")
 
         if workload.residency != "compute_oracle" and schedule.uses_tma:
-            ingress_resource = schedule.tma_ingress_capacity_resource
+            ingress_resource = resolved_tma_ingress
             ingress_cap = (
                 _select_capacity(capacities, ingress_resource, strict=False)
                 if ingress_resource is not None
@@ -1080,11 +1670,262 @@ def _evaluate_layer(
     )
 
 
+def predict_pipeline_worker_seconds(
+    profile: PipelineProfile,
+    *,
+    k_tiles: int,
+    output_tasks: int,
+) -> float:
+    """Predict the slowest persistent worker's causal completion time.
+
+    ``k_tiles`` is the number of BK-sized reduction tiles consumed by one
+    output task. ``output_tasks`` is the number of output tiles assigned to
+    the slowest resident worker.  The recurrence preserves the measured
+    steady-state TMA/MMA interval, the two-accumulator reuse dependency, and
+    serialized accumulator readback/store completion.
+    """
+
+    profile.validate()
+    for value, label in ((k_tiles, "k_tiles"), (output_tasks, "output_tasks")):
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ModelError(
+                f"{profile.profile_id}: {label} must be a positive integer"
+            )
+    if k_tiles > profile.maximum_k_tiles:
+        raise ModelError(
+            f"{profile.profile_id}: k_tiles={k_tiles} exceeds calibrated/holdout "
+            f"range {profile.maximum_k_tiles}"
+        )
+    if output_tasks > profile.maximum_output_tasks_per_worker:
+        raise ModelError(
+            f"{profile.profile_id}: output_tasks={output_tasks} exceeds "
+            f"calibrated/holdout range "
+            f"{profile.maximum_output_tasks_per_worker}"
+        )
+
+    previous_mma_done = 0.0
+    epilogue_done: list[float] = []
+    for task in range(output_tasks):
+        first_mma_done = (
+            profile.joint_first_mma_completion_seconds
+            if task == 0
+            else previous_mma_done + profile.joint_completion_interval_seconds
+        )
+        if task >= profile.accumulator_buffers:
+            first_mma_done = max(
+                first_mma_done,
+                epilogue_done[task - profile.accumulator_buffers]
+                + profile.joint_completion_interval_seconds,
+            )
+        last_mma_done = (
+            first_mma_done
+            + (k_tiles - 1) * profile.joint_completion_interval_seconds
+        )
+        epilogue_start = max(
+            last_mma_done,
+            epilogue_done[-1] if epilogue_done else 0.0,
+        )
+        epilogue_done.append(
+            epilogue_start + profile.epilogue_latency_seconds
+        )
+        previous_mma_done = last_mma_done
+    return epilogue_done[-1]
+
+
+def _evaluate_causal_pipeline(
+    workload: Workload,
+    schedule: Schedule,
+    hardware: Hardware,
+    precision: PrecisionSpec,
+    work: WorkAccounting,
+    profiles: list[PipelineProfile],
+) -> LayerResult:
+    resource = schedule.causal_pipeline_resource
+    if resource is None:
+        return LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit=f"{precision.compute_work_unit}/s",
+            missing_resources=[
+                f"causal_pipeline_contract:{schedule.schedule_id}"
+            ],
+        )
+    if workload.residency == "compute_oracle":
+        return LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit=f"{precision.compute_work_unit}/s",
+            missing_resources=["causal_pipeline_residency:compute_oracle"],
+        )
+
+    same_pipeline = [
+        profile
+        for profile in profiles
+        if profile.resource == resource
+        and profile.schedule_id == schedule.schedule_id
+        and profile.stages == schedule.stages
+    ]
+    exact = [
+        profile for profile in same_pipeline
+        if precision.precision_id in profile.precision_ids
+    ]
+    qualified = [
+        profile for profile in exact if profile.is_closure_qualified
+    ]
+    if not qualified:
+        conditions = [
+            f"{profile.profile_id}: {profile.qualification}"
+            for profile in exact
+        ]
+        conditions.extend(
+            f"{profile.profile_id}: precision_ids={','.join(profile.precision_ids)}"
+            for profile in same_pipeline
+            if precision.precision_id not in profile.precision_ids
+        )
+        return LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit=f"{precision.compute_work_unit}/s",
+            missing_resources=[
+                f"{resource}:precision={precision.precision_id}"
+            ],
+            conditions=sorted(conditions),
+        )
+
+    predictions: list[tuple[float, int, PipelineProfile]] = []
+    range_errors: list[str] = []
+    for profile in qualified:
+        service_units = (
+            max(1, hardware.sm_count // schedule.cta_group)
+            * profile.resident_ctas_per_sm
+        )
+        output_tasks = ceil_div(work.task_count, service_units)
+        try:
+            predicted = predict_pipeline_worker_seconds(
+                profile,
+                k_tiles=work.k_tiles,
+                output_tasks=output_tasks,
+            )
+        except ModelError as error:
+            range_errors.append(str(error))
+            continue
+        predictions.append((predicted, output_tasks, profile))
+    if not predictions:
+        return LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit=f"{precision.compute_work_unit}/s",
+            missing_resources=[f"{resource}:profile_range"],
+            conditions=sorted(range_errors),
+        )
+
+    # A profile is an indivisible joint measurement contract.  If repeated
+    # closure-qualified campaigns exist, select the fastest complete profile;
+    # never mix the best component from different campaigns.
+    total, output_tasks, selected = min(predictions, key=lambda row: row[0])
+    component_seconds = {
+        "causal.pipeline.joint_first_mma":
+            selected.joint_first_mma_completion_seconds,
+        "causal.pipeline.one_k_tile_interval":
+            selected.joint_completion_interval_seconds,
+        "causal.pipeline.one_epilogue": selected.epilogue_latency_seconds,
+        "causal.pipeline.persistent_worker": total,
+    }
+    condition = (
+        f"{selected.profile_id}: hot-L2 joint profile; "
+        f"{hardware.sm_count * selected.resident_ctas_per_sm} resident workers; "
+        f"slowest worker has {output_tasks} output task(s), "
+        f"{work.k_tiles} K tile(s) per task"
+    )
+    return LayerResult(
+        status="ok",
+        seconds=total,
+        performance_per_second=work.useful_compute_work / total,
+        performance_unit=f"{precision.compute_work_unit}/s",
+        bottlenecks=["causal.pipeline.persistent_worker"],
+        resource_seconds=component_seconds,
+        conditions=[condition],
+        selected_capacity_ids={resource: selected.profile_id},
+        selected_capacity_evidence_kinds={
+            resource: selected.evidence_kind.value
+        },
+        selected_capacity_qualifications={
+            resource: selected.qualification
+        },
+    )
+
+
+def _combine_empirical_layers(
+    resource_layer: LayerResult,
+    causal_layer: LayerResult,
+    work: WorkAccounting,
+) -> LayerResult:
+    resource_seconds = dict(resource_layer.resource_seconds)
+    resource_seconds.update(causal_layer.resource_seconds)
+    missing = sorted(set(
+        resource_layer.missing_resources + causal_layer.missing_resources
+    ))
+    conditions = sorted(set(resource_layer.conditions + causal_layer.conditions))
+    selected_ids = {
+        **resource_layer.selected_capacity_ids,
+        **causal_layer.selected_capacity_ids,
+    }
+    selected_kinds = {
+        **resource_layer.selected_capacity_evidence_kinds,
+        **causal_layer.selected_capacity_evidence_kinds,
+    }
+    selected_qualifications = {
+        **resource_layer.selected_capacity_qualifications,
+        **causal_layer.selected_capacity_qualifications,
+    }
+    if resource_layer.seconds is None or causal_layer.seconds is None or missing:
+        return LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit=f"{work.compute_work_unit}/s",
+            resource_seconds=dict(sorted(resource_seconds.items())),
+            missing_resources=missing,
+            conditions=conditions,
+            selected_capacity_ids=selected_ids,
+            selected_capacity_evidence_kinds=selected_kinds,
+            selected_capacity_qualifications=selected_qualifications,
+        )
+
+    total = max(resource_layer.seconds, causal_layer.seconds)
+    bottlenecks: list[str] = []
+    if math.isclose(resource_layer.seconds, total, rel_tol=1e-9):
+        bottlenecks.extend(
+            f"resource:{name}" for name in resource_layer.bottlenecks
+        )
+    if math.isclose(causal_layer.seconds, total, rel_tol=1e-9):
+        bottlenecks.extend(
+            f"causal:{name}" for name in causal_layer.bottlenecks
+        )
+    return LayerResult(
+        status="ok",
+        seconds=total,
+        performance_per_second=work.useful_compute_work / total,
+        performance_unit=f"{work.compute_work_unit}/s",
+        bottlenecks=sorted(bottlenecks),
+        resource_seconds=dict(sorted(resource_seconds.items())),
+        conditions=conditions,
+        selected_capacity_ids=selected_ids,
+        selected_capacity_evidence_kinds=selected_kinds,
+        selected_capacity_qualifications=selected_qualifications,
+    )
+
+
 def evaluate(
     workload: Workload,
     schedule: Schedule,
     hardware: Hardware,
     capacities: list[Capacity],
+    pipeline_profiles: Iterable[PipelineProfile] = (),
 ) -> ModelResult:
     precisions = precision_specs()
     workload.validate(precisions)
@@ -1092,7 +1933,16 @@ def evaluate(
     precision = precisions[workload.precision_id]
     for cap in capacities:
         cap.validate()
+    profiles = list(pipeline_profiles)
+    for profile in profiles:
+        profile.validate()
     work = account_work(workload, schedule, precision)
+    empirical_resource = _evaluate_layer(
+        workload, schedule, hardware, precision, work, capacities, strict=False
+    )
+    causal = _evaluate_causal_pipeline(
+        workload, schedule, hardware, precision, work, profiles
+    )
     return ModelResult(
         workload_id=workload.workload_id,
         schedule_id=schedule.schedule_id,
@@ -1100,8 +1950,10 @@ def evaluate(
         conditional_upper=_evaluate_layer(
             workload, schedule, hardware, precision, work, capacities, strict=True
         ),
-        empirical_envelope=_evaluate_layer(
-            workload, schedule, hardware, precision, work, capacities, strict=False
+        empirical_envelope=empirical_resource,
+        causal_pipeline=causal,
+        empirical_ideal_envelope=_combine_empirical_layers(
+            empirical_resource, causal, work
         ),
     )
 
@@ -1111,12 +1963,16 @@ def evaluate_manifest(
     schedules: Iterable[Schedule],
     hardware: Hardware,
     capacities: list[Capacity],
+    pipeline_profiles: Iterable[PipelineProfile] = (),
 ) -> WorkloadEnvelope:
+    profiles = list(pipeline_profiles)
     results: list[ModelResult] = []
     rejected: list[dict[str, str]] = []
     for schedule in schedules:
         try:
-            results.append(evaluate(workload, schedule, hardware, capacities))
+            results.append(evaluate(
+                workload, schedule, hardware, capacities, profiles
+            ))
         except ModelError as exc:
             rejected.append({"schedule_id": schedule.schedule_id, "reason": str(exc)})
 
@@ -1153,7 +2009,11 @@ def evaluate_manifest(
         )
 
     strict, strict_id = best_layer("conditional_upper")
-    empirical, empirical_id = best_layer("empirical_envelope")
+    empirical_resource, empirical_resource_id = best_layer(
+        "empirical_envelope"
+    )
+    causal, causal_id = best_layer("causal_pipeline")
+    empirical, empirical_id = best_layer("empirical_ideal_envelope")
     return WorkloadEnvelope(
         workload_id=workload.workload_id,
         valid_schedule_count=len(results),
@@ -1163,6 +2023,10 @@ def evaluate_manifest(
         conditional_schedule_id=strict_id,
         empirical_schedule_id=empirical_id,
         rejected=rejected,
+        manifest_empirical_resource_envelope=empirical_resource,
+        empirical_resource_schedule_id=empirical_resource_id,
+        causal_pipeline_envelope=causal,
+        causal_pipeline_schedule_id=causal_id,
     )
 
 
@@ -1307,4 +2171,52 @@ def audit_inputs(
                             "message": f"{cap.capacity_id}: {error}",
                         }
                     )
+    return findings
+
+
+def audit_pipeline_profiles(
+    profiles: Iterable[PipelineProfile],
+    *,
+    repo_root: Path | None = None,
+) -> list[dict[str, str]]:
+    """Audit profile semantics and repository-relative provenance files."""
+
+    findings: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for profile in profiles:
+        try:
+            profile.validate()
+        except ModelError as error:
+            findings.append({
+                "severity": "error",
+                "code": "invalid_pipeline_profile",
+                "message": str(error),
+            })
+            continue
+        if profile.profile_id in seen:
+            findings.append({
+                "severity": "error",
+                "code": "duplicate_pipeline_profile_id",
+                "message": profile.profile_id,
+            })
+        seen.add(profile.profile_id)
+        if repo_root is None:
+            continue
+        try:
+            resolve_repo_artifact(repo_root, profile.source_path)
+        except ModelError as error:
+            findings.append({
+                "severity": "error",
+                "code": "invalid_pipeline_source_path",
+                "message": f"{profile.profile_id}: {error}",
+            })
+        for artifact_path in profile.artifact_paths:
+            try:
+                resolve_repo_artifact(repo_root, artifact_path)
+            except ModelError as error:
+                findings.append({
+                    "severity": "error",
+                    "code": "invalid_pipeline_artifact_path",
+                    "message": f"{profile.profile_id}: {error}",
+                })
     return findings

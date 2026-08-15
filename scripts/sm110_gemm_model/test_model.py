@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from scripts.sm110_gemm_model.io import load_capacities, load_schedules
@@ -12,6 +13,7 @@ from scripts.sm110_gemm_model.model import (
     Capacity,
     EvidenceKind,
     Hardware,
+    PipelineProfile,
     Schedule,
     Workload,
     account_work,
@@ -19,7 +21,9 @@ from scripts.sm110_gemm_model.model import (
     evaluate,
     evaluate_manifest,
     precision_specs,
+    predict_pipeline_worker_seconds,
     _resource_demands,
+    _resolve_tma_capacity_resources,
     _select_capacity,
 )
 from scripts.sm110_gemm_model.observations import (
@@ -66,19 +70,51 @@ TUTORIAL_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                  "thor_sm110_gemm_performance_model_tutorial.md")
 CURRENT_REPLAY_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                        "thor_sm110_current_model_replay.md")
+PRECISION_MATRIX_PATH = (ROOT / "Docs/blackwell_tensorcore/"
+                         "thor_sm110_all_precision_evidence_matrix.json")
 
 
 class DocumentContractTest(unittest.TestCase):
+    def test_generated_precision_matrix_separates_solver_from_profile_evidence(self) -> None:
+        matrix = json.loads(PRECISION_MATRIX_PATH.read_text())
+        self.assertEqual(matrix["schema_version"], 3)
+        self.assertTrue(matrix["causal_pipeline_dag_implemented"])
+        self.assertEqual(matrix["causal_pipeline_closed_count"], 0)
+        self.assertEqual(matrix["empirical_ideal_closed_count"], 0)
+        self.assertEqual(matrix["end_to_end_closed_count"], 0)
+
     def test_current_model_replay_preserves_fail_closed_findings(self) -> None:
         text = CURRENT_REPLAY_PATH.read_text()
         self.assertIn("- audit pass：`False`", text)
         self.assertIn("- campaign measurement closed：`True`", text)
         self.assertIn("- all common resources closed：`True`", text)
         self.assertIn("- all precisions closed：`False`", text)
+        self.assertIn("- causal DAG solver implemented：`True`", text)
+        self.assertIn("- loaded pipeline profiles：0 项", text)
+        self.assertIn(
+            "- resource/causal/integrated complete observations：2/0/0",
+            text,
+        )
         self.assertEqual(
-            text.count("`residency_empirical_prediction_incomplete`"), 9
+            text.count(
+                "`residency_empirical_resource_prediction_incomplete`"
+            ),
+            13,
+        )
+        self.assertEqual(
+            text.count("`residency_causal_pipeline_prediction_incomplete`"),
+            15,
+        )
+        self.assertEqual(
+            text.count("`residency_empirical_prediction_incomplete`"),
+            15,
         )
         self.assertEqual(text.count("`overcurrent_events_observed`"), 1)
+        self.assertIn(
+            "`ok/ok` | 128.436 TFLOP/s–128.436 TFLOP/s | "
+            "`insufficient_evidence/insufficient_evidence`",
+            text,
+        )
 
     def test_core_symbols_are_defined_at_first_use(self) -> None:
         text = DOCUMENT_PATH.read_text()
@@ -1146,6 +1182,73 @@ class WorkAccountingTest(unittest.TestCase):
             7 * task_bytes / per_sm_rate,
         )
 
+    def test_exact_tma_contract_resolves_precision_and_packed_stride(self) -> None:
+        schedule = Schedule(
+            "mapped", 128, 256, 64, 2,
+            mma_n=256,
+            tmem_columns=256,
+            supported_precisions=("e4m3_f32",),
+            tma_contract_family_by_precision={
+                "e4m3_f32": "generic_m128n256k64_s2_v8",
+            },
+            tma_contract_row_stride_elements=(1024, 2048, 4096),
+        )
+        precision = self.precisions["e4m3_f32"]
+        ingress, hbm, gap = _resolve_tma_capacity_resources(
+            Workload("square", 2048, 2048, 2048, "e4m3_f32"),
+            schedule,
+            precision,
+        )
+        self.assertIsNone(gap)
+        self.assertEqual(
+            ingress,
+            "tma.smem_ingress.contract."
+            "generic_m128n256k64_s2_v8.stride2048.per_sm",
+        )
+        self.assertEqual(
+            hbm,
+            "tma.hbm.contract."
+            "generic_m128n256k64_s2_v8.stride2048",
+        )
+
+        ingress, hbm, gap = _resolve_tma_capacity_resources(
+            Workload("rectangular", 2048, 1024, 2048, "e4m3_f32"),
+            schedule,
+            precision,
+        )
+        self.assertIsNone(ingress)
+        self.assertIsNone(hbm)
+        self.assertIn("a_ld=2048:b_ld=1024", gap or "")
+
+    def test_legacy_tc5a_point_is_only_an_exact_stride2048_alias(self) -> None:
+        legacy = Capacity(
+            "legacy", "tma.smem_ingress.per_sm", 10.0, "byte",
+            EvidenceKind.MEASURED_SUSTAINED,
+            "test", "source.json", "legacy",
+        )
+        exact_2048 = (
+            "tma.smem_ingress.contract."
+            "tc5a_m128n256k64_s4_v16.stride2048.per_sm"
+        )
+        exact_1024 = exact_2048.replace("stride2048", "stride1024")
+        self.assertIs(_select_capacity([legacy], exact_2048, strict=False), legacy)
+        self.assertIsNone(_select_capacity([legacy], exact_1024, strict=False))
+
+    def test_example_schedules_map_every_precision_to_an_exact_tma_family(self) -> None:
+        schedules = load_schedules(SCHEDULE_PATH)
+        mapped = {
+            precision_id
+            for schedule in schedules
+            for precision_id in schedule.tma_contract_family_by_precision
+        }
+        self.assertEqual(mapped, set(self.precisions))
+        for schedule in schedules:
+            if schedule.tma_contract_family_by_precision:
+                self.assertEqual(
+                    schedule.tma_contract_row_stride_elements,
+                    (1024, 2048, 4096),
+                )
+
     def test_tma_capacity_is_not_inferred_from_stage_count(self) -> None:
         workload = Workload(
             "contract-gate",
@@ -1903,6 +2006,277 @@ class EvidenceSemanticsTest(unittest.TestCase):
         self.assertIn("invalid_source_path", {row["code"] for row in findings})
 
 
+class CausalPipelineModelTest(unittest.TestCase):
+    @staticmethod
+    def profile(
+        *,
+        schedule_id: str = "tc5a-test",
+        precision_ids: tuple[str, ...] = ("fp16_f32",),
+        maximum_k_tiles: int = 64,
+        maximum_output_tasks: int = 32,
+        qualification: str = "closure_qualified",
+    ) -> PipelineProfile:
+        qualified = qualification == "closure_qualified"
+        calibration_k = [1]
+        holdout_k = [maximum_k_tiles] if maximum_k_tiles != 1 else [2]
+        calibration_output = [1]
+        holdout_output = (
+            [maximum_output_tasks] if maximum_output_tasks != 1 else [2]
+        )
+
+        def prediction_ns(k_tiles: int, output_tasks: int) -> float:
+            previous_mma_done = 0.0
+            epilogue_done: list[float] = []
+            for task in range(output_tasks):
+                first = 10.0 if task == 0 else previous_mma_done + 2.0
+                if task >= 2:
+                    first = max(first, epilogue_done[task - 2] + 2.0)
+                last = first + (k_tiles - 1) * 2.0
+                start = max(last, epilogue_done[-1] if epilogue_done else 0.0)
+                epilogue_done.append(start + 5.0)
+                previous_mma_done = last
+            return epilogue_done[-1]
+
+        validation = []
+        for k_tiles in (*calibration_k, *holdout_k):
+            for output_tasks in (*calibration_output, *holdout_output):
+                split = (
+                    "calibration"
+                    if k_tiles in calibration_k
+                    and output_tasks in calibration_output
+                    else "holdout"
+                )
+                relative_error = 0.01 if split == "calibration" else 0.02
+                predicted = prediction_ns(k_tiles, output_tasks)
+                actual = predicted / (1.0 + relative_error)
+                validation.append({
+                    "case_id": f"k{k_tiles}.o{output_tasks}",
+                    "split": split,
+                    "k_tiles": k_tiles,
+                    "output_tasks": output_tasks,
+                    "actual_median_ns": actual,
+                    "predicted_ns": predicted,
+                    "relative_error": abs(predicted - actual) / actual,
+                })
+        return PipelineProfile(
+            profile_id=f"profile.{schedule_id}",
+            resource="pipeline.tc5a-test",
+            schedule_id=schedule_id,
+            precision_ids=precision_ids,
+            evidence_kind=EvidenceKind.MEASURED_JOINT,
+            qualification=qualification,
+            trial_count_per_case=10,
+            source_id="causal-suite",
+            expected_commit="1" * 40,
+            source_path="microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu",
+            source_locator="synthetic predeclared joint fit",
+            input_residency="hot_l2",
+            stages=4,
+            accumulator_buffers=2,
+            resident_ctas_per_sm=1,
+            maximum_k_tiles=maximum_k_tiles,
+            maximum_output_tasks_per_worker=maximum_output_tasks,
+            tma_first_completion_seconds=8e-9,
+            tma_completion_interval_seconds=1e-9,
+            mma_first_completion_seconds=9e-9,
+            mma_completion_interval_seconds=2e-9,
+            joint_first_mma_completion_seconds=10e-9,
+            joint_completion_interval_seconds=2e-9,
+            epilogue_latency_seconds=5e-9,
+            component_r_squared={
+                "tma": 0.999,
+                "mma": 0.999,
+                "joint": 0.999 if qualified else 0.5,
+            },
+            max_calibration_relative_error=0.01,
+            max_holdout_relative_error=0.02,
+            fit_contract={
+                "calibration_points": calibration_k,
+                "holdout_points": holdout_k,
+                "calibration_output_tasks": calibration_output,
+                "epilogue_calibration_output_tasks": [1],
+                "holdout_output_tasks": holdout_output,
+                "minimum_r_squared": 0.98,
+                "maximum_holdout_relative_error": 0.1,
+                "profile_stages": 4,
+                "profile_accumulator_buffers": 2,
+                "profile_resident_ctas_per_sm": 1,
+            },
+            validation=tuple(validation),
+            closure_qualified=qualified,
+            artifact_paths=("pipeline_profile.json",),
+        )
+
+    @staticmethod
+    def schedule() -> Schedule:
+        return Schedule(
+            "tc5a-test",
+            128,
+            256,
+            64,
+            4,
+            mma_n=256,
+            tail_policy="pad",
+            threads=192,
+            tmem_columns=512,
+            tmem_load_registers=8,
+            tmem_consumer_warps=4,
+            tma_ingress_capacity_resource="tma.tc5a-test",
+            causal_pipeline_resource="pipeline.tc5a-test",
+            persistent=True,
+        )
+
+    @staticmethod
+    def capacities() -> list[Capacity]:
+        resources = (
+            ("compute", "tensor.fp16.m128n256", "flop"),
+            ("l2read", "l2.read", "byte"),
+            ("l2write", "l2.write", "byte"),
+            ("tmem", "tmem.readback.x8.warps4", "byte"),
+            ("tma", "tma.tc5a-test", "byte"),
+        )
+        return [
+            Capacity(
+                capacity_id=name,
+                resource=resource,
+                rate_per_second=1e30,
+                work_unit=unit,
+                evidence_kind=EvidenceKind.MEASURED_SUSTAINED,
+                source_id="synthetic",
+                source_path="source.json",
+                source_locator=name,
+                qualification="closure_qualified",
+                trial_count=10,
+                artifact_paths=("source.json",),
+            )
+            for name, resource, unit in resources
+        ]
+
+    def test_persistent_double_buffer_recurrence_is_exact(self) -> None:
+        profile = self.profile()
+        predicted = predict_pipeline_worker_seconds(
+            profile, k_tiles=3, output_tasks=3
+        )
+        self.assertAlmostEqual(predicted, 31e-9)
+
+    def test_profile_recomputes_every_validation_prediction(self) -> None:
+        profile = self.profile()
+        rows = [dict(row) for row in profile.validation]
+        rows[0]["predicted_ns"] = float(rows[0]["predicted_ns"]) + 1.0
+        with self.assertRaises(ValueError):
+            replace(profile, validation=tuple(rows)).validate()
+
+    def test_negative_r_squared_is_retained_only_as_quarantined(self) -> None:
+        profile = self.profile(qualification="quarantined")
+        profile = replace(
+            profile,
+            component_r_squared={"tma": 0.99, "mma": 0.99, "joint": -0.2},
+        )
+        profile.validate()
+        self.assertFalse(profile.is_closure_qualified)
+
+    def test_integrated_ideal_is_max_of_resource_and_causal_time(self) -> None:
+        result = evaluate(
+            Workload(
+                "one-task", 128, 256, 64, "fp16_f32", residency="hot_l2"
+            ),
+            self.schedule(),
+            Hardware("thor", 20, 1.575e9),
+            self.capacities(),
+            [self.profile()],
+        )
+        self.assertEqual(result.empirical_envelope.status, "ok")
+        self.assertEqual(result.causal_pipeline.status, "ok")
+        self.assertAlmostEqual(result.causal_pipeline.seconds, 15e-9)
+        self.assertAlmostEqual(result.empirical_ideal_envelope.seconds, 15e-9)
+        self.assertIn(
+            "causal:causal.pipeline.persistent_worker",
+            result.empirical_ideal_envelope.bottlenecks,
+        )
+
+    def test_solver_without_an_exact_profile_fails_closed(self) -> None:
+        result = evaluate(
+            Workload(
+                "missing-profile", 128, 256, 64, "fp16_f32",
+                residency="hot_l2",
+            ),
+            self.schedule(),
+            Hardware("thor", 20, 1.575e9),
+            self.capacities(),
+        )
+        self.assertEqual(result.empirical_envelope.status, "ok")
+        self.assertEqual(result.causal_pipeline.status, "insufficient_evidence")
+        self.assertEqual(
+            result.causal_pipeline.missing_resources,
+            ["pipeline.tc5a-test:precision=fp16_f32"],
+        )
+        self.assertIsNone(result.empirical_ideal_envelope.seconds)
+
+    def test_fp16_profile_is_not_reused_for_bf16(self) -> None:
+        result = evaluate(
+            Workload(
+                "bf16-needs-own-profile", 128, 256, 64, "bf16_f32",
+                residency="hot_l2",
+            ),
+            self.schedule(),
+            Hardware("thor", 20, 1.575e9),
+            self.capacities(),
+            [self.profile(precision_ids=("fp16_f32",))],
+        )
+        self.assertEqual(result.causal_pipeline.status, "insufficient_evidence")
+        self.assertEqual(
+            result.causal_pipeline.missing_resources,
+            ["pipeline.tc5a-test:precision=bf16_f32"],
+        )
+        self.assertIn(
+            "profile.tc5a-test: precision_ids=fp16_f32",
+            result.causal_pipeline.conditions,
+        )
+
+    def test_profile_precision_contract_is_validated(self) -> None:
+        with self.assertRaisesRegex(ValueError, "precision_ids"):
+            replace(self.profile(), precision_ids=()).validate()
+        with self.assertRaisesRegex(ValueError, "unknown causal profile"):
+            replace(self.profile(), precision_ids=("not_a_precision",)).validate()
+
+    def test_profile_range_is_not_extrapolated(self) -> None:
+        result = evaluate(
+            Workload(
+                "range", 4096, 4096, 4096, "fp16_f32", residency="hot_l2"
+            ),
+            self.schedule(),
+            Hardware("thor", 20, 1.575e9),
+            self.capacities(),
+            [self.profile(maximum_output_tasks=20)],
+        )
+        self.assertEqual(result.causal_pipeline.status, "insufficient_evidence")
+        self.assertEqual(
+            result.causal_pipeline.missing_resources,
+            ["pipeline.tc5a-test:profile_range"],
+        )
+        self.assertTrue(any(
+            "output_tasks=26" in condition
+            for condition in result.causal_pipeline.conditions
+        ))
+
+    def test_quarantined_profile_cannot_close_the_layer(self) -> None:
+        result = evaluate(
+            Workload(
+                "quarantined", 128, 256, 64, "fp16_f32",
+                residency="hot_l2",
+            ),
+            self.schedule(),
+            Hardware("thor", 20, 1.575e9),
+            self.capacities(),
+            [self.profile(qualification="quarantined")],
+        )
+        self.assertEqual(result.causal_pipeline.status, "insufficient_evidence")
+        self.assertIn(
+            "profile.tc5a-test: quarantined",
+            result.causal_pipeline.conditions,
+        )
+
+
 class SnapshotEvaluationTest(unittest.TestCase):
     def test_bf16_snapshot_exposes_incomplete_empirical_layer(self) -> None:
         result = evaluate(
@@ -1975,7 +2349,8 @@ class SnapshotEvaluationTest(unittest.TestCase):
         )
         self.assertEqual(envelope.valid_schedule_count, 1)
         self.assertEqual(envelope.rejected_schedule_count, 2)
-        self.assertEqual(envelope.empirical_schedule_id, "padded")
+        self.assertEqual(envelope.empirical_resource_schedule_id, "padded")
+        self.assertIsNone(envelope.empirical_schedule_id)
         self.assertTrue(
             any("exact tail requires" in row["reason"] for row in envelope.rejected)
         )
@@ -2084,10 +2459,11 @@ class ObservationTest(unittest.TestCase):
             metadata={"suite_id": "snapshot", "expected_commit": "none"},
         )
         self.assertEqual(analysis["precision_count"], 12)
-        self.assertEqual(analysis["schema_version"], 2)
+        self.assertEqual(analysis["schema_version"], 3)
         self.assertEqual(analysis["implementation_ready_count"], 5)
         self.assertEqual(analysis["resource_envelope_closed_count"], 0)
-        self.assertFalse(analysis["causal_pipeline_dag_implemented"])
+        self.assertTrue(analysis["causal_pipeline_dag_implemented"])
+        self.assertEqual(analysis["causal_pipeline_closed_count"], 0)
         self.assertEqual(analysis["end_to_end_closed_count"], 0)
         self.assertFalse(analysis["all_precision_numeric_evidence_closed"])
         self.assertFalse(analysis["all_precisions_end_to_end_closed"])
@@ -2100,7 +2476,7 @@ class ObservationTest(unittest.TestCase):
             rows["e5m2_f32"]["support_gaps"],
         )
         self.assertIn(
-            "causal_pipeline_dag",
+            "closure_qualified_causal_pipeline_profile_matrix",
             rows["fp16_f32"]["model_gaps"],
         )
         document = render_precision_evidence_markdown(analysis)

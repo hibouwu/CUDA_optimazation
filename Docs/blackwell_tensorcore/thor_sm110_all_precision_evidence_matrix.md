@@ -15,25 +15,26 @@ pipeline DAG 已实现和闭环。
 - precision count：`12`
 - implementation ready：`5`
 - numeric closed：`4`
-- closure-qualified resource envelopes：`2`
+- closure-qualified resource envelopes：`0`
 - causal pipeline closed：`0`
+- integrated empirical ideal envelopes：`0`
 - end-to-end closed：`0`
 - all precisions end-to-end closed：`false`
 
-| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | resource envelope | causal DAG | end-to-end |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fp16_f32` | yes | 3/3 | yes | 3/3 | yes | yes | yes | NO | NO |
-| `bf16_f32` | yes | 3/3 | yes | 3/3 | yes | yes | yes | NO | NO |
-| `tf32_f32` | NO | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO |
-| `e4m3_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO |
-| `e5m2_f32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `e3m2_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `e2m3_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `e2m1_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `mxfp4_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `nvfp4_f32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
-| `s8_s32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO |
-| `u8_s32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO |
+| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | resource envelope | causal DAG | integrated ideal | end-to-end |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `fp16_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
+| `bf16_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
+| `tf32_f32` | NO | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
+| `e4m3_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
+| `e5m2_f32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `e3m2_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `e2m3_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `e2m1_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `mxfp4_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `nvfp4_f32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `s8_s32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
+| `u8_s32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
 
 ## 未闭环项
 
@@ -41,46 +42,56 @@ pipeline DAG 已实现和闭环。
 
 - support gaps：`none`
 - numeric gaps：`none`
-- model gaps：`causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`none`
-- missing empirical envelope scenarios：`none`
+- missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 
 ### `bf16_f32`
 
 - support gaps：`none`
 - numeric gaps：`none`
-- model gaps：`causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`none`
-- missing empirical envelope scenarios：`none`
+- missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 
 ### `tf32_f32`
 
 - support gaps：`none`
 - numeric gaps：`strict_compute_upper`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`none`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 
 ### `e4m3_f32`
 
 - support gaps：`none`
 - numeric gaps：`none`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`none`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 
 ### `e5m2_f32`
 
 - support gaps：`implementation_status, closure_candidate_backend, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.
 - blocker：A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required.
 
@@ -88,40 +99,48 @@ pipeline DAG 已实现和闭环。
 
 - support gaps：`implementation_status, native_mainloop, closure_candidate_backend, implementation_source, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`strict_compute_upper, full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：No packed FP6 E3M2 full-GEMM implementation, unpack path, or same-contract reference.
 
 ### `e2m3_f32`
 
 - support gaps：`implementation_status, native_mainloop, closure_candidate_backend, implementation_source, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`strict_compute_upper, full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：No packed FP6 E2M3 full-GEMM implementation, unpack path, or same-contract reference.
 
 ### `e2m1_f32`
 
 - support gaps：`implementation_status, native_mainloop, closure_candidate_backend, implementation_source, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`strict_compute_upper, full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：No raw unscaled E2M1 full-GEMM path; NVFP4/MXFP4 block-scaled results are different contracts.
 
 ### `mxfp4_f32`
 
 - support gaps：`implementation_status, closure_candidate_backend, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`strict_compute_upper, full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：Current CUTLASS 72a path outputs BF16, not the model's FP32 output contract.
 - blocker：Generated external source is not captured in the historical result bundle.
 - blocker：Historical ratio denominator is FP16 cuBLAS, not MXFP4.
@@ -130,10 +149,12 @@ pipeline DAG 已实现和闭环。
 
 - support gaps：`implementation_status, closure_candidate_backend, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：Current CUTLASS 72b path outputs narrow NVFP4 rather than FP32.
 - blocker：Generated external source is not captured in the historical result bundle.
 - blocker：Historical ratio denominator is FP16 cuBLAS, not NVFP4.
@@ -142,19 +163,23 @@ pipeline DAG 已实现和闭环。
 
 - support gaps：`none`
 - numeric gaps：`none`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`none`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 
 ### `u8_s32`
 
 - support gaps：`implementation_status, native_mainloop, closure_candidate_backend, implementation_source, same_contract_numerical_reference, same_precision_performance_denominator_impl`
 - numeric gaps：`full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
-- model gaps：`closure_qualified_empirical_envelope_matrix, causal_pipeline_dag`
+- model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
 - missing full-GEMM shapes：`1024, 2048, 4096`
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
+- missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - blocker：The official cuBLAS GemmEx support table allows CUBLAS_COMPUTE_32I with CUDA_R_8I inputs, not CUDA_R_8U inputs.
 - blocker：A same-contract U8 numerical reference and performance denominator must be implemented before closure collection.
 
@@ -170,6 +195,7 @@ pipeline DAG 已实现和闭环。
 6. hot-L2/cold-HBM × N=1024/2048/4096 六个 resource envelope 都只选择
    closure-qualified 且与 schedule 显式匹配的 capacity；
 7. latency、initiation interval、TMA/MMA/TMEM 依赖和 startup/drain 的
-   causal pipeline DAG 已实现并闭环；
+   causal pipeline DAG 已实现，并且每个选中 schedule 有独立审计通过的
+   closure-qualified joint profile；
 8. trial、源码、编译命令、binary hash、function-scoped SASS、NCU、环境和
    硬件身份通过独立 auditor。

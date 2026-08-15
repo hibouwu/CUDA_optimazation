@@ -20,7 +20,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd -- "$script_dir/.." && pwd)
 cd -- "$repo"
 if [[ $(git rev-parse HEAD) != "$expected_commit" ]]; then
-  echo "wrong checkout in resource supervisor" >&2
+  echo "wrong checkout in causal supervisor" >&2
   exit 1
 fi
 
@@ -31,14 +31,14 @@ if ! flock -n 9; then
   exit 1
 fi
 
-run_id="$suite_id-resources"
-suite_dir="results/sm110_resource_suite/$suite_id"
-python3 microbench/sm110_gemm_resource_campaign/run_resource_campaign.py \
-  --run-id "$run_id" --ncu
-python3 microbench/sm110_gemm_resource_campaign/audit_campaign.py \
-  "results/sm110_gemm_resource_campaign/$run_id" \
+run_id="$suite_id-causal"
+suite_dir="results/sm110_causal_suite/$suite_id"
+python3 microbench/sm110_gemm_causal_campaign/run_causal_campaign.py \
+  --run-id "$run_id" --expected-commit "$expected_commit" --ncu
+python3 microbench/sm110_gemm_causal_campaign/audit_campaign.py \
+  "results/sm110_gemm_causal_campaign/$run_id" \
   --require-ncu --expected-commit "$expected_commit"
-printf '%s\n' RESOURCE_CAMPAIGN_COMPLETE
+printf '%s\n' CAUSAL_CAMPAIGN_COMPLETE
 if [[ -e $suite_dir/oc_after.tsv ]]; then
   echo "post-run OC snapshot already exists before supervisor completion" >&2
   exit 1
@@ -56,6 +56,6 @@ if [[ $found -ne 1 ]]; then
   echo "no readable post-run overcurrent counters" >&2
   exit 1
 fi
-python3 microbench/sm110_gemm_resource_campaign/audit_resource_suite.py \
+python3 microbench/sm110_gemm_causal_campaign/audit_causal_suite.py \
   "$suite_dir" --expected-commit "$expected_commit"
-printf '%s\n' RESOURCE_SUPPLEMENT_COMPLETE
+printf '%s\n' CAUSAL_SUITE_COMPLETE

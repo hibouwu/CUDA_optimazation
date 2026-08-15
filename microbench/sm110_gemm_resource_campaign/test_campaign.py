@@ -13,6 +13,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from scripts.sm110_gemm_model import resource_import
+from scripts.sm110_gemm_model.io import capacities_from_rows
+from scripts.sm110_gemm_model.io import load_schedules
+from scripts.sm110_gemm_model.model import Workload, account_work, precision_specs
+
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -178,6 +183,56 @@ class ResourceCampaignTests(unittest.TestCase):
                 self.assertEqual(contract["stage_bytes"], stage_bytes)
                 self.assertEqual(contract["requests_per_stage"], requests)
                 self.assertEqual(contract["value_swizzle"], swizzle)
+
+    def test_model_schedule_mapping_matches_every_campaign_family_contract(self) -> None:
+        families = {
+            row["family_id"]: row for row in self.manifest["families"]
+        }
+        precisions = precision_specs()
+        schedules = load_schedules(
+            REPO / "scripts/sm110_gemm_model/examples/schedules.json"
+        )
+        seen: set[tuple[str, str]] = set()
+        for schedule in schedules:
+            for precision_id, family_id in (
+                schedule.tma_contract_family_by_precision.items()
+            ):
+                family = families[family_id]
+                with self.subTest(
+                    schedule=schedule.schedule_id,
+                    precision=precision_id,
+                    family=family_id,
+                ):
+                    self.assertIn(precision_id, family["precision_ids"])
+                    self.assertIn(
+                        schedule.input_transport_layout,
+                        family["input_transport_layouts"],
+                    )
+                    self.assertEqual(
+                        (schedule.bm, schedule.bn, schedule.bk, schedule.stages),
+                        (
+                            family["bm"], family["bn"], family["bk"],
+                            family["stages"],
+                        ),
+                    )
+                    self.assertEqual(schedule.threads, family["threads"])
+                    work = account_work(
+                        Workload(
+                            "one-tile", schedule.bm, schedule.bn, schedule.bk,
+                            precision_id,
+                        ),
+                        schedule,
+                        precisions[precision_id],
+                    )
+                    self.assertEqual(
+                        work.tma_input_bytes,
+                        runner.family_contract(family)["stage_bytes"],
+                    )
+                    seen.add((precision_id, family_id))
+        self.assertEqual(
+            {precision for precision, _ in seen},
+            runner.EXPECTED_PRECISIONS,
+        )
 
     def test_block_scale_transport_is_32_byte_physical_rows(self) -> None:
         family = next(
@@ -359,6 +414,65 @@ class ResourceCampaignTests(unittest.TestCase):
                 case_dir, case, fingerprint, False
             ))
 
+    def test_resume_reuses_audited_frozen_compile_without_recompiling(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = Path(temporary) / "frozen"
+            build = run_dir / "build"
+            build.mkdir(parents=True)
+            binary = build / "tma_ab_contract_bandwidth"
+            sass = build / "tma_ab_contract_bandwidth.sass.txt"
+            compile_path = build / "compile_command.json"
+            binary.write_bytes(b"one retained nvcc output")
+            sass.write_text(
+                "Function : tma_ab_contract_kernel\n"
+                " /*0000*/ UTMALDG.2D\n"
+                "Function : unrelated\n /*0008*/ UTMASTG\n"
+            )
+            (build / "compile.log").write_text("compile ok\n")
+            with mock.patch.object(
+                runner, "tool", side_effect=lambda name: f"/tools/{name}"
+            ):
+                command = runner.compile_command(run_dir, None, False)
+            compile_path.write_text(json.dumps(command, indent=2) + "\n")
+            binary_sha = runner.sha256_path(binary)
+            (build / "binary.sha256").write_text(
+                f"{binary_sha}  tma_ab_contract_bandwidth\n"
+            )
+            artifact = {
+                "binary": str(binary),
+                "binary_sha256": binary_sha,
+                "source_sha256": runner.sha256_path(runner.SOURCE_PATH),
+                "sass_path": str(sass),
+                "sass_sha256": runner.sha256_path(sass),
+                "compile_command_sha256": runner.sha256_path(compile_path),
+                "compile_command": command,
+                "source_dependencies": {
+                    path: runner.sha256_path(runner.REPO / path)
+                    for path in runner.SOURCE_DEPENDENCIES
+                },
+                "sass_function_counts": {
+                    "UTMALDG.2D": 1,
+                    "UTMASTG": 0,
+                },
+            }
+            (build / "artifact.json").write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n"
+            )
+            with mock.patch.object(
+                runner, "tool", side_effect=lambda name: f"/tools/{name}"
+            ):
+                retained = runner.retained_artifact(run_dir, None, False)
+            self.assertIsNotNone(retained)
+            self.assertEqual(retained["binary_sha256"], binary_sha)
+            binary.write_bytes(b"mutated retained output")
+            with (
+                mock.patch.object(
+                    runner, "tool", side_effect=lambda name: f"/tools/{name}"
+                ),
+                self.assertRaisesRegex(RuntimeError, "binary_sha256"),
+            ):
+                runner.retained_artifact(run_dir, None, False)
+
     def test_source_exposes_contract_only_and_scale_swizzle(self) -> None:
         source = runner.SOURCE_PATH.read_text()
         self.assertIn("--contract-only", source)
@@ -383,6 +497,8 @@ class ResourceCampaignTests(unittest.TestCase):
             )
         self.assertIn("--run-id \"$run_id\" --ncu", supervisor)
         self.assertIn("--require-ncu --expected-commit", supervisor)
+        self.assertIn("import-resource-capacities", wrapper)
+        self.assertIn("resource_capacities.json", wrapper)
         self.assertIn("sudo /usr/sbin/nvpmodel -m 1", runbook)
         self.assertIn(
             "results/sm110_gemm_resource_campaign/$SUITE_ID-resources",
@@ -490,6 +606,27 @@ class ResourceCampaignTests(unittest.TestCase):
             (build / "compile_command.json").write_text(
                 json.dumps(compile_command) + "\n"
             )
+            (build / "artifact.json").write_text(json.dumps({
+                "binary": str(recorded_binary),
+                "binary_sha256": binary_sha,
+                "source_sha256": dependencies[
+                    "microbench/15_tma_ab_contract_bandwidth/"
+                    "tma_ab_contract_bandwidth.cu"
+                ],
+                "sass_path": str(recorded_binary.with_name(
+                    "tma_ab_contract_bandwidth.sass.txt"
+                )),
+                "sass_sha256": sass_sha,
+                "compile_command": compile_command,
+                "compile_command_sha256": hashlib.sha256(
+                    (build / "compile_command.json").read_bytes()
+                ).hexdigest(),
+                "source_dependencies": dependencies,
+                "sass_function_counts": {
+                    "UTMALDG.2D": 1,
+                    "UTMASTG": 0,
+                },
+            }, indent=2, sort_keys=True) + "\n")
 
             manifest_relative = (
                 "microbench/sm110_gemm_resource_campaign/"
@@ -750,6 +887,116 @@ class ResourceCampaignTests(unittest.TestCase):
                     root, require_ncu=True, expected_commit=commit
                 )
             self.assertTrue(result["pass"], result["errors"])
+
+    def test_model_import_preserves_all_exact_resource_identities(self) -> None:
+        suite_id = "thor-resource-import-synthetic"
+        run_id = f"{suite_id}-resources"
+        commit = "d" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            suite = repo / "results/sm110_resource_suite" / suite_id
+            run = repo / "results/sm110_gemm_resource_campaign" / run_id
+            build = run / "build"
+            suite.mkdir(parents=True)
+            build.mkdir(parents=True)
+            (suite / "run_contract.json").write_text(json.dumps({
+                "resource_run_id": run_id,
+            }))
+            for name in (
+                "preflight.txt", "oc_before.tsv", "oc_after.tsv",
+                "suite_launcher.log", "suite_audit.json",
+            ):
+                (suite / name).write_text("synthetic\n")
+            for name in (
+                "run_spec.json", "environment.json",
+                "environment_snapshots.jsonl", "static_contracts.json",
+                "COMPLETE", "artifact_sha256.txt",
+            ):
+                (run / name).write_text("synthetic\n")
+            for name in (
+                "compile_command.json", "compile.log", "artifact.json",
+                "binary.sha256",
+                "tma_ab_contract_bandwidth",
+                "tma_ab_contract_bandwidth.sass.txt",
+            ):
+                (build / name).write_text("synthetic\n")
+            source = (
+                repo / "microbench/15_tma_ab_contract_bandwidth/"
+                       "tma_ab_contract_bandwidth.cu"
+            )
+            source.parent.mkdir(parents=True)
+            source.write_text("synthetic source\n")
+
+            results = []
+            for index, case in enumerate(self.cases, 1):
+                case_dir = run / "cases" / case["case_id"]
+                case_dir.mkdir(parents=True)
+                (case_dir / "result.json").write_text("{}\n")
+                (case_dir / "trials.jsonl").write_text("{}\n")
+                ncu = {"selected": False}
+                if case["ncu_selected"]:
+                    ncu_dir = case_dir / "ncu"
+                    ncu_dir.mkdir()
+                    (ncu_dir / "profile.ncu-rep").write_text("report\n")
+                    (ncu_dir / "profile.log").write_text("log\n")
+                    ncu = {
+                        "selected": True,
+                        "report_path": "ncu/profile.ncu-rep",
+                    }
+                results.append({
+                    "case_id": case["case_id"],
+                    "family_id": case["family_id"],
+                    "resource": case["resource"],
+                    "residency": case["residency"],
+                    "row_stride_elements": case["row_stride_elements"],
+                    "rate_unit": "B/s",
+                    "rate_per_second_median": float(index * 1_000_000),
+                    "trial_count": 10,
+                    "expected_contract": case["expected"],
+                    "source_path": (
+                        "microbench/15_tma_ab_contract_bandwidth/"
+                        "tma_ab_contract_bandwidth.cu"
+                    ),
+                    "ncu": ncu,
+                })
+            summary = {
+                "status": "complete",
+                "case_count": 54,
+                "results": results,
+            }
+            (run / "summary.json").write_text(
+                json.dumps(summary, indent=2, sort_keys=True) + "\n"
+            )
+
+            fake_platform = types.SimpleNamespace(audit_suite=lambda *a, **k: {
+                "pass": True,
+                "errors": [],
+                "warnings": ["overcurrent_delta:/oc3:1"],
+                "overcurrent_deltas": {"/oc3": 1},
+            })
+            with mock.patch.object(
+                resource_import,
+                "_load_platform_auditor",
+                return_value=fake_platform,
+            ):
+                imported = resource_import.import_resource_capacities(
+                    repo_root=repo,
+                    suite_id=suite_id,
+                    expected_commit=commit,
+                )
+            capacities = capacities_from_rows(imported["capacities"])
+            self.assertEqual(len(capacities), 54)
+            self.assertEqual(len({row.resource for row in capacities}), 54)
+            self.assertTrue(all(row.is_closure_qualified for row in capacities))
+            self.assertEqual(
+                imported["platform_evidence"]["overcurrent_deltas"],
+                {"/oc3": 1},
+            )
+            self.assertIn(
+                "tma.smem_ingress.contract."
+                "tc5a_m128n256k64_s4_v16.stride2048.per_sm",
+                {row.resource for row in capacities},
+            )
 
 
 if __name__ == "__main__":

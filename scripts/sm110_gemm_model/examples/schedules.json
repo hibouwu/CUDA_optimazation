@@ -13,6 +13,14 @@
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
     ],
+    "tma_contract_family_by_precision": {
+      "tf32_f32": "generic_m128n128k64_s2_v32",
+      "e4m3_f32": "generic_m128n128k64_s2_v8",
+      "e5m2_f32": "generic_m128n128k64_s2_v8",
+      "s8_s32": "generic_m128n128k64_s2_v8",
+      "u8_s32": "generic_m128n128k64_s2_v8"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
     "fixed_seconds": 0.0
   },
   {
@@ -31,6 +39,14 @@
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
     ],
+    "tma_contract_family_by_precision": {
+      "tf32_f32": "generic_m128n256k64_s2_v32",
+      "e4m3_f32": "generic_m128n256k64_s2_v8",
+      "e5m2_f32": "generic_m128n256k64_s2_v8",
+      "s8_s32": "generic_m128n256k64_s2_v8",
+      "u8_s32": "generic_m128n256k64_s2_v8"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
     "tmem_columns": 256,
     "fixed_seconds": 0.0
   },
@@ -50,6 +66,14 @@
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
     ],
+    "tma_contract_family_by_precision": {
+      "tf32_f32": "generic_m128n64k64_s2_v32",
+      "e4m3_f32": "generic_m128n64k64_s2_v8",
+      "e5m2_f32": "generic_m128n64k64_s2_v8",
+      "s8_s32": "generic_m128n64k64_s2_v8",
+      "u8_s32": "generic_m128n64k64_s2_v8"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
     "tmem_columns": 64,
     "fixed_seconds": 0.0
   },
@@ -69,8 +93,13 @@
     "tmem_columns": 512,
     "threads": 192,
     "tmem_consumer_warps": 4,
-    "tma_ingress_capacity_resource": "tma.smem_ingress.per_sm",
-    "tma_hbm_capacity_resource": "tma.hbm",
+    "tma_contract_family_by_precision": {
+      "fp16_f32": "tc5a_m128n256k64_s4_v16",
+      "bf16_f32": "tc5a_m128n256k64_s4_v16"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
+    "causal_pipeline_resource": "pipeline.tc5a_m128n256k64_stage4",
+    "persistent": true,
     "fixed_seconds": 0.0
   },
   {
@@ -86,6 +115,12 @@
     "tail_policy": "pad",
     "tmem_load_registers": 16,
     "supported_precisions": ["e3m2_f32", "e2m3_f32", "e2m1_f32"],
+    "tma_contract_family_by_precision": {
+      "e3m2_f32": "generic_m128n256k64_s2_v8",
+      "e2m3_f32": "generic_m128n256k64_s2_v8",
+      "e2m1_f32": "generic_m128n256k64_s2_v8"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
     "tmem_columns": 256,
     "input_transport_layout": "byte_padded",
     "fixed_seconds": 0.0
@@ -103,6 +138,11 @@
     "tail_policy": "pad",
     "tmem_load_registers": 16,
     "supported_precisions": ["mxfp4_f32", "nvfp4_f32"],
+    "tma_contract_family_by_precision": {
+      "mxfp4_f32": "block_m128n256k64_s2_v4_scale32",
+      "nvfp4_f32": "block_m128n256k64_s2_v4_scale16"
+    },
+    "tma_contract_row_stride_elements": [1024, 2048, 4096],
     "tmem_columns": 512,
     "input_transport_layout": "logical_packed",
     "fixed_seconds": 0.0

@@ -6,7 +6,10 @@ This directory is the executable companion to
 The model deliberately separates:
 
 1. a conditional upper bound using only rate-cap evidence;
-2. an empirical ideal envelope using measured sustained component rates;
+2. an empirical resource envelope using measured sustained component rates,
+   plus a schedule-bound causal pipeline envelope using a jointly measured
+   persistent-worker timing profile; their time maximum is the integrated
+   empirical ideal envelope;
 3. observed full-GEMM results, which are imported by the validation workflow
    and are not treated as component capacities.
 
@@ -15,6 +18,7 @@ Run the current evidence audit:
 ```bash
 python3 -m scripts.sm110_gemm_model.cli audit \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --pipeline-profiles scripts/sm110_gemm_model/profiles/pipeline_profiles.json \
   --repo-root .
 ```
 
@@ -26,6 +30,7 @@ python3 -m scripts.sm110_gemm_model.cli evaluate \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
   --workloads scripts/sm110_gemm_model/examples/workloads.json \
   --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --pipeline-profiles scripts/sm110_gemm_model/profiles/pipeline_profiles.json \
   --output /tmp/sm110-gemm-model-example.json
 ```
 
@@ -45,12 +50,30 @@ Likewise, the 1024-B/cycle/GPU L2 bus remains a shared `l2.read` constraint,
 while a single-CTA L2-hit probe directly measures
 `tma.smem_ingress.per_sm`, which is applied with a slowest-wave makespan. It is
 not inferred by dividing a concurrent full-GPU TMA result by the SM count.
-TMA component capacities are never selected from stage count alone.  A
-schedule must explicitly name `tma_ingress_capacity_resource` and, for
-`cold_hbm`, `tma_hbm_capacity_resource`.  The tc5a schedule binds the exact
-A16-KiB+B32-KiB, four-stage/eight-request points.  Other example schedules
-currently fail closed until a payload/request/thread/cache-matched component
-contract is captured; the 32-KiB `.inflight4` point is not silently reused.
+TMA component capacities are never selected from stage count alone. The
+example schedules declare `tma_contract_family_by_precision` and the exact
+measured `tma_contract_row_stride_elements`. For packed NN matrices v1 has
+`A_ld=K` and `B_ld=N`; the current campaign uses one common A/B stride, so only
+`K=N` and strides 1024/2048/4096 resolve to a resource ID. The family encodes
+payload, request, stage, thread, scale and cache/SM-coverage contracts. A
+missing family, unequal leading dimensions, an unmeasured stride, or an absent
+capacity fails closed. Legacy fixed resource IDs remain available only for old
+frozen contracts and cannot be mixed with the new mapping. The historical
+tc5a result has a one-way compatibility alias for its actual stride 2048; it
+cannot satisfy N=1024/4096. The 32-KiB `.inflight4` point is never silently
+reused.
+
+The same fail-closed rule applies to causal timing. A persistent schedule must
+explicitly name `causal_pipeline_resource`, and a profile must match that
+resource, schedule ID, precision ID, stage count, calibration/holdout range,
+and topology.
+The solver models the slowest resident worker, two accumulator buffers,
+joint TMA/MMA initiation interval, and serialized readback/store drain. The
+mere existence of the solver sets `causal_pipeline_dag_implemented=true`; it
+does not close any schedule without a `closure_qualified` Thor profile.
+Resource-only results remain available as
+`manifest_empirical_resource_envelope`, while `empirical_ideal_envelope`
+requires both layers for the same schedule and uses their maximum time.
 
 The schedule manifest separates executable transport contracts. Standard
 FP16/BF16/TF32/FP8/INT8 schedules use their native logical payload; raw
@@ -123,17 +146,66 @@ evidence for both time intervals. The resulting `campaign_sources` field makes
 the split explicit. Capacity and observation IDs belong to the composite ID,
 while `source_id`, `run_id`, and artifact paths retain the actual producer.
 
+The exact FP16 tc5a causal profile is a separate 91-case, 910-trial campaign.
+Its manifest, CSV rows, CUDA `mma_f16` instruction, and imported
+`precision_ids=["fp16_f32"]` contract agree. It cannot close BF16 merely because
+FP16 and BF16 have the same byte width. After
+the returned result tree passes both campaign and platform auditors, import it
+without copying fitted timings by hand:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-causal-profile \
+  --repo-root . \
+  --run-id "$CAUSAL_RUN_ID" \
+  --expected-commit "$EXPECTED_COMMIT" \
+  --output "results/sm110_model_closure/$SUITE_ID/pipeline_profiles.json"
+```
+
+The independent auditor reconstructs every timestamp-derived metric and the
+predeclared fit. Epilogue latency is estimated only from single-output-worker
+cases so queueing delay cannot be relabeled as one-task service latency;
+multi-output cases validate the recurrence. The SASS audit attributes TMA,
+MMA, barrier, and TMEM-load instructions separately to the stage-1/2/4 kernel
+functions. A fully captured campaign whose fit misses the R-squared or 10%
+calibration/holdout gates is retained as `quarantined`, not promoted into the
+integrated envelope. The older `microbench/11_pipeline_overlap` measures
+SMEM-to-TMEM `tcgen05.cp`/MMA overlap and is not a GMEM/L2 TMA causal profile.
+
+The exact resource suite emits 54 separately named hot-L2/cold-DRAM
+capacities. After `sm110_resource_supplement.sh finish`, the audited import is
+written to
+`results/sm110_model_closure/$RESOURCE_SUITE_ID/resource_capacities.json`.
+For an already returned result tree, regenerate it without copying rates by
+hand:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-resource-capacities \
+  --repo-root . \
+  --suite-id "$RESOURCE_SUITE_ID" \
+  --expected-commit "$EXPECTED_COMMIT" \
+  --output \
+  "results/sm110_model_closure/$RESOURCE_SUITE_ID/resource_capacities.json"
+```
+
+Pass that file to `evaluate`, `audit`, `coverage`, `report-closure`, or
+`report-precision-closure` with `--resource-import`. The importer reruns both
+the platform and 54-case independent audits and keeps hot rates per SM, cold
+rates per GPU, and all rates as `measured_sustained` rather than physical
+uppers.
+
 Render the final numerical tables and model comparisons without copying rates
 by hand:
 
 ```bash
 MODEL_DIR="results/sm110_model_closure/$SUITE_ID"
+PIPELINE_PROFILES="${PIPELINE_PROFILES:-scripts/sm110_gemm_model/profiles/pipeline_profiles.json}"
 python3 -m scripts.sm110_gemm_model.cli report-closure \
   --closure-import "$MODEL_DIR/model_inputs.json" \
   --repo-root . \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
   --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
   --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --pipeline-profiles "$PIPELINE_PROFILES" \
   --output-json "$MODEL_DIR/closure_analysis.json" \
   --output-markdown "$MODEL_DIR/closure_summary.md"
 ```
@@ -159,6 +231,7 @@ python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
   --closure-import "$MODEL_DIR/model_inputs.json" \
   --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
   --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --pipeline-profiles "$PIPELINE_PROFILES" \
   --support-manifest microbench/sm110_full_gemm_campaign/support_manifest.json \
   --output-json Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.json \
   --output-markdown Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.md \

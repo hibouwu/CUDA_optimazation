@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .model import (
+    CAUSAL_PIPELINE_DAG_IMPLEMENTED,
     Capacity,
     Hardware,
+    PipelineProfile,
     Schedule,
     Workload,
     evaluate_manifest,
@@ -100,6 +102,7 @@ def build_closure_analysis(
     observations: Iterable[ObservedBest],
     hardware: Hardware,
     schedules: Iterable[Schedule],
+    pipeline_profiles: Iterable[PipelineProfile] = (),
     upper_tolerance: float = 0.02,
     empirical_tolerance: float = 0.02,
     require_complete_contract: bool = True,
@@ -114,6 +117,7 @@ def build_closure_analysis(
     observations = list(observations)
     capacities = [*base_capacities, *closure_capacities]
     schedules = list(schedules)
+    pipeline_profiles = list(pipeline_profiles)
     rows: list[dict[str, Any]] = []
     findings: list[dict[str, str]] = [dict(row) for row in input_findings]
     if require_complete_contract:
@@ -269,8 +273,13 @@ def build_closure_analysis(
                 schedules,
                 hardware,
                 capacities,
+                pipeline_profiles,
             )
             strict = envelope.manifest_conditional_upper
+            empirical_resource = (
+                envelope.manifest_empirical_resource_envelope
+            )
+            causal = envelope.causal_pipeline_envelope
             empirical = envelope.empirical_ideal_envelope
             scenarios[residency] = {
                 "conditional_upper_status": strict.status,
@@ -279,15 +288,36 @@ def build_closure_analysis(
                 "conditional_resource_seconds": strict.resource_seconds,
                 "conditional_conditions": strict.conditions,
                 "conditional_schedule_id": envelope.conditional_schedule_id,
+                "empirical_resource_status": empirical_resource.status,
+                "empirical_resource_per_second":
+                    empirical_resource.performance_per_second,
+                "empirical_resource_bottlenecks":
+                    empirical_resource.bottlenecks,
+                "empirical_resource_seconds":
+                    empirical_resource.resource_seconds,
+                "empirical_resource_schedule_id":
+                    envelope.empirical_resource_schedule_id,
+                "causal_pipeline_status": causal.status,
+                "causal_pipeline_per_second": causal.performance_per_second,
+                "causal_pipeline_resource_seconds": causal.resource_seconds,
+                "causal_pipeline_missing_resources": causal.missing_resources,
+                "causal_pipeline_schedule_id":
+                    envelope.causal_pipeline_schedule_id,
                 "empirical_status": empirical.status,
                 "empirical_ideal_per_second": empirical.performance_per_second,
                 "empirical_bottlenecks": empirical.bottlenecks,
-                "empirical_resource_seconds": empirical.resource_seconds,
+                "empirical_ideal_resource_seconds": empirical.resource_seconds,
                 "empirical_conditions": empirical.conditions,
                 "empirical_schedule_id": envelope.empirical_schedule_id,
             }
         strict_rates = _finite(
             scenario["conditional_upper_per_second"]
+            for scenario in scenarios.values())
+        empirical_resource_rates = _finite(
+            scenario["empirical_resource_per_second"]
+            for scenario in scenarios.values())
+        causal_rates = _finite(
+            scenario["causal_pipeline_per_second"]
             for scenario in scenarios.values())
         empirical_rates = _finite(
             scenario["empirical_ideal_per_second"]
@@ -298,11 +328,32 @@ def build_closure_analysis(
                 "code": "residency_conditional_upper_incomplete",
                 "message": f"{observation.observation_id}: missing scenario upper",
             })
+        if len(empirical_resource_rates) != len(MODELED_RESIDENCIES):
+            findings.append({
+                "severity": "error",
+                "code": "residency_empirical_resource_prediction_incomplete",
+                "message": (
+                    f"{observation.observation_id}: missing resource-layer "
+                    "scenario prediction"
+                ),
+            })
+        if len(causal_rates) != len(MODELED_RESIDENCIES):
+            findings.append({
+                "severity": "error",
+                "code": "residency_causal_pipeline_prediction_incomplete",
+                "message": (
+                    f"{observation.observation_id}: missing causal-profile "
+                    "scenario prediction"
+                ),
+            })
         if len(empirical_rates) != len(MODELED_RESIDENCIES):
             findings.append({
                 "severity": "error",
                 "code": "residency_empirical_prediction_incomplete",
-                "message": f"{observation.observation_id}: missing scenario prediction",
+                "message": (
+                    f"{observation.observation_id}: missing integrated "
+                    "resource-plus-causal scenario prediction"
+                ),
             })
         for residency, scenario in scenarios.items():
             strict_rate = scenario["conditional_upper_per_second"]
@@ -326,6 +377,14 @@ def build_closure_analysis(
         # sensitivity interval, not collapsed to an invented residency.
         strict_rate_min = min(strict_rates) if strict_rates else None
         strict_rate_max = max(strict_rates) if strict_rates else None
+        empirical_resource_rate_min = (
+            min(empirical_resource_rates) if empirical_resource_rates else None
+        )
+        empirical_resource_rate_max = (
+            max(empirical_resource_rates) if empirical_resource_rates else None
+        )
+        causal_rate_min = min(causal_rates) if causal_rates else None
+        causal_rate_max = max(causal_rates) if causal_rates else None
         empirical_rate_min = min(empirical_rates) if empirical_rates else None
         empirical_rate_max = max(empirical_rates) if empirical_rates else None
         candidate_median_rate = observation.median_per_second
@@ -423,6 +482,10 @@ def build_closure_analysis(
                 observed_best_median_to_upper,
             "observed_best_maximum_to_conditional_upper":
                 observed_best_maximum_to_upper,
+            "empirical_resource_min_per_second": empirical_resource_rate_min,
+            "empirical_resource_max_per_second": empirical_resource_rate_max,
+            "causal_pipeline_min_per_second": causal_rate_min,
+            "causal_pipeline_max_per_second": causal_rate_max,
             "empirical_ideal_min_per_second": empirical_rate_min,
             "empirical_ideal_max_per_second": empirical_rate_max,
             "observed_to_empirical_ideal_min": candidate_to_empirical_min,
@@ -438,6 +501,14 @@ def build_closure_analysis(
             },
             "empirical_statuses": {
                 residency: scenario["empirical_status"]
+                for residency, scenario in scenarios.items()
+            },
+            "empirical_resource_statuses": {
+                residency: scenario["empirical_resource_status"]
+                for residency, scenario in scenarios.items()
+            },
+            "causal_pipeline_statuses": {
+                residency: scenario["causal_pipeline_status"]
                 for residency, scenario in scenarios.items()
             },
         })
@@ -465,7 +536,7 @@ def build_closure_analysis(
     campaign_coverage = campaign_measurement_coverage(
         closure_capacities, observations)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "pass": not any(
             finding["severity"] == "error" for finding in findings),
         "suite_id": metadata.get("suite_id"),
@@ -480,6 +551,30 @@ def build_closure_analysis(
         "observation_count": len(rows),
         "holdout_count": len(holdout_rows),
         "holdout_with_empirical_prediction_count": len(finite_holdout),
+        "causal_pipeline_dag_implemented":
+            CAUSAL_PIPELINE_DAG_IMPLEMENTED,
+        "pipeline_profile_count": len(pipeline_profiles),
+        "closure_qualified_pipeline_profile_count": sum(
+            profile.is_closure_qualified for profile in pipeline_profiles
+        ),
+        "resource_prediction_complete_observation_count": sum(
+            all(
+                status == "ok"
+                for status in row["empirical_resource_statuses"].values()
+            )
+            for row in rows
+        ),
+        "causal_prediction_complete_observation_count": sum(
+            all(
+                status == "ok"
+                for status in row["causal_pipeline_statuses"].values()
+            )
+            for row in rows
+        ),
+        "integrated_prediction_complete_observation_count": sum(
+            all(status == "ok" for status in row["empirical_statuses"].values())
+            for row in rows
+        ),
         "upper_tolerance_fraction": upper_tolerance,
         "empirical_tolerance_fraction": empirical_tolerance,
         "precision_coverage": [row.to_dict() for row in precision_rows],
@@ -518,6 +613,15 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         f"- capacity：{analysis.get('capacity_count')} 项",
         f"- base/profile capacity：{analysis.get('base_capacity_count')} 项",
         f"- full-GEMM observation：{analysis.get('observation_count')} 项",
+        "- causal DAG solver implemented："
+        f"`{analysis.get('causal_pipeline_dag_implemented')}`",
+        f"- loaded pipeline profiles：{analysis.get('pipeline_profile_count')} 项",
+        "- closure-qualified pipeline profiles："
+        f"{analysis.get('closure_qualified_pipeline_profile_count')} 项",
+        "- resource/causal/integrated complete observations："
+        f"{analysis.get('resource_prediction_complete_observation_count')}/"
+        f"{analysis.get('causal_prediction_complete_observation_count')}/"
+        f"{analysis.get('integrated_prediction_complete_observation_count')}",
         f"- overcurrent delta：`{json.dumps(analysis.get('platform_evidence', {}).get('overcurrent_deltas', {}), sort_keys=True)}`",
         "",
         "## Closure-qualified compute/component capacities",
@@ -555,7 +659,8 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         "",
         "1024/2048 是预声明的 calibration，4096 是 holdout；该划分不证明 cache "
         "residency。报告同时计算 hot-L2 和 cold-HBM：严格上界采用两者中更松的 "
-        "performance upper，经验包络保留两场景区间。",
+        "performance upper；resource envelope、causal profile 和二者合并后的最终经验"
+        "理想包络分别报告，不能互相顶替。",
         f"条件上界反证容差为 {100.0 * analysis.get('upper_tolerance_fraction', 0):.2f}%，"
         f"经验重校准容差为 {100.0 * analysis.get('empirical_tolerance_fraction', 0):.2f}%。",
         "",
@@ -563,9 +668,11 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         "Reference median | Observed-best backend | Cand/ref | "
         "Upper status (L2/HBM) | Conditional upper range | "
         "Candidate median/max upper | Observed-best max trial/max upper | "
-        "Empirical range | Candidate/empirical | Observed-best/empirical |",
+        "Resource status | Resource range | Causal status | Causal range | "
+        "Integrated ideal range | Candidate/integrated | Observed-best/integrated |",
         "| --- | ---: | --- | --- | ---: | --- | ---: | --- | ---: | "
-        "---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | "
+        "---: | ---: |",
     ])
     for row in analysis.get("observations", []):
         unit = row["performance_unit"]
@@ -584,6 +691,14 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
             f"{_rate_text(row['conditional_upper_max_per_second'], unit)} | "
             f"{_ratio_text(row['observed_median_to_conditional_upper'])} | "
             f"{_ratio_text(row['observed_best_maximum_to_conditional_upper'])} | "
+            f"`{row['empirical_resource_statuses']['hot_l2']}/"
+            f"{row['empirical_resource_statuses']['cold_hbm']}` | "
+            f"{_rate_text(row['empirical_resource_min_per_second'], unit)}–"
+            f"{_rate_text(row['empirical_resource_max_per_second'], unit)} | "
+            f"`{row['causal_pipeline_statuses']['hot_l2']}/"
+            f"{row['causal_pipeline_statuses']['cold_hbm']}` | "
+            f"{_rate_text(row['causal_pipeline_min_per_second'], unit)}–"
+            f"{_rate_text(row['causal_pipeline_max_per_second'], unit)} | "
             f"{_rate_text(row['empirical_ideal_min_per_second'], unit)}–"
             f"{_rate_text(row['empirical_ideal_max_per_second'], unit)} | "
             f"{_ratio_text(row['observed_to_empirical_ideal_min'])}–"

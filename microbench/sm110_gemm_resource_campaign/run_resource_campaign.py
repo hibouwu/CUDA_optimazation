@@ -495,12 +495,10 @@ def validate_environment(
         raise RuntimeError("resource campaign requires a clean worktree")
 
 
-def compile_binary(
+def compile_command(
     run_dir: Path, host_compiler: str | None, undef_gnu_source: bool,
-) -> dict[str, object]:
-    build = run_dir / "build"
-    build.mkdir(parents=True, exist_ok=True)
-    binary = build / "tma_ab_contract_bandwidth"
+) -> list[str]:
+    binary = run_dir / "build/tma_ab_contract_bandwidth"
     command = [tool("nvcc"), "-O3", "-std=c++17"]
     if host_compiler:
         command += ["-ccbin", host_compiler]
@@ -518,6 +516,45 @@ def compile_binary(
         "-gencode", "arch=compute_110a,code=sm_110a",
         str(SOURCE_PATH), "-lcuda", "-o", str(binary),
     ]
+    return command
+
+
+def function_sass(sass: str, name: str) -> str:
+    marker = re.search(
+        rf"^\s*Function\s*:\s*[^\n]*{re.escape(name)}[^\n]*$",
+        sass,
+        flags=re.MULTILINE,
+    )
+    if marker is None:
+        raise RuntimeError(f"resource SASS function is missing: {name}")
+    next_marker = re.search(
+        r"^\s*Function\s*:", sass[marker.end():], flags=re.MULTILINE
+    )
+    end = marker.end() + next_marker.start() if next_marker else len(sass)
+    return sass[marker.start():end]
+
+
+def sass_contract(sass: str) -> dict[str, int]:
+    body = function_sass(sass, "tma_ab_contract_kernel")
+    counts = {
+        "UTMALDG.2D": body.count("UTMALDG.2D"),
+        "UTMASTG": body.count("UTMASTG"),
+    }
+    if counts["UTMALDG.2D"] <= 0 or counts["UTMASTG"] != 0:
+        raise RuntimeError(
+            "resource function-scoped SASS attribution failed: "
+            f"{counts}"
+        )
+    return counts
+
+
+def compile_binary(
+    run_dir: Path, host_compiler: str | None, undef_gnu_source: bool,
+) -> dict[str, object]:
+    build = run_dir / "build"
+    build.mkdir(parents=True, exist_ok=True)
+    binary = build / "tma_ab_contract_bandwidth"
+    command = compile_command(run_dir, host_compiler, undef_gnu_source)
     (build / "compile_command.json").write_text(
         json.dumps(command, indent=2) + "\n"
     )
@@ -530,10 +567,9 @@ def compile_binary(
     sass = run_capture([tool("cuobjdump"), "--dump-sass", str(binary)])
     sass_path = build / "tma_ab_contract_bandwidth.sass.txt"
     sass_path.write_text(sass.stdout)
-    if sass.returncode or "tma_ab_contract_kernel" not in sass.stdout:
-        raise RuntimeError("resource microbenchmark SASS function is missing")
-    if "UTMALDG.2D" not in sass.stdout:
-        raise RuntimeError("resource microbenchmark lacks UTMALDG.2D")
+    if sass.returncode:
+        raise RuntimeError("resource microbenchmark cuobjdump failed")
+    sass_function_counts = sass_contract(sass.stdout)
     artifact = {
         "binary": binary,
         "binary_sha256": sha256_path(binary),
@@ -543,11 +579,89 @@ def compile_binary(
         "compile_command_sha256": sha256_path(
             build / "compile_command.json"
         ),
+        "compile_command": command,
+        "source_dependencies": {
+            path: sha256_path(REPO / path) for path in SOURCE_DEPENDENCIES
+        },
+        "sass_function_counts": sass_function_counts,
     }
     (build / "binary.sha256").write_text(
         f"{artifact['binary_sha256']}  {binary.name}\n"
     )
     return artifact
+
+
+def retained_artifact(
+    run_dir: Path, host_compiler: str | None, undef_gnu_source: bool,
+) -> dict[str, object] | None:
+    """Reaudit and reuse the first compile during a resumed campaign.
+
+    NVCC outputs are not assumed byte-reproducible.  Once ``artifact.json``
+    exists, a resume must preserve the exact retained binary and independently
+    recheck its source, compile command, hash record, and function-scoped SASS.
+    """
+
+    build = run_dir / "build"
+    artifact_path = build / "artifact.json"
+    if not artifact_path.is_file():
+        return None
+    try:
+        recorded = json.loads(artifact_path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError("retained resource artifact metadata is malformed") from error
+    if not isinstance(recorded, dict):
+        raise RuntimeError("retained resource artifact metadata is not an object")
+
+    binary = build / "tma_ab_contract_bandwidth"
+    sass_path = build / "tma_ab_contract_bandwidth.sass.txt"
+    compile_path = build / "compile_command.json"
+    hash_path = build / "binary.sha256"
+    for path in (binary, sass_path, compile_path, hash_path, build / "compile.log"):
+        if not path.is_file():
+            raise RuntimeError(
+                f"retained resource artifact is incomplete: {path.name}"
+            )
+    command = compile_command(run_dir, host_compiler, undef_gnu_source)
+    try:
+        recorded_command = json.loads(compile_path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError("retained resource compile command is malformed") from error
+    if recorded_command != command or recorded.get("compile_command") != command:
+        raise RuntimeError("retained resource compile command changed")
+
+    dependencies = {
+        path: sha256_path(REPO / path) for path in SOURCE_DEPENDENCIES
+    }
+    scalars = {
+        "binary_sha256": sha256_path(binary),
+        "source_sha256": sha256_path(SOURCE_PATH),
+        "sass_sha256": sha256_path(sass_path),
+        "compile_command_sha256": sha256_path(compile_path),
+    }
+    for name, expected in scalars.items():
+        if recorded.get(name) != expected:
+            raise RuntimeError(f"retained resource artifact hash changed: {name}")
+    if recorded.get("source_dependencies") != dependencies:
+        raise RuntimeError("retained resource source dependency hashes changed")
+    if Path(str(recorded.get("binary", ""))).resolve() != binary.resolve():
+        raise RuntimeError("retained resource binary path changed")
+    if Path(str(recorded.get("sass_path", ""))).resolve() != sass_path.resolve():
+        raise RuntimeError("retained resource SASS path changed")
+    if hash_path.read_text().strip() != (
+        f"{scalars['binary_sha256']}  tma_ab_contract_bandwidth"
+    ):
+        raise RuntimeError("retained resource binary hash record changed")
+    counts = sass_contract(sass_path.read_text())
+    if recorded.get("sass_function_counts") != counts:
+        raise RuntimeError("retained resource function-scoped SASS changed")
+    return {
+        "binary": binary,
+        **scalars,
+        "sass_path": sass_path,
+        "compile_command": command,
+        "source_dependencies": dependencies,
+        "sass_function_counts": counts,
+    }
 
 
 def assert_fields(
@@ -1051,8 +1165,21 @@ def main() -> int:
         with (run_dir / "environment_snapshots.jsonl").open("a") as handle:
             handle.write(json.dumps(snapshot, sort_keys=True) + "\n")
 
-    artifact = compile_binary(
+    artifact = retained_artifact(
         run_dir, args.host_compiler, args.nvcc_host_undef_gnu_source
+    )
+    if artifact is None:
+        artifact = compile_binary(
+            run_dir, args.host_compiler, args.nvcc_host_undef_gnu_source
+        )
+        print("COMPILED_FROZEN_ARTIFACT", flush=True)
+    else:
+        print("REUSED_AUDITED_FROZEN_ARTIFACT", flush=True)
+    (run_dir / "build/artifact.json").write_text(
+        json.dumps({
+            key: str(value) if isinstance(value, Path) else value
+            for key, value in artifact.items()
+        }, indent=2, sort_keys=True) + "\n"
     )
     static_rows = static_contract_audit(
         run_dir, Path(artifact["binary"]), cases

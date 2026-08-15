@@ -4,14 +4,15 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 usage:
-  microbench/sm110_resource_supplement.sh start SUITE_ID
-  microbench/sm110_resource_supplement.sh resume SUITE_ID
-  microbench/sm110_resource_supplement.sh status SUITE_ID
-  microbench/sm110_resource_supplement.sh finish SUITE_ID
+  microbench/sm110_causal_suite.sh start SUITE_ID
+  microbench/sm110_causal_suite.sh resume SUITE_ID
+  microbench/sm110_causal_suite.sh status SUITE_ID
+  microbench/sm110_causal_suite.sh finish SUITE_ID
 
-Collects only the exact TMA resource contracts needed by the stricter model.
-It does not rerun known L2 physical ceilings or the historical compute/full
-GEMM campaigns.
+Collects the exact tc5a_m128n256k64_stage4 causal timing profile: 91 cases,
+910 external trials, four predeclared NCU reports, raw globaltimer events,
+component fits, full-worker calibration, and holdout validation. Run it only
+after the exact-resource supplement has released the shared GPU lock.
 EOF
 }
 
@@ -31,12 +32,10 @@ repo=$(cd -- "$script_dir/.." && pwd)
 cd -- "$repo"
 
 expected_branch=codex/sm110-all-precision-closure
-suite_dir="results/sm110_resource_suite/$suite_id"
+suite_dir="results/sm110_causal_suite/$suite_id"
 contract_path="$suite_dir/run_contract.json"
-resource_run_id="$suite_id-resources"
-resource_dir="results/sm110_gemm_resource_campaign/$resource_run_id"
-model_dir="results/sm110_model_closure/$suite_id"
-resource_input="$model_dir/resource_capacities.json"
+causal_run_id="$suite_id-causal"
+causal_dir="results/sm110_gemm_causal_campaign/$causal_run_id"
 log_path="$suite_dir/suite_launcher.log"
 
 capture_oc() {
@@ -134,15 +133,15 @@ launch_supervisor() {
   local expected_commit=$1
   local redirection=$2
   if [[ $redirection == append ]]; then
-    nohup bash microbench/run_sm110_resource_supplement.sh \
+    nohup bash microbench/run_sm110_causal_suite.sh \
       "$suite_id" "$expected_commit" >> "$log_path" 2>&1 &
   else
-    nohup bash microbench/run_sm110_resource_supplement.sh \
+    nohup bash microbench/run_sm110_causal_suite.sh \
       "$suite_id" "$expected_commit" > "$log_path" 2>&1 &
   fi
   pid=$!
   echo "$pid" > "$suite_dir/suite_launcher.pid"
-  printf 'resource supplement launched pid=%s\n' "$pid"
+  printf 'causal suite launched pid=%s\n' "$pid"
   printf 'expected_commit=%s\n' "$expected_commit"
   printf 'log=%s\n' "$log_path"
 }
@@ -160,15 +159,13 @@ case "$action" in
       git status --short --untracked-files=no >&2
       exit 1
     fi
-    if [[ -e $suite_dir || -e $resource_dir ]]; then
+    if [[ -e $suite_dir || -e $causal_dir ]]; then
       echo "refusing to reuse evidence ID: $suite_id" >&2
       exit 1
     fi
-
     verify_platform
-
     mkdir -p -- "$suite_dir"
-    python3 - "$contract_path" "$suite_id" "$resource_run_id" \
+    python3 - "$contract_path" "$suite_id" "$causal_run_id" \
       "$expected_branch" "$expected_commit" <<'PY'
 import datetime
 import hashlib
@@ -176,15 +173,17 @@ import json
 import pathlib
 import sys
 dependencies = [
-    "microbench/sm110_resource_supplement.sh",
-    "microbench/run_sm110_resource_supplement.sh",
-    "microbench/sm110_gemm_resource_campaign/audit_resource_suite.py",
+    "microbench/sm110_causal_suite.sh",
+    "microbench/run_sm110_causal_suite.sh",
+    "microbench/sm110_gemm_causal_campaign/run_causal_campaign.py",
+    "microbench/sm110_gemm_causal_campaign/audit_campaign.py",
+    "microbench/sm110_gemm_causal_campaign/audit_causal_suite.py",
 ]
 payload = {
     "schema_version": 1,
-    "kind": "exact_resource_supplement",
+    "kind": "exact_tc5a_causal_pipeline_suite",
     "suite_id": sys.argv[2],
-    "resource_run_id": sys.argv[3],
+    "causal_run_id": sys.argv[3],
     "expected_branch": sys.argv[4],
     "expected_commit": sys.argv[5],
     "ncu_required": True,
@@ -221,12 +220,12 @@ PY
     if [[ -f $suite_dir/suite_launcher.pid ]]; then
       old_pid=$(<"$suite_dir/suite_launcher.pid")
       if [[ $old_pid =~ ^[0-9]+$ ]] && kill -0 "$old_pid" 2>/dev/null; then
-        echo "resource supervisor is still running pid=$old_pid" >&2
+        echo "causal supervisor is still running pid=$old_pid" >&2
         exit 1
       fi
     fi
-    if grep -q '^RESOURCE_SUPPLEMENT_COMPLETE$' "$log_path" 2>/dev/null; then
-      echo "resource supplement is already complete; run finish" >&2
+    if grep -q '^CAUSAL_SUITE_COMPLETE$' "$log_path" 2>/dev/null; then
+      echo "causal suite is already complete; run finish" >&2
       exit 1
     fi
     if [[ -e $suite_dir/oc_after.tsv ]]; then
@@ -259,7 +258,7 @@ current = read(sys.argv[2])
 if set(before) != set(current) or any(current[k] < before[k] for k in before):
     raise SystemExit("OC counters reset or changed; use a new suite ID")
 PY
-    printf 'RESOURCE_SUPPLEMENT_RESUME token=%s\n' "$resume_token" >> "$log_path"
+    printf 'CAUSAL_SUITE_RESUME token=%s\n' "$resume_token" >> "$log_path"
     launch_supervisor "$expected_commit" append
     ;;
 
@@ -278,8 +277,8 @@ PY
       echo "suite launcher PID is not present"
     fi
     printf '%s\n' '=== campaign status ==='
-    if [[ -f $resource_dir/campaign_status.json ]]; then
-      cat "$resource_dir/campaign_status.json"
+    if [[ -f $causal_dir/campaign_status.json ]]; then
+      cat "$causal_dir/campaign_status.json"
     else
       echo "not_started"
     fi
@@ -298,13 +297,8 @@ PY
       echo "wrong checkout: expected $expected_commit, got $actual_commit" >&2
       exit 1
     fi
-    if [[ -n $(git status --short --untracked-files=no) ]]; then
-      echo "finish requires the frozen clean tracked checkout" >&2
-      git status --short --untracked-files=no >&2
-      exit 1
-    fi
-    if ! grep -q '^RESOURCE_SUPPLEMENT_COMPLETE$' "$log_path"; then
-      echo "resource supplement is not complete; run status" >&2
+    if ! grep -q '^CAUSAL_SUITE_COMPLETE$' "$log_path"; then
+      echo "causal suite is not complete; run status" >&2
       exit 1
     fi
     if [[ -e $suite_dir/oc_after.tsv ]]; then
@@ -312,15 +306,9 @@ PY
     else
       capture_oc "$suite_dir/oc_after.tsv"
     fi
-    python3 microbench/sm110_gemm_resource_campaign/audit_resource_suite.py \
+    python3 microbench/sm110_gemm_causal_campaign/audit_causal_suite.py \
       "$suite_dir" --expected-commit "$expected_commit" \
       | tee "$suite_dir/suite_audit.json"
-    mkdir -p -- "$model_dir"
-    python3 -m scripts.sm110_gemm_model.cli import-resource-capacities \
-      --repo-root . \
-      --suite-id "$suite_id" \
-      --expected-commit "$expected_commit" \
-      --output "$resource_input"
     sha256sum \
       "$suite_dir/run_contract.json" \
       "$suite_dir/preflight.txt" \
@@ -328,13 +316,14 @@ PY
       "$suite_dir/oc_after.tsv" \
       "$suite_dir/suite_launcher.log" \
       "$suite_dir/suite_audit.json" \
-      "$resource_dir/artifact_sha256.txt" \
-      "$resource_dir/summary.json" \
-      "$resource_input" \
+      "$causal_dir/artifact_sha256.txt" \
+      "$causal_dir/summary.json" \
+      "$causal_dir/pipeline_profile.json" \
       > "$suite_dir/artifact_sha256.txt"
     printf '%s\n' '=== overcurrent delta ==='
     diff -u "$suite_dir/oc_before.tsv" "$suite_dir/oc_after.tsv" || true
-    printf 'RESOURCE_SUITE_FINISHED suite_id=%s\n' "$suite_id"
+    printf 'CAUSAL_SUITE_FINISHED suite_id=%s run_id=%s\n' \
+      "$suite_id" "$causal_run_id"
     ;;
 
   *)

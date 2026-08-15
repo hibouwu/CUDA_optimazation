@@ -22,8 +22,9 @@
     }
   },
   "causal_pipeline_closed_count": 0,
-  "causal_pipeline_dag_implemented": false,
+  "causal_pipeline_dag_implemented": true,
   "composition": "base_compute_full_plus_component_supplement",
+  "empirical_ideal_closed_count": 0,
   "end_to_end_closed_count": 0,
   "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
   "implementation_ready_count": 5,
@@ -39,75 +40,117 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
           "n": 1024,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "hot_l2",
           "scenario_id": "n1024.hot_l2",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.fp16": "snapshot_only",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.fp16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride1024",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride1024",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
           "n": 1024,
-          "performance_per_second": 69888000000000.01,
+          "performance_per_second": null,
           "residency": "cold_hbm",
           "scenario_id": "n1024.cold_hbm",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
-            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
-            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:hbm.total": "snapshot_only",
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.fp16": "snapshot_only",
-            "hbm.read": "closure_qualified",
-            "hbm.write": "closure_qualified",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.fp16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": true,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [],
           "n": 2048,
           "performance_per_second": 128436194661891.14,
@@ -121,7 +164,7 @@
             "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
             "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
             "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
             "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
           },
           "selected_capacity_qualifications": {
@@ -131,13 +174,37 @@
             "l2.read": "closure_qualified",
             "l2.write": "closure_qualified",
             "tensor.fp16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "closure_qualified",
             "tmem.readback.x8.warps4": "closure_qualified"
           },
           "status": "ok"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": true,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [],
           "n": 2048,
           "performance_per_second": 128436194661891.14,
@@ -154,8 +221,8 @@
             "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
             "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
             "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride2048": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
             "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
           },
           "selected_capacity_qualifications": {
@@ -168,89 +235,131 @@
             "l2.read": "closure_qualified",
             "l2.write": "closure_qualified",
             "tensor.fp16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride2048": "closure_qualified",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "closure_qualified",
             "tmem.readback.x8.warps4": "closure_qualified"
           },
           "status": "ok"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
           "n": 4096,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "hot_l2",
           "scenario_id": "n4096.hot_l2",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.fp16": "snapshot_only",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.fp16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=fp16_f32",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride4096",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride4096",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:fp16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:fp16_f32"
+          ],
           "n": 4096,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "cold_hbm",
           "scenario_id": "n4096.cold_hbm",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
-            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
-            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:hbm.total": "snapshot_only",
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.fp16": "snapshot_only",
-            "hbm.read": "closure_qualified",
-            "hbm.write": "closure_qualified",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.fp16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "fp16",
-      "missing_empirical_envelope_scenarios": [],
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
       "model_gaps": [
-        "causal_pipeline_dag"
+        "closure_qualified_empirical_envelope_matrix",
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": true,
@@ -301,14 +410,12 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": true,
       "precision_id": "fp16_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [
-        "n1024.hot_l2",
-        "n1024.cold_hbm",
         "n2048.hot_l2",
-        "n2048.cold_hbm",
-        "n4096.hot_l2",
-        "n4096.cold_hbm"
+        "n2048.cold_hbm"
       ],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -317,7 +424,7 @@
         "n4096.hot_l2",
         "n4096.cold_hbm"
       ],
-      "resource_envelope_matrix_complete": true,
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMsm110/src/main.cu",
         "GEMMsm110/include/backends/tc5_persistent.cuh"
@@ -334,75 +441,117 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
           "n": 1024,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "hot_l2",
           "scenario_id": "n1024.hot_l2",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.bf16": "snapshot_only",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.bf16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride1024",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride1024",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride1024.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
           "n": 1024,
-          "performance_per_second": 69888000000000.01,
+          "performance_per_second": null,
           "residency": "cold_hbm",
           "scenario_id": "n1024.cold_hbm",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
-            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
-            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:hbm.total": "snapshot_only",
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.bf16": "snapshot_only",
-            "hbm.read": "closure_qualified",
-            "hbm.write": "closure_qualified",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.bf16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": true,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [],
           "n": 2048,
           "performance_per_second": 128436194661891.14,
@@ -416,7 +565,7 @@
             "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
             "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
             "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
             "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
           },
           "selected_capacity_qualifications": {
@@ -426,13 +575,37 @@
             "l2.read": "closure_qualified",
             "l2.write": "closure_qualified",
             "tensor.bf16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "closure_qualified",
             "tmem.readback.x8.warps4": "closure_qualified"
           },
           "status": "ok"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": true,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [],
           "n": 2048,
           "performance_per_second": 128436194661891.14,
@@ -449,8 +622,8 @@
             "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
             "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
             "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride2048": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
             "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
           },
           "selected_capacity_qualifications": {
@@ -463,89 +636,131 @@
             "l2.read": "closure_qualified",
             "l2.write": "closure_qualified",
             "tensor.bf16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride2048": "closure_qualified",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride2048.per_sm": "closure_qualified",
             "tmem.readback.x8.warps4": "closure_qualified"
           },
           "status": "ok"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
           "n": 4096,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "hot_l2",
           "scenario_id": "n4096.hot_l2",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.bf16": "snapshot_only",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.bf16.m128n256": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         },
         {
-          "closure_qualified": true,
-          "missing_resources": [],
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
+          "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "pipeline.tc5a_m128n256k64_stage4:precision=bf16_f32",
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride4096",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
+          "missing_resources": [
+            "tma.hbm.contract.tc5a_m128n256k64_s4_v16.stride4096",
+            "tma.smem_ingress.contract.tc5a_m128n256k64_s4_v16.stride4096.per_sm",
+            "tma_transport_family_contract:generic_m128n128k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n256k64_stage2:bf16_f32",
+            "tma_transport_family_contract:generic_m128n64k64_exact_tail:bf16_f32"
+          ],
           "n": 4096,
-          "performance_per_second": 128436194661891.14,
+          "performance_per_second": null,
           "residency": "cold_hbm",
           "scenario_id": "n4096.cold_hbm",
-          "schedule_id": "tc5a_m128n256k64_stage4",
-          "selected_capacity_ids": {
-            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
-            "hard_upper:l2.read": "l2_read_ncu_model_peak",
-            "hard_upper:l2.write": "l2_write_ncu_model_peak",
-            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
-            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
-            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
-            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
-            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
-            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
-            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
-            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
-            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
-          },
-          "selected_capacity_qualifications": {
-            "hard_upper:hbm.total": "snapshot_only",
-            "hard_upper:l2.read": "snapshot_only",
-            "hard_upper:l2.write": "snapshot_only",
-            "hard_upper:tensor.bf16": "snapshot_only",
-            "hbm.read": "closure_qualified",
-            "hbm.write": "closure_qualified",
-            "l2.read": "closure_qualified",
-            "l2.write": "closure_qualified",
-            "tensor.bf16.m128n256": "closure_qualified",
-            "tma.hbm": "closure_qualified",
-            "tma.smem_ingress.per_sm": "closure_qualified",
-            "tmem.readback.x8.warps4": "closure_qualified"
-          },
-          "status": "ok"
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "bf16",
-      "missing_empirical_envelope_scenarios": [],
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
       "model_gaps": [
-        "causal_pipeline_dag"
+        "closure_qualified_empirical_envelope_matrix",
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": true,
@@ -596,14 +811,12 @@
       "performance_denominator_backend": "cublas_bf16_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "bf16_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [
-        "n1024.hot_l2",
-        "n1024.cold_hbm",
         "n2048.hot_l2",
-        "n2048.cold_hbm",
-        "n4096.hot_l2",
-        "n4096.cold_hbm"
+        "n2048.cold_hbm"
       ],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -612,7 +825,7 @@
         "n4096.hot_l2",
         "n4096.cold_hbm"
       ],
-      "resource_envelope_matrix_complete": true,
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/src/extended_gemm_bench.cu"
       ],
@@ -628,11 +841,33 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -644,14 +879,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -663,11 +923,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -679,14 +961,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -698,11 +1005,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -714,14 +1043,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v32.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v32.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v32.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v32.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v32.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -733,11 +1087,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "tf32",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -748,7 +1119,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": false,
@@ -801,7 +1173,9 @@
       "performance_denominator_backend": "cublas_tf32_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "tf32_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -826,11 +1200,33 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -842,14 +1238,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -861,11 +1282,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -877,14 +1320,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -896,11 +1364,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -912,14 +1402,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -931,11 +1446,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "fp8_e4m3",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -946,7 +1478,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": true,
@@ -997,7 +1530,9 @@
       "performance_denominator_backend": "fp8_q8_cublaslt_matmul",
       "performance_denominator_ready": true,
       "precision_id": "e4m3_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1020,11 +1555,33 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1036,14 +1593,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1055,11 +1637,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1071,14 +1675,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1090,11 +1719,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1106,14 +1757,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1125,11 +1801,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp8_e5m2",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -1140,7 +1833,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": false,
@@ -1192,7 +1886,9 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e5m2_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1223,9 +1919,25 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1237,10 +1949,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1252,9 +1981,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1266,10 +2011,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1281,9 +2043,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1295,10 +2073,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1310,11 +2105,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp6_e3m2_packed",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -1325,7 +2137,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": false,
       "numeric_closure": false,
@@ -1378,7 +2191,9 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e3m2_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1408,9 +2223,25 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1422,10 +2253,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1437,9 +2285,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1451,10 +2315,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1466,9 +2347,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1480,10 +2377,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1495,11 +2409,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp6_e2m3_packed",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -1510,7 +2441,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": false,
       "numeric_closure": false,
@@ -1563,7 +2495,9 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e2m3_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1593,9 +2527,25 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1607,10 +2557,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1622,9 +2589,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1636,10 +2619,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1651,9 +2651,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1665,10 +2681,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1680,11 +2713,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp4_e2m1_packed_unscaled",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -1695,7 +2745,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": false,
       "numeric_closure": false,
@@ -1748,7 +2799,9 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e2m1_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1778,9 +2831,25 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1792,10 +2861,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride1024",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride1024",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1807,9 +2893,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1821,10 +2923,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride2048",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride2048",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -1836,9 +2955,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1850,10 +2985,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride4096",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale32.stride4096",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale32.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -1865,11 +3017,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "partial",
       "input_type": "mxfp4_e2m1_ue8m0_block32",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -1880,7 +3049,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": false,
@@ -1933,7 +3103,9 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": false,
       "precision_id": "mxfp4_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -1966,9 +3138,25 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1980,10 +3168,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride1024",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride1024",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -1995,9 +3200,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2009,10 +3230,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride2048",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride2048",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2024,9 +3262,25 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2038,10 +3292,27 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:block_scaled_m128n256k64_stage2",
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride4096",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+            "tma.hbm.contract.block_m128n256k64_s2_v4_scale16.stride4096",
+            "tma.smem_ingress.contract.block_m128n256k64_s2_v4_scale16.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2053,11 +3324,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "partial",
       "input_type": "nvfp4_e2m1_ue4m3_block16",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -2068,7 +3356,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": false,
@@ -2120,7 +3409,9 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": false,
       "precision_id": "nvfp4_f32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -2155,11 +3446,33 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -2171,14 +3484,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -2190,11 +3528,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2206,14 +3566,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2225,11 +3610,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2241,14 +3648,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2260,11 +3692,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "signed_int8",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -2275,7 +3724,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": true,
       "numeric_closure": true,
@@ -2326,7 +3776,9 @@
       "performance_denominator_backend": "int8_q19_cublas_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "s8_s32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -2349,11 +3801,33 @@
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -2365,14 +3839,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride1024",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride1024",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride1024.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride1024.per_sm"
           ],
           "n": 1024,
           "performance_per_second": null,
@@ -2384,11 +3883,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2400,14 +3921,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride2048",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride2048",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride2048.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride2048.per_sm"
           ],
           "n": 2048,
           "performance_per_second": null,
@@ -2419,11 +3965,33 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2435,14 +4003,39 @@
           "status": "insufficient_evidence"
         },
         {
+          "causal_closure_qualified": false,
+          "causal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail"
+          ],
+          "causal_performance_per_second": null,
+          "causal_schedule_id": null,
+          "causal_selected_profile_ids": {},
+          "causal_status": "insufficient_evidence",
           "closure_qualified": false,
+          "ideal_closure_qualified": false,
+          "ideal_missing_resources": [
+            "causal_pipeline_contract:generic_m128n128k64_stage2",
+            "causal_pipeline_contract:generic_m128n256k64_stage2",
+            "causal_pipeline_contract:generic_m128n64k64_exact_tail",
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
+          ],
+          "ideal_performance_per_second": null,
+          "ideal_schedule_id": null,
+          "ideal_status": "insufficient_evidence",
           "missing_resources": [
-            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
-            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
-            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
-            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+            "tma.hbm.contract.generic_m128n128k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n256k64_s2_v8.stride4096",
+            "tma.hbm.contract.generic_m128n64k64_s2_v8.stride4096",
+            "tma.smem_ingress.contract.generic_m128n128k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n256k64_s2_v8.stride4096.per_sm",
+            "tma.smem_ingress.contract.generic_m128n64k64_s2_v8.stride4096.per_sm"
           ],
           "n": 4096,
           "performance_per_second": null,
@@ -2454,11 +4047,28 @@
           "status": "insufficient_evidence"
         }
       ],
+      "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "unsigned_int8",
+      "missing_causal_pipeline_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "missing_empirical_ideal_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
         "n2048.hot_l2",
@@ -2469,7 +4079,8 @@
       "missing_source_paths": [],
       "model_gaps": [
         "closure_qualified_empirical_envelope_matrix",
-        "causal_pipeline_dag"
+        "closure_qualified_causal_pipeline_profile_matrix",
+        "integrated_empirical_ideal_envelope_matrix"
       ],
       "native_mainloop": false,
       "numeric_closure": false,
@@ -2521,7 +4132,9 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "u8_s32",
+      "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
+      "qualified_empirical_ideal_scenarios": [],
       "required_empirical_envelope_scenarios": [
         "n1024.hot_l2",
         "n1024.cold_hbm",
@@ -2548,8 +4161,8 @@
     }
   ],
   "qualification": "closure_qualified",
-  "resource_envelope_closed_count": 2,
-  "schema_version": 2,
+  "resource_envelope_closed_count": 0,
+  "schema_version": 3,
   "suite_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c",
   "support_manifest_schema_version": 1
 }

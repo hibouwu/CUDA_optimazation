@@ -642,6 +642,7 @@ def audit(root: Path, *, require_ncu: bool,
         "static_contracts.json", "build/compile_command.json",
         "build/compile.log", "build/tma_ab_contract_bandwidth.sass.txt",
         "build/tma_ab_contract_bandwidth", "build/binary.sha256",
+        "build/artifact.json",
     )
     for relative in required:
         add(errors, (root / relative).is_file(), f"missing:{relative}")
@@ -809,6 +810,12 @@ def audit(root: Path, *, require_ncu: bool,
     compile_command = read_json(root / "build/compile_command.json")
     add(errors, audit_compile_command(compile_command, run_id),
         "compile command mismatch")
+    artifact = read_json(root / "build/artifact.json")
+    add(errors, isinstance(artifact, dict), "retained artifact is not an object")
+    add(errors, artifact.get("compile_command") == compile_command,
+        "retained artifact compile command mismatch")
+    add(errors, artifact.get("source_dependencies") == dependencies,
+        "retained artifact dependency hashes mismatch")
     sass_path = root / "build/tma_ab_contract_bandwidth.sass.txt"
     sass = sass_path.read_text()
     kernel_sass = function_sass(sass, "tma_ab_contract_kernel")
@@ -818,6 +825,12 @@ def audit(root: Path, *, require_ncu: bool,
             "kernel SASS lacks UTMALDG.2D")
         add(errors, "UTMASTG" not in kernel_sass,
             "kernel SASS unexpectedly stores through TMA")
+        expected_counts = {
+            "UTMALDG.2D": kernel_sass.count("UTMALDG.2D"),
+            "UTMASTG": kernel_sass.count("UTMASTG"),
+        }
+        add(errors, artifact.get("sass_function_counts") == expected_counts,
+            "retained artifact function-scoped SASS counts mismatch")
     binary_hash_text = (root / "build/binary.sha256").read_text().strip()
     binary_match = re.fullmatch(r"([0-9a-f]{64})\s+tma_ab_contract_bandwidth",
                                 binary_hash_text)
@@ -828,6 +841,33 @@ def audit(root: Path, *, require_ncu: bool,
         add(errors, sha256_path(binary_path) == binary_sha,
             "retained binary hash mismatch")
     sass_sha = sha256_path(sass_path)
+    artifact_binary = Path(str(artifact.get("binary", "")))
+    artifact_sass = Path(str(artifact.get("sass_path", "")))
+    expected_build_suffix = (
+        Path("results/sm110_gemm_resource_campaign") / run_id / "build"
+    )
+    add(errors, artifact_binary.is_absolute() and
+        tuple(artifact_binary.parts[-len((expected_build_suffix /
+              "tma_ab_contract_bandwidth").parts):]) ==
+        (expected_build_suffix / "tma_ab_contract_bandwidth").parts,
+        "retained artifact binary path mismatch")
+    add(errors, artifact_sass.is_absolute() and
+        tuple(artifact_sass.parts[-len((expected_build_suffix /
+              "tma_ab_contract_bandwidth.sass.txt").parts):]) ==
+        (expected_build_suffix / "tma_ab_contract_bandwidth.sass.txt").parts,
+        "retained artifact SASS path mismatch")
+    for name, expected in (
+        ("binary_sha256", binary_sha),
+        ("source_sha256", dependencies.get(
+            "microbench/15_tma_ab_contract_bandwidth/"
+            "tma_ab_contract_bandwidth.cu") if isinstance(dependencies, dict)
+            else None),
+        ("sass_sha256", sass_sha),
+        ("compile_command_sha256", sha256_path(
+            root / "build/compile_command.json")),
+    ):
+        add(errors, artifact.get(name) == expected,
+            f"retained artifact hash mismatch:{name}")
 
     static_rows = read_json(root / "static_contracts.json")
     add(errors, isinstance(static_rows, list) and len(static_rows) == 54,
