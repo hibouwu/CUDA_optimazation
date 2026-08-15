@@ -1,8 +1,30 @@
 {
   "all_precision_implementations_ready": false,
   "all_precision_numeric_evidence_closed": false,
+  "all_precision_resource_envelopes_closed": false,
   "all_precisions_end_to_end_closed": false,
-  "end_to_end_closed_count": 4,
+  "campaign_sources": {
+    "base": {
+      "expected_commit": "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8",
+      "provides": [
+        "epilogue_preflight",
+        "compute",
+        "full_gemm"
+      ],
+      "suite_id": "thor-t5000-closure-maxn-20260814-d382b57-a"
+    },
+    "component_supplement": {
+      "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
+      "provides": [
+        "component"
+      ],
+      "suite_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c"
+    }
+  },
+  "causal_pipeline_closed_count": 0,
+  "causal_pipeline_dag_implemented": false,
+  "composition": "base_compute_full_plus_component_supplement",
+  "end_to_end_closed_count": 0,
   "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
   "implementation_ready_count": 5,
   "numeric_closed_count": 4,
@@ -14,11 +36,222 @@
         "tc5a",
         "tc5b"
       ],
-      "end_to_end_closed": true,
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 1024,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 1024,
+          "performance_per_second": 69888000000000.01,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 2048,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 2048,
+          "performance_per_second": 128436194661891.14,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 4096,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 4096,
+          "performance_per_second": 128436194661891.14,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.fp16": "fp16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.fp16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.fp16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.fp16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.fp16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        }
+      ],
+      "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "fp16",
+      "missing_empirical_envelope_scenarios": [],
       "missing_source_paths": [],
+      "model_gaps": [
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": true,
       "numeric_evidence": {
@@ -68,6 +301,23 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": true,
       "precision_id": "fp16_f32",
+      "qualified_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": true,
       "source_paths": [
         "GEMMsm110/src/main.cu",
         "GEMMsm110/include/backends/tc5_persistent.cuh"
@@ -81,11 +331,222 @@
       "candidate_backend_ids": [
         "bf16_q0_wmma_m128n64k16"
       ],
-      "end_to_end_closed": true,
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 1024,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 1024,
+          "performance_per_second": 69888000000000.01,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 2048,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 2048,
+          "performance_per_second": 128436194661891.14,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 4096,
+          "performance_per_second": 128436194661891.14,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        },
+        {
+          "closure_qualified": true,
+          "missing_resources": [],
+          "n": 4096,
+          "performance_per_second": 128436194661891.14,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": "tc5a_m128n256k64_stage4",
+          "selected_capacity_ids": {
+            "hard_upper:hbm.total": "hbm_total_vendor_bandwidth",
+            "hard_upper:l2.read": "l2_read_ncu_model_peak",
+            "hard_upper:l2.write": "l2_write_ncu_model_peak",
+            "hard_upper:tensor.bf16": "bf16_vendor_peak_snapshot",
+            "hbm.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_read_aggregate",
+            "hbm.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.hbm_write_aggregate",
+            "l2.read": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_read_aggregate",
+            "l2.write": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.l2_write_aggregate",
+            "tensor.bf16.m128n256": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.compute.bf16_f32.m128n256",
+            "tma.hbm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_dram_stream_tc5a_ab_inflight8",
+            "tma.smem_ingress.per_sm": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tma_l2_hit_tc5a_ab_inflight8",
+            "tmem.readback.x8.warps4": "thor-t5000-tma-ingress-supplement-maxn-20260814-c.component.tmem_ld_32x32b_x8_warps4"
+          },
+          "selected_capacity_qualifications": {
+            "hard_upper:hbm.total": "snapshot_only",
+            "hard_upper:l2.read": "snapshot_only",
+            "hard_upper:l2.write": "snapshot_only",
+            "hard_upper:tensor.bf16": "snapshot_only",
+            "hbm.read": "closure_qualified",
+            "hbm.write": "closure_qualified",
+            "l2.read": "closure_qualified",
+            "l2.write": "closure_qualified",
+            "tensor.bf16.m128n256": "closure_qualified",
+            "tma.hbm": "closure_qualified",
+            "tma.smem_ingress.per_sm": "closure_qualified",
+            "tmem.readback.x8.warps4": "closure_qualified"
+          },
+          "status": "ok"
+        }
+      ],
+      "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "bf16",
+      "missing_empirical_envelope_scenarios": [],
       "missing_source_paths": [],
+      "model_gaps": [
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": true,
       "numeric_evidence": {
@@ -135,6 +596,23 @@
       "performance_denominator_backend": "cublas_bf16_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "bf16_f32",
+      "qualified_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": true,
       "source_paths": [
         "GEMMquant_sm110/src/extended_gemm_bench.cu"
       ],
@@ -147,11 +625,131 @@
       "candidate_backend_ids": [
         "tf32_q0_wmma_m64n64k8"
       ],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "tf32",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -203,6 +801,16 @@
       "performance_denominator_backend": "cublas_tf32_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "tf32_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/src/extended_gemm_bench.cu"
       ],
@@ -215,11 +823,131 @@
       "candidate_backend_ids": [
         "fp8_q7_mma_m16n8k32_smem128x64"
       ],
-      "end_to_end_closed": true,
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
+      "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "fp8_e4m3",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": true,
       "numeric_evidence": {
@@ -269,6 +997,16 @@
       "performance_denominator_backend": "fp8_q8_cublaslt_matmul",
       "performance_denominator_ready": true,
       "precision_id": "e4m3_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/src/quant_gemm_bench.cu"
       ],
@@ -279,11 +1017,131 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp8_e5m2",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -334,6 +1192,16 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e5m2_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/src/extended_gemm_bench.cu"
       ],
@@ -352,11 +1220,113 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp6_e3m2_packed",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": false,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -408,6 +1378,16 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e3m2_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [],
       "support_blockers": [
         "No packed FP6 E3M2 full-GEMM implementation, unpack path, or same-contract reference."
@@ -425,11 +1405,113 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp6_e2m3_packed",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": false,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -481,6 +1563,16 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e2m3_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [],
       "support_blockers": [
         "No packed FP6 E2M3 full-GEMM implementation, unpack path, or same-contract reference."
@@ -498,11 +1590,113 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:direct_smem_byte_container_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:direct_smem_byte_container_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "fp4_e2m1_packed_unscaled",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": false,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -554,6 +1748,16 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "e2m1_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [],
       "support_blockers": [
         "No raw unscaled E2M1 full-GEMM path; NVFP4/MXFP4 block-scaled results are different contracts."
@@ -571,11 +1775,113 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "partial",
       "input_type": "mxfp4_e2m1_ue8m0_block32",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -627,6 +1933,16 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": false,
       "precision_id": "mxfp4_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/build_and_run.sh",
         "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"
@@ -647,11 +1963,113 @@
     {
       "accumulator_type": "fp32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:block_scaled_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:block_scaled_m128n256k64_stage2"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "partial",
       "input_type": "nvfp4_e2m1_ue4m3_block16",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -702,6 +2120,16 @@
       "performance_denominator_backend": "cublas_tc",
       "performance_denominator_ready": false,
       "precision_id": "nvfp4_f32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/build_and_run.sh",
         "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"
@@ -724,11 +2152,131 @@
       "candidate_backend_ids": [
         "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"
       ],
-      "end_to_end_closed": true,
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
+      "end_to_end_closed": false,
       "implementation_ready": true,
       "implementation_status": "ready_for_closure_campaign",
       "input_type": "signed_int8",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": true,
       "numeric_closure": true,
       "numeric_evidence": {
@@ -778,6 +2326,16 @@
       "performance_denominator_backend": "int8_q19_cublas_gemmex",
       "performance_denominator_ready": true,
       "precision_id": "s8_s32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [
         "GEMMquant_sm110/src/quant_gemm_bench.cu"
       ],
@@ -788,11 +2346,131 @@
     {
       "accumulator_type": "signed_int32",
       "candidate_backend_ids": [],
+      "causal_pipeline_model_complete": false,
+      "empirical_envelope_scenarios": [
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n1024.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 1024,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n1024.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n2048.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 2048,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n2048.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "hot_l2",
+          "scenario_id": "n4096.hot_l2",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        },
+        {
+          "closure_qualified": false,
+          "missing_resources": [
+            "tma_hbm_capacity_contract:generic_m128n128k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n256k64_stage2",
+            "tma_hbm_capacity_contract:generic_m128n64k64_exact_tail",
+            "tma_ingress_capacity_contract:generic_m128n128k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n256k64_stage2",
+            "tma_ingress_capacity_contract:generic_m128n64k64_exact_tail"
+          ],
+          "n": 4096,
+          "performance_per_second": null,
+          "residency": "cold_hbm",
+          "scenario_id": "n4096.cold_hbm",
+          "schedule_id": null,
+          "selected_capacity_ids": {},
+          "selected_capacity_qualifications": {},
+          "status": "insufficient_evidence"
+        }
+      ],
       "end_to_end_closed": false,
       "implementation_ready": false,
       "implementation_status": "missing",
       "input_type": "unsigned_int8",
+      "missing_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
       "missing_source_paths": [],
+      "model_gaps": [
+        "closure_qualified_empirical_envelope_matrix",
+        "causal_pipeline_dag"
+      ],
       "native_mainloop": false,
       "numeric_closure": false,
       "numeric_evidence": {
@@ -843,6 +2521,16 @@
       "performance_denominator_backend": null,
       "performance_denominator_ready": false,
       "precision_id": "u8_s32",
+      "qualified_empirical_envelope_scenarios": [],
+      "required_empirical_envelope_scenarios": [
+        "n1024.hot_l2",
+        "n1024.cold_hbm",
+        "n2048.hot_l2",
+        "n2048.cold_hbm",
+        "n4096.hot_l2",
+        "n4096.cold_hbm"
+      ],
+      "resource_envelope_matrix_complete": false,
       "source_paths": [],
       "support_blockers": [
         "The official cuBLAS GemmEx support table allows CUBLAS_COMPUTE_32I with CUDA_R_8I inputs, not CUDA_R_8U inputs.",
@@ -859,7 +2547,9 @@
       "work_unit": "operation"
     }
   ],
-  "schema_version": 1,
+  "qualification": "closure_qualified",
+  "resource_envelope_closed_count": 2,
+  "schema_version": 2,
   "suite_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c",
   "support_manifest_schema_version": 1
 }

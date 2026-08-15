@@ -647,11 +647,15 @@ class ClosureConversionTest(unittest.TestCase):
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
         )
-        self.assertFalse(any(
-            finding["severity"] == "error"
-            for finding in analysis["findings"]
-        ))
-        self.assertTrue(analysis["pass"])
+        self.assertIn(
+            "residency_empirical_prediction_incomplete",
+            {
+                finding["code"]
+                for finding in analysis["findings"]
+                if finding["severity"] == "error"
+            },
+        )
+        self.assertFalse(analysis["pass"])
         self.assertEqual(analysis["capacity_count"], 54)
         self.assertEqual(analysis["observation_count"], 15)
         self.assertTrue(
@@ -671,11 +675,25 @@ class ClosureConversionTest(unittest.TestCase):
                        "support_manifest.json"
             ).read_text()),
             repo_root=ROOT,
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=load_schedules(
+                ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
             metadata=imported,
         )
         self.assertEqual(precision_analysis["implementation_ready_count"], 5)
+        self.assertEqual(
+            precision_analysis["campaign_sources"],
+            imported["campaign_sources"],
+        )
+        self.assertEqual(
+            precision_analysis["composition"], imported["composition"]
+        )
         self.assertEqual(precision_analysis["numeric_closed_count"], 4)
-        self.assertEqual(precision_analysis["end_to_end_closed_count"], 4)
+        self.assertEqual(
+            precision_analysis["resource_envelope_closed_count"], 2)
+        self.assertEqual(
+            precision_analysis["causal_pipeline_closed_count"], 0)
+        self.assertEqual(precision_analysis["end_to_end_closed_count"], 0)
         self.assertFalse(
             precision_analysis["all_precisions_end_to_end_closed"])
         precision_rows = {
@@ -804,7 +822,15 @@ class ClosureConversionTest(unittest.TestCase):
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
         )
-        self.assertTrue(composite_analysis["pass"])
+        self.assertFalse(composite_analysis["pass"])
+        self.assertIn(
+            "residency_empirical_prediction_incomplete",
+            {
+                finding["code"]
+                for finding in composite_analysis["findings"]
+                if finding["severity"] == "error"
+            },
+        )
         self.assertEqual(
             composite_analysis["campaign_sources"],
             composite["campaign_sources"],
@@ -1027,7 +1053,17 @@ class ClosureReportTest(unittest.TestCase):
             closure_capacities=closure,
             observations=observations,
             hardware=Hardware("thor", 20, 1.575e9),
-            schedules=[Schedule("s", 128, 128, 64, 2, tail_policy="pad")],
+            schedules=[Schedule(
+                "s",
+                128,
+                128,
+                64,
+                2,
+                tail_policy="pad",
+                tma_ingress_capacity_resource=
+                    "tma.smem_ingress.per_sm.inflight4",
+                tma_hbm_capacity_resource="tma.hbm.inflight4",
+            )],
             require_complete_contract=False,
         )
         by_n = {row["n"]: row for row in analysis["observations"]}

@@ -45,9 +45,12 @@ Likewise, the 1024-B/cycle/GPU L2 bus remains a shared `l2.read` constraint,
 while a single-CTA L2-hit probe directly measures
 `tma.smem_ingress.per_sm`, which is applied with a slowest-wave makespan. It is
 not inferred by dividing a concurrent full-GPU TMA result by the SM count.
-Schedules with fewer than four stages use the separately named `.inflight4`
-component capacities. Four-stage schedules use the exact tc5a A/B mixed
-contract, so a faster shallow or serial diagnostic cannot silently replace it.
+TMA component capacities are never selected from stage count alone.  A
+schedule must explicitly name `tma_ingress_capacity_resource` and, for
+`cold_hbm`, `tma_hbm_capacity_resource`.  The tc5a schedule binds the exact
+A16-KiB+B32-KiB, four-stage/eight-request points.  Other example schedules
+currently fail closed until a payload/request/thread/cache-matched component
+contract is captured; the 32-KiB `.inflight4` point is not silently reused.
 
 The schedule manifest separates executable transport contracts. Standard
 FP16/BF16/TF32/FP8/INT8 schedules use their native logical payload; raw
@@ -154,6 +157,8 @@ python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
   --repo-root . \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
   --closure-import "$MODEL_DIR/model_inputs.json" \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
   --support-manifest microbench/sm110_full_gemm_campaign/support_manifest.json \
   --output-json Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.json \
   --output-markdown Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.md \

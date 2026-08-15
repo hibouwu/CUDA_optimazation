@@ -94,6 +94,8 @@ def build_parser() -> argparse.ArgumentParser:
     precision_report_parser.add_argument("--repo-root", type=Path, required=True)
     precision_report_parser.add_argument("--capacities", type=Path, required=True)
     precision_report_parser.add_argument("--closure-import", type=Path, required=True)
+    precision_report_parser.add_argument("--hardware", type=Path, required=True)
+    precision_report_parser.add_argument("--schedules", type=Path, required=True)
     precision_report_parser.add_argument(
         "--support-manifest", type=Path, required=True)
     precision_report_parser.add_argument("--output-json", type=Path, required=True)
@@ -212,6 +214,8 @@ def main() -> int:
                 observations=observations,
                 support_manifest=read_json(args.support_manifest),
                 repo_root=args.repo_root.resolve(),
+                hardware=load_hardware(args.hardware),
+                schedules=load_schedules(args.schedules),
                 metadata=read_json(args.closure_import),
             )
             args.output_json.parent.mkdir(parents=True, exist_ok=True)
@@ -236,6 +240,10 @@ def main() -> int:
             "all_precisions_end_to_end_closed": closed,
             "implementation_ready_count": analysis["implementation_ready_count"],
             "numeric_closed_count": analysis["numeric_closed_count"],
+            "resource_envelope_closed_count":
+                analysis["resource_envelope_closed_count"],
+            "causal_pipeline_closed_count":
+                analysis["causal_pipeline_closed_count"],
             "end_to_end_closed_count": analysis["end_to_end_closed_count"],
             "output_json": str(args.output_json),
             "output_markdown": str(args.output_markdown),

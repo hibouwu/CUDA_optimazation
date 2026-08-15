@@ -4,11 +4,38 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .coverage import PrecisionCoverage, precision_coverage
-from .model import Capacity, ModelError, precision_specs
+from .model import (
+    CAUSAL_PIPELINE_DAG_IMPLEMENTED,
+    Capacity,
+    EvidenceKind,
+    Hardware,
+    ModelError,
+    Schedule,
+    Workload,
+    evaluate_manifest,
+    precision_specs,
+)
 from .observations import ObservedBest
 
 
 SUPPORT_READY = "ready_for_closure_campaign"
+REQUIRED_RESIDENCIES = ("hot_l2", "cold_hbm")
+
+
+def _empirical_capacity_selection_is_closure_qualified(layer: Any) -> bool:
+    empirical_resources = [
+        resource
+        for resource, kind in layer.selected_capacity_evidence_kinds.items()
+        if kind in {
+            EvidenceKind.MEASURED_SUSTAINED.value,
+            EvidenceKind.MEASURED_JOINT.value,
+        }
+    ]
+    return bool(empirical_resources) and all(
+        layer.selected_capacity_qualifications.get(resource)
+        == "closure_qualified"
+        for resource in empirical_resources
+    )
 
 
 def _existing_source_paths(
@@ -26,6 +53,8 @@ def build_precision_evidence_analysis(
     observations: Iterable[ObservedBest],
     support_manifest: dict[str, Any],
     repo_root: Path,
+    hardware: Hardware | None = None,
+    schedules: Iterable[Schedule] = (),
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Merge executable numeric coverage with the implementation support map.
@@ -38,6 +67,8 @@ def build_precision_evidence_analysis(
     """
 
     metadata = dict(metadata or {})
+    capacities = list(capacities)
+    observations = list(observations)
     specs = precision_specs()
     support_rows = support_manifest.get("precisions")
     if not isinstance(support_rows, list):
@@ -63,6 +94,7 @@ def build_precision_evidence_analysis(
         row.precision_id: row
         for row in precision_coverage(capacities, observations)
     }
+    schedules = list(schedules)
     rows: list[dict[str, Any]] = []
     for precision_id in specs:
         numeric: PrecisionCoverage = numeric_by_id[precision_id]
@@ -118,7 +150,91 @@ def build_precision_evidence_analysis(
         if not performance_denominator_ready:
             support_gaps.append("same_precision_performance_denominator_impl")
 
-        end_to_end_closed = implementation_ready and numeric.numeric_closure
+        envelope_scenarios: list[dict[str, Any]] = []
+        for n in numeric.required_full_gemm_shapes:
+            for residency in REQUIRED_RESIDENCIES:
+                scenario_id = f"n{n}.{residency}"
+                if hardware is None or not schedules:
+                    envelope_scenarios.append({
+                        "scenario_id": scenario_id,
+                        "n": n,
+                        "residency": residency,
+                        "status": "model_inputs_missing",
+                        "schedule_id": None,
+                        "performance_per_second": None,
+                        "selected_capacity_ids": {},
+                        "selected_capacity_qualifications": {},
+                        "missing_resources": [
+                            "hardware_or_schedule_manifest"
+                        ],
+                        "closure_qualified": False,
+                    })
+                    continue
+                envelope = evaluate_manifest(
+                    Workload(
+                        workload_id=f"{precision_id}.{scenario_id}",
+                        m=n,
+                        n=n,
+                        k=n,
+                        precision_id=precision_id,
+                        residency=residency,
+                    ),
+                    schedules,
+                    hardware,
+                    capacities,
+                )
+                layer = envelope.empirical_ideal_envelope
+                qualified = bool(
+                    layer.status == "ok"
+                    and layer.performance_per_second is not None
+                    and _empirical_capacity_selection_is_closure_qualified(
+                        layer
+                    )
+                )
+                envelope_scenarios.append({
+                    "scenario_id": scenario_id,
+                    "n": n,
+                    "residency": residency,
+                    "status": layer.status,
+                    "schedule_id": envelope.empirical_schedule_id,
+                    "performance_per_second": layer.performance_per_second,
+                    "selected_capacity_ids":
+                        layer.selected_capacity_ids,
+                    "selected_capacity_qualifications":
+                        layer.selected_capacity_qualifications,
+                    "missing_resources": layer.missing_resources,
+                    "closure_qualified": qualified,
+                })
+        qualified_envelope_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if row["closure_qualified"]
+        )
+        missing_envelope_scenarios = tuple(
+            row["scenario_id"]
+            for row in envelope_scenarios
+            if not row["closure_qualified"]
+        )
+        resource_envelope_matrix_complete = (
+            bool(envelope_scenarios) and not missing_envelope_scenarios
+        )
+        causal_pipeline_model_complete = bool(
+            CAUSAL_PIPELINE_DAG_IMPLEMENTED
+            and resource_envelope_matrix_complete
+        )
+        model_gaps: list[str] = []
+        if not resource_envelope_matrix_complete:
+            model_gaps.append(
+                "closure_qualified_empirical_envelope_matrix"
+            )
+        if not causal_pipeline_model_complete:
+            model_gaps.append("causal_pipeline_dag")
+        end_to_end_closed = bool(
+            implementation_ready
+            and numeric.numeric_closure
+            and resource_envelope_matrix_complete
+            and causal_pipeline_model_complete
+        )
         rows.append({
             "precision_id": precision_id,
             "input_type": support.get("input_type"),
@@ -139,19 +255,43 @@ def build_precision_evidence_analysis(
             "support_blockers": list(support.get("blockers") or ()),
             "numeric_evidence": numeric.to_dict(),
             "numeric_closure": numeric.numeric_closure,
+            "required_empirical_envelope_scenarios": [
+                f"n{n}.{residency}"
+                for n in numeric.required_full_gemm_shapes
+                for residency in REQUIRED_RESIDENCIES
+            ],
+            "qualified_empirical_envelope_scenarios":
+                list(qualified_envelope_scenarios),
+            "missing_empirical_envelope_scenarios":
+                list(missing_envelope_scenarios),
+            "empirical_envelope_scenarios": envelope_scenarios,
+            "resource_envelope_matrix_complete":
+                resource_envelope_matrix_complete,
+            "causal_pipeline_model_complete":
+                causal_pipeline_model_complete,
+            "model_gaps": model_gaps,
             "end_to_end_closed": end_to_end_closed,
         })
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "suite_id": metadata.get("suite_id"),
         "expected_commit": metadata.get("expected_commit"),
+        "composition": metadata.get("composition"),
+        "campaign_sources": metadata.get("campaign_sources", {}),
+        "qualification": metadata.get("qualification"),
         "support_manifest_schema_version": support_manifest.get("schema_version"),
         "precision_count": len(rows),
         "implementation_ready_count": sum(
             bool(row["implementation_ready"]) for row in rows
         ),
         "numeric_closed_count": sum(bool(row["numeric_closure"]) for row in rows),
+        "resource_envelope_closed_count": sum(
+            bool(row["resource_envelope_matrix_complete"]) for row in rows
+        ),
+        "causal_pipeline_closed_count": sum(
+            bool(row["causal_pipeline_model_complete"]) for row in rows
+        ),
         "end_to_end_closed_count": sum(
             bool(row["end_to_end_closed"]) for row in rows
         ),
@@ -161,6 +301,11 @@ def build_precision_evidence_analysis(
         "all_precision_numeric_evidence_closed": all(
             bool(row["numeric_closure"]) for row in rows
         ),
+        "all_precision_resource_envelopes_closed": all(
+            bool(row["resource_envelope_matrix_complete"]) for row in rows
+        ),
+        "causal_pipeline_dag_implemented":
+            CAUSAL_PIPELINE_DAG_IMPLEMENTED,
         "all_precisions_end_to_end_closed": all(
             bool(row["end_to_end_closed"]) for row in rows
         ),
@@ -173,25 +318,41 @@ def _mark(value: bool) -> str:
 
 
 def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
+    campaign_sources = analysis.get("campaign_sources") or {}
+    base_source = campaign_sources.get("base") or {}
+    component_source = campaign_sources.get("component_supplement") or {}
     lines = [
         "# Thor/SM110 全精度 GEMM 证据矩阵",
         "",
         "本表由可执行模型的 numeric coverage 与 full-GEMM support manifest 合并生成。",
         "`implementation_ready` 只表示实现、数值参考和同精度性能 denominator 已经",
-        "具备采集条件；`numeric_closure` 只表示所需 Thor 证据已经回传并通过审计；",
-        "只有二者同时成立，`end_to_end_closed` 才为真。",
+        "具备采集条件；`numeric_closure` 只表示所需 Thor 数值证据已经回传并通过",
+        "审计。最终 `end_to_end_closed` 还要求六个 residency/shape resource",
+        "envelope 只使用精确合同的 closure-qualified capacity，并要求 causal",
+        "pipeline DAG 已实现和闭环。",
         "",
         f"- closure suite：`{analysis.get('suite_id')}`",
-        f"- evidence commit：`{analysis.get('expected_commit')}`",
+        f"- composition：`{analysis.get('composition')}`",
+        "- base compute/full-GEMM："
+        f"`{base_source.get('suite_id')}` @ "
+        f"`{base_source.get('expected_commit')}`",
+        "- component supplement："
+        f"`{component_source.get('suite_id')}` @ "
+        f"`{component_source.get('expected_commit')}`",
+        f"- composite qualification：`{analysis.get('qualification')}`",
         f"- precision count：`{analysis.get('precision_count')}`",
         f"- implementation ready：`{analysis.get('implementation_ready_count')}`",
         f"- numeric closed：`{analysis.get('numeric_closed_count')}`",
+        "- closure-qualified resource envelopes："
+        f"`{analysis.get('resource_envelope_closed_count')}`",
+        "- causal pipeline closed："
+        f"`{analysis.get('causal_pipeline_closed_count')}`",
         f"- end-to-end closed：`{analysis.get('end_to_end_closed_count')}`",
         "- all precisions end-to-end closed："
         f"`{str(bool(analysis.get('all_precisions_end_to_end_closed'))).lower()}`",
         "",
-        "| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | end-to-end |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| precision | strict upper | compute shapes | implementation | full-GEMM shapes | numerical | denominator | resource envelope | causal DAG | end-to-end |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in analysis.get("precisions", []):
         numeric = row["numeric_evidence"]
@@ -212,6 +373,8 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
             f"{full_shapes} | "
             f"{_mark(numeric['full_gemm_numerical_validation_complete'])} | "
             f"{_mark(numeric['same_precision_performance_denominator'])} | "
+            f"{_mark(row['resource_envelope_matrix_complete'])} | "
+            f"{_mark(row['causal_pipeline_model_complete'])} | "
             f"{_mark(row['end_to_end_closed'])} |"
         )
 
@@ -229,10 +392,13 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
             "",
             f"- support gaps：`{', '.join(row['support_gaps']) or 'none'}`",
             f"- numeric gaps：`{', '.join(numeric['missing']) or 'none'}`",
+            f"- model gaps：`{', '.join(row['model_gaps']) or 'none'}`",
             "- missing compute shapes："
             f"`{', '.join(numeric['missing_compute_shapes']) or 'none'}`",
             "- missing full-GEMM shapes："
             f"`{', '.join(str(v) for v in numeric['missing_full_gemm_shapes']) or 'none'}`",
+            "- missing empirical envelope scenarios："
+            f"`{', '.join(row['missing_empirical_envelope_scenarios']) or 'none'}`",
         ])
         for blocker in row.get("support_blockers", []):
             lines.append(f"- blocker：{blocker}")
@@ -248,7 +414,11 @@ def render_precision_evidence_markdown(analysis: dict[str, Any]) -> str:
         "3. 有仓库内可复现的 native full-GEMM candidate；",
         "4. N=1024、2048、4096 三个完整输出数值验证；",
         "5. 三个 shape 都有同输入精度、同输出类型的 performance denominator；",
-        "6. trial、源码、编译命令、binary hash、function-scoped SASS、NCU、环境和",
+        "6. hot-L2/cold-HBM × N=1024/2048/4096 六个 resource envelope 都只选择",
+        "   closure-qualified 且与 schedule 显式匹配的 capacity；",
+        "7. latency、initiation interval、TMA/MMA/TMEM 依赖和 startup/drain 的",
+        "   causal pipeline DAG 已实现并闭环；",
+        "8. trial、源码、编译命令、binary hash、function-scoped SASS、NCU、环境和",
         "   硬件身份通过独立 auditor。",
         "",
     ])

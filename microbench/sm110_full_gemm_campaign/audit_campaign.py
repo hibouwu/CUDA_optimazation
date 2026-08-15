@@ -4,14 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
 import hashlib
 import io
 import json
 import math
 import re
-import runpy
 import statistics
+import subprocess
 from pathlib import Path
 
 
@@ -21,6 +22,194 @@ EXPECTED_SHAPES = {1024, 2048, 4096}
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def digest_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def recorded_git_commit(environment: object) -> str | None:
+    if not isinstance(environment, dict):
+        return None
+    row = environment.get("git_head")
+    if not isinstance(row, dict) or row.get("returncode") != 0:
+        return None
+    commit = str(row.get("output", "")).strip()
+    return commit if re.fullmatch(r"[0-9a-f]{40}", commit) else None
+
+
+def recorded_source_bytes(commit: str, relative: str) -> bytes | None:
+    """Read one source blob from the immutable commit recorded by the run.
+
+    Historical result auditing must not compare evidence hashes to whatever
+    happens to be checked out today.  It must compare them to the git object
+    that produced the run.  Missing history fails closed.
+    """
+    path = Path(relative)
+    if (
+        not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or path.is_absolute()
+        or ".." in path.parts
+        or not path.parts
+    ):
+        return None
+    try:
+        completed = subprocess.run(
+            ["git", "show", "--no-ext-diff", f"{commit}:{path.as_posix()}"],
+            cwd=REPO,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return completed.stdout if completed.returncode == 0 else None
+
+
+def recorded_tree_paths(commit: str, relative: str) -> tuple[str, ...] | None:
+    """List immutable repository paths below one recorded tree prefix."""
+    path = Path(relative)
+    if (
+        not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or path.is_absolute()
+        or ".." in path.parts
+        or not path.parts
+    ):
+        return None
+    try:
+        completed = subprocess.run(
+            [
+                "git", "ls-tree", "-r", "--name-only", commit,
+                "--", path.as_posix(),
+            ],
+            cwd=REPO,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode:
+        return None
+    try:
+        decoded = completed.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return tuple(line for line in decoded.splitlines() if line)
+
+
+def recorded_dependency_paths(commit: str) -> tuple[str, ...] | None:
+    """Reconstruct the schema-v2 full-GEMM dependency contract.
+
+    Auditing only dependency keys written by the producer would allow an
+    omitted header to evade hashing.  This schema freezes the FP16 entry
+    source, every repository-tracked GEMMsm110 include header, and the two
+    quantized/extended translation units.
+    """
+    headers = recorded_tree_paths(commit, "GEMMsm110/include")
+    if headers is None:
+        return None
+    paths = {
+        "GEMMsm110/src/main.cu",
+        "GEMMquant_sm110/src/quant_gemm_bench.cu",
+        "GEMMquant_sm110/src/extended_gemm_bench.cu",
+    }
+    paths.update(path for path in headers if path.endswith(".cuh"))
+    return tuple(sorted(paths))
+
+
+def recorded_cases(generator_source: bytes) -> list[dict[str, object]] | None:
+    """Decode immutable schema-v2 CASES without executing the runner.
+
+    The historical generator uses a literal ``SHAPES`` tuple plus a list with
+    comprehension expansion, f-strings, ``str(n)``, comparisons, and
+    conditional expressions.  Only that deliberately small expression
+    language is accepted.  Running the entire historical Python file would
+    give an independent auditor unnecessary code-execution authority.
+    """
+    if len(generator_source) > 2_000_000:
+        return None
+    try:
+        tree = ast.parse(generator_source.decode("utf-8"))
+    except (SyntaxError, UnicodeDecodeError):
+        return None
+    assignments: dict[str, ast.expr] = {}
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in {"SHAPES", "CASES"}
+        ):
+            assignments[node.targets[0].id] = node.value
+    try:
+        shapes = ast.literal_eval(assignments["SHAPES"])
+        cases_expression = assignments["CASES"]
+    except (KeyError, ValueError, TypeError):
+        return None
+    if (
+        not isinstance(shapes, tuple)
+        or not shapes
+        or any(not isinstance(value, int) for value in shapes)
+    ):
+        return None
+
+    allowed_nodes = {
+        ast.List,
+        ast.Tuple,
+        ast.Dict,
+        ast.Starred,
+        ast.ListComp,
+        ast.comprehension,
+        ast.Name,
+        ast.Load,
+        ast.Store,
+        ast.Constant,
+        ast.JoinedStr,
+        ast.FormattedValue,
+        ast.IfExp,
+        ast.Compare,
+        ast.Eq,
+        ast.Call,
+    }
+    for node in ast.walk(cases_expression):
+        if type(node) not in allowed_nodes:
+            return None
+        if isinstance(node, ast.Name) and node.id not in {
+            "n", "SHAPES", "str",
+        }:
+            return None
+        if isinstance(node, ast.Call) and not (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "str"
+            and len(node.args) == 1
+            and not node.keywords
+        ):
+            return None
+        if isinstance(node, ast.comprehension) and node.is_async:
+            return None
+    scope = {"__builtins__": {}, "SHAPES": shapes, "str": str}
+    try:
+        expression = ast.Expression(body=cases_expression)
+        ast.fix_missing_locations(expression)
+        decoded = eval(
+            compile(expression, "<recorded-cases>", "eval"),
+            scope,
+            scope,
+        )
+        # A JSON round trip proves that the result contains only inert data.
+        normalized = json.loads(json.dumps(decoded))
+    except (Exception, SystemExit):
+        return None
+    if (
+        not isinstance(normalized, list)
+        or len(normalized) > 10_000
+        or any(not isinstance(row, dict) for row in normalized)
+    ):
+        return None
+    return normalized
 
 
 def valid_recorded_extended_self_test_command(
@@ -94,6 +283,15 @@ def main() -> int:
 
     spec = json.loads((root / "run_spec.json").read_text())
     summary = json.loads((root / "summary.json").read_text())
+    environment = json.loads((root / "environment.json").read_text())
+    source_commit = recorded_git_commit(environment)
+    add(errors, source_commit is not None,
+        "environment does not identify one recorded git commit")
+    git_status = environment.get("git_status", {})
+    add(errors, isinstance(git_status, dict)
+        and git_status.get("returncode") == 0
+        and not str(git_status.get("output", "")).strip(),
+        "recorded source worktree was not clean")
     add(errors, spec.get("schema_version") == 2, "invalid spec schema")
     add(errors, spec.get("campaign") == "sm110_full_gemm_closure",
         "invalid campaign name")
@@ -112,20 +310,35 @@ def main() -> int:
     }, "problem contract changed")
     expected_generator = (REPO / "microbench/sm110_full_gemm_campaign/"
                           "run_full_gemm_campaign.py")
-    generator = REPO / str(spec.get("generator", ""))
+    generator_relative = str(spec.get("generator", ""))
+    generator = REPO / generator_relative
     add(errors, generator.resolve() == expected_generator.resolve(),
         "generator path is not the canonical campaign runner")
-    add(errors, generator.is_file() and digest(generator) == spec.get("generator_sha256"),
+    generator_source = (
+        recorded_source_bytes(source_commit, generator_relative)
+        if source_commit is not None else None
+    )
+    add(errors, generator_source is not None and
+        digest_bytes(generator_source) == spec.get("generator_sha256"),
         "generator hash mismatch")
     expected_manifest = (REPO / "microbench/sm110_full_gemm_campaign/"
                          "support_manifest.json")
-    manifest = REPO / str(spec.get("support_manifest", ""))
+    manifest_relative = str(spec.get("support_manifest", ""))
+    manifest = REPO / manifest_relative
     add(errors, manifest.resolve() == expected_manifest.resolve(),
         "support manifest path is not canonical")
-    add(errors, manifest.is_file() and digest(manifest) == spec.get("support_manifest_sha256"),
+    manifest_source = (
+        recorded_source_bytes(source_commit, manifest_relative)
+        if source_commit is not None else None
+    )
+    add(errors, manifest_source is not None and
+        digest_bytes(manifest_source) == spec.get("support_manifest_sha256"),
         "support manifest hash mismatch")
     try:
-        manifest_data = json.loads(manifest.read_text())
+        manifest_data = json.loads(
+            manifest_source.decode("utf-8")
+            if manifest_source is not None else ""
+        )
         expected_precisions = {
             row["precision_id"] for row in manifest_data["precisions"]
             if row.get("status") == "ready_for_closure_campaign"
@@ -135,22 +348,40 @@ def main() -> int:
         errors.append("support manifest is not parseable")
     expected_cases = len(expected_precisions) * len(EXPECTED_SHAPES)
     add(errors, bool(expected_precisions), "support manifest has no ready precisions")
-    for relative, expected in spec.get("source_dependencies", {}).items():
-        path = REPO / relative
-        add(errors, path.is_file() and digest(path) == expected,
+    declared_dependencies = spec.get("source_dependencies", {})
+    if not isinstance(declared_dependencies, dict):
+        declared_dependencies = {}
+        errors.append("source dependencies are not an object")
+    dependency_paths = (
+        recorded_dependency_paths(source_commit)
+        if source_commit is not None else None
+    )
+    add(errors, dependency_paths is not None,
+        "recorded source dependency tree cannot be loaded")
+    add(errors, dependency_paths is not None and
+        set(declared_dependencies) == set(dependency_paths),
+        "source dependency path set differs from recorded source tree")
+    canonical_dependencies: dict[str, str] = {}
+    for relative in dependency_paths or ():
+        expected = declared_dependencies.get(relative)
+        source = (
+            recorded_source_bytes(source_commit, str(relative))
+            if source_commit is not None else None
+        )
+        actual = digest_bytes(source) if source is not None else ""
+        canonical_dependencies[str(relative)] = actual
+        add(errors, source is not None and actual == expected,
             f"source dependency hash mismatch:{relative}")
 
     cases = spec.get("cases", [])
     try:
-        canonical_runner = runpy.run_path(str(expected_generator))
-        canonical_cases = canonical_runner["CASES"]
-        canonical_dependencies = {
-            str(path.relative_to(REPO)): digest(path)
-            for path in canonical_runner["source_dependencies"]()
-        }
-    except (OSError, KeyError, RuntimeError, SyntaxError):
+        if generator_source is None:
+            raise RuntimeError("recorded generator source is unavailable")
+        canonical_cases = recorded_cases(generator_source)
+        if canonical_cases is None:
+            raise RuntimeError("recorded CASES expression is not accepted")
+    except RuntimeError:
         canonical_cases = None
-        canonical_dependencies = None
         errors.append("canonical runner cases cannot be loaded")
     add(errors, cases == canonical_cases, "spec cases differ from canonical runner")
     add(errors, spec.get("source_dependencies") == canonical_dependencies,

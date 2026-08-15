@@ -771,6 +771,19 @@ def import_closure(
         "expected_commit": expected_commit,
         "qualification": qualification,
         "closure_qualified": qualification == "closure_qualified",
+        "composition": "single_suite",
+        "campaign_sources": {
+            "base": {
+                "suite_id": suite_id,
+                "expected_commit": expected_commit,
+                "provides": [
+                    "epilogue_preflight",
+                    "compute",
+                    "component",
+                    "full_gemm",
+                ],
+            },
+        },
         "platform_evidence": {
             "maxn": True,
             "gpu_clock_locked_hz": 1_575_000_000,

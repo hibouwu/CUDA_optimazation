@@ -19,6 +19,76 @@ AUDITOR = Path(__file__).with_name("audit_campaign.py")
 
 
 class CampaignEvidenceTests(unittest.TestCase):
+    def test_recorded_source_is_read_from_immutable_git_commit(self) -> None:
+        commit = "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8"
+        relative = (
+            "microbench/sm110_full_gemm_campaign/support_manifest.json"
+        )
+        payload = auditor.recorded_source_bytes(commit, relative)
+        self.assertIsNotNone(payload)
+        self.assertEqual(
+            auditor.digest_bytes(payload or b""),
+            "8f84b8e9460ac319f5e18c5259e2d7f102f61a150cbefc17c51b21ab8715d44a",
+        )
+        current = REPO / relative
+        self.assertNotEqual(
+            auditor.digest(current),
+            auditor.digest_bytes(payload or b""),
+        )
+        self.assertIsNone(
+            auditor.recorded_source_bytes(commit, "../escape")
+        )
+
+    def test_recorded_cases_are_decoded_without_general_code_execution(self) -> None:
+        commit = "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8"
+        source = auditor.recorded_source_bytes(
+            commit,
+            "microbench/sm110_full_gemm_campaign/"
+            "run_full_gemm_campaign.py",
+        )
+        self.assertIsNotNone(source)
+        cases = auditor.recorded_cases(source or b"")
+        self.assertIsNotNone(cases)
+        self.assertEqual(len(cases or []), 15)
+        self.assertEqual(
+            {row["precision_id"] for row in cases or []},
+            {"fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "s8_s32"},
+        )
+        malicious = (
+            b"SHAPES=(1,)\n"
+            b"CASES=[__import__('os').system('false')]\n"
+        )
+        self.assertIsNone(auditor.recorded_cases(malicious))
+
+    def test_recorded_dependency_set_is_rebuilt_from_git_tree(self) -> None:
+        commit = "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8"
+        paths = auditor.recorded_dependency_paths(commit)
+        self.assertIsNotNone(paths)
+        self.assertEqual(len(paths or ()), 24)
+        self.assertIn("GEMMsm110/src/main.cu", paths or ())
+        self.assertIn(
+            "GEMMsm110/include/backends/tc5_persistent.cuh",
+            paths or (),
+        )
+        self.assertIsNone(
+            auditor.recorded_tree_paths(commit, "../escape")
+        )
+
+    def test_recorded_commit_requires_clean_git_probe_shape(self) -> None:
+        commit = "d382b57eae289b458c5290e3d2b7e0daf1b7d7c8"
+        self.assertEqual(
+            auditor.recorded_git_commit({
+                "git_head": {"returncode": 0, "output": commit + "\n"}
+            }),
+            commit,
+        )
+        self.assertIsNone(auditor.recorded_git_commit({
+            "git_head": {"returncode": 1, "output": commit}
+        }))
+        self.assertIsNone(auditor.recorded_git_commit({
+            "git_head": {"returncode": 0, "output": "HEAD"}
+        }))
+
     def test_self_test_command_audit_is_checkout_relocation_safe(self) -> None:
         command = [
             "/xplorer/shijy/CUDA_optimazation/results/"

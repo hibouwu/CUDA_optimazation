@@ -64,9 +64,22 @@ DOCUMENT_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                  "thor_sm110_gemm_performance_bounds.md")
 TUTORIAL_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                  "thor_sm110_gemm_performance_model_tutorial.md")
+CURRENT_REPLAY_PATH = (ROOT / "Docs/blackwell_tensorcore/"
+                       "thor_sm110_current_model_replay.md")
 
 
 class DocumentContractTest(unittest.TestCase):
+    def test_current_model_replay_preserves_fail_closed_findings(self) -> None:
+        text = CURRENT_REPLAY_PATH.read_text()
+        self.assertIn("- audit pass：`False`", text)
+        self.assertIn("- campaign measurement closed：`True`", text)
+        self.assertIn("- all common resources closed：`True`", text)
+        self.assertIn("- all precisions closed：`False`", text)
+        self.assertEqual(
+            text.count("`residency_empirical_prediction_incomplete`"), 9
+        )
+        self.assertEqual(text.count("`overcurrent_events_observed`"), 1)
+
     def test_core_symbols_are_defined_at_first_use(self) -> None:
         text = DOCUMENT_PATH.read_text()
         definitions = {
@@ -250,13 +263,23 @@ class TutorialContractTest(unittest.TestCase):
             r"\(C_{\mathrm{L2,read}}^{\mathrm{UB}}\)":
                 r"定义 \(C_{\mathrm{L2,read}}^{\mathrm{UB}}\)",
             r"\(T_{\mathrm{L2,read}}^{\mathrm{LB}}\)":
-                r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)",
+                (
+                    r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)、" "\n"
+                    r"\(T_{\mathrm{HBM}}^{\mathrm{LB}}\)、" "\n"
+                    r"\(T_{\mathrm{L2,read}}^{\mathrm{LB}}\) 和" "\n"
+                    r"\(T_{\mathrm{L2,write}}^{\mathrm{LB}}\) 分别为"
+                ),
             r"\(c_{\mathrm{L2,write}}^{\mathrm{UB}}":
                 r"定义 \(c_{\mathrm{L2,write}}^{\mathrm{UB}}",
             r"\(C_{\mathrm{L2,write}}^{\mathrm{UB}}\)":
                 r"定义 \(C_{\mathrm{L2,write}}^{\mathrm{UB}}\)",
             r"\(T_{\mathrm{L2,write}}^{\mathrm{LB}}\)":
-                r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)",
+                (
+                    r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)、" "\n"
+                    r"\(T_{\mathrm{HBM}}^{\mathrm{LB}}\)、" "\n"
+                    r"\(T_{\mathrm{L2,read}}^{\mathrm{LB}}\) 和" "\n"
+                    r"\(T_{\mathrm{L2,write}}^{\mathrm{LB}}\) 分别为"
+                ),
             r"\(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}":
                 r"定义 \(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}",
             r"\(Q_{\mathrm{HBM,total}}^{\mathrm{LB}}\)":
@@ -357,6 +380,54 @@ class TutorialContractTest(unittest.TestCase):
         }
         self.assert_defined_at_first_use(lesson, definitions)
 
+    def test_lesson4_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 4 课：", 1)[1]
+        definitions = {
+            r"\(u\)": r"定义 \(u\) 为 M 方向 output tile",
+            r"\(v\)": r"定义 \(v\) 为 N 方向",
+            r"\(\mathcal T(x,w)\)":
+                r"定义 \(\mathcal T(x,w)\) 为 schedule",
+            r"\(t\)": r"定义 \(t\) 为其中一个 task",
+            r"\(n_t(x,w)": r"定义\n\(n_t(x,w)",
+            r"\(r\)": r"定义 \(r\) 为当前分析的本地资源",
+            r"\(q_{t,r}(x,w)\)": r"定义\n\(q_{t,r}(x,w)\)",
+            r"\(\widehat C_{r,\mathrm{unit}}\)":
+                r"定义 \(\widehat C_{r,\mathrm{unit}}\)",
+            r"\(p_{t,r}(x,w)\)": r"定义 \(p_{t,r}(x,w)\)",
+            r"\(U_r\)": r"定义 \(U_r\) 为能并行服务",
+            r"\(\widehat T_{r,\mathrm{fractional}}\)":
+                r"定义 \(\widehat T_{r,\mathrm{fractional}}\)",
+            r"\(\widehat T_{r,\mathrm{span}}\)":
+                r"定义 \(\widehat T_{r,\mathrm{span}}\)",
+            r"\(p_r\)": r"定义 \(p_r\) 为所有 task 都相同时",
+            r"\(N_{r,\mathrm{wave}}\)":
+                r"定义\n\(N_{r,\mathrm{wave}}\)",
+            r"\(\widehat T_{r,\mathrm{wave}}\)":
+                r"定义 \(\widehat T_{r,\mathrm{wave}}\)",
+            r"\(U_{\mathrm{local}}\)":
+                r"定义 \(U_{\mathrm{local}}\) 为可并行",
+            r"\(p_{\mathrm{ingress}}\)":
+                r"定义 \(p_{\mathrm{ingress}}\)",
+            r"\(\widehat T_{\mathrm{ingress,fractional}}\)":
+                r"定义 \(\widehat T_{\mathrm{ingress,fractional}}\)",
+            r"\(N_{\mathrm{ingress,wave}}\)":
+                r"定义 \(N_{\mathrm{ingress,wave}}\)",
+            r"\(\widehat T_{\mathrm{ingress,wave}}\)":
+                r"定义 \(\widehat T_{\mathrm{ingress,wave}}\)",
+            r"\(q_{\mathrm{small,task}}\)":
+                r"定义本例单 task\nissued payload \(q_{\mathrm{small,task}}\)",
+            r"\(p_{\mathrm{small,ingress}}\)":
+                r"定义 \(p_{\mathrm{small,ingress}}\)",
+            r"\(\widehat T_{\mathrm{small,ingress,wave}}\)":
+                r"定义\n\(\widehat T_{\mathrm{small,ingress,wave}}\)",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
     def test_lesson3_hand_calculations_match_executable_model(self) -> None:
         precision = precision_specs()["fp16_f32"]
         schedule = Schedule(
@@ -398,6 +469,334 @@ class TutorialContractTest(unittest.TestCase):
         self.assertEqual(irregular.tma_unique_input_bytes, 196_608)
         self.assertEqual(irregular.tma_input_bytes, 393_216)
 
+    def test_lesson4_wave_calculations_match_executable_model(self) -> None:
+        precision = precision_specs()["fp16_f32"]
+        schedule = Schedule(
+            "tc5a",
+            128,
+            256,
+            64,
+            4,
+            mma_n=256,
+            tail_policy="pad",
+            tmem_columns=256,
+            threads=192,
+        )
+        ingress_rate = 193_366_116_675.77954
+        l2_rate = 1_505_111_656_194.0369
+        exact = account_work(
+            Workload("exact", 2048, 2048, 2048, "fp16_f32"),
+            schedule,
+            precision,
+        )
+        exact_task_bytes = exact.tma_input_bytes / exact.task_count
+        exact_task_span = exact_task_bytes / ingress_rate
+        exact_waves = (exact.task_count + 20 - 1) // 20
+        self.assertEqual(exact_task_bytes, 1.5 * 1024**2)
+        self.assertEqual(exact_waves, 7)
+        self.assertAlmostEqual(exact_task_span * 1e6, 8.134124152874465)
+        self.assertAlmostEqual(
+            exact_waves * exact_task_span * 1e6,
+            56.93886907012125,
+        )
+
+        small = account_work(
+            Workload("small", 130, 260, 70, "fp16_f32"),
+            schedule,
+            precision,
+        )
+        small_task_bytes = small.tma_input_bytes / small.task_count
+        small_task_span = small_task_bytes / ingress_rate
+        small_waves = (small.task_count + 20 - 1) // 20
+        self.assertEqual(small_task_bytes, 96 * 1024)
+        self.assertEqual(small_waves, 1)
+        self.assertAlmostEqual(small_task_span * 1e6, 0.5083827595546541)
+        self.assertAlmostEqual(
+            small.tma_input_bytes / l2_rate * 1e6,
+            0.2612537072460936,
+        )
+
+    def test_lesson5_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 5 课：", 1)[1]
+        definitions = {
+            r"\(R_{\mathrm{stage}}\)":
+                r"定义 \(R_{\mathrm{stage}}\)",
+            r"\(I_{\max}\)": "定义\n\\(I_{\\max}\\)",
+            r"\(R_{\mathrm{task}}\)":
+                r"定义 \(R_{\mathrm{task}}\)",
+            r"\(\lambda_L\)": r"定义 \(\lambda_L\)",
+            r"\(\iota_L\)": r"定义 \(\iota_L\)",
+            r"\(\lambda_M\)": r"定义 \(\lambda_M\)",
+            r"\(\iota_M\)": r"定义 \(\iota_M\)",
+            r"\(\widehat C_{\mathrm{load}}\)":
+                r"定义 \(\widehat C_{\mathrm{load}}\)",
+            r"\(i\)": r"定义 \(i\) 为当前 task 内的 K-tile",
+            r"\(\mathsf L_i\)": r"定义 \(\mathsf L_i\)",
+            r"\(\mathsf M_i\)": r"定义 \(\mathsf M_i\)",
+            r"\(\mathsf R_{\mathrm{TMEM}}\)":
+                r"定义 \(\mathsf R_{\mathrm{TMEM}}\)",
+            r"\(\mathsf E_{\mathrm{epi}}\)":
+                r"定义 \(\mathsf E_{\mathrm{epi}}\)",
+            r"\(\mathsf S_D\)": "定义\n\\(\\mathsf S_D\\)",
+            r"\(G_{\mathrm{pipe}}":
+                r"定义 \(G_{\mathrm{pipe}}",
+            r"\(T_{\mathrm{span}}(x,w)\)":
+                "定义\n\\(T_{\\mathrm{span}}(x,w)\\)",
+            r"\(\ell\)": r"定义 \(\ell\)",
+            r"\(c\)": "定义\n\\(c\\)",
+            r"\(T_{\mathrm{toy},S=1}\)":
+                r"定义 \(T_{\mathrm{toy},S=1}\)",
+            r"\(T_{\mathrm{toy},S\ge2}\)":
+                r"定义 \(T_{\mathrm{toy},S\ge2}\)",
+            r"\(\rho_4\)": r"定义 \(\rho_4\)",
+            r"\(\rho_8\)": r"定义 \(\rho_8\)",
+            r"\(\widehat T_{\mathrm{resource}}(x,w)\)":
+                r"定义 \(\widehat T_{\mathrm{resource}}(x,w)\)",
+            r"\(\widehat T_{\mathrm{DAG}}(x,w)\)":
+                r"定义 \(\widehat T_{\mathrm{DAG}}(x,w)\)",
+            r"\(\widehat T_{\mathrm{schedule}}(x,w)\)":
+                r"定义 \(\widehat T_{\mathrm{schedule}}(x,w)\)",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson5_toy_pipeline_and_request_counts(self) -> None:
+        def toy_pipeline(
+            k_tiles: int, load_us: float, compute_us: float, stages: int
+        ) -> float:
+            if stages == 1:
+                return k_tiles * (load_us + compute_us)
+            return (
+                load_us
+                + (k_tiles - 1) * max(load_us, compute_us)
+                + compute_us
+            )
+
+        self.assertAlmostEqual(toy_pipeline(4, 0.5, 0.8, 1), 5.2)
+        self.assertAlmostEqual(toy_pipeline(4, 0.5, 0.8, 2), 3.7)
+        self.assertAlmostEqual(toy_pipeline(4, 0.5, 0.8, 4), 3.7)
+        self.assertEqual(32 * 2, 64)
+        self.assertEqual(4 * 2, 8)
+        self.assertAlmostEqual(129.398 / 68.615, 1.8858558624207535)
+        self.assertAlmostEqual(193.366 / 68.615, 2.8181301464694313)
+
+    def test_lesson6_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 6 课：", 1)[1].split(
+            "# 第 7 课：", 1
+        )[0]
+        definitions = {
+            r"\(\mathcal X(w)\)":
+                r"定义 \(\mathcal X(w)\)",
+            r"\(T(x,w)\)": r"定义 \(T(x,w)\)",
+            r"\(T^\star(w)\)": r"定义 \(T^\star(w)\)",
+            r"\(P^\star(w)\)": r"定义 \(P^\star(w)\)",
+            r"\(\mathcal R_{\mathrm{strict}}(w)\)":
+                r"定义 \(\mathcal R_{\mathrm{strict}}(w)\)",
+            r"\(T_{\mathrm{ub}}^{\mathrm{LB}}(w)\)":
+                r"定义 \(T_{\mathrm{ub}}^{\mathrm{LB}}(w)\)",
+            r"\(P_{\mathrm{ub}}(w)\)":
+                r"定义 \(P_{\mathrm{ub}}(w)\)",
+            r"\(\mathcal S_{\mathrm{v1}}(w)\)":
+                r"定义 \(\mathcal S_{\mathrm{v1}}(w)\)",
+            r"\(\widehat P(x,w)\)":
+                r"定义 \(\widehat P(x,w)\)",
+            r"\(\widehat P_{\mathrm{env}}(w)\)":
+                r"定义 \(\widehat P_{\mathrm{env}}(w)\)",
+            r"\(\mathcal O(w)\)": r"定义 \(\mathcal O(w)\)",
+            r"\(P_{o,\mathrm{median}}(w)\)":
+                r"定义 \(P_{o,\mathrm{median}}(w)\)",
+            r"\(P_{\mathrm{obs}}(w)\)":
+                r"定义 \(P_{\mathrm{obs}}(w)\)",
+            r"\(P_{o,\max}(w)\)":
+                "定义\n\\(P_{o,\\max}(w)\\)",
+            r"\(P_{\mathrm{tc5a}}": r"定义 \(P_{\mathrm{tc5a}}",
+            r"\(P_{\mathrm{cuBLAS}}":
+                r"定义 \(P_{\mathrm{cuBLAS}}",
+            r"\(N_{\mathrm{impl}}\)":
+                r"- \(N_{\mathrm{impl}}\)：",
+            r"\(N_{\mathrm{numeric}}\)":
+                r"- \(N_{\mathrm{numeric}}\)：",
+            r"\(N_{\mathrm{env}}\)":
+                r"- \(N_{\mathrm{env}}\)：",
+            r"\(N_{\mathrm{DAG}}\)":
+                r"- \(N_{\mathrm{DAG}}\)：",
+            r"\(N_{\mathrm{e2e}}\)":
+                r"- \(N_{\mathrm{e2e}}\)：",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson6_three_layer_numbers_match_report(self) -> None:
+        useful = 2 * 2048**3
+        empirical = 128.43619466189114e12
+        tc5a = 120.0389157918936e12
+        cublas = 130.6325516802194e12
+        cublas_max = 131.16327385421102e12
+        self.assertAlmostEqual(useful / empirical * 1e6, 133.76189811)
+        self.assertAlmostEqual(tc5a / cublas, 0.9189050833649917)
+        self.assertAlmostEqual(tc5a / empirical, 0.934619062079008)
+        self.assertAlmostEqual(cublas / empirical, 1.0171007637224865)
+        self.assertLess(cublas_max, 139.776e12)
+
+    def test_lesson7_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 7 课：", 1)[1].split(
+            "# 第 8 课：", 1
+        )[0]
+        definitions = {
+            r"\(d\)": r"定义 \(d\)",
+            r"\(\mathbf q": "定义\n\\(\\mathbf q",
+            r"\(\mathbf y": r"定义 \(\mathbf y",
+            r"\(\mathcal F\)": r"定义 \(\mathcal F\)",
+            r"\(\mathcal C^{\mathrm{UB}}\)":
+                "定义\n\\(\\mathcal C^{\\mathrm{UB}}\\)",
+            r"\(T_{\mathrm{joint}}^{\mathrm{LB}}":
+                r"定义 \(T_{\mathrm{joint}}^{\mathrm{LB}}",
+            r"\(J\)": r"定义 \(J\)",
+            r"\(\mathbf a_j\)": r"定义 \(\mathbf a_j\)",
+            r"\(b_j\)": r"定义 \(b_j\)",
+            r"\(T_{\mathrm{linear}}^{\mathrm{LB}}\)":
+                r"定义 \(T_{\mathrm{linear}}^{\mathrm{LB}}\)",
+            r"\(R\)": r"定义 \(R\) 和 \(W\)",
+            r"\(W\)": r"定义 \(R\) 和 \(W\)",
+            r"\(C_R^{\mathrm{UB}}\)":
+                "定义\n\\(C_R^{\\mathrm{UB}}\\)",
+            r"\(C_W^{\mathrm{UB}}\)":
+                r"\(C_W^{\mathrm{UB}}\) 为两个方向",
+            r"\(Q_R\)": r"定义 \(Q_R\) 为一次 GEMM 的 read",
+            r"\(Q_W\)": r"定义 \(Q_W\) 为同一次 GEMM",
+            r"\(C_{R+W}^{\mathrm{UB}}\)":
+                r"定义 \(C_{R+W}^{\mathrm{UB}}\)",
+            r"\(\widehat C_{\mathrm{HBM,R}}":
+                r"定义 \(\widehat C_{\mathrm{HBM,R}}",
+            r"\(\widehat C_{\mathrm{HBM,W}}":
+                "定义\n\\(\\widehat C_{\\mathrm{HBM,W}}",
+            r"\(T_{\mathrm{L2}}\)":
+                r"定义 \(T_{\mathrm{L2}}\)",
+            r"\(T_{\mathrm{TMA}}\)":
+                "定义\n\\(T_{\\mathrm{TMA}}\\)",
+            r"\(\gamma": r"定义 \(\gamma",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson7_joint_capacity_numbers(self) -> None:
+        q = 16 * 1024**2
+        hbm_read_seconds = q / 253.588e9
+        hbm_write_seconds = q / 201.158e9
+        hbm_total_seconds = 2 * q / 273e9
+        self.assertAlmostEqual(hbm_read_seconds * 1e6, 66.1593450794)
+        self.assertAlmostEqual(hbm_write_seconds * 1e6, 83.4031756132)
+        self.assertAlmostEqual(hbm_total_seconds * 1e6, 122.9100073260)
+        l2_read_seconds = 192 * 1024**2 / 1_505_111_656_194.0369
+        l2_write_seconds = 16 * 1024**2 / 545.416e9
+        self.assertAlmostEqual(l2_read_seconds * 1e6, 133.76189811)
+        self.assertAlmostEqual(
+            (l2_read_seconds + l2_write_seconds) * 1e6,
+            164.5223011785,
+        )
+
+    def test_lesson8_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 8 课：", 1)[1].split(
+            "# 第 9 课：", 1
+        )[0]
+        definitions = {
+            r"\(b_v\)": r"定义 \(b_v\)",
+            r"\(s_v": "定义\n\\(s_v",
+            r"\(s_a\)": r"定义 \(s_a\)",
+            r"\(s_o\)": r"定义 \(s_o\)",
+            r"\(K_{\mathrm{mma}}\)":
+                r"定义 \(K_{\mathrm{mma}}\)",
+            r"\(Q_{\mathrm{value,min}}(w)\)":
+                r"定义 \(Q_{\mathrm{value,min}}(w)\)",
+            r"\(Q_{D,\min}\)": "定义\n\\(Q_{D,\\min}\\)",
+            r"\(s_{\mathrm{transport}}(x)\)":
+                r"定义 \(s_{\mathrm{transport}}(x)\)",
+            r"\(g\)": r"定义 \(g\)",
+            r"\(s_s\)": r"定义 \(s_s\)",
+            r"\(Q_{\mathrm{scale,min}}(w)\)":
+                r"定义 \(Q_{\mathrm{scale,min}}(w)\)",
+            r"\(V\)": r"定义 \(V\) 为当前 scale tensor",
+            r"\(V_{128}": "定义\n\\(V_{128}",
+            r"\(G_4": "定义\n\\(G_4",
+            r"\(Q_{\mathrm{TMEM,scale}}(x,w)\)":
+                "定义\n\\(Q_{\\mathrm{TMEM,scale}}(x,w)\\)",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson8_precision_bytes_match_executable_model(self) -> None:
+        specs = precision_specs()
+        expected_mib = {
+            "fp16_f32": (16.0, 0.0),
+            "tf32_f32": (32.0, 0.0),
+            "e3m2_f32": (6.0, 0.0),
+            "e2m1_f32": (4.0, 0.0),
+            "mxfp4_f32": (4.0, 0.25),
+            "nvfp4_f32": (4.0, 0.5),
+            "s8_s32": (8.0, 0.0),
+        }
+        m = n = k = 2048
+        for precision_id, (expected_value, expected_scale) in expected_mib.items():
+            spec = specs[precision_id]
+            value = (m * k + k * n) * spec.input_bytes
+            scale = 0
+            if spec.input_scale_block is not None:
+                groups = (
+                    k + spec.input_scale_block - 1
+                ) // spec.input_scale_block
+                scale = (
+                    m * groups * spec.input_scale_bytes
+                    + n * groups * spec.input_scale_bytes
+                )
+            with self.subTest(precision_id=precision_id):
+                self.assertAlmostEqual(value / 2**20, expected_value)
+                self.assertAlmostEqual(scale / 2**20, expected_scale)
+
+    def test_lesson9_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 9 课：", 1)[1].split(
+            "# 附录 A：", 1
+        )[0]
+        definitions = {
+            r"\(c\)": r"定义 \(c\) 为一条模型 capacity",
+            r"\(\kappa\)": r"定义 \(\kappa\)",
+            r"\(\kappa_x\)": r"定义 \(\kappa_x\)",
+            r"\(\kappa_c\)": "定义\n\\(\\kappa_c\\)",
+            r"\(b\)": r"定义 \(b\) 为网格中 CTA",
+            r"\(t_{b,\mathrm{start}}\)":
+                r"定义 \(t_{b,\mathrm{start}}\)",
+            r"\(t_{b,\mathrm{stop}}\)":
+                r"\(t_{b,\mathrm{stop}}\) 为第",
+            r"\(T_{\mathrm{grid}}\)":
+                "定义\n\\(T_{\\mathrm{grid}}\\)",
+            r"\(n\)": r"定义 \(n\) 为同一冻结合同",
+            r"\(p_1": "定义\n\\(p_1",
+            r"\(\widetilde p\)": r"定义 \(\widetilde p\)",
+            r"\(p_{\max}": r"定义 \(p_{\max}",
+            r"\(\mathcal A\)": r"定义 \(\mathcal A\)",
+        }
+        definitions = {
+            symbol: definition.replace(r"\n", "\n")
+            for symbol, definition in definitions.items()
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
     def test_all_tutorial_local_links_resolve(self) -> None:
         text = TUTORIAL_PATH.read_text()
         targets = re.findall(r"\[[^\]]+\]\(([^)]+)\)", text)
@@ -416,7 +815,17 @@ class TutorialContractTest(unittest.TestCase):
 
 class WorkAccountingTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.schedule = Schedule("s", 128, 128, 64, 2, tail_policy="pad")
+        self.schedule = Schedule(
+            "s",
+            128,
+            128,
+            64,
+            2,
+            tail_policy="pad",
+            tma_ingress_capacity_resource=
+                "tma.smem_ingress.per_sm.inflight4",
+            tma_hbm_capacity_resource="tma.hbm.inflight4",
+        )
         self.precisions = precision_specs()
 
     def test_beta_zero_eliminates_c_read(self) -> None:
@@ -699,7 +1108,10 @@ class WorkAccountingTest(unittest.TestCase):
             residency="hot_l2")
         schedule = Schedule(
             "tc5a", 128, 256, 64, 4,
-            mma_n=256, tmem_columns=256)
+            mma_n=256,
+            tmem_columns=256,
+            tma_ingress_capacity_resource="tma.smem_ingress.per_sm",
+        )
         per_sm_rate = 80e9
         capacities = [
             Capacity(
@@ -732,6 +1144,73 @@ class WorkAccountingTest(unittest.TestCase):
             result.empirical_envelope.resource_seconds[
                 "tma.per_sm_parallel_makespan"],
             7 * task_bytes / per_sm_rate,
+        )
+
+    def test_tma_capacity_is_not_inferred_from_stage_count(self) -> None:
+        workload = Workload(
+            "contract-gate",
+            128,
+            128,
+            64,
+            "fp16_f32",
+            residency="hot_l2",
+        )
+        capacities = [
+            Capacity(
+                "compute", "tensor.fp16.m128n128", 1e30, "flop",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "compute"),
+            Capacity(
+                "l2_read", "l2.read", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-read"),
+            Capacity(
+                "l2_write", "l2.write", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "l2-write"),
+            Capacity(
+                "legacy_stage_guess", "tma.smem_ingress.per_sm", 1e30,
+                "byte", EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "legacy"),
+            Capacity(
+                "readback", "tmem.readback", 1e30, "byte",
+                EvidenceKind.MEASURED_SUSTAINED,
+                "test", "source.json", "readback"),
+        ]
+        unbound = evaluate(
+            workload,
+            Schedule("unbound-stage4", 128, 128, 64, 4),
+            Hardware("thor", 20, 1.575e9),
+            capacities,
+        ).empirical_envelope
+        self.assertEqual(unbound.status, "insufficient_evidence")
+        self.assertIn(
+            "tma_ingress_capacity_contract:unbound-stage4",
+            unbound.missing_resources,
+        )
+        self.assertNotIn(
+            "tma.per_sm_parallel_makespan",
+            unbound.resource_seconds,
+        )
+
+        bound = evaluate(
+            workload,
+            Schedule(
+                "explicit-stage4",
+                128,
+                128,
+                64,
+                4,
+                tma_ingress_capacity_resource=
+                    "tma.smem_ingress.per_sm",
+            ),
+            Hardware("thor", 20, 1.575e9),
+            capacities,
+        ).empirical_envelope
+        self.assertEqual(bound.status, "ok")
+        self.assertIn(
+            "tma.per_sm_parallel_makespan",
+            bound.resource_seconds,
         )
 
     def test_tmem_capacity_key_matches_instruction_and_warp_contract(self) -> None:
@@ -1058,7 +1537,16 @@ class EvidenceSemanticsTest(unittest.TestCase):
             Workload(
                 "shared-hbm", 128, 128, 64, "bf16_f32",
                 residency="cold_hbm"),
-            Schedule("s", 128, 128, 64, 2),
+            Schedule(
+                "s",
+                128,
+                128,
+                64,
+                2,
+                tma_ingress_capacity_resource=
+                    "tma.smem_ingress.per_sm.inflight4",
+                tma_hbm_capacity_resource="tma.hbm.inflight4",
+            ),
             Hardware("h", 20, 1.0),
             capacities,
         )
@@ -1111,7 +1599,15 @@ class EvidenceSemanticsTest(unittest.TestCase):
             Workload(
                 "hot-l2", 128, 128, 64, "bf16_f32",
                 residency="hot_l2"),
-            Schedule("s", 128, 128, 64, 2),
+            Schedule(
+                "s",
+                128,
+                128,
+                64,
+                2,
+                tma_ingress_capacity_resource=
+                    "tma.smem_ingress.per_sm.inflight4",
+            ),
             Hardware("h", 20, 1.0),
             capacities,
         )
@@ -1588,7 +2084,11 @@ class ObservationTest(unittest.TestCase):
             metadata={"suite_id": "snapshot", "expected_commit": "none"},
         )
         self.assertEqual(analysis["precision_count"], 12)
+        self.assertEqual(analysis["schema_version"], 2)
         self.assertEqual(analysis["implementation_ready_count"], 5)
+        self.assertEqual(analysis["resource_envelope_closed_count"], 0)
+        self.assertFalse(analysis["causal_pipeline_dag_implemented"])
+        self.assertEqual(analysis["end_to_end_closed_count"], 0)
         self.assertFalse(analysis["all_precision_numeric_evidence_closed"])
         self.assertFalse(analysis["all_precisions_end_to_end_closed"])
         rows = {row["precision_id"]: row for row in analysis["precisions"]}
@@ -1598,6 +2098,10 @@ class ObservationTest(unittest.TestCase):
         self.assertIn(
             "same_precision_performance_denominator_impl",
             rows["e5m2_f32"]["support_gaps"],
+        )
+        self.assertIn(
+            "causal_pipeline_dag",
+            rows["fp16_f32"]["model_gaps"],
         )
         document = render_precision_evidence_markdown(analysis)
         self.assertIn("all precisions end-to-end closed：`false`", document)

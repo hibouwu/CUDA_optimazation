@@ -69,6 +69,8 @@
     "tmem_columns": 512,
     "threads": 192,
     "tmem_consumer_warps": 4,
+    "tma_ingress_capacity_resource": "tma.smem_ingress.per_sm",
+    "tma_hbm_capacity_resource": "tma.hbm",
     "fixed_seconds": 0.0
   },
   {

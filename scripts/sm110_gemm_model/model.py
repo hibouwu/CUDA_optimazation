@@ -12,6 +12,13 @@ class ModelError(ValueError):
     """Raised when an input would make the model semantically ambiguous."""
 
 
+# The executable currently combines throughput-resource and finite-wave
+# constraints, but it does not yet solve a latency-weighted TMA/MMA/TMEM DAG.
+# Keep this capability explicit so a report cannot silently call the whole
+# three-layer model complete.
+CAUSAL_PIPELINE_DAG_IMPLEMENTED = False
+
+
 class EvidenceKind(str, Enum):
     SPECIFIED_UPPER = "specified_upper"
     DERIVED_UPPER = "derived_upper"
@@ -212,6 +219,8 @@ class Schedule:
     tmem_consumer_warps: int | None = None
     registers_per_thread: int | None = None
     uses_tma: bool = True
+    tma_ingress_capacity_resource: str | None = None
+    tma_hbm_capacity_resource: str | None = None
     input_transport_layout: str = "logical_packed"
     persistent: bool = False
     fixed_seconds: float = 0.0
@@ -264,6 +273,17 @@ class Schedule:
                 f"{self.schedule_id}: non-TMA input paths require a separate "
                 "issued-traffic and ingress-capacity contract not implemented in model v1"
             )
+        for resource, label in (
+            (self.tma_ingress_capacity_resource, "TMA ingress"),
+            (self.tma_hbm_capacity_resource, "TMA HBM"),
+        ):
+            if resource is not None and (
+                not isinstance(resource, str) or not resource.strip()
+            ):
+                raise ModelError(
+                    f"{self.schedule_id}: {label} capacity resource must be "
+                    "a nonempty string when declared"
+                )
         if self.tail_policy not in {"exact", "pad"}:
             raise ModelError(f"{self.schedule_id}: tail_policy must be exact or pad")
         if self.input_transport_layout not in {
@@ -522,6 +542,13 @@ class LayerResult:
     resource_seconds: dict[str, float] = field(default_factory=dict)
     missing_resources: list[str] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
+    selected_capacity_ids: dict[str, str] = field(default_factory=dict)
+    selected_capacity_evidence_kinds: dict[str, str] = field(
+        default_factory=dict
+    )
+    selected_capacity_qualifications: dict[str, str] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -852,12 +879,11 @@ def _resource_demands(
 
     if empirical:
         if workload.residency != "compute_oracle" and schedule.uses_tma:
-            if workload.residency == "cold_hbm":
-                tma_hbm_resource = (
-                    "tma.hbm" if schedule.stages >= 4
-                    else "tma.hbm.inflight4"
-                )
-                demands[tma_hbm_resource] = (
+            if (
+                workload.residency == "cold_hbm"
+                and schedule.tma_hbm_capacity_resource is not None
+            ):
+                demands[schedule.tma_hbm_capacity_resource] = (
                     work.tma_unique_input_bytes, "byte")
         tmem_warps = (
             schedule.tmem_consumer_warps
@@ -900,6 +926,18 @@ def _evaluate_layer(
     missing: list[str] = []
     conditions: list[str] = []
     selected: dict[str, Capacity] = {}
+    if not strict and workload.residency != "compute_oracle" and schedule.uses_tma:
+        if schedule.tma_ingress_capacity_resource is None:
+            missing.append(
+                f"tma_ingress_capacity_contract:{schedule.schedule_id}"
+            )
+        if (
+            workload.residency == "cold_hbm"
+            and schedule.tma_hbm_capacity_resource is None
+        ):
+            missing.append(
+                f"tma_hbm_capacity_contract:{schedule.schedule_id}"
+            )
     for resource, (quantity, unit) in demands.items():
         cap = _select_capacity(capacities, resource, strict=strict)
         if cap is None:
@@ -934,24 +972,24 @@ def _evaluate_layer(
                     f"{cap.capacity_id}: capacity unit {cap.work_unit} does not "
                     f"match {resource} ceiling demand unit {unit}"
                 )
-            seconds[f"hard_upper:{resource}"] = (
+            hard_key = f"hard_upper:{resource}"
+            seconds[hard_key] = (
                 quantity / cap.rate_per_second
             )
+            selected[hard_key] = cap
             if cap.condition:
                 conditions.append(f"{cap.capacity_id}: {cap.condition}")
 
         if workload.residency != "compute_oracle" and schedule.uses_tma:
-            ingress_resource = (
-                "tma.smem_ingress.per_sm"
-                if schedule.stages >= 4
-                else "tma.smem_ingress.per_sm.inflight4"
+            ingress_resource = schedule.tma_ingress_capacity_resource
+            ingress_cap = (
+                _select_capacity(capacities, ingress_resource, strict=False)
+                if ingress_resource is not None
+                else None
             )
-            ingress_cap = _select_capacity(
-                capacities, ingress_resource, strict=False
-            )
-            if ingress_cap is None:
+            if ingress_resource is not None and ingress_cap is None:
                 missing.append(ingress_resource)
-            else:
+            elif ingress_cap is not None:
                 if ingress_cap.work_unit != "byte":
                     raise ModelError(
                         f"{ingress_cap.capacity_id}: per-SM TMA ingress "
@@ -974,6 +1012,20 @@ def _evaluate_layer(
                         f"{ingress_cap.capacity_id}: "
                         f"{ingress_cap.condition}"
                     )
+                selected[ingress_resource] = ingress_cap
+
+    selected_ids = {
+        resource: cap.capacity_id
+        for resource, cap in sorted(selected.items())
+    }
+    selected_kinds = {
+        resource: cap.evidence_kind.value
+        for resource, cap in sorted(selected.items())
+    }
+    selected_qualifications = {
+        resource: cap.qualification
+        for resource, cap in sorted(selected.items())
+    }
 
     empirical_compute_resource = (
         f"{precision.compute_resource}.m{schedule.mma_m}n{schedule.mma_n}")
@@ -1001,6 +1053,9 @@ def _evaluate_layer(
             resource_seconds=dict(sorted(seconds.items())),
             missing_resources=sorted(set(missing)),
             conditions=sorted(set(conditions)),
+            selected_capacity_ids=selected_ids,
+            selected_capacity_evidence_kinds=selected_kinds,
+            selected_capacity_qualifications=selected_qualifications,
         )
 
     total = max(seconds.values())
@@ -1019,6 +1074,9 @@ def _evaluate_layer(
         resource_seconds=dict(sorted(seconds.items())),
         missing_resources=sorted(set(missing)),
         conditions=sorted(set(conditions)),
+        selected_capacity_ids=selected_ids,
+        selected_capacity_evidence_kinds=selected_kinds,
+        selected_capacity_qualifications=selected_qualifications,
     )
 
 

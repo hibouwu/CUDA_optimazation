@@ -2,7 +2,7 @@
 
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
-> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前冻结 campaign 的全部测量和全部公共资源已闭合；全部 12 种声明精度的产品级数值闭环仍未完成。
+> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前冻结 campaign 的采集合同和公共 component 测量已闭合；按“schedule 显式绑定精确 TMA capacity + causal pipeline DAG”重新收紧后，12 精度计数为 implementation 5、numeric 4、resource-envelope 2、causal 0、end-to-end 0，不能再把旧 4/12 numeric closure 称为完整三层模型闭环。
 >
 > **可信度纪律**：可证明上界、microbenchmark 经验包络和完整 GEMM 实测值分别报告，任何一层都不能冒充另一层。
 >
@@ -354,6 +354,8 @@ payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 | `tmem_consumer_warps` | 可选的 TMEM readback 消费 warp 数，单位 warp/CTA；省略时默认 `threads/32`。tc5a 的 CTA 有 6 个 warp，但只有 4 个 epilogue warp 消费 TMEM，因此必须显式设为 4 |
 | `registers_per_thread` | 可选寄存器占用，单位 32-bit register/thread |
 | `uses_tma` | 是否声明使用 TMA data path 的布尔值；v1 只实现 true，false 在缺少另一套 ingress 合同时 fail closed |
+| `tma_ingress_capacity_resource` | 可选的、经过审计且与 payload/request/stage/thread/cache/SM-coverage 合同匹配的 per-SM TMA ingress resource ID；未声明时 memory-resident 经验层 fail closed，不再只按 stage 数猜测 |
+| `tma_hbm_capacity_resource` | 可选的、与同一 schedule cold-entry 合同匹配的整卡 TMA/DRAM ingress resource ID；`cold_hbm` 未声明时经验层 fail closed |
 | `input_transport_layout` | 输入物理搬运布局；`logical_packed` 是精度合同允许的紧凑 payload，`byte_padded` 是 raw FP6/FP4 direct-SMEM 的 b8 container，`b6x16_p32`/`b4x16_p64` 是显式 `tcgen05.cp` 物理格式 |
 | `persistent` | 是否声明 persistent 调度的布尔值；v1 对 true fail closed |
 | `fixed_seconds` | 经验层已测固定成本，单位 s；严格层不使用实测固定成本 |
@@ -739,9 +741,12 @@ campaign 对 L2-hit ingress 使用单 CTA 的 device `%globaltimer`，对 aggreg
 `A=16 KiB + B=32 KiB, inflight=8`。新结果已经通过 10-trial、源码、binary、
 SASS、运行环境、SM coverage 和独立 auditor 门禁，获得 `closure_qualified`。
 其中串行 32 KiB case 只进入带 `diagnostic` 的资源 ID；uniform inflight=4
-提供两级/浅流水 schedule 使用的 `.inflight4` capacity，精确 tc5a A/B 混合
-case 提供四级 schedule 使用的 `tma.smem_ingress.per_sm` 与 `tma.hbm`。模型按
-`stages` 选择对应合同，因此较快但异合同的数字不会互相覆盖。
+提供 `.inflight4` capacity，精确 tc5a A/B 混合 case 提供
+`tma.smem_ingress.per_sm` 与 `tma.hbm`。保存这些 capacity 不表示任意两级/四级
+schedule 都能使用它们。schedule 必须通过 `tma_ingress_capacity_resource` 和
+`tma_hbm_capacity_resource` 显式绑定经过审计且 payload/request/stage/thread/
+cache/SM-coverage 合同匹配的 resource ID；未绑定时 empirical memory layer 返回
+`insufficient_evidence`，不再按 `stages` 猜测。
 HBM/L2 四个旧快照也采用相同处理：新 unified component campaign 的
 `hbm.read`、`hbm.write`、`l2.read`、`l2.write` 整卡 `%globaltimer` case 已回传
 并通过独立审计；同资源经验层优先选择这些 closure-qualified 点，不再混入较弱
@@ -768,36 +773,46 @@ cuBLAS 中位性能。tc5a 实测为 120.039 TFLOP/s，cuBLAS 为
 包络都为 128.436 TFLOP/s，候选实测达到 93.46%；本 shape 的稳定已观测最好
 backend 是 cuBLAS，其 median/经验包络为 101.71%，仍处于预声明的 2% 经验
 重校准容差内。cuBLAS 最大 trial 为 131.163 TFLOP/s，未超过任一适用条件上界。
-精确
-`tc5a_m128n256k64_stage4` 与最佳 generic schedule 在该 shape 上并列，二者均由
-共享 `l2.read` 而非 per-SM TMA ingress 限制；tc5a 的
+精确 `tc5a_m128n256k64_stage4` 由共享 `l2.read` 而非 per-SM TMA ingress
+限制；tc5a 的
 `tma.per_sm_parallel_makespan` 为 56.939 us，小于 `l2.read` 的 133.762 us。
-这正是新 microbenchmark 要验证的边界：旧模型把每 SM TMA 出口压成瓶颈，新证据
-证明在该 schedule/shape 下共享 L2 总线先成为经验瓶颈。
+这正是新 microbenchmark 验证的边界：在该精确 schedule/shape 下共享 L2 总线
+先成为经验瓶颈。generic schedule 当前没有精确 ingress/HBM capacity 绑定，不能
+再与 tc5a 并列或借用其 193.366/185.509 GB/s 合同。
 
 完整 15 个 observation、两种 residency 的逐资源时间、条件上界和经验包络位于
 结果提交的
 [`closure_analysis.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_analysis.json)
 与
 [`closure_summary.md`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_model_closure/thor-t5000-tma-ingress-supplement-maxn-20260814-c/closure_summary.md)。
-报告 `pass=true`，没有上界矛盾；唯一 finding 是基础 suite 区间
-`oc3_event_cnt +179` 的 warning。新 component supplement 区间三个 OC counter
-增量均为 0。该 warning 不否定 artifact/数值审计，但基础 compute/full-GEMM
-经验值必须保留“MAXN 区间观察到 overcurrent event”的平台条件。
+结果提交中的历史报告为 `pass=true`；它使用当时的 stage-only TMA 选择规则。用当前
+显式绑定模型和同一批 freshly re-imported raw evidence 重放后为 `pass=false`：
+没有条件上界矛盾，但 E4M3、S8、TF32 各三个 shape 共 9 个 observation 缺少
+合同匹配的 residency empirical prediction。当前规则下的完整重放表见
+[`thor_sm110_current_model_replay.md`](./thor_sm110_current_model_replay.md)。
+另有一条基础 suite 区间
+`oc3_event_cnt +179` warning；新 component supplement 区间三个 OC counter 增量
+均为 0。这个差异来自模型门禁收紧，不修改历史 GPU 数据，也不把 auditor 已通过的
+采集证据判为无效。
 
-当前 baseline v1 的公共资源已全部闭合。若要把模型扩展为更紧的非理想流水预测，
-仍有以下增强项；它们不是当前“允许独立资源完美重叠”的条件上界前置门禁：
+当前 campaign 声明的公共 component case 已全部闭合，但“某个 schedule 是否具有
+精确匹配 capacity”是更高一层的逐 schedule 门禁，不能由公共资源布尔值替代。
+若只要求较松的 conditional upper，下列项目不是方向正确性的前置条件；若要求本项目
+定义的完整 empirical envelope 和 causal end-to-end closure，则前两项与全精度
+合同属于必需缺口：
 
-- launch/TMEM alloc/barrier 固定成本；
-- TMA+MMA、MMA+readback+store 等联合容量外边界或稳定经验模型；
+- launch/TMEM alloc/barrier startup/drain 与 latency/interval DAG；
+- 与实际 candidate 精确匹配的 TMA ingress/HBM capacity，以及
+  TMA+MMA、MMA+readback+store 联合实验；
 - 非 NVFP4 输出语义各自的正式 epilogue capacity；
 - 全部 12 种精度的完整 GEMM、correctness reference 和同精度 denominator。
 
-因此最终状态是 `all_precisions_closed=false`、
-`all_common_resources_closed=true` 和
-`campaign_measurement_coverage.all_campaign_measurements_closed=true`。第一个字段
-描述全部声明精度的产品级证据完备性；后两个字段分别描述公共资源和本轮有界
-5-precision + 18-component 测量矩阵，三者不得互相替代。
+因此历史 closure report 保留
+`all_precisions_closed=false`、`all_common_resources_closed=true` 和
+`campaign_measurement_coverage.all_campaign_measurements_closed=true`；当前更完整
+的精度矩阵另报 `resource_envelope_closed_count=2`、
+`causal_pipeline_closed_count=0`、`end_to_end_closed_count=0`。前一组描述历史
+numeric/campaign 范围，后一组描述当前三层模型完备性，字段不得互相替代。
 
 ## 9. 自动化接口和反证规则
 
@@ -831,10 +846,12 @@ python3 -m scripts.sm110_gemm_model.cli coverage \
 ```
 
 完整目标还必须把上述 numeric coverage 与 full-GEMM implementation、同输入精度且
-同输出类型的数值参考、同精度 performance denominator 合并审计。定义
+同输出类型的数值参考、同精度 performance denominator 合并审计。当前端到端定义
+还要求 N=1024/2048/4096 × hot-L2/cold-HBM 六个场景都只选择精确合同且
+closure-qualified 的 resource capacity，并要求 causal pipeline DAG 完成。定义
 `all_precisions_end_to_end_closed` 为 12 个精度逐项同时通过这些门禁的布尔值；
-当前值必须保持 `false`。生成 JSON/Markdown 证据矩阵，并在任何精度未闭环时使
-最终门禁非零退出：
+当前值必须保持 `false`，当前五级计数是 `(5,4,2,0,0)`。生成 JSON/Markdown 证据
+矩阵，并在任何精度未闭环时使最终门禁非零退出：
 
 ```bash
 MODEL_DIR="results/sm110_model_closure/$SUITE_ID"
@@ -842,6 +859,8 @@ python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
   --repo-root . \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
   --closure-import "$MODEL_DIR/model_inputs.json" \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
   --support-manifest microbench/sm110_full_gemm_campaign/support_manifest.json \
   --output-json Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.json \
   --output-markdown Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.md \
@@ -939,8 +958,15 @@ closure 合同为准。
 3. **全部 12 精度产品覆盖**：除 compute-only 外，还要求每种精度有独立完整
    GEMM、correctness reference 和同语义性能 denominator。当前只有上述五种进入
    本轮 full-GEMM campaign；其中 TF32 仍缺 strict compute upper，所以当前只有
-   FP16、BF16、E4M3、S8 四种满足端到端 numeric closure。其余项目和每个缺失
-   shape 必须继续显示为 coverage gap，详见全精度证据矩阵。
+   FP16、BF16、E4M3、S8 四种满足 numeric closure。其余项目和每个缺失 shape
+   必须继续显示为 coverage gap。
+4. **逐 schedule 资源包络闭环**：每个 shape/residency 的最优 schedule 必须显式
+   绑定 payload/request/stage/thread/cache/SM-coverage 完全匹配的 capacity。当前
+   只有 FP16/BF16 的 tc5a 六场景矩阵满足，不能用 `all_common_resources_closed`
+   代替。
+5. **因果流水线闭环**：latency、initiation interval、TMA/MMA/TMEM 依赖、startup
+   和 drain 进入可执行 DAG。当前通用 DAG 尚未实现，因此 12 种精度均未达到完整
+   三层端到端 closure。详见全精度证据矩阵。
 
 一次 campaign 的逐精度测量合同依次要求：PTX/descriptor 合法、目标函数块 SASS、
 compute-only 10 trial、兼容的公共 data-movement/readback capacity、完整 GEMM
@@ -949,10 +975,11 @@ calibration/holdout、没有条件上界反证，以及 run spec、环境、源�
 NCU 和结果 hash 完整。公共 component capacity 可以由兼容精度共享，不要求为每种
 精度复制同一带宽实验。
 
-TMA+MMA 或 MMA+readback 的联合 microbenchmark 是增加联合容量约束时的必要
-证据，但不是当前“各独立资源允许完美重叠”基础包络的前置门禁。完整 GEMM holdout
-若系统性超过或偏离基础包络，再据此增加联合模型；不能为了形式上的全绿先加入
-一个没有外边界意义的 measured joint 点。
+TMA+MMA 或 MMA+readback 的联合 microbenchmark 不是较松 conditional upper
+方向正确性的前置门禁，却是把 throughput-resource envelope 升级为本项目所要求的
+causal pipeline closure 的必要证据。完整 GEMM holdout 若系统性超过或偏离基础
+包络，还要据此重校准联合模型；不能为了形式上的全绿先加入一个没有外边界意义的
+measured joint 点。
 
 本地环境不能生成新的 SM110 数值；本轮 Thor 数值已经由上述结果提交回传。未来若
 修改 GPU-facing 源码、case 合同、审计器或模型工作量，仍必须使用新的稳定
@@ -1335,5 +1362,7 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
 
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和
-运行时间戳。当前仓库快照尚未为每项历史结果提供完整统一的环境 manifest，
-这也是目标未完成的原因之一。
+运行时间戳。本轮 bounded compute/component/full-GEMM bundle 已保存这些 campaign
+级证据；更早的零散 snapshot 仍缺少统一 manifest，只能保留为 `snapshot_only`。
+当前目标未完成的主要原因是逐 schedule TMA 合同、causal DAG、缺失精度完整 GEMM
+与部分 strict compute upper，而不是把已有环境字段重复抄写一遍。

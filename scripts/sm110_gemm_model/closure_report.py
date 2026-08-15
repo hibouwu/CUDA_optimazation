@@ -499,6 +499,10 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
     lines = [
         "# Thor/SM110 GEMM closure 数值摘要",
         "",
+        "本报告由当前模型离线重放已导入的 campaign 证据生成；报告生成动作本身不代表",
+        "重新运行了 GPU。是否属于 fresh acquisition，应以 campaign source、run ID、",
+        "commit、raw trial 和环境 artifact 为准。",
+        "",
         f"- suite：`{analysis.get('suite_id')}`",
         f"- commit：`{analysis.get('expected_commit')}`",
         f"- composition：`{analysis.get('composition')}`",
