@@ -328,38 +328,64 @@ def build_closure_analysis(
         strict_rate_max = max(strict_rates) if strict_rates else None
         empirical_rate_min = min(empirical_rates) if empirical_rates else None
         empirical_rate_max = max(empirical_rates) if empirical_rates else None
-        observed_rate = observation.median_per_second
-        observed_median_to_upper = (
-            observed_rate / strict_rate_max
+        candidate_median_rate = observation.median_per_second
+        reference_median_rate = observation.reference_median_per_second
+        observed_best_median_rate = max(
+            candidate_median_rate,
+            (reference_median_rate
+             if reference_median_rate is not None else candidate_median_rate),
+        )
+        candidate_maximum_rate = observation.maximum_per_second
+        reference_maximum_rate = observation.reference_maximum_per_second
+        observed_best_maximum_rate = max(
+            candidate_maximum_rate,
+            (reference_maximum_rate
+             if reference_maximum_rate is not None else candidate_maximum_rate),
+        )
+        candidate_median_to_upper = (
+            candidate_median_rate / strict_rate_max
             if strict_rate_max is not None else None)
-        observed_maximum_to_upper = (
-            observation.maximum_per_second / strict_rate_max
+        candidate_maximum_to_upper = (
+            candidate_maximum_rate / strict_rate_max
             if strict_rate_max is not None else None)
-        observed_to_empirical_min = (
-            observed_rate / empirical_rate_max
+        observed_best_median_to_upper = (
+            observed_best_median_rate / strict_rate_max
+            if strict_rate_max is not None else None)
+        observed_best_maximum_to_upper = (
+            observed_best_maximum_rate / strict_rate_max
+            if strict_rate_max is not None else None)
+        candidate_to_empirical_min = (
+            candidate_median_rate / empirical_rate_max
             if empirical_rate_max is not None else None)
-        observed_to_empirical_max = (
-            observed_rate / empirical_rate_min
+        candidate_to_empirical_max = (
+            candidate_median_rate / empirical_rate_min
             if empirical_rate_min is not None else None)
-        if (observed_maximum_to_upper is not None
-                and observed_maximum_to_upper > 1.0 + upper_tolerance):
+        observed_best_to_empirical_min = (
+            observed_best_median_rate / empirical_rate_max
+            if empirical_rate_max is not None else None)
+        observed_best_to_empirical_max = (
+            observed_best_median_rate / empirical_rate_min
+            if empirical_rate_min is not None else None)
+        if (observed_best_maximum_to_upper is not None
+                and observed_best_maximum_to_upper > 1.0 + upper_tolerance):
             findings.append({
                 "severity": "error",
                 "code": "observed_exceeds_conditional_upper",
                 "message": (
                     f"{observation.observation_id}: maximum-trial/upper="
-                    f"{observed_maximum_to_upper:.6f} above the maximum of "
+                    f"{observed_best_maximum_to_upper:.6f} above the maximum of "
                     f"hot-L2/cold-HBM conditional uppers"),
             })
-        if (observed_to_empirical_min is not None
-                and observed_to_empirical_min > 1.0 + empirical_tolerance):
+        if (observed_best_to_empirical_min is not None
+                and observed_best_to_empirical_min > 1.0 + empirical_tolerance):
             findings.append({
                 "severity": "warning",
                 "code": "observed_exceeds_empirical_envelope",
                 "message": (
-                    f"{observation.observation_id}: observed exceeds both "
+                    f"{observation.observation_id}: candidate/reference best "
+                    "median exceeds both "
                     f"hot-L2/cold-HBM empirical predictions; minimum ratio="
-                    f"{observed_to_empirical_min:.6f}"),
+                    f"{observed_best_to_empirical_min:.6f}"),
             })
         rows.append({
             "observation_id": observation.observation_id,
@@ -374,19 +400,37 @@ def build_closure_analysis(
             "performance_unit": observation.performance_unit,
             "candidate_backend": observation.backend_id,
             "reference_backend": observation.reference,
-            "observed_median_per_second": observed_rate,
-            "observed_maximum_per_second": observation.maximum_per_second,
+            # Preserve the established candidate-only fields while adding
+            # explicit observed-best fields that also include the reference.
+            "observed_median_per_second": candidate_median_rate,
+            "observed_maximum_per_second": candidate_maximum_rate,
             "reference_median_per_second":
-                observation.reference_median_per_second,
+                reference_median_rate,
+            "reference_maximum_per_second": reference_maximum_rate,
+            "observed_best_median_per_second": observed_best_median_rate,
+            "observed_best_maximum_per_second": observed_best_maximum_rate,
+            "observed_best_backend": (
+                observation.backend_id
+                if (reference_median_rate is None
+                    or candidate_median_rate >= reference_median_rate)
+                else observation.reference),
             "observed_to_reference": observation.ratio_of_paired_medians,
             "conditional_upper_min_per_second": strict_rate_min,
             "conditional_upper_max_per_second": strict_rate_max,
-            "observed_median_to_conditional_upper": observed_median_to_upper,
-            "observed_maximum_to_conditional_upper": observed_maximum_to_upper,
+            "observed_median_to_conditional_upper": candidate_median_to_upper,
+            "observed_maximum_to_conditional_upper": candidate_maximum_to_upper,
+            "observed_best_median_to_conditional_upper":
+                observed_best_median_to_upper,
+            "observed_best_maximum_to_conditional_upper":
+                observed_best_maximum_to_upper,
             "empirical_ideal_min_per_second": empirical_rate_min,
             "empirical_ideal_max_per_second": empirical_rate_max,
-            "observed_to_empirical_ideal_min": observed_to_empirical_min,
-            "observed_to_empirical_ideal_max": observed_to_empirical_max,
+            "observed_to_empirical_ideal_min": candidate_to_empirical_min,
+            "observed_to_empirical_ideal_max": candidate_to_empirical_max,
+            "observed_best_to_empirical_ideal_min":
+                observed_best_to_empirical_min,
+            "observed_best_to_empirical_ideal_max":
+                observed_best_to_empirical_max,
             "residency_scenarios": scenarios,
             "conditional_statuses": {
                 residency: scenario["conditional_upper_status"]
@@ -511,10 +555,13 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         f"条件上界反证容差为 {100.0 * analysis.get('upper_tolerance_fraction', 0):.2f}%，"
         f"经验重校准容差为 {100.0 * analysis.get('empirical_tolerance_fraction', 0):.2f}%。",
         "",
-        "| Precision | N | Split | Candidate | Observed | Reference | "
-        "Cand/ref | Upper status (L2/HBM) | Conditional upper range | Median/max upper | Max trial/max upper | "
-        "Empirical range | Median/empirical range |",
-        "| --- | ---: | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Precision | N | Split | Candidate | Candidate median | Reference | "
+        "Reference median | Observed-best backend | Cand/ref | "
+        "Upper status (L2/HBM) | Conditional upper range | "
+        "Candidate median/max upper | Observed-best max trial/max upper | "
+        "Empirical range | Candidate/empirical | Observed-best/empirical |",
+        "| --- | ---: | --- | --- | ---: | --- | ---: | --- | ---: | "
+        "---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ])
     for row in analysis.get("observations", []):
         unit = row["performance_unit"]
@@ -524,17 +571,21 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
             f"`{row['candidate_backend']}` | "
             f"{_rate_text(row['observed_median_per_second'], unit)} | "
             f"`{row['reference_backend']}` | "
+            f"{_rate_text(row['reference_median_per_second'], unit)} | "
+            f"`{row['observed_best_backend']}` | "
             f"{_ratio_text(row['observed_to_reference'])} | "
             f"`{row['conditional_statuses']['hot_l2']}/"
             f"{row['conditional_statuses']['cold_hbm']}` | "
             f"{_rate_text(row['conditional_upper_min_per_second'], unit)}–"
             f"{_rate_text(row['conditional_upper_max_per_second'], unit)} | "
             f"{_ratio_text(row['observed_median_to_conditional_upper'])} | "
-            f"{_ratio_text(row['observed_maximum_to_conditional_upper'])} | "
+            f"{_ratio_text(row['observed_best_maximum_to_conditional_upper'])} | "
             f"{_rate_text(row['empirical_ideal_min_per_second'], unit)}–"
             f"{_rate_text(row['empirical_ideal_max_per_second'], unit)} | "
             f"{_ratio_text(row['observed_to_empirical_ideal_min'])}–"
-            f"{_ratio_text(row['observed_to_empirical_ideal_max'])} |")
+            f"{_ratio_text(row['observed_to_empirical_ideal_max'])} | "
+            f"{_ratio_text(row['observed_best_to_empirical_ideal_min'])}–"
+            f"{_ratio_text(row['observed_best_to_empirical_ideal_max'])} |")
 
     lines.extend(["", "## Findings", ""])
     findings = analysis.get("findings", [])

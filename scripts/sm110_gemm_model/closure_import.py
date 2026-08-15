@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import statistics
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -40,6 +41,14 @@ COMPONENT_RESOURCES = {
     "epilogue.nvfp4_requant": "epilogue.nvfp4_requant",
 }
 TMEM_MODEL_CASE = "tmem_ld_32x32b_x16_warps4"
+SOURCE_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _auditor_path(relative_path: str) -> str:
+    path = (SOURCE_ROOT / relative_path).resolve()
+    if not path.is_file():
+        raise ModelError(f"closure auditor is missing from current source: {path}")
+    return str(path)
 
 
 @dataclass(frozen=True)
@@ -83,6 +92,17 @@ def _read_json(path: Path) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ModelError(f"cannot read closure JSON {path}: {error}") from error
+
+
+def _read_json_lines(path: Path) -> list[dict[str, Any]]:
+    try:
+        rows = [json.loads(line) for line in path.read_text(
+            encoding="utf-8").splitlines() if line]
+    except (OSError, json.JSONDecodeError) as error:
+        raise ModelError(f"cannot read closure JSONL {path}: {error}") from error
+    if not all(isinstance(row, dict) for row in rows):
+        raise ModelError(f"closure JSONL contains a non-object row: {path}")
+    return rows
 
 
 def _require_files(paths: Iterable[Path]) -> None:
@@ -538,6 +558,31 @@ def observations_from_full(
         n = int(result["n"])
         case_dir = paths.full / "cases" / case_id
         trial_count = int(result["trial_count"])
+        trial_rows = _read_json_lines(case_dir / "trials.jsonl")
+        if len(trial_rows) != trial_count:
+            raise ModelError(
+                f"{case_id}: reference trial count differs from summary")
+        try:
+            reference_rates = [
+                float(row["reference_rate_per_second"]) for row in trial_rows
+            ]
+        except (KeyError, TypeError, ValueError) as error:
+            raise ModelError(
+                f"{case_id}: invalid reference rate in full-GEMM trials") from error
+        if (not all(math.isfinite(rate) and rate > 0 for rate in reference_rates)
+                or not math.isclose(
+                    statistics.median(reference_rates),
+                    float(result["reference_rate_per_second_median"]),
+                    rel_tol=1e-12)):
+            raise ModelError(
+                f"{case_id}: reference trial rates do not close to summary")
+        for key, expected in (
+            ("reference_rate_per_second_min", min(reference_rates)),
+            ("reference_rate_per_second_max", max(reference_rates)),
+        ):
+            if key in result and not math.isclose(
+                    float(result[key]), expected, rel_tol=1e-12):
+                raise ModelError(f"{case_id}: {key} differs from raw trials")
         artifacts = [*_common_artifacts(paths, paths.full),
                      paths.relative(case_dir / "result.json"),
                      paths.relative(case_dir / "trials.jsonl"),
@@ -568,6 +613,8 @@ def observations_from_full(
             run_id=paths.suite_id,
             reference_median_per_second=float(
                 result["reference_rate_per_second_median"]),
+            reference_maximum_per_second=max(reference_rates),
+            reference_minimum_per_second=min(reference_rates),
             ratio_of_paired_medians=float(result["ratio_of_paired_medians"]),
             residency="warm_repeated_device_gemm",
             timed_scope="device_kernel",
@@ -669,18 +716,20 @@ def import_closure(
     audit_results = {
         "compute": _run_auditor([
             sys.executable,
-            "microbench/sm110_gemm_campaign/audit_campaign.py",
+            _auditor_path("microbench/sm110_gemm_campaign/audit_campaign.py"),
             str(paths.compute),
             "--require-ncu",
         ], repo_root=paths.repo_root),
         "component": _run_auditor([
             sys.executable,
-            "microbench/sm110_gemm_component_campaign/audit_campaign.py",
+            _auditor_path(
+                "microbench/sm110_gemm_component_campaign/audit_campaign.py"),
             str(paths.component),
         ], repo_root=paths.repo_root),
         "full_gemm": _run_auditor([
             sys.executable,
-            "microbench/sm110_full_gemm_campaign/audit_campaign.py",
+            _auditor_path(
+                "microbench/sm110_full_gemm_campaign/audit_campaign.py"),
             str(paths.full),
         ], repo_root=paths.repo_root),
     }
@@ -797,18 +846,20 @@ def import_composite_closure(
     audit_results = {
         "compute": _run_auditor([
             sys.executable,
-            "microbench/sm110_gemm_campaign/audit_campaign.py",
+            _auditor_path("microbench/sm110_gemm_campaign/audit_campaign.py"),
             str(base_paths.compute),
             "--require-ncu",
         ], repo_root=repo_root),
         "component": _run_auditor([
             sys.executable,
-            "microbench/sm110_gemm_component_campaign/audit_campaign.py",
+            _auditor_path(
+                "microbench/sm110_gemm_component_campaign/audit_campaign.py"),
             str(component_paths.component),
         ], repo_root=repo_root),
         "full_gemm": _run_auditor([
             sys.executable,
-            "microbench/sm110_full_gemm_campaign/audit_campaign.py",
+            _auditor_path(
+                "microbench/sm110_full_gemm_campaign/audit_campaign.py"),
             str(base_paths.full),
         ], repo_root=repo_root),
     }

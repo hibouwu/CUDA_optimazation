@@ -426,6 +426,27 @@ class WorkAccountingTest(unittest.TestCase):
         self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
         self.assertNotIn("tma.l2", demands)
 
+    def test_cold_strict_schedule_keeps_shared_l2_minimum_demands(self) -> None:
+        workload = Workload("cold-strict", 256, 256, 64, "fp16_f32")
+        work = account_work(workload, self.schedule, self.precisions["fp16_f32"])
+        demands = _resource_demands(
+            workload,
+            self.schedule,
+            work,
+            self.precisions["fp16_f32"],
+            empirical=False,
+        )
+        read_min = (
+            work.input_value_bytes_min
+            + work.input_scale_bytes_min
+            + work.c_read_bytes_min
+        )
+        write_min = work.output_value_bytes_min + work.output_scale_bytes_min
+        self.assertEqual(demands["l2.read"], (read_min, "byte"))
+        self.assertEqual(demands["l2.write"], (write_min, "byte"))
+        self.assertEqual(
+            demands["hbm.total"], (read_min + write_min, "byte"))
+
     def test_hot_schedule_has_no_hbm_demand(self) -> None:
         workload = Workload(
             "hot-reuse", 256, 256, 64, "fp16_f32", residency="hot_l2")
@@ -700,6 +721,41 @@ class ComputeCampaignTest(unittest.TestCase):
 
 
 class EvidenceSemanticsTest(unittest.TestCase):
+    def test_shared_l2_upper_is_not_multiplied_by_sm_count(self) -> None:
+        capacities = [
+            Capacity(
+                "compute_upper", "tensor.bf16", 1e30, "flop",
+                EvidenceKind.DERIVED_UPPER,
+                "test", "source.json", "compute-upper"),
+            Capacity(
+                "l2_read_gpu_upper", "l2.read", 1024.0, "byte",
+                EvidenceKind.PROFILER_MODEL_PEAK,
+                "test", "source.json", "l2-read-upper",
+                condition="1024 B/cycle is one aggregate GPU-wide L2 read bus"),
+            Capacity(
+                "l2_write_gpu_upper", "l2.write", 1e30, "byte",
+                EvidenceKind.PROFILER_MODEL_PEAK,
+                "test", "source.json", "l2-write-upper",
+                condition="aggregate GPU-wide L2 write bus"),
+        ]
+        workload = Workload(
+            "shared-l2", 128, 128, 64, "bf16_f32", residency="hot_l2")
+        schedule = Schedule("s", 128, 128, 64, 2)
+        one_sm = evaluate(
+            workload, schedule, Hardware("one-sm", 1, 1.0), capacities,
+        ).conditional_upper
+        twenty_sm = evaluate(
+            workload, schedule, Hardware("twenty-sm", 20, 1.0), capacities,
+        ).conditional_upper
+        self.assertEqual(
+            one_sm.resource_seconds["l2.read"],
+            twenty_sm.resource_seconds["l2.read"],
+        )
+        self.assertEqual(
+            one_sm.performance_per_second,
+            twenty_sm.performance_per_second,
+        )
+
     def test_empirical_cold_hbm_intersects_shared_total_upper(self) -> None:
         def capacity(
             capacity_id: str,
@@ -736,6 +792,12 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 EvidenceKind.DERIVED_UPPER),
             capacity(
                 "hbm_total_upper", "hbm.total", 100.0, "byte",
+                EvidenceKind.DERIVED_UPPER),
+            capacity(
+                "l2_read_upper", "l2.read", 1e30, "byte",
+                EvidenceKind.DERIVED_UPPER),
+            capacity(
+                "l2_write_upper", "l2.write", 1e30, "byte",
                 EvidenceKind.DERIVED_UPPER),
             capacity(
                 "compute", "tensor.bf16.m128n128", 1e30, "flop",

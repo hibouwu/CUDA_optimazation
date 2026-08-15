@@ -40,6 +40,8 @@ class ObservedBest:
     artifact_paths: tuple[str, ...] = ()
     run_id: str = ""
     reference_median_per_second: float | None = None
+    reference_maximum_per_second: float | None = None
+    reference_minimum_per_second: float | None = None
     ratio_of_paired_medians: float | None = None
     residency: str = "warm_repeated_unspecified"
     timed_scope: str = "device_kernel"
@@ -90,6 +92,19 @@ class ObservedBest:
                     or self.reference_median_per_second <= 0):
                 raise ModelError(
                     f"{self.observation_id}: closure reference median is invalid")
+            reference_values = (
+                self.reference_minimum_per_second,
+                self.reference_median_per_second,
+                self.reference_maximum_per_second,
+            )
+            if (not all(value is not None and math.isfinite(value) and value > 0
+                        for value in reference_values)
+                    or not self.reference_minimum_per_second
+                    <= self.reference_median_per_second
+                    <= self.reference_maximum_per_second):
+                raise ModelError(
+                    f"{self.observation_id}: closure reference min/median/max "
+                    "performance is invalid")
             expected_ratio = (
                 self.median_per_second / self.reference_median_per_second)
             if (self.ratio_of_paired_medians is None

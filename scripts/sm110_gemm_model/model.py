@@ -836,6 +836,12 @@ def _resource_demands(
             demands["l2.write"] = (write_min, "byte")
         else:
             demands["hbm.total"] = (read_min + write_min, "byte")
+            # Device-memory traffic still crosses the GPU-wide shared L2
+            # fabric.  These are aggregate GPU capacities, not per-SM rates;
+            # keep the minimum read and write work as independent strict
+            # constraints alongside the shared HBM total constraint.
+            demands["l2.read"] = (read_min, "byte")
+            demands["l2.write"] = (write_min, "byte")
     elif workload.residency == "hot_l2":
         demands["l2.read"] = (
             (work.tma_input_bytes + work.c_read_bytes_min)

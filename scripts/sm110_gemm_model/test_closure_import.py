@@ -401,6 +401,12 @@ class ClosureConversionTest(unittest.TestCase):
                 "ratio_of_paired_medians": custom / reference,
                 "sass_path": f"build/{case['binary']}.sass.txt",
             })
+            case_dir = self.paths.full / "cases" / case["id"]
+            case_dir.mkdir(parents=True, exist_ok=True)
+            (case_dir / "trials.jsonl").write_text("".join(
+                json.dumps({"reference_rate_per_second": reference}) + "\n"
+                for _ in range(10)
+            ))
         observations = observations_from_full(
             {"results": results}, references=FULL_REFERENCES,
             paths=self.paths,
@@ -573,7 +579,10 @@ class ClosureConversionTest(unittest.TestCase):
             full_results.append(result)
             case_dir = self.paths.full / "cases" / case["id"]
             self.write_json(case_dir / "result.json", result)
-            (case_dir / "trials.jsonl").write_text("{}\n")
+            (case_dir / "trials.jsonl").write_text("".join(
+                json.dumps({"reference_rate_per_second": reference}) + "\n"
+                for _ in range(10)
+            ))
             for trial in range(1, 11):
                 trial_dir = case_dir / f"trial_{trial:02d}"
                 trial_dir.mkdir(parents=True)
@@ -970,6 +979,8 @@ class ClosureReportTest(unittest.TestCase):
                 artifact_paths=("summary.json",),
                 run_id="suite",
                 reference_median_per_second=1.1e12,
+                reference_minimum_per_second=1.09e12,
+                reference_maximum_per_second=1.11e12,
                 ratio_of_paired_medians=1e12 / 1.1e12,
                 qualification="closure_qualified",
             ))
@@ -1087,6 +1098,82 @@ class ClosureReportTest(unittest.TestCase):
         self.assertGreater(row["observed_maximum_to_conditional_upper"], 1.02)
         self.assertIn(
             "observed_exceeds_conditional_upper",
+            {finding["code"] for finding in analysis["findings"]},
+        )
+
+    def test_report_audits_reference_maximum_against_upper(self) -> None:
+        observation = ObservedBest(
+            "reference-maximum-only", "bf16_f32", 128, 128, 64,
+            "candidate", "cublas_bf16", "same_precision", 10, 10,
+            50.0, 51.0, 49.0, "flop/s", "summary.json",
+            reference_median_per_second=99.0,
+            reference_minimum_per_second=98.0,
+            reference_maximum_per_second=103.0,
+            ratio_of_paired_medians=50.0 / 99.0,
+        )
+        analysis = build_closure_analysis(
+            metadata={},
+            base_capacities=[self.capacity(
+                "compute_upper", "tensor.bf16", 100.0, "flop",
+                EvidenceKind.DERIVED_UPPER)],
+            closure_capacities=[],
+            observations=[observation],
+            hardware=Hardware("thor", 20, 1.575e9),
+            schedules=[Schedule(
+                "s", 128, 128, 64, 2,
+                tail_policy="exact", fixed_seconds=0.0)],
+            require_complete_contract=False,
+        )
+        row = analysis["observations"][0]
+        self.assertLess(row["observed_maximum_to_conditional_upper"], 1.0)
+        self.assertGreater(
+            row["observed_best_maximum_to_conditional_upper"], 1.02)
+        self.assertEqual(row["observed_best_backend"], "cublas_bf16")
+        self.assertIn(
+            "observed_exceeds_conditional_upper",
+            {finding["code"] for finding in analysis["findings"]},
+        )
+
+    def test_report_audits_reference_median_against_empirical_envelope(self) -> None:
+        observation = ObservedBest(
+            "reference-empirical", "bf16_f32", 128, 128, 64,
+            "candidate", "cublas_bf16", "same_precision", 10, 10,
+            50.0, 51.0, 49.0, "flop/s", "summary.json",
+            reference_median_per_second=90.0,
+            reference_minimum_per_second=89.0,
+            reference_maximum_per_second=91.0,
+            ratio_of_paired_medians=50.0 / 90.0,
+        )
+        envelope = WorkloadEnvelope(
+            workload_id="reference-empirical",
+            valid_schedule_count=1,
+            rejected_schedule_count=0,
+            manifest_conditional_upper=LayerResult(
+                "ok", 0.01, 100.0, "flop/s", ["tensor.bf16"]),
+            empirical_ideal_envelope=LayerResult(
+                "ok", 0.02, 50.0, "flop/s", ["tensor.bf16.m128n128"]),
+            conditional_schedule_id="s",
+            empirical_schedule_id="s",
+            rejected=[],
+        )
+        with mock.patch(
+            "scripts.sm110_gemm_model.closure_report.evaluate_manifest",
+            return_value=envelope,
+        ):
+            analysis = build_closure_analysis(
+                metadata={}, base_capacities=[], closure_capacities=[],
+                observations=[observation],
+                hardware=Hardware("one-sm-test", 1, 1.0),
+                schedules=[Schedule(
+                    "s", 128, 128, 64, 2,
+                    tail_policy="exact", fixed_seconds=0.0)],
+                require_complete_contract=False,
+            )
+        row = analysis["observations"][0]
+        self.assertEqual(row["observed_to_empirical_ideal_min"], 1.0)
+        self.assertEqual(row["observed_best_to_empirical_ideal_min"], 1.8)
+        self.assertIn(
+            "observed_exceeds_empirical_envelope",
             {finding["code"] for finding in analysis["findings"]},
         )
 

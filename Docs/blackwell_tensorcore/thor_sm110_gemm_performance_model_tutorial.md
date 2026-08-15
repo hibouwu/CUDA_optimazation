@@ -1,0 +1,1282 @@
+# 从零建立 Thor/SM110 GEMM 性能上界模型
+
+> 本文是一份伴随式教学文档。它不替代严格证据报告，而是解释每个公式为什么成立、
+> 每个参数属于哪个物理作用域，以及怎样从硬件容量一步步得到 GEMM 性能上界。
+>
+> 正式定义、完整证据和最终 closure 结论见
+> [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)。
+
+## 0. 怎样使用这份教程
+
+本教程的目标不是让读者记住最终数字，而是让读者能够独立完成以下工作：
+
+1. 从 GEMM 数学语义推导有用 FLOP、最小内存流量和 schedule 实际流量；
+2. 判断一个资源是整卡共享、每 SM 独立、每 CTA 独立还是每 warp 独立；
+3. 从资源服务容量推导时间下界，再由时间下界推导性能上界；
+4. 区分条件可证明性能上界、microbenchmark 经验理想包络和完整 GEMM 实测；
+5. 判断一个异常结果是物理上界错误、经验模型需要重校准，还是 kernel 确实存在损失；
+6. 为缺失的容量参数设计可复现 microbenchmark，并保留源码、命令、原始结果、
+   SASS/NCU 和环境证据。
+
+每一课固定包含：
+
+- 本课问题；
+- 参数定义与单位；
+- 第一性原理推导；
+- Thor 真实数值例子；
+- 错误建模反例；
+- 可执行检查；
+- 预测题和检查答案；
+- 本课证据来源。
+
+建议先自己完成预测题，再展开答案。能够解释推理过程比选对答案更重要。
+
+## 0.1 学习路线
+
+| 阶段 | 课程 | 学完后应该具备的能力 | 当前状态 |
+| --- | --- | --- | --- |
+| 最小模型 | 第 1 课：时间下界与性能上界 | 手算 Tensor/HBM/L2 条件上界 | 已完成 |
+| 硬件拓扑 | 第 2 课：shared 与 replicated resource | 正确区分共享 L2 和每 SM ingress | 已完成 |
+| 工作量 | 第 3 课：useful、minimum 与 issued work | 不把逻辑字节冒充物理 transaction | 待写 |
+| 调度 | 第 4 课：tile、task 和 wave | 从 CTA 的 M/N/K tile 推导 task waves | 待写 |
+| 流水线 | 第 5 课：TMA stages 与关键路径 | 建模 stage、inflight 和依赖链 | 待写 |
+| 三层模型 | 第 6 课：upper、envelope 与 observed | 不混淆物理上界与实测峰值 | 待写 |
+| 联合资源 | 第 7 课：独立 roof 与联合容量区域 | 判断何时需要 read/write 联合约束 | 待写 |
+| 精度推广 | 第 8 课：FP8/FP6/FP4/INT8 | 建模 packed、scale 和 OP/s | 待写 |
+| 证据闭环 | 第 9 课：microbenchmark 与 auditor | 自己设计、采集和审计证据 | 待写 |
+
+## 0.2 三个输出不能混为一个数字
+
+定义 \(P_{\mathrm{obs}}\) 为已经通过数值正确性验证的完整 GEMM 最好实测性能，
+单位对浮点 GEMM 为 FLOP/s，对整数 GEMM 为 OP/s。
+
+定义 \(P^\star\) 为所有物理可实现 GEMM 中真实但未知的最好性能，单位与
+\(P_{\mathrm{obs}}\) 相同。它是我们真正想知道、但通常不能直接观测的量。
+
+定义 \(P_{\mathrm{ub}}\) 为在明确硬件容量和算法条件下推导的条件性能上界，单位与
+\(P_{\mathrm{obs}}\) 相同。如果 workload 语义和全部上界条件一致，必须满足：
+
+\[
+P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}}.
+\]
+
+定义 \(\widehat P_{\mathrm{env}}\) 为 microbenchmark 驱动的经验理想包络，单位
+与 workload 相同。它回答“当前已枚举合法 schedule 在实测组件能力下应当能达到
+哪里”，但不自动进入上面的严格不等式。microbenchmark 的 sustained rate 能证明
+硬件至少已经达到该速率，不能单独证明硬件绝不可能更快。
+
+因此：
+
+- 完整 GEMM 超过 \(P_{\mathrm{ub}}\)：严格上界的容量、工作量或适用条件至少一项错误；
+- 完整 GEMM 超过 \(\widehat P_{\mathrm{env}}\)：经验容量或 schedule 枚举需要重校准；
+- 完整 GEMM 低于 \(\widehat P_{\mathrm{env}}\)：差距才是候选 kernel 的可解释实现损失。
+
+---
+
+# 第 1 课：性能上界为什么来自时间下界
+
+## 1.1 本课问题
+
+本课只回答一个问题：
+
+> 对一个语义已经冻结的经典稠密 GEMM，怎样在不假设具体 tc3/tc5a 实现的情况下，
+> 推导一个“一点可避免性能都没有浪费”的条件性能上界？
+
+本课暂不建模 CTA tile、TMA pipeline、TMEM、寄存器和 epilogue。我们先建立以后
+所有细化模型都必须服从的最小骨架。
+
+## 1.2 冻结 GEMM 数学语义
+
+经典稠密 GEMM 定义为：
+
+\[
+D=\alpha AB+\beta C.
+\]
+
+参数第一次出现时定义如下：
+
+- \(A\)：左输入矩阵；
+- \(B\)：右输入矩阵；
+- \(C\)：可选的原始输出矩阵；
+- \(D\)：最终输出矩阵；
+- \(\alpha\)：乘积 \(AB\) 的无量纲标量系数；
+- \(\beta\)：原始输出 \(C\) 的无量纲标量系数；
+- \(M\)：输出矩阵的行数，单位 element；
+- \(N\)：输出矩阵的列数，单位 element；
+- \(K\)：点积归约维度的长度，单位 element。
+
+矩阵形状是：
+
+\[
+A\in\mathbb R^{M\times K},\qquad
+B\in\mathbb R^{K\times N},\qquad
+C,D\in\mathbb R^{M\times N}.
+\]
+
+本课固定：
+
+- \(\alpha=1\)；
+- \(\beta=0\)，因此任何正确实现都不需要读取 \(C\)；
+- A/B 为 FP16，每个输入元素占 2 B；
+- accumulator 和输出 D 为 FP32，每个输出元素占 4 B；
+- 只计设备端 GEMM，不计 host-device copy、内存分配或一次性预处理。
+
+这里 B 表示 byte，element 表示逻辑矩阵元素。
+
+## 1.3 有用计算工作量
+
+一个输出元素为：
+
+\[
+D_{ij}=\sum_{k=0}^{K-1}A_{ik}B_{kj}.
+\]
+
+GPU GEMM 通常把一次乘法和一次加法计为 2 FLOP。定义
+\(W_{\mathrm{use}}\) 为用户可见的数学计算工作量，单位 FLOP：
+
+\[
+W_{\mathrm{use}}=2MNK.
+\]
+
+FLOP 表示一次浮点标量操作。这个值由数学问题决定，不由 kernel tile 决定。
+
+以后还会定义 \(W_{\mathrm{issued}}\) 为硬件实际发出的计算工作量，单位 FLOP。
+如果 schedule 因 padding 或尾部处理执行额外 MMA，则：
+
+\[
+W_{\mathrm{issued}}\ge W_{\mathrm{use}}.
+\]
+
+条件上界使用最低必需的 \(W_{\mathrm{use}}\)；具体 schedule 的经验时间使用
+\(W_{\mathrm{issued}}\)。不能把二者混为一个量。
+
+## 1.4 从时间下界得到性能上界
+
+定义 \(T\) 为一次设备端 GEMM 的执行时间，单位 s。定义 \(P\) 为 GEMM 性能，
+单位 FLOP/s：
+
+\[
+P=\frac{W_{\mathrm{use}}}{T}.
+\]
+
+定义 \(T^{\mathrm{LB}}\) 为任何满足当前条件的合法实现都不能突破的执行时间下界，
+单位 s。如果能够证明：
+
+\[
+T\ge T^{\mathrm{LB}},
+\]
+
+则必然有：
+
+\[
+P
+=\frac{W_{\mathrm{use}}}{T}
+\le
+\frac{W_{\mathrm{use}}}{T^{\mathrm{LB}}}.
+\]
+
+因此定义条件性能上界：
+
+\[
+P_{\mathrm{ub}}
+=\frac{W_{\mathrm{use}}}{T^{\mathrm{LB}}}.
+\]
+
+核心方法不是直接猜一个最快 TFLOP/s，而是先证明 GEMM 至少需要多少时间。
+
+## 1.5 单一资源的时间下界
+
+定义：
+
+- \(r\)：某个硬件资源的标识，例如 Tensor Core、HBM 或 L2 read；
+- \(Q_r\)：GEMM 在资源 \(r\) 上至少必须完成的工作量；单位取决于资源，例如
+  FLOP、OP 或 B；
+- \(C_r^{\mathrm{UB}}\)：资源 \(r\) 的条件服务容量上界，单位为对应工作量每秒；
+- \(T_r^{\mathrm{LB}}\)：资源 \(r\) 单独给出的时间下界，单位 s。
+
+则：
+
+\[
+T_r^{\mathrm{LB}}
+=\frac{Q_r}{C_r^{\mathrm{UB}}}.
+\]
+
+这个推导成立需要两个前提：
+
+1. \(Q_r\) 确实是任何合法实现都绕不过的最低工作量；
+2. \(C_r^{\mathrm{UB}}\) 确实是声明条件下不能超过的容量外边界。
+
+如果 \(C_r\) 只是 microbenchmark 实测 sustained rate，它只能进入经验层，不能
+在没有额外证明时写成 \(C_r^{\mathrm{UB}}\)。
+
+## 1.6 多资源条件下为什么取最大时间
+
+假设 Tensor Core、HBM、L2 read 和 L2 write 分别给出时间下界：
+
+\[
+T_{\mathrm{tensor}}^{\mathrm{LB}},\quad
+T_{\mathrm{HBM}}^{\mathrm{LB}},\quad
+T_{\mathrm{L2,read}}^{\mathrm{LB}},\quad
+T_{\mathrm{L2,write}}^{\mathrm{LB}}.
+\]
+
+即使假设这些资源能够完美重叠，完整 GEMM 也不能比其中任何一个时间下界更短。
+因此：
+
+\[
+T^{\mathrm{LB}}
+=\max\left(
+T_{\mathrm{tensor}}^{\mathrm{LB}},
+T_{\mathrm{HBM}}^{\mathrm{LB}},
+T_{\mathrm{L2,read}}^{\mathrm{LB}},
+T_{\mathrm{L2,write}}^{\mathrm{LB}}
+\right).
+\]
+
+这里不能直接求和。求和隐含“这些阶段完全串行且不能重叠”的 schedule 假设，
+它可能把时间下界抬得过高，从而产生一个过低、会被合法实现突破的伪上界。
+
+取最大值表达的是最乐观情况：所有可重叠工作都完美重叠，但最慢的不可绕过资源
+仍然决定最短总时间。
+
+## 1.7 Thor FP16 \(N=2048\) 手算
+
+本节固定方阵：
+
+\[
+M=N=K=2048.
+\]
+
+### 1.7.1 有用 FLOP
+
+\[
+W_{\mathrm{use}}
+=2\times2048^3
+=17{,}179{,}869{,}184\ \mathrm{FLOP}.
+\]
+
+即约 17.180 GFLOP，其中 1 GFLOP 等于 \(10^9\) FLOP。
+
+### 1.7.2 最小输入和输出字节
+
+定义 \(s_{\mathrm{in}}=2\ \mathrm{B/element}\) 为一个 FP16 输入元素的存储字节数。
+
+矩阵 A 的最低字节数：
+
+\[
+Q_A=MKs_{\mathrm{in}}=2048^2\times2=8{,}388{,}608\ \mathrm{B}=8\ \mathrm{MiB}.
+\]
+
+矩阵 B 同样有：
+
+\[
+Q_B=8\ \mathrm{MiB}.
+\]
+
+定义 \(Q_{\mathrm{read}}^{\mathrm{LB}}\) 为最低输入读取字节数，单位 B。由于
+\(\beta=0\)，不需要读取 C：
+
+\[
+Q_{\mathrm{read}}^{\mathrm{LB}}
+=Q_A+Q_B
+=16\ \mathrm{MiB}.
+\]
+
+定义 \(s_{\mathrm{out}}=4\ \mathrm{B/element}\) 为一个 FP32 输出元素的存储字节数。
+
+定义 \(Q_{\mathrm{write}}^{\mathrm{LB}}\) 为最低输出写回字节数，单位 B：
+
+\[
+Q_{\mathrm{write}}^{\mathrm{LB}}
+=MN s_{\mathrm{out}}
+=2048^2\times4
+=16\ \mathrm{MiB}.
+\]
+
+由于本课只有一个输出矩阵 \(D\)，定义 \(Q_D=Q_{\mathrm{write}}^{\mathrm{LB}}\)
+为矩阵 \(D\) 的最低写回字节数，因此 \(Q_D=16\ \mathrm{MiB}\)。
+
+MiB 使用二进制定义：
+
+\[
+1\ \mathrm{MiB}=2^{20}\ \mathrm{B}.
+\]
+
+GB/s 使用十进制定义：
+
+\[
+1\ \mathrm{GB/s}=10^9\ \mathrm{B/s}.
+\]
+
+### 1.7.3 L2 read 条件上界
+
+定义 \(f_{\mathrm{GPU}}=1.575\times10^9\ \mathrm{cycle/s}\) 为本次 MAXN campaign
+锁定的 GPU 时钟。
+
+定义 \(c_{\mathrm{L2,read}}^{\mathrm{UB}}=1024\ \mathrm{B/cycle/GPU}\) 为整卡共享
+L2 read 条件容量。`/GPU` 表示所有 20 个 SM 合计共享该容量，不是每个 SM 各有
+1024 B/cycle。
+
+换算为每秒容量：
+
+\[
+C_{\mathrm{L2,read}}^{\mathrm{UB}}
+=c_{\mathrm{L2,read}}^{\mathrm{UB}}f_{\mathrm{GPU}}
+=1024\times1.575\times10^9
+=1.6128\times10^{12}\ \mathrm{B/s}.
+\]
+
+即：
+
+\[
+C_{\mathrm{L2,read}}^{\mathrm{UB}}=1612.8\ \mathrm{GB/s}.
+\]
+
+所以：
+
+\[
+T_{\mathrm{L2,read}}^{\mathrm{LB}}
+=\frac{16\ \mathrm{MiB}}{1612.8\ \mathrm{GB/s}}
+\approx10.403\ \mu\mathrm{s}.
+\]
+
+其中 \(\mu\mathrm{s}\) 表示微秒，\(1\ \mu\mathrm{s}=10^{-6}\ \mathrm{s}\)。
+
+### 1.7.4 L2 write 条件上界
+
+定义 \(c_{\mathrm{L2,write}}^{\mathrm{UB}}=512\ \mathrm{B/cycle/GPU}\) 为整卡共享
+L2 write 条件容量。
+
+\[
+C_{\mathrm{L2,write}}^{\mathrm{UB}}
+=512\times1.575\times10^9
+=806.4\times10^9\ \mathrm{B/s}
+=806.4\ \mathrm{GB/s}.
+\]
+
+所以：
+
+\[
+T_{\mathrm{L2,write}}^{\mathrm{LB}}
+=\frac{16\ \mathrm{MiB}}{806.4\ \mathrm{GB/s}}
+\approx20.805\ \mu\mathrm{s}.
+\]
+
+### 1.7.5 Tensor Core 条件上界
+
+定义 \(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}=258.5\ \mathrm{TFLOP/s}\) 为当前
+FP16 条件 compute 上界；1 TFLOP/s 等于 \(10^{12}\) FLOP/s。
+
+\[
+T_{\mathrm{tensor}}^{\mathrm{LB}}
+=\frac{17{,}179{,}869{,}184\ \mathrm{FLOP}}
+       {258.5\times10^{12}\ \mathrm{FLOP/s}}
+\approx66.460\ \mu\mathrm{s}.
+\]
+
+### 1.7.6 cold-HBM 条件上界
+
+定义 \(Q_{\mathrm{HBM,total}}^{\mathrm{LB}}\) 为 cold-HBM 场景最低 HBM 总流量，
+单位 B：
+
+\[
+Q_{\mathrm{HBM,total}}^{\mathrm{LB}}
+=Q_A+Q_B+Q_D
+=32\ \mathrm{MiB}.
+\]
+
+定义 \(C_{\mathrm{HBM,total}}^{\mathrm{UB}}=273\ \mathrm{GB/s}\) 为整卡共享
+LPDDR5X/HBM 总带宽条件上界。这里 read 和 write 合并占用同一个 `hbm.total` 容量，
+不能分别使用 read peak 和 write peak 后假设二者能够无限同时达到。
+
+\[
+T_{\mathrm{HBM,total}}^{\mathrm{LB}}
+=\frac{32\ \mathrm{MiB}}{273\ \mathrm{GB/s}}
+\approx122.910\ \mu\mathrm{s}.
+\]
+
+因此 cold-HBM 时间下界为：
+
+\[
+T_{\mathrm{cold}}^{\mathrm{LB}}
+=\max(66.460,122.910,10.403,20.805)\ \mu\mathrm{s}
+=122.910\ \mu\mathrm{s}.
+\]
+
+对应条件性能上界：
+
+\[
+P_{\mathrm{cold}}^{\mathrm{ub}}
+=\frac{17{,}179{,}869{,}184}
+       {122.910\times10^{-6}}
+=139.776\times10^{12}\ \mathrm{FLOP/s}.
+\]
+
+即：
+
+\[
+P_{\mathrm{cold}}^{\mathrm{ub}}=139.776\ \mathrm{TFLOP/s}.
+\]
+
+这个数字不是由 cuBLAS 拟合得到的。它来自：
+
+1. GEMM 冻结语义给出的最低数学工作量；
+2. cold-HBM 场景不可绕过的最低总字节；
+3. 整卡共享 HBM 总容量条件上界。
+
+### 1.7.7 hot-L2 条件上界
+
+hot-L2 场景不要求输入再次从 HBM 读取，因此本课的最低时间为：
+
+\[
+T_{\mathrm{hot}}^{\mathrm{LB}}
+=\max(66.460,10.403,20.805)\ \mu\mathrm{s}
+=66.460\ \mu\mathrm{s}.
+\]
+
+对应：
+
+\[
+P_{\mathrm{hot}}^{\mathrm{ub}}=258.5\ \mathrm{TFLOP/s}.
+\]
+
+这不表示真实 GEMM 一定能达到 258.5 TFLOP/s，只表示当前严格约束还不能证明它
+必须更慢。schedule 并行度、TMA、TMEM、寄存器占用和关键路径将在后续课程逐项加入。
+
+## 1.8 错误反例：把共享 L2 乘以 SM 数量
+
+定义 \(N_{\mathrm{SM}}=20\ \mathrm{SM/GPU}\) 为 Thor 可用 SM 数量。
+
+错误模型把 `1024 B/cycle/GPU` 误读成 `1024 B/cycle/SM`：
+
+\[
+C_{\mathrm{wrong}}
+=N_{\mathrm{SM}}
+ c_{\mathrm{L2,read}}^{\mathrm{UB}}
+ f_{\mathrm{GPU}}
+=20\times1024\times1.575\times10^9
+=32.256\ \mathrm{TB/s}.
+\]
+
+它会得到错误时间：
+
+\[
+T_{\mathrm{wrong}}
+=\frac{16\ \mathrm{MiB}}{32.256\ \mathrm{TB/s}}
+\approx0.520\ \mu\mathrm{s}.
+\]
+
+正确共享 L2 read 时间为 10.403 us，两者正好相差 20 倍。
+
+在读取任何硬件容量时，必须同时记录数值、单位和作用域：
+
+```text
+1024 B/cycle/GPU   # 整卡共享
+1024 B/cycle/SM    # 每个 SM 独立
+```
+
+二者不是同一个参数。
+
+当前可执行模型把 L2 capacity 作为整卡 resource，计算严格 L2 时间时不会使用
+`sm_count`。只有后续的 per-SM TMA ingress task-wave 模型才会使用 SM 数量。
+
+## 1.9 cold-HBM 为什么也必须保留 L2 约束
+
+cold-HBM 描述输入起始时不保证驻留在 L2，并不表示数据可以绕过 L2 共享路径。
+对于当前 v1 TMA schedule，最低路径仍然包含：
+
+```text
+LPDDR5X/HBM → shared L2 fabric → per-SM TMA ingress → SMEM
+```
+
+因此 cold-HBM 的严格时间下界需要同时包含：
+
+\[
+T_{\mathrm{cold}}^{\mathrm{LB}}
+=\max\left(
+T_{\mathrm{tensor}}^{\mathrm{LB}},
+T_{\mathrm{HBM,total}}^{\mathrm{LB}},
+T_{\mathrm{L2,read}}^{\mathrm{LB}},
+T_{\mathrm{L2,write}}^{\mathrm{LB}}
+\right).
+\]
+
+在 FP16 \(N=2048\) 上加入 L2 约束不会改变 139.776 TFLOP/s，因为 HBM 仍然更慢；
+但省略它会使模型在其他 shape、精度或更高 HBM 带宽平台上不完备。
+
+## 1.10 read 与 write 是否需要联合 L2 约束
+
+当前有两条已知方向容量：
+
+\[
+R\le1024\ \mathrm{B/cycle/GPU},
+\]
+
+\[
+W\le512\ \mathrm{B/cycle/GPU},
+\]
+
+其中 \(R\) 是整卡 L2 read 服务率，单位 B/cycle/GPU；\(W\) 是整卡 L2 write
+服务率，单位 B/cycle/GPU。
+
+这两条事实足以分别建立 read 和 write 上界，但不足以自动证明：
+
+\[
+\frac{R}{1024}+\frac{W}{512}\le1.
+\]
+
+最后一条公式表示 read 与 write 共享一个完全时间复用的归一化容量区域。只有架构合同
+或 read+write 联合 microbenchmark 能证明它时，模型才能加入该约束。否则加入它
+可能制造一个过低的伪上界。
+
+当前 v1 采用更松但证据安全的处理：read/write 分别约束，并假设二者在最理想情况
+可以重叠。第 7 课会专门讨论联合容量区域。
+
+## 1.11 可执行手算检查
+
+在仓库根目录运行：
+
+```bash
+python3 - <<'PY'
+m = n = k = 2048
+input_bytes_per_element = 2
+output_bytes_per_element = 4
+gpu_clock_hz = 1.575e9
+l2_read_bytes_per_cycle_gpu = 1024
+l2_write_bytes_per_cycle_gpu = 512
+tensor_flop_per_second_upper = 258.5e12
+hbm_bytes_per_second_upper = 273e9
+
+useful_flop = 2 * m * n * k
+read_bytes_min = (
+    m * k * input_bytes_per_element
+    + k * n * input_bytes_per_element
+)
+write_bytes_min = m * n * output_bytes_per_element
+hbm_total_bytes_min = read_bytes_min + write_bytes_min
+
+l2_read_upper = l2_read_bytes_per_cycle_gpu * gpu_clock_hz
+l2_write_upper = l2_write_bytes_per_cycle_gpu * gpu_clock_hz
+
+times = {
+    "tensor": useful_flop / tensor_flop_per_second_upper,
+    "hbm.total": hbm_total_bytes_min / hbm_bytes_per_second_upper,
+    "l2.read": read_bytes_min / l2_read_upper,
+    "l2.write": write_bytes_min / l2_write_upper,
+}
+cold_time_lower = max(times.values())
+cold_performance_upper = useful_flop / cold_time_lower
+
+print(f"useful_flop={useful_flop}")
+print(f"read_bytes_min={read_bytes_min}")
+print(f"write_bytes_min={write_bytes_min}")
+for resource, seconds in times.items():
+    print(f"{resource}_time_lower_us={seconds * 1e6:.6f}")
+print(f"cold_performance_upper_tflops={cold_performance_upper / 1e12:.6f}")
+PY
+```
+
+预期输出中的关键数值是：
+
+```text
+useful_flop=17179869184
+read_bytes_min=16777216
+write_bytes_min=16777216
+tensor_time_lower_us=66.459842
+hbm.total_time_lower_us=122.910007
+l2.read_time_lower_us=10.402540
+l2.write_time_lower_us=20.805079
+cold_performance_upper_tflops=139.776000
+```
+
+## 1.12 本课预测题
+
+假设下一代 GPU 满足：
+
+- SM 数从 20 增加到 40；
+- L2 read 仍为整卡共享 1024 B/cycle/GPU；
+- L2 write 仍为整卡共享 512 B/cycle/GPU；
+- GPU 时钟仍为 1.575 GHz；
+- Tensor Core 整卡上限、HBM 带宽、GEMM shape 和其他条件都不变。
+
+回答：
+
+1. \(T_{\mathrm{L2,read}}^{\mathrm{LB}}\) 会不会因为 SM 数翻倍而减半？
+2. \(T_{\mathrm{L2,write}}^{\mathrm{LB}}\) 会不会变化？
+3. cold-HBM 的 139.776 TFLOP/s 条件上界会不会仅因 SM 数翻倍而变化？
+
+建议先写下自己的解释，再展开答案。
+
+<details>
+<summary>检查答案</summary>
+
+1. 不会。1024 B/cycle 的作用域是 `/GPU`，不是 `/SM`；SM 数不进入共享 L2 read
+   时间公式。
+2. 不会。512 B/cycle 同样是整卡共享 L2 write 容量。
+3. 不会。当前瓶颈是未变化的整卡共享 HBM total；仅增加 SM 数不改变
+   \(T_{\mathrm{HBM,total}}^{\mathrm{LB}}\)。后续 per-SM task-wave 时间可能因更多
+   独立出口缩短，但那属于经验 schedule 层，不会把整卡共享容量自动放大。
+
+</details>
+
+## 1.13 本课掌握标准
+
+如果能够不看公式回答下面四个问题，就可以进入第 2 课：
+
+1. 为什么性能上界要从时间下界推导？
+2. 为什么多个可完美重叠的资源取最大时间，而不是把时间全部相加？
+3. 为什么 1024 B/cycle/GPU 不能乘 SM 数？
+4. 为什么 cold-HBM 场景仍然需要保留 L2 read/write 约束？
+
+第 2 课将回答：
+
+> 共享 L2 总线和每 SM 独立 TMA ingress 同时存在时，为什么前者按整卡总字节建模，
+> 后者必须按 CTA task、SM 数和 wave makespan 建模？
+
+## 1.14 本课证据来源
+
+- L2 1024/512 B/cycle 参数和 1.575 GHz 换算：
+  [`profiles/capacities.json`](../../scripts/sm110_gemm_model/profiles/capacities.json)
+- L2 参数的原始说明与 NCU peak 推导：
+  [`microbench/L2throughtput/README.md`](../../microbench/L2throughtput/README.md)
+- Thor 20-SM、1.575 GHz 硬件配置：
+  [`profiles/thor_sm110.json`](../../scripts/sm110_gemm_model/profiles/thor_sm110.json)
+- 工作量和资源 demand 的可执行实现：
+  [`model.py`](../../scripts/sm110_gemm_model/model.py)
+- 共享 L2 不乘 SM 数、cold-HBM 保留 L2 的机械测试：
+  [`test_model.py`](../../scripts/sm110_gemm_model/test_model.py)
+- HBM 273 GB/s 和 FP16 compute 条件来源、证据等级与适用条件：
+  [`profiles/capacities.json`](../../scripts/sm110_gemm_model/profiles/capacities.json)
+- 完整三层模型、证据等级和最终 Thor closure：
+  [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)
+
+本课中的 1024/512 B/cycle 当前按仓库证据等级记为 `profiler_model_peak`：它可以形成
+带 NCU 峰值模型和 1.575 GHz 条件的条件上界，但不应在没有额外架构来源时改写为
+无条件的官方 `specified_upper`。
+
+---
+
+# 第 2 课：共享 L2 与每 SM 独立 ingress
+
+## 2.1 本课问题
+
+本课回答：
+
+> 一个 GEMM 的输入先经过整卡共享 L2 fabric，再经过每个 SM 独立的 TMA→SMEM
+> ingress。怎样同时建模这两个串接但作用域不同的资源，又不重复乘 SM 数或流水级数？
+
+这一课只讨论经验理想包络中的输入路径。原因是当前每 SM ingress 的 193.366 GB/s/SM
+来自 microbenchmark `measured_sustained`，它能校准经验时间，但不能单独证明任何实现
+都不能超过该速率，因此不能冒充严格条件上界。
+
+## 2.2 先画出物理作用域
+
+```mermaid
+flowchart LR
+    SRC["HBM cold input 或 hot-L2 working set"] --> L2["整卡共享 L2 read fabric<br/>一个 /GPU 容量"]
+    L2 --> I0["SM 0 独立 TMA ingress<br/>一个 /SM 容量"]
+    L2 --> I1["SM 1 独立 TMA ingress<br/>一个 /SM 容量"]
+    L2 --> IX["..."]
+    L2 --> I19["SM 19 独立 TMA ingress<br/>一个 /SM 容量"]
+    I0 --> S0["SM 0 SMEM"]
+    I1 --> S1["SM 1 SMEM"]
+    IX --> SX["..."]
+    I19 --> S19["SM 19 SMEM"]
+```
+
+这张图表达两个不同事实：
+
+1. 所有 SM 发出的 L2 read request 共同消耗一份整卡共享 L2 read 容量；
+2. 数据从 L2 进入不同 SM 的 SMEM 时，存在彼此独立的 per-SM ingress 服务单元。
+
+因此模型至少需要两种时间：
+
+- \(\widehat T_{\mathrm{L2,shared}}\)：整卡全部 issued L2 read traffic 的经验时间；
+- \(\widehat T_{\mathrm{ingress,makespan}}\)：有限数量独立 SM 出口服务全部 CTA task
+  的经验 makespan。
+
+两条路径串接不等于简单把两个总时间相加。当前基础经验包络允许不同 task 的 L2
+服务和 per-SM ingress 流水重叠，因此输入路径经验时间取：
+
+\[
+\widehat T_{\mathrm{input}}
+=\max\left(
+\widehat T_{\mathrm{L2,shared}},
+\widehat T_{\mathrm{ingress,makespan}}
+\right).
+\]
+
+如果以后联合 microbenchmark 证明两者不能达到这种理想重叠，再增加联合或关键路径
+约束；不能现在凭直觉把两个完整 makespan 相加。
+
+## 2.3 定义 tc5a schedule
+
+本课继续使用 FP16 方阵：
+
+\[
+M=N=K=2048.
+\]
+
+定义：
+
+- \(B_M=128\ \mathrm{element/task}\)：一个 CTA output tile 在 M 方向的尺寸；
+- \(B_N=256\ \mathrm{element/task}\)：一个 CTA output tile 在 N 方向的尺寸；
+- \(B_K=64\ \mathrm{element/K\ tile}\)：一次 K 方向迭代消费的元素数；
+- \(S=4\ \mathrm{stage}\)：pipeline 中同时驻留的 stage 数；
+- \(G_{\mathrm{CTA}}=1\ \mathrm{CTA/group}\)：一个 cooperative group 使用的 CTA 数；
+- \(N_{\mathrm{SM}}=20\ \mathrm{SM/GPU}\)：Thor 本次合同中的可用 SM 数；
+- \(s_{\mathrm{in}}=2\ \mathrm{B/element}\)：一个 FP16 输入元素的存储字节数。
+
+这对应 schedule：
+
+```text
+tc5a_m128n256k64_stage4
+```
+
+注意，\(S=4\) 不表示数据量或吞吐可以再乘 4。四个 stage 是允许请求在途重叠的
+schedule 合同；该并发效果已经包含在匹配的 microbenchmark rate 中。
+
+## 2.4 从 tile 推导 task 数
+
+定义 \(N_M\) 为 M 方向 output tile 数，单位 tile：
+
+\[
+N_M=\left\lceil\frac{M}{B_M}\right\rceil
+=\left\lceil\frac{2048}{128}\right\rceil
+=16.
+\]
+
+定义 \(N_N\) 为 N 方向 output tile 数，单位 tile：
+
+\[
+N_N=\left\lceil\frac{N}{B_N}\right\rceil
+=\left\lceil\frac{2048}{256}\right\rceil
+=8.
+\]
+
+符号 \(\lceil x\rceil\) 表示不小于 \(x\) 的最小整数，即向上取整。
+
+定义 \(N_{\mathrm{task}}\) 为完整 GEMM 的 output-tile CTA task 数，单位 task：
+
+\[
+N_{\mathrm{task}}=N_MN_N=16\times8=128\ \mathrm{task}.
+\]
+
+定义 \(N_K\) 为一个 output task 的 K tile 数，单位 K tile/task：
+
+\[
+N_K=\left\lceil\frac{K}{B_K}\right\rceil
+=\left\lceil\frac{2048}{64}\right\rceil
+=32.
+\]
+
+## 2.5 推导一个 K stage 的 A/B 字节
+
+定义 \(q_{A,\mathrm{stage}}\) 为一个 task 在一个 K stage 中读取的 A tile 字节数，
+单位 B/stage：
+
+\[
+q_{A,\mathrm{stage}}
+=B_MB_Ks_{\mathrm{in}}
+=128\times64\times2
+=16{,}384\ \mathrm{B}
+=16\ \mathrm{KiB}.
+\]
+
+定义 \(q_{B,\mathrm{stage}}\) 为一个 task 在一个 K stage 中读取的 B tile 字节数，
+单位 B/stage：
+
+\[
+q_{B,\mathrm{stage}}
+=B_KB_Ns_{\mathrm{in}}
+=64\times256\times2
+=32{,}768\ \mathrm{B}
+=32\ \mathrm{KiB}.
+\]
+
+定义 \(q_{\mathrm{stage}}\) 为一个 K stage 的总输入字节数，单位 B/stage：
+
+\[
+q_{\mathrm{stage}}
+=q_{A,\mathrm{stage}}+q_{B,\mathrm{stage}}
+=48\ \mathrm{KiB}.
+\]
+
+这正是 tc5a ingress microbenchmark 的单 stage 合同：A 为 16 KiB，B 为 32 KiB，
+每 stage 两条 TMA request。
+
+四个 pipeline stage 同时驻留，因此最多有：
+
+\[
+4\ \mathrm{stage}\times2\ \mathrm{request/stage}
+=8\ \mathrm{request}
+\]
+
+在途。但一个 output task 完成整个 K=2048 仍要依次处理 32 个 K tile，不是只处理
+四个 stage。
+
+## 2.6 推导每个 task 和整卡 issued L2 字节
+
+定义 \(q_{\mathrm{task}}\) 为一个 output task 完成全部 K 方向工作所发出的 TMA
+输入字节数，单位 B/task：
+
+\[
+q_{\mathrm{task}}
+=N_Kq_{\mathrm{stage}}
+=32\times48\ \mathrm{KiB}
+=1536\ \mathrm{KiB}
+=1.5\ \mathrm{MiB}.
+\]
+
+定义 \(Q_{\mathrm{L2,issued}}\) 为所有 output task 发出的 L2 read request 总字节，
+单位 B：
+
+\[
+Q_{\mathrm{L2,issued}}
+=N_{\mathrm{task}}q_{\mathrm{task}}
+=128\times1.5\ \mathrm{MiB}
+=192\ \mathrm{MiB}
+=201{,}326{,}592\ \mathrm{B}.
+\]
+
+这里的 192 MiB 大于第 1 课的 16 MiB 最低输入并集，原因不是数学问题变大，而是
+不同 output tile 会重复请求同一 A row tile 或 B column tile：
+
+- 16 MiB 是 A/B 输入的 unique logical bytes，适合最低 HBM traffic 或严格下界；
+- 192 MiB 是当前 tc5a schedule 发出的 TMA/L2 request bytes，适合经验 L2 时间。
+
+这正是 minimum work 与 issued work 必须分开的具体例子。
+
+## 2.7 整卡共享 L2 时间
+
+定义
+\(\widehat C_{\mathrm{L2,read}}=1{,}505.112\ \mathrm{GB/s/GPU}\)
+为 closure-qualified L2 read microbenchmark 的中位 sustained rate。帽子符号表示它是
+经验测量值，不是物理服务率上界。
+
+共享 L2 必须服务全部 192 MiB issued request：
+
+\[
+\widehat T_{\mathrm{L2,shared}}
+=\frac{Q_{\mathrm{L2,issued}}}
+       {\widehat C_{\mathrm{L2,read}}}
+=\frac{201{,}326{,}592}
+       {1{,}505.112\times10^9}
+\approx133.762\ \mu\mathrm{s}.
+\]
+
+公式中没有 \(N_{\mathrm{SM}}\)，因为 \(\widehat C_{\mathrm{L2,read}}\) 的作用域
+已经是 `/GPU`。
+
+## 2.8 每 SM 独立 ingress 的 task span
+
+定义
+\(\widehat C_{\mathrm{ingress,SM}}=193.366\ \mathrm{GB/s/SM}\)
+为与 tc5a 完全匹配的 L2-hit TMA→SMEM microbenchmark 中位 sustained rate。
+
+其合同是：
+
+- 单 CTA；
+- 只观察到一个 SM ID；
+- 192 threads；
+- A16 KiB+B32 KiB；
+- 四个 stage；
+- 每 stage 两条 request；
+- 八条在途 request；
+- L2-hit；
+- 10 个外部 trial。
+
+定义 \(\widehat t_{\mathrm{task,ingress}}\) 为一个 SM 独立服务一个完整 output task
+输入的经验时间，单位 s/task：
+
+\[
+\widehat t_{\mathrm{task,ingress}}
+=\frac{q_{\mathrm{task}}}
+       {\widehat C_{\mathrm{ingress,SM}}}
+=\frac{1.5\ \mathrm{MiB}}
+       {193.366\ \mathrm{GB/s}}
+\approx8.134\ \mu\mathrm{s/task}.
+\]
+
+这个值也叫 per-task ingress span。它保证单个 task 不会因为“整卡有 20 个 SM”而
+凭空缩短到 1/20；一个 task 在当前 v1 只由一个 CTA/SM group 服务。
+
+## 2.9 从独立 SM 数推导 wave makespan
+
+定义 \(N_{\mathrm{service}}\) 为能同时服务当前 CTA-group task 的独立服务单元数，
+单位 group/GPU：
+
+\[
+N_{\mathrm{service}}
+=\max\left(1,
+\left\lfloor\frac{N_{\mathrm{SM}}}{G_{\mathrm{CTA}}}\right\rfloor
+\right).
+\]
+
+当前 \(G_{\mathrm{CTA}}=1\)，所以：
+
+\[
+N_{\mathrm{service}}=20.
+\]
+
+定义 \(N_{\mathrm{wave}}\) 为服务全部 output task 所需的理想 wave 数，单位 wave：
+
+\[
+N_{\mathrm{wave}}
+=\left\lceil
+\frac{N_{\mathrm{task}}}{N_{\mathrm{service}}}
+\right\rceil
+=\left\lceil\frac{128}{20}\right\rceil
+=7.
+\]
+
+前 6 个 wave 最多各服务 20 个 task，最后一个 wave 服务剩余 8 个 task。模型不
+统一乘一个模糊的“最后一波效率”，而是直接使用整数 wave 数。
+
+定义 \(\widehat T_{\mathrm{ingress,makespan}}\) 为全部 task 经过独立 per-SM
+ingress 的理想经验 makespan，单位 s：
+
+\[
+\widehat T_{\mathrm{ingress,makespan}}
+=N_{\mathrm{wave}}
+ \widehat t_{\mathrm{task,ingress}}
+=7\times8.134\ \mu\mathrm{s}
+\approx56.939\ \mu\mathrm{s}.
+\]
+
+这就是 closure 报告中的 `tma.per_sm_parallel_makespan`。
+
+## 2.10 两个资源同时约束后的结果
+
+当前输入路径的两个经验时间是：
+
+\[
+\widehat T_{\mathrm{L2,shared}}=133.762\ \mu\mathrm{s},
+\]
+
+\[
+\widehat T_{\mathrm{ingress,makespan}}=56.939\ \mu\mathrm{s}.
+\]
+
+因此：
+
+\[
+\widehat T_{\mathrm{input}}
+=\max(133.762,56.939)\ \mu\mathrm{s}
+=133.762\ \mu\mathrm{s}.
+\]
+
+经验瓶颈是整卡共享 L2 read，而不是每 SM 独立 ingress。
+
+可以用一个直观但不替代 wave 公式的 aggregate sanity check 理解：
+
+\[
+N_{\mathrm{SM}}\widehat C_{\mathrm{ingress,SM}}
+=20\times193.366
+=3867.32\ \mathrm{GB/s/GPU}.
+\]
+
+它高于共享 L2 的：
+
+\[
+1505.112\ \mathrm{GB/s/GPU}.
+\]
+
+所以即使 20 个 SM 的独立出口全部理想并行，共享 L2 也无法以 3867 GB/s 供数。
+实际模型仍使用 task-wave makespan，因为小 task 数、CTA group 和最后一波会使简单
+aggregate `20 × rate` 丢失离散调度信息。
+
+## 2.11 三个常见错误模型
+
+### 错误一：把 per-SM rate 当作整卡唯一出口
+
+错误公式：
+
+\[
+\widehat T_{\mathrm{wrong,serial}}
+=\frac{Q_{\mathrm{L2,issued}}}
+       {\widehat C_{\mathrm{ingress,SM}}}.
+\]
+
+它等价于假设整卡 20 个 SM 共用一个 193.366 GB/s 出口，会得到约 1.041 ms，错误
+抹掉了 SM 之间的独立并行。
+
+### 错误二：把共享 L2 rate 乘 SM 数
+
+错误公式：
+
+\[
+\widehat C_{\mathrm{wrong,L2}}
+=N_{\mathrm{SM}}\widehat C_{\mathrm{L2,read}}.
+\]
+
+它把一个 `/GPU` 容量复制成 20 份，会把 133.762 us 错误缩短到约 6.688 us。
+
+### 错误三：把 stage 和 inflight 再乘进实测 rate
+
+错误公式：
+
+\[
+\widehat C_{\mathrm{wrong,ingress}}
+=S\times8\times
+ \widehat C_{\mathrm{ingress,SM}}.
+\]
+
+193.366 GB/s/SM 本身就是“四 stage、八请求”合同下的端到端实测结果。再乘 stage
+或 request 数会对同一并发收益重复计数。
+
+正确做法是用 schedule 字段选择匹配 capacity：
+
+```text
+stages >= 4  → tma.smem_ingress.per_sm
+stages < 4   → tma.smem_ingress.per_sm.inflight4
+```
+
+不能把一个更快但合同不匹配的 capacity 跨 schedule 使用。
+
+## 2.12 为什么 per-SM 实测不能进入严格上界
+
+193.366 GB/s/SM 是 `measured_sustained`。它证明：
+
+> 在冻结的 tc5a ingress 合同下，Thor 至少已经持续达到约 193.366 GB/s/SM。
+
+它没有证明：
+
+> 任何更好的指令序列、请求调度或未来 kernel 都绝不可能超过 193.366 GB/s/SM。
+
+因此：
+
+- 193.366 GB/s/SM 可以进入 \(\widehat P_{\mathrm{env}}\)；
+- 不能直接进入 \(P_{\mathrm{ub}}\)；
+- 严格层在缺少 per-SM port issue upper 时宁可保持更松，也不能用 measured rate
+  制造一个会被未来实现突破的伪上界。
+
+这也是为什么本模型同时保存“严格但可能松”和“经验上更贴近 kernel”的两层结果。
+
+## 2.13 可执行检查
+
+在仓库根目录运行：
+
+```bash
+python3 - <<'PY'
+import math
+
+m = n = k = 2048
+bm, bn, bk = 128, 256, 64
+input_bytes_per_element = 2
+sm_count = 20
+cta_group = 1
+l2_read_bytes_per_second_gpu = 1_505_111_656_194.0369
+ingress_bytes_per_second_sm = 193_366_116_675.77954
+
+m_tiles = math.ceil(m / bm)
+n_tiles = math.ceil(n / bn)
+k_tiles = math.ceil(k / bk)
+task_count = m_tiles * n_tiles
+
+a_stage_bytes = bm * bk * input_bytes_per_element
+b_stage_bytes = bk * bn * input_bytes_per_element
+stage_bytes = a_stage_bytes + b_stage_bytes
+task_bytes = k_tiles * stage_bytes
+l2_issued_bytes = task_count * task_bytes
+
+service_units = max(1, sm_count // cta_group)
+waves = math.ceil(task_count / service_units)
+task_span_seconds = task_bytes / ingress_bytes_per_second_sm
+ingress_makespan_seconds = waves * task_span_seconds
+l2_shared_seconds = l2_issued_bytes / l2_read_bytes_per_second_gpu
+
+print(f"m_tiles={m_tiles}")
+print(f"n_tiles={n_tiles}")
+print(f"k_tiles={k_tiles}")
+print(f"task_count={task_count}")
+print(f"a_stage_kib={a_stage_bytes / 2**10:.6f}")
+print(f"b_stage_kib={b_stage_bytes / 2**10:.6f}")
+print(f"task_mib={task_bytes / 2**20:.6f}")
+print(f"l2_issued_mib={l2_issued_bytes / 2**20:.6f}")
+print(f"waves={waves}")
+print(f"task_span_us={task_span_seconds * 1e6:.6f}")
+print(f"ingress_makespan_us={ingress_makespan_seconds * 1e6:.6f}")
+print(f"l2_shared_us={l2_shared_seconds * 1e6:.6f}")
+print("input_bottleneck=" + (
+    "l2.shared" if l2_shared_seconds >= ingress_makespan_seconds
+    else "per-sm-ingress"
+))
+PY
+```
+
+关键输出应为：
+
+```text
+m_tiles=16
+n_tiles=8
+k_tiles=32
+task_count=128
+a_stage_kib=16.000000
+b_stage_kib=32.000000
+task_mib=1.500000
+l2_issued_mib=192.000000
+waves=7
+task_span_us=8.134124
+ingress_makespan_us=56.938869
+l2_shared_us=133.761898
+input_bottleneck=l2.shared
+```
+
+## 2.14 本课预测题
+
+保持 tc5a tile、20 SM 和所有容量不变，把方阵扩大为：
+
+\[
+M=N=K=4096.
+\]
+
+请先推导：
+
+1. \(N_M,N_N,N_K\)；
+2. \(N_{\mathrm{task}}\)；
+3. 每个 task 的 TMA 输入 MiB；
+4. wave 数；
+5. per-SM ingress makespan；
+6. shared L2 read 时间；
+7. 哪个是输入瓶颈。
+
+<details>
+<summary>检查答案</summary>
+
+\[
+N_M=4096/128=32,
+\]
+
+\[
+N_N=4096/256=16,
+\]
+
+\[
+N_K=4096/64=64.
+\]
+
+因此：
+
+\[
+N_{\mathrm{task}}=32\times16=512.
+\]
+
+每个 task：
+
+\[
+q_{\mathrm{task}}=64\times48\ \mathrm{KiB}=3\ \mathrm{MiB}.
+\]
+
+整卡 issued L2 bytes：
+
+\[
+Q_{\mathrm{L2,issued}}=512\times3\ \mathrm{MiB}=1.5\ \mathrm{GiB}.
+\]
+
+wave 数：
+
+\[
+N_{\mathrm{wave}}=\lceil512/20\rceil=26.
+\]
+
+单 task ingress span 约 16.268 us，全部 task 的 ingress makespan 约：
+
+\[
+26\times16.268=422.974\ \mu\mathrm{s}.
+\]
+
+共享 L2 read 时间约：
+
+\[
+1070.095\ \mu\mathrm{s}.
+\]
+
+所以输入瓶颈仍是 shared L2 read。
+
+</details>
+
+## 2.15 本课掌握标准
+
+进入第 3 课前，应当能够解释：
+
+1. 为什么 L2 shared 时间使用全部 task 的总 issued bytes；
+2. 为什么 per-SM ingress 使用 task span 和整数 wave makespan；
+3. 为什么 per-SM rate 可以由不同 SM 并行，但共享 L2 rate不能乘 SM 数；
+4. 为什么 stage=4 和 inflight=8 只用于选择匹配 capacity，不能再次乘到实测 rate；
+5. 为什么 193.366 GB/s/SM 进入经验包络，却不能冒充物理上界。
+
+第 3 课将回答：
+
+> 同一个 FP16 \(N=2048\) 为什么同时出现 16 MiB minimum input、16 MiB unique
+> HBM input 和 192 MiB issued L2/TMA input；这三种字节分别应该约束哪个资源？
+
+## 2.16 到底用了多少个 L2 路径参数
+
+把“参数”按物理作用域和证据层拆开后，当前模型一共保存 **6 个会参与计算的
+L2 路径容量参数，再加 1 个只作诊断的串行对照参数**。这里不能只按名字里是否
+出现 `l2` 来计数，因为 per-SM TMA ingress 虽然消费的是 L2-hit 数据，却是 L2
+共享总线之后的另一类独立服务资源。
+
+定义本节 GB/s 为十进制 \(10^9\ \mathrm{B/s}\)。参数账本如下：
+
+| 类别 | 模型资源 ID | 数值与作用域 | 进入哪一层 | 是否参与候选 schedule 计算 |
+| --- | --- | ---: | --- | --- |
+| 共享 L2 read 条件峰值 | `l2.read` | 1024 B/cycle/GPU，即 1.6128 TB/s/GPU | 严格条件上界 | 是 |
+| 共享 L2 write 条件峰值 | `l2.write` | 512 B/cycle/GPU，即 0.8064 TB/s/GPU | 严格条件上界 | 是 |
+| 共享 L2 read 实测容量 | `l2.read` | 1505.112 GB/s/GPU | 经验理想包络 | 是 |
+| 共享 L2 write 实测容量 | `l2.write` | 545.416 GB/s/GPU | 经验理想包络 | 是 |
+| 浅流水 per-SM ingress | `tma.smem_ingress.per_sm.inflight4` | 129.398 GB/s/SM | 经验理想包络 | stage 少于 4 时选用 |
+| 四级 tc5a per-SM ingress | `tma.smem_ingress.per_sm` | 193.366 GB/s/SM | 经验理想包络 | stage 至少为 4 时选用 |
+| 串行 32 KiB 诊断对照 | `tma.smem_ingress.diagnostic.serial32k.per_sm` | 68.615 GB/s/SM | 诊断 | 否 |
+
+所以有三种同样正确、但回答对象不同的计数：
+
+1. 如果只问“你已经知道的共享 L2 物理峰值有几条”，答案是 **2 条**：read 和
+   write；
+2. 如果问“模型里会参与任一合法 schedule 计算的 L2 路径容量有几个”，答案是
+   **6 个**：2 个严格共享容量、2 个实测共享容量、2 个 schedule 分支的 per-SM
+   ingress 容量；
+3. 如果问“一个已经冻结 stage 数的具体 schedule，在严格层和经验层合计会查阅
+   几个相关数字”，答案是 **5 个**：2 个严格共享容量、2 个实测共享容量，以及
+   2 个 per-SM ingress 分支中被选中的 1 个。严格层和经验层分别出结果，并不是
+   把这 5 个数字塞进同一个 `max`。
+
+最后那个 68.615 GB/s/SM 串行值不参与性能包络。它的用途是证明并发合同确实改变
+了可持续 ingress rate，并帮助发现 runner 或流水线退化。
+
+这个账本也给出一个很实用的检查法：看到 `/GPU` 就不乘 SM 数；看到 `/SM` 才通过
+task-wave 模型复制独立服务单元；看到 `diagnostic` 就不能让它悄悄进入 envelope。
+
+## 2.17 本课证据来源
+
+- 共享 L2 read/write microbenchmark 源码：
+  [`memory_path_bandwidth.cu`](../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu)
+- 共享 L2 read 的 10 个原始 trial：
+  [`l2_read_aggregate/trials.jsonl`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/cases/l2_read_aggregate/trials.jsonl)
+- 共享 L2 write 的 10 个原始 trial：
+  [`l2_write_aggregate/trials.jsonl`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/cases/l2_write_aggregate/trials.jsonl)
+- tc5a schedule 参数：
+  [`schedules.json`](../../scripts/sm110_gemm_model/examples/schedules.json)
+- task、K tile、TMA bytes 和 per-SM makespan 实现：
+  [`model.py`](../../scripts/sm110_gemm_model/model.py)
+- tc5a A16 KiB+B32 KiB、四 stage/八请求源码：
+  [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu)
+- microbenchmark 合同说明：
+  [`07_tma_gmem_smem_bandwidth/README.md`](../../microbench/07_tma_gmem_smem_bandwidth/README.md)
+- component campaign 精确命令和 case：
+  [`run_component_campaign.py`](../../microbench/sm110_gemm_component_campaign/run_component_campaign.py)
+- component 独立 auditor：
+  [`audit_campaign.py`](../../microbench/sm110_gemm_component_campaign/audit_campaign.py)
+- closure-qualified component summary：
+  [`summary.json`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/summary.json)
+- tc5a L2-hit case 的 10 个原始 trial：
+  [`trials.jsonl`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/cases/tma_l2_hit_tc5a_ab_inflight8/trials.jsonl)
+- 浅流水 inflight=4 的 10 个原始 trial：
+  [`tma_l2_hit_32k_inflight4/trials.jsonl`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/cases/tma_l2_hit_32k_inflight4/trials.jsonl)
+- 串行诊断 case 的 10 个原始 trial：
+  [`tma_l2_hit_32k/trials.jsonl`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/cases/tma_l2_hit_32k/trials.jsonl)
+- TMA SASS：
+  [`tma.sass.txt`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tma.sass.txt)
+- 本轮代码、结果 commit、环境和全部 artifact hash：
+  [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)

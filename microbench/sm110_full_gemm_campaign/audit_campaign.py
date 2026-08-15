@@ -366,6 +366,16 @@ def main() -> int:
             add(errors, math.isclose(statistics.median(reference_rates),
                                      float(result["reference_rate_per_second_median"]),
                                      rel_tol=1e-12), f"{case_id}: reference median mismatch")
+            if "reference_rate_per_second_min" in result:
+                add(errors, math.isclose(min(reference_rates),
+                                         float(result["reference_rate_per_second_min"]),
+                                         rel_tol=1e-12),
+                    f"{case_id}: reference minimum mismatch")
+            if "reference_rate_per_second_max" in result:
+                add(errors, math.isclose(max(reference_rates),
+                                         float(result["reference_rate_per_second_max"]),
+                                         rel_tol=1e-12),
+                    f"{case_id}: reference maximum mismatch")
             paired_ratio = statistics.median(custom_rates) / statistics.median(reference_rates)
             add(errors, math.isclose(paired_ratio,
                                      float(result["ratio_of_paired_medians"]),

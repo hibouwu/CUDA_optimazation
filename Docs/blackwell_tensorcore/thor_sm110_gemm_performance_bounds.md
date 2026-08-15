@@ -8,6 +8,10 @@
 >
 > **范围**：单次、稠密、经典矩阵乘法；不包含稀疏、Strassen/近似算法、batched/grouped GEMM 和多 GPU 通信。
 
+第一次学习本模型时，建议先阅读伴随式教程
+[`thor_sm110_gemm_performance_model_tutorial.md`](./thor_sm110_gemm_performance_model_tutorial.md)；
+本文继续作为严格定义、最终证据和审计合同。
+
 ## 1. 先给出结论
 
 “比 cuBLAS 还完美的 GEMM”有三种不同含义，必须先分开：
@@ -430,6 +434,14 @@ T_{\mathrm{resource}}^{\mathrm{LB}}
 资源时间取最大值代表允许资源完美重叠，是一个乐观时间下界。若两个资源共享端口或不能
 同时达到各自峰值，必须增加联合容量约束，而不是把两个时间任意相加。
 
+`cold_hbm` 只描述输入初始驻留条件，不表示 DRAM traffic 绕过 L2。当前 v1 的
+TMA/global-store 路径仍必须经过整 GPU 共享 L2 fabric。因此 cold-HBM 严格层同时
+保留 `hbm.total`、`l2.read` 和 `l2.write` 最低工作约束；其中 L2 read/write
+分别使用 1024/512 B/cycle/GPU 的条件容量，绝不乘 `sm_count`。hot-L2 不使用
+`hbm.total`，但继续使用两条共享 L2 条件上界。当前没有足够外边界证据证明
+read/write 满足归一化联合约束
+\(R/1024+W/512\le1\)，所以 v1 分别约束两个方向并允许理想重叠。
+
 ### 5.1 证据等级
 
 每个容量参数都带 `evidence_kind`：
@@ -654,7 +666,11 @@ P_{\mathrm{obs,median}}
 \max_b\operatorname{median}_{j\in\mathrm{valid\ trials}}P_{b,j}.
 \]
 
-最大单 trial 值只用于检查上界违规，不作为稳定性能中心值。
+最大单 trial 值只用于检查上界违规，不作为稳定性能中心值。closure importer 从
+`trials.jsonl` 分别重算候选和同精度 reference 的 minimum、median 与 maximum；
+`P_{\mathrm{obs,median}}` 在二者中选择较大 median，条件上界反证则使用二者中更大
+的 maximum trial。旧报告只检查候选而把 cuBLAS 留作 denominator，会漏掉
+reference 对上界或经验包络的反证；当前 auditor 明确拒绝这种不完整语义。
 
 “Reference”字段当前主要表示性能 denominator，不必然是 correctness reference。
 例如 NVFP4/MXFP4 CUTLASS 路径可以通过自己的 host correctness reference，但
@@ -747,7 +763,10 @@ HBM/L2 四个旧快照也采用相同处理：新 unified component campaign 的
 对 FP16 \(N=2048\) 的完整 GEMM，定义候选/参考比为候选中位性能除以同精度
 cuBLAS 中位性能。tc5a 实测为 120.039 TFLOP/s，cuBLAS 为
 130.633 TFLOP/s，候选/参考比为 91.89%。hot-L2 与 cold-HBM 两场景的经验理想
-包络都为 128.436 TFLOP/s，实测达到 93.46%。精确
+包络都为 128.436 TFLOP/s，候选实测达到 93.46%；本 shape 的稳定已观测最好
+backend 是 cuBLAS，其 median/经验包络为 101.71%，仍处于预声明的 2% 经验
+重校准容差内。cuBLAS 最大 trial 为 131.163 TFLOP/s，未超过任一适用条件上界。
+精确
 `tc5a_m128n256k64_stage4` 与最佳 generic schedule 在该 shape 上并列，二者均由
 共享 `l2.read` 而非 per-SM TMA ingress 限制；tc5a 的
 `tma.per_sm_parallel_makespan` 为 56.939 us，小于 `l2.read` 的 133.762 us。
@@ -845,8 +864,8 @@ python3 -m unittest -v scripts.sm110_gemm_model.test_model
 - raw FP6/raw E2M1 direct-SMEM 必须按 b8 container 搬运，block-scaled schedule
   必须满足 scale TMEM allocation 合同；
 - 增大一个有效 rate upper 不能降低性能上界；
-- 完整 GEMM 的 median 用于稳定性能中心值，最大合法 trial 超过同语义条件上界时
-  审计失败；
+- 候选与同精度 reference 的较大 median 用于完整 GEMM 稳定已观测最好值；二者
+  任一最大合法 trial 超过同语义条件上界时审计失败；
 - 同一 residency 下经验理想包络超过条件性能上界时同样审计失败；这表示 capacity
   语义、工作量计数或上界适用条件至少有一项互相矛盾，不能靠 clamp 掩盖；
 - 完整 GEMM 超过经验包络时只触发重校准，不写成物理违规；
@@ -1194,6 +1213,8 @@ miss-sector proxy 的证据边界。
   [`launch_full_gemm_campaign.sh`](../../microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh)
 - 独立结果审计：
   [`audit_campaign.py`](../../microbench/sm110_full_gemm_campaign/audit_campaign.py)
+- reference minimum/median/maximum：由每个 case 的 `trials.jsonl` 中
+  `reference_rate_per_second` 重算，不依赖摘要中单独保存的 median；
 - Git 往返运行合同：
   [`README.md`](../../microbench/sm110_full_gemm_campaign/README.md)
 
