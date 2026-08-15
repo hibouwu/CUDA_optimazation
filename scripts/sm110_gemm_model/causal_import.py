@@ -37,12 +37,13 @@ def import_causal_profile(
     run_id: str,
     expected_commit: str,
 ) -> dict[str, Any]:
-    """Audit one returned Thor causal campaign and emit model profile input.
+    """Audit one returned Thor causal campaign and emit model profile inputs.
 
-    The campaign auditor independently reconstructs the frozen 91-case matrix,
-    every timestamp-derived metric, the joint fit, SASS/NCU contracts, and the
-    artifact manifest from Git blobs at ``expected_commit``.  A fit that misses
-    its predeclared gates is imported as ``quarantined`` rather than promoted.
+    The campaign auditor independently reconstructs two frozen 91-case matrices
+    (FP16 and BF16), every timestamp-derived metric, both joint fits, SASS/NCU
+    contracts, and the artifact manifest from Git blobs at ``expected_commit``.
+    A fit that misses its predeclared gates is imported as ``quarantined``
+    rather than promoted.
     """
 
     repo_root = repo_root.resolve()
@@ -62,17 +63,29 @@ def import_causal_profile(
             "causal campaign independent audit failed: "
             f"{audit.get('errors', [])}"
         )
-    profile_path = run_dir / "pipeline_profile.json"
+    profile_path = run_dir / "pipeline_profiles.json"
     try:
-        raw = json.loads(profile_path.read_text(encoding="utf-8"))
+        bundle = json.loads(profile_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise ModelError(f"cannot read causal pipeline profile: {error}") from error
-    profiles = pipeline_profiles_from_rows([raw])
-    if len(profiles) != 1:
-        raise ModelError("causal campaign must emit exactly one pipeline profile")
-    profile = profiles[0]
-    if profile.source_id != run_id or profile.expected_commit != expected_commit:
-        raise ModelError("causal profile identity differs from import contract")
+        raise ModelError(f"cannot read causal pipeline profiles: {error}") from error
+    if not isinstance(bundle, dict) or (
+        bundle.get("schema_version") != 2
+        or bundle.get("run_id") != run_id
+        or bundle.get("expected_commit") != expected_commit
+        or not isinstance(bundle.get("pipeline_profiles"), list)
+    ):
+        raise ModelError("causal pipeline-profile bundle contract is invalid")
+    profiles = pipeline_profiles_from_rows(bundle["pipeline_profiles"])
+    if len(profiles) != 2:
+        raise ModelError("causal campaign must emit exactly two pipeline profiles")
+    expected_precision_sets = {("fp16_f32",), ("bf16_f32",)}
+    if {profile.precision_ids for profile in profiles} != expected_precision_sets:
+        raise ModelError(
+            "causal profiles must be independent FP16 and BF16 singletons"
+        )
+    for profile in profiles:
+        if profile.source_id != run_id or profile.expected_commit != expected_commit:
+            raise ModelError("causal profile identity differs from import contract")
     provenance_findings = audit_pipeline_profiles(
         profiles, repo_root=repo_root
     )
@@ -82,13 +95,22 @@ def import_causal_profile(
     ]
     if errors:
         raise ModelError(f"causal profile provenance audit failed: {errors}")
+    profile_qualified_by_precision = {
+        profile.precision_ids[0]: bool(profile.closure_qualified)
+        for profile in profiles
+    }
+    profile_qualified = all(profile_qualified_by_precision.values())
     return {
-        "schema_version": 1,
-        "kind": "sm110_causal_pipeline_profile_import",
+        "schema_version": 2,
+        "kind": "sm110_causal_pipeline_profiles_import",
         "run_id": run_id,
         "expected_commit": expected_commit,
-        "qualification": profile.qualification,
-        "profile_qualified": profile.closure_qualified,
+        "qualification": (
+            "closure_qualified" if profile_qualified else "quarantined"
+        ),
+        "profile_count": len(profiles),
+        "profile_qualified_by_precision": profile_qualified_by_precision,
+        "profile_qualified": profile_qualified,
         "audit": audit,
-        "pipeline_profiles": [profile.to_dict()],
+        "pipeline_profiles": [profile.to_dict() for profile in profiles],
     }

@@ -429,27 +429,42 @@ inline void encode_tiled_3d_inter(CUtensorMap* tensor_map,
       "cuTensorMapEncodeTiled(3D INTER)");
 }
 
+inline void encode_tiled_2d_sw128_strided_16bit(
+    CUtensorMap* tensor_map, CUtensorMapDataType data_type,
+    const void* base, uint64_t global_height, uint64_t global_width,
+    uint64_t row_stride, uint32_t tile_height) {
+  if (data_type != CU_TENSOR_MAP_DATA_TYPE_FLOAT16 &&
+      data_type != CU_TENSOR_MAP_DATA_TYPE_BFLOAT16) {
+    std::fprintf(stderr,
+                 "16-bit SW128 tensor map requires FLOAT16 or BFLOAT16\n");
+    std::abort();
+  }
+  constexpr uint32_t kRank = 2;
+  uint64_t global_dim[kRank] = {global_width, global_height};
+  uint64_t global_stride[kRank - 1] = {
+      row_stride * 2};
+  uint32_t box_dim[kRank] = {64, tile_height};
+  uint32_t element_stride[kRank] = {1, 1};
+
+  check_driver(
+      cuTensorMapEncodeTiled(
+          tensor_map, data_type, kRank, const_cast<void*>(base),
+          global_dim, global_stride, box_dim,
+          element_stride, CU_TENSOR_MAP_INTERLEAVE_NONE,
+          CU_TENSOR_MAP_SWIZZLE_128B, CU_TENSOR_MAP_L2_PROMOTION_NONE,
+          CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE),
+      "cuTensorMapEncodeTiled(2D SW128 strided 16-bit)");
+}
+
 inline void encode_tiled_2d_sw128_strided(CUtensorMap* tensor_map,
                                           const half* base,
                                           uint64_t global_height,
                                           uint64_t global_width,
                                           uint64_t row_stride,
                                           uint32_t tile_height) {
-  constexpr uint32_t kRank = 2;
-  uint64_t global_dim[kRank] = {global_width, global_height};
-  uint64_t global_stride[kRank - 1] = {
-      row_stride * sizeof(half)};
-  uint32_t box_dim[kRank] = {64, tile_height};
-  uint32_t element_stride[kRank] = {1, 1};
-
-  check_driver(
-      cuTensorMapEncodeTiled(
-          tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, kRank,
-          const_cast<half*>(base), global_dim, global_stride, box_dim,
-          element_stride, CU_TENSOR_MAP_INTERLEAVE_NONE,
-          CU_TENSOR_MAP_SWIZZLE_128B, CU_TENSOR_MAP_L2_PROMOTION_NONE,
-          CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE),
-      "cuTensorMapEncodeTiled(2D SW128 strided)");
+  encode_tiled_2d_sw128_strided_16bit(
+      tensor_map, CU_TENSOR_MAP_DATA_TYPE_FLOAT16, base, global_height,
+      global_width, row_stride, tile_height);
 }
 
 inline void encode_tiled_2d_sw128(CUtensorMap* tensor_map,

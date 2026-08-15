@@ -1,8 +1,21 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "schedule_id": "tc5a_m128n256k64_stage4",
-  "precision_ids": [
-    "fp16_f32"
+  "precision_contracts": [
+    {
+      "precision_id": "fp16_f32",
+      "input_type": "fp16",
+      "tensor_map_data_type": "float16",
+      "instruction_kind": "f16",
+      "instruction_descriptor_u32": 138412048
+    },
+    {
+      "precision_id": "bf16_f32",
+      "input_type": "bf16",
+      "tensor_map_data_type": "bfloat16",
+      "instruction_kind": "f16",
+      "instruction_descriptor_u32": 138413200
+    }
   ],
   "expected_sm_count": 20,
   "threads": 192,
@@ -125,7 +138,7 @@
       "output_tasks": 32
     }
   ],
-  "ncu_cases": [
+  "ncu_case_suffixes": [
     "tma_s4_k16",
     "mma_s4_k16",
     "overlap_s4_k16",

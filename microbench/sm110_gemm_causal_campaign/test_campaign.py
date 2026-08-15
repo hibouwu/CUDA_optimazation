@@ -108,6 +108,21 @@ def write_hash_manifest(root: Path) -> None:
     (root / "artifact_sha256.txt").write_text("".join(rows))
 
 
+def synthetic_sass() -> str:
+    descriptors = {
+        "fp16_f32": 138412048,
+        "bf16_f32": 138413200,
+    }
+    return "".join(
+        f"Function : synthetic_tc5a_pipeline_dag_kernelILi{stages}E"
+        f"Lj{descriptor}EE\n"
+        f"UMOV UR25, {hex(descriptor)}\n"
+        "UTMALDG.2D\nUTCHMMA\nUTCBAR\nLDTM.\n"
+        for descriptor in descriptors.values()
+        for stages in (1, 2, 4)
+    )
+
+
 class CausalCampaignTest(unittest.TestCase):
     def setUp(self) -> None:
         self.manifest = runner.load_manifest()
@@ -115,16 +130,20 @@ class CausalCampaignTest(unittest.TestCase):
 
     def test_frozen_matrix_covers_exact_shapes_and_holdouts(self) -> None:
         plan = runner.plan_payload(self.manifest, self.cases)
-        self.assertEqual(plan["case_count"], 91)
+        self.assertEqual(plan["case_count"], 182)
         self.assertEqual(plan["family_count"], 13)
-        self.assertEqual(plan["raw_trial_count"], 910)
-        self.assertEqual(plan["ncu_case_count"], 4)
-        self.assertEqual(plan["precision_ids"], ["fp16_f32"])
+        self.assertEqual(plan["raw_trial_count"], 1820)
+        self.assertEqual(plan["ncu_case_count"], 8)
+        self.assertEqual(plan["profile_count"], 2)
+        self.assertEqual(plan["precision_ids"], ["fp16_f32", "bf16_f32"])
         self.assertEqual(plan["max_dynamic_smem_bytes"], 196608)
         self.assertEqual(plan["max_hot_input_bytes"], 3 * 1024 * 1024)
         self.assertEqual(plan["max_output_bytes"], 4 * 1024 * 1024)
         self.assertEqual(self.manifest["holdout_k_tiles"], [64])
-        self.assertEqual(self.manifest["precision_ids"], ["fp16_f32"])
+        self.assertEqual(
+            [row["precision_id"] for row in self.manifest["precision_contracts"]],
+            ["fp16_f32", "bf16_f32"],
+        )
         self.assertEqual(
             self.manifest["fit_contract"]["holdout_output_tasks"], [32]
         )
@@ -140,26 +159,37 @@ class CausalCampaignTest(unittest.TestCase):
         self.assertIn("ptx::tma_load_2d", source)
         self.assertIn("ptx::mma_f16", source)
         self.assertIn("fp16_f32", source)
+        self.assertIn("bf16_f32", source)
+        self.assertIn("CU_TENSOR_MAP_DATA_TYPE_FLOAT16", source)
+        self.assertIn("CU_TENSOR_MAP_DATA_TYPE_BFLOAT16", source)
+        self.assertIn("138412048U", source)
+        self.assertIn("138413200U", source)
         self.assertIn("tmem_load_32x32b_x8_no_wait", source)
         self.assertIn("const int offset_m = 0", source)
 
     def test_sass_attribution_is_function_scoped(self) -> None:
-        good = "".join(
-            f"Function : synthetic_tc5a_pipeline_dag_kernelILi{stages}EE\n"
-            "UTMALDG.2D\nUTCHMMA\nUTCBAR\nLDTM.\n"
-            for stages in (1, 2, 4)
-        )
+        good = synthetic_sass()
         counts, errors = auditor.sass_stage_function_counts(good)
         self.assertEqual(errors, [])
-        self.assertEqual(set(counts), {"stage1", "stage2", "stage4"})
+        self.assertEqual(set(counts), {
+            f"{precision}.stage{stage}"
+            for precision in ("fp16_f32", "bf16_f32")
+            for stage in (1, 2, 4)
+        })
         bad = good.replace(
-            "Function : synthetic_tc5a_pipeline_dag_kernelILi4EE\n"
+            "Function : synthetic_tc5a_pipeline_dag_kernelILi4E"
+            "Lj138413200EE\n"
+            "UMOV UR25, 0x8400490\n"
             "UTMALDG.2D\nUTCHMMA\nUTCBAR\nLDTM.\n",
-            "Function : synthetic_tc5a_pipeline_dag_kernelILi4EE\n"
+            "Function : synthetic_tc5a_pipeline_dag_kernelILi4E"
+            "Lj138413200EE\n"
+            "UMOV UR25, 0x8400490\n"
             "UTMALDG.2D\nUTCBAR\nLDTM.\n",
         )
         _, errors = auditor.sass_stage_function_counts(bad)
-        self.assertIn("stage-4 SASS token missing:UTCHMMA", errors)
+        self.assertIn(
+            "bf16_f32 stage-4 SASS token missing:UTCHMMA", errors
+        )
 
     def test_resume_reuses_only_a_reaudited_frozen_binary(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -169,11 +199,7 @@ class CausalCampaignTest(unittest.TestCase):
             binary = build / "tc5a_pipeline_dag"
             binary.write_bytes(b"non-reproducible nvcc binary snapshot")
             sass = build / "tc5a_pipeline_dag.sass.txt"
-            sass.write_text("".join(
-                f"Function : synthetic_tc5a_pipeline_dag_kernelILi{stages}EE\n"
-                "UTMALDG.2D\nUTCHMMA\nUTCBAR\nLDTM.\n"
-                for stages in (1, 2, 4)
-            ))
+            sass.write_text(synthetic_sass())
             command = runner.compile_command(run_dir)
             compile_path = build / "compile_command.json"
             compile_path.write_text(json.dumps(command))
@@ -277,7 +303,7 @@ class CausalCampaignTest(unittest.TestCase):
         (root / "plan.json").write_text(json.dumps(plan))
         (root / "manifest_snapshot.json").write_text(json.dumps(self.manifest))
         spec = {
-            "schema_version": 1, "run_id": run_id,
+            "schema_version": 2, "run_id": run_id,
             "campaign": "sm110_tc5a_causal_pipeline_dag",
             "expected_commit": COMMIT,
             "generator": "microbench/sm110_gemm_causal_campaign/run_causal_campaign.py",
@@ -290,12 +316,14 @@ class CausalCampaignTest(unittest.TestCase):
                 "microbench/sm110_gemm_causal_campaign/contract_manifest.json"
             ],
             "source_dependencies": dependency_hashes,
-            "precision_ids": ["fp16_f32"],
-            "case_count": 91, "family_count": 13, "trials": 10,
+            "precision_ids": ["fp16_f32", "bf16_f32"],
+            "precision_contracts": self.manifest["precision_contracts"],
+            "profile_count": 2,
+            "case_count": 182, "family_count": 13, "trials": 10,
             "trial_timeout_seconds": 120, "ncu_timeout_seconds": 300,
             "termination_grace_seconds": 5, "ncu_requested": True,
-            "ncu_case_count": 4,
-            "ncu_policy": "four predeclared k16 attribution cases",
+            "ncu_case_count": 8,
+            "ncu_policy": "four predeclared k16 attribution cases per precision",
             "static_only": False, "cases": self.cases,
         }
         (root / "run_spec.json").write_text(json.dumps(spec))
@@ -306,11 +334,7 @@ class CausalCampaignTest(unittest.TestCase):
             f"{binary_sha}  tc5a_pipeline_dag\n"
         )
         sass = root / "build/tc5a_pipeline_dag.sass.txt"
-        sass.write_text("".join(
-            f"Function : synthetic_tc5a_pipeline_dag_kernelILi{stages}EE\n"
-            "UTMALDG.2D\nUTCHMMA\nUTCBAR\nLDTM.\n"
-            for stages in (1, 2, 4)
-        ))
+        sass.write_text(synthetic_sass())
         sass_sha = auditor.sha256_path(sass)
         sass_function_counts, sass_errors = auditor.sass_stage_function_counts(
             sass.read_text()
@@ -384,6 +408,10 @@ class CausalCampaignTest(unittest.TestCase):
             })
             result = {
                 "schema_version": 1, "case_id": case_id,
+                "precision_id": case["precision_id"],
+                "tensor_map_data_type": case["tensor_map_data_type"],
+                "instruction_descriptor_u32":
+                    case["instruction_descriptor_u32"],
                 "family_id": case["family_id"], "mode": case["mode"],
                 "stages": case["stages"], "k_tiles": case["k_tiles"],
                 "output_tasks": case["output_tasks"], "status": "ok",
@@ -430,26 +458,40 @@ class CausalCampaignTest(unittest.TestCase):
             (case_dir / "result.json").write_text(json.dumps(result))
             results.append(result)
         (root / "static_contracts.json").write_text(json.dumps(static_rows))
-        profile = runner.build_profile(results, self.manifest, run_id, COMMIT)
-        self.assertTrue(profile["closure_qualified"])
-        model_profile = pipeline_profiles_from_rows([profile])[0]
-        model_profile.validate()
+        profiles = runner.build_profiles(results, self.manifest, run_id, COMMIT)
+        self.assertEqual(len(profiles), 2)
+        self.assertTrue(all(profile["closure_qualified"] for profile in profiles))
+        model_profiles = pipeline_profiles_from_rows(profiles)
+        for model_profile in model_profiles:
+            model_profile.validate()
+            self.assertEqual(
+                model_profile.resource,
+                "pipeline.tc5a_m128n256k64_stage4",
+            )
         self.assertEqual(
-            model_profile.resource,
-            "pipeline.tc5a_m128n256k64_stage4",
+            {profile.precision_ids for profile in model_profiles},
+            {("fp16_f32",), ("bf16_f32",)},
         )
-        self.assertEqual(model_profile.precision_ids, ("fp16_f32",))
-        (root / "pipeline_profile.json").write_text(json.dumps(profile))
+        (root / "pipeline_profiles.json").write_text(json.dumps({
+            "schema_version": 2,
+            "run_id": run_id,
+            "expected_commit": COMMIT,
+            "pipeline_profiles": profiles,
+        }))
+        qualification = {"fp16_f32": True, "bf16_f32": True}
         summary = {
-            "schema_version": 1, "run_id": run_id,
-            "expected_commit": COMMIT, "status": "complete", "case_count": 91,
-            "trial_count": 910, "ncu_case_count": 4,
+            "schema_version": 2, "run_id": run_id,
+            "expected_commit": COMMIT, "status": "complete", "case_count": 182,
+            "trial_count": 1820, "ncu_case_count": 8, "profile_count": 2,
+            "profile_qualified_by_precision": qualification,
             "profile_qualified": True, "results": results,
         }
         (root / "summary.json").write_text(json.dumps(summary))
         (root / "campaign_status.json").write_text(json.dumps({
-            "status": "complete", "completed_cases": 91,
-            "total_cases": 91, "profile_qualified": True,
+            "status": "complete", "completed_cases": 182,
+            "total_cases": 182, "profile_count": 2,
+            "profile_qualified_by_precision": qualification,
+            "profile_qualified": True,
         }))
         (root / "progress.jsonl").write_text(
             json.dumps({"status": "complete"}) + "\n"
@@ -474,7 +516,12 @@ class CausalCampaignTest(unittest.TestCase):
             self.assertEqual(result["errors"], [])
             self.assertTrue(result["pass"])
             self.assertTrue(result["profile_qualified"])
-            self.assertEqual(result["trial_count"], 910)
+            self.assertEqual(result["profile_count"], 2)
+            self.assertEqual(
+                result["profile_qualified_by_precision"],
+                {"fp16_f32": True, "bf16_f32": True},
+            )
+            self.assertEqual(result["trial_count"], 1820)
 
     def test_importer_reaudits_and_preserves_the_joint_profile(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -511,12 +558,41 @@ class CausalCampaignTest(unittest.TestCase):
         self.assertTrue(imported["audit"]["pass"])
         self.assertTrue(imported["profile_qualified"])
         self.assertEqual(imported["qualification"], "closure_qualified")
-        self.assertEqual(len(imported["pipeline_profiles"]), 1)
+        self.assertEqual(imported["profile_count"], 2)
+        self.assertEqual(len(imported["pipeline_profiles"]), 2)
+        self.assertEqual(
+            {tuple(row["precision_ids"]) for row in imported["pipeline_profiles"]},
+            {("fp16_f32",), ("bf16_f32",)},
+        )
+
+    def test_cross_precision_descriptor_tampering_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root, blobs = self._make_bundle(Path(temp))
+            case_id = "bf16_f32.full_s4_o32_k64"
+            path = root / "cases" / case_id / "trials.jsonl"
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            rows[0]["fields"]["instruction_descriptor_u32"] = "138412048"
+            rows[0]["raw_stdout"] = csv_text(rows[0]["fields"])
+            path.write_text(
+                "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows)
+            )
+            write_hash_manifest(root)
+
+            result = auditor.audit(
+                root, require_ncu=True, expected_commit=COMMIT,
+                blob_loader=lambda _commit, relative: blobs.get(relative),
+            )
+            self.assertFalse(result["pass"])
+            self.assertTrue(any(
+                f"{case_id}: trial 1: static field mismatch:"
+                "instruction_descriptor_u32" in error
+                for error in result["errors"]
+            ))
 
     def test_timer_tampering_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root, blobs = self._make_bundle(Path(temp))
-            path = root / "cases/full_s4_o32_k64/trials.jsonl"
+            path = root / "cases/fp16_f32.full_s4_o32_k64/trials.jsonl"
             rows = [json.loads(line) for line in path.read_text().splitlines()]
             rows[0]["fields"]["kernel_exit_ns"] = str(
                 int(rows[0]["fields"]["kernel_exit_ns"]) + 1
@@ -549,13 +625,18 @@ class CausalPlatformSuiteTest(unittest.TestCase):
             for path in suite_auditor.EXPECTED_PLATFORM_DEPENDENCIES
         }
         contract = {
-            "schema_version": 1,
-            "kind": "exact_tc5a_causal_pipeline_suite",
+            "schema_version": 2,
+            "kind": "exact_tc5a_fp16_bf16_causal_pipeline_suite",
             "suite_id": "suite-a",
             "causal_run_id": "suite-a-causal",
             "expected_branch": suite_auditor.EXPECTED_BRANCH,
             "expected_commit": COMMIT,
             "ncu_required": True,
+            "precision_ids": ["fp16_f32", "bf16_f32"],
+            "case_count": 182,
+            "trial_count": 1820,
+            "ncu_case_count": 8,
+            "profile_count": 2,
             "platform_dependencies": {
                 path: hashlib.sha256(payload).hexdigest()
                 for path, payload in blobs.items()
@@ -584,6 +665,10 @@ class CausalPlatformSuiteTest(unittest.TestCase):
                     "pass": True,
                     "errors": [],
                     "warnings": [],
+                    "profile_count": 2,
+                    "profile_qualified_by_precision": {
+                        "fp16_f32": True, "bf16_f32": True,
+                    },
                     "profile_qualified": True,
                 }
 
@@ -603,6 +688,11 @@ class CausalPlatformSuiteTest(unittest.TestCase):
                 )
         self.assertTrue(result["pass"])
         self.assertTrue(result["profile_qualified"])
+        self.assertEqual(result["profile_count"], 2)
+        self.assertEqual(
+            result["profile_qualified_by_precision"],
+            {"fp16_f32": True, "bf16_f32": True},
+        )
         self.assertEqual(result["overcurrent_deltas"], {"/sys/oc1": 2})
         self.assertIn("overcurrent_delta:/sys/oc1:2", result["warnings"])
 

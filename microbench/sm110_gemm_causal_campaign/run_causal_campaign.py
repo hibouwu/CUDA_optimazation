@@ -46,7 +46,8 @@ CALIBRATION_METRICS = (
     "total_measured_ns",
 )
 CSV_FIELDS = (
-    "case_id", "precision_id", "mode", "stages", "k_tiles", "output_tasks",
+    "case_id", "precision_id", "tensor_map_data_type",
+    "instruction_descriptor_u32", "mode", "stages", "k_tiles", "output_tasks",
     "total_k_operations", "threads", "tma_requests_per_k_tile",
     "a_bytes_per_k_tile", "b_bytes_per_k_tile",
     "payload_bytes_per_k_tile", "mma_instructions_per_k_tile",
@@ -106,7 +107,7 @@ def tool(name: str) -> str:
 
 def load_manifest() -> dict[str, Any]:
     manifest = json.loads(MANIFEST_PATH.read_text())
-    if manifest.get("schema_version") != 1:
+    if manifest.get("schema_version") != 2:
         raise RuntimeError("unsupported causal manifest schema")
     if manifest.get("external_trials_per_case") != EXPECTED_TRIALS:
         raise RuntimeError("causal manifest trial count changed")
@@ -114,47 +115,75 @@ def load_manifest() -> dict[str, Any]:
         raise RuntimeError("causal manifest trial timeout changed")
     if manifest.get("ncu_timeout_seconds") != DEFAULT_NCU_TIMEOUT_SECONDS:
         raise RuntimeError("causal manifest NCU timeout changed")
-    if manifest.get("precision_ids") != ["fp16_f32"]:
+    if manifest.get("precision_contracts") != [
+        {
+            "precision_id": "fp16_f32", "input_type": "fp16",
+            "tensor_map_data_type": "float16", "instruction_kind": "f16",
+            "instruction_descriptor_u32": 138412048,
+        },
+        {
+            "precision_id": "bf16_f32", "input_type": "bf16",
+            "tensor_map_data_type": "bfloat16", "instruction_kind": "f16",
+            "instruction_descriptor_u32": 138413200,
+        },
+    ]:
         raise RuntimeError(
-            "tc5a causal manifest must bind the mma_f16 source to fp16_f32"
+            "tc5a causal manifest must bind independent FP16 and BF16 descriptors"
         )
     return manifest
+
+
+def precision_ids(manifest: dict[str, Any]) -> list[str]:
+    return [str(row["precision_id"]) for row in manifest["precision_contracts"]]
 
 
 def make_cases(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     k_values = [
         *manifest["calibration_k_tiles"], *manifest["holdout_k_tiles"]
     ]
-    ncu_cases = set(manifest["ncu_cases"])
+    ncu_suffixes = set(manifest["ncu_case_suffixes"])
     cases: list[dict[str, Any]] = []
-    for family in manifest["families"]:
-        for k_tiles in k_values:
-            case_id = f"{family['family_id']}_k{k_tiles}"
-            case = {
-                "case_id": case_id,
-                "family_id": family["family_id"],
-                "mode": family["mode"],
-                "stages": int(family["stages"]),
-                "k_tiles": int(k_tiles),
-                "output_tasks": int(family["output_tasks"]),
-                "ncu_selected": case_id in ncu_cases,
-            }
-            case["args"] = [
-                "--case-id", case_id,
-                "--mode", case["mode"],
-                "--stages", str(case["stages"]),
-                "--k-tiles", str(case["k_tiles"]),
-                "--output-tasks", str(case["output_tasks"]),
-                "--warmup-launches", str(manifest["warmup_launches"]),
-                "--expected-sm-count", str(manifest["expected_sm_count"]),
-                "--csv",
-            ]
-            cases.append(case)
+    for precision in manifest["precision_contracts"]:
+        for family in manifest["families"]:
+            for k_tiles in k_values:
+                suffix = f"{family['family_id']}_k{k_tiles}"
+                case_id = f"{precision['precision_id']}.{suffix}"
+                case = {
+                    "case_id": case_id,
+                    "precision_id": precision["precision_id"],
+                    "input_type": precision["input_type"],
+                    "tensor_map_data_type": precision["tensor_map_data_type"],
+                    "instruction_kind": precision["instruction_kind"],
+                    "instruction_descriptor_u32":
+                        precision["instruction_descriptor_u32"],
+                    "family_id": family["family_id"],
+                    "mode": family["mode"],
+                    "stages": int(family["stages"]),
+                    "k_tiles": int(k_tiles),
+                    "output_tasks": int(family["output_tasks"]),
+                    "ncu_selected": suffix in ncu_suffixes,
+                }
+                case["args"] = [
+                    "--case-id", case_id,
+                    "--precision-id", case["precision_id"],
+                    "--mode", case["mode"],
+                    "--stages", str(case["stages"]),
+                    "--k-tiles", str(case["k_tiles"]),
+                    "--output-tasks", str(case["output_tasks"]),
+                    "--warmup-launches", str(manifest["warmup_launches"]),
+                    "--expected-sm-count", str(manifest["expected_sm_count"]),
+                    "--csv",
+                ]
+                cases.append(case)
     ids = [str(case["case_id"]) for case in cases]
     if len(ids) != len(set(ids)):
         raise RuntimeError("duplicate causal case ID")
-    if {case["case_id"] for case in cases if case["ncu_selected"]} != ncu_cases:
-        raise RuntimeError("NCU case list contains an unknown case")
+    actual_ncu_suffixes = {
+        str(case["case_id"]).split(".", 1)[1]
+        for case in cases if case["ncu_selected"]
+    }
+    if actual_ncu_suffixes != ncu_suffixes:
+        raise RuntimeError("NCU case suffix list contains an unknown case")
     return cases
 
 
@@ -268,25 +297,51 @@ def sass_stage_function_counts(sass_text: str) -> dict[str, dict[str, int]]:
             sections[current].append(line)
 
     result: dict[str, dict[str, int]] = {}
-    for stages in (1, 2, 4):
-        marker = f"tc5a_pipeline_dag_kernelILi{stages}EE"
-        matches = [name for name in sections if marker in name]
-        if len(matches) != 1:
-            raise RuntimeError(
-                f"causal SASS must contain exactly one stage-{stages} kernel"
+    descriptors = {
+        "fp16_f32": (138412048, "0x8400010", "0x8400490"),
+        "bf16_f32": (138413200, "0x8400490", "0x8400010"),
+    }
+    for precision_id, (
+        descriptor, descriptor_immediate, other_immediate,
+    ) in descriptors.items():
+        for stages in (1, 2, 4):
+            stage_marker = f"tc5a_pipeline_dag_kernelILi{stages}E"
+            matches = [
+                name for name in sections
+                if stage_marker in name and str(descriptor) in name
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(
+                    f"causal SASS must contain exactly one {precision_id} "
+                    f"stage-{stages} kernel"
+                )
+            body = "\n".join(sections[matches[0]])
+            counts = {
+                token: body.count(token)
+                for token in (*REQUIRED_SASS_TOKENS, "UTMASTG")
+            }
+            counts["instruction_descriptor_immediate"] = body.count(
+                descriptor_immediate
             )
-        body = "\n".join(sections[matches[0]])
-        counts = {
-            token: body.count(token)
-            for token in (*REQUIRED_SASS_TOKENS, "UTMASTG")
-        }
-        missing = [token for token in REQUIRED_SASS_TOKENS if counts[token] <= 0]
-        if missing or counts["UTMASTG"] != 0:
-            raise RuntimeError(
-                f"stage-{stages} causal SASS attribution failed: "
-                f"missing={missing} UTMASTG={counts['UTMASTG']}"
+            counts["other_instruction_descriptor_immediate"] = body.count(
+                other_immediate
             )
-        result[f"stage{stages}"] = counts
+            missing = [
+                token for token in REQUIRED_SASS_TOKENS if counts[token] <= 0
+            ]
+            if (
+                missing or counts["UTMASTG"] != 0
+                or counts["instruction_descriptor_immediate"] <= 0
+                or counts["other_instruction_descriptor_immediate"] != 0
+            ):
+                raise RuntimeError(
+                    f"{precision_id} stage-{stages} causal SASS attribution "
+                    f"failed: missing={missing} UTMASTG={counts['UTMASTG']} "
+                    f"descriptor={counts['instruction_descriptor_immediate']} "
+                    f"other_descriptor="
+                    f"{counts['other_instruction_descriptor_immediate']}"
+                )
+            result[f"{precision_id}.stage{stages}"] = counts
     return result
 
 
@@ -483,7 +538,10 @@ def assert_fields(
     payload = manifest["payload"]
     exact = {
         "case_id": case["case_id"],
-        "precision_id": manifest["precision_ids"][0],
+        "precision_id": case["precision_id"],
+        "tensor_map_data_type": case["tensor_map_data_type"],
+        "instruction_descriptor_u32":
+            str(case["instruction_descriptor_u32"]),
         "mode": case["mode"],
         "stages": str(case["stages"]), "k_tiles": str(case["k_tiles"]),
         "output_tasks": str(case["output_tasks"]),
@@ -689,6 +747,9 @@ def prior_result_is_reusable(
     expected_metadata = {
         "schema_version": 1,
         "case_id": case["case_id"],
+        "precision_id": case["precision_id"],
+        "tensor_map_data_type": case["tensor_map_data_type"],
+        "instruction_descriptor_u32": case["instruction_descriptor_u32"],
         "family_id": case["family_id"],
         "mode": case["mode"],
         "stages": case["stages"],
@@ -801,6 +862,9 @@ def run_case(
     )
     result: dict[str, Any] = {
         "schema_version": 1, "case_id": case["case_id"],
+        "precision_id": case["precision_id"],
+        "tensor_map_data_type": case["tensor_map_data_type"],
+        "instruction_descriptor_u32": case["instruction_descriptor_u32"],
         "family_id": case["family_id"], "mode": case["mode"],
         "stages": case["stages"], "k_tiles": case["k_tiles"],
         "output_tasks": case["output_tasks"], "status": "ok",
@@ -881,16 +945,30 @@ def predict_worker_ns(
 
 def build_profile(
     results: list[dict[str, Any]], manifest: dict[str, Any],
-    run_id: str, expected_commit: str,
+    run_id: str, expected_commit: str, precision_id: str,
 ) -> dict[str, Any]:
-    by_id = {row["case_id"]: row for row in results}
+    precision_results = [
+        row for row in results if row["precision_id"] == precision_id
+    ]
+    expected_per_precision = len(manifest["families"]) * (
+        len(manifest["calibration_k_tiles"])
+        + len(manifest["holdout_k_tiles"])
+    )
+    if len(precision_results) != expected_per_precision:
+        raise RuntimeError(
+            f"{precision_id}: causal result matrix is incomplete"
+        )
+    by_family_k = {
+        (str(row["family_id"]), int(row["k_tiles"])): row
+        for row in precision_results
+    }
     calibration = list(manifest["fit_contract"]["calibration_points"])
 
     def fit_family(family: str) -> dict[str, float]:
         return linear_fit([
             (
                 float(k_tiles - 1),
-                float(by_id[f"{family}_k{k_tiles}"]
+                float(by_family_k[(family, k_tiles)]
                       ["metric_stats"]["total_measured_ns"]["median"]),
             )
             for k_tiles in calibration
@@ -904,7 +982,7 @@ def build_profile(
     )
     epilogue_samples = [
         float(row["metric_stats"]["last_mma_to_store_ns"]["median"])
-        for row in results
+        for row in precision_results
         if row["mode"] == "full"
         and row["k_tiles"] in manifest["calibration_k_tiles"]
         and row["output_tasks"] in epilogue_output_tasks
@@ -913,7 +991,7 @@ def build_profile(
     joint_first = max(
         joint_fit["intercept_ns"],
         statistics.median(
-            float(by_id[f"overlap_s4_k{k}"]["metric_stats"]
+            float(by_family_k[("overlap_s4", k)]["metric_stats"]
                   ["first_mma_latency_ns"]["median"])
             for k in calibration
         ),
@@ -924,7 +1002,7 @@ def build_profile(
     validations: list[dict[str, Any]] = []
     calibration_k = set(manifest["fit_contract"]["calibration_points"])
     calibration_o = set(manifest["fit_contract"]["calibration_output_tasks"])
-    for row in results:
+    for row in precision_results:
         if row["mode"] != "full":
             continue
         actual = float(row["metric_stats"]["total_measured_ns"]["median"])
@@ -972,30 +1050,36 @@ def build_profile(
         str(MANIFEST_PATH.relative_to(REPO)),
         f"{artifact_root}/run_spec.json",
         f"{artifact_root}/summary.json",
-        f"{artifact_root}/pipeline_profile.json",
+        f"{artifact_root}/pipeline_profiles.json",
         f"{artifact_root}/artifact_sha256.txt",
         f"{artifact_root}/build/tc5a_pipeline_dag.sass.txt",
     ]
     artifact_paths.extend(
         f"{artifact_root}/cases/{row['case_id']}/trials.jsonl"
-        for row in sorted(results, key=lambda item: item["case_id"])
+        for row in sorted(precision_results, key=lambda item: item["case_id"])
     )
     artifact_paths.extend(
-        f"{artifact_root}/cases/{case_id}/ncu/profile.ncu-rep"
-        for case_id in manifest["ncu_cases"]
+        f"{artifact_root}/cases/{row['case_id']}/ncu/profile.ncu-rep"
+        for row in sorted(precision_results, key=lambda item: item["case_id"])
+        if row.get("ncu", {}).get("selected") is True
     )
     return {
         "schema_version": 1,
-        "profile_id": f"{run_id}.pipeline.tc5a_m128n256k64_stage4",
+        "profile_id": (
+            f"{run_id}.pipeline.tc5a_m128n256k64_stage4.{precision_id}"
+        ),
         "resource": "pipeline.tc5a_m128n256k64_stage4",
         "schedule_id": manifest["schedule_id"],
-        "precision_ids": list(manifest["precision_ids"]),
+        "precision_ids": [precision_id],
         "evidence_kind": "measured_joint",
         "qualification": "closure_qualified" if qualified else "quarantined",
         "trial_count_per_case": EXPECTED_TRIALS,
         "source_id": run_id, "expected_commit": expected_commit,
         "source_path": str(SOURCE_PATH.relative_to(REPO)),
-        "source_locator": "91-case causal campaign; medians and predeclared fit",
+        "source_locator": (
+            f"91-case {precision_id} causal campaign; medians and "
+            "predeclared fit"
+        ),
         "input_residency": manifest["residency"],
         "stages": fit_contract["profile_stages"],
         "accumulator_buffers": fit_contract["profile_accumulator_buffers"],
@@ -1021,6 +1105,16 @@ def build_profile(
     }
 
 
+def build_profiles(
+    results: list[dict[str, Any]], manifest: dict[str, Any],
+    run_id: str, expected_commit: str,
+) -> list[dict[str, Any]]:
+    return [
+        build_profile(results, manifest, run_id, expected_commit, precision_id)
+        for precision_id in precision_ids(manifest)
+    ]
+
+
 def write_artifact_manifest(run_dir: Path) -> None:
     excluded = {"artifact_sha256.txt", "launcher.log", "launcher.pid"}
     rows = []
@@ -1036,9 +1130,10 @@ def write_artifact_manifest(run_dir: Path) -> None:
 
 def plan_payload(manifest: dict[str, Any], cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "schedule_id": manifest["schedule_id"],
-        "precision_ids": list(manifest["precision_ids"]),
+        "precision_ids": precision_ids(manifest),
+        "profile_count": len(manifest["precision_contracts"]),
         "case_count": len(cases),
         "family_count": len(manifest["families"]),
         "raw_trial_count": len(cases) * EXPECTED_TRIALS,
@@ -1123,7 +1218,7 @@ def main() -> int:
         for path in (SOURCE_PATH, HELPER_PATH, MANIFEST_PATH, Path(__file__).resolve())
     }
     run_spec = {
-        "schema_version": 1, "run_id": args.run_id,
+        "schema_version": 2, "run_id": args.run_id,
         "campaign": "sm110_tc5a_causal_pipeline_dag",
         "expected_commit": args.expected_commit,
         "generator": str(Path(__file__).resolve().relative_to(REPO)),
@@ -1131,7 +1226,9 @@ def main() -> int:
         "contract_manifest": str(MANIFEST_PATH.relative_to(REPO)),
         "contract_manifest_sha256": sha256_path(MANIFEST_PATH),
         "source_dependencies": source_dependencies,
-        "precision_ids": list(manifest["precision_ids"]),
+        "precision_ids": precision_ids(manifest),
+        "precision_contracts": manifest["precision_contracts"],
+        "profile_count": len(manifest["precision_contracts"]),
         "case_count": len(cases), "family_count": len(manifest["families"]),
         "trials": EXPECTED_TRIALS,
         "trial_timeout_seconds": manifest["trial_timeout_seconds"],
@@ -1139,7 +1236,7 @@ def main() -> int:
         "termination_grace_seconds": 5,
         "ncu_requested": bool(args.ncu),
         "ncu_case_count": plan["ncu_case_count"],
-        "ncu_policy": "four predeclared k16 attribution cases",
+        "ncu_policy": "four predeclared k16 attribution cases per precision",
         "static_only": bool(args.static_only), "cases": cases,
     }
     freeze_json(run_dir / "run_spec.json", run_spec, "run specification")
@@ -1193,7 +1290,7 @@ def main() -> int:
             }, sort_keys=True) + "\n")
         (run_dir / "summary.json").write_text(
             json.dumps({
-                "schema_version": 1, "run_id": args.run_id,
+                "schema_version": 2, "run_id": args.run_id,
                 "expected_commit": args.expected_commit,
                 "status": "running", "completed_case_count": len(results),
                 "case_count": len(cases), "results": results,
@@ -1208,16 +1305,30 @@ def main() -> int:
         )
         print(f"DONE {index}/{len(cases)} {case['case_id']}", flush=True)
 
-    profile = build_profile(results, manifest, args.run_id, args.expected_commit)
-    (run_dir / "pipeline_profile.json").write_text(
-        json.dumps(profile, indent=2, sort_keys=True) + "\n"
+    profiles = build_profiles(
+        results, manifest, args.run_id, args.expected_commit
+    )
+    profile_qualified_by_precision = {
+        profile["precision_ids"][0]: bool(profile["closure_qualified"])
+        for profile in profiles
+    }
+    profiles_bundle = {
+        "schema_version": 2,
+        "run_id": args.run_id,
+        "expected_commit": args.expected_commit,
+        "pipeline_profiles": profiles,
+    }
+    (run_dir / "pipeline_profiles.json").write_text(
+        json.dumps(profiles_bundle, indent=2, sort_keys=True) + "\n"
     )
     summary = {
-        "schema_version": 1, "run_id": args.run_id,
+        "schema_version": 2, "run_id": args.run_id,
         "expected_commit": args.expected_commit, "status": "complete",
         "case_count": len(cases), "trial_count": len(cases) * EXPECTED_TRIALS,
         "ncu_case_count": plan["ncu_case_count"],
-        "profile_qualified": profile["closure_qualified"],
+        "profile_count": len(profiles),
+        "profile_qualified_by_precision": profile_qualified_by_precision,
+        "profile_qualified": all(profile_qualified_by_precision.values()),
         "results": results, "completed_at_utc": utc_now(),
     }
     (run_dir / "summary.json").write_text(
@@ -1234,19 +1345,25 @@ def main() -> int:
     (run_dir / "campaign_status.json").write_text(
         json.dumps({
             "status": "complete", "completed_cases": len(cases),
-            "total_cases": len(cases), "profile_qualified":
-                profile["closure_qualified"], "updated_at_utc": utc_now(),
+            "total_cases": len(cases),
+            "profile_count": len(profiles),
+            "profile_qualified_by_precision": profile_qualified_by_precision,
+            "profile_qualified": all(profile_qualified_by_precision.values()),
+            "updated_at_utc": utc_now(),
         }, indent=2, sort_keys=True) + "\n"
     )
     (run_dir / "COMPLETE").write_text(
         f"run_id={args.run_id}\ncommit={args.expected_commit}\n"
-        f"profile_qualified={str(profile['closure_qualified']).lower()}\n"
+        f"profile_qualified="
+        f"{str(all(profile_qualified_by_precision.values())).lower()}\n"
     )
     write_artifact_manifest(run_dir)
     print(json.dumps({
         "pass": True, "run_dir": str(run_dir), "case_count": len(cases),
         "trial_count": len(cases) * EXPECTED_TRIALS,
-        "profile_qualified": profile["closure_qualified"],
+        "profile_count": len(profiles),
+        "profile_qualified_by_precision": profile_qualified_by_precision,
+        "profile_qualified": all(profile_qualified_by_precision.values()),
     }, indent=2, sort_keys=True))
     return 0
 

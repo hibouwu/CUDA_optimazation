@@ -19,9 +19,22 @@ from typing import Any, Callable, Iterable
 REPO = Path(__file__).resolve().parents[2]
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 EXPECTED_TRIALS = 10
-EXPECTED_CASES = 91
+EXPECTED_PRECISIONS = ("fp16_f32", "bf16_f32")
+EXPECTED_CASES = 182
 EXPECTED_FAMILIES = 13
-EXPECTED_NCU_CASES = 4
+EXPECTED_NCU_CASES = 8
+EXPECTED_PRECISION_CONTRACTS = [
+    {
+        "precision_id": "fp16_f32", "input_type": "fp16",
+        "tensor_map_data_type": "float16", "instruction_kind": "f16",
+        "instruction_descriptor_u32": 138412048,
+    },
+    {
+        "precision_id": "bf16_f32", "input_type": "bf16",
+        "tensor_map_data_type": "bfloat16", "instruction_kind": "f16",
+        "instruction_descriptor_u32": 138413200,
+    },
+]
 REQUIRED_SASS_TOKENS = ("UTMALDG.2D", "UTCHMMA", "UTCBAR", "LDTM.")
 METRICS = (
     "first_tma_latency_ns", "tma_completion_span_ns", "tma_interval_ns",
@@ -29,7 +42,8 @@ METRICS = (
     "epilogue_to_store_ns", "last_mma_to_store_ns", "total_measured_ns",
 )
 CSV_FIELDS = (
-    "case_id", "precision_id", "mode", "stages", "k_tiles", "output_tasks",
+    "case_id", "precision_id", "tensor_map_data_type",
+    "instruction_descriptor_u32", "mode", "stages", "k_tiles", "output_tasks",
     "total_k_operations", "threads", "tma_requests_per_k_tile",
     "a_bytes_per_k_tile", "b_bytes_per_k_tile",
     "payload_bytes_per_k_tile", "mma_instructions_per_k_tile",
@@ -115,7 +129,7 @@ def canonical_integer(text: str) -> int:
 
 
 def validate_manifest(value: object) -> dict[str, Any] | None:
-    if not isinstance(value, dict) or value.get("schema_version") != 1:
+    if not isinstance(value, dict) or value.get("schema_version") != 2:
         return None
     expected_scalars = {
         "schedule_id": "tc5a_m128n256k64_stage4",
@@ -127,7 +141,7 @@ def validate_manifest(value: object) -> dict[str, Any] | None:
     }
     if any(value.get(key) != expected for key, expected in expected_scalars.items()):
         return None
-    if value.get("precision_ids") != ["fp16_f32"]:
+    if value.get("precision_contracts") != EXPECTED_PRECISION_CONTRACTS:
         return None
     if value.get("tile") != {"m": 128, "n": 256, "k": 64}:
         return None
@@ -167,7 +181,7 @@ def validate_manifest(value: object) -> dict[str, Any] | None:
         for row in families if isinstance(row, dict)
     ] != expected_families:
         return None
-    if value.get("ncu_cases") != [
+    if value.get("ncu_case_suffixes") != [
         "tma_s4_k16", "mma_s4_k16", "overlap_s4_k16", "full_s4_o4_k16"
     ]:
         return None
@@ -188,25 +202,37 @@ def validate_manifest(value: object) -> dict[str, Any] | None:
 
 
 def expected_cases(manifest: dict[str, Any]) -> list[dict[str, Any]]:
-    ncu = set(manifest["ncu_cases"])
+    ncu = set(manifest["ncu_case_suffixes"])
     k_values = [*manifest["calibration_k_tiles"], *manifest["holdout_k_tiles"]]
     cases = []
-    for family in manifest["families"]:
-        for k_tiles in k_values:
-            case_id = f"{family['family_id']}_k{k_tiles}"
-            case = {
-                "case_id": case_id, "family_id": family["family_id"],
-                "mode": family["mode"], "stages": family["stages"],
-                "k_tiles": k_tiles, "output_tasks": family["output_tasks"],
-                "ncu_selected": case_id in ncu,
-            }
-            case["args"] = [
-                "--case-id", case_id, "--mode", case["mode"],
-                "--stages", str(case["stages"]), "--k-tiles", str(k_tiles),
-                "--output-tasks", str(case["output_tasks"]),
-                "--warmup-launches", "3", "--expected-sm-count", "20", "--csv",
-            ]
-            cases.append(case)
+    for precision in manifest["precision_contracts"]:
+        for family in manifest["families"]:
+            for k_tiles in k_values:
+                suffix = f"{family['family_id']}_k{k_tiles}"
+                case_id = f"{precision['precision_id']}.{suffix}"
+                case = {
+                    "case_id": case_id,
+                    "precision_id": precision["precision_id"],
+                    "input_type": precision["input_type"],
+                    "tensor_map_data_type": precision["tensor_map_data_type"],
+                    "instruction_kind": precision["instruction_kind"],
+                    "instruction_descriptor_u32":
+                        precision["instruction_descriptor_u32"],
+                    "family_id": family["family_id"],
+                    "mode": family["mode"], "stages": family["stages"],
+                    "k_tiles": k_tiles,
+                    "output_tasks": family["output_tasks"],
+                    "ncu_selected": suffix in ncu,
+                }
+                case["args"] = [
+                    "--case-id", case_id,
+                    "--precision-id", precision["precision_id"],
+                    "--mode", case["mode"], "--stages", str(case["stages"]),
+                    "--k-tiles", str(k_tiles),
+                    "--output-tasks", str(case["output_tasks"]),
+                    "--warmup-launches", "3", "--expected-sm-count", "20", "--csv",
+                ]
+                cases.append(case)
     return cases
 
 
@@ -215,7 +241,9 @@ def expected_static_fields(
 ) -> dict[str, str]:
     payload = manifest["payload"]
     return {
-        "case_id": case["case_id"], "precision_id": "fp16_f32",
+        "case_id": case["case_id"], "precision_id": case["precision_id"],
+        "tensor_map_data_type": case["tensor_map_data_type"],
+        "instruction_descriptor_u32": str(case["instruction_descriptor_u32"]),
         "mode": case["mode"],
         "stages": str(case["stages"]), "k_tiles": str(case["k_tiles"]),
         "output_tasks": str(case["output_tasks"]),
@@ -439,23 +467,58 @@ def sass_stage_function_counts(
         elif current is not None:
             sections[current].append(line)
     result: dict[str, dict[str, int]] = {}
-    for stages in (1, 2, 4):
-        marker = f"tc5a_pipeline_dag_kernelILi{stages}EE"
-        matches = [name for name in sections if marker in name]
-        if len(matches) != 1:
-            errors.append(f"stage-{stages} SASS function attribution is ambiguous")
-            continue
-        body = "\n".join(sections[matches[0]])
-        counts = {
-            token: body.count(token)
-            for token in (*REQUIRED_SASS_TOKENS, "UTMASTG")
-        }
-        for token in REQUIRED_SASS_TOKENS:
-            if counts[token] <= 0:
-                errors.append(f"stage-{stages} SASS token missing:{token}")
-        if counts["UTMASTG"] != 0:
-            errors.append(f"stage-{stages} SASS unexpectedly contains UTMASTG")
-        result[f"stage{stages}"] = counts
+    descriptors = {
+        "fp16_f32": (138412048, "0x8400010", "0x8400490"),
+        "bf16_f32": (138413200, "0x8400490", "0x8400010"),
+    }
+    for precision_id, (
+        descriptor, descriptor_immediate, other_immediate,
+    ) in descriptors.items():
+        for stages in (1, 2, 4):
+            marker = f"tc5a_pipeline_dag_kernelILi{stages}E"
+            matches = [
+                name for name in sections
+                if marker in name and str(descriptor) in name
+            ]
+            if len(matches) != 1:
+                errors.append(
+                    f"{precision_id} stage-{stages} SASS function "
+                    "attribution is ambiguous"
+                )
+                continue
+            body = "\n".join(sections[matches[0]])
+            counts = {
+                token: body.count(token)
+                for token in (*REQUIRED_SASS_TOKENS, "UTMASTG")
+            }
+            counts["instruction_descriptor_immediate"] = body.count(
+                descriptor_immediate
+            )
+            counts["other_instruction_descriptor_immediate"] = body.count(
+                other_immediate
+            )
+            for token in REQUIRED_SASS_TOKENS:
+                if counts[token] <= 0:
+                    errors.append(
+                        f"{precision_id} stage-{stages} SASS token "
+                        f"missing:{token}"
+                    )
+            if counts["UTMASTG"] != 0:
+                errors.append(
+                    f"{precision_id} stage-{stages} SASS unexpectedly "
+                    "contains UTMASTG"
+                )
+            if counts["instruction_descriptor_immediate"] <= 0:
+                errors.append(
+                    f"{precision_id} stage-{stages} SASS lacks its "
+                    "instruction-descriptor immediate"
+                )
+            if counts["other_instruction_descriptor_immediate"] != 0:
+                errors.append(
+                    f"{precision_id} stage-{stages} SASS contains the "
+                    "other precision's instruction-descriptor immediate"
+                )
+            result[f"{precision_id}.stage{stages}"] = counts
     return result, errors
 
 
@@ -498,14 +561,26 @@ def predict_worker_ns(
 
 def rebuild_profile(
     results: list[dict[str, Any]], manifest: dict[str, Any], run_id: str,
-    commit: str,
+    commit: str, precision_id: str,
 ) -> dict[str, Any]:
-    by_id = {row["case_id"]: row for row in results}
+    precision_results = [
+        row for row in results if row["precision_id"] == precision_id
+    ]
+    expected_count = EXPECTED_FAMILIES * (
+        len(manifest["calibration_k_tiles"])
+        + len(manifest["holdout_k_tiles"])
+    )
+    if len(precision_results) != expected_count:
+        raise ValueError(f"{precision_id}: result matrix is incomplete")
+    by_family_k = {
+        (row["family_id"], row["k_tiles"]): row
+        for row in precision_results
+    }
     calibration = manifest["fit_contract"]["calibration_points"]
 
     def fit(family: str) -> dict[str, float]:
         return linear_fit([
-            (float(k - 1), float(by_id[f"{family}_k{k}"]["metric_stats"]
+            (float(k - 1), float(by_family_k[(family, k)]["metric_stats"]
                                  ["total_measured_ns"]["median"]))
             for k in calibration
         ])
@@ -516,14 +591,14 @@ def rebuild_profile(
     )
     epilogue = statistics.median(
         float(row["metric_stats"]["last_mma_to_store_ns"]["median"])
-        for row in results if row["mode"] == "full"
+        for row in precision_results if row["mode"] == "full"
         and row["k_tiles"] in manifest["calibration_k_tiles"]
         and row["output_tasks"] in epilogue_output_tasks
     )
     joint_first = max(
         joint["intercept_ns"],
         statistics.median(
-            float(by_id[f"overlap_s4_k{k}"]["metric_stats"]
+            float(by_family_k[("overlap_s4", k)]["metric_stats"]
                   ["first_mma_latency_ns"]["median"])
             for k in calibration
         ),
@@ -532,7 +607,7 @@ def rebuild_profile(
     validations = []
     calibration_k = set(manifest["fit_contract"]["calibration_points"])
     calibration_o = set(manifest["fit_contract"]["calibration_output_tasks"])
-    for row in results:
+    for row in precision_results:
         if row["mode"] != "full":
             continue
         actual = float(row["metric_stats"]["total_measured_ns"]["median"])
@@ -568,30 +643,36 @@ def rebuild_profile(
         "microbench/sm110_gemm_causal_campaign/contract_manifest.json",
         f"{artifact_root}/run_spec.json",
         f"{artifact_root}/summary.json",
-        f"{artifact_root}/pipeline_profile.json",
+        f"{artifact_root}/pipeline_profiles.json",
         f"{artifact_root}/artifact_sha256.txt",
         f"{artifact_root}/build/tc5a_pipeline_dag.sass.txt",
     ]
     artifact_paths.extend(
         f"{artifact_root}/cases/{row['case_id']}/trials.jsonl"
-        for row in sorted(results, key=lambda item: item["case_id"])
+        for row in sorted(precision_results, key=lambda item: item["case_id"])
     )
     artifact_paths.extend(
-        f"{artifact_root}/cases/{case_id}/ncu/profile.ncu-rep"
-        for case_id in manifest["ncu_cases"]
+        f"{artifact_root}/cases/{row['case_id']}/ncu/profile.ncu-rep"
+        for row in sorted(precision_results, key=lambda item: item["case_id"])
+        if row.get("ncu", {}).get("selected") is True
     )
     return {
         "schema_version": 1,
-        "profile_id": f"{run_id}.pipeline.tc5a_m128n256k64_stage4",
+        "profile_id": (
+            f"{run_id}.pipeline.tc5a_m128n256k64_stage4.{precision_id}"
+        ),
         "resource": "pipeline.tc5a_m128n256k64_stage4",
         "schedule_id": manifest["schedule_id"],
-        "precision_ids": list(manifest["precision_ids"]),
+        "precision_ids": [precision_id],
         "evidence_kind": "measured_joint",
         "qualification": "closure_qualified" if qualified else "quarantined",
         "trial_count_per_case": 10, "source_id": run_id,
         "expected_commit": commit,
         "source_path": "microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu",
-        "source_locator": "91-case causal campaign; medians and predeclared fit",
+        "source_locator": (
+            f"91-case {precision_id} causal campaign; medians and "
+            "predeclared fit"
+        ),
         "input_residency": manifest["residency"],
         "stages": 4, "accumulator_buffers": 2, "resident_ctas_per_sm": 1,
         "maximum_k_tiles": 64, "maximum_output_tasks_per_worker": 32,
@@ -609,6 +690,16 @@ def rebuild_profile(
         "closure_qualified": qualified,
         "artifact_paths": artifact_paths,
     }
+
+
+def rebuild_profiles(
+    results: list[dict[str, Any]], manifest: dict[str, Any], run_id: str,
+    commit: str,
+) -> list[dict[str, Any]]:
+    return [
+        rebuild_profile(results, manifest, run_id, commit, precision_id)
+        for precision_id in EXPECTED_PRECISIONS
+    ]
 
 
 def audit(
@@ -629,7 +720,7 @@ def audit(
     )
     formal = (
         "summary.json", "progress.jsonl", "campaign_status.json", "COMPLETE",
-        "pipeline_profile.json",
+        "pipeline_profiles.json",
     )
     required = (*common, *(formal if not static_only else ("STATIC_COMPLETE",)))
     for relative in required:
@@ -646,13 +737,23 @@ def audit(
     if expected_commit is not None:
         add(errors, commit == expected_commit, "recorded commit mismatch")
     run_id = root.name
-    add(errors, spec.get("schema_version") == 1, "run spec schema mismatch")
+    add(errors, spec.get("schema_version") == 2, "run spec schema mismatch")
     add(errors, spec.get("run_id") == run_id, "run ID mismatch")
     add(errors, spec.get("campaign") == "sm110_tc5a_causal_pipeline_dag",
         "campaign identity mismatch")
     add(errors, spec.get("expected_commit") == commit, "spec commit mismatch")
-    add(errors, spec.get("precision_ids") == ["fp16_f32"],
+    add(errors, spec.get("generator") ==
+        "microbench/sm110_gemm_causal_campaign/run_causal_campaign.py",
+        "campaign generator path mismatch")
+    add(errors, spec.get("contract_manifest") ==
+        "microbench/sm110_gemm_causal_campaign/contract_manifest.json",
+        "contract manifest path mismatch")
+    add(errors, spec.get("precision_ids") == list(EXPECTED_PRECISIONS),
         "run spec precision contract mismatch")
+    add(errors, spec.get("precision_contracts") == EXPECTED_PRECISION_CONTRACTS,
+        "run spec precision descriptor contract mismatch")
+    add(errors, spec.get("profile_count") == len(EXPECTED_PRECISIONS),
+        "run spec profile count mismatch")
     add(errors, spec.get("case_count") == EXPECTED_CASES, "case count mismatch")
     add(errors, spec.get("family_count") == EXPECTED_FAMILIES,
         "family count mismatch")
@@ -664,6 +765,9 @@ def audit(
         "termination grace mismatch")
     add(errors, spec.get("ncu_case_count") == EXPECTED_NCU_CASES,
         "NCU case count mismatch")
+    add(errors, spec.get("ncu_policy") ==
+        "four predeclared k16 attribution cases per precision",
+        "NCU policy mismatch")
     add(errors, spec.get("static_only") is static_only, "static mode mismatch")
     if require_ncu:
         add(errors, spec.get("ncu_requested") is True, "NCU was not requested")
@@ -707,14 +811,28 @@ def audit(
             if blob is not None:
                 add(errors, dependencies.get(relative) == sha256_bytes(blob),
                     f"Git blob hash mismatch:{relative}")
+        add(errors, spec.get("generator_sha256") == dependencies.get(
+            "microbench/sm110_gemm_causal_campaign/run_causal_campaign.py"
+        ), "generator hash differs from source dependencies")
+        add(errors, spec.get("contract_manifest_sha256") == dependencies.get(
+            "microbench/sm110_gemm_causal_campaign/contract_manifest.json"
+        ), "manifest hash differs from source dependencies")
     source_blob = blob_loader(
         commit, "microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu"
     ) if commit else None
     if source_blob is not None:
         add(errors, b"ptx::mma_f16" in source_blob,
-            "causal source does not implement the declared FP16 MMA")
-        add(errors, b"fp16_f32" in source_blob,
-            "causal source does not emit the declared precision ID")
+            "causal source does not implement the declared MMA")
+        for token, message in (
+            (b"fp16_f32", "FP16 precision ID"),
+            (b"bf16_f32", "BF16 precision ID"),
+            (b"CU_TENSOR_MAP_DATA_TYPE_FLOAT16", "FP16 tensor-map type"),
+            (b"CU_TENSOR_MAP_DATA_TYPE_BFLOAT16", "BF16 tensor-map type"),
+            (b"138412048U", "FP16 instruction descriptor"),
+            (b"138413200U", "BF16 instruction descriptor"),
+        ):
+            add(errors, token in source_blob,
+                f"causal source does not bind the declared {message}")
     manifest_relative = spec.get("contract_manifest")
     manifest_blob = blob_loader(commit, str(manifest_relative)) if commit else None
     add(errors, manifest_blob is not None, "manifest Git blob missing")
@@ -733,6 +851,28 @@ def audit(
     cases = expected_cases(manifest)
     add(errors, len(cases) == EXPECTED_CASES, "rebuilt case matrix size mismatch")
     add(errors, spec.get("cases") == cases, "run spec case matrix mismatch")
+    add(errors, read_json(root / "manifest_snapshot.json") == manifest,
+        "manifest snapshot differs from the committed contract")
+    plan = read_json(root / "plan.json")
+    expected_plan_fields = {
+        "schema_version": 2,
+        "schedule_id": manifest["schedule_id"],
+        "precision_ids": list(EXPECTED_PRECISIONS),
+        "profile_count": len(EXPECTED_PRECISIONS),
+        "case_count": EXPECTED_CASES,
+        "family_count": EXPECTED_FAMILIES,
+        "raw_trial_count": EXPECTED_CASES * EXPECTED_TRIALS,
+        "ncu_case_count": EXPECTED_NCU_CASES,
+        "calibration_k_tiles": manifest["calibration_k_tiles"],
+        "holdout_k_tiles": manifest["holdout_k_tiles"],
+        "full_output_task_sweep": manifest["full_output_task_sweep"],
+        "max_dynamic_smem_bytes": 196608,
+        "max_hot_input_bytes": 3145728,
+        "max_output_bytes": 4194304,
+        "cases": cases,
+    }
+    add(errors, plan == expected_plan_fields,
+        "campaign plan differs from independent reconstruction")
 
     command = read_json(root / "build/compile_command.json")
     add(errors, compile_command_valid(command, run_id, static_only=static_only),
@@ -782,15 +922,21 @@ def audit(
     summary = read_json(root / "summary.json")
     status = read_json(root / "campaign_status.json")
     add(errors, summary.get("status") == "complete", "summary is incomplete")
+    add(errors, summary.get("schema_version") == 2,
+        "summary schema mismatch")
     add(errors, summary.get("case_count") == EXPECTED_CASES,
         "summary case count mismatch")
     add(errors, summary.get("trial_count") == EXPECTED_CASES * EXPECTED_TRIALS,
         "summary raw-trial count mismatch")
     add(errors, summary.get("ncu_case_count") == EXPECTED_NCU_CASES,
         "summary NCU count mismatch")
+    add(errors, summary.get("profile_count") == len(EXPECTED_PRECISIONS),
+        "summary profile count mismatch")
     add(errors, status.get("status") == "complete", "campaign status incomplete")
     add(errors, status.get("completed_cases") == EXPECTED_CASES,
         "campaign completed-case count mismatch")
+    add(errors, status.get("profile_count") == len(EXPECTED_PRECISIONS),
+        "campaign status profile count mismatch")
     try:
         progress = [json.loads(line) for line in
                     (root / "progress.jsonl").read_text().splitlines() if line]
@@ -810,7 +956,11 @@ def audit(
     for case in cases:
         case_id = case["case_id"]
         result = result_by_id.get(case_id, {})
-        for name in ("family_id", "mode", "stages", "k_tiles", "output_tasks"):
+        for name in (
+            "precision_id", "tensor_map_data_type",
+            "instruction_descriptor_u32", "family_id", "mode", "stages",
+            "k_tiles", "output_tasks",
+        ):
             add(errors, result.get(name) == case[name],
                 f"{case_id}: result metadata mismatch:{name}")
         add(errors, result.get("status") == "ok", f"{case_id}: status is not ok")
@@ -907,33 +1057,53 @@ def audit(
             warnings.append(f"NCU not required during audit:{case_id}")
         verified_results.append(result)
 
-    recorded_profile = read_json(root / "pipeline_profile.json")
+    recorded_bundle = read_json(root / "pipeline_profiles.json")
     try:
-        rebuilt_profile = rebuild_profile(verified_results, manifest, run_id, commit or "")
-    except (KeyError, TypeError, ValueError, ZeroDivisionError) as error:
-        rebuilt_profile = None
-        errors.append(f"pipeline profile could not be rebuilt:{error}")
-    add(errors, rebuilt_profile == recorded_profile,
-        "pipeline profile differs from independent reconstruction")
-    if isinstance(rebuilt_profile, dict) and not rebuilt_profile["closure_qualified"]:
-        warnings.append(
-            "causal measurements are complete but the predeclared DAG fit is quarantined"
+        rebuilt_profiles = rebuild_profiles(
+            verified_results, manifest, run_id, commit or ""
         )
-    add(errors, summary.get("profile_qualified") ==
-        (rebuilt_profile or {}).get("closure_qualified"),
+    except (KeyError, TypeError, ValueError, ZeroDivisionError) as error:
+        rebuilt_profiles = []
+        errors.append(f"pipeline profiles could not be rebuilt:{error}")
+    expected_bundle = {
+        "schema_version": 2,
+        "run_id": run_id,
+        "expected_commit": commit or "",
+        "pipeline_profiles": rebuilt_profiles,
+    }
+    add(errors, recorded_bundle == expected_bundle,
+        "pipeline profiles differ from independent reconstruction")
+    profile_qualified_by_precision = {
+        profile["precision_ids"][0]: bool(profile["closure_qualified"])
+        for profile in rebuilt_profiles
+    }
+    for precision_id, qualified in profile_qualified_by_precision.items():
+        if not qualified:
+            warnings.append(
+                f"{precision_id}: causal measurements are complete but the "
+                "predeclared DAG fit is quarantined"
+            )
+    aggregate_qualified = bool(profile_qualified_by_precision) and all(
+        profile_qualified_by_precision.values()
+    )
+    add(errors, summary.get("profile_qualified_by_precision") ==
+        profile_qualified_by_precision,
+        "summary per-precision profile qualification mismatch")
+    add(errors, status.get("profile_qualified_by_precision") ==
+        profile_qualified_by_precision,
+        "status per-precision profile qualification mismatch")
+    add(errors, summary.get("profile_qualified") == aggregate_qualified,
         "summary profile qualification mismatch")
-    add(errors, status.get("profile_qualified") ==
-        (rebuilt_profile or {}).get("closure_qualified"),
+    add(errors, status.get("profile_qualified") == aggregate_qualified,
         "status profile qualification mismatch")
     return {
         "pass": not errors, "run_dir": str(root), "errors": errors,
         "warnings": sorted(set(warnings)), "case_count": len(cases),
         "trial_count": EXPECTED_CASES * EXPECTED_TRIALS,
         "ncu_case_count": EXPECTED_NCU_CASES,
-        "profile_qualified": (
-            rebuilt_profile.get("closure_qualified")
-            if isinstance(rebuilt_profile, dict) else False
-        ),
+        "profile_count": len(rebuilt_profiles),
+        "profile_qualified_by_precision": profile_qualified_by_precision,
+        "profile_qualified": aggregate_qualified,
         "static_only": False,
     }
 

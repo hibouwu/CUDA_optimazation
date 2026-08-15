@@ -147,13 +147,18 @@ def audit_suite(
     if expected_commit is not None:
         add(errors, commit == expected_commit, "expected commit mismatch")
     required_contract = {
-        "schema_version": 1,
-        "kind": "exact_tc5a_causal_pipeline_suite",
+        "schema_version": 2,
+        "kind": "exact_tc5a_fp16_bf16_causal_pipeline_suite",
         "suite_id": suite_id,
         "causal_run_id": f"{suite_id}-causal",
         "expected_branch": EXPECTED_BRANCH,
         "expected_commit": commit,
         "ncu_required": True,
+        "precision_ids": ["fp16_f32", "bf16_f32"],
+        "case_count": 182,
+        "trial_count": 1820,
+        "ncu_case_count": 8,
+        "profile_count": 2,
     }
     for name, value in required_contract.items():
         add(errors, contract.get(name) == value, f"run contract mismatch:{name}")
@@ -279,6 +284,10 @@ def audit_suite(
         "suite_dir": str(suite_dir),
         "expected_commit": commit,
         "overcurrent_deltas": deltas,
+        "profile_count": campaign.get("profile_count", 0),
+        "profile_qualified_by_precision": campaign.get(
+            "profile_qualified_by_precision", {}
+        ),
         "profile_qualified": bool(campaign.get("profile_qualified")),
         "errors": errors,
         "warnings": sorted(set(warnings)),

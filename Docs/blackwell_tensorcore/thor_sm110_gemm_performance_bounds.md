@@ -2,7 +2,7 @@
 
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
-> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前还实现了合同绑定的 persistent-worker causal DAG 求解器，并冻结了 tc5a 的 91-case/910-trial 因果采集合同；Thor timing profile 尚未回传。按“schedule/precision/row-stride 精确 TMA capacity + closure-qualified causal profile”重新收紧后，历史 12 精度计数为 implementation 5、numeric 4、完整 resource-envelope matrix 0、causal 0、end-to-end 0；历史 tc5a 仅精确支持 N=K=2048 的 hot/cold 两个 resource 场景。不能把求解器存在或旧 4/12 numeric closure 称为完整三层模型闭环。
+> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前还实现了合同绑定的 persistent-worker causal DAG 求解器，并冻结了 tc5a 的 FP16/BF16 双精度因果采集合同：每种精度 91 case、910 trial、4 份 NCU，总计 182 case、1,820 trial、8 份 NCU；Thor timing profile 尚未回传。按“schedule/precision/row-stride 精确 TMA capacity + closure-qualified causal profile”重新收紧后，历史 12 精度计数为 implementation 5、numeric 4、完整 resource-envelope matrix 0、causal 0、end-to-end 0；历史 tc5a 仅精确支持 N=K=2048 的 hot/cold 两个 resource 场景。不能把求解器存在或旧 4/12 numeric closure 称为完整三层模型闭环。
 >
 > **可信度纪律**：可证明上界、microbenchmark 经验包络和完整 GEMM 实测值分别报告，任何一层都不能冒充另一层。
 >
@@ -1030,10 +1030,11 @@ closure 合同为准。
    不能用 `all_common_resources_closed` 代替。
 5. **因果流水线闭环**：latency、initiation interval、TMA/MMA/TMEM 依赖、startup
    和 drain 进入可执行 DAG。合同绑定的 persistent-worker 求解器已经实现，但
-   当前没有 Thor profile 被导入；tc5a 的 91-case 源码明确调用 `mma_f16`，所以只会
-   先覆盖 `fp16_f32`。BF16 虽可共享字节级 transport capacity，也不能共享这份
-   TMA+MMA+epilogue 因果时序；它和其他 candidate 都需要自己的 profile，或另行
-   给出并审计等价性证明。因此 12 种精度仍均未达到完整三层端到端 closure。
+   当前没有 Thor profile 被导入；tc5a suite 已分别冻结 FP16 和 BF16 的 tensor-map
+   类型、MMA instruction descriptor、91-case 矩阵和 singleton profile，二者会独立
+   拟合并独立过门禁，不能因为 transport payload 都是 2 B/element 就互相复用。
+   其他 candidate 仍需要自己的 profile，或另行给出并审计等价性证明。因此 12 种
+   精度仍均未达到完整三层端到端 closure。
    详见全精度证据矩阵。
 
 一次 campaign 的逐精度测量合同依次要求：PTX/descriptor 合法、目标函数块 SASS、
@@ -1255,7 +1256,8 @@ cd microbench/07_tma_gmem_smem_bandwidth
   [`results/pipeline_overlap_results.csv`](../../microbench/11_pipeline_overlap/results/pipeline_overlap_results.csv)
 - tc5a GMEM/L2→TMA→SMEM→MMA→TMEM readback/store 因果 source：
   [`tc5a_pipeline_dag.cu`](../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu)
-- 91-case 因果 manifest、runner、独立 campaign/platform auditor 与模型导入器：
+- 双精度 182-case（每种精度 91 case）因果 manifest、runner、独立
+  campaign/platform auditor 与模型导入器：
   [`contract_manifest.json`](../../microbench/sm110_gemm_causal_campaign/contract_manifest.json)、
   [`run_causal_campaign.py`](../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py)、
   [`audit_campaign.py`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py)、
@@ -1305,9 +1307,10 @@ cd microbench/07_tma_gmem_smem_bandwidth
   实际保活的 16 B request 计数，而不是按源代码类型名猜测 transaction 宽度。
   还必须明确：`microbench/11_pipeline_overlap` 从已在 SMEM 的数据开始，测
   `tcgen05.cp`→TMEM 与 TS MMA；它不发出 tc5a 的 GMEM/L2 TMA request，不能提供
-  causal profile 的 joint TMA+MMA startup/interval。新的 91-case campaign 才冻结
-  A16 KiB+B32 KiB、四 stage、八请求、192 threads、双 accumulator persistent
-  worker 合同；在 Thor raw timing 回传前不产生模型 profile 数值。
+  causal profile 的 joint TMA+MMA startup/interval。新的双精度 campaign 才分别
+  冻结 FP16/BF16 的 A16 KiB+B32 KiB、四 stage、八请求、192 threads、双
+  accumulator persistent-worker 合同；在 Thor raw timing 回传前不产生模型
+  profile 数值。
 
 基本命令：
 
@@ -1449,7 +1452,7 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`audit_resource_suite.py`](../../microbench/sm110_gemm_resource_campaign/audit_resource_suite.py)
 - 资源结果到 54 个精确 `Capacity` 的重新审计导入器：
   [`resource_import.py`](../../scripts/sm110_gemm_model/resource_import.py)
-- tc5a persistent-worker 因果 source、91-case runner 与双层 auditor：
+- tc5a persistent-worker 因果 source、双精度 182-case runner 与双层 auditor：
   [`tc5a_pipeline_dag.cu`](../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu)、
   [`run_causal_campaign.py`](../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py)、
   [`audit_campaign.py`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py)、
@@ -1465,12 +1468,14 @@ NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash�
 证据缺口，不能先写入模型。结果返回后 `finish` 会生成
 `results/sm110_model_closure/$SUITE_ID/resource_capacities.json`，报告必须用
 `--resource-import` 显式加载；hot-L2 仍是 B/s/SM，cold-DRAM 仍是 B/s/GPU，二者
-都保持 `measured_sustained`。FP16 tc5a 因果程序已
-通过 91/91 静态合同、`sm_110a` 编译、stage-1/2/4 函数块级 SASS attribution 和
-合成 910-trial auditor 回归；epilogue latency 只用单 output-task case 校准，多
-task case 专门验证双 accumulator 与 drain 递推。其 manifest、CSV 和模型 profile
-均绑定 `precision_ids=["fp16_f32"]`；不能因为 BF16 payload 也是 2 B/element 就
-复用 FP16 MMA 时序。本机 SM120 不能执行该 SM110
+都保持 `measured_sustained`。FP16/BF16 tc5a 因果程序已
+通过 182/182 静态合同、`sm_110a` 编译、六个 precision/stage 函数块级 SASS
+attribution 和合成 1,820-trial auditor 回归；epilogue latency 对每种精度都只用
+单 output-task case 校准，多 task case 专门验证双 accumulator 与 drain 递推。
+manifest、CSV、tensor-map 类型、SASS instruction descriptor immediate 和模型
+profile 五处相互绑定；导入结果必须是 `precision_ids=["fp16_f32"]` 与
+`precision_ids=["bf16_f32"]` 两个 singleton，不能因 payload 相同而互相复用。
+本机 SM120 不能执行该 SM110
 tcgen05 合同，所以也不能写入 timing profile。
 当前目标其余未完成原因是 Thor causal/resource profile、其余 schedule 的因果合同、
 缺失精度完整 GEMM 与部分 strict compute upper，而不是把已有环境字段重复抄写一遍。

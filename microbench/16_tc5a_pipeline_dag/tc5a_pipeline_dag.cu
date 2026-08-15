@@ -43,6 +43,8 @@ constexpr int kAccumulatorBuffers = 2;
 constexpr int kMaxStages = 4;
 constexpr int kMaxKTiles = 64;
 constexpr int kMaxOutputTasks = 32;
+constexpr std::uint32_t kFp16InstructionDescriptor = 138412048U;
+constexpr std::uint32_t kBf16InstructionDescriptor = 138413200U;
 
 enum class Mode : int {
   kTmaOnly = 0,
@@ -53,6 +55,7 @@ enum class Mode : int {
 
 struct Options {
   std::string case_id;
+  std::string precision_id;
   Mode mode = Mode::kFull;
   int stages = 4;
   int k_tiles = 32;
@@ -64,6 +67,27 @@ struct Options {
   bool csv = false;
   bool csv_header = false;
 };
+
+struct PrecisionContract {
+  const char* precision_id;
+  const char* tensor_map_data_type_name;
+  CUtensorMapDataType tensor_map_data_type;
+  std::uint32_t instruction_descriptor;
+};
+
+const PrecisionContract& precision_contract(const std::string& precision_id) {
+  static constexpr PrecisionContract kFp16 = {
+      "fp16_f32", "float16", CU_TENSOR_MAP_DATA_TYPE_FLOAT16,
+      kFp16InstructionDescriptor};
+  static constexpr PrecisionContract kBf16 = {
+      "bf16_f32", "bfloat16", CU_TENSOR_MAP_DATA_TYPE_BFLOAT16,
+      kBf16InstructionDescriptor};
+  if (precision_id == kFp16.precision_id) return kFp16;
+  if (precision_id == kBf16.precision_id) return kBf16;
+  std::fprintf(stderr,
+               "--precision-id must be fp16_f32 or bf16_f32\n");
+  std::exit(2);
+}
 
 struct Trace {
   std::uint64_t start_ns;
@@ -93,7 +117,7 @@ __device__ __forceinline__ std::uint32_t current_smid() {
   return value;
 }
 
-template <int Stages>
+template <int Stages, std::uint32_t InstructionDescriptor>
 __global__ __launch_bounds__(kThreads)
 void tc5a_pipeline_dag_kernel(
     const __grid_constant__ CUtensorMap tensor_map_a,
@@ -101,10 +125,8 @@ void tc5a_pipeline_dag_kernel(
     int k_tiles, int output_tasks, Mode mode, Trace* trace) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 1000
   static_assert(Stages == 1 || Stages == 2 || Stages == 4);
-  constexpr std::uint32_t kInstructionDescriptor =
-      (1U << 4U) |
-      (static_cast<std::uint32_t>(kTileN) >> 3U << 17U) |
-      (static_cast<std::uint32_t>(kTileM) >> 4U << 24U);
+  static_assert(InstructionDescriptor == kFp16InstructionDescriptor ||
+                InstructionDescriptor == kBf16InstructionDescriptor);
 
   const int tid = static_cast<int>(threadIdx.x);
   const int warp = tid / ptx::kWarpSize;
@@ -203,7 +225,7 @@ void tc5a_pipeline_dag_kernel(
       const std::uint64_t descriptor_b =
           ptx::sw128_k_major_descriptor(b_block);
       ptx::mma_f16(accumulator, descriptor_a, descriptor_b,
-                   kInstructionDescriptor,
+                   InstructionDescriptor,
                    k_tile != 0 || k_block != 0);
     }
   };
@@ -462,7 +484,8 @@ Mode parse_mode(const char* text) {
 void usage(const char* program) {
   std::fprintf(
       stderr,
-      "Usage: %s --case-id ID --mode MODE --stages 1|2|4 "
+      "Usage: %s --case-id ID --precision-id fp16_f32|bf16_f32 "
+      "--mode MODE --stages 1|2|4 "
       "--k-tiles 1|2|4|8|16|32|64 --output-tasks 1|2|4|8|16|32 "
       "[--warmup-launches N] [--expected-sm-count N] "
       "[--contract-only] [--allow-non-sm110] [--csv] [--csv-header]\n",
@@ -482,6 +505,8 @@ Options parse_options(int argc, char** argv) {
     };
     if (std::strcmp(argument, "--case-id") == 0) {
       options.case_id = value();
+    } else if (std::strcmp(argument, "--precision-id") == 0) {
+      options.precision_id = value();
     } else if (std::strcmp(argument, "--mode") == 0) {
       options.mode = parse_mode(value());
     } else if (std::strcmp(argument, "--stages") == 0) {
@@ -521,6 +546,10 @@ bool in_power_two_set(int value, int maximum) {
 
 void validate_options(const Options& options) {
   if (options.case_id.empty()) fail("--case-id is required");
+  if (options.precision_id != "fp16_f32" &&
+      options.precision_id != "bf16_f32") {
+    fail("--precision-id must be fp16_f32 or bf16_f32");
+  }
   for (char character : options.case_id) {
     if (!(std::isalnum(static_cast<unsigned char>(character)) ||
           character == '.' || character == '_' || character == '-')) {
@@ -544,11 +573,11 @@ void validate_options(const Options& options) {
   }
 }
 
-template <int Stages>
+template <int Stages, std::uint32_t InstructionDescriptor>
 void configure_and_launch(const Options& options, const CUtensorMap& map_a,
                           const CUtensorMap& map_b, float* output,
                           Trace* trace, cudaStream_t stream) {
-  auto* kernel = &tc5a_pipeline_dag_kernel<Stages>;
+  auto* kernel = &tc5a_pipeline_dag_kernel<Stages, InstructionDescriptor>;
   constexpr int kDynamicSmemBytes = Stages * kStageBytes;
   CUDA_CHECK(cudaFuncSetAttribute(
       kernel, cudaFuncAttributeMaxDynamicSharedMemorySize,
@@ -562,15 +591,31 @@ void configure_and_launch(const Options& options, const CUtensorMap& map_a,
   CUDA_CHECK(cudaGetLastError());
 }
 
+template <std::uint32_t InstructionDescriptor>
+void launch_precision(const Options& options, const CUtensorMap& map_a,
+                      const CUtensorMap& map_b, float* output, Trace* trace,
+                      cudaStream_t stream) {
+  if (options.stages == 1) {
+    configure_and_launch<1, InstructionDescriptor>(
+        options, map_a, map_b, output, trace, stream);
+  } else if (options.stages == 2) {
+    configure_and_launch<2, InstructionDescriptor>(
+        options, map_a, map_b, output, trace, stream);
+  } else {
+    configure_and_launch<4, InstructionDescriptor>(
+        options, map_a, map_b, output, trace, stream);
+  }
+}
+
 void launch(const Options& options, const CUtensorMap& map_a,
             const CUtensorMap& map_b, float* output, Trace* trace,
             cudaStream_t stream = nullptr) {
-  if (options.stages == 1) {
-    configure_and_launch<1>(options, map_a, map_b, output, trace, stream);
-  } else if (options.stages == 2) {
-    configure_and_launch<2>(options, map_a, map_b, output, trace, stream);
+  if (options.precision_id == "fp16_f32") {
+    launch_precision<kFp16InstructionDescriptor>(
+        options, map_a, map_b, output, trace, stream);
   } else {
-    configure_and_launch<4>(options, map_a, map_b, output, trace, stream);
+    launch_precision<kBf16InstructionDescriptor>(
+        options, map_a, map_b, output, trace, stream);
   }
 }
 
@@ -581,7 +626,8 @@ std::uint64_t elapsed(std::uint64_t start, std::uint64_t stop) {
 
 void print_header() {
   std::puts(
-      "case_id,precision_id,mode,stages,k_tiles,output_tasks,"
+      "case_id,precision_id,tensor_map_data_type,"
+      "instruction_descriptor_u32,mode,stages,k_tiles,output_tasks,"
       "total_k_operations,threads,"
       "tma_requests_per_k_tile,a_bytes_per_k_tile,b_bytes_per_k_tile,"
       "payload_bytes_per_k_tile,mma_instructions_per_k_tile,"
@@ -596,6 +642,7 @@ void print_header() {
 }
 
 void print_row(const Options& options, int sm_count, const Trace& trace) {
+  const PrecisionContract& contract = precision_contract(options.precision_id);
   const int total_operations = options.k_tiles * options.output_tasks;
   const std::uint64_t first_tma = elapsed(trace.start_ns,
                                           trace.first_tma_done_ns);
@@ -619,11 +666,13 @@ void print_row(const Options& options, int sm_count, const Trace& trace) {
       trace.last_mma_done_ns, trace.last_store_done_ns);
   const std::uint64_t total = elapsed(trace.start_ns, trace.kernel_exit_ns);
   std::printf(
-      "%s,fp16_f32,%s,%d,%d,%d,%d,%d,2,%d,%d,%d,4,%d,%d,%d,hot_l2,"
+      "%s,%s,%s,%u,%s,%d,%d,%d,%d,%d,2,%d,%d,%d,4,%d,%d,%d,hot_l2,"
       "cuda_memset_zero,%d,%d,%u,"
       "%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu,"
       "%llu,%llu,%.9f,%llu,%llu,%.9f,%llu,%llu,%llu\n",
-      options.case_id.c_str(), mode_name(options.mode), options.stages,
+      options.case_id.c_str(), contract.precision_id,
+      contract.tensor_map_data_type_name, contract.instruction_descriptor,
+      mode_name(options.mode), options.stages,
       options.k_tiles, options.output_tasks, total_operations, kThreads,
       kAStageBytes, kBStageBytes, kStageBytes, kAccumulatorBuffers,
       kOutputBytesPerTask, options.stages * kStageBytes,
@@ -711,25 +760,27 @@ int main(int argc, char** argv) {
   const std::size_t output_elements =
       static_cast<std::size_t>(options.output_tasks) * kTileM * kTileN;
 
-  half* a = nullptr;
-  half* b = nullptr;
+  const PrecisionContract& contract = precision_contract(options.precision_id);
+  std::uint16_t* a = nullptr;
+  std::uint16_t* b = nullptr;
   float* output = nullptr;
   Trace* device_trace = nullptr;
-  CUDA_CHECK(cudaMalloc(&a, a_elements * sizeof(half)));
-  CUDA_CHECK(cudaMalloc(&b, b_elements * sizeof(half)));
+  CUDA_CHECK(cudaMalloc(&a, a_elements * sizeof(std::uint16_t)));
+  CUDA_CHECK(cudaMalloc(&b, b_elements * sizeof(std::uint16_t)));
   CUDA_CHECK(cudaMalloc(&output, output_elements * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&device_trace, sizeof(Trace)));
-  CUDA_CHECK(cudaMemset(a, 0, a_elements * sizeof(half)));
-  CUDA_CHECK(cudaMemset(b, 0, b_elements * sizeof(half)));
+  CUDA_CHECK(cudaMemset(a, 0, a_elements * sizeof(std::uint16_t)));
+  CUDA_CHECK(cudaMemset(b, 0, b_elements * sizeof(std::uint16_t)));
   CUDA_CHECK(cudaMemset(output, 0, output_elements * sizeof(float)));
 
   CUtensorMap map_a{};
   CUtensorMap map_b{};
-  ptx::encode_tiled_2d_sw128_strided(
-      &map_a, a, kTileM, k_elements, k_elements,
-      kTileM);
-  ptx::encode_tiled_2d_sw128_strided(
-      &map_b, b, kTileN, k_elements, k_elements, kTileN);
+  ptx::encode_tiled_2d_sw128_strided_16bit(
+      &map_a, contract.tensor_map_data_type, a, kTileM, k_elements,
+      k_elements, kTileM);
+  ptx::encode_tiled_2d_sw128_strided_16bit(
+      &map_b, contract.tensor_map_data_type, b, kTileN, k_elements,
+      k_elements, kTileN);
 
   for (int warmup = 0; warmup < options.warmup_launches; ++warmup) {
     CUDA_CHECK(cudaMemset(device_trace, 0, sizeof(Trace)));

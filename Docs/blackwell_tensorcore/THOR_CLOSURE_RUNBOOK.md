@@ -514,13 +514,16 @@ mode 切换后锁频仍残留且没有对应 `jetson_clocks --store` 快照，�
 
 ## 12. tc5a persistent-worker causal pipeline suite
 
-本节采集与 FP16 `tc5a_m128n256k64_stage4` 完全匹配的因果时序 profile。manifest、
-CSV 和导入后的 `PipelineProfile` 都冻结 `precision_ids=["fp16_f32"]`，源码使用
-`ptx::mma_f16`；该结果不能直接用于 BF16。它不是另一个
-带宽峰值实验：91 个 case 用 raw `%globaltimer` 事件分离 TMA-only、MMA-only、
-joint overlap 和完整 persistent worker 的 startup、稳态 interval、双 accumulator
-复用与 readback/store drain；每 case 10 个外部 trial，共 910 条 raw trial，另有
-四份预声明 NCU report。
+本节分别采集与 FP16、BF16 `tc5a_m128n256k64_stage4` 完全匹配的两个因果时序
+profile。定义 `precision_id` 为一份 profile 直接验证的精度标识，无单位；两个输出
+必须分别是 singleton `precision_ids=["fp16_f32"]` 和
+`precision_ids=["bf16_f32"]`。同一个 binary 为两种精度生成不同模板实例，并分别
+冻结 tensor-map 数据类型和 MMA instruction descriptor；不能因二者都是
+2 B/element 而共享时序。它不是另一个带宽峰值实验：每种精度 91 个 case 用 raw
+`%globaltimer` 事件分离 TMA-only、MMA-only、joint overlap 和完整 persistent
+worker 的 startup、稳态 interval、双 accumulator 复用与 readback/store drain；
+每 case 10 个外部 trial。总计 182 case、1,820 条 raw trial，另有 8 份预声明 NCU
+report（每种精度 4 份）。
 
 本组与第 11 节 resource suite 共用 `results/sm110_campaign.lock`。两组必须串行：
 先等一个 suite 的日志出现完成 marker 并执行 `finish`，再启动另一个。不要通过删除
@@ -598,19 +601,22 @@ fail closed。若 counter reset、checkout 改变、已有活进程或 OC 区间
 bash microbench/sm110_causal_suite.sh finish "$CAUSAL_SUITE_ID"
 ```
 
-`finish` 会验证 91-case/910-trial/4-NCU、binary/SASS/env/hash、不可变 Git blob、
-MAXN/clock/OC interval，并重新构建 component linear fit 与 full-worker validation。
-profile 的预声明门槛为：TMA/MMA/joint 三个 fit 的决定系数均不低于 0.98，且
-calibration/holdout 最大相对误差都不超过 10%。
+`finish` 会验证 182-case/1,820-trial/8-NCU、binary/SASS/env/hash、不可变 Git
+blob、MAXN/clock/OC interval，并为 FP16、BF16 分别重建 component linear fit 与
+full-worker validation。每份 profile 的预声明门槛为：TMA/MMA/joint 三个 fit 的
+决定系数均不低于 0.98，且 calibration/holdout 最大相对误差都不超过 10%。
 
 注意两个不同结论：
 
 - `suite_audit.json.pass=true` 表示 raw acquisition 和审计合同完整；
-- `profile_qualified=true` 才表示 fit 可进入最终经验理想模型。
+- `profile_qualified_by_precision.fp16_f32=true` 与
+  `profile_qualified_by_precision.bf16_f32=true` 分别表示对应 fit 可用；聚合的
+  `profile_qualified=true` 只在二者都通过时成立。
 
 若第一项为 true、第二项为 false，结果仍应完整回传；auditor 会保留
-`quarantined` profile 和 warning，禁止模型用它预测，但 raw 数据可用于分析下一版
-模型。不得调宽阈值后原地篡改同一 run ID。
+对应的 `quarantined` profile 和 warning，禁止模型用它预测，但另一种精度是否可用
+仍由自己的门禁决定，raw 数据也可用于分析下一版模型。不得调宽阈值后原地篡改
+同一 run ID。
 
 也可手工重放：
 
@@ -640,7 +646,8 @@ git rev-parse HEAD
 ```
 
 回传 `RESULT_BRANCH`、结果 commit、`suite_audit.json` 的 `pass/warnings`、
-`pipeline_profile.json` 的 `qualification` 和 `profile_qualified`。结果分支拉回分析
+`pipeline_profiles.json` 中两份 profile 的 `qualification`，以及
+`profile_qualified_by_precision` 和聚合 `profile_qualified`。结果分支拉回分析
 checkout 后，模型导入命令为：
 
 ```bash
@@ -654,8 +661,8 @@ python3 -m scripts.sm110_gemm_model.cli import-causal-profile \
 ```
 
 导入器会再次运行 campaign independent auditor，并逐条验证 profile gate、validation
-算术和 repository-relative artifact path；不能手工把 `pipeline_profile.json` 复制到
-默认 profile 文件。
+算术和 repository-relative artifact path；不能手工把 `pipeline_profiles.json`
+中的拟合数值复制到默认 profile 文件。
 
 ### 12.6 恢复默认平台设置
 

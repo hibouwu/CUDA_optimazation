@@ -146,10 +146,14 @@ evidence for both time intervals. The resulting `campaign_sources` field makes
 the split explicit. Capacity and observation IDs belong to the composite ID,
 while `source_id`, `run_id`, and artifact paths retain the actual producer.
 
-The exact FP16 tc5a causal profile is a separate 91-case, 910-trial campaign.
-Its manifest, CSV rows, CUDA `mma_f16` instruction, and imported
-`precision_ids=["fp16_f32"]` contract agree. It cannot close BF16 merely because
-FP16 and BF16 have the same byte width. After
+The exact tc5a causal suite contains two independent 91-case campaigns: one
+for FP16 and one for BF16, for 182 cases, 1,820 external trials, and eight NCU
+reports in total. The same binary contains separate FP16 and BF16 template
+instantiations. The manifest, tensor-map data type, CSV rows, instruction
+descriptor immediate in function-scoped SASS, and imported singleton
+`precision_ids` agree for each profile. The two profiles are fitted and gated
+separately; equal 16-bit payload width is never used as proof of equal timing.
+After
 the returned result tree passes both campaign and platform auditors, import it
 without copying fitted timings by hand:
 

@@ -9,10 +9,11 @@ usage:
   microbench/sm110_causal_suite.sh status SUITE_ID
   microbench/sm110_causal_suite.sh finish SUITE_ID
 
-Collects the exact tc5a_m128n256k64_stage4 causal timing profile: 91 cases,
-910 external trials, four predeclared NCU reports, raw globaltimer events,
-component fits, full-worker calibration, and holdout validation. Run it only
-after the exact-resource supplement has released the shared GPU lock.
+Collects independent FP16 and BF16 timing profiles for the exact
+tc5a_m128n256k64_stage4 schedule: 182 cases (91 per precision), 1,820 external
+trials, eight predeclared NCU reports (four per precision), raw globaltimer
+events, component fits, full-worker calibration, and holdout validation. Run it
+only after the exact-resource supplement has released the shared GPU lock.
 EOF
 }
 
@@ -180,13 +181,18 @@ dependencies = [
     "microbench/sm110_gemm_causal_campaign/audit_causal_suite.py",
 ]
 payload = {
-    "schema_version": 1,
-    "kind": "exact_tc5a_causal_pipeline_suite",
+    "schema_version": 2,
+    "kind": "exact_tc5a_fp16_bf16_causal_pipeline_suite",
     "suite_id": sys.argv[2],
     "causal_run_id": sys.argv[3],
     "expected_branch": sys.argv[4],
     "expected_commit": sys.argv[5],
     "ncu_required": True,
+    "precision_ids": ["fp16_f32", "bf16_f32"],
+    "case_count": 182,
+    "trial_count": 1820,
+    "ncu_case_count": 8,
+    "profile_count": 2,
     "platform_dependencies": {
         path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
         for path in dependencies
@@ -318,7 +324,7 @@ PY
       "$suite_dir/suite_audit.json" \
       "$causal_dir/artifact_sha256.txt" \
       "$causal_dir/summary.json" \
-      "$causal_dir/pipeline_profile.json" \
+      "$causal_dir/pipeline_profiles.json" \
       > "$suite_dir/artifact_sha256.txt"
     printf '%s\n' '=== overcurrent delta ==='
     diff -u "$suite_dir/oc_before.tsv" "$suite_dir/oc_after.tsv" || true

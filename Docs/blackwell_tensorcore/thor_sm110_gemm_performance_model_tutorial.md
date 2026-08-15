@@ -2568,32 +2568,49 @@ E_j=\max(L_j,E_{j-1})+\lambda_E.
 执行的递推。整卡共享 L2/HBM 的时间仍在 resource 层按总流量计算；最终只取二者
 最大值，不把两个已经重叠的完整 makespan 相加。
 
-## 5.9 冻结的 91-case 因果实验
+## 5.9 冻结的 FP16/BF16 双精度因果实验
 
-定义 `precision_ids` 为一份因果 profile 直接验证的精度合同集合，无单位。本轮
-集合严格等于 `{fp16_f32}`：CUDA source 分配 FP16 输入并调用 `ptx::mma_f16`，CSV
-每条记录也输出 `precision_id=fp16_f32`。这一定义不包含 BF16。FP16 与 BF16 都是
-2 B/element，只足以让二者在完全相同的 transport 合同下共享“搬了多少 Byte”的
-容量证据；它不能证明 BF16 MMA latency、TMA/MMA overlap 或 epilogue drain 与 FP16
-相同。模型因此要求 workload 的 `precision_id` 同时命中 profile 的
-`precision_ids`，否则因果层 fail closed。
+定义 `precision_ids` 为一份因果 profile 直接验证的精度合同集合，无单位。本轮不把
+FP16 与 BF16 放进同一个集合，而是输出两个 singleton profile：
+`{fp16_f32}` 与 `{bf16_f32}`。定义 \(N_P=2\) 为本轮独立测量的精度数，单位
+precision。两种精度虽然都是 2 B/element，但这只足以在完全相同的 transport
+合同下共享“搬了多少 Byte”的容量证据；不能证明 MMA latency、TMA/MMA overlap 或
+epilogue drain 相同。模型因此要求 workload 的 `precision_id` 命中对应 singleton
+profile，否则因果层 fail closed。
+
+独立性不是只靠字符串区分：FP16 profile 绑定 tensor-map 类型 `float16` 和
+instruction descriptor `0x08400010`；BF16 profile 绑定 tensor-map 类型
+`bfloat16` 和 instruction descriptor `0x08400490`。这里定义 instruction
+descriptor 为传给 `tcgen05.mma`、决定 MMA 数据类型和 shape 的 32-bit 无符号描述
+字，单位为 bit-pattern。CSV 保存其十进制值，函数级 SASS 必须在对应模板实例中
+出现同一 immediate，且不得出现另一精度的 immediate。
 
 定义 \(F_{\mathrm{causal}}=13\) 为冻结的实验 family 数，单位 family；定义
 \(N_{K,\mathrm{sweep}}=7\) 为 K-tile sweep 点数，单位 point/family，对应
-\(N_K\in\{1,2,4,8,16,32,64\}\)。因此定义 \(N_{\mathrm{case}}\) 为正式 case
-数，单位 case：
+\(N_K\in\{1,2,4,8,16,32,64\}\)。因此定义 \(N_{\mathrm{case},P}\) 为每种精度的正式 case
+数，单位 case/precision：
 
 \[
-N_{\mathrm{case}}
+N_{\mathrm{case},P}
 =F_{\mathrm{causal}}N_{K,\mathrm{sweep}}
 =13\times7
-=91\ \mathrm{case}.
+=91\ \mathrm{case/precision}.
+\]
+
+定义 \(N_{\mathrm{case,total}}\) 为本轮正式 case 总数，单位 case；因此：
+
+\[
+N_{\mathrm{case,total}}
+=N_PN_{\mathrm{case},P}
+=2\times91
+=182\ \mathrm{case}.
 \]
 
 13 个 family 包含 stage 1/2/4 的 TMA-only、stage 4 的 MMA-only、stage 1/2/4
 的 joint overlap，以及 output-task 数为 1/2/4/8/16/32 的六个 full worker
-family。每个 case 有 10 个独立外部 trial，因此 raw 计时记录为
-\(91\times10=910\) 条；另有四个预声明的 NCU attribution case。
+family。定义 \(N_T=10\) 为每个 case 的独立外部 trial 数，单位 trial/case，
+因此 raw 计时记录总数为 \(182\times10=1{,}820\) 条；每种精度另有四个预声明的
+NCU attribution case，总计八个。
 
 校准集使用 \(N_K=1,2,4,8,16,32\)，并把 \(N_K=64\) 作为 K 方向留出集；full
 worker 的 output-task 校准点为 1/2/4/8/16，32 是 task 方向留出点。这样才覆盖
@@ -2613,17 +2630,20 @@ latency。多 task 的全部 case 只用于验证上述双 accumulator 与串行
 profile 才成为 `closure_qualified`；否则 raw 实验仍保留，但 profile 标为
 `quarantined`，模型禁止使用。
 
-SASS 门禁不是在整个 binary 中搜索一次 mnemonic。独立 auditor 分别定位 stage
-1/2/4 三个模板 kernel 的函数块，要求每个函数块都有 `UTMALDG.2D`、`UTCHMMA`、
-`UTCBAR` 和 `LDTM.`，且都不能出现 `UTMASTG`；每个正式 result 保存同一份函数级
-计数并由保留的 SASS 重新计算。这样 stage-4 profile 不能借另外一个模板函数中的
-指令“通过”归因。
+SASS 门禁不是在整个 binary 中搜索一次 mnemonic。独立 auditor 分别定位
+FP16/BF16 × stage 1/2/4 的六个模板 kernel 函数块，要求每个函数块都有
+`UTMALDG.2D`、`UTCHMMA`、`UTCBAR` 和 `LDTM.`，且都不能出现 `UTMASTG`；还要求
+对应 descriptor immediate 至少出现一次、另一精度的 immediate 一次也不能出现。
+每个正式 result 保存同一份函数级计数并由保留的 SASS 重新计算。这样某个精度或
+stage 的 profile 不能借另一个模板函数中的指令“通过”归因。
 
 ## 5.10 现在还缺什么 Thor 证据
 
-CUDA source、91-case manifest、bounded/resumable runner、独立 auditor、persistent
-worker 求解器和本地 `sm_110a` SASS 检查都已完成；**Thor 计时尚未回传**，所以
-当前 `pipeline_profiles.json` 仍为空，因果门禁仍是 0。
+CUDA source、双精度 182-case manifest、bounded/resumable runner、独立 auditor、
+persistent-worker 求解器和本地 `sm_110a` SASS 检查都已完成；**Thor 计时尚未
+回传**，所以当前默认 `pipeline_profiles.json` 仍为空，因果门禁仍是 0。本地静态
+编译只证明两个 tensor-map/descriptor 路径都能生成目标 cubin 与六个函数块，不能
+提供 λ 或 ι 的 Thor runtime 数值。
 
 这里必须特别排除一个看似相近的旧实验：
 [`microbench/11_pipeline_overlap`](../../microbench/11_pipeline_overlap/README.md)
@@ -2742,7 +2762,7 @@ throughput 唯一反推出单请求 latency；不同的 latency、initiation int
   [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu)
 - 精确 tc5a causal CUDA source：
   [`tc5a_pipeline_dag.cu`](../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu)
-- 91-case manifest、runner 与独立 auditor：
+- 双精度 182-case（每种精度 91 case）manifest、runner 与独立 auditor：
   [`contract_manifest.json`](../../microbench/sm110_gemm_causal_campaign/contract_manifest.json)、
   [`run_causal_campaign.py`](../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py)、
   [`audit_campaign.py`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py)
@@ -3048,7 +3068,8 @@ N_{\mathrm{DAG}},N_{\mathrm{e2e}})
 
 旧逻辑只检查 implementation + numeric，得到 4/12；新门禁把 schedule-specific
 resource contract 和 causal profile 门禁加入后仍诚实地得到 0/12。这是完备性标准
-变严格，不是已有 Thor 数值被删除。待 54-case resource 和 91-case causal 结果回传
+变严格，不是已有 Thor 数值被删除。待 54-case resource 和双精度 182-case causal
+结果回传
 后必须重新生成矩阵；不能提前把计划中的 profile 计入闭环数。
 
 ## 6.9 三类失败分别怎样处理
@@ -4261,9 +4282,10 @@ auditor 和本地静态 preflight 同一个 commit 推送后再运行。当前�
 - TMA-only、MMA-only、TMA+MMA、再加 TMEM readback/store；
 - 首完成、总完成、steady slope 分开记录；
 - full persistent worker 再扫 1/2/4/8/16 个 output task，32 留出；
-- 这只关闭 FP16 的精确 tc5a anchor；BF16 即使能共享相同字节数的 transport
-  capacity，也必须用 BF16 MMA 的对应 profile 或独立等价性证明，其他精度同理；
-  不能跨精度或跨 schedule 复用 tc5a 时序。
+- suite 分别生成 FP16、BF16 的精确 tc5a anchor；两种精度各自使用自己的
+  tensor-map 类型、MMA descriptor、91-case raw timing 和 singleton profile，不能
+  因字节数相同而互相复用；其他精度仍需对应 profile 或独立等价性证明，也不能跨
+  schedule 复用 tc5a 时序。
 
 ### B. 精确 resource-envelope 必需组
 
@@ -4406,19 +4428,21 @@ GEMM/reference/denominator 仍保持未完成；A 组虽已有下一节所述的
 ## 9.15 精确 causal campaign 已经冻结了什么
 
 第 9.12 节 A 组的 tc5a anchor 已冻结为
-[`sm110_gemm_causal_campaign`](../../microbench/sm110_gemm_causal_campaign)。其 91 个
-case、910 个外部 trial、四个 NCU case、校准/留出划分和 10% 误差门槛已在第 5.9
-节逐一定义。这里补充证据闭环合同：
+[`sm110_gemm_causal_campaign`](../../microbench/sm110_gemm_causal_campaign)。其
+FP16/BF16 每种精度 91 个 case、910 个外部 trial、四个 NCU case，总计 182 case、
+1,820 trial、八个 NCU case；校准/留出划分和 10% 误差门槛已在第 5.9 节逐一定义。
+这里补充证据闭环合同：
 
 - CUDA binary 自身拒绝非 SM110 GPU，formal runner 不能使用 override；
 - `%globaltimer` 保存绝对 start、首/末 TMA、首/末 MMA、首 epilogue、末 store 和
   kernel-exit 时刻，auditor 由 raw timestamp 重新计算所有 interval；
 - source、helper、manifest、compile command、binary hash、function-scoped SASS、
-  910 条 raw trial、四个 NCU report、环境快照和 SHA-256 清单全部保留；
-- manifest 的 `precision_ids=["fp16_f32"]`、源码中的 `ptx::mma_f16` 和每条 CSV 的
-  `precision_id=fp16_f32` 三处相互校验；该 profile 不对 BF16 作证；
-- runner 与 auditor 分别重建线性 fit 和 full-worker prediction，profile JSON 必须
-  字节级语义一致；
+  1,820 条 raw trial、八个 NCU report、环境快照和 SHA-256 清单全部保留；
+- manifest 的两个 precision contract、源码 tensor-map 类型和 MMA descriptor、每条
+  CSV 的 precision/type/descriptor、SASS 中的 descriptor immediate，以及两个
+  singleton profile 五层相互校验；FP16 与 BF16 不互相作证；
+- runner 与 auditor 按精度分别重建线性 fit 和 full-worker prediction，两个 profile
+  JSON 必须分别与独立重建结果语义一致；
 - resume 不假设 `nvcc` binary 字节可复现；它只复用重新核对 source、compile
   command、binary hash、函数级 SASS 与 CSV 合同后仍完整的 retained binary 和 case；
 - `PipelineProfile.validate()` 再检查 \(R^2\)、校准/留出误差、topology、validation
@@ -4587,7 +4611,7 @@ Thor 结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c`，用于查看本�
 | `hbm.read/write`、`l2.read/write` | [`memory_path_bandwidth.cu`](../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu) | [`component runner`](../../microbench/sm110_gemm_component_campaign/run_component_campaign.py) / [`auditor`](../../microbench/sm110_gemm_component_campaign/audit_campaign.py) | [component summary](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/summary.json) |
 | TMA serial/inflight4/tc5a L2-hit 与 DRAM | [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu) | 同上 component runner/auditor | [TMA SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tma.sass.txt) |
 | generic/FP6/block-scale/tc5a 的精确 row-stride TMA resource 合同 | [`tma_ab_contract_bandwidth.cu`](../../microbench/15_tma_ab_contract_bandwidth/tma_ab_contract_bandwidth.cu) | [`resource runner`](../../microbench/sm110_gemm_resource_campaign/run_resource_campaign.py) / [`campaign auditor`](../../microbench/sm110_gemm_resource_campaign/audit_campaign.py) / [`platform auditor`](../../microbench/sm110_gemm_resource_campaign/audit_resource_suite.py) / [`model importer`](../../scripts/sm110_gemm_model/resource_import.py) | **待 Thor 采集；当前只有 54/54 静态合同与 SM110 SASS，不提供 capacity 数值** |
-| FP16 `pipeline.tc5a_m128n256k64_stage4` 的 \(\lambda_J,\iota_J,\lambda_E\) 与 full-worker validation | [`tc5a_pipeline_dag.cu`](../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu) | [`causal runner`](../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py) / [`campaign auditor`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py) / [`platform auditor`](../../microbench/sm110_gemm_causal_campaign/audit_causal_suite.py) | **待 Thor 采集；当前只有绑定 `fp16_f32` 的 91-case 冻结合同、求解器、静态 SASS 与合成 auditor 回归，不提供 timing profile，也不覆盖 BF16** |
+| FP16/BF16 `pipeline.tc5a_m128n256k64_stage4` 各自的 \(\lambda_J,\iota_J,\lambda_E\) 与 full-worker validation | [`tc5a_pipeline_dag.cu`](../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu) | [`causal runner`](../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py) / [`campaign auditor`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py) / [`platform auditor`](../../microbench/sm110_gemm_causal_campaign/audit_causal_suite.py) | **待 Thor 采集；当前已有 FP16/BF16 各 91 case、合计 182 case 的独立冻结合同、求解器、六函数静态 SASS descriptor 归因与合成 1,820-trial auditor 回归，但不提供 Thor timing profile** |
 | `tmem.readback.*` | [`tmem_readback_bandwidth.cu`](../../microbench/12_tmem_readback_bandwidth/tmem_readback_bandwidth.cu) | 同上 component runner/auditor | [TMEM SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tmem.sass.txt) |
 | `tmem.scale_ingress` | [`tmem_scale_ingress_bandwidth.cu`](../../microbench/13_tmem_scale_ingress_bandwidth/tmem_scale_ingress_bandwidth.cu) | 同上 component runner/auditor | [scale SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/scale.sass.txt) |
 | NVFP4 requant epilogue diagnostics | [`requant_epilogue_benchmark.cu`](../../GEMMsm110/tests/requant_epilogue_benchmark.cu) | [`run_epilogue_probe.py`](../../microbench/sm110_gemm_component_campaign/run_epilogue_probe.py) | [epilogue SASS](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/epilogue.sass.txt) |

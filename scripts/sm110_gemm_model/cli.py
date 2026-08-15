@@ -92,7 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     causal_import_parser = sub.add_parser(
         "import-causal-profile",
         help=("independently audit a returned tc5a causal campaign and emit "
-              "a model pipeline profile"),
+              "independent FP16/BF16 model pipeline profiles"),
     )
     causal_import_parser.add_argument("--repo-root", type=Path, required=True)
     causal_import_parser.add_argument("--run-id", required=True)
@@ -231,6 +231,9 @@ def main() -> int:
             "output": str(args.output),
             "run_id": imported["run_id"],
             "qualification": imported["qualification"],
+            "profile_count": imported["profile_count"],
+            "profile_qualified_by_precision":
+                imported["profile_qualified_by_precision"],
             "profile_qualified": imported["profile_qualified"],
         }, indent=2, sort_keys=True))
         return 0
