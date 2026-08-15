@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,10 @@ from scripts.sm110_gemm_model.coverage import (
     common_resource_coverage,
     precision_coverage,
 )
+from scripts.sm110_gemm_model.precision_report import (
+    build_precision_evidence_analysis,
+    render_precision_evidence_markdown,
+)
 from scripts.sm110_gemm_model.tcgen05_descriptors import (
     DescriptorError,
     decode_fields,
@@ -52,8 +57,13 @@ from microbench.sm110_gemm_campaign.audit_campaign import audit as audit_compute
 ROOT = Path(__file__).resolve().parents[2]
 CAPACITY_PATH = Path(__file__).resolve().parent / "profiles" / "capacities.json"
 SCHEDULE_PATH = Path(__file__).resolve().parent / "examples" / "schedules.json"
+SUPPORT_MANIFEST_PATH = (
+    ROOT / "microbench/sm110_full_gemm_campaign/support_manifest.json"
+)
 DOCUMENT_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                  "thor_sm110_gemm_performance_bounds.md")
+TUTORIAL_PATH = (ROOT / "Docs/blackwell_tensorcore/"
+                 "thor_sm110_gemm_performance_model_tutorial.md")
 
 
 class DocumentContractTest(unittest.TestCase):
@@ -182,6 +192,226 @@ class DocumentContractTest(unittest.TestCase):
                 self.assertLessEqual(
                     definition_start, first_use,
                     f"{symbol} appears before its definition")
+
+
+class TutorialContractTest(unittest.TestCase):
+    def assert_defined_at_first_use(
+        self, text: str, definitions: dict[str, str]
+    ) -> None:
+        for symbol, definition in definitions.items():
+            with self.subTest(symbol=symbol):
+                first_use = text.find(symbol)
+                definition_start = text.find(definition)
+                self.assertGreaterEqual(first_use, 0, f"missing symbol {symbol}")
+                self.assertGreaterEqual(
+                    definition_start, 0, f"missing definition for {symbol}")
+                self.assertLessEqual(
+                    definition_start, first_use,
+                    f"{symbol} appears before its definition")
+
+    def test_lesson1_core_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 1 课：", 1)[1].split("# 第 2 课：", 1)[0]
+        definitions = {
+            r"\(A\)": r"- \(A\)：左输入矩阵",
+            r"\(B\)": r"- \(B\)：右输入矩阵",
+            r"\(C\)": r"- \(C\)：可选的原始输出矩阵",
+            r"\(D\)": r"- \(D\)：最终输出矩阵",
+            r"\(\alpha\)": r"- \(\alpha\)：乘积",
+            r"\(\beta\)": r"- \(\beta\)：原始输出",
+            r"\(M\)": r"- \(M\)：输出矩阵的行数",
+            r"\(N\)": r"- \(N\)：输出矩阵的列数",
+            r"\(K\)": r"- \(K\)：点积归约维度",
+            r"\(i\)": r"定义 \(i\) 为输出矩阵的行索引",
+            r"\(j\)": r"\(j\) 为输出矩阵的列索引",
+            r"\(k\)": r"\(k\) 为当前点积的",
+            r"\(W_{\mathrm{use}}\)":
+                r"\(W_{\mathrm{use}}\) 为用户可见的数学计算工作量",
+            r"\(W_{\mathrm{issued}}\)":
+                r"定义 \(W_{\mathrm{issued}}\) 为硬件实际发出的计算工作量",
+            r"\(T\)": r"定义 \(T\) 为一次设备端 GEMM 的执行时间",
+            r"\(P\)": r"定义 \(P\) 为 GEMM 性能",
+            r"\(T^{\mathrm{LB}}\)":
+                r"定义 \(T^{\mathrm{LB}}\) 为任何满足当前条件",
+            r"\(P_{\mathrm{ub}}\)":
+                r"定义 \(P_{\mathrm{ub}}\) 为条件性能上界",
+            r"\(s_{\mathrm{in}}": r"定义 \(s_{\mathrm{in}}",
+            r"\(Q_A\)": r"定义 \(Q_A\) 为矩阵 A 的最低输入字节数",
+            r"\(Q_B\)": r"定义 \(Q_B\) 为矩阵 B 的最低输入字节数",
+            r"\(Q_{\mathrm{read}}^{\mathrm{LB}}\)":
+                r"定义 \(Q_{\mathrm{read}}^{\mathrm{LB}}\)",
+            r"\(s_{\mathrm{out}}": r"定义 \(s_{\mathrm{out}}",
+            r"\(Q_{\mathrm{write}}^{\mathrm{LB}}\)":
+                r"定义 \(Q_{\mathrm{write}}^{\mathrm{LB}}\)",
+            r"\(Q_D": r"定义 \(Q_D",
+            r"\(f_{\mathrm{GPU}}": r"定义 \(f_{\mathrm{GPU}}",
+            r"\(c_{\mathrm{L2,read}}^{\mathrm{UB}}":
+                r"定义 \(c_{\mathrm{L2,read}}^{\mathrm{UB}}",
+            r"\(C_{\mathrm{L2,read}}^{\mathrm{UB}}\)":
+                r"定义 \(C_{\mathrm{L2,read}}^{\mathrm{UB}}\)",
+            r"\(T_{\mathrm{L2,read}}^{\mathrm{LB}}\)":
+                r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)",
+            r"\(c_{\mathrm{L2,write}}^{\mathrm{UB}}":
+                r"定义 \(c_{\mathrm{L2,write}}^{\mathrm{UB}}",
+            r"\(C_{\mathrm{L2,write}}^{\mathrm{UB}}\)":
+                r"定义 \(C_{\mathrm{L2,write}}^{\mathrm{UB}}\)",
+            r"\(T_{\mathrm{L2,write}}^{\mathrm{LB}}\)":
+                r"定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)",
+            r"\(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}":
+                r"定义 \(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}",
+            r"\(Q_{\mathrm{HBM,total}}^{\mathrm{LB}}\)":
+                r"定义 \(Q_{\mathrm{HBM,total}}^{\mathrm{LB}}\)",
+            r"\(C_{\mathrm{HBM,total}}^{\mathrm{UB}}":
+                r"定义 \(C_{\mathrm{HBM,total}}^{\mathrm{UB}}",
+            r"\(T_{\mathrm{cold}}^{\mathrm{LB}}\)":
+                r"定义 \(T_{\mathrm{cold}}^{\mathrm{LB}}\)",
+            r"\(P_{\mathrm{cold}}^{\mathrm{ub}}\)":
+                r"定义 \(P_{\mathrm{cold}}^{\mathrm{ub}}\)",
+            r"\(T_{\mathrm{hot}}^{\mathrm{LB}}\)":
+                r"\(T_{\mathrm{hot}}^{\mathrm{LB}}\) 为该场景的总时间下界",
+            r"\(P_{\mathrm{hot}}^{\mathrm{ub}}\)":
+                r"定义 \(P_{\mathrm{hot}}^{\mathrm{ub}}\)",
+            r"\(N_{\mathrm{SM}}": r"定义 \(N_{\mathrm{SM}}",
+            r"\(R\)": r"定义 \(R\) 为整卡 L2 read 服务率",
+            r"\(W\)": r"\(W\) 为整卡 L2 write 服务率",
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson2_core_symbols_are_defined_at_first_use(self) -> None:
+        document = TUTORIAL_PATH.read_text()
+        lesson = document.split("# 第 2 课：", 1)[1].split("# 第 3 课：", 1)[0]
+        definitions = {
+            r"\(\widehat T_{\mathrm{L2,shared}}\)":
+                r"- \(\widehat T_{\mathrm{L2,shared}}\)：",
+            r"\(\widehat T_{\mathrm{ingress,makespan}}\)":
+                r"- \(\widehat T_{\mathrm{ingress,makespan}}\)：",
+            r"\(\widehat T_{\mathrm{input}}\)":
+                "定义\n\\(\\widehat T_{\\mathrm{input}}\\)",
+            r"\(B_M": r"- \(B_M",
+            r"\(B_N": r"- \(B_N",
+            r"\(B_K": r"- \(B_K",
+            r"\(S=": r"- \(S=",
+            r"\(G_{\mathrm{CTA}}": r"- \(G_{\mathrm{CTA}}",
+            r"\(N_M\)": r"定义 \(N_M\) 为 M 方向 output tile 数",
+            r"\(N_N\)": r"定义 \(N_N\) 为 N 方向 output tile 数",
+            r"\(N_{\mathrm{task}}\)":
+                r"定义 \(N_{\mathrm{task}}\) 为完整 GEMM",
+            r"\(N_K\)": r"定义 \(N_K\) 为一个 output task",
+            r"\(q_{A,\mathrm{stage}}\)":
+                r"定义 \(q_{A,\mathrm{stage}}\)",
+            r"\(q_{B,\mathrm{stage}}\)":
+                r"定义 \(q_{B,\mathrm{stage}}\)",
+            r"\(q_{\mathrm{stage}}\)":
+                r"定义 \(q_{\mathrm{stage}}\)",
+            r"\(q_{\mathrm{task}}\)": r"定义 \(q_{\mathrm{task}}\)",
+            r"\(Q_{\mathrm{L2,issued}}\)":
+                r"定义 \(Q_{\mathrm{L2,issued}}\)",
+            r"\(\widehat C_{\mathrm{L2,read}}":
+                "定义\n\\(\\widehat C_{\\mathrm{L2,read}}",
+            r"\(\widehat C_{\mathrm{ingress,SM}}":
+                "定义\n\\(\\widehat C_{\\mathrm{ingress,SM}}",
+            r"\(\widehat t_{\mathrm{task,ingress}}\)":
+                r"定义 \(\widehat t_{\mathrm{task,ingress}}\)",
+            r"\(N_{\mathrm{service}}\)":
+                r"定义 \(N_{\mathrm{service}}\) 为能同时服务",
+            r"\(N_{\mathrm{wave}}\)":
+                r"定义 \(N_{\mathrm{wave}}\) 为服务全部",
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson3_symbols_are_defined_at_first_use(self) -> None:
+        text = TUTORIAL_PATH.read_text()
+        lesson = text.split(
+            "# 第 3 课：useful、minimum、unique 与 issued work", 1
+        )[1]
+        definitions = {
+            r"\(w\)": r"定义 \(w\)",
+            r"\(x\)": r"定义 \(x\)",
+            r"\(W_{\mathrm{use}}(w)\)":
+                r"定义 \(W_{\mathrm{use}}(w)\)",
+            r"\(W_{\mathrm{issued}}(x,w)\)":
+                r"定义 \(W_{\mathrm{issued}}(x,w)\)",
+            r"\(M_x\)": r"定义 \(M_x\)、\(N_x\)、\(K_x\)",
+            r"\(N_x\)": r"定义 \(M_x\)、\(N_x\)、\(K_x\)",
+            r"\(K_x\)": r"定义 \(M_x\)、\(N_x\)、\(K_x\)",
+            r"\(\eta_{\mathrm{shape}}(x,w)\)":
+                r"定义 \(\eta_{\mathrm{shape}}(x,w)\)",
+            r"\(Q_{\mathrm{input,min}}(w)\)":
+                r"定义 \(Q_{\mathrm{input,min}}(w)\)",
+            r"\(Q_{\mathrm{TMA,unique}}(x,w)\)":
+                r"定义 \(Q_{\mathrm{TMA,unique}}(x,w)\)",
+            r"\(Q_{\mathrm{TMA,issued}}(x,w)\)":
+                r"定义 \(Q_{\mathrm{TMA,issued}}(x,w)\)",
+            r"\(Q_{A,\mathrm{issued}}(x,w)\)":
+                r"定义 \(Q_{A,\mathrm{issued}}(x,w)\)",
+            r"\(Q_{B,\mathrm{issued}}(x,w)\)":
+                r"定义 \(Q_{B,\mathrm{issued}}(x,w)\)",
+            r"\(a_{\mathrm{request}}(x,w)\)":
+                "定义为无量纲比值\n\\(a_{\\mathrm{request}}(x,w)\\)",
+            r"\(Q_{\mathrm{HBM,read,emp}}(x,w)\)":
+                r"定义 \(Q_{\mathrm{HBM,read,emp}}(x,w)\)",
+            r"\(Q_{\mathrm{L2,read,emp}}(x,w)\)":
+                r"定义 \(Q_{\mathrm{L2,read,emp}}(x,w)\)",
+            r"\(Q_{\mathrm{transaction}}(x,w)\)":
+                r"定义 \(Q_{\mathrm{transaction}}(x,w)\)",
+        }
+        self.assert_defined_at_first_use(lesson, definitions)
+
+    def test_lesson3_hand_calculations_match_executable_model(self) -> None:
+        precision = precision_specs()["fp16_f32"]
+        schedule = Schedule(
+            "tc5a",
+            128,
+            256,
+            64,
+            4,
+            mma_n=256,
+            tail_policy="pad",
+            tmem_columns=256,
+            threads=192,
+        )
+        exact = account_work(
+            Workload("exact", 2048, 2048, 2048, "fp16_f32"),
+            schedule,
+            precision,
+        )
+        self.assertEqual(exact.task_count, 128)
+        self.assertEqual(exact.k_tiles, 32)
+        self.assertEqual(exact.useful_compute_work, exact.issued_compute_work)
+        self.assertEqual(exact.input_value_bytes_min, 16 * 1024**2)
+        self.assertEqual(exact.tma_unique_input_bytes, 16 * 1024**2)
+        self.assertEqual(exact.tma_input_bytes, 192 * 1024**2)
+
+        irregular = account_work(
+            Workload("irregular", 130, 260, 70, "fp16_f32"),
+            schedule,
+            precision,
+        )
+        self.assertEqual(irregular.task_count, 4)
+        self.assertEqual(irregular.k_tiles, 2)
+        self.assertEqual(irregular.useful_compute_work, 4_732_000)
+        self.assertEqual(irregular.issued_compute_work, 33_554_432)
+        self.assertAlmostEqual(
+            irregular.shape_efficiency, 0.14102458953857422
+        )
+        self.assertEqual(irregular.input_value_bytes_min, 54_600)
+        self.assertEqual(irregular.tma_unique_input_bytes, 196_608)
+        self.assertEqual(irregular.tma_input_bytes, 393_216)
+
+    def test_all_tutorial_local_links_resolve(self) -> None:
+        text = TUTORIAL_PATH.read_text()
+        targets = re.findall(r"\[[^\]]+\]\(([^)]+)\)", text)
+        local_targets = [
+            target.split("#", 1)[0]
+            for target in targets
+            if not target.startswith(("https://", "http://", "mailto:"))
+        ]
+        for target in local_targets:
+            with self.subTest(target=target):
+                self.assertTrue(
+                    (TUTORIAL_PATH.parent / target).resolve().exists(),
+                    f"broken tutorial link: {target}",
+                )
 
 
 class WorkAccountingTest(unittest.TestCase):
@@ -1316,6 +1546,22 @@ class ObservationTest(unittest.TestCase):
         self.assertFalse(rows["tf32_f32"].numeric_closure)
         self.assertIn("empirical_compute_rate", rows["tf32_f32"].missing)
         self.assertFalse(rows["nvfp4_f32"].same_precision_performance_denominator)
+        self.assertEqual(
+            rows["nvfp4_f32"].missing_full_gemm_shapes,
+            (1024, 2048, 4096),
+        )
+        self.assertIn(
+            "closure_qualified_full_gemm_shape_matrix",
+            rows["nvfp4_f32"].missing,
+        )
+        self.assertIn(
+            "full_gemm_numerical_validation",
+            rows["nvfp4_f32"].missing,
+        )
+        self.assertIn(
+            "same_precision_performance_denominator",
+            rows["e5m2_f32"].missing,
+        )
         self.assertFalse(rows["e4m3_f32"].numeric_closure)
         self.assertIn(
             "closure_qualified_compute_rate", rows["e4m3_f32"].missing
@@ -1324,6 +1570,38 @@ class ObservationTest(unittest.TestCase):
         self.assertFalse(common["tmem.readback"])
         campaign = campaign_measurement_coverage(capacities, observed)
         self.assertFalse(campaign["all_campaign_measurements_closed"])
+
+    def test_precision_report_keeps_implementation_and_numeric_gates_separate(self) -> None:
+        capacities = load_capacities(CAPACITY_PATH)
+        observed = summarize_observed_csvs(
+            [
+                ROOT / "results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv",
+                ROOT / "results/quant_gemm_sm110/sm110_quant_gemm_1024_sweep.csv",
+            ],
+            repo_root=ROOT,
+        )
+        analysis = build_precision_evidence_analysis(
+            capacities=capacities,
+            observations=observed,
+            support_manifest=json.loads(SUPPORT_MANIFEST_PATH.read_text()),
+            repo_root=ROOT,
+            metadata={"suite_id": "snapshot", "expected_commit": "none"},
+        )
+        self.assertEqual(analysis["precision_count"], 12)
+        self.assertEqual(analysis["implementation_ready_count"], 5)
+        self.assertFalse(analysis["all_precision_numeric_evidence_closed"])
+        self.assertFalse(analysis["all_precisions_end_to_end_closed"])
+        rows = {row["precision_id"]: row for row in analysis["precisions"]}
+        self.assertTrue(rows["fp16_f32"]["implementation_ready"])
+        self.assertFalse(rows["fp16_f32"]["numeric_closure"])
+        self.assertFalse(rows["e5m2_f32"]["implementation_ready"])
+        self.assertIn(
+            "same_precision_performance_denominator_impl",
+            rows["e5m2_f32"]["support_gaps"],
+        )
+        document = render_precision_evidence_markdown(analysis)
+        self.assertIn("all precisions end-to-end closed：`false`", document)
+        self.assertIn("### `e5m2_f32`", document)
 
 
 if __name__ == "__main__":

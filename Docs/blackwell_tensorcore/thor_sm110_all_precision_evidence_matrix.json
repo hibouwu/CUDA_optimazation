@@ -1,0 +1,865 @@
+{
+  "all_precision_implementations_ready": false,
+  "all_precision_numeric_evidence_closed": false,
+  "all_precisions_end_to_end_closed": false,
+  "end_to_end_closed_count": 4,
+  "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
+  "implementation_ready_count": 5,
+  "numeric_closed_count": 4,
+  "precision_count": 12,
+  "precisions": [
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [
+        "tc5a",
+        "tc5b"
+      ],
+      "end_to_end_closed": true,
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
+      "input_type": "fp16",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": true,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": true,
+        "closure_qualified_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": true,
+        "full_gemm_observed": true,
+        "full_gemm_shape_matrix_complete": true,
+        "missing": [],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [],
+        "numeric_closure": true,
+        "observed_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "precision_id": "fp16_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": true,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": "cublas_tc",
+      "numerical_reference_ready": true,
+      "output_type": "fp32",
+      "performance_denominator_backend": "cublas_tc",
+      "performance_denominator_ready": true,
+      "precision_id": "fp16_f32",
+      "source_paths": [
+        "GEMMsm110/src/main.cu",
+        "GEMMsm110/include/backends/tc5_persistent.cuh"
+      ],
+      "support_blockers": [],
+      "support_gaps": [],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [
+        "bf16_q0_wmma_m128n64k16"
+      ],
+      "end_to_end_closed": true,
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
+      "input_type": "bf16",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": true,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": true,
+        "closure_qualified_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": true,
+        "full_gemm_observed": true,
+        "full_gemm_shape_matrix_complete": true,
+        "missing": [],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [],
+        "numeric_closure": true,
+        "observed_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "precision_id": "bf16_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": true,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": "cublas_bf16_gemmex",
+      "numerical_reference_ready": true,
+      "output_type": "fp32",
+      "performance_denominator_backend": "cublas_bf16_gemmex",
+      "performance_denominator_ready": true,
+      "precision_id": "bf16_f32",
+      "source_paths": [
+        "GEMMquant_sm110/src/extended_gemm_bench.cu"
+      ],
+      "support_blockers": [],
+      "support_gaps": [],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [
+        "tf32_q0_wmma_m64n64k8"
+      ],
+      "end_to_end_closed": false,
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
+      "input_type": "tf32",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": true,
+        "closure_qualified_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": true,
+        "full_gemm_observed": true,
+        "full_gemm_shape_matrix_complete": true,
+        "missing": [
+          "strict_compute_upper"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "precision_id": "tf32_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": true,
+        "strict_compute_upper": false
+      },
+      "numerical_reference_backend": "cublas_tf32_gemmex",
+      "numerical_reference_ready": true,
+      "output_type": "fp32",
+      "performance_denominator_backend": "cublas_tf32_gemmex",
+      "performance_denominator_ready": true,
+      "precision_id": "tf32_f32",
+      "source_paths": [
+        "GEMMquant_sm110/src/extended_gemm_bench.cu"
+      ],
+      "support_blockers": [],
+      "support_gaps": [],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [
+        "fp8_q7_mma_m16n8k32_smem128x64"
+      ],
+      "end_to_end_closed": true,
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
+      "input_type": "fp8_e4m3",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": true,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": true,
+        "closure_qualified_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": true,
+        "full_gemm_observed": true,
+        "full_gemm_shape_matrix_complete": true,
+        "missing": [],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [],
+        "numeric_closure": true,
+        "observed_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "precision_id": "e4m3_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": true,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": "fp8_q8_cublaslt_matmul",
+      "numerical_reference_ready": true,
+      "output_type": "fp32",
+      "performance_denominator_backend": "fp8_q8_cublaslt_matmul",
+      "performance_denominator_ready": true,
+      "precision_id": "e4m3_f32",
+      "source_paths": [
+        "GEMMquant_sm110/src/quant_gemm_bench.cu"
+      ],
+      "support_blockers": [],
+      "support_gaps": [],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "missing",
+      "input_type": "fp8_e5m2",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "e5m2_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": null,
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": null,
+      "performance_denominator_ready": false,
+      "precision_id": "e5m2_f32",
+      "source_paths": [
+        "GEMMquant_sm110/src/extended_gemm_bench.cu"
+      ],
+      "support_blockers": [
+        "The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.",
+        "A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "closure_candidate_backend",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "missing",
+      "input_type": "fp6_e3m2_packed",
+      "missing_source_paths": [],
+      "native_mainloop": false,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "strict_compute_upper",
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "e3m2_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": false
+      },
+      "numerical_reference_backend": null,
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": null,
+      "performance_denominator_ready": false,
+      "precision_id": "e3m2_f32",
+      "source_paths": [],
+      "support_blockers": [
+        "No packed FP6 E3M2 full-GEMM implementation, unpack path, or same-contract reference."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "native_mainloop",
+        "closure_candidate_backend",
+        "implementation_source",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "missing",
+      "input_type": "fp6_e2m3_packed",
+      "missing_source_paths": [],
+      "native_mainloop": false,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "strict_compute_upper",
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "e2m3_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": false
+      },
+      "numerical_reference_backend": null,
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": null,
+      "performance_denominator_ready": false,
+      "precision_id": "e2m3_f32",
+      "source_paths": [],
+      "support_blockers": [
+        "No packed FP6 E2M3 full-GEMM implementation, unpack path, or same-contract reference."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "native_mainloop",
+        "closure_candidate_backend",
+        "implementation_source",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "missing",
+      "input_type": "fp4_e2m1_packed_unscaled",
+      "missing_source_paths": [],
+      "native_mainloop": false,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "strict_compute_upper",
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "e2m1_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": false
+      },
+      "numerical_reference_backend": null,
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": null,
+      "performance_denominator_ready": false,
+      "precision_id": "e2m1_f32",
+      "source_paths": [],
+      "support_blockers": [
+        "No raw unscaled E2M1 full-GEMM path; NVFP4/MXFP4 block-scaled results are different contracts."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "native_mainloop",
+        "closure_candidate_backend",
+        "implementation_source",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "partial",
+      "input_type": "mxfp4_e2m1_ue8m0_block32",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "strict_compute_upper",
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "mxfp4_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": false
+      },
+      "numerical_reference_backend": "CUTLASS host reference inside generated example",
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": "cublas_tc",
+      "performance_denominator_ready": false,
+      "precision_id": "mxfp4_f32",
+      "source_paths": [
+        "GEMMquant_sm110/build_and_run.sh",
+        "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"
+      ],
+      "support_blockers": [
+        "Current CUTLASS 72a path outputs BF16, not the model's FP32 output contract.",
+        "Generated external source is not captured in the historical result bundle.",
+        "Historical ratio denominator is FP16 cuBLAS, not MXFP4."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "closure_candidate_backend",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "fp32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "partial",
+      "input_type": "nvfp4_e2m1_ue4m3_block16",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "nvfp4_f32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": "CUTLASS host reference inside generated example",
+      "numerical_reference_ready": false,
+      "output_type": "fp32",
+      "performance_denominator_backend": "cublas_tc",
+      "performance_denominator_ready": false,
+      "precision_id": "nvfp4_f32",
+      "source_paths": [
+        "GEMMquant_sm110/build_and_run.sh",
+        "GEMMquant_sm110/scripts/run_quant_gemm_1024.py"
+      ],
+      "support_blockers": [
+        "Current CUTLASS 72b path outputs narrow NVFP4 rather than FP32.",
+        "Generated external source is not captured in the historical result bundle.",
+        "Historical ratio denominator is FP16 cuBLAS, not NVFP4."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "closure_candidate_backend",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "flop"
+    },
+    {
+      "accumulator_type": "signed_int32",
+      "candidate_backend_ids": [
+        "int8_q15_wmma_m128n64k16_4warp_reuse_a_bcol"
+      ],
+      "end_to_end_closed": true,
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
+      "input_type": "signed_int8",
+      "missing_source_paths": [],
+      "native_mainloop": true,
+      "numeric_closure": true,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": true,
+        "closure_qualified_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": true,
+        "full_gemm_observed": true,
+        "full_gemm_shape_matrix_complete": true,
+        "missing": [],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [],
+        "numeric_closure": true,
+        "observed_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "precision_id": "s8_s32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": true,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": "int8_q19_cublas_gemmex",
+      "numerical_reference_ready": true,
+      "output_type": "signed_int32",
+      "performance_denominator_backend": "int8_q19_cublas_gemmex",
+      "performance_denominator_ready": true,
+      "precision_id": "s8_s32",
+      "source_paths": [
+        "GEMMquant_sm110/src/quant_gemm_bench.cu"
+      ],
+      "support_blockers": [],
+      "support_gaps": [],
+      "work_unit": "operation"
+    },
+    {
+      "accumulator_type": "signed_int32",
+      "candidate_backend_ids": [],
+      "end_to_end_closed": false,
+      "implementation_ready": false,
+      "implementation_status": "missing",
+      "input_type": "unsigned_int8",
+      "missing_source_paths": [],
+      "native_mainloop": false,
+      "numeric_closure": false,
+      "numeric_evidence": {
+        "closure_qualified_compute_rate": true,
+        "closure_qualified_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "closure_qualified_full_gemm": false,
+        "closure_qualified_full_gemm_shapes": [],
+        "compute_shape_matrix_complete": true,
+        "empirical_compute_rate": true,
+        "full_gemm_numerical_validation_complete": false,
+        "full_gemm_observed": false,
+        "full_gemm_shape_matrix_complete": false,
+        "missing": [
+          "full_gemm_observed",
+          "closure_qualified_full_gemm_shape_matrix",
+          "full_gemm_numerical_validation",
+          "same_precision_performance_denominator"
+        ],
+        "missing_compute_shapes": [],
+        "missing_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "numeric_closure": false,
+        "observed_full_gemm_shapes": [],
+        "precision_id": "u8_s32",
+        "required_compute_shapes": [
+          "m128n64",
+          "m128n128",
+          "m128n256"
+        ],
+        "required_full_gemm_shapes": [
+          1024,
+          2048,
+          4096
+        ],
+        "same_precision_performance_denominator": false,
+        "strict_compute_upper": true
+      },
+      "numerical_reference_backend": null,
+      "numerical_reference_ready": false,
+      "output_type": "signed_int32",
+      "performance_denominator_backend": null,
+      "performance_denominator_ready": false,
+      "precision_id": "u8_s32",
+      "source_paths": [],
+      "support_blockers": [
+        "The official cuBLAS GemmEx support table allows CUBLAS_COMPUTE_32I with CUDA_R_8I inputs, not CUDA_R_8U inputs.",
+        "A same-contract U8 numerical reference and performance denominator must be implemented before closure collection."
+      ],
+      "support_gaps": [
+        "implementation_status",
+        "native_mainloop",
+        "closure_candidate_backend",
+        "implementation_source",
+        "same_contract_numerical_reference",
+        "same_precision_performance_denominator_impl"
+      ],
+      "work_unit": "operation"
+    }
+  ],
+  "schema_version": 1,
+  "suite_id": "thor-t5000-tma-ingress-supplement-maxn-20260814-c",
+  "support_manifest_schema_version": 1
+}

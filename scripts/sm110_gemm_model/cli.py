@@ -22,6 +22,10 @@ from .coverage import (
 )
 from .model import ModelError, audit_inputs, evaluate_manifest, precision_specs
 from .observations import audit_observations, summarize_observed_csvs
+from .precision_report import (
+    build_precision_evidence_analysis,
+    render_precision_evidence_markdown,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -82,6 +86,24 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument("--schedules", type=Path, required=True)
     report_parser.add_argument("--output-json", type=Path, required=True)
     report_parser.add_argument("--output-markdown", type=Path, required=True)
+    precision_report_parser = sub.add_parser(
+        "report-precision-closure",
+        help=("merge all-precision implementation readiness with audited "
+              "numeric evidence"),
+    )
+    precision_report_parser.add_argument("--repo-root", type=Path, required=True)
+    precision_report_parser.add_argument("--capacities", type=Path, required=True)
+    precision_report_parser.add_argument("--closure-import", type=Path, required=True)
+    precision_report_parser.add_argument(
+        "--support-manifest", type=Path, required=True)
+    precision_report_parser.add_argument("--output-json", type=Path, required=True)
+    precision_report_parser.add_argument(
+        "--output-markdown", type=Path, required=True)
+    precision_report_parser.add_argument(
+        "--require-all-closed",
+        action="store_true",
+        help="exit nonzero unless every declared precision is end-to-end closed",
+    )
     return parser
 
 
@@ -178,6 +200,47 @@ def main() -> int:
             "finding_count": len(analysis["findings"]),
         }, indent=2, sort_keys=True))
         return 0 if analysis["pass"] else 1
+    if args.command == "report-precision-closure":
+        try:
+            closure_capacities, observations = load_closure_inputs(
+                args.closure_import)
+            analysis = build_precision_evidence_analysis(
+                capacities=[
+                    *load_capacities(args.capacities),
+                    *closure_capacities,
+                ],
+                observations=observations,
+                support_manifest=read_json(args.support_manifest),
+                repo_root=args.repo_root.resolve(),
+                metadata=read_json(args.closure_import),
+            )
+            args.output_json.parent.mkdir(parents=True, exist_ok=True)
+            args.output_markdown.parent.mkdir(parents=True, exist_ok=True)
+            args.output_json.write_text(
+                json.dumps(analysis, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            args.output_markdown.write_text(
+                render_precision_evidence_markdown(analysis),
+                encoding="utf-8",
+            )
+        except (ModelError, OSError, ValueError, KeyError, TypeError) as error:
+            print(json.dumps({
+                "pass": False,
+                "error": str(error),
+            }, indent=2, sort_keys=True))
+            return 1
+        closed = bool(analysis["all_precisions_end_to_end_closed"])
+        print(json.dumps({
+            "pass": closed,
+            "all_precisions_end_to_end_closed": closed,
+            "implementation_ready_count": analysis["implementation_ready_count"],
+            "numeric_closed_count": analysis["numeric_closed_count"],
+            "end_to_end_closed_count": analysis["end_to_end_closed_count"],
+            "output_json": str(args.output_json),
+            "output_markdown": str(args.output_markdown),
+        }, indent=2, sort_keys=True))
+        return 1 if args.require_all_closed and not closed else 0
     if args.command == "audit":
         capacities = load_capacities(args.capacities)
         observations = []

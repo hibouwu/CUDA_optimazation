@@ -53,23 +53,37 @@ def audit() -> list[str]:
         for source in implementation.get("source_paths", []):
             if not (REPO_ROOT / source).is_file():
                 errors.append(f"{pid}: missing source path {source}")
+        reference = row.get("numerical_reference") or {}
+        reference_source = reference.get("source_path")
+        if reference_source and not (REPO_ROOT / reference_source).is_file():
+            errors.append(
+                f"{pid}: missing numerical reference source path "
+                f"{reference_source}")
 
         blockers = row.get("blockers")
         if not isinstance(blockers, list):
             errors.append(f"{pid}: blockers must be a list")
         if status == "ready_for_closure_campaign":
-            reference = row.get("numerical_reference") or {}
             denominator = row.get("performance_denominator") or {}
             if not row.get("native_mainloop"):
                 errors.append(f"{pid}: ready row lacks a native mainloop")
             if not implementation.get("backend_ids"):
                 errors.append(f"{pid}: ready row lacks an implementation")
+            if not implementation.get("closure_candidate_backend_ids"):
+                errors.append(
+                    f"{pid}: ready row lacks a closure candidate backend")
             if not reference.get("same_input_precision"):
                 errors.append(f"{pid}: ready row lacks same-precision correctness")
             if not reference.get("same_output_type"):
                 errors.append(f"{pid}: ready row lacks same-output correctness")
+            if not reference_source:
+                errors.append(
+                    f"{pid}: ready row lacks a numerical reference source")
             if not denominator.get("same_precision") or denominator.get("status") != "ready":
                 errors.append(f"{pid}: ready row lacks a same-precision denominator")
+            if not denominator.get("backend_id"):
+                errors.append(
+                    f"{pid}: ready row lacks a denominator backend")
             if blockers:
                 errors.append(f"{pid}: ready row must have no blockers")
         else:

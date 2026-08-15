@@ -146,3 +146,23 @@ component rate is not a physical rate upper.
 closure, all-precision numeric closure, and common-resource closure. A successful
 five-precision campaign therefore does not silently claim that every one of the
 twelve declared precision contracts has a proven compute upper and full GEMM.
+
+Merge numeric evidence with the full-GEMM implementation/reference support map:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
+  --repo-root . \
+  --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --closure-import "$MODEL_DIR/model_inputs.json" \
+  --support-manifest microbench/sm110_full_gemm_campaign/support_manifest.json \
+  --output-json Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.json \
+  --output-markdown Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.md \
+  --require-all-closed
+```
+
+Without `--require-all-closed`, the command writes an honest intermediate gap
+matrix and exits successfully.  With it, any missing strict upper, compute
+shape, full-GEMM shape, numerical validation, same-precision denominator, or
+implementation source makes the command fail.  Structural validity of
+`support_manifest.json` is not treated as evidence that its `partial` or
+`missing` rows are complete.

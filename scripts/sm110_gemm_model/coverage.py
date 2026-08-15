@@ -14,10 +14,20 @@ class PrecisionCoverage:
     strict_compute_upper: bool
     empirical_compute_rate: bool
     closure_qualified_compute_rate: bool
+    required_compute_shapes: tuple[str, ...]
+    closure_qualified_compute_shapes: tuple[str, ...]
+    compute_shape_matrix_complete: bool
     full_gemm_observed: bool
     closure_qualified_full_gemm: bool
+    required_full_gemm_shapes: tuple[int, ...]
+    observed_full_gemm_shapes: tuple[int, ...]
+    closure_qualified_full_gemm_shapes: tuple[int, ...]
+    full_gemm_shape_matrix_complete: bool
+    full_gemm_numerical_validation_complete: bool
     same_precision_performance_denominator: bool
     numeric_closure: bool
+    missing_compute_shapes: tuple[str, ...]
+    missing_full_gemm_shapes: tuple[int, ...]
     missing: tuple[str, ...]
 
     def to_dict(self) -> dict[str, object]:
@@ -87,6 +97,10 @@ def precision_coverage(
     observed = list(observed)
     rows: list[PrecisionCoverage] = []
     for precision_id, spec in precision_specs().items():
+        required_compute_shapes = tuple(
+            f"m{CAMPAIGN_COMPUTE_SELECTION['m']}n{n}"
+            for n in CAMPAIGN_COMPUTE_SELECTION["n_values"]
+        )
         strict = any(
             cap.resource == spec.compute_resource and cap.evidence_kind.is_rate_upper_bound
             for cap in capacities
@@ -102,14 +116,57 @@ def precision_coverage(
             and cap.is_closure_qualified
             for cap in capacities
         )
+        qualified_compute_shapes = tuple(
+            shape
+            for shape in required_compute_shapes
+            if any(
+                cap.resource == f"{spec.compute_resource}.{shape}"
+                and cap.evidence_kind.is_empirical_rate
+                and cap.is_closure_qualified
+                for cap in capacities
+            )
+        )
+        missing_compute_shapes = tuple(
+            shape for shape in required_compute_shapes
+            if shape not in qualified_compute_shapes
+        )
+        compute_shape_matrix_complete = not missing_compute_shapes
         observed_rows = [row for row in observed if row.precision_id == precision_id]
         full_gemm = bool(observed_rows)
-        qualified_full_gemm = any(
-            row.qualification == "closure_qualified" for row in observed_rows
+        qualified_rows = [
+            row for row in observed_rows
+            if row.qualification == "closure_qualified"
+        ]
+        qualified_full_gemm = bool(qualified_rows)
+        required_full_gemm_shapes = CAMPAIGN_FULL_SHAPES
+        observed_full_gemm_shapes = tuple(sorted({
+            row.n for row in observed_rows
+            if row.m == row.n == row.k
+        }))
+        qualified_full_gemm_shapes = tuple(sorted({
+            row.n for row in qualified_rows
+            if row.m == row.n == row.k
+        }))
+        missing_full_gemm_shapes = tuple(
+            n for n in required_full_gemm_shapes
+            if n not in qualified_full_gemm_shapes
         )
-        same_denominator = any(
-            row.performance_reference_relation == "same_precision"
-            for row in observed_rows
+        full_gemm_shape_matrix_complete = not missing_full_gemm_shapes
+        numerical_shapes = {
+            row.n for row in qualified_rows
+            if row.m == row.n == row.k
+            and row.matched_count == row.trial_count
+        }
+        full_gemm_numerical_validation_complete = all(
+            n in numerical_shapes for n in required_full_gemm_shapes
+        )
+        denominator_shapes = {
+            row.n for row in qualified_rows
+            if row.m == row.n == row.k
+            and row.performance_reference_relation == "same_precision"
+        }
+        same_denominator = all(
+            n in denominator_shapes for n in required_full_gemm_shapes
         )
         missing: list[str] = []
         if not strict:
@@ -118,11 +175,17 @@ def precision_coverage(
             missing.append("empirical_compute_rate")
         elif not qualified_empirical:
             missing.append("closure_qualified_compute_rate")
+        if not compute_shape_matrix_complete:
+            missing.append("closure_qualified_compute_shape_matrix")
         if not full_gemm:
             missing.append("full_gemm_observed")
         elif not qualified_full_gemm:
             missing.append("closure_qualified_full_gemm")
-        if full_gemm and not same_denominator:
+        if not full_gemm_shape_matrix_complete:
+            missing.append("closure_qualified_full_gemm_shape_matrix")
+        if not full_gemm_numerical_validation_complete:
+            missing.append("full_gemm_numerical_validation")
+        if not same_denominator:
             missing.append("same_precision_performance_denominator")
         rows.append(
             PrecisionCoverage(
@@ -130,10 +193,23 @@ def precision_coverage(
                 strict_compute_upper=strict,
                 empirical_compute_rate=empirical,
                 closure_qualified_compute_rate=qualified_empirical,
+                required_compute_shapes=required_compute_shapes,
+                closure_qualified_compute_shapes=qualified_compute_shapes,
+                compute_shape_matrix_complete=compute_shape_matrix_complete,
                 full_gemm_observed=full_gemm,
                 closure_qualified_full_gemm=qualified_full_gemm,
+                required_full_gemm_shapes=required_full_gemm_shapes,
+                observed_full_gemm_shapes=observed_full_gemm_shapes,
+                closure_qualified_full_gemm_shapes=
+                    qualified_full_gemm_shapes,
+                full_gemm_shape_matrix_complete=
+                    full_gemm_shape_matrix_complete,
+                full_gemm_numerical_validation_complete=
+                    full_gemm_numerical_validation_complete,
                 same_precision_performance_denominator=same_denominator,
                 numeric_closure=not missing,
+                missing_compute_shapes=missing_compute_shapes,
+                missing_full_gemm_shapes=missing_full_gemm_shapes,
                 missing=tuple(missing),
             )
         )

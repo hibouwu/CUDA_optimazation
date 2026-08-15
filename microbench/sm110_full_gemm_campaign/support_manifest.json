@@ -24,7 +24,7 @@
       },
       "numerical_reference": {
         "backend_id": "cublas_tc",
-        "source_path": "GEMMsm110/include/cublas_reference.cuh",
+        "source_path": "GEMMsm110/include/cublaslt_reference.cuh",
         "same_input_precision": true,
         "same_output_type": true
       },

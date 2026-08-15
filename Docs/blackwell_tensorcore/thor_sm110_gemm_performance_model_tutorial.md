@@ -37,7 +37,7 @@
 | --- | --- | --- | --- |
 | 最小模型 | 第 1 课：时间下界与性能上界 | 手算 Tensor/HBM/L2 条件上界 | 已完成 |
 | 硬件拓扑 | 第 2 课：shared 与 replicated resource | 正确区分共享 L2 和每 SM ingress | 已完成 |
-| 工作量 | 第 3 课：useful、minimum 与 issued work | 不把逻辑字节冒充物理 transaction | 待写 |
+| 工作量 | 第 3 课：useful、minimum 与 issued work | 不把逻辑字节冒充物理 transaction | 已完成 |
 | 调度 | 第 4 课：tile、task 和 wave | 从 CTA 的 M/N/K tile 推导 task waves | 待写 |
 | 流水线 | 第 5 课：TMA stages 与关键路径 | 建模 stage、inflight 和依赖链 | 待写 |
 | 三层模型 | 第 6 课：upper、envelope 与 observed | 不混淆物理上界与实测峰值 | 待写 |
@@ -87,13 +87,7 @@ P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}}.
 
 ## 1.2 冻结 GEMM 数学语义
 
-经典稠密 GEMM 定义为：
-
-\[
-D=\alpha AB+\beta C.
-\]
-
-参数第一次出现时定义如下：
+先定义本式使用的全部参数：
 
 - \(A\)：左输入矩阵；
 - \(B\)：右输入矩阵；
@@ -104,6 +98,12 @@ D=\alpha AB+\beta C.
 - \(M\)：输出矩阵的行数，单位 element；
 - \(N\)：输出矩阵的列数，单位 element；
 - \(K\)：点积归约维度的长度，单位 element。
+
+在这些定义下，经典稠密 GEMM 为：
+
+\[
+D=\alpha AB+\beta C.
+\]
 
 矩阵形状是：
 
@@ -125,7 +125,8 @@ C,D\in\mathbb R^{M\times N}.
 
 ## 1.3 有用计算工作量
 
-一个输出元素为：
+定义 \(i\) 为输出矩阵的行索引、\(j\) 为输出矩阵的列索引、\(k\) 为当前点积的
+归约索引；三者都是无单位整数索引。一个输出元素为：
 
 \[
 D_{ij}=\sum_{k=0}^{K-1}A_{ik}B_{kj}.
@@ -175,7 +176,7 @@ P
 \frac{W_{\mathrm{use}}}{T^{\mathrm{LB}}}.
 \]
 
-因此定义条件性能上界：
+因此定义 \(P_{\mathrm{ub}}\) 为条件性能上界，单位 FLOP/s：
 
 \[
 P_{\mathrm{ub}}
@@ -211,7 +212,11 @@ T_r^{\mathrm{LB}}
 
 ## 1.6 多资源条件下为什么取最大时间
 
-假设 Tensor Core、HBM、L2 read 和 L2 write 分别给出时间下界：
+定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\)、
+\(T_{\mathrm{HBM}}^{\mathrm{LB}}\)、
+\(T_{\mathrm{L2,read}}^{\mathrm{LB}}\) 和
+\(T_{\mathrm{L2,write}}^{\mathrm{LB}}\) 分别为 Tensor Core、HBM、共享 L2 read
+和共享 L2 write 给出的时间下界，单位均为 s：
 
 \[
 T_{\mathrm{tensor}}^{\mathrm{LB}},\quad
@@ -261,13 +266,13 @@ W_{\mathrm{use}}
 
 定义 \(s_{\mathrm{in}}=2\ \mathrm{B/element}\) 为一个 FP16 输入元素的存储字节数。
 
-矩阵 A 的最低字节数：
+定义 \(Q_A\) 为矩阵 A 的最低输入字节数，单位 B：
 
 \[
 Q_A=MKs_{\mathrm{in}}=2048^2\times2=8{,}388{,}608\ \mathrm{B}=8\ \mathrm{MiB}.
 \]
 
-矩阵 B 同样有：
+定义 \(Q_B\) 为矩阵 B 的最低输入字节数，单位 B；本例中同样有：
 
 \[
 Q_B=8\ \mathrm{MiB}.
@@ -317,7 +322,8 @@ GB/s 使用十进制定义：
 L2 read 条件容量。`/GPU` 表示所有 20 个 SM 合计共享该容量，不是每个 SM 各有
 1024 B/cycle。
 
-换算为每秒容量：
+定义 \(C_{\mathrm{L2,read}}^{\mathrm{UB}}\) 为同一共享 L2 read 条件容量换算后的
+每秒值，单位 B/s：
 
 \[
 C_{\mathrm{L2,read}}^{\mathrm{UB}}
@@ -332,7 +338,8 @@ C_{\mathrm{L2,read}}^{\mathrm{UB}}
 C_{\mathrm{L2,read}}^{\mathrm{UB}}=1612.8\ \mathrm{GB/s}.
 \]
 
-所以：
+定义 \(T_{\mathrm{L2,read}}^{\mathrm{LB}}\) 为共享 L2 read 给出的时间下界，
+单位 s：
 
 \[
 T_{\mathrm{L2,read}}^{\mathrm{LB}}
@@ -347,6 +354,9 @@ T_{\mathrm{L2,read}}^{\mathrm{LB}}
 定义 \(c_{\mathrm{L2,write}}^{\mathrm{UB}}=512\ \mathrm{B/cycle/GPU}\) 为整卡共享
 L2 write 条件容量。
 
+定义 \(C_{\mathrm{L2,write}}^{\mathrm{UB}}\) 为该条件容量换算后的每秒值，
+单位 B/s：
+
 \[
 C_{\mathrm{L2,write}}^{\mathrm{UB}}
 =512\times1.575\times10^9
@@ -354,7 +364,8 @@ C_{\mathrm{L2,write}}^{\mathrm{UB}}
 =806.4\ \mathrm{GB/s}.
 \]
 
-所以：
+定义 \(T_{\mathrm{L2,write}}^{\mathrm{LB}}\) 为共享 L2 write 给出的时间下界，
+单位 s：
 
 \[
 T_{\mathrm{L2,write}}^{\mathrm{LB}}
@@ -366,6 +377,9 @@ T_{\mathrm{L2,write}}^{\mathrm{LB}}
 
 定义 \(C_{\mathrm{tensor,FP16}}^{\mathrm{UB}}=258.5\ \mathrm{TFLOP/s}\) 为当前
 FP16 条件 compute 上界；1 TFLOP/s 等于 \(10^{12}\) FLOP/s。
+
+定义 \(T_{\mathrm{tensor}}^{\mathrm{LB}}\) 为该 Tensor Core 容量给出的时间下界，
+单位 s：
 
 \[
 T_{\mathrm{tensor}}^{\mathrm{LB}}
@@ -389,13 +403,17 @@ Q_{\mathrm{HBM,total}}^{\mathrm{LB}}
 LPDDR5X/HBM 总带宽条件上界。这里 read 和 write 合并占用同一个 `hbm.total` 容量，
 不能分别使用 read peak 和 write peak 后假设二者能够无限同时达到。
 
+定义 \(T_{\mathrm{HBM,total}}^{\mathrm{LB}}\) 为共享 HBM/LPDDR 总容量给出的时间
+下界，单位 s：
+
 \[
 T_{\mathrm{HBM,total}}^{\mathrm{LB}}
 =\frac{32\ \mathrm{MiB}}{273\ \mathrm{GB/s}}
 \approx122.910\ \mu\mathrm{s}.
 \]
 
-因此 cold-HBM 时间下界为：
+定义 \(T_{\mathrm{cold}}^{\mathrm{LB}}\) 为当前 cold-HBM 场景的总时间下界，
+单位 s；允许资源完美重叠时：
 
 \[
 T_{\mathrm{cold}}^{\mathrm{LB}}
@@ -403,7 +421,8 @@ T_{\mathrm{cold}}^{\mathrm{LB}}
 =122.910\ \mu\mathrm{s}.
 \]
 
-对应条件性能上界：
+定义 \(P_{\mathrm{cold}}^{\mathrm{ub}}\) 为当前 cold-HBM 场景的条件性能上界，
+单位 FLOP/s：
 
 \[
 P_{\mathrm{cold}}^{\mathrm{ub}}
@@ -426,7 +445,8 @@ P_{\mathrm{cold}}^{\mathrm{ub}}=139.776\ \mathrm{TFLOP/s}.
 
 ### 1.7.7 hot-L2 条件上界
 
-hot-L2 场景不要求输入再次从 HBM 读取，因此本课的最低时间为：
+hot-L2 场景不要求输入再次从 HBM 读取。定义
+\(T_{\mathrm{hot}}^{\mathrm{LB}}\) 为该场景的总时间下界，单位 s：
 
 \[
 T_{\mathrm{hot}}^{\mathrm{LB}}
@@ -434,7 +454,8 @@ T_{\mathrm{hot}}^{\mathrm{LB}}
 =66.460\ \mu\mathrm{s}.
 \]
 
-对应：
+定义 \(P_{\mathrm{hot}}^{\mathrm{ub}}\) 为当前 hot-L2 场景的条件性能上界，
+单位 FLOP/s：
 
 \[
 P_{\mathrm{hot}}^{\mathrm{ub}}=258.5\ \mathrm{TFLOP/s}.
@@ -447,7 +468,8 @@ P_{\mathrm{hot}}^{\mathrm{ub}}=258.5\ \mathrm{TFLOP/s}.
 
 定义 \(N_{\mathrm{SM}}=20\ \mathrm{SM/GPU}\) 为 Thor 可用 SM 数量。
 
-错误模型把 `1024 B/cycle/GPU` 误读成 `1024 B/cycle/SM`：
+定义 \(C_{\mathrm{wrong}}\) 为把 `1024 B/cycle/GPU` 误读成
+`1024 B/cycle/SM` 后算出的错误整卡容量，单位 B/s：
 
 \[
 C_{\mathrm{wrong}}
@@ -458,7 +480,7 @@ C_{\mathrm{wrong}}
 =32.256\ \mathrm{TB/s}.
 \]
 
-它会得到错误时间：
+定义 \(T_{\mathrm{wrong}}\) 为由该错误容量算出的 L2 read 时间，单位 s：
 
 \[
 T_{\mathrm{wrong}}
@@ -506,7 +528,8 @@ T_{\mathrm{L2,write}}^{\mathrm{LB}}
 
 ## 1.10 read 与 write 是否需要联合 L2 约束
 
-当前有两条已知方向容量：
+定义 \(R\) 为整卡 L2 read 服务率、\(W\) 为整卡 L2 write 服务率，单位均为
+B/cycle/GPU。当前有两条已知方向容量：
 
 \[
 R\le1024\ \mathrm{B/cycle/GPU},
@@ -515,9 +538,6 @@ R\le1024\ \mathrm{B/cycle/GPU},
 \[
 W\le512\ \mathrm{B/cycle/GPU},
 \]
-
-其中 \(R\) 是整卡 L2 read 服务率，单位 B/cycle/GPU；\(W\) 是整卡 L2 write
-服务率，单位 B/cycle/GPU。
 
 这两条事实足以分别建立 read 和 write 上界，但不足以自动证明：
 
@@ -691,12 +711,14 @@ flowchart LR
 
 因此模型至少需要两种时间：
 
-- \(\widehat T_{\mathrm{L2,shared}}\)：整卡全部 issued L2 read traffic 的经验时间；
+- \(\widehat T_{\mathrm{L2,shared}}\)：整卡全部 issued L2 read traffic 的经验时间，
+  单位 s；
 - \(\widehat T_{\mathrm{ingress,makespan}}\)：有限数量独立 SM 出口服务全部 CTA task
-  的经验 makespan。
+  的经验 makespan，单位 s。
 
 两条路径串接不等于简单把两个总时间相加。当前基础经验包络允许不同 task 的 L2
-服务和 per-SM ingress 流水重叠，因此输入路径经验时间取：
+服务和 per-SM ingress 流水重叠。定义
+\(\widehat T_{\mathrm{input}}\) 为整条输入路径的经验 makespan，单位 s，因此取：
 
 \[
 \widehat T_{\mathrm{input}}
@@ -738,6 +760,8 @@ schedule 合同；该并发效果已经包含在匹配的 microbenchmark rate �
 
 ## 2.4 从 tile 推导 task 数
 
+定义符号 \(\lceil z\rceil\) 为不小于实数 \(z\) 的最小整数，即向上取整。
+
 定义 \(N_M\) 为 M 方向 output tile 数，单位 tile：
 
 \[
@@ -753,8 +777,6 @@ N_N=\left\lceil\frac{N}{B_N}\right\rceil
 =\left\lceil\frac{2048}{256}\right\rceil
 =8.
 \]
-
-符号 \(\lceil x\rceil\) 表示不小于 \(x\) 的最小整数，即向上取整。
 
 定义 \(N_{\mathrm{task}}\) 为完整 GEMM 的 output-tile CTA task 数，单位 task：
 
@@ -903,6 +925,8 @@ Q_{\mathrm{L2,issued}}
 
 ## 2.9 从独立 SM 数推导 wave makespan
 
+定义符号 \(\lfloor z\rfloor\) 为不大于实数 \(z\) 的最大整数，即向下取整。
+
 定义 \(N_{\mathrm{service}}\) 为能同时服务当前 CTA-group task 的独立服务单元数，
 单位 group/GPU：
 
@@ -990,7 +1014,8 @@ aggregate `20 × rate` 丢失离散调度信息。
 
 ### 错误一：把 per-SM rate 当作整卡唯一出口
 
-错误公式：
+定义 \(\widehat T_{\mathrm{wrong,serial}}\) 为错误地把 per-SM rate 当作整卡唯一
+串行出口后得到的时间，单位 s：
 
 \[
 \widehat T_{\mathrm{wrong,serial}}
@@ -1003,7 +1028,8 @@ aggregate `20 × rate` 丢失离散调度信息。
 
 ### 错误二：把共享 L2 rate 乘 SM 数
 
-错误公式：
+定义 \(\widehat C_{\mathrm{wrong,L2}}\) 为错误地把共享 L2 rate 复制到每个 SM 后
+得到的容量，单位 B/s/GPU：
 
 \[
 \widehat C_{\mathrm{wrong,L2}}
@@ -1014,7 +1040,8 @@ aggregate `20 × rate` 丢失离散调度信息。
 
 ### 错误三：把 stage 和 inflight 再乘进实测 rate
 
-错误公式：
+定义 \(\widehat C_{\mathrm{wrong,ingress}}\) 为把 stage 数和八条 request 重复乘进
+已实测 ingress rate 后得到的错误容量，单位 B/s/SM：
 
 \[
 \widehat C_{\mathrm{wrong,ingress}}
@@ -1280,3 +1307,514 @@ task-wave 模型复制独立服务单元；看到 `diagnostic` 就不能让它�
   [`tma.sass.txt`](https://github.com/hibouwu/CUDA_optimazation/blob/ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c/results/sm110_gemm_component_campaign/thor-t5000-tma-ingress-supplement-maxn-20260814-c-components/build/tma.sass.txt)
 - 本轮代码、结果 commit、环境和全部 artifact hash：
   [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)
+
+---
+
+# 第 3 课：useful、minimum、unique 与 issued work
+
+## 3.1 本课问题
+
+同一个 FP16、\(M=N=K=2048\) 的 GEMM，在前两课中同时出现了三个看起来互相
+矛盾的输入流量：
+
+- 16 MiB minimum input；
+- 16 MiB cold-entry unique input；
+- 192 MiB schedule-issued L2/TMA input。
+
+本课回答：这三个数字为什么都正确，它们分别应该放在哪个资源边界，以及为什么
+把其中一个数字放错位置会让上界失真。
+
+## 3.2 先区分数学问题和执行方案
+
+定义 \(w\) 为冻结的 workload 描述，无单位。它包含矩阵形状、输入/累加/输出
+精度、layout、\(\alpha\)、\(\beta\)、epilogue 和初始 residency。
+
+定义 \(x\) 为一个合法 schedule 描述，无单位。它包含 CTA tile、MMA shape、
+K tile、pipeline stage、CTA group、tail policy、输入 transport layout 和资源占用。
+
+第一性原理上的区别是：
+
+- workload 决定用户要求计算什么；
+- schedule 决定硬件实际发出多少工作来完成它。
+
+因此，任何工作量计数都要先问：它只由 \(w\) 决定，还是同时由 \(x\) 和 \(w\)
+决定？
+
+## 3.3 useful compute 与 issued compute
+
+定义 \(W_{\mathrm{use}}(w)\) 为 workload 要求的有用计算量，单位对浮点 GEMM 为
+FLOP，对整数 GEMM 为 OP。经典稠密 GEMM 有：
+
+\[
+W_{\mathrm{use}}(w)=2MNK.
+\]
+
+定义 \(W_{\mathrm{issued}}(x,w)\) 为 schedule 实际发给计算路径的工作量，单位
+与 \(W_{\mathrm{use}}(w)\) 相同。
+
+定义 \(M_x\)、\(N_x\)、\(K_x\) 分别为 schedule 经 tail policy 处理后实际覆盖的
+M、N、K 维元素数，单位 element。对于 `tail_policy=pad`：
+
+\[
+M_x=N_MB_M,
+\qquad
+N_x=N_NB_N,
+\qquad
+K_x=N_KB_K.
+\]
+
+这里 \(N_M\)、\(N_N\)、\(N_K\) 和 \(B_M\)、\(B_N\)、\(B_K\) 已在第 2 课
+定义。没有 split-K reduction 时：
+
+\[
+W_{\mathrm{issued}}(x,w)=2M_xN_xK_x.
+\]
+
+定义 \(\eta_{\mathrm{shape}}(x,w)\) 为 shape efficiency，无量纲：
+
+\[
+\eta_{\mathrm{shape}}(x,w)
+=\frac{W_{\mathrm{use}}(w)}{W_{\mathrm{issued}}(x,w)}.
+\]
+
+必须满足：
+
+\[
+0<\eta_{\mathrm{shape}}(x,w)\le1.
+\]
+
+严格条件上界面向所有可能的合法 GEMM，使用不可绕过的
+\(W_{\mathrm{use}}(w)\)。具体 schedule 的经验时间必须使用
+\(W_{\mathrm{issued}}(x,w)\)，否则 padding 的额外 MMA 会凭空消失。
+
+当前 \(2048^3\) 与 tc5a tile 完全整除，所以：
+
+\[
+M_x=N_x=K_x=2048,
+\]
+
+\[
+W_{\mathrm{issued}}(x,w)=W_{\mathrm{use}}(w),
+\]
+
+\[
+\eta_{\mathrm{shape}}(x,w)=1.
+\]
+
+这只是当前 shape 的性质，不能推广成所有 GEMM 都没有 padding work。
+
+## 3.4 minimum input bytes
+
+定义 \(Q_{\mathrm{input,min}}(w)\) 为任何正确实现至少需要解释的 A/B 输入数据
+字节并集，单位 B。对于没有 block scale 的同类型 A/B：
+
+\[
+Q_{\mathrm{input,min}}(w)
+=(MK+KN)s_{\mathrm{in}}.
+\]
+
+FP16 \(2048^3\) 中：
+
+\[
+Q_{\mathrm{input,min}}(w)
+=(2048^2+2048^2)\times2
+=16\ \mathrm{MiB}.
+\]
+
+这个数字表达的是逻辑输入并集，不表示某个具体 CTA schedule 只会请求 16 MiB，
+也不表示硬件一定只执行对应数量的 cache transaction。
+
+对于 MXFP4/NVFP4 等 block-scaled 输入，还要在 value bytes 之外单独加入 scale
+bytes；第 8 课会推导这部分。
+
+## 3.5 unique cold-entry bytes
+
+定义 \(Q_{\mathrm{TMA,unique}}(x,w)\) 为当前 schedule 在完成 padding 和 transport
+layout 之后，需要从外部 DRAM 边界首次引入的不同输入字节并集，单位 B。
+
+这里的 `tail_policy=pad` 首次明确采用**物化 padding 合同**：定义 pad 后的 A/B
+transport extent 为真实存在于输入 buffer 中的 extent，越界位置由零值填充，并和
+有效元素一样可以从设备内存进入 L2。预处理这些 buffer 的一次性代价不计入 GEMM，
+但 GEMM 读取的 padding 字节计入流量。如果实现改用 TMA 越界补零、predicate load
+或独立 tail kernel，那么 padding 零值可能不经过 HBM；它属于另一份 schedule 合同，
+不能继续套用本节的 unique-byte 公式。模型 v1 对未声明的 tail transport fail closed。
+
+它与 \(Q_{\mathrm{input,min}}(w)\) 的区别是：
+
+- minimum 只看数学语义；
+- unique 还看 schedule 是否 padding，以及 FP6/FP4 是 logical packed、b8
+  container 还是带 padding 的 transport layout。
+
+对于当前可整除的 FP16 tc5a，transport 仍是 2 B/element，所以：
+
+\[
+Q_{\mathrm{TMA,unique}}(x,w)=16\ \mathrm{MiB}.
+\]
+
+但在 irregular shape、FP6 b8 container 或 block-scale transport 中，两者不一定
+相等。
+
+经验 cold-HBM 层使用 \(Q_{\mathrm{TMA,unique}}(x,w)\) 约束 `hbm.read`，因为理想
+cache reuse 允许同一外部字节只从 DRAM 进入一次。它不会因为下游 CTA 重复读取而
+自动重复计算 DRAM 流量。
+
+## 3.6 issued TMA/L2 request bytes
+
+定义 \(Q_{\mathrm{TMA,issued}}(x,w)\) 为所有 output task 在全部 K tile 上发出的
+TMA 输入 request payload 总字节，单位 B。
+
+对于不含 scale 的当前 schedule：
+
+\[
+Q_{\mathrm{TMA,issued}}(x,w)
+=N_{\mathrm{task}}N_K
+\left(B_MB_K+B_KB_N\right)s_{\mathrm{in}}.
+\]
+
+为了看清 192 MiB 从哪里来，把 A/B 分开计算。
+
+定义 \(Q_{A,\mathrm{issued}}(x,w)\) 为所有 task 发出的 A request payload，单位 B：
+
+\[
+Q_{A,\mathrm{issued}}(x,w)
+=N_{\mathrm{task}}N_KB_MB_Ks_{\mathrm{in}}.
+\]
+
+代入 tc5a 参数：
+
+\[
+Q_{A,\mathrm{issued}}(x,w)
+=128\times32\times128\times64\times2
+=64\ \mathrm{MiB}.
+\]
+
+定义 \(Q_{B,\mathrm{issued}}(x,w)\) 为所有 task 发出的 B request payload，单位 B：
+
+\[
+Q_{B,\mathrm{issued}}(x,w)
+=N_{\mathrm{task}}N_KB_KB_Ns_{\mathrm{in}}.
+\]
+
+代入后：
+
+\[
+Q_{B,\mathrm{issued}}(x,w)
+=128\times32\times64\times256\times2
+=128\ \mathrm{MiB}.
+\]
+
+所以：
+
+\[
+Q_{\mathrm{TMA,issued}}(x,w)
+=Q_{A,\mathrm{issued}}(x,w)+Q_{B,\mathrm{issued}}(x,w)
+=192\ \mathrm{MiB}.
+\]
+
+A 的 unique bytes 只有 8 MiB，但每个 M tile 会分别配合 8 个 N tile，所以当前
+output-tile schedule 对 A 的 request payload 放大 8 倍。B 的 unique bytes 也是
+8 MiB，但会分别配合 16 个 M tile，所以 B request payload 放大 16 倍。
+
+整体 request amplification 定义为无量纲比值
+\(a_{\mathrm{request}}(x,w)\)：
+
+\[
+a_{\mathrm{request}}(x,w)
+=\frac{Q_{\mathrm{TMA,issued}}(x,w)}
+       {Q_{\mathrm{TMA,unique}}(x,w)}
+=\frac{192}{16}
+=12.
+\]
+
+这个 12 倍不是说 DRAM 一定读取 12 次。它说当前 CTA schedule 向 L2/TMA 路径
+发出了 12 倍于 unique input 的 payload request。
+
+## 3.7 每种工作量应该约束哪个资源
+
+| 资源层 | 应使用的工作量 | 原因 |
+| --- | --- | --- |
+| strict Tensor Core | \(W_{\mathrm{use}}(w)\) | 对所有合法实现都不可绕过的最低数学工作 |
+| empirical Tensor Core | \(W_{\mathrm{issued}}(x,w)\) | 当前 schedule 实际发出的 MMA 工作 |
+| strict `hbm.total` | minimum input + minimum output | 允许理想复用的外部边界最低总流量 |
+| empirical `hbm.read` | \(Q_{\mathrm{TMA,unique}}(x,w)\) | cold-entry 不同输入字节，可在 L2 中复用 |
+| strict `l2.read` | \(Q_{\mathrm{input,min}}(w)\) | 在“设备内存输入经共享 L2 到 SM”的硬件合同下，不可绕过的最低工作 |
+| empirical `l2.read` | \(Q_{\mathrm{TMA,issued}}(x,w)\) | 当前 schedule 发给共享 L2 的 request payload |
+| per-SM TMA ingress | 每 task issued bytes + task waves | 每个 task 的本地出口 span 和整卡 makespan |
+| TMEM readback | schedule-covered accumulator bytes | 当前 schedule 从 accumulator 读回的输出 tile |
+
+这张表是模型正确性的核心。资源容量再准确，如果分子使用了错误边界的工作量，
+最终时间仍然没有物理意义。
+
+## 3.8 为什么不能把 192 MiB 直接算成 HBM 流量
+
+当前理想 cold-entry 路径可以是：
+
+```text
+同一 A/B cache line 从 DRAM 进入一次
+              ↓
+       保留或再次命中共享 L2
+              ↓
+多个 output CTA 分别发出 TMA request
+```
+
+因此，同一字节可以只消耗一次外部 DRAM read，却响应多次 L2/TMA payload request。
+
+把 192 MiB 全部放进 `hbm.read` 等价于预先假设所有跨 CTA L2 reuse 都失败。这是某个
+具体 cache 行为的悲观预测，不是“没有可避免浪费”的经验理想包络。
+
+反过来，把 16 MiB 放进当前 tc5a 的 empirical `l2.read` 又等价于假设 L2 能把一份
+数据直接 multicast 给所有未来 CTA，完全忽略每个 CTA 实际发出的 request。这会把
+schedule 的数据复用缺陷隐藏掉。
+
+定义 \(Q_{\mathrm{HBM,read,emp}}(x,w)\) 为经验 cold-entry HBM/LPDDR read demand，
+单位 B；定义 \(Q_{\mathrm{L2,read,emp}}(x,w)\) 为经验共享 L2 read demand，单位 B。
+
+在“cold entry、物化 padding、每个不同输入字节理想地只进入 HBM 一次、但每条
+schedule-issued TMA payload 都要经过共享 L2”的经验理想条件下，当前模型采用：
+
+\[
+Q_{\mathrm{HBM,read,emp}}(x,w)
+=Q_{\mathrm{TMA,unique}}(x,w),
+\]
+
+\[
+Q_{\mathrm{L2,read,emp}}(x,w)
+=Q_{\mathrm{TMA,issued}}(x,w).
+\]
+
+## 3.9 irregular shape：padding 为什么不能忽略
+
+现在考虑 FP16：
+
+\[
+M=130,\qquad N=260,\qquad K=70,
+\]
+
+并继续使用 \(B_M=128\)、\(B_N=256\)、\(B_K=64\) 的 pad schedule。
+
+tile 数为：
+
+\[
+N_M=2,\qquad N_N=2,\qquad N_K=2.
+\]
+
+所以实际覆盖维度为：
+
+\[
+M_x=256,\qquad N_x=512,\qquad K_x=128.
+\]
+
+有用工作量：
+
+\[
+W_{\mathrm{use}}(w)=2\times130\times260\times70
+=4{,}732{,}000\ \mathrm{FLOP}.
+\]
+
+issued 工作量：
+
+\[
+W_{\mathrm{issued}}(x,w)=2\times256\times512\times128
+=33{,}554{,}432\ \mathrm{FLOP}.
+\]
+
+因此：
+
+\[
+\eta_{\mathrm{shape}}(x,w)
+=\frac{4{,}732{,}000}{33{,}554{,}432}
+\approx0.141025.
+\]
+
+也就是只有约 14.10% 的 issued compute 对应用户要求的有效结果。即使 Tensor Core
+本身达到 100% microbenchmark rate，用户可见 GEMM 性能也会受到这个 shape
+efficiency 的限制。
+
+minimum input 为：
+
+\[
+Q_{\mathrm{input,min}}(w)
+=(130\times70+70\times260)\times2
+=54{,}600\ \mathrm{B}.
+\]
+
+pad 后 unique TMA input 为：
+
+\[
+Q_{\mathrm{TMA,unique}}(x,w)
+=(256\times128+128\times512)\times2
+=196{,}608\ \mathrm{B}
+=192\ \mathrm{KiB}.
+\]
+
+共有 \(N_{\mathrm{task}}=4\) 个 output task，每个 task 有两个 K tile，每个 K tile
+仍发出 48 KiB，因此：
+
+\[
+Q_{\mathrm{TMA,issued}}(x,w)
+=4\times2\times48\ \mathrm{KiB}
+=384\ \mathrm{KiB}.
+\]
+
+这个例子同时存在数学尾部浪费、transport padding 和跨 task request amplification，
+所以不能只用一个模糊的“tile efficiency”系数替代逐项工作量。
+
+## 3.10 payload bytes 不是物理 transaction 数
+
+当前 \(Q_{\mathrm{TMA,issued}}(x,w)\) 统计的是指令合同声明的 payload bytes。
+它不自动证明：
+
+- L2 sector 数恰好等于 payload 除以 sector 大小；
+- TMA 没有协议开销；
+- misalignment 不会产生额外 transaction；
+- replay、partition camping 或 compression 不存在；
+- 每个 request 都以同一种 SASS transaction 形式完成。
+
+定义 \(Q_{\mathrm{transaction}}(x,w)\) 为硬件实际执行的物理 transaction bytes，
+单位 B。当前没有足够证据把它写成：
+
+\[
+Q_{\mathrm{transaction}}(x,w)
+=Q_{\mathrm{TMA,issued}}(x,w).
+\]
+
+因此模型 v1 使用 schedule payload 除以合同匹配的端到端 sustained rate。只有在
+NCU sector counter、SASS 和 transaction microbenchmark 能共同证明时，才增加
+独立的 transaction amplification 模型。
+
+## 3.11 可执行检查
+
+在仓库根目录运行：
+
+```bash
+python3 - <<'PY'
+import math
+
+def account(m, n, k, bm=128, bn=256, bk=64, bytes_per_input=2):
+    nm = math.ceil(m / bm)
+    nn = math.ceil(n / bn)
+    nk = math.ceil(k / bk)
+    issued_m, issued_n, issued_k = nm * bm, nn * bn, nk * bk
+    useful = 2 * m * n * k
+    issued = 2 * issued_m * issued_n * issued_k
+    minimum_input = (m * k + k * n) * bytes_per_input
+    unique_tma = (
+        issued_m * issued_k + issued_k * issued_n
+    ) * bytes_per_input
+    per_stage = (bm * bk + bk * bn) * bytes_per_input
+    tasks = nm * nn
+    tma_issued = tasks * nk * per_stage
+    return {
+        "tiles": (nm, nn, nk),
+        "issued_shape": (issued_m, issued_n, issued_k),
+        "useful_compute": useful,
+        "issued_compute": issued,
+        "shape_efficiency": useful / issued,
+        "minimum_input_bytes": minimum_input,
+        "unique_tma_bytes": unique_tma,
+        "issued_tma_bytes": tma_issued,
+        "request_amplification": tma_issued / unique_tma,
+    }
+
+for shape in ((2048, 2048, 2048), (130, 260, 70)):
+    print(shape, account(*shape))
+PY
+```
+
+关键结果应为：
+
+```text
+(2048, 2048, 2048)
+  tiles=(16, 8, 32)
+  shape_efficiency=1.0
+  minimum_input_bytes=16777216
+  unique_tma_bytes=16777216
+  issued_tma_bytes=201326592
+  request_amplification=12.0
+
+(130, 260, 70)
+  tiles=(2, 2, 2)
+  issued_shape=(256, 512, 128)
+  useful_compute=4732000
+  issued_compute=33554432
+  shape_efficiency≈0.1410245895
+  minimum_input_bytes=54600
+  unique_tma_bytes=196608
+  issued_tma_bytes=393216
+  request_amplification=2.0
+```
+
+## 3.12 四个常见错误
+
+1. 用 \(W_{\mathrm{use}}(w)\) 除以 empirical compute rate 来预测一个带大量 padding
+   的 schedule 时间，会隐藏额外 MMA；
+2. 用 \(W_{\mathrm{issued}}(x,w)\) 建立面向所有实现的 strict bound，会把当前
+   schedule 的浪费错误强加给未来更好的实现；
+3. 把 \(Q_{\mathrm{TMA,issued}}(x,w)\) 全部记入 HBM，会预先否定理想 L2 reuse；
+4. 把 payload bytes 直接叫做 physical transaction bytes，会越过现有 NCU/SASS
+   证据边界。
+
+## 3.13 本课预测题
+
+仍使用 FP16 tc5a tile，假设 \(M=N=2048\)，但把 \(K\) 改成 2050。
+
+请先判断：
+
+1. \(N_K\) 是多少？
+2. \(K_x\) 是多少？
+3. shape efficiency 是否仍为 1？
+4. minimum input、unique TMA input 和 issued TMA input 中，哪些会受 K padding
+   影响？
+
+<details>
+<summary>检查答案</summary>
+
+\[
+N_K=\left\lceil\frac{2050}{64}\right\rceil=33,
+\]
+
+\[
+K_x=33\times64=2112.
+\]
+
+有用工作使用 \(K=2050\)，issued work 使用 \(K_x=2112\)，所以 shape efficiency
+小于 1：
+
+\[
+\eta_{\mathrm{shape}}
+=\frac{2050}{2112}
+\approx0.970644.
+\]
+
+minimum input 仍按数学 K=2050 计算；unique TMA input 和 issued TMA input 都按
+pad 后的 K=2112 transport 计算，因此二者都会增加。
+
+</details>
+
+## 3.14 本课掌握标准
+
+进入第 4 课前，应当能够：
+
+1. 看到一个工作量时说清它由 workload 还是 schedule 决定；
+2. 独立推导 useful compute、issued compute 和 shape efficiency；
+3. 解释 minimum、unique 和 issued input bytes 的差别；
+4. 把三种字节放到正确的 HBM、L2 和 per-SM ingress 边界；
+5. 明确 payload 计数不是 physical transaction 证明。
+
+第 4 课将把 task 和 wave 推导推广到 arbitrary shape、CTA-group 和最后一波，解释
+为什么简单的 `总工作 / (SM 数 × per-SM rate)` 在小 grid 上会低估时间。
+
+## 3.15 本课证据来源
+
+- useful/issued compute、minimum/unique/issued bytes 的可执行实现：
+  [`model.py`](../../scripts/sm110_gemm_model/model.py)
+- irregular tail、FP6 transport 和 block-scale 工作量测试：
+  [`test_model.py`](../../scripts/sm110_gemm_model/test_model.py)
+- tc5a tile、stage、TMEM 和线程合同：
+  [`schedules.json`](../../scripts/sm110_gemm_model/examples/schedules.json)
+- TMA payload case 源码：
+  [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu)
+- shared L2 与 per-SM ingress 原始 trial、SASS 和环境证据：
+  [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)
+- 当前全精度实现与证据缺口：
+  [`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)

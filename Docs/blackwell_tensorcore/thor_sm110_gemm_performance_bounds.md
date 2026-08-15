@@ -10,6 +10,8 @@
 
 第一次学习本模型时，建议先阅读伴随式教程
 [`thor_sm110_gemm_performance_model_tutorial.md`](./thor_sm110_gemm_performance_model_tutorial.md)；
+逐精度的当前实现与证据缺口见机器生成的
+[`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)；
 本文继续作为严格定义、最终证据和审计合同。
 
 ## 1. 先给出结论
@@ -828,6 +830,28 @@ python3 -m scripts.sm110_gemm_model.cli coverage \
   --observed-input results/quant_gemm_sm110/sm110_quant_gemm_1024_sweep.csv
 ```
 
+完整目标还必须把上述 numeric coverage 与 full-GEMM implementation、同输入精度且
+同输出类型的数值参考、同精度 performance denominator 合并审计。定义
+`all_precisions_end_to_end_closed` 为 12 个精度逐项同时通过这些门禁的布尔值；
+当前值必须保持 `false`。生成 JSON/Markdown 证据矩阵，并在任何精度未闭环时使
+最终门禁非零退出：
+
+```bash
+MODEL_DIR="results/sm110_model_closure/$SUITE_ID"
+python3 -m scripts.sm110_gemm_model.cli report-precision-closure \
+  --repo-root . \
+  --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --closure-import "$MODEL_DIR/model_inputs.json" \
+  --support-manifest microbench/sm110_full_gemm_campaign/support_manifest.json \
+  --output-json Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.json \
+  --output-markdown Docs/blackwell_tensorcore/thor_sm110_all_precision_evidence_matrix.md \
+  --require-all-closed
+```
+
+不带 `--require-all-closed` 时命令仍生成诚实的中间矩阵，供设计下一轮补测；带该
+选项才是目标完成门禁。结构正确但仍列出 blocker 的 support manifest 不能单独
+证明任何缺失精度已经闭环。
+
 统一 closure 完成后，数值表、两种 residency 场景、最大 trial 上界反证和三个互不
 混淆的完成状态由报告器直接生成：
 
@@ -914,7 +938,9 @@ closure 合同为准。
    上界，不能把 measured rate 补成 rate upper。
 3. **全部 12 精度产品覆盖**：除 compute-only 外，还要求每种精度有独立完整
    GEMM、correctness reference 和同语义性能 denominator。当前只有上述五种进入
-   本轮 full-GEMM campaign，其他精度必须继续显示为 coverage gap。
+   本轮 full-GEMM campaign；其中 TF32 仍缺 strict compute upper，所以当前只有
+   FP16、BF16、E4M3、S8 四种满足端到端 numeric closure。其余项目和每个缺失
+   shape 必须继续显示为 coverage gap，详见全精度证据矩阵。
 
 一次 campaign 的逐精度测量合同依次要求：PTX/descriptor 合法、目标函数块 SASS、
 compute-only 10 trial、兼容的公共 data-movement/readback capacity、完整 GEMM
@@ -1302,6 +1328,10 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`scripts/sm110_gemm_model/closure_import.py`](../../scripts/sm110_gemm_model/closure_import.py)
 - 从已审计输入机械生成容量表、完整 GEMM 对比、上界反证和 holdout 分析：
   [`scripts/sm110_gemm_model/closure_report.py`](../../scripts/sm110_gemm_model/closure_report.py)
+- 合并 implementation readiness、逐 shape numeric coverage 和最终 fail-closed 门禁：
+  [`scripts/sm110_gemm_model/precision_report.py`](../../scripts/sm110_gemm_model/precision_report.py)
+- 当前 12 精度机器生成证据矩阵：
+  [`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)
 
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和

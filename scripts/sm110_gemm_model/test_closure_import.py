@@ -56,6 +56,9 @@ from scripts.sm110_gemm_model.closure_report import (
     render_closure_markdown,
 )
 from scripts.sm110_gemm_model.coverage import campaign_measurement_coverage
+from scripts.sm110_gemm_model.precision_report import (
+    build_precision_evidence_analysis,
+)
 
 
 COMMIT = "1" * 40
@@ -656,6 +659,38 @@ class ClosureConversionTest(unittest.TestCase):
                     ["all_campaign_measurements_closed"])
         self.assertTrue(analysis["all_common_resources_closed"])
         self.assertFalse(analysis["all_precisions_closed"])
+        precision_analysis = build_precision_evidence_analysis(
+            capacities=[
+                *load_capacities(
+                    ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
+                *capacities_from_rows(imported["capacities"]),
+            ],
+            observations=observations_from_rows(imported["observed_best"]),
+            support_manifest=json.loads((
+                ROOT / "microbench/sm110_full_gemm_campaign/"
+                       "support_manifest.json"
+            ).read_text()),
+            repo_root=ROOT,
+            metadata=imported,
+        )
+        self.assertEqual(precision_analysis["implementation_ready_count"], 5)
+        self.assertEqual(precision_analysis["numeric_closed_count"], 4)
+        self.assertEqual(precision_analysis["end_to_end_closed_count"], 4)
+        self.assertFalse(
+            precision_analysis["all_precisions_end_to_end_closed"])
+        precision_rows = {
+            row["precision_id"]: row
+            for row in precision_analysis["precisions"]
+        }
+        self.assertEqual(
+            precision_rows["tf32_f32"]["numeric_evidence"]["missing"],
+            ("strict_compute_upper",),
+        )
+        self.assertEqual(
+            precision_rows["e5m2_f32"]["numeric_evidence"]
+                          ["missing_full_gemm_shapes"],
+            (1024, 2048, 4096),
+        )
         campaign = campaign_measurement_coverage(
             capacities_from_rows(imported["capacities"]),
             observations_from_rows(imported["observed_best"]),
