@@ -358,3 +358,34 @@ sha256sum -c \
 源码、case、工作量或容量语义，因此**无需 Thor 重跑**。已有 evidence 仍分别绑定
 到 `d382b57eae289b458c5290e3d2b7e0daf1b7d7c8` 和
 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354`。
+
+## 11. 对抗式参数补充 campaign
+
+第 10 节的“不需要重跑”只适用于既有 tc5a closure 的路径可移植性修复。若要把
+闭环声明增强为“覆盖 payload sensitivity 与同核 read/write 联合服务面”，必须
+运行本节新增的 GPU-facing supplement，不能复用旧 component 数字。
+
+在冻结提交和干净 Thor checkout 上执行：
+
+```bash
+RUN_ID=thor-t5000-parameter-supplement-maxn-YYYYMMDD-a
+EXPECTED_COMMIT=$(git rev-parse HEAD)
+
+test "$(git status --short --untracked-files=no)" = ""
+bash microbench/run_sm110_parameter_supplement.sh \
+  "$RUN_ID" "$EXPECTED_COMMIT"
+```
+
+该命令顺序执行并独立审计 TMA payload/residency surface 与 HBM/L2 duplex ratio
+surface。完整合同、比例来源、参数适用边界和结果提交清单见
+[`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
+
+该 supplement 只关闭 payload 与 duplex 两个新增 runner surface。运行前后都应执行：
+
+```bash
+python3 scripts/sm110_gemm_model/runner_coverage.py
+```
+
+其中 `payload_duplex_runner_definition_complete` 应为 `true`；在精确 schedule
+topology、独立 joint-pipeline、固定成本 wall-time 校准和剩余完整 GEMM 路径补齐
+前，`all_performance_parameter_runner_definition_complete` 必须保持 `false`。

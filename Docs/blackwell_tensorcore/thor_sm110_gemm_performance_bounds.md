@@ -778,6 +778,15 @@ cuBLAS 中位性能。tc5a 实测为 120.039 TFLOP/s，cuBLAS 为
 描述全部声明精度的产品级证据完备性；后两个字段分别描述公共资源和本轮有界
 5-precision + 18-component 测量矩阵，三者不得互相替代。
 
+> **2026-08-15 对抗式复审边界**：上面的
+> `all_common_resources_closed=true` 只对当时定义的十个**独立**资源 ID 成立，
+> 不能解释为所有联合性能参数均已测量。复审发现 HBM/L2 同核 read/write duplex
+> surface 与 TMA payload/residency surface 尚未进入该布尔值。新增 runner、精确
+> 缺口矩阵和 Thor 重跑合同见
+> [`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
+> 新结果回传前，既有数值仍是“允许独立资源理想重叠”假设下的经验包络，不得升级
+> 为联合可达性已证明的包络。
+
 ## 9. 自动化接口和反证规则
 
 可执行模型位于
