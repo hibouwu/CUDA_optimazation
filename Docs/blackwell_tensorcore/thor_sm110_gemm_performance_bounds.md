@@ -2,7 +2,7 @@
 
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
-> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前还实现了合同绑定的 persistent-worker causal DAG 求解器，并冻结了 tc5a 的 FP16/BF16 双精度因果采集合同：每种精度 91 case、910 trial、4 份 NCU，总计 182 case、1,820 trial、8 份 NCU；Thor timing profile 尚未回传。按“schedule/precision/row-stride 精确 TMA capacity + closure-qualified causal profile”重新收紧后，历史 12 精度计数为 implementation 5、numeric 4、完整 resource-envelope matrix 0、causal 0、end-to-end 0；历史 tc5a 仅精确支持 N=K=2048 的 hot/cold 两个 resource 场景。不能把求解器存在或旧 4/12 numeric closure 称为完整三层模型闭环。
+> **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前还实现了合同绑定的 persistent-worker causal DAG 求解器，并冻结了 tc5a 的 FP16/BF16 双精度因果采集合同：每种精度 91 case、910 trial、4 份 NCU，总计 182 case、1,820 trial、8 份 NCU；Thor timing profile 尚未回传。按“schedule/precision/row-stride 精确 TMA capacity + closure-qualified causal profile”重新收紧后，当前 12 精度证据矩阵计数为 implementation 6、numeric 4、完整 resource-envelope matrix 0、causal 0、end-to-end 0；新增 E5M2 runner 尚未产生 Thor full-GEMM observation，历史 tc5a 也仅精确支持 N=K=2048 的 hot/cold 两个 resource 场景。不能把 runner 就绪、求解器存在或旧 4/12 numeric closure 称为完整三层模型闭环。
 >
 > **可信度纪律**：可证明上界、microbenchmark 经验包络和完整 GEMM 实测值分别报告，任何一层都不能冒充另一层。
 >
@@ -885,7 +885,7 @@ python3 -m scripts.sm110_gemm_model.cli coverage \
 还要求 N=1024/2048/4096 × hot-L2/cold-HBM 六个场景都只选择精确合同且
 closure-qualified 的 resource capacity，并要求 causal pipeline DAG 完成。定义
 `all_precisions_end_to_end_closed` 为 12 个精度逐项同时通过这些门禁的布尔值；
-当前值必须保持 `false`，当前五级计数是 `(5,4,0,0,0)`。生成 JSON/Markdown 证据
+当前值必须保持 `false`，当前五级计数是 `(6,4,0,0,0)`。生成 JSON/Markdown 证据
 矩阵，并在任何精度未闭环时使最终门禁非零退出：
 
 ```bash
@@ -1344,7 +1344,7 @@ miss-sector proxy 的证据边界。
   [`audit_support_manifest.py`](../../microbench/sm110_full_gemm_campaign/audit_support_manifest.py)
 - 首批 closure runner：
   [`run_full_gemm_campaign.py`](../../microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py)
-- BF16/TF32 完整 GEMM、E5M2 静态候选与 host 自检源码：
+- BF16/TF32/E5M2 完整 GEMM runner、E5M2 同精度 reference 与 host 自检源码：
   [`extended_gemm_bench.cu`](../../GEMMquant_sm110/src/extended_gemm_bench.cu)
 - detached/resume launcher：
   [`launch_full_gemm_campaign.sh`](../../microbench/sm110_full_gemm_campaign/launch_full_gemm_campaign.sh)
@@ -1371,11 +1371,13 @@ miss-sector proxy 的证据边界。
 当前工具只接收至少 10 个 trial 且全部 matched 的 backend series，再按最高
 median 选择稳定最好实现。NVFP4/MXFP4 的性能 denominator 是 FP16 cuBLAS，
 因此只保留绝对 GFLOP/s 和 correctness 状态，不使用历史 ratio 证明同精度胜负。
-覆盖合同当前有 FP16→FP32、BF16→FP32、TF32→FP32、E4M3→FP32 和
-S8→S32 达到“可启动 closure campaign”的实现条件；E5M2×E5M2 已有原生
-kernel，但 [`cublasLtMatmul` 官方 FP8 类型表](https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmul)
-没有列出这一 A/B 组合，因此尚缺合法独立 reference 和 denominator。两种 FP6、
-raw E2M1 和 U8 也尚无完整路径，MXFP4/NVFP4 因输出合同、外部生成源码留存和
+覆盖合同当前有 FP16→FP32、BF16→FP32、TF32→FP32、E4M3→FP32、
+E5M2→FP32 和 S8→S32 达到“可启动 closure campaign”的实现条件。
+[`cublasLtMatmul` 官方 FP8 类型表](https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmul)
+没有列出 E5M2×E5M2 A/B 组合，因此 E5M2 改用独立启动的 global-load E5M2 MMA
+作为同精度性能 denominator；该 reference 由独立 host E5M2 decoder 抽样验证，
+candidate 的完整 FP32 输出再与 reference kernel 比较。两种 FP6、raw E2M1 和
+U8 仍无完整路径，MXFP4/NVFP4 因输出合同、外部生成源码留存和
 跨精度 denominator 只能标为 `partial`。这里的 `ready_for_closure_campaign`
 仍不表示硬件闭环完成。
 
@@ -1387,12 +1389,13 @@ U8 被排除不是因为 PTX/SASS 不存在 U8 Tensor Core；compute-only campai
 U8 full-GEMM candidate、reference 和 denominator 完成前，
 模型宁可保留缺口。
 
-新版 campaign 把可闭环的五种合同冻结为 15 个 square `NN` case：每种精度
+新版 campaign 把可闭环的六种合同冻结为 18 个 square `NN` case：每种精度
 `N=1024,2048,4096`，其中前两点是 calibration，4096 是预先保留的 holdout。
 FP16 使用 `tc5b`（1024）和 `tc5a`（2048/4096），E4M3 使用 `q7`，S8 使用
-`q15`；BF16 使用原生 BF16 WMMA，TF32 使用原生 TF32 WMMA。这些候选都与
-同精度 cuBLAS/cuBLASLt reference 成对，
-不是把库实现冒充自研 GEMM。每个外层 case 运行 10 个独立 trial；每个 trial 内
+`q15`；BF16 使用原生 BF16 WMMA，TF32 使用原生 TF32 WMMA，E5M2 使用 shared-
+memory candidate 与 global-load reference。前五种库可支持的合同与同精度
+cuBLAS/cuBLASLt reference 成对；E5M2 则使用上述同精度独立 kernel denominator，
+不是把跨精度库结果冒充 reference。每个外层 case 运行 10 个独立 trial；每个 trial 内
 候选和 reference 使用同一输入，FP16 内层计时 100 次，其余内层计时 10 次。
 runner 独立从 `2N^3/time` 重算吞吐，S8 明确使用 OP/s。
 
@@ -1404,7 +1407,7 @@ bits；host-only 自检覆盖 retained-LSB 为偶/奇的两个 halfway case，�
 NaN payload 不被改写。静态证据也不是二进制级 mnemonic 搜索：审计在被测
 kernel 的 SASS 函数块内检查 `UTCHMMA`、`HMMA.16816.F32.BF16`、
 `HMMA.1684.F32.TF32`、FP8 `HMMA.16816.F32` 或 `IMMA.16816.S8.S8` 及 store。
-当前 CUDA 13.0 本地静态门禁 15/15 通过；在 Thor 返回 150 个 trial、环境和
+当前 CUDA 13.0 本地静态门禁 18/18 通过；在 Thor 返回 180 个 trial、环境和
 必需的 NCU artifact 之前，不把它们升级为新的已观测值。
 
 compute-only 和 full-GEMM runner 的成功 trial 都保存 120 s timeout 合同；选中的

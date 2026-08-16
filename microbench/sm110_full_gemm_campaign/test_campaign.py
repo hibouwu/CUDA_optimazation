@@ -129,6 +129,10 @@ class CampaignEvidenceTests(unittest.TestCase):
         return next(case for case in campaign.CASES
                     if case["id"] == "s8_s32_n1024_q15")
 
+    def e5m2_case(self) -> dict[str, object]:
+        return next(case for case in campaign.CASES
+                    if case["id"] == "e5m2_f32_n1024_q0")
+
     def test_fp16_trial_is_recomputed_from_times(self) -> None:
         case = self.fp16_case()
         stdout = (
@@ -188,6 +192,46 @@ class CampaignEvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "numerical contract mismatch"):
                 campaign.parse_trial(case, Path(temporary), stdout)
 
+    def test_e5m2_trial_binds_same_precision_reference_backend(self) -> None:
+        case = self.e5m2_case()
+        work = 2 * 1024 ** 3
+        custom_ms, reference_ms = 0.04, 0.08
+        stdout = (
+            "N=1024 mode=e5m2\n"
+            "reference_contract=e5m2_f32_cpu_samples "
+            "reference_sample_count=64 reference_mismatch_count=0\n"
+            "numerical_contract=e5m2_f32 mismatch_count=0\n"
+            "backend_id=e5m2_q0_mma_m16n8k32_smem128x64 "
+            "reference_backend_id=e5m2_q1_mma_m16n8k32_global "
+            f"time_ms={custom_ms} reference_time_ms={reference_ms} "
+            "work_unit=flop "
+            f"rate_per_second={work * 1000 / custom_ms} "
+            f"reference_rate_per_second={work * 1000 / reference_ms} "
+            "matched=1\n"
+        )
+        csv_text = (
+            "BackendId,N,Precision,Reference,TimeMs,ReferenceTimeMs,"
+            "RatePerSecond,ReferenceRatePerSecond,Matched\n"
+            "e5m2_q0_mma_m16n8k32_smem128x64,1024,e5m2->fp32,"
+            "same-precision E5M2 global MMA,0.04,0.08,1,1,1\n"
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "extended_sm110_benchmark.csv").write_text(csv_text)
+            parsed = campaign.parse_trial(case, root, stdout)
+        self.assertEqual(
+            parsed["fields"]["reference_backend_id"],
+            "e5m2_q1_mma_m16n8k32_global",
+        )
+        bad_stdout = stdout.replace(
+            "e5m2_q1_mma_m16n8k32_global", "wrong_e5m2_reference")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "extended_sm110_benchmark.csv").write_text(csv_text)
+            with self.assertRaisesRegex(
+                    RuntimeError, "reference backend mismatch"):
+                campaign.parse_trial(case, root, bad_stdout)
+
     def test_sass_tokens_must_be_in_matching_function(self) -> None:
         case = self.s8_case()
         fake = (
@@ -197,9 +241,27 @@ class CampaignEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "no function block"):
             campaign.matching_sass_evidence(fake, case)
 
+    def test_e5m2_candidate_and_reference_need_distinct_sass_blocks(self) -> None:
+        case = self.e5m2_case()
+        candidate = str(case["function_substring"])
+        reference = str(case["reference_function_substring"])
+        complete = (
+            f"Function : {candidate}\n HMMA.16816.F32\n STG.E\n"
+            f"Function : {reference}\n HMMA.16816.F32\n STG.E\n"
+        )
+        evidence = campaign.matching_sass_evidence(complete, case)
+        self.assertIn("reference", evidence)
+        missing_reference = (
+            f"Function : {candidate}\n HMMA.16816.F32\n STG.E\n"
+            f"Function : {reference}\n NOP\n"
+        )
+        with self.assertRaisesRegex(RuntimeError, "no function block"):
+            campaign.matching_sass_evidence(missing_reference, case)
+
     def test_extended_precision_shape_matrix_and_units(self) -> None:
         expected = {
-            "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "s8_s32",
+            "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32",
+            "e5m2_f32", "s8_s32",
         }
         pairs = {(case["precision_id"], case["n"]) for case in campaign.CASES}
         self.assertEqual(pairs, {(precision, n) for precision in expected
@@ -216,7 +278,7 @@ class CampaignEvidenceTests(unittest.TestCase):
                   for case in campaign.CASES}
         self.assertIn("HMMA.16816.F32.BF16", tokens["bf16_f32"])
         self.assertIn("HMMA.1684.F32.TF32", tokens["tf32_f32"])
-        self.assertNotIn("e5m2_f32", tokens)
+        self.assertIn("HMMA.16816.F32", tokens["e5m2_f32"])
         self.assertNotIn("u8_s32", tokens)
 
     def test_hardware_auditor_rejects_static_bundle(self) -> None:

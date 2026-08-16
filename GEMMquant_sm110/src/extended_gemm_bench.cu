@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -72,6 +73,26 @@ float float_from_bits(std::uint32_t bits) {
   return value;
 }
 
+float decode_e5m2_storage(std::uint8_t storage) {
+  constexpr int kExponentBias = 15;
+  const bool negative = (storage & 0x80u) != 0;
+  const int exponent = (storage >> 2) & 0x1f;
+  const int fraction = storage & 0x03;
+  float magnitude = 0.0f;
+  if (exponent == 0) {
+    // E5M2 subnormal: (fraction / 2^2) * 2^(1-bias).
+    magnitude = std::ldexp(static_cast<float>(fraction), -16);
+  } else if (exponent == 0x1f) {
+    magnitude = fraction == 0
+        ? std::numeric_limits<float>::infinity()
+        : std::numeric_limits<float>::quiet_NaN();
+  } else {
+    magnitude = std::ldexp(1.0f + 0.25f * static_cast<float>(fraction),
+                           exponent - kExponentBias);
+  }
+  return negative ? -magnitude : magnitude;
+}
+
 bool host_self_test() {
   // TF32 retains FP32 sign/exponent and ten fraction bits.  These two values
   // are exact halfway cases: the retained low bit is respectively even/odd.
@@ -87,13 +108,33 @@ bool host_self_test() {
   const bool nan_payload_unchanged =
       float_bits(round_to_tf32_rn(float_from_bits(0x7fc12345u))) ==
       0x7fc12345u;
+  const bool e5m2_positive_one = decode_e5m2_storage(0x3cu) == 1.0f;
+  const bool e5m2_negative_one = decode_e5m2_storage(0xbcu) == -1.0f;
+  const bool e5m2_min_subnormal =
+      decode_e5m2_storage(0x01u) == std::ldexp(1.0f, -16);
+  const bool e5m2_max_finite = decode_e5m2_storage(0x7bu) == 57344.0f;
+  const bool e5m2_infinity = std::isinf(decode_e5m2_storage(0x7cu));
+  const bool e5m2_nan = std::isnan(decode_e5m2_storage(0x7du));
+  const bool e5m2_cuda_encoding =
+      __nv_fp8_e5m2(1.0f).__x == 0x3cu &&
+      __nv_fp8_e5m2(-1.0f).__x == 0xbcu;
   const bool pass = tie_even_down && tie_odd_up && infinity_unchanged &&
-                    nan_payload_unchanged;
+                    nan_payload_unchanged && e5m2_positive_one &&
+                    e5m2_negative_one && e5m2_min_subnormal &&
+                    e5m2_max_finite && e5m2_infinity && e5m2_nan &&
+                    e5m2_cuda_encoding;
   std::cout << "self_test=" << (pass ? "pass" : "fail")
             << " tf32_tie_even_down=" << tie_even_down
             << " tf32_tie_odd_up=" << tie_odd_up
             << " tf32_infinity_unchanged=" << infinity_unchanged
-            << " tf32_nan_payload_unchanged=" << nan_payload_unchanged << '\n';
+            << " tf32_nan_payload_unchanged=" << nan_payload_unchanged
+            << " e5m2_positive_one=" << e5m2_positive_one
+            << " e5m2_negative_one=" << e5m2_negative_one
+            << " e5m2_min_subnormal=" << e5m2_min_subnormal
+            << " e5m2_max_finite=" << e5m2_max_finite
+            << " e5m2_infinity=" << e5m2_infinity
+            << " e5m2_nan=" << e5m2_nan
+            << " e5m2_cuda_encoding=" << e5m2_cuda_encoding << '\n';
   return pass;
 }
 
@@ -198,6 +239,62 @@ __device__ __forceinline__ std::uint32_t fp8_byte(const __nv_fp8_e5m2* p,
   return reinterpret_cast<const std::uint8_t*>(p)[index];
 }
 
+__global__ void e5m2_mma_m16n8k32_global_kernel(
+    const __nv_fp8_e5m2* a, const __nv_fp8_e5m2* b, float* c, int n) {
+  const int lane = threadIdx.x & 31;
+  const int warp = threadIdx.x >> 5;
+  const int group = lane >> 2;
+  const int in_group = lane & 3;
+  const int tile_m = blockIdx.y * 64;
+  const int tile_n = blockIdx.x * 64;
+  const int warp_m = tile_m + warp * 16;
+  float d[8][4]{};
+
+  for (int k0 = 0; k0 < n; k0 += 32) {
+    std::uint32_t a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+    #pragma unroll
+    for (int i = 0; i < 4; ++i) {
+      const int k_a0 = k0 + in_group * 4 + i;
+      const int k_a1 = k_a0 + 16;
+      a0 |= fp8_byte(a, std::size_t(warp_m + group) * n + k_a0) << (8 * i);
+      a1 |= fp8_byte(a, std::size_t(warp_m + group + 8) * n + k_a0)
+            << (8 * i);
+      a2 |= fp8_byte(a, std::size_t(warp_m + group) * n + k_a1) << (8 * i);
+      a3 |= fp8_byte(a, std::size_t(warp_m + group + 8) * n + k_a1)
+            << (8 * i);
+    }
+
+    #pragma unroll
+    for (int ct = 0; ct < 8; ++ct) {
+      std::uint32_t b0 = 0, b1 = 0;
+      #pragma unroll
+      for (int i = 0; i < 4; ++i) {
+        const int k_b0 = k0 + in_group * 4 + i;
+        const int k_b1 = k_b0 + 16;
+        const int col = tile_n + ct * 8 + group;
+        b0 |= fp8_byte(b, std::size_t(k_b0) * n + col) << (8 * i);
+        b1 |= fp8_byte(b, std::size_t(k_b1) * n + col) << (8 * i);
+      }
+      asm volatile("mma.sync.aligned.m16n8k32.row.col.kind::f8f6f4."
+                   "f32.e5m2.e5m2.f32 {%0,%1,%2,%3},"
+                   "{%4,%5,%6,%7},{%8,%9},{%0,%1,%2,%3};"
+        : "+f"(d[ct][0]), "+f"(d[ct][1]), "+f"(d[ct][2]), "+f"(d[ct][3])
+        : "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(b0), "r"(b1));
+    }
+  }
+
+  const int r0 = warp_m + group;
+  const int r1 = r0 + 8;
+  #pragma unroll
+  for (int ct = 0; ct < 8; ++ct) {
+    const int col = tile_n + ct * 8 + in_group * 2;
+    c[std::size_t(r0) * n + col] = d[ct][0];
+    c[std::size_t(r0) * n + col + 1] = d[ct][1];
+    c[std::size_t(r1) * n + col] = d[ct][2];
+    c[std::size_t(r1) * n + col + 1] = d[ct][3];
+  }
+}
+
 __global__ void e5m2_mma_m16n8k32_smem128x64_kernel(
     const __nv_fp8_e5m2* a, const __nv_fp8_e5m2* b, float* c, int n) {
   __shared__ alignas(16) std::uint8_t as[128*32], bs[32*64];
@@ -249,12 +346,13 @@ float cublas_float_reference(int n, const T* da, const T* db, float* dc,
 }
 
 void emit(const std::string& backend,const std::string& precision,
-          const std::string& reference,int n,float custom_ms,float reference_ms,
-          bool matched) {
+          const std::string& reference,const std::string& reference_backend_id,
+          int n,float custom_ms,float reference_ms,bool matched) {
   double custom_rate=rate(n,custom_ms), reference_rate=rate(n,reference_ms);
   const char* unit="flop";
   std::cout<<std::setprecision(17)<<"backend_id="<<backend<<" N="<<n
            <<" time_ms="<<custom_ms<<" reference_time_ms="<<reference_ms
+           <<" reference_backend_id="<<reference_backend_id
            <<" work_unit="<<unit<<" rate_per_second="<<custom_rate
            <<" reference_rate_per_second="<<reference_rate
            <<" matched="<<(matched?1:0)<<'\n';
@@ -266,7 +364,9 @@ void emit(const std::string& backend,const std::string& precision,
 
 template<class T,class Convert,class ToFloat,class Kernel>
 void run_float_case(int n,const std::string& backend,const std::string& precision,
-                    const std::string& reference,const char* ref_contract,
+                    const std::string& reference,
+                    const std::string& reference_backend_id,
+                    const char* ref_contract,
                     const char* num_contract,cudaDataType_t cuda_type,
                     cublasComputeType_t compute_type,Convert convert,
                     ToFloat to_float,Kernel kernel,float atol,float rtol) {
@@ -284,9 +384,66 @@ void run_float_case(int n,const std::string& backend,const std::string& precisio
   auto launch=[&]{ kernel(da,db,dc); CHECK_CUDA(cudaGetLastError()); };
   float custom_ms=benchmark(launch); CHECK_CUDA(cudaMemcpy(got.data(),dc,got.size()*sizeof(float),cudaMemcpyDeviceToHost));
   bool matched=compare_float_full(num_contract,ref,got,atol,rtol);
-  emit(backend,precision,reference,n,custom_ms,ref_ms,matched);
+  emit(backend,precision,reference,reference_backend_id,n,custom_ms,ref_ms,matched);
   CHECK_CUDA(cudaFree(da));CHECK_CUDA(cudaFree(db));CHECK_CUDA(cudaFree(dc));
   if(!matched) std::exit(EXIT_FAILURE);
+}
+
+void run_e5m2_case(int n) {
+  constexpr const char* kCandidate =
+      "e5m2_q0_mma_m16n8k32_smem128x64";
+  constexpr const char* kReference =
+      "e5m2_q1_mma_m16n8k32_global";
+  std::vector<float> fa(std::size_t(n) * n), fb(fa.size());
+  fill_floats(fa, fb);
+  auto a = convert_vector<__nv_fp8_e5m2>(
+      fa, [] (float x) { return __nv_fp8_e5m2(x); });
+  auto b = convert_vector<__nv_fp8_e5m2>(
+      fb, [] (float x) { return __nv_fp8_e5m2(x); });
+  std::vector<float> reference(fa.size()), got(fa.size());
+  __nv_fp8_e5m2 *da{}, *db{};
+  float* dc{};
+  CHECK_CUDA(cudaMalloc(&da, a.size() * sizeof(*da)));
+  CHECK_CUDA(cudaMalloc(&db, b.size() * sizeof(*db)));
+  CHECK_CUDA(cudaMalloc(&dc, reference.size() * sizeof(*dc)));
+  CHECK_CUDA(cudaMemcpy(
+      da, a.data(), a.size() * sizeof(*da), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(
+      db, b.data(), b.size() * sizeof(*db), cudaMemcpyHostToDevice));
+
+  const auto launch_reference = [&] {
+    e5m2_mma_m16n8k32_global_kernel<<<dim3(n / 64, n / 64), 128>>>(
+        da, db, dc, n);
+    CHECK_CUDA(cudaGetLastError());
+  };
+  const float reference_ms = benchmark(launch_reference);
+  CHECK_CUDA(cudaMemcpy(reference.data(), dc,
+                        reference.size() * sizeof(float),
+                        cudaMemcpyDeviceToHost));
+  const bool reference_matches_cpu = validate_float_reference_samples(
+      "e5m2_f32_cpu_samples", n, a, b, reference,
+      [] (__nv_fp8_e5m2 x) { return decode_e5m2_storage(x.__x); },
+      0.05f, 0.005f);
+  if (!reference_matches_cpu) std::exit(EXIT_FAILURE);
+
+  CHECK_CUDA(cudaMemset(dc, 0, got.size() * sizeof(float)));
+  const auto launch_candidate = [&] {
+    e5m2_mma_m16n8k32_smem128x64_kernel<<<
+        dim3(n / 64, n / 128), 256>>>(da, db, dc, n);
+    CHECK_CUDA(cudaGetLastError());
+  };
+  const float custom_ms = benchmark(launch_candidate);
+  CHECK_CUDA(cudaMemcpy(
+      got.data(), dc, got.size() * sizeof(float), cudaMemcpyDeviceToHost));
+  const bool matched = compare_float_full(
+      "e5m2_f32", reference, got, 0.05f, 0.005f);
+  emit(kCandidate, "e5m2->fp32", "same-precision E5M2 global MMA",
+       kReference, n, custom_ms, reference_ms, matched);
+
+  CHECK_CUDA(cudaFree(da));
+  CHECK_CUDA(cudaFree(db));
+  CHECK_CUDA(cudaFree(dc));
+  if (!matched) std::exit(EXIT_FAILURE);
 }
 
 } // namespace
@@ -295,16 +452,17 @@ int main(int argc,char**argv){
   if (argc == 2 && std::string(argv[1]) == "--self-test") {
     return host_self_test() ? 0 : 1;
   }
-  if(argc!=3){std::cerr<<"usage: "<<argv[0]<<" N bf16|tf32\n";return 2;}
+  if(argc!=3){std::cerr<<"usage: "<<argv[0]<<" N bf16|tf32|e5m2\n";return 2;}
   int n=std::atoi(argv[1]);std::string mode=argv[2];
   if(n<=0||n%128){std::cerr<<"N must be a positive multiple of 128\n";return 2;}
   cudaDeviceProp p{};CHECK_CUDA(cudaGetDeviceProperties(&p,0));
   std::cout<<"GPU="<<p.name<<" compute_capability="<<p.major<<'.'<<p.minor<<" N="<<n<<" mode="<<mode<<'\n';
-  if(mode=="bf16")run_float_case<__nv_bfloat16>(n,"bf16_q0_wmma_m128n64k16","bf16->fp32","cuBLAS BF16","bf16_f32_cpu_samples","bf16_f32",CUDA_R_16BF,CUBLAS_COMPUTE_32F,
+  if(mode=="bf16")run_float_case<__nv_bfloat16>(n,"bf16_q0_wmma_m128n64k16","bf16->fp32","cuBLAS BF16","cublas_bf16_gemmex","bf16_f32_cpu_samples","bf16_f32",CUDA_R_16BF,CUBLAS_COMPUTE_32F,
     [] (float x){return __float2bfloat16(x);},[](__nv_bfloat16 x){return __bfloat162float(x);},
     [=](__nv_bfloat16*a,__nv_bfloat16*b,float*c){wmma_m128n64_kernel<__nv_bfloat16,float,16><<<dim3(n/64,n/128),128>>>(a,b,c,n);},0.05f,0.005f);
-  else if(mode=="tf32")run_float_case<float>(n,"tf32_q0_wmma_m64n64k8","tf32->fp32","cuBLAS TF32","tf32_f32_cpu_samples","tf32_f32",CUDA_R_32F,CUBLAS_COMPUTE_32F_FAST_TF32,
+  else if(mode=="tf32")run_float_case<float>(n,"tf32_q0_wmma_m64n64k8","tf32->fp32","cuBLAS TF32","cublas_tf32_gemmex","tf32_f32_cpu_samples","tf32_f32",CUDA_R_32F,CUBLAS_COMPUTE_32F_FAST_TF32,
     [](float x){return round_to_tf32_rn(x);},[](float x){return x;},
     [=](float*a,float*b,float*c){tf32_wmma_m64n64_kernel<<<dim3(n/64,n/64),512>>>(a,b,c,n);},0.05f,0.005f);
+  else if(mode=="e5m2")run_e5m2_case(n);
   else {std::cerr<<"unknown mode\n";return 2;} return 0;
 }

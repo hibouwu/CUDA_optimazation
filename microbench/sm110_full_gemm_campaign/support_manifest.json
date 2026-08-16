@@ -120,24 +120,32 @@
       "accumulator_type": "fp32",
       "output_type": "fp32",
       "work_unit": "flop",
-      "status": "missing",
+      "status": "ready_for_closure_campaign",
       "native_mainloop": true,
       "implementation": {
-        "backend_ids": ["e5m2_q0_mma_m16n8k32_smem128x64"],
-        "closure_candidate_backend_ids": [],
+        "backend_ids": [
+          "e5m2_q0_mma_m16n8k32_smem128x64",
+          "e5m2_q1_mma_m16n8k32_global"
+        ],
+        "closure_candidate_backend_ids": [
+          "e5m2_q0_mma_m16n8k32_smem128x64"
+        ],
         "source_paths": ["GEMMquant_sm110/src/extended_gemm_bench.cu"]
       },
-      "numerical_reference": null,
-      "performance_denominator": null,
-      "static_candidate": {
-        "backend_id": "e5m2_q0_mma_m16n8k32_smem128x64",
-        "evidence": "CUDA 13 accepts mma.sync ... e5m2.e5m2 and cuobjdump shows HMMA in the selected function; this is static lowering only."
+      "numerical_reference": {
+        "backend_id": "e5m2_q1_mma_m16n8k32_global plus independent CPU E5M2 samples",
+        "source_path": "GEMMquant_sm110/src/extended_gemm_bench.cu",
+        "same_input_precision": true,
+        "same_output_type": true
+      },
+      "performance_denominator": {
+        "backend_id": "e5m2_q1_mma_m16n8k32_global",
+        "same_precision": true,
+        "status": "ready"
       },
       "reference_constraint_source": "https://docs.nvidia.com/cuda/cublas/index.html#cublasltmatmul",
-      "blockers": [
-        "The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.",
-        "A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required."
-      ]
+      "reference_note": "cuBLASLt does not expose an E5M2 times E5M2 contract here. The campaign therefore uses a separately launched global-load E5M2 MMA kernel as the same-precision performance denominator, validates 64 deterministic output samples against an independent host E5M2 decoder, and compares the complete FP32 output against the optimized shared-memory candidate.",
+      "blockers": []
     },
     {
       "precision_id": "e3m2_f32",

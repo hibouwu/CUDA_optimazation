@@ -79,6 +79,29 @@ CASES = [
     ],
     *[
         {
+            "id": f"e5m2_f32_n{n}_q0", "precision_id": "e5m2_f32",
+            "binary": "extended", "n": n,
+            "split": "holdout" if n == 4096 else "calibration",
+            "backend_id": "e5m2_q0_mma_m16n8k32_smem128x64",
+            "args": [str(n), "e5m2"],
+            "work_unit": "flop", "internal_repeats": 10,
+            "csv_precision": "e5m2->fp32",
+            "reference_contract": "e5m2_f32_cpu_samples",
+            "numerical_contract": "e5m2_f32",
+            "reference_backend_id": "e5m2_q1_mma_m16n8k32_global",
+            "function_substring":
+                "e5m2_mma_m16n8k32_smem128x64_kernel",
+            "sass_tokens": ["HMMA.16816.F32", "STG.E"],
+            "reference_function_substring":
+                "e5m2_mma_m16n8k32_global_kernel",
+            "reference_sass_tokens": ["HMMA.16816.F32", "STG.E"],
+            "ncu_kernel_regex":
+                "e5m2_mma_m16n8k32_smem128x64_kernel",
+        }
+        for n in SHAPES
+    ],
+    *[
+        {
             "id": f"s8_s32_n{n}_q15", "precision_id": "s8_s32",
             "binary": "quant", "n": n,
             "split": "holdout" if n == 4096 else "calibration",
@@ -275,18 +298,32 @@ def split_sass_functions(text: str) -> list[str]:
 
 
 def matching_sass_evidence(sass: str, case: dict[str, object]) -> dict[str, object]:
-    needle = str(case["function_substring"])
-    matches = [block for block in split_sass_functions(sass)
-               if needle in block.splitlines()[0]]
-    valid = [block for block in matches
-             if all(token in block for token in case["sass_tokens"])]
-    if not valid:
-        raise RuntimeError(
-            f"{case['id']}: no function block matching {needle!r} contains "
-            f"all SASS tokens {case['sass_tokens']}")
-    headers = [block.splitlines()[0].strip() for block in valid]
-    return {"function_substring": needle, "matching_function_headers": headers,
-            "sass_tokens": case["sass_tokens"]}
+    blocks = split_sass_functions(sass)
+
+    def require(function_key: str, tokens_key: str) -> dict[str, object]:
+        needle = str(case[function_key])
+        tokens = list(case[tokens_key])
+        matches = [block for block in blocks
+                   if needle in block.splitlines()[0]]
+        valid = [block for block in matches
+                 if all(token in block for token in tokens)]
+        if not valid:
+            raise RuntimeError(
+                f"{case['id']}: no function block matching {needle!r} contains "
+                f"all SASS tokens {tokens}")
+        return {
+            "function_substring": needle,
+            "matching_function_headers": [
+                block.splitlines()[0].strip() for block in valid
+            ],
+            "sass_tokens": tokens,
+        }
+
+    evidence = require("function_substring", "sass_tokens")
+    if "reference_function_substring" in case:
+        evidence["reference"] = require(
+            "reference_function_substring", "reference_sass_tokens")
+    return evidence
 
 
 def compile_binaries(run_dir: Path, host_compiler: str | None,
@@ -437,6 +474,11 @@ def parse_trial(case: dict[str, object], trial_dir: Path,
     else:
         if fields.get("backend_id") != case["backend_id"]:
             raise RuntimeError(f"{case['id']}: machine-readable backend mismatch")
+        if (case.get("reference_backend_id") is not None
+                and fields.get("reference_backend_id") !=
+                case["reference_backend_id"]):
+            raise RuntimeError(
+                f"{case['id']}: machine-readable reference backend mismatch")
         if fields.get("work_unit") != case["work_unit"]:
             raise RuntimeError(f"{case['id']}: machine-readable work unit mismatch")
         if fields.get("matched") not in {"1", "true"}:

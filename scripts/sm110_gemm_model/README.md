@@ -223,7 +223,7 @@ component rate is not a physical rate upper.
 
 `closure_analysis.json` separately reports `pass`, bounded-campaign measurement
 closure, all-precision numeric closure, and common-resource closure. A successful
-five-precision campaign therefore does not silently claim that every one of the
+six-precision campaign therefore does not silently claim that every one of the
 twelve declared precision contracts has a proven compute upper and full GEMM.
 
 Merge numeric evidence with the full-GEMM implementation/reference support map:

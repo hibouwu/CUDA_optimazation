@@ -7,7 +7,7 @@ import statistics
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 from .model import Capacity, EvidenceKind, ModelError, audit_inputs, precision_specs
@@ -15,7 +15,6 @@ from .observations import ObservedBest, audit_observations
 from .coverage import (
     CAMPAIGN_COMPONENT_RESOURCE_COUNTS,
     CAMPAIGN_COMPUTE_SELECTION,
-    CAMPAIGN_FULL_PRECISIONS,
     CAMPAIGN_FULL_SHAPES,
 )
 
@@ -92,6 +91,43 @@ def _read_json(path: Path) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ModelError(f"cannot read closure JSON {path}: {error}") from error
+
+
+def _read_json_at_commit(
+    repo_root: Path, commit: str, relative_path: object,
+) -> Any:
+    """Read a frozen JSON dependency from the commit that produced a run.
+
+    A run_spec stores a repository-relative support-manifest path and its hash.
+    Reading that path from the current checkout would silently reinterpret an
+    old result after the manifest grows.  The independent campaign auditor
+    already verifies the recorded blob; the importer uses the same immutable
+    Git object as its semantic input.
+    """
+    if not COMMIT_RE.fullmatch(commit):
+        raise ModelError(f"invalid recorded commit: {commit}")
+    if not isinstance(relative_path, str) or not relative_path:
+        raise ModelError("recorded JSON path must be a nonempty string")
+    path = PurePosixPath(relative_path)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise ModelError(
+            f"recorded JSON path is not repository relative: {relative_path}")
+    proc = subprocess.run(
+        ["git", "show", f"{commit}:{path.as_posix()}"],
+        cwd=repo_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode:
+        raise ModelError(
+            f"cannot read recorded JSON {path} at {commit}: {proc.stderr.strip()}")
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as error:
+        raise ModelError(
+            f"recorded JSON {path} at {commit} is invalid: {error}") from error
 
 
 def _read_json_lines(path: Path) -> list[dict[str, Any]]:
@@ -522,6 +558,8 @@ def capacities_from_component(
 
 def reference_denominators_from_manifest(
     manifest: dict[str, Any],
+    *,
+    expected_precision_ids: Iterable[str] | None = None,
 ) -> dict[str, str]:
     references: dict[str, str] = {}
     for row in manifest.get("precisions", []):
@@ -535,12 +573,49 @@ def reference_denominators_from_manifest(
                 or not denominator.get("backend_id")):
             raise ModelError(
                 f"{precision_id}: invalid closure performance denominator")
+        if precision_id in references:
+            raise ModelError(
+                f"support manifest repeats closure-ready precision {precision_id}")
         references[precision_id] = str(denominator["backend_id"])
-    if set(references) != set(CAMPAIGN_FULL_PRECISIONS):
-        raise ModelError(
-            "support manifest ready denominators differ from the frozen campaign "
-            f"precision set: {sorted(references)}")
+    if not references:
+        raise ModelError("support manifest has no closure-ready denominator")
+    if expected_precision_ids is not None:
+        expected = set(expected_precision_ids)
+        if not expected or set(references) != expected:
+            raise ModelError(
+                "support manifest ready denominators differ from the frozen "
+                f"campaign precision set: ready={sorted(references)} "
+                f"expected={sorted(expected)}")
     return references
+
+
+def full_precision_ids_from_spec(spec: dict[str, Any]) -> tuple[str, ...]:
+    cases = spec.get("cases")
+    if not isinstance(cases, list) or not cases:
+        raise ModelError("full-GEMM run spec has no frozen cases")
+    pairs: list[tuple[str, int]] = []
+    for case in cases:
+        if not isinstance(case, dict):
+            raise ModelError("full-GEMM run spec contains a non-object case")
+        precision_id = case.get("precision_id")
+        n = case.get("n")
+        if (not isinstance(precision_id, str) or not precision_id
+                or not isinstance(n, int) or isinstance(n, bool)):
+            raise ModelError("full-GEMM run spec has an invalid precision/shape")
+        pairs.append((precision_id, n))
+    if len(pairs) != len(set(pairs)):
+        raise ModelError("full-GEMM run spec repeats a precision/shape pair")
+    precision_ids = tuple(sorted({precision_id for precision_id, _ in pairs}))
+    expected = {
+        (precision_id, n)
+        for precision_id in precision_ids
+        for n in CAMPAIGN_FULL_SHAPES
+    }
+    if set(pairs) != expected:
+        raise ModelError(
+            "full-GEMM run spec is not a complete three-shape matrix: "
+            f"pairs={sorted(pairs)}")
+    return precision_ids
 
 
 def observations_from_full(
@@ -623,7 +698,7 @@ def observations_from_full(
         ))
     expected_pairs = {
         (precision_id, n)
-        for precision_id in CAMPAIGN_FULL_PRECISIONS
+        for precision_id in references
         for n in CAMPAIGN_FULL_SHAPES
     }
     actual_pairs = {(row.precision_id, row.n) for row in observations}
@@ -670,7 +745,7 @@ def _campaign_contract(references: dict[str, str]) -> dict[str, Any]:
         "full_gemm_precisions": sorted(references),
         "full_gemm_shapes": list(CAMPAIGN_FULL_SHAPES),
         "full_gemm_observation_count": (
-            len(CAMPAIGN_FULL_PRECISIONS) * len(CAMPAIGN_FULL_SHAPES)),
+            len(references) * len(CAMPAIGN_FULL_SHAPES)),
     }
 
 
@@ -750,9 +825,15 @@ def import_closure(
             component_summary, component_spec, paths=paths,
             qualification=qualification),
     ]
-    support_manifest_path = paths.repo_root / str(full_spec.get("support_manifest", ""))
+    full_precision_ids = full_precision_ids_from_spec(full_spec)
     references = reference_denominators_from_manifest(
-        _read_json(support_manifest_path))
+        _read_json_at_commit(
+            paths.repo_root,
+            expected_commit,
+            full_spec.get("support_manifest"),
+        ),
+        expected_precision_ids=full_precision_ids,
+    )
     observations = observations_from_full(
         full_summary, references=references, paths=paths,
         qualification=qualification)
@@ -904,9 +985,15 @@ def import_composite_closure(
             include_epilogue=False,
         ),
     ]
-    support_manifest_path = repo_root / str(full_spec.get("support_manifest", ""))
+    full_precision_ids = full_precision_ids_from_spec(full_spec)
     references = reference_denominators_from_manifest(
-        _read_json(support_manifest_path))
+        _read_json_at_commit(
+            repo_root,
+            base_expected_commit,
+            full_spec.get("support_manifest"),
+        ),
+        expected_precision_ids=full_precision_ids,
+    )
     observations = observations_from_full(
         full_summary,
         references=references,

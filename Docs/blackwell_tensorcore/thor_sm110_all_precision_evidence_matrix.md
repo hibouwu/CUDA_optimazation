@@ -13,7 +13,7 @@ pipeline DAG 已实现和闭环。
 - component supplement：`thor-t5000-tma-ingress-supplement-maxn-20260814-c` @ `25d8cf71fa566150b64f2eb1dc7f814ce70fa354`
 - composite qualification：`closure_qualified`
 - precision count：`12`
-- implementation ready：`5`
+- implementation ready：`6`
 - numeric closed：`4`
 - closure-qualified resource envelopes：`0`
 - causal pipeline closed：`0`
@@ -27,7 +27,7 @@ pipeline DAG 已实现和闭环。
 | `bf16_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
 | `tf32_f32` | NO | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
 | `e4m3_f32` | yes | 3/3 | yes | 3/3 | yes | yes | NO | NO | NO | NO |
-| `e5m2_f32` | yes | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
+| `e5m2_f32` | yes | 3/3 | yes | 0/3 | NO | NO | NO | NO | NO | NO |
 | `e3m2_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
 | `e2m3_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
 | `e2m1_f32` | NO | 3/3 | NO | 0/3 | NO | NO | NO | NO | NO | NO |
@@ -84,7 +84,7 @@ pipeline DAG 已实现和闭环。
 
 ### `e5m2_f32`
 
-- support gaps：`implementation_status, closure_candidate_backend, same_contract_numerical_reference, same_precision_performance_denominator_impl`
+- support gaps：`none`
 - numeric gaps：`full_gemm_observed, closure_qualified_full_gemm_shape_matrix, full_gemm_numerical_validation, same_precision_performance_denominator`
 - model gaps：`closure_qualified_empirical_envelope_matrix, closure_qualified_causal_pipeline_profile_matrix, integrated_empirical_ideal_envelope_matrix`
 - missing compute shapes：`none`
@@ -92,8 +92,6 @@ pipeline DAG 已实现和闭环。
 - missing empirical envelope scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - missing causal profile scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
 - missing integrated ideal scenarios：`n1024.hot_l2, n1024.cold_hbm, n2048.hot_l2, n2048.cold_hbm, n4096.hot_l2, n4096.cold_hbm`
-- blocker：The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.
-- blocker：A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required.
 
 ### `e3m2_f32`
 

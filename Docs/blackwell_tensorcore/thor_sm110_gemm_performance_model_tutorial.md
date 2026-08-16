@@ -3049,17 +3049,19 @@ cuBLAS 最大合法 trial 为 131.163 TFLOP/s，仍低于更紧的 cold-HBM 条�
 - \(N_{\mathrm{DAG}}\)：上述资源包络还具有完整 causal pipeline DAG；
 - \(N_{\mathrm{e2e}}\)：前四个条件对同一 precision 全部为真。
 
-截至本 causal campaign 尚未在 Thor 采集时，历史机器生成矩阵曾给出：
+截至本 causal campaign 尚未在 Thor 采集且 E5M2 runner 已静态就绪时，当前机器
+生成矩阵给出：
 
 \[
 (N_{\mathrm{impl}},N_{\mathrm{numeric}},N_{\mathrm{env}},
 N_{\mathrm{DAG}},N_{\mathrm{e2e}})
-=(5,4,0,0,0).
+=(6,4,0,0,0).
 \]
 
 这不是说已有结果无效。它准确地区分：
 
-- 5 种 full-GEMM 实现合同已能进入 campaign；
+- 6 种 full-GEMM 实现合同已能进入 campaign；新增 E5M2 runner 尚无 Thor
+  full-GEMM observation，因此没有增加 numeric closure；
 - FP16、BF16、E4M3、S8 共 4 种已有 numeric closure；
 - FP16、BF16 的历史 tc5a TMA 容量只精确匹配 stride2048，所以各自只有 N=2048
   的 hot/cold 两项可用；没有一个 precision 的六场景资源包络矩阵闭环；
@@ -3158,7 +3160,7 @@ cold-entry、工作量是否为 (2MNK)、计时区间、时钟/带宽条件、tr
 2. 说明为什么 \(\widehat P_{\mathrm{env}}\) 不自动进入严格不等式；
 3. 区分候选/reference 比、候选/envelope 比和 observed best；
 4. 解释为什么稳定比较用 median，而 strict upper 反证要看最大合法 trial；
-5. 读懂当前 `(5, 4, 0, 0, 0)` 的证据门禁含义。
+5. 读懂当前 `(6, 4, 0, 0, 0)` 的证据门禁含义。
 
 第 7 课将进一步回答：read 和 write 各有一个 peak 时，为什么不能自动假设两者
 完全独立，也不能自动假设它们完全共享；怎样用容量区域统一表达这两种情况。
@@ -3171,7 +3173,7 @@ cold-entry、工作量是否为 (2MNK)、计时区间、时钟/带宽条件、tr
   [`model.py`](../../scripts/sm110_gemm_model/model.py)
 - 12 精度五级门禁的机器实现：
   [`precision_report.py`](../../scripts/sm110_gemm_model/precision_report.py)
-- 当前机器生成 `(5,4,0,0,0)` 证据矩阵：
+- 当前机器生成 `(6,4,0,0,0)` 证据矩阵：
   [`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)
 - FP16 10-trial candidate/reference、最大 trial、资源时间和平台 warning 的完整来源：
   [`thor_sm110_gemm_performance_bounds.md`](./thor_sm110_gemm_performance_bounds.md)
@@ -3864,8 +3866,10 @@ compute-only 点。这证明 compute microbenchmark 覆盖完整，不等于 12 
 
 - 已闭环：FP16、BF16、E4M3、S8；
 - TF32：完整 GEMM 和 compute 已有，但缺 strict compute upper；
-- E5M2、FP6、raw E2M1、MXFP4、NVFP4、U8：缺少的 full-GEMM implementation、
-  同合同 reference/denominator 或 strict upper 逐项列在机器生成矩阵中。
+- E5M2：candidate、同合同 reference 和 denominator runner 已就绪，但缺 Thor
+  full-GEMM observation；FP6、raw E2M1、MXFP4、NVFP4、U8 缺少的
+  full-GEMM implementation、同合同 reference/denominator 或 strict upper
+  逐项列在机器生成矩阵中。
 
 进一步要求精确 TMA capacity 与共同 A/B row stride 后，没有任何精度的六场景
 resource envelope matrix 闭环。历史 FP16/BF16 `tc5a` probe 只精确支持
@@ -4300,7 +4304,8 @@ auditor 和本地静态 preflight 同一个 commit 推送后再运行。当前�
 
 ### C. 全精度 full-GEMM 必需组
 
-- 补 E5M2、E3M2、E2M3、raw E2M1、MXFP4、NVFP4、U8 的 native candidate；
+- 在 Thor 运行并审计包含 3 个 E5M2 shape 的新版 18-case campaign；补 E3M2、
+  E2M3、raw E2M1、MXFP4、NVFP4、U8 的 native candidate；
 - 输出合同统一为本模型的 FP32 或 INT32 accumulator output；
 - 每种实现必须有独立同输入编码/scale/output reference 与同精度 denominator；
 - N=1024/2048 calibration、N=4096 holdout，各 10 个外部 trial；

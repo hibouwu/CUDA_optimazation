@@ -6,9 +6,9 @@ performance denominator. `support_manifest.json` is the machine-readable source
 of truth. It intentionally reports gaps instead of substituting a nearby data
 type.
 
-The hardware batch contains 15 square `NN`, `beta=0`, no-epilogue,
+The hardware batch contains 18 square `NN`, `beta=0`, no-epilogue,
 accumulator-output cases: FP16→FP32, BF16→FP32, TF32→FP32, E4M3→FP32,
-and signed INT8→INT32 at
+E5M2→FP32, and signed INT8→INT32 at
 `N=1024,2048,4096`. `N=1024,2048` are calibration points; `N=4096` is frozen as
 a holdout point. Each external trial contains the benchmark's own warmups and
 timed repetitions, and the campaign stores ten independent external trials.
@@ -22,17 +22,18 @@ reference.
 
 Correctness fails closed on two distinct checks:
 
-- the cuBLAS/cuBLASLt reference is checked against 64 deterministic CPU samples
-  computed from the actual quantized input values;
+- the cuBLAS/cuBLASLt reference, or E5M2's separately launched global-load MMA
+  reference, is checked against 64 deterministic CPU samples computed from the
+  actual quantized input values;
 - the candidate's complete output matrix is compared with that checked
   reference (toleranced FP accumulator comparison or exact S8→S32 comparison).
 
 Performance is recomputed by the runner from `2*N^3 / time`, rather than trusting
 the legacy `GFLOPS` CSV label. Signed integer work is reported as OP/s, not
-FLOP/s. The candidate and library reference are measured in every trial using
-the same inputs and precision contract. The SASS proof is function-scoped: the
-auditor requires the selected kernel's function block to contain its expected
-Tensor Core and store instructions.
+FLOP/s. The candidate and same-precision denominator are measured in every
+trial using the same inputs and precision contract. The SASS proof is
+function-scoped: the auditor requires the selected kernel's function block to
+contain its expected Tensor Core and store instructions.
 
 Every external custom/reference trial has a 120-second host timeout. Each NCU
 holdout collection has a separate 300-second timeout. Timeout handling targets
@@ -50,10 +51,13 @@ python3 microbench/sm110_full_gemm_campaign/audit_support_manifest.py
 ```
 
 Current closure-ready paths are FP16→FP32, BF16→FP32, TF32→FP32, FP8
-E4M3→FP32, and signed INT8→INT32. E5M2×E5M2 has a native candidate but no
-supported cuBLASLt same-contract reference; the official FP8 type table does not
-list that A/B pair. Both FP6 encodings, raw unscaled E2M1, and unsigned INT8
-still need complete references. The current MXFP4 and
+E4M3→FP32, FP8 E5M2→FP32, and signed INT8→INT32. cuBLASLt does not expose an
+E5M2×E5M2 A/B contract here, so E5M2 uses a separately launched global-load
+E5M2 MMA kernel as its same-precision performance denominator, validates 64
+deterministic samples against an independent host decoder, and compares the
+candidate's complete FP32 output against that reference kernel. Both FP6
+encodings, raw unscaled E2M1, and unsigned INT8 still need complete references.
+The current MXFP4 and
 NVFP4 CUTLASS example paths are marked partial because their output contracts
 do not match the model's FP32 output contract, their generated external source
 was not captured in the historical result bundle, and the historical runner

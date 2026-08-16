@@ -441,7 +441,8 @@ def main() -> int:
         add(errors, sass_path.is_file() and digest(sass_path) == result.get("sass_sha256"),
             f"{case_id}: SASS hash mismatch")
         if sass_path.is_file():
-            blocks = [block for block in sass_blocks(sass_path.read_text())
+            all_blocks = sass_blocks(sass_path.read_text())
+            blocks = [block for block in all_blocks
                       if str(case["function_substring"]) in block.splitlines()[0]]
             valid_blocks = [block for block in blocks
                             if all(token in block for token in case["sass_tokens"])]
@@ -452,6 +453,38 @@ def main() -> int:
             actual_headers = {block.splitlines()[0].strip() for block in valid_blocks}
             add(errors, reported_headers == actual_headers,
                 f"{case_id}: SASS function header evidence mismatch")
+            if "reference_function_substring" in case:
+                reference_blocks = [
+                    block for block in all_blocks
+                    if str(case["reference_function_substring"])
+                    in block.splitlines()[0]
+                ]
+                valid_reference_blocks = [
+                    block for block in reference_blocks
+                    if all(token in block
+                           for token in case["reference_sass_tokens"])
+                ]
+                add(errors, bool(valid_reference_blocks),
+                    f"{case_id}: reference function-scoped SASS evidence missing")
+                reported_reference = result.get("sass_evidence", {}).get(
+                    "reference", {})
+                reported_reference_headers = set(
+                    reported_reference.get("matching_function_headers", []))
+                actual_reference_headers = {
+                    block.splitlines()[0].strip()
+                    for block in valid_reference_blocks
+                }
+                add(errors,
+                    reported_reference.get("function_substring") ==
+                    case["reference_function_substring"],
+                    f"{case_id}: reference SASS function identity mismatch")
+                add(errors,
+                    reported_reference.get("sass_tokens") ==
+                    case["reference_sass_tokens"],
+                    f"{case_id}: reference SASS token evidence mismatch")
+                add(errors,
+                    reported_reference_headers == actual_reference_headers,
+                    f"{case_id}: reference SASS header evidence mismatch")
         binary_hash_path = root / str(result.get("binary_hash_path", ""))
         binary_hash_fields = (binary_hash_path.read_text().split()
                               if binary_hash_path.is_file() else [])
@@ -556,6 +589,11 @@ def main() -> int:
                 else:
                     if fields.get("backend_id") != case["backend_id"]:
                         raise ValueError("machine-readable backend differs")
+                    if (case.get("reference_backend_id") is not None
+                            and fields.get("reference_backend_id") !=
+                            case["reference_backend_id"]):
+                        raise ValueError(
+                            "machine-readable reference backend differs")
                     if fields.get("work_unit") != case["work_unit"]:
                         raise ValueError("machine-readable unit differs")
                     if fields.get("matched") not in {"1", "true"}:

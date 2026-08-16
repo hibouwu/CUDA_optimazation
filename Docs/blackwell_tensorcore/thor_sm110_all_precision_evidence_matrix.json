@@ -27,7 +27,7 @@
   "empirical_ideal_closed_count": 0,
   "end_to_end_closed_count": 0,
   "expected_commit": "25d8cf71fa566150b64f2eb1dc7f814ce70fa354",
-  "implementation_ready_count": 5,
+  "implementation_ready_count": 6,
   "numeric_closed_count": 4,
   "precision_count": 12,
   "precisions": [
@@ -1551,7 +1551,9 @@
     },
     {
       "accumulator_type": "fp32",
-      "candidate_backend_ids": [],
+      "candidate_backend_ids": [
+        "e5m2_q0_mma_m16n8k32_smem128x64"
+      ],
       "causal_pipeline_model_complete": false,
       "empirical_envelope_scenarios": [
         {
@@ -1803,8 +1805,8 @@
       ],
       "empirical_ideal_matrix_complete": false,
       "end_to_end_closed": false,
-      "implementation_ready": false,
-      "implementation_status": "missing",
+      "implementation_ready": true,
+      "implementation_status": "ready_for_closure_campaign",
       "input_type": "fp8_e5m2",
       "missing_causal_pipeline_scenarios": [
         "n1024.hot_l2",
@@ -1880,11 +1882,11 @@
         "same_precision_performance_denominator": false,
         "strict_compute_upper": true
       },
-      "numerical_reference_backend": null,
-      "numerical_reference_ready": false,
+      "numerical_reference_backend": "e5m2_q1_mma_m16n8k32_global plus independent CPU E5M2 samples",
+      "numerical_reference_ready": true,
       "output_type": "fp32",
-      "performance_denominator_backend": null,
-      "performance_denominator_ready": false,
+      "performance_denominator_backend": "e5m2_q1_mma_m16n8k32_global",
+      "performance_denominator_ready": true,
       "precision_id": "e5m2_f32",
       "qualified_causal_pipeline_scenarios": [],
       "qualified_empirical_envelope_scenarios": [],
@@ -1901,16 +1903,8 @@
       "source_paths": [
         "GEMMquant_sm110/src/extended_gemm_bench.cu"
       ],
-      "support_blockers": [
-        "The cuBLASLt FP8 support table does not list E5M2 times E5M2 as a supported A/B pair, so the attempted library reference is not a valid closure contract.",
-        "A captured CUTLASS or other independent same-contract full-output reference and performance denominator is required."
-      ],
-      "support_gaps": [
-        "implementation_status",
-        "closure_candidate_backend",
-        "same_contract_numerical_reference",
-        "same_precision_performance_denominator_impl"
-      ],
+      "support_blockers": [],
+      "support_gaps": [],
       "work_unit": "flop"
     },
     {

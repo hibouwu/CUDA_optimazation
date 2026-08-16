@@ -70,6 +70,7 @@ FULL_REFERENCES = {
     "bf16_f32": "cublas_bf16_gemmex",
     "tf32_f32": "cublas_tf32_gemmex",
     "e4m3_f32": "fp8_q8_cublaslt_matmul",
+    "e5m2_f32": "e5m2_q1_mma_m16n8k32_global",
     "s8_s32": "int8_q19_cublas_gemmex",
 }
 
@@ -386,7 +387,7 @@ class ClosureConversionTest(unittest.TestCase):
         }
         self.assertEqual(validate_component_fields(case, fields), rate)
 
-    def test_full_gemm_conversion_emits_fifteen_same_precision_pairs(self) -> None:
+    def test_full_gemm_conversion_emits_eighteen_same_precision_pairs(self) -> None:
         results = []
         for index, case in enumerate(FULL_CASES, 1):
             reference = float(index) * 100.0
@@ -415,7 +416,7 @@ class ClosureConversionTest(unittest.TestCase):
             {"results": results}, references=FULL_REFERENCES,
             paths=self.paths,
             qualification="closure_qualified")
-        self.assertEqual(len(observations), 15)
+        self.assertEqual(len(observations), 18)
         self.assertTrue(all(
             row.performance_reference_relation == "same_precision"
             for row in observations))
@@ -615,6 +616,9 @@ class ClosureConversionTest(unittest.TestCase):
         with mock.patch(
             "scripts.sm110_gemm_model.closure_import._run_auditor",
             return_value={"pass": True},
+        ), mock.patch(
+            "scripts.sm110_gemm_model.closure_import._read_json_at_commit",
+            return_value=support_manifest,
         ):
             imported = import_closure(
                 repo_root=self.root, suite_id=SUITE, expected_commit=COMMIT)
@@ -627,10 +631,10 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertEqual(resource_counts["tmem.readback.x8.warps4"], 1)
         self.assertEqual(resource_counts["tmem.readback.x16.warps1"], 1)
         self.assertEqual(resource_counts["tmem.scale_ingress"], 1)
-        self.assertEqual(len(imported["observed_best"]), 15)
+        self.assertEqual(len(imported["observed_best"]), 18)
         self.assertTrue(imported["model_input_audit"]["pass"])
         self.assertEqual(
-            imported["campaign_contract"]["full_gemm_observation_count"], 15)
+            imported["campaign_contract"]["full_gemm_observation_count"], 18)
         self.assertEqual(imported["campaign_contract"]["compute_case_count"], 36)
         self.assertTrue(
             imported["platform_evidence"]["overcurrent_events_observed"])
@@ -658,7 +662,7 @@ class ClosureConversionTest(unittest.TestCase):
         )
         self.assertFalse(analysis["pass"])
         self.assertEqual(analysis["capacity_count"], 54)
-        self.assertEqual(analysis["observation_count"], 15)
+        self.assertEqual(analysis["observation_count"], 18)
         self.assertTrue(
             analysis["campaign_measurement_coverage"]
                     ["all_campaign_measurements_closed"])
@@ -681,7 +685,7 @@ class ClosureConversionTest(unittest.TestCase):
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
             metadata=imported,
         )
-        self.assertEqual(precision_analysis["implementation_ready_count"], 5)
+        self.assertEqual(precision_analysis["implementation_ready_count"], 6)
         self.assertEqual(
             precision_analysis["campaign_sources"],
             imported["campaign_sources"],
@@ -689,7 +693,7 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertEqual(
             precision_analysis["composition"], imported["composition"]
         )
-        self.assertEqual(precision_analysis["numeric_closed_count"], 4)
+        self.assertEqual(precision_analysis["numeric_closed_count"], 5)
         self.assertEqual(
             precision_analysis["resource_envelope_closed_count"], 0)
         self.assertEqual(
@@ -708,7 +712,7 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertEqual(
             precision_rows["e5m2_f32"]["numeric_evidence"]
                           ["missing_full_gemm_shapes"],
-            (1024, 2048, 4096),
+            (),
         )
         campaign = campaign_measurement_coverage(
             capacities_from_rows(imported["capacities"]),
@@ -781,6 +785,9 @@ class ClosureConversionTest(unittest.TestCase):
         with mock.patch(
             "scripts.sm110_gemm_model.closure_import._run_auditor",
             return_value={"pass": True},
+        ), mock.patch(
+            "scripts.sm110_gemm_model.closure_import._read_json_at_commit",
+            return_value=support_manifest,
         ):
             composite = import_composite_closure(
                 repo_root=self.root,
@@ -793,7 +800,7 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertEqual(composite["composition"],
                          "base_compute_full_plus_component_supplement")
         self.assertEqual(len(composite["capacities"]), 54)
-        self.assertEqual(len(composite["observed_best"]), 15)
+        self.assertEqual(len(composite["observed_best"]), 18)
         self.assertTrue(all(
             row["capacity_id"].startswith(f"{supplement_id}.")
             for row in composite["capacities"]))

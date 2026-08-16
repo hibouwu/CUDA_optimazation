@@ -2460,7 +2460,7 @@ class ObservationTest(unittest.TestCase):
         )
         self.assertEqual(analysis["precision_count"], 12)
         self.assertEqual(analysis["schema_version"], 3)
-        self.assertEqual(analysis["implementation_ready_count"], 5)
+        self.assertEqual(analysis["implementation_ready_count"], 6)
         self.assertEqual(analysis["resource_envelope_closed_count"], 0)
         self.assertTrue(analysis["causal_pipeline_dag_implemented"])
         self.assertEqual(analysis["causal_pipeline_closed_count"], 0)
@@ -2470,11 +2470,8 @@ class ObservationTest(unittest.TestCase):
         rows = {row["precision_id"]: row for row in analysis["precisions"]}
         self.assertTrue(rows["fp16_f32"]["implementation_ready"])
         self.assertFalse(rows["fp16_f32"]["numeric_closure"])
-        self.assertFalse(rows["e5m2_f32"]["implementation_ready"])
-        self.assertIn(
-            "same_precision_performance_denominator_impl",
-            rows["e5m2_f32"]["support_gaps"],
-        )
+        self.assertTrue(rows["e5m2_f32"]["implementation_ready"])
+        self.assertEqual(rows["e5m2_f32"]["support_gaps"], [])
         self.assertIn(
             "closure_qualified_causal_pipeline_profile_matrix",
             rows["fp16_f32"]["model_gaps"],
