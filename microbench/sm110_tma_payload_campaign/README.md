@@ -29,6 +29,12 @@ spec, exact Git commit, MAXN/Thor environment, source/binary/SASS hashes,
 miss evidence. A working-set-size label alone is not accepted as residency
 proof.
 
+Nsight Compute 2025.3.1 may emit base-unit raw-page values with quoted decimal
+grouping, for example `"83,886,080"` bytes. The runner and the independent
+auditor both validate the unit row (`ns`, `byte`, or `sector`) and parse only a
+strict grouped-number grammar. They reject scaled `Mbyte`/`ms` imports,
+malformed grouping, non-finite values, and summary/raw disagreements.
+
 The frozen supplement orchestrator runs this campaign with mandatory NCU:
 
 ```bash

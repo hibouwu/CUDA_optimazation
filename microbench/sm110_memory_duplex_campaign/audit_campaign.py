@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import math
@@ -18,6 +19,21 @@ sys.path.insert(0, str(REPO))
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
     EXPECTED_SMS, NCU_METRICS, TARGET_SQUARE_SHAPES, TRIALS, cases,
     duplex_sass_block, sha256_text, validate_trial,
+)
+
+NCU_BASE_UNITS = {
+    "gpu__time_duration.sum": "ns",
+    "lts__t_bytes.sum": "byte",
+    "lts__t_sectors_op_read.sum": "sector",
+    "lts__t_sectors_op_write.sum": "sector",
+    "lts__t_sectors_op_read_lookup_hit.sum": "sector",
+    "lts__t_sectors_op_read_lookup_miss.sum": "sector",
+    "dram__bytes_op_read.sum": "byte",
+    "dram__bytes_op_write.sum": "byte",
+}
+NCU_NUMBER_RE = re.compile(
+    r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
+    r"(?:[eE][+-]?\d+)?$"
 )
 
 
@@ -35,6 +51,51 @@ def load(path: Path, errors: list[str], label: str) -> dict[str, object]:
         errors.append(f"{label}: JSON root is not an object")
         return {}
     return value
+
+
+def ncu_number(value: object) -> float:
+    text = str(value).strip()
+    if not NCU_NUMBER_RE.fullmatch(text):
+        raise ValueError(f"invalid NCU number: {value!r}")
+    result = float(text.replace(",", ""))
+    if not math.isfinite(result):
+        raise ValueError(f"non-finite NCU number: {value!r}")
+    return result
+
+
+def find_ncu_row(path: Path) -> dict[str, str]:
+    with path.open(newline="") as handle:
+        rows = list(csv.reader(handle))
+    for index, header in enumerate(rows):
+        if ("ID" not in header or "Kernel Name" not in header
+                or not set(NCU_BASE_UNITS).issubset(header)):
+            continue
+        if index + 1 >= len(rows) or len(rows[index + 1]) != len(header):
+            raise ValueError("NCU unit row is missing")
+        unit_row = rows[index + 1]
+        for name, expected_unit in NCU_BASE_UNITS.items():
+            actual_unit = unit_row[header.index(name)]
+            if actual_unit != expected_unit:
+                raise ValueError(
+                    f"NCU metric {name} has unit {actual_unit!r}, "
+                    f"expected {expected_unit!r}")
+        id_index = header.index("ID")
+        kernel_index = header.index("Kernel Name")
+        time_index = header.index("gpu__time_duration.sum")
+        candidates: list[tuple[float, list[str]]] = []
+        for row in rows[index + 1:]:
+            if (len(row) != len(header) or not row[id_index].isdigit()
+                    or "duplex_kernel" not in row[kernel_index]):
+                continue
+            try:
+                duration = ncu_number(row[time_index])
+            except ValueError:
+                continue
+            if duration >= 0:
+                candidates.append((duration, row))
+        if candidates:
+            return dict(zip(header, candidates[-1][1]))
+    raise ValueError("no duplex kernel metric row")
 
 
 def audit_environment(root: Path, spec: dict[str, object], errors: list[str]) -> None:
@@ -85,6 +146,13 @@ def audit_ncu(root: Path, case: dict[str, object], result: dict[str, object],
         path = case_dir / relative
         if not relative or not path.is_file() or digest(path) != ncu.get(hash_key):
             errors.append(f"{cid}: {path_key} hash mismatch")
+    raw_path = case_dir / str(ncu.get("raw_path", ""))
+    try:
+        raw_row = find_ncu_row(raw_path)
+        raw_values = {name: ncu_number(raw_row[name]) for name in NCU_METRICS}
+    except (OSError, KeyError, ValueError) as exc:
+        errors.append(f"{cid}: cannot independently parse raw CSV: {exc}")
+        raw_values = {}
     try:
         values = {name: float(ncu["values"][name]) for name in NCU_METRICS}
         requested_read = int(ncu["requested_read_bytes"])
@@ -92,6 +160,10 @@ def audit_ncu(root: Path, case: dict[str, object], result: dict[str, object],
     except (KeyError, TypeError, ValueError) as exc:
         errors.append(f"{cid}: malformed NCU values: {exc}")
         return
+    for name, value in values.items():
+        if name in raw_values and not math.isclose(
+                value, raw_values[name], rel_tol=1e-12, abs_tol=1e-9):
+            errors.append(f"{cid}: summary/raw CSV mismatch for {name}")
     if any(not math.isfinite(value) or value < 0 for value in values.values()):
         errors.append(f"{cid}: invalid NCU numeric value")
     if values["lts__t_sectors_op_read.sum"] * 32 < requested_read * 0.90:

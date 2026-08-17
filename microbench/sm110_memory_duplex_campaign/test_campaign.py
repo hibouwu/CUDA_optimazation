@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import csv
+import hashlib
+import json
 import unittest
 import tempfile
 from pathlib import Path
 
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
-    HBM_RATIOS, L2_RATIOS, TARGET_SQUARE_SHAPES, cases,
+    HBM_RATIOS, L2_RATIOS, NCU_BASE_UNITS, NCU_METRICS,
+    TARGET_SQUARE_SHAPES, cases,
     derive_ratio_contracts, duplex_sass_block, find_ncu_row, validate_trial,
+    ncu_number,
+)
+from microbench.sm110_memory_duplex_campaign.audit_campaign import (
+    audit_ncu,
+    find_ncu_row as audit_find_ncu_row,
+    ncu_number as audit_ncu_number,
 )
 
 
@@ -79,16 +89,104 @@ class MemoryDuplexContractTest(unittest.TestCase):
     def test_ncu_parser_selects_timed_duplex_launch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "raw.csv"
-            path.write_text(
-                '==PROF==,Connected\n'
-                'ID,Kernel Name,gpu__time_duration.sum,lts__t_bytes.sum\n'
-                '1,initialize,10,20\n'
-                '2,duplex_kernel,100,200\n'
-                '3,duplex_kernel,300,400\n'
-            )
-            row = find_ncu_row(path)
-            self.assertEqual(row["ID"], "3")
-            self.assertEqual(row["gpu__time_duration.sum"], "300")
+            header = ["ID", "Kernel Name", *NCU_METRICS]
+            units = ["", "", *(NCU_BASE_UNITS[name] for name in NCU_METRICS)]
+            rows = [
+                ["1", "initialize", "10", "20", "0", "0", "0", "0", "0", "0"],
+                ["2", "duplex_kernel", "100,000", "200,000", "1", "1", "1", "0", "1", "1"],
+                ["3", "duplex_kernel", "300,000", "400,000", "2", "2", "2", "1", "2", "2"],
+            ]
+            with path.open("w", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["==PROF== Connected"])
+                writer.writerow(header)
+                writer.writerow(units)
+                writer.writerows(rows)
+            for parser in (find_ncu_row, audit_find_ncu_row):
+                row = parser(path)
+                self.assertEqual(row["ID"], "3")
+                self.assertEqual(row["gpu__time_duration.sum"], "300,000")
+            self.assertEqual(ncu_number("400,000"), 400_000.0)
+            self.assertEqual(audit_ncu_number("400,000"), 400_000.0)
+
+    def test_ncu_parser_rejects_malformed_grouping_and_scaled_units(self) -> None:
+        for parser in (ncu_number, audit_ncu_number):
+            with self.assertRaises(ValueError):
+                parser("40,00")
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "raw.csv"
+            header = ["ID", "Kernel Name", *NCU_METRICS]
+            units = ["", "", "ms", *("Mbyte" for _ in NCU_METRICS[1:])]
+            values = ["1", "duplex_kernel", *("1" for _ in NCU_METRICS)]
+            with path.open("w", newline="") as handle:
+                csv.writer(handle).writerows((header, units, values))
+            with self.assertRaisesRegex(RuntimeError, "expected 'ns'"):
+                find_ncu_row(path)
+            with self.assertRaisesRegex(ValueError, "expected 'ns'"):
+                audit_find_ncu_row(path)
+
+    def test_independent_auditor_reparses_grouped_raw_metrics(self) -> None:
+        case = cases()[0]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            ncu_dir = root / "cases" / str(case["id"]) / "ncu"
+            ncu_dir.mkdir(parents=True)
+            report = ncu_dir / "profile.ncu-rep"
+            raw = ncu_dir / "raw.csv"
+            stderr = ncu_dir / "stderr.log"
+            report.write_text("NCU")
+            stderr.write_text("")
+
+            requested_read = 64 << 20
+            requested_write = requested_read * int(case["write_operations"]) // int(
+                case["read_operations"])
+            values = {
+                "gpu__time_duration.sum": 8_000_000.0,
+                "lts__t_bytes.sum": float(requested_read + requested_write),
+                "lts__t_sectors_op_read.sum": requested_read / 32,
+                "lts__t_sectors_op_write.sum": requested_write / 32,
+                "lts__t_sectors_op_read_lookup_hit.sum": 0.0,
+                "lts__t_sectors_op_read_lookup_miss.sum": requested_read / 32,
+                "dram__bytes_op_read.sum": float(requested_read),
+                "dram__bytes_op_write.sum": float(requested_write),
+            }
+            header = ["ID", "Kernel Name", *NCU_METRICS]
+            units = ["", "", *(NCU_BASE_UNITS[name] for name in NCU_METRICS)]
+            data = [
+                "1", "duplex_kernel",
+                *(f"{int(values[name]):,}" for name in NCU_METRICS),
+            ]
+            with raw.open("w", newline="") as handle:
+                csv.writer(handle).writerows((header, units, data))
+
+            def digest(path: Path) -> str:
+                return hashlib.sha256(path.read_bytes()).hexdigest()
+
+            ncu = {
+                "returncode": 0,
+                "metrics": list(NCU_METRICS),
+                "iterations": 1,
+                "requested_read_bytes": requested_read,
+                "requested_write_bytes": requested_write,
+                "values": values,
+                "report_path": "ncu/profile.ncu-rep",
+                "report_sha256": digest(report),
+                "raw_path": "ncu/raw.csv",
+                "raw_sha256": digest(raw),
+                "stderr_path": "ncu/stderr.log",
+                "stderr_sha256": digest(stderr),
+            }
+            (ncu_dir / "summary.json").write_text(json.dumps(ncu, sort_keys=True))
+            result = {"ncu": ncu}
+            errors: list[str] = []
+            audit_ncu(root, case, result, errors)
+            self.assertEqual(errors, [])
+
+            ncu["values"]["dram__bytes_op_read.sum"] += 1
+            (ncu_dir / "summary.json").write_text(json.dumps(ncu, sort_keys=True))
+            errors = []
+            audit_ncu(root, case, result, errors)
+            self.assertTrue(any("summary/raw CSV mismatch" in row for row in errors))
 
     def test_sass_tokens_must_be_in_duplex_function(self) -> None:
         sass = """

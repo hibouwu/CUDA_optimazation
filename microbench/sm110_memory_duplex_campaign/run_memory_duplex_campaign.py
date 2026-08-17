@@ -55,6 +55,20 @@ NCU_METRICS = (
     "dram__bytes_op_read.sum",
     "dram__bytes_op_write.sum",
 )
+NCU_BASE_UNITS = {
+    "gpu__time_duration.sum": "ns",
+    "lts__t_bytes.sum": "byte",
+    "lts__t_sectors_op_read.sum": "sector",
+    "lts__t_sectors_op_write.sum": "sector",
+    "lts__t_sectors_op_read_lookup_hit.sum": "sector",
+    "lts__t_sectors_op_read_lookup_miss.sum": "sector",
+    "dram__bytes_op_read.sum": "byte",
+    "dram__bytes_op_write.sum": "byte",
+}
+NCU_NUMBER_RE = re.compile(
+    r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
+    r"(?:[eE][+-]?\d+)?$"
+)
 
 
 def derive_ratio_contracts() -> tuple[tuple[tuple[int, int], ...],
@@ -371,13 +385,32 @@ def query_metrics() -> list[str]:
     return list(NCU_METRICS)
 
 
+def ncu_number(value: object) -> float:
+    text = str(value).strip()
+    if not NCU_NUMBER_RE.fullmatch(text):
+        raise ValueError(f"invalid NCU number: {value!r}")
+    result = float(text.replace(",", ""))
+    if not math.isfinite(result):
+        raise ValueError(f"non-finite NCU number: {value!r}")
+    return result
+
+
 def find_ncu_row(path: Path) -> dict[str, str]:
     with path.open(newline="") as handle:
         rows = list(csv.reader(handle))
     for index, header in enumerate(rows):
         if ("ID" not in header or "Kernel Name" not in header
-                or "gpu__time_duration.sum" not in header):
+                or not set(NCU_BASE_UNITS).issubset(header)):
             continue
+        if index + 1 >= len(rows) or len(rows[index + 1]) != len(header):
+            raise RuntimeError(f"NCU unit row is missing from {path}")
+        unit_row = rows[index + 1]
+        for name, expected_unit in NCU_BASE_UNITS.items():
+            actual_unit = unit_row[header.index(name)]
+            if actual_unit != expected_unit:
+                raise RuntimeError(
+                    f"NCU metric {name} has unit {actual_unit!r}, "
+                    f"expected {expected_unit!r} in {path}")
         id_index = header.index("ID")
         kernel_index = header.index("Kernel Name")
         time_index = header.index("gpu__time_duration.sum")
@@ -387,9 +420,12 @@ def find_ncu_row(path: Path) -> dict[str, str]:
                     or "duplex_kernel" not in row[kernel_index]):
                 continue
             try:
-                candidates.append((float(row[time_index]), row))
+                duration = ncu_number(row[time_index])
             except ValueError:
                 pass
+            else:
+                if duration >= 0:
+                    candidates.append((duration, row))
         if candidates:
             # The binary launches warmup first and the measured kernel second.
             # Selecting the final duplex launch keeps the NCU byte contract tied
@@ -420,7 +456,7 @@ def collect_ncu(case_dir: Path, case: dict[str, object], binary: Path,
     if proc.returncode or "ERR_NVGPUCTRPERM" in proc.stderr or not report.is_file():
         raise RuntimeError(f"{case['id']}: NCU failed; see {stderr_path}")
     row = find_ncu_row(raw)
-    values = {name: float(row[name]) for name in metrics}
+    values = {name: ncu_number(row[name]) for name in metrics}
     if any(not math.isfinite(value) or value < 0 for value in values.values()):
         raise RuntimeError(f"{case['id']}: invalid NCU values")
     read_requested = (EXPECTED_SMS * BLOCKS_PER_SM * THREADS * ncu_iters

@@ -61,6 +61,17 @@ NCU_REQUIRED = (
     "lts__t_sectors_op_read_lookup_hit.sum",
     "lts__t_sectors_op_read_lookup_miss.sum",
 )
+NCU_BASE_UNITS = {
+    "gpu__time_duration.sum": "ns",
+    "l1tex__m_xbar2l1tex_read_bytes_mem_global_op_tma_ld.sum": "byte",
+    "lts__t_bytes.sum": "byte",
+    "lts__t_sectors_op_read_lookup_hit.sum": "sector",
+    "lts__t_sectors_op_read_lookup_miss.sum": "sector",
+}
+NCU_NUMBER_RE = re.compile(
+    r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
+    r"(?:[eE][+-]?\d+)?$"
+)
 
 
 def utc_now() -> str:
@@ -323,11 +334,32 @@ def query_ncu_metrics() -> tuple[list[str], list[str]]:
     return supported, missing
 
 
+def ncu_number(value: object) -> float:
+    text = str(value).strip()
+    if not NCU_NUMBER_RE.fullmatch(text):
+        raise ValueError(f"invalid NCU number: {value!r}")
+    result = float(text.replace(",", ""))
+    if not math.isfinite(result):
+        raise ValueError(f"non-finite NCU number: {value!r}")
+    return result
+
+
 def find_ncu_row(path: Path) -> dict[str, str]:
-    rows = list(csv.reader(path.open(newline="")))
+    with path.open(newline="") as handle:
+        rows = list(csv.reader(handle))
     for index, header in enumerate(rows):
-        if "ID" not in header or "Kernel Name" not in header:
+        if ("ID" not in header or "Kernel Name" not in header
+                or not set(NCU_BASE_UNITS).issubset(header)):
             continue
+        if index + 1 >= len(rows) or len(rows[index + 1]) != len(header):
+            raise RuntimeError(f"NCU unit row is missing from {path}")
+        unit_row = rows[index + 1]
+        for name, expected_unit in NCU_BASE_UNITS.items():
+            actual_unit = unit_row[header.index(name)]
+            if actual_unit != expected_unit:
+                raise RuntimeError(
+                    f"NCU metric {name} has unit {actual_unit!r}, "
+                    f"expected {expected_unit!r} in {path}")
         kernel_index = header.index("Kernel Name")
         time_index = header.index("gpu__time_duration.sum")
         candidates: list[tuple[float, list[str]]] = []
@@ -337,9 +369,11 @@ def find_ncu_row(path: Path) -> dict[str, str]:
             if "tma_kernel" not in row[kernel_index]:
                 continue
             try:
-                candidates.append((float(row[time_index]), row))
+                duration = ncu_number(row[time_index])
             except ValueError:
                 continue
+            if duration >= 0:
+                candidates.append((duration, row))
         if candidates:
             return dict(zip(header, max(candidates, key=lambda item: item[0])[1]))
     raise RuntimeError(f"no TMA kernel metric row in {path}")
@@ -347,7 +381,7 @@ def find_ncu_row(path: Path) -> dict[str, str]:
 
 def metric(row: dict[str, str], name: str) -> float:
     try:
-        value = float(row[name])
+        value = ncu_number(row[name])
     except (KeyError, ValueError) as exc:
         raise RuntimeError(f"invalid NCU metric {name}") from exc
     if not math.isfinite(value) or value < 0:

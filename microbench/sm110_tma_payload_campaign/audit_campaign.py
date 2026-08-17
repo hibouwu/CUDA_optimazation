@@ -28,6 +28,17 @@ REQUIRED_NCU_METRICS = {
     "lts__t_sectors_op_read_lookup_hit.sum",
     "lts__t_sectors_op_read_lookup_miss.sum",
 }
+NCU_BASE_UNITS = {
+    "gpu__time_duration.sum": "ns",
+    "l1tex__m_xbar2l1tex_read_bytes_mem_global_op_tma_ld.sum": "byte",
+    "lts__t_bytes.sum": "byte",
+    "lts__t_sectors_op_read_lookup_hit.sum": "sector",
+    "lts__t_sectors_op_read_lookup_miss.sum": "sector",
+}
+NCU_NUMBER_RE = re.compile(
+    r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
+    r"(?:[eE][+-]?\d+)?$"
+)
 
 
 def digest(path: Path) -> str:
@@ -52,12 +63,32 @@ def manifest_arg(case: dict[str, object], option: str) -> str | None:
         return None
 
 
+def ncu_number(value: object) -> float:
+    text = str(value).strip()
+    if not NCU_NUMBER_RE.fullmatch(text):
+        raise ValueError(f"invalid NCU number: {value!r}")
+    result = float(text.replace(",", ""))
+    if not math.isfinite(result):
+        raise ValueError(f"non-finite NCU number: {value!r}")
+    return result
+
+
 def find_ncu_row(path: Path) -> dict[str, str]:
     with path.open(newline="") as handle:
         rows = list(csv.reader(handle))
     for index, header in enumerate(rows):
-        if "ID" not in header or "Kernel Name" not in header:
+        if ("ID" not in header or "Kernel Name" not in header
+                or not set(NCU_BASE_UNITS).issubset(header)):
             continue
+        if index + 1 >= len(rows) or len(rows[index + 1]) != len(header):
+            raise ValueError("NCU unit row is missing")
+        unit_row = rows[index + 1]
+        for name, expected_unit in NCU_BASE_UNITS.items():
+            actual_unit = unit_row[header.index(name)]
+            if actual_unit != expected_unit:
+                raise ValueError(
+                    f"NCU metric {name} has unit {actual_unit!r}, "
+                    f"expected {expected_unit!r}")
         kernel_index = header.index("Kernel Name")
         time_index = header.index("gpu__time_duration.sum")
         candidates: list[tuple[float, list[str]]] = []
@@ -67,9 +98,11 @@ def find_ncu_row(path: Path) -> dict[str, str]:
             if "tma_kernel" not in row[kernel_index]:
                 continue
             try:
-                candidates.append((float(row[time_index]), row))
+                duration = ncu_number(row[time_index])
             except ValueError:
                 continue
+            if duration >= 0:
+                candidates.append((duration, row))
         if candidates:
             return dict(zip(header, max(candidates, key=lambda item: item[0])[1]))
     raise ValueError("no TMA kernel metric row")
@@ -170,16 +203,16 @@ def audit_ncu(
     try:
         raw_row = find_ncu_row(raw_path)
         raw_values = {
-            "tma_bytes": float(
+            "tma_bytes": ncu_number(
                 raw_row[
                     "l1tex__m_xbar2l1tex_read_bytes_mem_global_op_tma_ld.sum"
                 ]
             ),
-            "lts_bytes": float(raw_row["lts__t_bytes.sum"]),
-            "l2_hit_sectors": float(
+            "lts_bytes": ncu_number(raw_row["lts__t_bytes.sum"]),
+            "l2_hit_sectors": ncu_number(
                 raw_row["lts__t_sectors_op_read_lookup_hit.sum"]
             ),
-            "l2_miss_sectors": float(
+            "l2_miss_sectors": ncu_number(
                 raw_row["lts__t_sectors_op_read_lookup_miss.sum"]
             ),
         }

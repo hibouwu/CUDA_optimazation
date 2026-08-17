@@ -24,6 +24,12 @@ requires more read hits than misses.  `cold_hbm` requires direct DRAM read and
 write byte counters, so a large-working-set label cannot masquerade as proof of
 physical DRAM traffic.
 
+Nsight Compute 2025.3.1 raw CSV may quote base-unit metrics with decimal
+grouping such as `"8,299,136"`. Both the runner and an independently
+implemented auditor parser now require the exact base-unit row, accept valid
+grouping, reject malformed or scaled values, and compare every stored NCU
+metric back to the raw CSV.
+
 Run on Thor from a clean checkout at the frozen commit:
 
 ```bash

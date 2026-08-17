@@ -1,15 +1,24 @@
 from __future__ import annotations
 
+import csv
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from microbench.sm110_tma_payload_campaign.audit_campaign import audit_ncu
+from microbench.sm110_tma_payload_campaign.audit_campaign import (
+    audit_ncu,
+    find_ncu_row as audit_find_ncu_row,
+    ncu_number as audit_ncu_number,
+)
 from microbench.sm110_tma_payload_campaign.run_tma_payload_campaign import (
     DEFAULT_TARGET_ISSUED_BYTES,
+    NCU_BASE_UNITS,
     PAYLOAD_BYTES,
     cases,
+    find_ncu_row as runner_find_ncu_row,
+    metric,
+    ncu_number as runner_ncu_number,
     validate_trial,
 )
 
@@ -86,6 +95,63 @@ class TmaPayloadManifestTest(unittest.TestCase):
 
 
 class TmaPayloadNcuAuditTest(unittest.TestCase):
+    def test_thor_ncu_grouped_numbers_are_parsed_with_base_units(self) -> None:
+        header = ["ID", "Kernel Name", *NCU_BASE_UNITS]
+        units = ["", "", *(NCU_BASE_UNITS[name] for name in NCU_BASE_UNITS)]
+        init = ["0", "init_kernel", "37,536", "0", "0", "0", "0"]
+        timed = [
+            "1",
+            "tma_kernel(CUtensorMap_st, int)",
+            "8,299,136",
+            "83,886,080",
+            "94,701,600",
+            "2,098,918",
+            "531,043",
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "raw.csv"
+            with path.open("w", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["==PROF== Connected"])
+                writer.writerow(header)
+                writer.writerow(units)
+                writer.writerow(init)
+                writer.writerow(timed)
+            for parser in (runner_find_ncu_row, audit_find_ncu_row):
+                row = parser(path)
+                self.assertEqual(row["ID"], "1")
+                self.assertEqual(
+                    row["gpu__time_duration.sum"], "8,299,136")
+            self.assertEqual(
+                metric(
+                    runner_find_ncu_row(path),
+                    "l1tex__m_xbar2l1tex_read_bytes_mem_global_op_tma_ld.sum",
+                ),
+                83_886_080.0,
+            )
+        self.assertEqual(runner_ncu_number("131,182.38"), 131_182.38)
+        self.assertEqual(audit_ncu_number("2,098,918"), 2_098_918.0)
+        for malformed in ("8,29,9", "1_000", "nan", "1,000 ms"):
+            with self.subTest(malformed=malformed):
+                with self.assertRaises(ValueError):
+                    runner_ncu_number(malformed)
+                with self.assertRaises(ValueError):
+                    audit_ncu_number(malformed)
+
+    def test_ncu_parser_rejects_scaled_metric_units(self) -> None:
+        header = ["ID", "Kernel Name", *NCU_BASE_UNITS]
+        units = ["", "", "ms", "Mbyte", "Mbyte", "sector", "sector"]
+        values = ["1", "tma_kernel", "8.2", "83.8", "94.7", "2", "1"]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "raw.csv"
+            with path.open("w", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerows((header, units, values))
+            with self.assertRaisesRegex(RuntimeError, "expected 'ns'"):
+                runner_find_ncu_row(path)
+            with self.assertRaisesRegex(ValueError, "expected 'ns'"):
+                audit_find_ncu_row(path)
+
     def _bundle(self, root: Path, case: dict[str, object]) -> dict[str, object]:
         ncu_dir = root / "cases" / str(case["id"]) / "ncu"
         ncu_dir.mkdir(parents=True)
@@ -142,7 +208,9 @@ class TmaPayloadNcuAuditTest(unittest.TestCase):
             str(ncu["l2_miss_sectors"]),
         ]
         (ncu_dir / "raw.csv").write_text(
-            ",".join(raw_header) + "\n" + ",".join(raw_values) + "\n"
+            ",".join(raw_header) + "\n"
+            + ",".join(("", "", "ns", "byte", "byte", "sector", "sector"))
+            + "\n" + ",".join(raw_values) + "\n"
         )
         for path_key, hash_key in (
             ("report_path", "report_sha256"),
