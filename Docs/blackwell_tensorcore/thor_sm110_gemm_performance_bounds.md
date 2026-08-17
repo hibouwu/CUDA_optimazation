@@ -8,6 +8,12 @@
 >
 > **范围**：单次、稠密、经典矩阵乘法；不包含稀疏、Strassen/近似算法、batched/grouped GEMM 和多 GPU 通信。
 
+本文使用的 microbenchmark 研究问题、参数首次定义、case matrix、计时/NCU
+门禁、自动图表、当前缺口与源码索引集中记录在
+[`thor_sm110_gemm_microbenchmark_experiment.md`](./thor_sm110_gemm_microbenchmark_experiment.md)；
+操作命令和失败恢复流程见
+[`microbench/README.md`](../../microbench/README.md)。
+
 ## 1. 先给出结论
 
 “比 cuBLAS 还完美的 GEMM”有三种不同含义，必须先分开：

@@ -32,6 +32,11 @@ one detached runner at a time, waits for completion, runs the independent
 auditor, and starts the second campaign only after the first passes. Both
 campaigns share the global SM110 GPU lock and require NCU.
 
+The experiment rationale, parameter definitions, case matrices, acceptance
+thresholds, evidence boundaries, current coverage gaps, and exact source index
+are maintained in
+[`thor_sm110_gemm_microbenchmark_experiment.md`](../Docs/blackwell_tensorcore/thor_sm110_gemm_microbenchmark_experiment.md).
+
 Do not enable `set -euo pipefail` directly in an interactive login shell. An
 undefined status variable or a transient read of a changing JSON file can then
 exit the entire terminal. Strict mode belongs inside the versioned scripts or

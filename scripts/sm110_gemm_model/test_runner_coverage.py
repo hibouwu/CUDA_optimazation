@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 import unittest
+from pathlib import Path
 
 from scripts.sm110_gemm_model.runner_coverage import audit_runner_coverage
 
@@ -8,6 +10,11 @@ from scripts.sm110_gemm_model.runner_coverage import audit_runner_coverage
 class RunnerCoverageAuditTest(unittest.TestCase):
     def setUp(self) -> None:
         self.report = audit_runner_coverage()
+        self.repo = Path(__file__).resolve().parents[2]
+        self.document_path = (
+            self.repo / "Docs/blackwell_tensorcore/"
+            "thor_sm110_gemm_microbenchmark_experiment.md"
+        )
 
     def test_new_payload_and_duplex_surfaces_are_complete(self) -> None:
         self.assertTrue(self.report["tma_payload_surface"]["complete"])
@@ -37,6 +44,51 @@ class RunnerCoverageAuditTest(unittest.TestCase):
         full = self.report["full_gemm_validation"]
         self.assertTrue(full["ready_paths_covered"])
         self.assertFalse(full["all_precisions_covered"])
+
+    def test_experiment_document_tracks_machine_coverage_counts(self) -> None:
+        document = self.document_path.read_text()
+        for expected in (
+            "12/12 precision",
+            "10/10 case",
+            "21/21 case",
+            "2/28 pair",
+            "5/12 precision",
+            "7/12 precision",
+            "runner=0",
+        ):
+            self.assertIn(expected, document)
+        self.assertIn("1:4, 17:64, 9:32, 3:8, 1:2, 1:1, 2:1", document)
+        self.assertIn("27:16, 3:1, 27:8, 4:1, 6:1, 27:4, 8:1", document)
+
+    def test_experiment_document_defines_core_symbols_at_first_use(self) -> None:
+        document = self.document_path.read_text()
+        for symbol in (
+            r"\(M\)",
+            r"\(Q_r(x,w)\)",
+            r"\(S=20\ \mathrm{SM/GPU}\)",
+            r"\(p\in\{4,8,16,32,64\}\ \mathrm{KiB/request}\)",
+            r"\(r\)",
+            r"\(B_R\)",
+            r"\(L_r\)",
+        ):
+            definition = re.search(r"定义\s*(" + re.escape(symbol) + r")", document)
+            self.assertIsNotNone(definition, symbol)
+            self.assertEqual(
+                document.index(symbol),
+                definition.start(1),
+                symbol,
+            )
+
+    def test_experiment_document_local_links_resolve(self) -> None:
+        document = self.document_path.read_text()
+        links = re.findall(r"\[[^]]+\]\(([^)]+)\)", document)
+        self.assertGreater(len(links), 15)
+        for target in links:
+            if target.startswith(("https://", "http://", "#")):
+                continue
+            relative = target.split("#", 1)[0]
+            resolved = (self.document_path.parent / relative).resolve()
+            self.assertTrue(resolved.exists(), f"missing link target: {target}")
 
 
 if __name__ == "__main__":
