@@ -64,7 +64,11 @@ class CampaignPlotTest(unittest.TestCase):
         self.assertEqual(self.generate(payload)["campaign_kind"], "tma_payload")
         duplex = [
             self.rate_row(f"{prefix}_duplex_r{read}_w{write}",
-                          resource=f"{prefix}.duplex.r{read}_w{write}",
+                          resource=(
+                              f"hbm.duplex.proxy.r{read}_w{write}"
+                              if prefix == "hbm"
+                              else f"l2.duplex.r{read}_w{write}"
+                          ),
                           residency="cold_hbm" if prefix == "hbm" else "hot_l2")
             for prefix in ("hbm", "l2") for read, write in ((1, 4), (1, 1), (4, 1))
         ]

@@ -376,8 +376,10 @@ bash microbench/run_sm110_parameter_supplement.sh \
   "$RUN_ID" "$EXPECTED_COMMIT"
 ```
 
-该命令顺序执行并独立审计 TMA payload/residency surface 与 HBM/L2 duplex ratio
-surface。完整合同、比例来源、参数适用边界和结果提交清单见
+该命令顺序执行并独立审计 TMA payload/residency surface 与 hot-L2 duplex、
+cold-DRAM-read/write-path proxy ratio surface。Thor 缺少 external write-byte
+counter，因此 proxy 结果不能称为完整 physical DRAM duplex closure。完整合同、
+比例来源、参数适用边界和结果提交清单见
 [`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
 
 该 supplement 只关闭 payload 与 duplex 两个新增 runner surface。运行前后都应执行：
@@ -386,6 +388,8 @@ surface。完整合同、比例来源、参数适用边界和结果提交清单�
 python3 scripts/sm110_gemm_model/runner_coverage.py
 ```
 
-其中 `payload_duplex_runner_definition_complete` 应为 `true`；在精确 schedule
+其中 `payload_duplex_runner_definition_complete` 应为 `true`，但
+`physical_memory_duplex_closed` 与 `cold_external_write_bytes_closed` 必须保持
+`false`；在精确 schedule
 topology、独立 joint-pipeline、固定成本 wall-time 校准和剩余完整 GEMM 路径补齐
 前，`all_performance_parameter_runner_definition_complete` 必须保持 `false`。

@@ -16,10 +16,12 @@ counter 证明。
    强制 NCU 证明 TMA bytes、L2 bytes 与 hit/miss residency。
 2. `sm110_memory_duplex_campaign` 在同一个 kernel 内同时发射 128-bit global
    load 与 128-bit global store，测量精确 read:write 比例下的联合总 B/s；
-   cold-HBM 强制使用 NCU 的直接 DRAM read/write byte counter，hot-L2 强制检查
-   L2 hit/miss。
+   cold case 用 L2 read-miss sector 定量证明 DRAM reads，并用 L2 write sector
+   证明 write-path issue；hot-L2 强制检查 L2 hit/miss。Thor 不提供直接 external
+   write-byte counter，因此 cold case 明确保持 proxy qualification。
 
-这两个 campaign 修补此前最危险的两个“把假设当参数”漏洞。Thor 数据回传前，
+这两个 campaign 修补此前最危险的两个“把假设当参数”漏洞。cold duplex 仍不
+关闭 physical external write-byte 证据。Thor 数据回传前，
 只能声明 `payload_duplex_runner_definition_complete=true`，不能声明新参数已经测量
 闭环，更不能声明 `all_performance_parameter_runner_definition_complete=true`。
 
@@ -73,7 +75,7 @@ residency 和计时边界均匹配；只匹配一部分称为“邻近点”。
 | 每精度、每 MMA M/N atom 的 compute sustained rate | compute campaign，12 精度 × 3 atom | 精确覆盖 | 保留 |
 | 整卡 L2 read sustained rate | 16 MiB read-only component | 单向精确；不证明 duplex | 新增 L2 duplex ratio surface |
 | 整卡 L2 write sustained rate | 16 MiB write-only component | 单向精确；不证明 duplex | 新增 L2 duplex ratio surface |
-| 整卡 DRAM read/write sustained rate | 两个独立 256 MiB case | 单向精确；两者不可相加 | 新增 HBM/LPDDR duplex ratio surface |
+| 整卡 DRAM read/write sustained rate | 两个独立 256 MiB case | 单向精确；两者不可相加 | 新增 DRAM-read + L2-write-path proxy ratio surface；外部 write bytes 仍缺 |
 | 单 SM TMA ingress | 32 KiB uniform 与 tc5a 16+32 KiB | tc5a 精确，其余 schedule 只有邻近点 | 新增 4–64 KiB payload/residency surface；联合 issue topology 仍需 exact full-kernel 反证 |
 | TMA residency | working-set 大小与 warmup | 不充分 | 新 TMA campaign 强制 NCU hit/miss 与 TMA bytes |
 | TMEM scale ingress | `32x128b.warpx4` | 对当前 block-scale transport atom 精确 | 保留 |
@@ -146,6 +148,8 @@ bash microbench/run_sm110_parameter_supplement.sh \
 ratio/payload applicability 之前，报告必须同时写：
 
 - `payload_duplex_runner_definition_complete=true`；
+- `physical_memory_duplex_closed=false`；
+- `cold_external_write_bytes_closed=false`；
 - `all_performance_parameter_runner_definition_complete=false`；
 - `new_parameter_measurement_complete=false`；
 - 历史 `all_common_resources_closed=true` 仅适用于旧的独立资源定义。
@@ -165,7 +169,7 @@ python3 scripts/sm110_gemm_model/runner_coverage.py \
 | 测量 | runner/source | 独立 auditor |
 | --- | --- | --- |
 | TMA payload/residency surface | `microbench/sm110_tma_payload_campaign/run_tma_payload_campaign.py`；CUDA source：`microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu` | `microbench/sm110_tma_payload_campaign/audit_campaign.py` |
-| HBM/L2 duplex ratio surface | `microbench/sm110_memory_duplex_campaign/run_memory_duplex_campaign.py`；CUDA source：`microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu` | `microbench/sm110_memory_duplex_campaign/audit_campaign.py` |
+| hot-L2 duplex + cold-read/write-path proxy surface | `microbench/sm110_memory_duplex_campaign/run_memory_duplex_campaign.py`；CUDA source：`microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu` | `microbench/sm110_memory_duplex_campaign/audit_campaign.py` |
 | compute surface | `microbench/sm110_gemm_campaign/run_compute_campaign.py` | `microbench/sm110_gemm_campaign/audit_campaign.py` |
 | TMEM/TMA/component | `microbench/sm110_gemm_component_campaign/run_component_campaign.py` | `microbench/sm110_gemm_component_campaign/audit_campaign.py` |
 | 完整流水与 holdout | `microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py` | `microbench/sm110_full_gemm_campaign/audit_campaign.py` |

@@ -321,11 +321,15 @@ def _payload_plots(data: dict[str, Any], output: Path) -> list[tuple[Path, str]]
 def _duplex_plots(data: dict[str, Any], output: Path) -> list[tuple[Path, str]]:
     rows = _runtime_rows(data)
     panels = []
-    for prefix, label in (("hbm", "Cold DRAM duplex surface"),
+    for prefix, label in (("hbm", "Cold DRAM-read + write-path proxy"),
                           ("l2", "Hot L2 duplex surface")):
         selected: list[tuple[float, dict[str, Any], int, int]] = []
         for row in rows:
-            match = re.search(rf"{prefix}\.duplex\.r(\d+)_w(\d+)$", str(row.get("resource", "")))
+            resource_pattern = (
+                r"hbm\.duplex(?:\.proxy)?\.r(\d+)_w(\d+)$"
+                if prefix == "hbm" else r"l2\.duplex\.r(\d+)_w(\d+)$"
+            )
+            match = re.search(resource_pattern, str(row.get("resource", "")))
             if match:
                 read_ops, write_ops = int(match.group(1)), int(match.group(2))
                 selected.append((read_ops / (read_ops + write_ops), row, read_ops, write_ops))

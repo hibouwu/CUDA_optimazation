@@ -21,6 +21,12 @@ from microbench.sm110_memory_duplex_campaign.audit_campaign import (
 
 
 class MemoryDuplexContractTest(unittest.TestCase):
+    def test_ncu_contract_uses_thor_available_proxy_metrics(self) -> None:
+        self.assertNotIn("dram__bytes_op_read.sum", NCU_METRICS)
+        self.assertNotIn("dram__bytes_op_write.sum", NCU_METRICS)
+        self.assertIn("lts__t_sectors_op_read_lookup_miss.sum", NCU_METRICS)
+        self.assertIn("lts__t_sectors_op_write.sum", NCU_METRICS)
+
     def test_manifest_covers_all_declared_ratios(self) -> None:
         self.assertEqual((HBM_RATIOS, L2_RATIOS), derive_ratio_contracts())
         self.assertIn((27, 16), L2_RATIOS)
@@ -41,6 +47,14 @@ class MemoryDuplexContractTest(unittest.TestCase):
              for case in manifest if case["residency"] == "hot_l2"},
             set(L2_RATIOS),
         )
+        cold = [case for case in manifest if case["residency"] == "cold_hbm"]
+        self.assertTrue(all(".proxy." in str(case["resource"]) for case in cold))
+        self.assertTrue(all(
+            case["evidence_contract"]
+            == "cold_read_l2_miss_plus_write_l2_issue_proxy"
+            and case["external_write_bytes_proven"] is False
+            for case in cold
+        ))
 
     def test_trial_arithmetic_is_recomputed(self) -> None:
         case = cases(64 << 20)[0]
@@ -91,10 +105,16 @@ class MemoryDuplexContractTest(unittest.TestCase):
             path = Path(temporary) / "raw.csv"
             header = ["ID", "Kernel Name", *NCU_METRICS]
             units = ["", "", *(NCU_BASE_UNITS[name] for name in NCU_METRICS)]
+            def row(identifier, kernel, duration, lts_bytes, remainder):
+                values = {name: remainder for name in NCU_METRICS}
+                values["gpu__time_duration.sum"] = duration
+                values["lts__t_bytes.sum"] = lts_bytes
+                return [identifier, kernel, *(values[name] for name in NCU_METRICS)]
+
             rows = [
-                ["1", "initialize", "10", "20", "0", "0", "0", "0", "0", "0"],
-                ["2", "duplex_kernel", "100,000", "200,000", "1", "1", "1", "0", "1", "1"],
-                ["3", "duplex_kernel", "300,000", "400,000", "2", "2", "2", "1", "2", "2"],
+                row("1", "initialize", "10", "20", "0"),
+                row("2", "duplex_kernel", "100,000", "200,000", "1"),
+                row("3", "duplex_kernel", "300,000", "400,000", "2"),
             ]
             with path.open("w", newline="") as handle:
                 writer = csv.writer(handle)
@@ -147,8 +167,6 @@ class MemoryDuplexContractTest(unittest.TestCase):
                 "lts__t_sectors_op_write.sum": requested_write / 32,
                 "lts__t_sectors_op_read_lookup_hit.sum": 0.0,
                 "lts__t_sectors_op_read_lookup_miss.sum": requested_read / 32,
-                "dram__bytes_op_read.sum": float(requested_read),
-                "dram__bytes_op_write.sum": float(requested_write),
             }
             header = ["ID", "Kernel Name", *NCU_METRICS]
             units = ["", "", *(NCU_BASE_UNITS[name] for name in NCU_METRICS)]
@@ -169,6 +187,10 @@ class MemoryDuplexContractTest(unittest.TestCase):
                 "requested_read_bytes": requested_read,
                 "requested_write_bytes": requested_write,
                 "values": values,
+                "evidence_contract": case["evidence_contract"],
+                "external_write_bytes_proven": False,
+                "cold_read_miss_proxy_bytes": requested_read,
+                "cold_read_miss_proxy_to_requested": 1.0,
                 "report_path": "ncu/profile.ncu-rep",
                 "report_sha256": digest(report),
                 "raw_path": "ncu/raw.csv",
@@ -182,11 +204,42 @@ class MemoryDuplexContractTest(unittest.TestCase):
             audit_ncu(root, case, result, errors)
             self.assertEqual(errors, [])
 
-            ncu["values"]["dram__bytes_op_read.sum"] += 1
+            ncu["values"]["lts__t_bytes.sum"] += 1
             (ncu_dir / "summary.json").write_text(json.dumps(ncu, sort_keys=True))
             errors = []
             audit_ncu(root, case, result, errors)
             self.assertTrue(any("summary/raw CSV mismatch" in row for row in errors))
+
+    def test_cold_proxy_rejects_insufficient_read_misses(self) -> None:
+        case = next(case for case in cases() if case["residency"] == "cold_hbm")
+        requested_read = 1_000_000
+        values = {
+            name: 0.0 for name in NCU_METRICS
+        }
+        values["lts__t_sectors_op_read.sum"] = requested_read / 32
+        values["lts__t_sectors_op_write.sum"] = requested_read / 32
+        values["lts__t_sectors_op_read_lookup_miss.sum"] = (
+            requested_read * 0.59 / 32)
+        ncu = {
+            "returncode": 0,
+            "metrics": list(NCU_METRICS),
+            "requested_read_bytes": requested_read,
+            "requested_write_bytes": requested_read,
+            "values": values,
+            "evidence_contract": case["evidence_contract"],
+            "external_write_bytes_proven": False,
+            "cold_read_miss_proxy_bytes": requested_read * 0.59,
+            "cold_read_miss_proxy_to_requested": 0.59,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            ncu_dir = root / "cases" / str(case["id"]) / "ncu"
+            ncu_dir.mkdir(parents=True)
+            # Missing artifacts are acceptable in this focused negative test;
+            # the residency error must still be emitted independently.
+            errors: list[str] = []
+            audit_ncu(root, case, {"ncu": ncu}, errors)
+            self.assertTrue(any("cold-DRAM reads" in row for row in errors))
 
     def test_sass_tokens_must_be_in_duplex_function(self) -> None:
         sass = """

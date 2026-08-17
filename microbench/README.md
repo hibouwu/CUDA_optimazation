@@ -27,7 +27,7 @@ This is intentionally **not** an SM120, Hopper, Ampere, CUTLASS, or
 ## Thor Parameter Supplement: TMA Payload Plus Memory Duplex
 
 `run_sm110_parameter_supplement.sh` is the supported sequential entry point
-for the TMA payload and simultaneous HBM/L2 read/write campaigns. It launches
+for the TMA payload and simultaneous hot-L2/cold-read-write-path campaigns. It launches
 one detached runner at a time, waits for completion, runs the independent
 auditor, and starts the second campaign only after the first passes. Both
 campaigns share the global SM110 GPU lock and require NCU.
@@ -78,7 +78,8 @@ as evidence.
 Choose a unique ID, for example:
 
 ```bash
-RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-b
+# Use an unused suffix. After the 2026-08-17 a/b/c diagnostics, use d.
+RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-d
 EXPECTED_COMMIT=$(git rev-parse HEAD)
 ```
 
@@ -128,7 +129,7 @@ set +e
 set +u
 set +o pipefail 2>/dev/null || true
 
-RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-b
+RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-d
 LOG_DIR="results/sm110_parameter_supplement/$RUN_ID"
 TMA_DIR="results/sm110_tma_payload_campaign/${RUN_ID}-tma-payload"
 DUPLEX_DIR="results/sm110_memory_duplex_campaign/${RUN_ID}-memory-duplex"
@@ -203,6 +204,11 @@ python3 -m json.tool "$DUPLEX_DIR/plots/manifest.json"
 Expected runtime chart counts are one TMA payload curve and one duplex service
 curve. `summary.json`, raw trials, `.ncu-rep`, and raw NCU CSV remain the audit
 truth; SVG files are reproducible derived views.
+
+The cold panel is a quantitative DRAM-read miss proxy plus an L2 write-path
+contract. Thor does not expose direct external write-byte counters, so
+`external_write_bytes_proven` must remain `false`; do not relabel this plot as
+physical DRAM read/write closure.
 
 ### 5. NCU 2025.3.1 raw CSV diagnostics
 

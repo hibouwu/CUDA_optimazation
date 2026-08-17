@@ -1059,7 +1059,9 @@ cd microbench/L2throughtput
   [`microbench/05_gmem_dram_bandwidth/results/adversarial_review.md`](../../microbench/05_gmem_dram_bandwidth/results/adversarial_review.md)
 - 已引用实测：read-stream 126.010672 B/cycle/GPU；write-stream
   70.429363 B/cycle/GPU。
-- 边界：本机 NCU 可能缺直接 `dram__bytes*`，验证会使用 LTS miss-sector proxy。
+- 边界：本机 NCU 缺直接 `dram__bytes*`；read 验证可使用 LTS read-miss-sector
+  proxy，LTS write sectors 只能证明进入 write path，不能证明等量 external DRAM
+  write bytes。对应 duplex 结果必须保持 proxy qualification。
 
 基本命令：
 

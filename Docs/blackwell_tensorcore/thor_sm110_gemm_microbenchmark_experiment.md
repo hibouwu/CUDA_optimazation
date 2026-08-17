@@ -66,8 +66,8 @@ P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}},
 | --- | --- | ---: | --- | --- |
 | Tensor Core compute | 12 precision × 3 full-SM MMA atom | 12/12 precision，36 个 full-SM 点 | 历史 closure 已有；新参数补测不重复 | shape-qualified compute sustained rate |
 | 公共 component | TMA、HBM/L2、TMEM、epilogue | 必需公共资源完整 | 历史 closure 已有 | 经验资源 rate |
-| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-a` 在第 1 个 case 的 NCU CSV host parser 失败；不得视为完成 | payload-indexed per-SM/full-GPU TMA rate |
-| HBM/L2 duplex surface | 7 HBM ratio + 14 L2 ratio | 21/21 case | `-a` 因上一批 fail-closed，尚未启动 | read/write 联合服务曲线 |
+| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-c`：10/10、NCU、auditor、COMPLETE 通过 | payload-indexed per-SM/full-GPU TMA rate |
+| L2 duplex + cold read/write-path proxy | 7 cold ratio + 14 L2 ratio | 21/21 case | `-c` preflight 发现 Thor 无 `dram__bytes_op_read/write.sum`，未启动 case；保留诊断 | read/write 联合服务曲线；不关闭 external write bytes |
 | exact TMA topology | schedule × precision | 2/28 pair | 仅 tc5a FP16/BF16 | 禁止把 generic payload curve 冒充具体流水线 |
 | independent joint pipeline | TMA/MMA/TMEM 因果组合 | 0 | 未定义独立 runner | overlap、startup、drain、backpressure |
 | full GEMM validation | candidate/reference，3 个 N | 当前绘图分支 5/12 precision | 历史 15 case | 数值正确性与端到端反证 |
@@ -78,6 +78,8 @@ P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}},
 
 ```text
 all_performance_parameter_runner_definition_complete = false
+physical_memory_duplex_closed = false
+cold_external_write_bytes_closed = false
 empirical_parameter_runner_definition_complete = false
 all_precisions_covered = false
 joint_pipeline_surface.complete = false
@@ -277,9 +279,12 @@ runner 与独立 auditor 均使用严格分组语法解析，并强制 unit row 
 `thor-t5000-parameter-plots-maxn-20260817-a-tma-payload` 在第一个
 `tma_l2_hit_4k_slots2_single_sm` case 已生成合法 `profile.ncu-rep` 和 raw kernel
 row，但旧 host parser 对 `float("8,299,136")` 抛出异常。该目录必须保留为失败
-诊断，不能补写成成功结果。修复后的新提交必须使用新的 `-b` run ID。
+诊断，不能补写成成功结果。`-b` 又因后台 shell 缺少 `nvcc` PATH 在 GPU 采集前
+失败；`-c` 已完成 10/10 TMA payload，但 duplex 在 metric preflight fail-closed。
+修改 cold duplex 证据合同后的新提交必须使用新的 `-d` run ID，并在同一提交上
+重采 TMA 与 duplex，不能把 `-c` TMA 与 `-d` duplex 拼成一次 composite run。
 
-## 7. 实验 D：HBM/L2 simultaneous read/write duplex surface
+## 7. 实验 D：hot-L2 duplex 与 cold-DRAM-read/write-path proxy surface
 
 ### 7.1 研究假设
 
@@ -297,7 +302,7 @@ x_R=\frac{B_R}{B_R+B_W}.
 实验输出 total/read/write GB/s 随 \(x_R\) 的联合服务曲线，而不是把两个单向峰值
 机械相加。
 
-### 7.2 HBM ratio matrix
+### 7.2 cold proxy ratio matrix
 
 HBM ratio 从 12 precision、`N=1024/2048/4096` 的 unique input/output byte
 accounting 自动推导并约分：
@@ -306,7 +311,8 @@ accounting 自动推导并约分：
 1:4, 17:64, 9:32, 3:8, 1:2, 1:1, 2:1
 ```
 
-working set 为每方向 256 MiB，目标是 cold-DRAM traffic。
+working set 为每方向 256 MiB；它定量证明 cold-DRAM reads 与 write-path issue，
+不声称 physical external write-byte closure。
 
 ### 7.3 L2 ratio matrix
 
@@ -340,11 +346,21 @@ kernel 同时包含 `LDG.E.128` 和 `STG.E.128`。store 不依赖 loaded value�
 \]
 
 hot-L2 要求 read hit sectors 大于 miss sectors。cold-DRAM 定义
-\(D_R,D_W\) 为 profiler 的 DRAM read/write byte counter，并要求：
+\(L_R\) 为 L2 read lookup miss sector 数，并要求：
 
 \[
-D_R\ge0.60B_R,\qquad D_W\ge0.60B_W.
+32L_R\ge0.60B_R.
 \]
+
+Thor 不暴露 `dram__bytes_op_read/write.sum`。因此 cold case 只能定量证明 read
+离开 L2；\(32S_W\ge0.90B_W\) 证明 write 进入 L2 write path，但不证明等量
+physical DRAM write bytes。结果必须记录
+`qualification=cold_dram_read_plus_write_path_proxy` 和
+`external_write_bytes_proven=false`。
+
+`mcc__dram_throughput_op_read/write...pct_of_peak_sustained_*` 表示达到 sustained
+peak 的百分比，不是 byte counter；在没有 peak-rate、MCC instance 聚合和 timed
+duration 换算合同前，只能作诊断，不能替代上述字节门禁。
 
 独立 auditor 重新解析带千分位的 raw CSV、检查 base unit row，并逐 metric 比较
 summary 与 raw value；只验证文件 hash 不足以通过。

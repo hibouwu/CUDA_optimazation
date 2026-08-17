@@ -5,9 +5,10 @@ usage() {
   cat >&2 <<'EOF'
 usage: microbench/run_sm110_parameter_supplement.sh RUN_ID EXPECTED_COMMIT
 
-Runs the NCU-qualified TMA payload surface and simultaneous HBM/L2 duplex
-surface sequentially on Thor.  Each detached runner is waited for and audited
-before the next GPU campaign starts.
+Runs the NCU-qualified TMA payload surface and the simultaneous hot-L2 plus
+cold-DRAM-read/write-path proxy surface sequentially on Thor. Each detached
+runner is waited for and audited before the next GPU campaign starts. The cold
+proxy does not claim physical external write-byte closure.
 EOF
 }
 

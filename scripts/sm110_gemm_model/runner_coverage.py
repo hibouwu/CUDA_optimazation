@@ -229,6 +229,10 @@ def audit_runner_coverage() -> dict[str, object]:
             "case_count": len(duplex_manifest),
             "hbm_ratios": [list(value) for value in HBM_RATIOS],
             "l2_ratios": [list(value) for value in L2_RATIOS],
+            "hot_l2_duplex_complete": duplex_complete,
+            "cold_dram_read_proxy_complete": duplex_complete,
+            "cold_external_write_bytes_closed": False,
+            "qualification": "cold_dram_read_plus_write_path_proxy",
             "complete": duplex_complete,
         },
         "exact_tma_topology_surface": {
@@ -252,6 +256,8 @@ def audit_runner_coverage() -> dict[str, object]:
         },
         "source_contracts_exist": _paths_exist(source_contracts),
         "payload_duplex_runner_definition_complete": payload_duplex_complete,
+        "cold_external_write_bytes_closed": False,
+        "physical_memory_duplex_closed": False,
         "empirical_parameter_runner_definition_complete": empirical_runner_complete,
         "all_performance_parameter_runner_definition_complete": all_runner_complete,
     }

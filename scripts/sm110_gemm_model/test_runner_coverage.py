@@ -21,7 +21,17 @@ class RunnerCoverageAuditTest(unittest.TestCase):
         self.assertEqual(self.report["tma_payload_surface"]["case_count"], 10)
         self.assertTrue(self.report["memory_duplex_surface"]["complete"])
         self.assertEqual(self.report["memory_duplex_surface"]["case_count"], 21)
+        self.assertTrue(
+            self.report["memory_duplex_surface"]["cold_dram_read_proxy_complete"])
+        self.assertFalse(
+            self.report["memory_duplex_surface"]["cold_external_write_bytes_closed"])
+        self.assertEqual(
+            self.report["memory_duplex_surface"]["qualification"],
+            "cold_dram_read_plus_write_path_proxy",
+        )
         self.assertTrue(self.report["payload_duplex_runner_definition_complete"])
+        self.assertFalse(self.report["cold_external_write_bytes_closed"])
+        self.assertFalse(self.report["physical_memory_duplex_closed"])
 
     def test_audit_fails_closed_on_known_topology_and_joint_gaps(self) -> None:
         topology = self.report["exact_tma_topology_surface"]

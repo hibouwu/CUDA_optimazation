@@ -52,8 +52,6 @@ NCU_METRICS = (
     "lts__t_sectors_op_write.sum",
     "lts__t_sectors_op_read_lookup_hit.sum",
     "lts__t_sectors_op_read_lookup_miss.sum",
-    "dram__bytes_op_read.sum",
-    "dram__bytes_op_write.sum",
 )
 NCU_BASE_UNITS = {
     "gpu__time_duration.sum": "ns",
@@ -62,8 +60,6 @@ NCU_BASE_UNITS = {
     "lts__t_sectors_op_write.sum": "sector",
     "lts__t_sectors_op_read_lookup_hit.sum": "sector",
     "lts__t_sectors_op_read_lookup_miss.sum": "sector",
-    "dram__bytes_op_read.sum": "byte",
-    "dram__bytes_op_write.sum": "byte",
 }
 NCU_NUMBER_RE = re.compile(
     r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
@@ -182,10 +178,19 @@ def cases(target_bytes: int = TARGET_BYTES) -> list[dict[str, object]]:
             write_ops //= divisor
             iterations = iterations_for(target_bytes, read_ops, write_ops)
             case_id = f"{residency}_duplex_r{read_ops}_w{write_ops}"
+            cold_proxy = residency == "hbm"
             result.append({
                 "id": case_id,
-                "resource": f"{residency}.duplex.r{read_ops}_w{write_ops}",
+                "resource": (
+                    f"hbm.duplex.proxy.r{read_ops}_w{write_ops}"
+                    if cold_proxy else f"l2.duplex.r{read_ops}_w{write_ops}"
+                ),
                 "residency": "cold_hbm" if residency == "hbm" else "hot_l2",
+                "evidence_contract": (
+                    "cold_read_l2_miss_plus_write_l2_issue_proxy"
+                    if cold_proxy else "hot_l2_read_hit_plus_write_l2_issue"
+                ),
+                "external_write_bytes_proven": False,
                 "read_operations": read_ops,
                 "write_operations": write_ops,
                 "working_set_bytes_per_direction": working_set,
@@ -467,23 +472,32 @@ def collect_ncu(case_dir: Path, case: dict[str, object], binary: Path,
         raise RuntimeError(f"{case['id']}: NCU read traffic is below contract")
     if values["lts__t_sectors_op_write.sum"] * 32 < write_requested * 0.90:
         raise RuntimeError(f"{case['id']}: NCU write traffic is below contract")
+    miss_proxy_bytes = values[
+        "lts__t_sectors_op_read_lookup_miss.sum"] * 32.0
     if case["residency"] == "hot_l2":
         if values["lts__t_sectors_op_read_lookup_hit.sum"] <= values[
                 "lts__t_sectors_op_read_lookup_miss.sum"]:
             raise RuntimeError(f"{case['id']}: NCU does not prove L2-hit residency")
     else:
-        if values["dram__bytes_op_read.sum"] < read_requested * 0.60:
-            raise RuntimeError(f"{case['id']}: NCU does not prove DRAM reads")
-        if values["dram__bytes_op_write.sum"] < write_requested * 0.60:
-            raise RuntimeError(f"{case['id']}: NCU does not prove DRAM writes")
+        if miss_proxy_bytes < read_requested * 0.60:
+            raise RuntimeError(
+                f"{case['id']}: L2 miss sectors do not prove cold DRAM reads")
     summary = {"returncode": proc.returncode, "metrics": metrics,
                "iterations": ncu_iters, "requested_read_bytes": read_requested,
                "requested_write_bytes": write_requested, "values": values,
+               "evidence_contract": case["evidence_contract"],
+               "external_write_bytes_proven": False,
                "report_path": str(report.relative_to(case_dir)),
                "report_sha256": sha256(report),
                "raw_path": str(raw.relative_to(case_dir)), "raw_sha256": sha256(raw),
                "stderr_path": str(stderr_path.relative_to(case_dir)),
                "stderr_sha256": sha256(stderr_path)}
+    if case["residency"] == "cold_hbm":
+        summary.update({
+            "cold_read_miss_proxy_bytes": miss_proxy_bytes,
+            "cold_read_miss_proxy_to_requested": (
+                miss_proxy_bytes / read_requested),
+        })
     (ncu_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n")
     return summary
@@ -534,6 +548,12 @@ def main() -> int:
             "campaign": "sm110_memory_duplex_closure",
             "expected_commit": args.expected_commit, "expected_sm_count": EXPECTED_SMS,
             "trials": TRIALS, "ncu_required": True,
+            "cold_duplex_evidence": {
+                "read": "32 * l2_read_lookup_miss_sectors >= 0.60 * requested_read_bytes",
+                "write": "32 * l2_write_sectors >= 0.90 * requested_write_bytes",
+                "external_write_bytes_proven": False,
+                "qualification": "cold_dram_read_plus_write_path_proxy",
+            },
             "target_square_shapes": list(TARGET_SQUARE_SHAPES),
             "trial_timeout_seconds": args.trial_timeout_seconds,
             "ncu_timeout_seconds": args.ncu_timeout_seconds,
@@ -581,7 +601,10 @@ def main() -> int:
         result_path = case_dir / "result.json"
         trials_path = case_dir / "trials.jsonl"
         base = {"case_id": case["id"], "resource": case["resource"],
-                "residency": case["residency"], "source_path": str(SOURCE.relative_to(REPO)),
+                "residency": case["residency"],
+                "evidence_contract": case["evidence_contract"],
+                "external_write_bytes_proven": False,
+                "source_path": str(SOURCE.relative_to(REPO)),
                 "source_sha256": artifact["source_sha256"],
                 "binary_sha256": artifact["binary_sha256"],
                 "sass_sha256": artifact["sass_sha256"],

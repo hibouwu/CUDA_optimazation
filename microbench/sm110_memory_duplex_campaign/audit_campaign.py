@@ -28,8 +28,6 @@ NCU_BASE_UNITS = {
     "lts__t_sectors_op_write.sum": "sector",
     "lts__t_sectors_op_read_lookup_hit.sum": "sector",
     "lts__t_sectors_op_read_lookup_miss.sum": "sector",
-    "dram__bytes_op_read.sum": "byte",
-    "dram__bytes_op_write.sum": "byte",
 }
 NCU_NUMBER_RE = re.compile(
     r"^[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)"
@@ -138,6 +136,9 @@ def audit_ncu(root: Path, case: dict[str, object], result: dict[str, object],
         errors.append(f"{cid}: result and NCU summary differ")
     if ncu.get("returncode") != 0 or set(ncu.get("metrics", [])) != set(NCU_METRICS):
         errors.append(f"{cid}: required NCU metric contract not met")
+    if (ncu.get("evidence_contract") != case.get("evidence_contract")
+            or ncu.get("external_write_bytes_proven") is not False):
+        errors.append(f"{cid}: NCU evidence qualification mismatch")
     case_dir = root / "cases" / cid
     for path_key, hash_key in (("report_path", "report_sha256"),
                                ("raw_path", "raw_sha256"),
@@ -175,10 +176,22 @@ def audit_ncu(root: Path, case: dict[str, object], result: dict[str, object],
                 "lts__t_sectors_op_read_lookup_miss.sum"]:
             errors.append(f"{cid}: hot-L2 residency is not counter-proven")
     else:
-        if values["dram__bytes_op_read.sum"] < requested_read * 0.60:
-            errors.append(f"{cid}: cold-HBM read traffic is not counter-proven")
-        if values["dram__bytes_op_write.sum"] < requested_write * 0.60:
-            errors.append(f"{cid}: cold-HBM write traffic is not counter-proven")
+        miss_proxy_bytes = (
+            values["lts__t_sectors_op_read_lookup_miss.sum"] * 32.0)
+        if miss_proxy_bytes < requested_read * 0.60:
+            errors.append(f"{cid}: cold-DRAM reads are not miss-proxy-proven")
+        try:
+            stored_proxy = float(ncu["cold_read_miss_proxy_bytes"])
+            stored_ratio = float(ncu["cold_read_miss_proxy_to_requested"])
+        except (KeyError, TypeError, ValueError):
+            errors.append(f"{cid}: cold-read proxy summary is malformed")
+        else:
+            if not math.isclose(stored_proxy, miss_proxy_bytes, rel_tol=1e-12):
+                errors.append(f"{cid}: cold-read proxy byte arithmetic mismatch")
+            if not math.isclose(
+                    stored_ratio, miss_proxy_bytes / requested_read,
+                    rel_tol=1e-12):
+                errors.append(f"{cid}: cold-read proxy ratio arithmetic mismatch")
 
 
 def main() -> int:
@@ -205,6 +218,14 @@ def main() -> int:
         errors.append("platform/trial contract mismatch")
     if spec.get("ncu_required") is not True:
         errors.append("NCU was not mandatory")
+    expected_cold_contract = {
+        "read": "32 * l2_read_lookup_miss_sectors >= 0.60 * requested_read_bytes",
+        "write": "32 * l2_write_sectors >= 0.90 * requested_write_bytes",
+        "external_write_bytes_proven": False,
+        "qualification": "cold_dram_read_plus_write_path_proxy",
+    }
+    if spec.get("cold_duplex_evidence") != expected_cold_contract:
+        errors.append("cold-duplex proxy contract mismatch")
     if spec.get("target_square_shapes") != list(TARGET_SQUARE_SHAPES):
         errors.append("target square-shape contract mismatch")
     for timeout_key in ("trial_timeout_seconds", "ncu_timeout_seconds"):
@@ -238,6 +259,12 @@ def main() -> int:
         if result.get("status") != "ok" or result.get("trial_count") != TRIALS:
             errors.append(f"{cid}: result is incomplete")
             continue
+        for key in (
+            "resource", "residency", "evidence_contract",
+            "external_write_bytes_proven",
+        ):
+            if result.get(key) != case.get(key):
+                errors.append(f"{cid}: result/manifest mismatch for {key}")
         source = REPO / str(result.get("source_path", ""))
         sass = root / "build" / "sass.txt"
         function_sass_path = root / str(result.get("function_sass_path", ""))
