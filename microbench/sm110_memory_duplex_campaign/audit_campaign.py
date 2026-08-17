@@ -17,7 +17,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
-    EXPECTED_SMS, NCU_METRICS, TARGET_SQUARE_SHAPES, TRIALS, cases,
+    EXPECTED_SMS, MAX_OPERATION_GROUPS, NCU_METRICS,
+    TARGET_SQUARE_SHAPES, TRIALS, cases,
     duplex_sass_block, sha256_text, validate_trial,
 )
 
@@ -218,6 +219,8 @@ def main() -> int:
         errors.append("platform/trial contract mismatch")
     if spec.get("ncu_required") is not True:
         errors.append("NCU was not mandatory")
+    if spec.get("max_operation_groups") != MAX_OPERATION_GROUPS:
+        errors.append("operation-group limit mismatch")
     expected_cold_contract = {
         "read": "32 * l2_read_lookup_miss_sectors >= 0.60 * requested_read_bytes",
         "write": "32 * l2_write_sectors >= 0.90 * requested_write_bytes",
@@ -261,7 +264,7 @@ def main() -> int:
             continue
         for key in (
             "resource", "residency", "evidence_contract",
-            "external_write_bytes_proven",
+            "external_write_bytes_proven", "max_operation_groups",
         ):
             if result.get(key) != case.get(key):
                 errors.append(f"{cid}: result/manifest mismatch for {key}")

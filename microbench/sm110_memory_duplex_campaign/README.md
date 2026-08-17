@@ -19,6 +19,13 @@ transport points `27:16`, `27:8`, and `27:4`.  A rate is applicable only to the
 exact reduced ratio in its resource ID.  The manifests and model source are
 SHA-256-bound dependencies of the frozen run.
 
+The largest derived L2 ratio is the irreducible `96:1` point. The CUDA binary
+therefore freezes `max_operation_groups=128`; the runner rejects any manifest
+ratio above that bound, and every runtime row must report the same limit. The
+operation loop is runtime-controlled and retains a fixed eight-`uint4` local
+load set, so raising the former host validation limit from 64 does not unroll
+96 register groups. Removing or approximating `96:1` is not permitted.
+
 NCU must confirm both requested L2 read/write sectors. `hot_l2` additionally
 requires more read hits than misses. On Thor, direct `dram__bytes_op_read/write`
 metrics do not exist. `cold_hbm` therefore remains the compatibility residency

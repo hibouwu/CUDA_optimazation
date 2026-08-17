@@ -22,6 +22,7 @@ namespace {
 
 constexpr int kUnroll = 8;
 constexpr int kBytesPerOperation = 16;
+constexpr int kMaxOperationGroups = 128;
 
 enum class Direction { kRead, kWrite, kDuplex };
 enum class Residency { kL2, kHbm };
@@ -247,9 +248,9 @@ void usage(const char* program) {
       stderr,
       "Usage: %s --direction read|write|duplex --residency l2|hbm "
       "[--bytes N] [--iters N] [--warmup-iters N] "
-      "[--read-ops 1..64] [--write-ops 1..64] "
+      "[--read-ops 1..%d] [--write-ops 1..%d] "
       "[--blocks-per-sm 1..4] [--threads 32..256]\n",
-      program);
+      program, kMaxOperationGroups, kMaxOperationGroups);
 }
 
 Options parse_options(int argc, char** argv) {
@@ -294,8 +295,10 @@ Options parse_options(int argc, char** argv) {
       options.blocks_per_sm <= 0 || options.blocks_per_sm > 4 ||
       options.threads < 32 || options.threads > 256 ||
       options.threads % 32 != 0 || options.bytes < (1ull << 20) ||
-      options.read_operations <= 0 || options.read_operations > 64 ||
-      options.write_operations <= 0 || options.write_operations > 64) {
+      options.read_operations <= 0 ||
+      options.read_operations > kMaxOperationGroups ||
+      options.write_operations <= 0 ||
+      options.write_operations > kMaxOperationGroups) {
     usage(argv[0]);
     std::exit(2);
   }
@@ -452,6 +455,7 @@ int main(int argc, char** argv) {
       "sm_count=%d\nblocks=%d\nblocks_per_sm=%d\n"
       "unique_smid_count=%d\nthreads=%d\noccupancy_blocks_per_sm=%d\n"
       "iterations=%d\nwarmup_iterations=%d\nunroll=%d\n"
+      "max_operation_groups=%d\n"
       "read_operations_per_iteration=%d\nwrite_operations_per_iteration=%d\n"
       "bytes_per_operation=%d\nworking_set_bytes=%zu\n"
       "read_working_set_bytes=%zu\nwrite_working_set_bytes=%zu\n"
@@ -466,6 +470,7 @@ int main(int argc, char** argv) {
       unique_smid_count, options.threads, occupancy, options.iterations,
       options.warmup_iterations,
       options.direction == Direction::kDuplex ? 0 : kUnroll,
+      kMaxOperationGroups,
       options.read_operations, options.write_operations,
       kBytesPerOperation, options.bytes,
       options.direction == Direction::kWrite ? 0 : options.bytes,

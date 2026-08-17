@@ -382,6 +382,10 @@ counter，因此 proxy 结果不能称为完整 physical DRAM duplex closure。�
 比例来源、参数适用边界和结果提交清单见
 [`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
 
+L2 ratio matrix 包含不可约 `96:1`；当前 binary 合同为
+`max_operation_groups=128`。若 runtime output 未报告相同值，或 manifest 需求超过
+128，runner/auditor 必须 fail closed。
+
 该 supplement 只关闭 payload 与 duplex 两个新增 runner surface。运行前后都应执行：
 
 ```bash

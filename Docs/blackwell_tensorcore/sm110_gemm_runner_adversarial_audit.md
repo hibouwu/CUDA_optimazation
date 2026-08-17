@@ -105,6 +105,11 @@ L2 热入口覆盖 `27:16`、`27:8`、`27:4`、`3:1`、`4:1`、`6:1`、`8:1`、
 `N=1024/2048/4096` shape 上，将重复 TMA request bytes 与有效 accumulator store
 bytes 机械化简所得；三个分数依次对应 block-scaled value 加 SFA/SFB transport。
 
+`96:1` 是不可约比例。CUDA binary、run spec、case manifest、runtime output 和
+independent auditor 共同冻结 `max_operation_groups=128`，覆盖当前最大需求 96；
+不允许删除该点或把它近似成 `64:1`。device loop 是 runtime loop，固定复用 8 个
+`uint4` load 暂存值，所以上限从 64 调到 128 不引入 96 组静态寄存器展开。
+
 每个 case 保存 `requested_read_bytes`、`requested_write_bytes`、总 requested bytes、
 最早 CTA start、最晚 CTA stop、20-SM coverage、十次 trial、源码/binary/SASS hash
 和 NCU 原始报告。独立 auditor 从 trial 字段重新计算比例和 B/s。

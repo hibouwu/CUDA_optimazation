@@ -25,7 +25,7 @@ from microbench.sm110_gemm_component_campaign.run_component_campaign import (
     CASES as COMPONENT_CASES,
 )
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
-    HBM_RATIOS,
+    HBM_RATIOS, MAX_OPERATION_GROUPS,
     L2_RATIOS,
     cases as duplex_cases,
 )
@@ -233,6 +233,11 @@ def audit_runner_coverage() -> dict[str, object]:
             "cold_dram_read_proxy_complete": duplex_complete,
             "cold_external_write_bytes_closed": False,
             "qualification": "cold_dram_read_plus_write_path_proxy",
+            "max_operation_groups": MAX_OPERATION_GROUPS,
+            "max_required_operation_groups": max(
+                max(read_ops, write_ops)
+                for read_ops, write_ops in (*HBM_RATIOS, *L2_RATIOS)
+            ),
             "complete": duplex_complete,
         },
         "exact_tma_topology_surface": {

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
-    HBM_RATIOS, L2_RATIOS, NCU_BASE_UNITS, NCU_METRICS,
+    HBM_RATIOS, L2_RATIOS, MAX_OPERATION_GROUPS, NCU_BASE_UNITS, NCU_METRICS,
     TARGET_SQUARE_SHAPES, cases,
     derive_ratio_contracts, duplex_sass_block, find_ncu_row, validate_trial,
     ncu_number,
@@ -21,6 +21,28 @@ from microbench.sm110_memory_duplex_campaign.audit_campaign import (
 
 
 class MemoryDuplexContractTest(unittest.TestCase):
+    def test_binary_and_manifest_support_the_96_to_1_boundary(self) -> None:
+        self.assertEqual(MAX_OPERATION_GROUPS, 128)
+        case = next(
+            case for case in cases()
+            if case["read_operations"] == 96 and case["write_operations"] == 1
+        )
+        self.assertEqual(case["max_operation_groups"], 128)
+        self.assertEqual(
+            case["args"][case["args"].index("--read-ops") + 1], "96")
+        self.assertLessEqual(
+            max(max(case["read_operations"], case["write_operations"])
+                for case in cases()),
+            MAX_OPERATION_GROUPS,
+        )
+        source = (
+            Path(__file__).resolve().parents[2]
+            / "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu"
+        ).read_text()
+        self.assertIn("constexpr int kMaxOperationGroups = 128;", source)
+        self.assertIn("options.read_operations > kMaxOperationGroups", source)
+        self.assertIn("options.write_operations > kMaxOperationGroups", source)
+
     def test_ncu_contract_uses_thor_available_proxy_metrics(self) -> None:
         self.assertNotIn("dram__bytes_op_read.sum", NCU_METRICS)
         self.assertNotIn("dram__bytes_op_write.sum", NCU_METRICS)
@@ -70,6 +92,7 @@ class MemoryDuplexContractTest(unittest.TestCase):
             "threads": "256",
             "read_operations_per_iteration": str(case["read_operations"]),
             "write_operations_per_iteration": str(case["write_operations"]),
+            "max_operation_groups": str(MAX_OPERATION_GROUPS),
             "iterations": str(case["iterations"]), "warmup_iterations": "64",
             "working_set_bytes": str(case["working_set_bytes_per_direction"]),
             "read_working_set_bytes": str(case["working_set_bytes_per_direction"]),
@@ -89,6 +112,7 @@ class MemoryDuplexContractTest(unittest.TestCase):
             "blocks_per_sm": "4",
             "threads": "256", "read_operations_per_iteration": "1",
             "write_operations_per_iteration": "1",
+            "max_operation_groups": str(MAX_OPERATION_GROUPS),
             "iterations": str(case["iterations"]), "warmup_iterations": "64",
             "working_set_bytes": str(case["working_set_bytes_per_direction"]),
             "read_working_set_bytes": str(case["working_set_bytes_per_direction"]),

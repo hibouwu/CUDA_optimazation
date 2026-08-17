@@ -29,6 +29,13 @@ class RunnerCoverageAuditTest(unittest.TestCase):
             self.report["memory_duplex_surface"]["qualification"],
             "cold_dram_read_plus_write_path_proxy",
         )
+        self.assertEqual(
+            self.report["memory_duplex_surface"]["max_operation_groups"], 128)
+        self.assertEqual(
+            self.report["memory_duplex_surface"]
+                       ["max_required_operation_groups"],
+            96,
+        )
         self.assertTrue(self.report["payload_duplex_runner_definition_complete"])
         self.assertFalse(self.report["cold_external_write_bytes_closed"])
         self.assertFalse(self.report["physical_memory_duplex_closed"])

@@ -66,8 +66,8 @@ P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}},
 | --- | --- | ---: | --- | --- |
 | Tensor Core compute | 12 precision × 3 full-SM MMA atom | 12/12 precision，36 个 full-SM 点 | 历史 closure 已有；新参数补测不重复 | shape-qualified compute sustained rate |
 | 公共 component | TMA、HBM/L2、TMEM、epilogue | 必需公共资源完整 | 历史 closure 已有 | 经验资源 rate |
-| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-c`：10/10、NCU、auditor、COMPLETE 通过 | payload-indexed per-SM/full-GPU TMA rate |
-| L2 duplex + cold read/write-path proxy | 7 cold ratio + 14 L2 ratio | 21/21 case | `-c` preflight 发现 Thor 无 `dram__bytes_op_read/write.sum`，未启动 case；保留诊断 | read/write 联合服务曲线；不关闭 external write bytes |
+| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-e`：10/10 通过 | payload-indexed per-SM/full-GPU TMA rate |
+| L2 duplex + cold read/write-path proxy | 7 cold ratio + 14 L2 ratio | 21/21 case | `-e`：前 20 个通过；最后 `96:1` 暴露旧 binary `ops<=64` 矛盾，整批 fail-closed | read/write 联合服务曲线；不关闭 external write bytes |
 | exact TMA topology | schedule × precision | 2/28 pair | 仅 tc5a FP16/BF16 | 禁止把 generic payload curve 冒充具体流水线 |
 | independent joint pipeline | TMA/MMA/TMEM 因果组合 | 0 | 未定义独立 runner | overlap、startup、drain、backpressure |
 | full GEMM validation | candidate/reference，3 个 N | 当前绘图分支 5/12 precision | 历史 15 case | 数值正确性与端到端反证 |
@@ -283,6 +283,9 @@ row，但旧 host parser 对 `float("8,299,136")` 抛出异常。该目录必须
 失败；`-c` 已完成 10/10 TMA payload，但 duplex 在 metric preflight fail-closed。
 修改 cold duplex 证据合同后的新提交必须使用新的 `-d` run ID，并在同一提交上
 重采 TMA 与 duplex，不能把 `-c` TMA 与 `-d` duplex 拼成一次 composite run。
+随后 `-e` 已证明新 proxy metric 合同可执行，但最后一个不可约 `96:1` case 超过
+旧 binary 的 host 参数上限 64。修复把显式上限提高并冻结为 128；下一次完整重跑
+必须使用新的 `-f` run ID，不能复用 `-e` 的前 20 个 duplex case。
 
 ## 7. 实验 D：hot-L2 duplex 与 cold-DRAM-read/write-path proxy surface
 
@@ -322,6 +325,11 @@ L2 ratio 从 schedule-level repeated TMA input bytes 与 output bytes 自动推�
 27:16, 3:1, 27:8, 4:1, 6:1, 27:4, 8:1,
 12:1, 16:1, 24:1, 32:1, 48:1, 64:1, 96:1
 ```
+
+`96:1` 与 1 互质，不能在 `ops<=64` 内等价缩放。binary、runner manifest 和 auditor
+共同冻结 `max_operation_groups=128`；任何超过 128 的派生 ratio 在启动前失败。
+device kernel 使用 runtime `operation_groups` 循环，每个 group 重用固定的 8 个
+`uint4` 局部 load 值，因此该修改放宽的是 host legality，不是静态展开 96 份寄存器。
 
 working set 为每方向 16 MiB，目标是 hot-L2 traffic。`27:16`、`27:8`、`27:4`
 显式覆盖 block-scaled value+scale transport，不得被近似成整数 ratio。

@@ -44,6 +44,7 @@ HBM_BYTES = 256 << 20
 TARGET_BYTES = 512 << 20
 NCU_TARGET_BYTES = 64 << 20
 BYTES_PER_LOGICAL_OPERATION = 8 * 16
+MAX_OPERATION_GROUPS = 128
 TARGET_SQUARE_SHAPES = (1024, 2048, 4096)
 NCU_METRICS = (
     "gpu__time_duration.sum",
@@ -177,6 +178,10 @@ def cases(target_bytes: int = TARGET_BYTES) -> list[dict[str, object]]:
             read_ops //= divisor
             write_ops //= divisor
             iterations = iterations_for(target_bytes, read_ops, write_ops)
+            if max(read_ops, write_ops) > MAX_OPERATION_GROUPS:
+                raise RuntimeError(
+                    f"ratio {read_ops}:{write_ops} exceeds binary operation-group "
+                    f"limit {MAX_OPERATION_GROUPS}")
             case_id = f"{residency}_duplex_r{read_ops}_w{write_ops}"
             cold_proxy = residency == "hbm"
             result.append({
@@ -191,6 +196,7 @@ def cases(target_bytes: int = TARGET_BYTES) -> list[dict[str, object]]:
                     if cold_proxy else "hot_l2_read_hit_plus_write_l2_issue"
                 ),
                 "external_write_bytes_proven": False,
+                "max_operation_groups": MAX_OPERATION_GROUPS,
                 "read_operations": read_ops,
                 "write_operations": write_ops,
                 "working_set_bytes_per_direction": working_set,
@@ -348,6 +354,7 @@ def validate_trial(case: dict[str, object], fields: dict[str, str]) -> float:
         "blocks": str(EXPECTED_SMS * BLOCKS_PER_SM),
         "blocks_per_sm": str(BLOCKS_PER_SM), "threads": str(THREADS),
         "iterations": str(case["iterations"]), "warmup_iterations": "64",
+        "max_operation_groups": str(MAX_OPERATION_GROUPS),
         "read_operations_per_iteration": str(case["read_operations"]),
         "write_operations_per_iteration": str(case["write_operations"]),
         "working_set_bytes": str(case["working_set_bytes_per_direction"]),
@@ -548,6 +555,7 @@ def main() -> int:
             "campaign": "sm110_memory_duplex_closure",
             "expected_commit": args.expected_commit, "expected_sm_count": EXPECTED_SMS,
             "trials": TRIALS, "ncu_required": True,
+            "max_operation_groups": MAX_OPERATION_GROUPS,
             "cold_duplex_evidence": {
                 "read": "32 * l2_read_lookup_miss_sectors >= 0.60 * requested_read_bytes",
                 "write": "32 * l2_write_sectors >= 0.90 * requested_write_bytes",
@@ -604,6 +612,7 @@ def main() -> int:
                 "residency": case["residency"],
                 "evidence_contract": case["evidence_contract"],
                 "external_write_bytes_proven": False,
+                "max_operation_groups": MAX_OPERATION_GROUPS,
                 "source_path": str(SOURCE.relative_to(REPO)),
                 "source_sha256": artifact["source_sha256"],
                 "binary_sha256": artifact["binary_sha256"],
