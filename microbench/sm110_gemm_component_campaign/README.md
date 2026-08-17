@@ -38,6 +38,12 @@ The launcher returns immediately and records `launcher.pid`, `launcher.log`,
 ID safely skips only cases whose ten trials and source/binary/SASS hashes still
 match the immutable run contract.
 
+After writing `summary.json`, the runner automatically creates
+`plots/component-throughput-by-contract.svg`, `plots/index.md`, and a manifest
+bound to the summary SHA-256. Byte and element rates are separated, and
+unrelated resource contracts are shown as independent bars rather than a
+misleading line. The summary and raw trials remain the audit truth.
+
 Do not launch the 18 cases directly for closure qualification: a bare component
 directory does not contain the suite-level branch/commit, locked-clock and
 overcurrent interval required by the importer.  Use the same-commit commands

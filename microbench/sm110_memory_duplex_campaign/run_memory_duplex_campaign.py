@@ -27,6 +27,7 @@ sys.path.insert(0, str(REPO))
 
 from scripts.sm110_gemm_model.io import load_schedules, load_workloads
 from scripts.sm110_gemm_model.model import account_work, precision_specs
+from scripts.sm110_gemm_model.campaign_plots import generate_campaign_plots
 
 
 RESULT_ROOT = REPO / "results" / "sm110_memory_duplex_campaign"
@@ -592,11 +593,15 @@ def main() -> int:
                "case_count": len(results), "results": results}
     summary_path = run_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    plot_manifest = generate_campaign_plots(summary_path)
     if not args.static_only:
         complete_marker.write_text(
             f"run_id={args.run_id}\nsummary_sha256={sha256(summary_path)}\n")
         binary.unlink()
     write_status(run_dir, status, completed_cases=len(results), total_cases=len(manifest))
+    print(json.dumps({"run_dir": str(run_dir), "status": status,
+                      "plot_count": plot_manifest["chart_count"],
+                      "plots": str(run_dir / "plots")}, indent=2))
     return 0
 
 

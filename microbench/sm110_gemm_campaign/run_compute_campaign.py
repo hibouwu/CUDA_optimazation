@@ -28,6 +28,9 @@ from scripts.sm110_gemm_model.tcgen05_descriptors import (  # noqa: E402
     encode_block_scaled_fp4,
     encode_unscaled,
 )
+from scripts.sm110_gemm_model.campaign_plots import (  # noqa: E402
+    generate_campaign_plots,
+)
 
 
 SCHEMA_VERSION = 2
@@ -804,10 +807,12 @@ def main() -> int:
         "results": summaries,
         "updated_at_utc": utc_now(),
     }
-    (run_dir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    summary_path = run_dir / "summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    plot_manifest = generate_campaign_plots(summary_path)
     if ok and not args.static_only:
-        (run_dir / "COMPLETE").write_text(
-            f"run_id={args.run_id}\nsummary_sha256={sha256_path(run_dir / 'summary.json')}\n"
+        complete_marker.write_text(
+            f"run_id={args.run_id}\nsummary_sha256={sha256_path(summary_path)}\n"
         )
     write_status(
         run_dir,
@@ -816,6 +821,7 @@ def main() -> int:
         completed_cases=len(summaries),
         total_cases=len(manifest),
     )
+    print(f"PLOTS {plot_manifest['chart_count']}: {run_dir / 'plots'}", flush=True)
     return 0 if ok else 1
 
 

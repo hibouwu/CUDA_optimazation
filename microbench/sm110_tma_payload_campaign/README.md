@@ -51,6 +51,12 @@ git commit -m "results: Thor SM110 TMA payloads $RUN_ID"
 git push -u origin "thor-results/$RUN_ID"
 ```
 
+The runner automatically writes `plots/tma-throughput-by-payload.svg`,
+`plots/index.md`, and `plots/manifest.json` after `summary.json`. Hot-L2 is
+explicitly labeled as isolated per-SM ingress and cold-DRAM as full-GPU
+ingress, so the two lines are not silently treated as the same physical scope.
+The manifest records the source summary SHA-256.
+
 This campaign intentionally does not test FP6 decompression or block-scale
 scale-factor delivery. Those require separate source-backed tcgen05 data-path
 contracts and cannot be inferred from a generic GMEM-to-SMEM byte-copy curve.

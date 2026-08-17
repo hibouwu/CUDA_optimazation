@@ -43,3 +43,9 @@ After collection, run the independent auditor:
 python3 microbench/sm110_memory_duplex_campaign/audit_campaign.py \
   "results/sm110_memory_duplex_campaign/$RUN_ID"
 ```
+
+After `summary.json`, the runner automatically generates
+`plots/memory-duplex-service-curves.svg`. Each HBM/L2 panel plots total, read,
+and write GB/s against the issued-byte read share. Min/max whiskers retain the
+ten-trial spread. The SVG is a derived view; the raw summary and NCU evidence
+remain authoritative and are SHA-256-bound by `plots/manifest.json`.

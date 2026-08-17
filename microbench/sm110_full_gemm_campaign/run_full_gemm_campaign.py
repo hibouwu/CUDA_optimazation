@@ -22,6 +22,12 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from scripts.sm110_gemm_model.campaign_plots import (  # noqa: E402
+    generate_campaign_plots,
+)
+
 CAMPAIGN = Path(__file__).resolve().parent
 RESULT_ROOT = REPO / "results" / "sm110_full_gemm_campaign"
 TRIALS = 10
@@ -695,6 +701,7 @@ def main() -> int:
     }
     summary_path = run_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    plot_manifest = generate_campaign_plots(summary_path)
     if not args.static_only:
         complete_marker.write_text(
             f"run_id={args.run_id}\nsummary_sha256={sha256(summary_path)}\n")
@@ -704,7 +711,9 @@ def main() -> int:
                  completed_cases=len(results), total_cases=len(CASES))
     print(json.dumps({"run_dir": str(run_dir), "status": status,
                       "case_count": len(results),
-                      "ncu_report_count": len(ncu_results)}, indent=2))
+                      "ncu_report_count": len(ncu_results),
+                      "plot_count": plot_manifest["chart_count"],
+                      "plots": str(run_dir / "plots")}, indent=2))
     return 0
 
 
