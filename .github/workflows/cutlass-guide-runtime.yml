@@ -1,0 +1,64 @@
+name: cutlass-guide-trusted-sm110a-runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'cutlass-gemm-cpp-guide/**'
+      - '.gitmodules'
+      - '.github/workflows/cutlass-guide-*.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-sm110a-gpu
+  cancel-in-progress: false
+
+jobs:
+  runtime:
+    environment: thor-sm110a
+    runs-on: [self-hosted, linux, sm110a, trusted]
+    container:
+      image: nvcr.io/nvidia/cuda@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6
+      options: --gpus all
+    defaults:
+      run:
+        working-directory: cutlass-gemm-cpp-guide
+    steps:
+      - name: Install build tools
+        working-directory: ${{ github.workspace }}
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake ninja-build python3 git ca-certificates
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Audit trusted runner and GPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C third_party/cutlass rev-parse HEAD)" = e05f953a5b3d38adc240df2ff928e0421c2abba3
+          nvidia-smi --query-gpu=name,compute_cap,driver_version --format=csv,noheader
+          test "$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n1 | tr -d ' ')" = "11.0"
+          python3 tools/collect_environment.py --root . --output artifacts/environment.json
+      - name: Configure and build
+        env:
+          CUDACXX: /usr/local/cuda/bin/nvcc
+        run: |
+          cmake --preset sm110a-gpu
+          cmake --build --preset sm110a-gpu
+      - name: Run complete core matrix
+        run: ctest --preset sm110a-gpu -L runtime-sm110a
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutlass-guide-sm110a-runtime-evidence
+          path: |
+            cutlass-gemm-cpp-guide/artifacts/
+            cutlass-gemm-cpp-guide/build-sm110a-gpu/results/
+            cutlass-gemm-cpp-guide/build-sm110a-gpu/Testing/
+          if-no-files-found: warn

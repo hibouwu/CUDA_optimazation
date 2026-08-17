@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "case_id": "bs_mxfp4_1sm_p128x128x256",
+  "title": "Native MXFP4 block-scaled GEMM with K tile 256",
+  "track": "A",
+  "target": {"virtual_arch": "compute_110a", "arch": "sm_110a", "cutlass_arch_tag": "cutlass::arch::Sm100"},
+  "problem": {"mnkl": [128, 128, 256, 1], "logical_b_storage": "N_x_K", "logical_sfa": [128, 8], "logical_sfb": [128, 8]},
+  "kernel": {"mma_tile_mnk": [128, 128, 256], "instruction_mnk": [128, 128, 64], "cluster_mnk": [1, 1, 1], "cta_group": 1, "operand_source": "SS+scale-TMEM", "pipeline_stages": 0, "mainloop_schedule": "cutlass::gemm::KernelTmaWarpSpecialized1SmMxf4Sm100", "epilogue_schedule": "cutlass::epilogue::NoSmemWarpSpecialized1Sm"},
+  "types": {"a": {"value": "cutlass::float_e2m1_t", "scaled": "cutlass::mx_float4_t<cutlass::float_e2m1_t>", "scale": "cutlass::float_ue8m0_t", "scale_vector_size": 32}, "b": {"value": "cutlass::float_e2m1_t", "scaled": "cutlass::mx_float4_t<cutlass::float_e2m1_t>", "scale": "cutlass::float_ue8m0_t", "scale_vector_size": 32}, "c": {"value": "void"}, "accumulator": "float", "d": "cutlass::bfloat16_t"},
+  "layouts": {"a": "RowMajor", "b": "ColumnMajor", "d": "RowMajor", "scale": "Sm1xx K-major 128x4", "alignment_elements": {"a": 32, "b": 32, "d": 8}},
+  "codegen": {"attribution": "single_target_function_block", "ptx": {"required": ["cp\\.async\\.bulk\\.tensor", "tcgen05\\.cp", "tcgen05\\.mma.*kind::mxf4.*block_scale", "tcgen05\\.ld"], "forbidden": []}, "sass": {"required_families": ["UTMALDG", "UTCCP", "UTCOMMA", "LDTM"], "exact_counts_gating": false}},
+  "numerical": {"reference": "independent_cpu_reference", "seed": 20260817, "patterns": ["zero", "scale_boundary_sentinel", "seeded_random"], "atol": 1.0, "rtol": 0.1, "full_output": true, "canary": true},
+  "evidence": {"documented": true, "source_present": true, "compile_passed": true, "ptx_verified": true, "sass_verified": true, "runtime_correct": false, "performance_measured": false}
+}

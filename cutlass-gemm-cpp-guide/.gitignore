@@ -1,0 +1,11 @@
+/build*/
+/artifacts/
+/results/
+/.cache/
+*.cubin
+*.fatbin
+*.sass
+*.ptx
+*.ncu-rep
+__pycache__/
+*.pyc

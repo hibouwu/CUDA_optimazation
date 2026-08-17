@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "case_id": "dense_fp8_1sm_p128",
+  "title": "E4M3 dense GEMM 128x128x128 on one SM",
+  "track": "A",
+  "target": {"virtual_arch": "compute_110a", "arch": "sm_110a", "cutlass_arch_tag": "cutlass::arch::Sm100"},
+  "problem": {"mnkl": [128, 128, 128, 1], "logical_b_storage": "N_x_K"},
+  "kernel": {
+    "mma_tile_mnk": [128, 128, 128], "instruction_mnk": [128, 128, 32], "cluster_mnk": [1, 1, 1],
+    "cta_group": 1, "operand_source": "SS", "pipeline_stages": 0,
+    "mainloop_schedule": "cutlass::gemm::KernelTmaWarpSpecialized1SmSm100",
+    "epilogue_schedule": "cutlass::epilogue::NoSmemWarpSpecialized1Sm"
+  },
+  "types": {"a": {"value": "cutlass::float_e4m3_t"}, "b": {"value": "cutlass::float_e4m3_t"}, "c": {"value": "void"}, "accumulator": "float", "d": "float"},
+  "layouts": {"a": "RowMajor", "b": "ColumnMajor", "d": "RowMajor", "alignment_elements": {"a": 16, "b": 16, "d": 4}},
+  "codegen": {"attribution": "single_target_function_block", "ptx": {"required": ["cp\\.async\\.bulk\\.tensor", "tcgen05\\.mma.*kind::f8f6f4", "tcgen05\\.ld"], "forbidden": ["tcgen05\\.cp"]}, "sass": {"required_families": ["UTMALDG", "UTC(?:Q|O)?MMA", "LDTM"], "exact_counts_gating": false}},
+  "numerical": {"reference": "independent_cpu_reference", "seed": 20260817, "patterns": ["zero", "index_sensitive", "seeded_random"], "atol": 0.25, "rtol": 0.05, "full_output": true, "canary": true},
+  "evidence": {"documented": true, "source_present": true, "compile_passed": true, "ptx_verified": true, "sass_verified": true, "runtime_correct": false, "performance_measured": false}
+}

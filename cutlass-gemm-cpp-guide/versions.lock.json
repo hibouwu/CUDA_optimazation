@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "cutlass": {
+    "tag": "v4.6.1",
+    "git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+    "submodule_path": "third_party/cutlass"
+  },
+  "cuda": {
+    "version": "13.0",
+    "nvcc_version": "13.0.88",
+    "ptxas_version": "13.0.88",
+    "nvdisasm_version": "13.0.85",
+    "target_virtual": "compute_110a",
+    "target_real": "sm_110a"
+  },
+  "language": {
+    "cxx_standard": 17,
+    "cuda_standard": 17
+  },
+  "host_compiler": {
+    "family": "gcc",
+    "version": "13.3.0",
+    "status": "required-by-canonical-container"
+  },
+  "container": {
+    "reference": "nvcr.io/nvidia/cuda:13.0.2-devel-ubuntu24.04",
+    "digest": "sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6",
+    "resolved_from": "local docker image inspect"
+  },
+  "local_diagnostic_host": {
+    "nvcc": "13.0.88",
+    "gcc": "15.3.1",
+    "supported_as_canonical": false,
+    "reason": "CUDA 13.0 host-header compatibility is not closed with GCC 15"
+  },
+  "lock_sha256": "computed-over-this-file-by-tools/collect_environment.py"
+}
