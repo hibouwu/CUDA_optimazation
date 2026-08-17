@@ -397,3 +397,7 @@ python3 scripts/sm110_gemm_model/runner_coverage.py
 `false`；在精确 schedule
 topology、独立 joint-pipeline、固定成本 wall-time 校准和剩余完整 GEMM 路径补齐
 前，`all_performance_parameter_runner_definition_complete` 必须保持 `false`。
+
+duplex runner 的正常 `SystemExit(0)` 不得被 failure handler 捕获。最终
+`campaign_status.json=status=complete`、两个 independent auditor 和字面
+`PARAMETER_SUPPLEMENT_COMPLETE` 缺一不可；不得手工修写状态文件或 marker。

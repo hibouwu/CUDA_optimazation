@@ -6,12 +6,13 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
+from unittest import mock
 
 from microbench.sm110_memory_duplex_campaign.run_memory_duplex_campaign import (
     HBM_RATIOS, L2_RATIOS, MAX_OPERATION_GROUPS, NCU_BASE_UNITS, NCU_METRICS,
     TARGET_SQUARE_SHAPES, cases,
     derive_ratio_contracts, duplex_sass_block, find_ncu_row, validate_trial,
-    ncu_number,
+    guarded_main, ncu_number,
 )
 from microbench.sm110_memory_duplex_campaign.audit_campaign import (
     audit_ncu,
@@ -21,6 +22,38 @@ from microbench.sm110_memory_duplex_campaign.audit_campaign import (
 
 
 class MemoryDuplexContractTest(unittest.TestCase):
+    def test_guarded_main_does_not_relabel_normal_return_as_failure(self) -> None:
+        with mock.patch(
+            "microbench.sm110_memory_duplex_campaign."
+            "run_memory_duplex_campaign.mark_failed"
+        ) as mark_failed:
+            self.assertEqual(guarded_main(lambda: 0), 0)
+            mark_failed.assert_not_called()
+
+    def test_guarded_main_preserves_system_exit_without_failure_relabel(self) -> None:
+        def exit_zero():
+            raise SystemExit(0)
+
+        with mock.patch(
+            "microbench.sm110_memory_duplex_campaign."
+            "run_memory_duplex_campaign.mark_failed"
+        ) as mark_failed:
+            with self.assertRaisesRegex(SystemExit, "0"):
+                guarded_main(exit_zero)
+            mark_failed.assert_not_called()
+
+    def test_guarded_main_marks_real_exception_failed(self) -> None:
+        def fail():
+            raise RuntimeError("boom")
+
+        with mock.patch(
+            "microbench.sm110_memory_duplex_campaign."
+            "run_memory_duplex_campaign.mark_failed"
+        ) as mark_failed:
+            with self.assertRaisesRegex(RuntimeError, "boom"):
+                guarded_main(fail)
+            mark_failed.assert_called_once_with("RuntimeError: boom")
+
     def test_binary_and_manifest_support_the_96_to_1_boundary(self) -> None:
         self.assertEqual(MAX_OPERATION_GROUPS, 128)
         case = next(

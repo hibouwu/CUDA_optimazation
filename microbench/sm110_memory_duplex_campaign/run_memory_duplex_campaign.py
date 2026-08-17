@@ -673,21 +673,25 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def mark_failed(message: str) -> None:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--run-id")
+    args, _ = parser.parse_known_args()
+    if args.run_id and re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
+        failed_dir = RESULT_ROOT / args.run_id
+        if failed_dir.is_dir():
+            write_status(failed_dir, "failed", error=message)
+
+
+def guarded_main(main_function=main) -> int:
     try:
-        raise SystemExit(main())
-    except BaseException as exc:
-        try:
-            index = sys.argv.index("--run-id")
-            failed_run_id = sys.argv[index + 1]
-            if re.fullmatch(r"[A-Za-z0-9._-]+", failed_run_id):
-                failed_dir = RESULT_ROOT / failed_run_id
-                if failed_dir.is_dir():
-                    write_status(
-                        failed_dir,
-                        "failed",
-                        error=f"{type(exc).__name__}: {exc}",
-                    )
-        except (ValueError, IndexError, OSError):
-            pass
+        return main_function()
+    except SystemExit:
         raise
+    except Exception as exc:
+        mark_failed(f"{type(exc).__name__}: {exc}")
+        raise
+
+
+if __name__ == "__main__":
+    raise SystemExit(guarded_main())

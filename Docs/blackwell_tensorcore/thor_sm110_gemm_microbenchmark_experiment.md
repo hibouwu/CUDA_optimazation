@@ -66,8 +66,8 @@ P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}},
 | --- | --- | ---: | --- | --- |
 | Tensor Core compute | 12 precision × 3 full-SM MMA atom | 12/12 precision，36 个 full-SM 点 | 历史 closure 已有；新参数补测不重复 | shape-qualified compute sustained rate |
 | 公共 component | TMA、HBM/L2、TMEM、epilogue | 必需公共资源完整 | 历史 closure 已有 | 经验资源 rate |
-| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-e`：10/10 通过 | payload-indexed per-SM/full-GPU TMA rate |
-| L2 duplex + cold read/write-path proxy | 7 cold ratio + 14 L2 ratio | 21/21 case | `-e`：前 20 个通过；最后 `96:1` 暴露旧 binary `ops<=64` 矛盾，整批 fail-closed | read/write 联合服务曲线；不关闭 external write bytes |
+| TMA payload surface | 5 payload × 2 residency | 10/10 case | 2026-08-17 `-g`：10/10、NCU、auditor 通过 | payload-indexed per-SM/full-GPU TMA rate |
+| L2 duplex + cold read/write-path proxy | 7 cold ratio + 14 L2 ratio | 21/21 case | `-g`：21/21（含 96:1）、summary、COMPLETE、手工 auditor 均通过；旧状态机把 `SystemExit(0)` 覆写成 failed，suite marker 缺失 | read/write 联合服务曲线；不关闭 external write bytes |
 | exact TMA topology | schedule × precision | 2/28 pair | 仅 tc5a FP16/BF16 | 禁止把 generic payload curve 冒充具体流水线 |
 | independent joint pipeline | TMA/MMA/TMEM 因果组合 | 0 | 未定义独立 runner | overlap、startup、drain、backpressure |
 | full GEMM validation | candidate/reference，3 个 N | 当前绘图分支 5/12 precision | 历史 15 case | 数值正确性与端到端反证 |
@@ -286,6 +286,11 @@ row，但旧 host parser 对 `float("8,299,136")` 抛出异常。该目录必须
 随后 `-e` 已证明新 proxy metric 合同可执行，但最后一个不可约 `96:1` case 超过
 旧 binary 的 host 参数上限 64。修复把显式上限提高并冻结为 128；下一次完整重跑
 必须使用新的 `-f` run ID，不能复用 `-e` 的前 20 个 duplex case。
+`-g` 已取得完整 TMA/duplex 数据和两个通过的 auditor，但 duplex `main()` 正常返回
+后，旧 `except BaseException` 捕获 `SystemExit(0)`，把刚写入的 `complete` 状态
+覆写成 `failed`；orchestrator 因而没有输出 `PARAMETER_SUPPLEMENT_COMPLETE`。
+该目录保留为完整数据但 suite 状态未闭环的诊断。状态机修复后的正式重跑使用新
+`-h` run ID，禁止手工修改 `campaign_status.json` 或补写 suite marker。
 
 ## 7. 实验 D：hot-L2 duplex 与 cold-DRAM-read/write-path proxy surface
 
@@ -490,6 +495,10 @@ COMPLETE
 | `static_complete` | 仅静态合同完成；不是 runtime evidence |
 | `complete` | runner case 完整；仍需 independent auditor |
 | `PARAMETER_SUPPLEMENT_COMPLETE` | TMA 和 duplex 均 complete 且两个 auditor 通过 |
+
+runner entrypoint 必须放过 `SystemExit`；只有 `Exception` 子类的真实失败才能调用
+`mark_failed`。正常 `return 0`、`SystemExit(0)` 和真实 `RuntimeError` 均有独立
+状态机测试，禁止成功路径覆写 final `complete`。
 
 独立 auditor 不信任 summary 中的派生数字；它重新解析 raw stdout/CSV，重算 byte
 work、rate、trial statistics、NCU traffic ratio、residency 和 hash。任何 commit、

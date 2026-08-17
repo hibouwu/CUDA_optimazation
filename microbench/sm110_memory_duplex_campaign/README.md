@@ -48,6 +48,12 @@ implemented auditor parser now require the exact base-unit row, accept valid
 grouping, reject malformed or scaled values, and compare every stored NCU
 metric back to the raw CSV.
 
+The process entrypoint catches `Exception`, not `BaseException`. A normal
+`return 0` or `SystemExit(0)` must preserve the final `complete` status;
+`RuntimeError` and other real exceptions still call `mark_failed`. This state
+transition is covered by unit tests because the suite orchestrator relies on
+`campaign_status.json` before printing `PARAMETER_SUPPLEMENT_COMPLETE`.
+
 Run on Thor from a clean checkout at the frozen commit:
 
 ```bash

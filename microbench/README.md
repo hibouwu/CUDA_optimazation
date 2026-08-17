@@ -78,8 +78,8 @@ as evidence.
 Choose a unique ID, for example:
 
 ```bash
-# Use an unused suffix. After the 2026-08-17 a/b/c/d/e diagnostics, use f.
-RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-f
+# Use an unused suffix. After the 2026-08-17 a..g diagnostics, use h.
+RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-h
 EXPECTED_COMMIT=$(git rev-parse HEAD)
 ```
 
@@ -129,7 +129,7 @@ set +e
 set +u
 set +o pipefail 2>/dev/null || true
 
-RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-f
+RUN_ID=thor-t5000-parameter-plots-maxn-YYYYMMDD-h
 LOG_DIR="results/sm110_parameter_supplement/$RUN_ID"
 TMA_DIR="results/sm110_tma_payload_campaign/${RUN_ID}-tma-payload"
 DUPLEX_DIR="results/sm110_memory_duplex_campaign/${RUN_ID}-memory-duplex"
