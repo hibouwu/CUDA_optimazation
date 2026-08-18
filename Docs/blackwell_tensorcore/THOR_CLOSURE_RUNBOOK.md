@@ -675,3 +675,45 @@ sudo /usr/bin/jetson_clocks --show
 ```
 
 应看到本机默认 120W mode 1，且 GPU min/max 不再都固定为 1.575 GHz。
+## 13. 对抗式参数补充 campaign
+
+第 10 节的“不需要重跑”只适用于既有 tc5a closure 的路径可移植性修复。若要把
+闭环声明增强为“覆盖 payload sensitivity 与同核 read/write 联合服务面”，必须
+运行本节新增的 GPU-facing supplement，不能复用旧 component 数字。
+
+在冻结提交和干净 Thor checkout 上执行：
+
+```bash
+RUN_ID=thor-t5000-parameter-supplement-maxn-YYYYMMDD-a
+EXPECTED_COMMIT=$(git rev-parse HEAD)
+
+test "$(git status --short --untracked-files=no)" = ""
+bash microbench/run_sm110_parameter_supplement.sh \
+  "$RUN_ID" "$EXPECTED_COMMIT"
+```
+
+该命令顺序执行并独立审计 TMA payload/residency surface 与 hot-L2 duplex、
+cold-DRAM-read/write-path proxy ratio surface。Thor 缺少 external write-byte
+counter，因此 proxy 结果不能称为完整 physical DRAM duplex closure。完整合同、
+比例来源、参数适用边界和结果提交清单见
+[`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
+
+L2 ratio matrix 包含不可约 `96:1`；当前 binary 合同为
+`max_operation_groups=128`。若 runtime output 未报告相同值，或 manifest 需求超过
+128，runner/auditor 必须 fail closed。
+
+该 supplement 只关闭 payload 与 duplex 两个新增 runner surface。运行前后都应执行：
+
+```bash
+python3 scripts/sm110_gemm_model/runner_coverage.py
+```
+
+其中 `payload_duplex_runner_definition_complete` 应为 `true`，但
+`physical_memory_duplex_closed` 与 `cold_external_write_bytes_closed` 必须保持
+`false`；在精确 schedule
+topology、独立 joint-pipeline、固定成本 wall-time 校准和剩余完整 GEMM 路径补齐
+前，`all_performance_parameter_runner_definition_complete` 必须保持 `false`。
+
+duplex runner 的正常 `SystemExit(0)` 不得被 failure handler 捕获。最终
+`campaign_status.json=status=complete`、两个 independent auditor 和字面
+`PARAMETER_SUPPLEMENT_COMPLETE` 缺一不可；不得手工修写状态文件或 marker。

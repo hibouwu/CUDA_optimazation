@@ -114,6 +114,11 @@ per-case aggregates; optional NCU reports; and a hash-bound `COMPLETE` marker.
 The binaries themselves are removed after hashing to avoid committing large
 rebuildable executables.
 
+The completed runner automatically writes two figures under `plots/`: absolute
+candidate/reference throughput versus `N`, and candidate/reference percentage
+versus `N`. Precisions are faceted so FLOP/s and integer OP/s are never mixed
+on one axis. `plots/manifest.json` binds the derived SVGs to `summary.json`.
+
 ## Local static preflight
 
 This proves compilation and function-scoped SASS only; it does not prove runtime

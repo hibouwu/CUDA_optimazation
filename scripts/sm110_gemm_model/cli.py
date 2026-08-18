@@ -9,6 +9,7 @@ from .closure_import import import_closure, import_composite_closure
 from .causal_import import import_causal_profile
 from .resource_import import import_resource_capacities
 from .closure_report import build_closure_analysis, write_closure_report
+from .campaign_plots import generate_campaign_plots
 from .io import (
     load_capacities,
     load_closure_inputs,
@@ -304,6 +305,8 @@ def main() -> int:
                 json_path=args.output_json,
                 markdown_path=args.output_markdown,
             )
+            plot_manifest = generate_campaign_plots(
+                args.output_json, args.output_json.parent / "figures")
         except (ModelError, OSError, ValueError, KeyError, TypeError) as error:
             print(json.dumps({
                 "pass": False,
@@ -314,6 +317,8 @@ def main() -> int:
             "pass": analysis["pass"],
             "output_json": str(args.output_json),
             "output_markdown": str(args.output_markdown),
+            "output_figures": str(args.output_json.parent / "figures"),
+            "plot_count": plot_manifest["chart_count"],
             "finding_count": len(analysis["findings"]),
         }, indent=2, sort_keys=True))
         return 0 if analysis["pass"] else 1

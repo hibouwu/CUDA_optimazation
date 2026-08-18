@@ -214,6 +214,27 @@ python3 -m scripts.sm110_gemm_model.cli report-closure \
   --output-markdown "$MODEL_DIR/closure_summary.md"
 ```
 
+`report-closure` also writes deterministic SVG figures under
+`$MODEL_DIR/figures/`: the absolute observed/reference/envelope/upper curves
+and a separate percentage chart. The latter is important when a loose upper
+would visually flatten the observed line. `figures/manifest.json` binds every
+SVG to the SHA-256 of `closure_analysis.json`; the JSON remains authoritative.
+
+Every compute, component, TMA-payload, memory-duplex, and full-GEMM runner now
+generates its own `plots/index.md`, SVG files, and `plots/manifest.json` after
+writing `summary.json` and before writing `COMPLETE`. Static-only runs produce
+an explicit zero-chart manifest instead of a fake performance graph. Existing
+historical summaries can be plotted without rerunning Thor:
+
+```bash
+python3 -m scripts.sm110_gemm_model.plot_campaign_results \
+  --input results/<campaign>/<run-id>/summary.json
+```
+
+The plotter uses no third-party Python package. It separates FLOP/s from OP/s,
+byte/s from element/s, GPU-shared from per-SM labels, and does not connect
+unrelated component resource contracts with a line.
+
 The report preserves N=1024/2048 as the predeclared calibration points and
 N=4096 as holdout, but does not infer cache residency from that split. It
 evaluates both hot-L2 and cold-HBM scenarios: the conditional check uses the

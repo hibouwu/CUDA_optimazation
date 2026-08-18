@@ -87,7 +87,12 @@ git push -u origin thor-results/<run-id>
 - `cases/<case-id>/trials.jsonl`：每次原始运行输出；
 - `cases/<case-id>/result.json`：median/min/max 和静态审计；
 - 可选 `ncu/` 目录；
+- `plots/`：自动生成的 single-warp/full-SM MMA-N 折线图、索引和绑定
+  `summary.json` SHA-256 的 manifest；
 - `summary.json` 与 `COMPLETE`：只有所有 case 通过才生成完成标志。
+
+SVG 是派生展示结果；`summary.json`、原始 trial、SASS 和 NCU 才是审计证据。
+static-only 运行只生成零图 manifest，不会把静态 lowering 画成运行时性能。
 
 这一批结果只能校准 Tensor Core compute resource。TMA、TMEM readback、epilogue
 和完整 GEMM correctness 会使用后续独立 campaign；不能用本批结果替代。

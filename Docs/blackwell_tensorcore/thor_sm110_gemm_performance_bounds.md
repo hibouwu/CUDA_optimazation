@@ -14,6 +14,12 @@
 [`thor_sm110_all_precision_evidence_matrix.md`](./thor_sm110_all_precision_evidence_matrix.md)；
 本文继续作为严格定义、最终证据和审计合同。
 
+本文使用的 microbenchmark 研究问题、参数首次定义、case matrix、计时/NCU
+门禁、自动图表、当前缺口与源码索引集中记录在
+[`thor_sm110_gemm_microbenchmark_experiment.md`](./thor_sm110_gemm_microbenchmark_experiment.md)；
+操作命令和失败恢复流程见
+[`microbench/README.md`](../../microbench/README.md)。
+
 ## 1. 先给出结论
 
 “比 cuBLAS 还完美的 GEMM”有三种不同含义，必须先分开：
@@ -848,6 +854,15 @@ row-stride 精确匹配的 resource prediction，其余 13 项缺少对应场景
 `causal_pipeline_closed_count=0`、`end_to_end_closed_count=0`。前一组描述历史
 numeric/campaign 范围，后一组描述当前三层模型完备性，字段不得互相替代。
 
+> **2026-08-15 对抗式复审边界**：上面的
+> `all_common_resources_closed=true` 只对当时定义的十个**独立**资源 ID 成立，
+> 不能解释为所有联合性能参数均已测量。复审发现 HBM/L2 同核 read/write duplex
+> surface 与 TMA payload/residency surface 尚未进入该布尔值。新增 runner、精确
+> 缺口矩阵和 Thor 重跑合同见
+> [`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
+> 新结果回传前，既有数值仍是“允许独立资源理想重叠”假设下的经验包络，不得升级
+> 为联合可达性已证明的包络。
+
 ## 9. 自动化接口和反证规则
 
 可执行模型位于
@@ -1185,7 +1200,9 @@ cd microbench/L2throughtput
   [`microbench/05_gmem_dram_bandwidth/results/adversarial_review.md`](../../microbench/05_gmem_dram_bandwidth/results/adversarial_review.md)
 - 已引用实测：read-stream 126.010672 B/cycle/GPU；write-stream
   70.429363 B/cycle/GPU。
-- 边界：本机 NCU 可能缺直接 `dram__bytes*`，验证会使用 LTS miss-sector proxy。
+- 边界：本机 NCU 缺直接 `dram__bytes*`；read 验证可使用 LTS read-miss-sector
+  proxy，LTS write sectors 只能证明进入 write path，不能证明等量 external DRAM
+  write bytes。对应 duplex 结果必须保持 proxy qualification。
 
 基本命令：
 
