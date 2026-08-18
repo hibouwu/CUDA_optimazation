@@ -175,6 +175,15 @@ def import_resource_capacities(
         rate = float(result["rate_per_second_median"])
         row_stride = int(result["row_stride_elements"])
         family_id = str(result["family_id"])
+        precision_ids = tuple(str(value) for value in result["precision_ids"])
+        payloads = tuple(sorted({
+            int(expected[name])
+            for name in (
+                "a_value_bytes", "b_value_bytes",
+                "a_scale_bytes", "b_scale_bytes",
+            )
+            if int(expected.get(name, 0)) > 0
+        }))
         capacities.append(Capacity(
             capacity_id=f"{suite_id}.resource.{case_id}",
             resource=resource,
@@ -201,6 +210,27 @@ def import_resource_capacities(
                 run_dir=run_dir,
                 result=result,
             ),
+            applicable_precision_ids=precision_ids,
+            applicable_sm_counts=(20,),
+            applicable_hardware_ids=("thor_t5000_sm110_20sm",),
+            applicable_operating_modes=("MAXN",),
+            applicable_residencies=(
+                "hot_l2" if residency == "hot_l2" else "cold_hbm",
+            ),
+            applicable_tma_tile_bytes=payloads,
+            applicable_threads_per_cta=(int(expected["threads"]),),
+            applicable_resident_ctas_per_sm=(1,),
+            timed_scope=(
+                "single_cta_globaltimer_span"
+                if residency == "hot_l2"
+                else "full_grid_globaltimer_span"
+            ),
+            measurement_operand_residency=(
+                "l2_hit_requests"
+                if residency == "hot_l2"
+                else "dram_stream_requests"
+            ),
+            residency_evidence_qualification="ncu_proven",
         ))
 
     findings = audit_inputs(capacities, repo_root=repo_root)

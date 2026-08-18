@@ -1408,7 +1408,7 @@ bool compare_fp8_outputs(const std::vector<float>& ref,
                 << ", tol=" << tol << '\n';
     }
   }
-  std::cout << "numerical_contract=fp8_e4m3_f32"
+  std::cout << "numerical_contract=e4m3_f32"
             << " mismatch_count=" << errors
             << " max_abs_error=" << max_abs_error
             << " max_tolerance_ratio=" << max_tolerance_ratio

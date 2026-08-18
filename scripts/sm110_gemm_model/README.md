@@ -43,10 +43,14 @@ precision named by the project goal. The executable exposes that gap instead
 of substituting another precision's rate.
 Measured sustained rates are not treated as physical upper bounds. Every
 empirical schedule is additionally intersected with all conditional hard
-ceilings applicable to the same workload and schedule. In particular,
-direction-specific `hbm.read` and `hbm.write` points cannot bypass the shared
-`hbm.total` LPDDR ceiling.
-Likewise, the 1024-B/cycle/GPU L2 bus remains a shared `l2.read` constraint,
+ceilings applicable to the same workload and schedule. The empirical memory
+layer requires one ratio-qualified simultaneous `hbm.duplex`/`l2.duplex`
+capacity instead of combining independent read and write peaks. Thor's cold
+supplement is imported only as `hbm.duplex.proxy`, because it does not prove
+physical external write bytes, and therefore cannot satisfy `hbm.duplex`.
+The shared `hbm.total` LPDDR ceiling still intersects every cold schedule.
+Likewise, the 1024-B/cycle/GPU L2 read bus and 512-B/cycle/GPU write bus remain
+GPU-wide conditional constraints,
 while a single-CTA L2-hit probe directly measures
 `tma.smem_ingress.per_sm`, which is applied with a slowest-wave makespan. It is
 not inferred by dividing a concurrent full-GPU TMA result by the SM count.
@@ -83,6 +87,35 @@ layout for the accumulator and SFA/SFB operands. Fractional logical storage is
 therefore never silently treated as an executable direct-SMEM TMA layout.
 
 ## Importing a returned closure suite
+
+For three current-schema campaigns collected at one exact commit, the portable
+suite path independently audits each bundle, proves common host/GPU/commit
+linkage, upgrades full-GEMM snapshots only after that linkage, evaluates the
+explicit workload manifest, and emits the complete target audit:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli audit-closure-suite \
+  --repo-root . \
+  --compute-run-dir results/sm110_gemm_campaign/<suite>-compute \
+  --component-run-dir results/sm110_gemm_component_campaign/<suite>-components \
+  --full-gemm-run-dir results/sm110_full_gemm_campaign/<suite>-full \
+  --expected-commit <40-hex-commit> --require-ncu \
+  --base-capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --workloads scripts/sm110_gemm_model/examples/workloads.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --pipeline-profiles scripts/sm110_gemm_model/profiles/pipeline_profiles.json \
+  --output results/sm110_model_closure/<suite>/portable_suite_report.json
+
+python3 -m scripts.sm110_gemm_model.cli render-suite-appendix \
+  --suite-report results/sm110_model_closure/<suite>/portable_suite_report.json \
+  --repo-root . \
+  --output Docs/blackwell_tensorcore/microbenchmark_sources.md
+```
+
+An older multi-commit closure bundle must continue through the legacy
+`import-closure`/`import-composite-closure` route below; it must not be relabeled
+as a single-commit portable suite.
 
 Thor execution instructions are versioned with the runner in
 `Docs/blackwell_tensorcore/THOR_CLOSURE_RUNBOOK.md`. The committed wrapper
@@ -229,6 +262,17 @@ historical summaries can be plotted without rerunning Thor:
 ```bash
 python3 -m scripts.sm110_gemm_model.plot_campaign_results \
   --input results/<campaign>/<run-id>/summary.json
+```
+
+Returned parameter supplements are reaudited and imported separately. The
+duplex importer intentionally maps hot-L2 rows to `l2.duplex` and cold rows to
+`hbm.duplex.proxy`:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-tma-payload-campaign \
+  --repo-root . --run-dir results/sm110_tma_payload_campaign/<run-id>
+python3 -m scripts.sm110_gemm_model.cli import-memory-duplex-campaign \
+  --repo-root . --run-dir results/sm110_memory_duplex_campaign/<run-id>
 ```
 
 The plotter uses no third-party Python package. It separates FLOP/s from OP/s,

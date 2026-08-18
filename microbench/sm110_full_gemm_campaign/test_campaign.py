@@ -139,7 +139,7 @@ class CampaignEvidenceTests(unittest.TestCase):
             "M=1024, N=1024, K=1024\n"
             "reference_contract=fp16_f32_cpu_samples reference_sample_count=64 "
             "reference_mismatch_count=0\n"
-            "numerical_contract=fp_accumulator mismatch_count=0 "
+            "numerical_contract=fp16_f32 mismatch_count=0 "
             "max_abs_error=0.01 max_tolerance_ratio=0.5 atol=0.02 rtol=0.002\n"
         )
         csv_text = (
@@ -186,7 +186,7 @@ class CampaignEvidenceTests(unittest.TestCase):
         stdout = (
             "N=1024\nreference_contract=s8_s32_cpu_samples "
             "reference_sample_count=64 reference_mismatch_count=0\n"
-            "numerical_contract=fp8_e4m3_f32 mismatch_count=0\n"
+            "numerical_contract=e4m3_f32 mismatch_count=0\n"
         )
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(RuntimeError, "numerical contract mismatch"):

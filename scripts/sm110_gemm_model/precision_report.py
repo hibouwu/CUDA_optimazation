@@ -54,7 +54,7 @@ def build_precision_evidence_analysis(
     observations: Iterable[ObservedBest],
     support_manifest: dict[str, Any],
     repo_root: Path,
-    hardware: Hardware | None = None,
+    hardware: Hardware,
     schedules: Iterable[Schedule] = (),
     pipeline_profiles: Iterable[PipelineProfile] = (),
     metadata: dict[str, Any] | None = None,
@@ -94,7 +94,7 @@ def build_precision_evidence_analysis(
 
     numeric_by_id = {
         row.precision_id: row
-        for row in precision_coverage(capacities, observations)
+        for row in precision_coverage(capacities, observations, hardware)
     }
     schedules = list(schedules)
     pipeline_profiles = list(pipeline_profiles)
@@ -180,20 +180,46 @@ def build_precision_evidence_analysis(
                         "ideal_closure_qualified": False,
                     })
                     continue
-                envelope = evaluate_manifest(
-                    Workload(
-                        workload_id=f"{precision_id}.{scenario_id}",
-                        m=n,
-                        n=n,
-                        k=n,
-                        precision_id=precision_id,
-                        residency=residency,
-                    ),
-                    schedules,
-                    hardware,
-                    capacities,
-                    pipeline_profiles,
-                )
+                try:
+                    envelope = evaluate_manifest(
+                        Workload(
+                            workload_id=f"{precision_id}.{scenario_id}",
+                            m=n,
+                            n=n,
+                            k=n,
+                            precision_id=precision_id,
+                            residency=residency,
+                        ),
+                        schedules,
+                        hardware,
+                        capacities,
+                        pipeline_profiles,
+                    )
+                except ModelError as error:
+                    envelope_scenarios.append({
+                        "scenario_id": scenario_id,
+                        "n": n,
+                        "residency": residency,
+                        "status": "infeasible_or_unproven_residency",
+                        "schedule_id": None,
+                        "performance_per_second": None,
+                        "selected_capacity_ids": {},
+                        "selected_capacity_qualifications": {},
+                        "missing_resources": [str(error)],
+                        "closure_qualified": False,
+                        "causal_status": "infeasible_or_unproven_residency",
+                        "causal_schedule_id": None,
+                        "causal_performance_per_second": None,
+                        "causal_selected_profile_ids": {},
+                        "causal_missing_resources": [str(error)],
+                        "causal_closure_qualified": False,
+                        "ideal_status": "infeasible_or_unproven_residency",
+                        "ideal_schedule_id": None,
+                        "ideal_performance_per_second": None,
+                        "ideal_missing_resources": [str(error)],
+                        "ideal_closure_qualified": False,
+                    })
+                    continue
                 resource_layer = (
                     envelope.manifest_empirical_resource_envelope
                 )

@@ -8,7 +8,9 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from scripts.sm110_gemm_model.io import load_capacities, load_schedules
+from scripts.sm110_gemm_model.io import (
+    load_capacities, load_hardware, load_schedules,
+)
 from scripts.sm110_gemm_model.model import (
     Capacity,
     EvidenceKind,
@@ -40,6 +42,7 @@ from scripts.sm110_gemm_model.precision_report import (
     build_precision_evidence_analysis,
     render_precision_evidence_markdown,
 )
+from scripts.sm110_gemm_model.completion import joint_pipeline_profile_matches
 from scripts.sm110_gemm_model.tcgen05_descriptors import (
     DescriptorError,
     decode_fields,
@@ -72,6 +75,25 @@ CURRENT_REPLAY_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                        "thor_sm110_current_model_replay.md")
 PRECISION_MATRIX_PATH = (ROOT / "Docs/blackwell_tensorcore/"
                          "thor_sm110_all_precision_evidence_matrix.json")
+
+
+def proven_l2_hardware(
+    hardware_id: str = "thor",
+    sm_count: int = 20,
+    clock_hz: float = 1.575e9,
+    operating_mode: str = "test",
+    l2_capacity_bytes: int = 1 << 50,
+) -> Hardware:
+    return Hardware(
+        hardware_id,
+        sm_count,
+        clock_hz,
+        operating_mode,
+        l2_capacity_bytes=l2_capacity_bytes,
+        l2_capacity_evidence_kind="device_record",
+        l2_capacity_source_path="synthetic/l2_capacity.json",
+        l2_capacity_source_locator="l2_capacity_bytes",
+    )
 
 
 class DocumentContractTest(unittest.TestCase):
@@ -1067,6 +1089,10 @@ class WorkAccountingTest(unittest.TestCase):
         # Swizzle32x4x4 atom pads that mode to four groups.
         self.assertEqual(work.input_scale_bytes_min, (128 + 256) * 2)
         self.assertEqual(work.tma_scale_input_bytes, 512 + 1024)
+        self.assertEqual(work.tma_a_value_bytes, 4096)
+        self.assertEqual(work.tma_b_value_bytes, 8192)
+        self.assertEqual(work.tma_a_scale_bytes, 512)
+        self.assertEqual(work.tma_b_scale_bytes, 1024)
         self.assertEqual(work.tmem_scale_ingress_bytes, 1536)
 
     def test_padded_tail_charges_issued_tmem_readback_but_useful_store(self) -> None:
@@ -1093,12 +1119,18 @@ class WorkAccountingTest(unittest.TestCase):
         )
         self.assertEqual(work.tma_unique_input_bytes, 2 * 256 * 64 * 2)
         self.assertEqual(work.tma_input_bytes, 4 * 2 * 128 * 64 * 2)
-        self.assertEqual(demands["hbm.read"][0], work.tma_unique_input_bytes)
+        write_bytes = work.output_value_bytes_min + work.output_scale_bytes_min
+        self.assertEqual(
+            demands["hbm.duplex"][0],
+            work.tma_unique_input_bytes + write_bytes,
+        )
         self.assertEqual(
             demands["tma.hbm.inflight4"][0],
             work.tma_unique_input_bytes,
         )
-        self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
+        self.assertEqual(
+            demands["l2.duplex"][0], work.tma_input_bytes + write_bytes
+        )
         self.assertNotIn("tma.l2", demands)
 
     def test_cold_strict_schedule_keeps_shared_l2_minimum_demands(self) -> None:
@@ -1133,9 +1165,12 @@ class WorkAccountingTest(unittest.TestCase):
             self.precisions["fp16_f32"],
             empirical=True,
         )
-        self.assertNotIn("hbm.read", demands)
+        self.assertNotIn("hbm.duplex", demands)
         self.assertNotIn("tma.hbm", demands)
-        self.assertEqual(demands["l2.read"][0], work.tma_input_bytes)
+        write_bytes = work.output_value_bytes_min + work.output_scale_bytes_min
+        self.assertEqual(
+            demands["l2.duplex"][0], work.tma_input_bytes + write_bytes
+        )
         self.assertNotIn("tma.l2", demands)
 
     def test_per_sm_tma_ingress_uses_slowest_wave_makespan(self) -> None:
@@ -1155,13 +1190,9 @@ class WorkAccountingTest(unittest.TestCase):
                 EvidenceKind.MEASURED_SUSTAINED,
                 "test", "source.json", "compute"),
             Capacity(
-                "l2_read", "l2.read", 1e30, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-read"),
-            Capacity(
-                "l2_write", "l2.write", 1e30, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-write"),
+                "l2_duplex", "l2.duplex", 1e30, "byte",
+                EvidenceKind.MEASURED_JOINT,
+                "test", "source.json", "l2-duplex"),
             Capacity(
                 "tma_per_sm", "tma.smem_ingress.per_sm", per_sm_rate,
                 "byte", EvidenceKind.MEASURED_SUSTAINED,
@@ -1172,7 +1203,7 @@ class WorkAccountingTest(unittest.TestCase):
                 "test", "source.json", "readback"),
         ]
         result = evaluate(
-            workload, schedule, Hardware("thor", 20, 1.575e9), capacities)
+            workload, schedule, proven_l2_hardware(), capacities)
         work = result.work
         self.assertEqual(work.task_count, 128)
         task_bytes = work.tma_input_bytes / work.task_count
@@ -1264,13 +1295,9 @@ class WorkAccountingTest(unittest.TestCase):
                 EvidenceKind.MEASURED_SUSTAINED,
                 "test", "source.json", "compute"),
             Capacity(
-                "l2_read", "l2.read", 1e30, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-read"),
-            Capacity(
-                "l2_write", "l2.write", 1e30, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-write"),
+                "l2_duplex", "l2.duplex", 1e30, "byte",
+                EvidenceKind.MEASURED_JOINT,
+                "test", "source.json", "l2-duplex"),
             Capacity(
                 "legacy_stage_guess", "tma.smem_ingress.per_sm", 1e30,
                 "byte", EvidenceKind.MEASURED_SUSTAINED,
@@ -1283,7 +1310,7 @@ class WorkAccountingTest(unittest.TestCase):
         unbound = evaluate(
             workload,
             Schedule("unbound-stage4", 128, 128, 64, 4),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             capacities,
         ).empirical_envelope
         self.assertEqual(unbound.status, "insufficient_evidence")
@@ -1307,7 +1334,7 @@ class WorkAccountingTest(unittest.TestCase):
                 tma_ingress_capacity_resource=
                     "tma.smem_ingress.per_sm",
             ),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             capacities,
         ).empirical_envelope
         self.assertEqual(bound.status, "ok")
@@ -1352,7 +1379,7 @@ class WorkAccountingTest(unittest.TestCase):
             Schedule(
                 "nv-scale", 128, 256, 64, 2,
                 mma_n=256, tmem_columns=512),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             capacities,
         )
         self.assertEqual(
@@ -1554,10 +1581,12 @@ class EvidenceSemanticsTest(unittest.TestCase):
             "shared-l2", 128, 128, 64, "bf16_f32", residency="hot_l2")
         schedule = Schedule("s", 128, 128, 64, 2)
         one_sm = evaluate(
-            workload, schedule, Hardware("one-sm", 1, 1.0), capacities,
+            workload, schedule,
+            proven_l2_hardware("one-sm", 1, 1.0), capacities,
         ).conditional_upper
         twenty_sm = evaluate(
-            workload, schedule, Hardware("twenty-sm", 20, 1.0), capacities,
+            workload, schedule,
+            proven_l2_hardware("twenty-sm", 20, 1.0), capacities,
         ).conditional_upper
         self.assertEqual(
             one_sm.resource_seconds["l2.read"],
@@ -1615,17 +1644,11 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 "compute", "tensor.bf16.m128n128", 1e30, "flop",
                 EvidenceKind.MEASURED_SUSTAINED),
             capacity(
-                "hbm_read", "hbm.read", 1000.0, "byte",
-                EvidenceKind.MEASURED_SUSTAINED),
+                "hbm_duplex", "hbm.duplex", 1000.0, "byte",
+                EvidenceKind.MEASURED_JOINT),
             capacity(
-                "hbm_write", "hbm.write", 1000.0, "byte",
-                EvidenceKind.MEASURED_SUSTAINED),
-            capacity(
-                "l2_read", "l2.read", 1000.0, "byte",
-                EvidenceKind.MEASURED_SUSTAINED),
-            capacity(
-                "l2_write", "l2.write", 1000.0, "byte",
-                EvidenceKind.MEASURED_SUSTAINED),
+                "l2_duplex", "l2.duplex", 1000.0, "byte",
+                EvidenceKind.MEASURED_JOINT),
             capacity(
                 "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 1e30, "byte",
                 EvidenceKind.MEASURED_SUSTAINED),
@@ -1682,13 +1705,9 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 EvidenceKind.MEASURED_SUSTAINED,
                 "test", "source.json", "compute"),
             Capacity(
-                "l2_read", "l2.read", 1e12, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-read"),
-            Capacity(
-                "l2_write", "l2.write", 1e12, "byte",
-                EvidenceKind.MEASURED_SUSTAINED,
-                "test", "source.json", "l2-write"),
+                "l2_duplex", "l2.duplex", 1e12, "byte",
+                EvidenceKind.MEASURED_JOINT,
+                "test", "source.json", "l2-duplex"),
             Capacity(
                 "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 1e30, "byte",
                 EvidenceKind.MEASURED_SUSTAINED,
@@ -1711,7 +1730,7 @@ class EvidenceSemanticsTest(unittest.TestCase):
                 tma_ingress_capacity_resource=
                     "tma.smem_ingress.per_sm.inflight4",
             ),
-            Hardware("h", 20, 1.0),
+            proven_l2_hardware("h", 20, 1.0),
             capacities,
         )
         self.assertFalse(any(
@@ -2105,6 +2124,10 @@ class CausalPipelineModelTest(unittest.TestCase):
             validation=tuple(validation),
             closure_qualified=qualified,
             artifact_paths=("pipeline_profile.json",),
+            applicable_sm_counts=(20,),
+            applicable_hardware_ids=("thor",),
+            applicable_operating_modes=("test",),
+            applicable_clock_hz=(1.575e9,),
         )
 
     @staticmethod
@@ -2130,8 +2153,7 @@ class CausalPipelineModelTest(unittest.TestCase):
     def capacities() -> list[Capacity]:
         resources = (
             ("compute", "tensor.fp16.m128n256", "flop"),
-            ("l2read", "l2.read", "byte"),
-            ("l2write", "l2.write", "byte"),
+            ("l2duplex", "l2.duplex", "byte"),
             ("tmem", "tmem.readback.x8.warps4", "byte"),
             ("tma", "tma.tc5a-test", "byte"),
         )
@@ -2159,6 +2181,32 @@ class CausalPipelineModelTest(unittest.TestCase):
         )
         self.assertAlmostEqual(predicted, 31e-9)
 
+    def test_target_completion_accepts_only_an_exact_causal_profile(self) -> None:
+        profile = self.profile()
+        schedule = self.schedule()
+        workload = Workload(
+            "profile-contract", 128, 256, 64, "fp16_f32",
+            residency="hot_l2",
+        )
+        self.assertTrue(joint_pipeline_profile_matches(
+            profile,
+            workload=workload,
+            schedule=schedule,
+            hardware=proven_l2_hardware(),
+        ))
+        self.assertFalse(joint_pipeline_profile_matches(
+            profile,
+            workload=replace(workload, residency="cold_hbm"),
+            schedule=schedule,
+            hardware=proven_l2_hardware(),
+        ))
+        self.assertFalse(joint_pipeline_profile_matches(
+            profile,
+            workload=workload,
+            schedule=schedule,
+            hardware=proven_l2_hardware(hardware_id="other"),
+        ))
+
     def test_profile_recomputes_every_validation_prediction(self) -> None:
         profile = self.profile()
         rows = [dict(row) for row in profile.validation]
@@ -2181,7 +2229,7 @@ class CausalPipelineModelTest(unittest.TestCase):
                 "one-task", 128, 256, 64, "fp16_f32", residency="hot_l2"
             ),
             self.schedule(),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             self.capacities(),
             [self.profile()],
         )
@@ -2201,7 +2249,7 @@ class CausalPipelineModelTest(unittest.TestCase):
                 residency="hot_l2",
             ),
             self.schedule(),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             self.capacities(),
         )
         self.assertEqual(result.empirical_envelope.status, "ok")
@@ -2219,7 +2267,7 @@ class CausalPipelineModelTest(unittest.TestCase):
                 residency="hot_l2",
             ),
             self.schedule(),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             self.capacities(),
             [self.profile(precision_ids=("fp16_f32",))],
         )
@@ -2245,7 +2293,7 @@ class CausalPipelineModelTest(unittest.TestCase):
                 "range", 4096, 4096, 4096, "fp16_f32", residency="hot_l2"
             ),
             self.schedule(),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             self.capacities(),
             [self.profile(maximum_output_tasks=20)],
         )
@@ -2266,7 +2314,7 @@ class CausalPipelineModelTest(unittest.TestCase):
                 residency="hot_l2",
             ),
             self.schedule(),
-            Hardware("thor", 20, 1.575e9),
+            proven_l2_hardware(),
             self.capacities(),
             [self.profile(qualification="quarantined")],
         )
@@ -2282,7 +2330,9 @@ class SnapshotEvaluationTest(unittest.TestCase):
         result = evaluate(
             Workload("bf16", 1024, 1024, 1024, "bf16_f32"),
             Schedule("s", 128, 128, 64, 2, tail_policy="pad"),
-            Hardware("thor", 20, 1.575e9),
+            load_hardware(
+                Path(__file__).resolve().parent / "profiles" / "thor_sm110.json"
+            ),
             load_capacities(CAPACITY_PATH),
         )
         self.assertIn(result.conditional_upper.status, {"ok", "partial"})
@@ -2413,31 +2463,31 @@ class ObservationTest(unittest.TestCase):
             ],
             repo_root=ROOT,
         )
-        rows = {row.precision_id: row for row in precision_coverage(capacities, observed)}
+        hardware = load_hardware(
+            Path(__file__).resolve().parent / "profiles" / "thor_sm110.json"
+        )
+        rows = {
+            row.precision_id: row
+            for row in precision_coverage(capacities, observed, hardware)
+        }
         self.assertFalse(rows["tf32_f32"].numeric_closure)
-        self.assertIn("empirical_compute_rate", rows["tf32_f32"].missing)
+        self.assertIn(
+            "empirical_compute_rate", rows["tf32_f32"].evidence_missing
+        )
         self.assertFalse(rows["nvfp4_f32"].same_precision_performance_denominator)
-        self.assertEqual(
-            rows["nvfp4_f32"].missing_full_gemm_shapes,
-            (1024, 2048, 4096),
-        )
         self.assertIn(
-            "closure_qualified_full_gemm_shape_matrix",
-            rows["nvfp4_f32"].missing,
-        )
-        self.assertIn(
-            "full_gemm_numerical_validation",
-            rows["nvfp4_f32"].missing,
+            "full_gemm_observed", rows["nvfp4_f32"].evidence_missing
         )
         self.assertIn(
             "same_precision_performance_denominator",
-            rows["e5m2_f32"].missing,
+            rows["e5m2_f32"].comparison_missing,
         )
         self.assertFalse(rows["e4m3_f32"].numeric_closure)
         self.assertIn(
-            "closure_qualified_compute_rate", rows["e4m3_f32"].missing
+            "empirical_compute_rate",
+            rows["e4m3_f32"].evidence_missing,
         )
-        common = common_resource_coverage(capacities)
+        common = common_resource_coverage(capacities, hardware)
         self.assertFalse(common["tmem.readback"])
         campaign = campaign_measurement_coverage(capacities, observed)
         self.assertFalse(campaign["all_campaign_measurements_closed"])
@@ -2456,6 +2506,9 @@ class ObservationTest(unittest.TestCase):
             observations=observed,
             support_manifest=json.loads(SUPPORT_MANIFEST_PATH.read_text()),
             repo_root=ROOT,
+            hardware=load_hardware(
+                Path(__file__).resolve().parent / "profiles" / "thor_sm110.json"
+            ),
             metadata={"suite_id": "snapshot", "expected_commit": "none"},
         )
         self.assertEqual(analysis["precision_count"], 12)

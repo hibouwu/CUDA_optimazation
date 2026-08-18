@@ -9,6 +9,7 @@ from .model import (
     CAUSAL_PIPELINE_DAG_IMPLEMENTED,
     Capacity,
     Hardware,
+    ModelError,
     PipelineProfile,
     Schedule,
     Workload,
@@ -261,20 +262,47 @@ def build_closure_analysis(
     ):
         scenarios: dict[str, dict[str, Any]] = {}
         for residency in MODELED_RESIDENCIES:
-            envelope = evaluate_manifest(
-                Workload(
-                    workload_id=f"{observation.observation_id}.{residency}",
-                    m=observation.m,
-                    n=observation.n,
-                    k=observation.k,
-                    precision_id=observation.precision_id,
-                    residency=residency,
-                ),
-                schedules,
-                hardware,
-                capacities,
-                pipeline_profiles,
-            )
+            try:
+                envelope = evaluate_manifest(
+                    Workload(
+                        workload_id=f"{observation.observation_id}.{residency}",
+                        m=observation.m,
+                        n=observation.n,
+                        k=observation.k,
+                        precision_id=observation.precision_id,
+                        residency=residency,
+                    ),
+                    schedules,
+                    hardware,
+                    capacities,
+                    pipeline_profiles,
+                )
+            except ModelError as error:
+                scenarios[residency] = {
+                    "conditional_upper_status": "infeasible_or_unproven_residency",
+                    "conditional_upper_per_second": None,
+                    "conditional_bottlenecks": [],
+                    "conditional_resource_seconds": {},
+                    "conditional_conditions": [str(error)],
+                    "conditional_schedule_id": None,
+                    "empirical_resource_status": "infeasible_or_unproven_residency",
+                    "empirical_resource_per_second": None,
+                    "empirical_resource_bottlenecks": [],
+                    "empirical_resource_seconds": {},
+                    "empirical_resource_schedule_id": None,
+                    "causal_pipeline_status": "infeasible_or_unproven_residency",
+                    "causal_pipeline_per_second": None,
+                    "causal_pipeline_resource_seconds": {},
+                    "causal_pipeline_missing_resources": [str(error)],
+                    "causal_pipeline_schedule_id": None,
+                    "empirical_status": "infeasible_or_unproven_residency",
+                    "empirical_ideal_per_second": None,
+                    "empirical_bottlenecks": [],
+                    "empirical_ideal_resource_seconds": {},
+                    "empirical_conditions": [str(error)],
+                    "empirical_schedule_id": None,
+                }
+                continue
             strict = envelope.manifest_conditional_upper
             empirical_resource = (
                 envelope.manifest_empirical_resource_envelope
@@ -531,8 +559,8 @@ def build_closure_analysis(
         and math.isfinite(row["observed_to_empirical_ideal_min"])
     ]
     findings = _deduplicate_findings(findings)
-    precision_rows = precision_coverage(capacities, observations)
-    common_coverage = common_resource_coverage(capacities)
+    precision_rows = precision_coverage(capacities, observations, hardware)
+    common_coverage = common_resource_coverage(capacities, hardware)
     campaign_coverage = campaign_measurement_coverage(
         closure_capacities, observations)
     return {

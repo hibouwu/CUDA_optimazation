@@ -59,6 +59,10 @@ class PrecisionSpec:
     output_scale_block: int | None = None
     output_scale_bytes: int = 0
 
+    @property
+    def numerical_contract(self) -> str:
+        return self.precision_id
+
     def validate(self) -> None:
         if (not math.isfinite(self.input_bytes)
                 or not math.isfinite(self.output_bytes)
@@ -134,6 +138,10 @@ def precision_specs() -> dict[str, PrecisionSpec]:
     return {spec.precision_id: spec for spec in specs}
 
 
+def aggregate_compute_resource(precision_id: str) -> str:
+    return f"compute.total.{precision_id}"
+
+
 @dataclass(frozen=True)
 class Workload:
     workload_id: str
@@ -149,6 +157,9 @@ class Workload:
     residency: str = "cold_hbm"
     output_mode: str = "accumulator"
     include_launch: bool = True
+    validation_split: str = "calibration"
+    implementation_domain: str = "tensor_core_classical"
+    timed_scope: str = "device_kernel"
 
     def validate(self, precisions: dict[str, PrecisionSpec]) -> None:
         if any(not isinstance(value, int) or isinstance(value, bool)
@@ -197,6 +208,14 @@ class Workload:
             raise ModelError(
                 f"{self.workload_id}: alpha=0 is not a GEMM workload in the v1 model"
             )
+        if self.validation_split not in {"exploratory", "calibration", "holdout"}:
+            raise ModelError(f"{self.workload_id}: invalid validation_split")
+        if self.implementation_domain not in {
+            "tensor_core_classical", "all_classical"
+        }:
+            raise ModelError(f"{self.workload_id}: invalid implementation_domain")
+        if self.timed_scope not in {"device_kernel", "device_kernel_plus_launch"}:
+            raise ModelError(f"{self.workload_id}: invalid timed_scope")
 
 
 @dataclass(frozen=True)
@@ -227,6 +246,12 @@ class Schedule:
     tma_contract_row_stride_elements: tuple[int, ...] = ()
     causal_pipeline_resource: str | None = None
     input_transport_layout: str = "logical_packed"
+    input_scale_transport: str = "auto"
+    data_path_contract: str = "complete"
+    tma_destination_slots: int | None = None
+    readback_warps: int | None = None
+    resident_ctas_per_sm: int = 1
+    global_memory_access_pattern: str = "tma_read_coalesced_store"
     persistent: bool = False
     fixed_seconds: float = 0.0
 
@@ -278,6 +303,35 @@ class Schedule:
                 f"{self.schedule_id}: non-TMA input paths require a separate "
                 "issued-traffic and ingress-capacity contract not implemented in model v1"
             )
+        if self.input_scale_transport not in {
+            "auto", "none", "modeled", "unmodeled"
+        }:
+            raise ModelError(
+                f"{self.schedule_id}: unsupported input_scale_transport")
+        if self.data_path_contract not in {"complete", "unmodeled"}:
+            raise ModelError(
+                f"{self.schedule_id}: unsupported data_path_contract")
+        if self.tma_destination_slots is not None and self.tma_destination_slots <= 0:
+            raise ModelError(
+                f"{self.schedule_id}: tma_destination_slots must be positive")
+        if self.readback_warps is not None and (
+                self.readback_warps <= 0
+                or self.readback_warps > self.threads // 32):
+            raise ModelError(
+                f"{self.schedule_id}: readback_warps is outside the CTA")
+        if (self.readback_warps is not None
+                and self.tmem_consumer_warps is not None
+                and self.readback_warps != self.tmem_consumer_warps):
+            raise ModelError(
+                f"{self.schedule_id}: readback warp aliases disagree")
+        if self.resident_ctas_per_sm <= 0:
+            raise ModelError(
+                f"{self.schedule_id}: resident_ctas_per_sm must be positive")
+        if self.global_memory_access_pattern not in {
+            "tma_read_coalesced_store", "coalesced_load_store"
+        }:
+            raise ModelError(
+                f"{self.schedule_id}: unsupported global memory access pattern")
         if self.causal_pipeline_resource is not None and not self.persistent:
             raise ModelError(
                 f"{self.schedule_id}: causal pipeline binding requires the "
@@ -487,12 +541,36 @@ class Hardware:
     hardware_id: str
     sm_count: int
     clock_hz: float
+    operating_mode: str = "unspecified"
+    l2_capacity_bytes: int | None = None
+    l2_capacity_evidence_kind: str = "unproven"
+    l2_capacity_source_path: str = ""
+    l2_capacity_source_locator: str = ""
 
     def validate(self) -> None:
         if (not isinstance(self.sm_count, int) or isinstance(self.sm_count, bool)
                 or self.sm_count <= 0 or not math.isfinite(self.clock_hz)
                 or self.clock_hz <= 0):
             raise ModelError("hardware sm_count and clock_hz must be positive")
+        if not self.hardware_id or not self.operating_mode:
+            raise ModelError("hardware_id and operating_mode cannot be empty")
+        l2_declared = any((
+            self.l2_capacity_bytes is not None,
+            bool(self.l2_capacity_source_path),
+            bool(self.l2_capacity_source_locator),
+        ))
+        if l2_declared:
+            if (self.l2_capacity_bytes is None or self.l2_capacity_bytes <= 0
+                    or self.l2_capacity_evidence_kind not in {
+                        "device_record", "official_specification"
+                    }
+                    or not self.l2_capacity_source_path
+                    or not self.l2_capacity_source_locator):
+                raise ModelError(
+                    "hardware L2 capacity requires bytes, evidence and locator")
+        elif self.l2_capacity_evidence_kind != "unproven":
+            raise ModelError(
+                "hardware without L2 bytes must use unproven evidence")
 
 
 @dataclass(frozen=True)
@@ -513,6 +591,28 @@ class Capacity:
     trial_count: int = 1
     source_url: str = ""
     artifact_paths: tuple[str, ...] = ()
+    applicable_precision_ids: tuple[str, ...] = ()
+    applicable_mma_shapes: tuple[str, ...] = ()
+    applicable_cta_groups: tuple[int, ...] = ()
+    applicable_sm_counts: tuple[int, ...] = ()
+    applicable_hardware_ids: tuple[str, ...] = ()
+    applicable_operating_modes: tuple[str, ...] = ()
+    applicable_clock_hz: tuple[float, ...] = ()
+    applicable_residencies: tuple[str, ...] = ()
+    applicable_tma_tile_bytes: tuple[int, ...] = ()
+    applicable_tmem_load_registers: tuple[int, ...] = ()
+    applicable_readback_warps: tuple[int, ...] = ()
+    applicable_tma_destination_slots: tuple[int, ...] = ()
+    applicable_threads_per_cta: tuple[int, ...] = ()
+    applicable_resident_ctas_per_sm: tuple[int, ...] = ()
+    timed_scope: str = "unspecified"
+    measurement_operand_residency: str = "unspecified"
+    applicable_read_write_ratios: tuple[str, ...] = ()
+    applicable_access_patterns: tuple[str, ...] = ()
+    applicable_schedule_ids: tuple[str, ...] = ()
+    applicable_workload_ids: tuple[str, ...] = ()
+    residency_evidence_qualification: str = "unproven"
+    upper_scope: str = "schedule_family"
 
     def validate(self) -> None:
         if self.rate_per_second <= 0 or not math.isfinite(self.rate_per_second):
@@ -562,6 +662,204 @@ class Capacity:
             raise ModelError(
                 f"{self.capacity_id}: unknown evidence must be explicitly quarantined"
             )
+        integer_scopes = (
+            self.applicable_cta_groups,
+            self.applicable_sm_counts,
+            self.applicable_tma_tile_bytes,
+            self.applicable_tmem_load_registers,
+            self.applicable_readback_warps,
+            self.applicable_tma_destination_slots,
+            self.applicable_threads_per_cta,
+            self.applicable_resident_ctas_per_sm,
+        )
+        if any(
+            any(not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                for value in values)
+            for values in integer_scopes
+        ):
+            raise ModelError(
+                f"{self.capacity_id}: integer applicability must be positive")
+        if any(not math.isfinite(value) or value <= 0
+               for value in self.applicable_clock_hz):
+            raise ModelError(
+                f"{self.capacity_id}: clock applicability must be positive")
+        if self.upper_scope not in {
+            "schedule_family", "tensor_core_classical", "all_classical"
+        }:
+            raise ModelError(f"{self.capacity_id}: unsupported upper_scope")
+        if self.upper_scope in {"tensor_core_classical", "all_classical"}:
+            if not self.evidence_kind.is_rate_upper_bound:
+                raise ModelError(
+                    f"{self.capacity_id}: workload-domain scope requires a "
+                    "rate upper bound"
+                )
+            schedule_specific_scope = (
+                self.applicable_mma_shapes,
+                self.applicable_cta_groups,
+                self.applicable_tma_tile_bytes,
+                self.applicable_tmem_load_registers,
+                self.applicable_readback_warps,
+                self.applicable_tma_destination_slots,
+                self.applicable_threads_per_cta,
+                self.applicable_resident_ctas_per_sm,
+                self.applicable_read_write_ratios,
+                self.applicable_access_patterns,
+                self.applicable_schedule_ids,
+                self.applicable_workload_ids,
+            )
+            if any(schedule_specific_scope):
+                raise ModelError(
+                    f"{self.capacity_id}: workload-domain upper cannot carry "
+                    "schedule-specific applicability"
+                )
+        if self.resource.startswith("tensor.") and self.upper_scope == "all_classical":
+            raise ModelError(
+                f"{self.capacity_id}: all_classical arithmetic upper must use "
+                "compute.total.<precision_id>, not a tensor-pipe resource"
+            )
+        if self.resource.startswith("compute.total."):
+            if self.upper_scope != "all_classical":
+                raise ModelError(
+                    f"{self.capacity_id}: aggregate compute resource requires "
+                    "upper_scope=all_classical"
+                )
+            precision_id = self.resource.removeprefix("compute.total.")
+            if precision_id not in precision_specs():
+                raise ModelError(
+                    f"{self.capacity_id}: unknown aggregate compute precision "
+                    f"{precision_id}"
+                )
+        unknown_precisions = (
+            set(self.applicable_precision_ids) - set(precision_specs())
+        )
+        if unknown_precisions:
+            raise ModelError(
+                f"{self.capacity_id}: unknown applicable precisions "
+                f"{sorted(unknown_precisions)}"
+            )
+        for shape in self.applicable_mma_shapes:
+            match = re.fullmatch(r"m([1-9][0-9]*)n([1-9][0-9]*)k([1-9][0-9]*)", shape)
+            if match is None:
+                raise ModelError(
+                    f"{self.capacity_id}: invalid MMA applicability shape {shape!r}"
+                )
+        if any(group not in {1, 2} for group in self.applicable_cta_groups):
+            raise ModelError(f"{self.capacity_id}: invalid applicable CTA group")
+        for values, label in (
+            (self.applicable_hardware_ids, "hardware ID"),
+            (self.applicable_operating_modes, "operating mode"),
+            (self.applicable_schedule_ids, "schedule ID"),
+            (self.applicable_workload_ids, "workload ID"),
+        ):
+            if any(not isinstance(value, str) or not value.strip()
+                   for value in values):
+                raise ModelError(
+                    f"{self.capacity_id}: invalid applicable {label}")
+        if set(self.applicable_residencies) - {
+            "cold_hbm", "hot_l2", "compute_oracle"
+        }:
+            raise ModelError(
+                f"{self.capacity_id}: invalid applicable residency")
+        if self.residency_evidence_qualification not in {
+            "unproven", "construction_proven", "ncu_proven"
+        }:
+            raise ModelError(
+                f"{self.capacity_id}: invalid residency evidence qualification"
+            )
+        if any(
+            value not in {1, 2, 4, 8, 16, 32, 64, 128}
+            for value in self.applicable_tmem_load_registers
+        ):
+            raise ModelError(
+                f"{self.capacity_id}: invalid applicable LDTM width")
+        if any(value > 1024 or value % 32
+               for value in self.applicable_threads_per_cta):
+            raise ModelError(
+                f"{self.capacity_id}: invalid applicable CTA threads")
+        if self.measurement_operand_residency not in {
+            "unspecified", "smem_operands", "tmem_operands",
+            "register_operands", "l2_hit_requests", "dram_stream_requests",
+        }:
+            raise ModelError(
+                f"{self.capacity_id}: invalid measurement operand residency"
+            )
+        for ratio in self.applicable_read_write_ratios:
+            try:
+                read_text, write_text = ratio.split(":", 1)
+                read_value, write_value = float(read_text), float(write_text)
+            except (AttributeError, TypeError, ValueError) as error:
+                raise ModelError(
+                    f"{self.capacity_id}: invalid read:write ratio {ratio!r}"
+                ) from error
+            if (
+                not math.isfinite(read_value)
+                or not math.isfinite(write_value)
+                or read_value <= 0
+                or write_value <= 0
+            ):
+                raise ModelError(
+                    f"{self.capacity_id}: read:write ratio terms must be "
+                    "finite and positive"
+                )
+        if set(self.applicable_access_patterns) - {
+            "tma_read_coalesced_store", "coalesced_load_store"
+        }:
+            raise ModelError(f"{self.capacity_id}: invalid access pattern")
+
+        if (
+            self.qualification == "closure_qualified"
+            and self.resource.startswith("pipeline.joint.")
+        ):
+            if self.evidence_kind != EvidenceKind.MEASURED_JOINT:
+                raise ModelError(
+                    f"{self.capacity_id}: closure-qualified joint pipeline "
+                    "capacity requires measured_joint evidence"
+                )
+            exact_scope = (
+                self.applicable_precision_ids,
+                self.applicable_schedule_ids,
+                self.applicable_workload_ids,
+                self.applicable_residencies,
+                self.applicable_sm_counts,
+                self.applicable_hardware_ids,
+                self.applicable_operating_modes,
+                self.applicable_threads_per_cta,
+                self.applicable_resident_ctas_per_sm,
+            )
+            if (
+                any(len(values) != 1 for values in exact_scope)
+                or self.timed_scope == "unspecified"
+            ):
+                raise ModelError(
+                    f"{self.capacity_id}: closure-qualified joint pipeline "
+                    "capacity requires singleton precision, workload, schedule, "
+                    "residency, SM count, hardware, operating-mode, CTA-thread, "
+                    "resident-CTA scope, and an explicit timed scope"
+                )
+            required_residency_evidence = (
+                "ncu_proven"
+                if self.applicable_residencies[0] in {"cold_hbm", "hot_l2"}
+                else "construction_proven"
+            )
+            if self.residency_evidence_qualification != required_residency_evidence:
+                raise ModelError(
+                    f"{self.capacity_id}: closure-qualified joint pipeline "
+                    f"capacity requires {required_residency_evidence} "
+                    "residency evidence"
+                )
+            if required_residency_evidence == "ncu_proven":
+                has_report = any(
+                    path.endswith(".ncu-rep") for path in self.artifact_paths
+                )
+                has_raw_csv = any(
+                    "/ncu/" in path and path.endswith(".csv")
+                    for path in self.artifact_paths
+                )
+                if not has_report or not has_raw_csv:
+                    raise ModelError(
+                        f"{self.capacity_id}: ncu_proven joint pipeline capacity "
+                        "requires NCU report and raw CSV artifacts"
+                    )
 
     @property
     def is_closure_qualified(self) -> bool:
@@ -571,6 +869,21 @@ class Capacity:
         data = asdict(self)
         data["evidence_kind"] = self.evidence_kind.value
         return data
+
+
+def capacity_applies_to_hardware(
+    capacity: Capacity, hardware: Hardware,
+) -> bool:
+    return (
+        (not capacity.applicable_sm_counts
+         or hardware.sm_count in capacity.applicable_sm_counts)
+        and (not capacity.applicable_hardware_ids
+             or hardware.hardware_id in capacity.applicable_hardware_ids)
+        and (not capacity.applicable_operating_modes
+             or hardware.operating_mode in capacity.applicable_operating_modes)
+        and (not capacity.applicable_clock_hz
+             or hardware.clock_hz in capacity.applicable_clock_hz)
+    )
 
 
 @dataclass(frozen=True)
@@ -606,6 +919,11 @@ class PipelineProfile:
     validation: tuple[dict[str, Any], ...]
     closure_qualified: bool
     artifact_paths: tuple[str, ...] = ()
+    applicable_sm_counts: tuple[int, ...] = ()
+    applicable_hardware_ids: tuple[str, ...] = ()
+    applicable_operating_modes: tuple[str, ...] = ()
+    applicable_clock_hz: tuple[float, ...] = ()
+    timed_scope: str = "device_kernel"
 
     def validate(self) -> None:
         if not self.profile_id or not self.resource or not self.schedule_id:
@@ -982,6 +1300,46 @@ class PipelineProfile:
             raise ModelError(
                 f"{self.profile_id}: qualified profile requires artifact paths"
             )
+        if self.timed_scope not in {
+            "device_kernel", "device_kernel_plus_launch"
+        }:
+            raise ModelError(
+                f"{self.profile_id}: unsupported timed scope")
+        exact_hardware_scope = (
+            self.applicable_sm_counts,
+            self.applicable_hardware_ids,
+            self.applicable_operating_modes,
+            self.applicable_clock_hz,
+        )
+        if self.closure_qualified and any(
+            len(values) != 1 for values in exact_hardware_scope
+        ):
+            raise ModelError(
+                f"{self.profile_id}: closure-qualified causal profile requires "
+                "singleton SM-count, hardware-ID, operating-mode, and clock scope"
+            )
+        if any(
+            not isinstance(value, int) or isinstance(value, bool) or value <= 0
+            for value in self.applicable_sm_counts
+        ):
+            raise ModelError(
+                f"{self.profile_id}: invalid applicable SM count")
+        if any(
+            not isinstance(value, str) or not value.strip()
+            for values in (
+                self.applicable_hardware_ids,
+                self.applicable_operating_modes,
+            )
+            for value in values
+        ):
+            raise ModelError(
+                f"{self.profile_id}: invalid hardware applicability")
+        if any(
+            not math.isfinite(value) or value <= 0
+            for value in self.applicable_clock_hz
+        ):
+            raise ModelError(
+                f"{self.profile_id}: invalid applicable clock")
 
     @property
     def is_closure_qualified(self) -> bool:
@@ -1004,6 +1362,12 @@ class WorkAccounting:
     output_value_bytes_min: float
     output_scale_bytes_min: float
     tma_unique_input_bytes: float
+    tma_a_value_bytes: float
+    tma_b_value_bytes: float
+    tma_a_scale_bytes: float
+    tma_b_scale_bytes: float
+    tma_a_input_bytes: float
+    tma_b_input_bytes: float
     tma_value_input_bytes: float
     tma_scale_input_bytes: float
     tma_input_bytes: float
@@ -1070,6 +1434,14 @@ class WorkloadEnvelope:
     conditional_schedule_id: str | None
     empirical_schedule_id: str | None
     rejected: list[dict[str, str]]
+    domain_conditional_upper: LayerResult = field(
+        default_factory=lambda: LayerResult(
+            status="insufficient_evidence",
+            seconds=None,
+            performance_per_second=None,
+            performance_unit="unknown/s",
+        )
+    )
     manifest_empirical_resource_envelope: LayerResult = field(
         default_factory=lambda: LayerResult(
             status="insufficient_evidence",
@@ -1228,21 +1600,23 @@ def account_work(workload: Workload, schedule: Schedule, precision: PrecisionSpe
         output_value = workload.m * workload.n * precision.output_bytes
         output_scale = 0
 
-    per_full_tile_values = _transport_value_bytes(
+    per_a_tile_values = _transport_value_bytes(
         schedule.bm * schedule.bk,
         precision,
         schedule.input_transport_layout,
-    ) + _transport_value_bytes(
+    )
+    per_b_tile_values = _transport_value_bytes(
         schedule.bk * schedule.bn,
         precision,
         schedule.input_transport_layout,
     )
-    per_full_tile_scales = _block_scale_transport_bytes(
+    per_a_tile_scales = _block_scale_transport_bytes(
         schedule.bm,
         schedule.bk,
         precision.input_scale_block,
         precision.input_scale_bytes,
-    ) + _block_scale_transport_bytes(
+    )
+    per_b_tile_scales = _block_scale_transport_bytes(
         schedule.bn,
         schedule.bk,
         precision.input_scale_block,
@@ -1272,8 +1646,15 @@ def account_work(workload: Workload, schedule: Schedule, precision: PrecisionSpe
             precision.input_scale_bytes,
         )
     )
-    tma_value_input = nm * nn * nk * per_full_tile_values
-    tma_scale_input = nm * nn * nk * per_full_tile_scales
+    tile_visits = nm * nn * nk
+    tma_a_value = tile_visits * per_a_tile_values
+    tma_b_value = tile_visits * per_b_tile_values
+    tma_a_scale = tile_visits * per_a_tile_scales
+    tma_b_scale = tile_visits * per_b_tile_scales
+    tma_value_input = tma_a_value + tma_b_value
+    tma_scale_input = tma_a_scale + tma_b_scale
+    tma_a_input = tma_a_value + tma_a_scale
+    tma_b_input = tma_b_value + tma_b_scale
     tma_input = tma_value_input + tma_scale_input
     accumulator_readback = issued_m * issued_n * precision.accumulator_bytes
     reduction_bytes = (
@@ -1293,6 +1674,12 @@ def account_work(workload: Workload, schedule: Schedule, precision: PrecisionSpe
         output_value_bytes_min=float(output_value),
         output_scale_bytes_min=float(output_scale),
         tma_unique_input_bytes=float(unique_tma_input),
+        tma_a_value_bytes=float(tma_a_value),
+        tma_b_value_bytes=float(tma_b_value),
+        tma_a_scale_bytes=float(tma_a_scale),
+        tma_b_scale_bytes=float(tma_b_scale),
+        tma_a_input_bytes=float(tma_a_input),
+        tma_b_input_bytes=float(tma_b_input),
         tma_value_input_bytes=float(tma_value_input),
         tma_scale_input_bytes=float(tma_scale_input),
         tma_input_bytes=float(tma_input),
@@ -1305,8 +1692,30 @@ def account_work(workload: Workload, schedule: Schedule, precision: PrecisionSpe
     )
 
 
+def _ratio_matches(
+    required: tuple[float, float], declared: str,
+) -> bool:
+    read_text, write_text = declared.split(":", 1)
+    declared_read, declared_write = float(read_text), float(write_text)
+    read, write = required
+    return math.isclose(
+        read * declared_write,
+        write * declared_read,
+        rel_tol=1e-12,
+        abs_tol=1e-9,
+    )
+
+
 def _select_capacity(
-    capacities: Iterable[Capacity], resource: str, *, strict: bool
+    capacities: Iterable[Capacity],
+    resource: str,
+    *,
+    strict: bool,
+    workload: Workload | None = None,
+    schedule: Schedule | None = None,
+    hardware: Hardware | None = None,
+    precision: PrecisionSpec | None = None,
+    required_read_write_ratio: tuple[float, float] | None = None,
 ) -> Capacity | None:
     # The historical closure campaign already measured the exact tc5a stage-4
     # contract at packed row stride 2048, before resource IDs encoded the row
@@ -1325,16 +1734,172 @@ def _select_capacity(
     candidate_resources = {resource}
     if not strict:
         candidate_resources.update(legacy_empirical_aliases.get(resource, ()))
-    candidates = [
-        cap
-        for cap in capacities
-        if cap.resource in candidate_resources
-        and (
+    contract_is_complete = all(
+        value is not None
+        for value in (workload, schedule, hardware, precision)
+    )
+    if any(
+        value is not None
+        for value in (workload, schedule, hardware, precision)
+    ) and not contract_is_complete:
+        raise ModelError(
+            "capacity selection requires workload, schedule, hardware, and "
+            "precision together"
+        )
+
+    def applies(cap: Capacity) -> bool:
+        if cap.resource not in candidate_resources:
+            return False
+        if not (
             cap.evidence_kind.is_rate_upper_bound
             if strict
             else cap.evidence_kind.is_empirical_rate
+        ):
+            return False
+        if not contract_is_complete:
+            return not cap.applicable_read_write_ratios or (
+                required_read_write_ratio is not None
+                and any(
+                    _ratio_matches(required_read_write_ratio, ratio)
+                    for ratio in cap.applicable_read_write_ratios
+                )
+            )
+
+        assert workload is not None
+        assert schedule is not None
+        assert hardware is not None
+        assert precision is not None
+        shape = f"m{schedule.mma_m}n{schedule.mma_n}k{precision.mma_k}"
+        readback_warps = (
+            schedule.readback_warps
+            if schedule.readback_warps is not None
+            else (
+                schedule.tmem_consumer_warps
+                if schedule.tmem_consumer_warps is not None
+                else schedule.threads // 32
+            )
         )
-    ]
+        tma_payloads = {
+            int(_transport_value_bytes(
+                schedule.bm * schedule.bk,
+                precision,
+                schedule.input_transport_layout,
+            )),
+            int(_transport_value_bytes(
+                schedule.bk * schedule.bn,
+                precision,
+                schedule.input_transport_layout,
+            )),
+        }
+        if precision.input_scale_block is not None:
+            tma_payloads.update({
+                int(_block_scale_transport_bytes(
+                    schedule.bm,
+                    schedule.bk,
+                    precision.input_scale_block,
+                    precision.input_scale_bytes,
+                )),
+                int(_block_scale_transport_bytes(
+                    schedule.bn,
+                    schedule.bk,
+                    precision.input_scale_block,
+                    precision.input_scale_bytes,
+                )),
+            })
+        tma_payloads.discard(0)
+        expected_request_residency = (
+            "l2_hit_requests"
+            if resource.startswith("l2.")
+            or resource.startswith("tma.smem_ingress")
+            else (
+                "dram_stream_requests"
+                if resource.startswith("hbm.")
+                or resource.startswith("tma.hbm")
+                else None
+            )
+        )
+        return (
+            capacity_applies_to_hardware(cap, hardware)
+            and (
+                not cap.applicable_precision_ids
+                or precision.precision_id in cap.applicable_precision_ids
+            )
+            and (
+                not cap.applicable_mma_shapes
+                or shape in cap.applicable_mma_shapes
+            )
+            and (
+                not cap.applicable_cta_groups
+                or schedule.cta_group in cap.applicable_cta_groups
+            )
+            and (
+                not cap.applicable_residencies
+                or workload.residency in cap.applicable_residencies
+            )
+            and (
+                not cap.applicable_tma_tile_bytes
+                or not resource.startswith("tma.")
+                or tma_payloads.issubset(set(cap.applicable_tma_tile_bytes))
+            )
+            and (
+                not cap.applicable_tmem_load_registers
+                or schedule.tmem_load_registers
+                in cap.applicable_tmem_load_registers
+            )
+            and (
+                not cap.applicable_readback_warps
+                or readback_warps in cap.applicable_readback_warps
+            )
+            and (
+                not cap.applicable_tma_destination_slots
+                or schedule.tma_destination_slots
+                in cap.applicable_tma_destination_slots
+            )
+            and (
+                not cap.applicable_threads_per_cta
+                or schedule.threads in cap.applicable_threads_per_cta
+            )
+            and (
+                not cap.applicable_resident_ctas_per_sm
+                or schedule.resident_ctas_per_sm
+                in cap.applicable_resident_ctas_per_sm
+            )
+            and (
+                not cap.applicable_access_patterns
+                or schedule.global_memory_access_pattern
+                in cap.applicable_access_patterns
+            )
+            and (
+                not cap.applicable_schedule_ids
+                or schedule.schedule_id in cap.applicable_schedule_ids
+            )
+            and (
+                not cap.applicable_workload_ids
+                or workload.workload_id in cap.applicable_workload_ids
+            )
+            and (
+                not resource.startswith("pipeline.joint.")
+                or cap.timed_scope == workload.timed_scope
+            )
+            and (
+                expected_request_residency is None
+                or cap.measurement_operand_residency == "unspecified"
+                or cap.measurement_operand_residency
+                == expected_request_residency
+            )
+            and (
+                not cap.applicable_read_write_ratios
+                or (
+                    required_read_write_ratio is not None
+                    and any(
+                        _ratio_matches(required_read_write_ratio, ratio)
+                        for ratio in cap.applicable_read_write_ratios
+                    )
+                )
+            )
+        )
+
+    candidates = [cap for cap in capacities if applies(cap)]
     if not candidates:
         return None
     if not strict:
@@ -1435,16 +2000,16 @@ def _resource_demands(
     }
     if workload.residency == "cold_hbm":
         if empirical:
-            demands["hbm.read"] = (
-                work.tma_unique_input_bytes + work.c_read_bytes_min,
+            demands["hbm.duplex"] = (
+                work.tma_unique_input_bytes
+                + work.c_read_bytes_min
+                + write_min,
                 "byte",
             )
-            demands["hbm.write"] = (write_min, "byte")
-            demands["l2.read"] = (
-                work.tma_input_bytes + work.c_read_bytes_min,
+            demands["l2.duplex"] = (
+                work.tma_input_bytes + work.c_read_bytes_min + write_min,
                 "byte",
             )
-            demands["l2.write"] = (write_min, "byte")
         else:
             demands["hbm.total"] = (read_min + write_min, "byte")
             # Device-memory traffic still crosses the GPU-wide shared L2
@@ -1454,12 +2019,14 @@ def _resource_demands(
             demands["l2.read"] = (read_min, "byte")
             demands["l2.write"] = (write_min, "byte")
     elif workload.residency == "hot_l2":
-        demands["l2.read"] = (
-            (work.tma_input_bytes + work.c_read_bytes_min)
-            if empirical else read_min,
-            "byte",
-        )
-        demands["l2.write"] = (write_min, "byte")
+        if empirical:
+            demands["l2.duplex"] = (
+                work.tma_input_bytes + work.c_read_bytes_min + write_min,
+                "byte",
+            )
+        else:
+            demands["l2.read"] = (read_min, "byte")
+            demands["l2.write"] = (write_min, "byte")
 
     if empirical:
         if workload.residency != "compute_oracle" and schedule.uses_tma:
@@ -1513,6 +2080,17 @@ def _evaluate_layer(
     missing: list[str] = []
     conditions: list[str] = []
     selected: dict[str, Capacity] = {}
+    write_min = work.output_value_bytes_min + work.output_scale_bytes_min
+    duplex_ratios = {
+        "hbm.duplex": (
+            work.tma_unique_input_bytes + work.c_read_bytes_min,
+            write_min,
+        ),
+        "l2.duplex": (
+            work.tma_input_bytes + work.c_read_bytes_min,
+            write_min,
+        ),
+    }
     if not strict and workload.residency != "compute_oracle" and schedule.uses_tma:
         if tma_contract_gap is not None:
             missing.append(tma_contract_gap)
@@ -1529,7 +2107,16 @@ def _evaluate_layer(
                 f"tma_hbm_capacity_contract:{schedule.schedule_id}"
             )
     for resource, (quantity, unit) in demands.items():
-        cap = _select_capacity(capacities, resource, strict=strict)
+        cap = _select_capacity(
+            capacities,
+            resource,
+            strict=strict,
+            workload=workload,
+            schedule=schedule,
+            hardware=hardware,
+            precision=precision,
+            required_read_write_ratio=duplex_ratios.get(resource),
+        )
         if cap is None:
             missing.append(resource)
             continue
@@ -1554,7 +2141,15 @@ def _evaluate_layer(
             workload, schedule, work, precision, empirical=False
         )
         for resource, (quantity, unit) in ceiling_demands.items():
-            cap = _select_capacity(capacities, resource, strict=True)
+            cap = _select_capacity(
+                capacities,
+                resource,
+                strict=True,
+                workload=workload,
+                schedule=schedule,
+                hardware=hardware,
+                precision=precision,
+            )
             if cap is None:
                 continue
             if cap.work_unit != unit:
@@ -1573,7 +2168,15 @@ def _evaluate_layer(
         if workload.residency != "compute_oracle" and schedule.uses_tma:
             ingress_resource = resolved_tma_ingress
             ingress_cap = (
-                _select_capacity(capacities, ingress_resource, strict=False)
+                _select_capacity(
+                    capacities,
+                    ingress_resource,
+                    strict=False,
+                    workload=workload,
+                    schedule=schedule,
+                    hardware=hardware,
+                    precision=precision,
+                )
                 if ingress_resource is not None
                 else None
             )
@@ -1766,6 +2369,25 @@ def _evaluate_causal_pipeline(
         if profile.resource == resource
         and profile.schedule_id == schedule.schedule_id
         and profile.stages == schedule.stages
+        and profile.resident_ctas_per_sm == schedule.resident_ctas_per_sm
+        and profile.input_residency == workload.residency
+        and profile.timed_scope == workload.timed_scope
+        and (
+            not profile.applicable_sm_counts
+            or hardware.sm_count in profile.applicable_sm_counts
+        )
+        and (
+            not profile.applicable_hardware_ids
+            or hardware.hardware_id in profile.applicable_hardware_ids
+        )
+        and (
+            not profile.applicable_operating_modes
+            or hardware.operating_mode in profile.applicable_operating_modes
+        )
+        and (
+            not profile.applicable_clock_hz
+            or hardware.clock_hz in profile.applicable_clock_hz
+        )
     ]
     exact = [
         profile for profile in same_pipeline
@@ -1920,6 +2542,30 @@ def _combine_empirical_layers(
     )
 
 
+def _validate_residency_feasibility(
+    workload: Workload,
+    hardware: Hardware,
+    work: WorkAccounting,
+) -> None:
+    if workload.residency != "hot_l2":
+        return
+    if hardware.l2_capacity_bytes is None:
+        raise ModelError(
+            f"{workload.workload_id}: hot_l2 requires a proven L2 capacity"
+        )
+    logical_input_bytes = (
+        work.input_value_bytes_min
+        + work.input_scale_bytes_min
+        + work.c_read_bytes_min
+    )
+    if logical_input_bytes > hardware.l2_capacity_bytes:
+        raise ModelError(
+            f"{workload.workload_id}: hot_l2 logical input working set "
+            f"{logical_input_bytes:g} B exceeds proven L2 capacity "
+            f"{hardware.l2_capacity_bytes} B"
+        )
+
+
 def evaluate(
     workload: Workload,
     schedule: Schedule,
@@ -1937,6 +2583,7 @@ def evaluate(
     for profile in profiles:
         profile.validate()
     work = account_work(workload, schedule, precision)
+    _validate_residency_feasibility(workload, hardware, work)
     empirical_resource = _evaluate_layer(
         workload, schedule, hardware, precision, work, capacities, strict=False
     )
@@ -1955,6 +2602,105 @@ def evaluate(
         empirical_ideal_envelope=_combine_empirical_layers(
             empirical_resource, causal, work
         ),
+    )
+
+
+def evaluate_domain_upper(
+    workload: Workload,
+    hardware: Hardware,
+    capacities: Iterable[Capacity],
+) -> LayerResult:
+    """Evaluate a schedule-independent classical GEMM conditional upper."""
+    specs = precision_specs()
+    workload.validate(specs)
+    hardware.validate()
+    precision = specs[workload.precision_id]
+    capacities = list(capacities)
+    for capacity in capacities:
+        capacity.validate()
+    read_bytes = (
+        (workload.m * workload.k + workload.k * workload.n)
+        * precision.input_bytes
+        + _matrix_scale_bytes(
+            workload.m, workload.k,
+            precision.input_scale_block, precision.input_scale_bytes)
+        + _matrix_scale_bytes(
+            workload.n, workload.k,
+            precision.input_scale_block, precision.input_scale_bytes)
+        + (workload.m * workload.n * precision.accumulator_bytes
+           if workload.beta != 0 else 0.0)
+    )
+    write_bytes = workload.m * workload.n * precision.output_bytes
+    if workload.residency == "hot_l2":
+        if hardware.l2_capacity_bytes is None:
+            raise ModelError(
+                f"{workload.workload_id}: hot_l2 requires proven L2 capacity")
+        if read_bytes > hardware.l2_capacity_bytes:
+            raise ModelError(
+                f"{workload.workload_id}: hot_l2 working set exceeds L2 capacity")
+    compute_resource = (
+        precision.compute_resource
+        if workload.implementation_domain == "tensor_core_classical"
+        else aggregate_compute_resource(workload.precision_id)
+    )
+    demands: dict[str, tuple[float, str]] = {
+        compute_resource: (
+            float(2 * workload.m * workload.n * workload.k),
+            precision.compute_work_unit),
+    }
+    if workload.residency == "cold_hbm":
+        demands["hbm.total"] = (float(read_bytes + write_bytes), "byte")
+    elif workload.residency == "hot_l2":
+        demands["l2.read"] = (float(read_bytes), "byte")
+        demands["l2.write"] = (float(write_bytes), "byte")
+    seconds: dict[str, float] = {}
+    missing: list[str] = []
+    conditions: list[str] = []
+    for resource, (quantity, unit) in demands.items():
+        allowed_upper_scopes = (
+            {"tensor_core_classical", "all_classical"}
+            if workload.implementation_domain == "tensor_core_classical"
+            else {"all_classical"}
+        )
+        candidates = [
+            capacity for capacity in capacities
+            if capacity.resource == resource
+            and capacity.evidence_kind.is_rate_upper_bound
+            and capacity.upper_scope in allowed_upper_scopes
+            and capacity_applies_to_hardware(capacity, hardware)
+            and (not capacity.applicable_precision_ids
+                 or workload.precision_id in capacity.applicable_precision_ids)
+            and (not capacity.applicable_residencies
+                 or workload.residency in capacity.applicable_residencies)
+        ]
+        if not candidates:
+            missing.append(resource)
+            continue
+        capacity = min(candidates, key=lambda row: row.rate_per_second)
+        if capacity.work_unit != unit:
+            raise ModelError(
+                f"{capacity.capacity_id}: unit mismatch for {resource}")
+        seconds[resource] = quantity / capacity.rate_per_second
+        if capacity.condition:
+            conditions.append(f"{capacity.capacity_id}: {capacity.condition}")
+    if not seconds:
+        return LayerResult(
+            "insufficient_evidence", None, None,
+            f"{precision.compute_work_unit}/s",
+            missing_resources=sorted(set(missing)))
+    total = max(seconds.values())
+    return LayerResult(
+        status="ok" if not missing else "partial",
+        seconds=total,
+        performance_per_second=(
+            float(2 * workload.m * workload.n * workload.k) / total),
+        performance_unit=f"{precision.compute_work_unit}/s",
+        bottlenecks=sorted(
+            name for name, value in seconds.items()
+            if math.isclose(value, total, rel_tol=1e-9)),
+        resource_seconds=dict(sorted(seconds.items())),
+        missing_resources=sorted(set(missing)),
+        conditions=sorted(set(conditions)),
     )
 
 
@@ -1977,6 +2723,30 @@ def evaluate_manifest(
             rejected.append({"schedule_id": schedule.schedule_id, "reason": str(exc)})
 
     def best_layer(name: str) -> tuple[LayerResult, str | None]:
+        incomplete = [
+            row for row in results
+            if getattr(row, name).performance_per_second is None
+        ]
+        if incomplete:
+            missing = sorted({
+                resource
+                for row in incomplete
+                for resource in getattr(row, name).missing_resources
+            })
+            return (
+                LayerResult(
+                    status="insufficient_evidence",
+                    seconds=None,
+                    performance_per_second=None,
+                    performance_unit="unknown/s",
+                    missing_resources=missing,
+                    conditions=sorted(
+                        f"{row.schedule_id}: no numeric {name}"
+                        for row in incomplete
+                    ),
+                ),
+                None,
+            )
         candidates = [
             (getattr(row, name), row.schedule_id)
             for row in results
@@ -2014,6 +2784,22 @@ def evaluate_manifest(
     )
     causal, causal_id = best_layer("causal_pipeline")
     empirical, empirical_id = best_layer("empirical_ideal_envelope")
+    domain_upper = evaluate_domain_upper(workload, hardware, capacities)
+    if (
+        domain_upper.performance_per_second is not None
+        and empirical.performance_per_second is not None
+        and empirical.performance_unit == domain_upper.performance_unit
+        and empirical.performance_per_second
+        > domain_upper.performance_per_second * (1.0 + 1e-9)
+    ):
+        raise ModelError(
+            f"{workload.workload_id}: empirical ideal envelope "
+            f"{empirical.performance_per_second:.9e} "
+            f"{empirical.performance_unit} exceeds domain conditional upper "
+            f"{domain_upper.performance_per_second:.9e} "
+            f"{domain_upper.performance_unit}; domain scope, capacity, or "
+            "work accounting is inconsistent"
+        )
     return WorkloadEnvelope(
         workload_id=workload.workload_id,
         valid_schedule_count=len(results),
@@ -2023,6 +2809,7 @@ def evaluate_manifest(
         conditional_schedule_id=strict_id,
         empirical_schedule_id=empirical_id,
         rejected=rejected,
+        domain_conditional_upper=domain_upper,
         manifest_empirical_resource_envelope=empirical_resource,
         empirical_resource_schedule_id=empirical_resource_id,
         causal_pipeline_envelope=causal,

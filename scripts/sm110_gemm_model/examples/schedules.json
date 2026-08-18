@@ -9,6 +9,7 @@
     "split_k": 1,
     "tail_policy": "pad",
     "tmem_load_registers": 16,
+    "readback_warps": 4,
     "supported_precisions": [
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
@@ -35,6 +36,7 @@
     "split_k": 1,
     "tail_policy": "pad",
     "tmem_load_registers": 16,
+    "readback_warps": 4,
     "supported_precisions": [
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
@@ -62,6 +64,7 @@
     "split_k": 1,
     "tail_policy": "exact",
     "tmem_load_registers": 16,
+    "readback_warps": 4,
     "supported_precisions": [
       "fp16_f32", "bf16_f32", "tf32_f32", "e4m3_f32", "e5m2_f32",
       "s8_s32", "u8_s32"
@@ -88,7 +91,9 @@
     "cta_group": 1,
     "split_k": 1,
     "tail_policy": "pad",
+    "tma_destination_slots": 8,
     "tmem_load_registers": 8,
+    "readback_warps": 4,
     "supported_precisions": ["fp16_f32", "bf16_f32"],
     "tmem_columns": 512,
     "threads": 192,
@@ -114,6 +119,7 @@
     "split_k": 1,
     "tail_policy": "pad",
     "tmem_load_registers": 16,
+    "readback_warps": 4,
     "supported_precisions": ["e3m2_f32", "e2m3_f32", "e2m1_f32"],
     "tma_contract_family_by_precision": {
       "e3m2_f32": "generic_m128n256k64_s2_v8",
@@ -137,6 +143,7 @@
     "split_k": 1,
     "tail_policy": "pad",
     "tmem_load_registers": 16,
+    "readback_warps": 4,
     "supported_precisions": ["mxfp4_f32", "nvfp4_f32"],
     "tma_contract_family_by_precision": {
       "mxfp4_f32": "block_m128n256k64_s2_v4_scale32",

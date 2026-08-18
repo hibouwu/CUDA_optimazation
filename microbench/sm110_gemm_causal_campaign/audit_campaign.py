@@ -689,6 +689,11 @@ def rebuild_profile(
         "fit_contract": contract, "validation": validations,
         "closure_qualified": qualified,
         "artifact_paths": artifact_paths,
+        "applicable_sm_counts": [20],
+        "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+        "applicable_operating_modes": ["MAXN"],
+        "applicable_clock_hz": [1575000000.0],
+        "timed_scope": "device_kernel",
     }
 
 

@@ -210,6 +210,24 @@ contract. Thor does not expose direct external write-byte counters, so
 `external_write_bytes_proven` must remain `false`; do not relabel this plot as
 physical DRAM read/write closure.
 
+After both independent auditors pass, re-audit the bundles through the model
+importers. These commands print mergeable `{"capacities": [...]}` JSON; they do
+not edit the base profile:
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-tma-payload-campaign \
+  --repo-root . --run-dir "$TMA_DIR"
+python3 -m scripts.sm110_gemm_model.cli import-memory-duplex-campaign \
+  --repo-root . --run-dir "$DUPLEX_DIR"
+```
+
+The duplex importer maps hot rows to ratio-scoped `l2.duplex` and cold rows to
+`hbm.duplex.proxy`. It is an error for a cold row with
+`external_write_bytes_proven=false` to become physical `hbm.duplex`. The five
+payload points also do not cover block-scaled 512-B/1-KiB scale requests; use
+the coverage/target-completion output instead of interpreting 10/10 runner
+cases as all-schedule payload closure.
+
 ### 5. NCU 2025.3.1 raw CSV diagnostics
 
 NCU 2025.3.1 may emit quoted base-unit values with decimal grouping, such as

@@ -1,5 +1,10 @@
 {
-  "hardware_id": "thor_sm110_repo_snapshot",
+  "hardware_id": "thor_t5000_sm110_20sm",
   "sm_count": 20,
-  "clock_hz": 1575000000.0
+  "clock_hz": 1575000000.0,
+  "operating_mode": "MAXN",
+  "l2_capacity_bytes": 33554432,
+  "l2_capacity_evidence_kind": "device_record",
+  "l2_capacity_source_path": "microbench/L2throughtput/results/l2_throughput.csv",
+  "l2_capacity_source_locator": "mode=read-unique,working_set_bytes=16777216,l2_cache_bytes=33554432"
 }

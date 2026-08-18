@@ -37,6 +37,7 @@ from scripts.sm110_gemm_model.closure_import import (
 from scripts.sm110_gemm_model.io import (
     capacities_from_rows,
     load_capacities,
+    load_hardware,
     load_schedules,
     observations_from_rows,
 )
@@ -75,6 +76,19 @@ FULL_REFERENCES = {
 }
 
 
+def test_hardware() -> Hardware:
+    return Hardware(
+        "thor",
+        20,
+        1.575e9,
+        "test",
+        l2_capacity_bytes=1 << 50,
+        l2_capacity_evidence_kind="device_record",
+        l2_capacity_source_path="synthetic/l2_capacity.json",
+        l2_capacity_source_locator="l2_capacity_bytes",
+    )
+
+
 class ClosureConversionTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -104,7 +118,12 @@ class ClosureConversionTest(unittest.TestCase):
             })
         capacities = capacities_from_compute(
             {"results": results},
-            {"manifest": manifest},
+            {
+                "manifest": manifest,
+                "expected_sm_count": 20,
+                "timed_scope":
+                    "device_globaltimer_mma_issue_to_completion_barrier",
+            },
             paths=self.paths,
             qualification="closure_qualified",
         )
@@ -405,6 +424,7 @@ class ClosureConversionTest(unittest.TestCase):
                 "reference_rate_per_second_median": reference,
                 "ratio_of_paired_medians": custom / reference,
                 "sass_path": f"build/{case['binary']}.sass.txt",
+                "split": case["split"],
             })
             case_dir = self.paths.full / "cases" / case["id"]
             case_dir.mkdir(parents=True, exist_ok=True)
@@ -447,7 +467,12 @@ class ClosureConversionTest(unittest.TestCase):
             } for entry in make_compute_manifest()
              if entry["launch"] == "full_sm_4warp_block"
              and entry["m"] == 128 and entry["n"] in {64, 128, 256}]},
-            {"manifest": make_compute_manifest()},
+            {
+                "manifest": make_compute_manifest(),
+                "expected_sm_count": 20,
+                "timed_scope":
+                    "device_globaltimer_mma_issue_to_completion_barrier",
+            },
             paths=self.paths,
             qualification="closure_qualified",
         )[0]
@@ -535,7 +560,12 @@ class ClosureConversionTest(unittest.TestCase):
         self.create_common_run_files(
             self.paths.compute,
             {"results": compute_results},
-            {"manifest": manifest},
+            {
+                "manifest": manifest,
+                "expected_sm_count": 20,
+                "timed_scope":
+                    "device_globaltimer_mma_issue_to_completion_barrier",
+            },
         )
 
         (self.root / "source.cu").write_text("source\n")
@@ -580,6 +610,7 @@ class ClosureConversionTest(unittest.TestCase):
                 "reference_rate_per_second_median": reference,
                 "ratio_of_paired_medians": custom / reference,
                 "sass_path": f"build/{case['binary']}.sass.txt",
+                "split": case["split"],
             }
             full_results.append(result)
             case_dir = self.paths.full / "cases" / case["id"]
@@ -648,7 +679,9 @@ class ClosureConversionTest(unittest.TestCase):
                 ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
             closure_capacities=capacities_from_rows(imported["capacities"]),
             observations=observations_from_rows(imported["observed_best"]),
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=load_hardware(
+                ROOT / "scripts/sm110_gemm_model/profiles/thor_sm110.json"
+            ),
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
         )
@@ -666,7 +699,9 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertTrue(
             analysis["campaign_measurement_coverage"]
                     ["all_campaign_measurements_closed"])
-        self.assertTrue(analysis["all_common_resources_closed"])
+        self.assertFalse(analysis["all_common_resources_closed"])
+        self.assertFalse(analysis["common_resource_coverage"]["hbm.duplex"])
+        self.assertFalse(analysis["common_resource_coverage"]["l2.duplex"])
         self.assertFalse(analysis["all_precisions_closed"])
         precision_analysis = build_precision_evidence_analysis(
             capacities=[
@@ -680,7 +715,9 @@ class ClosureConversionTest(unittest.TestCase):
                        "support_manifest.json"
             ).read_text()),
             repo_root=ROOT,
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=load_hardware(
+                ROOT / "scripts/sm110_gemm_model/profiles/thor_sm110.json"
+            ),
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
             metadata=imported,
@@ -693,7 +730,7 @@ class ClosureConversionTest(unittest.TestCase):
         self.assertEqual(
             precision_analysis["composition"], imported["composition"]
         )
-        self.assertEqual(precision_analysis["numeric_closed_count"], 5)
+        self.assertEqual(precision_analysis["numeric_closed_count"], 6)
         self.assertEqual(
             precision_analysis["resource_envelope_closed_count"], 0)
         self.assertEqual(
@@ -706,8 +743,9 @@ class ClosureConversionTest(unittest.TestCase):
             for row in precision_analysis["precisions"]
         }
         self.assertEqual(
-            precision_rows["tf32_f32"]["numeric_evidence"]["missing"],
-            ("strict_compute_upper",),
+            precision_rows["tf32_f32"]["numeric_evidence"]
+                          ["evidence_missing"],
+            ("domain_compute_upper",),
         )
         self.assertEqual(
             precision_rows["e5m2_f32"]["numeric_evidence"]
@@ -747,7 +785,7 @@ class ClosureConversionTest(unittest.TestCase):
                 ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
             closure_capacities=capacities_from_rows(tampered_rows),
             observations=observations_from_rows(imported["observed_best"]),
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
         )
@@ -826,7 +864,7 @@ class ClosureConversionTest(unittest.TestCase):
                 ROOT / "scripts/sm110_gemm_model/profiles/capacities.json"),
             closure_capacities=capacities_from_rows(composite["capacities"]),
             observations=observations_from_rows(composite["observed_best"]),
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=load_schedules(
                 ROOT / "scripts/sm110_gemm_model/examples/schedules.json"),
         )
@@ -1012,20 +1050,16 @@ class ClosureReportTest(unittest.TestCase):
             self.capacity("compute", "tensor.bf16.m128n128", 80e12, "flop",
                           EvidenceKind.MEASURED_SUSTAINED,
                           qualification="closure_qualified"),
-            self.capacity("hbm_read", "hbm.read", 90e9, "byte",
-                          EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("hbm_write", "hbm.write", 80e9, "byte",
-                          EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("l2_read", "l2.read", 900e9, "byte",
-                          EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("l2_write", "l2.write", 500e9, "byte",
-                          EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("tma_hbm", "tma.hbm.inflight4", 80e9, "byte",
+            self.capacity("hbm_duplex", "hbm.duplex", 1e30, "byte",
+                          EvidenceKind.MEASURED_JOINT),
+            self.capacity("l2_duplex", "l2.duplex", 1e30, "byte",
+                          EvidenceKind.MEASURED_JOINT),
+            self.capacity("tma_hbm", "tma.hbm.inflight4", 1e30, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
             self.capacity(
-                "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 40e9, "byte",
+                "tma_per_sm", "tma.smem_ingress.per_sm.inflight4", 1e30, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
-            self.capacity("tmem", "tmem.readback", 1e12, "byte",
+            self.capacity("tmem", "tmem.readback", 1e30, "byte",
                           EvidenceKind.MEASURED_SUSTAINED),
         ]
         observations = []
@@ -1052,6 +1086,14 @@ class ClosureReportTest(unittest.TestCase):
                 reference_maximum_per_second=1.11e12,
                 ratio_of_paired_medians=1e12 / 1.1e12,
                 qualification="closure_qualified",
+                correctness_reference="cublas_bf16_gemmex",
+                correctness_reference_relation="independent_same_contract",
+                numerical_contract="bf16_f32",
+                calibration_split=("holdout" if n == 4096 else "calibration"),
+                arithmetic_path="tensor_core",
+                hardware_id="thor",
+                sm_count=20,
+                operating_mode="test",
             ))
         analysis = build_closure_analysis(
             metadata={
@@ -1060,7 +1102,7 @@ class ClosureReportTest(unittest.TestCase):
             base_capacities=base,
             closure_capacities=closure,
             observations=observations,
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[Schedule(
                 "s",
                 128,
@@ -1154,6 +1196,10 @@ class ClosureReportTest(unittest.TestCase):
                 ),
                 closure_qualified=True,
                 artifact_paths=("source.json",),
+                applicable_sm_counts=(20,),
+                applicable_hardware_ids=("thor",),
+                applicable_operating_modes=("test",),
+                applicable_clock_hz=(1.575e9,),
             )],
             require_complete_contract=False,
         )
@@ -1172,8 +1218,16 @@ class ClosureReportTest(unittest.TestCase):
             by_n[4096]["conditional_upper_min_per_second"],
             by_n[4096]["conditional_upper_max_per_second"],
         )
-        self.assertFalse(any(row["severity"] == "error"
-                             for row in analysis["findings"]))
+        error_codes = {
+            row["code"] for row in analysis["findings"]
+            if row["severity"] == "error"
+        }
+        self.assertIn(
+            "residency_causal_pipeline_prediction_incomplete", error_codes
+        )
+        self.assertIn(
+            "residency_empirical_prediction_incomplete", error_codes
+        )
         markdown = render_closure_markdown(analysis)
         self.assertIn("hot-L2", markdown)
         self.assertIn("cold-HBM", markdown)
@@ -1191,7 +1245,7 @@ class ClosureReportTest(unittest.TestCase):
                 EvidenceKind.DERIVED_UPPER)],
             closure_capacities=[],
             observations=[observation],
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[Schedule("s", 128, 128, 64, 2, tail_policy="pad")],
             require_complete_contract=False,
         )
@@ -1249,7 +1303,7 @@ class ClosureReportTest(unittest.TestCase):
                 EvidenceKind.DERIVED_UPPER)],
             closure_capacities=[],
             observations=[observation],
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[Schedule(
                 "s", 128, 128, 64, 2,
                 tail_policy="exact", fixed_seconds=0.0)],
@@ -1280,7 +1334,7 @@ class ClosureReportTest(unittest.TestCase):
                 EvidenceKind.DERIVED_UPPER)],
             closure_capacities=[],
             observations=[observation],
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[Schedule(
                 "s", 128, 128, 64, 2,
                 tail_policy="exact", fixed_seconds=0.0)],
@@ -1345,7 +1399,7 @@ class ClosureReportTest(unittest.TestCase):
             base_capacities=[],
             closure_capacities=[],
             observations=[],
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[],
         )
         codes = {finding["code"] for finding in analysis["findings"]}
@@ -1365,7 +1419,7 @@ class ClosureReportTest(unittest.TestCase):
                 EvidenceKind.DERIVED_UPPER)],
             closure_capacities=[],
             observations=(row for row in [observation]),
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[Schedule(
                 "s", 128, 128, 64, 2,
                 tail_policy="exact", fixed_seconds=0.0)],
@@ -1384,7 +1438,7 @@ class ClosureReportTest(unittest.TestCase):
             base_capacities=[],
             closure_capacities=[],
             observations=[],
-            hardware=Hardware("thor", 20, 1.575e9),
+            hardware=test_hardware(),
             schedules=[],
             require_complete_contract=False,
             input_findings=[finding, finding],

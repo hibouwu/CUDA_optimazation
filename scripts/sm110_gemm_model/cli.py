@@ -12,6 +12,7 @@ from .closure_report import build_closure_analysis, write_closure_report
 from .campaign_plots import generate_campaign_plots
 from .io import (
     load_capacities,
+    load_capacity_files,
     load_closure_inputs,
     load_hardware,
     load_pipeline_profiles,
@@ -23,7 +24,10 @@ from .coverage import (
     campaign_measurement_coverage,
     common_resource_coverage,
     precision_coverage,
+    scenario_coverage,
+    workload_manifest_coverage,
 )
+from .completion import audit_target_completeness
 from .model import (
     ModelError,
     audit_inputs,
@@ -31,11 +35,28 @@ from .model import (
     evaluate_manifest,
     precision_specs,
 )
-from .observations import audit_observations, summarize_observed_csvs
+from .observations import (
+    audit_observations,
+    qualify_observations_for_suite,
+    summarize_observed_csvs,
+)
+from .suite import (
+    audit_suite_linkage,
+    collect_suite_artifact_paths,
+    collect_suite_declared_provenance,
+)
 from .precision_report import (
     build_precision_evidence_analysis,
     render_precision_evidence_markdown,
 )
+from .appendix import load_and_render_suite_appendix
+from .evidence_import import (
+    import_component_campaign,
+    import_compute_campaign,
+    import_memory_duplex_campaign,
+    import_tma_payload_campaign,
+)
+from .observations import summarize_closure_campaign
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,15 +83,63 @@ def build_parser() -> argparse.ArgumentParser:
     observed_parser.add_argument("--repo-root", type=Path, required=True)
     observed_parser.add_argument("--input", type=Path, action="append", required=True)
     observed_parser.add_argument("--minimum-trials", type=int, default=10)
+    closure_campaign_parser = sub.add_parser(
+        "summarize-closure-campaign",
+        help="audit a full-GEMM bundle and emit scoped observations",
+    )
+    closure_campaign_parser.add_argument("--repo-root", type=Path, required=True)
+    closure_campaign_parser.add_argument("--run-dir", type=Path, required=True)
+    closure_campaign_parser.add_argument("--hardware", type=Path, required=True)
+    for command, help_text in (
+        ("import-compute-campaign", "import scoped compute capacities"),
+        ("import-component-campaign", "import scoped component capacities"),
+        ("import-tma-payload-campaign", "import scoped TMA payload capacities"),
+        ("import-memory-duplex-campaign", "import scoped joint memory capacities"),
+    ):
+        campaign_import = sub.add_parser(command, help=help_text)
+        campaign_import.add_argument("--repo-root", type=Path, required=True)
+        campaign_import.add_argument("--run-dir", type=Path, required=True)
+        if command == "import-compute-campaign":
+            campaign_import.add_argument("--require-ncu", action="store_true")
+    appendix_parser = sub.add_parser(
+        "render-suite-appendix",
+        help="render a deterministic provenance appendix from a suite report",
+    )
+    appendix_parser.add_argument("--suite-report", type=Path, required=True)
+    appendix_parser.add_argument("--repo-root", type=Path, required=True)
+    appendix_parser.add_argument("--output", type=Path, required=True)
     coverage_parser = sub.add_parser(
         "coverage", help="report precision and common-resource closure gaps"
     )
     coverage_parser.add_argument("--repo-root", type=Path, required=True)
-    coverage_parser.add_argument("--capacities", type=Path, required=True)
+    coverage_parser.add_argument(
+        "--capacities", type=Path, action="append", required=True)
+    coverage_parser.add_argument("--hardware", type=Path, required=True)
+    coverage_parser.add_argument("--workloads", type=Path, required=True)
+    coverage_parser.add_argument("--schedules", type=Path, required=True)
+    coverage_parser.add_argument("--pipeline-profiles", type=Path)
     coverage_parser.add_argument("--observed-input", type=Path, action="append")
     coverage_parser.add_argument("--closure-import", type=Path)
+    coverage_parser.add_argument("--closure-run-dir", type=Path, action="append")
     coverage_parser.add_argument("--resource-import", type=Path, action="append")
     coverage_parser.add_argument("--minimum-trials", type=int, default=10)
+    suite_parser = sub.add_parser(
+        "audit-closure-suite",
+        help="audit, cross-link, import, and evaluate one three-campaign suite",
+    )
+    suite_parser.add_argument("--repo-root", type=Path, required=True)
+    suite_parser.add_argument("--compute-run-dir", type=Path, required=True)
+    suite_parser.add_argument("--component-run-dir", type=Path, required=True)
+    suite_parser.add_argument("--full-gemm-run-dir", type=Path, required=True)
+    suite_parser.add_argument("--expected-commit", required=True)
+    suite_parser.add_argument("--require-ncu", action="store_true")
+    suite_parser.add_argument(
+        "--base-capacities", type=Path, action="append", required=True)
+    suite_parser.add_argument("--hardware", type=Path, required=True)
+    suite_parser.add_argument("--workloads", type=Path, required=True)
+    suite_parser.add_argument("--schedules", type=Path, required=True)
+    suite_parser.add_argument("--pipeline-profiles", type=Path)
+    suite_parser.add_argument("--output", type=Path)
     import_parser = sub.add_parser(
         "import-closure",
         help="independently audit a returned closure suite and emit model inputs",
@@ -159,10 +228,244 @@ def load_resource_imports(paths: list[Path] | None) -> list:
     return capacities
 
 
+def _coverage_output(
+    capacities,
+    hardware,
+    workloads,
+    schedules,
+    observed,
+    *,
+    repo_root: Path,
+    pipeline_profiles=(),
+) -> dict[str, object]:
+    manifest_rows = workload_manifest_coverage(workloads)
+    scenarios = scenario_coverage(
+        hardware,
+        capacities,
+        workloads,
+        schedules,
+        observed,
+        pipeline_profiles=pipeline_profiles,
+    )
+    rows = precision_coverage(capacities, observed, hardware, scenarios)
+    common = common_resource_coverage(capacities, hardware)
+    payload: dict[str, object] = {
+        "precision_coverage": [row.to_dict() for row in rows],
+        "scenario_coverage": [row.to_dict() for row in scenarios],
+        "workload_manifest_coverage": [row.to_dict() for row in manifest_rows],
+        "common_resource_coverage": common,
+        "all_precisions_numerically_closed": all(
+            row.numeric_closure for row in rows
+        ),
+        "all_precisions_absolute_three_layer_closed": all(
+            row.absolute_three_layer_closure for row in rows
+        ),
+        "all_precisions_same_precision_ratio_closed": all(
+            row.same_precision_ratio_closure for row in rows
+        ),
+        "all_common_resources_closed": all(common.values()),
+        "all_precisions_workload_manifest_complete": all(
+            row.complete for row in manifest_rows
+        ),
+    }
+    payload["target_completion"] = audit_target_completeness(
+        repo_root=repo_root,
+        hardware=hardware,
+        capacities=capacities,
+        workloads=workloads,
+        schedules=schedules,
+        observed=observed,
+        coverage=payload,
+        pipeline_profiles=pipeline_profiles,
+    ).to_dict()
+    return payload
+
+
+def _repo_relative_input(path: Path, repo_root: Path) -> str:
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(repo_root.resolve())
+    except ValueError as error:
+        raise ModelError(f"model input is outside repo: {path}") from error
+    if not resolved.is_file():
+        raise ModelError(f"model input is missing: {path}")
+    return str(relative)
+
+
 def main() -> int:
     args = build_parser().parse_args()
     if args.command == "list-precisions":
         print(json.dumps({k: v.__dict__ for k, v in precision_specs().items()}, indent=2))
+        return 0
+    if args.command == "render-suite-appendix":
+        output = load_and_render_suite_appendix(
+            args.suite_report, repo_root=args.repo_root,
+            output_path=args.output)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(output, encoding="utf-8")
+        return 0
+    if args.command == "summarize-closure-campaign":
+        rows = summarize_closure_campaign(
+            args.run_dir, repo_root=args.repo_root,
+            hardware=load_hardware(args.hardware))
+        print(json.dumps(
+            {"closure_observations": [row.to_dict() for row in rows]},
+            indent=2))
+        return 0
+    if args.command in {
+        "import-compute-campaign", "import-component-campaign",
+        "import-tma-payload-campaign", "import-memory-duplex-campaign",
+    }:
+        if args.command == "import-compute-campaign":
+            capacities = import_compute_campaign(
+                args.run_dir, repo_root=args.repo_root,
+                require_ncu=args.require_ncu)
+        elif args.command == "import-component-campaign":
+            capacities = import_component_campaign(
+                args.run_dir, repo_root=args.repo_root)
+        elif args.command == "import-tma-payload-campaign":
+            capacities = import_tma_payload_campaign(
+                args.run_dir, repo_root=args.repo_root)
+        else:
+            capacities = import_memory_duplex_campaign(
+                args.run_dir, repo_root=args.repo_root)
+        print(json.dumps(
+            {"capacities": [row.to_dict() for row in capacities]},
+            indent=2, sort_keys=True))
+        return 0
+    if args.command == "audit-closure-suite":
+        repo_root = args.repo_root.resolve()
+        linkage = audit_suite_linkage(
+            args.compute_run_dir,
+            args.component_run_dir,
+            args.full_gemm_run_dir,
+            repo_root=repo_root,
+            expected_commit=args.expected_commit,
+            require_ncu=args.require_ncu,
+        )
+        imported_capacities = [
+            *import_compute_campaign(
+                args.compute_run_dir,
+                repo_root=repo_root,
+                require_ncu=args.require_ncu,
+            ),
+            *import_component_campaign(
+                args.component_run_dir,
+                repo_root=repo_root,
+            ),
+        ]
+        hardware = load_hardware(args.hardware)
+        observation_snapshots = summarize_closure_campaign(
+            args.full_gemm_run_dir,
+            repo_root=repo_root,
+            hardware=hardware,
+        )
+        observations = qualify_observations_for_suite(
+            observation_snapshots,
+            linkage=linkage,
+            full_gemm_run_dir=args.full_gemm_run_dir,
+            repo_root=repo_root,
+            hardware=hardware,
+        )
+        declared_provenance = collect_suite_declared_provenance(
+            (
+                args.compute_run_dir,
+                args.component_run_dir,
+                args.full_gemm_run_dir,
+            ),
+            repo_root=repo_root,
+        )
+        campaign_artifacts = collect_suite_artifact_paths(
+            (
+                args.compute_run_dir,
+                args.component_run_dir,
+                args.full_gemm_run_dir,
+            ),
+            repo_root=repo_root,
+        )
+        capacities = [
+            *load_capacity_files(args.base_capacities),
+            *imported_capacities,
+        ]
+        findings = [
+            *audit_inputs(capacities, repo_root=repo_root),
+            *audit_observations(observations, repo_root=repo_root),
+        ]
+        if any(row["severity"] == "error" for row in findings):
+            raise ModelError(
+                "merged suite evidence failed provenance audit: "
+                + json.dumps(findings, sort_keys=True)
+            )
+        workloads = load_workloads(args.workloads)
+        schedules = load_schedules(args.schedules)
+        pipeline_profiles = (
+            load_pipeline_profiles(args.pipeline_profiles)
+            if args.pipeline_profiles else []
+        )
+        coverage = _coverage_output(
+            capacities,
+            hardware,
+            workloads,
+            schedules,
+            observations,
+            repo_root=repo_root,
+            pipeline_profiles=pipeline_profiles,
+        )
+        source_paths = sorted({
+            *declared_provenance.source_paths,
+            *(
+                _repo_relative_input(path, repo_root)
+                for path in (
+                    *args.base_capacities,
+                    args.hardware,
+                    args.workloads,
+                    args.schedules,
+                )
+            ),
+            *(capacity.source_path for capacity in capacities),
+            *(observation.source_path for observation in observations),
+        })
+        artifact_paths = sorted({
+            *campaign_artifacts,
+            *(
+                path
+                for capacity in capacities
+                for path in capacity.artifact_paths
+            ),
+            *(
+                path
+                for observation in observations
+                for path in observation.artifact_paths
+            ),
+        })
+        source_urls = sorted({
+            *declared_provenance.source_urls,
+            *(
+                capacity.source_url
+                for capacity in capacities
+                if capacity.source_url
+            ),
+        })
+        payload = {
+            "suite_linkage": linkage.to_dict(),
+            "imported_capacities": [
+                capacity.to_dict() for capacity in imported_capacities
+            ],
+            "closure_observations": [
+                observation.to_dict() for observation in observations
+            ],
+            "capacity_findings": findings,
+            "source_paths": source_paths,
+            "source_urls": source_urls,
+            "artifact_paths": artifact_paths,
+            "coverage": coverage,
+        }
+        output = json.dumps(payload, indent=2, sort_keys=True)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output + "\n", encoding="utf-8")
+        else:
+            print(output)
         return 0
     if args.command == "import-closure":
         try:
@@ -414,7 +717,7 @@ def main() -> int:
         print(json.dumps({"observed_best": [row.to_dict() for row in rows]}, indent=2))
         return 0
     if args.command == "coverage":
-        capacities = load_capacities(args.capacities)
+        capacities = load_capacity_files(args.capacities)
         observed = []
         if args.observed_input:
             observed.extend(summarize_observed_csvs(
@@ -427,27 +730,42 @@ def main() -> int:
                 args.closure_import)
             capacities.extend(imported_capacities)
             observed.extend(imported_observations)
+        if args.closure_run_dir:
+            hardware = load_hardware(args.hardware)
+            observed.extend(
+                row
+                for run_dir in args.closure_run_dir
+                for row in summarize_closure_campaign(
+                    run_dir,
+                    repo_root=args.repo_root,
+                    hardware=hardware,
+                )
+            )
         capacities.extend(load_resource_imports(args.resource_import))
         if not observed:
             raise SystemExit(
-                "coverage requires --observed-input or --closure-import")
-        rows = precision_coverage(capacities, observed)
-        common = common_resource_coverage(capacities)
-        campaign = campaign_measurement_coverage(capacities, observed)
-        print(
-            json.dumps(
-                {
-                    "precision_coverage": [row.to_dict() for row in rows],
-                    "common_resource_coverage": common,
-                    "campaign_measurement_coverage": campaign,
-                    "all_precisions_closed": all(row.numeric_closure for row in rows),
-                    "all_declared_precisions_closed": all(
-                        row.numeric_closure for row in rows),
-                    "all_common_resources_closed": all(common.values()),
-                },
-                indent=2,
-            )
+                "coverage requires --observed-input, --closure-import, or "
+                "--closure-run-dir")
+        hardware = load_hardware(args.hardware)
+        workloads = load_workloads(args.workloads)
+        schedules = load_schedules(args.schedules)
+        pipeline_profiles = (
+            load_pipeline_profiles(args.pipeline_profiles)
+            if args.pipeline_profiles else []
         )
+        output = _coverage_output(
+            capacities,
+            hardware,
+            workloads,
+            schedules,
+            observed,
+            repo_root=args.repo_root,
+            pipeline_profiles=pipeline_profiles,
+        )
+        output["campaign_measurement_coverage"] = (
+            campaign_measurement_coverage(capacities, observed)
+        )
+        print(json.dumps(output, indent=2))
         return 0
 
     hardware = load_hardware(args.hardware)

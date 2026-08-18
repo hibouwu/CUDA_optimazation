@@ -31,12 +31,36 @@ def capacities_from_rows(rows: list[dict[str, Any]]) -> list[Capacity]:
         data = dict(row)
         data["evidence_kind"] = EvidenceKind(data["evidence_kind"])
         data["artifact_paths"] = tuple(data.get("artifact_paths", ()))
+        for key in (
+            "applicable_precision_ids", "applicable_mma_shapes",
+            "applicable_cta_groups", "applicable_sm_counts",
+            "applicable_hardware_ids", "applicable_operating_modes",
+            "applicable_clock_hz", "applicable_residencies",
+            "applicable_tma_tile_bytes", "applicable_tmem_load_registers",
+            "applicable_readback_warps", "applicable_tma_destination_slots",
+            "applicable_threads_per_cta", "applicable_resident_ctas_per_sm",
+            "applicable_read_write_ratios", "applicable_access_patterns",
+            "applicable_schedule_ids", "applicable_workload_ids",
+        ):
+            data[key] = tuple(data.get(key, ()))
         capacities.append(Capacity(**data))
     return capacities
 
 
 def load_capacities(path: Path) -> list[Capacity]:
-    return capacities_from_rows(read_json(path))
+    payload = read_json(path)
+    if isinstance(payload, dict):
+        payload = payload.get("capacities", [])
+    if not isinstance(payload, list):
+        raise ModelError(f"{path}: capacity input must be a list or object")
+    return capacities_from_rows(payload)
+
+
+def load_capacity_files(paths: list[Path]) -> list[Capacity]:
+    capacities: list[Capacity] = []
+    for path in paths:
+        capacities.extend(load_capacities(path))
+    return capacities
 
 
 def pipeline_profiles_from_rows(
@@ -50,6 +74,11 @@ def pipeline_profiles_from_rows(
         data["precision_ids"] = tuple(data["precision_ids"])
         data["validation"] = tuple(dict(item) for item in data["validation"])
         data["artifact_paths"] = tuple(data.get("artifact_paths", ()))
+        for key in (
+            "applicable_sm_counts", "applicable_hardware_ids",
+            "applicable_operating_modes", "applicable_clock_hz",
+        ):
+            data[key] = tuple(data.get(key, ()))
         profiles.append(PipelineProfile(**data))
     return profiles
 

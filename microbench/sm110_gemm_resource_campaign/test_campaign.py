@@ -949,6 +949,9 @@ class ResourceCampaignTests(unittest.TestCase):
                     "resource": case["resource"],
                     "residency": case["residency"],
                     "row_stride_elements": case["row_stride_elements"],
+                    "precision_ids": case["precision_ids"],
+                    "input_transport_layouts":
+                        case["input_transport_layouts"],
                     "rate_unit": "B/s",
                     "rate_per_second_median": float(index * 1_000_000),
                     "trial_count": 10,

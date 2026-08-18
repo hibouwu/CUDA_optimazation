@@ -5,13 +5,17 @@
     "rate_per_second": 258500000000000.0,
     "work_unit": "flop",
     "evidence_kind": "derived_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "thor_official_sparse_fp16_to_dense",
     "source_path": "microbench/mma_compute_only/plots/benchmark_results.csv",
     "source_locator": "precision=BF16,warp_num=4,shape=M128N256K16,official_tflops",
     "original_value": 258.5,
     "original_unit": "TFLOP/s",
     "condition": "conditional dense FP16 rate inferred as one half of NVIDIA's 517-TFLOP/s sparse FP16 T5000 MAXN figure",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "bf16_vendor_peak_snapshot",
@@ -19,13 +23,17 @@
     "rate_per_second": 258500000000000.0,
     "work_unit": "flop",
     "evidence_kind": "derived_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "mma_compute_report_official_bf16",
     "source_path": "microbench/mma_compute_only/plots/benchmark_results.csv",
     "source_locator": "precision=BF16,warp_num=4,shape=M128N256K16,official_tflops",
     "original_value": 258.5,
     "original_unit": "TFLOP/s",
     "condition": "conditional dense FP16/BF16 rate inferred as one half of NVIDIA's 517-TFLOP/s sparse FP16 T5000 MAXN figure",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "s8_vendor_peak_conditional",
@@ -33,13 +41,17 @@
     "rate_per_second": 517500000000000.0,
     "work_unit": "operation",
     "evidence_kind": "derived_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "thor_official_sparse_int8_to_dense_s8",
     "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md",
     "source_locator": "sparse INT8 为 1035 TOPS",
     "original_value": 1035.0,
     "original_unit": "sparse TOPS",
     "condition": "conditional dense signed-INT8 rate inferred as one half of NVIDIA's 1035-TOPS sparse INT8 T5000 MAXN figure; the product table does not separately list dense or signed INT8",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "u8_vendor_peak_conditional",
@@ -47,13 +59,17 @@
     "rate_per_second": 517500000000000.0,
     "work_unit": "operation",
     "evidence_kind": "derived_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "thor_official_sparse_int8_to_dense_u8",
     "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md",
     "source_locator": "sparse INT8 为 1035 TOPS",
     "original_value": 1035.0,
     "original_unit": "sparse TOPS",
     "condition": "conditional dense unsigned-INT8 rate inferred as one half of NVIDIA's 1035-TOPS sparse INT8 T5000 MAXN figure; the product table does not distinguish signed and unsigned INT8",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "e4m3_vendor_peak_snapshot",
@@ -61,13 +77,17 @@
     "rate_per_second": 517000000000000.0,
     "work_unit": "flop",
     "evidence_kind": "specified_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "mma_compute_report_official_fp8",
     "source_path": "microbench/mma_compute_only/plots/benchmark_results.csv",
     "source_locator": "precision=FP8,warp_num=4,shape=M128N256K32,official_tflops",
     "original_value": 517.0,
     "original_unit": "TFLOP/s",
     "condition": "conditional application of NVIDIA's aggregate dense FP8 T5000 MAXN figure to the PTX E4M3 contract; the product table does not split E4M3 and E5M2",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "e5m2_vendor_peak_snapshot",
@@ -75,13 +95,17 @@
     "rate_per_second": 517000000000000.0,
     "work_unit": "flop",
     "evidence_kind": "specified_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "thor_official_dense_fp8",
     "source_path": "microbench/mma_compute_only/plots/benchmark_results.csv",
     "source_locator": "precision=FP8,warp_num=4,shape=M128N256K32,official_tflops",
     "original_value": 517.0,
     "original_unit": "TFLOP/s",
     "condition": "conditional application of NVIDIA's aggregate dense FP8 T5000 MAXN figure to the PTX E5M2 contract; the product table does not split E4M3 and E5M2",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "nvfp4_vendor_peak_snapshot",
@@ -89,13 +113,17 @@
     "rate_per_second": 1035000000000000.0,
     "work_unit": "flop",
     "evidence_kind": "specified_upper",
+    "upper_scope": "tensor_core_classical",
     "source_id": "mma_compute_report_official_fp4",
     "source_path": "microbench/mma_compute_only/plots/benchmark_results.csv",
     "source_locator": "precision=FP4,warp_num=4,shape=M128N256K64,official_tflops",
     "original_value": 1035.0,
     "original_unit": "TFLOP/s",
     "condition": "conditional application of NVIDIA's aggregate dense FP4 T5000 MAXN figure to the PTX mxf4nvf4 block16 contract; the product table does not identify the FP4 encoding and this rate is not transferable to raw E2M1 or MXFP4",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "hbm_total_vendor_bandwidth",
@@ -103,13 +131,17 @@
     "rate_per_second": 273000000000.0,
     "work_unit": "byte",
     "evidence_kind": "specified_upper",
+    "upper_scope": "all_classical",
     "source_id": "thor_product_bandwidth_snapshot",
     "source_path": "Docs/blackwell_tensorcore/thor_sm110_gemm_stage_model.md",
     "source_locator": "Jetson T5000 为 10 TPC、2560 CUDA cores、273 GB/s LPDDR5X",
     "original_value": 273.0,
     "original_unit": "GB/s",
-    "condition": "aggregate LPDDR5X specification; workload starts cold in device memory",
-    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/"
+    "condition": "aggregate LPDDR5X specification; workload starts cold in device memory; no memory compression or reuse from state outside the declared workload",
+    "source_url": "https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"]
   },
   {
     "capacity_id": "l2_read_ncu_model_peak",
@@ -117,12 +149,17 @@
     "rate_per_second": 1612800000000.0,
     "work_unit": "byte",
     "evidence_kind": "profiler_model_peak",
+    "upper_scope": "all_classical",
     "source_id": "l2_ncu_read_peak",
     "source_path": "microbench/L2throughtput/README.md",
     "source_locator": "L2 read peak model**：约 `1024 B/cycle/GPU`",
     "original_value": 1024.0,
     "original_unit": "B/cycle/GPU",
-    "condition": "NCU pct_of_peak model multiplied by the recorded 1.575 GHz snapshot"
+    "condition": "GPU-wide shared L2 read fabric: 1024 B/cycle multiplied by the recorded 1.575 GHz MAXN clock",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"],
+    "applicable_clock_hz": [1575000000.0]
   },
   {
     "capacity_id": "l2_write_ncu_model_peak",
@@ -130,12 +167,17 @@
     "rate_per_second": 806400000000.0,
     "work_unit": "byte",
     "evidence_kind": "profiler_model_peak",
+    "upper_scope": "all_classical",
     "source_id": "l2_ncu_write_peak",
     "source_path": "microbench/L2throughtput/README.md",
     "source_locator": "L2 write peak model**：约 `512 B/cycle/GPU`",
     "original_value": 512.0,
     "original_unit": "B/cycle/GPU",
-    "condition": "NCU pct_of_peak model multiplied by the recorded 1.575 GHz snapshot"
+    "condition": "GPU-wide shared L2 write fabric: 512 B/cycle multiplied by the recorded 1.575 GHz MAXN clock",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["MAXN"],
+    "applicable_clock_hz": [1575000000.0]
   },
   {
     "capacity_id": "bf16_compute_measured",
@@ -148,7 +190,17 @@
     "source_locator": "precision=BF16,warp_num=4,shape=M128N256K16,tflops",
     "original_value": 258.03,
     "original_unit": "TFLOP/s",
-    "condition": "compute-only timed window; excludes TMA, copy, readback, epilogue and launch"
+    "condition": "compute-only timed window; excludes TMA, copy, readback, epilogue and launch",
+    "applicable_precision_ids": ["bf16_f32"],
+    "applicable_mma_shapes": ["m128n256k16"],
+    "applicable_cta_groups": [1],
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "applicable_threads_per_cta": [128],
+    "applicable_resident_ctas_per_sm": [1],
+    "measurement_operand_residency": "smem_operands"
   },
   {
     "capacity_id": "e4m3_compute_measured",
@@ -161,7 +213,17 @@
     "source_locator": "precision=FP8,warp_num=4,shape=M128N256K32,tflops",
     "original_value": 516.059,
     "original_unit": "TFLOP/s",
-    "condition": "compute-only generated E4M3 descriptor"
+    "condition": "compute-only generated E4M3 descriptor",
+    "applicable_precision_ids": ["e4m3_f32"],
+    "applicable_mma_shapes": ["m128n256k32"],
+    "applicable_cta_groups": [1],
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "applicable_threads_per_cta": [128],
+    "applicable_resident_ctas_per_sm": [1],
+    "measurement_operand_residency": "smem_operands"
   },
   {
     "capacity_id": "nvfp4_compute_measured",
@@ -175,7 +237,11 @@
     "original_value": 1032.111,
     "original_unit": "TFLOP/s",
     "condition": "QUARANTINED: the historical generator encoded Table-42 E2M1 type code 5 in a Table-44 mxf4nvf4 descriptor, whose E2M1 code is 1; rerun with a corrected descriptor before using this rate",
-    "qualification": "quarantined"
+    "qualification": "quarantined",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0]
   },
   {
     "capacity_id": "hbm_read_stream_measured",
@@ -188,7 +254,12 @@
     "source_locator": "mode=read-stream,bytes_per_cycle",
     "original_value": 126.010672,
     "original_unit": "B/cycle/GPU",
-    "condition": "256 MiB .cg streaming read; converted with 1.575 GHz snapshot"
+    "condition": "256 MiB .cg streaming read; converted with 1.575 GHz snapshot",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "dram_stream_requests"
   },
   {
     "capacity_id": "hbm_write_stream_measured",
@@ -201,7 +272,12 @@
     "source_locator": "mode=write-stream,bytes_per_cycle",
     "original_value": 70.429363,
     "original_unit": "B/cycle/GPU",
-    "condition": "256 MiB .cg streaming write with device fence; converted with 1.575 GHz snapshot"
+    "condition": "256 MiB .cg streaming write with device fence; converted with 1.575 GHz snapshot",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "dram_stream_requests"
   },
   {
     "capacity_id": "l2_read_unique_measured",
@@ -214,7 +290,12 @@
     "source_locator": "mode=read-unique,bytes_per_cycle",
     "original_value": 946.701239,
     "original_unit": "B/cycle/GPU",
-    "condition": "16 MiB unique LDG.E.128 L2-hit working set; converted with 1.575 GHz snapshot"
+    "condition": "16 MiB unique LDG.E.128 L2-hit working set; converted with 1.575 GHz snapshot",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "l2_hit_requests"
   },
   {
     "capacity_id": "l2_write_unique_measured",
@@ -227,7 +308,12 @@
     "source_locator": "mode=write-unique,bytes_per_cycle",
     "original_value": 299.372706,
     "original_unit": "B/cycle/GPU",
-    "condition": "end-to-end global-store path, not a pure L2 write-port peak"
+    "condition": "end-to-end global-store path, not a pure L2 write-port peak; converted with 1.575 GHz snapshot",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "l2_hit_requests"
   },
   {
     "capacity_id": "tma_l2_hit_measured",
@@ -240,7 +326,16 @@
     "source_locator": "mode=l2-hit,bytes_per_cycle",
     "original_value": 773.443437,
     "original_unit": "B/cycle/GPU",
-    "condition": "32 KiB TMA tiles, one CTA/SM, 16 MiB backing; legacy full-grid aggregate divided by 20 SMs; serialized inflight=1 snapshot converted with 1.575 GHz"
+    "condition": "32 KiB TMA tiles, one CTA/SM, 16 MiB backing; legacy full-grid aggregate divided by 20 SMs; serialized inflight=1 snapshot converted with 1.575 GHz",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "l2_hit_requests",
+    "applicable_tma_tile_bytes": [32768],
+    "applicable_tma_destination_slots": [4],
+    "applicable_threads_per_cta": [128],
+    "applicable_resident_ctas_per_sm": [1]
   },
   {
     "capacity_id": "tma_hbm_stream_measured",
@@ -253,6 +348,15 @@
     "source_locator": "mode=dram-stream,bytes_per_cycle",
     "original_value": 155.779224,
     "original_unit": "B/cycle/GPU",
-    "condition": "unique 32 KiB TMA tiles beyond L2; end-to-end TMA ingress"
+    "condition": "unique 32 KiB TMA tiles beyond L2; four rotating SMEM destinations, 128 threads/CTA, one CTA/SM; end-to-end TMA ingress",
+    "applicable_sm_counts": [20],
+    "applicable_hardware_ids": ["thor_t5000_sm110_20sm"],
+    "applicable_operating_modes": ["historical_unproven"],
+    "applicable_clock_hz": [1575000000.0],
+    "measurement_operand_residency": "dram_stream_requests",
+    "applicable_tma_tile_bytes": [32768],
+    "applicable_tma_destination_slots": [4],
+    "applicable_threads_per_cta": [128],
+    "applicable_resident_ctas_per_sm": [1]
   }
 ]

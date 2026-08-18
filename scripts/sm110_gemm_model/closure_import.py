@@ -410,6 +410,18 @@ def capacities_from_compute(
             qualification=qualification,
             trial_count=int(result["trial_count"]),
             artifact_paths=artifacts,
+            applicable_precision_ids=(precision_id,),
+            applicable_mma_shapes=(
+                f"m{entry['m']}n{entry['n']}k{entry['precision']['k']}",
+            ),
+            applicable_cta_groups=(1,),
+            applicable_sm_counts=(int(spec["expected_sm_count"]),),
+            applicable_hardware_ids=("thor_t5000_sm110_20sm",),
+            applicable_operating_modes=("MAXN",),
+            applicable_threads_per_cta=(128,),
+            applicable_resident_ctas_per_sm=(1,),
+            timed_scope=str(spec["timed_scope"]),
+            measurement_operand_residency="smem_operands",
         ))
     expected = len(precision_specs()) * len(selected_n)
     if len(capacities) != expected:
@@ -448,8 +460,9 @@ def capacities_from_component(
         if case_id not in case_specs:
             raise ModelError(f"component case is absent from run spec: {case_id}")
         binary = str(case_specs[case_id]["binary"])
+        arguments = list(case_specs[case_id].get("args", []))
         case_arguments = " ".join(
-            map(str, case_specs[case_id].get("args", [])))
+            map(str, arguments))
         case_dir = paths.component / "cases" / case_id
         artifacts = (*_common_artifacts(
                          paths,
@@ -464,6 +477,13 @@ def capacities_from_component(
         rate_per_second = float(result["rate_per_second_median"])
         original_value = None
         original_unit = None
+        tma_tile_bytes: tuple[int, ...] = ()
+        tma_destination_slots: tuple[int, ...] = ()
+        tmem_load_registers: tuple[int, ...] = ()
+        readback_warps: tuple[int, ...] = ()
+        threads_per_cta: tuple[int, ...] = ()
+        resident_ctas_per_sm: tuple[int, ...] = ()
+        measurement_operand_residency = "unspecified"
         condition_scope = (
             "20-SM component campaign; case-declared blocks per SM; "
             "aggregate globaltimer span"
@@ -473,6 +493,55 @@ def capacities_from_component(
                 "20-SM target contract; exactly one CTA launched and one "
                 "SM ID observed; directly isolated per-SM L2-hit ingress"
             )
+        if resource.startswith("tma."):
+            tile = int(arguments[arguments.index("--tile-bytes") + 1])
+            pattern = (
+                str(arguments[arguments.index("--pattern") + 1])
+                if "--pattern" in arguments else "uniform"
+            )
+            tma_tile_bytes = (
+                (tile, tile * 2) if pattern == "tc5a-ab" else (tile,)
+            )
+            tma_destination_slots = (
+                int(arguments[arguments.index("--slots") + 1]),
+            )
+            threads_per_cta = (
+                int(arguments[arguments.index("--threads") + 1]),
+            )
+            resident_ctas_per_sm = (
+                int(arguments[arguments.index("--blocks-per-sm") + 1]),
+            )
+            measurement_operand_residency = (
+                "l2_hit_requests"
+                if arguments[arguments.index("--mode") + 1] == "l2-hit"
+                else "dram_stream_requests"
+            )
+        elif resource.startswith("tmem.readback"):
+            match = re.fullmatch(
+                r"tmem_ld_32x32b_x(\d+)_warps(\d+)", case_id
+            )
+            if match is None:
+                raise ModelError(
+                    f"{case_id}: cannot decode TMEM readback contract")
+            tmem_load_registers = (int(match.group(1)),)
+            readback_warps = (int(match.group(2)),)
+            threads_per_cta = (128,)
+            resident_ctas_per_sm = (
+                int(arguments[arguments.index("--blocks-per-sm") + 1]),
+            )
+            measurement_operand_residency = "tmem_operands"
+        elif resource in {"hbm.read", "hbm.write", "l2.read", "l2.write"}:
+            threads_per_cta = (
+                int(arguments[arguments.index("--threads") + 1]),
+            )
+            resident_ctas_per_sm = (
+                int(arguments[arguments.index("--blocks-per-sm") + 1]),
+            )
+            measurement_operand_residency = (
+                "dram_stream_requests"
+                if resource.startswith("hbm.")
+                else "l2_hit_requests"
+            )
         if resource == "tma.smem_ingress.per_sm":
             expected_sms = int(spec.get("expected_sm_count", 0))
             if expected_sms != 20:
@@ -480,7 +549,6 @@ def capacities_from_component(
                     f"{case_id}: per-SM TMA isolation requires the "
                     "frozen 20-SM campaign contract"
                 )
-            arguments = list(case_specs[case_id].get("args", []))
             try:
                 requested_blocks = int(
                     arguments[arguments.index("--blocks") + 1])
@@ -510,7 +578,6 @@ def capacities_from_component(
                 "measurement and is not divided by the device SM count"
             )
         elif resource == "tma.hbm":
-            arguments = list(case_specs[case_id].get("args", []))
             try:
                 mode = str(arguments[arguments.index("--mode") + 1])
                 pattern = str(
@@ -548,6 +615,17 @@ def capacities_from_component(
             qualification=qualification,
             trial_count=int(result["trial_count"]),
             artifact_paths=artifacts,
+            applicable_sm_counts=(int(spec["expected_sm_count"]),),
+            applicable_hardware_ids=("thor_t5000_sm110_20sm",),
+            applicable_operating_modes=("MAXN",),
+            applicable_tma_tile_bytes=tma_tile_bytes,
+            applicable_tmem_load_registers=tmem_load_registers,
+            applicable_readback_warps=readback_warps,
+            applicable_tma_destination_slots=tma_destination_slots,
+            applicable_threads_per_cta=threads_per_cta,
+            applicable_resident_ctas_per_sm=resident_ctas_per_sm,
+            timed_scope=str(spec.get("timing", "component_globaltimer_span")),
+            measurement_operand_residency=measurement_operand_residency,
         ))
     expected_count = sum(CAMPAIGN_COMPONENT_RESOURCE_COUNTS.values())
     if len(capacities) != expected_count:
@@ -695,6 +773,14 @@ def observations_from_full(
             timed_scope="device_kernel",
             qualification=qualification,
             selection_rule="fixed predeclared candidate and shape; paired same-precision reference",
+            correctness_reference=references[precision_id],
+            correctness_reference_relation="independent_same_contract",
+            numerical_contract=precision_id,
+            calibration_split=str(result["split"]),
+            arithmetic_path="tensor_core",
+            hardware_id="thor_t5000_sm110_20sm",
+            sm_count=20,
+            operating_mode="MAXN",
         ))
     expected_pairs = {
         (precision_id, n)

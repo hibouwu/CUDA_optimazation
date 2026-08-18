@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import json
 import re
@@ -75,7 +76,17 @@ def import_causal_profile(
         or not isinstance(bundle.get("pipeline_profiles"), list)
     ):
         raise ModelError("causal pipeline-profile bundle contract is invalid")
-    profiles = pipeline_profiles_from_rows(bundle["pipeline_profiles"])
+    profiles = [
+        dataclasses.replace(
+            profile,
+            applicable_sm_counts=(20,),
+            applicable_hardware_ids=("thor_t5000_sm110_20sm",),
+            applicable_operating_modes=("MAXN",),
+            applicable_clock_hz=(1_575_000_000.0,),
+            timed_scope="device_kernel",
+        )
+        for profile in pipeline_profiles_from_rows(bundle["pipeline_profiles"])
+    ]
     if len(profiles) != 2:
         raise ModelError("causal campaign must emit exactly two pipeline profiles")
     expected_precision_sets = {("fp16_f32",), ("bf16_f32",)}

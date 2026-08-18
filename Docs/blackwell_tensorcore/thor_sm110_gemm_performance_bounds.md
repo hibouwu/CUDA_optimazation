@@ -8,6 +8,156 @@
 >
 > **范围**：单次、稠密、经典矩阵乘法；不包含稀疏、Strassen/近似算法、batched/grouped GEMM 和多 GPU 通信。
 
+## 0. 可执行 schema 参数首次定义
+
+本节是模型 JSON/Python schema 的规范字典。下表中的空 tuple 表示“不额外收窄该维度”，而不是“已经证明适用于所有硬件”；closure 结论还必须经过硬件、场景与证据等级门禁。单位没有另行写明时为无量纲标识或枚举。
+
+| PrecisionSpec 字段 | 首次定义 |
+| --- | --- |
+| `precision_id` | 精度与数值合同的稳定 ID。 |
+| `input_bytes`, `accumulator_bytes`, `output_bytes` | 每个输入、累加器和输出元素的物理字节数，单位 B/element。 |
+| `mma_k` | 该精度一次 MMA atom 的 K 深度，单位 element。 |
+| `compute_resource`, `compute_work_unit` | 前者是算术资源 ID；后者是其工作单位，只能为 `flop` 或 `operation`。 |
+| `input_scale_block`, `input_scale_bytes` | 输入 block scale 覆盖的元素数和每个 scale 的字节数；非 block-scaled 精度分别为 null 与 0。 |
+| `output_scale_block`, `output_scale_bytes` | 输出 scale block 大小和每个输出 scale 的字节数；当前 accumulator-output 合同分别为 null 与 0。 |
+
+| Workload 字段 | 首次定义 |
+| --- | --- |
+| `workload_id` | 一个 GEMM 问题与验证场景的稳定 ID。 |
+| `m`, `n`, `k` | GEMM 的 M、N、K 逻辑维度，单位 element。 |
+| `transpose_a`, `transpose_b` | A、B 是否转置；v1 只接受 false/false。 |
+| `alpha`, `beta` | (D=\alpha AB+\beta C) 的标量系数。 |
+| `epilogue`, `output_mode` | epilogue 语义和输出表示；当前完整模型要求 `none` 与 `accumulator`。 |
+| `residency` | 输入入口场景：`cold_hbm`、`hot_l2` 或 `compute_oracle`。 |
+| `include_launch` | 是否允许计入已建模的 launch/fixed 时间。 |
+| `validation_split` | workload 是 `exploratory`、`calibration` 还是冻结 `holdout`。 |
+| `implementation_domain` | 上界覆盖 `tensor_core_classical` 还是包括非 Tensor Core 的 `all_classical`。 |
+| `timed_scope` | 计时边界，当前为 `device_kernel` 或 `device_kernel_plus_launch`。 |
+
+| Schedule 字段 | 首次定义 |
+| --- | --- |
+| `schedule_id` | 一个候选实现 schedule 的稳定 ID。 |
+| `bm`, `bn`, `bk` | CTA tile 的 M、N、K 尺寸，单位 element。 |
+| `mma_m`, `mma_n` | MMA atom 的 M、N 尺寸，单位 element；K 来自精度的 `mma_k`。 |
+| `stages`, `cta_group`, `split_k` | pipeline stage 数、协作 CTA 数和 K 分片数。 |
+| `tail_policy`, `supported_precisions` | 尾块处理策略以及该 schedule 明确支持的精度 ID 集。 |
+| `smem_limit_bytes`, `tmem_columns`, `registers_per_thread` | 每 CTA SMEM 上限、TMEM 列分配和可选每线程寄存器数。 |
+| `threads`, `resident_ctas_per_sm` | 每 CTA 线程数和模型假定每 SM 驻留 CTA 数。 |
+| `tmem_load_registers`, `tmem_consumer_warps`, `readback_warps` | LDTM 宽度、消费 warp 数和 readback warp 数；后两者若同时给出必须相同。 |
+| `uses_tma`, `tma_destination_slots` | 是否使用 TMA，以及已声明的并行 TMA destination slot 数。 |
+| `tma_ingress_capacity_resource`, `tma_hbm_capacity_resource` | 旧冻结合同显式绑定的 per-SM ingress 与全 GPU HBM resource ID。 |
+| `tma_contract_family_by_precision`, `tma_contract_row_stride_elements` | 精度到精确 TMA topology family 的映射，以及测过的 packed leading-dimension 集。 |
+| `causal_pipeline_resource`, `persistent` | schedule 绑定的 joint causal profile resource，以及是否采用 persistent-worker 调度。 |
+| `input_transport_layout`, `input_scale_transport`, `data_path_contract` | 值 transport layout、scale transport 状态和整个 data path 是否完整建模。 |
+| `global_memory_access_pattern` | schedule 对全局内存请求的结构化访问模式。 |
+| `fixed_seconds` | 已证明的固定时间项，单位 s；0 表示零浪费上界放松，不表示测得固定开销为零。 |
+
+| Hardware 字段 | 首次定义 |
+| --- | --- |
+| `hardware_id`, `sm_count`, `clock_hz`, `operating_mode` | 硬件稳定 ID、GPU 的 SM 数、GPU 时钟（cycle/s）和功耗/运行模式。 |
+| `l2_capacity_bytes` | 可用于 hot-L2 可行性门禁的已证明 L2 容量，单位 B/GPU。 |
+| `l2_capacity_evidence_kind` | L2 容量证据类型：设备记录或官方规格。 |
+| `l2_capacity_source_path`, `l2_capacity_source_locator` | L2 容量仓库内来源及可机械定位谓词。 |
+
+| Capacity 字段 | 首次定义 |
+| --- | --- |
+| `capacity_id`, `resource`, `rate_per_second`, `work_unit` | 容量记录 ID、资源 ID、服务率和工作单位；组合单位为 work-unit/s。 |
+| `evidence_kind`, `qualification`, `trial_count`, `uncertainty_fraction` | 证据逻辑类型、资格等级、外部 trial 数和相对不确定度。 |
+| `source_id`, `source_path`, `source_locator`, `source_url` | 生产者 ID、仓库内来源、机械 locator 和可选一手 URL。 |
+| `original_value`, `original_unit`, `condition`, `artifact_paths` | 未换算来源值/单位、成立条件和不可缺失的证据工件路径。 |
+| `applicable_precision_ids`, `applicable_mma_shapes`, `applicable_cta_groups` | 可使用该容量的精度、MMA shape 和 CTA-group 精确作用域。 |
+| `applicable_sm_counts`, `applicable_hardware_ids`, `applicable_operating_modes`, `applicable_clock_hz` | SM 数、产品 ID、运行模式和时钟作用域。 |
+| `applicable_residencies`, `measurement_operand_residency`, `residency_evidence_qualification` | workload residency、probe 请求入口和 residency 是未证明、构造证明还是 NCU 证明。 |
+| `applicable_tma_tile_bytes`, `applicable_tma_destination_slots` | 该 TMA 容量测过的 payload 字节数和 destination-slot 合同。 |
+| `applicable_tmem_load_registers`, `applicable_readback_warps` | TMEM readback 的 LDTM 宽度和参与 warp 数。 |
+| `applicable_threads_per_cta`, `applicable_resident_ctas_per_sm` | probe 的 CTA 线程数和每 SM 驻留 CTA 数。 |
+| `applicable_read_write_ratios`, `applicable_access_patterns` | joint memory 容量适用的 issued-byte read:write 比和访问模式。 |
+| `applicable_schedule_ids`, `applicable_workload_ids`, `timed_scope` | 精确 schedule/workload ID 与计时边界作用域。 |
+| `upper_scope` | rate upper 是单 schedule family、全部 Tensor-Core classical GEMM 还是全部 classical GEMM。 |
+
+| PipelineProfile 字段 | 首次定义 |
+| --- | --- |
+| `profile_id`, `resource`, `schedule_id`, `precision_ids` | joint profile ID、资源 ID、精确 schedule ID 和允许的 singleton/显式精度集合。 |
+| `evidence_kind`, `qualification`, `closure_qualified`, `trial_count_per_case` | profile 的证据类型、资格字符串、布尔资格和每 case 外部 trial 数。 |
+| `source_id`, `expected_commit`, `source_path`, `source_locator`, `artifact_paths` | profile 生产 run、冻结 Git commit、源码/locator 与证据工件。 |
+| `input_residency`, `timed_scope`, `applicable_sm_counts`, `applicable_hardware_ids`, `applicable_operating_modes`, `applicable_clock_hz` | 输入 residency、计时边界和精确硬件作用域。 |
+| `accumulator_buffers`, `resident_ctas_per_sm`, `maximum_k_tiles`, `maximum_output_tasks_per_worker` | accumulator buffer 数、驻留 CTA 数以及允许插值的 K-tile/worker-task 最大范围。 |
+| `tma_first_completion_seconds`, `tma_completion_interval_seconds` | TMA 首次完成延迟与稳态完成间隔，单位 s。 |
+| `mma_first_completion_seconds`, `mma_completion_interval_seconds` | MMA 首次完成延迟与稳态完成间隔，单位 s。 |
+| `joint_first_mma_completion_seconds`, `joint_completion_interval_seconds`, `epilogue_latency_seconds` | joint pipeline 首个 MMA、joint 稳态间隔和单 task epilogue drain，单位 s。 |
+| `component_r_squared`, `max_calibration_relative_error`, `max_holdout_relative_error` | 预声明拟合质量与 calibration/holdout 最大相对误差。 |
+| `fit_contract`, `validation` | 冻结拟合门禁/坐标集合，以及逐坐标 actual/predicted 验证行。 |
+
+| WorkAccounting 字段 | 首次定义 |
+| --- | --- |
+| `useful_compute_work`, `issued_compute_work`, `compute_work_unit` | 用户语义要求的算术工作、padding/tail 后实际发射工作及其单位。 |
+| `input_value_bytes_min`, `input_scale_bytes_min`, `c_read_bytes_min` | 零外部复用条件下 value、scale 和 βC 的最小读取字节数。 |
+| `output_value_bytes_min`, `output_scale_bytes_min` | 逻辑输出 value 与 scale 的最小写字节数。 |
+| `tma_unique_input_bytes`, `tma_value_input_bytes`, `tma_scale_input_bytes`, `tma_input_bytes` | unique 输入、schedule value 请求、scale 请求和二者合计的 TMA 字节数。 |
+| `tma_a_value_bytes`, `tma_b_value_bytes`, `tma_a_scale_bytes`, `tma_b_scale_bytes` | A/B value 与 A/B scale 各自的 schedule-level TMA 请求字节数；四项保留独立 request 语义。 |
+| `tma_a_input_bytes`, `tma_b_input_bytes` | A 与 B 各自 value+scale 的汇总字节数，只用于矩阵侧总量，不得冒充单条 TMA payload。 |
+| `tmem_scale_ingress_bytes`, `accumulator_readback_bytes`, `reduction_bytes` | scale-to-TMEM、accumulator readback 和 split-K reduction I/O 字节数。 |
+| `task_count`, `output_tiles`, `k_tiles` | CTA task 数、输出 tile 数和每输出 tile 的 K tile 数。 |
+
+| LayerResult 与 WorkloadEnvelope 字段 | 首次定义 |
+| --- | --- |
+| `status`, `seconds`, `performance_per_second`, `performance_unit` | 一层模型的状态、makespan（s）、性能和性能单位。 |
+| `bottlenecks`, `resource_seconds`, `missing_resources`, `conditions` | 并列瓶颈、逐资源时间、缺失资源和成立条件。 |
+| `selected_capacity_ids`, `selected_capacity_evidence_kinds`, `selected_capacity_qualifications` | 选中容量 ID、证据类型和资格的审计映射。 |
+| `valid_schedule_count`, `rejected_schedule_count`, `rejected` | 合法 schedule 数、拒绝数和逐 schedule 拒绝原因。 |
+| `domain_conditional_upper`, `manifest_conditional_upper`, `conditional_schedule_id` | 实现域全局条件上界、manifest 内条件上界和后者的 schedule ID。 |
+| `manifest_empirical_resource_envelope`, `empirical_resource_schedule_id` | 独立资源经验层及其 schedule ID。 |
+| `causal_pipeline_envelope`, `causal_pipeline_schedule_id` | joint causal profile 层及其 schedule ID。 |
+| `empirical_ideal_envelope`, `empirical_schedule_id` | 资源层与因果层取时间最大值后的经验理想包络及其 schedule ID。 |
+
+| ObservedBest 字段 | 首次定义 |
+| --- | --- |
+| `observation_id`, `backend_id`, `reference`, `selection_rule` | 完整 GEMM observation ID、候选 backend、性能 denominator 和选择规则。 |
+| `median_per_second`, `minimum_per_second`, `maximum_per_second`, `performance_unit` | 候选 trial 的中位/最小/最大性能及单位。 |
+| `matched_count`, `reference_median_per_second`, `reference_minimum_per_second`, `reference_maximum_per_second`, `ratio_of_paired_medians` | correctness 匹配数、reference 三个统计量和候选/参考 paired median 比。 |
+| `performance_reference_relation`, `correctness_reference`, `correctness_reference_relation`, `numerical_contract` | 性能 denominator 与 correctness reference 是否同精度/同合同，以及执行数值合同 ID。 |
+| `calibration_split`, `arithmetic_path` | observation 的 calibration/holdout 角色及经 SASS 审计的算术路径。 |
+| `run_id`, `operating_mode` | 生产 run ID 与运行功耗模式；其余 workload、硬件和 provenance 字段沿用前述同名定义。 |
+
+| Coverage 字段 | 首次定义 |
+| --- | --- |
+| `conditional_upper_numeric`, `conditional_upper_complete`, `conditional_upper_per_second` | 场景 domain 上界是否有数值、是否资源完整以及数值本身。 |
+| `closure_qualified_empirical_envelope`, `empirical_envelope_per_second`, `empirical_schedule_id` | 场景经验包络是否由合格证据闭合、其数值与 schedule。 |
+| `contract_matched_full_gemm`, `scenario_aligned_full_gemm`, `observed_median_per_second` | 是否有问题合同匹配、residency/timing 对齐的完整 GEMM 及其中位性能。 |
+| `upper_consistent`, `empirical_envelope_consistent`, `empirical_to_observed_ratio` | observation 是否不违反上界/包络，以及包络除以 observation 的比值。 |
+| `numeric_closure`, `absolute_three_layer_closure`, `same_precision_ratio_closure`, `missing` | 数值证据、domain upper+经验包络+observation 三层、同精度比值是否闭合，以及缺口列表。 |
+| `calibration_workload_ids`, `holdout_workload_ids`, `complete` | manifest 中 calibration/holdout workload ID 集及二者是否齐全。 |
+| `domain_compute_upper`, `empirical_compute_rate`, `closure_qualified_compute_rate` | 每精度/实现域的算术 domain upper、任意经验 rate 和合格经验 rate 状态。 |
+| `strict_compute_upper`, `required_compute_shapes`, `closure_qualified_compute_shapes`, `compute_shape_matrix_complete`, `missing_compute_shapes` | 旧 campaign 的严格 compute upper 与三 shape compute matrix 审计字段。 |
+| `full_gemm_observed`, `closure_qualified_full_gemm`, `required_full_gemm_shapes`, `observed_full_gemm_shapes`, `closure_qualified_full_gemm_shapes`, `full_gemm_shape_matrix_complete`, `full_gemm_numerical_validation_complete`, `missing_full_gemm_shapes` | 完整 GEMM 三 shape matrix 的存在、资格、correctness 与缺口。 |
+| `same_precision_performance_denominator`, `calibration_scenario_closure`, `holdout_scenario_closure`, `evidence_missing`, `comparison_missing` | 同精度 denominator、两个 split 的三层 closure，以及绝对证据/相对比较缺口。 |
+
+| Suite 与目标完成度字段 | 首次定义 |
+| --- | --- |
+| `suite_id`, `expected_commit`, `hostname`, `gpu_identity`, `ncu_required` | suite ID、冻结提交、主机/GPU 身份及是否强制 NCU。 |
+| `compute_run_id`, `component_run_id`, `full_gemm_run_id` | 三批相互链接的 run ID。 |
+| `source_paths`, `source_urls` | suite 声明的仓库内源文件集合与外部一手 URL 集合。 |
+| `compute_campaign_case_ids`, `compute_campaign_full_gpu_case_ids`, `legal_schedule_ids`, `complete_data_path_schedule_ids` | 每精度 compute case、full-GPU case、合法 schedule 和完整 data-path schedule 集合。 |
+| `candidate_tma_payload_bytes`, `required_tma_payload_bytes`, `closure_qualified_tma_payload_bytes`, `required_tmem_readback_contracts` | 候选/必须/已实测 TMA payload 与必须 TMEM readback 合同。 |
+| `required_hbm_duplex_read_write_ratios`, `closure_qualified_hbm_duplex_proxy_ratios`, `closure_qualified_hbm_duplex_ratios` | 必须 HBM ratio、已测 cold proxy ratio 和具备物理外部读写字节证明的 ratio。 |
+| `candidate_l2_duplex_read_write_ratios`, `required_l2_duplex_read_write_ratios`, `closure_qualified_l2_duplex_ratios` | 候选、必须和已合格实测的 L2 read:write ratio。 |
+| `required_joint_pipeline_contracts`, `closure_qualified_joint_pipeline_contracts` | 必须的 pipeline 合同，以及已由 exact joint capacity 或硬件/精度/拓扑/range 全匹配 causal profile 闭合的合同 ID。 |
+| `full_gemm_support_status`, `full_gemm_campaign_case_ids`, `full_gemm_calibration_case_ids`, `full_gemm_holdout_case_ids`, `full_gemm_scenario_qualified_case_ids` | 每精度完整 GEMM 支持状态、全部 case、两个 split 和 residency-qualified case 集。 |
+| `precision_audits`, `global_missing` | 逐精度审计行与全局缺口列表。 |
+| `all_precision_contracts_present`, `all_compute_campaigns_planned`, `all_complete_data_paths_modeled`, `all_required_tma_payloads_planned` | 精度合同、compute 计划、data path 和 payload case 是否完整声明。 |
+| `all_required_tma_payloads_measured`, `all_required_hbm_duplex_proxies_measured`, `all_required_hbm_duplex_ratios_measured`, `all_required_l2_duplex_ratios_measured` | payload、cold proxy、物理 HBM duplex 和 L2 duplex 的必须矩阵是否实测闭合。 |
+| `all_full_gemm_campaigns_planned`, `all_full_gemm_scenarios_planned`, `all_precisions_absolute_three_layer_closed` | 完整 GEMM case/场景是否规划，以及所有精度是否三层闭合。 |
+| `duplex_campaign_frozen`, `epilogue_campaign_frozen`, `joint_pipeline_campaign_frozen` | 三类补充 campaign 的源码/case/runner/auditor hash freeze 是否有效。 |
+| `dependency_span_model_complete`, `hardware_capacity_source_present`, `cache_residency_model_complete`, `joint_overlap_model_complete`, `final_source_appendix_generated` | 依赖跨度、硬件容量来源、cache residency、joint overlap 和最终来源附录门禁。 |
+
+| 顶层输出字段 | 首次定义 |
+| --- | --- |
+| `precision_coverage`, `scenario_coverage`, `workload_manifest_coverage`, `common_resource_coverage`, `target_completion` | coverage 输出的逐精度、逐场景、manifest、公共资源与完整目标审计对象。 |
+| `all_precisions_numerically_closed`, `all_precisions_absolute_three_layer_closed`, `all_precisions_same_precision_ratio_closed`, `all_common_resources_closed`, `all_precisions_workload_manifest_complete` | 五个互不替代的聚合布尔门禁。 |
+| `suite_linkage`, `imported_capacities`, `closure_observations`, `capacity_findings`, `coverage` | suite 输出的链接证明、导入容量、完整 GEMM observation、审计 finding 和 coverage 对象。 |
+
+这里的顶层 `complete` 只在所有逐精度与全局门禁均通过时为 true，绝不把 runner 已规划、proxy 已测或局部数值存在当作最终完成。
+
 第一次学习本模型时，建议先阅读伴随式教程
 [`thor_sm110_gemm_performance_model_tutorial.md`](./thor_sm110_gemm_performance_model_tutorial.md)；
 逐精度的当前实现与证据缺口见机器生成的
@@ -33,6 +183,15 @@ FLOP/s，对 S8/U8 整数模式其单位为 OP/s。定义 \(P^\star\) 为所有�
 GEMM 中真实但未知的最好性能；定义 \(P_{\mathrm{ub}}\) 为条件性能上界，二者
 使用与 workload 相同的性能单位。在上界假设全部成立且
 workload 语义一致时，必须满足：
+
+主变量 \(P\) 保持 FLOP/s 或 OP/s，因为完整 kernel 的 elapsed time、HBM/L2
+服务率与库结果最终都在秒域比较。另定义归一化指标
+\(\Pi=P/f_g\)，其中 \(f_g\) 是与该证据完全相同运行区间和 clock domain 的 GPU
+频率，\(\Pi\) 的单位为 FLOP/cycle/GPU 或 OP/cycle/GPU；若确实需要 per-SM
+展示，再定义 \(\Pi_{\mathrm{SM}}=P/(S f_g)\)，其中 \(S\) 是参与计时的 SM 数。
+\(\Pi\) 适合在同硬件作用域内解释利用率，不替代 \(P\)：不同 boost 区间、不同
+clock domain、GPU-wide shared bus 与 per-SM 出口都禁止仅凭“每 cycle”数值直接
+相除或相加。
 
 \[
 P_{\mathrm{obs}}\le P^\star\le P_{\mathrm{ub}}.
@@ -392,7 +551,7 @@ payload 和 GMEM 最小写回量处在不同资源边界，不能相互替代。
 | --- | --- |
 | `capacity_id` | 容量记录的稳定标识，无单位 |
 | `resource` | 被约束资源的稳定标识，无单位 |
-| `rate_per_second` | SI 基础单位下的服务率，单位由 `work_unit`/s 决定 |
+| `rate_per_second`, `work_unit` | 前者定义为 SI 基础单位下的服务率；后者定义该服务率的工作单位，组合单位为 `work_unit`/s |
 | `work_unit` | `flop`、`operation` 或 `byte` |
 | `evidence_kind` | 第 5.1 节定义的逻辑证据等级 |
 | `source_id` | 来源记录的稳定标识，无单位 |
@@ -720,6 +879,9 @@ CSV 的性能 denominator 仍是 FP16 cuBLAS。工具将这种情况标记为
 
 ## 8. 最终 closure 证据状态
 
+`coverage` 对应字段定义为可执行模型生成的覆盖率与缺口对象，而不是人工状态摘要。
+`all_common_resources_closed` 定义为当前版本所列全部公共经验资源均有同硬件作用域的 closure-qualified 容量；资源清单变化时，旧报告中的同名布尔值不能跨 schema 直接沿用。
+
 下面状态来自结果提交
 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 中的可执行 `coverage`、三批独立
 auditor 和 `report-closure`，不是人工印象。该结果把已完成基础 suite
@@ -735,6 +897,8 @@ encoding，因此映射到某个 PTX 精度合同仍是显式条件。BF16/FP16 
 TFLOP/s 与 S8/U8 的 517.5 TOPS 都是按 2:1 稀疏倍率推得的
 `derived_upper`，不是官方直接列出的 dense 项；INT8 表也没有区分 signed/unsigned。规格来源见
 [NVIDIA Jetson Thor 官方介绍](https://developer.nvidia.com/blog/introducing-nvidia-jetson-thor-the-ultimate-platform-for-physical-ai/)。
+
+`numeric_closure` 定义为该精度具有硬件匹配、closure-qualified 且独立同合同 correctness 的完整 GEMM 数值证据；它不等于 domain 上界、场景对齐或因果流水线闭环。
 
 | 精度 | compute 条件上界 | closure compute 实测 | 完整 GEMM | 同精度性能 denominator | `numeric_closure` |
 | --- | --- | --- | --- | --- | --- |
@@ -860,8 +1024,9 @@ numeric/campaign 范围，后一组描述当前三层模型完备性，字段不
 > surface 与 TMA payload/residency surface 尚未进入该布尔值。新增 runner、精确
 > 缺口矩阵和 Thor 重跑合同见
 > [`sm110_gemm_runner_adversarial_audit.md`](sm110_gemm_runner_adversarial_audit.md)。
-> 新结果回传前，既有数值仍是“允许独立资源理想重叠”假设下的经验包络，不得升级
-> 为联合可达性已证明的包络。
+> parameter supplement 已回传并按 12.9 节导入；它关闭 L2 duplex 与 cold proxy
+> surface，但物理 HBM duplex 和 exact joint-pipeline 仍未闭合，所以既有数值仍不得
+> 升级为联合可达性已证明的包络。
 
 ## 9. 自动化接口和反证规则
 
@@ -891,6 +1056,10 @@ python3 -m scripts.sm110_gemm_model.cli audit \
 python3 -m scripts.sm110_gemm_model.cli coverage \
   --repo-root . \
   --capacities scripts/sm110_gemm_model/profiles/capacities.json \
+  --hardware scripts/sm110_gemm_model/profiles/thor_sm110.json \
+  --workloads scripts/sm110_gemm_model/examples/workloads.json \
+  --schedules scripts/sm110_gemm_model/examples/schedules.json \
+  --pipeline-profiles scripts/sm110_gemm_model/profiles/pipeline_profiles.json \
   --observed-input results/gemm_sm110/sm110_gemm_core_128_4096_10trials.csv \
   --observed-input results/quant_gemm_sm110/sm110_quant_gemm_1024_sweep.csv
 ```
@@ -1042,7 +1211,7 @@ closure 合同为准。
    绑定 precision/payload/request/stage/thread/cache/SM-coverage/row-stride 完全匹配
    的 capacity。历史 tc5a probe 只冻结共同 A/B stride=2048，所以 FP16/BF16
    各自只有 N=2048 的 hot/cold 两个场景可用，没有任何精度的六场景 matrix 完整；
-   不能用 `all_common_resources_closed` 代替。
+   不能用旧 schema 下的公共资源通过状态代替。
 5. **因果流水线闭环**：latency、initiation interval、TMA/MMA/TMEM 依赖、startup
    和 drain 进入可执行 DAG。合同绑定的 persistent-worker 求解器已经实现，但
    当前没有 Thor profile 被导入；tc5a suite 已分别冻结 FP16 和 BF16 的 tensor-map
@@ -1478,13 +1647,84 @@ compute、component、full-GEMM 三批使用同一非阻塞 GPU 文件锁，因�
   [`audit_campaign.py`](../../microbench/sm110_gemm_causal_campaign/audit_campaign.py)、
   [`audit_causal_suite.py`](../../microbench/sm110_gemm_causal_campaign/audit_causal_suite.py)
 
+### 12.9 2026-08-17 parameter supplement 的导入边界
+
+Thor 已返回 parameter supplement 结果：采集代码提交为
+`0c42cbb`，结果分支为
+`thor-results/thor-t5000-parameter-plots-maxn-20260817-i`，GPU 数据提交为
+`aa845dd`，suite-log 后续提交为 `78e0948`。TMA payload 为 10/10 case、每 case
+10 trial；memory duplex 为 21/21 case、每 case 10 trial。两批独立 auditor 均通过，
+当前导入器对该真实结果树的离线重放得到 10 个 payload capacity 和 21 个 duplex
+capacity。
+
+这 21 个 duplex capacity 必须按证据语义拆分：14 个 hot-L2 case 导入为精确
+read:write ratio 作用域的 `l2.duplex`；7 个 cold case 只能导入为
+`hbm.duplex.proxy`。后者的 NCU 证明 external read 的 L2 miss sector 和 write 已进入
+L2 write path，但明确记录 `external_write_bytes_proven=false`，所以绝不能满足经验层
+要求的物理 `hbm.duplex`。因此“cold proxy ratio 全测完”与“HBM 外部读写 joint
+capacity 闭合”是两个不同布尔门禁。
+
+迁移后的经验层对 cold-HBM 同时要求 unique-input/output ratio 匹配的物理
+`hbm.duplex`，以及 schedule-level repeated-TMA/output ratio 匹配的 `l2.duplex`；
+hot-L2 只要求后者。条件上界层仍独立使用共享 `hbm.total`，以及整卡共享的
+`l2.read`=1024 B/cycle/GPU 和 `l2.write`=512 B/cycle/GPU。每 SM 的 TMA ingress
+仍是独立出口，不能乘进或除进这两个共享 L2 总线参数。这样既不会同时拼接两个
+互不保证可同时达到的单向 peak，也不会把 per-SM ingress 与 GPU-wide fabric
+重复计数。
+
+对已回传目录重新审计并生成可合并 JSON 的命令为：
+
+```bash
+python3 -m scripts.sm110_gemm_model.cli import-tma-payload-campaign \
+  --repo-root . \
+  --run-dir results/sm110_tma_payload_campaign/\
+thor-t5000-parameter-plots-maxn-20260817-i-tma-payload
+
+python3 -m scripts.sm110_gemm_model.cli import-memory-duplex-campaign \
+  --repo-root . \
+  --run-dir results/sm110_memory_duplex_campaign/\
+thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex
+```
+
+把真实 `-i` 结果与当前 workload/schedule manifest 合并重放后，所有必须的 L2
+duplex ratio 均已测量，所有必须的 cold HBM ratio 也都有 proxy，但物理 HBM duplex
+ratio 仍为 0。五点 payload surface 覆盖除 block-scaled scale transport 外的必须 payload；
+MXFP4/NVFP4 当前精确合同还需要 512 B 和 1024 B 的独立 scale payload，
+因此 `all_required_tma_payloads_measured=false`。这比简单写“10/10 case 完成”更严格：
+runner 自己的 case matrix 完成，不代表后续扩展的 schedule manifest 每个 payload 都在
+其覆盖域内。
+
+所以这轮数据关闭的是已声明五点 TMA surface、全部当前 L2 duplex ratio 和全部
+cold proxy ratio，不会把 `exact_tma_topology_surface.complete`、物理 HBM duplex、
+joint pipeline、全部精度完整 GEMM或最终 `complete` 改成 true。物理 HBM duplex 与逐
+workload/schedule 的 exact joint-pipeline capacity 仍需独立 runner；在它们返回前，
+模型必须给出 `insufficient_evidence`，而不是用 proxy 或独立 component peak 补数。
+
+parameter supplement 的具体 microbenchmark 来源为：
+
+- TMA payload CUDA source：
+  [`tma_gmem_smem_bandwidth.cu`](../../microbench/07_tma_gmem_smem_bandwidth/tma_gmem_smem_bandwidth.cu)
+- TMA payload runner、独立 auditor 与合同说明：
+  [`run_tma_payload_campaign.py`](../../microbench/sm110_tma_payload_campaign/run_tma_payload_campaign.py)、
+  [`audit_campaign.py`](../../microbench/sm110_tma_payload_campaign/audit_campaign.py)、
+  [`README.md`](../../microbench/sm110_tma_payload_campaign/README.md)
+- memory duplex CUDA source：
+  [`memory_path_bandwidth.cu`](../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu)
+- memory duplex runner、独立 auditor 与 cold-proxy 合同：
+  [`run_memory_duplex_campaign.py`](../../microbench/sm110_memory_duplex_campaign/run_memory_duplex_campaign.py)、
+  [`audit_campaign.py`](../../microbench/sm110_memory_duplex_campaign/audit_campaign.py)、
+  [`README.md`](../../microbench/sm110_memory_duplex_campaign/README.md)
+- 两批结果到模型容量的 fail-closed 导入器：
+  [`evidence_import.py`](../../scripts/sm110_gemm_model/evidence_import.py)
+
 后续复测必须另外保存 GPU 名称、SM/compute capability、driver、CUDA、NVCC、
 NCU、时钟、功耗模式、温度、Git commit、编译命令、binary hash、SASS hash 和
 运行时间戳。本轮 bounded compute/component/full-GEMM bundle 已保存这些 campaign
 级证据；更早的零散 snapshot 仍缺少统一 manifest，只能保留为 `snapshot_only`。
 逐 schedule TMA 合同的采集程序已经通过 54/54 本地静态合同、`sm_110a`
 交叉编译与函数块级 SASS attribution；本机 GPU 是 SM120，formal binary 明确拒绝
-非 SM110，因此没有把本机 runtime 冒充 Thor 证据。Thor capacity 尚未返回，仍是
+非 SM110，因此没有把本机 runtime 冒充 Thor 证据。这里所指 54-case 精确
+schedule/precision/row-stride TMA capacity 尚未从 Thor 返回，仍是
 证据缺口，不能先写入模型。结果返回后 `finish` 会生成
 `results/sm110_model_closure/$SUITE_ID/resource_capacities.json`，报告必须用
 `--resource-import` 显式加载；hot-L2 仍是 B/s/SM，cold-DRAM 仍是 B/s/GPU，二者

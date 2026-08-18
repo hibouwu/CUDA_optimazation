@@ -146,7 +146,7 @@ inline bool compare_result(const std::vector<float>& ref,
                 << ", got=" << got[i] << ", diff=" << diff << '\n';
     }
   }
-  std::cout << "numerical_contract=fp_accumulator"
+  std::cout << "numerical_contract=fp16_f32"
             << " mismatch_count=" << errors
             << " max_abs_error=" << max_abs_error
             << " max_tolerance_ratio=" << max_tolerance_ratio
