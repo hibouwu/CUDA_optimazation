@@ -19,6 +19,11 @@ from scripts.sm110_gemm_model.model import (
     evaluate,
     evaluate_manifest,
 )
+from scripts.sm110_gemm_model.schema_doc_audit import (
+    audit_canonical_layout,
+    audit_document,
+    audit_local_links,
+)
 
 
 class EvidenceMigrationTest(unittest.TestCase):
@@ -229,6 +234,11 @@ class EvidenceMigrationTest(unittest.TestCase):
         bf16 = next(row for row in rows if row.precision_id == "bf16_f32")
         self.assertFalse(bf16.complete)
         self.assertIn("holdout_workload", bf16.missing)
+
+    def test_split_document_set_is_schema_complete_and_link_clean(self) -> None:
+        self.assertEqual(audit_document(), [])
+        self.assertEqual(audit_canonical_layout(), [])
+        self.assertEqual(audit_local_links(), [])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 # Thor/SM110 three-layer GEMM reference model
 
 This directory is the executable companion to
-`Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md`.
+`Docs/blackwell_tensorcore/gemm/README.md`. The older
+`thor_sm110_gemm_performance_bounds.md` is retained as a historical/legacy
+evidence report, not the current formula source.
 
 The model deliberately separates:
 

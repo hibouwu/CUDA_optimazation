@@ -883,7 +883,9 @@ def audit_target_completeness(
             row.absolute_three_layer_closure for row in rows
         ),
         "final_source_appendix_generated": (
-            repo_root / "Docs/blackwell_tensorcore/microbenchmark_sources.md"
+            repo_root
+            / "Docs/blackwell_tensorcore/gemm/appendices/"
+              "microbenchmark_sources.md"
         ).is_file(),
     }
     for name, passed in checks.items():

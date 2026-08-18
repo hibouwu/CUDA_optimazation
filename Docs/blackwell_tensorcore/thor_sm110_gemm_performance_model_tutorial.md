@@ -1,5 +1,7 @@
 # 从零建立 Thor/SM110 GEMM 性能上界模型
 
+> **Legacy tutorial notice（2026-08-18）**：本单体教程生成于 current duplex/exact/causal schema 之前，保留手算、练习和历史证据，但不再是规范公式来源。新的学习入口是 [`gemm/tutorial/README.md`](./gemm/tutorial/README.md)，current 模型章节位于 [`gemm/model/`](./gemm/model/01_scope_and_claims.md)。涉及 empirical `hbm.read/write` 或 `l2.read/write` 的旧课程必须结合 current ratio-qualified duplex 章节重读。
+
 > 本文是一份伴随式教学文档。它不替代严格证据报告，而是解释每个公式为什么成立、
 > 每个参数属于哪个物理作用域，以及怎样从硬件容量一步步得到 GEMM 性能上界。
 >

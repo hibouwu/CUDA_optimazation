@@ -1,5 +1,7 @@
 # Thor/SM110 稠密 GEMM：条件性能上界、经验理想包络与实测最好值
 
+> **Legacy / historical notice（2026-08-18）**：本文件保留旧链接、历史 closure 数值和模型收紧过程，不再作为 current 规范入口。当前模型从 [`gemm/README.md`](./gemm/README.md) 开始；现行公式见 [`gemm/model/`](./gemm/model/01_scope_and_claims.md)，实验合同见 [`gemm/experiments/`](./gemm/experiments/EXP-01-compute-surface.md)。本文件中独立 empirical `hbm.read/write`、`l2.read/write` 和旧 128.436 TFLOP/s envelope 只按历史 schema 解读。
+
 > **研究目标**：回答“在 Thor/SM110 的物理约束下，一个没有可避免性能浪费的稠密 GEMM 最快可以到哪里”，而不是只预测仓库中的 `tc3`。
 >
 > **模型状态**：结构模型、证据分级、工作量计算、完整 GEMM 结果导入和缺口审计已经可执行；Thor composite closure 已由代码提交 `25d8cf71fa566150b64f2eb1dc7f814ce70fa354` 生成，并由结果提交 `ba651f0ebddd0983ceca5b352e65aa7ed5b7f32c` 回传。当前还实现了合同绑定的 persistent-worker causal DAG 求解器，并冻结了 tc5a 的 FP16/BF16 双精度因果采集合同：每种精度 91 case、910 trial、4 份 NCU，总计 182 case、1,820 trial、8 份 NCU；Thor timing profile 尚未回传。按“schedule/precision/row-stride 精确 TMA capacity + closure-qualified causal profile”重新收紧后，当前 12 精度证据矩阵计数为 implementation 6、numeric 4、完整 resource-envelope matrix 0、causal 0、end-to-end 0；新增 E5M2 runner 尚未产生 Thor full-GEMM observation，历史 tc5a 也仅精确支持 N=K=2048 的 hot/cold 两个 resource 场景。不能把 runner 就绪、求解器存在或旧 4/12 numeric closure 称为完整三层模型闭环。

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit that every executable model field is defined in the main document."""
+"""Audit current split GEMM documentation against the executable schema."""
 
 from __future__ import annotations
 
@@ -29,7 +29,44 @@ from .suite import SuiteDeclaredProvenance, SuiteLinkage
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCUMENT = ROOT / "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md"
+GEMM_DOC_ROOT = ROOT / "Docs/blackwell_tensorcore/gemm"
+DOCUMENT = GEMM_DOC_ROOT / "appendices/schema_reference.md"
+
+CANONICAL_DOCUMENTS = (
+    GEMM_DOC_ROOT / "README.md",
+    *(GEMM_DOC_ROOT / "model" / name for name in (
+        "01_scope_and_claims.md",
+        "02_symbols_units_and_workload.md",
+        "03_work_accounting.md",
+        "04_strict_performance_upper.md",
+        "05_empirical_resource_envelope.md",
+        "06_causal_pipeline_model.md",
+        "07_observed_gemm_and_falsification.md",
+        "08_current_coverage_and_gaps.md",
+    )),
+    *(GEMM_DOC_ROOT / "experiments" / name for name in (
+        "EXP-01-compute-surface.md",
+        "EXP-02-l2-physical-bounds.md",
+        "EXP-03-tma-payload-surface.md",
+        "EXP-04-memory-duplex-surface.md",
+        "EXP-05-exact-tma-topology.md",
+        "EXP-06-tmem-readback-and-scale.md",
+        "EXP-07-causal-pipeline.md",
+        "EXP-08-full-gemm-validation.md",
+    )),
+    *(GEMM_DOC_ROOT / "appendices" / name for name in (
+        "schema_reference.md",
+        "microbenchmark_sources.md",
+        "current_model_replay.md",
+        "historical_results.md",
+        "audit_and_reproduction.md",
+    )),
+    *(GEMM_DOC_ROOT / "tutorial" / name for name in (
+        "README.md",
+        "01_fp16_n2048_worked_example.md",
+        "02_common_failure_modes.md",
+    )),
+)
 
 COVERAGE_TOP_LEVEL_FIELDS = {
     "precision_coverage",
@@ -130,8 +167,139 @@ def audit_document(path: Path = DOCUMENT) -> list[str]:
     return errors
 
 
+def audit_canonical_layout() -> list[str]:
+    errors: list[str] = []
+    for path in CANONICAL_DOCUMENTS:
+        if not path.is_file():
+            errors.append(f"missing canonical document: {path.relative_to(ROOT)}")
+
+    experiment_dir = GEMM_DOC_ROOT / "experiments"
+    for path in sorted(experiment_dir.glob("EXP-*.md")):
+        text = path.read_text(encoding="utf-8")
+        for token in ("研究问题", "对应模型", "不能证明什么", "源码与工件"):
+            if token not in text:
+                errors.append(
+                    f"experiment document lacks required section {token}: "
+                    f"{path.name}"
+                )
+
+    model_requirements = {
+        "03_work_accounting.md": (
+            "W_{\\mathrm{use}}",
+            "Q_{\\mathrm{TMA,issued}}",
+            "tma_a_scale_bytes",
+            "512 B",
+            "1024 B",
+        ),
+        "04_strict_performance_upper.md": (
+            "T_r^{\\mathrm{LB}}",
+            "P_{\\mathrm{ub}}",
+            "1024\\ \\mathrm{B/cycle/GPU}",
+            "512\\ \\mathrm{B/cycle/GPU}",
+            "domain_conditional_upper",
+        ),
+        "06_causal_pipeline_model.md": (
+            "\\lambda_J",
+            "\\iota_J",
+            "T_{\\mathrm{worker}}",
+            "empirical_ideal_envelope",
+        ),
+        "07_observed_gemm_and_falsification.md": (
+            "P_{\\mathrm{obs}}",
+            "independent_same_contract",
+            "absolute_three_layer_closure",
+        ),
+    }
+    for name, tokens in model_requirements.items():
+        path = GEMM_DOC_ROOT / "model" / name
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token in tokens:
+            if token not in text:
+                errors.append(f"model document {name} lacks contract token: {token}")
+
+    empirical_path = GEMM_DOC_ROOT / "model/05_empirical_resource_envelope.md"
+    if empirical_path.is_file():
+        empirical = empirical_path.read_text(encoding="utf-8")
+        for token in (
+            'resource="hbm.duplex"',
+            "`hbm.duplex.proxy`",
+            "`l2.duplex`",
+            "精确 read:write ratio",
+            "insufficient_evidence",
+        ):
+            if token not in empirical:
+                errors.append(
+                    f"empirical model document lacks current semantic token: {token}"
+                )
+        for stale in (
+            "经验层同时使用方向独立的 `hbm.read`/`hbm.write`",
+            "empirical `hbm.read`",
+            "empirical `l2.read`",
+        ):
+            if stale in empirical:
+                errors.append(
+                    f"empirical model document retains legacy semantic: {stale}"
+                )
+
+    replay_path = GEMM_DOC_ROOT / "appendices/current_model_replay.md"
+    if replay_path.is_file():
+        replay = replay_path.read_text(encoding="utf-8")
+        for token in (
+            "f06f2cd917a4cb23806b5e1be06120be9152ed7b",
+            "aa845dd9e70e2c541ae3a7d5293bf8de4bd55092",
+            "physical HBM duplex",
+            "target completion",
+        ):
+            if token not in replay:
+                errors.append(f"current replay lacks identity/status token: {token}")
+
+    legacy_documents = (
+        ROOT / "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_bounds.md",
+        ROOT / "Docs/blackwell_tensorcore/thor_sm110_gemm_performance_model_tutorial.md",
+        ROOT / "Docs/blackwell_tensorcore/thor_sm110_current_model_replay.md",
+    )
+    for path in legacy_documents:
+        if path.is_file() and "notice（2026-08-18）" not in path.read_text(
+            encoding="utf-8"
+        ):
+            errors.append(f"legacy document lacks migration notice: {path.name}")
+    return errors
+
+
+def audit_local_links() -> list[str]:
+    errors: list[str] = []
+    for document in CANONICAL_DOCUMENTS:
+        if not document.is_file():
+            continue
+        text = document.read_text(encoding="utf-8")
+        for raw_target in re.findall(r"\]\(([^)\n]+)\)", text):
+            target = raw_target.strip().strip("<>")
+            if (
+                not target
+                or target.startswith(("http://", "https://", "#"))
+                or "$" in target
+                or "<" in target
+            ):
+                continue
+            target = target.split("#", 1)[0]
+            if not target:
+                continue
+            resolved = (document.parent / target).resolve()
+            if not resolved.exists():
+                errors.append(
+                    f"broken local link: {document.relative_to(ROOT)} -> {target}"
+                )
+    return errors
+
+
 def main() -> int:
-    errors = audit_document()
+    errors = [
+        *audit_document(),
+        *audit_canonical_layout(),
+        *audit_local_links(),
+    ]
     if errors:
         print("SCHEMA_DOC_AUDIT_FAIL")
         for error in errors:

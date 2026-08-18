@@ -35,7 +35,9 @@ campaigns share the global SM110 GPU lock and require NCU.
 The experiment rationale, parameter definitions, case matrices, acceptance
 thresholds, evidence boundaries, current coverage gaps, and exact source index
 are maintained in
-[`thor_sm110_gemm_microbenchmark_experiment.md`](../Docs/blackwell_tensorcore/thor_sm110_gemm_microbenchmark_experiment.md).
+the current short experiment contracts under
+[`Docs/blackwell_tensorcore/gemm/experiments/`](../Docs/blackwell_tensorcore/gemm/experiments/EXP-01-compute-surface.md).
+The older monolithic experiment document remains a legacy index.
 
 Do not enable `set -euo pipefail` directly in an interactive login shell. An
 undefined status variable or a transient read of a changing JSON file can then

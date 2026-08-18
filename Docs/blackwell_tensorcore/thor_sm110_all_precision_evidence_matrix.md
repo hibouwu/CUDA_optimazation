@@ -1,5 +1,7 @@
 # Thor/SM110 全精度 GEMM 证据矩阵
 
+> **Historical generated matrix notice（2026-08-18）**：本矩阵绑定旧 composite evidence/schema，保留历史审计用途。current coverage 入口为 [`gemm/model/08_current_coverage_and_gaps.md`](./gemm/model/08_current_coverage_and_gaps.md)；重新生成前不得把本表称为 current f06 target-completion 输出。
+
 本表由可执行模型的 numeric coverage 与 full-GEMM support manifest 合并生成。
 `implementation_ready` 只表示实现、数值参考和同精度性能 denominator 已经
 具备采集条件；`numeric_closure` 只表示所需 Thor 数值证据已经回传并通过

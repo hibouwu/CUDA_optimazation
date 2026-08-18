@@ -1,5 +1,7 @@
 # Thor/SM110 GEMM 性能上限模型：Microbenchmark 实验设计、采集合同与证据状态
 
+> **Legacy monolithic experiment index（2026-08-18）**：当前实验合同已按物理问题拆到 [`gemm/experiments/`](./gemm/experiments/EXP-01-compute-surface.md)。本文件保留旧章节号和运行历史，新增实验语义应只在对应 `EXP-*` 文档中定义。
+
 > **文档目的**：说明 Thor/SM110 GEMM 性能上限模型为什么需要这些
 > microbenchmark、每个实验具体测什么、如何控制变量、怎样进入模型，以及哪些
 > 数字仍不能称为物理上限。

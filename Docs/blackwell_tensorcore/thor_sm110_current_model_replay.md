@@ -1,5 +1,7 @@
 # Thor/SM110 GEMM closure 数值摘要
 
+> **Historical replay notice（2026-08-18）**：本报告基于 `25d8cf7...`/`ba651f0...` 及迁移前独立 read/write empirical schema，不再代表 current f06 模型。当前重放边界见 [`gemm/appendices/current_model_replay.md`](./gemm/appendices/current_model_replay.md)。
+
 本报告由当前模型离线重放已导入的 campaign 证据生成；报告生成动作本身不代表
 重新运行了 GPU。是否属于 fresh acquisition，应以 campaign source、run ID、
 commit、raw trial 和环境 artifact 为准。
