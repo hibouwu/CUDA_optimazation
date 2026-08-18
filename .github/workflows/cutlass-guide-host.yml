@@ -1,0 +1,34 @@
+name: cutlass-guide-host-contracts
+
+on:
+  pull_request:
+    paths:
+      - 'cutlass-gemm-cpp-guide/**'
+      - '.gitmodules'
+      - '.github/workflows/cutlass-guide-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cutlass-gemm-cpp-guide/**'
+      - '.gitmodules'
+      - '.github/workflows/cutlass-guide-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: cutlass-gemm-cpp-guide
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure
+        run: cmake --preset host
+      - name: Build
+        run: cmake --build --preset host
+      - name: Test
+        run: ctest --preset host

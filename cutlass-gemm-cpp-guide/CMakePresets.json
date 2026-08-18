@@ -1,0 +1,64 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "host",
+      "displayName": "Host contracts only",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-host",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GUIDE_ENABLE_CUDA_CASES": "OFF",
+        "GUIDE_ENABLE_GPU_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "sm110a-static",
+      "displayName": "SM110a compile and codegen",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-sm110a-static",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GUIDE_ENABLE_CUDA_CASES": "ON",
+        "GUIDE_ENABLE_GPU_TESTS": "OFF",
+        "GUIDE_ENABLE_EXPERIMENTAL_CASES": "ON"
+      }
+    },
+    {
+      "name": "sm110a-gpu",
+      "displayName": "SM110a runtime correctness",
+      "inherits": "sm110a-static",
+      "binaryDir": "${sourceDir}/build-sm110a-gpu",
+      "cacheVariables": {
+        "GUIDE_ENABLE_GPU_TESTS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {"name": "host", "configurePreset": "host"},
+    {"name": "sm110a-static", "configurePreset": "sm110a-static"},
+    {"name": "sm110a-gpu", "configurePreset": "sm110a-gpu"}
+  ],
+  "testPresets": [
+    {
+      "name": "host",
+      "configurePreset": "host",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "sm110a-static",
+      "configurePreset": "sm110a-static",
+      "output": {"outputOnFailure": true}
+    },
+    {
+      "name": "sm110a-gpu",
+      "configurePreset": "sm110a-gpu",
+      "output": {"outputOnFailure": true}
+    }
+  ]
+}

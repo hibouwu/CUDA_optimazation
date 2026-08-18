@@ -1,0 +1,67 @@
+name: cutlass-guide-sm110a-static
+
+on:
+  pull_request:
+    paths:
+      - 'cutlass-gemm-cpp-guide/**'
+      - '.gitmodules'
+      - '.github/workflows/cutlass-guide-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cutlass-gemm-cpp-guide/**'
+      - '.gitmodules'
+      - '.github/workflows/cutlass-guide-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    container:
+      image: nvcr.io/nvidia/cuda@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6
+    defaults:
+      run:
+        working-directory: cutlass-gemm-cpp-guide
+    steps:
+      - name: Install build tools
+        working-directory: ${{ github.workspace }}
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake ninja-build python3 git ca-certificates
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Validate pinned dependency
+        run: python3 tools/validate_cases.py --root .
+      - name: Configure
+        env:
+          CUDACXX: /usr/local/cuda/bin/nvcc
+        run: cmake --preset sm110a-static
+      - name: Build all SM110a cases
+        run: cmake --build --preset sm110a-static
+      - name: Generate and inspect function-local PTX/SASS
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ptx artifacts/codegen
+          for manifest in cases/*/case.json; do
+            case_id="$(basename "$(dirname "$manifest")")"
+            nvcc -std=c++17 -O3 --expt-relaxed-constexpr -arch=sm_110a -ptx \
+              -Iinclude -Ithird_party/cutlass/include -Ithird_party/cutlass/tools/util/include \
+              -DGUIDE_CASE_ID=\"${case_id}\" \
+              -DGUIDE_CUTLASS_SHA=\"e05f953a5b3d38adc240df2ff928e0421c2abba3\" \
+              -DGUIDE_TOOLCHAIN_LOCK_SHA=\"ci\" -DGUIDE_SOURCE_SHA=\"ci\" \
+              "cases/${case_id}/case.cu" -o "artifacts/ptx/${case_id}.ptx"
+            python3 tools/inspect_codegen.py --root . --case "$case_id" \
+              --binary "build-sm110a-static/${case_id}" \
+              --ptx "artifacts/ptx/${case_id}.ptx" \
+              --output "artifacts/codegen/${case_id}"
+          done
+      - name: Upload static evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutlass-guide-sm110a-static-evidence
+          path: cutlass-gemm-cpp-guide/artifacts/
+          if-no-files-found: error

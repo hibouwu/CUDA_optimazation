@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "case_id": "tail_dense_f16_p130x129x127",
+  "title": "FP16 dense GEMM with logical M/N/K tails and padded strides",
+  "track": "A+B",
+  "target": {"virtual_arch": "compute_110a", "arch": "sm_110a", "cutlass_arch_tag": "cutlass::arch::Sm100"},
+  "problem": {"mnkl": [130, 129, 127, 1], "logical_b_storage": "N_x_K", "physical_strides": {"lda": 128, "ldb": 136, "ldd": 132}},
+  "kernel": {"mma_tile_mnk": [128, 128, 64], "instruction_mnk": [128, 128, 16], "cluster_mnk": [1, 1, 1], "cta_group": 1, "operand_source": "SS", "pipeline_stages": 0, "mainloop_schedule": "cutlass::gemm::KernelTmaWarpSpecialized1SmSm100", "epilogue_schedule": "cutlass::epilogue::NoSmemWarpSpecialized1Sm"},
+  "types": {"a": {"value": "cutlass::half_t"}, "b": {"value": "cutlass::half_t"}, "c": {"value": "void"}, "accumulator": "float", "d": "float"},
+  "layouts": {"a": "RowMajor padded", "b": "ColumnMajor padded", "d": "RowMajor padded", "alignment_elements": {"a": 8, "b": 8, "d": 4}},
+  "codegen": {"attribution": "single_target_function_block", "ptx": {"required": ["cp\\.async\\.bulk\\.tensor", "tcgen05\\.mma.*kind::f16", "tcgen05\\.ld"], "forbidden": ["tcgen05\\.cp"]}, "sass": {"required_families": ["UTMALDG", "UTCHMMA", "LDTM"], "exact_counts_gating": false}},
+  "numerical": {"reference": "independent_cpu_reference", "seed": 20260817, "patterns": ["tail_sentinel", "index_sensitive", "misaligned_pointer_rejected"], "atol": 0.01, "rtol": 0.01, "full_output": true, "canary": true},
+  "evidence": {"documented": true, "source_present": true, "compile_passed": true, "ptx_verified": true, "sass_verified": true, "runtime_correct": false, "performance_measured": false}
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "case_id": "epilogue_bias_relu_f16_p128",
+  "title": "FP16 dense GEMM with fused bias and ReLU epilogue",
+  "track": "A",
+  "target": {"virtual_arch": "compute_110a", "arch": "sm_110a", "cutlass_arch_tag": "cutlass::arch::Sm100"},
+  "problem": {"mnkl": [128, 128, 128, 1], "logical_b_storage": "N_x_K", "bias": [128]},
+  "kernel": {"mma_tile_mnk": [128, 128, 64], "instruction_mnk": [128, 128, 16], "cluster_mnk": [1, 1, 1], "cta_group": 1, "operand_source": "SS", "pipeline_stages": 0, "mainloop_schedule": "cutlass::gemm::KernelTmaWarpSpecialized1SmSm100", "epilogue_schedule": "cutlass::epilogue::TmaWarpSpecialized1Sm"},
+  "types": {"a": {"value": "cutlass::half_t"}, "b": {"value": "cutlass::half_t"}, "c": {"value": "bias<float>"}, "accumulator": "float", "d": "cutlass::half_t"},
+  "layouts": {"a": "RowMajor", "b": "ColumnMajor", "d": "RowMajor", "alignment_elements": {"a": 8, "b": 8, "d": 8}},
+  "codegen": {"attribution": "single_target_function_block", "ptx": {"required": ["cp\\.async\\.bulk\\.tensor", "tcgen05\\.mma.*kind::f16", "tcgen05\\.ld"], "forbidden": []}, "sass": {"required_families": ["UTMALDG", "UTCHMMA", "LDTM"], "exact_counts_gating": false}},
+  "numerical": {"reference": "independent_cpu_reference", "seed": 20260817, "patterns": ["negative_relu_boundary", "index_sensitive", "seeded_random"], "atol": 0.05, "rtol": 0.02, "full_output": true, "canary": true},
+  "evidence": {"documented": true, "source_present": true, "compile_passed": true, "ptx_verified": true, "sass_verified": true, "runtime_correct": false, "performance_measured": false}
+}

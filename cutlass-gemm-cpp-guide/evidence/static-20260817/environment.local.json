@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "platform": {
+    "machine": "x86_64",
+    "system": "Linux",
+    "release": "7.1.5-101.fc43.x86_64"
+  },
+  "lock_sha256": "673e0910cb5d66076f7dd58e6d82673c98a7ec195ee18908dae9dcfe6316ceeb",
+  "cutlass_head": {
+    "command": [
+      "git",
+      "-C",
+      "third_party/cutlass",
+      "rev-parse",
+      "HEAD"
+    ],
+    "returncode": 0,
+    "output": "e05f953a5b3d38adc240df2ff928e0421c2abba3"
+  },
+  "nvcc": {
+    "command": [
+      "nvcc",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0"
+  },
+  "ptxas": {
+    "command": [
+      "ptxas",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "ptxas: NVIDIA (R) Ptx optimizing assembler\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:55:12_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0"
+  },
+  "nvdisasm": {
+    "command": [
+      "nvdisasm",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "nvdisasm: NVIDIA (R) CUDA disassembler\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Thu_Aug_14_07:20:41_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.85\nBuild cuda_13.0.r13.0/compiler.36400806_0"
+  },
+  "host_compiler": {
+    "command": [
+      "g++",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "g++ (GCC) 15.3.1 20260722 (Red Hat 15.3.1-1)\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+  },
+  "cmake": {
+    "command": [
+      "cmake",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "cmake version 3.31.11\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake)."
+  },
+  "ninja": {
+    "command": [
+      "ninja",
+      "--version"
+    ],
+    "returncode": 0,
+    "output": "1.13.1"
+  },
+  "gpu": {
+    "command": [
+      "nvidia-smi",
+      "--query-gpu=name,compute_cap,driver_version",
+      "--format=csv,noheader"
+    ],
+    "returncode": 9,
+    "output": "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running."
+  }
+}

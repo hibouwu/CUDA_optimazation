@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "static-20260817",
+  "status": "STATIC_PASS_RUNTIME_NOT_RUN",
+  "target": "sm_110a",
+  "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+  "toolchain": {
+    "container": "nvcr.io/nvidia/cuda@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6",
+    "nvcc": "13.0.88",
+    "gcc": "13.3.0"
+  },
+  "counts": {"source_present": 10, "compile_passed": 10, "ptx_verified": 10, "sass_verified": 10, "runtime_correct": 0},
+  "cases": {
+    "dense_f16_1sm_p128": {"binary_sha256": "3669f3e9743f11c1a4e45b03ccad47af0a7f971f8251f099889bd3ba60dac653", "ptx_sha256": "483f0b1f64b0d4b8316366232fbfd8ce2dc70db7f22b7ef6e73bc56de39fc9cf"},
+    "dense_bf16_1sm_p128": {"binary_sha256": "8425797732029689bf299a48fd6ab23b0192f194b6d124887d13369553fdcab7", "ptx_sha256": "5c3520e2c96492e74fc9e1fd47376a4063af73d489855adf3469bc782ebed55f"},
+    "dense_fp8_1sm_p128": {"binary_sha256": "865d4ea5d3b4cc0c3fd921b2aebd56e0565827de68c3c6324854242d67166978", "ptx_sha256": "e6960a271eccce8bd8542aa6158514f34312ef68106b2b76dfb49fddbc94d951"},
+    "dense_f16_2sm_p256x128x128": {"binary_sha256": "7a0766395a51872abb88bb9e72f502a2250c2a220fead29e3e25039ca46f5ae6", "ptx_sha256": "6b53054bd845751ae8d6e95b1cba87e2d9a9ba1b49d10ebf5cf47eb643dd649b"},
+    "bs_mxfp8_1sm_p128": {"binary_sha256": "99208fb102b068f5b7884509b7d425d5d11954b5ac7e2c6ce30cd4debbdd209c", "ptx_sha256": "7475c0fc0612d35229218afe322fb0fe22542dad7616c47222695683b041b762"},
+    "bs_mxfp4_1sm_p128x128x256": {"binary_sha256": "a690fea6a6bbd8f29224e0fcfe454724729a6e8a6262d319d0525e06b0067663", "ptx_sha256": "2189f2dbc170b9022ad04a572cb9aa67fa4ab0721fff68cb8f87e0119e410de2"},
+    "bs_nvfp4_1sm_p128x128x256": {"binary_sha256": "0965f940a10afa2bf246d2d24c850bb294047dd15f9dfdf2d6cc778bbed339b5", "ptx_sha256": "f25f3106ede1cc85d6f744c5b518534707d0507de4664c02de306a25c7272cd2"},
+    "sparse_bs_nvfp4_1sm_p128x128x256": {"binary_sha256": "01fcc09a07efff5658f930480c3370ae86e37582a0e03d46451b2b93cb594c3c", "ptx_sha256": "72a1c78fb1e7d186607ca212a78787ce0cb05ff76196b6bb05b6e5987c216683"},
+    "epilogue_bias_relu_f16_p128": {"binary_sha256": "e31ebb8579edde5bf05220a5074078c2eaab52f723c6ac1acade18319cabdb88", "ptx_sha256": "1c0a7fc028138d7879dc912853f22ff58fa397869d6deaf03394ef99a3eea901"},
+    "tail_dense_f16_p130x129x127": {"binary_sha256": "adc66f95437206bdd7673b1b995c4bac6c78dd0e7477283892875ba412f83bd0", "ptx_sha256": "377eded20d75b848ca2c3e1ae75eaf6cdead635e592891b1d4c7fb5ddf06aa7d"}
+  },
+  "evidence_boundary": "Compilation and function-local PTX/SASS contracts only. No usable GPU was present; runtime correctness and performance are not claimed."
+}
