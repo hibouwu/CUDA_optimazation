@@ -1,0 +1,16 @@
+launched run_id=thor-t5000-parameter-plots-maxn-20260817-i-tma-payload pid=1949230
+log=/xplorer/shijy/CUDA_optimazation/results/sm110_tma_payload_campaign/thor-t5000-parameter-plots-maxn-20260817-i-tma-payload/launcher.log
+{
+  "errors": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_tma_payload_campaign/thor-t5000-parameter-plots-maxn-20260817-i-tma-payload"
+}
+launched run_id=thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex pid=1952178 log=results/sm110_memory_duplex_campaign/thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex/launcher.log
+{
+  "errors": [],
+  "pass": true,
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_memory_duplex_campaign/thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex"
+}
+PARAMETER_SUPPLEMENT_COMPLETE
+tma_payload_dir=results/sm110_tma_payload_campaign/thor-t5000-parameter-plots-maxn-20260817-i-tma-payload
+memory_duplex_dir=results/sm110_memory_duplex_campaign/thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex
