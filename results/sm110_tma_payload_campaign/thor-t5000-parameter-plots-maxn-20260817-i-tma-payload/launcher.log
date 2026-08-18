@@ -1,0 +1,16 @@
+PASS tma_l2_hit_4k_slots2_single_sm: median=1.242063947e+10 B/s
+PASS tma_l2_hit_8k_slots2_single_sm: median=2.332843559e+10 B/s
+PASS tma_l2_hit_16k_slots2_single_sm: median=4.159535483e+10 B/s
+PASS tma_l2_hit_32k_slots2_single_sm: median=6.850597485e+10 B/s
+PASS tma_l2_hit_64k_slots2_single_sm: median=1.015017000e+11 B/s
+PASS tma_dram_stream_4k_slots2_full_gpu: median=9.788624383e+10 B/s
+PASS tma_dram_stream_8k_slots2_full_gpu: median=1.604364010e+11 B/s
+PASS tma_dram_stream_16k_slots2_full_gpu: median=2.509586480e+11 B/s
+PASS tma_dram_stream_32k_slots2_full_gpu: median=2.617456451e+11 B/s
+PASS tma_dram_stream_64k_slots2_full_gpu: median=2.639735434e+11 B/s
+{
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_tma_payload_campaign/thor-t5000-parameter-plots-maxn-20260817-i-tma-payload",
+  "status": "complete",
+  "plot_count": 1,
+  "plots": "/xplorer/shijy/CUDA_optimazation/results/sm110_tma_payload_campaign/thor-t5000-parameter-plots-maxn-20260817-i-tma-payload/plots"
+}

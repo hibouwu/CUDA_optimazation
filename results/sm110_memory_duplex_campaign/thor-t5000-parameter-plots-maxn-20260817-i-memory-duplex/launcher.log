@@ -1,0 +1,6 @@
+{
+  "run_dir": "/xplorer/shijy/CUDA_optimazation/results/sm110_memory_duplex_campaign/thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex",
+  "status": "complete",
+  "plot_count": 1,
+  "plots": "/xplorer/shijy/CUDA_optimazation/results/sm110_memory_duplex_campaign/thor-t5000-parameter-plots-maxn-20260817-i-memory-duplex/plots"
+}

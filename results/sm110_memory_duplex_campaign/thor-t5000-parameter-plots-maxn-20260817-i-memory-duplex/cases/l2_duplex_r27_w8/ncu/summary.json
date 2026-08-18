@@ -1,0 +1,30 @@
+{
+  "evidence_contract": "hot_l2_read_hit_plus_write_l2_issue",
+  "external_write_bytes_proven": false,
+  "iterations": 1,
+  "metrics": [
+    "gpu__time_duration.sum",
+    "lts__t_bytes.sum",
+    "lts__t_sectors_op_read.sum",
+    "lts__t_sectors_op_write.sum",
+    "lts__t_sectors_op_read_lookup_hit.sum",
+    "lts__t_sectors_op_read_lookup_miss.sum"
+  ],
+  "raw_path": "ncu/raw.csv",
+  "raw_sha256": "2542d88aa0729132f6c012b29cbfa432458c3638bc2539a56e1832cb1c4caaff",
+  "report_path": "ncu/profile.ncu-rep",
+  "report_sha256": "5fcd0463782729b247a6cbf4ffc2a24acba12d2ca0a8d5988d6904dfe1f05402",
+  "requested_read_bytes": 70778880,
+  "requested_write_bytes": 20971520,
+  "returncode": 0,
+  "stderr_path": "ncu/stderr.log",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "values": {
+    "gpu__time_duration.sum": 187520.0,
+    "lts__t_bytes.sum": 92137344.0,
+    "lts__t_sectors_op_read.sum": 2212715.0,
+    "lts__t_sectors_op_read_lookup_hit.sum": 1686826.0,
+    "lts__t_sectors_op_read_lookup_miss.sum": 525290.0,
+    "lts__t_sectors_op_write.sum": 660209.0
+  }
+}

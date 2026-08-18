@@ -1,0 +1,12 @@
+{"completed_cases": 0, "current_case": null, "hostname": "thor-6642", "pid": 1949230, "status": "running", "updated_at_utc": "2026-08-18T01:25:11.957368+00:00"}
+{"completed_cases": 0, "current_case": "tma_l2_hit_4k_slots2_single_sm", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:21.715090+00:00"}
+{"completed_cases": 1, "current_case": "tma_l2_hit_8k_slots2_single_sm", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:25.834045+00:00"}
+{"completed_cases": 2, "current_case": "tma_l2_hit_16k_slots2_single_sm", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:29.604265+00:00"}
+{"completed_cases": 3, "current_case": "tma_l2_hit_32k_slots2_single_sm", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:33.352374+00:00"}
+{"completed_cases": 4, "current_case": "tma_l2_hit_64k_slots2_single_sm", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:36.994468+00:00"}
+{"completed_cases": 5, "current_case": "tma_dram_stream_4k_slots2_full_gpu", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:40.652072+00:00"}
+{"completed_cases": 6, "current_case": "tma_dram_stream_8k_slots2_full_gpu", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:44.389499+00:00"}
+{"completed_cases": 7, "current_case": "tma_dram_stream_16k_slots2_full_gpu", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:48.120240+00:00"}
+{"completed_cases": 8, "current_case": "tma_dram_stream_32k_slots2_full_gpu", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:51.844498+00:00"}
+{"completed_cases": 9, "current_case": "tma_dram_stream_64k_slots2_full_gpu", "hostname": "thor-6642", "pid": 1949230, "status": "running", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:55.566914+00:00"}
+{"completed_cases": 10, "current_case": null, "hostname": "thor-6642", "pid": 1949230, "status": "complete", "total_cases": 10, "updated_at_utc": "2026-08-18T01:25:59.307301+00:00"}

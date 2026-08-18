@@ -1,0 +1,55 @@
+{
+  "binary_sha256": "0c23e7f0881fb9f21c5c051b4364754e71255cfc7b6f6776e26c48361a771c49",
+  "case_id": "l2_duplex_r64_w1",
+  "evidence_contract": "hot_l2_read_hit_plus_write_l2_issue",
+  "external_write_bytes_proven": false,
+  "fingerprint": "b341c4479d35bb7a5524ce371532a30833fc3e4d8dc709cf07a84d9c04c5b89c",
+  "function_sass_path": "build/duplex_kernel.sass",
+  "function_sass_sha256": "95f2d6decaeeea3e10727c00e61a06ad31372c2a2cd12cbdc647cee1305c4824",
+  "max_operation_groups": 128,
+  "ncu": {
+    "evidence_contract": "hot_l2_read_hit_plus_write_l2_issue",
+    "external_write_bytes_proven": false,
+    "iterations": 1,
+    "metrics": [
+      "gpu__time_duration.sum",
+      "lts__t_bytes.sum",
+      "lts__t_sectors_op_read.sum",
+      "lts__t_sectors_op_write.sum",
+      "lts__t_sectors_op_read_lookup_hit.sum",
+      "lts__t_sectors_op_read_lookup_miss.sum"
+    ],
+    "raw_path": "ncu/raw.csv",
+    "raw_sha256": "5f43c4222a076fb28b427d523768ee1f2ab3f4a023d6efdd849c6a3ad57fcfc0",
+    "report_path": "ncu/profile.ncu-rep",
+    "report_sha256": "c5392284a835a56c67c0ddb3de29e1da67be9c8ea095b13b1491f8d332abf722",
+    "requested_read_bytes": 167772160,
+    "requested_write_bytes": 2621440,
+    "returncode": 0,
+    "stderr_path": "ncu/stderr.log",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "values": {
+      "gpu__time_duration.sum": 205568.0,
+      "lts__t_bytes.sum": 170610784.0,
+      "lts__t_sectors_op_read.sum": 5239262.0,
+      "lts__t_sectors_op_read_lookup_hit.sum": 4715142.0,
+      "lts__t_sectors_op_read_lookup_miss.sum": 525427.0,
+      "lts__t_sectors_op_write.sum": 86387.0
+    }
+  },
+  "rate_per_second_max": 1545660377358.4905,
+  "rate_per_second_median": 1543252563242.3955,
+  "rate_per_second_min": 1540183671993.6365,
+  "rate_unit": "B/s",
+  "residency": "hot_l2",
+  "resource": "l2.duplex.r64_w1",
+  "sass_sha256": "c30ae664a5940c99a91dc6b01eac2a6f790fd4bb25e6e702c05431749149bd2a",
+  "sass_tokens": [
+    "LDG.E.128",
+    "STG.E.128"
+  ],
+  "source_path": "microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu",
+  "source_sha256": "df1eaf2a7dc103a7638bcc581de7e7cc792ac1450d407adcc85d920825d870fa",
+  "status": "ok",
+  "trial_count": 10
+}

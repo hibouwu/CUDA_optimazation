@@ -1,0 +1,29 @@
+{
+  "expected_counter_bytes": 67108864,
+  "iterations": 8192,
+  "l2_hit_sectors": 2098918.0,
+  "l2_miss_proxy_to_expected": 0.25237226486206055,
+  "l2_miss_sectors": 529263.0,
+  "lts_bytes": 89523520.0,
+  "lts_to_expected": 1.3340044021606445,
+  "metrics": [
+    "gpu__time_duration.sum",
+    "l1tex__m_xbar2l1tex_read_bytes_mem_global_op_tma_ld.sum",
+    "lts__t_bytes.sum",
+    "lts__t_sectors_op_read_lookup_hit.sum",
+    "lts__t_sectors_op_read_lookup_miss.sum",
+    "sm__pipe_tma_cycles_active.avg.pct_of_peak_sustained_active",
+    "sm__inst_executed_pipe_tma.sum"
+  ],
+  "permission_denied": false,
+  "raw_path": "ncu/raw.csv",
+  "raw_sha256": "a3b45ab0ffc73d4501c7e76ad6a123a0fcb8450a3b507f58b2a51c1d2f723f7a",
+  "report_path": "ncu/profile.ncu-rep",
+  "report_sha256": "437ba84580a50219344df574f467f6e7d75bf9ee35da36e2d1b63e5cb69333d1",
+  "returncode": 0,
+  "stderr_path": "ncu/profile.stderr.log",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timed_requested_bytes": 67108864,
+  "tma_bytes": 83886080.0,
+  "tma_to_expected": 1.25
+}

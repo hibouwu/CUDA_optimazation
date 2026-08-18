@@ -1,0 +1,18 @@
+{
+  "campaign_kind": "tma_payload",
+  "chart_count": 1,
+  "charts": [
+    {
+      "description": "TMA throughput by payload and residency",
+      "path": "tma-throughput-by-payload.svg",
+      "sha256": "ee6575c747cec2d75a03b68526479c1df2b773555daef902252845a8e9e14449"
+    }
+  ],
+  "evidence_boundary": "derived visualization only; source JSON remains authoritative; lines and ratios do not promote measured sustained rates to physical uppers",
+  "generator_path": "scripts/sm110_gemm_model/campaign_plots.py",
+  "generator_sha256": "d1ed96bcc0a2140129cb10fba73e91508853a6001750e1c658e57846d8ed93ed",
+  "runtime_rows": 10,
+  "schema_version": 1,
+  "source_json": "../summary.json",
+  "source_sha256": "2feba5979d623f44bf27da943a0d51e8b36f4506468af10723de9ee953e57604"
+}

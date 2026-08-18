@@ -1,0 +1,18 @@
+{
+  "campaign_kind": "memory_duplex",
+  "chart_count": 1,
+  "charts": [
+    {
+      "description": "memory duplex total/read/write service curves",
+      "path": "memory-duplex-service-curves.svg",
+      "sha256": "35059c32436b28e54dd3e847dd76c51bf07a838965315a4ce0790dd8f4e5380d"
+    }
+  ],
+  "evidence_boundary": "derived visualization only; source JSON remains authoritative; lines and ratios do not promote measured sustained rates to physical uppers",
+  "generator_path": "scripts/sm110_gemm_model/campaign_plots.py",
+  "generator_sha256": "d1ed96bcc0a2140129cb10fba73e91508853a6001750e1c658e57846d8ed93ed",
+  "runtime_rows": 21,
+  "schema_version": 1,
+  "source_json": "../summary.json",
+  "source_sha256": "ac8e24e9d7c0585c6f732559e98f638d3c96c0b460a06e6bddafd4b5dcd4310d"
+}

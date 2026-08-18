@@ -1,0 +1,23 @@
+{"completed_cases": 0, "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:02.059718+00:00"}
+{"completed_cases": 1, "current_case": "hbm_duplex_r1_w4", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:15.505340+00:00"}
+{"completed_cases": 2, "current_case": "hbm_duplex_r17_w64", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:20.613390+00:00"}
+{"completed_cases": 3, "current_case": "hbm_duplex_r9_w32", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:25.197382+00:00"}
+{"completed_cases": 4, "current_case": "hbm_duplex_r3_w8", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:29.366252+00:00"}
+{"completed_cases": 5, "current_case": "hbm_duplex_r1_w2", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:33.421996+00:00"}
+{"completed_cases": 6, "current_case": "hbm_duplex_r1_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:37.464754+00:00"}
+{"completed_cases": 7, "current_case": "hbm_duplex_r2_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:41.462721+00:00"}
+{"completed_cases": 8, "current_case": "l2_duplex_r27_w16", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:45.298300+00:00"}
+{"completed_cases": 9, "current_case": "l2_duplex_r3_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:49.001622+00:00"}
+{"completed_cases": 10, "current_case": "l2_duplex_r27_w8", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:52.799235+00:00"}
+{"completed_cases": 11, "current_case": "l2_duplex_r4_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:26:56.537591+00:00"}
+{"completed_cases": 12, "current_case": "l2_duplex_r6_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:00.312758+00:00"}
+{"completed_cases": 13, "current_case": "l2_duplex_r27_w4", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:04.055200+00:00"}
+{"completed_cases": 14, "current_case": "l2_duplex_r8_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:07.843738+00:00"}
+{"completed_cases": 15, "current_case": "l2_duplex_r12_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:11.574774+00:00"}
+{"completed_cases": 16, "current_case": "l2_duplex_r16_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:15.352180+00:00"}
+{"completed_cases": 17, "current_case": "l2_duplex_r24_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:19.167969+00:00"}
+{"completed_cases": 18, "current_case": "l2_duplex_r32_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:22.983539+00:00"}
+{"completed_cases": 19, "current_case": "l2_duplex_r48_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:26.828261+00:00"}
+{"completed_cases": 20, "current_case": "l2_duplex_r64_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:30.657955+00:00"}
+{"completed_cases": 21, "current_case": "l2_duplex_r96_w1", "hostname": "thor-6642", "pid": 1952178, "status": "running", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:34.521192+00:00"}
+{"completed_cases": 21, "hostname": "thor-6642", "pid": 1952178, "status": "complete", "total_cases": 21, "updated_at_utc": "2026-08-18T01:27:34.524164+00:00"}
