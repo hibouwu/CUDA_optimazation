@@ -334,8 +334,7 @@ element/scale；定义 \(s_s\) 为单个 scale 的字节数，单位为 B/scale�
 scale 的字节数下界定义为 \(Q_{\mathrm{in,scale}}^{\mathrm{LB}}\)，单位为 B：
 
 \[
-Q_{\mathrm{in,scale}}^{\mathrm{LB}}
-=
+Q_{\mathrm{in,scale}}^{\mathrm{LB}} =
 \left(
 M\left\lceil\frac{K}{b_s}\right\rceil
 +
@@ -380,8 +379,7 @@ schedule \(x\) 执行 workload \(w\) 发出的 TMA 输入 payload，单位为 B�
 SFB 物理 transport payload，单位为 B：
 
 \[
-S(X,B_K,b_s,s_s)
-=
+S(X,B_K,b_s,s_s) =
 \left\lceil\frac{X}{a_s}\right\rceil a_s
 \left\lceil
   \frac{\left\lceil B_K/b_s\right\rceil}{g_s}
@@ -447,8 +445,7 @@ L2 总线与 SM 本地出口不是同一个资源。定义
 worker 的本地出口 makespan 为：
 
 \[
-\widehat T_{\mathrm{TMA,local}}
-=
+\widehat T_{\mathrm{TMA,local}} =
 \left\lceil\frac{N_{\mathrm{task}}}{S}\right\rceil
 \frac{Q_{\mathrm{TMA/task}}}
      {\widehat C_{\mathrm{TMA,SM}}}.

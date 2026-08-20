@@ -43,8 +43,46 @@ def _rate_text(value: float | None, unit: str) -> str:
     return f"{value:.6g} {unit}"
 
 
+def _rate_per_cycle_text(
+    value: float | None,
+    unit: str,
+    clock_hz: float | None,
+    resource: str,
+) -> str:
+    """Normalize one rate by the report-bound GPC clock.
+
+    Capacity rows are GPU-wide unless their resource identity explicitly says
+    ``per_sm``.  Keeping the scope in the rendered unit prevents a per-SM TMA
+    outlet from being compared with an aggregate L2 or Tensor Core rate.
+    """
+    if (
+        value is None
+        or clock_hz is None
+        or not math.isfinite(value)
+        or not math.isfinite(clock_hz)
+        or clock_hz <= 0
+    ):
+        return "—"
+    per_cycle = value / clock_hz
+    scope = "SM" if ".per_sm" in resource else "GPU"
+    if unit == "flop/s":
+        return f"{per_cycle / 1e3:,.3f} kFLOP/cycle/{scope}"
+    if unit == "operation/s":
+        return f"{per_cycle / 1e3:,.3f} kOP/cycle/{scope}"
+    if unit == "byte/s":
+        return f"{per_cycle:,.3f} B/cycle/{scope}"
+    if unit == "element/s":
+        return f"{per_cycle:,.3f} element/cycle/{scope}"
+    return f"{per_cycle:,.6g} {unit.removesuffix('/s')}/cycle/{scope}"
+
+
 def _ratio_text(value: float | None) -> str:
     return "—" if value is None else f"{100.0 * value:.2f}%"
+
+
+def _artifact_text(paths: Iterable[str]) -> str:
+    rendered = [f"`{path}`" for path in paths]
+    return "<br>".join(rendered) if rendered else "—"
 
 
 MODELED_RESIDENCIES = ("hot_l2", "cold_hbm")
@@ -572,6 +610,12 @@ def build_closure_analysis(
         "composition": metadata.get("composition", "single_suite"),
         "campaign_sources": metadata.get("campaign_sources", {}),
         "qualification": metadata.get("qualification"),
+        "hardware": {
+            "hardware_id": hardware.hardware_id,
+            "sm_count": hardware.sm_count,
+            "clock_hz": hardware.clock_hz,
+            "operating_mode": hardware.operating_mode,
+        },
         "platform_evidence": metadata.get("platform_evidence", {}),
         "model_input_audit": metadata.get("model_input_audit", {}),
         "capacity_count": len(capacity_rows),
@@ -619,6 +663,19 @@ def build_closure_analysis(
 
 
 def render_closure_markdown(analysis: dict[str, Any]) -> str:
+    hardware = analysis.get("hardware", {})
+    clock_hz = hardware.get("clock_hz")
+    if clock_hz is None:
+        clock_hz = analysis.get("platform_evidence", {}).get(
+            "gpu_clock_locked_hz"
+        )
+    clock_text = (
+        f"{float(clock_hz) / 1e9:.3f} GHz"
+        if isinstance(clock_hz, (int, float))
+        and math.isfinite(float(clock_hz))
+        and float(clock_hz) > 0
+        else "unknown clock"
+    )
     lines = [
         "# Thor/SM110 GEMM closure 数值摘要",
         "",
@@ -654,13 +711,19 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         "",
         "## Closure-qualified compute/component capacities",
         "",
-        "| Resource | Case | Median rate | Trials | Evidence | Qualification | Source |",
-        "| --- | --- | ---: | ---: | --- | --- | --- |",
+        "定义每周期 rate 为 `rate_per_second / clock_hz`；这里的 `cycle` 是本报告"
+        f"绑定的 GPC 时钟周期（{clock_text}）。该列只是单位归一化，不改变证据等级。"
+        "`/GPU` 表示整卡聚合或共享资源，`/SM` 只用于 resource ID 明确标注"
+        " `.per_sm` 的独立每-SM 出口。",
+        "",
+        "| Resource | Case | Median rate | Per cycle | Trials | Evidence | Qualification | Source |",
+        "| --- | --- | ---: | ---: | ---: | --- | --- | --- |",
     ]
     for row in analysis.get("capacities", []):
         lines.append(
             f"| `{row['resource']}` | `{row['capacity_id']}` | "
             f"{_rate_text(row['rate_per_second'], row['rate_unit'])} | "
+            f"{_rate_per_cycle_text(row['rate_per_second'], row['rate_unit'], clock_hz, row['resource'])} | "
             f"{row['trial_count']} | `{row['evidence_kind']}` | "
             f"`{row['qualification']}` | `{row['source_path']}` |")
 
@@ -671,17 +734,23 @@ def render_closure_markdown(analysis: dict[str, Any]) -> str:
         "这些参数参与严格上界或 HBM/L2 经验场景，但没有因本次 closure 自动升级；"
         "其 `snapshot_only`/`profiler_model_peak` 等证据等级必须保留。",
         "",
-        "| Resource | Case | Rate | Evidence | Qualification | Source |",
-        "| --- | --- | ---: | --- | --- | --- |",
+        "| Resource | Case | Rate | Per cycle | Evidence | Qualification | Source | Artifacts |",
+        "| --- | --- | ---: | ---: | --- | --- | --- | --- |",
     ])
     for row in analysis.get("base_capacities", []):
         lines.append(
             f"| `{row['resource']}` | `{row['capacity_id']}` | "
             f"{_rate_text(row['rate_per_second'], row['rate_unit'])} | "
+            f"{_rate_per_cycle_text(row['rate_per_second'], row['rate_unit'], clock_hz, row['resource'])} | "
             f"`{row['evidence_kind']}` | `{row['qualification']}` | "
-            f"`{row['source_path']}` |")
+            f"`{row['source_path']}` | "
+            f"{_artifact_text(row.get('artifact_paths', []))} |")
 
     lines.extend([
+        "",
+        "相关但合同不同、因此未导入 current capacity selector 的 `tcgen05.cp`、"
+        "TS TMEM consume、CP/MMA overlap 和 DSMEM topology snapshots，见 "
+        "`Docs/blackwell_tensorcore/gemm/appendices/microbenchmark_sources.md`。",
         "",
         "## Full-GEMM 与模型",
         "",

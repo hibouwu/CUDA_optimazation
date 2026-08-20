@@ -1,4 +1,4 @@
-z# Accurate Models of NVIDIA Tensor Cores
+# Accurate Models of NVIDIA Tensor Cores
 
 > **作者**：Faizan A. Khattak、Mantas Mikaitis，英国利兹大学计算机科学学院  
 > **软件**：MATLAB Tensor Core v0.5，<https://github.com/northnumerical-computing/MATLAB-tensor-core>  

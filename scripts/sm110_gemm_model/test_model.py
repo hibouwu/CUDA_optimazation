@@ -137,6 +137,13 @@ class DocumentContractTest(unittest.TestCase):
             "`insufficient_evidence/insufficient_evidence`",
             text,
         )
+        self.assertIn("| Per cycle |", text)
+        self.assertIn("1,024.000 B/cycle/GPU", text)
+        self.assertIn("512.000 B/cycle/GPU", text)
+        self.assertIn("122.772 B/cycle/SM", text)
+        self.assertIn("l2_capacity_staircase.svg", text)
+        self.assertIn("generic `tcgen05.cp`", text)
+        self.assertIn("DSMEM topology/contention", text)
 
     def test_core_symbols_are_defined_at_first_use(self) -> None:
         text = DOCUMENT_PATH.read_text()

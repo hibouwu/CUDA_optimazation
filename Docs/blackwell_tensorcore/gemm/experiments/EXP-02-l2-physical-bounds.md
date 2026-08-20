@@ -37,6 +37,14 @@ U_{\mathrm{L2,W}}=0.8064\ \mathrm{TB/s}.
 
 这些 sustained point 用于诊断和旧 empirical calibration；迁移后的 current empirical memory layer 使用 EXP-04 的 ratio-qualified `l2.duplex`。
 
+容量阶跃图不是一组独立的新 capacity。同一 microbenchmark 家族的 16 MiB
+baseline `read-unique`/`write-unique` 代表点已经分别由
+`l2_read_unique_measured=946.701 B/cycle/GPU` 和
+`l2_write_unique_measured=299.373 B/cycle/GPU` 进入 historical/base
+capacity 表；validation SVG 是重复采样中位曲线，额外支持约 32 MiB capacity
+transition，不应假装 baseline 数字就是 SVG 某一个点的精确 raw value。不得从
+SVG 像素反推或把同一实验家族的曲线点再次导入并与代表点重复计数。
+
 ## 5. 接受门禁
 
 - working set 与 residency 合同明确；
@@ -76,6 +84,8 @@ T_{\mathrm{L2,W}}^{\mathrm{LB}}
 
 - L2 说明：[L2throughtput/README.md](../../../../microbench/L2throughtput/README.md)
 - 历史结果：[l2_throughput.csv](../../../../microbench/L2throughtput/results/l2_throughput.csv)
+- 容量阶跃图：[l2_capacity_staircase.svg](../../../../microbench/L2throughtput/plots/l2_capacity_staircase.svg)
+- 并发饱和图：[l2_concurrency_saturation.svg](../../../../microbench/L2throughtput/plots/l2_concurrency_saturation.svg)
 - memory path source：[memory_path_bandwidth.cu](../../../../microbench/14_memory_path_bandwidth/memory_path_bandwidth.cu)
 - component runner：[run_component_campaign.py](../../../../microbench/sm110_gemm_component_campaign/run_component_campaign.py)
 - profile：[thor_sm110.json](../../../../scripts/sm110_gemm_model/profiles/thor_sm110.json)

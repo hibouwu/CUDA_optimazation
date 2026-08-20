@@ -25,7 +25,25 @@
 | causal profile | [EXP-07](../experiments/EXP-07-causal-pipeline.md) | [tc5a_pipeline_dag.cu](../../../../microbench/16_tc5a_pipeline_dag/tc5a_pipeline_dag.cu) | [runner](../../../../microbench/sm110_gemm_causal_campaign/run_causal_campaign.py) / [auditor](../../../../microbench/sm110_gemm_causal_campaign/audit_campaign.py) | FP16/BF16 182-case contract 已冻结；Thor timing 未回传 |
 | full-GEMM observation | [EXP-08](../experiments/EXP-08-full-gemm-validation.md) | [main.cu](../../../../GEMMsm110/src/main.cu)、[extended](../../../../GEMMquant_sm110/src/extended_gemm_bench.cu)、[quant](../../../../GEMMquant_sm110/src/quant_gemm_bench.cu) | [runner](../../../../microbench/sm110_full_gemm_campaign/run_full_gemm_campaign.py) / [auditor](../../../../microbench/sm110_full_gemm_campaign/audit_campaign.py) | 历史 Thor 5 precision；current runner 6 precision |
 
-## 3. 模型导入器
+## 3. 相关诊断实验：有用，但不作为 current capacity
+
+下表只收录有已提交数值或可定位绘图工件、并且可能扩展未来 GEMM schedule
+模型的实验。它们没有满足 current schedule 的 exact applicability 时，不进入
+capacity selector。
+
+| 实验 | 已提交 snapshot | 对模型的潜在用途 | 当前处理 | 来源 |
+| --- | ---: | --- | --- | --- |
+| L2 baseline + capacity/concurrency sweep | 16 MiB baseline 代表点：`read-unique=946.701`、`write-unique=299.373 B/cycle/GPU`；validation SVG 显示约 32 MiB 阶跃 | `hot_l2` capacity 与 saturation 佐证 | 两个 baseline rate 已在 base capacity；SVG 中位曲线只作 artifact，不从像素反推或重复导入 | [capacity staircase](../../../../microbench/L2throughtput/plots/l2_capacity_staircase.svg)、[concurrency](../../../../microbench/L2throughtput/plots/l2_concurrency_saturation.svg) |
+| generic `tcgen05.cp` | 859.024 B/cycle/GPU，2.384 cycle/cp | future TS schedule 的 SMEM→TMEM operand ingress | 不用于当前 SS/TMA schedule；也不替代 512-B scale `warpx4` atom | [cp_only_results.csv](../../../../microbench/mma_with_cp/plots/cp_only_results.csv)、[06 README](../../../../microbench/06_tmem_cp_bandwidth/README.md) |
+| TS MMA TMEM consume | `ts-mma-only=115.699 B/cycle/GPU`；CP+MMA A2=`103.011 B/cycle/GPU` | future TS schedule 的 TMEM operand-consume demand | 2048 B/MMA 是估算分子，不是 raw TMEM port upper | [08 README](../../../../microbench/08_tmem_consume_bandwidth/README.md)、[mma_only_results.csv](../../../../microbench/mma_with_cp/plots/mma_only_results.csv) |
+| CP/MMA overlap | FP4 M128N256：serial 214.210、A2 overlap 331.938 TFLOP/s，1.55x | future TS causal/joint profile | 输入已在 SMEM/TMEM；没有 GMEM/TMA、完整 epilogue 或 exact GEMM residency，不能导入 current causal profile | [pipeline_results.csv](../../../../microbench/mma_with_cp/plots/pipeline_results.csv)、[11 README](../../../../microbench/11_pipeline_overlap/README.md) |
+| DSMEM topology/contention | ring 113.15–141.87、fan-in 52.76–72.09 B/cycle/GPU | future CTA-group-2 cluster/DSMEM schedule | current v1 拒绝 `cta_group=2`；不是物理 interconnect upper | [09 README](../../../../microbench/09_dsmem_topology_contention/README.md) |
+
+L1 global path、local SMEM bank/stride 和 DSMEM baseline runner 也可能服务未来
+non-TMA 或 cluster schedule；当前 checkout 没有与本报告同等级的 committed raw
+summary，因此只保留 source index，不抄 README 之外的推测数字进入 capacity 表。
+
+## 4. 模型导入器
 
 | importer | 责任 |
 | --- | --- |
@@ -35,7 +53,7 @@
 | [observations.py](../../../../scripts/sm110_gemm_model/observations.py) | full-GEMM observation import与 suite qualification |
 | [suite.py](../../../../scripts/sm110_gemm_model/suite.py) | compute/component/full-GEMM host/GPU/commit linkage |
 
-## 4. Non-claims
+## 5. Non-claims
 
 - 本附录中的路径存在不等于对应 Thor runtime 已完成；
 - static-only、SASS presence、runner-defined 和 measured 是四种不同状态；

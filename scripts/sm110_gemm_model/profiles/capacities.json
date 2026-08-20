@@ -288,6 +288,10 @@
     "source_id": "l2_read_unique",
     "source_path": "microbench/L2throughtput/results/l2_throughput.csv",
     "source_locator": "mode=read-unique,bytes_per_cycle",
+    "artifact_paths": [
+      "microbench/L2throughtput/plots/l2_capacity_staircase.svg",
+      "microbench/L2throughtput/plots/l2_concurrency_saturation.svg"
+    ],
     "original_value": 946.701239,
     "original_unit": "B/cycle/GPU",
     "condition": "16 MiB unique LDG.E.128 L2-hit working set; converted with 1.575 GHz snapshot",
@@ -306,6 +310,10 @@
     "source_id": "l2_write_unique",
     "source_path": "microbench/L2throughtput/results/l2_throughput.csv",
     "source_locator": "mode=write-unique,bytes_per_cycle",
+    "artifact_paths": [
+      "microbench/L2throughtput/plots/l2_capacity_staircase.svg",
+      "microbench/L2throughtput/plots/l2_concurrency_saturation.svg"
+    ],
     "original_value": 299.372706,
     "original_unit": "B/cycle/GPU",
     "condition": "end-to-end global-store path, not a pure L2 write-port peak; converted with 1.575 GHz snapshot",

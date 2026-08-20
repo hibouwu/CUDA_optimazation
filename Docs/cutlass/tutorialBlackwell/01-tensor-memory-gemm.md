@@ -14,7 +14,7 @@ In this article, we will go over Blackwell’s MMA instruction and Tensor Memory
 
 We’ll begin with a general summary of these two features before moving on to CUTLASS abstractions of the features.
 
-Then we will study the first of the CuTe Blackwell examples with a focus on what has changed since Hopper.
+Then we will study the first of the [CuTe Blackwell examples](https://github.com/NVIDIA/cutlass/tree/main/examples/cute/tutorial/blackwell) with a focus on what has changed since Hopper.
 
 The goal of this post is to explain a minimal working example of a simple GEMM kernel using features new to Blackwell.
 
@@ -87,7 +87,7 @@ TMEM is 256KB per SM in size, and is organized 2-dimensionally in 512 columns an
 
 This inherent 2-D structure is reflected in the 32-bit addresses as well, where bits 31-16 denote the lane ID while 15-0 denote the column.
 
-This image from the PTX documentation shows the layout:
+This image from the [PTX documentation](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensor-memory-addressing) shows the layout:
 
 ![](Imgaes/tensor-memory-layout.png)
 
@@ -117,7 +117,7 @@ Additionally, both the UMMA operation and the data movement operations expect ce
 
 Luckily for us, CUTLASS provides utility functions that we’ll cover later that simplify the process of organizing data via swizzling.
 
-That said, those interested can find the layout information in the PTX guide.
+That said, those interested can find the layout information in the [PTX guide](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-shared-memory-layout-swizzling).
 
 Finally, besides UMMA operations and these data movement instructions, no other operations access data from TMEM.
 
@@ -129,7 +129,7 @@ tcgen05.mma
 
 Although we’ll mainly be using CUTLASS interfaces for this operation, the PTX documentation is the best source for understanding its functionality.
 
-Ignoring some optional arguments, the PTX syntax for the `tcgen05` MMA operations takes one of these forms:
+Ignoring some optional arguments, the [PTX syntax](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensorcore-5th-generation-instructions-tcgen05-mma) for the `tcgen05` MMA operations takes one of these forms:
 
 ```
 tcgen05.mma.cta_group.kind   [d-tmem],  a-desc,  b-desc, idesc, enable-input-d;
@@ -142,7 +142,7 @@ For this example, we’ll look at a dense FP16 GEMM with FP32 accumulation (.kin
 
 We’ll only consider the 1-CTA case for now – the next post in this series will look at the 2-CTA version.
 
-From the table of supported matrix shapes, we see that MMA instructions are available in shapes 64 x N x 16 with N a multiple of 8 and 128 x N x 16 with N a multiple of 16, where in both cases N is at most 256.
+From the [table of supported matrix shapes](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-kind-shapes), we see that MMA instructions are available in shapes 64 x N x 16 with N a multiple of 8 and 128 x N x 16 with N a multiple of 16, where in both cases N is at most 256.
 
 (For all data types, K is expected to be 32 bytes wide for dense GEMM.)
 
@@ -150,23 +150,23 @@ Note that the largest UMMA atom, 128 x 256 x 16, is twice as large as the larges
 
 Its accumulator takes up exactly half of TMEM, meaning that several UMMA atoms can be pipelined without sacrificing performance.
 
-The operands `a-desc` and `b-desc` are shared memory descriptors, which are very similar to those used for WGMMA.
+The operands `a-desc` and `b-desc` are [shared memory descriptors](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#shared-memory-descriptor), which are very similar to [those used for WGMMA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor).
 
 Briefly, these are 64-bit values that pack information about the address, layout, and swizzling pattern of a matrix stored in SMEM.
 
 (If A is sourced from TMEM, its descriptor is replaced by its TMEM address.)
 
-Matrix tiles in SMEM are expected to be K-major, though the MMA instruction is able to transpose them, and are allowed to have one of a few predefined swizzling patterns similar to those used for WGMMA.
+Matrix tiles in SMEM are expected to be K-major, though the MMA instruction is able to transpose them, and are allowed to have one of [a few predefined swizzling patterns](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-shared-memory-layout-swizzling) similar to those used for WGMMA.
 
 In addition to the matrix descriptors, `tcgen05.mma` also expects an instruction descriptor (the argument `idesc` ).
 
-This is a 32-bit piece of metadata containing, for example, data type and sparsity information; full details can be found here.
+This is a 32-bit piece of metadata containing, for example, data type and sparsity information; full details can be found [here](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#instruction-descriptor).
 
 Notably, two bits in the instruction descriptor tell the instruction to transpose and/or negate A and/or B.
 
 In addition, the argument `enable-input-d` switches between zeroing out the accumulators before executing MMA (the operation D = A * B) and retaining the accumulators (D = A * B + D).
 
-The accumulators live in a transparent row-major format in TMEM.
+The accumulators live in [a transparent row-major format](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-path-layout-organization) in TMEM.
 
 Since no data is held in registers, we no longer have to worry about the complex thread-value layouts required for WMMA and WGMMA.
 
@@ -184,7 +184,7 @@ There are three types of memory movement instructions under `tcgen05` : `ld` , `
 
 For our discussion we will focus on `ld` , which is used to copy data from TMEM to RMEM.
 
-The basic version of the PTX instruction for `tcgen05.ld` is as follows:
+The basic version of the [PTX instruction for `tcgen05.ld`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensorcore-5th-generation-instructions-tcgen05-ld) is as follows:
 
 ```
 tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
@@ -192,9 +192,9 @@ tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
 .num    = { .x1, .x2, .x4, .x8, .x16, .x32, .x64, .x128 }
 ```
 
-As indicated by the `.sync.aligned` qualifier, `tcgen05.ld` is a warp-wide instruction where all threads in the warp must execute the same instruction and are synchronized as a warp, similar to the earlier `ldmatrix` instruction.
+As indicated by the `.sync.aligned` qualifier, `tcgen05.ld` is a warp-wide instruction where all threads in the warp must execute the same instruction and are synchronized as a warp, similar to the earlier [`ldmatrix`](https://docs.nvidia.com/cuda/parallel-thread-execution/#warp-level-matrix-load-instruction-ldmatrix) instruction.
 
-`tcgen05.ld` supports a variety of data movement shapes, described in the PTX guide.
+`tcgen05.ld` supports a variety of data movement shapes, described in the [PTX guide](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-shape).
 
 They are generally denoted by {lanes}x{bits}; our example uses 32x32b, which corresponds to 32 lanes (or data paths) by 32 bits, across a single warp.
 
@@ -206,7 +206,7 @@ In a single instruction, a warp can load at most lanes * bits * num <= 128 kb (1
 
 Finally, recall that each warp can only access 32 of the 128 TMEM lanes.
 
-This diagram from the PTX documentation shows our `tcgen05.ld.sync.aligned.32x32b.x1.b32` operation:
+This diagram from the [PTX documentation](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-mma-fragment-3232b) shows our `tcgen05.ld.sync.aligned.32x32b.x1.b32` operation:
 
 ![](Imgaes/tcgen05-mma-fragment-3232b.png)
 
@@ -218,13 +218,13 @@ The arguments for our instruction are just `r` and `taddr` , where `r` is the de
 
 With the large number of options, the natural question is how to pick the correct variant.
 
-The number of lanes is most affected by the MMA instruction used; different `tcgen05.mma` variants result in different output layouts, and different `tcgen05.ld` shapes are suited for different situations.
+The number of lanes is most affected by the MMA instruction used; different `tcgen05.mma` variants [result in different output layouts](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-data-path-layout-organization), and different `tcgen05.ld` shapes are suited for different situations.
 
 For the bit width and `.num` , the consideration is more about performance and resources.
 
 Larger repetition will reduce the number of issued instructions, and may facilitate vectorization.
 
-However, larger `.num` values also require more registers.
+However, larger `.num` values also [require more registers](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-num-shapes-ld).
 
 So this value is a tuning parameter.
 
@@ -237,9 +237,9 @@ Like previous CUTLASS MMA abstractions, this is described by:
 - An MMA_Atom in the cute/arch/ directory, which is a wrapper for the appropriate PTX instruction;
 - An MMA_Traits in the cute/atom/ directory, which contains CuTe layouts and other metadata used to interact with the atom in a CUTLASS-native way.
 
-Our WGMMA tutorial gives a more in-depth explanation of this design.
+Our [WGMMA tutorial](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/) gives a more in-depth explanation of this design.
 
-Below is the template signature for SM100_MMA_F16BF16_SS, which is the atom used in the first CuTe Blackwell code sample.
+Below is [the template signature for SM100_MMA_F16BF16_SS](https://github.com/NVIDIA/cutlass/blob/331a1f5b3fa3b6a9d9ef57c393d8719fb5510a32/include/cute/atom/mma_traits_sm100.hpp#L1090), which is the atom used in the first CuTe Blackwell code sample.
 
 ```
 template <class a_type, class b_type, class c_type,
@@ -312,7 +312,7 @@ Finally, a brief note on the anatomy of the atom name.
 
   In this case, either `fp16` or `bf16` .
 
-  Note that this maps onto the `.kind` qualifier for `tcgen05.mma` (e.g., `.kind::f16` ), while the exact input type is recorded by the instruction descriptor .
+  Note that this maps onto the `.kind` qualifier for `tcgen05.mma` (e.g., `.kind::f16` ), while the exact input type is recorded by the [instruction descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instuction-desc-kind-tf32-f16-f8f6f4) .
 - `SS` : specifies memory location for A and B.
 
   `SS` is for both being in SMEM, while `TS` is for A being in TMEM and B in SMEM.
@@ -324,11 +324,11 @@ Instead they are determined by the template parameters.
 
 # CUTLASS Example: Simple UMMA
 
-Next, let’s discuss the implementation presented in the first Blackwell CuTe example.
+Next, let’s discuss the implementation presented in the [first Blackwell CuTe example](https://github.com/NVIDIA/cutlass/blob/main/examples/cute/tutorial/blackwell/01_mma_sm100.cu).
 
 To keep the discussion focused on Blackwell, we will assume a degree of familiarity with the typical format of CUTLASS GEMM kernels.
 
-For a more introductory discussion, see our earlier blog series.
+For a more introductory discussion, see our [earlier blog series](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/).
 
 For clarity, we will roughly subdivide our discussion into five sections:
 
@@ -486,7 +486,7 @@ The width of the swizzle is determined by the size of the tile in the contiguous
 
 In this case, the K dimension has 4 tiles of size 16 and half-precision is 2 bytes, so the width is `16*4*2=128` bytes.
 
-For more details on swizzling for MMA, see this post.
+For more details on swizzling for MMA, see [this post](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/).
 
 Like other CUTLASS code, this example allocates SMEM dynamically and manages it as a `SharedStorage` struct.
 
@@ -531,7 +531,7 @@ Tensor tCrB = cta_mma.make_fragment_B(tCsB);
 Tensor tCtAcc = cta_mma.make_fragment_C(tCgC); // (MmaC, NumMma_M, NumMma_N)
 ```
 
-Just like in Hopper’s WGMMA, the operand Tensors are not tensors of register-backed data but tensors of SMEM matrix descriptors.
+Just like in Hopper’s WGMMA, the operand Tensors are not tensors of register-backed data but tensors of [SMEM matrix descriptors](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#shared-memory-descriptor).
 
 For example, printing tCrA shows
 
@@ -543,7 +543,7 @@ tCrA:   UMMA::DescriptorIterator o (_1,_1,_4):(_0,_0,_2)
 
 with a single descriptor per MMA atom, tiled by `(NumMma_M, NumMma_K) = (_1, _4)` .
 
-We have covered matrix descriptors previously as part of our blog on WGMMA.
+We have covered matrix descriptors previously as part of [our blog on WGMMA](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/).
 
 The accumulator tensor here is an ordinary TMEM-backed tensor, but its layout may be hard to grasp at first:
 
@@ -604,7 +604,7 @@ for (int k_tile = 0; k_tile < size<3>(tCgA); ++k_tile)
 
 The synchronization constructs are essentially the same as those used for TMA.
 
-If you want an introductory tutorial for TMA and synchronization, see our earlier blog.
+If you want an introductory tutorial for TMA and synchronization, see our earlier [blog](https://research.colfax-intl.com/tutorial-hopper-tma/).
 
 One thing worth noting is that the mbarrier is initialized by one thread that belongs to the warp that will be launching UMMA.
 
@@ -628,11 +628,11 @@ Once all the MMAs are done, we need to copy the accumulator results from TMEM to
 
 This is done using the PTX `tcgen05.ld` instruction.
 
-CUTLASS abstracts `tcgen05.ld` as a copy atom, with different variants we saw earlier represented as different copy traits defined in copy atoms found in cute/atom/copy_traits_sm100.hpp.
+CUTLASS abstracts `tcgen05.ld` as a copy atom, with different variants we saw earlier represented as different copy traits defined in copy atoms found in [cute/atom/copy_traits_sm100.hpp](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/copy_traits_sm100.hpp).
 
 Our example uses the `SM100_TMEM_LOAD_32dp32b1x` atom.
 
-We can see how this translates into the correct variant in the PTX wrapper around our atom, found in cute/arch/copy_sm100.hpp.
+We can see how this translates into the correct variant in the PTX wrapper around our atom, found in [cute/arch/copy_sm100.hpp](https://github.com/NVIDIA/cutlass/blob/331a1f5b3fa3b6a9d9ef57c393d8719fb5510a32/include/cute/arch/copy_sm100.hpp#L3333).
 
 ```
 // 32 data path lanes, 32-bit pattern, repeated 1 times
@@ -674,21 +674,21 @@ Tensor tDrAcc = make_tensor<AccType>(shape(tDgD));
 copy(tiled_t2r_copy, tDtAcc, tDrAcc);
 ```
 
-Here we use a specialized function, `make_tmem_copy` , to deduce a TV-layout from the copy atom and TMEM tensor and create the TiledCopy.
+Here we use a specialized function, [`make_tmem_copy`](https://github.com/NVIDIA/cutlass/blob/b84e9802d84b16bcb4e92338fcf0a04785df9236/include/cute/atom/copy_traits_sm100.hpp#L341) , to deduce a TV-layout from the copy atom and TMEM tensor and create the TiledCopy.
 
 One important thing to know about this function is that it is hardcoded to use 4 warps, or 1 warpgroup.
 
 As mentioned in the earlier section, certain regions of TMEM are only accessible by a corresponding warp in a warpgroup, based on the warp index mod 4.
 
-This diagram from the PTX manual shows how the data is assigned to warps for our example:
+This [diagram from the PTX manual](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#layout-d-m-128-cta-group-1) shows how the data is assigned to warps for our example:
 
 ![](Imgaes/tcgen05-data-path-layout-d1.png)
 
-The following diagram from PTX manual shows the TMEM addresses that this maps to.
+The [following diagram from PTX manual](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-data-path-layout-d2) shows the TMEM addresses that this maps to.
 
 ![](Imgaes/tcgen05-data-path-layout-d2.png)
 
-To understand how CuTe handles this copy, we can turn to the traits struct, found in cute/atom/copy_traits_sm100.hpp.
+To understand how CuTe handles this copy, we can turn to the traits struct, found in [cute/atom/copy_traits_sm100.hpp](https://github.com/NVIDIA/cutlass/blob/b84e9802d84b16bcb4e92338fcf0a04785df9236/include/cute/atom/copy_traits_sm100.hpp#L2110).
 
 ```
 template <>
@@ -763,7 +763,7 @@ Finally, once the accumulator has been copied out to RMEM, it can be post-proces
 
 There is one additional topic to discuss for the basic example: TMEM allocation and deallocation.
 
-We can do this using the CuTe helper class cute::TMEM::Allocator1Sm, which provides an interface to the `tcgen05.alloc` and `tcgen05.dealloc` functions discussed above.
+We can do this using the CuTe helper class [cute::TMEM::Allocator1Sm](https://github.com/NVIDIA/cutlass/blob/main/include/cute/arch/tmem_allocator_sm100.hpp), which provides an interface to the `tcgen05.alloc` and `tcgen05.dealloc` functions discussed above.
 
 The basic pattern is as follows.
 
@@ -790,9 +790,9 @@ Note that, while only one thread passes the TMEM address to the MMA instruction,
 
 Finally, the same warp that called `allocate` also has to call `free` .
 
-As a slightly more advanced feature, the `release_allocation_lock` method is a wrapper for `tcgen05.relinquish_alloc_permit` ; apparently, this is a guarantee that the CTA will not perform any further TMEM allocation, allowing future CTAs to queue up for the same SM.
+As a slightly more advanced feature, the `release_allocation_lock` method is a wrapper for [`tcgen05.relinquish_alloc_permit`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-instructions-tcgen05-alloc-dealloc-relinquish-alloc-permit) ; apparently, this is a guarantee that the CTA will not perform any further TMEM allocation, allowing future CTAs to queue up for the same SM.
 
-You can see some more complete examples of TMEM management in the CUTLASS sm100 GEMM kernels.
+You can see some more complete examples of TMEM management in the [CUTLASS sm100 GEMM kernels](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L535).
 
 To help with TMEM management, nvcc has added the flag `--g-tensor-memory-access-check` .
 
@@ -800,7 +800,7 @@ With this flag enabled, at runtime the kernel will error out on any uninitialize
 
 # Conclusion
 
-In this post, we discussed the new features available on Nvidia Blackwell GPUs and then looked at how to use these features by going over the first CuTe Blackwell example.
+In this post, we discussed the new features available on Nvidia Blackwell GPUs and then looked at how to use these features by going over the [first CuTe Blackwell example](https://github.com/NVIDIA/cutlass/blob/main/examples/cute/tutorial/blackwell/01_mma_sm100.cu).
 
 We observed that the main concepts and the overall structure of the CUTLASS GEMM kernel have not changed with the Blackwell architecture.
 
@@ -817,7 +817,7 @@ In the next post, we will discuss examples that handle non-trivial cluster shape
 
 # References
 
-Cris Cecka, Mihir Awatramani, “Programming Blackwell Tensor Cores with CUTLASS”, GTC 2025, https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/.
+Cris Cecka, Mihir Awatramani, “Programming Blackwell Tensor Cores with CUTLASS”, GTC 2025, [https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/](https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/).
 
 1. Hello, I have read the article carefully and gained a lot of insight.
 
@@ -853,9 +853,9 @@ Cris Cecka, Mihir Awatramani, “Programming Blackwell Tensor Cores with CUTLASS
 
      That’s correct: `umma_arrive` (which resolves to the PTX instruction `tcgen05.commit` ) observes the completion of all prior UMMAs issued by that thread on the given mbarrier.
 
-     You might find this section of the PTX doc helpful.
+     You might find [this section of the PTX doc](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-memory-consistency-model) helpful.
 
-     This sort of thing actually existed pre-Blackwell, namely `cp.async` with mbarrier arrive, see here in PTX or here in CUTLASS .
+     This sort of thing actually existed pre-Blackwell, namely `cp.async` with mbarrier arrive, see [here in PTX](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive) or [here in CUTLASS](https://github.com/NVIDIA/cutlass/blob/f86feb0aa8a9490a7ab27bc991e36d7b5bf300e3/include/cutlass/arch/barrier.h#L741) .
 
      (By the way, tCrA is a tensor of descriptors which include SMEM pointers as well as some other information like strides and swizzle patterns.
 

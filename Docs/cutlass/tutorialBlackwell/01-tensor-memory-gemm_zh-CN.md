@@ -14,7 +14,7 @@ NVIDIA Blackwell 架构引入了一些新特性，它们显著改变了 GEMM 内
 
 我们将首先概述这两项特性，然后介绍 CUTLASS 对它们的抽象。
 
-随后，我们将研究第一个 CuTe Blackwell 示例，重点关注相较 Hopper 发生了哪些变化。
+随后，我们将研究第一个 [CuTe Blackwell 示例](https://github.com/NVIDIA/cutlass/tree/main/examples/cute/tutorial/blackwell)，重点关注相较 Hopper 发生了哪些变化。
 
 本文的目标是解说一个使用 Blackwell 新特性的简单 GEMM 内核最小可运行示例。
 
@@ -87,7 +87,7 @@ Ampere 的异步拷贝指令使 GEMM 主循环能够真正实现流水化。
 
 这种固有的二维结构也体现在 32 位地址中：第 31–16 位表示通道 ID，第 15–0 位表示列。
 
-下图取自 PTX 文档，展示了该布局：
+下图取自 [PTX 文档](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensor-memory-addressing)，展示了该布局：
 
 ![](Imgaes/tensor-memory-layout.png)
 
@@ -117,7 +117,7 @@ TMEM 使用 `tcgen05.alloc` 指令动态分配。
 
 幸运的是，CUTLASS 提供了稍后会介绍的工具函数，可简化通过 swizzle 组织数据的过程。
 
-对具体细节感兴趣的读者可以在 PTX 指南中查看布局信息。
+对具体细节感兴趣的读者可以在 [PTX 指南](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-shared-memory-layout-swizzling)中查看布局信息。
 
 最后，除 UMMA 操作和这些数据移动指令外，没有其他操作会访问 TMEM 中的数据。
 
@@ -129,7 +129,7 @@ tcgen05.mma
 
 尽管我们将主要通过 CUTLASS 接口使用该操作，但 PTX 文档仍是理解其功能的最佳资料。
 
-忽略一些可选参数后，`tcgen05` MMA 操作的 PTX 语法采用以下形式之一：
+忽略一些可选参数后，`tcgen05` MMA 操作的 [PTX 语法](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensorcore-5th-generation-instructions-tcgen05-mma)采用以下形式之一：
 
 ```
 tcgen05.mma.cta_group.kind   [d-tmem],  a-desc,  b-desc, idesc, enable-input-d;
@@ -142,7 +142,7 @@ tcgen05.mma.cta_group.kind   [d-tmem], [a-tmem], b-desc, idesc, enable-input-d;
 
 目前我们只考虑单 CTA 情形，本系列的下一篇文章将研究双 CTA 版本。
 
-从支持的矩阵形状表中可以看到，MMA 指令支持 `64 x N x 16`（N 为 8 的倍数）和 `128 x N x 16`（N 为 16 的倍数）的形状，两种情况下 N 都不超过 256。
+从[支持的矩阵形状表](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-kind-shapes)中可以看到，MMA 指令支持 `64 x N x 16`（N 为 8 的倍数）和 `128 x N x 16`（N 为 16 的倍数）的形状，两种情况下 N 都不超过 256。
 
 （对于所有数据类型，稠密 GEMM 的 K 维宽度都应为 32 字节。）
 
@@ -150,23 +150,23 @@ tcgen05.mma.cta_group.kind   [d-tmem], [a-tmem], b-desc, idesc, enable-input-d;
 
 其累加器恰好占用 TMEM 的一半，这意味着可以在不牺牲性能的前提下对多个 UMMA 原子进行流水化处理。
 
-操作数 `a-desc` 和 `b-desc` 是共享内存描述符，与 WGMMA 所使用的描述符非常相似。
+操作数 `a-desc` 和 `b-desc` 是[共享内存描述符](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#shared-memory-descriptor)，与 [WGMMA 所使用的描述符](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor)非常相似。
 
 简而言之，它们是 64 位数值，打包了存储在 SMEM 中的矩阵的地址、布局和 swizzle 模式等信息。
 
 （如果 A 来自 TMEM，其描述符将由 TMEM 地址取代。）
 
-SMEM 中的矩阵块应为 K-major，尽管 MMA 指令可以对它们进行转置；同时，这些矩阵块允许采用若干预定义 swizzle 模式之一，其形式与 WGMMA 使用的模式相似。
+SMEM 中的矩阵块应为 K-major，尽管 MMA 指令可以对它们进行转置；同时，这些矩阵块允许采用[若干预定义 swizzle 模式](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-shared-memory-layout-swizzling)之一，其形式与 WGMMA 使用的模式相似。
 
 除矩阵描述符外，`tcgen05.mma` 还需要一个指令描述符（参数 `idesc`）。
 
-它是一个 32 位元数据，其中包含数据类型、稀疏性等信息；完整细节可在相关文档中查看。
+它是一个 32 位元数据，其中包含数据类型、稀疏性等信息；完整细节可在[相关文档](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#instruction-descriptor)中查看。
 
 值得注意的是，指令描述符中有两个比特用于指示该指令对 A 和/或 B 进行转置和/或取负。
 
 此外，参数 `enable-input-d` 用于在执行 MMA 前将累加器清零（运算 `D = A * B`）与保留累加器（运算 `D = A * B + D`）两种模式之间切换。
 
-累加器在 TMEM 中采用透明的行主序格式。
+累加器在 TMEM 中采用[透明的行主序格式](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-path-layout-organization)。
 
 由于数据不保存在寄存器中，我们不再需要处理 WMMA 和 WGMMA 所需的复杂线程-值布局。
 
@@ -184,7 +184,7 @@ tcgen05.ld
 
 本文将重点讨论 `ld`，它用于将数据从 TMEM 拷贝到 RMEM。
 
-`tcgen05.ld` 的基本 PTX 指令形式如下：
+[`tcgen05.ld` 的基本 PTX 指令](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tensorcore-5th-generation-instructions-tcgen05-ld)形式如下：
 
 ```
 tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
@@ -192,9 +192,9 @@ tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
 .num    = { .x1, .x2, .x4, .x8, .x16, .x32, .x64, .x128 }
 ```
 
-如 `.sync.aligned` 限定符所示，`tcgen05.ld` 是一条 warp 级指令：warp 中的所有线程必须执行同一条指令，并以 warp 为单位同步，这与早期的 `ldmatrix` 指令类似。
+如 `.sync.aligned` 限定符所示，`tcgen05.ld` 是一条 warp 级指令：warp 中的所有线程必须执行同一条指令，并以 warp 为单位同步，这与早期的 [`ldmatrix`](https://docs.nvidia.com/cuda/parallel-thread-execution/#warp-level-matrix-load-instruction-ldmatrix) 指令类似。
 
-`tcgen05.ld` 支持多种数据移动形状，详见 PTX 指南。
+`tcgen05.ld` 支持多种数据移动形状，详见 [PTX 指南](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-shape)。
 
 这些形状通常记为 `{lanes}x{bits}`；本示例使用 `32x32b`，对应在单个 warp 中以 32 个通道（或数据路径）各传输 32 位。
 
@@ -206,7 +206,7 @@ tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
 
 最后，请记住，每个 warp 只能访问 128 个 TMEM 通道中的 32 个。
 
-下图取自 PTX 文档，展示了本例中的 `tcgen05.ld.sync.aligned.32x32b.x1.b32` 操作：
+下图取自 [PTX 文档](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-mma-fragment-3232b)，展示了本例中的 `tcgen05.ld.sync.aligned.32x32b.x1.b32` 操作：
 
 ![](Imgaes/tcgen05-mma-fragment-3232b.png)
 
@@ -218,13 +218,13 @@ tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
 
 面对众多选项，自然会产生一个问题：应该如何选择正确的变体？
 
-通道数主要取决于所使用的 MMA 指令；不同的 `tcgen05.mma` 变体会产生不同的输出布局，而不同的 `tcgen05.ld` 形状适用于不同情形。
+通道数主要取决于所使用的 MMA 指令；不同的 `tcgen05.mma` 变体会[产生不同的输出布局](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-data-path-layout-organization)，而不同的 `tcgen05.ld` 形状适用于不同情形。
 
 对于位宽和 `.num`，更主要的考量是性能和资源。
 
 更大的重复次数会减少发射的指令数，并可能有利于向量化。
 
-但是，更大的 `.num` 值也需要更多寄存器。
+但是，更大的 `.num` 值也[需要更多寄存器](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-num-shapes-ld)。
 
 因此，该值是一个调优参数。
 
@@ -237,9 +237,9 @@ tcgen05.ld.sync.aligned.shape.num.b32    r, [taddr];
 - `cute/arch/` 目录中的一个 `MMA_Atom`，用于封装相应的 PTX 指令；
 - `cute/atom/` 目录中的一个 `MMA_Traits`，其中包含 CuTe 布局和其他元数据，用于以 CUTLASS 原生方式与该原子交互。
 
-我们的 WGMMA 教程对这一设计做了更深入的解释。
+我们的 [WGMMA 教程](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/)对这一设计做了更深入的解释。
 
-下面给出 `SM100_MMA_F16BF16_SS` 的模板签名，这是第一个 CuTe Blackwell 代码示例所使用的原子。
+下面给出 [`SM100_MMA_F16BF16_SS` 的模板签名](https://github.com/NVIDIA/cutlass/blob/331a1f5b3fa3b6a9d9ef57c393d8719fb5510a32/include/cute/atom/mma_traits_sm100.hpp#L1090)，这是第一个 CuTe Blackwell 代码示例所使用的原子。
 
 ```
 template <class a_type, class b_type, class c_type,
@@ -312,7 +312,7 @@ struct MMA_Traits<SM100_MMA_F16BF16_SS<a_type, b_type, c_type,
 
   在此情形中为 `fp16` 或 `bf16`。
 
-  请注意，它对应 `tcgen05.mma` 的 `.kind` 限定符（例如 `.kind::f16`），而精确的输入类型则记录在指令描述符中。
+  请注意，它对应 `tcgen05.mma` 的 `.kind` 限定符（例如 `.kind::f16`），而精确的输入类型则记录在[指令描述符](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instuction-desc-kind-tf32-f16-f8f6f4)中。
 - `SS`：指定 A 和 B 的内存位置。
 
   `SS` 表示两者都位于 SMEM，`TS` 表示 A 位于 TMEM 而 B 位于 SMEM。
@@ -324,11 +324,11 @@ struct MMA_Traits<SM100_MMA_F16BF16_SS<a_type, b_type, c_type,
 
 # CUTLASS 示例：简单 UMMA
 
-接下来，我们讨论第一个 Blackwell CuTe 示例中给出的实现。
+接下来，我们讨论[第一个 Blackwell CuTe 示例](https://github.com/NVIDIA/cutlass/blob/main/examples/cute/tutorial/blackwell/01_mma_sm100.cu)中给出的实现。
 
 为了使讨论聚焦于 Blackwell，我们假定读者对 CUTLASS GEMM 内核的典型格式已有一定了解。
 
-如需更入门的介绍，请参阅我们之前的博客系列。
+如需更入门的介绍，请参阅我们[之前的博客系列](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/)。
 
 为了清晰起见，我们将讨论大致分为五个部分：
 
@@ -486,7 +486,7 @@ swizzle 的宽度由连续维度上的矩阵块大小决定。
 
 在此情形中，K 维有 4 个大小为 16 的矩阵块，半精度数据占 2 字节，因此宽度为 `16*4*2=128` 字节。
 
-有关 MMA swizzle 的更多细节，请参阅相关文章。
+有关 MMA swizzle 的更多细节，请参阅[相关文章](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/)。
 
 与其他 CUTLASS 代码一样，本示例动态分配 SMEM，并以 `SharedStorage` 结构管理它。
 
@@ -531,7 +531,7 @@ Tensor tCrB = cta_mma.make_fragment_B(tCsB);
 Tensor tCtAcc = cta_mma.make_fragment_C(tCgC);  // (MmaC, NumMma_M, NumMma_N)
 ```
 
-与 Hopper 的 WGMMA 一样，操作数张量不是以寄存器数据为后端的张量，而是 SMEM 矩阵描述符的张量。
+与 Hopper 的 WGMMA 一样，操作数张量不是以寄存器数据为后端的张量，而是 [SMEM 矩阵描述符](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#shared-memory-descriptor)的张量。
 
 例如，打印 `tCrA` 将显示
 
@@ -543,7 +543,7 @@ tCrA:   UMMA::DescriptorIterator o (_1,_1,_4):(_0,_0,_2)
 
 每个 MMA 原子对应一个描述符，并按 `(NumMma_M, NumMma_K) = (_1, _4)` 分块。
 
-我们之前已在 WGMMA 博客中介绍过矩阵描述符。
+我们之前已在 [WGMMA 博客](https://research.colfax-intl.com/cutlass-tutorial-wgmma-hopper/)中介绍过矩阵描述符。
 
 这里的累加器张量是一个普通的以 TMEM 为后端的张量，但它的布局初看可能难以理解：
 
@@ -604,7 +604,7 @@ for (int k_tile = 0; k_tile < size<3>(tCgA); ++k_tile)
 
 这些同步结构与 TMA 所使用的结构基本相同。
 
-如果需要关于 TMA 和同步的入门教程，请参阅我们之前的博客。
+如果需要关于 TMA 和同步的入门教程，请参阅我们[之前的博客](https://research.colfax-intl.com/tutorial-hopper-tma/)。
 
 值得注意的一点是，mbarrier 由将要发射 UMMA 的那个 warp 中的一个线程初始化。
 
@@ -628,11 +628,11 @@ CUTLASS 在 UMMA 原子实现内部选出该线程，因此实际上，仅从单
 
 该操作使用 PTX `tcgen05.ld` 指令完成。
 
-CUTLASS 将 `tcgen05.ld` 抽象为拷贝原子；我们之前看到的不同变体，由 `cute/atom/copy_traits_sm100.hpp` 中拷贝原子所定义的不同拷贝 traits 表示。
+CUTLASS 将 `tcgen05.ld` 抽象为拷贝原子；我们之前看到的不同变体，由 [`cute/atom/copy_traits_sm100.hpp`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/copy_traits_sm100.hpp) 中拷贝原子所定义的不同拷贝 traits 表示。
 
 本示例使用 `SM100_TMEM_LOAD_32dp32b1x` 原子。
 
-在 `cute/arch/copy_sm100.hpp` 中该原子的 PTX 封装中，可以看到它如何转换为正确的指令变体。
+在 [`cute/arch/copy_sm100.hpp`](https://github.com/NVIDIA/cutlass/blob/331a1f5b3fa3b6a9d9ef57c393d8719fb5510a32/include/cute/arch/copy_sm100.hpp#L3333) 中该原子的 PTX 封装中，可以看到它如何转换为正确的指令变体。
 
 ```
 // 32 个数据路径通道，32 位模式，重复 1 次
@@ -652,7 +652,6 @@ struct SM100_TMEM_LOAD_32dp32b1x
     :  "r"(src_addr));
 #else
     CUTE_INVALID_CONTROL_PATH("Trying to use TMEM_LOAD without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
-    // 尝试在未启用 CUTE_ARCH_TCGEN05_TMEM_ENABLED 的情况下使用 TMEM_LOAD。
 #endif
   }
 };
@@ -675,21 +674,21 @@ Tensor tDrAcc = make_tensor<AccType>(shape(tDgD));
 copy(tiled_t2r_copy, tDtAcc, tDrAcc);
 ```
 
-这里我们使用专用函数 `make_tmem_copy`，根据拷贝原子和 TMEM 张量推导 TV 布局，并创建 `TiledCopy`。
+这里我们使用专用函数 [`make_tmem_copy`](https://github.com/NVIDIA/cutlass/blob/b84e9802d84b16bcb4e92338fcf0a04785df9236/include/cute/atom/copy_traits_sm100.hpp#L341)，根据拷贝原子和 TMEM 张量推导 TV 布局，并创建 `TiledCopy`。
 
 关于该函数，一个重要事实是：它硬编码使用 4 个 warp，即 1 个 warpgroup。
 
 如前文所述，TMEM 的某些区域只能由 warpgroup 中根据 warp 索引对 4 取模所对应的 warp 访问。
 
-下面这张来自 PTX 手册的图展示了本示例中数据如何分配给各个 warp：
+下面这张[来自 PTX 手册的图](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#layout-d-m-128-cta-group-1)展示了本示例中数据如何分配给各个 warp：
 
 ![](Imgaes/tcgen05-data-path-layout-d1.png)
 
-下面来自 PTX 手册的图展示了该映射所对应的 TMEM 地址。
+下面[来自 PTX 手册的图](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-data-path-layout-d2)展示了该映射所对应的 TMEM 地址。
 
 ![](Imgaes/tcgen05-data-path-layout-d2.png)
 
-为了理解 CuTe 如何处理该拷贝，我们可以查看位于 `cute/atom/copy_traits_sm100.hpp` 中的 traits 结构。
+为了理解 CuTe 如何处理该拷贝，我们可以查看位于 [`cute/atom/copy_traits_sm100.hpp`](https://github.com/NVIDIA/cutlass/blob/b84e9802d84b16bcb4e92338fcf0a04785df9236/include/cute/atom/copy_traits_sm100.hpp#L2110) 中的 traits 结构。
 
 ```
 template <>
@@ -764,7 +763,7 @@ tDrAcc: ptr[32b](0x705671fff290) o ((_1,_1),_256,_1,_1):((_0,_0),_1,_0,_0)
 
 对于这个基础示例，还有一个额外主题需要讨论：TMEM 的分配和释放。
 
-我们可以使用 CuTe 辅助类 `cute::TMEM::Allocator1Sm` 完成该操作，该类为上文讨论的 `tcgen05.alloc` 和 `tcgen05.dealloc` 函数提供了接口。
+我们可以使用 CuTe 辅助类 [`cute::TMEM::Allocator1Sm`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/arch/tmem_allocator_sm100.hpp) 完成该操作，该类为上文讨论的 `tcgen05.alloc` 和 `tcgen05.dealloc` 函数提供了接口。
 
 基本模式如下。
 
@@ -791,9 +790,9 @@ if (elect_one_warp) {
 
 最后，调用 `allocate` 的同一个 warp 也必须调用 `free`。
 
-作为一项稍高级的特性，`release_allocation_lock` 方法封装了 `tcgen05.relinquish_alloc_permit`；它显然用于保证该 CTA 不再执行任何 TMEM 分配，从而允许后续 CTA 为同一个 SM 排队。
+作为一项稍高级的特性，`release_allocation_lock` 方法封装了 [`tcgen05.relinquish_alloc_permit`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-instructions-tcgen05-alloc-dealloc-relinquish-alloc-permit)；它显然用于保证该 CTA 不再执行任何 TMEM 分配，从而允许后续 CTA 为同一个 SM 排队。
 
-可以在 CUTLASS sm100 GEMM 内核中查看更完整的 TMEM 管理示例。
+可以在 [CUTLASS sm100 GEMM 内核](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L535)中查看更完整的 TMEM 管理示例。
 
 为协助 TMEM 管理，nvcc 新增了标志 `--g-tensor-memory-access-check`。
 
@@ -801,7 +800,7 @@ if (elect_one_warp) {
 
 # 结论
 
-本文讨论了 Nvidia Blackwell GPU 上可用的新特性，然后通过梳理第一个 CuTe Blackwell 示例，研究了如何使用这些特性。
+本文讨论了 Nvidia Blackwell GPU 上可用的新特性，然后通过梳理[第一个 CuTe Blackwell 示例](https://github.com/NVIDIA/cutlass/blob/main/examples/cute/tutorial/blackwell/01_mma_sm100.cu)，研究了如何使用这些特性。
 
 我们观察到，CUTLASS GEMM 内核的主要概念和整体结构并未随 Blackwell 架构而改变。
 
@@ -818,7 +817,7 @@ if (elect_one_warp) {
 
 # 参考资料
 
-Cris Cecka、Mihir Awatramani，《使用 CUTLASS 编程 Blackwell Tensor Core》，GTC 2025，https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/。
+Cris Cecka、Mihir Awatramani，《使用 CUTLASS 编程 Blackwell Tensor Core》，GTC 2025，[https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/](https://www.nvidia.com/en-us/on-demand/session/gtc25-s72720/)。
 
 1. 您好，我仔细阅读了这篇文章，受益匪浅。
 
@@ -854,9 +853,9 @@ Cris Cecka、Mihir Awatramani，《使用 CUTLASS 编程 Blackwell Tensor Core�
 
      这一理解是正确的：`umma_arrive`（最终解析为 PTX 指令 `tcgen05.commit`）会在给定 mbarrier 上观察到该线程之前发出的所有 UMMA 已完成。
 
-     PTX 文档的这一节可能会有帮助。
+     [PTX 文档的这一节](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#tcgen05-memory-consistency-model)可能会有帮助。
 
-     这种机制在 Blackwell 之前实际上就已存在，即 `cp.async` 与 mbarrier arrive 的组合；可参阅 PTX 或 CUTLASS 中的相关内容。
+     这种机制在 Blackwell 之前实际上就已存在，即 `cp.async` 与 mbarrier arrive 的组合；可参阅 [PTX](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive) 或 [CUTLASS](https://github.com/NVIDIA/cutlass/blob/f86feb0aa8a9490a7ab27bc991e36d7b5bf300e3/include/cutlass/arch/barrier.h#L741) 中的相关内容。
 
      （顺便一提，`tCrA` 是一个描述符张量，这些描述符包含 SMEM 指针，以及步长、swizzle 模式等其他信息。
 

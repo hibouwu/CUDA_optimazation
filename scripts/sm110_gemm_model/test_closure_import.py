@@ -1232,6 +1232,44 @@ class ClosureReportTest(unittest.TestCase):
         self.assertIn("hot-L2", markdown)
         self.assertIn("cold-HBM", markdown)
         self.assertIn("cublas_bf16_gemmex", markdown)
+        self.assertIn("| Per cycle |", markdown)
+        self.assertIn("1.575 GHz", markdown)
+        self.assertIn("kFLOP/cycle/GPU", markdown)
+
+    def test_per_cycle_rendering_preserves_gpu_and_per_sm_scope(self) -> None:
+        analysis = {
+            "hardware": {"clock_hz": 1_575_000_000.0},
+            "capacities": [
+                {
+                    "resource": "l2.read",
+                    "capacity_id": "l2-upper",
+                    "rate_per_second": 1_612_800_000_000.0,
+                    "rate_unit": "byte/s",
+                    "trial_count": 10,
+                    "evidence_kind": "specified_upper",
+                    "qualification": "closure_qualified",
+                    "source_path": "l2.json",
+                },
+                {
+                    "resource": "tma.smem_ingress.per_sm",
+                    "capacity_id": "tma-per-sm",
+                    "rate_per_second": 193_725_000_000.0,
+                    "rate_unit": "byte/s",
+                    "trial_count": 10,
+                    "evidence_kind": "measured_sustained",
+                    "qualification": "closure_qualified",
+                    "source_path": "tma.json",
+                },
+            ],
+            "base_capacities": [],
+            "observations": [],
+            "findings": [],
+        }
+        markdown = render_closure_markdown(analysis)
+        self.assertIn("1,024.000 B/cycle/GPU", markdown)
+        self.assertIn("123.000 B/cycle/SM", markdown)
+        self.assertIn("| Artifacts |", markdown)
+        self.assertIn("microbenchmark_sources.md", markdown)
 
     def test_report_flags_observation_above_conditional_upper(self) -> None:
         observation = ObservedBest(

@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1100" height="520" viewBox="0 0 1100 520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="8" height="8">
+      <path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" stroke="#2d6a4f" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+
+  <text x="550" y="28" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#b0b0b0">
+    Flexification: Two extensions to FlashAttention
+  </text>
+
+  <!-- ========== TOP PANEL: Standard FlashAttention ========== -->
+  <text x="40" y="62" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#888888">
+    Standard FlashAttention
+  </text>
+
+  <!-- Q x KV Grid -->
+  <text x="40" y="115" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">Q</text>
+  <text x="130" y="82" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">KV</text>
+
+  <!-- Grid tiles - all solid with block numbers -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">
+    <!-- Row 1 (SM1) -->
+    <rect x="60" y="90" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="85" y="115">0</text>
+    <rect x="115" y="90" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="140" y="115">1</text>
+    <rect x="170" y="90" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="195" y="115">2</text>
+    <!-- Row 2 (SM2) -->
+    <rect x="60" y="135" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="85" y="160">3</text>
+    <rect x="115" y="135" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="140" y="160">4</text>
+    <rect x="170" y="135" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="195" y="160">5</text>
+    <!-- Row 3 (SM3) -->
+    <rect x="60" y="180" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="85" y="205">6</text>
+    <rect x="115" y="180" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="140" y="205">7</text>
+    <rect x="170" y="180" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="195" y="205">8</text>
+  </g>
+
+  <!-- SM assignment brackets -->
+  <text x="240" y="118" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM1</text>
+  <text x="240" y="163" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM2</text>
+  <text x="240" y="208" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM3</text>
+  <path d="M225,95 L232,95 L232,130 L225,130" fill="none" stroke="#666666" stroke-width="1"/>
+  <path d="M225,140 L232,140 L232,175 L225,175" fill="none" stroke="#666666" stroke-width="1"/>
+  <path d="M225,185 L232,185 L232,220 L225,220" fill="none" stroke="#666666" stroke-width="1"/>
+
+  <!-- Arrow to work queues -->
+  <path d="M280,155 L340,155" fill="none" stroke="#666666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#666666"/>
+    </marker>
+  </defs>
+
+  <!-- Work Queue Header -->
+  <text x="530" y="62" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">
+    Work queue for SM2 (KV tiles to process)
+  </text>
+
+  <!-- Work Queue Columns: Loader → MMA/Epilogue → Softmax -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#b0b0b0" text-anchor="middle">
+    <!-- Loader Warp Queue -->
+    <text x="400" y="85" fill="#888888">Loader Warp</text>
+    <rect x="365" y="95" width="70" height="130" rx="6" fill="none" stroke="#555555" stroke-width="1" stroke-dasharray="4,2"/>
+    <rect x="375" y="105" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="400" y="128" fill="#ffffff" font-size="11">3</text>
+    <rect x="375" y="145" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="400" y="168" fill="#ffffff" font-size="11">4</text>
+    <rect x="375" y="185" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="400" y="208" fill="#ffffff" font-size="11">5</text>
+
+    <!-- Arrow between queues -->
+    <path d="M445,155 L475,155" fill="none" stroke="#555555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+    <defs>
+      <marker id="arrow2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#555555"/>
+      </marker>
+    </defs>
+
+    <!-- MMA / Epilogue Queue -->
+    <text x="530" y="85" fill="#888888">MMA / Epilogue</text>
+    <rect x="495" y="95" width="70" height="130" rx="6" fill="none" stroke="#555555" stroke-width="1" stroke-dasharray="4,2"/>
+    <rect x="505" y="105" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="530" y="128" fill="#ffffff" font-size="11">3</text>
+    <rect x="505" y="145" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="530" y="168" fill="#ffffff" font-size="11">4</text>
+    <rect x="505" y="185" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="530" y="208" fill="#ffffff" font-size="11">5</text>
+
+    <!-- Arrow between queues -->
+    <path d="M575,155 L605,155" fill="none" stroke="#555555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+    <!-- Softmax Warp -->
+    <text x="660" y="85" fill="#888888">Softmax Warp</text>
+    <rect x="625" y="95" width="70" height="130" rx="6" fill="none" stroke="#555555" stroke-width="1" stroke-dasharray="4,2"/>
+    <rect x="635" y="105" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="660" y="128" fill="#ffffff" font-size="11">3</text>
+    <rect x="635" y="145" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="660" y="168" fill="#ffffff" font-size="11">4</text>
+    <rect x="635" y="185" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="660" y="208" fill="#ffffff" font-size="11">5</text>
+  </g>
+
+  <!-- Standard FA description -->
+  <text x="780" y="130" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#888888">
+    All tiles processed
+  </text>
+  <text x="780" y="148" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#888888">
+    Dense iteration: 0, 1, 2, 3, ...
+  </text>
+
+  <!-- ========== DIVIDER ========== -->
+  <line x1="40" y1="260" x2="1060" y2="260" stroke="#444444" stroke-width="1" stroke-dasharray="8,4"/>
+
+  <!-- ========== BOTTOM PANEL: Flexification ========== -->
+  <text x="40" y="295" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#ee4c2c" font-weight="600">
+    Flexification
+  </text>
+
+  <!-- Q x KV Grid with sparsity -->
+  <text x="40" y="350" text-anchor="start" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">Q</text>
+  <text x="130" y="317" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">KV</text>
+
+  <!-- Grid tiles - sparse pattern with jumps -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="11" text-anchor="middle">
+    <!-- Row 1 (SM1) -->
+    <rect x="60" y="325" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="85" y="350" fill="#ffffff">0</text>
+    <rect x="115" y="325" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="140" y="350" fill="#ffffff">1</text>
+    <rect x="170" y="325" width="50" height="40" rx="4" fill="#2d2d2d" stroke="#555555" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="195" y="350" fill="#555555">-</text>
+    
+    <!-- Row 2 (SM2) - blocks 3 and 5, skip 4, block 3 is partial -->
+    <rect x="60" y="370" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <rect x="60" y="370" width="50" height="40" rx="4" fill="url(#hatch)" stroke="#2d6a4f" stroke-width="1.5"/>
+    <text x="85" y="395" fill="#ffffff">3</text>
+    <rect x="115" y="370" width="50" height="40" rx="4" fill="#2d2d2d" stroke="#555555" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="140" y="395" fill="#555555">-</text>
+    <rect x="170" y="370" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="195" y="395" fill="#ffffff">5</text>
+    
+    <!-- Row 3 (SM3) -->
+    <rect x="60" y="415" width="50" height="40" rx="4" fill="#2d2d2d" stroke="#555555" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="85" y="440" fill="#555555">-</text>
+    <rect x="115" y="415" width="50" height="40" rx="4" fill="#2d2d2d" stroke="#555555" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="140" y="440" fill="#555555">-</text>
+    <rect x="170" y="415" width="50" height="40" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <rect x="170" y="415" width="50" height="40" rx="4" fill="url(#hatch)" stroke="#2d6a4f" stroke-width="1.5"/>
+    <text x="195" y="440" fill="#ffffff">8</text>
+  </g>
+
+  <!-- SM assignment brackets -->
+  <text x="240" y="353" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM1</text>
+  <text x="240" y="398" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM2</text>
+  <text x="240" y="443" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#888888">SM3</text>
+  <path d="M225,330 L232,330 L232,365 L225,365" fill="none" stroke="#666666" stroke-width="1"/>
+  <path d="M225,375 L232,375 L232,410 L225,410" fill="none" stroke="#666666" stroke-width="1"/>
+  <path d="M225,420 L232,420 L232,455 L225,455" fill="none" stroke="#666666" stroke-width="1"/>
+
+  <!-- Arrow to work queues with annotation -->
+  <path d="M270,390 L330,390" fill="none" stroke="#ee4c2c" stroke-width="2" marker-end="url(#arrow3)"/>
+  <defs>
+    <marker id="arrow3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#ee4c2c"/>
+    </marker>
+  </defs>
+
+  <!-- Block sparsity annotation -->
+  <text x="300" y="370" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#ee4c2c" font-weight="500">
+    Block sparsity
+  </text>
+
+  <!-- Work Queue Header -->
+  <text x="530" y="295" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#888888">
+    Work queue for SM2 (only non-empty tiles)
+  </text>
+
+  <!-- Work Queue Columns - Flexified: Loader → MMA/Epilogue → Softmax -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#b0b0b0" text-anchor="middle">
+    <!-- Loader Warp Queue -->
+    <text x="400" y="320" fill="#888888">Loader Warp</text>
+    <rect x="365" y="330" width="70" height="100" rx="6" fill="none" stroke="#ee4c2c" stroke-width="2" stroke-dasharray="4,2"/>
+    <rect x="375" y="340" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <rect x="375" y="340" width="50" height="35" rx="4" fill="url(#hatch)" stroke="#2d6a4f" stroke-width="1.5"/>
+    <text x="400" y="363" fill="#ffffff" font-size="11">3</text>
+    <rect x="375" y="380" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="400" y="403" fill="#ffffff" font-size="11">5</text>
+
+    <!-- Arrow between queues -->
+    <path d="M445,380 L475,380" fill="none" stroke="#555555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+    <!-- MMA / Epilogue Queue -->
+    <text x="530" y="320" fill="#888888">MMA / Epilogue</text>
+    <rect x="495" y="330" width="70" height="100" rx="6" fill="none" stroke="#555555" stroke-width="1" stroke-dasharray="4,2"/>
+    <rect x="505" y="340" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="530" y="363" fill="#ffffff" font-size="11">3</text>
+    <rect x="505" y="380" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="530" y="403" fill="#ffffff" font-size="11">5</text>
+
+    <!-- Arrow between queues -->
+    <path d="M575,380 L605,380" fill="none" stroke="#555555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+    <!-- Softmax Warp -->
+    <text x="660" y="320" fill="#888888">Softmax Warp</text>
+    <rect x="625" y="330" width="70" height="100" rx="6" fill="none" stroke="#ee4c2c" stroke-width="2" stroke-dasharray="4,2"/>
+    
+    <!-- Block 3 (partial) with badges -->
+    <rect x="635" y="340" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <rect x="635" y="340" width="50" height="35" rx="4" fill="url(#hatch)" stroke="#2d6a4f" stroke-width="1.5"/>
+    <text x="660" y="363" fill="#ffffff" font-size="11">3</text>
+    <!-- score_mod badge (top-right corner) -->
+    <circle cx="680" cy="345" r="5" fill="#ee4c2c"/>
+    <!-- mask_mod badge (bottom-right corner) -->
+    <circle cx="680" cy="370" r="5" fill="#f4a261"/>
+    
+    <!-- Block 5 (full) with badge -->
+    <rect x="635" y="380" width="50" height="35" rx="4" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="660" y="403" fill="#ffffff" font-size="11">5</text>
+    <!-- score_mod badge only (top-right corner) -->
+    <circle cx="680" cy="385" r="5" fill="#ee4c2c"/>
+  </g>
+
+  <!-- Score mod / mask mod legend under softmax warp -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="start">
+    <circle cx="634" cy="450" r="5" fill="#ee4c2c"/>
+    <text x="644" y="454" fill="#ee4c2c">score_mod (every block)</text>
+    <circle cx="634" cy="468" r="5" fill="#f4a261"/>
+    <text x="644" y="472" fill="#f4a261">mask_mod (partial only)</text>
+  </g>
+
+  <!-- Annotations box on right side -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="11">
+    <!-- Legend -->
+    <rect x="820" y="320" width="20" height="14" rx="2" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <text x="850" y="332" fill="#888888">Full block</text>
+
+    <rect x="820" y="345" width="20" height="14" rx="2" fill="#59a14f" stroke="#1f1f1f" stroke-width="1"/>
+    <rect x="820" y="345" width="20" height="14" rx="2" fill="url(#hatch)" stroke="#2d6a4f" stroke-width="1"/>
+    <text x="850" y="357" fill="#888888">Partial block (some scores masked)</text>
+
+    <rect x="820" y="370" width="20" height="14" rx="2" fill="#2d2d2d" stroke="#555555" stroke-width="1" stroke-dasharray="2,1"/>
+    <text x="850" y="382" fill="#888888">Skipped (empty by sparsity)</text>
+
+    <!-- Extension point summary -->
+    <text x="820" y="420" fill="#ee4c2c" font-weight="600" font-size="12">Extension points:</text>
+    <text x="820" y="438" fill="#b0b0b0">1. Block sparsity: which tiles enter queue</text>
+    <text x="820" y="456" fill="#b0b0b0">2. score_mod: applied to every block</text>
+    <text x="820" y="474" fill="#b0b0b0">3. mask_mod: applied to partial blocks</text>
+  </g>
+
+</svg>
