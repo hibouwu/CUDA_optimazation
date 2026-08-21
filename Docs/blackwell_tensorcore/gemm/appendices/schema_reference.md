@@ -1,4 +1,6 @@
-# 可执行 schema reference\n\n本附录冻结代码提交 `f06f2cd917a4cb23806b5e1be06120be9152ed7b` 的模型字段语义。规范公式见 [`model/`](../model/01_scope_and_claims.md)；本页只定义 serialization、applicability 与审计字段。空 tuple 表示该记录没有额外收窄该维度，不代表已经证明跨所有硬件适用。\n\n## 0. 可执行 schema 参数首次定义
+# 可执行 schema reference
+
+本附录冻结代码提交 `f06f2cd917a4cb23806b5e1be06120be9152ed7b` 的模型字段语义。规范公式见 [`model/`](../model/01_scope_and_claims.md)；本页只定义 serialization、applicability 与审计字段。空 tuple 表示该记录没有额外收窄该维度，不代表已经证明跨所有硬件适用。\n\n## 0. 可执行 schema 参数首次定义
 
 本节是模型 JSON/Python schema 的规范字典。下表中的空 tuple 表示“不额外收窄该维度”，而不是“已经证明适用于所有硬件”；closure 结论还必须经过硬件、场景与证据等级门禁。单位没有另行写明时为无量纲标识或枚举。
 
