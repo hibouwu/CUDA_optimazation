@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sm110a-static-instance-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "contract_sha256", "objective_sha256", "freshness_epoch",
+    "instance_id", "subject", "provenance", "target", "translation_units",
+    "declared_config", "static_contract", "hypothesis"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "contract_sha256": {"$ref": "#/$defs/sha256"},
+    "objective_sha256": {"$ref": "#/$defs/sha256"},
+    "freshness_epoch": {"type": "string", "minLength": 1},
+    "instance_id": {"$ref": "#/$defs/safe_id"},
+    "subject": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "id", "group"],
+      "properties": {
+        "kind": {"enum": ["explicit_schedule_tag", "kernel_schedule_auto_control"]},
+        "id": {"type": "string", "minLength": 1},
+        "group": {"type": "string", "minLength": 1}
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reference_inventory_sha256", "reference_class", "source_anchors", "parent_instance_id", "derivation_axis"],
+      "properties": {
+        "reference_inventory_sha256": {"$ref": "#/$defs/sha256"},
+        "reference_class": {"enum": ["official_cpp_explicit_or_conditional", "official_cpp_auto_derived", "generator_config", "source_derived", "auto_control"]},
+        "source_anchors": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source_anchor"}},
+        "parent_instance_id": {"type": ["string", "null"]},
+        "derivation_axis": {"type": "string", "minLength": 1}
+      }
+    },
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cutlass_git_sha", "cutlass_arch_tag", "virtual_arch", "binary_arch"],
+      "properties": {
+        "cutlass_git_sha": {"pattern": "^[0-9a-f]{40}$"},
+        "cutlass_arch_tag": {"const": "cutlass::arch::Sm100"},
+        "virtual_arch": {"const": "compute_110a"},
+        "binary_arch": {"const": "sm_110a"}
+      }
+    },
+    "translation_units": {
+      "type": "object", "additionalProperties": false,
+      "required": ["config", "kernel", "type_witness"],
+      "properties": {
+        "config": {"$ref": "#/$defs/file_ref"},
+        "kernel": {"$ref": "#/$defs/file_ref"},
+        "type_witness": {"$ref": "#/$defs/file_ref"}
+      }
+    },
+    "declared_config": {
+      "type": "object", "additionalProperties": false,
+      "required": ["family", "operator_class", "elements", "layouts", "alignments", "mma_tile_mnk", "cluster_mnk", "stage_policy", "mainloop_schedule", "epilogue_schedule", "kernel_problem_shape", "tile_scheduler", "cta_group", "operand_source", "mechanism"],
+      "properties": {
+        "family": {"type": "string", "minLength": 1},
+        "operator_class": {"type": "string", "minLength": 1},
+        "elements": {"type": "object", "additionalProperties": false, "required": ["a", "b", "accumulator", "d"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}, "accumulator": {"type": "string"}, "d": {"type": "string"}}},
+        "layouts": {"type": "object", "additionalProperties": false, "required": ["a", "b", "d"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}, "d": {"type": "string"}}},
+        "alignments": {"type": "object", "additionalProperties": false, "required": ["a", "b", "d"], "properties": {"a": {"type": "integer", "minimum": 1}, "b": {"type": "integer", "minimum": 1}, "d": {"type": "integer", "minimum": 1}}},
+        "mma_tile_mnk": {"$ref": "#/$defs/shape3"},
+        "cluster_mnk": {"$ref": "#/$defs/shape3"},
+        "stage_policy": {"type": "string", "minLength": 1},
+        "mainloop_schedule": {"type": "string", "minLength": 1},
+        "epilogue_schedule": {"type": "string", "minLength": 1},
+        "kernel_problem_shape": {"type": "string", "minLength": 1},
+        "tile_scheduler": {"type": "string", "minLength": 1},
+        "cta_group": {"enum": [1, 2]},
+        "operand_source": {"type": "string", "minLength": 1},
+        "mechanism": {
+          "type": "object", "additionalProperties": false,
+          "required": ["pointer_mode", "transforms", "block_scaled", "sparse", "fast_fp32", "complex"],
+          "properties": {
+            "pointer_mode": {"enum": ["single", "array"]},
+            "transforms": {"type": "object", "additionalProperties": false, "required": ["a", "b"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}}},
+            "block_scaled": {"type": "object", "additionalProperties": false, "required": ["enabled", "scale_a", "scale_b", "vector_size_a", "vector_size_b"], "properties": {"enabled": {"type": "boolean"}, "scale_a": {"type": ["string", "null"]}, "scale_b": {"type": ["string", "null"]}, "vector_size_a": {"type": ["integer", "null"], "minimum": 1}, "vector_size_b": {"type": ["integer", "null"], "minimum": 1}}},
+            "sparse": {"type": "object", "additionalProperties": false, "required": ["enabled", "metadata"], "properties": {"enabled": {"type": "boolean"}, "metadata": {"type": ["string", "null"]}}},
+            "fast_fp32": {"type": "object", "additionalProperties": false, "required": ["enabled", "atom_model"], "properties": {"enabled": {"type": "boolean"}, "atom_model": {"type": ["string", "null"]}}},
+            "complex": {"type": "object", "additionalProperties": false, "required": ["enabled", "representation"], "properties": {"enabled": {"type": "boolean"}, "representation": {"type": ["string", "null"]}}}
+          }
+        }
+      }
+    },
+    "static_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required_layers", "target_entity", "function_selector", "ptx", "sass"],
+      "properties": {
+        "required_layers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "target_entity": {"const": "cutlass::device_kernel<GemmKernel>"},
+        "function_selector": {"const": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function"},
+        "ptx": {"$ref": "#/$defs/opcode_contract"},
+        "sass": {"$ref": "#/$defs/opcode_contract"}
+      }
+    },
+    "hypothesis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["expected_outcome", "failure_domain", "failure_layer", "diagnostic_patterns", "control_instance_id"],
+      "properties": {
+        "expected_outcome": {"enum": ["STATIC_PASS", "EXPECTED_STATIC_REJECT", "UNSUPPORTED_SM110A", "UNKNOWN"]},
+        "failure_domain": {"type": ["string", "null"]},
+        "failure_layer": {"type": ["string", "null"]},
+        "diagnostic_patterns": {"type": "array", "items": {"type": "string"}},
+        "control_instance_id": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safe_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "safe_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "file_ref": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "source_anchor": {"type": "object", "additionalProperties": false, "required": ["path", "line_start", "line_end", "sha256"], "properties": {"path": {"$ref": "#/$defs/safe_path"}, "line_start": {"type": "integer", "minimum": 1}, "line_end": {"type": "integer", "minimum": 1}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "shape3": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}], "minItems": 3, "maxItems": 3},
+    "pattern": {"type": "object", "additionalProperties": false, "required": ["id", "regex", "min_count", "max_count"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "regex": {"type": "string", "minLength": 3}, "min_count": {"type": "integer", "minimum": 0}, "max_count": {"type": ["integer", "null"], "minimum": 0}}},
+    "opcode_contract": {"type": "object", "additionalProperties": false, "required": ["required", "forbidden"], "properties": {"required": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern"}}, "forbidden": {"type": "array", "items": {"$ref": "#/$defs/pattern"}}}}
+  }
+}

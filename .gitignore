@@ -17,6 +17,8 @@ transformer_bench
 # Benchmark outputs
 *_benchmark.csv
 results/
+!cutlass-gemm-cpp-guide/evidence/codegen-sm110a-v2/results/
+!cutlass-gemm-cpp-guide/evidence/codegen-sm110a-v2/results/*.json
 !/results/
 /results/*
 !/results/gemm_sm110/

@@ -49,6 +49,37 @@ add_test(
 set_tests_properties(host.schedule_tag_adversarial PROPERTIES LABELS "host;schema;coverage;codegen;adversarial")
 
 add_test(
+  NAME host.codegen_v2_contract
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tools/validate_codegen_v2.py
+          --root ${CMAKE_CURRENT_SOURCE_DIR})
+set_tests_properties(host.codegen_v2_contract PROPERTIES LABELS "host;schema;codegen-v2")
+
+add_test(
+  NAME host.codegen_v2_attribution_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_attribution_v2_adversarial.py)
+set_tests_properties(host.codegen_v2_attribution_adversarial PROPERTIES LABELS "host;codegen-v2;adversarial")
+
+add_test(
+  NAME host.codegen_v2_model_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_codegen_v2_model_adversarial.py)
+set_tests_properties(host.codegen_v2_model_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial")
+
+add_test(
+  NAME host.codegen_v2_deep_replay_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_deep_replay_v2_adversarial.py)
+set_tests_properties(host.codegen_v2_deep_replay_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial")
+
+add_test(
+  NAME host.codegen_v2_campaign_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_codegen_v2_campaign_adversarial.py)
+set_tests_properties(host.codegen_v2_campaign_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial")
+
+add_test(
   NAME host.cutlass_source_contracts
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tests/mechanism/test_cutlass_source_contracts.py)

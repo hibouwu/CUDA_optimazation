@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "3e7eaffad26aa46e881564ef04eea74ae425c352de2e9099d42839b808ba6813",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "instance_id": "dense_f16_2sm",
+  "subject": {
+    "kind": "explicit_schedule_tag",
+    "id": "KernelTmaWarpSpecialized2SmSm100",
+    "group": "dense"
+  },
+  "provenance": {
+    "reference_inventory_sha256": "1370b33695542ceae8103a6280dd422e3122dcdd53cd0c69d55a92853d3cd296",
+    "reference_class": "official_cpp_explicit_or_conditional",
+    "source_anchors": [
+      {
+        "path": "test/unit/gemm/device/sm100_tensorop_gemm/f8_f8_void_f32.cu",
+        "line_start": 480,
+        "line_end": 480,
+        "sha256": "7e25c8d5f01c13c30cc2c9398d2f55f4176c49874e95314f475ac6aa7a626d06"
+      }
+    ],
+    "parent_instance_id": null,
+    "derivation_axis": "official_configuration_reuse"
+  },
+  "target": {
+    "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+    "cutlass_arch_tag": "cutlass::arch::Sm100",
+    "virtual_arch": "compute_110a",
+    "binary_arch": "sm_110a"
+  },
+  "translation_units": {
+    "config": {
+      "path": "tests/codegen/instances/dense_f16_2sm/config.hpp",
+      "sha256": "7f28e4da3e12dc2a6d34638e3961a31259944e9fe31de68b211a480bcf4fc283"
+    },
+    "kernel": {
+      "path": "tests/codegen/instances/dense_f16_2sm/kernel.cu",
+      "sha256": "84cfbbd488c36780561d7f48efc35f81a2a063ffccbecac1b00bd3c5c208ad93"
+    },
+    "type_witness": {
+      "path": "tests/codegen/instances/dense_f16_2sm/type_witness.cu",
+      "sha256": "4f0f7187fd5247830469cf15028a074707e3fa0cb1110d4e5748131ea4365771"
+    }
+  },
+  "declared_config": {
+    "family": "dense_f16",
+    "operator_class": "cutlass::arch::OpClassTensorOp",
+    "elements": {
+      "a": "cutlass::half_t",
+      "b": "cutlass::half_t",
+      "accumulator": "float",
+      "d": "float"
+    },
+    "layouts": {
+      "a": "RowMajor",
+      "b": "ColumnMajor",
+      "d": "RowMajor"
+    },
+    "alignments": {
+      "a": 8,
+      "b": 8,
+      "d": 4
+    },
+    "mma_tile_mnk": [
+      256,
+      128,
+      64
+    ],
+    "cluster_mnk": [
+      2,
+      1,
+      1
+    ],
+    "stage_policy": "cutlass::gemm::collective::StageCountAutoCarveout<EpilogueSharedStorage>",
+    "mainloop_schedule": "cutlass::gemm::KernelTmaWarpSpecialized2SmSm100",
+    "epilogue_schedule": "cutlass::epilogue::TmaWarpSpecialized2Sm",
+    "kernel_problem_shape": "cute::Shape<int,int,int,int>",
+    "tile_scheduler": "void (CUTLASS default)",
+      "cta_group": 2,
+      "operand_source": "SS",
+      "mechanism": {
+        "pointer_mode": "single",
+        "transforms": {"a": "identity", "b": "identity"},
+        "block_scaled": {"enabled": false, "scale_a": null, "scale_b": null, "vector_size_a": null, "vector_size_b": null},
+        "sparse": {"enabled": false, "metadata": null},
+        "fast_fp32": {"enabled": false, "atom_model": null},
+        "complex": {"enabled": false, "representation": null}
+      }
+  },
+  "static_contract": {
+    "required_layers": [
+      "DECLARED_BUILDER_CONFIG",
+      "BUILDER_SPECIALIZATION",
+      "DISPATCH_POLICY",
+      "COLLECTIVE",
+      "STAGE",
+      "COPY_LAYOUT",
+      "TILED_MMA",
+      "ATOM",
+      "KERNEL_COMPOSITION",
+      "PTX_EMISSION",
+      "SM110A_ASSEMBLY",
+      "FUNCTION_BINDING",
+      "FUNCTION_CONTRACT"
+    ],
+    "target_entity": "cutlass::device_kernel<GemmKernel>",
+    "function_selector": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+    "ptx": {
+      "required": [
+        {
+          "id": "tma_load",
+          "regex": "cp\\.async\\.bulk\\.tensor(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_load",
+          "regex": "tcgen05\\.ld(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "mma_f16_2sm",
+          "regex": "tcgen05\\.mma\\.cta_group::2\\.kind::f16(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "mma_1sm",
+          "regex": "tcgen05\\.mma\\.cta_group::1(?:\\..*)?",
+          "min_count": 0,
+          "max_count": 0
+        }
+      ]
+    },
+    "sass": {
+      "required": [
+        {
+          "id": "tma_load_2cta",
+          "regex": "UTMALDG(?:\\..*)?\\.2CTA",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "mma_f16_2cta",
+          "regex": "UTCHMMA\\.2CTA(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_load",
+          "regex": "LDTM(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "mma_plain",
+          "regex": "UTCHMMA",
+          "min_count": 0,
+          "max_count": 0
+        }
+      ]
+    }
+  },
+  "hypothesis": {
+    "expected_outcome": "STATIC_PASS",
+    "failure_domain": null,
+    "failure_layer": null,
+    "diagnostic_patterns": [],
+    "control_instance_id": null
+  }
+}

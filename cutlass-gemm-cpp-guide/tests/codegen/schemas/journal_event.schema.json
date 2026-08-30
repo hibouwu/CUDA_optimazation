@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sm110a-static-journal-event-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "event_type", "attempt_id", "instance_id", "fingerprint_id", "timestamp_utc", "previous_event_sha256", "payload", "event_sha256"],
+  "properties": {
+    "seq": {"type": "integer", "minimum": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "attempt_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "instance_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "fingerprint_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "timestamp_utc": {"type": "string", "format": "date-time"},
+    "previous_event_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "payload": {"type": "object"},
+    "event_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

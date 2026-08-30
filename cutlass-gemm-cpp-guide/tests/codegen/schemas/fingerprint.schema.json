@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sm110a-static-fingerprint-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contract_sha256", "objective_sha256", "freshness_epoch", "fingerprint_id", "instance_ref", "source_closure", "toolchain", "execution_plan", "environment", "component_hashes", "overall_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "contract_sha256": {"$ref": "#/$defs/sha256"},
+    "objective_sha256": {"$ref": "#/$defs/sha256"},
+    "freshness_epoch": {"type": "string", "minLength": 1},
+    "fingerprint_id": {"$ref": "#/$defs/safe_id"},
+    "instance_ref": {"$ref": "#/$defs/ref"},
+    "source_closure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cutlass_git_sha", "cutlass_clean", "inputs", "input_tree_sha256"],
+      "properties": {
+        "cutlass_git_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "cutlass_clean": {"const": true},
+        "inputs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/file"}},
+        "input_tree_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "toolchain": {
+      "type": "object", "additionalProperties": false,
+      "required": ["container_digest", "versions_lock_sha256", "executables"],
+      "properties": {
+        "container_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "versions_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "executables": {
+          "type": "object", "minProperties": 4,
+          "additionalProperties": {
+            "type": "object", "additionalProperties": false,
+            "required": ["path", "binary_sha256", "version", "version_sha256"],
+            "properties": {
+              "path": {"type": "string"},
+              "binary_sha256": {"$ref": "#/$defs/sha256"},
+              "version": {"type": "string"},
+              "version_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    "execution_plan": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["step_id", "tool", "argv"],
+        "properties": {
+          "step_id": {"$ref": "#/$defs/safe_id"},
+          "tool": {"type": "string"},
+          "argv": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        }
+      }
+    },
+    "environment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["allowed", "asserted_absent"],
+      "properties": {
+        "allowed": {"type": "object", "additionalProperties": {"type": "string"}},
+        "asserted_absent": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "component_hashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["instance", "source", "toolchain", "harness", "plan"],
+      "properties": {
+        "instance": {"$ref": "#/$defs/sha256"},
+        "source": {"$ref": "#/$defs/sha256"},
+        "toolchain": {"$ref": "#/$defs/sha256"},
+        "harness": {"$ref": "#/$defs/sha256"},
+        "plan": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "overall_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safe_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "safe_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "ref": {"type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "file": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}}}
+  }
+}

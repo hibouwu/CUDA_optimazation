@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sm110a-static-result-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "contract_sha256", "objective_sha256", "freshness_epoch",
+    "result_id", "scope", "subject", "instance_ref", "fingerprint_ref", "attempt_id",
+    "journal_ref", "artifact_manifest_ref", "status", "layer_outcomes", "evidence"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "contract_sha256": {"$ref": "#/$defs/sha256"},
+    "objective_sha256": {"$ref": "#/$defs/sha256"},
+    "freshness_epoch": {"type": "string", "minLength": 1},
+    "result_id": {"$ref": "#/$defs/safe_id"},
+    "scope": {"const": "STATIC_CODEGEN_ONLY"},
+    "subject": {"type": "object", "additionalProperties": false, "required": ["kind", "id", "group"], "properties": {"kind": {"enum": ["explicit_schedule_tag", "kernel_schedule_auto_control"]}, "id": {"type": "string"}, "group": {"type": "string"}}},
+    "instance_ref": {"$ref": "#/$defs/ref"},
+    "fingerprint_ref": {"$ref": "#/$defs/ref"},
+    "attempt_id": {"$ref": "#/$defs/safe_id"},
+    "journal_ref": {"type": "object", "additionalProperties": false, "required": ["path", "sha256", "last_seq", "last_event_sha256"], "properties": {"path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}, "last_seq": {"type": "integer", "minimum": 1}, "last_event_sha256": {"$ref": "#/$defs/sha256"}}},
+    "artifact_manifest_ref": {"$ref": "#/$defs/ref"},
+    "status": {"enum": ["STATIC_PASS", "EXPECTED_STATIC_REJECT", "UNSUPPORTED_SM110A", "UNEXPECTED_COMPILE_FAIL", "ATTRIBUTION_FAIL"]},
+    "layer_outcomes": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["layer", "state", "witness_artifact_id"],
+        "properties": {
+          "layer": {"type": "string"},
+          "state": {"enum": ["RESOLVED", "REJECTED", "NOT_REACHED"]},
+          "witness_artifact_id": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "evidence": {
+      "oneOf": [
+        {"$ref": "#/$defs/static_pass_evidence"},
+        {"$ref": "#/$defs/expected_reject_evidence"},
+        {"$ref": "#/$defs/unsupported_evidence"},
+        {"$ref": "#/$defs/failure_evidence"}
+      ]
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "STATIC_PASS"}}}, "then": {"properties": {"evidence": {"$ref": "#/$defs/static_pass_evidence"}}}},
+    {"if": {"properties": {"status": {"const": "EXPECTED_STATIC_REJECT"}}}, "then": {"properties": {"evidence": {"$ref": "#/$defs/expected_reject_evidence"}}}},
+    {"if": {"properties": {"status": {"const": "UNSUPPORTED_SM110A"}}}, "then": {"properties": {"evidence": {"$ref": "#/$defs/unsupported_evidence"}}}},
+    {"if": {"properties": {"status": {"enum": ["UNEXPECTED_COMPILE_FAIL", "ATTRIBUTION_FAIL"]}}}, "then": {"properties": {"evidence": {"$ref": "#/$defs/failure_evidence"}}}}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safe_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+    "safe_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "ref": {"type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "pattern_result": {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "required": {"type": "boolean"}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}},
+    "static_pass_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "type_witness_artifact_id", "resolved_stage", "function_binding", "ptx_contract_results", "sass_contract_results", "cta_group_contract_pass"],
+      "properties": {
+        "kind": {"const": "STATIC_PASS"},
+        "type_witness_artifact_id": {"$ref": "#/$defs/safe_id"},
+        "resolved_stage": {"type": "object", "additionalProperties": false, "required": ["declared_policy_cpp", "resolved_policy_cpp", "stage_count", "scheduler_stages", "accumulator_stages"], "properties": {"declared_policy_cpp": {"type": "string", "minLength": 1}, "resolved_policy_cpp": {"type": "string", "minLength": 1}, "stage_count": {"type": "integer", "minimum": 1}, "scheduler_stages": {"type": "integer", "minimum": 0}, "accumulator_stages": {"type": "integer", "minimum": 0}}},
+        "function_binding": {"type": "object", "additionalProperties": false, "required": ["target_cpp_entity", "selection_policy", "symbol", "ptx_entry_count", "elf_sto_entry_count", "nvdisasm_symbol_match_count", "nvdisasm_total_function_count", "ptx_function_artifact_id", "sass_function_artifact_id", "same_symbol"], "properties": {"target_cpp_entity": {"const": "cutlass::device_kernel<GemmKernel>"}, "selection_policy": {"const": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function"}, "symbol": {"type": "string", "minLength": 1}, "ptx_entry_count": {"const": 1}, "elf_sto_entry_count": {"const": 1}, "nvdisasm_symbol_match_count": {"const": 1}, "nvdisasm_total_function_count": {"type": "integer", "minimum": 1}, "ptx_function_artifact_id": {"$ref": "#/$defs/safe_id"}, "sass_function_artifact_id": {"$ref": "#/$defs/safe_id"}, "same_symbol": {"const": true}}},
+        "ptx_contract_results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern_result"}},
+        "sass_contract_results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern_result"}},
+        "cta_group_contract_pass": {"const": true}
+      }
+    },
+    "expected_reject_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "failure", "diagnostic_results", "source_constraints", "legal_control"],
+      "properties": {
+        "kind": {"const": "EXPECTED_STATIC_REJECT"},
+        "failure": {"type": "object", "additionalProperties": false, "required": ["layer", "domain", "step_id", "returncode", "stderr_artifact_id"], "properties": {"layer": {"type": "string"}, "domain": {"const": "CONFIGURATION_LEGALITY"}, "step_id": {"$ref": "#/$defs/safe_id"}, "returncode": {"type": "integer", "not": {"const": 0}}, "stderr_artifact_id": {"$ref": "#/$defs/safe_id"}}},
+        "diagnostic_results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern_result"}},
+        "source_constraints": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/ref"}},
+        "legal_control": {
+          "type": "object", "additionalProperties": false,
+          "required": ["result_ref", "relation", "controlled_delta"],
+          "properties": {
+            "result_ref": {"$ref": "#/$defs/ref"},
+            "relation": {"enum": ["parent", "sibling"]},
+            "controlled_delta": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "unsupported_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "failure", "diagnostic_results", "source_constraints", "sm110a_preflight_result_ref"],
+      "properties": {
+        "kind": {"const": "UNSUPPORTED_SM110A"},
+        "failure": {"type": "object", "additionalProperties": false, "required": ["layer", "domain", "step_id", "returncode", "stderr_artifact_id"], "properties": {"layer": {"type": "string"}, "domain": {"const": "TARGET_ARCHITECTURE"}, "step_id": {"$ref": "#/$defs/safe_id"}, "returncode": {"type": "integer", "not": {"const": 0}}, "stderr_artifact_id": {"$ref": "#/$defs/safe_id"}}},
+        "diagnostic_results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern_result"}},
+        "source_constraints": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/ref"}},
+        "sm110a_preflight_result_ref": {"$ref": "#/$defs/ref"}
+      }
+    },
+    "failure_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "reason", "step_id", "returncode", "diagnostic_artifact_id"],
+      "properties": {"kind": {"const": "HARNESS_FAILURE"}, "reason": {"type": "string", "minLength": 1}, "step_id": {"$ref": "#/$defs/safe_id"}, "returncode": {"type": "integer"}, "diagnostic_artifact_id": {"$ref": "#/$defs/safe_id"}}
+    }
+  }
+}

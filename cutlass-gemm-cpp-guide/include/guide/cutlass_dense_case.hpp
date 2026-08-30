@@ -52,27 +52,35 @@ struct DenseGemmConfig {
   using OperatorClass = cutlass::arch::OpClassTensorOp;
   using MmaTileShape = MmaTileShape_;
   using ClusterShape = ClusterShape_;
+  using MainloopSchedule = MainloopSchedule_;
+  using EpilogueSchedule = EpilogueSchedule_;
+  using ProblemShape = cute::Shape<int, int, int, int>;
+  using TileScheduler = void;
 
-  using CollectiveEpilogue = typename cutlass::epilogue::collective::CollectiveBuilder<
+  using EpilogueBuilder = cutlass::epilogue::collective::CollectiveBuilder<
       ArchTag, OperatorClass, MmaTileShape, ClusterShape,
       cutlass::epilogue::collective::EpilogueTileAuto,
       ElementAccumulator, ElementCompute,
       ElementC, LayoutC, AlignmentC,
       ElementD, LayoutD, AlignmentD,
-      EpilogueSchedule_>::CollectiveOp;
+      EpilogueSchedule>;
+  using CollectiveEpilogue = typename EpilogueBuilder::CollectiveOp;
 
-  using CollectiveMainloop = typename cutlass::gemm::collective::CollectiveBuilder<
+  using StagePolicy = cutlass::gemm::collective::StageCountAutoCarveout<
+      static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>;
+
+  using MainloopBuilder = cutlass::gemm::collective::CollectiveBuilder<
       ArchTag, OperatorClass,
       ElementA, LayoutA, AlignmentA,
       ElementB, LayoutB, AlignmentB,
       ElementAccumulator,
       MmaTileShape, ClusterShape,
-      cutlass::gemm::collective::StageCountAutoCarveout<
-          static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>,
-      MainloopSchedule_>::CollectiveOp;
+      StagePolicy,
+      MainloopSchedule>;
+  using CollectiveMainloop = typename MainloopBuilder::CollectiveOp;
 
   using GemmKernel = cutlass::gemm::kernel::GemmUniversal<
-      cute::Shape<int, int, int, int>, CollectiveMainloop, CollectiveEpilogue, void>;
+      ProblemShape, CollectiveMainloop, CollectiveEpilogue, TileScheduler>;
   using Gemm = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
   using StrideA = typename GemmKernel::StrideA;
   using StrideB = typename GemmKernel::StrideB;

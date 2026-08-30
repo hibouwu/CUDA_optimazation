@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "phase1_run_id": "phase1-fresh-20260830",
+  "phase1_current_summary": "evidence/codegen-sm110a-v2/summary-phase1-fresh-20260830.json",
+  "fresh_replay_required_semantics": "permanent_coverage_membership_never_completion_flag",
+  "inventory_contract_sha256": {
+    "explicit_tags": "2bbd6195fe9683512a3c16b06f8637883937eac5bbbfa44b1a68fa81ed2e4b50",
+    "auto_controls": "309d8530dcd63a59c7c98051e340fb7a3cd712cd72d261b39a2316306930ed91"
+  },
+  "phase1_fresh_replay_instances": [
+    "dense_f16_1sm",
+    "dense_f16_2sm",
+    "dense_bs_nvfp4_1sm",
+    "dense_bs_mxf4_1sm",
+    "dense_bs_mxf8_1sm",
+    "sparse_bs_nvfp4_1sm"
+  ],
+  "record_schemas": {
+    "instance": "tests/codegen/schemas/instance.schema.json",
+    "fingerprint": "tests/codegen/schemas/fingerprint.schema.json",
+    "artifact_manifest": "tests/codegen/schemas/artifact_manifest.schema.json",
+    "journal_event": "tests/codegen/schemas/journal_event.schema.json",
+    "result": "tests/codegen/schemas/result.schema.json"
+  },
+  "harness_components": [
+    "tools/run_codegen_v2.py",
+    "tools/validate_codegen_v2.py",
+    "tools/codegen_v2/attribution.py",
+    "tools/codegen_v2/deep_replay.py",
+    "tools/codegen_v2/model.py"
+  ],
+  "target": {
+    "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+    "cutlass_arch_tag": "cutlass::arch::Sm100",
+    "virtual_arch": "compute_110a",
+    "binary_arch": "sm_110a"
+  },
+  "toolchain": {
+    "versions_lock_file_sha256": "d0c38e0759646fdb5950669aa055f564d43c7bb60984bbc5cacbff4bfcdf242a",
+    "container_reference": "nvcr.io/nvidia/cuda@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6",
+    "container_digest": "sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6",
+    "nvcc": "13.0.88",
+    "ptxas": "13.0.88",
+    "cuobjdump": "13.0.85",
+    "nvdisasm": "13.0.85",
+    "host_compiler": "gcc-13.3.0",
+    "tool_binary_sha256": {
+      "nvcc": "b8e2347d9d7fcadf8812a27324d515de99d033d3e48611811ece7e66d7895f8a",
+      "ptxas": "daba837a68265cae38c832d13399b61dab811891de9b8914defddef143b849f2",
+      "cuobjdump": "1763b5367167e73939c853f6c71bdec7be0ea4a1cfb6625e4c81d7c7a1f801ae",
+      "nvdisasm": "3c27bded09bd877807207b62db8186a0a9a359d10311ab6e2c885f9b418c9f41",
+      "host_compiler": "52f1ddb33fe78b9441e0f42e9cd22c571f1101938e046c8a26582494e041cc73"
+    }
+  },
+  "kernel_artifact_pipeline": [
+    "STATIC_KERNEL_TU",
+    "SEEDED_DUAL_CODE_FATBIN",
+    "EXTRACTED_PTX",
+    "EXTRACTED_SM110A_CUBIN",
+    "ELF_STO_ENTRY",
+    "NVDISASM_JSON_FUNCTION",
+    "FUNCTION_LOCAL_CONTRACT"
+  ],
+  "type_witness_pipeline": [
+    "TYPE_WITNESS_TU",
+    "TYPE_WITNESS_EXECUTABLE",
+    "RESOLVED_TYPE_JSON"
+  ],
+  "function_selector": {
+    "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
+    "policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+    "opcode_selection_forbidden": true
+  },
+  "compile_plan": {
+    "jobs": 1,
+    "nvcc_common_argv": [
+      "-std=c++17",
+      "-O3",
+      "-DNDEBUG",
+      "--expt-relaxed-constexpr",
+      "--frandom-seed=<instance_id>",
+      "-Iinclude",
+      "-Ithird_party/cutlass/include",
+      "-Ithird_party/cutlass/tools/util/include"
+    ],
+    "fatbin_argv": [
+      "--fatbin",
+      "--generate-code=arch=compute_110a,code=compute_110a",
+      "--generate-code=arch=compute_110a,code=sm_110a",
+      "--ptxas-options=-v"
+    ],
+    "docker_isolation": [
+      "--rm",
+      "--network=none",
+      "--security-opt=label=disable",
+      "--user=<host-uid>:<host-gid>",
+      "--env=LC_ALL=C",
+      "workspace-read-only",
+      "attempt-output-read-write"
+    ],
+    "asserted_absent_environment": [
+      "NVCC_PREPEND_FLAGS",
+      "NVCC_APPEND_FLAGS",
+      "CUDAFE_FLAGS",
+      "PTXAS_OPTIONS",
+      "LD_PRELOAD"
+    ]
+  },
+  "layer_order": [
+    "DECLARED_BUILDER_CONFIG",
+    "BUILDER_SPECIALIZATION",
+    "DISPATCH_POLICY",
+    "COLLECTIVE",
+    "STAGE",
+    "COPY_LAYOUT",
+    "TILED_MMA",
+    "ATOM",
+    "KERNEL_COMPOSITION",
+    "PTX_EMISSION",
+    "SM110A_ASSEMBLY",
+    "FUNCTION_BINDING",
+    "FUNCTION_CONTRACT"
+  ],
+  "layer_states": [
+    "RESOLVED",
+    "REJECTED",
+    "NOT_REACHED"
+  ],
+  "layer_witness_artifact_ids": {
+    "DECLARED_BUILDER_CONFIG": "config_source",
+    "BUILDER_SPECIALIZATION": "type_output",
+    "DISPATCH_POLICY": "type_output",
+    "COLLECTIVE": "type_output",
+    "STAGE": "type_output",
+    "COPY_LAYOUT": "type_output",
+    "TILED_MMA": "type_output",
+    "ATOM": "type_output",
+    "KERNEL_COMPOSITION": "type_output",
+    "PTX_EMISSION": "ptx_full",
+    "SM110A_ASSEMBLY": "cubin",
+    "FUNCTION_BINDING": "elf_symbols",
+    "FUNCTION_CONTRACT": "contract_report"
+  },
+  "terminal_statuses": [
+    "STATIC_PASS",
+    "EXPECTED_STATIC_REJECT",
+    "UNSUPPORTED_SM110A"
+  ],
+  "implemented_terminal_statuses": [
+    "STATIC_PASS"
+  ],
+  "nonterminal_failure_statuses": [
+    "UNEXPECTED_COMPILE_FAIL",
+    "ATTRIBUTION_FAIL"
+  ],
+  "artifact_roles": [
+    "KERNEL_SOURCE_SNAPSHOT",
+    "TYPE_WITNESS_SOURCE_SNAPSHOT",
+    "TYPE_WITNESS_EXECUTABLE",
+    "TYPE_WITNESS_OUTPUT",
+    "FATBIN",
+    "PTX_FULL",
+    "CUBIN",
+    "ELF_SYMBOL_TABLE",
+    "CODE_OBJECT_METADATA",
+    "NVDISASM_JSON_FULL",
+    "NVDISASM_TEXT_FULL",
+    "PTX_TARGET_FUNCTION",
+    "SASS_TARGET_FUNCTION",
+    "COMPILE_STDOUT",
+    "COMPILE_STDERR",
+    "CONTRACT_CHECK_REPORT",
+    "DIAGNOSTIC_EXCERPT"
+  ],
+  "journal_events": [
+    "ATTEMPT_CREATED",
+    "INSTANCE_VALIDATED",
+    "FINGERPRINT_SEALED",
+    "STEP_STARTED",
+    "COMMAND_FINISHED",
+    "ARTIFACT_SEALED",
+    "ARTIFACT_MANIFEST_SEALED",
+    "ATTEMPT_SEALED"
+  ],
+  "evidence_boundary": {
+    "thor_launch": false,
+    "runtime_correctness": false,
+    "numerical_correctness": false,
+    "performance": false
+  }
+}
