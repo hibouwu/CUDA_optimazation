@@ -5,9 +5,11 @@ Tensor Core 路径把一次 GEMM 拆成两类工作。Mainloop 沿 K 维加载 A
 组合或融合计算，最后写回 D。CUTLASS 的 Builder、Collective 和 Kernel 抽象，就是把这条
 数据流组织成一份可实例化的 C++ 类型。
 
-分析沿一个真实 1SM FP16 实例，从高层配置向下追踪代码生成。核心问题是：Builder 中的
-数据类型、Layout、`MmaTileShape`、Cluster、Stage
-和 Schedule，最终分别选择了什么数据路径与 TCGen05 指令。
+这篇文档要回答的问题很直接：在 CUTLASS 中写下一份高层 GEMM 配置后，底下实际落成了
+哪些类型、数据通路和 PTX/SASS 指令？分析沿一个真实 1SM FP16 实例向下展开，依次追踪
+数据类型、Layout、`MmaTileShape`、Cluster、Stage 和 Schedule 如何参与 Builder 分派。
+能够生成代码的实例继续追到该实例唯一的 `sm_110a` kernel 函数；静态拒绝项则停在能够
+稳定复现的失败层，不会虚构并不存在的 PTX/SASS。
 
 ```text
 GemmUniversal / CollectiveBuilder 配置
@@ -25,8 +27,8 @@ Accumulator 和 D 使用 FP32，A 为 RowMajor，B 为 ColumnMajor，`MmaTileSha
 `compute_110a/sm_110a`，CUTLASS 固定为
 `e05f953a5b3d38adc240df2ff928e0421c2abba3`。
 
-这里的 `STATIC_PASS` 只表示当前实例生成了预期的函数级 PTX/SASS。真实 Thor launch、
-数值正确性和性能分别属于后续实验。
+这里的 `STATIC_PASS` 只表示当前实例生成了预期的函数级 PTX/SASS，而且两份产物归属于
+同一个 kernel symbol。真实 Thor launch、数值正确性和性能分别属于后续实验。
 
 ## 1. 高层配置与底层指令的对应关系
 
@@ -62,13 +64,11 @@ SS 实例中，A/B 由 TMA 放入 SMEM，MMA 通过 SMEM descriptor读取两个�
 TMEM；`cta_group::1` 表示一个 CTA 承担这次 MMA。Atom 的 instruction shape、A/B 类型、
 Accumulator 类型和 PTX opcode共同构成一条 MMA 的合同。
 
-这一节最终要把 `MMA_Atom` 与 `MMA_Traits` 展开到具体类型，再在目标函数中确认
-`tcgen05.mma...kind::f16`。BF16、FP8、Block-scaled 和 Sparse 会命中不同 descriptor 或
-opcode family；这些变化在 FP16 主路径闭合后作为扩展讨论。
-
-现有历史静态快照已经记录 FP16/BF16/FP8、Block-scaled 和 Sparse 的聚合 PTX/SASS PASS，
-但没有保存完整 Atom type dump 和当前可逐函数重查的产物。因此这一节仍需要重新生成，
-把历史状态补成可复核的 V2 证据。
+固定源码能够确定 Atom 的选择同时受数值类型、操作数来源和 CTA 协作范围约束。当前
+`case.json` 声明了 FP16、SS 和 `cta_group::1`，历史快照也记录过
+`tcgen05.mma...kind::f16`，但两者之间还缺当前版本的 `MMA_Atom` / `MMA_Traits` 展开和完整
+函数产物。因此这里可以保留“FP16 SS 1SM”作为待重放路径，暂时不能把历史 mnemonic 命中
+写成 fresh opcode 结论。
 
 ## 3. 从 MMA Atom 到 `MmaTileShape`
 
@@ -77,14 +77,14 @@ slice，使一个或两个 CTA 能够共同覆盖更大的 `MmaTileShape`。当�
 `cta_group::1` 只有一个 CTA slice；2SM 扩展则会引入 peer CTA、`cta_group::2` 和不同的
 Cluster/TMEM 分配关系。
 
-这一节需要并排展示五种 shape：instruction shape、TiledMMA shape、`MmaTileShape`、
-Cluster/work tile 和运行时 problem shape。它们来自不同层，文档将分别给出具体值，而不使用
-“128³”同时指代多个 shape。逻辑覆盖倍数可以由 Tile 与 instruction shape 的比例得到，但实际 SASS 条数还
-受到循环、展开和调度影响，只作为观测数据。
+这条类型链包含五种不同的 shape：instruction shape、TiledMMA shape、`MmaTileShape`、
+Cluster/work tile 和运行时 problem shape。当前清单只保存了后面三类的一部分值，尚未保存
+解析后的 instruction/TiledMMA shape。逻辑覆盖倍数可以由 Tile 与 instruction shape 的比例
+解释，实际 SASS 条数还受循环、展开和调度影响，只能作为观测数据。
 
 历史静态快照目前只有少量单点：1SM 覆盖 `128×128×64/128/256`，2SM 只有
-`256×128×64`。同一实现路径下 3～4 个合法 `MmaTileShape` 的覆盖面尚未形成，解析后的
-TiledMMA 和 CTA slice也没有归档。下一步沿 shape 轴补实例，数值类型保持 FP16 不变。
+`256×128×64`。这说明历史数据覆盖了几个 tile 单点，还不足以解释 Atom 如何扩展到
+TiledMMA，也没有形成同一实现路径下可比较的 shape surface。
 
 ## 4. Tensor Core Mainloop 的数据路径
 
@@ -93,8 +93,7 @@ TiledMMA 和 CTA slice也没有归档。下一步沿 shape 轴补实例，数值
 SMEM。`SmemCopyAtomA/B` 在这条路径中不承担经典的 SMEM→RMEM copy，Accumulator 则由
 TMEM 持有。
 
-这一节从 Builder 输入追踪到具体 `DispatchPolicy`、GMEM Copy、SMEM Layout、Transform 和
-`CollectiveMma`，最终形成：
+固定源码和声明配置给出的候选数据流是：
 
 ```text
 GMEM A/B
@@ -106,10 +105,11 @@ GMEM A/B
 
 普通 Dense SS 不需要为了“指令齐全”强制出现 `tcgen05.cp`。Block-scaled 的 scale ingress
 是否使用 `tcgen05.cp`，TS 操作数怎样进入 TMEM，都由各自解析后的路径决定。Sparse 还会
-增加 compressed operand和 metadata。主路径闭合后，只需要解释这些扩展在哪一层发生变化。
+增加 compressed operand和 metadata。它们属于不同 Builder 分支，不能从 Dense 的指令合同
+直接外推。
 
-现有静态快照已经为这些代表路径保存 required PTX/SASS 聚合结果，但没有完整
-`DispatchPolicy`、Copy/Layout、Transform 和函数产物；这部分仍要重新生成并归档。
+历史快照只保存了这些代表路径的聚合指令命中，没有保存完整 `DispatchPolicy`、Copy/Layout、
+Transform 和函数产物。因此本节目前能确定候选数据路径，尚不能给出逐层闭合结论。
 
 ## 5. Stage 的来源与多级流水线
 
@@ -119,14 +119,13 @@ Stage。Stage 数因此同时影响 A/B 存储量、Barrier 数量、SharedStora
 状态轮转。
 
 `StageCountAutoCarveout` 先为 Epilogue SharedStorage 预留空间，再根据单个 A/B Stage 的
-开销和可用 SMEM 推导合法 Mainloop Stage。文档最终给出解析后的 Stage，而不止写
-`Auto`。Accumulator Stage、Scheduler Stage 和 Epilogue C/D Stage分别属于不同 pipeline，
-各自记录对应数字和资源。
+开销和可用 SMEM 推导合法 Mainloop Stage。Accumulator Stage、Scheduler Stage 和 Epilogue
+C/D Stage分别属于不同 pipeline，不能共用一个模糊的 Stage 数字。
 
 现有实例清单中的 `pipeline_stages=0` 是未解析占位值，不是真实 Stage。因此 Stage 是
-当前最明确的证据缺口。重新生成时需要保存解析后的
-`DispatchPolicy::Stages`、各类 Pipeline 类型、SMEM Layout、SharedStorage 和对应函数片段。
-这里分析代码生成和资源合同，Stage 的性能影响留到性能实验。
+当前最明确的证据缺口。没有解析后的 `DispatchPolicy::Stages`、Pipeline 类型、SMEM Layout
+和 SharedStorage，就只能确认 Builder 输入使用了 AutoCarveout，不能声称实际采用了多少级
+流水线。Stage 的性能影响仍属于独立性能实验。
 
 ## 6. 从 TMEM Accumulator 到 D
 
@@ -135,10 +134,10 @@ Stage交给 Epilogue。Epilogue先把 accumulator fragment从 TMEM 读到寄存�
 LinearCombination或 FusionCallbacks，最后按 resolved Epilogue Schedule选择 D Store 路径。
 No-SMEM Epilogue 与 TMA Store Epilogue 分别建立合同，D Store 路径以实际 Schedule 为准。
 
-当前主线使用基础 No-SMEM Epilogue，先确认 TMEM readback、输出类型转换和 D 写回。历史
-静态快照还包含一份 Bias+ReLU 实例；基础路径解释完成后，再用它说明 Fusion 带来的变化。
-静态产物可以证明某种 Epilogue 已经实例化，bias 轴、activation 和最终数值则留给 runtime
-reference。
+当前声明配置使用基础 No-SMEM Epilogue，历史快照还包含一份 Bias+ReLU 实例。两者尚未
+保存当前版本的完整 Epilogue 类型和函数片段，所以现在只能区分两条候选路径。后续静态
+产物可以证明 Epilogue 类型被实例化；bias 轴、activation 和最终数值仍由 runtime reference
+验证。
 
 ## 7. 从 Work Tile 到完整 GEMM
 
@@ -147,17 +146,16 @@ Collective 只负责一个输出 Tile 内部的计算。`GemmUniversal` 把 Main
 这里的 Tile Scheduler 与 Mainloop `KernelSchedule` 处于不同层：前者分配整题工作，后者
 选择一个 Tile 内部的 TMA/TCGen05 实现。
 
-第一轮先固定默认或 DataParallel scheduler。Persistent/CLC、Stream-K 和 Split-K 会改变
-Work Tile、workspace、fixup 或 reduction path，因此需要生成独立实例。它们未必对应唯一
-opcode，静态验证应关注 Scheduler 类型、Arguments/Params 和 helper function归属。现有
-10 个实例没有覆盖这些路径，所以 Scheduler 轴目前是 `NOT_CHECKED`。
+现有 10 个历史实例没有形成 Scheduler 轴的独立证据，当前状态仍是 `NOT_CHECKED`。
+Persistent/CLC、Stream-K 和 Split-K 改变的是 Work Tile、workspace、fixup 或 reduction
+path，未必对应唯一 opcode；这一层的静态结论应来自 Scheduler 类型、Arguments/Params 和
+helper function归属。
 
 ## 8. 函数级 PTX/SASS 归属
 
-不同 `MmaTileShape`、Stage 或 Scheduler 都会生成不同 kernel type。为了避免实例串扰，每个
-编译期实例最好生成独立 executable；至少也要有稳定唯一的 symbol。检查工具从该 symbol
-提取 PTX `.entry` 和 SASS function，再执行 required/forbidden 合同。整个 binary 中发现某条
-指令与当前实例之间没有直接归属关系。
+不同 `MmaTileShape`、Stage 或 Scheduler 都会生成不同 kernel type。本文把稳定唯一的 kernel
+symbol 作为归属键，从同一 symbol 提取 PTX `.entry` 和 SASS function，再执行
+required/forbidden 合同。整个 binary 中发现某条指令与当前实例之间没有直接归属关系。
 
 每条结果必须绑定：
 
@@ -173,23 +171,121 @@ SASS function
 ```
 
 历史静态快照保存了工具链身份和每个实例的 binary/PTX hash，但没有把完整 PTX/SASS
-提交到 Git。它作为历史结果保留，当前逐函数结论由重新生成的产物支持。
+提交到 Git，所以当前仍没有可逐函数复查的 fresh 结论。
 
 ## 9. 59 个显式 Schedule Tag 的覆盖合同
 
 固定 CUTLASS commit 在 `dispatch_policy.hpp` 中声明了 59 个显式 SM100 Tensor Core
-Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：每个 Tag 都必须有唯一清单
-条目，并最终得到 `STATIC_PASS`、`EXPECTED_STATIC_REJECT`、`UNSUPPORTED_SM110A`、
-`UNEXPECTED_COMPILE_FAIL` 或 `ATTRIBUTION_FAIL`。没有结果的条目保持
-`NOT_CHECKED`；`OUT_OF_SCOPE` 不作为跳过理由。
+Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：每个 Tag 选取一个固定的
+基准实例。能够编译的实例沿完整类型链追到函数级 PTX/SASS，静态拒绝项则保存停止层和
+编译诊断。最终状态只有三种：成功闭合记为
+`STATIC_PASS`，有稳定源码约束和编译诊断的合法候选记为 `EXPECTED_STATIC_REJECT`，经过
+合法上层实例与目标架构诊断确认的情形记为 `UNSUPPORTED_SM110A`。`NOT_CHECKED`、
+`HISTORICAL_STATIC_PASS`、`UNEXPECTED_COMPILE_FAIL` 和 `ATTRIBUTION_FAIL` 都是执行中的
+状态，收尾时必须归零。
 
 机器可读清单位于
 [`sm110a_tensor_schedule_tags.json`](../tests/codegen/sm110a_tensor_schedule_tags.json)。
-当前 6 个 Tag 有历史静态结果，另外 53 个尚未生成。下面逐项列出全部分母。
-`KernelScheduleAuto` 是自动选择入口，不代表第 60 个显式实现，因此单独作为控制项验证，
-不计入 59。
+当前状态由清单重算，`HISTORICAL_STATIC_PASS` 只代表旧快照，仍要 fresh 重放：
 
-### 9.1 普通 Dense（5）
+| 清单状态 | 数量 |
+|---|---:|
+| `NOT_CHECKED` | 53 |
+| `HISTORICAL_STATIC_PASS` | 6 |
+| `STATIC_PASS` | 0 |
+| `EXPECTED_STATIC_REJECT` | 0 |
+| `UNSUPPORTED_SM110A` | 0 |
+| `UNEXPECTED_COMPILE_FAIL` | 0 |
+| `ATTRIBUTION_FAIL` | 0 |
+
+完整分母见附录 A。`KernelScheduleAuto` 是自动选择入口，不代表第 60 个显式实现，因此
+单独作为控制项验证，不计入 59。
+
+固定源码清点为每个 Tag 找到了构造基准实例的起点。来源清单记录在
+[`sm110a_schedule_reference_inventory.json`](../tests/codegen/sm110a_schedule_reference_inventory.json)，
+当前统计如下：
+
+| 基准实例的来源线索 | 数量 | 这项数据说明什么 |
+|---|---:|---|
+| 官方 C++ 显式或条件式引用 | 39 | test/example 中能找到目标 Tag；条件分支仍需固定实参后编译 |
+| 官方注释中的 Auto 候选映射 | 1 | 实际 Builder 输入是 `KernelScheduleAuto`，注释只提供候选 Tag |
+| `generator.py` 可还原配置 | 5 | 生成器给出了还原类型、Tile、Cluster 和 Schedule 所需的配置 |
+| 沿单一变化轴的源码派生 | 14 | 从相邻合法配置只改变一个概念轴，再用编译结果判断 |
+
+59 个显式 Tag 的基准实例来源分成四类：官方 C++ 代码中的显式或条件式引用、官方注释中的
+Auto 候选映射、可从生成器还原的配置，以及沿一个明确变化轴得到的源码派生项。这组数字只
+说明待编译实例从哪里来，不表示任何一项已经被 `sm_110a` 编译器接受。
+
+其中，`KernelTmaWarpSpecialized1SmMxf4Sm100` 只有 Auto 注释映射。验证时先重放 Auto，
+记录 Builder 的解析结果，再把 Schedule 显式替换为目标 Tag；注释本身不计入
+`STATIC_PASS`。
+
+14 个派生项都记录了直接父项和唯一变化轴。校验器还会确认父子项使用同一来源锚点，并拒绝
+循环依赖。当前最明确的边界是
+`KernelTmaWarpSpecialized2SmMixedInputSmemSm100`：固定源码的 2SM mixed-input helper 没有
+对应的 Smem/SS 返回路径，因此它是 `EXPECTED_STATIC_REJECT` 候选。这个判断目前属于源码
+假设，后续仍要保存独立编译诊断才能成为正式终态。
+
+59/59 的含义也在这里固定下来：每个 Tag 至少闭合一个基准实例。Fast FP32 等 Tag
+可以因输入类型不同命中多个 Builder 偏特化，generic block-scaled Tag 也可能选择不同 MMA
+分支；这些组合域不由一行 Tag 结果自动覆盖。
+
+`KernelScheduleAuto` 的控制项按相同的 11 个实现分组单独记录。每一项从本组一个合法显式
+Tag 的配置出发，只把 Builder 输入改为 Auto。固定源码目前给出 4 项“预计可构造”和 7 项
+“预计静态拒绝”，11 项的正式状态仍全部是 `NOT_CHECKED`。Auto 成功时记录实际命中的 Builder
+偏特化和内部 `DispatchPolicy::Schedule`，不要求物化成 59 个 public leaf Tag 之一。机器清单
+位于 [`sm110a_auto_control_inventory.json`](../tests/codegen/sm110a_auto_control_inventory.json)，
+完整对照项见附录 B。
+
+## 10. 历史静态数据留下了什么
+
+仓库保留的 `static-20260817` 快照使用 CUTLASS
+`e05f953a5b3d38adc240df2ff928e0421c2abba3`、NVCC/PTXAS 13.0.88、GCC 13.3 和
+`sm_110a`。它记录了 10 个实例的聚合结果：
+
+```text
+source_present  = 10/10
+compile_passed  = 10/10
+ptx_verified    = 10/10
+sass_verified   = 10/10
+runtime_correct = 0/10
+```
+
+| 实现路径 | 现有实例 | MmaTileShape | CTA Group | 静态结果 | 运行结果 |
+|---|---|---|---:|---|---|
+| Dense FP16 | `dense_f16_1sm_p128` | `128×128×64` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| Dense BF16 | `dense_bf16_1sm_p128` | `128×128×64` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| Dense FP8 | `dense_fp8_1sm_p128` | `128×128×128` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| Dense FP16 2SM | `dense_f16_2sm_p256x128x128` | `256×128×64` | 2 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| MXFP8 | `bs_mxfp8_1sm_p128` | `128×128×128` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| MXFP4 | `bs_mxfp4_1sm_p128x128x256` | `128×128×256` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| NVFP4 | `bs_nvfp4_1sm_p128x128x256` | `128×128×256` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| Sparse NVFP4 | `sparse_bs_nvfp4_1sm_p128x128x256` | `128×128×256` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| Bias+ReLU | `epilogue_bias_relu_f16_p128` | `128×128×64` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+| FP16 tail sample | `tail_dense_f16_p130x129x127` | `128×128×64` | 1 | `HISTORICAL_STATIC_PASS` | `NOT_RUN` |
+
+这些记录说明固定工具链曾经为多种 TCGen05 路径生成过预期指令，但完整函数产物没有归档，
+当前 inspector 也还不能排除跨函数串证据。因此它们统一保留为 `HISTORICAL_STATIC_PASS`。
+`runtime_correct=0` 表示没有 Thor 数值证据，并非十个数值失败。
+
+## 11. 当前结果能够支持的结论
+
+现有数据提供了横向宽度：FP16、BF16、FP8、1SM/2SM、Block-scaled、Sparse 和一个融合
+Epilogue 都留下过聚合静态记录。它没有提供纵向闭环：解析后的 Atom、TiledMMA、Stage、
+Scheduler、目标 symbol、PTX function 和 SASS function 尚未绑定成同一个实例证据链。
+
+因此当前最可靠的结论是“59 个显式入口和 11 个 Auto 对照项已经完整建账，并且每一项都有
+明确的实例来源或派生路径”。关于具体 opcode、Stage 数、Auto 解析结果和函数指令的结论，
+仍要等新的结果合同与 fresh 产物。下一阶段先解决函数唯一归属和 artifact identity，再重放
+6 个历史 Tag；这样得到的结果才能回填前面的 Atom、Mainloop、Stage、Epilogue 和 Scheduler
+章节。
+
+## 附录 A：59 个显式 Schedule Tag
+
+下面的完整台账只回答“每个显式 Tag 是否已经建账并获得静态终态”。一个 Tag 能接受的全部
+数据类型、Tile、Cluster 和 Builder 分支不在这张表的覆盖范围内。
+
+### A.1 普通 Dense（5）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -199,14 +295,14 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelMixedTmaCpAsyncWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
 | `KernelMixedTmaCpAsyncWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
 
-### 9.2 Pointer-array Dense（2）
+### A.2 Pointer-array Dense（2）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
 | `KernelPtrArrayTmaWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
 
-### 9.3 Blockwise（4）
+### A.3 Blockwise（4）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -215,7 +311,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelPtrArrayTmaWarpSpecializedBlockwise1SmSm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecializedBlockwise2SmSm100` | `NOT_CHECKED` | — |
 
-### 9.4 Planar Complex（4）
+### A.4 Planar Complex（4）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -224,7 +320,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelPtrArrayTmaWarpSpecialized1SmPlanarComplexSm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmPlanarComplexSm100` | `NOT_CHECKED` | — |
 
-### 9.5 Fast FP32 / 9xBF16（8）
+### A.5 Fast FP32 / 9xBF16（8）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -237,7 +333,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelPtrArrayTmaWarpSpecialized1SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
 
-### 9.6 Mixed-input（4）
+### A.6 Mixed-input（4）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -246,7 +342,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelTmaWarpSpecialized2SmMixedInputSm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized2SmMixedInputSmemSm100` | `NOT_CHECKED` | — |
 
-### 9.7 Interleaved Complex TF32（4）
+### A.7 Interleaved Complex TF32（4）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -255,14 +351,14 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelPtrArrayTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
 
-### 9.8 普通 Sparse（2）
+### A.8 普通 Sparse（2）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
 | `KernelSparseTmaWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
 | `KernelSparseTmaWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
 
-### 9.9 Dense Block-scaled（10）
+### A.9 Dense Block-scaled（10）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -277,7 +373,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100` | `NOT_CHECKED` | — |
 | `KernelMixedTmaCpAsyncWarpSpecialized2SmBlockScaledSm100` | `NOT_CHECKED` | — |
 
-### 9.10 Pointer-array Block-scaled（8）
+### A.10 Pointer-array Block-scaled（8）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -290,7 +386,7 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
 
-### 9.11 Sparse Block-scaled（8）
+### A.11 Sparse Block-scaled（8）
 
 | Schedule Tag | 当前状态 | 已有关联实例 |
 |---|---|---|
@@ -303,48 +399,24 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 | `KernelSparseTmaWarpSpecialized1SmMxf4Sm100` | `NOT_CHECKED` | — |
 | `KernelSparseTmaWarpSpecialized2SmMxf4Sm100` | `NOT_CHECKED` | — |
 
-这张表只回答“59 个 Tag 是否全部进入测试分母”。每个 Tag 的 Builder 参数、合法数据类型、
-Tile、Cluster、Stage、Epilogue 和函数级 PTX/SASS 仍由后续实例逐项补齐。性能和 runtime
-correctness 使用独立分母，不由这张静态表推导。
+性能和 runtime correctness 使用独立分母，不由这张静态表推导。
 
-## 10. 现有静态数据
+## 附录 B：11 个 `KernelScheduleAuto` 对照项
 
-仓库当前保留的 `static-20260817` 静态快照使用 CUTLASS
-`e05f953a5b3d38adc240df2ff928e0421c2abba3`、NVCC/PTXAS 13.0.88、GCC 13.3 和
-`sm_110a`。它记录了 10 个实例的聚合结果：
+读取固定 Builder 源码后，11 个 Auto 对照项形成了一组待编译推测：4 项预计能够完成类型
+构造，7 项预计会在 Builder 或 kernel 组合阶段被拒绝。11 项当前仍全部是 `NOT_CHECKED`；
+只有重新编译并完成函数归属检查后，才能写入正式静态终态。
 
-```text
-source_present  = 10/10
-compile_passed  = 10/10
-ptx_verified    = 10/10
-sass_verified   = 10/10
-runtime_correct = 0/10
-```
-
-| 实现路径 | 现有实例 | MmaTileShape | CTA Group | 静态结果 | 运行结果 |
-|---|---|---|---:|---|---|
-| Dense FP16 | `dense_f16_1sm_p128` | `128×128×64` | 1 | PASS | NOT_RUN |
-| Dense BF16 | `dense_bf16_1sm_p128` | `128×128×64` | 1 | PASS | NOT_RUN |
-| Dense FP8 | `dense_fp8_1sm_p128` | `128×128×128` | 1 | PASS | NOT_RUN |
-| Dense FP16 2SM | `dense_f16_2sm_p256x128x128` | `256×128×64` | 2 | PASS | NOT_RUN |
-| MXFP8 | `bs_mxfp8_1sm_p128` | `128×128×128` | 1 | PASS | NOT_RUN |
-| MXFP4 | `bs_mxfp4_1sm_p128x128x256` | `128×128×256` | 1 | PASS | NOT_RUN |
-| NVFP4 | `bs_nvfp4_1sm_p128x128x256` | `128×128×256` | 1 | PASS | NOT_RUN |
-| Sparse NVFP4 | `sparse_bs_nvfp4_1sm_p128x128x256` | `128×128×256` | 1 | PASS | NOT_RUN |
-| Bias+ReLU | `epilogue_bias_relu_f16_p128` | `128×128×64` | 1 | PASS | NOT_RUN |
-| FP16 tail sample | `tail_dense_f16_p130x129x127` | `128×128×64` | 1 | PASS | NOT_RUN |
-
-这张表表示历史静态状态。完整函数产物尚未归档，后续重新生成后才能写入逐层结果；
-`runtime_correct=0` 表示没有 Thor 数值证据，并非十个数值失败。
-
-## 11. 这些结果说明了什么
-
-现有数据已经横向覆盖多种 TCGen05 路径，却还没有纵向解释任何一条实例。FP16 1SM、
-FP16 2SM、FP8、Block-scaled 和 Sparse 都有聚合 PASS，但解析后的 Atom、TiledMMA、Stage、
-Scheduler 和完整函数归属没有进入同一条可复核链。因此下一步保持现有精度范围，先把
-FP16 1SM 贯穿实例写深。
-
-最明显的三个缺口是：Stage 仍是占位值；1SM/2SM 没有形成 3～4 个 Tile 的 shape surface；
-Scheduler 轴完全没有实例。等 FP16 1SM 的 Atom、TiledMMA、Collective、Stage 和函数产物闭合
-以后，再沿一个轴增加 2SM 或新的 Tile。这样每次扩展都能回答“哪一层发生了变化”，而不是
-只在表格里再多一行 `PASS`。
+| Auto 对照项 | 实现分组 | 显式 seed Tag | 源码推测 | 当前状态 |
+|---|---|---|---|---|
+| `auto_dense_canonical` | `dense` | `KernelTmaWarpSpecialized1SmSm100` | 预计可构造 | `NOT_CHECKED` |
+| `auto_ptr_array_dense_canonical` | `ptr_array_dense` | `KernelPtrArrayTmaWarpSpecialized1SmSm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_blockwise_canonical` | `blockwise` | `KernelTmaWarpSpecializedBlockwise1SmSm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_planar_complex_canonical` | `planar_complex` | `KernelTmaWarpSpecialized1SmPlanarComplexSm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_fast_fp32_canonical` | `fast_fp32` | `KernelTmaWarpSpecialized1SmFastFP32Sm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_mixed_input_canonical` | `mixed_input` | `KernelTmaWarpSpecialized2SmMixedInputSm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_interleaved_complex_tf32_canonical` | `interleaved_complex_tf32` | `KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | 预计可构造 | `NOT_CHECKED` |
+| `auto_sparse_canonical` | `sparse` | `KernelSparseTmaWarpSpecialized1SmSm100` | 预计可构造 | `NOT_CHECKED` |
+| `auto_dense_block_scaled_canonical` | `dense_block_scaled` | `KernelTmaWarpSpecialized1SmMxf4Sm100` | 预计可构造 | `NOT_CHECKED` |
+| `auto_ptr_array_block_scaled_canonical` | `ptr_array_block_scaled` | `KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100` | 预计静态拒绝 | `NOT_CHECKED` |
+| `auto_sparse_block_scaled_canonical` | `sparse_block_scaled` | `KernelSparseTmaWarpSpecialized1SmMxf8f6f4Sm100` | 预计静态拒绝 | `NOT_CHECKED` |

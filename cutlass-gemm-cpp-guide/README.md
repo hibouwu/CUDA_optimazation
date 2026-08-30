@@ -11,10 +11,10 @@
 - CUDA 固定为 13.0.88，canonical container 固定到 digest。
 - 历史 `static-20260817` snapshot记录 10/10 核心 case通过 container compile 与函数级
   PTX/SASS contract；完整函数产物仍需在新文档结构下 fresh 重放后逐项归档。
-- FP16 dense `128³` 的目标函数包含 TMA、`tcgen05.mma.kind::f16` 和 `tcgen05.ld`，
-  且不包含 `tcgen05.cp`。
-- MXFP8 block-scaled `128³` 的同一目标函数包含
-  `cp.async.bulk.tensor + tcgen05.cp + tcgen05.mma...block_scale + tcgen05.ld`。
+- 在这份历史快照中，FP16 Dense `128³` 记录了 TMA、`tcgen05.mma.kind::f16` 和
+  `tcgen05.ld`，MXFP8 Block-scaled `128³` 还记录了 `tcgen05.cp` 与 block-scale MMA。
+  两项都尚未在当前文档结构下重新生成完整函数产物，因此仍是
+  `HISTORICAL_STATIC_PASS`，不是本轮 fresh 结果。
 - 当前机器没有可用 NVIDIA driver；所有 `runtime_correct` 仍是 `false`，不能称为
   Thor 数值闭环或 v0.1 release。
 
@@ -57,7 +57,18 @@ correctness，也不包含性能结论。
 Tensor Core Codegen 的固定分母是 CUTLASS v4.6.1 中 59 个显式 SM100 Schedule Tag。完整
 清单位于
 [`tests/codegen/sm110a_tensor_schedule_tags.json`](tests/codegen/sm110a_tensor_schedule_tags.json)，
-并由 `host.schedule_tag_coverage` 检查数量、唯一性、分组、case映射和文档完整性。
+来源清单位于
+[`tests/codegen/sm110a_schedule_reference_inventory.json`](tests/codegen/sm110a_schedule_reference_inventory.json)。
+11 个 `KernelScheduleAuto` 控制项位于
+[`tests/codegen/sm110a_auto_control_inventory.json`](tests/codegen/sm110a_auto_control_inventory.json)。
+阶段 0 给 59 个 Tag 固定了四类来源线索：39 个能在官方 C++ test/example 中找到显式或
+条件式引用，1 个只在官方注释中给出 Auto 候选映射，5 个可由 `generator.py` 配置还原，
+其余 14 个从相邻合法配置沿一个明确变化轴派生。这组数字不表示任何实例已经被
+`sm_110a` 编译器接受。完整审计见
+[`phase-00-workspace-source-inventory.md`](evidence/codegen-sm110a-v2/phase-reports/phase-00-workspace-source-inventory.md)。
+`host.schedule_tag_coverage` 会检查目标、源码 commit与clean状态、59项分组、case语义映射、
+来源锚点和文档表格；
+`host.schedule_tag_adversarial` 负责验证故意破坏不会被误判为通过。
 
 ## 重要边界
 

@@ -33,5 +33,5 @@
     "supported_as_canonical": false,
     "reason": "CUDA 13.0 host-header compatibility is not closed with GCC 15"
   },
-  "lock_sha256": "computed-over-this-file-by-tools/collect_environment.py"
+  "lock_sha256": "b74d16f06401b694daf94aa1d896238873ea29302da60bd49344f2eda0c0fe63"
 }

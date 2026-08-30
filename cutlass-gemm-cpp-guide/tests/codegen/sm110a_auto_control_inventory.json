@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+  "target": {
+    "virtual_arch": "compute_110a",
+    "binary_arch": "sm_110a"
+  },
+  "schedule_input": "cutlass::gemm::collective::KernelScheduleAuto",
+  "coverage_policy": "one_canonical_auto_control_per_explicit_tag_group",
+  "group_count": 11,
+  "entries": [
+    {
+      "control_id": "auto_dense_canonical",
+      "group": "dense",
+      "seed_tag": "KernelTmaWarpSpecialized1SmSm100",
+      "expected_outcome_hypothesis": "STATIC_PASS",
+      "hypothesis_failure_layer": null,
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl", "line_start": 193, "line_end": 194, "sha256": "b8b73a3d23b1f0604ed189a96f4802b173021f1e507f19256b22f0007d6395dc"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_ptr_array_dense_canonical",
+      "group": "ptr_array_dense",
+      "seed_tag": "KernelPtrArrayTmaWarpSpecialized1SmSm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "kernel_composition",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl", "line_start": 193, "line_end": 326, "sha256": "0eaf69bfa9cf3f7a290bd61e7c3b284a38dcf3fdada8aaee30f6a3380155caa7"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_blockwise_canonical",
+      "group": "blockwise",
+      "seed_tag": "KernelTmaWarpSpecializedBlockwise1SmSm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "builder_specialization",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_blockwise_umma_builder.inl", "line_start": 270, "line_end": 282, "sha256": "0b1b2bc825bc1a9d62360c7775cf71541ff2f13b90d79240b8658c344d226a3e"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_planar_complex_canonical",
+      "group": "planar_complex",
+      "seed_tag": "KernelTmaWarpSpecialized1SmPlanarComplexSm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "builder_specialization",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_planar_complex_umma_builder.inl", "line_start": 70, "line_end": 80, "sha256": "b2aa1f56a9e61b7c0b10d95fa8105144d3f49726eceeeeb9ddd819631bcb35fb"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_fast_fp32_canonical",
+      "group": "fast_fp32",
+      "seed_tag": "KernelTmaWarpSpecialized1SmFastFP32Sm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "builder_specialization",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_9xBF16_interleaved_complex_umma_builder.inl", "line_start": 270, "line_end": 282, "sha256": "3b20d66d0e86efb72e3030294e0e564e63a7c039a99bb402043c0a16b76a6efc"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_mixed_input_canonical",
+      "group": "mixed_input",
+      "seed_tag": "KernelTmaWarpSpecialized2SmMixedInputSm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "builder_specialization",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_mixed_input_umma_builder.inl", "line_start": 180, "line_end": 190, "sha256": "134fc2ba16770f12ffaf8da0425e8377d4e2d663115629e286aab348f6250e90"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_interleaved_complex_tf32_canonical",
+      "group": "interleaved_complex_tf32",
+      "seed_tag": "KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100",
+      "expected_outcome_hypothesis": "STATIC_PASS",
+      "hypothesis_failure_layer": null,
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_interleaved_complex_umma_builder.inl", "line_start": 103, "line_end": 111, "sha256": "769c9f9de1fd55d00abeef627eb526a05bddff506bbbbff6a14a400ff98b24f7"},
+        {"path": "include/cutlass/gemm/collective/builders/sm100_common.inl", "line_start": 684, "line_end": 699, "sha256": "9dc07355a2c840ab0d1cb7b5c5f30e0532eea2c1caef8b97b25418186210f214"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_sparse_canonical",
+      "group": "sparse",
+      "seed_tag": "KernelSparseTmaWarpSpecialized1SmSm100",
+      "expected_outcome_hypothesis": "STATIC_PASS",
+      "hypothesis_failure_layer": null,
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_sparse_umma_builder.inl", "line_start": 245, "line_end": 309, "sha256": "461be327651577283468af884d4d76a2a4628991fb56a27689c3359958400b19"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_dense_block_scaled_canonical",
+      "group": "dense_block_scaled",
+      "seed_tag": "KernelTmaWarpSpecialized1SmMxf4Sm100",
+      "expected_outcome_hypothesis": "STATIC_PASS",
+      "hypothesis_failure_layer": null,
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_blockscaled_umma_builder.inl", "line_start": 122, "line_end": 155, "sha256": "14bfd6a187fad6913b93d31e62132594c1d2db51bc928f46cf3eb0ecf423e425"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_ptr_array_block_scaled_canonical",
+      "group": "ptr_array_block_scaled",
+      "seed_tag": "KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "kernel_composition",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_blockscaled_umma_builder.inl", "line_start": 122, "line_end": 292, "sha256": "51702be06e2187f61d89789f849feffe7525715b8d8b781fb888879872afab77"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    },
+    {
+      "control_id": "auto_sparse_block_scaled_canonical",
+      "group": "sparse_block_scaled",
+      "seed_tag": "KernelSparseTmaWarpSpecialized1SmMxf8f6f4Sm100",
+      "expected_outcome_hypothesis": "EXPECTED_STATIC_REJECT",
+      "hypothesis_failure_layer": "builder_specialization",
+      "hypothesis_evidence": [
+        {"path": "include/cutlass/gemm/collective/builders/sm100_blockscaled_sparse_umma_builder.inl", "line_start": 150, "line_end": 165, "sha256": "042cac8c94283834007623d54c30b247c686dfa14dfd638c173f437d4875e018"}
+      ],
+      "status": "NOT_CHECKED",
+      "resolved_builder_specialization": null,
+      "resolved_dispatch_policy": null,
+      "result_id": null,
+      "fresh_replay_required": true
+    }
+  ]
+}

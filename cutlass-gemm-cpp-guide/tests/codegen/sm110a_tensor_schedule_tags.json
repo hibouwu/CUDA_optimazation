@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "title": "CUTLASS v4.6.1 explicit SM100 Tensor Core mainloop schedule coverage for sm_110a",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "target_contract": {
     "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
     "cutlass_arch_tag": "cutlass::arch::Sm100",
@@ -12,19 +13,53 @@
     "explicit_tag_count": 59,
     "kernel_schedule_auto_in_denominator": false
   },
+  "reference_inventory": {
+    "path": "tests/codegen/sm110a_schedule_reference_inventory.json",
+    "sha256": "1370b33695542ceae8103a6280dd422e3122dcdd53cd0c69d55a92853d3cd296",
+    "class_counts": {
+      "official_cpp_explicit_or_conditional": 39,
+      "official_cpp_auto_derived": 1,
+      "generator_config": 5,
+      "source_derived": 14
+    }
+  },
+  "auto_control_inventory": {
+    "path": "tests/codegen/sm110a_auto_control_inventory.json",
+    "sha256": "de7032f8234737b747b0d962c37809bb1b4b843adf7d26b12f736a0e0b15bfc3",
+    "expected_count": 11,
+    "one_per_group": true
+  },
   "coverage_policy": {
     "omission_allowed": false,
     "out_of_scope_allowed": false,
     "performance_required_per_tag": false,
     "runtime_correctness_required_per_tag": false,
     "static_codegen_required_per_tag": true,
-    "required_static_evidence": [
-      "declared_builder_config",
-      "resolved_builder_specialization",
-      "compile_result",
-      "function_local_ptx_contract",
-      "function_local_sass_contract"
-    ],
+    "required_static_evidence": {
+      "STATIC_PASS": [
+        "declared_builder_config",
+        "resolved_builder_specialization",
+        "resolved_cross_layer_types",
+        "compile_acceptance",
+        "function_local_ptx_contract",
+        "function_local_sass_contract",
+        "same_target_symbol"
+      ],
+      "EXPECTED_STATIC_REJECT": [
+        "declared_builder_config",
+        "legal_sibling_or_parent_control",
+        "compile_rejection",
+        "diagnostic_contract",
+        "failure_layer_attribution"
+      ],
+      "UNSUPPORTED_SM110A": [
+        "declared_builder_config",
+        "resolved_upper_type_chain",
+        "sm110a_target_rejection",
+        "diagnostic_contract",
+        "architecture_failure_attribution"
+      ]
+    },
     "allowed_statuses": [
       "NOT_CHECKED",
       "HISTORICAL_STATIC_PASS",

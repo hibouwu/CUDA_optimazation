@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "first_principles_objective": "证明固定 CUTLASS e05f953a5b3d38adc240df2ff928e0421c2abba3 中每个高层 Mainloop Schedule（59 个显式 Tensor Tag，加上按 11 个实现分组建立的 KernelScheduleAuto 控制项）如何经过 Builder、DispatchPolicy、Collective、Stage、Copy/Layout、TiledMMA 与 Atom，映射到同一 sm_110a 目标函数的 PTX/SASS；所有项目得到可审计的静态终态，静态证据绝不越级为 Thor 运行、数值或性能结论。",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "scope": {
+    "explicit_tensor_schedule_tags": 59,
+    "auto_control_groups": 11,
+    "simt_explicit_schedules": 0,
+    "requires_thor_gpu": false,
+    "requires_runtime_correctness": false,
+    "requires_performance": false
+  },
+  "claim_boundary": {
+    "coverage_unit": "one_canonical_instance_per_explicit_schedule_tag",
+    "exhaustive_template_domain": false,
+    "static_codegen_is_runtime_correctness": false,
+    "static_codegen_is_performance": false,
+    "target_function_scope": "one_unique_kernel_function_per_successfully_compiled_instance",
+    "same_function_scope": "ptx_and_sass_evidence_within_one_instance",
+    "rejected_instance_scope": "terminate_at_an_evidence_backed_failure_layer"
+  },
+  "phase_loop": [
+    "implement",
+    "positive_validation",
+    "deliberate_breakage",
+    "adversarial_audit",
+    "repair",
+    "full_phase_rerun"
+  ],
+  "phase_gate": {
+    "allow_advance_with_unexplained_failures": false,
+    "allow_advance_with_omissions": false,
+    "allow_evidence_promotion": false
+  },
+  "accepted_final_statuses": [
+    "STATIC_PASS",
+    "EXPECTED_STATIC_REJECT",
+    "UNSUPPORTED_SM110A"
+  ],
+  "phases": [
+    {
+      "id": 0,
+      "name": "workspace_source_inventory",
+      "status": "COMPLETE",
+      "completion_report": {
+        "path": "evidence/codegen-sm110a-v2/phase-reports/phase-00-workspace-source-inventory.md",
+        "sha256": "21b095785a629357e9eb875014814a3a29055e9ff9ee2cc4a5b606be2077028d",
+        "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
+      }
+    },
+    {"id": 1, "name": "cross_layer_harness", "status": "IN_PROGRESS"},
+    {"id": 2, "name": "official_cpp_tags", "status": "PENDING"},
+    {"id": 3, "name": "generator_config_tags", "status": "PENDING"},
+    {"id": 4, "name": "source_derived_tags", "status": "PENDING"},
+    {"id": 5, "name": "auto_and_clean_replay", "status": "PENDING"},
+    {"id": 6, "name": "documentation_archive_final_audit", "status": "PENDING"}
+  ]
+}

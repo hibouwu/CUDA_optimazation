@@ -39,8 +39,14 @@ add_test(
   NAME host.schedule_tag_coverage
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/validate_schedule_tag_coverage.py
-          --root ${CMAKE_CURRENT_SOURCE_DIR})
+          --root ${CMAKE_CURRENT_SOURCE_DIR} --require-source)
 set_tests_properties(host.schedule_tag_coverage PROPERTIES LABELS "host;schema;coverage;codegen")
+
+add_test(
+  NAME host.schedule_tag_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_schedule_tag_coverage_adversarial.py)
+set_tests_properties(host.schedule_tag_adversarial PROPERTIES LABELS "host;schema;coverage;codegen;adversarial")
 
 add_test(
   NAME host.cutlass_source_contracts
