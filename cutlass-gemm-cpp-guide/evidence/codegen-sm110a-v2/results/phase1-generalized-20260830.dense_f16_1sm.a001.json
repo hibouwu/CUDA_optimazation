@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "result_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "subject": {
+    "kind": "explicit_schedule_tag",
+    "id": "KernelTmaWarpSpecialized1SmSm100",
+    "group": "dense"
+  },
+  "instance_ref": {
+    "id": "dense_f16_1sm",
+    "path": "tests/codegen/instances/dense_f16_1sm/instance.json",
+    "sha256": "aacb5ba5343fdce8d0808dcb97a5439545faedf2c2408d6935d169d5f56a3832"
+  },
+  "fingerprint_ref": {
+    "id": "fp-dense_f16_1sm-d51b681ba54b",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_1sm-d51b681ba54b.json",
+    "sha256": "63cf68cf3361141723784a146ecd2a53f0b3d2016f15567c07c5a739b1a7c0bd"
+  },
+  "attempt_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
+  "journal_ref": {
+    "path": "evidence/codegen-sm110a-v2/journals/phase1-generalized-20260830.dense_f16_1sm.a001.jsonl",
+    "sha256": "9f61cd2add37271844b40be75336d574fc46da309107967564280b4edc0abd6e",
+    "last_seq": 64,
+    "last_event_sha256": "f7c9479a4d869c50244942f41c63aef815080d0f937931ec744a9bd65883c4a2"
+  },
+  "artifact_manifest_ref": {
+    "id": "am-phase1-generalized-20260830.dense_f16_1sm.a001",
+    "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase1-generalized-20260830.dense_f16_1sm.a001.json",
+    "sha256": "45e8bb69abd715d5d9b560e2a942adfcb7ea9732d7f506ea9c115b4e94bde7a6"
+  },
+  "status": "STATIC_PASS",
+  "layer_outcomes": [
+    {
+      "layer": "DECLARED_BUILDER_CONFIG",
+      "state": "RESOLVED",
+      "witness_artifact_id": "config_source"
+    },
+    {
+      "layer": "BUILDER_SPECIALIZATION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "DISPATCH_POLICY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COLLECTIVE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "STAGE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COPY_LAYOUT",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "TILED_MMA",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "ATOM",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "KERNEL_COMPOSITION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "PTX_EMISSION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "ptx_full"
+    },
+    {
+      "layer": "SM110A_ASSEMBLY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "cubin"
+    },
+    {
+      "layer": "FUNCTION_BINDING",
+      "state": "RESOLVED",
+      "witness_artifact_id": "elf_symbols"
+    },
+    {
+      "layer": "FUNCTION_CONTRACT",
+      "state": "RESOLVED",
+      "witness_artifact_id": "contract_report"
+    }
+  ],
+  "evidence": {
+    "kind": "STATIC_PASS",
+    "type_witness_artifact_id": "type_output",
+    "resolved_stage": {
+      "declared_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<EpilogueSharedStorage>",
+      "resolved_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<32>",
+      "stage_count": 7,
+      "scheduler_stages": 2,
+      "accumulator_stages": 4,
+      "load_to_transform_stages": 0,
+      "transform_to_mma_stages": 0,
+      "computation_stages": 0,
+      "transformation_stages": 0
+    },
+    "function_binding": {
+      "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
+      "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+      "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi7ELi2ELi4ENS5_IJNS4_1CILi1EEESB_SB_EEENS_4arch5Sm100EEENS5_IJNSA_ILi128EEESG_NSA_ILi64EEEEEENS_6half_tENS5_IJlSB_lEEESJ_SK_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_20SM100_MMA_F16BF16_SSISJ_SJ_fLi128ELi128ELNS4_4UMMA5MajorE0ELSP_0ELNSO_7ScaleInE0ELSQ_0EEEEEENS4_6LayoutISC_NS5_IJNSA_ILi0EEESU_SU_EEEEENS5_IJNS4_10UnderscoreESX_SX_EEEEENS4_13SM90_TMA_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENST_INS5_IJNSA_ILi8EEESH_EEENS5_IJSH_SB_EEEEEEEvNS4_8identityES10_S1A_vS1B_EENS_8epilogue10collective18CollectiveEpilogueINS1D_26Sm100NoSmemWarpSpecializedEJNS5_IJSG_SH_EEEvSK_fSK_NS1D_6fusion15FusionCallbacksIS1G_NS1I_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEESI_S1H_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xESB_NSA_ILi4EEEEEEvvEEEEvNT_6ParamsE",
+      "ptx_entry_count": 1,
+      "elf_sto_entry_count": 1,
+      "nvdisasm_symbol_match_count": 1,
+      "nvdisasm_total_function_count": 4,
+      "ptx_function_artifact_id": "ptx_target",
+      "sass_function_artifact_id": "sass_target",
+      "same_symbol": true
+    },
+    "ptx_contract_results": [
+      {
+        "id": "tma_load",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint"
+        ]
+      },
+      {
+        "id": "tmem_load",
+        "required": true,
+        "match_count": 2,
+        "matched_opcodes": [
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+        ]
+      },
+      {
+        "id": "mma_f16_1sm",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "tcgen05.mma.cta_group::1.kind::f16",
+          "tcgen05.mma.cta_group::1.kind::f16",
+          "tcgen05.mma.cta_group::1.kind::f16",
+          "tcgen05.mma.cta_group::1.kind::f16"
+        ]
+      },
+      {
+        "id": "mma_2sm",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      },
+      {
+        "id": "tmem_copy",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      }
+    ],
+    "sass_contract_results": [
+      {
+        "id": "tma_load",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "UTMALDG.3D",
+          "UTMALDG.3D",
+          "UTMALDG.3D",
+          "UTMALDG.3D"
+        ]
+      },
+      {
+        "id": "tmem_load",
+        "required": true,
+        "match_count": 2,
+        "matched_opcodes": [
+          "LDTM.X64",
+          "LDTM.X64"
+        ]
+      },
+      {
+        "id": "mma_f16",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "UTCHMMA",
+          "UTCHMMA",
+          "UTCHMMA",
+          "UTCHMMA"
+        ]
+      },
+      {
+        "id": "mma_2cta",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      },
+      {
+        "id": "tma_2cta",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      },
+      {
+        "id": "tmem_copy",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      }
+    ],
+    "cta_group_contract_pass": true
+  }
+}

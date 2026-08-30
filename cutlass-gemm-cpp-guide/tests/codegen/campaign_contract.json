@@ -54,7 +54,7 @@
       "status": "COMPLETE",
       "completion_report": {
         "path": "evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md",
-        "sha256": "13654f149e0b61e9401cc7abb37ee8bd2d2314c5484b50afcc08c6312fbba84e",
+        "sha256": "bb89bf1b57fd24922068d6e07f2cf1c3399597e1ce1fc359c1282e67c8f29e23",
         "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
       }
     },

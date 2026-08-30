@@ -149,7 +149,11 @@ def main() -> int:
             ("tiled_mma", "mainloop_tiled_mma"),
             ("mma_atom", "tiled_mma_atom"),
         ):
-            value["resolved_types"][canonical] = f"FORGED_{canonical}_SS"
+            value["resolved_types"][canonical] = (
+                "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<999>"
+                if canonical == "dispatch_policy"
+                else f"FORGED_{canonical}_SS"
+            )
             value["resolved_types"][consumer] = value["resolved_types"][canonical]
         payload = (json.dumps(value, indent=2) + "\n").encode()
         paths["type_output"].write_bytes(payload)

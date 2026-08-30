@@ -123,6 +123,12 @@ block-scaled 路径分别观察到 8/4/2 条函数内 `tcgen05.cp`，Sparse NVFP
 同时 type witness 闭合了 scale copy/layout 和 sparse metadata layout。这里的计数是当前
 实例观测，不是跨 Tile、跨工具链的固定公式。
 
+`operand_source` 不再由实例手填。通用 witness 直接读取 `TiledMma::FrgTypeA/B`：六个 fresh
+实例中，普通 Dense 和三条 Dense block-scaled 路径都是 `SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`；
+Sparse NVFP4 是 `SPARSE_SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`。MixedInput pilot 则实际解析为
+`TMEM_FRAGMENT / SMEM_DESCRIPTOR`。这组结果说明 SS/TS 应从 MMA fragment 类型确认，不能只
+看 Schedule Tag 的命名。
+
 ## 5. Stage 的来源与多级流水线
 
 当前实例的 A/B 空间布局在末尾追加 `PIPE` 维，从而在 SMEM 中形成多份可循环复用的物理

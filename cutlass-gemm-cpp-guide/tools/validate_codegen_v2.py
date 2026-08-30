@@ -138,6 +138,23 @@ def main() -> int:
             raise ContractError("--deep-replay requires --require-results and --require-archive")
         if contract.get("scope") != "STATIC_CODEGEN_ONLY":
             raise ContractError("static contract scope must be STATIC_CODEGEN_ONLY")
+        if contract.get("witness_contract", {}).get("version") != 2:
+            raise ContractError("static witness contract must use generalized version 2")
+        if contract.get("witness_contract", {}).get("mma_operand_source_categories") != [
+            "SMEM_DESCRIPTOR",
+            "SPARSE_SMEM_DESCRIPTOR",
+            "TMEM_FRAGMENT",
+        ]:
+            raise ContractError("static witness contract has an unexpected MMA operand-source domain")
+        if contract.get("witness_contract", {}).get("structured_value_roles") != [
+            "builder_tuple_arity_a",
+            "builder_tuple_arity_b",
+            "blockwise_major_a",
+            "blockwise_major_b",
+            "sparse_a_sparsity",
+            "sparse_e_sparsity",
+        ]:
+            raise ContractError("static witness contract has an unexpected structured-value domain")
         if contract.get("fresh_replay_required_semantics") != (
             "permanent_coverage_membership_never_completion_flag"
         ):

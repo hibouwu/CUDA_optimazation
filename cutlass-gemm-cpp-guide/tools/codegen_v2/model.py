@@ -35,9 +35,106 @@ def strip_cpp_comments_and_strings(text: str) -> str:
 
 
 def normalize_cpp_type(value: str) -> str:
-    """Normalize harmless demangler/alias spelling differences for identity checks."""
+    """Normalize a deliberately small set of compiler-reported C++ aliases."""
     normalized = re.sub(r"\s+", "", value)
-    return normalized.replace("cute::Shape<", "cute::tuple<")
+    normalized = normalized.replace("cute::Shape<", "cute::tuple<")
+    normalized = re.sub(r"cute::_([0-9]+)(?![A-Za-z0-9_])", r"cute::C<\1>", normalized)
+    normalized = normalized.replace(
+        "cutlass::int4b_t", "cutlass::integer_subbyte<4,true>"
+    )
+    normalized = normalized.replace(
+        "cute::UMMA::Major::K", "(cute::UMMA::Major)0"
+    ).replace("cute::UMMA::Major::MN", "(cute::UMMA::Major)1")
+    normalized = normalized.replace(
+        "cutlass::FloatRoundStyle::round_to_nearest",
+        "(cutlass::FloatRoundStyle)2",
+    )
+    aliases = {
+        "int8_t": "signedchar",
+        "uint8_t": "unsignedchar",
+        "int32_t": "int",
+        "uint32_t": "unsignedint",
+    }
+    for alias, canonical in aliases.items():
+        normalized = re.sub(
+            rf"(?<![A-Za-z0-9_])(?:std::)?{alias}(?![A-Za-z0-9_])",
+            canonical,
+            normalized,
+        )
+    return normalized
+
+
+def split_cpp_template(value: str) -> tuple[str, list[str]] | None:
+    """Split one normalized C++ template-id without pretending to parse C++."""
+    opening = value.find("<")
+    if opening < 0 or not value.endswith(">"):
+        return None
+    base = value[:opening]
+    body = value[opening + 1 : -1]
+    arguments: list[str] = []
+    depth = 0
+    start = 0
+    for index, character in enumerate(body):
+        if character == "<":
+            depth += 1
+        elif character == ">":
+            depth -= 1
+            if depth < 0:
+                return None
+        elif character == "," and depth == 0:
+            arguments.append(body[start:index])
+            start = index + 1
+    if depth != 0:
+        return None
+    arguments.append(body[start:])
+    return base, arguments
+
+
+def cpp_type_equivalent(
+    actual: str, declared: str, *, allow_trailing_default_arguments: bool = False
+) -> bool:
+    actual_normalized = normalize_cpp_type(actual)
+    declared_normalized = normalize_cpp_type(declared)
+    if actual_normalized == declared_normalized:
+        return True
+    actual_template = split_cpp_template(actual_normalized)
+    declared_template = split_cpp_template(declared_normalized)
+    if actual_template is None or declared_template is None:
+        return False
+    actual_base, actual_arguments = actual_template
+    declared_base, declared_arguments = declared_template
+    if actual_base != declared_base or len(actual_arguments) < len(declared_arguments):
+        return False
+    if len(actual_arguments) != len(declared_arguments):
+        if not allow_trailing_default_arguments:
+            return False
+        if declared_base == "cutlass::epilogue::fusion::LinearCombination":
+            if not 2 <= len(declared_arguments) <= 5 or len(actual_arguments) != 5:
+                return False
+            expanded_declared = list(declared_arguments)
+            if len(expanded_declared) < 3:
+                expanded_declared.append(expanded_declared[0])
+            if len(expanded_declared) < 4:
+                expanded_declared.append(expanded_declared[1])
+            if len(expanded_declared) < 5:
+                expanded_declared.append("(cutlass::FloatRoundStyle)2")
+            declared_arguments = expanded_declared
+        else:
+            return False
+    return all(
+        cpp_type_equivalent(actual_arg, declared_arg)
+        for actual_arg, declared_arg in zip(actual_arguments, declared_arguments, strict=False)
+    )
+
+
+def classify_mma_fragment_type(value: str) -> str:
+    if "sparse_smem_desc" in value:
+        return "SPARSE_SMEM_DESCRIPTOR"
+    if "smem_desc" in value:
+        return "SMEM_DESCRIPTOR"
+    if "tmem_frg" in value:
+        return "TMEM_FRAGMENT"
+    return "UNKNOWN"
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -369,6 +466,16 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
                     raise ContractError(
                         f"{artifact_kind}.{pattern['id']}: max_count is smaller than min_count"
                     )
+                if list_name == "required" and pattern["min_count"] < 1:
+                    raise ContractError(
+                        f"{artifact_kind}.{pattern['id']}: required min_count must be positive"
+                    )
+                if list_name == "forbidden" and (
+                    pattern["min_count"] != 0 or pattern["max_count"] != 0
+                ):
+                    raise ContractError(
+                        f"{artifact_kind}.{pattern['id']}: forbidden contract must require exactly zero matches"
+                    )
     hypothesis = instance["hypothesis"]
     if hypothesis["expected_outcome"] == "STATIC_PASS" and any(
         hypothesis[key] is not None for key in ("failure_domain", "failure_layer")
@@ -399,14 +506,132 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         block_scaled["vector_size_a"],
         block_scaled["vector_size_b"],
     ]
-    if block_scaled["enabled"] != all(value is not None for value in scale_values):
+    if block_scaled["enabled"] != all(value is not None for value in scale_values) or (
+        not block_scaled["enabled"] and any(value is not None for value in scale_values)
+    ):
         raise ContractError(f"{path.name}: block-scaled mechanism fields are inconsistent")
+    if block_scaled["enabled"] and block_scaled["scale_a"] != block_scaled["scale_b"]:
+        raise ContractError(f"{path.name}: the current block-scale witness requires one shared scale type")
+    blockwise = mechanism["blockwise"]
+    blockwise_values = [
+        blockwise["granularity_m"], blockwise["granularity_n"],
+        blockwise["granularity_k"], blockwise["major_a"], blockwise["major_b"],
+        blockwise["element_sfa"], blockwise["element_sfb"],
+    ]
+    if blockwise["enabled"] != all(value is not None for value in blockwise_values) or (
+        not blockwise["enabled"] and any(value is not None for value in blockwise_values)
+    ):
+        raise ContractError(f"{path.name}: blockwise mechanism fields are inconsistent")
     sparse = mechanism["sparse"]
-    if sparse["enabled"] != (sparse["metadata"] is not None):
+    sparse_values = [
+        sparse["metadata_element"], sparse["a_sparsity"], sparse["e_sparsity"]
+    ]
+    if sparse["enabled"] != all(value is not None for value in sparse_values) or (
+        not sparse["enabled"] and any(value is not None for value in sparse_values)
+    ):
         raise ContractError(f"{path.name}: sparse mechanism fields are inconsistent")
+    mixed = mechanism["mixed_input"]
+    mixed_core = [
+        mixed["mode"], mixed["operands_swapped"], mixed["transformed_operand"],
+        mixed["tuple_arity"], mixed["narrow_type"], mixed["wide_type"],
+    ]
+    if mixed["enabled"] != all(value is not None for value in mixed_core) or (
+        not mixed["enabled"] and any(value is not None for value in mixed_core)
+    ):
+        raise ContractError(f"{path.name}: mixed-input mechanism fields are inconsistent")
+    if mixed["enabled"]:
+        expected_arity = {
+            "convert_only": 1,
+            "scale_only": 2,
+            "scale_zero": 3,
+        }.get(mixed["mode"])
+        if expected_arity != mixed["tuple_arity"]:
+            raise ContractError(f"{path.name}: mixed-input tuple arity differs from its mode")
+        if (mixed["scale_type"] is not None) != (mixed["tuple_arity"] >= 2) or (
+            (mixed["zero_type"] is not None) != (mixed["tuple_arity"] >= 3)
+        ):
+            raise ContractError(f"{path.name}: mixed-input scale/zero fields differ from tuple arity")
+    elif mixed["scale_type"] is not None or mixed["zero_type"] is not None:
+        raise ContractError(f"{path.name}: disabled mixed-input carries scale/zero fields")
+    fast = mechanism["fast_fp32"]
+    fast_values = [
+        fast["atom_model"], fast["num_compute_matrices"], fast["num_bands"],
+        fast["scaling_factor"], fast["acc_promotion_interval"],
+    ]
+    if fast["enabled"] != all(value is not None for value in fast_values) or (
+        not fast["enabled"] and any(value is not None for value in fast_values)
+    ):
+        raise ContractError(f"{path.name}: FastFP32 mechanism fields are inconsistent")
+    if fast["enabled"]:
+        expected_atom_model = (
+            "9xBF16-smem" if "FastFP32Smem" in subject_id else "9xBF16-no-smem"
+        )
+        if fast["atom_model"] != expected_atom_model:
+            raise ContractError(f"{path.name}: FastFP32 atom model differs from the Schedule Tag")
+    complex_mechanism = mechanism["complex"]
+    if complex_mechanism["enabled"] != (complex_mechanism["representation"] is not None):
+        raise ContractError(f"{path.name}: complex mechanism fields are inconsistent")
     expected_pointer_mode = "array" if "PtrArray" in subject_id else "single"
     if mechanism["pointer_mode"] != expected_pointer_mode:
         raise ContractError(f"{path.name}: pointer mode differs from the Schedule Tag")
+    problem_mode = instance["declared_config"]["builder_contract"]["problem_mode"]
+    if expected_pointer_mode == "array" and problem_mode not in {"array", "grouped"}:
+        raise ContractError(f"{path.name}: pointer-array Tag requires array/grouped ProblemShape")
+    if expected_pointer_mode == "single" and problem_mode in {"array", "grouped"}:
+        raise ContractError(f"{path.name}: non-pointer Tag uses an array/grouped ProblemShape")
+    group = instance["subject"]["group"]
+    expected_mechanisms = {
+        "block_scaled": "block_scaled" in group,
+        "blockwise": group == "blockwise",
+        "sparse": group in {"sparse", "sparse_block_scaled"},
+        "mixed_input": group == "mixed_input",
+        "fast_fp32": group == "fast_fp32",
+        "complex": group in {"planar_complex", "interleaved_complex_tf32"},
+    }
+    for mechanism_name, expected_enabled in expected_mechanisms.items():
+        if mechanism[mechanism_name]["enabled"] is not expected_enabled:
+            raise ContractError(
+                f"{path.name}: group {group} requires {mechanism_name}.enabled={expected_enabled}"
+            )
+    expected_complex_representation = {
+        "planar_complex": "planar",
+        "interleaved_complex_tf32": "interleaved",
+    }.get(group)
+    if complex_mechanism["representation"] != expected_complex_representation:
+        raise ContractError(
+            f"{path.name}: group {group} requires complex representation "
+            f"{expected_complex_representation!r}"
+        )
+    if group == "mixed_input":
+        expected_transforms = {"a": "swap+transpose", "b": "swap+transpose"}
+    elif group in {"sparse", "sparse_block_scaled"}:
+        expected_transforms = {"a": "sparse-2:4-compression", "b": "identity"}
+    else:
+        expected_transforms = {"a": "identity", "b": "identity"}
+    if mechanism["transforms"] != expected_transforms:
+        raise ContractError(
+            f"{path.name}: group {group} requires {expected_transforms} operand transforms"
+        )
+    required_ptx_patterns = [
+        item["regex"] for item in instance["static_contract"]["ptx"]["required"]
+    ]
+    required_sass_patterns = [
+        item["regex"] for item in instance["static_contract"]["sass"]["required"]
+    ]
+    if not any("mma" in pattern for pattern in required_ptx_patterns) or not any(
+        "MMA" in pattern for pattern in required_sass_patterns
+    ):
+        raise ContractError(f"{path.name}: static contract lacks a required MMA family")
+    if block_scaled["enabled"] and not any(
+        pattern.lstrip("^").startswith(r"tcgen05\.mma") and "block_scale" in pattern
+        for pattern in required_ptx_patterns
+    ):
+        raise ContractError(f"{path.name}: block-scaled contract lacks a block_scale MMA")
+    if sparse["enabled"] and not any(
+        pattern.lstrip("^").startswith(r"tcgen05\.mma\.sp")
+        for pattern in required_ptx_patterns
+    ):
+        raise ContractError(f"{path.name}: sparse contract lacks a tcgen05.mma.sp family")
     return instance
 
 
@@ -1178,6 +1403,10 @@ def validate_static_pass_evidence(
         "mma_value_type_a",
         "mma_value_type_b",
         "mma_value_type_c",
+        "mma_fragment_type_a",
+        "mma_fragment_type_b",
+        "mma_operand_source_a",
+        "mma_operand_source_b",
         "gemm_kernel",
         "gmem_tiled_copy_a",
         "gmem_tiled_copy_b",
@@ -1190,17 +1419,34 @@ def validate_static_pass_evidence(
         "kernel_collective_epilogue",
         "config_arch_tag",
         "config_operator_class",
+        "mainloop_operator_class",
+        "epilogue_operator_class",
         "config_element_a",
         "config_element_b",
+        "config_element_c",
+        "config_element_compute",
         "config_element_accumulator",
         "config_element_d",
         "config_layout_a",
         "config_layout_b",
+        "config_layout_c",
         "config_layout_d",
+        "builder_element_a",
+        "builder_element_b",
+        "builder_layout_a",
+        "builder_layout_b",
+        "epilogue_element_c",
+        "epilogue_element_d",
+        "epilogue_layout_c",
+        "epilogue_layout_d",
+        "epilogue_tile",
+        "fusion_operation",
         "config_mainloop_schedule",
         "config_epilogue_schedule",
         "config_stage_policy",
         "config_problem_shape",
+        "config_cluster_shape",
+        "config_cluster_default_shape",
         "config_tile_scheduler",
     ):
         if not isinstance(resolved_types.get(key), str) or not resolved_types[key]:
@@ -1219,31 +1465,129 @@ def validate_static_pass_evidence(
             raise ContractError(
                 f"type witness cross-layer binding differs for {canonical_key}"
             )
+    for axis in ("a", "b"):
+        fragment_type = resolved_types[f"mma_fragment_type_{axis}"]
+        reported_source = resolved_types[f"mma_operand_source_{axis}"]
+        classified_source = classify_mma_fragment_type(fragment_type)
+        if classified_source == "UNKNOWN" or reported_source != classified_source:
+            raise ContractError(
+                f"type witness cannot classify MMA operand {axis.upper()} source"
+            )
+    dispatch_template = split_cpp_template(
+        normalize_cpp_type(resolved_types["dispatch_policy"])
+    )
+    dispatch_base = dispatch_template[0] if dispatch_template is not None else ""
+    allowed_dispatch_bases = {
+        "dense": {
+            "cutlass::gemm::MainloopSm100UmmaCpAsyncWarpSpecialized",
+            "cutlass::gemm::MainloopSm100UmmaMixedTmaCpAsyncWarpSpecialized",
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized",
+        },
+        "ptr_array_dense": {
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecialized",
+            "cutlass::gemm::MainloopSm100RCGroupGemmTmaUmmaWarpSpecialized",
+        },
+        "blockwise": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedBlockwiseScaling",
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecializedBlockwiseScaling",
+        },
+        "planar_complex": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedPlanarComplex",
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecializedPlanarComplex",
+        },
+        "fast_fp32": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedFastF32",
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecializedFastF32",
+        },
+        "mixed_input": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedMixedInput",
+        },
+        "interleaved_complex_tf32": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedInterleavedComplexTF32",
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecializedInterleavedComplexTF32",
+        },
+        "sparse": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedSparse",
+        },
+        "dense_block_scaled": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedBlockScaled",
+            "cutlass::gemm::MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedBlockScaled",
+        },
+        "ptr_array_block_scaled": {
+            "cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecializedBlockScaled",
+            "cutlass::gemm::MainloopSm100RCGroupGemmTmaUmmaWarpSpecializedBlockScaled",
+        },
+        "sparse_block_scaled": {
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedBlockScaledSparse",
+        },
+    }
+    subject_group = instance["subject"]["group"]
+    if dispatch_base not in allowed_dispatch_bases.get(subject_group, set()):
+        raise ContractError(
+            f"type witness DispatchPolicy family differs from subject group {subject_group}"
+        )
     declared = instance["declared_config"]
     exact_config_types = {
         "config_arch_tag": instance["target"]["cutlass_arch_tag"],
         "config_operator_class": declared["operator_class"],
         "config_element_a": declared["elements"]["a"],
         "config_element_b": declared["elements"]["b"],
+        "config_element_c": declared["elements"]["c"],
+        "config_element_compute": declared["elements"]["compute"],
         "config_element_accumulator": declared["elements"]["accumulator"],
         "config_element_d": declared["elements"]["d"],
+        "mainloop_operator_class": declared["builder_contract"]["mainloop_operator_class"],
+        "epilogue_operator_class": declared["builder_contract"]["epilogue_operator_class"],
+        "builder_element_a": declared["builder_contract"]["element_a"],
+        "builder_element_b": declared["builder_contract"]["element_b"],
+        "builder_layout_a": declared["builder_contract"]["layout_a"],
+        "builder_layout_b": declared["builder_contract"]["layout_b"],
+        "epilogue_element_c": declared["builder_contract"]["epilogue_element_c"],
+        "epilogue_element_d": declared["builder_contract"]["epilogue_element_d"],
+        "epilogue_layout_c": declared["builder_contract"]["epilogue_layout_c"],
+        "epilogue_layout_d": declared["builder_contract"]["epilogue_layout_d"],
+        "epilogue_tile": declared["builder_contract"]["epilogue_tile"],
+        "fusion_operation": declared["builder_contract"]["fusion_operation"],
         "config_mainloop_schedule": declared["mainloop_schedule"],
         "config_epilogue_schedule": declared["epilogue_schedule"],
         "config_problem_shape": declared["kernel_problem_shape"],
+        "config_cluster_shape": declared["builder_contract"]["cluster_type_cpp"],
     }
     for witness_key, declared_value in exact_config_types.items():
-        if normalize_cpp_type(resolved_types[witness_key]) != normalize_cpp_type(declared_value):
+        equivalent = cpp_type_equivalent(
+            resolved_types[witness_key],
+            declared_value,
+            allow_trailing_default_arguments=(witness_key == "fusion_operation"),
+        )
+        if not equivalent:
             raise ContractError(f"type witness {witness_key} differs from declared_config")
-    for axis in ("a", "b", "d"):
+    for axis in ("a", "b", "c", "d"):
         declared_layout = declared["layouts"][axis]
         layout_name = next(
             (name for name in ("RowMajor", "ColumnMajor") if name in declared_layout),
             None,
         )
-        if layout_name is None or not normalize_cpp_type(
-            resolved_types[f"config_layout_{axis}"]
-        ).endswith(layout_name):
+        normalized_layout = normalize_cpp_type(resolved_types[f"config_layout_{axis}"])
+        if layout_name is None or not normalized_layout.rstrip("*").endswith(layout_name):
             raise ContractError(f"type witness config_layout_{axis} differs from declared_config")
+    default_cluster_type = resolved_types["config_cluster_default_shape"]
+    if resolved_values.get("cluster_mnk") != declared["builder_contract"]["cluster_default_mnk"]:
+        raise ContractError("type witness cluster default differs from declared_config")
+    if declared["builder_contract"]["cluster_is_dynamic"] is False and (
+        normalize_cpp_type(default_cluster_type)
+        != normalize_cpp_type(resolved_types["config_cluster_shape"])
+    ):
+        raise ContractError("static cluster type differs from its default cluster type")
+    problem_type = resolved_types["config_problem_shape"]
+    problem_mode = declared["builder_contract"]["problem_mode"]
+    problem_markers = {
+        "array": "ArrayProblemShape",
+        "grouped": "GroupProblemShape",
+        "moe": "MoEProblemShape",
+    }
+    for mode, marker in problem_markers.items():
+        if (marker in problem_type) is not (problem_mode == mode):
+            raise ContractError("type witness ProblemShape family differs from declared problem_mode")
     stage_policy = declared["stage_policy"]
     stage_family = stage_policy.split("<", 1)[0].rsplit("::", 1)[-1]
     resolved_stage_policy = resolved_types["config_stage_policy"]
@@ -1278,6 +1622,10 @@ def validate_static_pass_evidence(
         "stage_count": resolved_values.get("mainloop_stages"),
         "scheduler_stages": resolved_values.get("scheduler_stages"),
         "accumulator_stages": resolved_values.get("accumulator_stages"),
+        "load_to_transform_stages": resolved_values.get("load_to_transform_stages"),
+        "transform_to_mma_stages": resolved_values.get("transform_to_mma_stages"),
+        "computation_stages": resolved_values.get("computation_stages"),
+        "transformation_stages": resolved_values.get("transformation_stages"),
     }
     if evidence["resolved_stage"] != expected_stage:
         raise ContractError("result resolved_stage differs from type witness")
@@ -1290,20 +1638,19 @@ def validate_static_pass_evidence(
         or any(not isinstance(value, int) or value <= 0 for value in atom_shape)
     ):
         raise ContractError("type witness lacks a positive atom_shape_mnk")
+    for axis in ("a", "b"):
+        tuple_arity = resolved_values.get(f"builder_tuple_arity_{axis}")
+        if not isinstance(tuple_arity, int) or tuple_arity < 0:
+            raise ContractError(f"type witness lacks builder_tuple_arity_{axis}")
     for witness_key, declared_key in (
         ("mma_tile_mnk", "mma_tile_mnk"),
         ("cluster_mnk", "cluster_mnk"),
     ):
         if resolved_values.get(witness_key) != instance["declared_config"][declared_key]:
             raise ContractError(f"type witness {witness_key} differs from the instance")
-    for axis in ("a", "b", "d"):
+    for axis in ("a", "b", "c", "d"):
         if resolved_values.get(f"alignment_{axis}") != declared["alignments"][axis]:
             raise ContractError(f"type witness alignment_{axis} differs from declared_config")
-    operand_source = declared["operand_source"]
-    if "SS" in operand_source and "_SS" not in resolved_types["mma_atom"]:
-        raise ContractError("type witness MMA Atom differs from declared SS operand source")
-    if "TS" in operand_source and "_TS" not in resolved_types["mma_atom"]:
-        raise ContractError("type witness MMA Atom differs from declared TS operand source")
     mechanism = instance["declared_config"]["mechanism"]
     scale_optional_keys = {
         "scale_element",
@@ -1318,6 +1665,38 @@ def validate_static_pass_evidence(
         "element_e",
         "gmem_copy_atom_e",
         "smem_layout_e",
+    }
+    input_compute_optional_keys = {
+        "smem_layout_atoms_a",
+        "smem_layout_atoms_b",
+        "input_copy_atom_a",
+        "input_copy_atom_b",
+        "compute_copy_atom_a",
+        "compute_copy_atom_b",
+    }
+    planar_optional_keys = {
+        "planar_tiled_mma_pair",
+        "planar_tiled_mma_a_negative",
+    }
+    scale_factor_optional_keys = {
+        "scale_factor_tiled_mma",
+        "scale_factor_mma_atom",
+    }
+    blockwise_optional_keys = {
+        "blockwise_scale_config",
+        "blockwise_element_sfa",
+        "blockwise_element_sfb",
+        "blockwise_layout_sfa",
+        "blockwise_layout_sfb",
+        "blockwise_major_a",
+        "blockwise_major_b",
+    }
+    mixed_optional_keys = {
+        "mixed_element_scale",
+        "mixed_element_zero",
+        "mixed_layout_scale",
+        "mixed_gmem_tiled_copy_scale",
+        "mixed_smem_layout_atom_scale",
     }
     allowed_optional_keys: set[str] = set()
     if mechanism["block_scaled"]["enabled"]:
@@ -1350,12 +1729,228 @@ def validate_static_pass_evidence(
         for key in sparse_optional_keys:
             if not isinstance(optional_types.get(key), str) or not optional_types[key]:
                 raise ContractError(f"sparse type witness lacks {key}")
-        if resolved_values.get("element_a_sparsity") != 2:
-            raise ContractError("sparse type witness does not expose the expected 2:4 A sparsity")
+        sparse_declared = mechanism["sparse"]
+        if resolved_values.get("element_a_sparsity") != sparse_declared["a_sparsity"]:
+            raise ContractError("sparse type witness does not expose the declared A sparsity")
+        if resolved_values.get("element_e_sparsity") != sparse_declared["e_sparsity"]:
+            raise ContractError("sparse type witness metadata sparsity differs from the declaration")
+        if not cpp_type_equivalent(
+            optional_types["element_e"], sparse_declared["metadata_element"]
+        ):
+            raise ContractError("sparse metadata element type differs from the declaration")
+        sparse_config = split_cpp_template(
+            normalize_cpp_type(optional_types["sparse_config"])
+        )
+        if sparse_config is None or sparse_config[0] != "cutlass::Sm1xxGemmSparseConfig":
+            raise ContractError("sparse type witness has an unrelated SparseConfig")
     elif sparse_optional_keys & set(optional_types):
         raise ContractError("dense type witness unexpectedly contains sparse metadata details")
-    elif resolved_values.get("element_a_sparsity") != 0:
+    elif resolved_values.get("element_a_sparsity") != 0 or resolved_values.get(
+        "element_e_sparsity"
+    ) != 0:
         raise ContractError("dense type witness unexpectedly contains sparse ratio details")
+    if mechanism["blockwise"]["enabled"]:
+        allowed_optional_keys.update(blockwise_optional_keys)
+        for key in blockwise_optional_keys:
+            if not isinstance(optional_types.get(key), str) or not optional_types[key]:
+                raise ContractError(f"blockwise type witness lacks {key}")
+        for key, declared_key in (
+            ("blockwise_granularity_m", "granularity_m"),
+            ("blockwise_granularity_n", "granularity_n"),
+            ("blockwise_granularity_k", "granularity_k"),
+        ):
+            if resolved_values.get(key) != mechanism["blockwise"][declared_key]:
+                raise ContractError(f"blockwise type witness {key} differs from declared mechanism")
+        for axis in ("a", "b"):
+            if optional_types[f"blockwise_major_{axis}"] != mechanism["blockwise"][f"major_{axis}"]:
+                raise ContractError(
+                    f"blockwise type witness major_{axis} differs from declared mechanism"
+                )
+            if not cpp_type_equivalent(
+                optional_types[f"blockwise_element_sf{axis}"],
+                mechanism["blockwise"][f"element_sf{axis}"],
+            ):
+                raise ContractError(
+                    f"blockwise type witness ElementSF{axis.upper()} differs from declared mechanism"
+                )
+        scale_config = split_cpp_template(
+            normalize_cpp_type(optional_types["blockwise_scale_config"])
+        )
+        major_value = {"K": 0, "MN": 1}
+        expected_scale_arguments = [
+            str(mechanism["blockwise"]["granularity_m"]),
+            str(mechanism["blockwise"]["granularity_n"]),
+            str(mechanism["blockwise"]["granularity_k"]),
+            f"(cute::UMMA::Major){major_value[mechanism['blockwise']['major_a']]}",
+            f"(cute::UMMA::Major){major_value[mechanism['blockwise']['major_b']]}",
+        ]
+        if (
+            scale_config is None
+            or scale_config[0] != "cutlass::detail::Sm1xxBlockwiseScaleConfig"
+            or scale_config[1] != expected_scale_arguments
+        ):
+            raise ContractError("blockwise ScaleConfig differs from the declared mechanism")
+    elif blockwise_optional_keys & set(optional_types) or any(
+        resolved_values.get(key) != 0
+        for key in ("blockwise_granularity_m", "blockwise_granularity_n", "blockwise_granularity_k")
+    ):
+        raise ContractError("non-blockwise type witness contains blockwise details")
+    needs_input_compute = (
+        mechanism["fast_fp32"]["enabled"]
+        or mechanism["mixed_input"]["enabled"]
+        or mechanism["complex"]["representation"] == "interleaved"
+    )
+    if needs_input_compute:
+        allowed_optional_keys.update(input_compute_optional_keys)
+        for key in input_compute_optional_keys:
+            if not isinstance(optional_types.get(key), str) or not optional_types[key]:
+                raise ContractError(f"transform-pipeline type witness lacks {key}")
+    elif input_compute_optional_keys & set(optional_types):
+        raise ContractError("type witness contains undeclared input/compute copy roles")
+    if mechanism["complex"]["enabled"]:
+        for axis in ("a", "b"):
+            builder_complex = split_cpp_template(
+                normalize_cpp_type(resolved_types[f"builder_element_{axis}"])
+            )
+            if (
+                builder_complex is None
+                or builder_complex[0] != "cute::tuple"
+                or len(builder_complex[1]) != 2
+                or resolved_values.get(f"builder_tuple_arity_{axis}") != 2
+                or not cpp_type_equivalent(
+                    builder_complex[1][0], resolved_types[f"config_element_{axis}"]
+                )
+                or not cpp_type_equivalent(builder_complex[1][1], "cute::identity")
+            ):
+                raise ContractError(
+                    f"complex type witness Builder operand {axis.upper()} lacks value/transform pair"
+                )
+    if mechanism["complex"]["representation"] == "planar":
+        allowed_optional_keys.update(planar_optional_keys)
+        for key in planar_optional_keys:
+            if not isinstance(optional_types.get(key), str) or not optional_types[key]:
+                raise ContractError(f"planar-complex type witness lacks {key}")
+        planar_pair = normalize_cpp_type(optional_types["planar_tiled_mma_pair"])
+        planar_negative = normalize_cpp_type(
+            optional_types["planar_tiled_mma_a_negative"]
+        )
+        planar_pair_template = split_cpp_template(planar_pair)
+        if (
+            planar_pair_template is None
+            or planar_pair_template[0]
+            != "cutlass::gemm::collective::detail::Sm100CollectiveMmaPlanarComplexTiledMmaType"
+            or normalize_cpp_type(resolved_types["tiled_mma"]) not in planar_pair
+            or planar_negative not in planar_pair
+            or planar_negative == normalize_cpp_type(resolved_types["tiled_mma"])
+        ):
+            raise ContractError("planar-complex TiledMMA pair does not bind positive and negative roles")
+    elif planar_optional_keys & set(optional_types):
+        raise ContractError("type witness contains undeclared planar Atom roles")
+    needs_scale_factor_atom = (
+        mechanism["block_scaled"]["enabled"]
+        and "MixedTmaCpAsync" in instance["subject"]["id"]
+    )
+    if needs_scale_factor_atom:
+        allowed_optional_keys.update(scale_factor_optional_keys)
+        for key in scale_factor_optional_keys:
+            if not isinstance(optional_types.get(key), str) or not optional_types[key]:
+                raise ContractError(f"mixed block-scaled type witness lacks {key}")
+        scale_factor_tiled_mma = normalize_cpp_type(
+            optional_types["scale_factor_tiled_mma"]
+        )
+        scale_factor_atom = normalize_cpp_type(optional_types["scale_factor_mma_atom"])
+        scale_factor_template = split_cpp_template(scale_factor_tiled_mma)
+        if (
+            scale_factor_template is None
+            or scale_factor_template[0] != "cute::TiledMMA"
+            or scale_factor_atom not in scale_factor_tiled_mma
+            or scale_factor_atom == normalize_cpp_type(resolved_types["mma_atom"])
+        ):
+            raise ContractError("mixed block-scaled scale-factor TiledMMA does not bind its Atom")
+    elif scale_factor_optional_keys & set(optional_types):
+        raise ContractError("type witness contains an undeclared scale-factor Atom")
+    if mechanism["mixed_input"]["enabled"]:
+        allowed_optional_keys.update(mixed_optional_keys)
+        for key in mixed_optional_keys:
+            if not isinstance(optional_types.get(key), str) or not optional_types[key]:
+                raise ContractError(f"mixed-input type witness lacks {key}")
+        scale_type = optional_types["mixed_element_scale"]
+        zero_type = optional_types["mixed_element_zero"]
+        if ("void" not in scale_type) is not (mechanism["mixed_input"]["scale_type"] is not None):
+            raise ContractError("mixed-input scale witness differs from declared tuple")
+        if ("void" not in zero_type) is not (mechanism["mixed_input"]["zero_type"] is not None):
+            raise ContractError("mixed-input zero witness differs from declared tuple")
+        if mechanism["mixed_input"]["scale_type"] is not None and not cpp_type_equivalent(
+            scale_type, mechanism["mixed_input"]["scale_type"]
+        ):
+            raise ContractError("mixed-input scale type differs from declared tuple")
+        if mechanism["mixed_input"]["zero_type"] is not None and not cpp_type_equivalent(
+            zero_type, mechanism["mixed_input"]["zero_type"]
+        ):
+            raise ContractError("mixed-input zero type differs from declared tuple")
+        mixed_declared = mechanism["mixed_input"]
+        transformed_axis = mixed_declared["transformed_operand"]
+        other_axis = "b" if transformed_axis == "a" else "a"
+        builder_transformed = resolved_types[f"builder_element_{transformed_axis}"]
+        builder_other = resolved_types[f"builder_element_{other_axis}"]
+        builder_tuple = split_cpp_template(normalize_cpp_type(builder_transformed))
+        expected_tuple_types = [mixed_declared["narrow_type"]]
+        if mixed_declared["scale_type"] is not None:
+            expected_tuple_types.append(mixed_declared["scale_type"])
+        if mixed_declared["zero_type"] is not None:
+            expected_tuple_types.append(mixed_declared["zero_type"])
+        if (
+            builder_tuple is None
+            or builder_tuple[0] != "cute::tuple"
+            or len(builder_tuple[1]) != mixed_declared["tuple_arity"]
+            or resolved_values.get(f"builder_tuple_arity_{transformed_axis}")
+            != mixed_declared["tuple_arity"]
+            or not all(
+                cpp_type_equivalent(actual, declared)
+                for actual, declared in zip(
+                    builder_tuple[1], expected_tuple_types, strict=True
+                )
+            )
+        ):
+            raise ContractError("mixed-input transformed Builder tuple differs from the declaration")
+        if resolved_values.get(f"builder_tuple_arity_{other_axis}") != 0:
+            raise ContractError("mixed-input wide Builder operand must not be a tuple")
+        if not cpp_type_equivalent(builder_other, mixed_declared["wide_type"]):
+            raise ContractError("mixed-input untransformed Builder operand differs from the wide type")
+        logical_narrow_axis = other_axis if mixed_declared["operands_swapped"] else transformed_axis
+        logical_wide_axis = transformed_axis if mixed_declared["operands_swapped"] else other_axis
+        if not cpp_type_equivalent(
+            resolved_types[f"config_element_{logical_narrow_axis}"],
+            mixed_declared["narrow_type"],
+        ):
+            raise ContractError("mixed-input logical narrow operand differs from the declared swap relation")
+        if not cpp_type_equivalent(
+            resolved_types[f"config_element_{logical_wide_axis}"],
+            mixed_declared["wide_type"],
+        ):
+            raise ContractError("mixed-input logical wide operand differs from the declared swap relation")
+    elif mixed_optional_keys & set(optional_types):
+        raise ContractError("type witness contains undeclared mixed-input roles")
+    if mechanism["fast_fp32"]["enabled"]:
+        fast_expected = {
+            "num_compute_matrices": "num_compute_matrices",
+            "num_bands_to_compute": "num_bands",
+            "fast_scaling_factor": "scaling_factor",
+            "acc_promotion_interval": "acc_promotion_interval",
+        }
+        for witness_key, declared_key in fast_expected.items():
+            if resolved_values.get(witness_key) != mechanism["fast_fp32"][declared_key]:
+                raise ContractError(f"FastFP32 {witness_key} differs from declared mechanism")
+    elif any(
+        resolved_values.get(key) != 0
+        for key in (
+            "num_compute_matrices",
+            "num_bands_to_compute",
+            "fast_scaling_factor",
+            "acc_promotion_interval",
+        )
+    ):
+        raise ContractError("non-FastFP32 type witness contains emulation algorithm details")
     unexpected_optional = set(optional_types) - allowed_optional_keys
     if unexpected_optional:
         raise ContractError(f"type witness contains undeclared optional mechanisms: {unexpected_optional}")

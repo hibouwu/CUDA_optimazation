@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from codegen_v2.model import (  # noqa: E402
     ContractError,
+    cpp_type_equivalent,
     explicit_subject_inventory_sha256,
     canonical_json_bytes,
     contract_sha256,
@@ -200,9 +201,23 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
         "declared_config": {
             "family": "fixture",
             "operator_class": "cutlass::arch::OpClassTensorOp",
-            "elements": {"a": "half", "b": "half", "accumulator": "float", "d": "float"},
-            "layouts": {"a": "RowMajor", "b": "ColumnMajor", "d": "RowMajor"},
-            "alignments": {"a": 8, "b": 8, "d": 4},
+            "elements": {"a": "half", "b": "half", "c": "void", "d": "float", "accumulator": "float", "compute": "float"},
+            "layouts": {"a": "RowMajor", "b": "ColumnMajor", "c": "RowMajor", "d": "RowMajor"},
+            "alignments": {"a": 8, "b": 8, "c": 1, "d": 4},
+            "builder_contract": {
+                "mainloop_operator_class": "cutlass::arch::OpClassTensorOp",
+                "epilogue_operator_class": "cutlass::arch::OpClassTensorOp",
+                "element_a": "half", "element_b": "half",
+                "layout_a": "cutlass::layout::RowMajor", "layout_b": "cutlass::layout::ColumnMajor",
+                "epilogue_element_c": "void", "epilogue_element_d": "float",
+                "epilogue_layout_c": "cutlass::layout::RowMajor", "epilogue_layout_d": "cutlass::layout::RowMajor",
+                "epilogue_tile": "cutlass::epilogue::collective::EpilogueTileAuto",
+                "fusion_operation": "void",
+                "problem_mode": "dense",
+                "cluster_type_cpp": "cute::Shape<cute::_1,cute::_1,cute::_1>",
+                "cluster_is_dynamic": False,
+                "cluster_default_mnk": [1, 1, 1],
+            },
             "mma_tile_mnk": [128, 128, 64],
             "cluster_mnk": [1, 1, 1],
             "stage_policy": "Auto",
@@ -211,13 +226,14 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "kernel_problem_shape": "cute::Shape<int,int,int,int>",
             "tile_scheduler": "void",
             "cta_group": 1,
-            "operand_source": "SS",
             "mechanism": {
                 "pointer_mode": "single",
                 "transforms": {"a": "identity", "b": "identity"},
                 "block_scaled": {"enabled": False, "scale_a": None, "scale_b": None, "vector_size_a": None, "vector_size_b": None},
-                "sparse": {"enabled": False, "metadata": None},
-                "fast_fp32": {"enabled": False, "atom_model": None},
+                "blockwise": {"enabled": False, "granularity_m": None, "granularity_n": None, "granularity_k": None, "major_a": None, "major_b": None, "element_sfa": None, "element_sfb": None},
+                "sparse": {"enabled": False, "metadata_element": None, "a_sparsity": None, "e_sparsity": None},
+                "mixed_input": {"enabled": False, "mode": None, "operands_swapped": None, "transformed_operand": None, "tuple_arity": None, "narrow_type": None, "wide_type": None, "scale_type": None, "zero_type": None},
+                "fast_fp32": {"enabled": False, "atom_model": None, "num_compute_matrices": None, "num_bands": None, "scaling_factor": None, "acc_promotion_interval": None},
                 "complex": {"enabled": False, "representation": None},
             },
         },
@@ -362,16 +378,20 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "mainloop_builder_collective_op": "collective_mainloop",
             "epilogue_builder": "epilogue_builder",
             "epilogue_builder_collective_op": "collective_epilogue",
-            "dispatch_policy": "dispatch_policy",
+            "dispatch_policy": "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<2>",
             "dispatch_schedule": "dispatch_schedule",
             "tiled_mma": "tiled_mma",
             "mma_atom": "mma_atom_SS",
-            "mainloop_dispatch_policy": "dispatch_policy",
+            "mainloop_dispatch_policy": "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<2>",
             "mainloop_tiled_mma": "tiled_mma",
             "tiled_mma_atom": "mma_atom_SS",
             "mma_value_type_a": "half",
             "mma_value_type_b": "half",
             "mma_value_type_c": "float",
+            "mma_fragment_type_a": "cute::UMMA::smem_desc<A>",
+            "mma_fragment_type_b": "cute::UMMA::smem_desc<B>",
+            "mma_operand_source_a": "SMEM_DESCRIPTOR",
+            "mma_operand_source_b": "SMEM_DESCRIPTOR",
             "gemm_kernel": "cutlass::gemm::kernel::GemmUniversal<Fixture>",
             "gmem_tiled_copy_a": "copy_a",
             "gmem_tiled_copy_b": "copy_b",
@@ -384,21 +404,38 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "kernel_collective_epilogue": "collective_epilogue",
             "config_arch_tag": "cutlass::arch::Sm100",
             "config_operator_class": "cutlass::arch::OpClassTensorOp",
+            "mainloop_operator_class": "cutlass::arch::OpClassTensorOp",
+            "epilogue_operator_class": "cutlass::arch::OpClassTensorOp",
             "config_element_a": "half",
             "config_element_b": "half",
+            "config_element_c": "void",
+            "config_element_compute": "float",
             "config_element_accumulator": "float",
             "config_element_d": "float",
             "config_layout_a": "cutlass::layout::RowMajor",
             "config_layout_b": "cutlass::layout::ColumnMajor",
+            "config_layout_c": "cutlass::layout::RowMajor",
             "config_layout_d": "cutlass::layout::RowMajor",
+            "builder_element_a": "half",
+            "builder_element_b": "half",
+            "builder_layout_a": "cutlass::layout::RowMajor",
+            "builder_layout_b": "cutlass::layout::ColumnMajor",
+            "epilogue_element_c": "void",
+            "epilogue_element_d": "float",
+            "epilogue_layout_c": "cutlass::layout::RowMajor",
+            "epilogue_layout_d": "cutlass::layout::RowMajor",
+            "epilogue_tile": "cutlass::epilogue::collective::EpilogueTileAuto",
+            "fusion_operation": "void",
             "config_mainloop_schedule": "cutlass::gemm::KernelFixtureSm100",
             "config_epilogue_schedule": "NoSmem",
             "config_stage_policy": "Auto",
             "config_problem_shape": "cute::Shape<int,int,int,int>",
+            "config_cluster_shape": "cute::Shape<cute::_1,cute::_1,cute::_1>",
+            "config_cluster_default_shape": "cute::Shape<cute::_1,cute::_1,cute::_1>",
             "config_tile_scheduler": "void"
         },
         "resolved_optional_types": {},
-        "resolved_values": {"mainloop_stages": 2, "scheduler_stages": 1, "accumulator_stages": 1, "atom_shape_mnk": [128,128,16], "mma_tile_mnk": [128,128,64], "cluster_mnk": [1,1,1], "scale_vector_size": 0, "scale_vector_size_a": 0, "scale_vector_size_b": 0, "element_a_sparsity": 0, "alignment_a": 8, "alignment_b": 8, "alignment_d": 4, "mainloop_shared_storage_bytes": 1024, "epilogue_shared_storage_bytes": 0, "kernel_shared_storage_bytes": 1024},
+        "resolved_values": {"mainloop_stages": 2, "scheduler_stages": 1, "accumulator_stages": 1, "load_to_transform_stages": 0, "transform_to_mma_stages": 0, "computation_stages": 0, "transformation_stages": 0, "atom_shape_mnk": [128,128,16], "mma_tile_mnk": [128,128,64], "cluster_mnk": [1,1,1], "builder_tuple_arity_a": 0, "builder_tuple_arity_b": 0, "scale_vector_size": 0, "scale_vector_size_a": 0, "scale_vector_size_b": 0, "element_a_sparsity": 0, "element_e_sparsity": 0, "blockwise_granularity_m": 0, "blockwise_granularity_n": 0, "blockwise_granularity_k": 0, "num_compute_matrices": 0, "num_bands_to_compute": 0, "fast_scaling_factor": 0, "acc_promotion_interval": 0, "alignment_a": 8, "alignment_b": 8, "alignment_c": 1, "alignment_d": 4, "mainloop_shared_storage_bytes": 1024, "epilogue_shared_storage_bytes": 0, "kernel_shared_storage_bytes": 1024},
     }
     ptx_result_values = [
         {"id":"tma","required":True,"match_count":1,"matched_opcodes":["cp.async.bulk.tensor.3d"]},
@@ -596,7 +633,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
         "evidence": {
             "kind": "STATIC_PASS",
             "type_witness_artifact_id": "type_output",
-            "resolved_stage": {"declared_policy_cpp": "Auto", "resolved_policy_cpp": "Auto", "stage_count": 2, "scheduler_stages": 1, "accumulator_stages": 1},
+            "resolved_stage": {"declared_policy_cpp": "Auto", "resolved_policy_cpp": "Auto", "stage_count": 2, "scheduler_stages": 1, "accumulator_stages": 1, "load_to_transform_stages": 0, "transform_to_mma_stages": 0, "computation_stages": 0, "transformation_stages": 0},
             "function_binding": {
                 "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
                 "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
@@ -808,6 +845,29 @@ def main() -> int:
         "_ZN7cutlass13device_kernelI13FixtureKernelEEvNT_6ParamsE",
         "abi-mangled:N7cutlass4gemm6kernel13GemmUniversalI7FixtureEE",
     )
+
+    alias_pairs = [
+        (
+            "cute::tuple<cute::C<2>, cute::C<1>, cute::C<1>>",
+            "cute::Shape<cute::_2,cute::_1,cute::_1>",
+            False,
+        ),
+        ("cutlass::integer_subbyte<4, true>", "cutlass::int4b_t", False),
+        ("signed char", "int8_t", False),
+        ("int", "int32_t", False),
+        (
+            "cutlass::epilogue::fusion::LinearCombination<signed char,float,signed char,float,(cutlass::FloatRoundStyle)2>",
+            "cutlass::epilogue::fusion::LinearCombination<int8_t,float,int8_t,float>",
+            True,
+        ),
+    ]
+    for actual, declared, allow_defaults in alias_pairs:
+        if not cpp_type_equivalent(
+            actual,
+            declared,
+            allow_trailing_default_arguments=allow_defaults,
+        ):
+            raise AssertionError(f"equivalent C++ types were rejected: {actual} != {declared}")
 
     strict_root = Path(tempfile.mkdtemp(prefix="codegen-v2-strict-"))
     try:
@@ -1309,7 +1369,542 @@ def main() -> int:
         "abi_fallback_symbol_shape", "target symbol is not", direct_bad_abi_fallback
     )
 
-    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=64 positive=6")
+    def direct_required_min_zero(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["static_contract"]["ptx"]["required"][0]["min_count"] = 0
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "required_min_zero", "required min_count must be positive", direct_required_min_zero
+    )
+
+    def direct_forbidden_nonzero(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["static_contract"]["sass"]["forbidden"][0]["min_count"] = 1
+        instance["static_contract"]["sass"]["forbidden"][0]["max_count"] = 1
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "forbidden_nonzero", "forbidden contract must require exactly zero", direct_forbidden_nonzero
+    )
+
+    def direct_disabled_mechanism_payload(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["declared_config"]["mechanism"]["block_scaled"]["scale_a"] = "forged::Scale"
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "disabled_mechanism_payload",
+        "block-scaled mechanism fields are inconsistent",
+        direct_disabled_mechanism_payload,
+    )
+
+    def direct_wrong_problem_mode(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["declared_config"]["builder_contract"]["problem_mode"] = "array"
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "non_pointer_array_problem",
+        "non-pointer Tag uses an array/grouped ProblemShape",
+        direct_wrong_problem_mode,
+    )
+
+    def retarget_fixture_group(root: Path, paths: dict[str, Path], group: str) -> dict:
+        tags_path = root / "tests/codegen/sm110a_tensor_schedule_tags.json"
+        tags = load_strict_json(tags_path)
+        next(entry for entry in tags["entries"] if entry["tag"] == "KernelFixtureSm100")[
+            "group"
+        ] = group
+        write_json(tags_path, tags)
+        contract_path = root / "tests/codegen/static_codegen_contract.json"
+        contract = load_strict_json(contract_path)
+        contract["inventory_contract_sha256"]["explicit_tags"] = (
+            explicit_subject_inventory_sha256(root)
+        )
+        write_json(contract_path, contract)
+        instance = load_strict_json(paths["instance"])
+        instance["contract_sha256"] = contract_sha256(root)
+        instance["subject"]["group"] = group
+        return instance
+
+    def direct_fast_group_disabled(root: Path, paths: dict[str, Path]) -> None:
+        instance = retarget_fixture_group(root, paths, "fast_fp32")
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "fast_group_disabled",
+        "group fast_fp32 requires fast_fp32.enabled=True",
+        direct_fast_group_disabled,
+    )
+
+    def direct_planar_wrong_representation(root: Path, paths: dict[str, Path]) -> None:
+        instance = retarget_fixture_group(root, paths, "planar_complex")
+        instance["declared_config"]["mechanism"]["complex"] = {
+            "enabled": True,
+            "representation": "interleaved",
+        }
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "planar_wrong_representation",
+        "requires complex representation 'planar'",
+        direct_planar_wrong_representation,
+    )
+
+    def direct_mixed_tuple_arity(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["declared_config"]["mechanism"]["mixed_input"] = {
+            "enabled": True,
+            "mode": "convert_only",
+            "operands_swapped": True,
+            "transformed_operand": "a",
+            "tuple_arity": 2,
+            "narrow_type": "narrow",
+            "wide_type": "wide",
+            "scale_type": "scale",
+            "zero_type": None,
+        }
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "mixed_tuple_arity",
+        "mixed-input tuple arity differs from its mode",
+        direct_mixed_tuple_arity,
+    )
+
+    def load_static_fixture(root: Path, paths: dict[str, Path]):
+        return (
+            load_strict_json(paths["result"]),
+            load_strict_json(paths["instance"]),
+            load_strict_json(paths["manifest"]),
+            load_strict_json(paths["type_output"]),
+        )
+
+    def direct_planar_missing_negative(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "planar_complex"
+        instance["declared_config"]["mechanism"]["complex"] = {
+            "enabled": True,
+            "representation": "planar",
+        }
+        planar_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedPlanarComplex<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = planar_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = planar_dispatch
+        for axis in ("a", "b"):
+            pair_type = "cute::tuple<half,cute::identity>"
+            instance["declared_config"]["builder_contract"][f"element_{axis}"] = pair_type
+            witness["resolved_types"][f"builder_element_{axis}"] = pair_type
+            witness["resolved_values"][f"builder_tuple_arity_{axis}"] = 2
+        witness["resolved_optional_types"] = {"planar_tiled_mma_pair": "Pair"}
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "planar_missing_negative_atom",
+        "planar-complex type witness lacks planar_tiled_mma_a_negative",
+        direct_planar_missing_negative,
+    )
+
+    def direct_mixed_scale_factor_missing(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["id"] = "KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100"
+        instance["subject"]["group"] = "dense_block_scaled"
+        instance["declared_config"]["mechanism"]["block_scaled"] = {
+            "enabled": True,
+            "scale_a": "scale",
+            "scale_b": "scale",
+            "vector_size_a": 32,
+            "vector_size_b": 32,
+        }
+        witness["resolved_optional_types"] = {
+            "scale_element": "scale",
+            "gmem_tiled_copy_sfa": "copy_sfa",
+            "gmem_tiled_copy_sfb": "copy_sfb",
+            "smem_layout_atom_sfa": "layout_sfa",
+            "smem_layout_atom_sfb": "layout_sfb",
+        }
+        mixed_blockscale_dispatch = (
+            "cutlass::gemm::MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedBlockScaled<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = mixed_blockscale_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = mixed_blockscale_dispatch
+        for key in ("scale_vector_size", "scale_vector_size_a", "scale_vector_size_b"):
+            witness["resolved_values"][key] = 32
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "mixed_blockscale_missing_scale_factor_atom",
+        "mixed block-scaled type witness lacks scale_factor",
+        direct_mixed_scale_factor_missing,
+    )
+
+    def direct_unexpected_optional_role(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        witness["resolved_optional_types"]["invented_role"] = "forged"
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "unexpected_optional_role",
+        "undeclared optional mechanisms",
+        direct_unexpected_optional_role,
+    )
+
+    def direct_fast_identity_missing(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "fast_fp32"
+        instance["declared_config"]["mechanism"]["fast_fp32"] = {
+            "enabled": True,
+            "atom_model": "9xBF16-smem",
+            "num_compute_matrices": 3,
+            "num_bands": 5,
+            "scaling_factor": 8,
+            "acc_promotion_interval": 1,
+        }
+        witness["resolved_optional_types"] = {
+            key: key for key in (
+                "smem_layout_atoms_a", "smem_layout_atoms_b",
+                "input_copy_atom_a", "input_copy_atom_b",
+                "compute_copy_atom_a", "compute_copy_atom_b",
+            )
+        }
+        witness["resolved_values"].update({
+            "num_compute_matrices": 3,
+            "num_bands_to_compute": 5,
+            "fast_scaling_factor": 8,
+            "acc_promotion_interval": 1,
+        })
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "fast_dispatch_identity",
+        "DispatchPolicy family differs from subject group fast_fp32",
+        direct_fast_identity_missing,
+    )
+
+    def direct_mixed_builder_binding(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "mixed_input"
+        instance["declared_config"]["mechanism"]["mixed_input"] = {
+            "enabled": True,
+            "mode": "convert_only",
+            "operands_swapped": False,
+            "transformed_operand": "a",
+            "tuple_arity": 1,
+            "narrow_type": "half",
+            "wide_type": "half",
+            "scale_type": None,
+            "zero_type": None,
+        }
+        witness["resolved_optional_types"] = {
+            key: ("void" if key in {"mixed_element_scale", "mixed_element_zero"} else key)
+            for key in (
+                "smem_layout_atoms_a", "smem_layout_atoms_b",
+                "input_copy_atom_a", "input_copy_atom_b",
+                "compute_copy_atom_a", "compute_copy_atom_b",
+                "mixed_element_scale", "mixed_element_zero", "mixed_layout_scale",
+                "mixed_gmem_tiled_copy_scale", "mixed_smem_layout_atom_scale",
+            )
+        }
+        mixed_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedMixedInput<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = mixed_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = mixed_dispatch
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "mixed_builder_binding",
+        "transformed Builder tuple differs from the declaration",
+        direct_mixed_builder_binding,
+    )
+
+    def direct_sparse_ratio_missing(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "sparse"
+        instance["declared_config"]["mechanism"]["sparse"] = {
+            "enabled": True,
+            "metadata_element": "uint8_t",
+            "a_sparsity": 2,
+            "e_sparsity": 8,
+        }
+        witness["resolved_optional_types"] = {
+            "sparse_config": "SparseConfig",
+            "smem_layout_atom_e": "LayoutEAtom",
+            "element_e": "unsigned char",
+            "gmem_copy_atom_e": "CopyE",
+            "smem_layout_e": "LayoutE",
+        }
+        witness["resolved_values"]["element_a_sparsity"] = 0
+        witness["resolved_values"]["element_e_sparsity"] = 8
+        sparse_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedSparse<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = sparse_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = sparse_dispatch
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "sparse_ratio_missing",
+        "does not expose the declared A sparsity",
+        direct_sparse_ratio_missing,
+    )
+
+    def direct_planar_forged_pair(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "planar_complex"
+        instance["declared_config"]["mechanism"]["complex"] = {
+            "enabled": True,
+            "representation": "planar",
+        }
+        planar_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedPlanarComplex<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = planar_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = planar_dispatch
+        for axis in ("a", "b"):
+            pair_type = "cute::tuple<half,cute::identity>"
+            instance["declared_config"]["builder_contract"][f"element_{axis}"] = pair_type
+            witness["resolved_types"][f"builder_element_{axis}"] = pair_type
+            witness["resolved_values"][f"builder_tuple_arity_{axis}"] = 2
+        witness["resolved_optional_types"] = {
+            "planar_tiled_mma_pair": "forged::UnrelatedPair<int>",
+            "planar_tiled_mma_a_negative": "forged::UnrelatedNegative<int>",
+        }
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "planar_forged_pair",
+        "does not bind positive and negative roles",
+        direct_planar_forged_pair,
+    )
+
+    def direct_scale_factor_forged_binding(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"] = {
+            "kind": "explicit_schedule_tag",
+            "id": "KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100",
+            "group": "dense_block_scaled",
+        }
+        instance["declared_config"]["mechanism"]["block_scaled"] = {
+            "enabled": True,
+            "scale_a": "scale",
+            "scale_b": "scale",
+            "vector_size_a": 32,
+            "vector_size_b": 32,
+        }
+        witness["resolved_types"]["dispatch_policy"] = (
+            "cutlass::gemm::MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedBlockScaled<1>"
+        )
+        witness["resolved_types"]["mainloop_dispatch_policy"] = witness["resolved_types"][
+            "dispatch_policy"
+        ]
+        witness["resolved_optional_types"] = {
+            "scale_element": "scale",
+            "gmem_tiled_copy_sfa": "copy_sfa",
+            "gmem_tiled_copy_sfb": "copy_sfb",
+            "smem_layout_atom_sfa": "layout_sfa",
+            "smem_layout_atom_sfb": "layout_sfb",
+            "scale_factor_tiled_mma": "forged::UnrelatedTiledMma<int>",
+            "scale_factor_mma_atom": "forged::UnrelatedAtom<int>",
+        }
+        for key in ("scale_vector_size", "scale_vector_size_a", "scale_vector_size_b"):
+            witness["resolved_values"][key] = 32
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "scale_factor_forged_binding",
+        "does not bind its Atom",
+        direct_scale_factor_forged_binding,
+    )
+
+    def direct_blockwise_major_forged(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "blockwise"
+        instance["declared_config"]["mechanism"]["blockwise"] = {
+            "enabled": True,
+            "granularity_m": 2,
+            "granularity_n": 2,
+            "granularity_k": 32,
+            "major_a": "MN",
+            "major_b": "K",
+            "element_sfa": "float",
+            "element_sfb": "float",
+        }
+        blockwise_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedBlockwiseScaling<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = blockwise_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = blockwise_dispatch
+        witness["resolved_optional_types"] = {
+            "blockwise_scale_config": "cutlass::detail::Sm1xxBlockwiseScaleConfig<2,2,32,(cute::UMMA::Major)1,(cute::UMMA::Major)0>",
+            "blockwise_element_sfa": "float",
+            "blockwise_element_sfb": "float",
+            "blockwise_layout_sfa": "LayoutA",
+            "blockwise_layout_sfb": "LayoutB",
+            "blockwise_major_a": "K",
+            "blockwise_major_b": "K",
+        }
+        witness["resolved_values"].update({
+            "blockwise_granularity_m": 2,
+            "blockwise_granularity_n": 2,
+            "blockwise_granularity_k": 32,
+        })
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "blockwise_major_forged",
+        "major_a differs from declared mechanism",
+        direct_blockwise_major_forged,
+    )
+
+    def direct_sparse_config_forged(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "sparse"
+        instance["declared_config"]["mechanism"]["sparse"] = {
+            "enabled": True,
+            "metadata_element": "uint8_t",
+            "a_sparsity": 2,
+            "e_sparsity": 8,
+        }
+        sparse_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedSparse<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = sparse_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = sparse_dispatch
+        witness["resolved_optional_types"] = {
+            "sparse_config": "forged::NotSparseConfig<int>",
+            "smem_layout_atom_e": "LayoutEAtom",
+            "element_e": "unsigned char",
+            "gmem_copy_atom_e": "CopyE",
+            "smem_layout_e": "LayoutE",
+        }
+        witness["resolved_values"]["element_a_sparsity"] = 2
+        witness["resolved_values"]["element_e_sparsity"] = 8
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "sparse_config_forged",
+        "unrelated SparseConfig",
+        direct_sparse_config_forged,
+    )
+
+    def direct_sparse_regex_alternation(root: Path, paths: dict[str, Path]) -> None:
+        instance = retarget_fixture_group(root, paths, "sparse")
+        instance["declared_config"]["mechanism"]["transforms"] = {
+            "a": "sparse-2:4-compression",
+            "b": "identity",
+        }
+        instance["declared_config"]["mechanism"]["sparse"] = {
+            "enabled": True,
+            "metadata_element": "uint8_t",
+            "a_sparsity": 2,
+            "e_sparsity": 8,
+        }
+        instance["static_contract"]["ptx"]["required"][1]["regex"] = (
+            r"tcgen05\.mma\.cta_group::1(?:\..*)?|never\.mma\.sp"
+        )
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "sparse_regex_alternation",
+        "lacks a tcgen05.mma.sp family",
+        direct_sparse_regex_alternation,
+    )
+
+    def direct_mixed_binary_tuple(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "mixed_input"
+        instance["declared_config"]["builder_contract"]["element_a"] = (
+            "cute::tuple<half,forged::extra>"
+        )
+        instance["declared_config"]["mechanism"]["mixed_input"] = {
+            "enabled": True,
+            "mode": "convert_only",
+            "operands_swapped": False,
+            "transformed_operand": "a",
+            "tuple_arity": 1,
+            "narrow_type": "half",
+            "wide_type": "half",
+            "scale_type": None,
+            "zero_type": None,
+        }
+        mixed_dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedMixedInput<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = mixed_dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = mixed_dispatch
+        witness["resolved_types"]["builder_element_a"] = (
+            "cute::tuple<half,forged::extra>"
+        )
+        witness["resolved_optional_types"] = {
+            key: ("void" if key in {"mixed_element_scale", "mixed_element_zero"} else key)
+            for key in (
+                "smem_layout_atoms_a", "smem_layout_atoms_b",
+                "input_copy_atom_a", "input_copy_atom_b",
+                "compute_copy_atom_a", "compute_copy_atom_b",
+                "mixed_element_scale", "mixed_element_zero", "mixed_layout_scale",
+                "mixed_gmem_tiled_copy_scale", "mixed_smem_layout_atom_scale",
+            )
+        }
+        witness["resolved_values"]["builder_tuple_arity_a"] = 2
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "mixed_binary_tuple",
+        "transformed Builder tuple differs from the declaration",
+        direct_mixed_binary_tuple,
+    )
+
+    def direct_operand_source_spoof(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        witness["resolved_types"]["mma_operand_source_a"] = "TMEM_FRAGMENT"
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "mma_operand_source_spoof",
+        "cannot classify MMA operand A source",
+        direct_operand_source_spoof,
+    )
+
+    def direct_forged_fusion_defaults(root: Path, paths: dict[str, Path]) -> None:
+        accepted = cpp_type_equivalent(
+            "cutlass::epilogue::fusion::LinearCombination<signed char,float,forged::C,forged::Scalar,forged::Round>",
+            "cutlass::epilogue::fusion::LinearCombination<int8_t,float>",
+            allow_trailing_default_arguments=True,
+        )
+        if accepted:
+            raise ContractError("forged Fusion default arguments were accepted")
+        raise ContractError("forged Fusion default arguments were rejected")
+
+    require_direct_rejected(
+        "forged_fusion_defaults",
+        "were rejected",
+        direct_forged_fusion_defaults,
+    )
+
+    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=84 positive=7")
     return 0
 
 

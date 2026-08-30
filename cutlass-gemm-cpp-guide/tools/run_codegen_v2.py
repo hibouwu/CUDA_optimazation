@@ -876,6 +876,10 @@ def run_instance(
                 "stage_count": resolved_values["mainloop_stages"],
                 "scheduler_stages": resolved_values["scheduler_stages"],
                 "accumulator_stages": resolved_values["accumulator_stages"],
+                "load_to_transform_stages": resolved_values["load_to_transform_stages"],
+                "transform_to_mma_stages": resolved_values["transform_to_mma_stages"],
+                "computation_stages": resolved_values["computation_stages"],
+                "transformation_stages": resolved_values["transformation_stages"],
             },
             "function_binding": {
                 "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
@@ -906,11 +910,13 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--instance", action="append", default=[])
     parser.add_argument("--all-phase1", action="store_true")
-    parser.add_argument("--run-id", default="phase1-fresh-20260830")
+    parser.add_argument("--run-id")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
-    if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", args.run_id):
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    run_id = args.run_id or contract["phase1_run_id"]
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", run_id):
         raise RunnerError("run-id must be a safe ASCII identifier")
     requested = list(args.instance)
     if args.all_phase1:
@@ -927,8 +933,7 @@ def main() -> int:
     requested = list(dict.fromkeys(requested))
     if not requested:
         raise RunnerError("select --instance or --all-phase1")
-    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    if args.run_id == contract["phase1_run_id"] and requested != contract[
+    if run_id == contract["phase1_run_id"] and requested != contract[
         "phase1_fresh_replay_instances"
     ]:
         raise RunnerError("the frozen Phase 1 run_id requires the complete ordered replay set")
@@ -942,7 +947,7 @@ def main() -> int:
             run_instance(
                 root=root,
                 instance_path=instance_path,
-                run_id=args.run_id,
+                run_id=run_id,
                 toolchain=toolchain,
                 resume=args.resume,
             )
@@ -955,13 +960,13 @@ def main() -> int:
         )
         for result in results
     ]
-    summary_path = root / "evidence/codegen-sm110a-v2" / f"summary-{args.run_id}.json"
+    summary_path = root / "evidence/codegen-sm110a-v2" / f"summary-{run_id}.json"
     history_refs: list[dict[str, str]] = []
     if summary_path.exists():
         previous = load_strict_json(summary_path)
         if (
             previous.get("schema_version") != 1
-            or previous.get("run_id") != args.run_id
+            or previous.get("run_id") != run_id
             or previous.get("scope") != "STATIC_CODEGEN_ONLY"
             or not isinstance(previous.get("result_refs"), list)
             or not isinstance(previous.get("history_result_refs"), list)
@@ -977,7 +982,7 @@ def main() -> int:
             history_refs.append(ref)
     summary = {
         "schema_version": 1,
-        "run_id": args.run_id,
+        "run_id": run_id,
         "scope": "STATIC_CODEGEN_ONLY",
         "result_refs": result_refs,
         "history_result_refs": history_refs,
@@ -990,7 +995,7 @@ def main() -> int:
         str(root),
         "--require-archive",
     ]
-    if args.run_id == contract["phase1_run_id"]:
+    if run_id == contract["phase1_run_id"]:
         validation_command.append("--require-results")
     validation = run_checked(validation_command, cwd=root)
     print(validation.stdout.decode("utf-8", errors="replace").strip())

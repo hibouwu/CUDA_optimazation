@@ -3,9 +3,30 @@
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "scope": "STATIC_CODEGEN_ONLY",
-  "phase1_run_id": "phase1-fresh-20260830",
-  "phase1_current_summary": "evidence/codegen-sm110a-v2/summary-phase1-fresh-20260830.json",
+  "phase1_run_id": "phase1-generalized-20260830",
+  "phase1_current_summary": "evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json",
   "fresh_replay_required_semantics": "permanent_coverage_membership_never_completion_flag",
+  "witness_contract": {
+    "version": 2,
+    "problem_modes": ["dense", "array", "grouped", "moe"],
+    "atom_roles": ["main", "planar_negative", "scale_factor"],
+    "mma_operand_source_categories": [
+      "SMEM_DESCRIPTOR",
+      "SPARSE_SMEM_DESCRIPTOR",
+      "TMEM_FRAGMENT"
+    ],
+    "structured_value_roles": [
+      "builder_tuple_arity_a",
+      "builder_tuple_arity_b",
+      "blockwise_major_a",
+      "blockwise_major_b",
+      "sparse_a_sparsity",
+      "sparse_e_sparsity"
+    ],
+    "copy_layout_roles": ["classic", "input_compute", "block_scale", "blockwise", "mixed_scale", "sparse_metadata"],
+    "pipeline_roles": ["mainloop", "scheduler", "accumulator", "load_to_transform", "transform_to_mma", "computation", "transformation"],
+    "mechanism_profiles": ["dense", "pointer_array", "block_scaled", "blockwise", "sparse", "mixed_input", "fast_fp32", "planar_complex", "interleaved_complex"]
+  },
   "inventory_contract_sha256": {
     "explicit_tags": "2bbd6195fe9683512a3c16b06f8637883937eac5bbbfa44b1a68fa81ed2e4b50",
     "auto_controls": "309d8530dcd63a59c7c98051e340fb7a3cd712cd72d261b39a2316306930ed91"

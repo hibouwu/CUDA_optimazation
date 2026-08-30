@@ -132,7 +132,7 @@
       "tag": "KernelTmaWarpSpecialized1SmSm100",
       "group": "dense",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.dense_f16_1sm.a001",
+      "result_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
       "current_case_ids": [
         "dense_f16_1sm_p128",
         "dense_bf16_1sm_p128",
@@ -146,7 +146,7 @@
       "tag": "KernelTmaWarpSpecialized2SmSm100",
       "group": "dense",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.dense_f16_2sm.a001",
+      "result_id": "phase1-generalized-20260830.dense_f16_2sm.a001",
       "current_case_ids": [
         "dense_f16_2sm_p256x128x128"
       ],
@@ -387,7 +387,7 @@
       "tag": "KernelTmaWarpSpecialized1SmNvf4Sm100",
       "group": "dense_block_scaled",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.dense_bs_nvfp4_1sm.a001",
+      "result_id": "phase1-generalized-20260830.dense_bs_nvfp4_1sm.a001",
       "current_case_ids": [
         "bs_nvfp4_1sm_p128x128x256"
       ],
@@ -404,7 +404,7 @@
       "tag": "KernelTmaWarpSpecialized1SmMxf4Sm100",
       "group": "dense_block_scaled",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.dense_bs_mxf4_1sm.a001",
+      "result_id": "phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
       "current_case_ids": [
         "bs_mxfp4_1sm_p128x128x256"
       ],
@@ -421,7 +421,7 @@
       "tag": "KernelTmaWarpSpecialized1SmMxf8f6f4Sm100",
       "group": "dense_block_scaled",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.dense_bs_mxf8_1sm.a001",
+      "result_id": "phase1-generalized-20260830.dense_bs_mxf8_1sm.a001",
       "current_case_ids": [
         "bs_mxfp8_1sm_p128"
       ],
@@ -536,7 +536,7 @@
       "tag": "KernelSparseTmaWarpSpecialized1SmNvf4Sm100",
       "group": "sparse_block_scaled",
       "status": "STATIC_PASS",
-      "result_id": "phase1-fresh-20260830.sparse_bs_nvfp4_1sm.a001",
+      "result_id": "phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
       "current_case_ids": [
         "sparse_bs_nvfp4_1sm_p128x128x256"
       ],

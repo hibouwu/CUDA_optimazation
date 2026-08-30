@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "3e7eaffad26aa46e881564ef04eea74ae425c352de2e9099d42839b808ba6813",
+  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "instance_id": "dense_bs_nvfp4_1sm",
@@ -49,17 +49,21 @@
     "elements": {
       "a": "cutlass::nv_float4_t<cutlass::float_e2m1_t>",
       "b": "cutlass::nv_float4_t<cutlass::float_e2m1_t>",
+      "c": "void",
+      "d": "cutlass::bfloat16_t",
       "accumulator": "float",
-      "d": "cutlass::bfloat16_t"
+      "compute": "float"
     },
     "layouts": {
       "a": "RowMajor",
       "b": "ColumnMajor",
+      "c": "RowMajor",
       "d": "RowMajor"
     },
     "alignments": {
       "a": 32,
       "b": 32,
+      "c": 1,
       "d": 8
     },
     "mma_tile_mnk": [
@@ -77,16 +81,82 @@
     "epilogue_schedule": "cutlass::epilogue::NoSmemWarpSpecialized1Sm",
     "kernel_problem_shape": "cute::Shape<int,int,int,int>",
     "tile_scheduler": "void (CUTLASS default)",
-      "cta_group": 1,
-      "operand_source": "SS+scale-TMEM",
-      "mechanism": {
-        "pointer_mode": "single",
-        "transforms": {"a": "identity", "b": "identity"},
-        "block_scaled": {"enabled": true, "scale_a": "cutlass::float_ue4m3_t", "scale_b": "cutlass::float_ue4m3_t", "vector_size_a": 16, "vector_size_b": 16},
-        "sparse": {"enabled": false, "metadata": null},
-        "fast_fp32": {"enabled": false, "atom_model": null},
-        "complex": {"enabled": false, "representation": null}
+    "cta_group": 1,
+    "mechanism": {
+      "pointer_mode": "single",
+      "transforms": {
+        "a": "identity",
+        "b": "identity"
+      },
+      "block_scaled": {
+        "enabled": true,
+        "scale_a": "cutlass::float_ue4m3_t",
+        "scale_b": "cutlass::float_ue4m3_t",
+        "vector_size_a": 16,
+        "vector_size_b": 16
+      },
+      "sparse": {
+        "enabled": false,
+        "metadata_element": null,
+        "a_sparsity": null,
+        "e_sparsity": null
+      },
+      "fast_fp32": {
+        "enabled": false,
+        "atom_model": null,
+        "num_compute_matrices": null,
+        "num_bands": null,
+        "scaling_factor": null,
+        "acc_promotion_interval": null
+      },
+      "complex": {
+        "enabled": false,
+        "representation": null
+      },
+      "blockwise": {
+        "enabled": false,
+        "granularity_m": null,
+        "granularity_n": null,
+        "granularity_k": null,
+        "major_a": null,
+        "major_b": null,
+        "element_sfa": null,
+        "element_sfb": null
+      },
+      "mixed_input": {
+        "enabled": false,
+        "mode": null,
+        "operands_swapped": null,
+        "transformed_operand": null,
+        "tuple_arity": null,
+        "narrow_type": null,
+        "wide_type": null,
+        "scale_type": null,
+        "zero_type": null
       }
+    },
+    "builder_contract": {
+      "mainloop_operator_class": "cutlass::arch::OpClassBlockScaledTensorOp",
+      "epilogue_operator_class": "cutlass::arch::OpClassBlockScaledTensorOp",
+      "element_a": "cutlass::nv_float4_t<cutlass::float_e2m1_t>",
+      "element_b": "cutlass::nv_float4_t<cutlass::float_e2m1_t>",
+      "layout_a": "cutlass::layout::RowMajor",
+      "layout_b": "cutlass::layout::ColumnMajor",
+      "epilogue_element_c": "void",
+      "epilogue_element_d": "cutlass::bfloat16_t",
+      "epilogue_layout_c": "cutlass::layout::RowMajor",
+      "epilogue_layout_d": "cutlass::layout::RowMajor",
+      "epilogue_tile": "cutlass::epilogue::collective::EpilogueTileAuto",
+      "fusion_operation": "void",
+      "problem_mode": "dense",
+      "cluster_type_cpp": "cute::Shape<cute::_1,cute::_1,cute::_1>",
+      "cluster_is_dynamic": false,
+      "cluster_default_mnk": [
+        1,
+        1,
+        1
+      ]
+    }
   },
   "static_contract": {
     "required_layers": [

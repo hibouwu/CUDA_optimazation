@@ -50,16 +50,29 @@ struct DenseGemmConfig {
 
   using ArchTag = cutlass::arch::Sm100;
   using OperatorClass = cutlass::arch::OpClassTensorOp;
+  using MainloopOperatorClass = OperatorClass;
+  using EpilogueOperatorClass = OperatorClass;
   using MmaTileShape = MmaTileShape_;
   using ClusterShape = ClusterShape_;
+  using ClusterDefaultShape = ClusterShape;
   using MainloopSchedule = MainloopSchedule_;
   using EpilogueSchedule = EpilogueSchedule_;
   using ProblemShape = cute::Shape<int, int, int, int>;
   using TileScheduler = void;
+  using BuilderElementA = ElementA;
+  using BuilderElementB = ElementB;
+  using BuilderLayoutA = LayoutA;
+  using BuilderLayoutB = LayoutB;
+  using EpilogueElementC = ElementC;
+  using EpilogueElementD = ElementD;
+  using EpilogueLayoutC = LayoutC;
+  using EpilogueLayoutD = LayoutD;
+  using EpilogueTile = cutlass::epilogue::collective::EpilogueTileAuto;
+  using FusionOperation = void;
 
   using EpilogueBuilder = cutlass::epilogue::collective::CollectiveBuilder<
-      ArchTag, OperatorClass, MmaTileShape, ClusterShape,
-      cutlass::epilogue::collective::EpilogueTileAuto,
+      ArchTag, EpilogueOperatorClass, MmaTileShape, ClusterShape,
+      EpilogueTile,
       ElementAccumulator, ElementCompute,
       ElementC, LayoutC, AlignmentC,
       ElementD, LayoutD, AlignmentD,
@@ -70,7 +83,7 @@ struct DenseGemmConfig {
       static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>;
 
   using MainloopBuilder = cutlass::gemm::collective::CollectiveBuilder<
-      ArchTag, OperatorClass,
+      ArchTag, MainloopOperatorClass,
       ElementA, LayoutA, AlignmentA,
       ElementB, LayoutB, AlignmentB,
       ElementAccumulator,

@@ -55,13 +55,28 @@
     },
     "declared_config": {
       "type": "object", "additionalProperties": false,
-      "required": ["family", "operator_class", "elements", "layouts", "alignments", "mma_tile_mnk", "cluster_mnk", "stage_policy", "mainloop_schedule", "epilogue_schedule", "kernel_problem_shape", "tile_scheduler", "cta_group", "operand_source", "mechanism"],
+      "required": ["family", "operator_class", "elements", "layouts", "alignments", "builder_contract", "mma_tile_mnk", "cluster_mnk", "stage_policy", "mainloop_schedule", "epilogue_schedule", "kernel_problem_shape", "tile_scheduler", "cta_group", "mechanism"],
       "properties": {
         "family": {"type": "string", "minLength": 1},
         "operator_class": {"type": "string", "minLength": 1},
-        "elements": {"type": "object", "additionalProperties": false, "required": ["a", "b", "accumulator", "d"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}, "accumulator": {"type": "string"}, "d": {"type": "string"}}},
-        "layouts": {"type": "object", "additionalProperties": false, "required": ["a", "b", "d"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}, "d": {"type": "string"}}},
-        "alignments": {"type": "object", "additionalProperties": false, "required": ["a", "b", "d"], "properties": {"a": {"type": "integer", "minimum": 1}, "b": {"type": "integer", "minimum": 1}, "d": {"type": "integer", "minimum": 1}}},
+        "elements": {"type": "object", "additionalProperties": false, "required": ["a", "b", "c", "d", "accumulator", "compute"], "properties": {"a": {"type": "string", "minLength": 1}, "b": {"type": "string", "minLength": 1}, "c": {"type": "string", "minLength": 1}, "d": {"type": "string", "minLength": 1}, "accumulator": {"type": "string", "minLength": 1}, "compute": {"type": "string", "minLength": 1}}},
+        "layouts": {"type": "object", "additionalProperties": false, "required": ["a", "b", "c", "d"], "properties": {"a": {"type": "string", "minLength": 1}, "b": {"type": "string", "minLength": 1}, "c": {"type": "string", "minLength": 1}, "d": {"type": "string", "minLength": 1}}},
+        "alignments": {"type": "object", "additionalProperties": false, "required": ["a", "b", "c", "d"], "properties": {"a": {"type": "integer", "minimum": 1}, "b": {"type": "integer", "minimum": 1}, "c": {"type": "integer", "minimum": 1}, "d": {"type": "integer", "minimum": 1}}},
+        "builder_contract": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mainloop_operator_class", "epilogue_operator_class", "element_a", "element_b", "layout_a", "layout_b", "epilogue_element_c", "epilogue_element_d", "epilogue_layout_c", "epilogue_layout_d", "epilogue_tile", "fusion_operation", "problem_mode", "cluster_type_cpp", "cluster_is_dynamic", "cluster_default_mnk"],
+          "properties": {
+            "mainloop_operator_class": {"type": "string", "minLength": 1}, "epilogue_operator_class": {"type": "string", "minLength": 1},
+            "element_a": {"type": "string", "minLength": 1}, "element_b": {"type": "string", "minLength": 1},
+            "layout_a": {"type": "string", "minLength": 1}, "layout_b": {"type": "string", "minLength": 1},
+            "epilogue_element_c": {"type": "string", "minLength": 1}, "epilogue_element_d": {"type": "string", "minLength": 1},
+            "epilogue_layout_c": {"type": "string", "minLength": 1}, "epilogue_layout_d": {"type": "string", "minLength": 1},
+            "epilogue_tile": {"type": "string", "minLength": 1}, "fusion_operation": {"type": "string", "minLength": 1},
+            "problem_mode": {"enum": ["dense", "array", "grouped", "moe"]},
+            "cluster_type_cpp": {"type": "string", "minLength": 1}, "cluster_is_dynamic": {"type": "boolean"},
+            "cluster_default_mnk": {"$ref": "#/$defs/shape3"}
+          }
+        },
         "mma_tile_mnk": {"$ref": "#/$defs/shape3"},
         "cluster_mnk": {"$ref": "#/$defs/shape3"},
         "stage_policy": {"type": "string", "minLength": 1},
@@ -70,17 +85,18 @@
         "kernel_problem_shape": {"type": "string", "minLength": 1},
         "tile_scheduler": {"type": "string", "minLength": 1},
         "cta_group": {"enum": [1, 2]},
-        "operand_source": {"type": "string", "minLength": 1},
         "mechanism": {
           "type": "object", "additionalProperties": false,
-          "required": ["pointer_mode", "transforms", "block_scaled", "sparse", "fast_fp32", "complex"],
+          "required": ["pointer_mode", "transforms", "block_scaled", "blockwise", "sparse", "mixed_input", "fast_fp32", "complex"],
           "properties": {
             "pointer_mode": {"enum": ["single", "array"]},
             "transforms": {"type": "object", "additionalProperties": false, "required": ["a", "b"], "properties": {"a": {"type": "string"}, "b": {"type": "string"}}},
             "block_scaled": {"type": "object", "additionalProperties": false, "required": ["enabled", "scale_a", "scale_b", "vector_size_a", "vector_size_b"], "properties": {"enabled": {"type": "boolean"}, "scale_a": {"type": ["string", "null"]}, "scale_b": {"type": ["string", "null"]}, "vector_size_a": {"type": ["integer", "null"], "minimum": 1}, "vector_size_b": {"type": ["integer", "null"], "minimum": 1}}},
-            "sparse": {"type": "object", "additionalProperties": false, "required": ["enabled", "metadata"], "properties": {"enabled": {"type": "boolean"}, "metadata": {"type": ["string", "null"]}}},
-            "fast_fp32": {"type": "object", "additionalProperties": false, "required": ["enabled", "atom_model"], "properties": {"enabled": {"type": "boolean"}, "atom_model": {"type": ["string", "null"]}}},
-            "complex": {"type": "object", "additionalProperties": false, "required": ["enabled", "representation"], "properties": {"enabled": {"type": "boolean"}, "representation": {"type": ["string", "null"]}}}
+            "blockwise": {"type": "object", "additionalProperties": false, "required": ["enabled", "granularity_m", "granularity_n", "granularity_k", "major_a", "major_b", "element_sfa", "element_sfb"], "properties": {"enabled": {"type": "boolean"}, "granularity_m": {"type": ["integer", "null"], "minimum": 1}, "granularity_n": {"type": ["integer", "null"], "minimum": 1}, "granularity_k": {"type": ["integer", "null"], "minimum": 1}, "major_a": {"enum": ["MN", "K", null]}, "major_b": {"enum": ["MN", "K", null]}, "element_sfa": {"type": ["string", "null"]}, "element_sfb": {"type": ["string", "null"]}}},
+            "sparse": {"type": "object", "additionalProperties": false, "required": ["enabled", "metadata_element", "a_sparsity", "e_sparsity"], "properties": {"enabled": {"type": "boolean"}, "metadata_element": {"type": ["string", "null"]}, "a_sparsity": {"enum": [2, null]}, "e_sparsity": {"enum": [8, 16, null]}}},
+            "mixed_input": {"type": "object", "additionalProperties": false, "required": ["enabled", "mode", "operands_swapped", "transformed_operand", "tuple_arity", "narrow_type", "wide_type", "scale_type", "zero_type"], "properties": {"enabled": {"type": "boolean"}, "mode": {"enum": ["convert_only", "scale_only", "scale_zero", null]}, "operands_swapped": {"type": ["boolean", "null"]}, "transformed_operand": {"enum": ["a", "b", null]}, "tuple_arity": {"type": ["integer", "null"], "minimum": 1}, "narrow_type": {"type": ["string", "null"]}, "wide_type": {"type": ["string", "null"]}, "scale_type": {"type": ["string", "null"]}, "zero_type": {"type": ["string", "null"]}}},
+            "fast_fp32": {"type": "object", "additionalProperties": false, "required": ["enabled", "atom_model", "num_compute_matrices", "num_bands", "scaling_factor", "acc_promotion_interval"], "properties": {"enabled": {"type": "boolean"}, "atom_model": {"enum": ["9xBF16-smem", "9xBF16-no-smem", null]}, "num_compute_matrices": {"type": ["integer", "null"], "minimum": 1}, "num_bands": {"type": ["integer", "null"], "minimum": 1}, "scaling_factor": {"type": ["integer", "null"], "minimum": 0}, "acc_promotion_interval": {"type": ["integer", "null"], "minimum": 1}}},
+            "complex": {"type": "object", "additionalProperties": false, "required": ["enabled", "representation"], "properties": {"enabled": {"type": "boolean"}, "representation": {"enum": ["planar", "interleaved", null]}}}
           }
         }
       }

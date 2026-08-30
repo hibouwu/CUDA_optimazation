@@ -11,9 +11,11 @@
 - CUDA 固定为 13.0.88，canonical container 固定到 digest。
 - 历史 `static-20260817` snapshot仍保留 10 个旧 case 的聚合记录；它们与 fresh 结果分开
   展示，不因为 Tag 已重放就自动升级 BF16、FP8、Bias+ReLU 或 tail 等历史变体。
-- Phase 1 已用新结果合同 fresh 重放 6 个 canonical instance：Dense FP16 1SM/2SM、
-  NVFP4、MXFP4、MXFP8 和 Sparse NVFP4。六份结果都闭合了 Builder/Collective/Stage/Atom、
-  唯一 PTX/SASS 目标函数和函数内 opcode，并通过从源码重新编译开始的 deep replay。
+- Phase 1 已用通用结果合同 fresh 重放 6 个 canonical instance：Dense FP16 1SM/2SM、
+  NVFP4、MXFP4、MXFP8 和 Sparse NVFP4。合同已经区分 logical/Builder 类型、不同 copy/layout
+  role、多级 Stage、MMA fragment 的实际 SMEM/TMEM source，以及 Planar、FastFP32、MixedInput、
+  Blockwise、Sparse 等 family-specific 结构。六份正式结果闭合了唯一 PTX/SASS 目标函数和
+  函数内 opcode，并通过从源码重新编译开始的 deep replay。
 - 59 个显式 Schedule Tag 当前为 `STATIC_PASS=6`、`NOT_CHECKED=53`；11 个
   `KernelScheduleAuto` 控制项仍全部 `NOT_CHECKED`。
 - 当前机器没有可用 NVIDIA driver；所有 `runtime_correct` 仍是 `false`，不能称为

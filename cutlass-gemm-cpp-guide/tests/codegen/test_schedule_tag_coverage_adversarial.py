@@ -167,7 +167,7 @@ def require_rejected(name: str, expected_error: str, mutate) -> None:
 
 
 def main() -> int:
-    result_id = "phase1-fresh-20260830.dense_f16_1sm.a001"
+    result_id = "phase1-generalized-20260830.dense_f16_1sm.a001"
     helper_errors: list[str] = []
     loaded_record = VALIDATOR_MODULE.load_result_record(
         ROOT,
