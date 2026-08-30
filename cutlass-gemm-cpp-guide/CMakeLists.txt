@@ -33,7 +33,14 @@ add_test(
   NAME host.coverage_summary
   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/summarize_coverage.py
           --root ${CMAKE_CURRENT_SOURCE_DIR} --check)
-set_tests_properties(host.coverage_summary PROPERTIES LABELS "host;docs")
+set_tests_properties(host.coverage_summary PROPERTIES LABELS "host;coverage")
+
+add_test(
+  NAME host.schedule_tag_coverage
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/validate_schedule_tag_coverage.py
+          --root ${CMAKE_CURRENT_SOURCE_DIR})
+set_tests_properties(host.schedule_tag_coverage PROPERTIES LABELS "host;schema;coverage;codegen")
 
 add_test(
   NAME host.cutlass_source_contracts

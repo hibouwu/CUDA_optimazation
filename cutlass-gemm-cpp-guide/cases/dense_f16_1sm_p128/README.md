@@ -1,7 +1,8 @@
 # `dense_f16_1sm_p128`
 
 Track A 给出 `CollectiveBuilder → GemmUniversal → GemmUniversalAdapter` 的完整调用；
-Track B 在 [`docs/tma-tmem-tcgen05.md`](../../docs/tma-tmem-tcgen05.md) 解构同一数据流。
+对应的 TCGen05、TMA、TMEM 与 Stage codegen 路径见
+[Tensor Core GEMM Codegen 形式化合同验证](../../docs/02-tensor-core-tcgen05-gemm-codegen-formal-validation.md)。
 
 - Problem：`M=N=K=128`
 - MMA tile：`128×128×64`，因此 problem K 包含两个 K tile
