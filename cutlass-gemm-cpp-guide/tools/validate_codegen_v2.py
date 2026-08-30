@@ -127,6 +127,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--require-results", action="store_true")
+    parser.add_argument("--require-phase2-results", action="store_true")
     parser.add_argument("--require-archive", action="store_true")
     parser.add_argument("--deep-replay", action="store_true")
     args = parser.parse_args()
@@ -134,8 +135,13 @@ def main() -> int:
     errors: list[str] = []
     try:
         contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-        if args.deep_replay and (not args.require_results or not args.require_archive):
-            raise ContractError("--deep-replay requires --require-results and --require-archive")
+        if args.deep_replay and (
+            not args.require_archive
+            or not (args.require_results or args.require_phase2_results)
+        ):
+            raise ContractError(
+                "--deep-replay requires --require-archive and at least one required campaign"
+            )
         if contract.get("scope") != "STATIC_CODEGEN_ONLY":
             raise ContractError("static contract scope must be STATIC_CODEGEN_ONLY")
         if contract.get("witness_contract", {}).get("version") != 2:
@@ -179,6 +185,17 @@ def main() -> int:
         ]
         if len(subjects) != len(set(subjects)):
             raise ContractError("Phase 1 instances do not cover six unique subjects")
+        phase2_expected_instances = contract["phase2_official_instances"]
+        if args.require_phase2_results:
+            missing_phase2 = sorted(set(phase2_expected_instances) - set(instances))
+            if missing_phase2:
+                raise ContractError(f"missing Phase 2 instances: {missing_phase2}")
+            phase2_subjects = [
+                (instances[instance_id]["subject"]["kind"], instances[instance_id]["subject"]["id"])
+                for instance_id in phase2_expected_instances
+            ]
+            if len(phase2_subjects) != len(set(phase2_subjects)):
+                raise ContractError("Phase 2 instances do not cover 34 unique subjects")
 
         evidence_root = root / "evidence/codegen-sm110a-v2"
         result_paths = sorted((evidence_root / "results").glob("*.json"))
@@ -211,6 +228,9 @@ def main() -> int:
         )
 
         current_results: dict[str, dict] = {}
+        phase2_current_results: dict[str, dict] = {}
+        if args.deep_replay:
+            verify_deep_replay_environment(root)
         if args.require_results:
             current_summary_path = safe_path(
                 root, contract["phase1_current_summary"], "phase1_current_summary"
@@ -237,8 +257,50 @@ def main() -> int:
             if nonpass:
                 raise ContractError(f"Phase 1 historical replay is not all STATIC_PASS: {nonpass}")
             if args.deep_replay:
-                verify_deep_replay_environment(root)
                 for ref in current_summary["result_refs"]:
+                    replay_result_derivations(
+                        root,
+                        root / ref["path"],
+                        environment_verified=True,
+                    )
+        if args.require_phase2_results:
+            phase2_summary_path = safe_path(
+                root, contract["phase2_current_summary"], "phase2_current_summary"
+            )
+            if phase2_summary_path not in summary_paths:
+                raise ContractError("Phase 2 current summary is not in the summary namespace")
+            phase2_summary, phase2_selected_results, _ = summaries_by_path[
+                phase2_summary_path
+            ]
+            if (
+                phase2_summary.get("run_id") != contract["phase2_run_id"]
+                or phase2_summary_path.name
+                != f"summary-{contract['phase2_run_id']}.json"
+            ):
+                raise ContractError("Phase 2 current summary/run_id mismatch")
+            phase2_selected_ids = [
+                result["instance_ref"]["id"] for result in phase2_selected_results
+            ]
+            if phase2_selected_ids != phase2_expected_instances:
+                raise ContractError(
+                    "Phase 2 summary instance order differs: "
+                    f"{phase2_selected_ids} != {phase2_expected_instances}"
+                )
+            phase2_current_results = dict(
+                zip(phase2_selected_ids, phase2_selected_results, strict=True)
+            )
+            invalid_phase2 = {
+                instance_id: phase2_current_results[instance_id]["status"]
+                for instance_id in phase2_expected_instances
+                if phase2_current_results[instance_id]["status"]
+                not in {"STATIC_PASS", "UNSUPPORTED_SM110A"}
+            }
+            if invalid_phase2:
+                raise ContractError(
+                    f"Phase 2 replay has an invalid terminal status: {invalid_phase2}"
+                )
+            if args.deep_replay:
+                for ref in phase2_summary["result_refs"]:
                     replay_result_derivations(
                         root,
                         root / ref["path"],
@@ -249,6 +311,7 @@ def main() -> int:
         bundle_sha = "NOT_AVAILABLE"
         instances = {}
         current_results = {}
+        phase2_current_results = {}
         unsealed_result_count = 0
     if errors:
         for error in errors:
@@ -257,6 +320,7 @@ def main() -> int:
     print(
         "CODEGEN_V2_CONTRACT_PASS "
         f"instances={len(instances)} phase1_results={len(current_results)} "
+        f"phase2_results={len(phase2_current_results)} "
         f"unsealed_results={unsealed_result_count} "
         f"result_contract_bundle_sha256={bundle_sha}"
     )

@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "instance_id": "dense_mixed_tma_cpasync_fp8_1sm_moe",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_15MoEProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_47MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedILi12ELi3ELi2ENS6_IJNS5_1CILi1EEESD_SD_EEENS_4arch5Sm100EEENS6_IJNSC_ILi128EEENSC_ILi16EEESI_EEENS_12float_e4m3_tENS6_IJlSD_lEEESL_SM_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_19SM100_MMA_F8F6F4_SSISL_SL_fLi128ELi16ELNS5_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS5_6LayoutISE_NS6_IJNSC_ILi0EEESW_SW_EEEEENS6_IJNS5_10UnderscoreESZ_SZ_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi8EEENSV_INS6_IJNSC_ILi8EEESI_EEENS6_IJSI_SD_EEEEEEEvNS5_8identityENS5_9TiledCopyINS5_9Copy_AtomIJNS5_31SM80_CP_ASYNC_CACHEGLOBAL_ZFILLINS_9uint128_tES1H_EESL_EEENSV_INS6_IJNS6_IJS18_SJ_EEESJ_EEENS6_IJNS6_IJNSC_ILi256EEESD_EEESJ_EEEEENS6_IJSJ_SI_EEEEES1C_vS1D_EENS_8epilogue10collective18CollectiveEpilogueINS1T_23Sm100TmaWarpSpecializedILi2ELi1ELi16ELb1ELb0EEEJSK_NS6_IJNSV_ISI_SD_EENSV_ISJ_SD_EEEEENS_6half_tENS6_IJSD_llEEES21_S22_NS1T_6fusion15FusionCallbacksIS1X_NS23_17LinearCombinationIS21_fS21_fLNS_15FloatRoundStyleE2EEESK_S20_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_16dp256b2xES12_NS13_IS15_NS16_ILi16EEENSV_INS6_IJNSC_ILi64EEES18_EEENS6_IJSD_S2E_EEEEEEENS5_17SM75_U16x8_LDSM_TENS5_14SM90_TMA_STOREES2I_NS5_17SM90_U16x8_STSM_TENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEEEEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 5,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 5,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group"
+      ]
+    },
+    {
+      "id": "cpasync_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "cp.async.cg.shared.global.L2::128B",
+        "cp.async.cg.shared.global.L2::128B"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.16x256b.x2.b32",
+        "tcgen05.ld.sync.aligned.16x256b.x2.b32"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4"
+      ]
+    },
+    {
+      "id": "opposite_cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 3,
+      "matched_opcodes": [
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "id": "cpasync_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDGSTS.E.BYPASS.LTC128B.128",
+        "LDGSTS.E.BYPASS.LTC128B.128"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDTM.16DP256BIT.X2",
+        "LDTM.16DP256BIT.X2"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA"
+      ]
+    },
+    {
+      "id": "mma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 1,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4"
+    ],
+    "sass_mma_opcodes": [
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA"
+    ],
+    "errors": []
+  }
+}

@@ -54,6 +54,7 @@
     "safe_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
     "safe_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
     "ref": {"type": "object", "additionalProperties": false, "required": ["id", "path", "sha256"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "path": {"$ref": "#/$defs/safe_path"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "source_range_ref": {"type": "object", "additionalProperties": false, "required": ["path", "line_start", "line_end", "sha256"], "properties": {"path": {"$ref": "#/$defs/safe_path"}, "line_start": {"type": "integer", "minimum": 1}, "line_end": {"type": "integer", "minimum": 1}, "sha256": {"$ref": "#/$defs/sha256"}}},
     "pattern_result": {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"$ref": "#/$defs/safe_id"}, "required": {"type": "boolean"}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}},
     "static_pass_evidence": {
       "type": "object", "additionalProperties": false,
@@ -89,13 +90,26 @@
     },
     "unsupported_evidence": {
       "type": "object", "additionalProperties": false,
-      "required": ["kind", "failure", "diagnostic_results", "source_constraints", "sm110a_preflight_result_ref"],
+      "required": ["kind", "reason", "failure", "type_witness_artifact_id", "resolved_stage", "function_binding", "guard_atom", "guard_macro", "ptx_guard_results", "sass_guard_results", "source_constraints", "legal_control"],
       "properties": {
         "kind": {"const": "UNSUPPORTED_SM110A"},
-        "failure": {"type": "object", "additionalProperties": false, "required": ["layer", "domain", "step_id", "returncode", "stderr_artifact_id"], "properties": {"layer": {"type": "string"}, "domain": {"const": "TARGET_ARCHITECTURE"}, "step_id": {"$ref": "#/$defs/safe_id"}, "returncode": {"type": "integer", "not": {"const": 0}}, "stderr_artifact_id": {"$ref": "#/$defs/safe_id"}}},
-        "diagnostic_results": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pattern_result"}},
-        "source_constraints": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/ref"}},
-        "sm110a_preflight_result_ref": {"$ref": "#/$defs/ref"}
+        "reason": {"const": "ARCH_GUARD_FALLBACK"},
+        "failure": {"type": "object", "additionalProperties": false, "required": ["layer", "domain", "reason"], "properties": {"layer": {"const": "FUNCTION_CONTRACT"}, "domain": {"const": "TARGET_ARCHITECTURE"}, "reason": {"const": "ARCH_GUARD_FALLBACK"}}},
+        "type_witness_artifact_id": {"$ref": "#/$defs/safe_id"},
+        "resolved_stage": {"type": "object", "additionalProperties": false, "required": ["declared_policy_cpp", "resolved_policy_cpp", "stage_count", "scheduler_stages", "accumulator_stages", "load_to_transform_stages", "transform_to_mma_stages", "computation_stages", "transformation_stages"], "properties": {"declared_policy_cpp": {"type": "string", "minLength": 1}, "resolved_policy_cpp": {"type": "string", "minLength": 1}, "stage_count": {"type": "integer", "minimum": 1}, "scheduler_stages": {"type": "integer", "minimum": 0}, "accumulator_stages": {"type": "integer", "minimum": 0}, "load_to_transform_stages": {"type": "integer", "minimum": 0}, "transform_to_mma_stages": {"type": "integer", "minimum": 0}, "computation_stages": {"type": "integer", "minimum": 0}, "transformation_stages": {"type": "integer", "minimum": 0}}},
+        "function_binding": {"type": "object", "additionalProperties": false, "required": ["target_cpp_entity", "selection_policy", "symbol", "ptx_entry_count", "elf_sto_entry_count", "nvdisasm_symbol_match_count", "nvdisasm_total_function_count", "ptx_function_artifact_id", "sass_function_artifact_id", "same_symbol"], "properties": {"target_cpp_entity": {"const": "cutlass::device_kernel<GemmKernel>"}, "selection_policy": {"const": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function"}, "symbol": {"type": "string", "minLength": 1}, "ptx_entry_count": {"const": 1}, "elf_sto_entry_count": {"const": 1}, "nvdisasm_symbol_match_count": {"const": 1}, "nvdisasm_total_function_count": {"type": "integer", "minimum": 1}, "ptx_function_artifact_id": {"$ref": "#/$defs/safe_id"}, "sass_function_artifact_id": {"$ref": "#/$defs/safe_id"}, "same_symbol": {"const": true}}},
+        "guard_atom": {"const": "SM100_MMA_F16BF16_2x1SM_SS_SCALED"},
+        "guard_macro": {"const": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED"},
+        "ptx_guard_results": {"type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [
+          {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"const": "arch_guard_brkpt"}, "required": {"const": true}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}},
+          {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"const": "tensor_mma_absent"}, "required": {"const": false}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}}
+        ]},
+        "sass_guard_results": {"type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [
+          {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"const": "arch_guard_trap"}, "required": {"const": true}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}},
+          {"type": "object", "additionalProperties": false, "required": ["id", "required", "match_count", "matched_opcodes"], "properties": {"id": {"const": "tensor_mma_absent"}, "required": {"const": false}, "match_count": {"type": "integer", "minimum": 0}, "matched_opcodes": {"type": "array", "items": {"type": "string"}}}}
+        ]},
+        "source_constraints": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/source_range_ref"}},
+        "legal_control": {"type": "object", "additionalProperties": false, "required": ["result_ref", "relation", "controlled_delta"], "properties": {"result_ref": {"$ref": "#/$defs/ref"}, "relation": {"const": "same_target_fresh_static_pass"}, "controlled_delta": {"type": "array", "minItems": 1, "items": {"type": "string"}}}}
       }
     },
     "failure_evidence": {

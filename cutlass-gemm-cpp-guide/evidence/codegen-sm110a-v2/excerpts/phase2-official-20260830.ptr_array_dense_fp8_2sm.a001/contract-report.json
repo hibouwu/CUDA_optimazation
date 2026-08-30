@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "instance_id": "ptr_array_dense_fp8_2sm",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17ArrayProblemShapeIN4cute5tupleIJiiiiEEEEENS1_10collective13CollectiveMmaINS1_40MainloopSm100ArrayTmaUmmaWarpSpecializedILi7ELi2ELi4ENS6_IJNS5_1CILi2EEENSC_ILi1EEESE_EEENS_4arch5Sm100EEENS6_IJNSC_ILi256EEENSC_ILi128EEESK_EEENS_12float_e4m3_tENS6_IJlSE_lEEESM_SN_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_25SM100_MMA_F8F6F4_2x1SM_SSISM_SM_fLi256ELi128ELNS5_4UMMA5MajorE0ELSS_0ELNSR_7ScaleInE0ELST_0EEEEEENS5_6LayoutINS6_IJSE_SE_SE_EEENS6_IJNSC_ILi0EEESY_SY_EEEEENS6_IJNS5_10UnderscoreES11_S11_EEEEENS5_18SM100_TMA_2SM_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi8EEENSW_INS6_IJNSC_ILi8EEESK_EEENS6_IJSK_SE_EEEEEEEvNS5_8identityES14_S1E_vS1F_EENS_8epilogue10collective18CollectiveEpilogueINS1H_31Sm100PtrArrayTmaWarpSpecializedILi2ELi2ELi64ELb0ELb0EEEJNS6_IJSK_SK_SK_EEENS6_IJNSW_ISK_SE_EENSW_INSC_ILi64EEESE_EEEEESM_NS6_IJSE_llEEESM_S1R_NS1H_6fusion15FusionCallbacksIS1L_NS1S_17LinearCombinationISM_fSM_fLNS_15FloatRoundStyleE2EEES1M_S1Q_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xENS5_13SM90_TMA_LOADENS15_IS17_S19_NSW_INS6_IJSK_S1A_EEENS6_IJSE_SK_EEEEEEENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS5_14SM90_TMA_STOREES26_S28_S28_EEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::2.kind::f8f6f4",
+        "tcgen05.mma.cta_group::2.kind::f8f6f4",
+        "tcgen05.mma.cta_group::2.kind::f8f6f4",
+        "tcgen05.mma.cta_group::2.kind::f8f6f4"
+      ]
+    },
+    {
+      "id": "opposite_cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 6,
+      "matched_opcodes": [
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D",
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDTM.X64",
+        "LDTM.X64"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCQMMA.2CTA",
+        "UTCQMMA.2CTA",
+        "UTCQMMA.2CTA",
+        "UTCQMMA.2CTA"
+      ]
+    }
+  ],
+  "cta_group": {
+    "declared": 2,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::2.kind::f8f6f4",
+      "tcgen05.mma.cta_group::2.kind::f8f6f4",
+      "tcgen05.mma.cta_group::2.kind::f8f6f4",
+      "tcgen05.mma.cta_group::2.kind::f8f6f4"
+    ],
+    "sass_mma_opcodes": [
+      "UTCQMMA.2CTA",
+      "UTCQMMA.2CTA",
+      "UTCQMMA.2CTA",
+      "UTCQMMA.2CTA"
+    ],
+    "errors": []
+  }
+}

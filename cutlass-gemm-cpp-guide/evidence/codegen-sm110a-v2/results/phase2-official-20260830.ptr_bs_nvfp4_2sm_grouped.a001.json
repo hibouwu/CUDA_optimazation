@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "result_id": "phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "subject": {
+    "kind": "explicit_schedule_tag",
+    "id": "KernelPtrArrayTmaWarpSpecialized2SmNvf4Sm100",
+    "group": "ptr_array_block_scaled"
+  },
+  "instance_ref": {
+    "id": "ptr_bs_nvfp4_2sm_grouped",
+    "path": "tests/codegen/instances/ptr_bs_nvfp4_2sm_grouped/instance.json",
+    "sha256": "c0c734d0a189f01846bd73bb9ca4b49efb4e6ea187b9a4f97791200322a7d0b5"
+  },
+  "fingerprint_ref": {
+    "id": "fp-ptr_bs_nvfp4_2sm_grouped-8463e017d85c",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_nvfp4_2sm_grouped-8463e017d85c.json",
+    "sha256": "36c19bf74ff2945a16ab47f13e5d48451fa09604755c7e53479a3e67a4a36c42"
+  },
+  "attempt_id": "phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001",
+  "journal_ref": {
+    "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001.jsonl",
+    "sha256": "f3f19f8cdf3edc804e96a335fdc33d52a0635f5217340cb1aa73cb848d9d02a0",
+    "last_seq": 64,
+    "last_event_sha256": "d8e77ef341f4a600692a23a8d85ee84963626a4cd9af53b964a934996bcc0162"
+  },
+  "artifact_manifest_ref": {
+    "id": "am-phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001",
+    "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001.json",
+    "sha256": "7c646f6177a46c0890d13546b2fd88cdb66301bfd9aabbb9f4c3cc9001a5959e"
+  },
+  "status": "STATIC_PASS",
+  "layer_outcomes": [
+    {
+      "layer": "DECLARED_BUILDER_CONFIG",
+      "state": "RESOLVED",
+      "witness_artifact_id": "config_source"
+    },
+    {
+      "layer": "BUILDER_SPECIALIZATION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "DISPATCH_POLICY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COLLECTIVE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "STAGE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COPY_LAYOUT",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "TILED_MMA",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "ATOM",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "KERNEL_COMPOSITION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "PTX_EMISSION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "ptx_full"
+    },
+    {
+      "layer": "SM110A_ASSEMBLY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "cubin"
+    },
+    {
+      "layer": "FUNCTION_BINDING",
+      "state": "RESOLVED",
+      "witness_artifact_id": "elf_symbols"
+    },
+    {
+      "layer": "FUNCTION_CONTRACT",
+      "state": "RESOLVED",
+      "witness_artifact_id": "contract_report"
+    }
+  ],
+  "evidence": {
+    "kind": "STATIC_PASS",
+    "type_witness_artifact_id": "type_output",
+    "resolved_stage": {
+      "declared_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<EpilogueSharedStorage>",
+      "resolved_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<67584>",
+      "stage_count": 4,
+      "scheduler_stages": 8,
+      "accumulator_stages": 1,
+      "load_to_transform_stages": 0,
+      "transform_to_mma_stages": 0,
+      "computation_stages": 0,
+      "transformation_stages": 0
+    },
+    "function_binding": {
+      "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
+      "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+      "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17GroupProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_51MainloopSm100ArrayTmaUmmaWarpSpecializedBlockScaledILi4ELi8ELi1ENS6_IJiiNS5_1CILi1EEEEEENS_4arch5Sm100EEENS6_IJNSC_ILi256EEESI_SI_EEENS6_IJNS_12float_e2m1_tENS_13float_ue4m3_tEEEENS6_IJPNS6_IJlSD_NSC_ILi0EEEEEEPNS5_6LayoutINS6_IJNS6_IJNS6_IJNSC_ILi32EEENSC_ILi4EEEEEEiEEENS6_IJNS6_IJNSC_ILi16EEESS_EEEiEEENS6_IJSD_iEEEEEENS6_IJSX_NS6_IJNS6_IJSN_SD_EEENSC_ILi512EEEEEENS6_IJSN_iEEEEEEEEEEESM_S17_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_23SM100_MMA_MXF4_2x1SM_SSISK_SK_fSL_Li256ELi256ELi16ELNS5_4UMMA5MajorE0ELS1C_0ELNS1B_7ScaleInE0ELS1D_0EEEEEENSQ_INS6_IJSD_SD_SD_EEENS6_IJSN_SN_SN_EEEEENS6_IJNS5_10UnderscoreES1J_S1J_EEEEENS6_IJNS5_28SM100_TMA_2SM_LOAD_MULTICASTES1M_EEENS6_IJNS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi4EEENSQ_INS6_IJNSC_ILi8EEESI_EEENS6_IJSI_SD_EEEEEEENSQ_INS6_IJNS6_IJNS6_IJST_SD_EEESW_EEESD_NS6_IJSD_SS_EEEEEENS6_IJNS6_IJNS6_IJSW_S11_EEES10_EEESN_NS6_IJSS_S11_EEEEEEEEEEEvNS5_8identityES1N_NS6_IJS1X_NSQ_INS6_IJNS6_IJNS6_IJST_NSC_ILi2EEEEEESW_EEESD_S20_EEENS6_IJS23_SN_NS6_IJSS_NSC_ILi1024EEEEEEEEEEEEEEvS28_EENS_8epilogue10collective18CollectiveEpilogueINS2J_31Sm100PtrArrayTmaWarpSpecializedILi4ELi2ELi64ELb1ELb0EEEJNS6_IJNSC_ILi128EEESI_SI_EEENS6_IJS2O_NSC_ILi64EEEEEENS_6half_tESP_S2S_SP_NS2J_6fusion15FusionCallbacksIS2N_NS2T_17LinearCombinationIS2S_fS2S_fLNS_15FloatRoundStyleE2EEES2P_S2R_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xENS5_13SM90_TMA_LOADENS1O_IS1Q_NS1R_ILi16EEENSQ_INS6_IJS1T_S2Q_EEENS6_IJS2Q_SD_EEEEEEENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS5_14SM90_TMA_STOREES38_S3A_S3A_EEEvvEEEEvNT_6ParamsE",
+      "ptx_entry_count": 1,
+      "elf_sto_entry_count": 1,
+      "nvdisasm_symbol_match_count": 1,
+      "nvdisasm_total_function_count": 5,
+      "ptx_function_artifact_id": "ptx_target",
+      "sass_function_artifact_id": "sass_target",
+      "same_symbol": true
+    },
+    "ptx_contract_results": [
+      {
+        "id": "tma_load",
+        "required": true,
+        "match_count": 16,
+        "matched_opcodes": [
+          "cp.async.bulk.tensor.2d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.4d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.4d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.4d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.4d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+          "cp.async.bulk.tensor.2d.global.shared::cta.bulk_group",
+          "cp.async.bulk.tensor.2d.global.shared::cta.bulk_group",
+          "cp.async.bulk.tensor.2d.global.shared::cta.bulk_group",
+          "cp.async.bulk.tensor.2d.global.shared::cta.bulk_group"
+        ]
+      },
+      {
+        "id": "tmem_load",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+          "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+        ]
+      },
+      {
+        "id": "tmem_copy",
+        "required": true,
+        "match_count": 24,
+        "matched_opcodes": [
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4",
+          "tcgen05.cp.cta_group::2.32x128b.warpx4"
+        ]
+      },
+      {
+        "id": "mma",
+        "required": true,
+        "match_count": 8,
+        "matched_opcodes": [
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16",
+          "tcgen05.mma.cta_group::2.kind::mxf4nvf4.block_scale.block16"
+        ]
+      },
+      {
+        "id": "opposite_cta",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      }
+    ],
+    "sass_contract_results": [
+      {
+        "id": "tma_load",
+        "required": true,
+        "match_count": 12,
+        "matched_opcodes": [
+          "UTMALDG.2D.MULTICAST.2CTA",
+          "UTMALDG.2D.MULTICAST.2CTA",
+          "UTMALDG.4D.MULTICAST.2CTA",
+          "UTMALDG.4D.MULTICAST.2CTA",
+          "UTMALDG.2D.MULTICAST.2CTA",
+          "UTMALDG.2D.MULTICAST.2CTA",
+          "UTMALDG.4D.MULTICAST.2CTA",
+          "UTMALDG.4D.MULTICAST.2CTA",
+          "UTMALDG.2D",
+          "UTMALDG.2D",
+          "UTMALDG.2D",
+          "UTMALDG.2D"
+        ]
+      },
+      {
+        "id": "tmem_load",
+        "required": true,
+        "match_count": 4,
+        "matched_opcodes": [
+          "LDTM.X64",
+          "LDTM.X64",
+          "LDTM.X64",
+          "LDTM.X64"
+        ]
+      },
+      {
+        "id": "tmem_copy",
+        "required": true,
+        "match_count": 24,
+        "matched_opcodes": [
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT",
+          "UTCCP.T.S.2CTA.4X32DP128BIT"
+        ]
+      },
+      {
+        "id": "mma",
+        "required": true,
+        "match_count": 8,
+        "matched_opcodes": [
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X",
+          "UTCOMMA.2CTA.4X"
+        ]
+      }
+    ],
+    "cta_group_contract_pass": true
+  }
+}

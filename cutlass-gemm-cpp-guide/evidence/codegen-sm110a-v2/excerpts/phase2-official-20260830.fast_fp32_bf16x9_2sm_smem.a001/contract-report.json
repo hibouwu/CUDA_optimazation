@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "instance_id": "fast_fp32_bf16x9_2sm_smem",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_42MainloopSm100TmaUmmaWarpSpecializedFastF32ILi8ELi7ELi3ELi4ELi5ELi8ELi1ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi16EEEEEEfNS5_IJlSC_lEEEfSP_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_33SM100_MMA_F16BF16_2x1SM_SS_SCALEDINS_10bfloat16_tEST_fLi256ELi128ELNS4_4UMMA5MajorE0ELSV_0ELj8ELNSU_7ScaleInE0ELSW_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEES11_S11_EEEEENS5_IJNS4_10UnderscoreES14_S14_EEEEENS4_13SM90_TMA_LOADENS7_6detail35CollectiveMmaEmulatedLayoutAtomTypeINS4_14ComposedLayoutINS4_7SwizzleILi2ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi32EEENSZ_INS5_IJNSA_ILi8EEESN_EEENS5_IJSN_SC_EEEEEEENS1A_INS1B_ILi1ELi4ELi3EEENS1D_ILi16EEES1I_EEEENS18_29CollectiveMmaEmulatedCopyTypeINS4_9Copy_AtomIJNS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEEfEEES1S_EENS4_8identityENS4_23SM90_TMA_LOAD_MULTICASTES1N_NS1O_IS1S_NS1P_IJS1R_ST_EEEEES1U_EENS_8epilogue10collective18CollectiveEpilogueINS1Z_26Sm100NoSmemWarpSpecializedEJNS5_IJSM_SM_EEEfNS5_IJSC_llEEEfS24_NS1Z_6thread17LinearCombinationIfLi1EffLNS25_9ScaleType4KindE0ELNS_15FloatRoundStyleE2EfEENSG_27SM100_TMEM_LOAD_32dp32b128xENSA_ILi4EEES2C_EEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "terminal_status": "UNSUPPORTED_SM110A",
+  "reason": "ARCH_GUARD_FALLBACK",
+  "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
+  "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+  "ptx_guard_results": [
+    {
+      "id": "arch_guard_brkpt",
+      "required": true,
+      "match_count": 9,
+      "matched_opcodes": [
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt",
+        "brkpt"
+      ]
+    },
+    {
+      "id": "tensor_mma_absent",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_guard_results": [
+    {
+      "id": "arch_guard_trap",
+      "required": true,
+      "match_count": 9,
+      "matched_opcodes": [
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP",
+        "BPT.TRAP"
+      ]
+    },
+    {
+      "id": "tensor_mma_absent",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "source_constraints": [
+    {
+      "path": "include/cute/arch/mma_sm100_umma.hpp",
+      "line_start": 759,
+      "line_end": 793,
+      "sha256": "05f7416708eb057b10c458e301e362f9a8ee884b58862fe8efd3216f02da3e90"
+    },
+    {
+      "path": "include/cute/arch/config.hpp",
+      "line_start": 73,
+      "line_end": 75,
+      "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"
+    },
+    {
+      "path": "include/cute/arch/config.hpp",
+      "line_start": 100,
+      "line_end": 118,
+      "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"
+    }
+  ],
+  "legal_control": {
+    "result_ref": {
+      "id": "phase1-generalized-20260830.dense_f16_2sm.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_2sm.a001.json",
+      "sha256": "4bf31b79ced2f4e68cc99ead12f776c12997afbbc39691a3fccf26093cc8cf2d"
+    },
+    "relation": "same_target_fresh_static_pass",
+    "controlled_delta": [
+      "mainloop_schedule",
+      "resolved_tiled_mma_atom",
+      "function_local_codegen"
+    ]
+  }
+}

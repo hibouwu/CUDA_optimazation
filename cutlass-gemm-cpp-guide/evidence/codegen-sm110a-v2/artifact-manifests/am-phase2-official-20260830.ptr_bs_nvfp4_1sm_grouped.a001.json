@@ -1,0 +1,500 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "artifact_manifest_id": "am-phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
+  "attempt_id": "phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
+  "instance_ref": {
+    "id": "ptr_bs_nvfp4_1sm_grouped",
+    "path": "tests/codegen/instances/ptr_bs_nvfp4_1sm_grouped/instance.json",
+    "sha256": "bb92013bc44d28bd0393c59afefb2ed67ae53219d6101fb5ef140d9335619f38"
+  },
+  "fingerprint_ref": {
+    "id": "fp-ptr_bs_nvfp4_1sm_grouped-e1568755f79b",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_nvfp4_1sm_grouped-e1568755f79b.json",
+    "sha256": "1254892e0196d5f5f105a4d93dac3f48e9f6adcb41adfd7b0355063e8d49a894"
+  },
+  "items": [
+    {
+      "artifact_id": "config_source",
+      "role": "KERNEL_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/source/config-config.hpp",
+      "storage": "ignored_archive",
+      "media_type": "text/x-c++hdr",
+      "sha256": "b135900bdc1c99d08a87bf43e1b00fd8b85ebae07c9959b4e30cb50b408d84b3",
+      "size_bytes": 3731,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "kernel_source",
+      "role": "KERNEL_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/source/kernel-kernel.cu",
+      "storage": "ignored_archive",
+      "media_type": "text/x-cuda",
+      "sha256": "e98e7eb7ebe8b93b168575e7638213e52030f9b339a23ca8544f8a3c9709e1da",
+      "size_bytes": 300,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_source",
+      "role": "TYPE_WITNESS_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/source/type_witness-type_witness.cu",
+      "storage": "ignored_archive",
+      "media_type": "text/x-cuda",
+      "sha256": "e0c8e80d10a19eaf0a640bcf774931e729de60311b0dca6995e1fb75163944c1",
+      "size_bytes": 283,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_executable",
+      "role": "TYPE_WITNESS_EXECUTABLE",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/type_witness",
+      "storage": "ignored_archive",
+      "media_type": "application/x-executable",
+      "sha256": "200e53285a0091b115873a80ebe41eb96cd6a12e4bfb6ac295fd6a39c0bb3bab",
+      "size_bytes": 1067872,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [
+        "type_source",
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_output",
+      "role": "TYPE_WITNESS_OUTPUT",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/resolved-types.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "9e1139c4f4aead987cc90994ebf930c5a565e3c8c495e739e63ee34b5987bd01",
+      "size_bytes": 16975,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [
+        "type_executable"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "fatbin",
+      "role": "FATBIN",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/kernel.fatbin",
+      "storage": "ignored_archive",
+      "media_type": "application/x-fatbin",
+      "sha256": "1edaa7d0f809033d07c91a540fd45953f9fe22f9eddb2dead75ba643f4fab923",
+      "size_bytes": 292872,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [
+        "kernel_source",
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "ptx_full",
+      "role": "PTX_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/extracted/kernel.1.sm_110a.ptx",
+      "storage": "ignored_archive",
+      "media_type": "text/x-ptx",
+      "sha256": "bd35fdfe98d7c727c0997e00eb33c018a6536f7069494a7fa14a179a079394b5",
+      "size_bytes": 192091,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [
+        "fatbin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "cubin",
+      "role": "CUBIN",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/extracted/kernel.1.sm_110a.cubin",
+      "storage": "ignored_archive",
+      "media_type": "application/x-cubin",
+      "sha256": "02a55bc5106002799ada0b8babe79f2f56ca770e40425d71acef55ef13e413fa",
+      "size_bytes": 261896,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [
+        "fatbin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols",
+      "role": "ELF_SYMBOL_TABLE",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/elf-symbols.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "79576a8ad93fada3278e5f4beaf31a3bd57ae5c87909f4377a9560b66110ff5e",
+      "size_bytes": 3871,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_metadata",
+      "role": "CODE_OBJECT_METADATA",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/cuobjdump-sass.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "d5ed0c3cd5a27941499518dc290d5fbd6a03b3f1de75f84c018073998dc3122e",
+      "size_bytes": 1798108,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json",
+      "role": "NVDISASM_JSON_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/nvdisasm.json",
+      "storage": "ignored_archive",
+      "media_type": "application/json",
+      "sha256": "cb059f13b44957cb23c150bb46442f99440b781afb0b91844523f64f2a077bc1",
+      "size_bytes": 340437,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text",
+      "role": "NVDISASM_TEXT_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/nvdisasm.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "b032df958fd30a4e73029f89ebf6ade6734d24a678954e99f8c2c39c90a45b9e",
+      "size_bytes": 410315,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_type_witness_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/compile_type_witness.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_type_witness_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/compile_type_witness.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "ca03091b2da3428cf5777c94bfa52fc56b5a64f68b6df5f966a6a00d736f6989",
+      "size_bytes": 1834,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "run_type_witness_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/run_type_witness.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "9e1139c4f4aead987cc90994ebf930c5a565e3c8c495e739e63ee34b5987bd01",
+      "size_bytes": 16975,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "run_type_witness_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/run_type_witness.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_fatbin_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/compile_fatbin.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_fatbin_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/compile_fatbin.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e07dbe3672517deab12c36e6aa74816c1f47ec4180a889e2eab94faa2ebbba1d",
+      "size_bytes": 4607,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_ptx_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/list_ptx.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "8cca8f338815879c5048b02d22cc1943e1df96cb33424792c34d3fd3d5d9c234",
+      "size_bytes": 36,
+      "producer_step_id": "list_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_ptx_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/list_ptx.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "list_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_elf_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/list_elf.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "60e7598aeed3a239ffb883cda4e6b0c56f67a8e389c20e5278c0d7e602171aeb",
+      "size_bytes": 38,
+      "producer_step_id": "list_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_elf_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/list_elf.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "list_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_ptx_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/extract_ptx.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "22113d38e2500a57fad66f3f0e524b990ada916ee25e00042db52e087aa2f5bf",
+      "size_bytes": 84,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_ptx_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/extract_ptx.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_elf_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/extract_elf.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "1672f9ccbeb2afe96534a9c21e8b43c6aa8e149288213d614703b21d9d8916ce",
+      "size_bytes": 49,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_elf_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/extract_elf.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/elf_symbols.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "79576a8ad93fada3278e5f4beaf31a3bd57ae5c87909f4377a9560b66110ff5e",
+      "size_bytes": 3871,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/elf_symbols.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_object_metadata_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/code_object_metadata.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "d5ed0c3cd5a27941499518dc290d5fbd6a03b3f1de75f84c018073998dc3122e",
+      "size_bytes": 1798108,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_object_metadata_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/code_object_metadata.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/nvdisasm_json.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "cb059f13b44957cb23c150bb46442f99440b781afb0b91844523f64f2a077bc1",
+      "size_bytes": 340437,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/nvdisasm_json.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/nvdisasm_text.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "b032df958fd30a4e73029f89ebf6ade6734d24a678954e99f8c2c39c90a45b9e",
+      "size_bytes": 410315,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/full/logs/nvdisasm_text.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "ptx_target",
+      "role": "PTX_TARGET_FUNCTION",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/target.ptx.txt",
+      "storage": "git_evidence",
+      "media_type": "text/x-ptx",
+      "sha256": "0654f6265ba9d1568b2881f4d1f338e1b130d83e7e53dc1c577dbbeb483be573",
+      "size_bytes": 190900,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "ptx_full"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "sass_target",
+      "role": "SASS_TARGET_FUNCTION",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/target.sass.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "cb9940d10f83674dd9bc38c9cdb79a879004d3628d2bbfc2150a8661b0bc76de",
+      "size_bytes": 327217,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "nvdisasm_json"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "contract_report",
+      "role": "CONTRACT_CHECK_REPORT",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001/contract-report.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "63d9ac8986f715197318471541206e210547092824dc1e81d482001dd2d0fad8",
+      "size_bytes": 8978,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "ptx_target",
+        "sass_target",
+        "type_output"
+      ],
+      "sealed": true
+    }
+  ],
+  "archive_bundle": {
+    "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
+    "format": "directory-manifest",
+    "sha256": "ff1191c6a1dddb4c41c8adb3cee9e613cc9a2f738e445219f537f9014aacd546",
+    "size_bytes": 6948130
+  }
+}

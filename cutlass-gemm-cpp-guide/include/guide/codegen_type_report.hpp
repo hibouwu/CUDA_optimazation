@@ -75,10 +75,15 @@ template <class Type, class = void>
 struct HasBlockwiseDetails : std::false_type {};
 template <class Type>
 struct HasBlockwiseDetails<Type, std::void_t<
-    typename Type::ScaleConfig, typename Type::ElementSFA, typename Type::ElementSFB,
-    typename Type::LayoutSFA, typename Type::LayoutSFB,
+    typename Type::ScaleConfig, typename Type::LayoutSFA, typename Type::LayoutSFB,
     decltype(Type::ScaleGranularityM), decltype(Type::ScaleGranularityN),
     decltype(Type::ScaleGranularityK)>> : std::true_type {};
+
+template <class Type, class = void>
+struct HasBlockwiseScaleElementAliases : std::false_type {};
+template <class Type>
+struct HasBlockwiseScaleElementAliases<Type, std::void_t<
+    typename Type::ElementSFA, typename Type::ElementSFB>> : std::true_type {};
 
 template <class Type, class = void>
 struct HasMixedInputDetails : std::false_type {};
@@ -347,8 +352,14 @@ void write_codegen_type_report(std::ostream& out, std::string const& instance_id
     using InternalLayoutSFA = std::remove_pointer_t<typename Mainloop::LayoutSFA>;
     using InternalLayoutSFB = std::remove_pointer_t<typename Mainloop::LayoutSFB>;
     optional_field("blockwise_scale_config", codegen_type_name<typename Mainloop::ScaleConfig>());
-    optional_field("blockwise_element_sfa", codegen_type_name<typename Mainloop::ElementSFA>());
-    optional_field("blockwise_element_sfb", codegen_type_name<typename Mainloop::ElementSFB>());
+    if constexpr (HasBlockwiseScaleElementAliases<Mainloop>::value) {
+      optional_field("blockwise_element_sfa", codegen_type_name<typename Mainloop::ElementSFA>());
+      optional_field("blockwise_element_sfb", codegen_type_name<typename Mainloop::ElementSFB>());
+    } else {
+      // The array/grouped specialization sources software scale values as ElementAccumulator.
+      optional_field("blockwise_element_sfa", codegen_type_name<typename Mainloop::ElementAccumulator>());
+      optional_field("blockwise_element_sfb", codegen_type_name<typename Mainloop::ElementAccumulator>());
+    }
     optional_field("blockwise_layout_sfa", codegen_type_name<typename Mainloop::LayoutSFA>());
     optional_field("blockwise_layout_sfb", codegen_type_name<typename Mainloop::LayoutSFB>());
     optional_field("blockwise_major_a",

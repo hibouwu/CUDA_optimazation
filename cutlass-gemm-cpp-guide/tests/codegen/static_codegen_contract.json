@@ -5,6 +5,44 @@
   "scope": "STATIC_CODEGEN_ONLY",
   "phase1_run_id": "phase1-generalized-20260830",
   "phase1_current_summary": "evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json",
+  "phase2_run_id": "phase2-official-20260830",
+  "phase2_current_summary": "evidence/codegen-sm110a-v2/summary-phase2-official-20260830.json",
+  "phase2_official_instances": [
+    "dense_cpasync_fp8_1sm",
+    "dense_mixed_tma_cpasync_fp8_1sm_moe",
+    "dense_mixed_tma_cpasync_fp8_2sm_moe",
+    "ptr_array_dense_fp8_1sm",
+    "ptr_array_dense_fp8_2sm",
+    "blockwise_fp8_1sm_g2x2x32",
+    "blockwise_fp8_2sm_g64x4x32",
+    "ptr_array_blockwise_fp8_1sm_trivial",
+    "ptr_array_blockwise_fp8_2sm_g1x128x128",
+    "planar_complex_f16_1sm",
+    "planar_complex_f16_2sm",
+    "ptr_array_planar_complex_f16_1sm",
+    "ptr_array_planar_complex_f16_2sm",
+    "fast_fp32_bf16x9_2sm_smem",
+    "mixed_input_int4_bf16_2sm_convert",
+    "dense_bs_mixed_tma_cpasync_1sm_moe",
+    "dense_bs_mixed_tma_cpasync_2sm_moe",
+    "dense_bs_generic_nvf4_1sm",
+    "dense_bs_generic_nvf4_2sm",
+    "dense_bs_mxf8_2sm_official",
+    "dense_bs_nvfp4_2sm_official",
+    "ptr_bs_mxf4_1sm_official",
+    "ptr_bs_mxf4_2sm_official",
+    "ptr_bs_mxf8_1sm_official",
+    "ptr_bs_mxf8_2sm_official",
+    "ptr_bs_nvfp4_1sm_grouped",
+    "ptr_bs_nvfp4_2sm_grouped",
+    "sparse_i8_1sm_official",
+    "sparse_i8_2sm_official",
+    "sparse_bs_mxf4_1sm_official",
+    "sparse_bs_mxf4_2sm_official",
+    "sparse_bs_mxf8_1sm_official",
+    "sparse_bs_mxf8_2sm_official",
+    "sparse_bs_nvfp4_2sm_official"
+  ],
   "fresh_replay_required_semantics": "permanent_coverage_membership_never_completion_flag",
   "witness_contract": {
     "version": 2,
@@ -95,6 +133,32 @@
     "policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
     "opcode_selection_forbidden": true
   },
+  "arch_guard_fallback_contract": {
+    "reason": "ARCH_GUARD_FALLBACK",
+    "terminal_status": "UNSUPPORTED_SM110A",
+    "failure_layer": "FUNCTION_CONTRACT",
+    "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
+    "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+    "ptx": [
+      {"id": "arch_guard_brkpt", "regex": "brkpt", "required": true, "min_count": 9, "max_count": 9},
+      {"id": "tensor_mma_absent", "regex": "tcgen05\\.mma(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+    ],
+    "sass": [
+      {"id": "arch_guard_trap", "regex": "BPT\\.TRAP(?:\\..*)?", "required": true, "min_count": 9, "max_count": 9},
+      {"id": "tensor_mma_absent", "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+    ],
+    "source_constraints": [
+      {"path": "include/cute/arch/mma_sm100_umma.hpp", "line_start": 759, "line_end": 793, "sha256": "05f7416708eb057b10c458e301e362f9a8ee884b58862fe8efd3216f02da3e90"},
+      {"path": "include/cute/arch/config.hpp", "line_start": 73, "line_end": 75, "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"},
+      {"path": "include/cute/arch/config.hpp", "line_start": 100, "line_end": 118, "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"}
+    ],
+    "control_relation": "same_target_fresh_static_pass",
+    "controlled_delta": [
+      "mainloop_schedule",
+      "resolved_tiled_mma_atom",
+      "function_local_codegen"
+    ]
+  },
   "compile_plan": {
     "jobs": 1,
     "nvcc_common_argv": [
@@ -171,7 +235,8 @@
     "UNSUPPORTED_SM110A"
   ],
   "implemented_terminal_statuses": [
-    "STATIC_PASS"
+    "STATIC_PASS",
+    "UNSUPPORTED_SM110A"
   ],
   "nonterminal_failure_statuses": [
     "UNEXPECTED_COMPILE_FAIL",

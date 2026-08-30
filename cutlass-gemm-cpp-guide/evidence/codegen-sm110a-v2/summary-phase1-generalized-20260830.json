@@ -6,32 +6,32 @@
     {
       "id": "phase1-generalized-20260830.dense_f16_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_1sm.a001.json",
-      "sha256": "a5cb317b034258d10a1b5271b8d1774722226ab4ce79ec553cb8ce68fc3a5f38"
+      "sha256": "220a64e633568a7840605e679e591ead3daa73b33ecf4bd5107ee702bcba1934"
     },
     {
       "id": "phase1-generalized-20260830.dense_f16_2sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_2sm.a001.json",
-      "sha256": "9268bc40239bd363e2c06702cf33de6951983cb24097c9a828c70a2bcfb43bb7"
+      "sha256": "4bf31b79ced2f4e68cc99ead12f776c12997afbbc39691a3fccf26093cc8cf2d"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_nvfp4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_nvfp4_1sm.a001.json",
-      "sha256": "6f77092c67a0aa47caf9b8b05283eb5e0815ffb72ac2b75972dfdf47f67b980d"
+      "sha256": "18ad433b24e9840f5c2b439ac0718d7255865436b26e1997d0e7d0b4bd639fc8"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001.json",
-      "sha256": "01316626957e01133751aa87caa7dc8a13f2d587d9d205180e18babde6bae384"
+      "sha256": "91cfcf0a7e84ede583ed986ef80be47a7ae2c1f6ddb136fc2536b76e11f485df"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_mxf8_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_mxf8_1sm.a001.json",
-      "sha256": "aa92257389fc8ab233c344d4172127d7d021112e5a2aa981caadc4ae4ed73c35"
+      "sha256": "02798641dd3b35e6f07bb72c3c78aaa19df9f9a04eb109847977576fafebe57c"
     },
     {
       "id": "phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001.json",
-      "sha256": "1986beda1e4b12e87afe55187cce64c8e1c9437c412297fa778212f34897b5d6"
+      "sha256": "7b381dea8ceef4e462d7f74c8dfbb5a9a8d80232001b9c14d1e04708ae5707d4"
     }
   ],
   "history_result_refs": []

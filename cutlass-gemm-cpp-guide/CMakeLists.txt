@@ -81,6 +81,12 @@ add_test(
 set_tests_properties(host.codegen_v2_campaign_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial")
 
 add_test(
+  NAME host.phase2_official_generation_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_phase2_official_generation_adversarial.py)
+set_tests_properties(host.phase2_official_generation_adversarial PROPERTIES LABELS "host;schema;codegen-v2;phase2;adversarial")
+
+add_test(
   NAME host.cutlass_source_contracts
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tests/mechanism/test_cutlass_source_contracts.py)

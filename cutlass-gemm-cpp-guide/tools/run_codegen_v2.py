@@ -26,6 +26,7 @@ from codegen_v2.model import (
     atomic_write_json,
     canonical_json_bytes,
     contract_sha256,
+    evaluate_arch_guard_patterns,
     expected_execution_plan,
     file_ref,
     hash_input_tree,
@@ -38,6 +39,7 @@ from codegen_v2.model import (
     validate_fingerprint,
     validate_instance,
     validate_result,
+    validate_source_anchor,
 )
 
 
@@ -434,6 +436,65 @@ def add_artifact(
     )
 
 
+def find_fresh_static_control(
+    root: Path,
+    instance: dict[str, Any],
+    subject_fingerprint: dict[str, Any],
+) -> dict[str, str]:
+    control_id = instance["hypothesis"]["control_instance_id"]
+    if not isinstance(control_id, str) or not control_id:
+        raise RunnerError("UNSUPPORTED_SM110A instance lacks a frozen control instance")
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    results_dir = root / "evidence/codegen-sm110a-v2/results"
+    for path in sorted(results_dir.glob("*.json")):
+        try:
+            candidate = load_strict_json(path)
+        except ContractError:
+            continue
+        if (
+            candidate.get("status") != "STATIC_PASS"
+            or candidate.get("instance_ref", {}).get("id") != control_id
+            or candidate.get("contract_sha256") != contract_sha256(root)
+            or candidate.get("freshness_epoch") != instance["freshness_epoch"]
+        ):
+            continue
+        try:
+            validated = validate_result(root, path, require_archive=True)
+            control_instance = validate_instance(
+                root,
+                safe_path(root, validated["instance_ref"]["path"], "control.instance_ref"),
+            )
+            control_fingerprint = validate_fingerprint(
+                root,
+                safe_path(
+                    root,
+                    validated["fingerprint_ref"]["path"],
+                    "control.fingerprint_ref",
+                ),
+            )
+        except (ContractError, OSError):
+            continue
+        if (
+            control_instance["target"] == instance["target"]
+            and control_fingerprint["toolchain"] == subject_fingerprint["toolchain"]
+            and control_fingerprint["environment"] == subject_fingerprint["environment"]
+            and control_fingerprint["source_closure"]["cutlass_git_sha"]
+            == subject_fingerprint["source_closure"]["cutlass_git_sha"]
+        ):
+            matches.append((path, validated))
+    if len(matches) != 1:
+        raise RunnerError(
+            f"UNSUPPORTED_SM110A requires exactly one fresh same-target STATIC_PASS control, "
+            f"found {[path.name for path, _ in matches]}"
+        )
+    control_path, control_result = matches[0]
+    return file_ref(
+        root,
+        control_path,
+        identifier=control_result["result_id"],
+    )
+
+
 def run_instance(
     *,
     root: Path,
@@ -695,21 +756,55 @@ def run_instance(
         required_sass=[item["regex"] for item in sass_contract["required"]],
         forbidden_sass=[item["regex"] for item in sass_contract["forbidden"]],
     )
-    if not attribution.passed:
+    expected_outcome = instance["hypothesis"]["expected_outcome"]
+    terminal_status = "STATIC_PASS"
+    guard_contract = load_strict_json(
+        root / "tests/codegen/static_codegen_contract.json"
+    )["arch_guard_fallback_contract"]
+    guard_control_ref: dict[str, str] | None = None
+    if attribution.passed:
+        if expected_outcome != "STATIC_PASS":
+            raise RunnerError(
+                f"function-local contract passed but frozen outcome is {expected_outcome}"
+            )
+        ptx_results = pattern_results(
+            ptx_contract["required"], attribution.ptx_contract.required_matches, True
+        ) + pattern_results(
+            ptx_contract["forbidden"], attribution.ptx_contract.forbidden_matches, False
+        )
+        sass_results = pattern_results(
+            sass_contract["required"], attribution.sass_contract.required_matches, True
+        ) + pattern_results(
+            sass_contract["forbidden"], attribution.sass_contract.forbidden_matches, False
+        )
+    elif expected_outcome == "UNSUPPORTED_SM110A":
+        if guard_contract["guard_atom"] not in resolved_types["mma_atom"]:
+            raise RunnerError("failed function contract does not use the frozen guarded MMA atom")
+        for index, source_range in enumerate(guard_contract["source_constraints"]):
+            try:
+                validate_source_anchor(root, source_range, f"guard.source_constraints[{index}]")
+            except ContractError as error:
+                raise RunnerError(str(error)) from error
+        try:
+            ptx_results = evaluate_arch_guard_patterns(
+                attribution.ptx_function.opcodes,
+                guard_contract["ptx"],
+                "architecture_guard.ptx",
+            )
+            sass_results = evaluate_arch_guard_patterns(
+                attribution.sass_function.opcodes,
+                guard_contract["sass"],
+                "architecture_guard.sass",
+            )
+        except ContractError as error:
+            raise RunnerError(str(error)) from error
+        guard_control_ref = find_fresh_static_control(root, instance, fingerprint)
+        terminal_status = "UNSUPPORTED_SM110A"
+    else:
         raise RunnerError(
             f"function-local contract failed: ptx={attribution.ptx_contract}, "
             f"sass={attribution.sass_contract}, cta={attribution.cta_group_contract.errors}"
         )
-    ptx_results = pattern_results(
-        ptx_contract["required"], attribution.ptx_contract.required_matches, True
-    ) + pattern_results(
-        ptx_contract["forbidden"], attribution.ptx_contract.forbidden_matches, False
-    )
-    sass_results = pattern_results(
-        sass_contract["required"], attribution.sass_contract.required_matches, True
-    ) + pattern_results(
-        sass_contract["forbidden"], attribution.sass_contract.forbidden_matches, False
-    )
 
     excerpt_dir = evidence_root / "excerpts" / attempt_id
     excerpt_dir.mkdir(parents=True, exist_ok=False)
@@ -720,9 +815,8 @@ def run_instance(
     shutil.copy2(type_output, tracked_type_output)
     ptx_excerpt.write_text(attribution.ptx_function.text + "\n", encoding="utf-8")
     sass_excerpt.write_text(attribution.sass_function.text + "\n", encoding="utf-8")
-    atomic_write_json(
-        contract_report,
-        {
+    if terminal_status == "STATIC_PASS":
+        report_value = {
             "schema_version": 1,
             "instance_id": instance["instance_id"],
             "symbol": symbol,
@@ -737,8 +831,30 @@ def run_instance(
                 "sass_mma_opcodes": list(attribution.cta_group_contract.sass_mma_opcodes),
                 "errors": list(attribution.cta_group_contract.errors),
             },
-        },
-    )
+        }
+    else:
+        assert guard_control_ref is not None
+        report_value = {
+            "schema_version": 1,
+            "instance_id": instance["instance_id"],
+            "symbol": symbol,
+            "ptx_target": attribution.ptx_target,
+            "sass_arch": attribution.sass_arch,
+            "nvdisasm_total_function_count": attribution.sass_total_function_count,
+            "terminal_status": "UNSUPPORTED_SM110A",
+            "reason": guard_contract["reason"],
+            "guard_atom": guard_contract["guard_atom"],
+            "guard_macro": guard_contract["guard_macro"],
+            "ptx_guard_results": ptx_results,
+            "sass_guard_results": sass_results,
+            "source_constraints": guard_contract["source_constraints"],
+            "legal_control": {
+                "result_ref": guard_control_ref,
+                "relation": guard_contract["control_relation"],
+                "controlled_delta": guard_contract["controlled_delta"],
+            },
+        }
+    atomic_write_json(contract_report, report_value)
 
     if fingerprint_path.exists():
         if load_strict_json(fingerprint_path) != fingerprint:
@@ -813,7 +929,7 @@ def run_instance(
     journal.append(
         "ATTEMPT_SEALED",
         {
-            "terminal_pipeline_state": "STATIC_PASS",
+            "terminal_pipeline_state": terminal_status,
             "artifact_manifest_path": manifest_path.relative_to(root).as_posix(),
             "artifact_manifest_sha256": sha256_file(manifest_path),
             "last_completed_step_id": "function_contract",
@@ -840,6 +956,80 @@ def run_instance(
         "FUNCTION_BINDING": "elf_symbols",
         "FUNCTION_CONTRACT": "contract_report",
     }
+    layer_order = load_strict_json(
+        root / "tests/codegen/static_codegen_contract.json"
+    )["layer_order"]
+    layer_outcomes = []
+    for layer in layer_order:
+        state = (
+            "REJECTED"
+            if terminal_status == "UNSUPPORTED_SM110A" and layer == "FUNCTION_CONTRACT"
+            else "RESOLVED"
+        )
+        layer_outcomes.append(
+            {
+                "layer": layer,
+                "state": state,
+                "witness_artifact_id": layer_artifacts[layer],
+            }
+        )
+    resolved_stage = {
+        "declared_policy_cpp": instance["declared_config"]["stage_policy"],
+        "resolved_policy_cpp": resolved_types["config_stage_policy"],
+        "stage_count": resolved_values["mainloop_stages"],
+        "scheduler_stages": resolved_values["scheduler_stages"],
+        "accumulator_stages": resolved_values["accumulator_stages"],
+        "load_to_transform_stages": resolved_values["load_to_transform_stages"],
+        "transform_to_mma_stages": resolved_values["transform_to_mma_stages"],
+        "computation_stages": resolved_values["computation_stages"],
+        "transformation_stages": resolved_values["transformation_stages"],
+    }
+    function_binding = {
+        "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
+        "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+        "symbol": symbol,
+        "ptx_entry_count": 1,
+        "elf_sto_entry_count": 1,
+        "nvdisasm_symbol_match_count": 1,
+        "nvdisasm_total_function_count": attribution.sass_total_function_count,
+        "ptx_function_artifact_id": "ptx_target",
+        "sass_function_artifact_id": "sass_target",
+        "same_symbol": True,
+    }
+    if terminal_status == "STATIC_PASS":
+        evidence_value = {
+            "kind": "STATIC_PASS",
+            "type_witness_artifact_id": "type_output",
+            "resolved_stage": resolved_stage,
+            "function_binding": function_binding,
+            "ptx_contract_results": ptx_results,
+            "sass_contract_results": sass_results,
+            "cta_group_contract_pass": True,
+        }
+    else:
+        assert guard_control_ref is not None
+        evidence_value = {
+            "kind": "UNSUPPORTED_SM110A",
+            "reason": guard_contract["reason"],
+            "failure": {
+                "layer": guard_contract["failure_layer"],
+                "domain": "TARGET_ARCHITECTURE",
+                "reason": guard_contract["reason"],
+            },
+            "type_witness_artifact_id": "type_output",
+            "resolved_stage": resolved_stage,
+            "function_binding": function_binding,
+            "guard_atom": guard_contract["guard_atom"],
+            "guard_macro": guard_contract["guard_macro"],
+            "ptx_guard_results": ptx_results,
+            "sass_guard_results": sass_results,
+            "source_constraints": guard_contract["source_constraints"],
+            "legal_control": {
+                "result_ref": guard_control_ref,
+                "relation": guard_contract["control_relation"],
+                "controlled_delta": guard_contract["controlled_delta"],
+            },
+        }
     result = {
         "schema_version": 1,
         "contract_sha256": contract_sha256(root),
@@ -860,48 +1050,14 @@ def run_instance(
             "last_event_sha256": journal.previous,
         },
         "artifact_manifest_ref": file_ref(root, manifest_path, identifier=manifest_id),
-        "status": "STATIC_PASS",
-        "layer_outcomes": [
-            {"layer": layer, "state": "RESOLVED", "witness_artifact_id": layer_artifacts[layer]}
-            for layer in load_strict_json(root / "tests/codegen/static_codegen_contract.json")[
-                "layer_order"
-            ]
-        ],
-        "evidence": {
-            "kind": "STATIC_PASS",
-            "type_witness_artifact_id": "type_output",
-            "resolved_stage": {
-                "declared_policy_cpp": instance["declared_config"]["stage_policy"],
-                "resolved_policy_cpp": resolved_types["config_stage_policy"],
-                "stage_count": resolved_values["mainloop_stages"],
-                "scheduler_stages": resolved_values["scheduler_stages"],
-                "accumulator_stages": resolved_values["accumulator_stages"],
-                "load_to_transform_stages": resolved_values["load_to_transform_stages"],
-                "transform_to_mma_stages": resolved_values["transform_to_mma_stages"],
-                "computation_stages": resolved_values["computation_stages"],
-                "transformation_stages": resolved_values["transformation_stages"],
-            },
-            "function_binding": {
-                "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
-                "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
-                "symbol": symbol,
-                "ptx_entry_count": 1,
-                "elf_sto_entry_count": 1,
-                "nvdisasm_symbol_match_count": 1,
-                "nvdisasm_total_function_count": attribution.sass_total_function_count,
-                "ptx_function_artifact_id": "ptx_target",
-                "sass_function_artifact_id": "sass_target",
-                "same_symbol": True,
-            },
-            "ptx_contract_results": ptx_results,
-            "sass_contract_results": sass_results,
-            "cta_group_contract_pass": True,
-        },
+        "status": terminal_status,
+        "layer_outcomes": layer_outcomes,
+        "evidence": evidence_value,
     }
     result_path = results_dir / f"{result_id}.json"
     atomic_write_json(result_path, result)
     validate_result(root, result_path)
-    print(f"STATIC_PASS instance={instance['instance_id']} result={result_id}")
+    print(f"{terminal_status} instance={instance['instance_id']} result={result_id}")
     return result
 
 
@@ -910,26 +1066,25 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--instance", action="append", default=[])
     parser.add_argument("--all-phase1", action="store_true")
+    parser.add_argument("--all-phase2", action="store_true")
     parser.add_argument("--run-id")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    run_id = args.run_id or contract["phase1_run_id"]
+    if args.all_phase1 and args.all_phase2:
+        raise RunnerError("--all-phase1 and --all-phase2 are mutually exclusive")
+    default_run_id = (
+        contract["phase2_run_id"] if args.all_phase2 else contract["phase1_run_id"]
+    )
+    run_id = args.run_id or default_run_id
     if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", run_id):
         raise RunnerError("run-id must be a safe ASCII identifier")
     requested = list(args.instance)
     if args.all_phase1:
-        requested.extend(
-            [
-                "dense_f16_1sm",
-                "dense_f16_2sm",
-                "dense_bs_nvfp4_1sm",
-                "dense_bs_mxf4_1sm",
-                "dense_bs_mxf8_1sm",
-                "sparse_bs_nvfp4_1sm",
-            ]
-        )
+        requested.extend(contract["phase1_fresh_replay_instances"])
+    if args.all_phase2:
+        requested.extend(contract["phase2_official_instances"])
     requested = list(dict.fromkeys(requested))
     if not requested:
         raise RunnerError("select --instance or --all-phase1")
@@ -937,6 +1092,10 @@ def main() -> int:
         "phase1_fresh_replay_instances"
     ]:
         raise RunnerError("the frozen Phase 1 run_id requires the complete ordered replay set")
+    if run_id == contract["phase2_run_id"] and requested != contract[
+        "phase2_official_instances"
+    ]:
+        raise RunnerError("the frozen Phase 2 run_id requires the complete ordered replay set")
     toolchain = inspect_environment(root)
     results = []
     for instance_id in requested:
@@ -997,6 +1156,8 @@ def main() -> int:
     ]
     if run_id == contract["phase1_run_id"]:
         validation_command.append("--require-results")
+    if run_id == contract["phase2_run_id"]:
+        validation_command.append("--require-phase2-results")
     validation = run_checked(validation_command, cwd=root)
     print(validation.stdout.decode("utf-8", errors="replace").strip())
     return 0

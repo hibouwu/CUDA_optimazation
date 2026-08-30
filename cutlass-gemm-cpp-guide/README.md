@@ -16,7 +16,13 @@
   role、多级 Stage、MMA fragment 的实际 SMEM/TMEM source，以及 Planar、FastFP32、MixedInput、
   Blockwise、Sparse 等 family-specific 结构。六份正式结果闭合了唯一 PTX/SASS 目标函数和
   函数内 opcode，并通过从源码重新编译开始的 deep replay。
-- 59 个显式 Schedule Tag 当前为 `STATIC_PASS=6`、`NOT_CHECKED=53`；11 个
+- Phase 2 又按官方 C++ test/example 原样固定 34 个 canonical instance，其中 33 个
+  `STATIC_PASS`。FastFP32 2SM Smem 实例的 Builder、CUBIN 和函数归属均成功，但目标函数因
+  SM110a 未启用 scaled F16/BF16 MMA macro 而落成 9 个 `brkpt/BPT.TRAP`、0 条 Tensor MMA，
+  因此记为该实例的 `UNSUPPORTED_SM110A`，没有伪装成成功。34 份结果都已从源码重新编译、
+  重新提取并重新反汇编；与 Phase 1 合计 40/40 通过 deep replay。
+- 59 个显式 Schedule Tag 当前为 `STATIC_PASS=39`、`UNSUPPORTED_SM110A=1`、
+  `NOT_CHECKED=19`；11 个
   `KernelScheduleAuto` 控制项仍全部 `NOT_CHECKED`。
 - 当前机器没有可用 NVIDIA driver；所有 `runtime_correct` 仍是 `false`，不能称为
   Thor 数值闭环或 v0.1 release。
@@ -71,6 +77,8 @@ Tensor Core Codegen 的固定分母是 CUTLASS v4.6.1 中 59 个显式 SM100 Sch
 [`phase-00-workspace-source-inventory.md`](evidence/codegen-sm110a-v2/phase-reports/phase-00-workspace-source-inventory.md)。
 跨层 harness、六实例数据和对抗审查见
 [`phase-01-cross-layer-harness.md`](evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md)。
+34 个 official C++ instance 的配置、数据、结果与对抗审查见
+[`phase-02-official-cpp-tags.md`](evidence/codegen-sm110a-v2/phase-reports/phase-02-official-cpp-tags.md)。
 `host.schedule_tag_coverage` 会检查目标、源码 commit与clean状态、59项分组、case语义映射、
 来源锚点和文档表格；
 `host.schedule_tag_adversarial` 负责验证故意破坏不会被误判为通过。
@@ -78,8 +86,9 @@ Tensor Core Codegen 的固定分母是 CUTLASS v4.6.1 中 59 个显式 SM100 Sch
 ## 重要边界
 
 `128×128×128` 在文档中默认表示数学 problem shape；它不自动等于 CTA tile、
-MMA tile、单条指令 shape、TMA tile或 scale tile。性能 benchmark、NCU、grouped、
-batched、pointer-array、Stream-K 和跨架构可移植性均不属于 v0.1。
+MMA tile、单条指令 shape、TMA tile或 scale tile。本轮已经静态覆盖了 grouped 和
+pointer-array 的 canonical instance；这些路径的 Thor launch、数值正确性、性能 benchmark
+与 NCU 分析，以及 batched、Stream-K 和跨架构可移植性，仍不属于当前静态闭环。
 
 GitHub Actions workflow位于父仓库根目录的 `.github/workflows/cutlass-guide-*.yml`；
 子项目内不保存一套无效的嵌套 workflow副本。

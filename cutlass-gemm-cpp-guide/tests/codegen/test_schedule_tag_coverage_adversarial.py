@@ -70,10 +70,16 @@ def make_root() -> Path:
     target_doc.parent.mkdir(parents=True, exist_ok=True)
     target_doc.write_text(DOCUMENT.read_text(encoding="utf-8"), encoding="utf-8")
     shutil.copy2(VERSIONS_LOCK, root / "versions.lock.json")
-    phase_report_target = root / PHASE0_REPORT_RELATIVE
-    phase_report_target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(PHASE0_REPORT, phase_report_target)
-    copy_relative(PHASE1_REPORT_RELATIVE)
+    for phase in load(CONTRACT)["phases"]:
+        completion_report = phase.get("completion_report")
+        if completion_report is not None:
+            copy_relative(completion_report["path"])
+    static_contract = load(ROOT / "tests/codegen/static_codegen_contract.json")
+    for source_range in static_contract["arch_guard_fallback_contract"]["source_constraints"]:
+        source = ROOT / "third_party/cutlass" / source_range["path"]
+        target = root / "third_party/cutlass" / source_range["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
     for reference in load(REFERENCE_INVENTORY)["entries"]:
         source = ROOT / "third_party/cutlass" / reference["path"]
         target = root / "third_party/cutlass" / reference["path"]
@@ -281,7 +287,12 @@ def main() -> int:
     )
 
     def wrong_document_status_summary(manifest, contract, document, root):
-        document = document.replace("| `NOT_CHECKED` | 53 |", "| `NOT_CHECKED` | 52 |", 1)
+        count = sum(entry["status"] == "NOT_CHECKED" for entry in manifest["entries"])
+        document = document.replace(
+            f"| `NOT_CHECKED` | {count} |",
+            f"| `NOT_CHECKED` | {count - 1} |",
+            1,
+        )
         return manifest, contract, document
 
     require_rejected(

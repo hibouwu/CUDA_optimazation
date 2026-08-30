@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "instance_id": "sparse_bs_mxf4_1sm_official",
+  "subject": {
+    "kind": "explicit_schedule_tag",
+    "id": "KernelSparseTmaWarpSpecialized1SmMxf4Sm100",
+    "group": "sparse_block_scaled"
+  },
+  "provenance": {
+    "reference_inventory_sha256": "1370b33695542ceae8103a6280dd422e3122dcdd53cd0c69d55a92853d3cd296",
+    "reference_class": "official_cpp_explicit_or_conditional",
+    "source_anchors": [
+      {
+        "path": "test/unit/gemm/device/sm100_blockscaled_sparse_tensorop_gemm/sm100_bssp_gemm_mxf4_mxf4_f32_f16_f16_o_tnn.cu",
+        "line_start": 83,
+        "line_end": 83,
+        "sha256": "70471d88a0bb1cc9b9ca8b375a246f9e61034b4394ba1a9f166481e16c77964b"
+      }
+    ],
+    "parent_instance_id": null,
+    "derivation_axis": "official_configuration_reuse"
+  },
+  "target": {
+    "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+    "cutlass_arch_tag": "cutlass::arch::Sm100",
+    "virtual_arch": "compute_110a",
+    "binary_arch": "sm_110a"
+  },
+  "translation_units": {
+    "config": {
+      "path": "tests/codegen/instances/sparse_bs_mxf4_1sm_official/config.hpp",
+      "sha256": "a3b1f857212ef0405f16fe384d6af92d4e2d33295c0dcd5007b262d424142b6f"
+    },
+    "kernel": {
+      "path": "tests/codegen/instances/sparse_bs_mxf4_1sm_official/kernel.cu",
+      "sha256": "f33af383b11a1da0ac00cb971f522de15a4041d2a9ea92b078bea52a97621005"
+    },
+    "type_witness": {
+      "path": "tests/codegen/instances/sparse_bs_mxf4_1sm_official/type_witness.cu",
+      "sha256": "87a5a331a9e89e25b0bdde9005860fa620b316d4ac293d49d2c6aeee376c42ac"
+    }
+  },
+  "declared_config": {
+    "family": "sparse_block_scaled",
+    "operator_class": "cutlass::arch::OpClassBlockScaledSparseTensorOp",
+    "elements": {
+      "a": "cutlass::mx_float4_t<cutlass::float_e2m1_t>",
+      "b": "cutlass::mx_float4_t<cutlass::float_e2m1_t>",
+      "c": "cutlass::half_t",
+      "d": "cutlass::half_t",
+      "accumulator": "float",
+      "compute": "float"
+    },
+    "layouts": {
+      "a": "RowMajor",
+      "b": "ColumnMajor",
+      "c": "ColumnMajor",
+      "d": "ColumnMajor"
+    },
+    "alignments": {
+      "a": 64,
+      "b": 32,
+      "c": 8,
+      "d": 8
+    },
+    "builder_contract": {
+      "mainloop_operator_class": "cutlass::arch::OpClassBlockScaledSparseTensorOp",
+      "epilogue_operator_class": "cutlass::arch::OpClassBlockScaledSparseTensorOp",
+      "element_a": "cutlass::mx_float4_t<cutlass::float_e2m1_t>",
+      "element_b": "cutlass::mx_float4_t<cutlass::float_e2m1_t>",
+      "layout_a": "cutlass::layout::RowMajor",
+      "layout_b": "cutlass::layout::ColumnMajor",
+      "epilogue_element_c": "cutlass::half_t",
+      "epilogue_element_d": "cutlass::half_t",
+      "epilogue_layout_c": "cutlass::layout::ColumnMajor",
+      "epilogue_layout_d": "cutlass::layout::ColumnMajor",
+      "epilogue_tile": "cutlass::epilogue::collective::EpilogueTileAuto",
+      "fusion_operation": "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct<cutlass::epilogue::thread::Clamp,cutlass::half_t,float,cutlass::half_t,cutlass::half_t,float>",
+      "problem_mode": "dense",
+      "cluster_type_cpp": "cute::Shape<cute::_1,cute::_1,cute::_1>",
+      "cluster_is_dynamic": false,
+      "cluster_default_mnk": [
+        1,
+        1,
+        1
+      ]
+    },
+    "mma_tile_mnk": [
+      128,
+      128,
+      256
+    ],
+    "cluster_mnk": [
+      1,
+      1,
+      1
+    ],
+    "stage_policy": "cutlass::gemm::collective::StageCountAutoCarveoutEpi<CollectiveEpilogue>",
+    "mainloop_schedule": "cutlass::gemm::KernelSparseTmaWarpSpecialized1SmMxf4Sm100",
+    "epilogue_schedule": "cutlass::epilogue::TmaWarpSpecialized1SmMxf4",
+    "kernel_problem_shape": "cute::Shape<int,int,int,int>",
+    "tile_scheduler": "void",
+    "cta_group": 1,
+    "mechanism": {
+      "pointer_mode": "single",
+      "transforms": {
+        "a": "sparse-2:4-compression",
+        "b": "identity"
+      },
+      "block_scaled": {
+        "enabled": true,
+        "scale_a": "cutlass::float_ue8m0_t",
+        "scale_b": "cutlass::float_ue8m0_t",
+        "vector_size_a": 64,
+        "vector_size_b": 64
+      },
+      "blockwise": {
+        "enabled": false,
+        "granularity_m": null,
+        "granularity_n": null,
+        "granularity_k": null,
+        "major_a": null,
+        "major_b": null,
+        "element_sfa": null,
+        "element_sfb": null
+      },
+      "sparse": {
+        "enabled": true,
+        "metadata_element": "uint8_t",
+        "a_sparsity": 2,
+        "e_sparsity": 16
+      },
+      "mixed_input": {
+        "enabled": false,
+        "mode": null,
+        "operands_swapped": null,
+        "transformed_operand": null,
+        "tuple_arity": null,
+        "narrow_type": null,
+        "wide_type": null,
+        "scale_type": null,
+        "zero_type": null
+      },
+      "fast_fp32": {
+        "enabled": false,
+        "atom_model": null,
+        "num_compute_matrices": null,
+        "num_bands": null,
+        "scaling_factor": null,
+        "acc_promotion_interval": null
+      },
+      "complex": {
+        "enabled": false,
+        "representation": null
+      }
+    }
+  },
+  "static_contract": {
+    "required_layers": [
+      "DECLARED_BUILDER_CONFIG",
+      "BUILDER_SPECIALIZATION",
+      "DISPATCH_POLICY",
+      "COLLECTIVE",
+      "STAGE",
+      "COPY_LAYOUT",
+      "TILED_MMA",
+      "ATOM",
+      "KERNEL_COMPOSITION",
+      "PTX_EMISSION",
+      "SM110A_ASSEMBLY",
+      "FUNCTION_BINDING",
+      "FUNCTION_CONTRACT"
+    ],
+    "target_entity": "cutlass::device_kernel<GemmKernel>",
+    "function_selector": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+    "ptx": {
+      "required": [
+        {
+          "id": "tma_load",
+          "regex": "cp\\.async\\.bulk\\.tensor(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_load",
+          "regex": "tcgen05\\.ld(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_copy",
+          "regex": "tcgen05\\.cp(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "mma",
+          "regex": "tcgen05\\.mma\\.sp\\.cta_group::1(?:\\..*)?kind::mxf4(?:\\..*)?block_scale(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "opposite_cta",
+          "regex": "tcgen05\\.mma(?:\\.sp)?\\.cta_group::2(?:\\..*)?",
+          "min_count": 0,
+          "max_count": 0
+        }
+      ]
+    },
+    "sass": {
+      "required": [
+        {
+          "id": "tma_load",
+          "regex": "UTMALDG(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_load",
+          "regex": "LDTM(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "tmem_copy",
+          "regex": "UTCCP(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        },
+        {
+          "id": "mma",
+          "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?",
+          "min_count": 1,
+          "max_count": null
+        }
+      ],
+      "forbidden": [
+        {
+          "id": "mma_2cta",
+          "regex": "UTC[A-Z0-9_]*MMA\\.2CTA(?:\\..*)?",
+          "min_count": 0,
+          "max_count": 0
+        }
+      ]
+    }
+  },
+  "hypothesis": {
+    "expected_outcome": "STATIC_PASS",
+    "failure_domain": null,
+    "failure_layer": null,
+    "diagnostic_patterns": [],
+    "control_instance_id": null
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "instance_id": "sparse_bs_nvfp4_1sm",

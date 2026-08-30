@@ -155,93 +155,106 @@
     {
       "tag": "KernelWarpSpecialized1SmSm100",
       "group": "dense",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_cpasync_fp8_1sm.a001"
     },
     {
       "tag": "KernelMixedTmaCpAsyncWarpSpecialized1SmSm100",
       "group": "dense",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_mixed_tma_cpasync_fp8_1sm_moe.a001"
     },
     {
       "tag": "KernelMixedTmaCpAsyncWarpSpecialized2SmSm100",
       "group": "dense",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmSm100",
       "group": "ptr_array_dense",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_dense_fp8_1sm.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized2SmSm100",
       "group": "ptr_array_dense",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_dense_fp8_2sm.a001"
     },
     {
       "tag": "KernelTmaWarpSpecializedBlockwise1SmSm100",
       "group": "blockwise",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001"
     },
     {
       "tag": "KernelTmaWarpSpecializedBlockwise2SmSm100",
       "group": "blockwise",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecializedBlockwise1SmSm100",
       "group": "blockwise",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecializedBlockwise2SmSm100",
       "group": "blockwise",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmPlanarComplexSm100",
       "group": "planar_complex",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.planar_complex_f16_1sm.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized2SmPlanarComplexSm100",
       "group": "planar_complex",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.planar_complex_f16_2sm.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmPlanarComplexSm100",
       "group": "planar_complex",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_planar_complex_f16_1sm.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized2SmPlanarComplexSm100",
       "group": "planar_complex",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_array_planar_complex_f16_2sm.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmFastFP32Sm100",
@@ -267,9 +280,10 @@
     {
       "tag": "KernelTmaWarpSpecialized2SmFastFP32SmemSm100",
       "group": "fast_fp32",
-      "status": "NOT_CHECKED",
+      "status": "UNSUPPORTED_SM110A",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmFastFP32Sm100",
@@ -316,9 +330,10 @@
     {
       "tag": "KernelTmaWarpSpecialized2SmMixedInputSm100",
       "group": "mixed_input",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.mixed_input_int4_bf16_2sm_convert.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized2SmMixedInputSmemSm100",
@@ -358,30 +373,34 @@
     {
       "tag": "KernelSparseTmaWarpSpecialized1SmSm100",
       "group": "sparse",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_i8_1sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized2SmSm100",
       "group": "sparse",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_i8_2sm_official.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmBlockScaledSm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized2SmBlockScaledSm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_generic_nvf4_2sm.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmNvf4Sm100",
@@ -396,9 +415,10 @@
     {
       "tag": "KernelTmaWarpSpecialized2SmNvf4Sm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmMxf4Sm100",
@@ -430,23 +450,26 @@
     {
       "tag": "KernelTmaWarpSpecialized2SmMxf8f6f4Sm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_mxf8_2sm_official.a001"
     },
     {
       "tag": "KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_mixed_tma_cpasync_1sm_moe.a001"
     },
     {
       "tag": "KernelMixedTmaCpAsyncWarpSpecialized2SmBlockScaledSm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmBlockScaledSm100",
@@ -465,44 +488,50 @@
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmNvf4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized2SmNvf4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_nvfp4_2sm_grouped.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmMxf4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_mxf4_1sm_official.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized2SmMxf4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_mxf4_2sm_official.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized2SmMxf8f6f4Sm100",
       "group": "ptr_array_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized1SmBlockScaledSm100",
@@ -521,16 +550,18 @@
     {
       "tag": "KernelSparseTmaWarpSpecialized1SmMxf8f6f4Sm100",
       "group": "sparse_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized2SmMxf8f6f4Sm100",
       "group": "sparse_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized1SmNvf4Sm100",
@@ -545,23 +576,26 @@
     {
       "tag": "KernelSparseTmaWarpSpecialized2SmNvf4Sm100",
       "group": "sparse_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized1SmMxf4Sm100",
       "group": "sparse_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_bs_mxf4_1sm_official.a001"
     },
     {
       "tag": "KernelSparseTmaWarpSpecialized2SmMxf4Sm100",
       "group": "sparse_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase2-official-20260830.sparse_bs_mxf4_2sm_official.a001"
     }
   ]
 }

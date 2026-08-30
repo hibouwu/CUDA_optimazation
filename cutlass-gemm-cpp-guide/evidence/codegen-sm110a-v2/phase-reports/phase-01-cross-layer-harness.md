@@ -106,7 +106,7 @@ Deep replay 在新临时目录重新编译六个 type witness 和六个 FATBIN�
 ```text
 phase1_results=6
 unsealed_results=0
-result_contract_bundle_sha256=2f45e596ff64246f80fcade6d0012c7d753ad43b387e588c34d9ae831c0f0daf
+result_contract_bundle_sha256=6046f6f498fff30e78b7adde3ee05bf76229491579c6370c8d99cd582630b02e
 ```
 
 省略 `--run-id` 并执行 `--all-phase1 --resume` 时，runner 从冻结合同读取当前 run id，六项都
@@ -130,6 +130,9 @@ result_contract_bundle_sha256=2f45e596ff64246f80fcade6d0012c7d753ad43b387e588c34
 7. Fusion 默认模板参数不能无条件忽略。当前只对白名单 `LinearCombination` 按其真实五参数默认规则展开，伪造 C/Scalar/Round 会被拒绝。
 8. 原实例中手填的 operand source 会把预期当成结果。该字段已删除，改由 MMA fragment type 分类。
 9. 第一版六实例结果是在较窄合同下生成的。它们保留在 Git commit `5c19054` 中，没有被复用；本轮使用新 run id 从空 active evidence namespace 重新生成。
+10. Phase 2 的 FastFP32 preflight 暴露了 compile-success 的架构 guard fallback。Harness 增加了
+    `UNSUPPORTED_SM110A/ARCH_GUARD_FALLBACK` 终态及同环境 control；六个 Phase 1
+    `STATIC_PASS` control 随新合同从空 namespace 重放，不能沿用旧 fingerprint。
 
 两次中止的预运行只产生未 sealed 的 ignored archive，并在正式重放前移出 active namespace；没有 result、summary 或状态投影引用它们。
 
@@ -153,7 +156,7 @@ evidence_promotions: 0
 
 持久化结果：
 
-- current summary：`evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json`，SHA-256 `0da3ea1da38d394a553462fbca422c7a93c15b0012717522f9af344b36caae39`；
+- current summary：`evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json`，SHA-256 `be821150b2af8b857868b08ab20a2f87c7e2003d0cb6471d4764c54360a7e15d`；
 - 6 份 result、6 份 fingerprint、6 份 artifact manifest、6 份 hash-chained journal；
 - 24 份 Git 内 type/PTX/SASS/contract excerpt；
 - 完整 archive 约 16 MiB，位于被忽略的 `artifacts/codegen-sm110a-v2/phase1-generalized-20260830/`，每个文件的 SHA-256 与 bundle checksum 已写入 manifest。

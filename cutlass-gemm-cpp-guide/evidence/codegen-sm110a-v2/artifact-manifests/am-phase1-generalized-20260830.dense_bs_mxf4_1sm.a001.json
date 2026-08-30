@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
   "artifact_manifest_id": "am-phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
   "attempt_id": "phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
   "instance_ref": {
     "id": "dense_bs_mxf4_1sm",
     "path": "tests/codegen/instances/dense_bs_mxf4_1sm/instance.json",
-    "sha256": "cdabba2d723dc1192a04167319bb03d5d31bdc941a020bce940cd2d769ae22c0"
+    "sha256": "df387756217697a270de7e4c002c3ba5c98ce99072cc36f8df2c6d4ee9b2c167"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_bs_mxf4_1sm-2244639843b2",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mxf4_1sm-2244639843b2.json",
-    "sha256": "7d0c9995f91c63f5b525becb813f56984fba89668bebd63bf93e5ac59b4bc172"
+    "id": "fp-dense_bs_mxf4_1sm-730b18dc1b4c",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mxf4_1sm-730b18dc1b4c.json",
+    "sha256": "c4b32c891ee17d447e80d7ebb683ffe7b031aac180c7320ec0f51218b6347067"
   },
   "items": [
     {
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "2da6845297189a3634f1ee74ef65b427dfcb1c680aa94aae4bbcbf36cce03d50",
+      "sha256": "14425ae696ccffc1054541542f19af74df9602e17fbb5182a68fdfd09dcedc45",
       "size_bytes": 3924,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
     "format": "directory-manifest",
-    "sha256": "54273f7004ae1ec6975c29e10dbf0d3a9e7751582d1a9dbad0a098c8aae807e8",
+    "sha256": "ef334164e284c8fb584511709ec6be6c88f7b14dca19f4850b80b6b5d7af4958",
     "size_bytes": 2647114
   }
 }

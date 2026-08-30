@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "instance_id": "ptr_array_dense_fp8_1sm",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_17ArrayProblemShapeIN4cute5tupleIJiiiiEEEEENS1_10collective13CollectiveMmaINS1_40MainloopSm100ArrayTmaUmmaWarpSpecializedILi5ELi2ELi4ENS6_IJNS5_1CILi1EEESD_SD_EEENS_4arch5Sm100EEENS6_IJNSC_ILi128EEESI_SI_EEENS_12float_e4m3_tENS6_IJlSD_lEEESK_SL_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_19SM100_MMA_F8F6F4_SSISK_SK_fLi128ELi128ELNS5_4UMMA5MajorE0ELSQ_0ELNSP_7ScaleInE0ELSR_0EEEEEENS5_6LayoutISE_NS6_IJNSC_ILi0EEESV_SV_EEEEENS6_IJNS5_10UnderscoreESY_SY_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi8EEENSU_INS6_IJNSC_ILi8EEESI_EEENS6_IJSI_SD_EEEEEEEvNS5_8identityES11_S1B_vS1C_EENS_8epilogue10collective18CollectiveEpilogueINS1E_31Sm100PtrArrayTmaWarpSpecializedILi2ELi2ELi64ELb0ELb0EEEJSJ_NS6_IJNSU_ISI_SD_EENSU_INSC_ILi64EEESD_EEEEESK_NS6_IJSD_llEEESK_S1N_NS1E_6fusion15FusionCallbacksIS1I_NS1O_17LinearCombinationISK_fSK_fLNS_15FloatRoundStyleE2EEESJ_S1M_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xES11_NS12_IS14_S16_NSU_INS6_IJSI_S17_EEENS6_IJSD_SI_EEEEEEENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS5_14SM90_TMA_STOREES21_S23_S23_EEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4"
+      ]
+    },
+    {
+      "id": "opposite_cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 6,
+      "matched_opcodes": [
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDTM.X64",
+        "LDTM.X64"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA"
+      ]
+    },
+    {
+      "id": "mma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 1,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4"
+    ],
+    "sass_mma_opcodes": [
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA"
+    ],
+    "errors": []
+  }
+}

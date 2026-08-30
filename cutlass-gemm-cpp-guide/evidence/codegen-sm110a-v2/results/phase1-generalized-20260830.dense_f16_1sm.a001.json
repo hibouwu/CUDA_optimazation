@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "dense_f16_1sm",
     "path": "tests/codegen/instances/dense_f16_1sm/instance.json",
-    "sha256": "aacb5ba5343fdce8d0808dcb97a5439545faedf2c2408d6935d169d5f56a3832"
+    "sha256": "ebb2f7da7b32bae78328a0bf47c7d6229d9850275fccfe2c259ee93067275fb2"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_f16_1sm-d51b681ba54b",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_1sm-d51b681ba54b.json",
-    "sha256": "63cf68cf3361141723784a146ecd2a53f0b3d2016f15567c07c5a739b1a7c0bd"
+    "id": "fp-dense_f16_1sm-ba78af56b549",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_1sm-ba78af56b549.json",
+    "sha256": "38036f7ced2ff6e002e08e24058bc00c5a8c0eae1048d4a764587842b6e3e0ee"
   },
   "attempt_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase1-generalized-20260830.dense_f16_1sm.a001.jsonl",
-    "sha256": "9f61cd2add37271844b40be75336d574fc46da309107967564280b4edc0abd6e",
+    "sha256": "c31111ab8ec2cca016be76f9887f09bbd1d50a86502013db295da42000826d71",
     "last_seq": 64,
-    "last_event_sha256": "f7c9479a4d869c50244942f41c63aef815080d0f937931ec744a9bd65883c4a2"
+    "last_event_sha256": "aed00e6a8853b481d4d1cc7bd200d8ba3354f52a8080aa324645e1a33b4090c0"
   },
   "artifact_manifest_ref": {
     "id": "am-phase1-generalized-20260830.dense_f16_1sm.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase1-generalized-20260830.dense_f16_1sm.a001.json",
-    "sha256": "45e8bb69abd715d5d9b560e2a942adfcb7ea9732d7f506ea9c115b4e94bde7a6"
+    "sha256": "d9382c1befb19cc936e7344d1bcd42dfdb49680f6103feb72c715abe4965b86f"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

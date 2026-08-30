@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "instance_id": "dense_cpasync_fp8_1sm",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_39MainloopSm100UmmaCpAsyncWarpSpecializedILi12ELi3ELi2ENS5_IJNS4_1CILi1EEESB_SB_EEENS_4arch5Sm100EEENS5_IJNSA_ILi128EEENSA_ILi16EEESG_EEENS_12float_e4m3_tENS5_IJlSB_lEEESJ_SK_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_19SM100_MMA_F8F6F4_SSISJ_SJ_fLi128ELi16ELNS4_4UMMA5MajorE0ELSP_0ELNSO_7ScaleInE0ELSQ_0EEEEEENS4_6LayoutISC_NS5_IJNSA_ILi0EEESU_SU_EEEEENS5_IJNS4_10UnderscoreESX_SX_EEEEENS4_9TiledCopyINS4_9Copy_AtomIJNS4_31SM80_CP_ASYNC_CACHEALWAYS_ZFILLINS_9uint128_tES13_EESJ_EEENST_INS5_IJNS5_IJNSA_ILi8EEESH_EEESH_EEENS5_IJNS5_IJNSA_ILi256EEESB_EEESH_EEEEENS5_IJSH_SG_EEEEENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi8EEENST_INS5_IJS16_SG_EEENS5_IJSG_SB_EEEEEEEvNS4_8identityES1E_S1N_vS1O_EENS_8epilogue10collective18CollectiveEpilogueINS1Q_23Sm100TmaWarpSpecializedILi2ELi1ELi16ELb1ELb0EEEJSI_NS5_IJNST_ISG_SB_EENST_ISH_SB_EEEEENS_6half_tENS5_IJSB_llEEES1Y_S1Z_NS1Q_6fusion15FusionCallbacksIS1U_NS20_17LinearCombinationIS1Y_fS1Y_fLNS_15FloatRoundStyleE2EEESI_S1X_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_16dp256b2xENS4_13SM90_TMA_LOADENS1F_IS1H_NS1I_ILi16EEENST_INS5_IJNSA_ILi64EEES16_EEENS5_IJSB_S2C_EEEEEEENS4_17SM75_U16x8_LDSM_TENS4_14SM90_TMA_STOREES2G_NS4_17SM90_U16x8_STSM_TENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEEEEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "cpasync_load",
+      "required": true,
+      "match_count": 18,
+      "matched_opcodes": [
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B",
+        "cp.async.ca.shared.global.L2::128B"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.16x256b.x2.b32",
+        "tcgen05.ld.sync.aligned.16x256b.x2.b32"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4"
+      ]
+    },
+    {
+      "id": "opposite_cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "cpasync_load",
+      "required": true,
+      "match_count": 18,
+      "matched_opcodes": [
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128",
+        "LDGSTS.E.LTC128B.128"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDTM.16DP256BIT.X2",
+        "LDTM.16DP256BIT.X2"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA"
+      ]
+    },
+    {
+      "id": "mma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 1,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4"
+    ],
+    "sass_mma_opcodes": [
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA"
+    ],
+    "errors": []
+  }
+}

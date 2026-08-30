@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "fingerprint_id": "fp-ptr_array_planar_complex_f16_2sm-bbb4277cf5eb",
+  "instance_ref": {
+    "id": "ptr_array_planar_complex_f16_2sm",
+    "path": "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/instance.json",
+    "sha256": "59a362d53899942d3c925e8c97ba35ab8eafd98868593f5bcb04c106526a5068"
+  },
+  "source_closure": {
+    "cutlass_git_sha": "e05f953a5b3d38adc240df2ff928e0421c2abba3",
+    "cutlass_clean": true,
+    "inputs": [
+      {
+        "path": "include/guide/block_scale_reference.hpp",
+        "sha256": "54cdd524bb34e5d5d7817e6702e95904266711e3e36c10fa9d2a2694b5a2df1c"
+      },
+      {
+        "path": "include/guide/case_runner.hpp",
+        "sha256": "82a7cdc0f92a0b985144d00281dfa7a408e2bdabaf20a371ca16024ea69b3ea7"
+      },
+      {
+        "path": "include/guide/codegen_type_report.hpp",
+        "sha256": "0019f1ba406eeb9883e776d8d6ed216bd25f86611efc50aae7533e9379d477f5"
+      },
+      {
+        "path": "include/guide/cutlass_bias_relu_case.hpp",
+        "sha256": "927bf76e6fd10d1ce7299221b2ab736834921edea4d80eb7a54809db6a2882b4"
+      },
+      {
+        "path": "include/guide/cutlass_blockscaled_case.hpp",
+        "sha256": "b5b4dddd2c3a90f0e4ff09ae3ce0fef47bcdd94253860b2c867d171c769597c4"
+      },
+      {
+        "path": "include/guide/cutlass_dense_case.hpp",
+        "sha256": "8b8532a5732e92b780f2db9e1aacf9dbdb075a5444c04620b3adf5c1c7d1629f"
+      },
+      {
+        "path": "include/guide/cutlass_sparse_case.hpp",
+        "sha256": "3510d0c1eef366d55d5cba8784e6dca46d1ea1dd744eb77d44dc9f8f65979f21"
+      },
+      {
+        "path": "include/guide/dense_reference.hpp",
+        "sha256": "a91f17ca365f7f4ce344bba95413ac55316111a6092f7e81ef722a9d6d14443e"
+      },
+      {
+        "path": "include/guide/device_buffer.hpp",
+        "sha256": "47066ebe955ff7c1e2a291ada281672a486831673d2f98a384167d87924cd290"
+      },
+      {
+        "path": "include/guide/scale_layout.hpp",
+        "sha256": "fd999584a55ad2608374c5eb1cae9d369043ad9df6c2e9817b2b3c554dbfab50"
+      },
+      {
+        "path": "include/guide/sparse_reference.hpp",
+        "sha256": "9757dd7c070636242485beae16c9bb6c9b5816737cba9ceb343275ed6a0f0461"
+      },
+      {
+        "path": "include/guide/test_support.hpp",
+        "sha256": "d9e82024be0e6a110b965e9a446051f78582e68c3d34038d7a58c9e5ed59bdd9"
+      },
+      {
+        "path": "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/config.hpp",
+        "sha256": "ec0d63c9ceaad5a73f62b26581ca96c57e409281bcaf579542b024d0b425b055"
+      },
+      {
+        "path": "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/instance.json",
+        "sha256": "59a362d53899942d3c925e8c97ba35ab8eafd98868593f5bcb04c106526a5068"
+      },
+      {
+        "path": "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/kernel.cu",
+        "sha256": "fe7de214cfd222e64422bc0e4cd91b96f14acce73ca4b7636d9285750ca9a02d"
+      },
+      {
+        "path": "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/type_witness.cu",
+        "sha256": "04d9f6bc82c1f8658b1b0f2eaf22d2a820b8ca6f15c7b3c1778de104bc52be8b"
+      },
+      {
+        "path": "tests/codegen/schemas/artifact_manifest.schema.json",
+        "sha256": "0f674e480eb3e8aee3af1567d36e9b1ed606b9d4e3df7ef8439407f01794064b"
+      },
+      {
+        "path": "tests/codegen/schemas/fingerprint.schema.json",
+        "sha256": "37b7af0ba9792a24475b14439a607ef381f61eff471a2a9425323e8ef3a6af92"
+      },
+      {
+        "path": "tests/codegen/schemas/instance.schema.json",
+        "sha256": "0a094947b4b4588ce7e066ca1306028cbd6b7e7a83dc9da73ac47c5b609e662f"
+      },
+      {
+        "path": "tests/codegen/schemas/journal_event.schema.json",
+        "sha256": "3e2274dcc1c60a59b7cec6ce6a4ff76cfeb9a04f85da08c5da80fcc62f291213"
+      },
+      {
+        "path": "tests/codegen/schemas/result.schema.json",
+        "sha256": "915f044325e1edff33337c360a223a124969fcb77bbbf3b2d2b2582904c234f7"
+      },
+      {
+        "path": "tests/codegen/sm110a_schedule_reference_inventory.json",
+        "sha256": "1370b33695542ceae8103a6280dd422e3122dcdd53cd0c69d55a92853d3cd296"
+      },
+      {
+        "path": "tests/codegen/static_codegen_contract.json",
+        "sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89"
+      },
+      {
+        "path": "tools/codegen_v2/attribution.py",
+        "sha256": "532732c1b637e28c8a5b2dc2815f30ccf047a05ae0623c3c688bc9bed3c7b0b4"
+      },
+      {
+        "path": "tools/codegen_v2/deep_replay.py",
+        "sha256": "e26f786424dffaae42aa56bb92f8e7f2e989c3d767d64df4eda74659d487cd55"
+      },
+      {
+        "path": "tools/codegen_v2/model.py",
+        "sha256": "15bbe0621e8f98161983a8f17d241ecb5c1921572264ba1eb32c1f005961672d"
+      },
+      {
+        "path": "tools/run_codegen_v2.py",
+        "sha256": "6329e701a40478f179201b28c60bb7b550c0706dd52dc980a15abdf1c5ed9fcd"
+      },
+      {
+        "path": "tools/validate_codegen_v2.py",
+        "sha256": "6e387a4db8620e287ed545b202e97ea5b592ba57a054cedd1ba79bbd0cc7bc41"
+      },
+      {
+        "path": "versions.lock.json",
+        "sha256": "d0c38e0759646fdb5950669aa055f564d43c7bb60984bbc5cacbff4bfcdf242a"
+      }
+    ],
+    "input_tree_sha256": "0ca7fc7b73783d6f31f93757ae20c563a315159be03566ad9037d56ac4198cfd"
+  },
+  "toolchain": {
+    "container_digest": "sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6",
+    "versions_lock_sha256": "d0c38e0759646fdb5950669aa055f564d43c7bb60984bbc5cacbff4bfcdf242a",
+    "executables": {
+      "nvcc": {
+        "path": "/usr/local/cuda/bin/nvcc",
+        "binary_sha256": "b8e2347d9d7fcadf8812a27324d515de99d033d3e48611811ece7e66d7895f8a",
+        "version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0",
+        "version_sha256": "fc7ce0c80d28ed925fd490dc4e3915ce620fcf115f965189688c6f049243aad5"
+      },
+      "ptxas": {
+        "path": "/usr/local/cuda/bin/ptxas",
+        "binary_sha256": "daba837a68265cae38c832d13399b61dab811891de9b8914defddef143b849f2",
+        "version": "ptxas: NVIDIA (R) Ptx optimizing assembler\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:55:12_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0",
+        "version_sha256": "9942c4e0325871cfa88d49c42167b52ac5a3bae3bc64fd59b6d33253bfca45ec"
+      },
+      "cuobjdump": {
+        "path": "/usr/local/cuda/bin/cuobjdump",
+        "binary_sha256": "1763b5367167e73939c853f6c71bdec7be0ea4a1cfb6625e4c81d7c7a1f801ae",
+        "version": "cuobjdump: NVIDIA (R) fat binary listing tool\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Thu_Aug_14_07:26:37_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.85\nBuild cuda_13.0.r13.0/compiler.36400806_0",
+        "version_sha256": "82d560b00ef375b13afc20378df2005748e05a6315c3649a5734a6df978b847d"
+      },
+      "nvdisasm": {
+        "path": "/usr/local/cuda/bin/nvdisasm",
+        "binary_sha256": "3c27bded09bd877807207b62db8186a0a9a359d10311ab6e2c885f9b418c9f41",
+        "version": "nvdisasm: NVIDIA (R) CUDA disassembler\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Thu_Aug_14_07:20:41_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.85\nBuild cuda_13.0.r13.0/compiler.36400806_0",
+        "version_sha256": "a336ed4b719e78b72c17eb29a361ccdfad362b7682b091eaa9d5e196297de35b"
+      },
+      "host_compiler": {
+        "path": "/usr/bin/g++",
+        "binary_sha256": "52f1ddb33fe78b9441e0f42e9cd22c571f1101938e046c8a26582494e041cc73",
+        "version": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+        "version_sha256": "78e131468bbc55cea0dd0e699c362357f25d995aa8ac19feda6912ee1c3c7068"
+      }
+    }
+  },
+  "execution_plan": [
+    {
+      "step_id": "compile_type_witness",
+      "tool": "nvcc",
+      "argv": [
+        "-std=c++17",
+        "-O3",
+        "-DNDEBUG",
+        "--expt-relaxed-constexpr",
+        "--frandom-seed=ptr_array_planar_complex_f16_2sm",
+        "-Iinclude",
+        "-Ithird_party/cutlass/include",
+        "-Ithird_party/cutlass/tools/util/include",
+        "--generate-code=arch=compute_110a,code=sm_110a",
+        "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/type_witness.cu",
+        "-o",
+        "<attempt>/full/type_witness"
+      ]
+    },
+    {
+      "step_id": "run_type_witness",
+      "tool": "type_witness",
+      "argv": [
+        "<attempt>/full/type_witness"
+      ]
+    },
+    {
+      "step_id": "compile_fatbin",
+      "tool": "nvcc",
+      "argv": [
+        "-std=c++17",
+        "-O3",
+        "-DNDEBUG",
+        "--expt-relaxed-constexpr",
+        "--frandom-seed=ptr_array_planar_complex_f16_2sm",
+        "-Iinclude",
+        "-Ithird_party/cutlass/include",
+        "-Ithird_party/cutlass/tools/util/include",
+        "--fatbin",
+        "--generate-code=arch=compute_110a,code=compute_110a",
+        "--generate-code=arch=compute_110a,code=sm_110a",
+        "--ptxas-options=-v",
+        "tests/codegen/instances/ptr_array_planar_complex_f16_2sm/kernel.cu",
+        "-o",
+        "<attempt>/full/kernel.fatbin"
+      ]
+    },
+    {
+      "step_id": "list_ptx",
+      "tool": "cuobjdump",
+      "argv": [
+        "--list-ptx",
+        "<fatbin>"
+      ]
+    },
+    {
+      "step_id": "list_elf",
+      "tool": "cuobjdump",
+      "argv": [
+        "--list-elf",
+        "<fatbin>"
+      ]
+    },
+    {
+      "step_id": "extract_ptx",
+      "tool": "cuobjdump",
+      "argv": [
+        "--extract-ptx",
+        "all",
+        "<fatbin>"
+      ]
+    },
+    {
+      "step_id": "extract_elf",
+      "tool": "cuobjdump",
+      "argv": [
+        "--extract-elf",
+        "all",
+        "<fatbin>"
+      ]
+    },
+    {
+      "step_id": "elf_symbols",
+      "tool": "cuobjdump",
+      "argv": [
+        "--dump-elf-symbols",
+        "<cubin>"
+      ]
+    },
+    {
+      "step_id": "code_object_metadata",
+      "tool": "cuobjdump",
+      "argv": [
+        "--dump-sass",
+        "<cubin>"
+      ]
+    },
+    {
+      "step_id": "nvdisasm_json",
+      "tool": "nvdisasm",
+      "argv": [
+        "--emit-json",
+        "-c",
+        "<cubin>"
+      ]
+    },
+    {
+      "step_id": "nvdisasm_text",
+      "tool": "nvdisasm",
+      "argv": [
+        "-c",
+        "-sf",
+        "<cubin>"
+      ]
+    }
+  ],
+  "environment": {
+    "allowed": {
+      "LC_ALL": "C"
+    },
+    "asserted_absent": [
+      "NVCC_PREPEND_FLAGS",
+      "NVCC_APPEND_FLAGS",
+      "CUDAFE_FLAGS",
+      "PTXAS_OPTIONS",
+      "LD_PRELOAD"
+    ]
+  },
+  "component_hashes": {
+    "instance": "59a362d53899942d3c925e8c97ba35ab8eafd98868593f5bcb04c106526a5068",
+    "source": "0ca7fc7b73783d6f31f93757ae20c563a315159be03566ad9037d56ac4198cfd",
+    "toolchain": "079b6c2caa031a5c817096dcb9f1ededd05521dbf4c252452848779b00d93552",
+    "harness": "1280d90904dca8502948b6868398c088cd3187ecfc9241c052d7883a7404ae06",
+    "plan": "f3e5ba6c6586deadf5ce14b8ec6c2deb13835fee8496d8e0b3767c8d5c91c1d2"
+  },
+  "overall_sha256": "bbb4277cf5ebb0ac2de45f5d42eb03b193c65f5c235f542bd5a5c407931ae449"
+}

@@ -90,6 +90,30 @@ def split_cpp_template(value: str) -> tuple[str, list[str]] | None:
     return base, arguments
 
 
+def split_cpp_pointer(value: str) -> tuple[str, bool]:
+    """Return one normalized pointee spelling and whether exactly one pointer is present."""
+    normalized = normalize_cpp_type(value)
+    if normalized.endswith("**"):
+        return normalized, False
+    if normalized.endswith("*"):
+        return normalized[:-1], True
+    return normalized, False
+
+
+def _default_alignment_elements(value: str) -> int | None:
+    bits = {
+        "cutlass::half_t": 16,
+        "cutlass::bfloat16_t": 16,
+        "float": 32,
+        "double": 64,
+        "signedchar": 8,
+        "unsignedchar": 8,
+        "int": 32,
+        "unsignedint": 32,
+    }.get(normalize_cpp_type(value))
+    return None if bits is None else 128 // bits
+
+
 def cpp_type_equivalent(
     actual: str, declared: str, *, allow_trailing_default_arguments: bool = False
 ) -> bool:
@@ -117,6 +141,29 @@ def cpp_type_equivalent(
             if len(expanded_declared) < 4:
                 expanded_declared.append(expanded_declared[1])
             if len(expanded_declared) < 5:
+                expanded_declared.append("(cutlass::FloatRoundStyle)2")
+            declared_arguments = expanded_declared
+        elif declared_base == "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct":
+            if not 3 <= len(declared_arguments) <= 9 or len(actual_arguments) != 9:
+                return False
+            expanded_declared = list(declared_arguments)
+            if len(expanded_declared) < 4:
+                expanded_declared.append(expanded_declared[1])
+            if len(expanded_declared) < 5:
+                expanded_declared.append(expanded_declared[1])
+            if len(expanded_declared) < 6:
+                expanded_declared.append(expanded_declared[2])
+            if len(expanded_declared) < 7:
+                alignment_bias = _default_alignment_elements(expanded_declared[3])
+                if alignment_bias is None:
+                    return False
+                expanded_declared.append(str(alignment_bias))
+            if len(expanded_declared) < 8:
+                alignment_scalar = _default_alignment_elements(expanded_declared[5])
+                if alignment_scalar is None:
+                    return False
+                expanded_declared.append(str(alignment_scalar))
+            if len(expanded_declared) < 9:
                 expanded_declared.append("(cutlass::FloatRoundStyle)2")
             declared_arguments = expanded_declared
         else:
@@ -485,6 +532,17 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         not hypothesis["failure_domain"] or not hypothesis["failure_layer"]
     ):
         raise ContractError(f"{path.name}: reject hypothesis requires failure domain/layer")
+    if hypothesis["expected_outcome"] == "UNSUPPORTED_SM110A":
+        guard_contract = contract["arch_guard_fallback_contract"]
+        if hypothesis["failure_domain"] != "TARGET_ARCHITECTURE":
+            raise ContractError(
+                f"{path.name}: UNSUPPORTED_SM110A hypothesis requires TARGET_ARCHITECTURE"
+            )
+        if hypothesis["failure_layer"] != guard_contract["failure_layer"]:
+            raise ContractError(
+                f"{path.name}: UNSUPPORTED_SM110A hypothesis requires "
+                f"{guard_contract['failure_layer']}"
+            )
     control_id = hypothesis["control_instance_id"]
     if hypothesis["expected_outcome"] == "STATIC_PASS" and control_id is not None:
         raise ContractError(f"{path.name}: STATIC_PASS hypothesis must not declare a control")
@@ -942,6 +1000,7 @@ def validate_journal_semantics(
     fingerprint: dict[str, Any],
     artifacts: dict[str, Any],
     manifest_path: Path,
+    terminal_status: str,
 ) -> None:
     event_types = [event["event_type"] for event in events]
     if event_types[:3] != ["ATTEMPT_CREATED", "INSTANCE_VALIDATED", "FINGERPRINT_SEALED"]:
@@ -1011,7 +1070,7 @@ def validate_journal_semantics(
         ) != expected_argv:
             raise ContractError(f"journal actual argv differs from frozen plan for {step['step_id']}")
         if finished["payload"].get("returncode") != 0:
-            raise ContractError("STATIC_PASS journal contains a failed command")
+            raise ContractError("successful static-codegen journal contains a failed command")
         command_events[step["step_id"]] = finished
         index += 2
     sealed_events: dict[str, dict[str, Any]] = {}
@@ -1038,10 +1097,10 @@ def validate_journal_semantics(
             raise ContractError("journal manifest-sealed path mismatch")
     if manifest_event["payload"].get("sha256") != sha256_file(manifest_path):
         raise ContractError("journal manifest-sealed SHA-256 mismatch")
-    if terminal_event["payload"].get("terminal_pipeline_state") != "STATIC_PASS":
-        raise ContractError("STATIC_PASS result lacks a STATIC_PASS terminal journal event")
+    if terminal_event["payload"].get("terminal_pipeline_state") != terminal_status:
+        raise ContractError("result status differs from the terminal journal state")
     expected_terminal_payload = {
-        "terminal_pipeline_state": "STATIC_PASS",
+        "terminal_pipeline_state": terminal_status,
         "artifact_manifest_path": manifest_path.relative_to(root).as_posix(),
         "artifact_manifest_sha256": sha256_file(manifest_path),
         "last_completed_step_id": "function_contract",
@@ -1215,6 +1274,265 @@ def _expected_pattern_results(
     ]
 
 
+def evaluate_arch_guard_patterns(
+    opcodes: tuple[str, ...], contracts: list[dict[str, Any]], field: str
+) -> list[dict[str, Any]]:
+    """Recompute an exact function-local architecture-guard contract."""
+    expressions = validate_patterns([item["regex"] for item in contracts], field)
+    results: list[dict[str, Any]] = []
+    for contract_item, expression in zip(contracts, expressions, strict=True):
+        matches = tuple(opcode for opcode in opcodes if expression.fullmatch(opcode))
+        count = len(matches)
+        maximum = contract_item["max_count"]
+        if count < contract_item["min_count"] or (
+            maximum is not None and count > maximum
+        ):
+            raise ContractError(
+                f"{field} {contract_item['id']} count {count} outside "
+                f"[{contract_item['min_count']}, {maximum}]"
+            )
+        results.append(
+            {
+                "id": contract_item["id"],
+                "required": contract_item["required"],
+                "match_count": count,
+                "matched_opcodes": list(matches),
+            }
+        )
+    return results
+
+
+def _validate_arch_guard_control(
+    root: Path,
+    result: dict[str, Any],
+    instance: dict[str, Any],
+    subject_fingerprint: dict[str, Any],
+    control: dict[str, Any],
+    *,
+    require_archive: bool,
+) -> None:
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    if control["relation"] != contract["arch_guard_fallback_contract"]["control_relation"]:
+        raise ContractError("architecture-guard control relation differs from the contract")
+    if control["controlled_delta"] != contract["arch_guard_fallback_contract"][
+        "controlled_delta"
+    ]:
+        raise ContractError("architecture-guard control delta differs from the contract")
+    control_ref = control["result_ref"]
+    control_path = safe_path(root, control_ref["path"], "legal_control.result_ref.path")
+    if control_path.stem != control_ref["id"] or sha256_file(control_path) != control_ref["sha256"]:
+        raise ContractError("architecture-guard control result reference is not sealed")
+    control_result = load_strict_json(control_path)
+    if control_result.get("status") != "STATIC_PASS":
+        raise ContractError("architecture-guard control is not STATIC_PASS")
+    if control_result.get("result_id") == result["result_id"]:
+        raise ContractError("architecture-guard control must be a distinct result")
+    for key in ("contract_sha256", "objective_sha256", "freshness_epoch", "scope"):
+        if control_result.get(key) != result[key]:
+            raise ContractError("architecture-guard control is not fresh under the same contract")
+    expected_control_id = instance["hypothesis"]["control_instance_id"]
+    if control_result.get("instance_ref", {}).get("id") != expected_control_id:
+        raise ContractError("architecture-guard control differs from the frozen control instance")
+    control_instance_ref = control_result["instance_ref"]
+    control_instance_path = safe_path(
+        root, control_instance_ref["path"], "legal_control.instance_ref.path"
+    )
+    if sha256_file(control_instance_path) != control_instance_ref["sha256"]:
+        raise ContractError("architecture-guard control instance reference is not sealed")
+    control_instance = validate_instance(root, control_instance_path)
+    if control_instance["target"] != instance["target"]:
+        raise ContractError("architecture-guard control target differs from the subject")
+    control_fingerprint_ref = control_result["fingerprint_ref"]
+    control_fingerprint_path = safe_path(
+        root,
+        control_fingerprint_ref["path"],
+        "legal_control.fingerprint_ref.path",
+    )
+    if sha256_file(control_fingerprint_path) != control_fingerprint_ref["sha256"]:
+        raise ContractError("architecture-guard control fingerprint reference is not sealed")
+    control_fingerprint = validate_fingerprint(root, control_fingerprint_path)
+    if (
+        control_fingerprint["toolchain"] != subject_fingerprint["toolchain"]
+        or control_fingerprint["environment"] != subject_fingerprint["environment"]
+        or control_fingerprint["source_closure"]["cutlass_git_sha"]
+        != subject_fingerprint["source_closure"]["cutlass_git_sha"]
+    ):
+        raise ContractError("architecture-guard control uses a different environment")
+    validate_result(root, control_path, require_archive=require_archive)
+
+
+def _arch_guard_expected_report(
+    *,
+    instance: dict[str, Any],
+    symbol: str,
+    ptx_target: str,
+    sass_arch: str,
+    total_functions: int,
+    evidence: dict[str, Any],
+    ptx_results: list[dict[str, Any]],
+    sass_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "instance_id": instance["instance_id"],
+        "symbol": symbol,
+        "ptx_target": ptx_target,
+        "sass_arch": sass_arch,
+        "nvdisasm_total_function_count": total_functions,
+        "terminal_status": "UNSUPPORTED_SM110A",
+        "reason": "ARCH_GUARD_FALLBACK",
+        "guard_atom": evidence["guard_atom"],
+        "guard_macro": evidence["guard_macro"],
+        "ptx_guard_results": ptx_results,
+        "sass_guard_results": sass_results,
+        "source_constraints": evidence["source_constraints"],
+        "legal_control": evidence["legal_control"],
+    }
+
+
+def _validate_arch_guard_function_contract(
+    root: Path,
+    result: dict[str, Any],
+    instance: dict[str, Any],
+    subject_fingerprint: dict[str, Any],
+    evidence: dict[str, Any],
+    role_items: dict[str, dict[str, Any]],
+    role_paths: dict[str, Path],
+    resolved_types: dict[str, str],
+    *,
+    require_archive: bool,
+) -> None:
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    guard = contract["arch_guard_fallback_contract"]
+    if (
+        evidence["reason"] != guard["reason"]
+        or evidence["failure"]
+        != {
+            "layer": guard["failure_layer"],
+            "domain": "TARGET_ARCHITECTURE",
+            "reason": guard["reason"],
+        }
+        or evidence["guard_atom"] != guard["guard_atom"]
+        or evidence["guard_macro"] != guard["guard_macro"]
+    ):
+        raise ContractError("architecture-guard evidence identity differs from the contract")
+    atom_name = normalize_cpp_type(resolved_types["mma_atom"])
+    if re.search(rf"(?<![A-Za-z0-9_]){re.escape(guard['guard_atom'])}(?![A-Za-z0-9_])", atom_name) is None:
+        raise ContractError("type witness does not resolve the guarded FastFP32 MMA atom")
+    if evidence["source_constraints"] != guard["source_constraints"]:
+        raise ContractError("architecture-guard source constraints differ from the contract")
+    for index, source_range in enumerate(evidence["source_constraints"]):
+        validate_source_anchor(root, source_range, f"source_constraints[{index}]")
+
+    if require_archive:
+        if role_paths["FATBIN"].read_bytes()[:4] != bytes.fromhex("50ed55ba"):
+            raise ContractError("architecture-guard FATBIN has an invalid magic value")
+        if role_paths["CUBIN"].read_bytes()[:4] != b"\x7fELF":
+            raise ContractError("architecture-guard CUBIN is not an ELF file")
+        ptx_text = role_paths["PTX_FULL"].read_text(encoding="utf-8")
+        entries = parse_ptx_entries(ptx_text)
+        if len(entries) != 1:
+            raise ContractError("architecture-guard PTX must contain exactly one .entry")
+        try:
+            attribution = attribute_codegen(
+                ptx_text=ptx_text,
+                nvdisasm_json_text=role_paths["NVDISASM_JSON_FULL"].read_text(encoding="utf-8"),
+                elf_symbols_text=role_paths["ELF_SYMBOL_TABLE"].read_text(encoding="utf-8"),
+                code_object_metadata_text=role_paths["CODE_OBJECT_METADATA"].read_text(encoding="utf-8"),
+                expected_symbol=entries[0].symbol,
+                declared_cta_group=instance["declared_config"]["cta_group"],
+                expected_ptx_target=instance["target"]["binary_arch"],
+                expected_sass_arch=instance["target"]["binary_arch"],
+                required_ptx=[],
+                forbidden_ptx=[],
+                required_sass=[],
+                forbidden_sass=[],
+            )
+        except AttributionError as error:
+            raise ContractError(f"cannot recompute architecture-guard function binding: {error}") from error
+        ptx_function = attribution.ptx_function
+        sass_function = attribution.sass_function
+        ptx_target = attribution.ptx_target
+        sass_arch = attribution.sass_arch
+        total_functions = attribution.sass_total_function_count
+        if role_paths["PTX_TARGET_FUNCTION"].read_text(encoding="utf-8") != ptx_function.text + "\n":
+            raise ContractError("architecture-guard PTX excerpt differs from the bound function")
+        if role_paths["SASS_TARGET_FUNCTION"].read_text(encoding="utf-8") != sass_function.text + "\n":
+            raise ContractError("architecture-guard SASS excerpt differs from the bound function")
+    else:
+        tracked_ptx = role_paths["PTX_TARGET_FUNCTION"].read_text(encoding="utf-8")
+        entries = parse_ptx_entries(tracked_ptx)
+        if len(entries) != 1:
+            raise ContractError("tracked architecture-guard PTX must contain exactly one .entry")
+        ptx_function = entries[0]
+        sass_value = load_strict_json(role_paths["SASS_TARGET_FUNCTION"])
+        instructions = sass_value.get("sass-instructions")
+        if not isinstance(sass_value.get("function-name"), str) or not isinstance(instructions, list):
+            raise ContractError("tracked architecture-guard SASS function is invalid")
+        sass_opcodes = []
+        for index, instruction in enumerate(instructions):
+            if not isinstance(instruction, dict) or not isinstance(instruction.get("opcode"), str):
+                raise ContractError(f"tracked architecture-guard SASS instruction {index} lacks opcode")
+            sass_opcodes.append(instruction["opcode"].upper())
+        sass_function = FunctionBlock(
+            sass_value["function-name"],
+            json.dumps(sass_value, separators=(",", ":")),
+            tuple(sass_opcodes),
+        )
+        if ptx_function.symbol != sass_function.symbol:
+            raise ContractError("tracked architecture-guard PTX/SASS symbols differ")
+        report = load_strict_json(role_paths["CONTRACT_CHECK_REPORT"])
+        total_functions = report.get("nvdisasm_total_function_count")
+        if not isinstance(total_functions, int) or total_functions < 1:
+            raise ContractError("architecture-guard report lacks a function count")
+        ptx_target = instance["target"]["binary_arch"]
+        sass_arch = instance["target"]["binary_arch"]
+
+    ptx_results = evaluate_arch_guard_patterns(
+        ptx_function.opcodes, guard["ptx"], "architecture_guard.ptx"
+    )
+    sass_results = evaluate_arch_guard_patterns(
+        sass_function.opcodes, guard["sass"], "architecture_guard.sass"
+    )
+    binding = {
+        "target_cpp_entity": instance["static_contract"]["target_entity"],
+        "selection_policy": instance["static_contract"]["function_selector"],
+        "symbol": ptx_function.symbol,
+        "ptx_entry_count": 1,
+        "elf_sto_entry_count": 1,
+        "nvdisasm_symbol_match_count": 1,
+        "nvdisasm_total_function_count": total_functions,
+        "ptx_function_artifact_id": role_items["PTX_TARGET_FUNCTION"]["artifact_id"],
+        "sass_function_artifact_id": role_items["SASS_TARGET_FUNCTION"]["artifact_id"],
+        "same_symbol": True,
+    }
+    if evidence["function_binding"] != binding:
+        raise ContractError("architecture-guard function binding differs from recomputation")
+    validate_device_kernel_symbol(binding["symbol"], resolved_types["gemm_kernel"])
+    if evidence["ptx_guard_results"] != ptx_results or evidence["sass_guard_results"] != sass_results:
+        raise ContractError("architecture-guard opcode evidence differs from recomputation")
+    expected_report = _arch_guard_expected_report(
+        instance=instance,
+        symbol=ptx_function.symbol,
+        ptx_target=ptx_target,
+        sass_arch=sass_arch,
+        total_functions=total_functions,
+        evidence=evidence,
+        ptx_results=ptx_results,
+        sass_results=sass_results,
+    )
+    if load_strict_json(role_paths["CONTRACT_CHECK_REPORT"]) != expected_report:
+        raise ContractError("architecture-guard report differs from recomputation")
+    _validate_arch_guard_control(
+        root,
+        result,
+        instance,
+        subject_fingerprint,
+        evidence["legal_control"],
+        require_archive=require_archive,
+    )
+
+
 def validate_device_kernel_symbol(symbol: str, gemm_kernel_type: str) -> None:
     normal_kernel = gemm_kernel_type.startswith("cutlass::gemm::kernel::GemmUniversal<")
     abi_kernel = gemm_kernel_type.startswith(
@@ -1239,6 +1557,8 @@ def validate_static_pass_evidence(
     artifacts: dict[str, Any],
     *,
     require_archive: bool,
+    guard_fallback: bool = False,
+    subject_fingerprint: dict[str, Any] | None = None,
 ) -> None:
     evidence = result["evidence"]
     items_by_id = {item["artifact_id"]: item for item in artifacts["items"]}
@@ -1527,6 +1847,7 @@ def validate_static_pass_evidence(
             f"type witness DispatchPolicy family differs from subject group {subject_group}"
         )
     declared = instance["declared_config"]
+    mechanism = declared["mechanism"]
     exact_config_types = {
         "config_arch_tag": instance["target"]["cutlass_arch_tag"],
         "config_operator_class": declared["operator_class"],
@@ -1540,8 +1861,6 @@ def validate_static_pass_evidence(
         "epilogue_operator_class": declared["builder_contract"]["epilogue_operator_class"],
         "builder_element_a": declared["builder_contract"]["element_a"],
         "builder_element_b": declared["builder_contract"]["element_b"],
-        "builder_layout_a": declared["builder_contract"]["layout_a"],
-        "builder_layout_b": declared["builder_contract"]["layout_b"],
         "epilogue_element_c": declared["builder_contract"]["epilogue_element_c"],
         "epilogue_element_d": declared["builder_contract"]["epilogue_element_d"],
         "epilogue_layout_c": declared["builder_contract"]["epilogue_layout_c"],
@@ -1553,6 +1872,13 @@ def validate_static_pass_evidence(
         "config_problem_shape": declared["kernel_problem_shape"],
         "config_cluster_shape": declared["builder_contract"]["cluster_type_cpp"],
     }
+    if not mechanism["blockwise"]["enabled"]:
+        exact_config_types.update(
+            {
+                "builder_layout_a": declared["builder_contract"]["layout_a"],
+                "builder_layout_b": declared["builder_contract"]["layout_b"],
+            }
+        )
     for witness_key, declared_value in exact_config_types.items():
         equivalent = cpp_type_equivalent(
             resolved_types[witness_key],
@@ -1651,7 +1977,6 @@ def validate_static_pass_evidence(
     for axis in ("a", "b", "c", "d"):
         if resolved_values.get(f"alignment_{axis}") != declared["alignments"][axis]:
             raise ContractError(f"type witness alignment_{axis} differs from declared_config")
-    mechanism = instance["declared_config"]["mechanism"]
     scale_optional_keys = {
         "scale_element",
         "gmem_tiled_copy_sfa",
@@ -1790,6 +2115,42 @@ def validate_static_pass_evidence(
             or scale_config[1] != expected_scale_arguments
         ):
             raise ContractError("blockwise ScaleConfig differs from the declared mechanism")
+        pointer_expected = mechanism["pointer_mode"] == "array"
+        for axis in ("a", "b"):
+            builder_layout = split_cpp_template(
+                normalize_cpp_type(resolved_types[f"builder_layout_{axis}"])
+            )
+            if (
+                builder_layout is None
+                or builder_layout[0] != "cute::tuple"
+                or len(builder_layout[1]) != 2
+            ):
+                raise ContractError(
+                    f"blockwise Builder layout {axis.upper()} is not a two-item tuple"
+                )
+            operand_layout, operand_pointer = split_cpp_pointer(builder_layout[1][0])
+            scale_layout, scale_pointer = split_cpp_pointer(builder_layout[1][1])
+            optional_scale_layout, optional_scale_pointer = split_cpp_pointer(
+                optional_types[f"blockwise_layout_sf{axis}"]
+            )
+            if operand_pointer is not pointer_expected or scale_pointer is not pointer_expected:
+                raise ContractError(
+                    f"blockwise Builder layout {axis.upper()} pointer mode differs from the declaration"
+                )
+            if optional_scale_pointer is not pointer_expected:
+                raise ContractError(
+                    f"blockwise optional LayoutSF{axis.upper()} pointer mode differs from the declaration"
+                )
+            if not cpp_type_equivalent(
+                operand_layout, resolved_types[f"config_layout_{axis}"]
+            ):
+                raise ContractError(
+                    f"blockwise Builder operand layout {axis.upper()} differs from the logical layout"
+                )
+            if not cpp_type_equivalent(scale_layout, optional_scale_layout):
+                raise ContractError(
+                    f"blockwise Builder scale layout {axis.upper()} differs from the resolved LayoutSF"
+                )
     elif blockwise_optional_keys & set(optional_types) or any(
         resolved_values.get(key) != 0
         for key in ("blockwise_granularity_m", "blockwise_granularity_n", "blockwise_granularity_k")
@@ -1954,6 +2315,22 @@ def validate_static_pass_evidence(
     unexpected_optional = set(optional_types) - allowed_optional_keys
     if unexpected_optional:
         raise ContractError(f"type witness contains undeclared optional mechanisms: {unexpected_optional}")
+
+    if guard_fallback:
+        if subject_fingerprint is None:
+            raise ContractError("architecture-guard validation lacks the subject fingerprint")
+        _validate_arch_guard_function_contract(
+            root,
+            result,
+            instance,
+            subject_fingerprint,
+            evidence,
+            role_items,
+            role_paths,
+            resolved_types,
+            require_archive=require_archive,
+        )
+        return
 
     static_contract = instance["static_contract"]
     if not require_archive:
@@ -2206,6 +2583,17 @@ def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> 
             state != "NOT_REACHED" for state in states[rejected + 1 :]
         ):
             raise ContractError("reject result violates stop-at-first-failure ordering")
+        if result["status"] == "UNSUPPORTED_SM110A":
+            if layers[rejected]["layer"] != "FUNCTION_CONTRACT":
+                raise ContractError(
+                    "architecture-guard fallback must reject at FUNCTION_CONTRACT"
+                )
+            expected_witnesses = contract["layer_witness_artifact_ids"]
+            for item in layers:
+                if item["witness_artifact_id"] != expected_witnesses[item["layer"]]:
+                    raise ContractError(
+                        f"layer {item['layer']} uses the wrong architecture-guard witness"
+                    )
     instance_ref = result["instance_ref"]
     instance_path = safe_path(root, instance_ref["path"], "instance_ref.path")
     if sha256_file(instance_path) != instance_ref["sha256"]:
@@ -2258,7 +2646,14 @@ def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> 
     )
     if last_seq != journal_ref["last_seq"] or last_hash != journal_ref["last_event_sha256"]:
         raise ContractError("result journal terminal reference mismatch")
-    validate_journal_semantics(root, journal_events, fingerprint, artifacts, manifest_path)
+    validate_journal_semantics(
+        root,
+        journal_events,
+        fingerprint,
+        artifacts,
+        manifest_path,
+        result["status"],
+    )
     if result["status"] == "STATIC_PASS":
         evidence = result["evidence"]
         referenced = {
@@ -2283,6 +2678,31 @@ def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> 
                     raise ContractError(f"{results_name}: forbidden opcode matched")
         validate_static_pass_evidence(
             root, result, instance, artifacts, require_archive=require_archive
+        )
+    elif result["status"] == "UNSUPPORTED_SM110A":
+        evidence = result["evidence"]
+        referenced = {
+            evidence["type_witness_artifact_id"],
+            evidence["function_binding"]["ptx_function_artifact_id"],
+            evidence["function_binding"]["sass_function_artifact_id"],
+        }
+        if not referenced <= artifact_ids:
+            raise ContractError("architecture-guard evidence references unknown artifacts")
+        layer_witnesses = {
+            item["witness_artifact_id"]
+            for item in layers
+            if item["witness_artifact_id"] is not None
+        }
+        if not layer_witnesses <= artifact_ids:
+            raise ContractError("architecture-guard layers reference unknown artifacts")
+        validate_static_pass_evidence(
+            root,
+            result,
+            instance,
+            artifacts,
+            require_archive=require_archive,
+            guard_fallback=True,
+            subject_fingerprint=fingerprint,
         )
     return result
 

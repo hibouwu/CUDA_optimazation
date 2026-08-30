@@ -91,8 +91,9 @@ Cluster/TMEM 分配关系。
 64、64、32、128，对应的 MmaTile K 分别为 256、256、128、256。
 
 这些比例解释了一个编译期 tile 如何由 Atom 沿 K 维重复覆盖，却不被当作稳定 SASS 条数公式。
-当前仍只是六个离散点，尚未形成同一 family 下的完整 shape surface；后续扩展 Tile 时会继续
-复用相同的 Atom/TiledMMA 记账方式。
+上面的数字只是在解释 Phase 1 的六个起始点。Phase 2 已把相同的记账方法扩展到另外 34 个
+canonical instance，但每个 Tag 仍只固定一个基准实例；它们还不是同一 family 下连续、完备的
+shape surface。
 
 ## 4. Tensor Core Mainloop 的数据路径
 
@@ -123,9 +124,10 @@ block-scaled 路径分别观察到 8/4/2 条函数内 `tcgen05.cp`，Sparse NVFP
 同时 type witness 闭合了 scale copy/layout 和 sparse metadata layout。这里的计数是当前
 实例观测，不是跨 Tile、跨工具链的固定公式。
 
-`operand_source` 不再由实例手填。通用 witness 直接读取 `TiledMma::FrgTypeA/B`：六个 fresh
-实例中，普通 Dense 和三条 Dense block-scaled 路径都是 `SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`；
-Sparse NVFP4 是 `SPARSE_SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`。MixedInput pilot 则实际解析为
+`operand_source` 不再由实例手填。通用 witness 直接读取 `TiledMma::FrgTypeA/B`：Phase 1 的
+六个实例中，普通 Dense 和三条 Dense block-scaled 路径都是
+`SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`；Sparse NVFP4 是
+`SPARSE_SMEM_DESCRIPTOR / SMEM_DESCRIPTOR`。Phase 2 的 MixedInput canonical instance 则解析为
 `TMEM_FRAGMENT / SMEM_DESCRIPTOR`。这组结果说明 SS/TS 应从 MMA fragment 类型确认，不能只
 看 Schedule Tag 的命名。
 
@@ -202,6 +204,12 @@ nvdisasm function，其中只有一个是目标 entry，另外三个 guardrail �
 完整产物保存在忽略目录，Git 中保存函数摘录、resolved type、合同报告、hash 和 journal。
 随后从源码重新编译、重提取、重反汇编的 deep replay 6/6 通过。
 
+Phase 2 的 34 条结果随后沿同一路径逐项 deep replay，34/34 通过。合计 40/40 的正式结果都
+重新经历了类型 witness 编译、dual-code FATBIN 生成、PTX/CUBIN 提取和函数级反汇编核对；
+其中 39 条闭合为 `STATIC_PASS`，FastFP32 canonical instance 仍按同一目标函数里的
+9 个 trap、0 条 Tensor MMA 复现为 `UNSUPPORTED_SM110A`。这只证明静态产物可复现，不是
+Thor runtime、数值或性能验证。
+
 ## 9. 59 个显式 Schedule Tag 的覆盖合同
 
 固定 CUTLASS commit 在 `dispatch_policy.hpp` 中声明了 59 个显式 SM100 Tensor Core
@@ -215,16 +223,16 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 
 机器可读清单位于
 [`sm110a_tensor_schedule_tags.json`](../tests/codegen/sm110a_tensor_schedule_tags.json)。
-当前状态由清单和 result record 联合重算。6 个历史 Tag 已经由新的 canonical instance 完成
-fresh 重放，其余 53 个仍未执行：
+当前状态由清单和 result record 联合重算。Phase 1 的 6 个 control 与 Phase 2 的 34 个
+official C++ instance 已经形成正式终态；其余 19 个 generator/source-derived Tag 仍未执行：
 
 | 清单状态 | 数量 |
 |---|---:|
-| `NOT_CHECKED` | 53 |
+| `NOT_CHECKED` | 19 |
 | `HISTORICAL_STATIC_PASS` | 0 |
-| `STATIC_PASS` | 6 |
+| `STATIC_PASS` | 39 |
 | `EXPECTED_STATIC_REJECT` | 0 |
-| `UNSUPPORTED_SM110A` | 0 |
+| `UNSUPPORTED_SM110A` | 1 |
 | `UNEXPECTED_COMPILE_FAIL` | 0 |
 | `ATTRIBUTION_FAIL` | 0 |
 
@@ -245,6 +253,16 @@ fresh 重放，其余 53 个仍未执行：
 59 个显式 Tag 的基准实例来源分成四类：官方 C++ 代码中的显式或条件式引用、官方注释中的
 Auto 候选映射、可从生成器还原的配置，以及沿一个明确变化轴得到的源码派生项。这组数字只
 说明待编译实例从哪里来，不表示任何一项已经被 `sm_110a` 编译器接受。
+
+Phase 2 已逐项重放 39 个 official C++ 来源中的剩余 34 项。加上 Phase 1 的 5 个 official
+control，这一来源类现为 38 个 `STATIC_PASS` 和 1 个 `UNSUPPORTED_SM110A`。后者是
+`KernelTmaWarpSpecialized2SmFastFP32SmemSm100` 的一个 FP32/9xBF16 canonical instance：
+类型链解析到 `SM100_MMA_F16BF16_2x1SM_SS_SCALED`，但固定 CUTLASS 只为 SM100A/SM103A
+定义 `CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED`，SM110A 分支没有该 macro。目标函数
+因此出现 9 个 PTX `brkpt` 和 9 个 SASS `BPT.TRAP`，Tensor MMA 为 0。编译、CUBIN、唯一
+symbol 和函数绑定都成功，只有 `FUNCTION_CONTRACT` 被拒绝；同工具链的 Dense 2SM
+`STATIC_PASS` 作为 control。这个结论只属于该固定 FastFP32 实例，不等于 Tag 的全部类型域
+都不支持。
 
 其中，`KernelTmaWarpSpecialized1SmMxf4Sm100` 的来源线索只有 Auto 注释映射；注释本身不
 计入 `STATIC_PASS`。Phase 1 另行固定了一个显式 Mxf4 instance，并用完整类型链和函数产物
@@ -303,13 +321,16 @@ Bias+ReLU 和 tail 等历史变体没有因此自动升级。`runtime_correct=0`
 
 ## 11. 当前结果能够支持的结论
 
-现在既有横向历史宽度，也有六条纵向 fresh 闭环。对这六个 canonical instance，可以确认
-Builder 输入、`CollectiveOp`、Dispatch、Stage、Copy/Layout、TiledMMA、Atom 和同一目标
-函数内 PTX/SASS 的对应关系；六份结果还通过了从源码开始的独立 deep replay。
+现在有 40 条显式 Tag 的 fresh 静态终态。33 个 Phase 2 `STATIC_PASS` 覆盖 ordinary/PtrArray
+Dense、mixed TMA+cp.async、Blockwise、Planar、MixedInput、ordinary Sparse，以及 dense/
+pointer/sparse block-scaled；ProblemShape 分布为 18 个 dense、8 个 array、4 个 grouped 和
+4 个 MoE。实际 MMA operand source 中，26 项为 SMEM/SMEM，7 项为 sparse-SMEM/SMEM，
+MixedInput 一项为 TMEM/SMEM。Mainloop Stage 在固定实例间从 2 到 24，不存在从 Schedule
+名称直接推出 Stage 数的通用公式。
 
-结论仍以实例为单位，不能写成“这 6 个 Tag 的全部类型、Tile 和 Builder 分支都已覆盖”。
-其余 53 个显式 Tag 与 11 个 Auto 对照项仍未形成正式终态；下一阶段从 39 个有官方 C++
-显式或条件式引用的 Tag 开始扩展。整个文档仍没有 Thor launch、数值或性能证据。
+结论仍以实例为单位，不能写成“这 40 个 Tag 的全部类型、Tile、Cluster 和 Builder 分支都
+已覆盖”。其余 19 个显式 Tag 与 11 个 Auto 对照项仍未形成正式终态。整个文档仍没有
+Thor launch、数值或性能证据。
 
 ## 附录 A：59 个显式 Schedule Tag
 
@@ -318,47 +339,47 @@ Builder 输入、`CollectiveOp`、Dispatch、Stage、Copy/Layout、TiledMMA、At
 
 ### A.1 普通 Dense（5）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelTmaWarpSpecialized1SmSm100` | `STATIC_PASS` | `dense_f16_1sm_p128`、`dense_bf16_1sm_p128`、`dense_fp8_1sm_p128`、`epilogue_bias_relu_f16_p128`、`tail_dense_f16_p130x129x127` |
 | `KernelTmaWarpSpecialized2SmSm100` | `STATIC_PASS` | `dense_f16_2sm_p256x128x128` |
-| `KernelWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
-| `KernelMixedTmaCpAsyncWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
-| `KernelMixedTmaCpAsyncWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
+| `KernelWarpSpecialized1SmSm100` | `STATIC_PASS` | — |
+| `KernelMixedTmaCpAsyncWarpSpecialized1SmSm100` | `STATIC_PASS` | — |
+| `KernelMixedTmaCpAsyncWarpSpecialized2SmSm100` | `STATIC_PASS` | — |
 
 ### A.2 Pointer-array Dense（2）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelPtrArrayTmaWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
+| `KernelPtrArrayTmaWarpSpecialized1SmSm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized2SmSm100` | `STATIC_PASS` | — |
 
 ### A.3 Blockwise（4）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelTmaWarpSpecializedBlockwise1SmSm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecializedBlockwise2SmSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecializedBlockwise1SmSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecializedBlockwise2SmSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecializedBlockwise1SmSm100` | `STATIC_PASS` | — |
+| `KernelTmaWarpSpecializedBlockwise2SmSm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecializedBlockwise1SmSm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecializedBlockwise2SmSm100` | `STATIC_PASS` | — |
 
 ### A.4 Planar Complex（4）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelTmaWarpSpecialized1SmPlanarComplexSm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmPlanarComplexSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized1SmPlanarComplexSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized2SmPlanarComplexSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized1SmPlanarComplexSm100` | `STATIC_PASS` | — |
+| `KernelTmaWarpSpecialized2SmPlanarComplexSm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized1SmPlanarComplexSm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized2SmPlanarComplexSm100` | `STATIC_PASS` | — |
 
 ### A.5 Fast FP32 / 9xBF16（8）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelTmaWarpSpecialized1SmFastFP32Sm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized2SmFastFP32Sm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized1SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized2SmFastFP32SmemSm100` | `UNSUPPORTED_SM110A` | — |
 | `KernelPtrArrayTmaWarpSpecialized1SmFastFP32Sm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmFastFP32Sm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized1SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
@@ -366,16 +387,16 @@ Builder 输入、`CollectiveOp`、Dispatch、Stage、Copy/Layout、TiledMMA、At
 
 ### A.6 Mixed-input（4）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelTmaWarpSpecialized1SmMixedInputSm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized1SmMixedInputSmemSm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmMixedInputSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized2SmMixedInputSm100` | `STATIC_PASS` | — |
 | `KernelTmaWarpSpecialized2SmMixedInputSmemSm100` | `NOT_CHECKED` | — |
 
 ### A.7 Interleaved Complex TF32（4）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized2SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
@@ -384,51 +405,51 @@ Builder 输入、`CollectiveOp`、Dispatch、Stage、Copy/Layout、TiledMMA、At
 
 ### A.8 普通 Sparse（2）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelSparseTmaWarpSpecialized1SmSm100` | `NOT_CHECKED` | — |
-| `KernelSparseTmaWarpSpecialized2SmSm100` | `NOT_CHECKED` | — |
+| `KernelSparseTmaWarpSpecialized1SmSm100` | `STATIC_PASS` | — |
+| `KernelSparseTmaWarpSpecialized2SmSm100` | `STATIC_PASS` | — |
 
 ### A.9 Dense Block-scaled（10）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelTmaWarpSpecialized1SmBlockScaledSm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmBlockScaledSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized1SmBlockScaledSm100` | `STATIC_PASS` | — |
+| `KernelTmaWarpSpecialized2SmBlockScaledSm100` | `STATIC_PASS` | — |
 | `KernelTmaWarpSpecialized1SmNvf4Sm100` | `STATIC_PASS` | `bs_nvfp4_1sm_p128x128x256` |
-| `KernelTmaWarpSpecialized2SmNvf4Sm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized2SmNvf4Sm100` | `STATIC_PASS` | — |
 | `KernelTmaWarpSpecialized1SmMxf4Sm100` | `STATIC_PASS` | `bs_mxfp4_1sm_p128x128x256` |
 | `KernelTmaWarpSpecialized2SmMxf4Sm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized1SmMxf8f6f4Sm100` | `STATIC_PASS` | `bs_mxfp8_1sm_p128` |
-| `KernelTmaWarpSpecialized2SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
-| `KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100` | `NOT_CHECKED` | — |
-| `KernelMixedTmaCpAsyncWarpSpecialized2SmBlockScaledSm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized2SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
+| `KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100` | `STATIC_PASS` | — |
+| `KernelMixedTmaCpAsyncWarpSpecialized2SmBlockScaledSm100` | `STATIC_PASS` | — |
 
 ### A.10 Pointer-array Block-scaled（8）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelPtrArrayTmaWarpSpecialized1SmBlockScaledSm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmBlockScaledSm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized1SmNvf4Sm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized2SmNvf4Sm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized1SmMxf4Sm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized2SmMxf4Sm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
-| `KernelPtrArrayTmaWarpSpecialized2SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
+| `KernelPtrArrayTmaWarpSpecialized1SmNvf4Sm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized2SmNvf4Sm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized1SmMxf4Sm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized2SmMxf4Sm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized1SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
+| `KernelPtrArrayTmaWarpSpecialized2SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
 
 ### A.11 Sparse Block-scaled（8）
 
-| Schedule Tag | 当前状态 | 已有关联实例 |
+| Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
 | `KernelSparseTmaWarpSpecialized1SmBlockScaledSm100` | `NOT_CHECKED` | — |
 | `KernelSparseTmaWarpSpecialized2SmBlockScaledSm100` | `NOT_CHECKED` | — |
-| `KernelSparseTmaWarpSpecialized1SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
-| `KernelSparseTmaWarpSpecialized2SmMxf8f6f4Sm100` | `NOT_CHECKED` | — |
+| `KernelSparseTmaWarpSpecialized1SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
+| `KernelSparseTmaWarpSpecialized2SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
 | `KernelSparseTmaWarpSpecialized1SmNvf4Sm100` | `STATIC_PASS` | `sparse_bs_nvfp4_1sm_p128x128x256` |
-| `KernelSparseTmaWarpSpecialized2SmNvf4Sm100` | `NOT_CHECKED` | — |
-| `KernelSparseTmaWarpSpecialized1SmMxf4Sm100` | `NOT_CHECKED` | — |
-| `KernelSparseTmaWarpSpecialized2SmMxf4Sm100` | `NOT_CHECKED` | — |
+| `KernelSparseTmaWarpSpecialized2SmNvf4Sm100` | `STATIC_PASS` | — |
+| `KernelSparseTmaWarpSpecialized1SmMxf4Sm100` | `STATIC_PASS` | — |
+| `KernelSparseTmaWarpSpecialized2SmMxf4Sm100` | `STATIC_PASS` | — |
 
 性能和 runtime correctness 使用独立分母，不由这张静态表推导。
 

@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "instance_id": "blockwise_fp8_1sm_g2x2x32",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_51MainloopSm100TmaUmmaWarpSpecializedBlockwiseScalingILi5ELi5ELi4ENS5_IJNS4_1CILi1EEESB_SB_EEENS_4arch5Sm100EEENS5_IJNSA_ILi128EEESG_SG_EEENS_12float_e4m3_tENS5_IJNS5_IJlSB_lEEENS4_6LayoutINS5_IJNS5_IJNSA_ILi2EEEiEEENS5_IJNSA_ILi32EEEiEEEiEEENS5_IJNS5_IJNSA_ILi0EEESB_EEENS5_IJSQ_iEEEiEEEEEEEESI_NS5_IJSJ_NSK_ISP_NS5_IJSS_SR_iEEEEEEEENS4_8TiledMMAINS4_8MMA_AtomIJNS4_19SM100_MMA_F8F6F4_SSISI_SI_fLi128ELi128ELNS4_4UMMA5MajorE0ELS13_0ELNS12_7ScaleInE0ELS14_0EEEEEENSK_ISC_NS5_IJSQ_SQ_SQ_EEEEENS5_IJNS4_10UnderscoreES19_S19_EEEEENS5_IJNS4_13SM90_TMA_LOADENS4_9TiledCopyINS4_9Copy_AtomIJNS4_25SM80_CP_ASYNC_CACHEALWAYSImmEEfEEENSK_INS5_IJSN_SL_EEENS5_IJSL_SB_EEEEENS5_IJNSA_ILi64EEEEEEEEEEENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi8EEENSK_INS5_IJNSA_ILi8EEESG_EEENS5_IJSG_SB_EEEEEEEvNS4_8identityENS5_IJS1C_NS1D_INS1E_IJNS1F_IffEEfEEENSK_INS5_IJSN_SB_EEENS5_IJSB_SQ_EEEEENS5_IJSN_EEEEEEEES1Y_vS1Z_EENS_8epilogue10collective18CollectiveEpilogueINS29_23Sm100TmaWarpSpecializedILi2ELi2ELi64ELb0ELb0EEEJSH_NS5_IJNSK_ISG_SB_EENSK_IS1L_SB_EEEEESI_SJ_SI_SJ_NS29_6fusion15FusionCallbacksIS2D_NS2H_17LinearCombinationISI_fSI_fLNS_15FloatRoundStyleE2EEESH_S2G_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xES1C_NS1P_INS1Q_ILi2ELi4ELi3EEES1T_NSK_INS5_IJS1U_S1L_EEENS5_IJS1L_SB_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES2V_S2X_S2X_EEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4",
+        "tcgen05.mma.cta_group::1.kind::f8f6f4"
+      ]
+    },
+    {
+      "id": "opposite_cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 6,
+      "matched_opcodes": [
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64",
+        "LDTM.X64"
+      ]
+    },
+    {
+      "id": "mma",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA",
+        "UTCQMMA"
+      ]
+    },
+    {
+      "id": "mma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 1,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4",
+      "tcgen05.mma.cta_group::1.kind::f8f6f4"
+    ],
+    "sass_mma_opcodes": [
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA",
+      "UTCQMMA"
+    ],
+    "errors": []
+  }
+}

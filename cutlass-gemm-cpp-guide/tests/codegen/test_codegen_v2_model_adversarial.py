@@ -21,6 +21,7 @@ from codegen_v2.model import (  # noqa: E402
     explicit_subject_inventory_sha256,
     canonical_json_bytes,
     contract_sha256,
+    evaluate_arch_guard_patterns,
     expected_execution_plan,
     expected_actual_docker_argv,
     fingerprint_payload,
@@ -32,6 +33,7 @@ from codegen_v2.model import (  # noqa: E402
     validate_artifact_manifest,
     validate_fingerprint,
     validate_instance,
+    validate_journal_semantics,
     validate_device_kernel_symbol,
     validate_result,
     validate_static_pass_evidence,
@@ -96,6 +98,11 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
     for schema in (ROOT / "tests/codegen/schemas").glob("*.json"):
         shutil.copy2(schema, root / "tests/codegen/schemas" / schema.name)
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    for source_range in contract["arch_guard_fallback_contract"]["source_constraints"]:
+        source = ROOT / "third_party/cutlass" / source_range["path"]
+        target = root / "third_party/cutlass" / source_range["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
     for component in contract["harness_components"]:
         target = root / component
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -136,7 +143,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
         encoding="utf-8",
     )
     anchor_path = root / "third_party/cutlass/reference.cpp"
-    anchor_path.parent.mkdir(parents=True)
+    anchor_path.parent.mkdir(parents=True, exist_ok=True)
     anchor_path.write_text("KernelFixtureSm100\n", encoding="utf-8")
     inventory_path = root / "tests/codegen/sm110a_schedule_reference_inventory.json"
     write_json(
@@ -667,6 +674,146 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
     }
 
 
+def replace_guard_artifact(root: Path, artifacts: dict, artifact_id: str, content: bytes) -> Path:
+    item = next(value for value in artifacts["items"] if value["artifact_id"] == artifact_id)
+    path = root / item["path"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    item["sha256"] = sha256_file(path)
+    item["size_bytes"] = path.stat().st_size
+    return path
+
+
+def make_guard_direct_fixture():
+    root, paths = make_fixture()
+    result = copy.deepcopy(load_strict_json(paths["result"]))
+    instance = copy.deepcopy(load_strict_json(paths["instance"]))
+    fingerprint = copy.deepcopy(load_strict_json(paths["fingerprint"]))
+    artifacts = copy.deepcopy(load_strict_json(paths["manifest"]))
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    guard = contract["arch_guard_fallback_contract"]
+    guard_dir = root / "guard-direct"
+    guard_dir.mkdir()
+
+    def relocate(artifact_id: str, content: bytes) -> Path:
+        item = next(value for value in artifacts["items"] if value["artifact_id"] == artifact_id)
+        path = guard_dir / artifact_id
+        path.write_bytes(content)
+        item["path"] = path.relative_to(root).as_posix()
+        item["sha256"] = sha256_file(path)
+        item["size_bytes"] = path.stat().st_size
+        return path
+
+    target_symbol = result["evidence"]["function_binding"]["symbol"]
+    ptx_body = "\n".join("  brkpt;" for _ in range(9))
+    ptx_text = (
+        ".version 9.0\n.target sm_110a\n.address_size 64\n"
+        f".entry {target_symbol}()\n{{\n{ptx_body}\n}}\n"
+    )
+    ptx_function = parse_ptx_entries(ptx_text)[0]
+    sass_function = {
+        "function-name": target_symbol,
+        "start": 0,
+        "length": 144,
+        "sass-instructions": [
+            {"opcode": "BPT.TRAP", "operands": ""} for _ in range(9)
+        ],
+    }
+    nvjson = json.dumps(
+        [
+            {
+                "SM": {"version": {"major": 11, "minor": 0}},
+                ".note.nv.tkinfo": {"tki_toolOptions": "-arch sm_110a -m 64 "},
+            },
+            [sass_function],
+        ],
+        separators=(",", ":"),
+    ).encode()
+    type_output = load_strict_json(paths["type_output"])
+    type_output["instance_id"] = "guard_fixture"
+    guarded_atom = (
+        "cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS_SCALED<half,half,float,256,128>>"
+    )
+    type_output["resolved_types"]["mma_atom"] = guarded_atom
+    type_output["resolved_types"]["tiled_mma_atom"] = guarded_atom
+    type_bytes = (json.dumps(type_output, indent=2) + "\n").encode()
+    relocate("type_output", type_bytes)
+    relocate("run_type_witness_stdout", type_bytes)
+    relocate("ptx_full", ptx_text.encode())
+    relocate("ptx_target", (ptx_function.text + "\n").encode())
+    relocate("nvdisasm_json", nvjson)
+    relocate("nvdisasm_json_stdout", nvjson)
+    sass_bytes = (json.dumps(sass_function, separators=(",", ":")) + "\n").encode()
+    relocate("sass_target", sass_bytes)
+
+    ptx_results = evaluate_arch_guard_patterns(
+        ptx_function.opcodes, guard["ptx"], "fixture.guard.ptx"
+    )
+    sass_opcodes = tuple(
+        value["opcode"].upper() for value in sass_function["sass-instructions"]
+    )
+    sass_results = evaluate_arch_guard_patterns(
+        sass_opcodes, guard["sass"], "fixture.guard.sass"
+    )
+    control_ref = reference("fixture.fixture.a001", root, paths["result"])
+    function_binding = {
+        **result["evidence"]["function_binding"],
+        "nvdisasm_total_function_count": 1,
+    }
+    guard_evidence = {
+        "kind": "UNSUPPORTED_SM110A",
+        "reason": guard["reason"],
+        "failure": {
+            "layer": guard["failure_layer"],
+            "domain": "TARGET_ARCHITECTURE",
+            "reason": guard["reason"],
+        },
+        "type_witness_artifact_id": "type_output",
+        "resolved_stage": copy.deepcopy(result["evidence"]["resolved_stage"]),
+        "function_binding": function_binding,
+        "guard_atom": guard["guard_atom"],
+        "guard_macro": guard["guard_macro"],
+        "ptx_guard_results": ptx_results,
+        "sass_guard_results": sass_results,
+        "source_constraints": copy.deepcopy(guard["source_constraints"]),
+        "legal_control": {
+            "result_ref": control_ref,
+            "relation": guard["control_relation"],
+            "controlled_delta": copy.deepcopy(guard["controlled_delta"]),
+        },
+    }
+    report = {
+        "schema_version": 1,
+        "instance_id": "guard_fixture",
+        "symbol": target_symbol,
+        "ptx_target": "sm_110a",
+        "sass_arch": "sm_110a",
+        "nvdisasm_total_function_count": 1,
+        "terminal_status": "UNSUPPORTED_SM110A",
+        "reason": guard["reason"],
+        "guard_atom": guard["guard_atom"],
+        "guard_macro": guard["guard_macro"],
+        "ptx_guard_results": ptx_results,
+        "sass_guard_results": sass_results,
+        "source_constraints": copy.deepcopy(guard["source_constraints"]),
+        "legal_control": copy.deepcopy(guard_evidence["legal_control"]),
+    }
+    relocate("contract_report", (json.dumps(report, indent=2) + "\n").encode())
+    result["result_id"] = "guard.fixture.a001"
+    result["attempt_id"] = "guard.fixture.a001"
+    result["status"] = "UNSUPPORTED_SM110A"
+    result["evidence"] = guard_evidence
+    instance["instance_id"] = "guard_fixture"
+    instance["hypothesis"] = {
+        "expected_outcome": "UNSUPPORTED_SM110A",
+        "failure_domain": "TARGET_ARCHITECTURE",
+        "failure_layer": "FUNCTION_CONTRACT",
+        "diagnostic_patterns": [],
+        "control_instance_id": "fixture",
+    }
+    return root, paths, result, instance, fingerprint, artifacts
+
+
 def require_rejected(name: str, expected: str, mutate) -> None:
     root, paths = make_fixture()
     try:
@@ -691,6 +838,35 @@ def require_direct_rejected(name: str, expected: str, callback) -> None:
                 raise AssertionError(f"{name}: wrong direct rejection: {error}") from error
         else:
             raise AssertionError(f"{name}: deliberate direct corruption was accepted")
+    finally:
+        shutil.rmtree(root)
+
+
+def validate_guard_direct(
+    root, result, instance, fingerprint, artifacts, *, require_archive: bool = True
+) -> None:
+    validate_static_pass_evidence(
+        root,
+        result,
+        instance,
+        artifacts,
+        require_archive=require_archive,
+        guard_fallback=True,
+        subject_fingerprint=fingerprint,
+    )
+
+
+def require_guard_rejected(name: str, expected: str, mutate) -> None:
+    root, paths, result, instance, fingerprint, artifacts = make_guard_direct_fixture()
+    try:
+        mutate(root, paths, result, instance, fingerprint, artifacts)
+        try:
+            validate_guard_direct(root, result, instance, fingerprint, artifacts)
+        except ContractError as error:
+            if expected not in str(error):
+                raise AssertionError(f"{name}: wrong guard rejection: {error}") from error
+        else:
+            raise AssertionError(f"{name}: forged architecture guard was accepted")
     finally:
         shutil.rmtree(root)
 
@@ -858,6 +1034,11 @@ def main() -> int:
         (
             "cutlass::epilogue::fusion::LinearCombination<signed char,float,signed char,float,(cutlass::FloatRoundStyle)2>",
             "cutlass::epilogue::fusion::LinearCombination<int8_t,float,int8_t,float>",
+            True,
+        ),
+        (
+            "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct<cutlass::epilogue::thread::Clamp,cutlass::half_t,float,cutlass::half_t,cutlass::half_t,float,8,4,(cutlass::FloatRoundStyle)2>",
+            "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct<cutlass::epilogue::thread::Clamp,cutlass::half_t,float,cutlass::half_t,cutlass::half_t,float>",
             True,
         ),
     ]
@@ -1888,6 +2069,246 @@ def main() -> int:
         direct_operand_source_spoof,
     )
 
+    def unsupported_wrong_domain(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["hypothesis"] = {
+            "expected_outcome": "UNSUPPORTED_SM110A",
+            "failure_domain": "CONFIGURATION_LEGALITY",
+            "failure_layer": "FUNCTION_CONTRACT",
+            "diagnostic_patterns": [],
+            "control_instance_id": "missing_control",
+        }
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "unsupported_wrong_domain",
+        "requires TARGET_ARCHITECTURE",
+        unsupported_wrong_domain,
+    )
+
+    def unsupported_wrong_layer(root: Path, paths: dict[str, Path]) -> None:
+        instance = load_strict_json(paths["instance"])
+        instance["hypothesis"] = {
+            "expected_outcome": "UNSUPPORTED_SM110A",
+            "failure_domain": "TARGET_ARCHITECTURE",
+            "failure_layer": "ATOM",
+            "diagnostic_patterns": [],
+            "control_instance_id": "missing_control",
+        }
+        write_json(paths["instance"], instance)
+        validate_instance(root, paths["instance"])
+
+    require_direct_rejected(
+        "unsupported_wrong_layer",
+        "requires FUNCTION_CONTRACT",
+        unsupported_wrong_layer,
+    )
+
+    guard_root, guard_paths, guard_result, guard_instance, guard_fingerprint, guard_artifacts = (
+        make_guard_direct_fixture()
+    )
+    try:
+        validate_guard_direct(
+            guard_root,
+            guard_result,
+            guard_instance,
+            guard_fingerprint,
+            guard_artifacts,
+        )
+        validate_guard_direct(
+            guard_root,
+            guard_result,
+            guard_instance,
+            guard_fingerprint,
+            guard_artifacts,
+            require_archive=False,
+        )
+    finally:
+        shutil.rmtree(guard_root)
+
+    journal_root, journal_paths = make_fixture()
+    try:
+        journal_events = [
+            json.loads(line)
+            for line in journal_paths["journal"].read_text(encoding="utf-8").splitlines()
+        ]
+        journal_events[-1]["payload"]["terminal_pipeline_state"] = "UNSUPPORTED_SM110A"
+        validate_journal_semantics(
+            journal_root,
+            journal_events,
+            load_strict_json(journal_paths["fingerprint"]),
+            load_strict_json(journal_paths["manifest"]),
+            journal_paths["manifest"],
+            "UNSUPPORTED_SM110A",
+        )
+    finally:
+        shutil.rmtree(journal_root)
+
+    def guard_fake_trap(root, paths, result, instance, fingerprint, artifacts):
+        symbol = result["evidence"]["function_binding"]["symbol"]
+        body = "\n".join("  brkpt;" for _ in range(8))
+        ptx = (
+            ".version 9.0\n.target sm_110a\n.address_size 64\n"
+            f".entry {symbol}()\n{{\n{body}\n}}\n"
+        )
+        replace_guard_artifact(root, artifacts, "ptx_full", ptx.encode())
+        replace_guard_artifact(
+            root,
+            artifacts,
+            "ptx_target",
+            (parse_ptx_entries(ptx)[0].text + "\n").encode(),
+        )
+
+    require_guard_rejected(
+        "guard_fake_trap_count", "arch_guard_brkpt count 8", guard_fake_trap
+    )
+
+    def guard_helper_pollution(root, paths, result, instance, fingerprint, artifacts):
+        symbol = result["evidence"]["function_binding"]["symbol"]
+        target = {
+            "function-name": symbol,
+            "start": 0,
+            "length": 16,
+            "sass-instructions": [{"opcode": "NOP", "operands": ""}],
+        }
+        helper = {
+            "function-name": "helper_guard",
+            "start": 16,
+            "length": 144,
+            "sass-instructions": [
+                {"opcode": "BPT.TRAP", "operands": ""} for _ in range(9)
+            ],
+        }
+        nvjson = json.dumps(
+            [
+                {
+                    "SM": {"version": {"major": 11, "minor": 0}},
+                    ".note.nv.tkinfo": {"tki_toolOptions": "-arch sm_110a -m 64 "},
+                },
+                [target, helper],
+            ],
+            separators=(",", ":"),
+        ).encode()
+        replace_guard_artifact(root, artifacts, "nvdisasm_json", nvjson)
+        replace_guard_artifact(root, artifacts, "nvdisasm_json_stdout", nvjson)
+        replace_guard_artifact(
+            root,
+            artifacts,
+            "sass_target",
+            (json.dumps(target, separators=(",", ":")) + "\n").encode(),
+        )
+
+    require_guard_rejected(
+        "guard_helper_trap_pollution",
+        "arch_guard_trap count 0",
+        guard_helper_pollution,
+    )
+
+    def guard_mma_still_present(root, paths, result, instance, fingerprint, artifacts):
+        symbol = result["evidence"]["function_binding"]["symbol"]
+        body = "\n".join("  brkpt;" for _ in range(9))
+        body += "\n  tcgen05.mma.cta_group::2.kind::f16;"
+        ptx = (
+            ".version 9.0\n.target sm_110a\n.address_size 64\n"
+            f".entry {symbol}()\n{{\n{body}\n}}\n"
+        )
+        replace_guard_artifact(root, artifacts, "ptx_full", ptx.encode())
+        replace_guard_artifact(
+            root,
+            artifacts,
+            "ptx_target",
+            (parse_ptx_entries(ptx)[0].text + "\n").encode(),
+        )
+
+    require_guard_rejected(
+        "guard_mma_still_present",
+        "tensor_mma_absent count 1",
+        guard_mma_still_present,
+    )
+
+    def guard_source_hash_drift(root, paths, result, instance, fingerprint, artifacts):
+        source = (
+            root
+            / "third_party/cutlass"
+            / result["evidence"]["source_constraints"][0]["path"]
+        )
+        text = source.read_text(encoding="utf-8")
+        source.write_text(
+            text.replace(
+                "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
+                "SM100_MMA_F16BF16_2x1SM_SS_SCALED_DRIFT",
+                1,
+            ),
+            encoding="utf-8",
+        )
+
+    require_guard_rejected(
+        "guard_source_hash_drift",
+        "source range SHA-256 mismatch",
+        guard_source_hash_drift,
+    )
+
+    def guard_control_nonpass(root, paths, result, instance, fingerprint, artifacts):
+        bad = load_strict_json(paths["result"])
+        bad["status"] = "UNSUPPORTED_SM110A"
+        bad_path = root / "evidence/codegen-sm110a-v2/results/nonpass.control.a001.json"
+        write_json(bad_path, bad)
+        result["evidence"]["legal_control"]["result_ref"] = reference(
+            "nonpass.control.a001", root, bad_path
+        )
+        report_item = next(
+            value
+            for value in artifacts["items"]
+            if value["artifact_id"] == "contract_report"
+        )
+        report = load_strict_json(root / report_item["path"])
+        report["legal_control"] = copy.deepcopy(result["evidence"]["legal_control"])
+        replace_guard_artifact(
+            root,
+            artifacts,
+            "contract_report",
+            (json.dumps(report, indent=2) + "\n").encode(),
+        )
+
+    require_guard_rejected(
+        "guard_control_nonpass",
+        "control is not STATIC_PASS",
+        guard_control_nonpass,
+    )
+
+    def guard_control_cross_environment(root, paths, result, instance, fingerprint, artifacts):
+        fingerprint["environment"] = copy.deepcopy(fingerprint["environment"])
+        fingerprint["environment"]["allowed"]["LC_ALL"] = "forged"
+
+    require_guard_rejected(
+        "guard_control_cross_environment",
+        "control uses a different environment",
+        guard_control_cross_environment,
+    )
+
+    def direct_guard_status_hypothesis_mismatch(root: Path, paths: dict[str, Path]) -> None:
+        guard_values = make_guard_direct_fixture()
+        try:
+            guard_value = guard_values[2]
+            value = load_strict_json(paths["result"])
+            value["status"] = "UNSUPPORTED_SM110A"
+            value["evidence"] = guard_value["evidence"]
+            for item in value["layer_outcomes"]:
+                item["state"] = (
+                    "REJECTED" if item["layer"] == "FUNCTION_CONTRACT" else "RESOLVED"
+                )
+            write_json(paths["result"], value)
+            validate_result(root, paths["result"])
+        finally:
+            shutil.rmtree(guard_values[0])
+
+    require_direct_rejected(
+        "guard_status_hypothesis_mismatch",
+        "result status differs from the frozen instance hypothesis",
+        direct_guard_status_hypothesis_mismatch,
+    )
+
     def direct_forged_fusion_defaults(root: Path, paths: dict[str, Path]) -> None:
         accepted = cpp_type_equivalent(
             "cutlass::epilogue::fusion::LinearCombination<signed char,float,forged::C,forged::Scalar,forged::Round>",
@@ -1904,7 +2325,172 @@ def main() -> int:
         direct_forged_fusion_defaults,
     )
 
-    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=84 positive=7")
+    per_row_declared = (
+        "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct<"
+        "cutlass::epilogue::thread::Clamp,cutlass::half_t,float,"
+        "cutlass::half_t,cutlass::half_t,float>"
+    )
+
+    def reject_forged_per_row_defaults(name: str, alignment_bias: int, alignment_scalar: int, round_style: int):
+        def callback(root: Path, paths: dict[str, Path]) -> None:
+            actual = (
+                "cutlass::epilogue::fusion::PerRowLinCombPerRowBiasEltAct<"
+                "cutlass::epilogue::thread::Clamp,cutlass::half_t,float,"
+                "cutlass::half_t,cutlass::half_t,float,"
+                f"{alignment_bias},{alignment_scalar},(cutlass::FloatRoundStyle){round_style}>"
+            )
+            if cpp_type_equivalent(
+                actual,
+                per_row_declared,
+                allow_trailing_default_arguments=True,
+            ):
+                raise ContractError(f"forged PerRow defaults {name} were accepted")
+            raise ContractError(f"forged PerRow defaults {name} were rejected")
+
+        require_direct_rejected(
+            f"forged_per_row_{name}",
+            "were rejected",
+            callback,
+        )
+
+    reject_forged_per_row_defaults("bias_alignment", 7, 4, 2)
+    reject_forged_per_row_defaults("scalar_alignment", 8, 5, 2)
+    reject_forged_per_row_defaults("round_style", 8, 4, 1)
+
+    def prepare_blockwise_alias_fixture(
+        root: Path, paths: dict[str, Path], pointer_mode: str = "single"
+    ):
+        result, instance, artifacts, witness = load_static_fixture(root, paths)
+        instance["subject"]["group"] = "blockwise"
+        instance["declared_config"]["mechanism"]["pointer_mode"] = pointer_mode
+        pointer = "*" if pointer_mode == "array" else ""
+        instance["declared_config"]["builder_contract"]["layout_a"] = (
+            f"cute::tuple<LayoutA{pointer},LayoutSFA{pointer}>"
+        )
+        instance["declared_config"]["builder_contract"]["layout_b"] = (
+            f"cute::tuple<LayoutB{pointer},LayoutSFB{pointer}>"
+        )
+        instance["declared_config"]["mechanism"]["blockwise"] = {
+            "enabled": True,
+            "granularity_m": 2,
+            "granularity_n": 2,
+            "granularity_k": 32,
+            "major_a": "MN",
+            "major_b": "K",
+            "element_sfa": "float",
+            "element_sfb": "float",
+        }
+        dispatch = (
+            "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecializedBlockwiseScaling<1>"
+        )
+        witness["resolved_types"]["dispatch_policy"] = dispatch
+        witness["resolved_types"]["mainloop_dispatch_policy"] = dispatch
+        layout_sfa = "cute::Layout<cute::tuple<cute::C<2>,int>,cute::tuple<cute::C<0>,cute::C<1>>>"
+        layout_sfb = "cute::Layout<cute::tuple<cute::C<32>,int>,cute::tuple<cute::C<0>,cute::C<1>>>"
+        witness["resolved_types"]["builder_layout_a"] = (
+            f"cute::tuple<cutlass::layout::RowMajor{pointer},{layout_sfa}{pointer}>"
+        )
+        witness["resolved_types"]["builder_layout_b"] = (
+            f"cute::tuple<cutlass::layout::ColumnMajor{pointer},{layout_sfb}{pointer}>"
+        )
+        witness["resolved_optional_types"] = {
+            "blockwise_scale_config": "cutlass::detail::Sm1xxBlockwiseScaleConfig<2,2,32,(cute::UMMA::Major)1,(cute::UMMA::Major)0>",
+            "blockwise_element_sfa": "float",
+            "blockwise_element_sfb": "float",
+            "blockwise_layout_sfa": layout_sfa + pointer,
+            "blockwise_layout_sfb": layout_sfb + pointer,
+            "blockwise_major_a": "MN",
+            "blockwise_major_b": "K",
+        }
+        witness["resolved_values"].update(
+            {
+                "blockwise_granularity_m": 2,
+                "blockwise_granularity_n": 2,
+                "blockwise_granularity_k": 32,
+            }
+        )
+        return result, instance, artifacts, witness
+
+    block_root, block_paths = make_fixture()
+    try:
+        block_result, block_instance, block_artifacts, block_witness = (
+            prepare_blockwise_alias_fixture(block_root, block_paths)
+        )
+        write_json(block_paths["type_output"], block_witness)
+        validate_static_pass_evidence(
+            block_root,
+            block_result,
+            block_instance,
+            block_artifacts,
+            require_archive=True,
+        )
+    finally:
+        shutil.rmtree(block_root)
+
+    block_array_root, block_array_paths = make_fixture()
+    try:
+        block_array_result, block_array_instance, block_array_artifacts, block_array_witness = (
+            prepare_blockwise_alias_fixture(
+                block_array_root, block_array_paths, pointer_mode="array"
+            )
+        )
+        write_json(block_array_paths["type_output"], block_array_witness)
+        validate_static_pass_evidence(
+            block_array_root,
+            block_array_result,
+            block_array_instance,
+            block_array_artifacts,
+            require_archive=True,
+        )
+    finally:
+        shutil.rmtree(block_array_root)
+
+    def blockwise_alias_wrong_pointer(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = prepare_blockwise_alias_fixture(root, paths)
+        layout_sfa = witness["resolved_optional_types"]["blockwise_layout_sfa"]
+        witness["resolved_types"]["builder_layout_a"] = (
+            f"cute::tuple<cutlass::layout::RowMajor*,{layout_sfa}*>"
+        )
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "blockwise_alias_pointer_mode",
+        "pointer mode differs from the declaration",
+        blockwise_alias_wrong_pointer,
+    )
+
+    def blockwise_alias_array_missing_pointer(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = prepare_blockwise_alias_fixture(
+            root, paths, pointer_mode="array"
+        )
+        witness["resolved_types"]["builder_layout_a"] = witness["resolved_types"][
+            "builder_layout_a"
+        ].replace("*", "")
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "blockwise_alias_array_missing_pointer",
+        "pointer mode differs from the declaration",
+        blockwise_alias_array_missing_pointer,
+    )
+
+    def blockwise_alias_wrong_scale_layout(root: Path, paths: dict[str, Path]) -> None:
+        result, instance, artifacts, witness = prepare_blockwise_alias_fixture(root, paths)
+        witness["resolved_optional_types"]["blockwise_layout_sfa"] = (
+            "cute::Layout<cute::tuple<cute::C<99>,int>,cute::tuple<cute::C<0>,cute::C<1>>>"
+        )
+        write_json(paths["type_output"], witness)
+        validate_static_pass_evidence(root, result, instance, artifacts, require_archive=True)
+
+    require_direct_rejected(
+        "blockwise_alias_scale_layout",
+        "differs from the resolved LayoutSF",
+        blockwise_alias_wrong_scale_layout,
+    )
+
+    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=99 positive=13")
     return 0
 
 

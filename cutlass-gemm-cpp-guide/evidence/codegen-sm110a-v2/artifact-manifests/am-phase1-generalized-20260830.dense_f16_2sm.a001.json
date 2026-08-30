@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "b4f228dc801f952f6d0942291986d6e9472b7efec006d9306451326d489901f3",
+  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
   "artifact_manifest_id": "am-phase1-generalized-20260830.dense_f16_2sm.a001",
   "attempt_id": "phase1-generalized-20260830.dense_f16_2sm.a001",
   "instance_ref": {
     "id": "dense_f16_2sm",
     "path": "tests/codegen/instances/dense_f16_2sm/instance.json",
-    "sha256": "8ec844096a6f4bfae4d252491e2b331df2395fc4ab425410acafc0af4aa65541"
+    "sha256": "610c352f3f8d2541039f8b4a1f84916ae1e0ad4ddc96daaeeaabf22c0476109f"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_f16_2sm-289895148bbe",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_2sm-289895148bbe.json",
-    "sha256": "249539428ecb0cf9fbcd63f5b45d8784d974c195aabfd883320ea54d60c88513"
+    "id": "fp-dense_f16_2sm-11492efef824",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_2sm-11492efef824.json",
+    "sha256": "0fd71d0e49ad00c9e41839978eb527d2d7785eb5c4d19d785f998e0d9419c88f"
   },
   "items": [
     {
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_2sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "601cfa6e63fee1d9c07e9b4ffe0fdf82a7b9dcdfe4829e2056566622fb68f414",
+      "sha256": "2e7a439ac20b7cda8247b022767be2e1e795a9923428b9ba1ae6140a66fd1bbc",
       "size_bytes": 3642,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_2sm.a001",
     "format": "directory-manifest",
-    "sha256": "f7916bb31e16f489242b28049d6c781604d3039cdd56919d97119e1c8378b5c3",
+    "sha256": "759c826ea0e284a63ddf43a20f36e7ac67fa6db47d732252aeb4d82bcd5cb2fb",
     "size_bytes": 2672299
   }
 }
