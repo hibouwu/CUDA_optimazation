@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "freshness_epoch": "sm110a-codegen-v2-20260830",
+  "result_id": "phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "subject": {
+    "kind": "explicit_schedule_tag",
+    "id": "KernelTmaWarpSpecialized2SmFastFP32Sm100",
+    "group": "fast_fp32"
+  },
+  "instance_ref": {
+    "id": "fast_fp32_complex_2sm_generator",
+    "path": "tests/codegen/instances/fast_fp32_complex_2sm_generator/instance.json",
+    "sha256": "a6860cc36e5309bd0e876690697c484fb90a3aa51ee8243b06b36ddd00bfe07b"
+  },
+  "fingerprint_ref": {
+    "id": "fp-fast_fp32_complex_2sm_generator-a212129e16f8",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-fast_fp32_complex_2sm_generator-a212129e16f8.json",
+    "sha256": "68099a11860c81922060e3cc72abf5e9a9eeda9731d96fdfe61b0289631a2f4a"
+  },
+  "attempt_id": "phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001",
+  "journal_ref": {
+    "path": "evidence/codegen-sm110a-v2/journals/phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001.jsonl",
+    "sha256": "6bb85f81e8afbccbc20b8ec951c0d8ddcaed50bedba7d06f4469f866d648550d",
+    "last_seq": 64,
+    "last_event_sha256": "6b2f323623288d2d7407d0a121f8f77bd3d48c26a4621b98c0294a351efa5481"
+  },
+  "artifact_manifest_ref": {
+    "id": "am-phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001",
+    "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001.json",
+    "sha256": "1856ec3aaebb99cf71498588b13aa121b065e2bf0481f4f6590fdf9b40a066bb"
+  },
+  "status": "UNSUPPORTED_SM110A",
+  "layer_outcomes": [
+    {
+      "layer": "DECLARED_BUILDER_CONFIG",
+      "state": "RESOLVED",
+      "witness_artifact_id": "config_source"
+    },
+    {
+      "layer": "BUILDER_SPECIALIZATION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "DISPATCH_POLICY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COLLECTIVE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "STAGE",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "COPY_LAYOUT",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "TILED_MMA",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "ATOM",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "KERNEL_COMPOSITION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "type_output"
+    },
+    {
+      "layer": "PTX_EMISSION",
+      "state": "RESOLVED",
+      "witness_artifact_id": "ptx_full"
+    },
+    {
+      "layer": "SM110A_ASSEMBLY",
+      "state": "RESOLVED",
+      "witness_artifact_id": "cubin"
+    },
+    {
+      "layer": "FUNCTION_BINDING",
+      "state": "RESOLVED",
+      "witness_artifact_id": "elf_symbols"
+    },
+    {
+      "layer": "FUNCTION_CONTRACT",
+      "state": "REJECTED",
+      "witness_artifact_id": "contract_report"
+    }
+  ],
+  "evidence": {
+    "kind": "UNSUPPORTED_SM110A",
+    "reason": "ARCH_GUARD_FALLBACK",
+    "failure": {
+      "layer": "FUNCTION_CONTRACT",
+      "domain": "TARGET_ARCHITECTURE",
+      "reason": "ARCH_GUARD_FALLBACK"
+    },
+    "type_witness_artifact_id": "type_output",
+    "resolved_stage": {
+      "declared_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<EpilogueSharedStorage>",
+      "resolved_policy_cpp": "cutlass::gemm::collective::StageCountAutoCarveout<1>",
+      "stage_count": 8,
+      "scheduler_stages": 3,
+      "accumulator_stages": 4,
+      "load_to_transform_stages": 8,
+      "transform_to_mma_stages": 5,
+      "computation_stages": 0,
+      "transformation_stages": 0
+    },
+    "function_binding": {
+      "target_cpp_entity": "cutlass::device_kernel<GemmKernel>",
+      "selection_policy": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+      "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_42MainloopSm100TmaUmmaWarpSpecializedFastF32ILi8ELi5ELi3ELi4ELi5ELi8ELi1ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi64EEENSA_ILi16EEEEEENS_7complexIfEENS5_IJlSC_lEEESQ_SR_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_33SM100_MMA_F16BF16_2x1SM_TS_SCALEDINSP_INS_10bfloat16_tEEESW_fLi256ELi64ELNS4_4UMMA5MajorE0ELSY_0ELj8ELNSX_7ScaleInE0ELSZ_0ELNSX_8SaturateE0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEES15_S15_EEEEENS5_IJNS4_10UnderscoreES18_S18_EEEEENS4_13SM90_TMA_LOADENS7_6detail35CollectiveMmaEmulatedLayoutAtomTypeINS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi64EEENS13_INS5_IJNSA_ILi8EEESN_EEENS5_IJSN_SC_EEEEEEENS1E_INS1F_ILi2ELi4ELi3EEENS1H_ILi32EEES1M_EEEENS1C_29CollectiveMmaEmulatedCopyTypeINS4_9Copy_AtomIJNS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEESQ_EEENSF_5STORE26SM100_TMEM_STORE_32dp32b8xEEENS4_8identityENS4_23SM90_TMA_LOAD_MULTICASTES1R_NS1S_IS1W_NS1T_IJS1V_SW_EEEEES20_EENS_8epilogue10collective18CollectiveEpilogueINS25_26Sm100NoSmemWarpSpecializedEJNS5_IJNSA_ILi128EEESM_EEESQ_NS5_IJSC_llEEESQ_S2B_NS25_6thread17LinearCombinationISQ_Li1ESQ_SQ_LNS2C_9ScaleType4KindE0ELNS_15FloatRoundStyleE2ESQ_EENSG_26SM100_TMEM_LOAD_32dp32b64xESB_SB_EEEvvEEEEvNT_6ParamsE",
+      "ptx_entry_count": 1,
+      "elf_sto_entry_count": 1,
+      "nvdisasm_symbol_match_count": 1,
+      "nvdisasm_total_function_count": 4,
+      "ptx_function_artifact_id": "ptx_target",
+      "sass_function_artifact_id": "sass_target",
+      "same_symbol": true
+    },
+    "guard_profile_id": "fast_complex_2sm_tmem_smem_scaled",
+    "guard_atom": "SM100_MMA_F16BF16_2x1SM_TS_SCALED",
+    "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+    "ptx_guard_results": [
+      {
+        "id": "arch_guard_brkpt",
+        "required": true,
+        "match_count": 36,
+        "matched_opcodes": [
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt",
+          "brkpt"
+        ]
+      },
+      {
+        "id": "tmem_store",
+        "required": true,
+        "match_count": 6,
+        "matched_opcodes": [
+          "tcgen05.st.sync.aligned.32x32b.x8.b32",
+          "tcgen05.st.sync.aligned.32x32b.x8.b32",
+          "tcgen05.st.sync.aligned.32x32b.x8.b32",
+          "tcgen05.st.sync.aligned.32x32b.x8.b32",
+          "tcgen05.st.sync.aligned.32x32b.x8.b32",
+          "tcgen05.st.sync.aligned.32x32b.x8.b32"
+        ]
+      },
+      {
+        "id": "tensor_mma_absent",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      }
+    ],
+    "sass_guard_results": [
+      {
+        "id": "arch_guard_trap",
+        "required": true,
+        "match_count": 36,
+        "matched_opcodes": [
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP",
+          "BPT.TRAP"
+        ]
+      },
+      {
+        "id": "tmem_store",
+        "required": true,
+        "match_count": 6,
+        "matched_opcodes": [
+          "STTM.X8",
+          "STTM.X8",
+          "STTM.X8",
+          "STTM.X8",
+          "STTM.X8",
+          "STTM.X8"
+        ]
+      },
+      {
+        "id": "tensor_mma_absent",
+        "required": false,
+        "match_count": 0,
+        "matched_opcodes": []
+      }
+    ],
+    "source_constraints": [
+      {
+        "path": "include/cute/arch/mma_sm100_umma.hpp",
+        "line_start": 844,
+        "line_end": 879,
+        "sha256": "aef1faeb893915d94fc2b3d10732305b7297721a4bb8f792f55f5991dc175465"
+      },
+      {
+        "path": "include/cute/arch/config.hpp",
+        "line_start": 73,
+        "line_end": 75,
+        "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"
+      },
+      {
+        "path": "include/cute/arch/config.hpp",
+        "line_start": 100,
+        "line_end": 118,
+        "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"
+      }
+    ],
+    "legal_control": {
+      "result_ref": {
+        "id": "phase3-generator-controls-20260830.interleaved_complex_tf32_2sm_generator.a001",
+        "path": "evidence/codegen-sm110a-v2/results/phase3-generator-controls-20260830.interleaved_complex_tf32_2sm_generator.a001.json",
+        "sha256": "74265caa2f8b85b4422e656e3278bf93494dd32b5f8389018f1d6fb4834602ee"
+      },
+      "relation": "same_target_fresh_static_pass",
+      "controlled_delta": [
+        "mainloop_schedule",
+        "epilogue_schedule",
+        "resolved_tiled_mma_atom",
+        "function_local_codegen"
+      ]
+    }
+  }
+}

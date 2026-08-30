@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
   "attempt_id": "phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
   "instance_ref": {
     "id": "sparse_bs_nvfp4_1sm",
     "path": "tests/codegen/instances/sparse_bs_nvfp4_1sm/instance.json",
-    "sha256": "1dd35f89841e0516c2be54b4171cd372fbbdad494d5d0eee1185c1a41f696661"
+    "sha256": "6b83ed2b24d605eccf2d70a8ee179722b47ceb5f5b8dc7d906ea6c8f2ff60514"
   },
   "fingerprint_ref": {
-    "id": "fp-sparse_bs_nvfp4_1sm-f740a2207985",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_nvfp4_1sm-f740a2207985.json",
-    "sha256": "f057ed284b1a7a19bb15a124299ffd736b9e7d8d3dcd5fb062f1412e0916f2ce"
+    "id": "fp-sparse_bs_nvfp4_1sm-6b079026d50e",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_nvfp4_1sm-6b079026d50e.json",
+    "sha256": "303d6c46106735462e6b6b0583562eaf9eae55f99e1de531dc01fec481a42066"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "d3906d40f4cc778b33542ead4982a40a0339a8a393def4d77f79311e25f44385",
-      "size_bytes": 1072688,
+      "sha256": "dd115a73aa353241bc7c556b9c0d3dbbb872e81accf41ea2a04b242bb9d4bf95",
+      "size_bytes": 1076952,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "841ed22ee8f901dd3dc1d4df7f1009aca786fd6cec9b3ad6171950f63fd537b0",
-      "size_bytes": 21671,
+      "sha256": "cdcdb18b09f8a021ce342425f2c24a7517b0283604f07b515b52ee0119b7a30c",
+      "size_bytes": 21865,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "841ed22ee8f901dd3dc1d4df7f1009aca786fd6cec9b3ad6171950f63fd537b0",
-      "size_bytes": 21671,
+      "sha256": "cdcdb18b09f8a021ce342425f2c24a7517b0283604f07b515b52ee0119b7a30c",
+      "size_bytes": 21865,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "6810cbc47f31233514dd04a6b7c6f816d9e88f44a73025c6019f5de0a75bbd45",
+      "sha256": "7540afa2d82db4119724bebdfc3fb5d44599e40fc19998facad56e0150c675a9",
       "size_bytes": 4976,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "0bd9e75d1c3b197ee1a7834845d125dca73b803d81bdeb4b2c793d4845c386d3",
-      "size_bytes": 5132,
+      "sha256": "cdd5ac946ef66abb4f6d6bbdfdea02ed588278fc5a4ed90add8c16494bc8bf2c",
+      "size_bytes": 5163,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
     "format": "directory-manifest",
-    "sha256": "7ab0e2d7902a42c08ee14742f48d9671728a84ad70bac8dd6960eb136572755a",
-    "size_bytes": 2643029
+    "sha256": "17d3aeded8fe5e4a82606b7e022e10c52a0e0118aa7afb29199cf4086280c196",
+    "size_bytes": 2647487
   }
 }

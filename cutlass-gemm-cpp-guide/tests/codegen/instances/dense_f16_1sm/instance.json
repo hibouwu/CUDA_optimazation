@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "instance_id": "dense_f16_1sm",
@@ -41,7 +41,8 @@
     "type_witness": {
       "path": "tests/codegen/instances/dense_f16_1sm/type_witness.cu",
       "sha256": "6dadf005a2b45e27065e66e0b255a714c5f8bbc5c68f6327074294df00d28833"
-    }
+    },
+    "collective_prefix_witness": null
   },
   "declared_config": {
     "family": "dense_f16",
@@ -253,13 +254,17 @@
           "max_count": 0
         }
       ]
-    }
+    },
+    "tma_cta_policy": "match_mma"
   },
   "hypothesis": {
     "expected_outcome": "STATIC_PASS",
     "failure_domain": null,
     "failure_layer": null,
     "diagnostic_patterns": [],
-    "control_instance_id": null
+    "control_instance_id": null,
+    "guard_profile_id": null,
+    "reject_contract": null,
+    "control_campaign_id": null
   }
 }

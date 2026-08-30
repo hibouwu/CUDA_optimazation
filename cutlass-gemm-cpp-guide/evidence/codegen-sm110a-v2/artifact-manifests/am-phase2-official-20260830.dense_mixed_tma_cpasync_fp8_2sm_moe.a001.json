@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001",
   "attempt_id": "phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001",
   "instance_ref": {
     "id": "dense_mixed_tma_cpasync_fp8_2sm_moe",
     "path": "tests/codegen/instances/dense_mixed_tma_cpasync_fp8_2sm_moe/instance.json",
-    "sha256": "62c27800be2383c814849aba6a00ec07cd9d8a63b120a3c7f99525534e20c501"
+    "sha256": "c4351be77771ca8273b9fb43fea32de57bba4659d92fa9dbab42d35c3ce0a21d"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_mixed_tma_cpasync_fp8_2sm_moe-d123698938fd",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_mixed_tma_cpasync_fp8_2sm_moe-d123698938fd.json",
-    "sha256": "1be0b916c7543e4a999f1014a0b63897a576391fec0ac189bbdcd786a967f468"
+    "id": "fp-dense_mixed_tma_cpasync_fp8_2sm_moe-a557945ff67c",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_mixed_tma_cpasync_fp8_2sm_moe-a557945ff67c.json",
+    "sha256": "c945714d26901508429188c00977f5adbfcf90e257c53ec1c1f4500de790a90d"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "3c2d4cd0a49a355e756716ff65b31ebc9fb6fad20dce94bd419cf04c625584d2",
-      "size_bytes": 1052816,
+      "sha256": "db1204e48996ca658b6afdd8982f6829bcfa13d7fd87f6e1043e30d34cc047a3",
+      "size_bytes": 1057080,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "73cdd1c831c65a10761fa1c58b795fdae171a5427b488990fb2a6c056b1913a6",
-      "size_bytes": 17157,
+      "sha256": "c1f74b865ea784870c57b60fd03b03c493f330d211c509495f1616878405fa29",
+      "size_bytes": 17351,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "73cdd1c831c65a10761fa1c58b795fdae171a5427b488990fb2a6c056b1913a6",
-      "size_bytes": 17157,
+      "sha256": "c1f74b865ea784870c57b60fd03b03c493f330d211c509495f1616878405fa29",
+      "size_bytes": 17351,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "faedbe640397f6a76f9985e8df8f037528a04b26b79d6f80ce490c61e424f202",
+      "sha256": "4db8962a3cc888d31ea7cfc8bdd7bbc026248f6b13a0af26b2ddf00a7710e246",
       "size_bytes": 4144,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "f7c06e712d5cd306000d9db3990614f5e109890041a585ea83e64298793af3d5",
-      "size_bytes": 4137,
+      "sha256": "f6024110fa3c6968c6aaed8cbba72311151afe06e3544feeb7c36610326a4bd9",
+      "size_bytes": 4168,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_mixed_tma_cpasync_fp8_2sm_moe.a001",
     "format": "directory-manifest",
-    "sha256": "8392d616cf6347f16192d81df24f74410681d2963922fcbd880759fa7d25ba23",
-    "size_bytes": 4295962
+    "sha256": "23875826879a0b21402cd6baf55552c62f42bcf52eebb435c826b6eac7fc1b68",
+    "size_bytes": 4300420
   }
 }

@@ -11,9 +11,11 @@ from typing import Any, Callable
 
 from .model import (
     ContractError,
+    _reject_diagnostic_value,
     load_strict_json,
     safe_path,
     sha256_file,
+    sha256_bytes,
     validate_result,
 )
 
@@ -35,6 +37,15 @@ def _run_checked(command: list[str]) -> subprocess.CompletedProcess[bytes]:
             f"stderr={result.stderr.decode(errors='replace')}"
         )
     return result
+
+
+def _run_capture(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
 
 
 def _docker_command(
@@ -130,6 +141,7 @@ def replay_result_derivations(
     result_path: Path,
     *,
     run_command: CommandRunner = _run_checked,
+    capture_command: CommandRunner = _run_capture,
     environment_verified: bool = False,
 ) -> None:
     """Rebuild and re-derive every decisive artifact from the current frozen inputs."""
@@ -148,6 +160,69 @@ def replay_result_derivations(
         full = replay_root / "full"
         extracted = full / "extracted"
         extracted.mkdir(parents=True)
+
+        if result["status"] == "EXPECTED_STATIC_REJECT":
+            prefix_reference = instance["translation_units"]["collective_prefix_witness"]
+            if prefix_reference is not None:
+                prefix_compile = _docker_command(
+                    image,
+                    entrypoint="/usr/local/cuda/bin/nvcc",
+                    guide_root=root,
+                    replay_root=replay_root,
+                    workdir="/workspace",
+                ) + _replace_plan_paths(
+                    plan["compile_collective_prefix_witness"]["argv"]
+                )
+                run_command(prefix_compile)
+                prefix_output = run_command(
+                    _docker_command(
+                        image,
+                        entrypoint="/out/full/collective_prefix_witness",
+                        replay_root=replay_root,
+                        replay_read_only=True,
+                    )
+                ).stdout
+                if prefix_output != _artifact_path(
+                    root, manifest, "collective_prefix_output"
+                ).read_bytes():
+                    raise ContractError("deep replay collective prefix output differs")
+            compile_type = _docker_command(
+                image,
+                entrypoint="/usr/local/cuda/bin/nvcc",
+                guide_root=root,
+                replay_root=replay_root,
+                workdir="/workspace",
+            ) + _replace_plan_paths(plan["compile_type_witness"]["argv"])
+            rejected = capture_command(compile_type)
+            reject_contract = instance["hypothesis"]["reject_contract"]
+            if reject_contract is None or rejected.returncode != reject_contract[
+                "expected_returncode"
+            ]:
+                raise ContractError("deep replay rejection return code differs")
+            if (full / "type_witness").exists():
+                raise ContractError("deep replay rejection produced a type executable")
+            try:
+                stderr = rejected.stderr.decode("utf-8", errors="strict")
+            except UnicodeDecodeError as error:
+                raise ContractError("deep replay rejection stderr is not UTF-8") from error
+            diagnostic, results, error_count = _reject_diagnostic_value(
+                root,
+                instance,
+                stderr,
+                sha256_bytes(rejected.stderr),
+                len(rejected.stderr),
+            )
+            evidence = result["evidence"]
+            if (
+                results != evidence["diagnostic_results"]
+                or error_count != evidence["observed_error_count"]
+                or diagnostic["selected_lines"]
+                != load_strict_json(
+                    _artifact_path(root, manifest, "diagnostic_excerpt")
+                )["selected_lines"]
+            ):
+                raise ContractError("deep replay rejection diagnostic differs")
+            return
 
         compile_type = _docker_command(
             image,

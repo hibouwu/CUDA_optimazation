@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001",
   "attempt_id": "phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001",
   "instance_ref": {
     "id": "ptr_bs_mxf8_1sm_official",
     "path": "tests/codegen/instances/ptr_bs_mxf8_1sm_official/instance.json",
-    "sha256": "f261f927bb599fd0e8e2c26ac17f67b1f3e1da2c719a5633c7cce59e3ab33f42"
+    "sha256": "441652a0708f4f10c89af13b5fc983d163b30dfc25125dd11506a575411d5a49"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_bs_mxf8_1sm_official-4dcc45d1cc84",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_mxf8_1sm_official-4dcc45d1cc84.json",
-    "sha256": "7df9bd6aac494d4c4a6b07d9ccc5df0cfc1e064f823d3ed5868dcba7ace0710b"
+    "id": "fp-ptr_bs_mxf8_1sm_official-403e462dbb60",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_mxf8_1sm_official-403e462dbb60.json",
+    "sha256": "1c151ebf2379093de9766f9c786f41856cbabdad747d52f9e76c7f220f4b11f2"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "44800d34c1fd7eb45a997bcf0596c631f236fe9eef80688744c9723e57cf6c70",
-      "size_bytes": 1058488,
+      "sha256": "afee817ff74cb26c468eb1445e9ba0b6a98c0784e54f980d82881707245491a7",
+      "size_bytes": 1058656,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "f700af4bc54e5e3417cac4a3fe975b2f251e80d52b17a74a2d5365f23bb28992",
-      "size_bytes": 16955,
+      "sha256": "62aad948aba5157635a49f8e52ff6c02f4a11c3fa62103de2fc275837930fd16",
+      "size_bytes": 17149,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "f700af4bc54e5e3417cac4a3fe975b2f251e80d52b17a74a2d5365f23bb28992",
-      "size_bytes": 16955,
+      "sha256": "62aad948aba5157635a49f8e52ff6c02f4a11c3fa62103de2fc275837930fd16",
+      "size_bytes": 17149,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "4d033b0d258822aef02a3364ca373a3617a06e52c9d44e3b0c167b19b335c4bb",
+      "sha256": "1e868e8e05cabead6817e8bdf3b34f1fd0326932edf14c5589d1efd7e3ee3195",
       "size_bytes": 4427,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "9b95de36f21e675edf0b5814d0af05455c984ebfafb6142739fb1aa4f14c198e",
-      "size_bytes": 8330,
+      "sha256": "23a296ecad8f0026644540f259932a3233d954737e53183be530c9b4a0d74038",
+      "size_bytes": 8361,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_bs_mxf8_1sm_official.a001",
     "format": "directory-manifest",
-    "sha256": "69c178e19f5a46e5b699392f9eed55345e80675ae94487f9fd11e93b4a96f624",
-    "size_bytes": 4080023
+    "sha256": "0a08fc9b806cdd586265e6a9f159e19f025093067802ce1861dda3a96b08be92",
+    "size_bytes": 4080385
   }
 }

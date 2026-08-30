@@ -46,11 +46,14 @@
     },
     "translation_units": {
       "type": "object", "additionalProperties": false,
-      "required": ["config", "kernel", "type_witness"],
+      "required": ["config", "kernel", "type_witness", "collective_prefix_witness"],
       "properties": {
         "config": {"$ref": "#/$defs/file_ref"},
         "kernel": {"$ref": "#/$defs/file_ref"},
-        "type_witness": {"$ref": "#/$defs/file_ref"}
+        "type_witness": {"$ref": "#/$defs/file_ref"},
+        "collective_prefix_witness": {
+          "oneOf": [{"$ref": "#/$defs/file_ref"}, {"type": "null"}]
+        }
       }
     },
     "declared_config": {
@@ -103,24 +106,46 @@
     },
     "static_contract": {
       "type": "object", "additionalProperties": false,
-      "required": ["required_layers", "target_entity", "function_selector", "ptx", "sass"],
+      "required": ["required_layers", "target_entity", "function_selector", "tma_cta_policy", "ptx", "sass"],
       "properties": {
         "required_layers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "target_entity": {"const": "cutlass::device_kernel<GemmKernel>"},
         "function_selector": {"const": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function"},
+        "tma_cta_policy": {"enum": ["match_mma", "allow_single_cta_input_transform"]},
         "ptx": {"$ref": "#/$defs/opcode_contract"},
         "sass": {"$ref": "#/$defs/opcode_contract"}
       }
     },
     "hypothesis": {
       "type": "object", "additionalProperties": false,
-      "required": ["expected_outcome", "failure_domain", "failure_layer", "diagnostic_patterns", "control_instance_id"],
+      "required": ["expected_outcome", "failure_domain", "failure_layer", "diagnostic_patterns", "control_instance_id", "control_campaign_id", "guard_profile_id", "reject_contract"],
       "properties": {
         "expected_outcome": {"enum": ["STATIC_PASS", "EXPECTED_STATIC_REJECT", "UNSUPPORTED_SM110A", "UNKNOWN"]},
         "failure_domain": {"type": ["string", "null"]},
         "failure_layer": {"type": ["string", "null"]},
         "diagnostic_patterns": {"type": "array", "items": {"type": "string"}},
-        "control_instance_id": {"type": ["string", "null"]}
+        "control_instance_id": {"type": ["string", "null"]},
+        "control_campaign_id": {"type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+        "guard_profile_id": {"type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9_.-]*$"},
+        "reject_contract": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["step_id", "expected_returncode", "expected_error_count", "required_diagnostics", "source_constraints", "control_relation", "controlled_delta", "requires_collective_prefix_witness"],
+              "properties": {
+                "step_id": {"const": "compile_type_witness"},
+                "expected_returncode": {"type": "integer", "minimum": 1, "maximum": 124},
+                "expected_error_count": {"type": "integer", "minimum": 1},
+                "required_diagnostics": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/pattern"}},
+                "source_constraints": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/source_anchor"}},
+                "control_relation": {"enum": ["parent", "sibling"]},
+                "controlled_delta": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+                "requires_collective_prefix_witness": {"type": "boolean"}
+              }
+            }
+          ]
+        }
       }
     }
   },

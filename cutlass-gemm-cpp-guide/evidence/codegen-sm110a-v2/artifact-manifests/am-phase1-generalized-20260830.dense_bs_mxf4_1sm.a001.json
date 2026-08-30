@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
   "attempt_id": "phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
   "instance_ref": {
     "id": "dense_bs_mxf4_1sm",
     "path": "tests/codegen/instances/dense_bs_mxf4_1sm/instance.json",
-    "sha256": "df387756217697a270de7e4c002c3ba5c98ce99072cc36f8df2c6d4ee9b2c167"
+    "sha256": "6e18839318a7714a9471be7e6df66c17a579f3e0f126910f2cdc20dcf6b44486"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_bs_mxf4_1sm-730b18dc1b4c",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mxf4_1sm-730b18dc1b4c.json",
-    "sha256": "c4b32c891ee17d447e80d7ebb683ffe7b031aac180c7320ec0f51218b6347067"
+    "id": "fp-dense_bs_mxf4_1sm-2b94a0a60841",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mxf4_1sm-2b94a0a60841.json",
+    "sha256": "af9e5c89d01647e2b1502a280d5cca0cae59cd37845ad2e49f3f6c543316c341"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "9a40cf1dd6bb7be16217360c69e2f9447e62d666065e62e71def6b813e5dc000",
-      "size_bytes": 1057800,
+      "sha256": "50f3bce4ab0ce30f89ac35d36e105af86e3356b29cb422ae22cff223866bb894",
+      "size_bytes": 1057968,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "6c82e23a9de4528398a32e73a5942da7c5dbcc2ca431f950d1ce96f9f5cb35bb",
-      "size_bytes": 19787,
+      "sha256": "928d4d8d3bf58abed14f67d4a6eea40caca973f990439c32d320829600ab103d",
+      "size_bytes": 19981,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "6c82e23a9de4528398a32e73a5942da7c5dbcc2ca431f950d1ce96f9f5cb35bb",
-      "size_bytes": 19787,
+      "sha256": "928d4d8d3bf58abed14f67d4a6eea40caca973f990439c32d320829600ab103d",
+      "size_bytes": 19981,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "14425ae696ccffc1054541542f19af74df9602e17fbb5182a68fdfd09dcedc45",
+      "sha256": "55148297d9c2a024f5247b4cd221e6c556e486fdd979d35b1d986ad71048b4e0",
       "size_bytes": 3924,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "af662d607dcd4cde52a1686f03d08217ac163d7207d615343432494d65a41db3",
-      "size_bytes": 5056,
+      "sha256": "12100a77bd3e1be3d943e0c3ada7a07de15fcaa6760484f94159d5976d925c97",
+      "size_bytes": 5087,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
     "format": "directory-manifest",
-    "sha256": "ef334164e284c8fb584511709ec6be6c88f7b14dca19f4850b80b6b5d7af4958",
-    "size_bytes": 2647114
+    "sha256": "216a7518801848a468b354160f6133dd01eb70391224641f481c81cff3ac812c",
+    "size_bytes": 2647476
   }
 }

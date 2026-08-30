@@ -241,6 +241,10 @@ void write_codegen_type_report(std::ostream& out, std::string const& instance_id
       << "  \"instance_id\": \"" << escape_codegen_json(instance_id) << "\",\n"
       << "  \"resolved_types\": {\n";
   field("collective_mainloop", codegen_type_name<Mainloop>());
+  field("mainloop_element_a", codegen_type_name<typename Mainloop::ElementA>());
+  field("mainloop_element_b", codegen_type_name<typename Mainloop::ElementB>());
+  field("mainloop_transform_a", codegen_type_name<typename Mainloop::TransformA>());
+  field("mainloop_transform_b", codegen_type_name<typename Mainloop::TransformB>());
   field("mainloop_builder", codegen_type_name<typename Config::MainloopBuilder>());
   field("mainloop_builder_collective_op",
         codegen_type_name<typename Config::MainloopBuilder::CollectiveOp>());
@@ -516,6 +520,43 @@ void write_codegen_type_report(std::ostream& out, std::string const& instance_id
       << "    \"mainloop_shared_storage_bytes\": " << sizeof(typename Mainloop::SharedStorage) << ",\n"
       << "    \"epilogue_shared_storage_bytes\": " << sizeof(typename Epilogue::SharedStorage) << ",\n"
       << "    \"kernel_shared_storage_bytes\": " << sizeof(typename Kernel::SharedStorage) << "\n"
+      << "  }\n"
+      << "}\n";
+}
+
+template <class Config>
+void write_codegen_collective_prefix_report(
+    std::ostream& out, std::string const& instance_id) {
+  using Mainloop = typename Config::CollectiveMainloop;
+  using Dispatch = typename Mainloop::DispatchPolicy;
+  using DispatchSchedule = typename Dispatch::Schedule;
+  using TiledMma = typename Mainloop::TiledMma;
+  out << "{\n"
+      << "  \"schema_version\": 1,\n"
+      << "  \"instance_id\": \"" << escape_codegen_json(instance_id) << "\",\n"
+      << "  \"resolved_types\": {\n"
+      << "    \"collective_mainloop\": \"" << escape_codegen_json(codegen_type_name<Mainloop>()) << "\",\n"
+      << "    \"dispatch_policy\": \"" << escape_codegen_json(codegen_type_name<Dispatch>()) << "\",\n"
+      << "    \"dispatch_schedule\": \"" << escape_codegen_json(codegen_type_name<DispatchSchedule>()) << "\",\n"
+      << "    \"tiled_mma\": \"" << escape_codegen_json(codegen_type_name<TiledMma>()) << "\",\n"
+      << "    \"mma_atom\": \"" << escape_codegen_json(codegen_type_name<typename TiledMma::Atom>()) << "\",\n"
+      << "    \"mma_fragment_type_a\": \"" << escape_codegen_json(codegen_type_name<typename TiledMma::FrgTypeA>()) << "\",\n"
+      << "    \"mma_fragment_type_b\": \"" << escape_codegen_json(codegen_type_name<typename TiledMma::FrgTypeB>()) << "\",\n"
+      << "    \"mma_operand_source_a\": \"" << codegen_mma_operand_source<typename TiledMma::FrgTypeA>() << "\",\n"
+      << "    \"mma_operand_source_b\": \"" << codegen_mma_operand_source<typename TiledMma::FrgTypeB>() << "\",\n"
+      << "    \"mainloop_element_a\": \"" << escape_codegen_json(codegen_type_name<typename Mainloop::ElementA>()) << "\",\n"
+      << "    \"mainloop_element_b\": \"" << escape_codegen_json(codegen_type_name<typename Mainloop::ElementB>()) << "\",\n"
+      << "    \"mainloop_transform_a\": \"" << escape_codegen_json(codegen_type_name<typename Mainloop::TransformA>()) << "\",\n"
+      << "    \"mainloop_transform_b\": \"" << escape_codegen_json(codegen_type_name<typename Mainloop::TransformB>()) << "\"\n"
+      << "  },\n"
+      << "  \"resolved_values\": {\n"
+      << "    \"mainloop_stages\": " << mainloop_stage_count<Dispatch>() << ",\n"
+      << "    \"scheduler_stages\": " << DispatchSchedule::SchedulerPipelineStageCount << ",\n"
+      << "    \"accumulator_stages\": " << DispatchSchedule::AccumulatorPipelineStageCount << ",\n"
+      << "    \"atom_shape_mnk\": ["
+      << static_cast<int>(cute::size<0>(typename TiledMma::AtomShape_MNK{})) << ','
+      << static_cast<int>(cute::size<1>(typename TiledMma::AtomShape_MNK{})) << ','
+      << static_cast<int>(cute::size<2>(typename TiledMma::AtomShape_MNK{})) << "]\n"
       << "  }\n"
       << "}\n";
 }

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "run_id": "phase3-generator-20260830",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "campaign_ref": {
+    "id": "phase3-generator-20260830",
+    "path": "tests/codegen/run-campaigns/phase3-generator-20260830.json",
+    "sha256": "704e42407bdf50606d865d66cd5f574ec19bd7ff3c4f9b35a187851161b6a915"
+  },
+  "result_refs": [
+    {
+      "id": "phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001.json",
+      "sha256": "14bacdb09935b32ede34eea866e5573a2df38c76dcace6b372c009daad50e954"
+    },
+    {
+      "id": "phase3-generator-20260830.fast_fp32_complex_1sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-20260830.fast_fp32_complex_1sm_generator.a001.json",
+      "sha256": "dc363f41938341be363316dc4523f26ea7ce321904ce5301f959459e45369b95"
+    },
+    {
+      "id": "phase3-generator-20260830.interleaved_complex_tf32_2sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-20260830.interleaved_complex_tf32_2sm_generator.a001.json",
+      "sha256": "febca4edab5cddb507a86b7f74a38f35440112bb095b3ef452ea1172af96dc57"
+    },
+    {
+      "id": "phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001.json",
+      "sha256": "11faf96f7f36f2eff503ee2977e3ed50406f52a21c5d9ca801326e4fa8c6e560"
+    },
+    {
+      "id": "phase3-generator-20260830.dense_bs_mxf4_2sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-20260830.dense_bs_mxf4_2sm_generator.a001.json",
+      "sha256": "24ee66d9f1246e46e5027516bfa0f74080ecd9d241eb6168a73b2b107beb65ec"
+    }
+  ],
+  "history_result_refs": []
+}

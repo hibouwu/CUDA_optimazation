@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "target": {
+    "virtual_arch": "compute_110a",
+    "binary_arch": "sm_110a"
+  },
+  "result_contract_bundle_sha256": "b4d8852e9e962cb57dd718d45709272ef47cd6c228866f917e40be3edc6fda64",
+  "command": "python3 tools/validate_codegen_v2.py --root . --require-campaign phase1-generalized-20260830 --require-campaign phase2-official-20260830 --require-campaign phase3-generator-controls-20260830 --require-campaign phase3-generator-20260830 --require-archive --deep-replay",
+  "command_sha256": "a7dcd8686cb998c5057701e9080abfaf92af41ac6c672bf32489ddd15d8774a0",
+  "exit_code": 0,
+  "stdout": "CODEGEN_V2_CONTRACT_PASS instances=45 phase1_results=6 phase2_results=34 campaign_results=phase1-generalized-20260830:6,phase2-official-20260830:34,phase3-generator-controls-20260830:2,phase3-generator-20260830:5 unsealed_results=0 result_contract_bundle_sha256=b4d8852e9e962cb57dd718d45709272ef47cd6c228866f917e40be3edc6fda64\n",
+  "stdout_sha256": "064a43dbd4e396f54d974a91deaca96992999bf4e2a1b70fa3c68c103d9e91a2",
+  "replayed_results": 47,
+  "status_counts": {
+    "STATIC_PASS": 44,
+    "UNSUPPORTED_SM110A": 3
+  },
+  "campaigns": [
+    {
+      "id": "phase1-generalized-20260830",
+      "path": "tests/codegen/run-campaigns/phase1-generalized-20260830.json",
+      "sha256": "f0d0b7ebff08c86d45323c56b57bcea840eaa3a96a2e797b27b599877038b8fe",
+      "summary_path": "evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json",
+      "summary_sha256": "9d778148710f6e5e107f2febb2f5915757f904a1e6734f0c97f2d252dc198849"
+    },
+    {
+      "id": "phase2-official-20260830",
+      "path": "tests/codegen/run-campaigns/phase2-official-20260830.json",
+      "sha256": "7cb3d38217a5f2c898e2f41a7c011153df67430cdf1569169e1752dc4f50aea7",
+      "summary_path": "evidence/codegen-sm110a-v2/summary-phase2-official-20260830.json",
+      "summary_sha256": "03a03dd49f80f7ee74e37f283629ce90c6b7b14921b71a7335635d956cb4c0ab"
+    },
+    {
+      "id": "phase3-generator-controls-20260830",
+      "path": "tests/codegen/run-campaigns/phase3-generator-controls-20260830.json",
+      "sha256": "696a900709b82358e10cdcdc9ca1255fc2e76a2362fbf5451fdb4dfe36ab5b48",
+      "summary_path": "evidence/codegen-sm110a-v2/summary-phase3-generator-controls-20260830.json",
+      "summary_sha256": "3f7465bf828a1a22546a83a4f7ba42e12f6021e7eb39a043445c007d48250f56"
+    },
+    {
+      "id": "phase3-generator-20260830",
+      "path": "tests/codegen/run-campaigns/phase3-generator-20260830.json",
+      "sha256": "704e42407bdf50606d865d66cd5f574ec19bd7ff3c4f9b35a187851161b6a915",
+      "summary_path": "evidence/codegen-sm110a-v2/summary-phase3-generator-20260830.json",
+      "summary_sha256": "b377ffb654c2d7b740c8a3015080e4bec22edc0febc1ac323e272caa40160522"
+    }
+  ],
+  "evidence_boundary": {
+    "thor_launch": false,
+    "runtime_correctness": false,
+    "numerical_correctness": false,
+    "performance": false
+  }
+}

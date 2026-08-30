@@ -7,6 +7,7 @@
   "nvdisasm_total_function_count": 4,
   "terminal_status": "UNSUPPORTED_SM110A",
   "reason": "ARCH_GUARD_FALLBACK",
+  "guard_profile_id": "fast_real_2sm_smem_scaled",
   "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
   "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
   "ptx_guard_results": [
@@ -81,7 +82,7 @@
     "result_ref": {
       "id": "phase1-generalized-20260830.dense_f16_2sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_2sm.a001.json",
-      "sha256": "4bf31b79ced2f4e68cc99ead12f776c12997afbbc39691a3fccf26093cc8cf2d"
+      "sha256": "b99186445cb218aef3abcc1f9fd9e0ccfe25b61f89179e4f9021bb9cbaed6cab"
     },
     "relation": "same_target_fresh_static_pass",
     "controlled_delta": [

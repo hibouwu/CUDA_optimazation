@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
   "attempt_id": "phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
   "instance_ref": {
     "id": "dense_cpasync_fp8_1sm",
     "path": "tests/codegen/instances/dense_cpasync_fp8_1sm/instance.json",
-    "sha256": "a402d212d137f8d6c323dd3e33100a761e0dab2af55f8ed55ae50e0cc63e3ce7"
+    "sha256": "e2c13d3de92f2caaa611d572cf5343a6493aefa4eac2a204e57cee8ce917cb64"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_cpasync_fp8_1sm-3bc1505fe4ba",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_cpasync_fp8_1sm-3bc1505fe4ba.json",
-    "sha256": "55de4b0b7edd4fe052ecc2bde1c7bdb9ae78cb1b2b6ef3e7cf38cdc58780f5be"
+    "id": "fp-dense_cpasync_fp8_1sm-1234d23b6b4d",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_cpasync_fp8_1sm-1234d23b6b4d.json",
+    "sha256": "cb138913b5da653b96c5ad56735a563decbe58939a749bcf383befbb59c97a85"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "ab1554362310e32c5f0da3efe732e74039cab739398a1bd64743b6fd1e6c35b5",
-      "size_bytes": 1052168,
+      "sha256": "bc7b69b836d657c669b9cc8ea7f87121a7c7f8372e5140250977af08f6bcce68",
+      "size_bytes": 1052336,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "56d377dd947540e1a47b8afa570bacee6a9165b67b61c2d300d4154df25cf9e7",
-      "size_bytes": 18151,
+      "sha256": "fdae53da53147b9a129a7b1a74e68f65b173bfc3f1162c7104968d14e760cd44",
+      "size_bytes": 18345,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "56d377dd947540e1a47b8afa570bacee6a9165b67b61c2d300d4154df25cf9e7",
-      "size_bytes": 18151,
+      "sha256": "fdae53da53147b9a129a7b1a74e68f65b173bfc3f1162c7104968d14e760cd44",
+      "size_bytes": 18345,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "c063bd75f1b10151c110d8d7a080893d2bed6429255bdf6084865bad0815b538",
+      "sha256": "90706f06ffcefc561226eeb562866773c18a99835442eea362b90ff3c2f3a70d",
       "size_bytes": 4044,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "28ae02a0477eda78f818b78470a8bdb326599243f03d25dcf4d5a6f6965314c3",
-      "size_bytes": 4800,
+      "sha256": "4de596c0db298209e914423f9c09f6354556ddf3040bfedc5de3565276c8937a",
+      "size_bytes": 4831,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
     "format": "directory-manifest",
-    "sha256": "45186ad1c7038ee6cad5cebc0e61d43befcb75f7307e70d99d43f88550818003",
-    "size_bytes": 3758089
+    "sha256": "f12cbfbb942ac87165ded115a5ca2de4cf9985bf8b829819c96d2c0a12f9bfe1",
+    "size_bytes": 3758451
   }
 }

@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001",
   "attempt_id": "phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001",
   "instance_ref": {
     "id": "sparse_bs_mxf8_2sm_official",
     "path": "tests/codegen/instances/sparse_bs_mxf8_2sm_official/instance.json",
-    "sha256": "a0e631278bb90377920868b5dfa042d4dca600189a8830a79fb19936b8ead731"
+    "sha256": "9973471dbbdc2caeeb8d7d8d1f0ff94989f95fd113257c995ed5b1c720b55459"
   },
   "fingerprint_ref": {
-    "id": "fp-sparse_bs_mxf8_2sm_official-08ee95ab6aac",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_mxf8_2sm_official-08ee95ab6aac.json",
-    "sha256": "7cf6de65874276cfee6c956c58ee72f85618321c53c9fe9d3f069c42b20a9663"
+    "id": "fp-sparse_bs_mxf8_2sm_official-937f81c0bfc5",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_mxf8_2sm_official-937f81c0bfc5.json",
+    "sha256": "2601217a8422fcd6cb5e5c99669e036ca75417476738e8590dc63b6d4be69ea8"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "4a32d33532a48bec9bee5af4f156f16f2ae444cd4a6c0268adb6c61e16029a35",
-      "size_bytes": 1082904,
+      "sha256": "3293ef263cd4294aadc9f157272473601151b4bd70f22c80bc87e604949dbb29",
+      "size_bytes": 1083264,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "1f43a0299079f4b0d08cd5df82c10255d6cc901a939f2b4ea34f4b3cb6f333c9",
-      "size_bytes": 23230,
+      "sha256": "2cfa375a3238e6b2a85763fdfe8356129cc646c8fd9001131db19dadcce23095",
+      "size_bytes": 23424,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "1f43a0299079f4b0d08cd5df82c10255d6cc901a939f2b4ea34f4b3cb6f333c9",
-      "size_bytes": 23230,
+      "sha256": "2cfa375a3238e6b2a85763fdfe8356129cc646c8fd9001131db19dadcce23095",
+      "size_bytes": 23424,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "742af522fbb130d9299cdacab1e9d1ed282e6f2d76a14cdeddea624e370158d9",
+      "sha256": "71c36763350cc7831283064a8d7981a269017fa33e74935279fb8282a938422f",
       "size_bytes": 5370,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "283ece3a5dcfea002b3bd2a3112163d4e986ef572fe85dc75527178b42d8c8b5",
-      "size_bytes": 6478,
+      "sha256": "61f058abf9e9f20a3e481ab7a3b968c2a421af6c29b0a4da6dcd7b9070791abf",
+      "size_bytes": 6509,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.sparse_bs_mxf8_2sm_official.a001",
     "format": "directory-manifest",
-    "sha256": "07c40d12f27654a62ff08428399a5da733ed2ca6644dc7c66acf527024ef2f74",
-    "size_bytes": 3968683
+    "sha256": "f76cd10cee1a72eed23c4e631ace49850cec5c56d722c9e061864fbed09497cf",
+    "size_bytes": 3969237
   }
 }

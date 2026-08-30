@@ -96,7 +96,7 @@ SCHEDULE_TAG_ADVERSARIAL_PASS mutations=57 positive_helpers=2
 ```text
 python3 tools/validate_codegen_v2.py \
   --root . \
-  --require-results \
+  --require-campaign phase1-generalized-20260830 \
   --require-archive \
   --deep-replay
 ```
@@ -106,10 +106,11 @@ Deep replay 在新临时目录重新编译六个 type witness 和六个 FATBIN�
 ```text
 phase1_results=6
 unsealed_results=0
-result_contract_bundle_sha256=6046f6f498fff30e78b7adde3ee05bf76229491579c6370c8d99cd582630b02e
+result_contract_bundle_sha256=b4d8852e9e962cb57dd718d45709272ef47cd6c228866f917e40be3edc6fda64
 ```
 
-省略 `--run-id` 并执行 `--all-phase1 --resume` 时，runner 从冻结合同读取当前 run id，六项都
+执行 `--campaign phase1-generalized-20260830 --resume` 时，runner 从 sealed campaign
+读取当前 run id，六项都
 返回 `RESUMED_VERIFIED`，并再次通过完整 result/archive 校验；它不会回落到旧 campaign。
 
 最后又从空的 `/tmp/sm110a-phase1-final.5VQYwP` 目录重新 configure/build，host CTest
@@ -156,12 +157,16 @@ evidence_promotions: 0
 
 持久化结果：
 
-- current summary：`evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json`，SHA-256 `be821150b2af8b857868b08ab20a2f87c7e2003d0cb6471d4764c54360a7e15d`；
+- current summary：`evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json`，SHA-256 `9d778148710f6e5e107f2febb2f5915757f904a1e6734f0c97f2d252dc198849`；
 - 6 份 result、6 份 fingerprint、6 份 artifact manifest、6 份 hash-chained journal；
 - 24 份 Git 内 type/PTX/SASS/contract excerpt；
-- 完整 archive 约 16 MiB，位于被忽略的 `artifacts/codegen-sm110a-v2/phase1-generalized-20260830/`，每个文件的 SHA-256 与 bundle checksum 已写入 manifest。
+- 完整 archive 约 15 MiB、198 个文件，位于被忽略的 `artifacts/codegen-sm110a-v2/phase1-generalized-20260830/`；实际文件集合与 manifest 逐项相等，每个文件的 SHA-256 与 bundle checksum 已写入 manifest。
 
-59 个显式 Tag 的当前投影是：
+Phase 3 将 architecture guard、generic campaign 和 expected-reject 语义一次性冻结后，这 6 项
+已在最终 bundle 下重新 clean replay；它们同时包含在
+`evidence/codegen-sm110a-v2/replay-attestations/phase3-final-deep-replay.json` 的 47/47 重放中。
+
+Phase 1 完成时，59 个显式 Tag 的阶段快照是：
 
 ```text
 STATIC_PASS: 6
@@ -169,4 +174,4 @@ HISTORICAL_STATIC_PASS: 0
 NOT_CHECKED: 53
 ```
 
-这只说明六个 canonical instance 的静态链路闭合。没有执行 Thor kernel，没有数值输入输出，没有 CUDA event/NCU，也没有延迟、吞吐或性能比较。剩余 53 个显式 Tag 和 11 个 Auto control 由后续阶段继续完成。
+这个阶段快照只说明六个 canonical instance 的静态链路闭合；后续阶段已经继续推进，当前总账见 Phase 3 报告。这里没有执行 Thor kernel，没有数值输入输出，没有 CUDA event/NCU，也没有延迟、吞吐或性能比较。

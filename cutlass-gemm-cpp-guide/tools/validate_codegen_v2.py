@@ -14,7 +14,9 @@ from jsonschema import Draft202012Validator
 from codegen_v2.model import (
     ContractError,
     canonical_json_bytes,
+    file_ref,
     load_strict_json,
+    load_run_campaign,
     safe_path,
     sha256_bytes,
     sha256_file,
@@ -69,6 +71,19 @@ def validate_static_translation_units(root: Path, instance: dict) -> None:
         raise ContractError(f"{instance['instance_id']}: type witness TU is incomplete")
     if "device_kernel<" in witness:
         raise ContractError(f"{instance['instance_id']}: type witness must not instantiate the target kernel")
+    prefix_reference = instance["translation_units"]["collective_prefix_witness"]
+    if prefix_reference is not None:
+        prefix_path = safe_path(root, prefix_reference["path"], "collective_prefix_witness.path")
+        prefix = prefix_path.read_text(encoding="utf-8")
+        if (
+            "write_codegen_collective_prefix_report" not in prefix
+            or not re.search(r"\bint\s+main\s*\(", prefix)
+            or "GemmKernel" in prefix
+            or "device_kernel<" in prefix
+        ):
+            raise ContractError(
+                f"{instance['instance_id']}: collective prefix witness reaches kernel composition"
+            )
 
 
 def validate_summary(
@@ -79,6 +94,7 @@ def validate_summary(
         "schema_version",
         "run_id",
         "scope",
+        "campaign_ref",
         "result_refs",
         "history_result_refs",
     }:
@@ -91,6 +107,18 @@ def validate_summary(
         raise ContractError(f"{path.name}: invalid run_id")
     if path.name != f"summary-{summary['run_id']}.json":
         raise ContractError(f"{path.name}: summary filename differs from run_id")
+    campaign_ref = summary["campaign_ref"]
+    if campaign_ref is not None:
+        if not isinstance(campaign_ref, dict) or set(campaign_ref) != {"id", "path", "sha256"}:
+            raise ContractError(f"{path.name}: campaign_ref has an invalid shape")
+        campaign_path, campaign = load_run_campaign(root, campaign_ref["id"])
+        if (
+            campaign_ref
+            != file_ref(root, campaign_path, identifier=campaign["campaign_id"])
+            or campaign["run_id"] != summary["run_id"]
+            or campaign["current_summary"] != path.relative_to(root).as_posix()
+        ):
+            raise ContractError(f"{path.name}: campaign_ref does not bind this summary")
     refs = summary["result_refs"]
     history_refs = summary["history_result_refs"]
     if not isinstance(refs, list) or not refs or not isinstance(history_refs, list):
@@ -128,6 +156,7 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--require-results", action="store_true")
     parser.add_argument("--require-phase2-results", action="store_true")
+    parser.add_argument("--require-campaign", action="append", default=[])
     parser.add_argument("--require-archive", action="store_true")
     parser.add_argument("--deep-replay", action="store_true")
     args = parser.parse_args()
@@ -135,9 +164,19 @@ def main() -> int:
     errors: list[str] = []
     try:
         contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+        required_campaign_ids = list(args.require_campaign)
+        if args.require_results:
+            required_campaign_ids.append("phase1-generalized-20260830")
+        if args.require_phase2_results:
+            required_campaign_ids.append("phase2-official-20260830")
+        required_campaign_ids = list(dict.fromkeys(required_campaign_ids))
+        required_campaigns = {
+            campaign_id: load_run_campaign(root, campaign_id)
+            for campaign_id in required_campaign_ids
+        }
         if args.deep_replay and (
             not args.require_archive
-            or not (args.require_results or args.require_phase2_results)
+            or not required_campaign_ids
         ):
             raise ContractError(
                 "--deep-replay requires --require-archive and at least one required campaign"
@@ -167,7 +206,6 @@ def main() -> int:
             raise ContractError("fresh_replay_required must remain a permanent coverage marker")
         validate_schema_files(root, contract)
         bundle_sha = contract_bundle_sha256(root, contract)
-        expected_instances = contract["phase1_fresh_replay_instances"]
         instance_paths = sorted((root / "tests/codegen/instances").glob("*/instance.json"))
         instances = {}
         for path in instance_paths:
@@ -176,26 +214,20 @@ def main() -> int:
             if instance["instance_id"] in instances:
                 raise ContractError(f"duplicate instance ID {instance['instance_id']}")
             instances[instance["instance_id"]] = instance
-        missing = sorted(set(expected_instances) - set(instances))
-        if missing:
-            raise ContractError(f"missing Phase 1 instances: {missing}")
-        subjects = [
-            (instances[instance_id]["subject"]["kind"], instances[instance_id]["subject"]["id"])
-            for instance_id in expected_instances
-        ]
-        if len(subjects) != len(set(subjects)):
-            raise ContractError("Phase 1 instances do not cover six unique subjects")
-        phase2_expected_instances = contract["phase2_official_instances"]
-        if args.require_phase2_results:
-            missing_phase2 = sorted(set(phase2_expected_instances) - set(instances))
-            if missing_phase2:
-                raise ContractError(f"missing Phase 2 instances: {missing_phase2}")
-            phase2_subjects = [
-                (instances[instance_id]["subject"]["kind"], instances[instance_id]["subject"]["id"])
-                for instance_id in phase2_expected_instances
+        for campaign_id, (_, campaign) in required_campaigns.items():
+            expected_instances = campaign["ordered_instances"]
+            missing = sorted(set(expected_instances) - set(instances))
+            if missing:
+                raise ContractError(f"{campaign_id}: missing instances: {missing}")
+            subjects = [
+                (
+                    instances[instance_id]["subject"]["kind"],
+                    instances[instance_id]["subject"]["id"],
+                )
+                for instance_id in expected_instances
             ]
-            if len(phase2_subjects) != len(set(phase2_subjects)):
-                raise ContractError("Phase 2 instances do not cover 34 unique subjects")
+            if len(subjects) != len(set(subjects)):
+                raise ContractError(f"{campaign_id}: ordered instances repeat a subject")
 
         evidence_root = root / "evidence/codegen-sm110a-v2"
         result_paths = sorted((evidence_root / "results").glob("*.json"))
@@ -220,87 +252,157 @@ def main() -> int:
                 ref["path"]
                 for ref in summary["result_refs"] + summary["history_result_refs"]
             )
-        unsealed_result_count = len(
-            {
-                path.relative_to(root).as_posix() for path in result_paths
-            }
-            - referenced_result_paths
-        )
+        # Report a missing required current summary before treating its otherwise
+        # valid results as unsealed namespace entries.
+        for campaign_id, (_, campaign) in required_campaigns.items():
+            safe_path(
+                root,
+                campaign["current_summary"],
+                f"{campaign_id}.current_summary",
+            )
+        actual_result_paths = {
+            path.relative_to(root).as_posix() for path in result_paths
+        }
+        unsealed_result_paths = sorted(actual_result_paths - referenced_result_paths)
+        if unsealed_result_paths:
+            raise ContractError(
+                f"result namespace contains unsealed entries: {unsealed_result_paths}"
+            )
+        unsealed_result_count = 0
 
-        current_results: dict[str, dict] = {}
-        phase2_current_results: dict[str, dict] = {}
+        published_results = [
+            result
+            for _, _, _, all_summary_results in summaries.values()
+            for result in all_summary_results
+        ]
+        expected_fingerprints = {
+            result["fingerprint_ref"]["path"] for result in published_results
+        }
+        expected_manifests = {
+            result["artifact_manifest_ref"]["path"] for result in published_results
+        }
+        expected_journals = {
+            result["journal_ref"]["path"] for result in published_results
+        }
+        namespace_specs = (
+            (
+                "fingerprint",
+                expected_fingerprints,
+                {
+                    path.relative_to(root).as_posix()
+                    for path in (evidence_root / "fingerprints").glob("*.json")
+                },
+            ),
+            (
+                "artifact manifest",
+                expected_manifests,
+                {
+                    path.relative_to(root).as_posix()
+                    for path in (evidence_root / "artifact-manifests").glob("*.json")
+                },
+            ),
+            (
+                "journal",
+                expected_journals,
+                {
+                    path.relative_to(root).as_posix()
+                    for path in (evidence_root / "journals").glob("*.jsonl")
+                },
+            ),
+        )
+        for label, expected_paths, actual_paths in namespace_specs:
+            if actual_paths != expected_paths:
+                raise ContractError(
+                    f"{label} namespace differs from published results: "
+                    f"missing={sorted(expected_paths - actual_paths)}, "
+                    f"extra={sorted(actual_paths - expected_paths)}"
+                )
+
+        expected_excerpt_files: set[str] = set()
+        known_archive_bundles: set[str] = set()
+        for manifest_relative in expected_manifests:
+            manifest = load_strict_json(root / manifest_relative)
+            known_archive_bundles.add(manifest["archive_bundle"]["path"])
+            expected_excerpt_files.update(
+                item["path"]
+                for item in manifest["items"]
+                if item["storage"] == "git_evidence"
+            )
+        excerpts_root = evidence_root / "excerpts"
+        actual_excerpt_files: set[str] = set()
+        if excerpts_root.exists():
+            for path in excerpts_root.rglob("*"):
+                if path.is_symlink():
+                    raise ContractError("excerpt namespace contains a symlink")
+                if path.is_dir():
+                    continue
+                if not path.is_file():
+                    raise ContractError("excerpt namespace contains a non-regular file")
+                actual_excerpt_files.add(path.relative_to(root).as_posix())
+        if actual_excerpt_files != expected_excerpt_files:
+            raise ContractError(
+                "excerpt namespace differs from published manifests: "
+                f"missing={sorted(expected_excerpt_files - actual_excerpt_files)}, "
+                f"extra={sorted(actual_excerpt_files - expected_excerpt_files)}"
+            )
+
+        if args.require_archive:
+            archives_root = root / "artifacts/codegen-sm110a-v2"
+            actual_archive_bundles: set[str] = set()
+            if archives_root.exists():
+                for path in archives_root.glob("*/attempts/*"):
+                    if path.is_symlink():
+                        raise ContractError("attempt archive namespace contains a symlink")
+                    if path.is_dir():
+                        actual_archive_bundles.add(path.relative_to(root).as_posix())
+                    elif path.exists():
+                        raise ContractError(
+                            "attempt archive namespace contains a non-directory entry"
+                        )
+            orphan_archives = sorted(actual_archive_bundles - known_archive_bundles)
+            if orphan_archives:
+                raise ContractError(
+                    f"attempt archive namespace contains orphan entries: {orphan_archives}"
+                )
+
+        campaign_current_results: dict[str, dict[str, dict]] = {}
         if args.deep_replay:
             verify_deep_replay_environment(root)
-        if args.require_results:
+        for campaign_id, (campaign_path, campaign) in required_campaigns.items():
             current_summary_path = safe_path(
-                root, contract["phase1_current_summary"], "phase1_current_summary"
+                root,
+                campaign["current_summary"],
+                f"{campaign_id}.current_summary",
             )
             if current_summary_path not in summary_paths:
-                raise ContractError("Phase 1 current summary is not in the summary namespace")
+                raise ContractError(f"{campaign_id}: current summary is not in the namespace")
             current_summary, selected_results, _ = summaries_by_path[current_summary_path]
             if (
-                current_summary.get("run_id") != contract["phase1_run_id"]
-                or current_summary_path.name != f"summary-{contract['phase1_run_id']}.json"
+                current_summary.get("run_id") != campaign["run_id"]
+                or current_summary.get("campaign_ref")
+                != file_ref(root, campaign_path, identifier=campaign_id)
+                or current_summary_path.name != f"summary-{campaign['run_id']}.json"
             ):
-                raise ContractError("Phase 1 current summary/run_id mismatch")
+                raise ContractError(f"{campaign_id}: current summary identity mismatch")
             selected_ids = [result["instance_ref"]["id"] for result in selected_results]
+            expected_instances = campaign["ordered_instances"]
             if selected_ids != expected_instances:
                 raise ContractError(
-                    f"Phase 1 summary instance order differs: {selected_ids} != {expected_instances}"
+                    f"{campaign_id}: summary instance order differs: "
+                    f"{selected_ids} != {expected_instances}"
                 )
-            current_results = dict(zip(selected_ids, selected_results, strict=True))
-            nonpass = {
-                instance_id: current_results[instance_id]["status"]
+            selected_by_id = dict(zip(selected_ids, selected_results, strict=True))
+            invalid = {
+                instance_id: selected_by_id[instance_id]["status"]
                 for instance_id in expected_instances
-                if current_results[instance_id]["status"] != "STATIC_PASS"
+                if selected_by_id[instance_id]["status"]
+                not in campaign["allowed_terminal_statuses"]
             }
-            if nonpass:
-                raise ContractError(f"Phase 1 historical replay is not all STATIC_PASS: {nonpass}")
+            if invalid:
+                raise ContractError(f"{campaign_id}: invalid terminal statuses: {invalid}")
+            campaign_current_results[campaign_id] = selected_by_id
             if args.deep_replay:
                 for ref in current_summary["result_refs"]:
-                    replay_result_derivations(
-                        root,
-                        root / ref["path"],
-                        environment_verified=True,
-                    )
-        if args.require_phase2_results:
-            phase2_summary_path = safe_path(
-                root, contract["phase2_current_summary"], "phase2_current_summary"
-            )
-            if phase2_summary_path not in summary_paths:
-                raise ContractError("Phase 2 current summary is not in the summary namespace")
-            phase2_summary, phase2_selected_results, _ = summaries_by_path[
-                phase2_summary_path
-            ]
-            if (
-                phase2_summary.get("run_id") != contract["phase2_run_id"]
-                or phase2_summary_path.name
-                != f"summary-{contract['phase2_run_id']}.json"
-            ):
-                raise ContractError("Phase 2 current summary/run_id mismatch")
-            phase2_selected_ids = [
-                result["instance_ref"]["id"] for result in phase2_selected_results
-            ]
-            if phase2_selected_ids != phase2_expected_instances:
-                raise ContractError(
-                    "Phase 2 summary instance order differs: "
-                    f"{phase2_selected_ids} != {phase2_expected_instances}"
-                )
-            phase2_current_results = dict(
-                zip(phase2_selected_ids, phase2_selected_results, strict=True)
-            )
-            invalid_phase2 = {
-                instance_id: phase2_current_results[instance_id]["status"]
-                for instance_id in phase2_expected_instances
-                if phase2_current_results[instance_id]["status"]
-                not in {"STATIC_PASS", "UNSUPPORTED_SM110A"}
-            }
-            if invalid_phase2:
-                raise ContractError(
-                    f"Phase 2 replay has an invalid terminal status: {invalid_phase2}"
-                )
-            if args.deep_replay:
-                for ref in phase2_summary["result_refs"]:
                     replay_result_derivations(
                         root,
                         root / ref["path"],
@@ -310,17 +412,26 @@ def main() -> int:
         errors.append(str(error))
         bundle_sha = "NOT_AVAILABLE"
         instances = {}
-        current_results = {}
-        phase2_current_results = {}
+        campaign_current_results = {}
         unsealed_result_count = 0
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
+    phase1_results = len(
+        campaign_current_results.get("phase1-generalized-20260830", {})
+    )
+    phase2_results = len(
+        campaign_current_results.get("phase2-official-20260830", {})
+    )
+    campaign_counts = ",".join(
+        f"{campaign_id}:{len(results)}"
+        for campaign_id, results in campaign_current_results.items()
+    ) or "none"
     print(
         "CODEGEN_V2_CONTRACT_PASS "
-        f"instances={len(instances)} phase1_results={len(current_results)} "
-        f"phase2_results={len(phase2_current_results)} "
+        f"instances={len(instances)} phase1_results={phase1_results} "
+        f"phase2_results={phase2_results} campaign_results={campaign_counts} "
         f"unsealed_results={unsealed_result_count} "
         f"result_contract_bundle_sha256={bundle_sha}"
     )

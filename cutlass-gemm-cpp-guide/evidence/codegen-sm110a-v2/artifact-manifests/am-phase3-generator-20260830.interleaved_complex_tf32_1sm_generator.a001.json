@@ -1,0 +1,500 @@
+{
+  "schema_version": 1,
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
+  "artifact_manifest_id": "am-phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001",
+  "attempt_id": "phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001",
+  "instance_ref": {
+    "id": "interleaved_complex_tf32_1sm_generator",
+    "path": "tests/codegen/instances/interleaved_complex_tf32_1sm_generator/instance.json",
+    "sha256": "e473c33ac21b385d36411a53f814c1fe0f06f35316f1d60b60e8bc5c466547d3"
+  },
+  "fingerprint_ref": {
+    "id": "fp-interleaved_complex_tf32_1sm_generator-6fffaf1c8bff",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-interleaved_complex_tf32_1sm_generator-6fffaf1c8bff.json",
+    "sha256": "db9bf1c1d82c4fe9606e15dcce736309c68ca882b530442a8b6b3335ab653d6d"
+  },
+  "items": [
+    {
+      "artifact_id": "config_source",
+      "role": "KERNEL_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/source/config-config.hpp",
+      "storage": "ignored_archive",
+      "media_type": "text/x-c++hdr",
+      "sha256": "3c6cb0be05d0f4ce2cac82602bf24dedbdc0509f60e972315914e85b739ae575",
+      "size_bytes": 3795,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "kernel_source",
+      "role": "KERNEL_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/source/kernel-kernel.cu",
+      "storage": "ignored_archive",
+      "media_type": "text/x-cuda",
+      "sha256": "1d5bbf4cb7c9df9e275aed6a4b710fa6a252250a297f4f601922403fc7bd0e88",
+      "size_bytes": 314,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_source",
+      "role": "TYPE_WITNESS_SOURCE_SNAPSHOT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/source/type_witness-type_witness.cu",
+      "storage": "ignored_archive",
+      "media_type": "text/x-cuda",
+      "sha256": "ece6650c97803d93098173ac6cdb8881728f7f1a1399054ca046f786ef454e90",
+      "size_bytes": 311,
+      "producer_step_id": "snapshot_sources",
+      "parent_artifact_ids": [
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_executable",
+      "role": "TYPE_WITNESS_EXECUTABLE",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/type_witness",
+      "storage": "ignored_archive",
+      "media_type": "application/x-executable",
+      "sha256": "623732a2e0d5bb895fc9491afdef3ab77c4c35916ef8d00b6d3344ca65bb4343",
+      "size_bytes": 1062264,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [
+        "type_source",
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "type_output",
+      "role": "TYPE_WITNESS_OUTPUT",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/resolved-types.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "cc107ee5cfc038fe7dcc8fe1070e6dbb17a3fb427b98104fe263d457b6f27b25",
+      "size_bytes": 18823,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [
+        "type_executable"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "fatbin",
+      "role": "FATBIN",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/kernel.fatbin",
+      "storage": "ignored_archive",
+      "media_type": "application/x-fatbin",
+      "sha256": "c9f526d322f4c3fc51c8b3a40f0a055670cc56a089598a3ea2c7a0fa593e553d",
+      "size_bytes": 245760,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [
+        "kernel_source",
+        "config_source"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "ptx_full",
+      "role": "PTX_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/extracted/kernel.1.sm_110a.ptx",
+      "storage": "ignored_archive",
+      "media_type": "text/x-ptx",
+      "sha256": "facbc92e77e1646739c500c6cb4877bb057f28ab7d09990770df207215611a03",
+      "size_bytes": 149920,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [
+        "fatbin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "cubin",
+      "role": "CUBIN",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/extracted/kernel.1.sm_110a.cubin",
+      "storage": "ignored_archive",
+      "media_type": "application/x-cubin",
+      "sha256": "7c96fdeb4b5d45b289f957a881b5203f5573c6d88b9defde517f987f630a2149",
+      "size_bytes": 218008,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [
+        "fatbin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols",
+      "role": "ELF_SYMBOL_TABLE",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/elf-symbols.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "697c9afd7b27d11c567ee3891215c3bc7e70b6d502f2eb6d352cb38f43035c5a",
+      "size_bytes": 3423,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_metadata",
+      "role": "CODE_OBJECT_METADATA",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/cuobjdump-sass.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "118a3a7970aead0e54df2f147c241c44f7b6889cd65beeebf65b3882645170ce",
+      "size_bytes": 1346154,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json",
+      "role": "NVDISASM_JSON_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/nvdisasm.json",
+      "storage": "ignored_archive",
+      "media_type": "application/json",
+      "sha256": "8883f616f26ccddc3ef91c9fca16df7ecc7503b25aa9180adfc3fd823850d727",
+      "size_bytes": 295990,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text",
+      "role": "NVDISASM_TEXT_FULL",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/nvdisasm.txt",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "2a53a9ce1dda34bf53c7dce64225043e5779143b6f5de4f9e4b15d6fd3cbfb47",
+      "size_bytes": 339346,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [
+        "cubin"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_type_witness_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/compile_type_witness.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_type_witness_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/compile_type_witness.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "ca03091b2da3428cf5777c94bfa52fc56b5a64f68b6df5f966a6a00d736f6989",
+      "size_bytes": 1834,
+      "producer_step_id": "compile_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "run_type_witness_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/run_type_witness.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "cc107ee5cfc038fe7dcc8fe1070e6dbb17a3fb427b98104fe263d457b6f27b25",
+      "size_bytes": 18823,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "run_type_witness_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/run_type_witness.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "run_type_witness",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_fatbin_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/compile_fatbin.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "compile_fatbin_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/compile_fatbin.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "f74535bb305fdcbfc45ec80f1d7dd1a81f5b3e2b87d9bd13b1cac13d11ba2681",
+      "size_bytes": 3906,
+      "producer_step_id": "compile_fatbin",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_ptx_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/list_ptx.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "8cca8f338815879c5048b02d22cc1943e1df96cb33424792c34d3fd3d5d9c234",
+      "size_bytes": 36,
+      "producer_step_id": "list_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_ptx_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/list_ptx.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "list_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_elf_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/list_elf.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "60e7598aeed3a239ffb883cda4e6b0c56f67a8e389c20e5278c0d7e602171aeb",
+      "size_bytes": 38,
+      "producer_step_id": "list_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "list_elf_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/list_elf.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "list_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_ptx_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/extract_ptx.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "22113d38e2500a57fad66f3f0e524b990ada916ee25e00042db52e087aa2f5bf",
+      "size_bytes": 84,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_ptx_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/extract_ptx.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "extract_ptx",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_elf_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/extract_elf.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "1672f9ccbeb2afe96534a9c21e8b43c6aa8e149288213d614703b21d9d8916ce",
+      "size_bytes": 49,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "extract_elf_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/extract_elf.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "extract_elf",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/elf_symbols.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "697c9afd7b27d11c567ee3891215c3bc7e70b6d502f2eb6d352cb38f43035c5a",
+      "size_bytes": 3423,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "elf_symbols_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/elf_symbols.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "elf_symbols",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_object_metadata_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/code_object_metadata.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "118a3a7970aead0e54df2f147c241c44f7b6889cd65beeebf65b3882645170ce",
+      "size_bytes": 1346154,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "code_object_metadata_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/code_object_metadata.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "code_object_metadata",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/nvdisasm_json.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "8883f616f26ccddc3ef91c9fca16df7ecc7503b25aa9180adfc3fd823850d727",
+      "size_bytes": 295990,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_json_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/nvdisasm_json.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "nvdisasm_json",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text_stdout",
+      "role": "COMPILE_STDOUT",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/nvdisasm_text.stdout",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "2a53a9ce1dda34bf53c7dce64225043e5779143b6f5de4f9e4b15d6fd3cbfb47",
+      "size_bytes": 339346,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "nvdisasm_text_stderr",
+      "role": "COMPILE_STDERR",
+      "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/full/logs/nvdisasm_text.stderr",
+      "storage": "ignored_archive",
+      "media_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "producer_step_id": "nvdisasm_text",
+      "parent_artifact_ids": [],
+      "sealed": true
+    },
+    {
+      "artifact_id": "ptx_target",
+      "role": "PTX_TARGET_FUNCTION",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/target.ptx.txt",
+      "storage": "git_evidence",
+      "media_type": "text/x-ptx",
+      "sha256": "e5c7f0cc2a4ae6db5f9760bf7d4ab2a2952d63c30f18e1f3b17b9a91b1a84bad",
+      "size_bytes": 148729,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "ptx_full"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "sass_target",
+      "role": "SASS_TARGET_FUNCTION",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/target.sass.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "279dbc7ba06c3f929730ec2c967b85fd2ff8cc3e94848e10e60281cae161fe5f",
+      "size_bytes": 290016,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "nvdisasm_json"
+      ],
+      "sealed": true
+    },
+    {
+      "artifact_id": "contract_report",
+      "role": "CONTRACT_CHECK_REPORT",
+      "path": "evidence/codegen-sm110a-v2/excerpts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001/contract-report.json",
+      "storage": "git_evidence",
+      "media_type": "application/json",
+      "sha256": "d79df32e1148868a191414ab244ead8edb6f510419f0daa2feed34175de68236",
+      "size_bytes": 4742,
+      "producer_step_id": "function_contract",
+      "parent_artifact_ids": [
+        "ptx_target",
+        "sass_target",
+        "type_output"
+      ],
+      "sealed": true
+    }
+  ],
+  "archive_bundle": {
+    "path": "artifacts/codegen-sm110a-v2/phase3-generator-20260830/attempts/phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001",
+    "format": "directory-manifest",
+    "sha256": "7184a37e69d561a5b4b4da2c29841cd0463404de7f3dac46cd66de9f9e98ed3b",
+    "size_bytes": 5674968
+  }
+}

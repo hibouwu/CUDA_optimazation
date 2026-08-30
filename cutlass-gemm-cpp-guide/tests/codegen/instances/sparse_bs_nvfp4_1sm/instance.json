@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "instance_id": "sparse_bs_nvfp4_1sm",
@@ -41,7 +41,8 @@
     "type_witness": {
       "path": "tests/codegen/instances/sparse_bs_nvfp4_1sm/type_witness.cu",
       "sha256": "eaa5f911af25b31d0621a7f1f6eb9dece6c587a8211dbb7612e813b7d41c5a06"
-    }
+    },
+    "collective_prefix_witness": null
   },
   "declared_config": {
     "family": "sparse_block_scaled_nvfp4",
@@ -247,13 +248,17 @@
           "max_count": 0
         }
       ]
-    }
+    },
+    "tma_cta_policy": "match_mma"
   },
   "hypothesis": {
     "expected_outcome": "STATIC_PASS",
     "failure_domain": null,
     "failure_layer": null,
     "diagnostic_patterns": [],
-    "control_instance_id": null
+    "control_instance_id": null,
+    "guard_profile_id": null,
+    "reject_contract": null,
+    "control_campaign_id": null
   }
 }

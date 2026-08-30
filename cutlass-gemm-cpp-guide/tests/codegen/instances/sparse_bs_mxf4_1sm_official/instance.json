@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "instance_id": "sparse_bs_mxf4_1sm_official",
@@ -41,7 +41,8 @@
     "type_witness": {
       "path": "tests/codegen/instances/sparse_bs_mxf4_1sm_official/type_witness.cu",
       "sha256": "87a5a331a9e89e25b0bdde9005860fa620b316d4ac293d49d2c6aeee376c42ac"
-    }
+    },
+    "collective_prefix_witness": null
   },
   "declared_config": {
     "family": "sparse_block_scaled",
@@ -176,6 +177,7 @@
     ],
     "target_entity": "cutlass::device_kernel<GemmKernel>",
     "function_selector": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+    "tma_cta_policy": "match_mma",
     "ptx": {
       "required": [
         {
@@ -254,6 +256,9 @@
     "failure_domain": null,
     "failure_layer": null,
     "diagnostic_patterns": [],
-    "control_instance_id": null
+    "control_instance_id": null,
+    "control_campaign_id": null,
+    "guard_profile_id": null,
+    "reject_contract": null
   }
 }

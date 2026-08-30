@@ -91,9 +91,9 @@ Cluster/TMEM 分配关系。
 64、64、32、128，对应的 MmaTile K 分别为 256、256、128、256。
 
 这些比例解释了一个编译期 tile 如何由 Atom 沿 K 维重复覆盖，却不被当作稳定 SASS 条数公式。
-上面的数字只是在解释 Phase 1 的六个起始点。Phase 2 已把相同的记账方法扩展到另外 34 个
-canonical instance，但每个 Tag 仍只固定一个基准实例；它们还不是同一 family 下连续、完备的
-shape surface。
+上面的数字只是在解释 Phase 1 的六个起始点。Phase 2 与 Phase 3 已把相同的记账方法扩展到
+另外 39 个 canonical instance，但每个 Tag 仍只固定一个基准实例；它们还不是同一 family 下
+连续、完备的 shape surface。
 
 ## 4. Tensor Core Mainloop 的数据路径
 
@@ -131,6 +131,11 @@ block-scaled 路径分别观察到 8/4/2 条函数内 `tcgen05.cp`，Sparse NVFP
 `TMEM_FRAGMENT / SMEM_DESCRIPTOR`。这组结果说明 SS/TS 应从 MMA fragment 类型确认，不能只
 看 Schedule Tag 的命名。
 
+Phase 3 的两条 Interleaved Complex TF32 路径和两条 complex FastFP32 路径同样解析为
+`TMEM_FRAGMENT / SMEM_DESCRIPTOR`。前者在目标函数里各有 2 条 `tcgen05.st/STTM` 与 8 条
+TF32 MMA；后者虽完成 6 条 TMEM store，却因 scaled F16/BF16 guard 没有产生 MMA。也就是说，
+TS 数据搬运已闭合不等于 MMA opcode 一定存在，二者必须分开验证。
+
 ## 5. Stage 的来源与多级流水线
 
 当前实例的 A/B 空间布局在末尾追加 `PIPE` 维，从而在 SMEM 中形成多份可循环复用的物理
@@ -146,6 +151,12 @@ C/D Stage分别属于不同 pipeline，不能共用一个模糊的 Stage 数字�
 `DispatchPolicy::Stages`。FP16 1SM 为 7/2/4，FP16 2SM 为 8/2/4，三个 Dense
 block-scaled 和 Sparse NVFP4 都为 6/2/2；三个数字依次是 Mainloop、Scheduler 和
 Accumulator Stage。
+
+Phase 3 又暴露出两套不能折叠成一个“Stage 数”的 transform pipeline。Interleaved TF32
+1SM/2SM 的 Mainloop Stage 分别为 8/10，另有固定 4 个 Transformation Stage；complex
+FastFP32 1SM/2SM 的 Load→Transform Stage 为 4/8，Transform→MMA Stage 为 4/5。MXF4 2SM
+NoSmem 实例则解析为 Mainloop/Scheduler/Accumulator `8/2/2`。这些差异来自具体
+Collective、Epilogue carveout 与算法路径，不来自 Tag 名称本身。
 
 声明 policy 与解析 policy 分开保存。FP16 2SM 的 Epilogue SharedStorage 为 34816 字节，
 因此解析为 `StageCountAutoCarveout<34816>`；No-SMEM 路径的 Epilogue SharedStorage 为
@@ -204,11 +215,14 @@ nvdisasm function，其中只有一个是目标 entry，另外三个 guardrail �
 完整产物保存在忽略目录，Git 中保存函数摘录、resolved type、合同报告、hash 和 journal。
 随后从源码重新编译、重提取、重反汇编的 deep replay 6/6 通过。
 
-Phase 2 的 34 条结果随后沿同一路径逐项 deep replay，34/34 通过。合计 40/40 的正式结果都
-重新经历了类型 witness 编译、dual-code FATBIN 生成、PTX/CUBIN 提取和函数级反汇编核对；
-其中 39 条闭合为 `STATIC_PASS`，FastFP32 canonical instance 仍按同一目标函数里的
-9 个 trap、0 条 Tensor MMA 复现为 `UNSUPPORTED_SM110A`。这只证明静态产物可复现，不是
-Thor runtime、数值或性能验证。
+Phase 2 的 34 条结果随后沿同一路径逐项 deep replay，34/34 通过。Phase 3 的 5 个显式 Tag
+实例和 2 个 Interleaved control attempt 也全部重放。合计 47/47 都重新经历了 type witness
+编译、dual-code FATBIN 生成、PTX/CUBIN 提取和函数级反汇编核对。最终 45 个显式 Tag 中，
+42 个为 `STATIC_PASS`；Fast 实数 Smem、Fast complex 1SM TS、Fast complex 2SM TS 三个固定
+实例分别以 9/36/36 个目标函数 trap、0 条 Tensor MMA 复现为 `UNSUPPORTED_SM110A`。机器可读
+attestation 位于
+[`phase3-final-deep-replay.json`](../evidence/codegen-sm110a-v2/replay-attestations/phase3-final-deep-replay.json)。
+这只证明静态产物可复现，不是 Thor runtime、数值或性能验证。
 
 ## 9. 59 个显式 Schedule Tag 的覆盖合同
 
@@ -223,16 +237,17 @@ Mainloop Schedule Tag。本项目把这 59 个 Tag 作为完整静态分母：�
 
 机器可读清单位于
 [`sm110a_tensor_schedule_tags.json`](../tests/codegen/sm110a_tensor_schedule_tags.json)。
-当前状态由清单和 result record 联合重算。Phase 1 的 6 个 control 与 Phase 2 的 34 个
-official C++ instance 已经形成正式终态；其余 19 个 generator/source-derived Tag 仍未执行：
+当前状态由清单和 result record 联合重算。Phase 1 的 6 个基线、Phase 2 的 34 个 official
+C++ instance 与 Phase 3 的 5 个 generator instance 已经形成正式终态；其余 14 个
+source-derived Tag 仍未执行：
 
 | 清单状态 | 数量 |
 |---|---:|
-| `NOT_CHECKED` | 19 |
+| `NOT_CHECKED` | 14 |
 | `HISTORICAL_STATIC_PASS` | 0 |
-| `STATIC_PASS` | 39 |
+| `STATIC_PASS` | 42 |
 | `EXPECTED_STATIC_REJECT` | 0 |
-| `UNSUPPORTED_SM110A` | 1 |
+| `UNSUPPORTED_SM110A` | 3 |
 | `UNEXPECTED_COMPILE_FAIL` | 0 |
 | `ATTRIBUTION_FAIL` | 0 |
 
@@ -263,6 +278,21 @@ control，这一来源类现为 38 个 `STATIC_PASS` 和 1 个 `UNSUPPORTED_SM11
 symbol 和函数绑定都成功，只有 `FUNCTION_CONTRACT` 被拒绝；同工具链的 Dense 2SM
 `STATIC_PASS` 作为 control。这个结论只属于该固定 FastFP32 实例，不等于 Tag 的全部类型域
 都不支持。
+
+Phase 3 随后闭合 5 个 `generator_config` Tag。两个 Interleaved Complex TF32 实例从
+`tuple<complex<float>, identity>` 进入 Builder，解析成 A=TMEM、B=SMEM 的 TF32 TS Atom；
+1SM/2SM 的目标函数都观察到 2 条 STTM 和 8 条 `UTCHMMA`，2SM MMA 严格带 `.2CTA`。它的
+input-transform TMA 使用 1CTA load 与 multicast，因此合同只放宽 TMA load 的 CTA 形式，
+没有放宽 MMA CTA group。
+
+两个 complex FastFP32 实例则按 generator 的真实 emitter 输入，先把裸
+`complex<float>` 交给 compatibility Builder，再由 resolved Mainloop 证明内部补成
+`identity` transform。它们分别解析为 1SM/2SM TS scaled Atom，目标函数各有 36 个 PTX
+`brkpt`、36 个 SASS `BPT.TRAP`、6 条 STTM 和 0 条 Tensor MMA，因而只把这两条 canonical
+配置记为 `UNSUPPORTED_SM110A`。MXF4 2SM 使用 compile-time E2M1×E2M1、UE8M0/SV32 与
+NoSmem Epilogue，目标函数闭合 4 条 MXF4 MMA、4 条 scale copy 和 2 条 accumulator load。
+这些结论不覆盖 generator 的 layout、conjugate、Stream-K、dynamic cluster 或 C-null
+笛卡尔积。
 
 其中，`KernelTmaWarpSpecialized1SmMxf4Sm100` 的来源线索只有 Auto 注释映射；注释本身不
 计入 `STATIC_PASS`。Phase 1 另行固定了一个显式 Mxf4 instance，并用完整类型链和函数产物
@@ -321,15 +351,15 @@ Bias+ReLU 和 tail 等历史变体没有因此自动升级。`runtime_correct=0`
 
 ## 11. 当前结果能够支持的结论
 
-现在有 40 条显式 Tag 的 fresh 静态终态。33 个 Phase 2 `STATIC_PASS` 覆盖 ordinary/PtrArray
-Dense、mixed TMA+cp.async、Blockwise、Planar、MixedInput、ordinary Sparse，以及 dense/
-pointer/sparse block-scaled；ProblemShape 分布为 18 个 dense、8 个 array、4 个 grouped 和
-4 个 MoE。实际 MMA operand source 中，26 项为 SMEM/SMEM，7 项为 sparse-SMEM/SMEM，
-MixedInput 一项为 TMEM/SMEM。Mainloop Stage 在固定实例间从 2 到 24，不存在从 Schedule
-名称直接推出 Stage 数的通用公式。
+现在有 45 条显式 Tag 的 fresh 静态终态：42 个 `STATIC_PASS`、3 个
+`UNSUPPORTED_SM110A`。Phase 2 的 33 个 pass 覆盖 ordinary/PtrArray Dense、mixed
+TMA+cp.async、Blockwise、Planar、MixedInput、ordinary Sparse，以及 dense/pointer/sparse
+block-scaled；Phase 3 再增加 Interleaved Complex TF32 1SM/2SM 与 MXF4 2SM 三条 pass。
+Phase 3 也把“同一 Fast family 的不同 Builder 分支不能共用一份 guard 合同”变成了数据：
+实数 Smem 为 9 trap，complex TS 1SM/2SM 各为 36 trap。
 
-结论仍以实例为单位，不能写成“这 40 个 Tag 的全部类型、Tile、Cluster 和 Builder 分支都
-已覆盖”。其余 19 个显式 Tag 与 11 个 Auto 对照项仍未形成正式终态。整个文档仍没有
+结论仍以实例为单位，不能写成“这 45 个 Tag 的全部类型、Tile、Cluster 和 Builder 分支都
+已覆盖”。其余 14 个显式 Tag 与 11 个 Auto 对照项仍未形成正式终态。整个文档仍没有
 Thor launch、数值或性能证据。
 
 ## 附录 A：59 个显式 Schedule Tag
@@ -376,8 +406,8 @@ Thor launch、数值或性能证据。
 
 | Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelTmaWarpSpecialized1SmFastFP32Sm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmFastFP32Sm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized1SmFastFP32Sm100` | `UNSUPPORTED_SM110A` | — |
+| `KernelTmaWarpSpecialized2SmFastFP32Sm100` | `UNSUPPORTED_SM110A` | — |
 | `KernelTmaWarpSpecialized1SmFastFP32SmemSm100` | `NOT_CHECKED` | — |
 | `KernelTmaWarpSpecialized2SmFastFP32SmemSm100` | `UNSUPPORTED_SM110A` | — |
 | `KernelPtrArrayTmaWarpSpecialized1SmFastFP32Sm100` | `NOT_CHECKED` | — |
@@ -398,8 +428,8 @@ Thor launch、数值或性能证据。
 
 | Schedule Tag | 当前状态 | 既有 `cases/` case |
 |---|---|---|
-| `KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
-| `KernelTmaWarpSpecialized2SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | `STATIC_PASS` | — |
+| `KernelTmaWarpSpecialized2SmInterleavedComplexTF32Sm100` | `STATIC_PASS` | — |
 | `KernelPtrArrayTmaWarpSpecialized1SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
 | `KernelPtrArrayTmaWarpSpecialized2SmInterleavedComplexTF32Sm100` | `NOT_CHECKED` | — |
 
@@ -419,7 +449,7 @@ Thor launch、数值或性能证据。
 | `KernelTmaWarpSpecialized1SmNvf4Sm100` | `STATIC_PASS` | `bs_nvfp4_1sm_p128x128x256` |
 | `KernelTmaWarpSpecialized2SmNvf4Sm100` | `STATIC_PASS` | — |
 | `KernelTmaWarpSpecialized1SmMxf4Sm100` | `STATIC_PASS` | `bs_mxfp4_1sm_p128x128x256` |
-| `KernelTmaWarpSpecialized2SmMxf4Sm100` | `NOT_CHECKED` | — |
+| `KernelTmaWarpSpecialized2SmMxf4Sm100` | `STATIC_PASS` | — |
 | `KernelTmaWarpSpecialized1SmMxf8f6f4Sm100` | `STATIC_PASS` | `bs_mxfp8_1sm_p128` |
 | `KernelTmaWarpSpecialized2SmMxf8f6f4Sm100` | `STATIC_PASS` | — |
 | `KernelMixedTmaCpAsyncWarpSpecialized1SmBlockScaledSm100` | `STATIC_PASS` | — |

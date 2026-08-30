@@ -766,6 +766,8 @@
       "failure_domain": "TARGET_ARCHITECTURE",
       "failure_layer": "FUNCTION_CONTRACT",
       "control_instance_id": "dense_f16_2sm",
+      "control_campaign_id": "phase1-generalized-20260830",
+      "guard_profile_id": "fast_real_2sm_smem_scaled",
       "mainloop_op": "cutlass::arch::OpClassTensorOp",
       "epilogue_op": "cutlass::arch::OpClassTensorOp",
       "a": "float",

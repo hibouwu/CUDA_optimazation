@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "ptr_array_blockwise_fp8_2sm_g1x128x128",
     "path": "tests/codegen/instances/ptr_array_blockwise_fp8_2sm_g1x128x128/instance.json",
-    "sha256": "9081c1cfbe20260dea3c06d999c831d0c49c7d755d36bda0b6608b031014c556"
+    "sha256": "fb9012671158424fbfa512ff3ccfe25e5ea1c4a9b903e22ade47aa5df6352484"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_array_blockwise_fp8_2sm_g1x128x128-e19fa48ea4c6",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_2sm_g1x128x128-e19fa48ea4c6.json",
-    "sha256": "151032fd65617e25b77d9dbe4f6fe8d2c412c31089b85bf9154452a7325aba1b"
+    "id": "fp-ptr_array_blockwise_fp8_2sm_g1x128x128-ef3f8546a870",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_2sm_g1x128x128-ef3f8546a870.json",
+    "sha256": "790b3ae1dd2c205608b6de0127cd78d5cdf7550ef39668a451a79cebceb858fa"
   },
   "attempt_id": "phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001.jsonl",
-    "sha256": "0b0a2eb75c66e91050bf799473618189e11fbd101b606502894b4e21dc7b8d1c",
+    "sha256": "fde23a751df4d2f38fbc63660e64651084096cf5687bf58c6d37f7e28a0b3c90",
     "last_seq": 64,
-    "last_event_sha256": "30ca36edbccdfd02d8c8d07fce6425532046fd7cbe8629aa9fa43ad7f3e11e89"
+    "last_event_sha256": "66485bcf70bd1e798d0cadf7c37236a6f7f1d190637a75c526e13b4b455d163e"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001.json",
-    "sha256": "9b21c38a3f63f5bc144af22bf46a3a73806be325e3d011fc439379cab2ab5fb9"
+    "sha256": "eaee5864f008175335736b8a341264cc0a86e48e8c4cbda142ce36bf6c14007e"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

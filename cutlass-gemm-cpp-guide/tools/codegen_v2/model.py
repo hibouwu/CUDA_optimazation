@@ -258,6 +258,62 @@ def safe_path(root: Path, relative: object, field: str, *, require_file: bool = 
     return path
 
 
+def load_run_campaign(root: Path, campaign_id: str) -> tuple[Path, dict[str, Any]]:
+    """Load a strict execution campaign kept outside the codegen fingerprint closure."""
+    if re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", campaign_id) is None:
+        raise ContractError("campaign ID must be a safe ASCII identifier")
+    path = root / "tests/codegen/run-campaigns" / f"{campaign_id}.json"
+    campaign = load_strict_json(path)
+    expected_fields = {
+        "schema_version",
+        "objective_sha256",
+        "scope",
+        "phase_id",
+        "campaign_id",
+        "run_id",
+        "current_summary",
+        "allowed_terminal_statuses",
+        "ordered_instances",
+    }
+    if set(campaign) != expected_fields:
+        raise ContractError(f"{path.name}: run campaign fields differ from the frozen shape")
+    if (
+        campaign["schema_version"] != 1
+        or campaign["objective_sha256"]
+        != "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
+        or campaign["scope"] != "STATIC_CODEGEN_ONLY"
+        or not isinstance(campaign["phase_id"], int)
+        or campaign["phase_id"] < 1
+        or campaign["campaign_id"] != campaign_id
+        or campaign["run_id"] != campaign_id
+        or campaign["current_summary"]
+        != f"evidence/codegen-sm110a-v2/summary-{campaign_id}.json"
+    ):
+        raise ContractError(f"{path.name}: invalid run campaign identity")
+    statuses = campaign["allowed_terminal_statuses"]
+    allowed_statuses = {"STATIC_PASS", "EXPECTED_STATIC_REJECT", "UNSUPPORTED_SM110A"}
+    if (
+        not isinstance(statuses, list)
+        or not statuses
+        or len(statuses) != len(set(statuses))
+        or any(status not in allowed_statuses for status in statuses)
+    ):
+        raise ContractError(f"{path.name}: invalid terminal status policy")
+    instances = campaign["ordered_instances"]
+    if (
+        not isinstance(instances, list)
+        or not instances
+        or len(instances) != len(set(instances))
+        or any(
+            not isinstance(instance_id, str)
+            or re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", instance_id) is None
+            for instance_id in instances
+        )
+    ):
+        raise ContractError(f"{path.name}: invalid ordered instance set")
+    return path, campaign
+
+
 def validate_with_schema(record: dict[str, Any], schema_path: Path, label: str) -> None:
     schema = load_strict_json(schema_path)
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
@@ -363,6 +419,26 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
     for role, expected_path in canonical_tu_paths.items():
         if instance["translation_units"][role]["path"] != expected_path.relative_to(root).as_posix():
             raise ContractError(f"{path.name}: {role} translation unit path is not canonical")
+    prefix_reference = instance["translation_units"]["collective_prefix_witness"]
+    reject_contract = instance["hypothesis"]["reject_contract"]
+    requires_prefix = (
+        instance["hypothesis"]["expected_outcome"] == "EXPECTED_STATIC_REJECT"
+        and instance["hypothesis"]["failure_layer"] == "KERNEL_COMPOSITION"
+    )
+    if requires_prefix:
+        expected_prefix_path = canonical_instance_path.parent / "collective_prefix_witness.cu"
+        if (
+            prefix_reference is None
+            or prefix_reference["path"] != expected_prefix_path.relative_to(root).as_posix()
+            or reject_contract is None
+            or reject_contract["requires_collective_prefix_witness"] is not True
+        ):
+            raise ContractError(f"{path.name}: kernel-composition reject lacks a canonical prefix witness")
+    elif prefix_reference is not None or (
+        reject_contract is not None
+        and reject_contract["requires_collective_prefix_witness"] is not False
+    ):
+        raise ContractError(f"{path.name}: unexpected collective prefix witness")
     subject_id = instance["subject"]["id"]
     declared_schedule = instance["declared_config"]["mainloop_schedule"].removeprefix(
         "cutlass::gemm::"
@@ -393,14 +469,23 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         reference = references[0]
         if instance["provenance"]["reference_class"] != reference["reference_class"]:
             raise ContractError(f"{path.name}: reference class differs from inventory")
-        expected_anchor = {
+        expected_anchors = [{
             "path": reference["path"],
             "line_start": reference["line"],
             "line_end": reference["line"],
             "sha256": reference["anchor_line_sha256"],
-        }
-        if instance["provenance"]["source_anchors"] != [expected_anchor]:
-            raise ContractError(f"{path.name}: provenance anchor differs from inventory")
+        }]
+        if reference["reference_class"] == "generator_config":
+            expected_anchors.append({
+                "path": reference["mapping_path"],
+                "line_start": reference["mapping_line"],
+                "line_end": reference["mapping_line"],
+                "sha256": reference["mapping_line_sha256"],
+            })
+        if instance["provenance"]["source_anchors"] != expected_anchors:
+            raise ContractError(f"{path.name}: provenance anchors differ from inventory")
+        if instance["provenance"]["derivation_axis"] != reference["derivation_axis"]:
+            raise ContractError(f"{path.name}: derivation axis differs from inventory")
         if reference["reference_class"] == "source_derived":
             parent_id = instance["provenance"]["parent_instance_id"]
             if parent_id is None or parent_id == instance["instance_id"]:
@@ -455,6 +540,8 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         if (expected_failure or "").upper() != (observed_failure or "").upper():
             raise ContractError(f"{path.name}: Auto failure-layer hypothesis differs from inventory")
     for role, reference in instance["translation_units"].items():
+        if reference is None:
+            continue
         source = safe_path(root, reference["path"], f"translation_units.{role}.path")
         if sha256_file(source) != reference["sha256"]:
             raise ContractError(f"translation_units.{role}: SHA-256 mismatch")
@@ -494,6 +581,18 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         or "device_kernel<" in witness_text
     ):
         raise ContractError(f"{path.name}: type witness TU is not bound to the same Config/instance")
+    if prefix_reference is not None:
+        prefix_path = root / prefix_reference["path"]
+        prefix_text = prefix_path.read_text(encoding="utf-8")
+        if (
+            '#include "config.hpp"' not in prefix_text
+            or f"write_codegen_collective_prefix_report<{expected_config_type}>" not in prefix_text
+            or f'"{instance["instance_id"]}"' not in prefix_text
+            or re.search(r"\bint\s+main\s*\(", prefix_text) is None
+            or "GemmKernel" in prefix_text
+            or "device_kernel<" in prefix_text
+        ):
+            raise ContractError(f"{path.name}: collective prefix witness is not bounded above GemmKernel")
     for index, anchor in enumerate(instance["provenance"]["source_anchors"]):
         validate_source_anchor(root, anchor, f"provenance.source_anchors[{index}]")
     for artifact_kind in ("ptx", "sass"):
@@ -524,16 +623,51 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
                         f"{artifact_kind}.{pattern['id']}: forbidden contract must require exactly zero matches"
                     )
     hypothesis = instance["hypothesis"]
+    guard_profile_id = hypothesis["guard_profile_id"]
+    reject_contract = hypothesis["reject_contract"]
+    if hypothesis["diagnostic_patterns"] != []:
+        raise ContractError(f"{path.name}: legacy diagnostic_patterns must remain empty")
     if hypothesis["expected_outcome"] == "STATIC_PASS" and any(
         hypothesis[key] is not None for key in ("failure_domain", "failure_layer")
     ):
         raise ContractError(f"{path.name}: STATIC_PASS hypothesis must not declare a failure")
-    if hypothesis["expected_outcome"] == "EXPECTED_STATIC_REJECT" and (
-        not hypothesis["failure_domain"] or not hypothesis["failure_layer"]
-    ):
-        raise ContractError(f"{path.name}: reject hypothesis requires failure domain/layer")
+    if hypothesis["expected_outcome"] == "EXPECTED_STATIC_REJECT":
+        reject_global = contract["expected_static_reject_contract"]
+        if (
+            reject_contract is None
+            or hypothesis["failure_domain"] != reject_global["failure_domain"]
+            or hypothesis["failure_layer"] not in reject_global["allowed_failure_layers"]
+            or reject_contract["step_id"] != reject_global["failure_step_id"]
+        ):
+            raise ContractError(f"{path.name}: reject hypothesis differs from the frozen reject contract")
+        for pattern in reject_contract["required_diagnostics"]:
+            try:
+                expression = re.compile(pattern["regex"])
+            except re.error as error:
+                raise ContractError(f"{path.name}: invalid rejection diagnostic regex: {error}") from error
+            if expression.search("") is not None or pattern["min_count"] < 1:
+                raise ContractError(f"{path.name}: rejection diagnostics must be positive and nonempty")
+            if pattern["max_count"] is not None and pattern["max_count"] < pattern["min_count"]:
+                raise ContractError(f"{path.name}: rejection diagnostic bounds are invalid")
+        for index, source_range in enumerate(reject_contract["source_constraints"]):
+            validate_source_anchor(root, source_range, f"reject_contract.source_constraints[{index}]")
+        if reject_contract["control_relation"] == "parent" and (
+            instance["provenance"]["parent_instance_id"]
+            != hypothesis["control_instance_id"]
+        ):
+            raise ContractError(f"{path.name}: rejection parent differs from the legal control")
+        if instance["subject"]["kind"] == "kernel_schedule_auto_control" and (
+            reject_contract["controlled_delta"]
+            != reject_global["controlled_delta_for_auto"]
+        ):
+            raise ContractError(f"{path.name}: Auto rejection changes more than Mainloop Schedule")
+    elif reject_contract is not None:
+        raise ContractError(f"{path.name}: non-reject hypothesis carries a reject contract")
     if hypothesis["expected_outcome"] == "UNSUPPORTED_SM110A":
         guard_contract = contract["arch_guard_fallback_contract"]
+        profiles = guard_contract["profiles"]
+        if guard_profile_id not in profiles:
+            raise ContractError(f"{path.name}: unknown architecture-guard profile")
         if hypothesis["failure_domain"] != "TARGET_ARCHITECTURE":
             raise ContractError(
                 f"{path.name}: UNSUPPORTED_SM110A hypothesis requires TARGET_ARCHITECTURE"
@@ -543,12 +677,33 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
                 f"{path.name}: UNSUPPORTED_SM110A hypothesis requires "
                 f"{guard_contract['failure_layer']}"
             )
+        for index, source_range in enumerate(profiles[guard_profile_id]["source_constraints"]):
+            validate_source_anchor(
+                root,
+                source_range,
+                f"arch_guard_fallback_contract.profiles.{guard_profile_id}.source_constraints[{index}]",
+            )
+    elif guard_profile_id is not None:
+        raise ContractError(f"{path.name}: non-unsupported hypothesis carries a guard profile")
     control_id = hypothesis["control_instance_id"]
-    if hypothesis["expected_outcome"] == "STATIC_PASS" and control_id is not None:
+    control_campaign_id = hypothesis["control_campaign_id"]
+    if hypothesis["expected_outcome"] == "STATIC_PASS" and (
+        control_id is not None or control_campaign_id is not None
+    ):
         raise ContractError(f"{path.name}: STATIC_PASS hypothesis must not declare a control")
     if hypothesis["expected_outcome"] in {"EXPECTED_STATIC_REJECT", "UNSUPPORTED_SM110A"}:
-        if control_id is None or control_id == instance["instance_id"]:
+        if (
+            control_id is None
+            or control_id == instance["instance_id"]
+            or control_campaign_id is None
+        ):
             raise ContractError(f"{path.name}: rejection hypothesis lacks a distinct legal control")
+        _, control_campaign = load_run_campaign(root, control_campaign_id)
+        if (
+            control_id not in control_campaign["ordered_instances"]
+            or "STATIC_PASS" not in control_campaign["allowed_terminal_statuses"]
+        ):
+            raise ContractError(f"{path.name}: legal control is absent from its frozen campaign")
     if control_id is not None:
         control_path = root / "tests/codegen/instances" / control_id / "instance.json"
         control_instance = load_strict_json(
@@ -638,13 +793,17 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
     if expected_pointer_mode == "single" and problem_mode in {"array", "grouped"}:
         raise ContractError(f"{path.name}: non-pointer Tag uses an array/grouped ProblemShape")
     group = instance["subject"]["group"]
+    fast_complex = group == "fast_fp32" and all(
+        cpp_type_equivalent(instance["declared_config"]["elements"][axis], "cutlass::complex<float>")
+        for axis in ("a", "b")
+    )
     expected_mechanisms = {
         "block_scaled": "block_scaled" in group,
         "blockwise": group == "blockwise",
         "sparse": group in {"sparse", "sparse_block_scaled"},
         "mixed_input": group == "mixed_input",
         "fast_fp32": group == "fast_fp32",
-        "complex": group in {"planar_complex", "interleaved_complex_tf32"},
+        "complex": group in {"planar_complex", "interleaved_complex_tf32"} or fast_complex,
     }
     for mechanism_name, expected_enabled in expected_mechanisms.items():
         if mechanism[mechanism_name]["enabled"] is not expected_enabled:
@@ -655,6 +814,8 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
         "planar_complex": "planar",
         "interleaved_complex_tf32": "interleaved",
     }.get(group)
+    if fast_complex:
+        expected_complex_representation = "interleaved"
     if complex_mechanism["representation"] != expected_complex_representation:
         raise ContractError(
             f"{path.name}: group {group} requires complex representation "
@@ -669,6 +830,12 @@ def validate_instance(root: Path, path: Path) -> dict[str, Any]:
     if mechanism["transforms"] != expected_transforms:
         raise ContractError(
             f"{path.name}: group {group} requires {expected_transforms} operand transforms"
+        )
+    if instance["static_contract"]["tma_cta_policy"] == "allow_single_cta_input_transform" and not (
+        group == "interleaved_complex_tf32" or fast_complex
+    ):
+        raise ContractError(
+            f"{path.name}: relaxed TMA CTA policy is limited to complex input-transform kernels"
         )
     required_ptx_patterns = [
         item["regex"] for item in instance["static_contract"]["ptx"]["required"]
@@ -710,7 +877,28 @@ def expected_execution_plan(instance: dict[str, Any]) -> list[dict[str, Any]]:
         "-Ithird_party/cutlass/include",
         "-Ithird_party/cutlass/tools/util/include",
     ]
-    return [
+    prefix_plan: list[dict[str, Any]] = []
+    prefix_reference = instance["translation_units"]["collective_prefix_witness"]
+    if prefix_reference is not None:
+        prefix_plan = [
+            {
+                "step_id": "compile_collective_prefix_witness",
+                "tool": "nvcc",
+                "argv": common
+                + [
+                    "--generate-code=arch=compute_110a,code=sm_110a",
+                    prefix_reference["path"],
+                    "-o",
+                    "<attempt>/full/collective_prefix_witness",
+                ],
+            },
+            {
+                "step_id": "run_collective_prefix_witness",
+                "tool": "collective_prefix_witness",
+                "argv": ["<attempt>/full/collective_prefix_witness"],
+            },
+        ]
+    return prefix_plan + [
         {
             "step_id": "compile_type_witness",
             "tool": "nvcc",
@@ -825,7 +1013,11 @@ def validate_fingerprint(root: Path, path: Path) -> dict[str, Any]:
         "versions.lock.json",
         "tests/codegen/sm110a_schedule_reference_inventory.json",
     }
-    required_input_paths.update(instance["translation_units"][role]["path"] for role in instance["translation_units"])
+    required_input_paths.update(
+        reference["path"]
+        for reference in instance["translation_units"].values()
+        if reference is not None
+    )
     required_input_paths.update(
         path_value.relative_to(root).as_posix()
         for path_value in (root / "include/guide").glob("*.hpp")
@@ -983,6 +1175,23 @@ def validate_artifact_manifest(
     if require_archive and not bundle_path.is_dir():
         raise ContractError("archive_bundle.path must be a directory")
     archive_items = [item for item in manifest["items"] if item["storage"] == "ignored_archive"]
+    if require_archive:
+        expected_archive_paths = {item["path"] for item in archive_items}
+        actual_archive_paths: set[str] = set()
+        for archive_entry in bundle_path.rglob("*"):
+            if archive_entry.is_symlink():
+                raise ContractError("archive bundle contains a symlink")
+            if archive_entry.is_dir():
+                continue
+            if not archive_entry.is_file():
+                raise ContractError("archive bundle contains a non-regular file")
+            actual_archive_paths.add(archive_entry.relative_to(root).as_posix())
+        if actual_archive_paths != expected_archive_paths:
+            missing = sorted(expected_archive_paths - actual_archive_paths)
+            extra = sorted(actual_archive_paths - expected_archive_paths)
+            raise ContractError(
+                f"archive bundle file set differs from manifest: missing={missing}, extra={extra}"
+            )
     canonical_items = [
         (item["artifact_id"], item["path"], item["sha256"], item["size_bytes"])
         for item in archive_items
@@ -1047,10 +1256,26 @@ def validate_journal_semantics(
         "overall_sha256": fingerprint["overall_sha256"]
     }:
         raise ContractError("FINGERPRINT_SEALED does not seal the referenced fingerprint")
+    execution_plan = fingerprint["execution_plan"]
+    failure_step_id: str | None = None
+    if terminal_status == "EXPECTED_STATIC_REJECT":
+        rejection_items = [
+            item for item in artifacts["items"] if item["role"] == "REJECTION_REPORT"
+        ]
+        if len(rejection_items) != 1:
+            raise ContractError("EXPECTED_STATIC_REJECT requires one rejection report")
+        rejection_report = load_strict_json(
+            safe_path(root, rejection_items[0]["path"], "rejection_report.path")
+        )
+        failure_step_id = rejection_report.get("failure", {}).get("step_id")
+        step_ids = [step["step_id"] for step in execution_plan]
+        if failure_step_id not in step_ids:
+            raise ContractError("rejection failure step is outside the execution plan")
+        execution_plan = execution_plan[: step_ids.index(failure_step_id) + 1]
     index = 3
     command_events: dict[str, dict[str, Any]] = {}
     attempt_root = root / artifacts["archive_bundle"]["path"]
-    for step in fingerprint["execution_plan"]:
+    for step_index, step in enumerate(execution_plan):
         if index + 1 >= len(events):
             raise ContractError("journal ended before all execution-plan commands")
         started, finished = events[index], events[index + 1]
@@ -1069,8 +1294,17 @@ def validate_journal_semantics(
             origin_user=origin_user,
         ) != expected_argv:
             raise ContractError(f"journal actual argv differs from frozen plan for {step['step_id']}")
-        if finished["payload"].get("returncode") != 0:
-            raise ContractError("successful static-codegen journal contains a failed command")
+        returncode = finished["payload"].get("returncode")
+        is_reject_failure = (
+            terminal_status == "EXPECTED_STATIC_REJECT"
+            and step["step_id"] == failure_step_id
+            and step_index == len(execution_plan) - 1
+        )
+        if is_reject_failure:
+            if not isinstance(returncode, int) or returncode == 0:
+                raise ContractError("rejection journal failure command did not fail")
+        elif returncode != 0:
+            raise ContractError("journal contains a failure before the terminal reject step")
         command_events[step["step_id"]] = finished
         index += 2
     sealed_events: dict[str, dict[str, Any]] = {}
@@ -1103,7 +1337,11 @@ def validate_journal_semantics(
         "terminal_pipeline_state": terminal_status,
         "artifact_manifest_path": manifest_path.relative_to(root).as_posix(),
         "artifact_manifest_sha256": sha256_file(manifest_path),
-        "last_completed_step_id": "function_contract",
+        "last_completed_step_id": (
+            failure_step_id
+            if terminal_status == "EXPECTED_STATIC_REJECT"
+            else "function_contract"
+        ),
     }
     if terminal_event["payload"] != expected_terminal_payload:
         raise ContractError("ATTEMPT_SEALED payload does not bind the final manifest/state")
@@ -1129,7 +1367,7 @@ def validate_journal_semantics(
                 or finished.get("stderr_sha256") != item["sha256"]
             ):
                 raise ContractError(f"journal stderr binding mismatch for {producer}")
-        elif producer not in {"snapshot_sources", "function_contract"}:
+        elif producer not in {"snapshot_sources", "function_contract", "reject_contract"}:
             raise ContractError(f"artifact {artifact_id} has an unknown producer step {producer}")
     for step_id in command_events:
         for stream_name in ("stdout", "stderr"):
@@ -1152,6 +1390,7 @@ def expected_actual_docker_argv(
         "cuobjdump": "/usr/local/cuda/bin/cuobjdump",
         "nvdisasm": "/usr/local/cuda/bin/nvdisasm",
         "type_witness": "/out/full/type_witness",
+        "collective_prefix_witness": "/out/full/collective_prefix_witness",
     }
     if tool not in entrypoints:
         raise ContractError(f"execution plan uses unknown tool {tool!r}")
@@ -1170,17 +1409,24 @@ def expected_actual_docker_argv(
         "--entrypoint",
         entrypoints[tool],
     ]
-    compile_step = step_id in {"compile_type_witness", "compile_fatbin"}
+    compile_step = step_id in {
+        "compile_collective_prefix_witness",
+        "compile_type_witness",
+        "compile_fatbin",
+    }
     if compile_step:
         command += ["-v", "<guide-root>:/workspace:ro"]
-    mount_suffix = ":ro" if step_id == "run_type_witness" else ""
+    mount_suffix = ":ro" if step_id in {
+        "run_collective_prefix_witness",
+        "run_type_witness",
+    } else ""
     command += ["-v", f"<attempt-root>:/out{mount_suffix}"]
     if compile_step:
         command += ["-w", "/workspace"]
     elif step_id in {"extract_ptx", "extract_elf"}:
         command += ["-w", "/out/full/extracted"]
     command.append(contract["toolchain"]["container_reference"])
-    if step_id == "run_type_witness":
+    if step_id in {"run_collective_prefix_witness", "run_type_witness"}:
         return command
     translated: list[str] = []
     for argument in step["argv"]:
@@ -1302,23 +1548,46 @@ def evaluate_arch_guard_patterns(
     return results
 
 
+def _validate_control_campaign_membership(
+    root: Path,
+    instance: dict[str, Any],
+    control_ref: dict[str, Any],
+) -> None:
+    campaign_id = instance["hypothesis"]["control_campaign_id"]
+    if not isinstance(campaign_id, str):
+        raise ContractError("control campaign is not frozen by the instance")
+    campaign_path, campaign = load_run_campaign(root, campaign_id)
+    summary_path = safe_path(root, campaign["current_summary"], "control_campaign.current_summary")
+    summary = load_strict_json(summary_path)
+    if (
+        summary.get("run_id") != campaign["run_id"]
+        or summary.get("campaign_ref")
+        != file_ref(root, campaign_path, identifier=campaign_id)
+        or not isinstance(summary.get("result_refs"), list)
+    ):
+        raise ContractError("control campaign summary does not bind its campaign")
+    matching = [ref for ref in summary["result_refs"] if ref == control_ref]
+    if len(matching) != 1:
+        raise ContractError("legal control is not the selected result of its campaign")
+
+
 def _validate_arch_guard_control(
     root: Path,
     result: dict[str, Any],
     instance: dict[str, Any],
     subject_fingerprint: dict[str, Any],
     control: dict[str, Any],
+    guard_profile: dict[str, Any],
     *,
     require_archive: bool,
 ) -> None:
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    if control["relation"] != contract["arch_guard_fallback_contract"]["control_relation"]:
+    if control["relation"] != guard_profile["control_relation"]:
         raise ContractError("architecture-guard control relation differs from the contract")
-    if control["controlled_delta"] != contract["arch_guard_fallback_contract"][
-        "controlled_delta"
-    ]:
+    if control["controlled_delta"] != guard_profile["controlled_delta"]:
         raise ContractError("architecture-guard control delta differs from the contract")
     control_ref = control["result_ref"]
+    _validate_control_campaign_membership(root, instance, control_ref)
     control_path = safe_path(root, control_ref["path"], "legal_control.result_ref.path")
     if control_path.stem != control_ref["id"] or sha256_file(control_path) != control_ref["sha256"]:
         raise ContractError("architecture-guard control result reference is not sealed")
@@ -1381,6 +1650,7 @@ def _arch_guard_expected_report(
         "nvdisasm_total_function_count": total_functions,
         "terminal_status": "UNSUPPORTED_SM110A",
         "reason": "ARCH_GUARD_FALLBACK",
+        "guard_profile_id": evidence["guard_profile_id"],
         "guard_atom": evidence["guard_atom"],
         "guard_macro": evidence["guard_macro"],
         "ptx_guard_results": ptx_results,
@@ -1404,6 +1674,12 @@ def _validate_arch_guard_function_contract(
 ) -> None:
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
     guard = contract["arch_guard_fallback_contract"]
+    guard_profile_id = evidence["guard_profile_id"]
+    if guard_profile_id != instance["hypothesis"]["guard_profile_id"]:
+        raise ContractError("architecture-guard profile differs from the frozen instance")
+    guard_profile = guard["profiles"].get(guard_profile_id)
+    if guard_profile is None:
+        raise ContractError("architecture-guard profile is not defined by the contract")
     if (
         evidence["reason"] != guard["reason"]
         or evidence["failure"]
@@ -1412,14 +1688,14 @@ def _validate_arch_guard_function_contract(
             "domain": "TARGET_ARCHITECTURE",
             "reason": guard["reason"],
         }
-        or evidence["guard_atom"] != guard["guard_atom"]
-        or evidence["guard_macro"] != guard["guard_macro"]
+        or evidence["guard_atom"] != guard_profile["guard_atom"]
+        or evidence["guard_macro"] != guard_profile["guard_macro"]
     ):
         raise ContractError("architecture-guard evidence identity differs from the contract")
     atom_name = normalize_cpp_type(resolved_types["mma_atom"])
-    if re.search(rf"(?<![A-Za-z0-9_]){re.escape(guard['guard_atom'])}(?![A-Za-z0-9_])", atom_name) is None:
+    if re.search(rf"(?<![A-Za-z0-9_]){re.escape(guard_profile['guard_atom'])}(?![A-Za-z0-9_])", atom_name) is None:
         raise ContractError("type witness does not resolve the guarded FastFP32 MMA atom")
-    if evidence["source_constraints"] != guard["source_constraints"]:
+    if evidence["source_constraints"] != guard_profile["source_constraints"]:
         raise ContractError("architecture-guard source constraints differ from the contract")
     for index, source_range in enumerate(evidence["source_constraints"]):
         validate_source_anchor(root, source_range, f"source_constraints[{index}]")
@@ -1441,6 +1717,9 @@ def _validate_arch_guard_function_contract(
                 code_object_metadata_text=role_paths["CODE_OBJECT_METADATA"].read_text(encoding="utf-8"),
                 expected_symbol=entries[0].symbol,
                 declared_cta_group=instance["declared_config"]["cta_group"],
+                require_tma_group_match=(
+                    instance["static_contract"]["tma_cta_policy"] == "match_mma"
+                ),
                 expected_ptx_target=instance["target"]["binary_arch"],
                 expected_sass_arch=instance["target"]["binary_arch"],
                 required_ptx=[],
@@ -1489,10 +1768,10 @@ def _validate_arch_guard_function_contract(
         sass_arch = instance["target"]["binary_arch"]
 
     ptx_results = evaluate_arch_guard_patterns(
-        ptx_function.opcodes, guard["ptx"], "architecture_guard.ptx"
+        ptx_function.opcodes, guard_profile["ptx"], "architecture_guard.ptx"
     )
     sass_results = evaluate_arch_guard_patterns(
-        sass_function.opcodes, guard["sass"], "architecture_guard.sass"
+        sass_function.opcodes, guard_profile["sass"], "architecture_guard.sass"
     )
     binding = {
         "target_cpp_entity": instance["static_contract"]["target_entity"],
@@ -1529,6 +1808,7 @@ def _validate_arch_guard_function_contract(
         instance,
         subject_fingerprint,
         evidence["legal_control"],
+        guard_profile,
         require_archive=require_archive,
     )
 
@@ -1709,6 +1989,10 @@ def validate_static_pass_evidence(
         raise ContractError("type witness lacks resolved types/values")
     for key in (
         "collective_mainloop",
+        "mainloop_element_a",
+        "mainloop_element_b",
+        "mainloop_transform_a",
+        "mainloop_transform_b",
         "mainloop_builder",
         "mainloop_builder_collective_op",
         "epilogue_builder",
@@ -2168,24 +2452,84 @@ def validate_static_pass_evidence(
                 raise ContractError(f"transform-pipeline type witness lacks {key}")
     elif input_compute_optional_keys & set(optional_types):
         raise ContractError("type witness contains undeclared input/compute copy roles")
+    if instance["subject"]["group"] == "interleaved_complex_tf32":
+        if (
+            resolved_values.get("computation_stages", 0) <= 0
+            or resolved_values.get("transformation_stages", 0) <= 0
+            or resolved_values.get("load_to_transform_stages") != 0
+            or resolved_values.get("transform_to_mma_stages") != 0
+            or resolved_types["mma_operand_source_a"] != "TMEM_FRAGMENT"
+            or resolved_types["mma_operand_source_b"] != "SMEM_DESCRIPTOR"
+            or not cpp_type_equivalent(
+                resolved_types["mma_value_type_a"],
+                "cutlass::complex<cutlass::tfloat32_t>",
+            )
+            or not cpp_type_equivalent(
+                resolved_types["mma_value_type_b"],
+                "cutlass::complex<cutlass::tfloat32_t>",
+            )
+        ):
+            raise ContractError(
+                "InterleavedComplexTF32 witness does not bind its TF32 transform pipeline"
+            )
+    if mechanism["fast_fp32"]["enabled"]:
+        expected_a_source = (
+            "TMEM_FRAGMENT"
+            if mechanism["fast_fp32"]["atom_model"] == "9xBF16-no-smem"
+            else "SMEM_DESCRIPTOR"
+        )
+        if (
+            resolved_values.get("load_to_transform_stages", 0) <= 0
+            or resolved_values.get("transform_to_mma_stages", 0) <= 0
+            or resolved_values.get("computation_stages") != 0
+            or resolved_values.get("transformation_stages") != 0
+            or resolved_types["mma_operand_source_a"] != expected_a_source
+            or resolved_types["mma_operand_source_b"] != "SMEM_DESCRIPTOR"
+        ):
+            raise ContractError(
+                "FastFP32 witness does not bind the declared input/compute pipeline"
+            )
     if mechanism["complex"]["enabled"]:
         for axis in ("a", "b"):
-            builder_complex = split_cpp_template(
-                normalize_cpp_type(resolved_types[f"builder_element_{axis}"])
-            )
-            if (
-                builder_complex is None
-                or builder_complex[0] != "cute::tuple"
-                or len(builder_complex[1]) != 2
-                or resolved_values.get(f"builder_tuple_arity_{axis}") != 2
-                or not cpp_type_equivalent(
-                    builder_complex[1][0], resolved_types[f"config_element_{axis}"]
-                )
-                or not cpp_type_equivalent(builder_complex[1][1], "cute::identity")
-            ):
-                raise ContractError(
-                    f"complex type witness Builder operand {axis.upper()} lacks value/transform pair"
-                )
+            builder_type = resolved_types[f"builder_element_{axis}"]
+            if mechanism["fast_fp32"]["enabled"]:
+                if (
+                    resolved_values.get(f"builder_tuple_arity_{axis}") != 0
+                    or not cpp_type_equivalent(builder_type, "cutlass::complex<float>")
+                    or not cpp_type_equivalent(
+                        resolved_types[f"mainloop_element_{axis}"],
+                        resolved_types[f"config_element_{axis}"],
+                    )
+                    or not cpp_type_equivalent(
+                        resolved_types[f"mainloop_transform_{axis}"], "cute::identity"
+                    )
+                ):
+                    raise ContractError(
+                        f"Fast complex compatibility Builder operand {axis.upper()} "
+                        "does not resolve bare complex input to an identity transform"
+                    )
+            else:
+                builder_complex = split_cpp_template(normalize_cpp_type(builder_type))
+                if (
+                    builder_complex is None
+                    or builder_complex[0] != "cute::tuple"
+                    or len(builder_complex[1]) != 2
+                    or resolved_values.get(f"builder_tuple_arity_{axis}") != 2
+                    or not cpp_type_equivalent(
+                        builder_complex[1][0], resolved_types[f"config_element_{axis}"]
+                    )
+                    or not cpp_type_equivalent(builder_complex[1][1], "cute::identity")
+                    or not cpp_type_equivalent(
+                        resolved_types[f"mainloop_element_{axis}"],
+                        resolved_types[f"config_element_{axis}"],
+                    )
+                    or not cpp_type_equivalent(
+                        resolved_types[f"mainloop_transform_{axis}"], builder_complex[1][1]
+                    )
+                ):
+                    raise ContractError(
+                        f"complex type witness Builder operand {axis.upper()} lacks value/transform pair"
+                    )
     if mechanism["complex"]["representation"] == "planar":
         allowed_optional_keys.update(planar_optional_keys)
         for key in planar_optional_keys:
@@ -2372,6 +2716,7 @@ def validate_static_pass_evidence(
             ptx_function.opcodes,
             sass_function.opcodes,
             instance["declared_config"]["cta_group"],
+            instance["static_contract"]["tma_cta_policy"] == "match_mma",
         )
         if not ptx_contract.passed or not sass_contract.passed or not cta_contract.passed:
             raise ContractError("tracked function excerpts do not satisfy the static contract")
@@ -2427,6 +2772,7 @@ def validate_static_pass_evidence(
             "sass_contract_results": expected_sass_results,
             "cta_group": {
                 "declared": cta_contract.declared_cta_group,
+                "tma_policy": instance["static_contract"]["tma_cta_policy"],
                 "ptx_mma_opcodes": list(cta_contract.ptx_mma_opcodes),
                 "sass_mma_opcodes": list(cta_contract.sass_mma_opcodes),
                 "errors": list(cta_contract.errors),
@@ -2462,6 +2808,9 @@ def validate_static_pass_evidence(
             ),
             expected_symbol=symbol,
             declared_cta_group=instance["declared_config"]["cta_group"],
+            require_tma_group_match=(
+                instance["static_contract"]["tma_cta_policy"] == "match_mma"
+            ),
             expected_ptx_target=instance["target"]["binary_arch"],
             expected_sass_arch=instance["target"]["binary_arch"],
             required_ptx=[item["regex"] for item in static_contract["ptx"]["required"]],
@@ -2537,6 +2886,7 @@ def validate_static_pass_evidence(
         "sass_contract_results": expected_sass_results,
         "cta_group": {
             "declared": attribution.cta_group_contract.declared_cta_group,
+            "tma_policy": instance["static_contract"]["tma_cta_policy"],
             "ptx_mma_opcodes": list(attribution.cta_group_contract.ptx_mma_opcodes),
             "sass_mma_opcodes": list(attribution.cta_group_contract.sass_mma_opcodes),
             "errors": list(attribution.cta_group_contract.errors),
@@ -2544,6 +2894,266 @@ def validate_static_pass_evidence(
     }
     if load_strict_json(role_paths["CONTRACT_CHECK_REPORT"]) != expected_report:
         raise ContractError("tracked contract report differs from recomputation")
+
+
+def _reject_diagnostic_value(
+    root: Path,
+    instance: dict[str, Any],
+    stderr: str,
+    raw_sha256: str,
+    raw_size: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]], int]:
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    global_contract = contract["expected_static_reject_contract"]
+    reject = instance["hypothesis"]["reject_contract"]
+    if reject is None:
+        raise ContractError("EXPECTED_STATIC_REJECT lacks reject_contract")
+    if not stderr or raw_size > global_contract["max_stderr_bytes"]:
+        raise ContractError("rejection stderr is empty or exceeds the frozen limit")
+    infrastructure_matches = [
+        pattern
+        for pattern in global_contract["infrastructure_forbidden_patterns"]
+        if re.search(pattern, stderr) is not None
+    ]
+    if infrastructure_matches:
+        raise ContractError("rejection stderr contains infrastructure failure diagnostics")
+    results: list[dict[str, Any]] = []
+    selected: dict[int, str] = {}
+    lines = stderr.splitlines()
+    for pattern in reject["required_diagnostics"]:
+        expression = re.compile(pattern["regex"])
+        matches = list(expression.finditer(stderr))
+        count = len(matches)
+        maximum = pattern["max_count"]
+        if count < pattern["min_count"] or (maximum is not None and count > maximum):
+            raise ContractError(f"rejection diagnostic {pattern['id']} differs from contract")
+        results.append(
+            {
+                "id": pattern["id"],
+                "required": True,
+                "match_count": count,
+                "matched_opcodes": [match.group(0) for match in matches],
+            }
+        )
+        for match in matches:
+            line_number = stderr.count("\n", 0, match.start()) + 1
+            selected[line_number] = lines[line_number - 1]
+    error_count = len(re.findall(global_contract["error_line_regex"], stderr))
+    if error_count != reject["expected_error_count"]:
+        raise ContractError("rejection error count differs from contract")
+    for line_number, line in enumerate(lines, start=1):
+        if (
+            "error" in line.lower()
+            or "fatal" in line.lower()
+            or instance["instance_id"] in line
+            or "KernelScheduleAuto" in line
+        ):
+            selected[line_number] = line
+    diagnostic = {
+        "schema_version": 1,
+        "instance_id": instance["instance_id"],
+        "raw_stderr_sha256": raw_sha256,
+        "raw_stderr_size_bytes": raw_size,
+        "observed_error_count": error_count,
+        "required_results": results,
+        "infrastructure_forbidden_matches": [],
+        "selected_lines": [
+            {
+                "line_number": line_number,
+                "text": selected[line_number],
+                "sha256": sha256_bytes((selected[line_number] + "\n").encode("utf-8")),
+            }
+            for line_number in sorted(selected)
+        ],
+    }
+    return diagnostic, results, error_count
+
+
+def validate_expected_static_reject_evidence(
+    root: Path,
+    result: dict[str, Any],
+    instance: dict[str, Any],
+    fingerprint: dict[str, Any],
+    artifacts: dict[str, Any],
+    *,
+    require_archive: bool,
+) -> None:
+    evidence = result["evidence"]
+    reject = instance["hypothesis"]["reject_contract"]
+    if reject is None:
+        raise ContractError("EXPECTED_STATIC_REJECT result lacks an instance reject contract")
+    items_by_id = {item["artifact_id"]: item for item in artifacts["items"]}
+    plan_ids = [step["step_id"] for step in fingerprint["execution_plan"]]
+    failure_step = reject["step_id"]
+    if failure_step not in plan_ids:
+        raise ContractError("reject step is outside the fingerprint plan")
+    executed_steps = plan_ids[: plan_ids.index(failure_step) + 1]
+    expected_ids = {"config_source", "kernel_source", "type_source", "diagnostic_excerpt", "rejection_report"}
+    expected_ids.update(
+        f"{step_id}_{stream}" for step_id in executed_steps for stream in ("stdout", "stderr")
+    )
+    expected_ids.update(
+        f"source_constraint_{index:02d}"
+        for index in range(len(reject["source_constraints"]))
+    )
+    if reject["requires_collective_prefix_witness"]:
+        expected_ids.update(
+            {"collective_prefix_source", "collective_prefix_executable", "collective_prefix_output"}
+        )
+    if set(items_by_id) != expected_ids:
+        raise ContractError(
+            "EXPECTED_STATIC_REJECT artifact set differs: "
+            f"missing={sorted(expected_ids - set(items_by_id))} "
+            f"extra={sorted(set(items_by_id) - expected_ids)}"
+        )
+    failure = evidence["failure"]
+    expected_failure = {
+        "layer": instance["hypothesis"]["failure_layer"],
+        "domain": "CONFIGURATION_LEGALITY",
+        "step_id": failure_step,
+        "returncode": reject["expected_returncode"],
+        "stderr_artifact_id": f"{failure_step}_stderr",
+    }
+    if failure != expected_failure:
+        raise ContractError("rejection failure identity differs from the frozen instance")
+    stderr_item = items_by_id[f"{failure_step}_stderr"]
+    if (
+        evidence["raw_stderr_sha256"] != stderr_item["sha256"]
+        or evidence["raw_stderr_size_bytes"] != stderr_item["size_bytes"]
+        or evidence["observed_error_count"] != reject["expected_error_count"]
+        or evidence["diagnostic_excerpt_artifact_id"] != "diagnostic_excerpt"
+        or evidence["rejection_report_artifact_id"] != "rejection_report"
+    ):
+        raise ContractError("rejection evidence does not bind the raw stderr artifacts")
+    diagnostic_path = safe_path(root, items_by_id["diagnostic_excerpt"]["path"], "diagnostic_excerpt")
+    if require_archive:
+        stderr_path = safe_path(root, stderr_item["path"], "compile_type_witness.stderr")
+        try:
+            stderr = stderr_path.read_bytes().decode("utf-8", errors="strict")
+        except UnicodeDecodeError as error:
+            raise ContractError("rejection stderr is not UTF-8") from error
+        diagnostic, results, error_count = _reject_diagnostic_value(
+            root,
+            instance,
+            stderr,
+            stderr_item["sha256"],
+            stderr_item["size_bytes"],
+        )
+        if load_strict_json(diagnostic_path) != diagnostic:
+            raise ContractError("tracked rejection diagnostic differs from archived stderr")
+        attempt_root = root / artifacts["archive_bundle"]["path"]
+        if (attempt_root / "full/type_witness").exists():
+            raise ContractError("rejected type witness unexpectedly produced an executable")
+    else:
+        diagnostic = load_strict_json(diagnostic_path)
+        if diagnostic.get("infrastructure_forbidden_matches") != []:
+            raise ContractError("tracked rejection diagnostic contains infrastructure failures")
+        results = diagnostic.get("required_results")
+        error_count = diagnostic.get("observed_error_count")
+    if evidence["diagnostic_results"] != results or error_count != evidence["observed_error_count"]:
+        raise ContractError("rejection diagnostic results differ from decisive evidence")
+
+    source_evidence = []
+    for index, source_range in enumerate(reject["source_constraints"]):
+        artifact_id = f"source_constraint_{index:02d}"
+        expected = {**source_range, "excerpt_artifact_id": artifact_id}
+        source_evidence.append(expected)
+        validate_source_anchor(root, source_range, f"reject.source_constraints[{index}]")
+        source = safe_path(
+            root / "third_party/cutlass",
+            source_range["path"],
+            f"reject.source_constraints[{index}].path",
+        )
+        lines = source.read_text(encoding="utf-8").splitlines()
+        expected_text = "\n".join(
+            lines[source_range["line_start"] - 1 : source_range["line_end"]]
+        ) + "\n"
+        excerpt_path = safe_path(root, items_by_id[artifact_id]["path"], artifact_id)
+        if excerpt_path.read_text(encoding="utf-8") != expected_text:
+            raise ContractError("rejection source excerpt differs from its frozen range")
+    if evidence["source_constraints"] != source_evidence:
+        raise ContractError("rejection source constraints differ from the instance")
+    expected_prefix_id = (
+        "collective_prefix_output" if reject["requires_collective_prefix_witness"] else None
+    )
+    if evidence["prefix_witness_artifact_id"] != expected_prefix_id:
+        raise ContractError("rejection prefix witness differs from the failure layer")
+    if expected_prefix_id is not None:
+        prefix = load_strict_json(
+            safe_path(root, items_by_id[expected_prefix_id]["path"], expected_prefix_id)
+        )
+        if prefix.get("instance_id") != instance["instance_id"] or "gemm_kernel" in prefix.get(
+            "resolved_types", {}
+        ):
+            raise ContractError("collective prefix witness is invalid or reaches GemmKernel")
+
+    control = evidence["legal_control"]
+    if (
+        control["relation"] != reject["control_relation"]
+        or control["controlled_delta"] != reject["controlled_delta"]
+    ):
+        raise ContractError("rejection legal-control relation differs from the instance")
+    control_ref = control["result_ref"]
+    _validate_control_campaign_membership(root, instance, control_ref)
+    control_path = safe_path(root, control_ref["path"], "rejection.control.result_ref")
+    if control_ref != file_ref(root, control_path, identifier=control_ref["id"]):
+        raise ContractError("rejection control result ref is not sealed")
+    control_result = load_strict_json(control_path)
+    if control_result.get("status") != "STATIC_PASS" or control_result.get("result_id") == result[
+        "result_id"
+    ]:
+        raise ContractError("rejection control is not a distinct STATIC_PASS")
+    for key in ("contract_sha256", "objective_sha256", "freshness_epoch", "scope"):
+        if control_result.get(key) != result[key]:
+            raise ContractError("rejection control is not fresh under the same contract")
+    control_instance_path = safe_path(
+        root, control_result["instance_ref"]["path"], "rejection.control.instance_ref"
+    )
+    control_instance = validate_instance(root, control_instance_path)
+    if (
+        control_instance["instance_id"] != instance["hypothesis"]["control_instance_id"]
+        or control_instance["target"] != instance["target"]
+    ):
+        raise ContractError("rejection control instance/target differs from the hypothesis")
+    if reject["control_relation"] == "parent" and instance["provenance"][
+        "parent_instance_id"
+    ] != control_instance["instance_id"]:
+        raise ContractError("rejection control is not the declared parent")
+    subject_config = json.loads(json.dumps(instance["declared_config"]))
+    control_config = json.loads(json.dumps(control_instance["declared_config"]))
+    subject_config.pop("mainloop_schedule")
+    control_config.pop("mainloop_schedule")
+    if subject_config != control_config:
+        raise ContractError("rejection control changes more than Mainloop Schedule")
+    control_fingerprint_path = safe_path(
+        root, control_result["fingerprint_ref"]["path"], "rejection.control.fingerprint_ref"
+    )
+    control_fingerprint = validate_fingerprint(root, control_fingerprint_path)
+    if (
+        control_fingerprint["toolchain"] != fingerprint["toolchain"]
+        or control_fingerprint["environment"] != fingerprint["environment"]
+        or control_fingerprint["source_closure"]["cutlass_git_sha"]
+        != fingerprint["source_closure"]["cutlass_git_sha"]
+    ):
+        raise ContractError("rejection control uses another toolchain/environment")
+    validate_result(root, control_path, require_archive=require_archive)
+
+    expected_report = {
+        "schema_version": 1,
+        "instance_id": instance["instance_id"],
+        "terminal_status": "EXPECTED_STATIC_REJECT",
+        "failure": expected_failure,
+        "diagnostic_results": evidence["diagnostic_results"],
+        "observed_error_count": evidence["observed_error_count"],
+        "raw_stderr_sha256": evidence["raw_stderr_sha256"],
+        "raw_stderr_size_bytes": evidence["raw_stderr_size_bytes"],
+        "source_constraints": source_evidence,
+        "prefix_witness_artifact_id": expected_prefix_id,
+        "legal_control": control,
+    }
+    report_path = safe_path(root, items_by_id["rejection_report"]["path"], "rejection_report")
+    if load_strict_json(report_path) != expected_report:
+        raise ContractError("rejection report differs from recomputed evidence")
 
 
 def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> dict[str, Any]:
@@ -2593,6 +3203,22 @@ def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> 
                 if item["witness_artifact_id"] != expected_witnesses[item["layer"]]:
                     raise ContractError(
                         f"layer {item['layer']} uses the wrong architecture-guard witness"
+                    )
+        else:
+            rejected_layer = layers[rejected]["layer"]
+            for index, item in enumerate(layers):
+                expected_witness = (
+                    "config_source"
+                    if index == 0 and index < rejected
+                    else "collective_prefix_output"
+                    if index < rejected
+                    else "rejection_report"
+                    if index == rejected
+                    else None
+                )
+                if item["witness_artifact_id"] != expected_witness:
+                    raise ContractError(
+                        f"layer {item['layer']} uses the wrong {rejected_layer} rejection witness"
                     )
     instance_ref = result["instance_ref"]
     instance_path = safe_path(root, instance_ref["path"], "instance_ref.path")
@@ -2678,6 +3304,22 @@ def validate_result(root: Path, path: Path, *, require_archive: bool = True) -> 
                     raise ContractError(f"{results_name}: forbidden opcode matched")
         validate_static_pass_evidence(
             root, result, instance, artifacts, require_archive=require_archive
+        )
+    elif result["status"] == "EXPECTED_STATIC_REJECT":
+        layer_witnesses = {
+            item["witness_artifact_id"]
+            for item in layers
+            if item["witness_artifact_id"] is not None
+        }
+        if not layer_witnesses <= artifact_ids:
+            raise ContractError("rejection layers reference unknown artifacts")
+        validate_expected_static_reject_evidence(
+            root,
+            result,
+            instance,
+            fingerprint,
+            artifacts,
+            require_archive=require_archive,
         )
     elif result["status"] == "UNSUPPORTED_SM110A":
         evidence = result["evidence"]

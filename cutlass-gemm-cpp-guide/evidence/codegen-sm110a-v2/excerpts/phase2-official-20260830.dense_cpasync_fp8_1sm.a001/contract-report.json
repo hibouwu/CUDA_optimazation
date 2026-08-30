@@ -113,6 +113,7 @@
   ],
   "cta_group": {
     "declared": 1,
+    "tma_policy": "match_mma",
     "ptx_mma_opcodes": [
       "tcgen05.mma.cta_group::1.kind::f8f6f4",
       "tcgen05.mma.cta_group::1.kind::f8f6f4",

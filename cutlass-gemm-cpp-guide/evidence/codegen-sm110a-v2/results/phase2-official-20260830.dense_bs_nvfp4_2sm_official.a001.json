@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "dense_bs_nvfp4_2sm_official",
     "path": "tests/codegen/instances/dense_bs_nvfp4_2sm_official/instance.json",
-    "sha256": "0ed49031dd8fd48da73fd923970a868654c841c84dc7ffe4c761b6efc54b4f8c"
+    "sha256": "c0cb47bda74d84ee8d2d630833950d0e58063c2b27e7836c07dd127e623b59d8"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_bs_nvfp4_2sm_official-b66365f01486",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_nvfp4_2sm_official-b66365f01486.json",
-    "sha256": "99cc2ff41c937a1e78e47d3952620c70fa82987e1047d16a7600696cbe776430"
+    "id": "fp-dense_bs_nvfp4_2sm_official-81c71d1f74cf",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_nvfp4_2sm_official-81c71d1f74cf.json",
+    "sha256": "00e7ea0ccc59cef5100632dd33cad8f3397eecf1f42f0081f024a842ed9038f2"
   },
   "attempt_id": "phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001.jsonl",
-    "sha256": "d65a02ea14b317466d39d0e8c0286d8f325dc03d690b36727bb045281e5781f7",
+    "sha256": "22114a35c2b8527efe6b8fa06d4b100d7028028cfd9ddf14c319d27161c32597",
     "last_seq": 64,
-    "last_event_sha256": "f2bf02f13064735355a5b32b49e91131647a6e3818874757444ed250ab96f531"
+    "last_event_sha256": "46d9aef903e7bd8e2e851f04337d15bbd9522868a39e45d0ea9c05b132aa1b61"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.dense_bs_nvfp4_2sm_official.a001.json",
-    "sha256": "3593cdb746d92090afa5ff2dcee57a9f0ee720ea6edea7a4fa3c612bb321fc7b"
+    "sha256": "1d3d863a46661fc79f390e7b89e78379e53115158705f25e917a838cc0990865"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

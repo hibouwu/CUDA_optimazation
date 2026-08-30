@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "ptr_bs_mxf8_2sm_official",
     "path": "tests/codegen/instances/ptr_bs_mxf8_2sm_official/instance.json",
-    "sha256": "6236875dbaf1f22d35424d3e83aa88dfd2c37d0e101e9b43de439cc53315d861"
+    "sha256": "e129a37d7bb66474ac96c0ff1af47069b77dce773c06496fe331785014938318"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_bs_mxf8_2sm_official-3cee018aac5d",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_mxf8_2sm_official-3cee018aac5d.json",
-    "sha256": "96a615643ff82df70b570a624ad0fd9ba06a77cd56e9cd12ff89f9e54f62b806"
+    "id": "fp-ptr_bs_mxf8_2sm_official-7ffa467e29f3",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_mxf8_2sm_official-7ffa467e29f3.json",
+    "sha256": "3500e1f63f6d94adf3ff18140f2ddf3a93a9b636967ac0c708f8122124c748e1"
   },
   "attempt_id": "phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001.jsonl",
-    "sha256": "94c8d7ee56c9e770f2a419c2080a2e6306ae5462c53d0b263089191c14be0a0a",
+    "sha256": "c14ec9555e5006f69335847e1bf2b921fb69de95cad6c4fc11c5ee7bca51b267",
     "last_seq": 64,
-    "last_event_sha256": "a387b7265161097879308991667531bca3c888202b6b3d97e5a3c709d3fb822d"
+    "last_event_sha256": "e9efb7728f3638051d851ecf197e0966ef0d98c22e0fb2c7356b8c5c997045f8"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_bs_mxf8_2sm_official.a001.json",
-    "sha256": "c59b39febc4f83ee0c0d8ef390c531b153c6fa47261e881a4ac811e6d9ab9007"
+    "sha256": "fd9d9640c7a019d48557000c81f2cfb9b1e2f92a077b714136b9f6331c31b356"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

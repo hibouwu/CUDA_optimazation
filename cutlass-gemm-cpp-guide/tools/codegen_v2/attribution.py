@@ -134,7 +134,7 @@ def _ptx_opcodes(function_text: str) -> tuple[str, ...]:
         predicate = re.match(r"^@!?%[A-Za-z0-9_.$]+\s+", candidate)
         if predicate is not None:
             candidate = candidate[predicate.end() :]
-        opcode = re.match(r"^([A-Za-z][A-Za-z0-9_.:]*)(?=\s|;|\{)", candidate)
+        opcode = re.match(r"^([A-Za-z][A-Za-z0-9_.:]*)(?=\s|;|\{|\[)", candidate)
         if opcode is not None:
             opcodes.append(opcode.group(1))
     return tuple(opcodes)
@@ -306,6 +306,7 @@ def evaluate_cta_group(
     ptx_opcodes: tuple[str, ...],
     sass_opcodes: tuple[str, ...],
     declared_cta_group: int,
+    require_tma_group_match: bool = True,
 ) -> CtaGroupResult:
     if declared_cta_group not in (1, 2):
         raise AttributionError("declared_cta_group must be 1 or 2")
@@ -336,9 +337,9 @@ def evaluate_cta_group(
         errors.append("1SM target SASS contains a 2CTA MMA opcode")
     elif declared_cta_group == 2 and any(".2CTA" not in opcode for opcode in sass_mma):
         errors.append("2SM target SASS contains a non-2CTA MMA opcode")
-    if declared_cta_group == 1 and any(".2CTA" in opcode for opcode in sass_tma):
+    if require_tma_group_match and declared_cta_group == 1 and any(".2CTA" in opcode for opcode in sass_tma):
         errors.append("1SM target SASS contains a 2CTA TMA-load opcode")
-    if declared_cta_group == 2 and sass_tma and not any(".2CTA" in opcode for opcode in sass_tma):
+    if require_tma_group_match and declared_cta_group == 2 and sass_tma and not any(".2CTA" in opcode for opcode in sass_tma):
         errors.append("2SM target SASS contains no 2CTA TMA-load opcode")
     return CtaGroupResult(declared_cta_group, ptx_mma, sass_mma, sass_tma, tuple(errors))
 
@@ -357,6 +358,7 @@ def attribute_codegen(
     forbidden_ptx: list[str],
     required_sass: list[str],
     forbidden_sass: list[str],
+    require_tma_group_match: bool = True,
 ) -> AttributionResult:
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", expected_symbol):
         raise AttributionError("expected_symbol must be a stable C identifier")
@@ -390,5 +392,10 @@ def attribute_codegen(
         sass_function,
         evaluate_contract(ptx_function.opcodes, required_ptx, forbidden_ptx, "ptx"),
         evaluate_contract(sass_function.opcodes, required_sass, forbidden_sass, "sass"),
-        evaluate_cta_group(ptx_function.opcodes, sass_function.opcodes, declared_cta_group),
+        evaluate_cta_group(
+            ptx_function.opcodes,
+            sass_function.opcodes,
+            declared_cta_group,
+            require_tma_group_match,
+        ),
     )

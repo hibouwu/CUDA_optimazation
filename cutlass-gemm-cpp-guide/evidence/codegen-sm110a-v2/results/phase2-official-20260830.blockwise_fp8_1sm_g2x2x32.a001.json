@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "blockwise_fp8_1sm_g2x2x32",
     "path": "tests/codegen/instances/blockwise_fp8_1sm_g2x2x32/instance.json",
-    "sha256": "07ef38a6c656c86d5312484b7bba8e65ba660884fd44be5b3511a76f37ae1134"
+    "sha256": "5c277ee43ffdfe55bb0ae57e44924bfc4df2491a8a500192e5a92ae506c050fb"
   },
   "fingerprint_ref": {
-    "id": "fp-blockwise_fp8_1sm_g2x2x32-f78f9062318d",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-blockwise_fp8_1sm_g2x2x32-f78f9062318d.json",
-    "sha256": "cd726c670ff6e9493540aa12af4a5dc71475ccb713d3d7dd8b820a43d8e84db8"
+    "id": "fp-blockwise_fp8_1sm_g2x2x32-0ad045a38614",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-blockwise_fp8_1sm_g2x2x32-0ad045a38614.json",
+    "sha256": "4b9bd7ffface32b5f875a257e5364c0d0990b09bc954861e086c41a5fdf773c2"
   },
   "attempt_id": "phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001.jsonl",
-    "sha256": "597e62643437d41670c6cd2b22aacb30d1b06d294a165ae8bd7602828ae1f636",
+    "sha256": "8b205e5b4e6707afc77d807fde60c7ab9261e9deb791cb84da63e9d091db3398",
     "last_seq": 64,
-    "last_event_sha256": "352dff7e25b7d16671bc0a5d2c568011d95521062b2822e6c7d6706e10589a84"
+    "last_event_sha256": "8df94b2d145f6e0d3f16d2d7204b8837ceb3d712ba8071ca9bb0da9682510874"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.blockwise_fp8_1sm_g2x2x32.a001.json",
-    "sha256": "3181cb47832a488ab8bd044ed24f002ccd373d405bfef4b2860f6e75baf4e61f"
+    "sha256": "7d804a8551ab81ff62540086ac1581c637fd2af5ab4bfb57c632cdb5721f85cd"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

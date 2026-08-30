@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "run_id": "phase3-generator-controls-20260830",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "campaign_ref": {
+    "id": "phase3-generator-controls-20260830",
+    "path": "tests/codegen/run-campaigns/phase3-generator-controls-20260830.json",
+    "sha256": "696a900709b82358e10cdcdc9ca1255fc2e76a2362fbf5451fdb4dfe36ab5b48"
+  },
+  "result_refs": [
+    {
+      "id": "phase3-generator-controls-20260830.interleaved_complex_tf32_1sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-controls-20260830.interleaved_complex_tf32_1sm_generator.a001.json",
+      "sha256": "36297c6f1014b2be698696c4d28300a35598fb782fd4fd40f23fcd15718a141f"
+    },
+    {
+      "id": "phase3-generator-controls-20260830.interleaved_complex_tf32_2sm_generator.a001",
+      "path": "evidence/codegen-sm110a-v2/results/phase3-generator-controls-20260830.interleaved_complex_tf32_2sm_generator.a001.json",
+      "sha256": "74265caa2f8b85b4422e656e3278bf93494dd32b5f8389018f1d6fb4834602ee"
+    }
+  ],
+  "history_result_refs": []
+}

@@ -135,12 +135,16 @@ evidence_promotions: 0
 持久化结果：
 
 - Phase 2 summary：`evidence/codegen-sm110a-v2/summary-phase2-official-20260830.json`，
-  SHA-256 `ce2d7f21973aa335a7bc151f9bab8a3cff294c64d6999f4737efe25722c27c2e`；
+  SHA-256 `03a03dd49f80f7ee74e37f283629ce90c6b7b14921b71a7335635d956cb4c0ab`；
 - 34 result、34 fingerprint、34 artifact manifest、34 hash-chained journal；
 - 136 份 Git 内 type/PTX/SASS/contract excerpt；
-- 完整 Phase 2 archive 约 151 MiB，1156 个文件，位于被忽略的
+- 完整 Phase 2 archive 约 148 MiB，1122 个文件，位于被忽略的
   `artifacts/codegen-sm110a-v2/phase2-official-20260830/`；
-- result-contract bundle：`6046f6f498fff30e78b7adde3ee05bf76229491579c6370c8d99cd582630b02e`。
+- result-contract bundle：`b4d8852e9e962cb57dd718d45709272ef47cd6c228866f917e40be3edc6fda64`。
 
-59 个显式 Tag 的当前投影为：`STATIC_PASS=39`、`UNSUPPORTED_SM110A=1`、
-`NOT_CHECKED=19`。本阶段没有执行 Thor kernel、数值计算或性能测量。
+Phase 3 冻结最终 harness 后，这 34 项也已在同一 bundle 下重新 clean replay，并包含在
+`evidence/codegen-sm110a-v2/replay-attestations/phase3-final-deep-replay.json` 的 47/47 重放中。
+
+Phase 2 完成时，59 个显式 Tag 的阶段快照为：`STATIC_PASS=39`、
+`UNSUPPORTED_SM110A=1`、`NOT_CHECKED=19`；后续当前总账见 Phase 3 报告。
+本阶段没有执行 Thor kernel、数值计算或性能测量。

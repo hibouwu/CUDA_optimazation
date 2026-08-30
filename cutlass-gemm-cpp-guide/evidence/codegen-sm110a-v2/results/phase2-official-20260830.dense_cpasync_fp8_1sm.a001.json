@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "dense_cpasync_fp8_1sm",
     "path": "tests/codegen/instances/dense_cpasync_fp8_1sm/instance.json",
-    "sha256": "a402d212d137f8d6c323dd3e33100a761e0dab2af55f8ed55ae50e0cc63e3ce7"
+    "sha256": "e2c13d3de92f2caaa611d572cf5343a6493aefa4eac2a204e57cee8ce917cb64"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_cpasync_fp8_1sm-3bc1505fe4ba",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_cpasync_fp8_1sm-3bc1505fe4ba.json",
-    "sha256": "55de4b0b7edd4fe052ecc2bde1c7bdb9ae78cb1b2b6ef3e7cf38cdc58780f5be"
+    "id": "fp-dense_cpasync_fp8_1sm-1234d23b6b4d",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_cpasync_fp8_1sm-1234d23b6b4d.json",
+    "sha256": "cb138913b5da653b96c5ad56735a563decbe58939a749bcf383befbb59c97a85"
   },
   "attempt_id": "phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.dense_cpasync_fp8_1sm.a001.jsonl",
-    "sha256": "845069f5fb5b2fa76488b48f6d018efe59a054ff632bb86c4a9fcd85c54418e4",
+    "sha256": "d549dcbeec2147857d327536bfe454ec708a050d34d2c086f0f58ab28e7df5c4",
     "last_seq": 64,
-    "last_event_sha256": "9e907290d6f204eee4f133311e9f02ea4712754c1d81325664c91f5458ead0a9"
+    "last_event_sha256": "89ecbe4bd66bdcfbdbe7261f8f0984d0e0f7d4f0602bec6e7d0df293eb4ac439"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.dense_cpasync_fp8_1sm.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.dense_cpasync_fp8_1sm.a001.json",
-    "sha256": "93b109954683a88e3aec758e9b067b985ae1bc5a37b5a65d97973eecc4b2a19a"
+    "sha256": "69155612d5c66b9391d991e5ceecd7d2d26e1545b7e015c8fb1d1adc921536fb"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

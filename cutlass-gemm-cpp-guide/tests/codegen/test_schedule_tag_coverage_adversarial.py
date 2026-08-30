@@ -75,7 +75,17 @@ def make_root() -> Path:
         if completion_report is not None:
             copy_relative(completion_report["path"])
     static_contract = load(ROOT / "tests/codegen/static_codegen_contract.json")
-    for source_range in static_contract["arch_guard_fallback_contract"]["source_constraints"]:
+    guard_source_ranges = {
+        (
+            source_range["path"],
+            source_range["line_start"],
+            source_range["line_end"],
+            source_range["sha256"],
+        ): source_range
+        for profile in static_contract["arch_guard_fallback_contract"]["profiles"].values()
+        for source_range in profile["source_constraints"]
+    }
+    for source_range in guard_source_ranges.values():
         source = ROOT / "third_party/cutlass" / source_range["path"]
         target = root / "third_party/cutlass" / source_range["path"]
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -97,6 +107,40 @@ def make_root() -> Path:
             evidence_target = root / "third_party/cutlass" / evidence_anchor["path"]
             evidence_target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(evidence_source, evidence_target)
+
+    copied_results: set[str] = set()
+
+    def copy_result_graph(result_relative: Path) -> None:
+        if result_relative.as_posix() in copied_results:
+            return
+        copied_results.add(result_relative.as_posix())
+        copy_relative(result_relative)
+        result = load(ROOT / result_relative)
+        for ref_name in (
+            "instance_ref",
+            "fingerprint_ref",
+            "journal_ref",
+            "artifact_manifest_ref",
+        ):
+            copy_relative(result[ref_name]["path"])
+        fingerprint = load(ROOT / result["fingerprint_ref"]["path"])
+        for source_input in fingerprint["source_closure"]["inputs"]:
+            copy_relative(source_input["path"])
+        artifact_manifest = load(ROOT / result["artifact_manifest_ref"]["path"])
+        for artifact in artifact_manifest["items"]:
+            if artifact["storage"] == "git_evidence":
+                copy_relative(artifact["path"])
+
+    for campaign_path in sorted((ROOT / "tests/codegen/run-campaigns").glob("*.json")):
+        copy_relative(campaign_path.relative_to(ROOT))
+    for summary_path in sorted(
+        (ROOT / "evidence/codegen-sm110a-v2").glob("summary-*.json")
+    ):
+        copy_relative(summary_path.relative_to(ROOT))
+        summary = load(summary_path)
+        for result_ref in summary["result_refs"] + summary["history_result_refs"]:
+            copy_result_graph(Path(result_ref["path"]))
+
     for entry in load(MANIFEST)["entries"]:
         for case_id in entry["current_case_ids"]:
             case = root / "cases" / case_id / "case.json"
@@ -106,17 +150,7 @@ def make_root() -> Path:
         if result_id is None:
             continue
         result_relative = Path("evidence/codegen-sm110a-v2/results") / f"{result_id}.json"
-        copy_relative(result_relative)
-        result = load(ROOT / result_relative)
-        for ref_name in ("instance_ref", "fingerprint_ref", "journal_ref", "artifact_manifest_ref"):
-            copy_relative(result[ref_name]["path"])
-        fingerprint = load(ROOT / result["fingerprint_ref"]["path"])
-        for source_input in fingerprint["source_closure"]["inputs"]:
-            copy_relative(source_input["path"])
-        artifact_manifest = load(ROOT / result["artifact_manifest_ref"]["path"])
-        for artifact in artifact_manifest["items"]:
-            if artifact["storage"] == "git_evidence":
-                copy_relative(artifact["path"])
+        copy_result_graph(result_relative)
     return root
 
 

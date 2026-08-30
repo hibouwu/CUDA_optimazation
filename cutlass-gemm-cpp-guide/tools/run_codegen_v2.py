@@ -32,6 +32,7 @@ from codegen_v2.model import (
     hash_input_tree,
     journal_event_hash,
     load_strict_json,
+    load_run_campaign,
     safe_path,
     sha256_bytes,
     sha256_file,
@@ -219,6 +220,8 @@ def build_fingerprint(
     input_paths = {path.resolve() for path in harness_input_paths(root)}
     input_paths.add(instance_path.resolve())
     for reference in instance["translation_units"].values():
+        if reference is None:
+            continue
         input_paths.add((root / reference["path"]).resolve())
     inputs = [file_ref(root, path) for path in sorted(input_paths)]
     plan = logical_execution_plan(instance)
@@ -311,7 +314,7 @@ class CommandRecord:
     returncode: int
 
 
-def execute_step(
+def capture_step(
     *,
     command: list[str],
     step_id: str,
@@ -346,11 +349,17 @@ def execute_step(
             "stderr_sha256": sha256_file(stderr_path),
         },
     )
-    if result.returncode:
-        raise RunnerError(
-            f"{step_id} failed ({result.returncode}); see {stdout_path} and {stderr_path}"
-        )
     return CommandRecord(step_id, stdout_path, stderr_path, result.returncode)
+
+
+def execute_step(**kwargs: Any) -> CommandRecord:
+    record = capture_step(**kwargs)
+    if record.returncode:
+        raise RunnerError(
+            f"{record.step_id} failed ({record.returncode}); "
+            f"see {record.stdout_path} and {record.stderr_path}"
+        )
+    return record
 
 
 def one_extracted_file(directory: Path, suffix: str, label: str) -> Path:
@@ -382,6 +391,82 @@ def pattern_results(
             }
         )
     return output
+
+
+def classify_expected_reject_diagnostic(
+    root: Path,
+    instance: dict[str, Any],
+    record: CommandRecord,
+) -> tuple[str, list[dict[str, Any]], int, list[dict[str, Any]]]:
+    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
+    global_contract = contract["expected_static_reject_contract"]
+    reject = instance["hypothesis"]["reject_contract"]
+    if reject is None or record.step_id != reject["step_id"]:
+        raise RunnerError("failed command is not the frozen expected-reject step")
+    if record.returncode != reject["expected_returncode"]:
+        raise RunnerError("expected-reject return code differs from the frozen contract")
+    if record.returncode in global_contract["forbidden_returncodes"] or record.returncode >= global_contract[
+        "forbidden_returncode_minimum"
+    ]:
+        raise RunnerError("infrastructure return code cannot become EXPECTED_STATIC_REJECT")
+    raw = record.stderr_path.read_bytes()
+    if not raw or len(raw) > global_contract["max_stderr_bytes"]:
+        raise RunnerError("expected-reject stderr is empty or exceeds the frozen limit")
+    try:
+        stderr = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise RunnerError("expected-reject stderr is not UTF-8") from error
+    for pattern in global_contract["infrastructure_forbidden_patterns"]:
+        if re.search(pattern, stderr) is not None:
+            raise RunnerError("infrastructure diagnostic cannot become EXPECTED_STATIC_REJECT")
+    results: list[dict[str, Any]] = []
+    selected_lines: dict[int, str] = {}
+    lines = stderr.splitlines()
+    for pattern in reject["required_diagnostics"]:
+        expression = re.compile(pattern["regex"])
+        matches = list(expression.finditer(stderr))
+        count = len(matches)
+        maximum = pattern["max_count"]
+        if count < pattern["min_count"] or (maximum is not None and count > maximum):
+            raise RunnerError(f"required rejection diagnostic {pattern['id']} differs")
+        matched = [match.group(0) for match in matches]
+        results.append(
+            {
+                "id": pattern["id"],
+                "required": True,
+                "match_count": count,
+                "matched_opcodes": matched,
+            }
+        )
+        for match in matches:
+            line_number = stderr.count("\n", 0, match.start()) + 1
+            selected_lines[line_number] = lines[line_number - 1]
+    error_count = len(re.findall(global_contract["error_line_regex"], stderr))
+    if error_count != reject["expected_error_count"]:
+        raise RunnerError("expected-reject error count differs from the frozen contract")
+    for line_number, line in enumerate(lines, start=1):
+        if (
+            "error" in line.lower()
+            or "fatal" in line.lower()
+            or instance["instance_id"] in line
+            or "KernelScheduleAuto" in line
+        ):
+            selected_lines[line_number] = line
+    excerpt_lines = [
+        {
+            "line_number": line_number,
+            "text": selected_lines[line_number],
+            "sha256": sha256_bytes((selected_lines[line_number] + "\n").encode("utf-8")),
+        }
+        for line_number in sorted(selected_lines)
+    ]
+    return stderr, results, error_count, excerpt_lines
+
+
+def source_constraint_text(root: Path, source_range: dict[str, Any]) -> str:
+    source = safe_path(root / "third_party/cutlass", source_range["path"], "source_constraint.path")
+    lines = source.read_text(encoding="utf-8").splitlines()
+    return "\n".join(lines[source_range["line_start"] - 1 : source_range["line_end"]]) + "\n"
 
 
 def next_attempt_id(
@@ -442,57 +527,269 @@ def find_fresh_static_control(
     subject_fingerprint: dict[str, Any],
 ) -> dict[str, str]:
     control_id = instance["hypothesis"]["control_instance_id"]
-    if not isinstance(control_id, str) or not control_id:
-        raise RunnerError("UNSUPPORTED_SM110A instance lacks a frozen control instance")
-    matches: list[tuple[Path, dict[str, Any]]] = []
-    results_dir = root / "evidence/codegen-sm110a-v2/results"
-    for path in sorted(results_dir.glob("*.json")):
-        try:
-            candidate = load_strict_json(path)
-        except ContractError:
-            continue
-        if (
-            candidate.get("status") != "STATIC_PASS"
-            or candidate.get("instance_ref", {}).get("id") != control_id
-            or candidate.get("contract_sha256") != contract_sha256(root)
-            or candidate.get("freshness_epoch") != instance["freshness_epoch"]
-        ):
-            continue
-        try:
-            validated = validate_result(root, path, require_archive=True)
-            control_instance = validate_instance(
-                root,
-                safe_path(root, validated["instance_ref"]["path"], "control.instance_ref"),
-            )
-            control_fingerprint = validate_fingerprint(
-                root,
-                safe_path(
-                    root,
-                    validated["fingerprint_ref"]["path"],
-                    "control.fingerprint_ref",
-                ),
-            )
-        except (ContractError, OSError):
-            continue
-        if (
-            control_instance["target"] == instance["target"]
-            and control_fingerprint["toolchain"] == subject_fingerprint["toolchain"]
-            and control_fingerprint["environment"] == subject_fingerprint["environment"]
-            and control_fingerprint["source_closure"]["cutlass_git_sha"]
-            == subject_fingerprint["source_closure"]["cutlass_git_sha"]
-        ):
-            matches.append((path, validated))
-    if len(matches) != 1:
-        raise RunnerError(
-            f"UNSUPPORTED_SM110A requires exactly one fresh same-target STATIC_PASS control, "
-            f"found {[path.name for path, _ in matches]}"
-        )
-    control_path, control_result = matches[0]
+    campaign_id = instance["hypothesis"]["control_campaign_id"]
+    if not isinstance(control_id, str) or not control_id or not isinstance(campaign_id, str):
+        raise RunnerError("rejection instance lacks a frozen control instance/campaign")
+    campaign_path, campaign = load_run_campaign(root, campaign_id)
+    summary_path = safe_path(root, campaign["current_summary"], "control_campaign.current_summary")
+    summary = load_strict_json(summary_path)
+    if (
+        summary.get("run_id") != campaign["run_id"]
+        or summary.get("campaign_ref")
+        != file_ref(root, campaign_path, identifier=campaign_id)
+        or not isinstance(summary.get("result_refs"), list)
+    ):
+        raise RunnerError("control campaign summary is not sealed to its campaign")
+    selected: list[tuple[Path, dict[str, Any]]] = []
+    observed_ids: list[str] = []
+    for ref in summary["result_refs"]:
+        path = safe_path(root, ref["path"], "control_campaign.result_ref")
+        if ref != file_ref(root, path, identifier=ref["id"]):
+            raise RunnerError("control campaign result ref is not sealed")
+        candidate = validate_result(root, path, require_archive=True)
+        observed_ids.append(candidate["instance_ref"]["id"])
+        if candidate["instance_ref"]["id"] == control_id:
+            selected.append((path, candidate))
+    if observed_ids != campaign["ordered_instances"] or len(selected) != 1:
+        raise RunnerError("control campaign membership/order does not provide one legal control")
+    control_path, control_result = selected[0]
+    if (
+        control_result["status"] != "STATIC_PASS"
+        or control_result["contract_sha256"] != contract_sha256(root)
+        or control_result["freshness_epoch"] != instance["freshness_epoch"]
+    ):
+        raise RunnerError("control campaign result is not a fresh STATIC_PASS")
+    control_instance = validate_instance(
+        root, safe_path(root, control_result["instance_ref"]["path"], "control.instance_ref")
+    )
+    control_fingerprint = validate_fingerprint(
+        root,
+        safe_path(root, control_result["fingerprint_ref"]["path"], "control.fingerprint_ref"),
+    )
+    if (
+        control_instance["target"] != instance["target"]
+        or control_fingerprint["toolchain"] != subject_fingerprint["toolchain"]
+        or control_fingerprint["environment"] != subject_fingerprint["environment"]
+        or control_fingerprint["source_closure"]["cutlass_git_sha"]
+        != subject_fingerprint["source_closure"]["cutlass_git_sha"]
+    ):
+        raise RunnerError("control campaign result uses a different target/environment")
     return file_ref(
         root,
         control_path,
         identifier=control_result["result_id"],
     )
+
+
+def seal_expected_static_reject(
+    *,
+    root: Path,
+    instance_path: Path,
+    instance: dict[str, Any],
+    fingerprint: dict[str, Any],
+    fingerprint_path: Path,
+    evidence_root: Path,
+    results_dir: Path,
+    attempt_id: str,
+    attempt_root: Path,
+    snapshot_paths: dict[str, Path],
+    command_records: list[CommandRecord],
+    failed_record: CommandRecord,
+    prefix_executable: Path | None,
+    prefix_output: Path | None,
+    journal: Journal,
+    working_journal_path: Path,
+    journal_path: Path,
+) -> dict[str, Any]:
+    reject = instance["hypothesis"]["reject_contract"]
+    if reject is None:
+        raise RunnerError("EXPECTED_STATIC_REJECT lacks a reject contract")
+    _, diagnostic_results, error_count, excerpt_lines = classify_expected_reject_diagnostic(
+        root, instance, failed_record
+    )
+    if (prefix_output is not None) is not reject["requires_collective_prefix_witness"]:
+        raise RunnerError("expected-reject prefix witness presence differs from the contract")
+    if (attempt_root / "full/type_witness").exists():
+        raise RunnerError("rejected type witness unexpectedly produced an executable")
+    control_ref = find_fresh_static_control(root, instance, fingerprint)
+
+    excerpt_dir = evidence_root / "excerpts" / attempt_id
+    excerpt_dir.mkdir(parents=True, exist_ok=False)
+    diagnostic_excerpt = excerpt_dir / "diagnostic-excerpt.json"
+    diagnostic_value = {
+        "schema_version": 1,
+        "instance_id": instance["instance_id"],
+        "raw_stderr_sha256": sha256_file(failed_record.stderr_path),
+        "raw_stderr_size_bytes": failed_record.stderr_path.stat().st_size,
+        "observed_error_count": error_count,
+        "required_results": diagnostic_results,
+        "infrastructure_forbidden_matches": [],
+        "selected_lines": excerpt_lines,
+    }
+    atomic_write_json(diagnostic_excerpt, diagnostic_value)
+
+    source_evidence: list[dict[str, Any]] = []
+    source_excerpt_paths: list[Path] = []
+    for index, source_range in enumerate(reject["source_constraints"]):
+        source_excerpt = excerpt_dir / f"source-constraint-{index:02d}.txt"
+        source_excerpt.write_text(source_constraint_text(root, source_range), encoding="utf-8")
+        artifact_id = f"source_constraint_{index:02d}"
+        source_excerpt_paths.append(source_excerpt)
+        source_evidence.append({**source_range, "excerpt_artifact_id": artifact_id})
+
+    tracked_prefix_output: Path | None = None
+    if prefix_output is not None:
+        tracked_prefix_output = excerpt_dir / "collective-prefix-types.json"
+        shutil.copy2(prefix_output, tracked_prefix_output)
+
+    rejection_report = excerpt_dir / "rejection-report.json"
+    failure = {
+        "layer": instance["hypothesis"]["failure_layer"],
+        "domain": "CONFIGURATION_LEGALITY",
+        "step_id": failed_record.step_id,
+        "returncode": failed_record.returncode,
+        "stderr_artifact_id": f"{failed_record.step_id}_stderr",
+    }
+    report_value = {
+        "schema_version": 1,
+        "instance_id": instance["instance_id"],
+        "terminal_status": "EXPECTED_STATIC_REJECT",
+        "failure": failure,
+        "diagnostic_results": diagnostic_results,
+        "observed_error_count": error_count,
+        "raw_stderr_sha256": sha256_file(failed_record.stderr_path),
+        "raw_stderr_size_bytes": failed_record.stderr_path.stat().st_size,
+        "source_constraints": source_evidence,
+        "prefix_witness_artifact_id": (
+            "collective_prefix_output" if tracked_prefix_output is not None else None
+        ),
+        "legal_control": {
+            "result_ref": control_ref,
+            "relation": reject["control_relation"],
+            "controlled_delta": reject["controlled_delta"],
+        },
+    }
+    atomic_write_json(rejection_report, report_value)
+
+    if fingerprint_path.exists():
+        if load_strict_json(fingerprint_path) != fingerprint:
+            raise RunnerError(f"fingerprint ID collision at publication: {fingerprint_path}")
+    else:
+        atomic_write_json(fingerprint_path, fingerprint)
+    validate_fingerprint(root, fingerprint_path)
+
+    items: list[dict[str, Any]] = []
+    add_artifact(items, root=root, artifact_id="config_source", role="KERNEL_SOURCE_SNAPSHOT", path=snapshot_paths["config"], storage="ignored_archive", media_type="text/x-c++hdr", producer_step_id="snapshot_sources", parents=[])
+    add_artifact(items, root=root, artifact_id="kernel_source", role="KERNEL_SOURCE_SNAPSHOT", path=snapshot_paths["kernel"], storage="ignored_archive", media_type="text/x-cuda", producer_step_id="snapshot_sources", parents=["config_source"])
+    add_artifact(items, root=root, artifact_id="type_source", role="TYPE_WITNESS_SOURCE_SNAPSHOT", path=snapshot_paths["type_witness"], storage="ignored_archive", media_type="text/x-cuda", producer_step_id="snapshot_sources", parents=["config_source"])
+    if prefix_executable is not None and prefix_output is not None and tracked_prefix_output is not None:
+        add_artifact(items, root=root, artifact_id="collective_prefix_source", role="COLLECTIVE_PREFIX_SOURCE", path=snapshot_paths["collective_prefix_witness"], storage="ignored_archive", media_type="text/x-cuda", producer_step_id="snapshot_sources", parents=["config_source"])
+        add_artifact(items, root=root, artifact_id="collective_prefix_executable", role="COLLECTIVE_PREFIX_EXECUTABLE", path=prefix_executable, storage="ignored_archive", media_type="application/x-executable", producer_step_id="compile_collective_prefix_witness", parents=["collective_prefix_source", "config_source"])
+        add_artifact(items, root=root, artifact_id="collective_prefix_output", role="COLLECTIVE_PREFIX_OUTPUT", path=tracked_prefix_output, storage="git_evidence", media_type="application/json", producer_step_id="run_collective_prefix_witness", parents=["collective_prefix_executable"])
+    for record in command_records:
+        add_artifact(items, root=root, artifact_id=f"{record.step_id}_stdout", role="COMPILE_STDOUT", path=record.stdout_path, storage="ignored_archive", media_type="text/plain", producer_step_id=record.step_id, parents=[])
+        add_artifact(items, root=root, artifact_id=f"{record.step_id}_stderr", role="COMPILE_STDERR", path=record.stderr_path, storage="ignored_archive", media_type="text/plain", producer_step_id=record.step_id, parents=[])
+    add_artifact(items, root=root, artifact_id="diagnostic_excerpt", role="DIAGNOSTIC_EXCERPT", path=diagnostic_excerpt, storage="git_evidence", media_type="application/json", producer_step_id="compile_type_witness", parents=["compile_type_witness_stderr"])
+    for index, source_excerpt in enumerate(source_excerpt_paths):
+        add_artifact(items, root=root, artifact_id=f"source_constraint_{index:02d}", role="SOURCE_CONSTRAINT_EXCERPT", path=source_excerpt, storage="git_evidence", media_type="text/plain", producer_step_id="reject_contract", parents=[])
+    rejection_parents = ["diagnostic_excerpt"] + [
+        f"source_constraint_{index:02d}" for index in range(len(source_excerpt_paths))
+    ]
+    if tracked_prefix_output is not None:
+        rejection_parents.append("collective_prefix_output")
+    add_artifact(items, root=root, artifact_id="rejection_report", role="REJECTION_REPORT", path=rejection_report, storage="git_evidence", media_type="application/json", producer_step_id="reject_contract", parents=rejection_parents)
+
+    archive_items = [item for item in items if item["storage"] == "ignored_archive"]
+    archive_checksum = sha256_bytes(canonical_json_bytes([
+        (item["artifact_id"], item["path"], item["sha256"], item["size_bytes"])
+        for item in archive_items
+    ]))
+    manifest_id = f"am-{attempt_id}"
+    manifest = {
+        "schema_version": 1,
+        "contract_sha256": contract_sha256(root),
+        "artifact_manifest_id": manifest_id,
+        "attempt_id": attempt_id,
+        "instance_ref": file_ref(root, instance_path, identifier=instance["instance_id"]),
+        "fingerprint_ref": file_ref(root, fingerprint_path, identifier=fingerprint["fingerprint_id"]),
+        "items": items,
+        "archive_bundle": {
+            "path": attempt_root.relative_to(root).as_posix(),
+            "format": "directory-manifest",
+            "sha256": archive_checksum,
+            "size_bytes": sum(item["size_bytes"] for item in archive_items),
+        },
+    }
+    for item in items:
+        journal.append("ARTIFACT_SEALED", {"artifact_id": item["artifact_id"], "path": item["path"], "sha256": item["sha256"], "producer_step_id": item["producer_step_id"]})
+    manifest_path = evidence_root / "artifact-manifests" / f"{manifest_id}.json"
+    atomic_write_json(manifest_path, manifest)
+    validate_artifact_manifest(root, manifest_path)
+    journal.append("ARTIFACT_MANIFEST_SEALED", {"path": manifest_path.relative_to(root).as_posix(), "sha256": sha256_file(manifest_path)})
+    journal.append("ATTEMPT_SEALED", {
+        "terminal_pipeline_state": "EXPECTED_STATIC_REJECT",
+        "artifact_manifest_path": manifest_path.relative_to(root).as_posix(),
+        "artifact_manifest_sha256": sha256_file(manifest_path),
+        "last_completed_step_id": "compile_type_witness",
+    })
+    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = journal_path.with_name(journal_path.name + f".tmp-{os.getpid()}")
+    temporary.write_bytes(working_journal_path.read_bytes())
+    os.replace(temporary, journal_path)
+    working_journal_path.unlink()
+
+    layer_order = load_strict_json(root / "tests/codegen/static_codegen_contract.json")["layer_order"]
+    rejected_layer = instance["hypothesis"]["failure_layer"]
+    rejected_index = layer_order.index(rejected_layer)
+    layer_outcomes = []
+    for index, layer in enumerate(layer_order):
+        if index < rejected_index:
+            witness = "config_source" if index == 0 else "collective_prefix_output"
+            state = "RESOLVED"
+        elif index == rejected_index:
+            witness = "rejection_report"
+            state = "REJECTED"
+        else:
+            witness = None
+            state = "NOT_REACHED"
+        layer_outcomes.append({"layer": layer, "state": state, "witness_artifact_id": witness})
+    evidence_value = {
+        "kind": "EXPECTED_STATIC_REJECT",
+        "failure": failure,
+        "diagnostic_results": diagnostic_results,
+        "observed_error_count": error_count,
+        "raw_stderr_sha256": sha256_file(failed_record.stderr_path),
+        "raw_stderr_size_bytes": failed_record.stderr_path.stat().st_size,
+        "diagnostic_excerpt_artifact_id": "diagnostic_excerpt",
+        "rejection_report_artifact_id": "rejection_report",
+        "prefix_witness_artifact_id": (
+            "collective_prefix_output" if tracked_prefix_output is not None else None
+        ),
+        "source_constraints": source_evidence,
+        "legal_control": report_value["legal_control"],
+    }
+    result = {
+        "schema_version": 1,
+        "contract_sha256": contract_sha256(root),
+        "objective_sha256": OBJECTIVE_SHA256,
+        "freshness_epoch": fingerprint["freshness_epoch"],
+        "result_id": attempt_id,
+        "scope": "STATIC_CODEGEN_ONLY",
+        "subject": instance["subject"],
+        "instance_ref": file_ref(root, instance_path, identifier=instance["instance_id"]),
+        "fingerprint_ref": file_ref(root, fingerprint_path, identifier=fingerprint["fingerprint_id"]),
+        "attempt_id": attempt_id,
+        "journal_ref": {"path": journal_path.relative_to(root).as_posix(), "sha256": sha256_file(journal_path), "last_seq": journal.seq, "last_event_sha256": journal.previous},
+        "artifact_manifest_ref": file_ref(root, manifest_path, identifier=manifest_id),
+        "status": "EXPECTED_STATIC_REJECT",
+        "layer_outcomes": layer_outcomes,
+        "evidence": evidence_value,
+    }
+    result_path = results_dir / f"{attempt_id}.json"
+    atomic_write_json(result_path, result)
+    validate_result(root, result_path)
+    print(f"EXPECTED_STATIC_REJECT instance={instance['instance_id']} result={attempt_id}")
+    return result
 
 
 def run_instance(
@@ -550,7 +847,11 @@ def run_instance(
     journal_path = evidence_root / "journals" / f"{attempt_id}.jsonl"
     if journal_path.exists():
         raise RunnerError(f"journal already exists: {journal_path}")
-    working_journal_path = attempt_root / "journal.in-progress.jsonl"
+    # An in-progress journal is mutable staging state, not part of the sealed
+    # attempt archive.  Keep it in the ignored cache until publication.
+    working_journal_path = (
+        root / ".cache/codegen-v2/journals" / f"{attempt_id}.in-progress.jsonl"
+    )
     journal = Journal(
         working_journal_path,
         attempt_id,
@@ -571,6 +872,8 @@ def run_instance(
 
     snapshot_paths: dict[str, Path] = {}
     for role, reference in instance["translation_units"].items():
+        if reference is None:
+            continue
         source = safe_path(root, reference["path"], f"translation_units.{role}.path")
         target = snapshots / f"{role}-{source.name}"
         shutil.copy2(source, target)
@@ -586,6 +889,52 @@ def run_instance(
         "-Ithird_party/cutlass/include",
         "-Ithird_party/cutlass/tools/util/include",
     ]
+    expected_outcome = instance["hypothesis"]["expected_outcome"]
+    command_records: list[CommandRecord] = []
+    prefix_executable: Path | None = None
+    prefix_output: Path | None = None
+    prefix_reference = instance["translation_units"]["collective_prefix_witness"]
+    if prefix_reference is not None:
+        prefix_executable = full / "collective_prefix_witness"
+        prefix_compile = docker_command(
+            entrypoint="/usr/local/cuda/bin/nvcc",
+            guide_root=root,
+            attempt_root=attempt_root,
+            workdir="/workspace",
+        ) + common + [
+            "--generate-code=arch=compute_110a,code=sm_110a",
+            prefix_reference["path"],
+            "-o",
+            "/out/full/collective_prefix_witness",
+        ]
+        command_records.append(
+            execute_step(
+                command=prefix_compile,
+                step_id="compile_collective_prefix_witness",
+                root=root,
+                attempt_root=attempt_root,
+                journal=journal,
+            )
+        )
+        prefix_run = docker_command(
+            entrypoint="/out/full/collective_prefix_witness",
+            attempt_root=attempt_root,
+            read_only_attempt=True,
+        )
+        prefix_record = execute_step(
+            command=prefix_run,
+            step_id="run_collective_prefix_witness",
+            root=root,
+            attempt_root=attempt_root,
+            journal=journal,
+        )
+        command_records.append(prefix_record)
+        # The command stdout is already an archived artifact.  Parse and copy
+        # that file directly instead of leaving an unmanifested duplicate.
+        prefix_output = prefix_record.stdout_path
+        prefix_value = load_strict_json(prefix_output)
+        if prefix_value.get("instance_id") != instance["instance_id"]:
+            raise RunnerError("collective prefix witness instance_id mismatch")
     type_executable = full / "type_witness"
     type_compile = docker_command(
         entrypoint="/usr/local/cuda/bin/nvcc",
@@ -598,16 +947,41 @@ def run_instance(
         "-o",
         "/out/full/type_witness",
     ]
-    command_records: list[CommandRecord] = []
-    command_records.append(
-        execute_step(
-            command=type_compile,
-            step_id="compile_type_witness",
-            root=root,
-            attempt_root=attempt_root,
-            journal=journal,
-        )
+    type_compile_record = capture_step(
+        command=type_compile,
+        step_id="compile_type_witness",
+        root=root,
+        attempt_root=attempt_root,
+        journal=journal,
     )
+    command_records.append(type_compile_record)
+    if type_compile_record.returncode:
+        if expected_outcome != "EXPECTED_STATIC_REJECT":
+            raise RunnerError(
+                f"compile_type_witness failed ({type_compile_record.returncode}); "
+                f"see {type_compile_record.stderr_path}"
+            )
+        return seal_expected_static_reject(
+            root=root,
+            instance_path=instance_path,
+            instance=instance,
+            fingerprint=fingerprint,
+            fingerprint_path=fingerprint_path,
+            evidence_root=evidence_root,
+            results_dir=results_dir,
+            attempt_id=attempt_id,
+            attempt_root=attempt_root,
+            snapshot_paths=snapshot_paths,
+            command_records=command_records,
+            failed_record=type_compile_record,
+            prefix_executable=prefix_executable,
+            prefix_output=prefix_output,
+            journal=journal,
+            working_journal_path=working_journal_path,
+            journal_path=journal_path,
+        )
+    if expected_outcome == "EXPECTED_STATIC_REJECT":
+        raise RunnerError("frozen EXPECTED_STATIC_REJECT compiled successfully")
     type_run = docker_command(
         entrypoint="/out/full/type_witness",
         attempt_root=attempt_root,
@@ -749,6 +1123,9 @@ def run_instance(
         code_object_metadata_text=metadata_path.read_text(encoding="utf-8"),
         expected_symbol=symbol,
         declared_cta_group=instance["declared_config"]["cta_group"],
+        require_tma_group_match=(
+            instance["static_contract"]["tma_cta_policy"] == "match_mma"
+        ),
         expected_ptx_target="sm_110a",
         expected_sass_arch="sm_110a",
         required_ptx=[item["regex"] for item in ptx_contract["required"]],
@@ -761,6 +1138,12 @@ def run_instance(
     guard_contract = load_strict_json(
         root / "tests/codegen/static_codegen_contract.json"
     )["arch_guard_fallback_contract"]
+    guard_profile_id = instance["hypothesis"]["guard_profile_id"]
+    guard_profile = (
+        guard_contract["profiles"].get(guard_profile_id)
+        if guard_profile_id is not None
+        else None
+    )
     guard_control_ref: dict[str, str] | None = None
     if attribution.passed:
         if expected_outcome != "STATIC_PASS":
@@ -778,9 +1161,11 @@ def run_instance(
             sass_contract["forbidden"], attribution.sass_contract.forbidden_matches, False
         )
     elif expected_outcome == "UNSUPPORTED_SM110A":
-        if guard_contract["guard_atom"] not in resolved_types["mma_atom"]:
+        if guard_profile is None:
+            raise RunnerError("UNSUPPORTED_SM110A lacks a frozen guard profile")
+        if guard_profile["guard_atom"] not in resolved_types["mma_atom"]:
             raise RunnerError("failed function contract does not use the frozen guarded MMA atom")
-        for index, source_range in enumerate(guard_contract["source_constraints"]):
+        for index, source_range in enumerate(guard_profile["source_constraints"]):
             try:
                 validate_source_anchor(root, source_range, f"guard.source_constraints[{index}]")
             except ContractError as error:
@@ -788,12 +1173,12 @@ def run_instance(
         try:
             ptx_results = evaluate_arch_guard_patterns(
                 attribution.ptx_function.opcodes,
-                guard_contract["ptx"],
+                guard_profile["ptx"],
                 "architecture_guard.ptx",
             )
             sass_results = evaluate_arch_guard_patterns(
                 attribution.sass_function.opcodes,
-                guard_contract["sass"],
+                guard_profile["sass"],
                 "architecture_guard.sass",
             )
         except ContractError as error:
@@ -813,6 +1198,9 @@ def run_instance(
     sass_excerpt = excerpt_dir / "target.sass.json"
     contract_report = excerpt_dir / "contract-report.json"
     shutil.copy2(type_output, tracked_type_output)
+    # The tracked excerpt and the sealed command stdout are the two retained
+    # copies.  Do not leave an unmanifested third copy in the ignored archive.
+    type_output.unlink()
     ptx_excerpt.write_text(attribution.ptx_function.text + "\n", encoding="utf-8")
     sass_excerpt.write_text(attribution.sass_function.text + "\n", encoding="utf-8")
     if terminal_status == "STATIC_PASS":
@@ -827,6 +1215,7 @@ def run_instance(
             "sass_contract_results": sass_results,
             "cta_group": {
                 "declared": attribution.cta_group_contract.declared_cta_group,
+                "tma_policy": instance["static_contract"]["tma_cta_policy"],
                 "ptx_mma_opcodes": list(attribution.cta_group_contract.ptx_mma_opcodes),
                 "sass_mma_opcodes": list(attribution.cta_group_contract.sass_mma_opcodes),
                 "errors": list(attribution.cta_group_contract.errors),
@@ -843,15 +1232,16 @@ def run_instance(
             "nvdisasm_total_function_count": attribution.sass_total_function_count,
             "terminal_status": "UNSUPPORTED_SM110A",
             "reason": guard_contract["reason"],
-            "guard_atom": guard_contract["guard_atom"],
-            "guard_macro": guard_contract["guard_macro"],
+            "guard_profile_id": guard_profile_id,
+            "guard_atom": guard_profile["guard_atom"],
+            "guard_macro": guard_profile["guard_macro"],
             "ptx_guard_results": ptx_results,
             "sass_guard_results": sass_results,
-            "source_constraints": guard_contract["source_constraints"],
+            "source_constraints": guard_profile["source_constraints"],
             "legal_control": {
                 "result_ref": guard_control_ref,
-                "relation": guard_contract["control_relation"],
-                "controlled_delta": guard_contract["controlled_delta"],
+                "relation": guard_profile["control_relation"],
+                "controlled_delta": guard_profile["controlled_delta"],
             },
         }
     atomic_write_json(contract_report, report_value)
@@ -1019,15 +1409,16 @@ def run_instance(
             "type_witness_artifact_id": "type_output",
             "resolved_stage": resolved_stage,
             "function_binding": function_binding,
-            "guard_atom": guard_contract["guard_atom"],
-            "guard_macro": guard_contract["guard_macro"],
+            "guard_profile_id": guard_profile_id,
+            "guard_atom": guard_profile["guard_atom"],
+            "guard_macro": guard_profile["guard_macro"],
             "ptx_guard_results": ptx_results,
             "sass_guard_results": sass_results,
-            "source_constraints": guard_contract["source_constraints"],
+            "source_constraints": guard_profile["source_constraints"],
             "legal_control": {
                 "result_ref": guard_control_ref,
-                "relation": guard_contract["control_relation"],
-                "controlled_delta": guard_contract["controlled_delta"],
+                "relation": guard_profile["control_relation"],
+                "controlled_delta": guard_profile["controlled_delta"],
             },
         }
     result = {
@@ -1065,37 +1456,43 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--instance", action="append", default=[])
+    parser.add_argument("--campaign")
     parser.add_argument("--all-phase1", action="store_true")
     parser.add_argument("--all-phase2", action="store_true")
     parser.add_argument("--run-id")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     root = args.root.resolve()
-    contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    if args.all_phase1 and args.all_phase2:
-        raise RunnerError("--all-phase1 and --all-phase2 are mutually exclusive")
-    default_run_id = (
-        contract["phase2_run_id"] if args.all_phase2 else contract["phase1_run_id"]
-    )
-    run_id = args.run_id or default_run_id
+    selected_campaigns = [
+        value
+        for value in (
+            args.campaign,
+            "phase1-generalized-20260830" if args.all_phase1 else None,
+            "phase2-official-20260830" if args.all_phase2 else None,
+        )
+        if value is not None
+    ]
+    if len(selected_campaigns) > 1:
+        raise RunnerError("select exactly one campaign")
+    campaign_path: Path | None = None
+    campaign: dict[str, Any] | None = None
+    if selected_campaigns:
+        if args.instance or args.run_id is not None:
+            raise RunnerError("formal --campaign runs cannot be mixed with --instance/--run-id")
+        try:
+            campaign_path, campaign = load_run_campaign(root, selected_campaigns[0])
+        except ContractError as error:
+            raise RunnerError(str(error)) from error
+        run_id = campaign["run_id"]
+        requested = list(campaign["ordered_instances"])
+    else:
+        run_id = args.run_id or "ad-hoc-codegen"
+        requested = list(args.instance)
     if not re.fullmatch(r"[a-z0-9][a-z0-9_.-]*", run_id):
         raise RunnerError("run-id must be a safe ASCII identifier")
-    requested = list(args.instance)
-    if args.all_phase1:
-        requested.extend(contract["phase1_fresh_replay_instances"])
-    if args.all_phase2:
-        requested.extend(contract["phase2_official_instances"])
     requested = list(dict.fromkeys(requested))
     if not requested:
-        raise RunnerError("select --instance or --all-phase1")
-    if run_id == contract["phase1_run_id"] and requested != contract[
-        "phase1_fresh_replay_instances"
-    ]:
-        raise RunnerError("the frozen Phase 1 run_id requires the complete ordered replay set")
-    if run_id == contract["phase2_run_id"] and requested != contract[
-        "phase2_official_instances"
-    ]:
-        raise RunnerError("the frozen Phase 2 run_id requires the complete ordered replay set")
+        raise RunnerError("select --campaign or at least one --instance")
     toolchain = inspect_environment(root)
     results = []
     for instance_id in requested:
@@ -1119,7 +1516,11 @@ def main() -> int:
         )
         for result in results
     ]
-    summary_path = root / "evidence/codegen-sm110a-v2" / f"summary-{run_id}.json"
+    summary_path = (
+        root / campaign["current_summary"]
+        if campaign is not None
+        else root / "evidence/codegen-sm110a-v2" / f"summary-{run_id}.json"
+    )
     history_refs: list[dict[str, str]] = []
     if summary_path.exists():
         previous = load_strict_json(summary_path)
@@ -1127,6 +1528,12 @@ def main() -> int:
             previous.get("schema_version") != 1
             or previous.get("run_id") != run_id
             or previous.get("scope") != "STATIC_CODEGEN_ONLY"
+            or previous.get("campaign_ref")
+            != (
+                file_ref(root, campaign_path, identifier=campaign["campaign_id"])
+                if campaign is not None and campaign_path is not None
+                else None
+            )
             or not isinstance(previous.get("result_refs"), list)
             or not isinstance(previous.get("history_result_refs"), list)
         ):
@@ -1143,6 +1550,11 @@ def main() -> int:
         "schema_version": 1,
         "run_id": run_id,
         "scope": "STATIC_CODEGEN_ONLY",
+        "campaign_ref": (
+            file_ref(root, campaign_path, identifier=campaign["campaign_id"])
+            if campaign is not None and campaign_path is not None
+            else None
+        ),
         "result_refs": result_refs,
         "history_result_refs": history_refs,
     }
@@ -1154,10 +1566,8 @@ def main() -> int:
         str(root),
         "--require-archive",
     ]
-    if run_id == contract["phase1_run_id"]:
-        validation_command.append("--require-results")
-    if run_id == contract["phase2_run_id"]:
-        validation_command.append("--require-phase2-results")
+    if campaign is not None:
+        validation_command += ["--require-campaign", campaign["campaign_id"]]
     validation = run_checked(validation_command, cwd=root)
     print(validation.stdout.decode("utf-8", errors="replace").strip())
     return 0

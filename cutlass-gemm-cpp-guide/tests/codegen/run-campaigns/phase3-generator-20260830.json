@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+  "scope": "STATIC_CODEGEN_ONLY",
+  "phase_id": 3,
+  "campaign_id": "phase3-generator-20260830",
+  "run_id": "phase3-generator-20260830",
+  "current_summary": "evidence/codegen-sm110a-v2/summary-phase3-generator-20260830.json",
+  "allowed_terminal_statuses": [
+    "STATIC_PASS",
+    "UNSUPPORTED_SM110A"
+  ],
+  "ordered_instances": [
+    "interleaved_complex_tf32_1sm_generator",
+    "fast_fp32_complex_1sm_generator",
+    "interleaved_complex_tf32_2sm_generator",
+    "fast_fp32_complex_2sm_generator",
+    "dense_bs_mxf4_2sm_generator"
+  ]
+}

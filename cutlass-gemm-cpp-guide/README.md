@@ -20,12 +20,18 @@
   `STATIC_PASS`。FastFP32 2SM Smem 实例的 Builder、CUBIN 和函数归属均成功，但目标函数因
   SM110a 未启用 scaled F16/BF16 MMA macro 而落成 9 个 `brkpt/BPT.TRAP`、0 条 Tensor MMA，
   因此记为该实例的 `UNSUPPORTED_SM110A`，没有伪装成成功。34 份结果都已从源码重新编译、
-  重新提取并重新反汇编；与 Phase 1 合计 40/40 通过 deep replay。
-- 59 个显式 Schedule Tag 当前为 `STATIC_PASS=39`、`UNSUPPORTED_SM110A=1`、
-  `NOT_CHECKED=19`；11 个
+  重新提取并重新反汇编。
+- Phase 3 从 `generator.py` 的真实 operation 配置还原 5 个 canonical instance：Interleaved
+  Complex TF32 1SM/2SM 与 MXF4 2SM 得到 `STATIC_PASS`；complex FastFP32 1SM/2SM 的
+  Builder、CUBIN 和函数归属均成功，但各自目标函数都是 36 个 trap、6 条 STTM、0 条
+  Tensor MMA，因此只把这两个固定实例记为 `UNSUPPORTED_SM110A`。两个同 CTA
+  Interleaved 实例另以独立 campaign 充当 fresh control。
+- Phase 1、Phase 2、Phase 3 合计 45 个显式 Tag 实例和 2 个 control attempt 已完成
+  47/47 deep replay。59 个显式 Schedule Tag 当前为 `STATIC_PASS=42`、
+  `UNSUPPORTED_SM110A=3`、`NOT_CHECKED=14`；11 个
   `KernelScheduleAuto` 控制项仍全部 `NOT_CHECKED`。
-- 当前机器没有可用 NVIDIA driver；所有 `runtime_correct` 仍是 `false`，不能称为
-  Thor 数值闭环或 v0.1 release。
+- 本机 GPU 不是 Thor/SM110a，当前也没有 Thor 运行证据；所有 `runtime_correct` 仍是
+  `false`，不能称为 Thor 数值闭环或 v0.1 release。
 
 ## 最短使用路径
 
@@ -79,6 +85,8 @@ Tensor Core Codegen 的固定分母是 CUTLASS v4.6.1 中 59 个显式 SM100 Sch
 [`phase-01-cross-layer-harness.md`](evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md)。
 34 个 official C++ instance 的配置、数据、结果与对抗审查见
 [`phase-02-official-cpp-tags.md`](evidence/codegen-sm110a-v2/phase-reports/phase-02-official-cpp-tags.md)。
+5 个 generator instance、两类 Fast guard 与最终 harness 迁移见
+[`phase-03-generator-config-tags.md`](evidence/codegen-sm110a-v2/phase-reports/phase-03-generator-config-tags.md)。
 `host.schedule_tag_coverage` 会检查目标、源码 commit与clean状态、59项分组、case语义映射、
 来源锚点和文档表格；
 `host.schedule_tag_adversarial` 负责验证故意破坏不会被误判为通过。

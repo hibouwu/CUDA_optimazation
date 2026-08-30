@@ -54,7 +54,7 @@
       "status": "COMPLETE",
       "completion_report": {
         "path": "evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md",
-        "sha256": "cedb22ad3ce4b33f24a71934eb69da832f37d9477aec7fb78c218a1787f9264c",
+        "sha256": "c1059893f3ae8bcfb9c6bd21c50ad26f7f29f54b9a9f7ce6143a2c355ba82501",
         "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
       }
     },
@@ -64,12 +64,21 @@
       "status": "COMPLETE",
       "completion_report": {
         "path": "evidence/codegen-sm110a-v2/phase-reports/phase-02-official-cpp-tags.md",
-        "sha256": "11e353dd9e6c7f3c3e01eaeee059fa901a9e5e90239d1aad375e9a5f7b81ea55",
+        "sha256": "ec337aed73a6a1ea1182b5e893cab6a9f7aea27cdcfb48634459d96c82af660d",
         "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
       }
     },
-    {"id": 3, "name": "generator_config_tags", "status": "IN_PROGRESS"},
-    {"id": 4, "name": "source_derived_tags", "status": "PENDING"},
+    {
+      "id": 3,
+      "name": "generator_config_tags",
+      "status": "COMPLETE",
+      "completion_report": {
+        "path": "evidence/codegen-sm110a-v2/phase-reports/phase-03-generator-config-tags.md",
+        "sha256": "3e434c28b2409a65d55662e8b231989473b337b0b00bcbc08071a1ef6e140d72",
+        "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
+      }
+    },
+    {"id": 4, "name": "source_derived_tags", "status": "IN_PROGRESS"},
     {"id": 5, "name": "auto_and_clean_replay", "status": "PENDING"},
     {"id": 6, "name": "documentation_archive_final_audit", "status": "PENDING"}
   ]

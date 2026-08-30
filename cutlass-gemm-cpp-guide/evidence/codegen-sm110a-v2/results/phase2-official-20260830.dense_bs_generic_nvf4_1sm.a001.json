@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "dense_bs_generic_nvf4_1sm",
     "path": "tests/codegen/instances/dense_bs_generic_nvf4_1sm/instance.json",
-    "sha256": "0b4d92d23ce586fd5a3da1eefbefb5a50df60a6aca0b702fdf51dcde834c7a55"
+    "sha256": "222ba66c0f4f374aafaeaeab177ea6127f237ffaad9186dd89ea8774ffa72318"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_bs_generic_nvf4_1sm-0930f7f57abf",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_generic_nvf4_1sm-0930f7f57abf.json",
-    "sha256": "2bf85c40d5db2c75c3cebcbaa4d86666fe2efd3db6fcc368d007e1574de0927d"
+    "id": "fp-dense_bs_generic_nvf4_1sm-998969fc6b41",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_generic_nvf4_1sm-998969fc6b41.json",
+    "sha256": "922711e5f19428fb35760ffd502817f6e1de5f8b6a56cae7faa7c78257413be7"
   },
   "attempt_id": "phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001.jsonl",
-    "sha256": "b5c01b0a24fca5a9b083603b3a7d0ec3d476dbe181ce5335ed8ba57b5dbd598e",
+    "sha256": "b5c2ffea436f0c5aeaf9b467c065a155db98ae548b5cb96c89238c8d79daebde",
     "last_seq": 64,
-    "last_event_sha256": "2d776a6394502633072b6ba1e19c66039a5fffebd9c6358c0e5aa82ad3c3561a"
+    "last_event_sha256": "264bf0584806ff326fe4b84ca13eaaefcecd9bfe1275aab10b0da7fc000de5b9"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.dense_bs_generic_nvf4_1sm.a001.json",
-    "sha256": "0d9af74d17ca3dca2ab35228ca0b8bb169700d1f4683c14a2c018ead730db657"
+    "sha256": "4efbfaee13f934e164dce062945b4bc638536d56e5a825623cdbcff671366ad1"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

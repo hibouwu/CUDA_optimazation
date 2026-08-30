@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.ptr_array_dense_fp8_2sm.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "ptr_array_dense_fp8_2sm",
     "path": "tests/codegen/instances/ptr_array_dense_fp8_2sm/instance.json",
-    "sha256": "4aa744fb3847ab486f82c1ac973e25bb6b2741bf770bdbb1c6b99c5c6295e7bf"
+    "sha256": "156aad571355325c8efaeaacaec2000895fbd45f10f5a896d76b700632675901"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_array_dense_fp8_2sm-d61fb6f7fbf6",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_dense_fp8_2sm-d61fb6f7fbf6.json",
-    "sha256": "430718680ebc0ff15df1609ed4bff095372030be1ffcc96bf15c4948353816d6"
+    "id": "fp-ptr_array_dense_fp8_2sm-16e66b854e63",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_dense_fp8_2sm-16e66b854e63.json",
+    "sha256": "17d5094cf87587dfa59799f6e0de89489f314dadc151a176c579bbd416c4c79c"
   },
   "attempt_id": "phase2-official-20260830.ptr_array_dense_fp8_2sm.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_array_dense_fp8_2sm.a001.jsonl",
-    "sha256": "aeb9c209d3e9383b0d6a299d97f4961ab2077b2d8724a91d4dba00bf6d39fab2",
+    "sha256": "0d60ca33c7fb5306e4347f2a24f393ff0f5ba6eec35d00f46d1deff307287162",
     "last_seq": 64,
-    "last_event_sha256": "4214d8987c5a76ac83019bcbd2d1201fd648d82ebb4f6b00f97bde7fdf231655"
+    "last_event_sha256": "57a4cd24723e67ff73ef6757ee1ee0c808fc31893898a5c66a16dc9be2d15d82"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.ptr_array_dense_fp8_2sm.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_array_dense_fp8_2sm.a001.json",
-    "sha256": "d1dd8f8197c27341e4033fca371a9b35e5463dd8d0dd821202059952adb0f3e1"
+    "sha256": "f1fa7e0b3e24604c15e3f49a43ecbaa57c0a82594748963ef46ad98f471f50a8"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

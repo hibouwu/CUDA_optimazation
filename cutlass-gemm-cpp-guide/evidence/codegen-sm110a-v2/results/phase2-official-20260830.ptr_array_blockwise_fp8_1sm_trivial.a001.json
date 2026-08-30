@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "ptr_array_blockwise_fp8_1sm_trivial",
     "path": "tests/codegen/instances/ptr_array_blockwise_fp8_1sm_trivial/instance.json",
-    "sha256": "ac7660907c2942f0646bf6d8b675c029f114eb866ddf0b81e62999d8ffdf5ada"
+    "sha256": "dc8bb35691fa3c2a50fe0a15bbceb46d47164a5a09acb44801b5ad0617e5d175"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_array_blockwise_fp8_1sm_trivial-2f003f7d9801",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_1sm_trivial-2f003f7d9801.json",
-    "sha256": "9ef494e8757b7aa48007f9245ef5437d72199fbc87be68dce022445e39179779"
+    "id": "fp-ptr_array_blockwise_fp8_1sm_trivial-761a10b80c6e",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_1sm_trivial-761a10b80c6e.json",
+    "sha256": "60d74aa207dcb90333d31433a000d166b17dd6ee12de730f513c9d71b539fe0c"
   },
   "attempt_id": "phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001.jsonl",
-    "sha256": "29e54a786187021da653eca587182a12e44b661a0b2c7abf92d66df4f9e257b5",
+    "sha256": "32218f5209f519805d86100b01b4acf235e1818bd04fa4dcf4fab3b42cd6b8b7",
     "last_seq": 64,
-    "last_event_sha256": "22e7594f5800d143d906c517f2bd495dd2ca4668bc7f8e14e6ddee21257e8983"
+    "last_event_sha256": "eecc87b3f0967c1f6a82ad2b429b912bba826eea1c16c104bd18434e84cb1bc6"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_array_blockwise_fp8_1sm_trivial.a001.json",
-    "sha256": "48678e06761c5b9d7f6329e519fcd838aefe60f6e1cd3beb87ef943bfe5b0755"
+    "sha256": "62e4eae141e9a042d622f346487e4601d3148fdbb790237e82ed931ef564c4bb"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

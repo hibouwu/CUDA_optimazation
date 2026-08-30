@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "ptr_bs_nvfp4_1sm_grouped",
     "path": "tests/codegen/instances/ptr_bs_nvfp4_1sm_grouped/instance.json",
-    "sha256": "bb92013bc44d28bd0393c59afefb2ed67ae53219d6101fb5ef140d9335619f38"
+    "sha256": "c5b873219216c01d36f902ce0fb0328888c04c8a680284d564b56ed605b5b7ab"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_bs_nvfp4_1sm_grouped-e1568755f79b",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_nvfp4_1sm_grouped-e1568755f79b.json",
-    "sha256": "1254892e0196d5f5f105a4d93dac3f48e9f6adcb41adfd7b0355063e8d49a894"
+    "id": "fp-ptr_bs_nvfp4_1sm_grouped-c855d92b23e5",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_bs_nvfp4_1sm_grouped-c855d92b23e5.json",
+    "sha256": "186427a79ce7a78786bb153cde169dd2bf83f7c1588f3394a29c094af381acb5"
   },
   "attempt_id": "phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001.jsonl",
-    "sha256": "029975b4e98503357f7b00b12716d1fa0c785bf1708a0579e9b634c8d2f43d60",
+    "sha256": "f5a3e15a3e2949cd681521eded318463b9bf7389adb3111bc75b1ec40000ef3b",
     "last_seq": 64,
-    "last_event_sha256": "f3982e85309d09cb22fb96e9c5db93c37f5aa342e791e5378328d50adadd6f02"
+    "last_event_sha256": "0dcaa8b7a4984966ecb97e7eccba01522c11f513e542c5d2c28ea99aed697de4"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.ptr_bs_nvfp4_1sm_grouped.a001.json",
-    "sha256": "39feb49457abf28771d6fed928a252914f48d83b7179022313be3bad256644f3"
+    "sha256": "f88534e4db07c7ea9ae8ce12c5aa64767864a2d5acd7b0b6f73ff1b06d0f3f16"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

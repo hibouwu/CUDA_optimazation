@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase1-generalized-20260830.dense_f16_1sm.a001",
   "attempt_id": "phase1-generalized-20260830.dense_f16_1sm.a001",
   "instance_ref": {
     "id": "dense_f16_1sm",
     "path": "tests/codegen/instances/dense_f16_1sm/instance.json",
-    "sha256": "ebb2f7da7b32bae78328a0bf47c7d6229d9850275fccfe2c259ee93067275fb2"
+    "sha256": "a4331abfd23785e0e49bb0298f3985f2ce7488beff45a8aea61d6c76323b05a8"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_f16_1sm-ba78af56b549",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_1sm-ba78af56b549.json",
-    "sha256": "38036f7ced2ff6e002e08e24058bc00c5a8c0eae1048d4a764587842b6e3e0ee"
+    "id": "fp-dense_f16_1sm-f1323cb7f9ca",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_f16_1sm-f1323cb7f9ca.json",
+    "sha256": "1ab79cbc96bd63518aa5dc40cf3fc810c5edeb5c4c01735f6501726184f0343d"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_1sm.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "99e56abb5e6c220691441a05e79a2f395502a625399ad7be6cbd2c3b0ec73551",
-      "size_bytes": 1049528,
+      "sha256": "33d88fa764dd4d503083d1d6ff4555dade941cefee6d520cc983ae48e97bdded",
+      "size_bytes": 1049696,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.dense_f16_1sm.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "8345a61af00e098c65be745ebb2ed3768bcddfbec7dc1ffc28ff3ed289ffa23f",
-      "size_bytes": 13608,
+      "sha256": "e380a71911aabb819c1320684855a1af0f0f5290f9ca902688eb1028c47c458e",
+      "size_bytes": 13790,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_1sm.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "8345a61af00e098c65be745ebb2ed3768bcddfbec7dc1ffc28ff3ed289ffa23f",
-      "size_bytes": 13608,
+      "sha256": "e380a71911aabb819c1320684855a1af0f0f5290f9ca902688eb1028c47c458e",
+      "size_bytes": 13790,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_1sm.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "6453c8f490e3bbfe5c4102318b299c2e2a910e8b65ce568d2fb8338f3d8f0ed7",
+      "sha256": "ceb9e4279242cae420edf7e55e07f9d741c848ae5fc00506005073db44aa6be6",
       "size_bytes": 3098,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase1-generalized-20260830.dense_f16_1sm.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "dbe207cd592bd370da2abdf901d1d0c94df7855010e11918edeed43147d969ec",
-      "size_bytes": 3728,
+      "sha256": "5a403eeb6525ff101eaad2f4081f8844c8fc8c6d961b5a15042b74e349736c77",
+      "size_bytes": 3759,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase1-generalized-20260830/attempts/phase1-generalized-20260830.dense_f16_1sm.a001",
     "format": "directory-manifest",
-    "sha256": "195ee28c3d9754abc14bb2e075a8f6101a4eeb67464cb30d499667dee75c4b25",
-    "size_bytes": 2464104
+    "sha256": "715c9db2c9cacd2bc5b963a747d567cbf7cea779a061d66a188b9bdb9f4cdf45",
+    "size_bytes": 2464454
   }
 }

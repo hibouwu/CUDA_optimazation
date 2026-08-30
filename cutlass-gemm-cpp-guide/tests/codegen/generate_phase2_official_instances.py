@@ -109,6 +109,13 @@ def spec(**values) -> dict:
         "sparse_mma": False,
         "block_scale_mma": False,
         "tmem_copy": False,
+        "tmem_store": False,
+        "tmem_copy_count": None,
+        "tmem_store_count": None,
+        "tmem_load_count": None,
+        "mma_count": None,
+        "sass_mma_regex": r"UTC[A-Z0-9_]*MMA(?:\..*)?",
+        "tma_cta_policy": "match_mma",
         "extra_includes": "",
         "source_note": "",
         "generation_risk": "",
@@ -116,6 +123,9 @@ def spec(**values) -> dict:
         "failure_domain": None,
         "failure_layer": None,
         "control_instance_id": None,
+        "control_campaign_id": None,
+        "guard_profile_id": None,
+        "reject_contract": None,
     }
     defaults.update(values)
     defaults["builder_a"] = defaults["builder_a"] or defaults["a"]
@@ -199,12 +209,14 @@ def load_phase2_specs() -> list[dict]:
         for entry in inventory["entries"]
         if entry["reference_class"] == "official_cpp_explicit_or_conditional"
     }
-    contract = load_strict_json(ROOT / "tests/codegen/static_codegen_contract.json")
+    phase1_campaign = load_strict_json(
+        ROOT / "tests/codegen/run-campaigns/phase1-generalized-20260830.json"
+    )
     phase1_tags = {
         load_strict_json(
             ROOT / "tests/codegen/instances" / instance_id / "instance.json"
         )["subject"]["id"]
-        for instance_id in contract["phase1_fresh_replay_instances"]
+        for instance_id in phase1_campaign["ordered_instances"]
     }
     expected_tags = official_tags - phase1_tags
     if set(tags) != expected_tags:
@@ -324,6 +336,9 @@ struct Config {{
 
 
 def opcode_contract(item: dict) -> tuple[dict, dict]:
+    def bounds(count: int | None) -> tuple[int, int | None]:
+        return (count, count) if count is not None else (1, None)
+
     ptx_required = []
     sass_required = []
     if item["load_mode"] in {"tma", "mixed"}:
@@ -332,20 +347,27 @@ def opcode_contract(item: dict) -> tuple[dict, dict]:
     if item["load_mode"] in {"cpasync", "mixed"}:
         ptx_required.append({"id": "cpasync_load", "regex": r"cp\.async\.(?:ca|cg)\.shared\.global(?:\..*)?", "min_count": 1, "max_count": None})
         sass_required.append({"id": "cpasync_load", "regex": r"LDGSTS(?:\..*)?", "min_count": 1, "max_count": None})
-    ptx_required.append({"id": "tmem_load", "regex": r"tcgen05\.ld(?:\..*)?", "min_count": 1, "max_count": None})
-    sass_required.append({"id": "tmem_load", "regex": r"LDTM(?:\..*)?", "min_count": 1, "max_count": None})
+    tmem_load_min, tmem_load_max = bounds(item["tmem_load_count"])
+    ptx_required.append({"id": "tmem_load", "regex": r"tcgen05\.ld(?:\..*)?", "min_count": tmem_load_min, "max_count": tmem_load_max})
+    sass_required.append({"id": "tmem_load", "regex": r"LDTM(?:\..*)?", "min_count": tmem_load_min, "max_count": tmem_load_max})
     if item["tmem_copy"]:
-        ptx_required.append({"id": "tmem_copy", "regex": r"tcgen05\.cp(?:\..*)?", "min_count": 1, "max_count": None})
-        sass_required.append({"id": "tmem_copy", "regex": r"UTCCP(?:\..*)?", "min_count": 1, "max_count": None})
+        tmem_copy_min, tmem_copy_max = bounds(item["tmem_copy_count"])
+        ptx_required.append({"id": "tmem_copy", "regex": r"tcgen05\.cp(?:\..*)?", "min_count": tmem_copy_min, "max_count": tmem_copy_max})
+        sass_required.append({"id": "tmem_copy", "regex": r"UTCCP(?:\..*)?", "min_count": tmem_copy_min, "max_count": tmem_copy_max})
+    if item["tmem_store"]:
+        tmem_store_min, tmem_store_max = bounds(item["tmem_store_count"])
+        ptx_required.append({"id": "tmem_store", "regex": r"tcgen05\.st(?:\..*)?", "min_count": tmem_store_min, "max_count": tmem_store_max})
+        sass_required.append({"id": "tmem_store", "regex": r"STTM(?:\..*)?", "min_count": tmem_store_min, "max_count": tmem_store_max})
     sparse = r"\.sp" if item["sparse_mma"] else ""
     suffix = r"(?:\..*)?block_scale(?:\..*)?" if item["block_scale_mma"] else r"(?:\..*)?"
+    mma_min, mma_max = bounds(item["mma_count"])
     ptx_required.append({
         "id": "mma",
         "regex": rf"tcgen05\.mma{sparse}\.cta_group::{item['cta']}(?:\..*)?kind::{item['mma_kind']}{suffix}",
-        "min_count": 1,
-        "max_count": None,
+        "min_count": mma_min,
+        "max_count": mma_max,
     })
-    sass_required.append({"id": "mma", "regex": r"UTC[A-Z0-9_]*MMA(?:\..*)?", "min_count": 1, "max_count": None})
+    sass_required.append({"id": "mma", "regex": item["sass_mma_regex"], "min_count": mma_min, "max_count": mma_max})
     opposite = 2 if item["cta"] == 1 else 1
     ptx_forbidden = [{"id": "opposite_cta", "regex": rf"tcgen05\.mma(?:\.sp)?\.cta_group::{opposite}(?:\..*)?", "min_count": 0, "max_count": 0}]
     sass_forbidden = []
@@ -358,6 +380,14 @@ def render_instance(item: dict, config: Path, kernel: Path, witness: Path) -> di
     inventory_path = ROOT / "tests/codegen/sm110a_schedule_reference_inventory.json"
     inventory = load_strict_json(inventory_path)
     reference = next(entry for entry in inventory["entries"] if entry["tag"] == item["tag"])
+    source_anchors = [{"path": reference["path"], "line_start": reference["line"], "line_end": reference["line"], "sha256": reference["anchor_line_sha256"]}]
+    if reference["reference_class"] == "generator_config":
+        source_anchors.append({
+            "path": reference["mapping_path"],
+            "line_start": reference["mapping_line"],
+            "line_end": reference["mapping_line"],
+            "sha256": reference["mapping_line_sha256"],
+        })
     tags = load_strict_json(ROOT / "tests/codegen/sm110a_tensor_schedule_tags.json")
     group = next(entry["group"] for entry in tags["entries"] if entry["tag"] == item["tag"])
     mechanism = merge(base_mechanism(), item.get("mechanism_patch", {}))
@@ -374,7 +404,7 @@ def render_instance(item: dict, config: Path, kernel: Path, witness: Path) -> di
         "provenance": {
             "reference_inventory_sha256": hashlib.sha256(inventory_path.read_bytes()).hexdigest(),
             "reference_class": reference["reference_class"],
-            "source_anchors": [{"path": reference["path"], "line_start": reference["line"], "line_end": reference["line"], "sha256": reference["anchor_line_sha256"]}],
+            "source_anchors": source_anchors,
             "parent_instance_id": None,
             "derivation_axis": reference["derivation_axis"],
         },
@@ -383,6 +413,7 @@ def render_instance(item: dict, config: Path, kernel: Path, witness: Path) -> di
             "config": {"path": config.relative_to(ROOT).as_posix(), "sha256": hashlib.sha256(config.read_bytes()).hexdigest()},
             "kernel": {"path": kernel.relative_to(ROOT).as_posix(), "sha256": hashlib.sha256(kernel.read_bytes()).hexdigest()},
             "type_witness": {"path": witness.relative_to(ROOT).as_posix(), "sha256": hashlib.sha256(witness.read_bytes()).hexdigest()},
+            "collective_prefix_witness": None,
         },
         "declared_config": {
             "family": group,
@@ -410,6 +441,7 @@ def render_instance(item: dict, config: Path, kernel: Path, witness: Path) -> di
             "required_layers": ["DECLARED_BUILDER_CONFIG", "BUILDER_SPECIALIZATION", "DISPATCH_POLICY", "COLLECTIVE", "STAGE", "COPY_LAYOUT", "TILED_MMA", "ATOM", "KERNEL_COMPOSITION", "PTX_EMISSION", "SM110A_ASSEMBLY", "FUNCTION_BINDING", "FUNCTION_CONTRACT"],
             "target_entity": "cutlass::device_kernel<GemmKernel>",
             "function_selector": "sole_ptx_entry_equals_sole_elf_sto_entry_equals_unique_nvdisasm_function",
+            "tma_cta_policy": item["tma_cta_policy"],
             "ptx": ptx,
             "sass": sass,
         },
@@ -419,6 +451,9 @@ def render_instance(item: dict, config: Path, kernel: Path, witness: Path) -> di
             "failure_layer": item["failure_layer"],
             "diagnostic_patterns": [],
             "control_instance_id": item["control_instance_id"],
+            "control_campaign_id": item["control_campaign_id"],
+            "guard_profile_id": item["guard_profile_id"],
+            "reject_contract": item["reject_contract"],
         },
     }
 

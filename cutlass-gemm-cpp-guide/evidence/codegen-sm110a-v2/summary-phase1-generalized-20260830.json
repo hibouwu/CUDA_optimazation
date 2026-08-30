@@ -2,36 +2,41 @@
   "schema_version": 1,
   "run_id": "phase1-generalized-20260830",
   "scope": "STATIC_CODEGEN_ONLY",
+  "campaign_ref": {
+    "id": "phase1-generalized-20260830",
+    "path": "tests/codegen/run-campaigns/phase1-generalized-20260830.json",
+    "sha256": "f0d0b7ebff08c86d45323c56b57bcea840eaa3a96a2e797b27b599877038b8fe"
+  },
   "result_refs": [
     {
       "id": "phase1-generalized-20260830.dense_f16_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_1sm.a001.json",
-      "sha256": "220a64e633568a7840605e679e591ead3daa73b33ecf4bd5107ee702bcba1934"
+      "sha256": "45945f83c3462b853f2a02adcbdacdec86770cc0df3848caac4456e9958fc240"
     },
     {
       "id": "phase1-generalized-20260830.dense_f16_2sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_2sm.a001.json",
-      "sha256": "4bf31b79ced2f4e68cc99ead12f776c12997afbbc39691a3fccf26093cc8cf2d"
+      "sha256": "b99186445cb218aef3abcc1f9fd9e0ccfe25b61f89179e4f9021bb9cbaed6cab"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_nvfp4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_nvfp4_1sm.a001.json",
-      "sha256": "18ad433b24e9840f5c2b439ac0718d7255865436b26e1997d0e7d0b4bd639fc8"
+      "sha256": "4cb2d6086aa4349e3b64b076f625dcea051249c28a83694ca34e250e57b1893f"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_mxf4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_mxf4_1sm.a001.json",
-      "sha256": "91cfcf0a7e84ede583ed986ef80be47a7ae2c1f6ddb136fc2536b76e11f485df"
+      "sha256": "cd77699c15fc0a1ad51416b4e715c57a59b6f92b1310950424c896a242e56b78"
     },
     {
       "id": "phase1-generalized-20260830.dense_bs_mxf8_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_bs_mxf8_1sm.a001.json",
-      "sha256": "02798641dd3b35e6f07bb72c3c78aaa19df9f9a04eb109847977576fafebe57c"
+      "sha256": "b2b445bff78ecad9430de988ec16fd0909b1c4e8efb79228f58ee4efebc9442e"
     },
     {
       "id": "phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001",
       "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.sparse_bs_nvfp4_1sm.a001.json",
-      "sha256": "7b381dea8ceef4e462d7f74c8dfbb5a9a8d80232001b9c14d1e04708ae5707d4"
+      "sha256": "ceb94f1a14d4658daeb2c1d067e03a9278d5db2e9db34779dc5dd4080687b20c"
     }
   ],
   "history_result_refs": []

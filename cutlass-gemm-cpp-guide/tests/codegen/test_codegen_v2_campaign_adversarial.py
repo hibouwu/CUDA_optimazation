@@ -18,14 +18,23 @@ from test_codegen_v2_model_adversarial import make_fixture, write_json  # noqa: 
 
 
 def make_campaign_fixture() -> tuple[Path, dict[str, Path]]:
-    def freeze_fixture_campaign(contract):
-        contract["phase1_fresh_replay_instances"] = ["fixture"]
-        contract["phase1_run_id"] = "fixture"
-        contract["phase1_current_summary"] = (
-            "evidence/codegen-sm110a-v2/summary-fixture.json"
-        )
-
-    root, paths = make_fixture(freeze_fixture_campaign)
+    root, paths = make_fixture()
+    campaign = root / "tests/codegen/run-campaigns/fixture.json"
+    campaign.parent.mkdir(parents=True, exist_ok=True)
+    write_json(
+        campaign,
+        {
+            "schema_version": 1,
+            "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
+            "scope": "STATIC_CODEGEN_ONLY",
+            "phase_id": 99,
+            "campaign_id": "fixture",
+            "run_id": "fixture",
+            "current_summary": "evidence/codegen-sm110a-v2/summary-fixture.json",
+            "allowed_terminal_statuses": ["STATIC_PASS"],
+            "ordered_instances": ["fixture"],
+        },
+    )
     summary = root / "evidence/codegen-sm110a-v2/summary-fixture.json"
     write_json(
         summary,
@@ -33,18 +42,20 @@ def make_campaign_fixture() -> tuple[Path, dict[str, Path]]:
             "schema_version": 1,
             "run_id": "fixture",
             "scope": "STATIC_CODEGEN_ONLY",
+            "campaign_ref": file_ref(root, campaign, identifier="fixture"),
             "result_refs": [file_ref(root, paths["result"], identifier="fixture.fixture.a001")],
             "history_result_refs": [],
         },
     )
     paths["summary"] = summary
+    paths["campaign"] = campaign
     return root, paths
 
 
 def run_gate(root: Path, *, require_results: bool = True) -> subprocess.CompletedProcess[str]:
     command = [sys.executable, str(root / "tools/validate_codegen_v2.py"), "--root", str(root)]
     if require_results:
-        command.append("--require-results")
+        command += ["--require-campaign", "fixture", "--require-archive"]
     return subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -67,7 +78,7 @@ def main() -> int:
     root, _ = make_campaign_fixture()
     try:
         result = run_gate(root)
-        if result.returncode != 0 or "phase1_results=1" not in result.stdout:
+        if result.returncode != 0 or "campaign_results=fixture:1" not in result.stdout:
             raise AssertionError(f"clean campaign fixture failed: {result.stdout}\n{result.stderr}")
     finally:
         shutil.rmtree(root)
@@ -102,7 +113,7 @@ def main() -> int:
 
     require_rejected(
         "cross_run_summary",
-        "result attempt belongs to a different run_id",
+        "campaign_ref does not bind this summary",
         cross_run_summary,
     )
 
@@ -123,29 +134,88 @@ def main() -> int:
         orphan.parent.mkdir(parents=True)
         orphan.write_text("orphan\n", encoding="utf-8")
 
-    unsealed_root, unsealed_paths = make_campaign_fixture()
-    try:
-        orphan_fingerprint(unsealed_root, unsealed_paths)
-        orphan_manifest(unsealed_root, unsealed_paths)
-        orphan_journal(unsealed_root, unsealed_paths)
-        orphan_excerpt(unsealed_root, unsealed_paths)
-        unsealed_result = unsealed_paths["result"].with_name("unsealed.json")
-        shutil.copy2(unsealed_paths["result"], unsealed_result)
-        result = run_gate(unsealed_root)
-        if result.returncode != 0 or "unsealed_results=1" not in result.stdout:
-            raise AssertionError(
-                f"unsealed staging files affected the committed campaign: {result.stdout}\n{result.stderr}"
-            )
-    finally:
-        shutil.rmtree(unsealed_root)
+    require_rejected(
+        "orphan_fingerprint",
+        "fingerprint namespace differs from published results",
+        orphan_fingerprint,
+    )
+    require_rejected(
+        "orphan_manifest",
+        "artifact manifest namespace differs from published results",
+        orphan_manifest,
+    )
+    require_rejected(
+        "orphan_journal",
+        "journal namespace differs from published results",
+        orphan_journal,
+    )
+    require_rejected(
+        "orphan_excerpt",
+        "excerpt namespace differs from published manifests",
+        orphan_excerpt,
+    )
+    require_rejected(
+        "unsealed_result",
+        "result namespace contains unsealed entries",
+        lambda r, p: shutil.copy2(
+            p["result"], p["result"].with_name("unsealed.json")
+        ),
+    )
+
+    def orphan_attempt(root: Path, paths: dict[str, Path]) -> None:
+        orphan = root / "artifacts/codegen-sm110a-v2/orphan/attempts/orphan.a001"
+        orphan.mkdir(parents=True)
+        (orphan / "unsealed.txt").write_text("orphan\n", encoding="utf-8")
+
+    require_rejected(
+        "orphan_attempt",
+        "attempt archive namespace contains orphan entries",
+        orphan_attempt,
+    )
+
+    def non_directory_attempt(root: Path, paths: dict[str, Path]) -> None:
+        invalid = root / "artifacts/codegen-sm110a-v2/orphan/attempts/not-a-directory"
+        invalid.parent.mkdir(parents=True)
+        invalid.write_text("not an attempt directory\n", encoding="utf-8")
+
+    require_rejected(
+        "non_directory_attempt",
+        "attempt archive namespace contains a non-directory entry",
+        non_directory_attempt,
+    )
 
     require_rejected(
         "missing_current_summary",
-        "phase1_current_summary",
+        "current_summary: file is missing",
         lambda r, p: p["summary"].unlink(),
     )
 
-    print("CODEGEN_V2_CAMPAIGN_ADVERSARIAL_PASS mutations=4 positive=2")
+    require_rejected(
+        "campaign_ref_hash",
+        "campaign_ref does not bind this summary",
+        lambda r, p: (
+            lambda value: (
+                value["campaign_ref"].__setitem__("sha256", "0" * 64),
+                write_json(p["summary"], value),
+            )
+        )(load_strict_json(p["summary"])),
+    )
+
+    def campaign_member_status(root: Path, paths: dict[str, Path]) -> None:
+        campaign = load_strict_json(paths["campaign"])
+        campaign["allowed_terminal_statuses"] = ["UNSUPPORTED_SM110A"]
+        write_json(paths["campaign"], campaign)
+        summary = load_strict_json(paths["summary"])
+        summary["campaign_ref"] = file_ref(root, paths["campaign"], identifier="fixture")
+        write_json(paths["summary"], summary)
+
+    require_rejected(
+        "campaign_member_status",
+        "invalid terminal statuses",
+        campaign_member_status,
+    )
+
+    print("CODEGEN_V2_CAMPAIGN_ADVERSARIAL_PASS mutations=13 positive=1")
     return 0
 
 

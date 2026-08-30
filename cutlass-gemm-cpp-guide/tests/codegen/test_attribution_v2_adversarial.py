@@ -82,7 +82,9 @@ def inspect(
     )
 
 
-def inspect_group(ptx: str, sass: str, cta_group: int):
+def inspect_group(
+    ptx: str, sass: str, cta_group: int, *, require_tma_group_match: bool = True
+):
     return attribute_codegen(
         ptx_text=ptx,
         nvdisasm_json_text=sass,
@@ -90,6 +92,7 @@ def inspect_group(ptx: str, sass: str, cta_group: int):
         code_object_metadata_text=CODE_OBJECT_METADATA,
         expected_symbol="kernel_A",
         declared_cta_group=cta_group,
+        require_tma_group_match=require_tma_group_match,
         expected_ptx_target="sm_110a",
         expected_sass_arch="sm_110a",
         required_ptx=[
@@ -349,6 +352,14 @@ def main() -> int:
     if "tcgen05.relinquish_alloc_permit.cta_group::1.sync.aligned" not in zero_opcodes:
         raise AssertionError("zero-operand PTX lifecycle opcode was not parsed")
 
+    bracket_operand_ptx = valid_ptx.replace(
+        "  tcgen05.ld.sync.aligned %r1, %r2;",
+        "  tcgen05.st.sync.aligned.32x32b.x32.b32[%r1],{%r2};",
+    )
+    bracket_opcodes = parse_ptx_entries(bracket_operand_ptx)[0].opcodes
+    if "tcgen05.st.sync.aligned.32x32b.x32.b32" not in bracket_opcodes:
+        raise AssertionError("PTX opcode adjacent to a bracket operand was not parsed")
+
     nested_ptx = valid_ptx.replace(
         "tcgen05.mma.cta_group::1.kind::f16 %r1, %r2;",
         "{\n  .reg .u32 nested;\n"
@@ -384,6 +395,18 @@ def main() -> int:
         raise AssertionError("2SM PTX plus 1SM SASS passed")
     if inspect_group(valid_ptx, two_group_sass, 1).cta_group_contract.passed:
         raise AssertionError("1SM PTX plus 2SM SASS passed")
+    input_transform_sass = sass_json(
+        sass_function("kernel_A", "UTMALDG.3D.MULTICAST", "UTCHMMA.2CTA", "LDTM.16")
+    )
+    if inspect_group(two_group_ptx, input_transform_sass, 2).cta_group_contract.passed:
+        raise AssertionError("strict 2SM TMA policy accepted a 1CTA input-transform load")
+    if not inspect_group(
+        two_group_ptx,
+        input_transform_sass,
+        2,
+        require_tma_group_match=False,
+    ).cta_group_contract.passed:
+        raise AssertionError("input-transform TMA policy rejected valid 2CTA MMA with 1CTA TMA")
 
     pseudo_opcode = sass_json(
         sass_function("kernel_A", "NOTUTMALDG", "NOTUTCHMMA", "NOTLDTM")
@@ -391,7 +414,7 @@ def main() -> int:
     if inspect(valid_ptx, pseudo_opcode).sass_contract.passed:
         raise AssertionError("substring-like pseudo opcodes passed fullmatch contracts")
 
-    print("ATTRIBUTION_V2_ADVERSARIAL_PASS cases=33 positive=5")
+    print("ATTRIBUTION_V2_ADVERSARIAL_PASS cases=34 positive=7")
     return 0
 
 

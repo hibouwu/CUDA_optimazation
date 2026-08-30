@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "sparse_bs_mxf8_1sm_official",
     "path": "tests/codegen/instances/sparse_bs_mxf8_1sm_official/instance.json",
-    "sha256": "4e3f3fc68a5ab333e692b72e992813aea25bb4904017ebf8d82ae82f7e33019a"
+    "sha256": "ebe244472ff8cb2ea4bb5d1fb05dca114face1cacb90b5b1cfd3032aca8fa8cd"
   },
   "fingerprint_ref": {
-    "id": "fp-sparse_bs_mxf8_1sm_official-ca6bc9a0ed7f",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_mxf8_1sm_official-ca6bc9a0ed7f.json",
-    "sha256": "c0ce0c5c2b4043ef19a9727a1a82649f0d83c6d0b9682f4d248a16349486216e"
+    "id": "fp-sparse_bs_mxf8_1sm_official-a0b92b5fa762",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_mxf8_1sm_official-a0b92b5fa762.json",
+    "sha256": "9b65702123a58a3c942d1bcbda65a983fd1baa13a07254291d6976ef817b104d"
   },
   "attempt_id": "phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001.jsonl",
-    "sha256": "290c2758b07599438307ec46def4c0f336ff133001cfb517de631dbe3eb6daac",
+    "sha256": "d5ad367e30dc31118b1381144876dc21ee068f5ca821df5f2961b1c615b2cf4a",
     "last_seq": 64,
-    "last_event_sha256": "448f4da92380b49218332f3e8654f643113f4e698f4a5022a981e5691c321902"
+    "last_event_sha256": "422e6289ee361c9b7f5f04b9cf41b8684e60dd7775e4c62fbb2994dabd81d1ca"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.sparse_bs_mxf8_1sm_official.a001.json",
-    "sha256": "0d386aca2ba31be22282c1c900b528439b8dc804d2b8f11a34a8f3334bed5f3b"
+    "sha256": "f472b1dee0631e58041fc44fa4399f669fcf5873ae86c57008df03115f827b19"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

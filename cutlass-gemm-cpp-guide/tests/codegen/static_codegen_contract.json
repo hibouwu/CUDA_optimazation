@@ -3,46 +3,6 @@
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "scope": "STATIC_CODEGEN_ONLY",
-  "phase1_run_id": "phase1-generalized-20260830",
-  "phase1_current_summary": "evidence/codegen-sm110a-v2/summary-phase1-generalized-20260830.json",
-  "phase2_run_id": "phase2-official-20260830",
-  "phase2_current_summary": "evidence/codegen-sm110a-v2/summary-phase2-official-20260830.json",
-  "phase2_official_instances": [
-    "dense_cpasync_fp8_1sm",
-    "dense_mixed_tma_cpasync_fp8_1sm_moe",
-    "dense_mixed_tma_cpasync_fp8_2sm_moe",
-    "ptr_array_dense_fp8_1sm",
-    "ptr_array_dense_fp8_2sm",
-    "blockwise_fp8_1sm_g2x2x32",
-    "blockwise_fp8_2sm_g64x4x32",
-    "ptr_array_blockwise_fp8_1sm_trivial",
-    "ptr_array_blockwise_fp8_2sm_g1x128x128",
-    "planar_complex_f16_1sm",
-    "planar_complex_f16_2sm",
-    "ptr_array_planar_complex_f16_1sm",
-    "ptr_array_planar_complex_f16_2sm",
-    "fast_fp32_bf16x9_2sm_smem",
-    "mixed_input_int4_bf16_2sm_convert",
-    "dense_bs_mixed_tma_cpasync_1sm_moe",
-    "dense_bs_mixed_tma_cpasync_2sm_moe",
-    "dense_bs_generic_nvf4_1sm",
-    "dense_bs_generic_nvf4_2sm",
-    "dense_bs_mxf8_2sm_official",
-    "dense_bs_nvfp4_2sm_official",
-    "ptr_bs_mxf4_1sm_official",
-    "ptr_bs_mxf4_2sm_official",
-    "ptr_bs_mxf8_1sm_official",
-    "ptr_bs_mxf8_2sm_official",
-    "ptr_bs_nvfp4_1sm_grouped",
-    "ptr_bs_nvfp4_2sm_grouped",
-    "sparse_i8_1sm_official",
-    "sparse_i8_2sm_official",
-    "sparse_bs_mxf4_1sm_official",
-    "sparse_bs_mxf4_2sm_official",
-    "sparse_bs_mxf8_1sm_official",
-    "sparse_bs_mxf8_2sm_official",
-    "sparse_bs_nvfp4_2sm_official"
-  ],
   "fresh_replay_required_semantics": "permanent_coverage_membership_never_completion_flag",
   "witness_contract": {
     "version": 2,
@@ -63,20 +23,12 @@
     ],
     "copy_layout_roles": ["classic", "input_compute", "block_scale", "blockwise", "mixed_scale", "sparse_metadata"],
     "pipeline_roles": ["mainloop", "scheduler", "accumulator", "load_to_transform", "transform_to_mma", "computation", "transformation"],
-    "mechanism_profiles": ["dense", "pointer_array", "block_scaled", "blockwise", "sparse", "mixed_input", "fast_fp32", "planar_complex", "interleaved_complex"]
+    "mechanism_profiles": ["dense", "pointer_array", "block_scaled", "blockwise", "sparse", "mixed_input", "fast_fp32", "fast_fp32_interleaved_complex", "planar_complex", "interleaved_complex"]
   },
   "inventory_contract_sha256": {
     "explicit_tags": "2bbd6195fe9683512a3c16b06f8637883937eac5bbbfa44b1a68fa81ed2e4b50",
     "auto_controls": "309d8530dcd63a59c7c98051e340fb7a3cd712cd72d261b39a2316306930ed91"
   },
-  "phase1_fresh_replay_instances": [
-    "dense_f16_1sm",
-    "dense_f16_2sm",
-    "dense_bs_nvfp4_1sm",
-    "dense_bs_mxf4_1sm",
-    "dense_bs_mxf8_1sm",
-    "sparse_bs_nvfp4_1sm"
-  ],
   "record_schemas": {
     "instance": "tests/codegen/schemas/instance.schema.json",
     "fingerprint": "tests/codegen/schemas/fingerprint.schema.json",
@@ -137,27 +89,86 @@
     "reason": "ARCH_GUARD_FALLBACK",
     "terminal_status": "UNSUPPORTED_SM110A",
     "failure_layer": "FUNCTION_CONTRACT",
-    "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
-    "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
-    "ptx": [
-      {"id": "arch_guard_brkpt", "regex": "brkpt", "required": true, "min_count": 9, "max_count": 9},
-      {"id": "tensor_mma_absent", "regex": "tcgen05\\.mma(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+    "profiles": {
+      "fast_real_2sm_smem_scaled": {
+        "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
+        "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+        "ptx": [
+          {"id": "arch_guard_brkpt", "regex": "brkpt", "required": true, "min_count": 9, "max_count": 9},
+          {"id": "tensor_mma_absent", "regex": "tcgen05\\.mma(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "sass": [
+          {"id": "arch_guard_trap", "regex": "BPT\\.TRAP(?:\\..*)?", "required": true, "min_count": 9, "max_count": 9},
+          {"id": "tensor_mma_absent", "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "source_constraints": [
+          {"path": "include/cute/arch/mma_sm100_umma.hpp", "line_start": 759, "line_end": 793, "sha256": "05f7416708eb057b10c458e301e362f9a8ee884b58862fe8efd3216f02da3e90"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 73, "line_end": 75, "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 100, "line_end": 118, "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"}
+        ],
+        "control_relation": "same_target_fresh_static_pass",
+        "controlled_delta": ["mainloop_schedule", "resolved_tiled_mma_atom", "function_local_codegen"]
+      },
+      "fast_complex_1sm_tmem_smem_scaled": {
+        "guard_atom": "SM100_MMA_F16BF16_TS_SCALED",
+        "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+        "ptx": [
+          {"id": "arch_guard_brkpt", "regex": "brkpt", "required": true, "min_count": 36, "max_count": 36},
+          {"id": "tmem_store", "regex": "tcgen05\\.st(?:\\..*)?", "required": true, "min_count": 6, "max_count": 6},
+          {"id": "tensor_mma_absent", "regex": "tcgen05\\.mma(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "sass": [
+          {"id": "arch_guard_trap", "regex": "BPT\\.TRAP(?:\\..*)?", "required": true, "min_count": 36, "max_count": 36},
+          {"id": "tmem_store", "regex": "STTM(?:\\..*)?", "required": true, "min_count": 6, "max_count": 6},
+          {"id": "tensor_mma_absent", "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "source_constraints": [
+          {"path": "include/cute/arch/mma_sm100_umma.hpp", "line_start": 386, "line_end": 423, "sha256": "b2c239e1d2f4071939cb0ad2e3edddc5e3f2cbbda2c9cfab754599765787c4db"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 73, "line_end": 75, "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 100, "line_end": 118, "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"}
+        ],
+        "control_relation": "same_target_fresh_static_pass",
+        "controlled_delta": ["mainloop_schedule", "epilogue_schedule", "resolved_tiled_mma_atom", "function_local_codegen"]
+      },
+      "fast_complex_2sm_tmem_smem_scaled": {
+        "guard_atom": "SM100_MMA_F16BF16_2x1SM_TS_SCALED",
+        "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
+        "ptx": [
+          {"id": "arch_guard_brkpt", "regex": "brkpt", "required": true, "min_count": 36, "max_count": 36},
+          {"id": "tmem_store", "regex": "tcgen05\\.st(?:\\..*)?", "required": true, "min_count": 6, "max_count": 6},
+          {"id": "tensor_mma_absent", "regex": "tcgen05\\.mma(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "sass": [
+          {"id": "arch_guard_trap", "regex": "BPT\\.TRAP(?:\\..*)?", "required": true, "min_count": 36, "max_count": 36},
+          {"id": "tmem_store", "regex": "STTM(?:\\..*)?", "required": true, "min_count": 6, "max_count": 6},
+          {"id": "tensor_mma_absent", "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
+        ],
+        "source_constraints": [
+          {"path": "include/cute/arch/mma_sm100_umma.hpp", "line_start": 844, "line_end": 879, "sha256": "aef1faeb893915d94fc2b3d10732305b7297721a4bb8f792f55f5991dc175465"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 73, "line_end": 75, "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"},
+          {"path": "include/cute/arch/config.hpp", "line_start": 100, "line_end": 118, "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"}
+        ],
+        "control_relation": "same_target_fresh_static_pass",
+        "controlled_delta": ["mainloop_schedule", "epilogue_schedule", "resolved_tiled_mma_atom", "function_local_codegen"]
+      }
+    }
+  },
+  "expected_static_reject_contract": {
+    "failure_domain": "CONFIGURATION_LEGALITY",
+    "allowed_failure_layers": ["BUILDER_SPECIALIZATION", "KERNEL_COMPOSITION"],
+    "failure_step_id": "compile_type_witness",
+    "max_stderr_bytes": 8388608,
+    "forbidden_returncodes": [125, 126, 127],
+    "forbidden_returncode_minimum": 128,
+    "infrastructure_forbidden_patterns": [
+      "(?i)out of memory|std::bad_alloc|\\bKilled\\b|terminated by signal",
+      "(?i)internal compiler error|please submit a bug report",
+      "(?i)No space left on device|Permission denied",
+      "(?i)No such file or directory|cannot open source file",
+      "(?i)nvcc fatal|ptxas fatal|failed to execute|cannot execute"
     ],
-    "sass": [
-      {"id": "arch_guard_trap", "regex": "BPT\\.TRAP(?:\\..*)?", "required": true, "min_count": 9, "max_count": 9},
-      {"id": "tensor_mma_absent", "regex": "UTC[A-Z0-9_]*MMA(?:\\..*)?", "required": false, "min_count": 0, "max_count": 0}
-    ],
-    "source_constraints": [
-      {"path": "include/cute/arch/mma_sm100_umma.hpp", "line_start": 759, "line_end": 793, "sha256": "05f7416708eb057b10c458e301e362f9a8ee884b58862fe8efd3216f02da3e90"},
-      {"path": "include/cute/arch/config.hpp", "line_start": 73, "line_end": 75, "sha256": "1e808bfed504928ceaf94e540a84a83ca96b146cabfff190c31515439593fff7"},
-      {"path": "include/cute/arch/config.hpp", "line_start": 100, "line_end": 118, "sha256": "389c68180bfe02d6a9d017ded93556b0c64558b8b60b759632802aac5b80f6f0"}
-    ],
-    "control_relation": "same_target_fresh_static_pass",
-    "controlled_delta": [
-      "mainloop_schedule",
-      "resolved_tiled_mma_atom",
-      "function_local_codegen"
-    ]
+    "error_line_regex": "(?m)^.*\\berror(?: #?[0-9]+)?:.*$",
+    "controlled_delta_for_auto": ["declared_config.mainloop_schedule"]
   },
   "compile_plan": {
     "jobs": 1,
@@ -236,6 +247,7 @@
   ],
   "implemented_terminal_statuses": [
     "STATIC_PASS",
+    "EXPECTED_STATIC_REJECT",
     "UNSUPPORTED_SM110A"
   ],
   "nonterminal_failure_statuses": [
@@ -259,7 +271,12 @@
     "COMPILE_STDOUT",
     "COMPILE_STDERR",
     "CONTRACT_CHECK_REPORT",
-    "DIAGNOSTIC_EXCERPT"
+    "DIAGNOSTIC_EXCERPT",
+    "SOURCE_CONSTRAINT_EXCERPT",
+    "REJECTION_REPORT",
+    "COLLECTIVE_PREFIX_SOURCE",
+    "COLLECTIVE_PREFIX_EXECUTABLE",
+    "COLLECTIVE_PREFIX_OUTPUT"
   ],
   "journal_events": [
     "ATTEMPT_CREATED",

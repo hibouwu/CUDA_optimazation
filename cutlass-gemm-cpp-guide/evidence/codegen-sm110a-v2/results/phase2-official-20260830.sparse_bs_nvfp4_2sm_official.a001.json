@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "sparse_bs_nvfp4_2sm_official",
     "path": "tests/codegen/instances/sparse_bs_nvfp4_2sm_official/instance.json",
-    "sha256": "e34b178de6f5dc25614eba80729a8359f7692f88f6c440c8b7686553db2c71fb"
+    "sha256": "9d2cd2c36143db7a87b9c925ce60bea4c41c4d6c73e1191ba32cc5dfb8669e69"
   },
   "fingerprint_ref": {
-    "id": "fp-sparse_bs_nvfp4_2sm_official-2ad06cb13587",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_nvfp4_2sm_official-2ad06cb13587.json",
-    "sha256": "eebb7524ce3e775bc5a03743890e65588b20ab3d2e45b7a0903233e7bef7735e"
+    "id": "fp-sparse_bs_nvfp4_2sm_official-03762b27f23e",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-sparse_bs_nvfp4_2sm_official-03762b27f23e.json",
+    "sha256": "8407350a0039683ffacc87cc66a1cbac336ca783329e8d4ec96acdab0d42b4e0"
   },
   "attempt_id": "phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001.jsonl",
-    "sha256": "db44a6c620c3fcb0c8e057e4fe6e3555abceecb16cfe935823e34cdd9b5ff8e0",
+    "sha256": "55b64df20f63b0df36d04c0275358fb9a394b3edc82808b5df59dda3d353b0ef",
     "last_seq": 64,
-    "last_event_sha256": "5ec282d7959d3714eff54c944d7e37fa7afddc29fd54e60c44dbd77f65e94bf8"
+    "last_event_sha256": "fccf2db1d374d6671ed2bccdf9ef3d1d584c430c4fc5530d0a611865def498ac"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.sparse_bs_nvfp4_2sm_official.a001.json",
-    "sha256": "68840b03f70d4e088faf2160867ae7d780e47b42e5cfb34136773da5423a537b"
+    "sha256": "bc179c5ac91e84f275ae3c42ef11357ffcd6766835151caa164f47db5ae3ca12"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

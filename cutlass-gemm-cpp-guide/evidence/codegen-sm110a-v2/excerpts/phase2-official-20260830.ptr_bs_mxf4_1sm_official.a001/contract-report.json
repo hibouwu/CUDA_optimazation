@@ -223,6 +223,7 @@
   ],
   "cta_group": {
     "declared": 1,
+    "tma_policy": "match_mma",
     "ptx_mma_opcodes": [
       "tcgen05.mma.cta_group::1.kind::mxf4.block_scale.block32",
       "tcgen05.mma.cta_group::1.kind::mxf4.block_scale.block32",

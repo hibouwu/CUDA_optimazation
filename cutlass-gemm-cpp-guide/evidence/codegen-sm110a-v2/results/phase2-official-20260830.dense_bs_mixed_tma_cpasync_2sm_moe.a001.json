@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "dense_bs_mixed_tma_cpasync_2sm_moe",
     "path": "tests/codegen/instances/dense_bs_mixed_tma_cpasync_2sm_moe/instance.json",
-    "sha256": "ef8af31c2a36ae6e3abc16ea69b8d3e07ca69534c9e011ff27588657bb285823"
+    "sha256": "0753abf21b6db93667c51ce4adad3ae288bf13d938629cd5fa2a3f9aefe4eb1c"
   },
   "fingerprint_ref": {
-    "id": "fp-dense_bs_mixed_tma_cpasync_2sm_moe-c67f1be5375e",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mixed_tma_cpasync_2sm_moe-c67f1be5375e.json",
-    "sha256": "6fba06c65493ee4c3cbab2d7b36d24aa6edfdacc66ea759f2c7e22a5c6793787"
+    "id": "fp-dense_bs_mixed_tma_cpasync_2sm_moe-efc306298f5b",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-dense_bs_mixed_tma_cpasync_2sm_moe-efc306298f5b.json",
+    "sha256": "0ee6485f04349e2b9fd399945745dde53be4358b24c4912ae4660249b6ccf425"
   },
   "attempt_id": "phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001.jsonl",
-    "sha256": "85397b97f460f0c1223eccbaa1a58ca32215f7af5d2068768ee5673aeebd8151",
+    "sha256": "3eaec3dff5cdf3d0e1d6b5713f308def06fada72ffd82e75486e7322e589ae5d",
     "last_seq": 64,
-    "last_event_sha256": "950ee3d6e1bcd0a774686bb6b17e98e9b3b81e13044a0ab94af471bad5cb7df2"
+    "last_event_sha256": "7f16e292b9a235ff14deb1d8ec4459fad25a47e4eed8a7e42fde61a712bc77d9"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.dense_bs_mixed_tma_cpasync_2sm_moe.a001.json",
-    "sha256": "151ee3bb13400a252635d28b77d196e0eef3204fa6d230ef465b8fd699f47cea"
+    "sha256": "e560f61d64aac281e404acec195c7a91a687ed1a27c06fe47e6ce44f6ba6fca6"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

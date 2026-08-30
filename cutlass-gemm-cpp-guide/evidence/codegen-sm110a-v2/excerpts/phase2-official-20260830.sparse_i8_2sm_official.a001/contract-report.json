@@ -95,6 +95,7 @@
   ],
   "cta_group": {
     "declared": 2,
+    "tma_policy": "match_mma",
     "ptx_mma_opcodes": [
       "tcgen05.mma.sp.cta_group::2.kind::i8",
       "tcgen05.mma.sp.cta_group::2.kind::i8"

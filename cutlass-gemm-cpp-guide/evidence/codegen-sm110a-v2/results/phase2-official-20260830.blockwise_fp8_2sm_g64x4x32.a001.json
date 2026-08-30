@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "blockwise_fp8_2sm_g64x4x32",
     "path": "tests/codegen/instances/blockwise_fp8_2sm_g64x4x32/instance.json",
-    "sha256": "141b8e5ecb2980206c70843742ea64bf171dad337cd5ca70eb19017cc08faab4"
+    "sha256": "4b47a9717926f7070040788f17d94085b93133a480c1078e79399823c00b8368"
   },
   "fingerprint_ref": {
-    "id": "fp-blockwise_fp8_2sm_g64x4x32-727f0faf7dbc",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-blockwise_fp8_2sm_g64x4x32-727f0faf7dbc.json",
-    "sha256": "a3773d302cfff68f83456f400f8b820fb4b54449c0f3458cc6b174abf9664922"
+    "id": "fp-blockwise_fp8_2sm_g64x4x32-86a35079975e",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-blockwise_fp8_2sm_g64x4x32-86a35079975e.json",
+    "sha256": "aa148e14a277c888c18c07458f1ce261d0c46813eac29d9a79e831a1b8e3609a"
   },
   "attempt_id": "phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001.jsonl",
-    "sha256": "0708f9c8c668369a71d83b66674ab5df484b82c346a0d6cde3e85eb1c33ad235",
+    "sha256": "cc7a7f98b3d50d32cfe11c0092f62839f9f14f8d34ec65cae420b9232c241e88",
     "last_seq": 64,
-    "last_event_sha256": "5c568629ed95c1618378e7aa6129fbf6241b333cef04f92d496fee4e66060b7a"
+    "last_event_sha256": "b744ea3cf2503fcd4b1a8f27acfe376f80fa52883de08361f51ca5ce130f523d"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.blockwise_fp8_2sm_g64x4x32.a001.json",
-    "sha256": "5656ecbab9d6741f97a86ba3c672dd035257fbad60448c394b19e0728eda7c92"
+    "sha256": "42f9c8653841ccd8469960e80afc9a1eea93b49e033c80f895a7b9691a8c3e2d"
   },
   "status": "STATIC_PASS",
   "layer_outcomes": [

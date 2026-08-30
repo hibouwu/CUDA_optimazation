@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "artifact_manifest_id": "am-phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
   "attempt_id": "phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
   "instance_ref": {
     "id": "ptr_array_blockwise_fp8_2sm_g1x128x128",
     "path": "tests/codegen/instances/ptr_array_blockwise_fp8_2sm_g1x128x128/instance.json",
-    "sha256": "9081c1cfbe20260dea3c06d999c831d0c49c7d755d36bda0b6608b031014c556"
+    "sha256": "fb9012671158424fbfa512ff3ccfe25e5ea1c4a9b903e22ade47aa5df6352484"
   },
   "fingerprint_ref": {
-    "id": "fp-ptr_array_blockwise_fp8_2sm_g1x128x128-e19fa48ea4c6",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_2sm_g1x128x128-e19fa48ea4c6.json",
-    "sha256": "151032fd65617e25b77d9dbe4f6fe8d2c412c31089b85bf9154452a7325aba1b"
+    "id": "fp-ptr_array_blockwise_fp8_2sm_g1x128x128-ef3f8546a870",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-ptr_array_blockwise_fp8_2sm_g1x128x128-ef3f8546a870.json",
+    "sha256": "790b3ae1dd2c205608b6de0127cd78d5cdf7550ef39668a451a79cebceb858fa"
   },
   "items": [
     {
@@ -60,8 +60,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001/full/type_witness",
       "storage": "ignored_archive",
       "media_type": "application/x-executable",
-      "sha256": "d0381257a62194afc01d208210adf77d0d64b9092b8f6279caa626e3b21ad73d",
-      "size_bytes": 1063712,
+      "sha256": "26606fadf073f90cf3328c45cce7f8de90bbe4c51c171b1f558aa55a646018d0",
+      "size_bytes": 1067976,
       "producer_step_id": "compile_type_witness",
       "parent_artifact_ids": [
         "type_source",
@@ -75,8 +75,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001/resolved-types.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "441fa4aafe8d64949f414bc3ff1387fa397d2b4fd9e2164d27f1dd2e43988dd8",
-      "size_bytes": 17569,
+      "sha256": "bc2e40df974e722e6dead955f68ef5d4dc2e9ef86c88655507cddd0829889c3d",
+      "size_bytes": 17763,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [
         "type_executable"
@@ -212,8 +212,8 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001/full/logs/run_type_witness.stdout",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "441fa4aafe8d64949f414bc3ff1387fa397d2b4fd9e2164d27f1dd2e43988dd8",
-      "size_bytes": 17569,
+      "sha256": "bc2e40df974e722e6dead955f68ef5d4dc2e9ef86c88655507cddd0829889c3d",
+      "size_bytes": 17763,
       "producer_step_id": "run_type_witness",
       "parent_artifact_ids": [],
       "sealed": true
@@ -248,7 +248,7 @@
       "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001/full/logs/compile_fatbin.stderr",
       "storage": "ignored_archive",
       "media_type": "text/plain",
-      "sha256": "6881da4169210988b81f6ac2563656c93a4d768f94c41e231f4d60878384db35",
+      "sha256": "5254dbce20880f540c6699a3407c6b563c592a3d7f22457895074788559ddcd6",
       "size_bytes": 4576,
       "producer_step_id": "compile_fatbin",
       "parent_artifact_ids": [],
@@ -480,8 +480,8 @@
       "path": "evidence/codegen-sm110a-v2/excerpts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001/contract-report.json",
       "storage": "git_evidence",
       "media_type": "application/json",
-      "sha256": "d45e152ffff6d5e66b707b7d5e7a072966f5f770365861418d10e0c2d1b00d13",
-      "size_bytes": 4521,
+      "sha256": "5977788b53adc0ae900f1bf8cfa7f3f2b24d6941a554178c3041e7631affc52e",
+      "size_bytes": 4552,
       "producer_step_id": "function_contract",
       "parent_artifact_ids": [
         "ptx_target",
@@ -494,7 +494,7 @@
   "archive_bundle": {
     "path": "artifacts/codegen-sm110a-v2/phase2-official-20260830/attempts/phase2-official-20260830.ptr_array_blockwise_fp8_2sm_g1x128x128.a001",
     "format": "directory-manifest",
-    "sha256": "087bad331c48f706babeaf191fff9777afe17ab4bd1538d7c0ec0adb458aea6b",
-    "size_bytes": 5371910
+    "sha256": "49752f6d009a40591faf353877a4ba25b16d7cbcd9c7ca9594bd2be1e7693c69",
+    "size_bytes": 5376368
   }
 }

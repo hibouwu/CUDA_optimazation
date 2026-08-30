@@ -98,7 +98,17 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
     for schema in (ROOT / "tests/codegen/schemas").glob("*.json"):
         shutil.copy2(schema, root / "tests/codegen/schemas" / schema.name)
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    for source_range in contract["arch_guard_fallback_contract"]["source_constraints"]:
+    guard_source_ranges = {
+        (
+            source_range["path"],
+            source_range["line_start"],
+            source_range["line_end"],
+            source_range["sha256"],
+        ): source_range
+        for profile in contract["arch_guard_fallback_contract"]["profiles"].values()
+        for source_range in profile["source_constraints"]
+    }
+    for source_range in guard_source_ranges.values():
         source = ROOT / "third_party/cutlass" / source_range["path"]
         target = root / "third_party/cutlass" / source_range["path"]
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -156,6 +166,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
                     "path": "reference.cpp",
                     "line": 1,
                     "anchor_line_sha256": sha256_bytes(b"KernelFixtureSm100"),
+                    "derivation_axis": "fixture",
                 }
             ]
         },
@@ -204,6 +215,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "config": {"path": config_path.relative_to(root).as_posix(), "sha256": sha256_file(config_path)},
             "kernel": {"path": kernel_path.relative_to(root).as_posix(), "sha256": sha256_file(kernel_path)},
             "type_witness": {"path": witness_path.relative_to(root).as_posix(), "sha256": sha256_file(witness_path)},
+            "collective_prefix_witness": None,
         },
         "declared_config": {
             "family": "fixture",
@@ -248,6 +260,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "required_layers": contract["layer_order"],
             "target_entity": contract["function_selector"]["target_cpp_entity"],
             "function_selector": contract["function_selector"]["policy"],
+            "tma_cta_policy": "match_mma",
             "ptx": {
                 "required": [
                     {"id": "tma", "regex": "cp\\.async\\.bulk\\.tensor(?:\\..*)?", "min_count": 1, "max_count": None},
@@ -275,6 +288,9 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
             "failure_layer": None,
             "diagnostic_patterns": [],
             "control_instance_id": None,
+            "control_campaign_id": None,
+            "guard_profile_id": None,
+            "reject_contract": None,
         },
     }
     instance_path = root / "tests/codegen/instances/fixture/instance.json"
@@ -381,6 +397,10 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
         "instance_id": instance_id,
         "resolved_types": {
             "collective_mainloop": "collective_mainloop",
+            "mainloop_element_a": "half",
+            "mainloop_element_b": "half",
+            "mainloop_transform_a": "cute::identity",
+            "mainloop_transform_b": "cute::identity",
             "mainloop_builder": "mainloop_builder",
             "mainloop_builder_collective_op": "collective_mainloop",
             "epilogue_builder": "epilogue_builder",
@@ -485,7 +505,7 @@ def make_fixture(contract_mutator=None) -> tuple[Path, dict[str, Path]]:
         "type_output": ("TYPE_WITNESS_OUTPUT", json.dumps(type_output_value).encode()+b"\n", ["type_executable"]),
         "ptx_target": ("PTX_TARGET_FUNCTION", ptx_block.encode(), ["ptx_full"]),
         "sass_target": ("SASS_TARGET_FUNCTION", (json.dumps(sass_function,separators=(",", ":"))+"\n").encode(), ["nvdisasm_json"]),
-        "contract_report": ("CONTRACT_CHECK_REPORT", (json.dumps({"schema_version":1,"instance_id":instance_id,"symbol":target_symbol,"ptx_target":"sm_110a","sass_arch":"sm_110a","nvdisasm_total_function_count":1,"ptx_contract_results":ptx_result_values,"sass_contract_results":sass_result_values,"cta_group":{"declared":1,"ptx_mma_opcodes":["tcgen05.mma.cta_group::1.kind::f16"],"sass_mma_opcodes":["UTCHMMA"],"errors":[]}},indent=2)+"\n").encode(), ["ptx_target","sass_target","type_output"]),
+        "contract_report": ("CONTRACT_CHECK_REPORT", (json.dumps({"schema_version":1,"instance_id":instance_id,"symbol":target_symbol,"ptx_target":"sm_110a","sass_arch":"sm_110a","nvdisasm_total_function_count":1,"ptx_contract_results":ptx_result_values,"sass_contract_results":sass_result_values,"cta_group":{"declared":1,"tma_policy":"match_mma","ptx_mma_opcodes":["tcgen05.mma.cta_group::1.kind::f16"],"sass_mma_opcodes":["UTCHMMA"],"errors":[]}},indent=2)+"\n").encode(), ["ptx_target","sass_target","type_output"]),
     }
     for artifact_id,(role,content,parents) in excerpt_values.items():
         path=excerpt/artifact_id; path.write_bytes(content)
@@ -691,9 +711,38 @@ def make_guard_direct_fixture():
     fingerprint = copy.deepcopy(load_strict_json(paths["fingerprint"]))
     artifacts = copy.deepcopy(load_strict_json(paths["manifest"]))
     contract = load_strict_json(root / "tests/codegen/static_codegen_contract.json")
-    guard = contract["arch_guard_fallback_contract"]
+    guard_contract = contract["arch_guard_fallback_contract"]
+    guard_profile_id = "fast_real_2sm_smem_scaled"
+    guard = guard_contract["profiles"][guard_profile_id]
     guard_dir = root / "guard-direct"
     guard_dir.mkdir()
+    control_campaign_path = root / "tests/codegen/run-campaigns/guard-control.json"
+    control_campaign_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(
+        control_campaign_path,
+        {
+            "schema_version": 1,
+            "objective_sha256": contract["objective_sha256"],
+            "scope": "STATIC_CODEGEN_ONLY",
+            "phase_id": 99,
+            "campaign_id": "guard-control",
+            "run_id": "guard-control",
+            "current_summary": "evidence/codegen-sm110a-v2/summary-guard-control.json",
+            "allowed_terminal_statuses": ["STATIC_PASS"],
+            "ordered_instances": ["fixture"],
+        },
+    )
+    write_json(
+        root / "evidence/codegen-sm110a-v2/summary-guard-control.json",
+        {
+            "schema_version": 1,
+            "run_id": "guard-control",
+            "scope": "STATIC_CODEGEN_ONLY",
+            "campaign_ref": reference("guard-control", root, control_campaign_path),
+            "result_refs": [reference("fixture.fixture.a001", root, paths["result"])],
+            "history_result_refs": [],
+        },
+    )
 
     def relocate(artifact_id: str, content: bytes) -> Path:
         item = next(value for value in artifacts["items"] if value["artifact_id"] == artifact_id)
@@ -762,15 +811,16 @@ def make_guard_direct_fixture():
     }
     guard_evidence = {
         "kind": "UNSUPPORTED_SM110A",
-        "reason": guard["reason"],
+        "reason": guard_contract["reason"],
         "failure": {
-            "layer": guard["failure_layer"],
+            "layer": guard_contract["failure_layer"],
             "domain": "TARGET_ARCHITECTURE",
-            "reason": guard["reason"],
+            "reason": guard_contract["reason"],
         },
         "type_witness_artifact_id": "type_output",
         "resolved_stage": copy.deepcopy(result["evidence"]["resolved_stage"]),
         "function_binding": function_binding,
+        "guard_profile_id": guard_profile_id,
         "guard_atom": guard["guard_atom"],
         "guard_macro": guard["guard_macro"],
         "ptx_guard_results": ptx_results,
@@ -790,7 +840,8 @@ def make_guard_direct_fixture():
         "sass_arch": "sm_110a",
         "nvdisasm_total_function_count": 1,
         "terminal_status": "UNSUPPORTED_SM110A",
-        "reason": guard["reason"],
+        "reason": guard_contract["reason"],
+        "guard_profile_id": guard_profile_id,
         "guard_atom": guard["guard_atom"],
         "guard_macro": guard["guard_macro"],
         "ptx_guard_results": ptx_results,
@@ -810,6 +861,9 @@ def make_guard_direct_fixture():
         "failure_layer": "FUNCTION_CONTRACT",
         "diagnostic_patterns": [],
         "control_instance_id": "fixture",
+        "control_campaign_id": "guard-control",
+        "guard_profile_id": guard_profile_id,
+        "reject_contract": None,
     }
     return root, paths, result, instance, fingerprint, artifacts
 
@@ -991,6 +1045,35 @@ def main() -> int:
     finally:
         shutil.rmtree(root)
 
+    guard_contract = load_strict_json(
+        ROOT / "tests/codegen/static_codegen_contract.json"
+    )["arch_guard_fallback_contract"]
+    for profile_id in (
+        "fast_complex_1sm_tmem_smem_scaled",
+        "fast_complex_2sm_tmem_smem_scaled",
+    ):
+        profile = guard_contract["profiles"][profile_id]
+        evaluate_arch_guard_patterns(
+            tuple(["brkpt"] * 36 + ["tcgen05.st.sync.aligned.x32"] * 6),
+            profile["ptx"],
+            f"{profile_id}.ptx",
+        )
+        evaluate_arch_guard_patterns(
+            tuple(["BPT.TRAP"] * 36 + ["STTM.x32"] * 6),
+            profile["sass"],
+            f"{profile_id}.sass",
+        )
+        try:
+            evaluate_arch_guard_patterns(
+                tuple(["BPT.TRAP"] * 39 + ["STTM.x32"] * 6),
+                profile["sass"],
+                f"{profile_id}.whole_binary_pollution",
+            )
+        except ContractError:
+            pass
+        else:
+            raise AssertionError(f"{profile_id}: whole-binary trap pollution was accepted")
+
     offline_root, offline_paths = make_fixture()
     try:
         shutil.rmtree(offline_paths["archive"])
@@ -1089,6 +1172,16 @@ def main() -> int:
     require_rejected("artifact_hash", "artifact size/hash", lambda r, p: p["type_output"].write_text("drift\n", encoding="utf-8"))
     require_rejected("artifact_parent", "topologically ordered", lambda r, p: mutate_manifest(p, lambda v: v["items"][0]["parent_artifact_ids"].append("sass_target")))
     require_rejected("bundle_hash", "bundle checksum", lambda r, p: mutate_manifest(p, lambda v: v["archive_bundle"].__setitem__("sha256", "0" * 64)))
+    require_rejected(
+        "unmanifested_archive_file",
+        "archive bundle file set differs from manifest",
+        lambda r, p: (p["archive"] / "unmanifested.bin").write_bytes(b"not sealed\n"),
+    )
+    require_rejected(
+        "archive_symlink",
+        "archive bundle contains a symlink",
+        lambda r, p: (p["archive"] / "unmanifested-link").symlink_to("type_executable"),
+    )
     require_rejected("archive_missing", "file is missing", lambda r, p: shutil.rmtree(p["archive"]))
     require_rejected("path_traversal", "does not match", lambda r, p: mutate_manifest(p, lambda v: v["items"][0].__setitem__("path", "../escape")))
 
@@ -1214,7 +1307,7 @@ def main() -> int:
             }
         mutate_json(paths["result"], mutate)
 
-    require_rejected("forged_reject", "not implemented", forge_reject)
+    require_rejected("forged_reject", "not valid under any", forge_reject)
 
     require_rejected(
         "resolved_stage_tamper",
@@ -2077,6 +2170,9 @@ def main() -> int:
             "failure_layer": "FUNCTION_CONTRACT",
             "diagnostic_patterns": [],
             "control_instance_id": "missing_control",
+            "control_campaign_id": "guard-control",
+            "guard_profile_id": "fast_real_2sm_smem_scaled",
+            "reject_contract": None,
         }
         write_json(paths["instance"], instance)
         validate_instance(root, paths["instance"])
@@ -2095,6 +2191,9 @@ def main() -> int:
             "failure_layer": "ATOM",
             "diagnostic_patterns": [],
             "control_instance_id": "missing_control",
+            "control_campaign_id": "guard-control",
+            "guard_profile_id": "fast_real_2sm_smem_scaled",
+            "reject_contract": None,
         }
         write_json(paths["instance"], instance)
         validate_instance(root, paths["instance"])
@@ -2257,6 +2356,14 @@ def main() -> int:
         result["evidence"]["legal_control"]["result_ref"] = reference(
             "nonpass.control.a001", root, bad_path
         )
+        control_summary_path = (
+            root / "evidence/codegen-sm110a-v2/summary-guard-control.json"
+        )
+        control_summary = load_strict_json(control_summary_path)
+        control_summary["result_refs"] = [
+            copy.deepcopy(result["evidence"]["legal_control"]["result_ref"])
+        ]
+        write_json(control_summary_path, control_summary)
         report_item = next(
             value
             for value in artifacts["items"]
@@ -2490,7 +2597,7 @@ def main() -> int:
         blockwise_alias_wrong_scale_layout,
     )
 
-    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=99 positive=13")
+    print("CODEGEN_V2_MODEL_ADVERSARIAL_PASS mutations=103 positive=15")
     return 0
 
 

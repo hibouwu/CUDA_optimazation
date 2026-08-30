@@ -53,7 +53,10 @@ add_test(
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tools/validate_codegen_v2.py
           --root ${CMAKE_CURRENT_SOURCE_DIR}
-          --require-results)
+          --require-campaign phase1-generalized-20260830
+          --require-campaign phase2-official-20260830
+          --require-campaign phase3-generator-controls-20260830
+          --require-campaign phase3-generator-20260830)
 set_tests_properties(host.codegen_v2_contract PROPERTIES LABELS "host;schema;codegen-v2")
 
 add_test(
@@ -81,10 +84,34 @@ add_test(
 set_tests_properties(host.codegen_v2_campaign_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial")
 
 add_test(
+  NAME host.codegen_v2_expected_reject_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_expected_static_reject_adversarial.py)
+set_tests_properties(host.codegen_v2_expected_reject_adversarial PROPERTIES LABELS "host;schema;codegen-v2;adversarial;reject")
+
+add_test(
+  NAME host.codegen_v2_replay_attestation
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/validate_replay_attestations.py)
+set_tests_properties(host.codegen_v2_replay_attestation PROPERTIES LABELS "host;schema;codegen-v2;replay")
+
+add_test(
+  NAME host.codegen_v2_replay_attestation_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_replay_attestation_adversarial.py)
+set_tests_properties(host.codegen_v2_replay_attestation_adversarial PROPERTIES LABELS "host;schema;codegen-v2;replay;adversarial")
+
+add_test(
   NAME host.phase2_official_generation_adversarial
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_phase2_official_generation_adversarial.py)
 set_tests_properties(host.phase2_official_generation_adversarial PROPERTIES LABELS "host;schema;codegen-v2;phase2;adversarial")
+
+add_test(
+  NAME host.phase3_generator_generation_adversarial
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/tests/codegen/test_phase3_generator_generation_adversarial.py)
+set_tests_properties(host.phase3_generator_generation_adversarial PROPERTIES LABELS "host;schema;codegen-v2;phase3;adversarial")
 
 add_test(
   NAME host.cutlass_source_contracts

@@ -259,16 +259,18 @@
     {
       "tag": "KernelTmaWarpSpecialized1SmFastFP32Sm100",
       "group": "fast_fp32",
-      "status": "NOT_CHECKED",
+      "status": "UNSUPPORTED_SM110A",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase3-generator-20260830.fast_fp32_complex_1sm_generator.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized2SmFastFP32Sm100",
       "group": "fast_fp32",
-      "status": "NOT_CHECKED",
+      "status": "UNSUPPORTED_SM110A",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase3-generator-20260830.fast_fp32_complex_2sm_generator.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmFastFP32SmemSm100",
@@ -345,16 +347,18 @@
     {
       "tag": "KernelTmaWarpSpecialized1SmInterleavedComplexTF32Sm100",
       "group": "interleaved_complex_tf32",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase3-generator-20260830.interleaved_complex_tf32_1sm_generator.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized2SmInterleavedComplexTF32Sm100",
       "group": "interleaved_complex_tf32",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase3-generator-20260830.interleaved_complex_tf32_2sm_generator.a001"
     },
     {
       "tag": "KernelPtrArrayTmaWarpSpecialized1SmInterleavedComplexTF32Sm100",
@@ -433,9 +437,10 @@
     {
       "tag": "KernelTmaWarpSpecialized2SmMxf4Sm100",
       "group": "dense_block_scaled",
-      "status": "NOT_CHECKED",
+      "status": "STATIC_PASS",
       "current_case_ids": [],
-      "fresh_replay_required": true
+      "fresh_replay_required": true,
+      "result_id": "phase3-generator-20260830.dense_bs_mxf4_2sm_generator.a001"
     },
     {
       "tag": "KernelTmaWarpSpecialized1SmMxf8f6f4Sm100",

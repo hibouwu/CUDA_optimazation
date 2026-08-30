@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "contract_sha256": "ce8c3bc939484c51b9e56cf8be040809c2d3e238e17863177e007e16eee61f89",
+  "contract_sha256": "c8b6d55be86663c29db88d39aba96cfd1c9bde954d1ad6f023743537789d2a04",
   "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091",
   "freshness_epoch": "sm110a-codegen-v2-20260830",
   "result_id": "phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001",
@@ -13,24 +13,24 @@
   "instance_ref": {
     "id": "fast_fp32_bf16x9_2sm_smem",
     "path": "tests/codegen/instances/fast_fp32_bf16x9_2sm_smem/instance.json",
-    "sha256": "d0efc2997c99b8a0c6c6d8db3b650d6524d2629f84955bcc74efb1ec470663e6"
+    "sha256": "07be6582f90c577021e460647a62feb8c71b79bbb288b3b36c2b764dcebc1e04"
   },
   "fingerprint_ref": {
-    "id": "fp-fast_fp32_bf16x9_2sm_smem-0df5d5f72eda",
-    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-fast_fp32_bf16x9_2sm_smem-0df5d5f72eda.json",
-    "sha256": "d401f789208090767944f4432710c000dbae1f8667faadc1f69fe3733f33f208"
+    "id": "fp-fast_fp32_bf16x9_2sm_smem-e2858df85819",
+    "path": "evidence/codegen-sm110a-v2/fingerprints/fp-fast_fp32_bf16x9_2sm_smem-e2858df85819.json",
+    "sha256": "c67a0f50d77950c70db013c75ff8fc8b05c2d5cf189c2b2ef34fdb1ff952fe11"
   },
   "attempt_id": "phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001",
   "journal_ref": {
     "path": "evidence/codegen-sm110a-v2/journals/phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001.jsonl",
-    "sha256": "cc30e61c2800ccbc716153a3330a4f5ebe03bc2a262cda857e7ff9e0ee845743",
+    "sha256": "9dc268792d572aebce3ae9654c4d81c48657e70d640f5852e24013f7ba0d3b49",
     "last_seq": 64,
-    "last_event_sha256": "4359faf663def2b098efa8703e7a9709b9779fdd43e315d5a7114b2fbb1a3884"
+    "last_event_sha256": "40daab17e76cc8fefdd228982d8ab571f0a512560b2206efdfd4922ef1c07941"
   },
   "artifact_manifest_ref": {
     "id": "am-phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001",
     "path": "evidence/codegen-sm110a-v2/artifact-manifests/am-phase2-official-20260830.fast_fp32_bf16x9_2sm_smem.a001.json",
-    "sha256": "171e0b5d99206d75136befa642e3e434a95d5edf9a71d804087849dd757fe61a"
+    "sha256": "3f2ef08003cf1fbaeaf43a4ff97b6f20990a97d4c1bdb54cf7ef27404b83833f"
   },
   "status": "UNSUPPORTED_SM110A",
   "layer_outcomes": [
@@ -132,6 +132,7 @@
       "sass_function_artifact_id": "sass_target",
       "same_symbol": true
     },
+    "guard_profile_id": "fast_real_2sm_smem_scaled",
     "guard_atom": "SM100_MMA_F16BF16_2x1SM_SS_SCALED",
     "guard_macro": "CUTE_ARCH_TCGEN05_F16BF16_MMA_SCALED_ENABLED",
     "ptx_guard_results": [
@@ -206,7 +207,7 @@
       "result_ref": {
         "id": "phase1-generalized-20260830.dense_f16_2sm.a001",
         "path": "evidence/codegen-sm110a-v2/results/phase1-generalized-20260830.dense_f16_2sm.a001.json",
-        "sha256": "4bf31b79ced2f4e68cc99ead12f776c12997afbbc39691a3fccf26093cc8cf2d"
+        "sha256": "b99186445cb218aef3abcc1f9fd9e0ccfe25b61f89179e4f9021bb9cbaed6cab"
       },
       "relation": "same_target_fresh_static_pass",
       "controlled_delta": [
