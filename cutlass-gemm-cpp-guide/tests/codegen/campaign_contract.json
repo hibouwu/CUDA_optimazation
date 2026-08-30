@@ -48,8 +48,17 @@
         "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
       }
     },
-    {"id": 1, "name": "cross_layer_harness", "status": "IN_PROGRESS"},
-    {"id": 2, "name": "official_cpp_tags", "status": "PENDING"},
+    {
+      "id": 1,
+      "name": "cross_layer_harness",
+      "status": "COMPLETE",
+      "completion_report": {
+        "path": "evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md",
+        "sha256": "13654f149e0b61e9401cc7abb37ee8bd2d2314c5484b50afcc08c6312fbba84e",
+        "objective_sha256": "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
+      }
+    },
+    {"id": 2, "name": "official_cpp_tags", "status": "IN_PROGRESS"},
     {"id": 3, "name": "generator_config_tags", "status": "PENDING"},
     {"id": 4, "name": "source_derived_tags", "status": "PENDING"},
     {"id": 5, "name": "auto_and_clean_replay", "status": "PENDING"},

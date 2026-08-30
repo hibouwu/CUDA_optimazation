@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "instance_id": "dense_f16_1sm",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi7ELi2ELi4ENS5_IJNS4_1CILi1EEESB_SB_EEENS_4arch5Sm100EEENS5_IJNSA_ILi128EEESG_NSA_ILi64EEEEEENS_6half_tENS5_IJlSB_lEEESJ_SK_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_20SM100_MMA_F16BF16_SSISJ_SJ_fLi128ELi128ELNS4_4UMMA5MajorE0ELSP_0ELNSO_7ScaleInE0ELSQ_0EEEEEENS4_6LayoutISC_NS5_IJNSA_ILi0EEESU_SU_EEEEENS5_IJNS4_10UnderscoreESX_SX_EEEEENS4_13SM90_TMA_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENST_INS5_IJNSA_ILi8EEESH_EEENS5_IJSH_SB_EEEEEEEvNS4_8identityES10_S1A_vS1B_EENS_8epilogue10collective18CollectiveEpilogueINS1D_26Sm100NoSmemWarpSpecializedEJNS5_IJSG_SH_EEEvSK_fSK_NS1D_6fusion15FusionCallbacksIS1G_NS1I_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEESI_S1H_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b64xESB_NSA_ILi4EEEEEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x64.b32"
+      ]
+    },
+    {
+      "id": "mma_f16_1sm",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::1.kind::f16",
+        "tcgen05.mma.cta_group::1.kind::f16",
+        "tcgen05.mma.cta_group::1.kind::f16",
+        "tcgen05.mma.cta_group::1.kind::f16"
+      ]
+    },
+    {
+      "id": "mma_2sm",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    },
+    {
+      "id": "tmem_copy",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D",
+        "UTMALDG.3D"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 2,
+      "matched_opcodes": [
+        "LDTM.X64",
+        "LDTM.X64"
+      ]
+    },
+    {
+      "id": "mma_f16",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCHMMA",
+        "UTCHMMA",
+        "UTCHMMA",
+        "UTCHMMA"
+      ]
+    },
+    {
+      "id": "mma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    },
+    {
+      "id": "tma_2cta",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    },
+    {
+      "id": "tmem_copy",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 1,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::1.kind::f16",
+      "tcgen05.mma.cta_group::1.kind::f16",
+      "tcgen05.mma.cta_group::1.kind::f16",
+      "tcgen05.mma.cta_group::1.kind::f16"
+    ],
+    "sass_mma_opcodes": [
+      "UTCHMMA",
+      "UTCHMMA",
+      "UTCHMMA",
+      "UTCHMMA"
+    ],
+    "errors": []
+  }
+}

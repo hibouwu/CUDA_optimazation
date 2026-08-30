@@ -25,6 +25,10 @@ PHASE0_REPORT_RELATIVE = Path(
     "evidence/codegen-sm110a-v2/phase-reports/phase-00-workspace-source-inventory.md"
 )
 PHASE0_REPORT = ROOT / PHASE0_REPORT_RELATIVE
+PHASE1_REPORT_RELATIVE = Path(
+    "evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md"
+)
+PHASE1_REPORT = ROOT / PHASE1_REPORT_RELATIVE
 
 VALIDATOR_SPEC = importlib.util.spec_from_file_location("schedule_tag_validator", VALIDATOR)
 if VALIDATOR_SPEC is None or VALIDATOR_SPEC.loader is None:
@@ -44,6 +48,14 @@ def write(path: Path, value: dict) -> None:
 
 def make_root() -> Path:
     root = Path(tempfile.mkdtemp(prefix="schedule-tag-adversarial-"))
+
+    def copy_relative(relative: str | Path) -> None:
+        relative_path = Path(relative)
+        source = ROOT / relative_path
+        target = root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
     write(root / "tests/codegen/sm110a_tensor_schedule_tags.json", load(MANIFEST))
     write(root / "tests/codegen/campaign_contract.json", load(CONTRACT))
     shutil.copy2(
@@ -61,6 +73,7 @@ def make_root() -> Path:
     phase_report_target = root / PHASE0_REPORT_RELATIVE
     phase_report_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(PHASE0_REPORT, phase_report_target)
+    copy_relative(PHASE1_REPORT_RELATIVE)
     for reference in load(REFERENCE_INVENTORY)["entries"]:
         source = ROOT / "third_party/cutlass" / reference["path"]
         target = root / "third_party/cutlass" / reference["path"]
@@ -83,6 +96,21 @@ def make_root() -> Path:
             case = root / "cases" / case_id / "case.json"
             case.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "cases" / case_id / "case.json", case)
+        result_id = entry.get("result_id")
+        if result_id is None:
+            continue
+        result_relative = Path("evidence/codegen-sm110a-v2/results") / f"{result_id}.json"
+        copy_relative(result_relative)
+        result = load(ROOT / result_relative)
+        for ref_name in ("instance_ref", "fingerprint_ref", "journal_ref", "artifact_manifest_ref"):
+            copy_relative(result[ref_name]["path"])
+        fingerprint = load(ROOT / result["fingerprint_ref"]["path"])
+        for source_input in fingerprint["source_closure"]["inputs"]:
+            copy_relative(source_input["path"])
+        artifact_manifest = load(ROOT / result["artifact_manifest_ref"]["path"])
+        for artifact in artifact_manifest["items"]:
+            if artifact["storage"] == "git_evidence":
+                copy_relative(artifact["path"])
     return root
 
 
@@ -102,6 +130,10 @@ def run(root: Path, *, require_source: bool = False) -> subprocess.CompletedProc
 def set_phase0_complete(contract: dict, root: Path) -> None:
     contract["phases"][0]["status"] = "COMPLETE"
     contract["phases"][1]["status"] = "IN_PROGRESS"
+    contract["phases"][1].pop("completion_report", None)
+    for phase in contract["phases"][2:]:
+        phase["status"] = "PENDING"
+        phase.pop("completion_report", None)
     report_bytes = (root / PHASE0_REPORT_RELATIVE).read_bytes()
     contract["phases"][0]["completion_report"] = {
         "path": PHASE0_REPORT_RELATIVE.as_posix(),
@@ -135,27 +167,18 @@ def require_rejected(name: str, expected_error: str, mutate) -> None:
 
 
 def main() -> int:
-    result_helper_root = Path(tempfile.mkdtemp(prefix="schedule-result-helper-"))
-    try:
-        result_id = "valid-helper-record"
-        expected_record = {"schema_version": 1, "sentinel": "loaded"}
-        write(
-            result_helper_root / "evidence/codegen-sm110a-v2/results" / f"{result_id}.json",
-            expected_record,
+    result_id = "phase1-fresh-20260830.dense_f16_1sm.a001"
+    helper_errors: list[str] = []
+    loaded_record = VALIDATOR_MODULE.load_result_record(
+        ROOT,
+        result_id,
+        "helper",
+        helper_errors,
+    )
+    if loaded_record is None or loaded_record.get("result_id") != result_id or helper_errors:
+        raise AssertionError(
+            f"load_result_record positive helper failed: record={loaded_record}, errors={helper_errors}"
         )
-        helper_errors: list[str] = []
-        loaded_record = VALIDATOR_MODULE.load_result_record(
-            result_helper_root,
-            result_id,
-            "helper",
-            helper_errors,
-        )
-        if loaded_record != expected_record or helper_errors:
-            raise AssertionError(
-                f"load_result_record positive helper failed: record={loaded_record}, errors={helper_errors}"
-            )
-    finally:
-        shutil.rmtree(result_helper_root)
 
     completion_helper_errors: list[str] = []
     completion_phase = {
@@ -302,7 +325,11 @@ def main() -> int:
     )
 
     def missing_historical_evidence(manifest, contract, document, root):
-        entry = next(entry for entry in manifest["entries"] if entry["status"] == "HISTORICAL_STATIC_PASS")
+        entry = next(entry for entry in manifest["entries"] if entry["status"] == "STATIC_PASS")
+        entry["status"] = "HISTORICAL_STATIC_PASS"
+        entry.pop("result_id", None)
+        row = next(line for line in document.splitlines() if line.startswith(f"| `{entry['tag']}` |"))
+        document = document.replace(row, row.replace("`STATIC_PASS`", "`HISTORICAL_STATIC_PASS`"), 1)
         case_path = root / "cases" / entry["current_case_ids"][0] / "case.json"
         case = load(case_path)
         case["evidence"]["sass_verified"] = False
@@ -396,8 +423,22 @@ def main() -> int:
 
     require_rejected(
         "fabricated_result_after_phase_status_flip",
-        "result-backed status is forbidden before Phase 1 harness closure",
+        "result record unavailable",
         fabricated_result_after_phase_status_flip,
+    )
+
+    def result_contract_bundle_drift(manifest, contract, document, root):
+        model_path = root / "tools/codegen_v2/model.py"
+        model_path.write_text(
+            model_path.read_text(encoding="utf-8") + "\n# deliberate contract drift\n",
+            encoding="utf-8",
+        )
+        return manifest, contract, document
+
+    require_rejected(
+        "result_contract_bundle_drift",
+        "result-contract bundle differs",
+        result_contract_bundle_drift,
     )
 
     def weakened_evidence(manifest, contract, document, root):
@@ -941,7 +982,7 @@ def main() -> int:
     finally:
         shutil.rmtree(missing_source_root)
 
-    print("SCHEDULE_TAG_ADVERSARIAL_PASS mutations=56 positive_helpers=2")
+    print("SCHEDULE_TAG_ADVERSARIAL_PASS mutations=57 positive_helpers=2")
     return 0
 
 

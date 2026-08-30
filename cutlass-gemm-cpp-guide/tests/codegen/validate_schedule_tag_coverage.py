@@ -13,13 +13,20 @@ from collections import Counter
 from pathlib import Path
 
 
+GUIDE_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(GUIDE_ROOT / "tools"))
+
+from codegen_v2.model import ContractError, validate_result  # noqa: E402
+from validate_codegen_v2 import contract_bundle_sha256  # noqa: E402
+
+
 EXPECTED_CUTLASS_SHA = "e05f953a5b3d38adc240df2ff928e0421c2abba3"
 EXPECTED_OBJECTIVE_SHA256 = "463fa7015808acd883b28d115fa33708f66064aaceed96f728996a01ca0e4091"
 EXPECTED_DISPATCH_POLICY_SHA256 = "fcce5fffb3118b15fea5aa59e39bea15ddd18c28c858b434ced889045968117c"
 EXPECTED_REFERENCE_INVENTORY_SHA256 = "1370b33695542ceae8103a6280dd422e3122dcdd53cd0c69d55a92853d3cd296"
 EXPECTED_AUTO_INVENTORY_SHA256 = "de7032f8234737b747b0d962c37809bb1b4b843adf7d26b12f736a0e0b15bfc3"
 EXPECTED_VERSIONS_LOCK_FILE_SHA256 = "d0c38e0759646fdb5950669aa055f564d43c7bb60984bbc5cacbff4bfcdf242a"
-EXPECTED_RESULT_CONTRACT_SHA256: str | None = None
+EXPECTED_RESULT_CONTRACT_SHA256: str | None = "ee0352d9c1887f650d33b17bf47c1b6e3a56b526878214fb6552701b4c579ce7"
 EXPECTED_TAG_COUNT = 59
 EXPECTED_TAG_SET_SHA256 = "95ae141fd872bb7894937b145b2f66cc488e089d2b84b55efaf9d25bdf5da1e7"
 EXPECTED_TAG_GROUP_SHA256 = "bc88440aad196855d40af50bfe3ee1f84356f5a5aa0ae9a4b60a9549c01d995b"
@@ -202,10 +209,14 @@ def load_result_record(root: Path, result_id: object, subject: str, errors: list
         return None
     result_path = root / "evidence/codegen-sm110a-v2/results" / f"{result_id}.json"
     try:
-        return load_json(result_path)
-    except ValueError as error:
+        result = validate_result(root, result_path, require_archive=False)
+    except (ContractError, OSError) as error:
         errors.append(f"{subject}: result record unavailable: {error}")
         return None
+    if result.get("result_id") != result_id or result_path.stem != result_id:
+        errors.append(f"{subject}: result record identity mismatch")
+        return None
+    return result
 
 
 def validate_completion_report(
@@ -316,6 +327,16 @@ def main() -> int:
     errors: list[str] = []
     campaign_complete = False
     harness_complete = False
+
+    if EXPECTED_RESULT_CONTRACT_SHA256 is not None:
+        try:
+            result_contract = load_json(root / "tests/codegen/static_codegen_contract.json")
+            observed_result_contract = contract_bundle_sha256(root, result_contract)
+        except (ContractError, OSError, ValueError) as error:
+            errors.append(f"result-contract bundle unavailable: {error}")
+        else:
+            if observed_result_contract != EXPECTED_RESULT_CONTRACT_SHA256:
+                errors.append("result-contract bundle differs from the Phase 1 frozen harness")
 
     if contract.get("schema_version") != 1:
         errors.append("campaign schema_version must be 1")
@@ -483,9 +504,10 @@ def main() -> int:
                     errors.append(f"{tag}: result record schema_version must be 1")
                 if result.get("objective_sha256") != EXPECTED_OBJECTIVE_SHA256:
                     errors.append(f"{tag}: result record objective mismatch")
-                if result.get("subject_kind") != "explicit_schedule_tag":
+                result_subject = result.get("subject", {})
+                if result_subject.get("kind") != "explicit_schedule_tag":
                     errors.append(f"{tag}: result record subject_kind mismatch")
-                if result.get("subject_id") != tag or result.get("status") != status:
+                if result_subject.get("id") != tag or result.get("status") != status:
                     errors.append(f"{tag}: result record subject/status mismatch")
         elif result_id is not None:
             errors.append(f"{tag}: non-result status {status!r} must not carry result_id")
@@ -967,9 +989,10 @@ def main() -> int:
                     errors.append(f"{control_id}: result record schema_version must be 1")
                 if result.get("objective_sha256") != EXPECTED_OBJECTIVE_SHA256:
                     errors.append(f"{control_id}: result record objective mismatch")
-                if result.get("subject_kind") != "kernel_schedule_auto_control":
+                result_subject = result.get("subject", {})
+                if result_subject.get("kind") != "kernel_schedule_auto_control":
                     errors.append(f"{control_id}: result record subject_kind mismatch")
-                if result.get("subject_id") != control_id or result.get("status") != auto_status:
+                if result_subject.get("id") != control_id or result.get("status") != auto_status:
                     errors.append(f"{control_id}: result record subject/status mismatch")
         elif result_id is not None:
             errors.append(f"{control_id}: non-result status {auto_status!r} must not carry result_id")

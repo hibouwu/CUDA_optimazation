@@ -52,7 +52,8 @@ add_test(
   NAME host.codegen_v2_contract
   COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/tools/validate_codegen_v2.py
-          --root ${CMAKE_CURRENT_SOURCE_DIR})
+          --root ${CMAKE_CURRENT_SOURCE_DIR}
+          --require-results)
 set_tests_properties(host.codegen_v2_contract PROPERTIES LABELS "host;schema;codegen-v2")
 
 add_test(

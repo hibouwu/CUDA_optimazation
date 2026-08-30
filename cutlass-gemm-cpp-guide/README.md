@@ -9,12 +9,13 @@
 - 目标只承诺 `compute_110a → sm_110a`。
 - CUTLASS 固定为 v4.6.1 / `e05f953a5b3d38adc240df2ff928e0421c2abba3`。
 - CUDA 固定为 13.0.88，canonical container 固定到 digest。
-- 历史 `static-20260817` snapshot记录 10/10 核心 case通过 container compile 与函数级
-  PTX/SASS contract；完整函数产物仍需在新文档结构下 fresh 重放后逐项归档。
-- 在这份历史快照中，FP16 Dense `128³` 记录了 TMA、`tcgen05.mma.kind::f16` 和
-  `tcgen05.ld`，MXFP8 Block-scaled `128³` 还记录了 `tcgen05.cp` 与 block-scale MMA。
-  两项都尚未在当前文档结构下重新生成完整函数产物，因此仍是
-  `HISTORICAL_STATIC_PASS`，不是本轮 fresh 结果。
+- 历史 `static-20260817` snapshot仍保留 10 个旧 case 的聚合记录；它们与 fresh 结果分开
+  展示，不因为 Tag 已重放就自动升级 BF16、FP8、Bias+ReLU 或 tail 等历史变体。
+- Phase 1 已用新结果合同 fresh 重放 6 个 canonical instance：Dense FP16 1SM/2SM、
+  NVFP4、MXFP4、MXFP8 和 Sparse NVFP4。六份结果都闭合了 Builder/Collective/Stage/Atom、
+  唯一 PTX/SASS 目标函数和函数内 opcode，并通过从源码重新编译开始的 deep replay。
+- 59 个显式 Schedule Tag 当前为 `STATIC_PASS=6`、`NOT_CHECKED=53`；11 个
+  `KernelScheduleAuto` 控制项仍全部 `NOT_CHECKED`。
 - 当前机器没有可用 NVIDIA driver；所有 `runtime_correct` 仍是 `false`，不能称为
   Thor 数值闭环或 v0.1 release。
 
@@ -66,6 +67,8 @@ Tensor Core Codegen 的固定分母是 CUTLASS v4.6.1 中 59 个显式 SM100 Sch
 其余 14 个从相邻合法配置沿一个明确变化轴派生。这组数字不表示任何实例已经被
 `sm_110a` 编译器接受。完整审计见
 [`phase-00-workspace-source-inventory.md`](evidence/codegen-sm110a-v2/phase-reports/phase-00-workspace-source-inventory.md)。
+跨层 harness、六实例数据和对抗审查见
+[`phase-01-cross-layer-harness.md`](evidence/codegen-sm110a-v2/phase-reports/phase-01-cross-layer-harness.md)。
 `host.schedule_tag_coverage` 会检查目标、源码 commit与clean状态、59项分组、case语义映射、
 来源锚点和文档表格；
 `host.schedule_tag_adversarial` 负责验证故意破坏不会被误判为通过。

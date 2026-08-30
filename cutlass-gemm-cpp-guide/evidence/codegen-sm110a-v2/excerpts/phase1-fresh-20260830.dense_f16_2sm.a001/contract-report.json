@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "instance_id": "dense_f16_2sm",
+  "symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE",
+  "ptx_target": "sm_110a",
+  "sass_arch": "sm_110a",
+  "nvdisasm_total_function_count": 4,
+  "ptx_contract_results": [
+    {
+      "id": "tma_load",
+      "required": true,
+      "match_count": 8,
+      "matched_opcodes": [
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group",
+        "cp.async.bulk.tensor.3d.global.shared::cta.bulk_group"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.ld.sync.aligned.32x32b.x32.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x32.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x32.b32",
+        "tcgen05.ld.sync.aligned.32x32b.x32.b32"
+      ]
+    },
+    {
+      "id": "mma_f16_2sm",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "tcgen05.mma.cta_group::2.kind::f16",
+        "tcgen05.mma.cta_group::2.kind::f16",
+        "tcgen05.mma.cta_group::2.kind::f16",
+        "tcgen05.mma.cta_group::2.kind::f16"
+      ]
+    },
+    {
+      "id": "mma_1sm",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "sass_contract_results": [
+    {
+      "id": "tma_load_2cta",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA",
+        "UTMALDG.3D.2CTA"
+      ]
+    },
+    {
+      "id": "mma_f16_2cta",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "UTCHMMA.2CTA",
+        "UTCHMMA.2CTA",
+        "UTCHMMA.2CTA",
+        "UTCHMMA.2CTA"
+      ]
+    },
+    {
+      "id": "tmem_load",
+      "required": true,
+      "match_count": 4,
+      "matched_opcodes": [
+        "LDTM.X32",
+        "LDTM.X32",
+        "LDTM.X32",
+        "LDTM.X32"
+      ]
+    },
+    {
+      "id": "mma_plain",
+      "required": false,
+      "match_count": 0,
+      "matched_opcodes": []
+    }
+  ],
+  "cta_group": {
+    "declared": 2,
+    "ptx_mma_opcodes": [
+      "tcgen05.mma.cta_group::2.kind::f16",
+      "tcgen05.mma.cta_group::2.kind::f16",
+      "tcgen05.mma.cta_group::2.kind::f16",
+      "tcgen05.mma.cta_group::2.kind::f16"
+    ],
+    "sass_mma_opcodes": [
+      "UTCHMMA.2CTA",
+      "UTCHMMA.2CTA",
+      "UTCHMMA.2CTA",
+      "UTCHMMA.2CTA"
+    ],
+    "errors": []
+  }
+}

@@ -1,0 +1,2510 @@
+
+.entry _ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE(
+.param .align 128 .b8 _ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE_param_0[2048]
+)
+.maxntid 256
+.minnctapersm 1
+{
+.reg .pred %p<150>;
+.reg .b16 %rs<12>;
+.reg .b32 %r<1304>;
+.reg .b32 %f<268>;
+.reg .b64 %rd<49>;
+
+mov.b64 %rd10, _ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE_param_0;
+mov.u64 %rd1, %rd10;
+ld.param.u32 %r1, [_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE_param_0+12];
+mov.u32 %r2, %tid.x;
+shr.u32 %r3, %r2, 5;
+shfl.sync.idx.b32	%r4|%p2, %r3, 0, 31, -1;
+mov.b32 %r263, -1;
+mov.b32 %r261, 0;
+mov.u32 %r262, %r261;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r263;
+@%px mov.s32 %r262, 1;
+mov.s32 %r261, %rx;
+}
+
+
+
+mov.u32 %r266, %cluster_ctarank;
+
+
+and.b32 %r7, %r266, 1;
+xor.b32 %r8, %r266, 1;
+ld.param.u64 %rd2, [_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEENSA_ILi1EEESC_EEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_SM_NS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESX_SX_EEEEENS5_IJNS4_10UnderscoreES10_S10_EEEEENS4_18SM100_TMA_2SM_LOADENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSV_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityES13_S1D_vS1E_EENS_8epilogue10collective18CollectiveEpilogueINS1G_23Sm100TmaWarpSpecializedILi4ELi2ELi32ELb0ELb1EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSV_ISI_SC_EENSV_INSA_ILi32EEESC_EEEEEvSM_fSM_NS1G_6fusion15FusionCallbacksIS1K_NS1Q_17LinearCombinationIffvfLNS_15FloatRoundStyleE2EEES1L_S1P_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b32xENS4_13SM90_TMA_LOADENS14_IS16_NS17_ILi32EEENSV_INS5_IJS19_S1N_EEENS5_IJS1N_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES25_S27_S27_EEEvvEEEEvNT_6ParamsE_param_0+1328];
+setp.ne.s64 %p3, %rd2, 0;
+@%p3 bra $L__BB0_4;
+ld.param.u64 %rd3, [%rd1+1320];
+setp.eq.s64 %p4, %rd3, 0;
+@%p4 bra $L__BB0_3;
+cvta.to.global.u64 %rd11, %rd3;
+ld.global.f32 %f3, [%rd11];
+bra.uni $L__BB0_4;
+$L__BB0_3:
+ld.param.f32 %f3, [%rd1+1312];
+$L__BB0_4:
+add.s64 %rd4, %rd1, 128;
+add.s64 %rd5, %rd1, 384;
+setp.ne.s32 %p5, %r4, 1;
+setp.eq.s32 %p6, %r262, 0;
+or.pred %p7, %p5, %p6;
+@%p7 bra $L__BB0_6;
+cvta.param.u64 %rd12, %rd4;
+
+prefetch.tensormap [%rd12];
+
+cvta.param.u64 %rd13, %rd5;
+
+prefetch.tensormap [%rd13];
+
+$L__BB0_6:
+setp.eq.s32 %p8, %r262, 0;
+setp.ne.s32 %p9, %r4, 3;
+or.pred %p10, %p9, %p8;
+@%p10 bra $L__BB0_8;
+add.s64 %rd16, %rd1, 1408;
+cvta.param.u64 %rd14, %rd16;
+
+prefetch.tensormap [%rd14];
+
+add.s64 %rd17, %rd1, 1664;
+cvta.param.u64 %rd15, %rd17;
+
+prefetch.tensormap [%rd15];
+
+$L__BB0_8:
+setp.ne.s32 %p11, %r262, 0;
+setp.eq.s32 %p12, %r7, 0;
+setp.eq.s32 %p13, %r4, 2;
+and.pred %p14, %p12, %p13;
+and.pred %p1, %p14, %p11;
+shfl.sync.idx.b32	%r273|%p15, %r3, 0, 31, -1;
+mov.b32 %r269, -1;
+mov.b32 %r267, 0;
+mov.u32 %r268, %r267;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r269;
+@%px mov.s32 %r268, 1;
+mov.s32 %r267, %rx;
+}
+
+
+shfl.sync.idx.b32	%r274|%p16, %r3, 0, 31, -1;
+setp.ne.s32 %p17, %r274, 0;
+@%p17 bra $L__BB0_11;
+mov.b32 %r277, -1;
+mov.b32 %r275, 0;
+mov.u32 %r276, %r275;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r277;
+@%px mov.s32 %r276, 1;
+mov.s32 %r275, %rx;
+}
+
+
+setp.eq.s32 %p18, %r276, 0;
+@%p18 bra $L__BB0_11;
+mov.u32 %r281, _ZN7cutlass4smemE;
+mov.b32 %r310, 1;
+
+{
+mbarrier.init.shared::cta.b64 [%r281], %r310; 
+}
+
+add.s32 %r283, %r281, 64;
+
+{
+mbarrier.init.shared::cta.b64 [%r283], %r310; 
+}
+
+add.s32 %r285, %r281, 8;
+
+{
+mbarrier.init.shared::cta.b64 [%r285], %r310; 
+}
+
+add.s32 %r287, %r281, 72;
+
+{
+mbarrier.init.shared::cta.b64 [%r287], %r310; 
+}
+
+add.s32 %r289, %r281, 16;
+
+{
+mbarrier.init.shared::cta.b64 [%r289], %r310; 
+}
+
+add.s32 %r291, %r281, 80;
+
+{
+mbarrier.init.shared::cta.b64 [%r291], %r310; 
+}
+
+add.s32 %r293, %r281, 24;
+
+{
+mbarrier.init.shared::cta.b64 [%r293], %r310; 
+}
+
+add.s32 %r295, %r281, 88;
+
+{
+mbarrier.init.shared::cta.b64 [%r295], %r310; 
+}
+
+add.s32 %r297, %r281, 32;
+
+{
+mbarrier.init.shared::cta.b64 [%r297], %r310; 
+}
+
+add.s32 %r299, %r281, 96;
+
+{
+mbarrier.init.shared::cta.b64 [%r299], %r310; 
+}
+
+add.s32 %r301, %r281, 40;
+
+{
+mbarrier.init.shared::cta.b64 [%r301], %r310; 
+}
+
+add.s32 %r303, %r281, 104;
+
+{
+mbarrier.init.shared::cta.b64 [%r303], %r310; 
+}
+
+add.s32 %r305, %r281, 48;
+
+{
+mbarrier.init.shared::cta.b64 [%r305], %r310; 
+}
+
+add.s32 %r307, %r281, 112;
+
+{
+mbarrier.init.shared::cta.b64 [%r307], %r310; 
+}
+
+add.s32 %r309, %r281, 56;
+
+{
+mbarrier.init.shared::cta.b64 [%r309], %r310; 
+}
+
+add.s32 %r311, %r281, 120;
+
+{
+mbarrier.init.shared::cta.b64 [%r311], %r310; 
+}
+
+$L__BB0_11:
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+
+mov.u32 %r312, %cluster_ctarank;
+
+
+shfl.sync.idx.b32	%r318|%p19, %r3, 0, 31, -1;
+mov.b32 %r315, -1;
+mov.b32 %r313, 0;
+mov.u32 %r314, %r313;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r315;
+@%px mov.s32 %r314, 1;
+mov.s32 %r313, %rx;
+}
+
+
+shfl.sync.idx.b32	%r319|%p20, %r3, 0, 31, -1;
+setp.ne.s32 %p21, %r319, 1;
+@%p21 bra $L__BB0_14;
+mov.b32 %r322, -1;
+mov.b32 %r320, 0;
+mov.u32 %r321, %r320;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r322;
+@%px mov.s32 %r321, 1;
+mov.s32 %r320, %rx;
+}
+
+
+setp.eq.s32 %p22, %r321, 0;
+@%p22 bra $L__BB0_14;
+mov.u32 %r341, _ZN7cutlass4smemE;
+add.s32 %r326, %r341, 128;
+mov.b32 %r337, 32;
+
+{
+mbarrier.init.shared::cta.b64 [%r326], %r337; 
+}
+
+add.s32 %r328, %r341, 160;
+mov.b32 %r339, 128;
+
+{
+mbarrier.init.shared::cta.b64 [%r328], %r339; 
+}
+
+add.s32 %r330, %r341, 136;
+
+{
+mbarrier.init.shared::cta.b64 [%r330], %r337; 
+}
+
+add.s32 %r332, %r341, 168;
+
+{
+mbarrier.init.shared::cta.b64 [%r332], %r339; 
+}
+
+add.s32 %r334, %r341, 144;
+
+{
+mbarrier.init.shared::cta.b64 [%r334], %r337; 
+}
+
+add.s32 %r336, %r341, 176;
+
+{
+mbarrier.init.shared::cta.b64 [%r336], %r339; 
+}
+
+add.s32 %r338, %r341, 152;
+
+{
+mbarrier.init.shared::cta.b64 [%r338], %r337; 
+}
+
+add.s32 %r340, %r341, 184;
+
+{
+mbarrier.init.shared::cta.b64 [%r340], %r339; 
+}
+
+$L__BB0_14:
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+shfl.sync.idx.b32	%r342|%p23, %r3, 0, 31, -1;
+setp.ne.s32 %p24, %r342, 3;
+@%p24 bra $L__BB0_17;
+mov.b32 %r345, -1;
+mov.b32 %r343, 0;
+mov.u32 %r344, %r343;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r345;
+@%px mov.s32 %r344, 1;
+mov.s32 %r343, %rx;
+}
+
+
+setp.eq.s32 %p25, %r344, 0;
+@%p25 bra $L__BB0_17;
+mov.u32 %r352, _ZN7cutlass4smemE;
+add.s32 %r349, %r352, 192;
+mov.b32 %r350, 32;
+
+{
+mbarrier.init.shared::cta.b64 [%r349], %r350; 
+}
+
+add.s32 %r351, %r352, 200;
+
+{
+mbarrier.init.shared::cta.b64 [%r351], %r350; 
+}
+
+$L__BB0_17:
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+and.b32 %r9, %r2, 31;
+shfl.sync.idx.b32	%r353|%p26, %r3, 0, 31, -1;
+setp.ne.s32 %p27, %r353, 4;
+@%p27 bra $L__BB0_20;
+mov.b32 %r356, -1;
+mov.b32 %r354, 0;
+mov.u32 %r355, %r354;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r356;
+@%px mov.s32 %r355, 1;
+mov.s32 %r354, %rx;
+}
+
+
+setp.eq.s32 %p28, %r355, 0;
+@%p28 bra $L__BB0_20;
+mov.u32 %r367, _ZN7cutlass4smemE;
+add.s32 %r360, %r367, 208;
+mov.b32 %r363, 1;
+
+{
+mbarrier.init.shared::cta.b64 [%r360], %r363; 
+}
+
+add.s32 %r362, %r367, 224;
+mov.b32 %r365, 416;
+
+{
+mbarrier.init.shared::cta.b64 [%r362], %r365; 
+}
+
+add.s32 %r364, %r367, 216;
+
+{
+mbarrier.init.shared::cta.b64 [%r364], %r363; 
+}
+
+add.s32 %r366, %r367, 232;
+
+{
+mbarrier.init.shared::cta.b64 [%r366], %r365; 
+}
+
+$L__BB0_20:
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+
+mov.u32 %r368, %cluster_ctarank;
+
+
+shfl.sync.idx.b32	%r369|%p29, %r3, 0, 31, -1;
+setp.ne.s32 %p30, %r369, 5;
+@%p30 bra $L__BB0_23;
+mov.b32 %r372, -1;
+mov.b32 %r370, 0;
+mov.u32 %r371, %r370;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r372;
+@%px mov.s32 %r371, 1;
+mov.s32 %r370, %rx;
+}
+
+
+setp.eq.s32 %p31, %r371, 0;
+@%p31 bra $L__BB0_23;
+mov.u32 %r391, _ZN7cutlass4smemE;
+add.s32 %r376, %r391, 240;
+mov.b32 %r387, 1;
+
+{
+mbarrier.init.shared::cta.b64 [%r376], %r387; 
+}
+
+add.s32 %r378, %r391, 272;
+mov.b32 %r389, 256;
+
+{
+mbarrier.init.shared::cta.b64 [%r378], %r389; 
+}
+
+add.s32 %r380, %r391, 248;
+
+{
+mbarrier.init.shared::cta.b64 [%r380], %r387; 
+}
+
+add.s32 %r382, %r391, 280;
+
+{
+mbarrier.init.shared::cta.b64 [%r382], %r389; 
+}
+
+add.s32 %r384, %r391, 256;
+
+{
+mbarrier.init.shared::cta.b64 [%r384], %r387; 
+}
+
+add.s32 %r386, %r391, 288;
+
+{
+mbarrier.init.shared::cta.b64 [%r386], %r389; 
+}
+
+add.s32 %r388, %r391, 264;
+
+{
+mbarrier.init.shared::cta.b64 [%r388], %r387; 
+}
+
+add.s32 %r390, %r391, 296;
+
+{
+mbarrier.init.shared::cta.b64 [%r390], %r389; 
+}
+
+$L__BB0_23:
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+
+mov.u32 %r392, %cluster_ctarank;
+
+
+shfl.sync.idx.b32	%r393|%p32, %r3, 0, 31, -1;
+setp.ne.s32 %p33, %r393, 3;
+@%p33 bra $L__BB0_26;
+mov.b32 %r396, -1;
+mov.b32 %r394, 0;
+mov.u32 %r395, %r394;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r396;
+@%px mov.s32 %r395, 1;
+mov.s32 %r394, %rx;
+}
+
+
+setp.eq.s32 %p34, %r395, 0;
+@%p34 bra $L__BB0_26;
+mov.u32 %r407, _ZN7cutlass4smemE;
+add.s32 %r400, %r407, 304;
+mov.b32 %r405, 32;
+
+{
+mbarrier.init.shared::cta.b64 [%r400], %r405; 
+}
+
+add.s32 %r402, %r407, 320;
+
+{
+mbarrier.init.shared::cta.b64 [%r402], %r405; 
+}
+
+add.s32 %r404, %r407, 312;
+
+{
+mbarrier.init.shared::cta.b64 [%r404], %r405; 
+}
+
+add.s32 %r406, %r407, 328;
+
+{
+mbarrier.init.shared::cta.b64 [%r406], %r405; 
+}
+
+$L__BB0_26:
+setp.ne.s32 %p35, %r4, 0;
+setp.eq.s32 %p36, %r262, 0;
+
+{
+fence.mbarrier_init.release.cluster; 
+}
+
+or.pred %p37, %p35, %p36;
+@%p37 bra $L__BB0_28;
+mov.u32 %r410, _ZN7cutlass4smemE;
+add.s32 %r409, %r410, 336;
+mov.b32 %r408, 32;
+
+{
+mbarrier.init.shared::cta.b64 [%r409], %r408; 
+}
+
+$L__BB0_28:
+setp.ne.s32 %p38, %r4, 0;
+
+barrier.cluster.arrive.relaxed.aligned;
+
+
+mov.u32 %r10, %ctaid.x;
+
+mov.u32 %r411, %cluster_ctaid.x;
+
+
+
+mov.u32 %r412, %cluster_ctaid.y;
+
+
+
+mov.u32 %r413, %cluster_ctaid.z;
+
+
+mov.b16 %rs3, 0;
+mov.u16 %rs4, %rs3;
+@%p38 bra $L__BB0_30;
+setp.lt.u32 %p39, %r411, 2;
+setp.eq.s32 %p40, %r412, 0;
+or.pred %p41, %p39, %p40;
+selp.u16 %rs6, 1, 0, %p41;
+selp.b16 %rs7, 2, 0, %p41;
+or.b16 %rs3, %rs7, %rs6;
+and.b32 %r414, %r411, -2;
+mov.b32 %r415, 3;
+shl.b32 %r416, %r415, %r414;
+cvt.u16.u32 %rs4, %r416;
+$L__BB0_30:
+mov.u32 %r1227, %ctaid.y;
+mov.u32 %r14, %ctaid.z;
+ld.param.u32 %r34, [%rd1+1956];
+setp.lt.s32 %p42, %r34, 1;
+mov.u32 %r1228, %r10;
+@%p42 bra $L__BB0_34;
+ld.param.u32 %r16, [%rd1+1932];
+setp.eq.s32 %p43, %r16, 1;
+ld.param.v4.u32 {%r417, %r418, %r17, %r419}, [%rd1+1936];
+mul.hi.u32 %r420, %r10, %r417;
+shr.u32 %r421, %r420, %r418;
+selp.b32 %r1222, %r10, %r421, %p43;
+mul.lo.s32 %r422, %r1222, %r16;
+sub.s32 %r19, %r10, %r422;
+setp.eq.s32 %p44, %r17, 1;
+mul.hi.u32 %r423, %r1227, %r419;
+ld.param.v4.u32 {%r424, %r425, %r20, %r21}, [%rd1+1952];
+mov.b64 %rd18, {%r424, %r425};
+shr.u32 %r426, %r423, %r424;
+selp.b32 %r1223, %r1227, %r426, %p44;
+mul.lo.s32 %r428, %r1223, %r17;
+sub.s32 %r23, %r1227, %r428;
+setp.eq.s32 %p45, %r34, 1;
+mul.hi.u32 %r429, %r1223, %r20;
+shr.u32 %r430, %r429, %r21;
+selp.b32 %r24, %r1223, %r430, %p45;
+mul.lo.s32 %r431, %r24, %r34;
+sub.s32 %r25, %r1223, %r431;
+mov.u32 %r432, %nctaid.x;
+mul.hi.u32 %r433, %r432, %r417;
+shr.u32 %r434, %r433, %r418;
+selp.b32 %r435, %r432, %r434, %p43;
+mul.hi.u32 %r436, %r435, %r20;
+shr.u32 %r437, %r436, %r21;
+selp.b32 %r26, %r435, %r437, %p45;
+mul.lo.s32 %r438, %r26, %r34;
+mov.u32 %r439, %nctaid.y;
+mul.hi.u32 %r440, %r439, %r419;
+shr.u32 %r441, %r440, %r424;
+selp.b32 %r442, %r439, %r441, %p44;
+mul.hi.u32 %r443, %r442, %r20;
+shr.u32 %r444, %r443, %r21;
+selp.b32 %r445, %r442, %r444, %p45;
+mul.lo.s32 %r447, %r445, %r34;
+setp.ge.s32 %p46, %r1222, %r438;
+setp.ge.s32 %p47, %r1223, %r447;
+{ .reg .b32 tmp; mov.b64 {tmp, %r27}, %rd18; }
+or.pred %p48, %p46, %p47;
+@%p48 bra $L__BB0_33;
+setp.eq.s32 %p49, %r34, 1;
+mul.hi.u32 %r448, %r1222, %r20;
+shr.u32 %r449, %r448, %r21;
+selp.b32 %r450, %r1222, %r449, %p49;
+mad.lo.s32 %r28, %r26, %r25, %r450;
+sub.s32 %r451, %r24, %r450;
+mad.lo.s32 %r1223, %r451, %r34, %r1222;
+mov.u32 %r1222, %r28;
+$L__BB0_33:
+mad.lo.s32 %r1228, %r16, %r1222, %r19;
+mad.lo.s32 %r1227, %r17, %r1223, %r23;
+mov.u32 %r34, %r27;
+$L__BB0_34:
+ld.param.u32 %r37, [%rd1+1968];
+setp.ne.s32 %p50, %r37, 1;
+@%p50 bra $L__BB0_36;
+ld.param.u32 %r452, [%rd1+1952];
+ld.param.v4.u32 {%r453, %r454, %r455, %r456}, [%rd1+1936];
+ld.param.u32 %r457, [%rd1+1932];
+setp.eq.s32 %p51, %r457, 1;
+mul.hi.u32 %r458, %r1228, %r453;
+shr.u32 %r459, %r458, %r454;
+selp.b32 %r460, %r1228, %r459, %p51;
+setp.eq.s32 %p52, %r455, 1;
+mul.hi.u32 %r461, %r1227, %r456;
+shr.u32 %r462, %r461, %r452;
+selp.b32 %r463, %r1227, %r462, %p52;
+sub.s32 %r464, %r463, %r460;
+mad.lo.s32 %r1228, %r464, %r457, %r1228;
+sub.s32 %r465, %r460, %r463;
+mad.lo.s32 %r1227, %r465, %r455, %r1227;
+$L__BB0_36:
+setp.ne.s32 %p53, %r4, 2;
+
+barrier.cluster.wait.aligned;
+
+
+@%p53 bra $L__BB0_66;
+add.s32 %r992, %r1, 63;
+shr.s32 %r993, %r992, 31;
+shr.u32 %r994, %r993, 26;
+add.s32 %r995, %r992, %r994;
+shr.s32 %r42, %r995, 6;
+min.u32 %r43, %r42, 8;
+add.s32 %r44, %r1, 126;
+cvta.param.u64 %rd6, %rd4;
+cvta.param.u64 %rd7, %rd5;
+mov.u32 %r45, %nctaid.x;
+mov.u32 %r46, %nctaid.y;
+add.s32 %r996, %r1, -1;
+setp.lt.u32 %p115, %r996, -127;
+selp.s32 %r997, -1, 0, %p115;
+add.s32 %r998, %r43, %r997;
+add.s32 %r47, %r998, 1;
+sub.s32 %r48, %r42, %r43;
+neg.s32 %r49, %r998;
+shl.b32 %r999, %r10, 6;
+and.b32 %r50, %r999, 64;
+shl.b32 %r1000, %r10, 7;
+and.b32 %r51, %r1000, 128;
+mov.b32 %r1248, 1;
+mov.b32 %r1233, 0;
+not.pred %p126, %p1;
+mov.u32 %r1234, %r1233;
+mov.u32 %r1247, %r1233;
+mov.u32 %r1239, %r1233;
+mov.u32 %r1240, %r1248;
+$L__BB0_38:
+setp.ne.s32 %p116, %r266, 0;
+@%p116 bra $L__BB0_40;
+shl.b32 %r1005, %r1239, 3;
+mov.u32 %r1006, _ZN7cutlass4smemE;
+add.s32 %r1007, %r1006, %r1005;
+add.s32 %r1001, %r1007, 320;
+mov.b32 %r1003, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1001], %r1240, %r1003; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1004, %r1007, 304;
+
+{
+mbarrier.arrive.shared::cta.b64 _, [%r1004];
+}
+
+add.s32 %r1008, %r1239, 1;
+setp.eq.s32 %p117, %r1008, 2;
+selp.b32 %r1239, 0, %r1008, %p117;
+selp.u32 %r1009, 1, 0, %p117;
+xor.b32 %r1240, %r1240, %r1009;
+$L__BB0_40:
+setp.lt.u32 %p118, %r44, 127;
+shr.u32 %r1014, %r1228, 31;
+add.s32 %r1015, %r1228, %r1014;
+shl.b32 %r1016, %r1015, 7;
+and.b32 %r1017, %r1016, -256;
+or.b32 %r66, %r1017, %r51;
+shl.b32 %r1018, %r1227, 7;
+or.b32 %r67, %r1018, %r50;
+shl.b32 %r1019, %r1247, 3;
+mov.u32 %r1020, _ZN7cutlass4smemE;
+add.s32 %r1021, %r1020, %r1019;
+add.s32 %r1011, %r1021, 64;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1011], %r1248; 
+selp.b32 %r1245, 1, 0, P1; 
+}
+
+mov.b32 %r1251, 0;
+@%p118 bra $L__BB0_49;
+mov.b32 %r1241, 0;
+mov.u32 %r1242, %r49;
+mov.u32 %r1244, %r1247;
+$L__BB0_42:
+.pragma "nounroll";
+setp.ne.s32 %p119, %r1245, 0;
+shl.b32 %r1023, %r1244, 3;
+add.s32 %r1025, %r1020, %r1023;
+add.s32 %r74, %r1025, 64;
+@%p119 bra $L__BB0_44;
+mov.b32 %r1028, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r74], %r1248, %r1028; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+$L__BB0_44:
+@%p126 bra $L__BB0_46;
+add.s32 %r1030, %r74, -64;
+mov.b32 %r1029, 49152;
+
+{
+mbarrier.arrive.expect_tx.shared::cta.b64 _, [%r1030], %r1029; 
+}
+
+$L__BB0_46:
+add.s32 %r1039, %r1244, 1;
+setp.eq.s32 %p121, %r1039, 8;
+selp.b32 %r1247, 0, %r1039, %p121;
+selp.u32 %r1040, 1, 0, %p121;
+xor.b32 %r1248, %r1248, %r1040;
+shl.b32 %r1041, %r1247, 3;
+add.s32 %r1043, %r1020, %r1041;
+add.s32 %r1032, %r1043, 64;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1032], %r1248; 
+selp.b32 %r1245, 1, 0, P1; 
+}
+
+mov.b32 %r1036, -1;
+mov.b32 %r1034, 0;
+mov.u32 %r1035, %r1034;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r1036;
+@%px mov.s32 %r1035, 1;
+mov.s32 %r1034, %rx;
+}
+
+
+setp.eq.s32 %p122, %r1035, 0;
+@%p122 bra $L__BB0_48;
+add.s32 %r1054, %r74, -64;
+and.b32 %r1050, %r1054, -16777224;
+shl.b32 %r1055, %r1244, 14;
+add.s32 %r1057, %r1020, %r1055;
+add.s32 %r1044, %r1057, 34816;
+mov.b64 %rd43, 1152921504606846976;
+
+cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint [%r1044], [%rd6, {%r1241, %r66, %r14}], [%r1050], %rd43;
+
+shl.b32 %r1058, %r1244, 13;
+add.s32 %r1059, %r1020, %r1058;
+add.s32 %r1049, %r1059, 165888;
+
+cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint [%r1049], [%rd7, {%r1241, %r67, %r14}], [%r1050], %rd43;
+
+$L__BB0_48:
+add.s32 %r1242, %r1242, 1;
+add.s32 %r1241, %r1241, 64;
+setp.ne.s32 %p123, %r1242, 1;
+mov.u32 %r1244, %r1247;
+mov.u32 %r1251, %r47;
+@%p123 bra $L__BB0_42;
+$L__BB0_49:
+setp.le.s32 %p124, %r42, %r43;
+shl.b32 %r1063, %r1247, 3;
+add.s32 %r1065, %r1020, %r1063;
+add.s32 %r1061, %r1065, 64;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1061], %r1248; 
+selp.b32 %r1252, 1, 0, P1; 
+}
+
+@%p124 bra $L__BB0_58;
+add.s32 %r84, %r48, %r1251;
+mov.u32 %r1250, %r1247;
+$L__BB0_51:
+.pragma "nounroll";
+setp.ne.s32 %p125, %r1252, 0;
+shl.b32 %r1066, %r1250, 3;
+add.s32 %r1068, %r1020, %r1066;
+add.s32 %r89, %r1068, 64;
+@%p125 bra $L__BB0_53;
+mov.b32 %r1071, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r89], %r1248, %r1071; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+$L__BB0_53:
+@%p126 bra $L__BB0_55;
+add.s32 %r1073, %r89, -64;
+mov.b32 %r1072, 49152;
+
+{
+mbarrier.arrive.expect_tx.shared::cta.b64 _, [%r1073], %r1072; 
+}
+
+$L__BB0_55:
+add.s32 %r1082, %r1250, 1;
+setp.eq.s32 %p127, %r1082, 8;
+selp.b32 %r1247, 0, %r1082, %p127;
+selp.u32 %r1083, 1, 0, %p127;
+xor.b32 %r1248, %r1248, %r1083;
+shl.b32 %r1084, %r1247, 3;
+add.s32 %r1086, %r1020, %r1084;
+add.s32 %r1075, %r1086, 64;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1075], %r1248; 
+selp.b32 %r1252, 1, 0, P1; 
+}
+
+mov.b32 %r1079, -1;
+mov.b32 %r1077, 0;
+mov.u32 %r1078, %r1077;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r1079;
+@%px mov.s32 %r1078, 1;
+mov.s32 %r1077, %rx;
+}
+
+
+setp.eq.s32 %p128, %r1078, 0;
+@%p128 bra $L__BB0_57;
+shl.b32 %r1094, %r1251, 6;
+add.s32 %r1097, %r89, -64;
+and.b32 %r1093, %r1097, -16777224;
+shl.b32 %r1098, %r1250, 14;
+add.s32 %r1100, %r1020, %r1098;
+add.s32 %r1087, %r1100, 34816;
+mov.b64 %rd47, 1152921504606846976;
+
+cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint [%r1087], [%rd6, {%r1094, %r66, %r14}], [%r1093], %rd47;
+
+shl.b32 %r1101, %r1250, 13;
+add.s32 %r1102, %r1020, %r1101;
+add.s32 %r1092, %r1102, 165888;
+
+cp.async.bulk.tensor.3d.cta_group::2.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint [%r1092], [%rd7, {%r1094, %r67, %r14}], [%r1093], %rd47;
+
+$L__BB0_57:
+add.s32 %r1251, %r1251, 1;
+setp.ne.s32 %p129, %r1251, %r84;
+mov.u32 %r1250, %r1247;
+@%p129 bra $L__BB0_51;
+$L__BB0_58:
+bar.warp.sync -1;
+shl.b32 %r1113, %r1233, 3;
+add.s32 %r1115, %r1020, %r1113;
+add.s32 %r1103, %r1115, 208;
+mov.b32 %r1105, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1103], %r1234, %r1105; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+shl.b32 %r1116, %r1233, 4;
+add.s32 %r1117, %r1020, %r1116;
+add.s32 %r1110, %r1117, 352;
+
+{
+.reg .pred p1;
+.reg .b128 clc_result;
+ld.shared.b128 clc_result, [%r1110];
+clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;
+selp.u32 %r1109, 1, 0, p1;
+@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%r1261, %r1260, %r14, _}, clc_result;
+}
+
+
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+add.s32 %r1111, %r1115, 224;
+mov.b32 %r1112, 0;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r1111, %r1112;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+setp.lt.s32 %p130, %r34, 1;
+@%p130 bra $L__BB0_62;
+ld.param.u32 %r100, [%rd1+1932];
+setp.eq.s32 %p131, %r100, 1;
+ld.param.v4.u32 {%r1118, %r1119, %r101, %r1120}, [%rd1+1936];
+mul.hi.u32 %r1121, %r1261, %r1118;
+shr.u32 %r1122, %r1121, %r1119;
+selp.b32 %r1255, %r1261, %r1122, %p131;
+mul.lo.s32 %r1123, %r1255, %r100;
+sub.s32 %r103, %r1261, %r1123;
+setp.eq.s32 %p132, %r101, 1;
+mul.hi.u32 %r1124, %r1260, %r1120;
+ld.param.v4.u32 {%r1125, %r1126, %r104, %r105}, [%rd1+1952];
+mov.b64 %rd48, {%r1125, %r1126};
+shr.u32 %r1127, %r1124, %r1125;
+selp.b32 %r1256, %r1260, %r1127, %p132;
+mul.lo.s32 %r1129, %r1256, %r101;
+sub.s32 %r107, %r1260, %r1129;
+setp.eq.s32 %p133, %r34, 1;
+mul.hi.u32 %r1130, %r1256, %r104;
+shr.u32 %r1131, %r1130, %r105;
+selp.b32 %r108, %r1256, %r1131, %p133;
+mul.lo.s32 %r1132, %r108, %r34;
+sub.s32 %r109, %r1256, %r1132;
+mul.hi.u32 %r1133, %r45, %r1118;
+shr.u32 %r1134, %r1133, %r1119;
+selp.b32 %r1135, %r45, %r1134, %p131;
+mul.hi.u32 %r1136, %r1135, %r104;
+shr.u32 %r1137, %r1136, %r105;
+selp.b32 %r110, %r1135, %r1137, %p133;
+mul.lo.s32 %r1138, %r110, %r34;
+mul.hi.u32 %r1139, %r46, %r1120;
+shr.u32 %r1140, %r1139, %r1125;
+selp.b32 %r1141, %r46, %r1140, %p132;
+mul.hi.u32 %r1142, %r1141, %r104;
+shr.u32 %r1143, %r1142, %r105;
+selp.b32 %r1144, %r1141, %r1143, %p133;
+mul.lo.s32 %r1146, %r1144, %r34;
+setp.ge.s32 %p134, %r1255, %r1138;
+setp.ge.s32 %p135, %r1256, %r1146;
+{ .reg .b32 tmp; mov.b64 {tmp, %r111}, %rd48; }
+or.pred %p136, %p134, %p135;
+@%p136 bra $L__BB0_61;
+setp.eq.s32 %p137, %r34, 1;
+mul.hi.u32 %r1147, %r1255, %r104;
+shr.u32 %r1148, %r1147, %r105;
+selp.b32 %r1149, %r1255, %r1148, %p137;
+mad.lo.s32 %r112, %r110, %r109, %r1149;
+sub.s32 %r1150, %r108, %r1149;
+mad.lo.s32 %r1256, %r1150, %r34, %r1255;
+mov.u32 %r1255, %r112;
+$L__BB0_61:
+mad.lo.s32 %r1261, %r100, %r1255, %r103;
+mad.lo.s32 %r1260, %r101, %r1256, %r107;
+mov.u32 %r34, %r111;
+$L__BB0_62:
+setp.ne.s32 %p138, %r37, 1;
+@%p138 bra $L__BB0_64;
+ld.param.u32 %r1151, [%rd1+1952];
+ld.param.v4.u32 {%r1152, %r1153, %r1154, %r1155}, [%rd1+1936];
+ld.param.u32 %r1156, [%rd1+1932];
+setp.eq.s32 %p139, %r1156, 1;
+mul.hi.u32 %r1157, %r1261, %r1152;
+shr.u32 %r1158, %r1157, %r1153;
+selp.b32 %r1159, %r1261, %r1158, %p139;
+setp.eq.s32 %p140, %r1154, 1;
+mul.hi.u32 %r1160, %r1260, %r1155;
+shr.u32 %r1161, %r1160, %r1151;
+selp.b32 %r1162, %r1260, %r1161, %p140;
+sub.s32 %r1163, %r1162, %r1159;
+mad.lo.s32 %r1261, %r1163, %r1156, %r1261;
+sub.s32 %r1164, %r1159, %r1162;
+mad.lo.s32 %r1260, %r1164, %r1154, %r1260;
+$L__BB0_64:
+setp.eq.s32 %p141, %r1109, 1;
+add.s32 %r1228, %r1261, %r411;
+add.s32 %r1227, %r1260, %r412;
+add.s32 %r1165, %r1233, 1;
+setp.eq.s32 %p142, %r1165, 2;
+selp.b32 %r1233, 0, %r1165, %p142;
+selp.u32 %r1166, 1, 0, %p142;
+xor.b32 %r1234, %r1234, %r1166;
+@%p141 bra $L__BB0_38;
+shl.b32 %r1191, %r1247, 3;
+add.s32 %r1193, %r1020, 64;
+add.s32 %r1167, %r1193, %r1191;
+mov.b32 %r1190, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1167], %r1248, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1194, %r1247, 1;
+setp.eq.s32 %p143, %r1194, 8;
+selp.b32 %r1195, 0, %r1194, %p143;
+selp.u32 %r1196, 1, 0, %p143;
+xor.b32 %r1171, %r1248, %r1196;
+shl.b32 %r1197, %r1195, 3;
+add.s32 %r1170, %r1193, %r1197;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1170], %r1171, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1198, %r1195, 1;
+setp.eq.s32 %p144, %r1198, 8;
+selp.b32 %r1199, 0, %r1198, %p144;
+selp.u32 %r1200, 1, 0, %p144;
+xor.b32 %r1174, %r1171, %r1200;
+shl.b32 %r1201, %r1199, 3;
+add.s32 %r1173, %r1193, %r1201;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1173], %r1174, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1202, %r1199, 1;
+setp.eq.s32 %p145, %r1202, 8;
+selp.b32 %r1203, 0, %r1202, %p145;
+selp.u32 %r1204, 1, 0, %p145;
+xor.b32 %r1177, %r1174, %r1204;
+shl.b32 %r1205, %r1203, 3;
+add.s32 %r1176, %r1193, %r1205;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1176], %r1177, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1206, %r1203, 1;
+setp.eq.s32 %p146, %r1206, 8;
+selp.b32 %r1207, 0, %r1206, %p146;
+selp.u32 %r1208, 1, 0, %p146;
+xor.b32 %r1180, %r1177, %r1208;
+shl.b32 %r1209, %r1207, 3;
+add.s32 %r1179, %r1193, %r1209;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1179], %r1180, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1210, %r1207, 1;
+setp.eq.s32 %p147, %r1210, 8;
+selp.b32 %r1211, 0, %r1210, %p147;
+selp.u32 %r1212, 1, 0, %p147;
+xor.b32 %r1183, %r1180, %r1212;
+shl.b32 %r1213, %r1211, 3;
+add.s32 %r1182, %r1193, %r1213;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1182], %r1183, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1214, %r1211, 1;
+setp.eq.s32 %p148, %r1214, 8;
+selp.b32 %r1215, 0, %r1214, %p148;
+selp.u32 %r1216, 1, 0, %p148;
+xor.b32 %r1186, %r1183, %r1216;
+shl.b32 %r1217, %r1215, 3;
+add.s32 %r1185, %r1193, %r1217;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1185], %r1186, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r1218, %r1215, 1;
+setp.eq.s32 %p149, %r1218, 8;
+selp.b32 %r1219, 0, %r1218, %p149;
+selp.u32 %r1220, 1, 0, %p149;
+xor.b32 %r1189, %r1186, %r1220;
+shl.b32 %r1221, %r1219, 3;
+add.s32 %r1188, %r1193, %r1221;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r1188], %r1189, %r1190; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+bra.uni $L__BB0_129;
+$L__BB0_66:
+setp.ne.s32 %p54, %r4, 1;
+setp.ne.s32 %p55, %r266, 0;
+or.pred %p56, %p54, %p55;
+@%p56 bra $L__BB0_75;
+setp.lt.u32 %p57, %r9, 2;
+selp.u32 %r129, 1, 0, %p57;
+mov.b32 %r1263, 1;
+mov.b32 %r1262, 0;
+mov.u32 %r1264, %r1262;
+mov.u32 %r1265, %r1262;
+mov.u32 %r1266, %r1262;
+mov.u32 %r1267, %r1262;
+$L__BB0_68:
+shl.b32 %r485, %r1266, 3;
+mov.u32 %r486, _ZN7cutlass4smemE;
+add.s32 %r487, %r486, %r485;
+add.s32 %r468, %r487, 304;
+mov.b32 %r475, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r468], %r1267, %r475; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r471, %r487, 320;
+mov.b32 %r480, 0;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r471, %r480;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+add.s32 %r136, %r1266, 1;
+shl.b32 %r488, %r1262, 3;
+add.s32 %r489, %r486, %r488;
+add.s32 %r473, %r489, 224;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r473], %r1263, %r475; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r137, %r489, 208;
+mov.b32 %r479, 16;
+
+{
+.reg .pred p;
+.reg .b32 remAddr32;
+setp.eq.u32 p, %r129, 1;
+@p mapa.shared::cluster.u32 remAddr32, %r137, %r9;
+@p mbarrier.arrive.expect_tx.shared::cluster.b64 _, [remAddr32], %r479;
+}
+
+mov.b32 %r482, -1;
+mov.u32 %r481, %r480;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r482;
+@%px mov.s32 %r481, 1;
+mov.s32 %r480, %rx;
+}
+
+
+setp.eq.s32 %p58, %r481, 0;
+@%p58 bra $L__BB0_70;
+shl.b32 %r492, %r1262, 4;
+add.s32 %r494, %r486, %r492;
+add.s32 %r490, %r494, 352;
+
+{
+clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%r490], [%r137];
+}
+
+
+$L__BB0_70:
+setp.eq.s32 %p59, %r136, 2;
+add.s32 %r505, %r1262, 1;
+setp.eq.s32 %p60, %r505, 2;
+selp.b32 %r1262, 0, %r505, %p60;
+selp.u32 %r506, 1, 0, %p60;
+xor.b32 %r1263, %r1263, %r506;
+shl.b32 %r507, %r1264, 3;
+add.s32 %r509, %r486, %r507;
+add.s32 %r495, %r509, 208;
+mov.b32 %r497, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r495], %r1265, %r497; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+shl.b32 %r510, %r1264, 4;
+add.s32 %r511, %r486, %r510;
+add.s32 %r502, %r511, 352;
+
+{
+.reg .pred p1;
+.reg .b128 clc_result;
+ld.shared.b128 clc_result, [%r502];
+clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;
+selp.u32 %r501, 1, 0, p1;
+@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%r498, %r499, %r500, _}, clc_result;
+}
+
+
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+setp.eq.s32 %p61, %r501, 1;
+add.s32 %r503, %r509, 224;
+mov.b32 %r504, 0;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r503, %r504;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+add.s32 %r512, %r1264, 1;
+setp.eq.s32 %p62, %r512, 2;
+selp.b32 %r1264, 0, %r512, %p62;
+selp.u32 %r513, 1, 0, %p62;
+xor.b32 %r1265, %r1265, %r513;
+selp.u32 %r514, 1, 0, %p59;
+xor.b32 %r1267, %r1267, %r514;
+selp.b32 %r1266, 0, %r136, %p59;
+@%p61 bra $L__BB0_68;
+shl.b32 %r519, %r1262, 3;
+add.s32 %r521, %r486, %r519;
+add.s32 %r144, %r521, 224;
+mov.b32 %r518, 1;
+
+{
+.reg .pred P1; 
+.reg .pred P2; 
+setp.eq.u32 P2, %r518, 1;
+@P2 mbarrier.test_wait.parity.shared::cta.b64 P1, [%r144], %r1263; 
+selp.b32 %r515, 1, 0, P1; 
+}
+
+setp.ne.s32 %p63, %r515, 0;
+@%p63 bra $L__BB0_73;
+mov.b32 %r524, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r144], %r1263, %r524; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+$L__BB0_73:
+add.s32 %r529, %r1262, 1;
+setp.eq.s32 %p64, %r529, 2;
+selp.b32 %r530, 0, %r529, %p64;
+selp.u32 %r531, 1, 0, %p64;
+xor.b32 %r527, %r1263, %r531;
+shl.b32 %r532, %r530, 3;
+add.s32 %r534, %r486, %r532;
+add.s32 %r146, %r534, 224;
+mov.b32 %r528, 1;
+
+{
+.reg .pred P1; 
+.reg .pred P2; 
+setp.eq.u32 P2, %r528, 1;
+@P2 mbarrier.test_wait.parity.shared::cta.b64 P1, [%r146], %r527; 
+selp.b32 %r525, 1, 0, P1; 
+}
+
+setp.ne.s32 %p65, %r525, 0;
+@%p65 bra $L__BB0_129;
+mov.b32 %r537, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r146], %r527, %r537; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+bra.uni $L__BB0_129;
+$L__BB0_75:
+setp.ne.s32 %p66, %r4, 0;
+@%p66 bra $L__BB0_106;
+mov.u32 %r812, _ZN7cutlass4smemE;
+add.s32 %r806, %r812, 384;
+mov.b32 %r807, 512;
+
+tcgen05.alloc.cta_group::2.sync.aligned.shared::cta.b32 [%r806], %r807;
+
+bar.warp.sync -1;
+mov.b32 %r808, 6;
+mov.b32 %r809, 160;
+
+bar.arrive %r808, %r809;
+
+ld.shared.u32 %r147, [_ZN7cutlass4smemE+384];
+add.s32 %r813, %r812, 34816;
+shr.u32 %r814, %r813, 4;
+and.b32 %r815, %r814, 16383;
+cvt.u64.u32 %rd28, %r815;
+or.b64 %rd29, %rd28, 4611756662049538048;
+mov.b64 {%r151, %r150}, %rd29;
+add.s32 %r816, %r812, 165888;
+shr.u32 %r817, %r816, 4;
+and.b32 %r818, %r817, 16383;
+cvt.u64.u32 %rd30, %r818;
+or.b64 %rd31, %rd30, 4611756662049538048;
+mov.b64 {%r154, %r153}, %rd31;
+add.s32 %r819, %r1, 63;
+shr.s32 %r820, %r819, 31;
+shr.u32 %r821, %r820, 26;
+add.s32 %r822, %r819, %r821;
+shr.s32 %r148, %r822, 6;
+max.s32 %r155, %r148, 1;
+mov.b32 %r1269, 1;
+mov.b32 %r1268, 0;
+mov.u32 %r1270, %r1268;
+mov.u32 %r1271, %r1268;
+mov.u32 %r1272, %r1268;
+mov.u32 %r1284, %r1268;
+mov.u32 %r1274, %r1268;
+$L__BB0_77:
+setp.ne.s32 %p92, %r7, 0;
+shl.b32 %r833, %r1270, 3;
+add.s32 %r835, %r812, %r833;
+add.s32 %r823, %r835, 208;
+mov.b32 %r825, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r823], %r1271, %r825; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+shl.b32 %r836, %r1270, 4;
+add.s32 %r837, %r812, %r836;
+add.s32 %r830, %r837, 352;
+
+{
+.reg .pred p1;
+.reg .b128 clc_result;
+ld.shared.b128 clc_result, [%r830];
+clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;
+selp.u32 %r829, 1, 0, p1;
+@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%r826, %r827, %r828, _}, clc_result;
+}
+
+
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+add.s32 %r831, %r835, 224;
+mov.b32 %r832, 0;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r831, %r832;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+add.s32 %r164, %r1270, 1;
+@%p92 bra $L__BB0_99;
+setp.lt.s32 %p93, %r1, 1;
+shl.b32 %r839, %r1268, 7;
+add.s32 %r165, %r839, %r147;
+mov.b32 %r1281, 1;
+@%p93 bra $L__BB0_80;
+shl.b32 %r843, %r1272, 3;
+add.s32 %r841, %r812, %r843;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r841], %r1284; 
+selp.b32 %r840, 1, 0, P1; 
+}
+
+setp.ne.s32 %p94, %r840, 0;
+selp.u32 %r1281, 1, 0, %p94;
+$L__BB0_80:
+setp.lt.s32 %p95, %r1, 1;
+shl.b32 %r848, %r1268, 3;
+add.s32 %r850, %r812, %r848;
+add.s32 %r168, %r850, 272;
+mov.b32 %r847, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r168], %r1269, %r847; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+mov.u32 %r1285, %r1274;
+@%p95 bra $L__BB0_97;
+add.s32 %r1285, %r155, %r1274;
+mov.b32 %r1277, 0;
+mov.u32 %r1276, %r148;
+mov.u32 %r1280, %r1272;
+$L__BB0_82:
+.pragma "nounroll";
+setp.ne.s32 %p96, %r1281, 0;
+shl.b32 %r852, %r1280, 3;
+add.s32 %r176, %r812, %r852;
+@%p96 bra $L__BB0_84;
+mov.b32 %r856, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r176], %r1284, %r856; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+$L__BB0_84:
+add.s32 %r858, %r1280, 1;
+add.s32 %r1274, %r1274, 1;
+setp.eq.s32 %p97, %r858, 8;
+selp.b32 %r1272, 0, %r858, %p97;
+selp.u32 %r859, 1, 0, %p97;
+xor.b32 %r1284, %r1284, %r859;
+setp.eq.s32 %p98, %r1276, 1;
+mov.b32 %r1281, 1;
+@%p98 bra $L__BB0_86;
+shl.b32 %r863, %r1272, 3;
+add.s32 %r861, %r812, %r863;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r861], %r1284; 
+selp.b32 %r860, 1, 0, P1; 
+}
+
+setp.ne.s32 %p99, %r860, 0;
+selp.u32 %r1281, 1, 0, %p99;
+$L__BB0_86:
+shl.b32 %r870, %r1280, 10;
+add.s32 %r182, %r870, %r151;
+shl.b32 %r871, %r1280, 9;
+add.s32 %r183, %r871, %r154;
+mov.b32 %r867, -1;
+mov.b32 %r865, 0;
+mov.u32 %r866, %r865;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r867;
+@%px mov.s32 %r866, 1;
+mov.s32 %r865, %rx;
+}
+
+
+setp.eq.s32 %p100, %r866, 0;
+@%p100 bra $L__BB0_88;
+mov.b64 %rd33, {%r183, %r153};
+mov.b64 %rd32, {%r182, %r150};
+mov.b32 %r873, 270532624;
+mov.b32 %r882, 0;
+
+{
+.reg .pred p;
+setp.ne.b32 p, %r1277, 0;
+tcgen05.mma.cta_group::2.kind::f16 [%r165], %rd32, %rd33, %r873, {%r882, %r882, %r882, %r882, %r882, %r882, %r882, %r882}, p; 
+}
+
+
+$L__BB0_88:
+mov.b32 %r885, -1;
+mov.b32 %r883, 0;
+mov.u32 %r884, %r883;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r885;
+@%px mov.s32 %r884, 1;
+mov.s32 %r883, %rx;
+}
+
+
+setp.eq.s32 %p101, %r884, 0;
+@%p101 bra $L__BB0_90;
+add.s32 %r899, %r183, 2;
+mov.b64 %rd35, {%r899, %r153};
+add.s32 %r900, %r182, 2;
+mov.b64 %rd34, {%r900, %r150};
+mov.b32 %r889, 270532624;
+mov.b32 %r890, 1;
+mov.b32 %r898, 0;
+
+{
+.reg .pred p;
+setp.ne.b32 p, %r890, 0;
+tcgen05.mma.cta_group::2.kind::f16 [%r165], %rd34, %rd35, %r889, {%r898, %r898, %r898, %r898, %r898, %r898, %r898, %r898}, p; 
+}
+
+
+$L__BB0_90:
+mov.b32 %r903, -1;
+mov.b32 %r901, 0;
+mov.u32 %r902, %r901;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r903;
+@%px mov.s32 %r902, 1;
+mov.s32 %r901, %rx;
+}
+
+
+setp.eq.s32 %p102, %r902, 0;
+@%p102 bra $L__BB0_92;
+add.s32 %r917, %r183, 4;
+mov.b64 %rd37, {%r917, %r153};
+add.s32 %r918, %r182, 4;
+mov.b64 %rd36, {%r918, %r150};
+mov.b32 %r907, 270532624;
+mov.b32 %r908, 1;
+mov.b32 %r916, 0;
+
+{
+.reg .pred p;
+setp.ne.b32 p, %r908, 0;
+tcgen05.mma.cta_group::2.kind::f16 [%r165], %rd36, %rd37, %r907, {%r916, %r916, %r916, %r916, %r916, %r916, %r916, %r916}, p; 
+}
+
+
+$L__BB0_92:
+add.s32 %r184, %r182, 6;
+add.s32 %r185, %r183, 6;
+mov.b32 %r921, -1;
+mov.b32 %r919, 0;
+mov.u32 %r920, %r919;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r921;
+@%px mov.s32 %r920, 1;
+mov.s32 %r919, %rx;
+}
+
+
+setp.eq.s32 %p103, %r920, 0;
+@%p103 bra $L__BB0_94;
+mov.b64 %rd39, {%r185, %r153};
+mov.b64 %rd38, {%r184, %r150};
+mov.b32 %r925, 270532624;
+mov.b32 %r926, 1;
+mov.b32 %r934, 0;
+
+{
+.reg .pred p;
+setp.ne.b32 p, %r926, 0;
+tcgen05.mma.cta_group::2.kind::f16 [%r165], %rd38, %rd39, %r925, {%r934, %r934, %r934, %r934, %r934, %r934, %r934, %r934}, p; 
+}
+
+
+$L__BB0_94:
+mov.b32 %r937, -1;
+mov.b32 %r935, 0;
+mov.u32 %r936, %r935;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r937;
+@%px mov.s32 %r936, 1;
+mov.s32 %r935, %rx;
+}
+
+
+setp.eq.s32 %p104, %r936, 0;
+@%p104 bra $L__BB0_96;
+add.s32 %r940, %r176, 64;
+
+{
+tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r940], %rs3; 
+}
+
+$L__BB0_96:
+setp.ne.s32 %p105, %r1274, %r1285;
+add.s32 %r1276, %r1276, -1;
+mov.b32 %r1277, 1;
+mov.u32 %r1280, %r1272;
+@%p105 bra $L__BB0_82;
+$L__BB0_97:
+mov.b32 %r944, -1;
+mov.b32 %r942, 0;
+mov.u32 %r943, %r942;
+
+{
+.reg .b32 %rx;
+.reg .pred %px;
+elect.sync %rx|%px, %r944;
+@%px mov.s32 %r943, 1;
+mov.s32 %r942, %rx;
+}
+
+
+setp.eq.s32 %p106, %r943, 0;
+mov.u32 %r1274, %r1285;
+@%p106 bra $L__BB0_99;
+add.s32 %r947, %r168, -32;
+
+{
+tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r947], %rs4; 
+}
+
+$L__BB0_99:
+setp.eq.s32 %p107, %r164, 2;
+setp.eq.s32 %p108, %r829, 1;
+add.s32 %r948, %r1268, 1;
+setp.eq.s32 %p109, %r948, 4;
+selp.b32 %r1268, 0, %r948, %p109;
+selp.u32 %r949, 1, 0, %p109;
+xor.b32 %r1269, %r1269, %r949;
+selp.u32 %r950, 1, 0, %p107;
+xor.b32 %r1271, %r1271, %r950;
+selp.b32 %r1270, 0, %r164, %p107;
+@%p108 bra $L__BB0_77;
+setp.ne.s32 %p110, %r7, 0;
+
+tcgen05.relinquish_alloc_permit.cta_group::2.sync.aligned;
+
+@%p110 bra $L__BB0_102;
+shl.b32 %r966, %r1268, 3;
+add.s32 %r968, %r812, 272;
+add.s32 %r954, %r968, %r966;
+mov.b32 %r965, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r954], %r1269, %r965; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r969, %r1268, 1;
+setp.eq.s32 %p111, %r969, 4;
+selp.b32 %r970, 0, %r969, %p111;
+selp.u32 %r971, 1, 0, %p111;
+xor.b32 %r958, %r1269, %r971;
+shl.b32 %r972, %r970, 3;
+add.s32 %r957, %r968, %r972;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r957], %r958, %r965; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r973, %r970, 1;
+setp.eq.s32 %p112, %r973, 4;
+selp.b32 %r974, 0, %r973, %p112;
+selp.u32 %r975, 1, 0, %p112;
+xor.b32 %r961, %r958, %r975;
+shl.b32 %r976, %r974, 3;
+add.s32 %r960, %r968, %r976;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r960], %r961, %r965; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+add.s32 %r977, %r974, 1;
+setp.eq.s32 %p113, %r977, 4;
+selp.b32 %r978, 0, %r977, %p113;
+selp.u32 %r979, 1, 0, %p113;
+xor.b32 %r964, %r961, %r979;
+shl.b32 %r980, %r978, 3;
+add.s32 %r963, %r968, %r980;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r963], %r964, %r965; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+bra.uni $L__BB0_103;
+$L__BB0_102:
+add.s32 %r951, %r812, 336;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r951, %r8;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+$L__BB0_103:
+setp.ne.s32 %p114, %r7, 0;
+add.s32 %r981, %r812, 336;
+mov.b32 %r982, 0;
+mov.b32 %r983, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r981], %r982, %r983; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+@%p114 bra $L__BB0_105;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r981, %r8;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+$L__BB0_105:
+mov.b32 %r989, 512;
+
+{
+tcgen05.dealloc.cta_group::2.sync.aligned.b32 %r147, %r989; 
+}
+
+bra.uni $L__BB0_129;
+$L__BB0_106:
+setp.lt.s32 %p67, %r4, 4;
+@%p67 bra $L__BB0_129;
+mov.b32 %r538, 6;
+mov.b32 %r539, 160;
+
+bar.sync %r538, %r539;
+
+ld.shared.u32 %r541, [_ZN7cutlass4smemE+384];
+mov.u32 %r197, %nctaid.x;
+mov.u32 %r198, %nctaid.y;
+and.b32 %r199, %r2, 96;
+shl.b32 %r542, %r2, 16;
+and.b32 %r543, %r542, 6291456;
+shl.b32 %r544, %r2, 5;
+and.b32 %r545, %r544, 224;
+and.b32 %r546, %r544, 3840;
+and.b32 %r547, %r2, 1;
+setp.eq.b32 %p68, %r547, 1;
+and.b32 %r548, %r2, 2;
+setp.eq.s32 %p69, %r548, 0;
+and.b32 %r549, %r2, 4;
+setp.eq.s32 %p70, %r549, 0;
+shl.b32 %r550, %r2, 2;
+and.b32 %r551, %r550, 28;
+or.b32 %r552, %r545, %r551;
+or.b32 %r200, %r546, %r552;
+add.s32 %r201, %r541, %r543;
+add.s64 %rd19, %rd1, 1664;
+cvta.param.u64 %rd8, %rd19;
+selp.b32 %r202, -1, 1, %p68;
+selp.b32 %r203, 2, -2, %p69;
+selp.b32 %r204, 4, -4, %p70;
+mov.b32 %r1290, 0;
+shl.b32 %r695, %r200, 2;
+shl.b32 %r698, %r202, 4;
+shl.b32 %r699, %r203, 4;
+shl.b32 %r700, %r204, 4;
+mov.u32 %r1291, %r1290;
+mov.u32 %r1295, %r1290;
+mov.u32 %r1296, %r1290;
+$L__BB0_108:
+shl.b32 %r563, %r1295, 3;
+mov.u32 %r564, _ZN7cutlass4smemE;
+add.s32 %r565, %r564, %r563;
+add.s32 %r553, %r565, 208;
+mov.b32 %r555, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r553], %r1296, %r555; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+shl.b32 %r566, %r1295, 4;
+add.s32 %r567, %r564, %r566;
+add.s32 %r560, %r567, 352;
+
+{
+.reg .pred p1;
+.reg .b128 clc_result;
+ld.shared.b128 clc_result, [%r560];
+clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;
+selp.u32 %r559, 1, 0, p1;
+@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%r1303, %r1302, %r558, _}, clc_result;
+}
+
+
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+add.s32 %r561, %r565, 224;
+mov.b32 %r562, 0;
+
+{
+.reg .b32 remAddr32;
+mapa.shared::cluster.u32 remAddr32, %r561, %r562;
+mbarrier.arrive.shared::cluster.b64 _, [remAddr32];
+}
+
+setp.lt.s32 %p71, %r34, 1;
+@%p71 bra $L__BB0_112;
+ld.param.u32 %r217, [%rd1+1932];
+setp.eq.s32 %p72, %r217, 1;
+ld.param.v4.u32 {%r568, %r569, %r218, %r570}, [%rd1+1936];
+mul.hi.u32 %r571, %r1303, %r568;
+shr.u32 %r572, %r571, %r569;
+selp.b32 %r1297, %r1303, %r572, %p72;
+mul.lo.s32 %r573, %r1297, %r217;
+sub.s32 %r220, %r1303, %r573;
+setp.eq.s32 %p73, %r218, 1;
+mul.hi.u32 %r574, %r1302, %r570;
+ld.param.v4.u32 {%r575, %r576, %r221, %r222}, [%rd1+1952];
+mov.b64 %rd20, {%r575, %r576};
+shr.u32 %r577, %r574, %r575;
+selp.b32 %r1298, %r1302, %r577, %p73;
+mul.lo.s32 %r579, %r1298, %r218;
+sub.s32 %r224, %r1302, %r579;
+setp.eq.s32 %p74, %r34, 1;
+mul.hi.u32 %r580, %r1298, %r221;
+shr.u32 %r581, %r580, %r222;
+selp.b32 %r225, %r1298, %r581, %p74;
+mul.lo.s32 %r582, %r225, %r34;
+sub.s32 %r226, %r1298, %r582;
+mul.hi.u32 %r583, %r197, %r568;
+shr.u32 %r584, %r583, %r569;
+selp.b32 %r585, %r197, %r584, %p72;
+mul.hi.u32 %r586, %r585, %r221;
+shr.u32 %r587, %r586, %r222;
+selp.b32 %r227, %r585, %r587, %p74;
+mul.lo.s32 %r588, %r227, %r34;
+mul.hi.u32 %r589, %r198, %r570;
+shr.u32 %r590, %r589, %r575;
+selp.b32 %r591, %r198, %r590, %p73;
+mul.hi.u32 %r592, %r591, %r221;
+shr.u32 %r593, %r592, %r222;
+selp.b32 %r594, %r591, %r593, %p74;
+mul.lo.s32 %r596, %r594, %r34;
+setp.ge.s32 %p75, %r1297, %r588;
+setp.ge.s32 %p76, %r1298, %r596;
+{ .reg .b32 tmp; mov.b64 {tmp, %r228}, %rd20; }
+or.pred %p77, %p75, %p76;
+@%p77 bra $L__BB0_111;
+setp.eq.s32 %p78, %r34, 1;
+mul.hi.u32 %r597, %r1297, %r221;
+shr.u32 %r598, %r597, %r222;
+selp.b32 %r599, %r1297, %r598, %p78;
+mad.lo.s32 %r229, %r227, %r226, %r599;
+sub.s32 %r600, %r225, %r599;
+mad.lo.s32 %r1298, %r600, %r34, %r1297;
+mov.u32 %r1297, %r229;
+$L__BB0_111:
+mad.lo.s32 %r1303, %r217, %r1297, %r220;
+mad.lo.s32 %r1302, %r218, %r1298, %r224;
+mov.u32 %r34, %r228;
+$L__BB0_112:
+setp.ne.s32 %p79, %r37, 1;
+@%p79 bra $L__BB0_114;
+ld.param.u32 %r601, [%rd1+1952];
+ld.param.v4.u32 {%r602, %r603, %r604, %r605}, [%rd1+1936];
+ld.param.u32 %r606, [%rd1+1932];
+setp.eq.s32 %p80, %r606, 1;
+mul.hi.u32 %r607, %r1303, %r602;
+shr.u32 %r608, %r607, %r603;
+selp.b32 %r609, %r1303, %r608, %p80;
+setp.eq.s32 %p81, %r604, 1;
+mul.hi.u32 %r610, %r1302, %r605;
+shr.u32 %r611, %r610, %r601;
+selp.b32 %r612, %r1302, %r611, %p81;
+sub.s32 %r613, %r612, %r609;
+mad.lo.s32 %r1303, %r613, %r606, %r1303;
+sub.s32 %r614, %r609, %r612;
+mad.lo.s32 %r1302, %r614, %r604, %r1302;
+$L__BB0_114:
+setp.eq.s64 %p82, %rd2, 0;
+add.s32 %r242, %r1295, 1;
+shl.b32 %r243, %r1228, 7;
+shl.b32 %r244, %r1227, 7;
+@%p82 bra $L__BB0_118;
+ld.param.u64 %rd9, [%rd1+1320];
+setp.eq.s64 %p83, %rd9, 0;
+@%p83 bra $L__BB0_117;
+cvta.to.global.u64 %rd21, %rd9;
+cvt.u32.u64 %r615, %rd2;
+mul.lo.s32 %r616, %r14, %r615;
+mul.wide.s32 %rd22, %r616, 4;
+add.s64 %rd23, %rd21, %rd22;
+ld.global.f32 %f3, [%rd23];
+bra.uni $L__BB0_118;
+$L__BB0_117:
+ld.param.f32 %f3, [%rd1+1312];
+$L__BB0_118:
+shl.b32 %r620, %r1290, 3;
+add.s32 %r622, %r564, %r620;
+add.s32 %r245, %r622, 240;
+
+{
+.reg .pred P1; 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r245], %r1291; 
+selp.b32 %r617, 1, 0, P1; 
+}
+
+setp.ne.s32 %p84, %r617, 0;
+shl.b32 %r623, %r1290, 7;
+add.s32 %r246, %r201, %r623;
+@%p84 bra $L__BB0_120;
+mov.b32 %r626, 10000000;
+
+{
+.reg .pred P1; 
+LAB_WAIT: 
+mbarrier.try_wait.parity.shared::cta.b64 P1, [%r245], %r1291, %r626; 
+@P1 bra DONE; 
+bra LAB_WAIT; 
+DONE: 
+}
+
+$L__BB0_120:
+setp.ne.s32 %p85, %r199, 0;
+
+tcgen05.ld.sync.aligned.32x32b.x32.b32{%r627, %r628, %r629, %r630,%r631, %r632, %r633, %r634,%r635, %r636, %r637, %r638,%r639, %r640, %r641, %r642,%r643, %r644, %r645, %r646,%r647, %r648, %r649, %r650,%r651, %r652, %r653, %r654,%r655, %r656, %r657, %r658},[%r246];
+
+
+mov.b32 %f105, %r627;
+mov.b32 %f106, %r628;
+mov.b32 %f107, %r629;
+mov.b32 %f108, %r630;
+mov.b32 %f109, %r631;
+mov.b32 %f110, %r632;
+mov.b32 %f111, %r633;
+mov.b32 %f112, %r634;
+mov.b32 %f113, %r635;
+mov.b32 %f114, %r636;
+mov.b32 %f115, %r637;
+mov.b32 %f116, %r638;
+mov.b32 %f117, %r639;
+mov.b32 %f118, %r640;
+mov.b32 %f119, %r641;
+mov.b32 %f120, %r642;
+mov.b32 %f121, %r643;
+mov.b32 %f122, %r644;
+mov.b32 %f123, %r645;
+mov.b32 %f124, %r646;
+mov.b32 %f125, %r647;
+mov.b32 %f126, %r648;
+mov.b32 %f127, %r649;
+mov.b32 %f128, %r650;
+mov.b32 %f129, %r651;
+mov.b32 %f130, %r652;
+mov.b32 %f131, %r653;
+mov.b32 %f132, %r654;
+mov.b32 %f133, %r655;
+mov.b32 %f134, %r656;
+mov.b32 %f135, %r657;
+mov.b32 %f136, %r658;
+mul.f32 %f137, %f3, %f105;
+mul.f32 %f138, %f3, %f106;
+mul.f32 %f139, %f3, %f107;
+mul.f32 %f140, %f3, %f108;
+mul.f32 %f141, %f3, %f109;
+mul.f32 %f142, %f3, %f110;
+mul.f32 %f143, %f3, %f111;
+mul.f32 %f144, %f3, %f112;
+mul.f32 %f145, %f3, %f113;
+mul.f32 %f146, %f3, %f114;
+mul.f32 %f147, %f3, %f115;
+mul.f32 %f148, %f3, %f116;
+mul.f32 %f149, %f3, %f117;
+mul.f32 %f150, %f3, %f118;
+mul.f32 %f151, %f3, %f119;
+mul.f32 %f152, %f3, %f120;
+mul.f32 %f153, %f3, %f121;
+mul.f32 %f154, %f3, %f122;
+mul.f32 %f155, %f3, %f123;
+mul.f32 %f156, %f3, %f124;
+mul.f32 %f157, %f3, %f125;
+mul.f32 %f158, %f3, %f126;
+mul.f32 %f159, %f3, %f127;
+mul.f32 %f160, %f3, %f128;
+mul.f32 %f161, %f3, %f129;
+mul.f32 %f162, %f3, %f130;
+mul.f32 %f163, %f3, %f131;
+mul.f32 %f164, %f3, %f132;
+mul.f32 %f165, %f3, %f133;
+mul.f32 %f166, %f3, %f134;
+mul.f32 %f167, %f3, %f135;
+mul.f32 %f168, %f3, %f136;
+add.s32 %r697, %r564, %r695;
+add.s32 %r247, %r697, 1024;
+st.shared.v4.f32 [%r697+1024], {%f137, %f138, %f139, %f140};
+add.s32 %r248, %r247, %r698;
+st.shared.v4.f32 [%r248], {%f141, %f142, %f143, %f144};
+add.s32 %r249, %r247, %r699;
+st.shared.v4.f32 [%r249], {%f145, %f146, %f147, %f148};
+add.s32 %r250, %r249, %r698;
+st.shared.v4.f32 [%r250], {%f149, %f150, %f151, %f152};
+add.s32 %r251, %r247, %r700;
+st.shared.v4.f32 [%r251], {%f153, %f154, %f155, %f156};
+add.s32 %r252, %r251, %r698;
+st.shared.v4.f32 [%r252], {%f157, %f158, %f159, %f160};
+add.s32 %r253, %r251, %r699;
+st.shared.v4.f32 [%r253], {%f161, %f162, %f163, %f164};
+add.s32 %r254, %r253, %r698;
+st.shared.v4.f32 [%r254], {%f165, %f166, %f167, %f168};
+add.s32 %r692, %r246, 32;
+
+tcgen05.ld.sync.aligned.32x32b.x32.b32{%r660, %r661, %r662, %r663,%r664, %r665, %r666, %r667,%r668, %r669, %r670, %r671,%r672, %r673, %r674, %r675,%r676, %r677, %r678, %r679,%r680, %r681, %r682, %r683,%r684, %r685, %r686, %r687,%r688, %r689, %r690, %r691},[%r692];
+
+
+mov.b32 %f8, %r660;
+mov.b32 %f9, %r661;
+mov.b32 %f10, %r662;
+mov.b32 %f11, %r663;
+mov.b32 %f12, %r664;
+mov.b32 %f13, %r665;
+mov.b32 %f14, %r666;
+mov.b32 %f15, %r667;
+mov.b32 %f16, %r668;
+mov.b32 %f17, %r669;
+mov.b32 %f18, %r670;
+mov.b32 %f19, %r671;
+mov.b32 %f20, %r672;
+mov.b32 %f21, %r673;
+mov.b32 %f22, %r674;
+mov.b32 %f23, %r675;
+mov.b32 %f24, %r676;
+mov.b32 %f25, %r677;
+mov.b32 %f26, %r678;
+mov.b32 %f27, %r679;
+mov.b32 %f28, %r680;
+mov.b32 %f29, %r681;
+mov.b32 %f30, %r682;
+mov.b32 %f31, %r683;
+mov.b32 %f32, %r684;
+mov.b32 %f33, %r685;
+mov.b32 %f34, %r686;
+mov.b32 %f35, %r687;
+mov.b32 %f36, %r688;
+mov.b32 %f37, %r689;
+mov.b32 %f38, %r690;
+mov.b32 %f39, %r691;
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+mov.b32 %r693, 1;
+mov.b32 %r694, 128;
+
+bar.sync %r693, %r694;
+
+@%p85 bra $L__BB0_122;
+add.s32 %r701, %r564, 1024;
+
+cp.async.bulk.tensor.3d.global.shared::cta.bulk_group [%rd8, {%r244, %r243, %r14}], [%r701];
+
+
+cp.async.bulk.commit_group;
+
+
+cp.async.bulk.wait_group.read 1;
+
+$L__BB0_122:
+setp.ne.s32 %p86, %r199, 0;
+mov.b32 %r741, 1;
+mov.b32 %r742, 128;
+
+bar.sync %r741, %r742;
+
+mul.f32 %f169, %f3, %f8;
+mul.f32 %f170, %f3, %f9;
+mul.f32 %f171, %f3, %f10;
+mul.f32 %f172, %f3, %f11;
+st.shared.v4.f32 [%r247+16384], {%f169, %f170, %f171, %f172};
+mul.f32 %f173, %f3, %f12;
+mul.f32 %f174, %f3, %f13;
+mul.f32 %f175, %f3, %f14;
+mul.f32 %f176, %f3, %f15;
+st.shared.v4.f32 [%r248+16384], {%f173, %f174, %f175, %f176};
+mul.f32 %f177, %f3, %f16;
+mul.f32 %f178, %f3, %f17;
+mul.f32 %f179, %f3, %f18;
+mul.f32 %f180, %f3, %f19;
+st.shared.v4.f32 [%r249+16384], {%f177, %f178, %f179, %f180};
+mul.f32 %f181, %f3, %f20;
+mul.f32 %f182, %f3, %f21;
+mul.f32 %f183, %f3, %f22;
+mul.f32 %f184, %f3, %f23;
+st.shared.v4.f32 [%r250+16384], {%f181, %f182, %f183, %f184};
+mul.f32 %f185, %f3, %f24;
+mul.f32 %f186, %f3, %f25;
+mul.f32 %f187, %f3, %f26;
+mul.f32 %f188, %f3, %f27;
+st.shared.v4.f32 [%r251+16384], {%f185, %f186, %f187, %f188};
+mul.f32 %f189, %f3, %f28;
+mul.f32 %f190, %f3, %f29;
+mul.f32 %f191, %f3, %f30;
+mul.f32 %f192, %f3, %f31;
+st.shared.v4.f32 [%r252+16384], {%f189, %f190, %f191, %f192};
+mul.f32 %f193, %f3, %f32;
+mul.f32 %f194, %f3, %f33;
+mul.f32 %f195, %f3, %f34;
+mul.f32 %f196, %f3, %f35;
+st.shared.v4.f32 [%r253+16384], {%f193, %f194, %f195, %f196};
+mul.f32 %f197, %f3, %f36;
+mul.f32 %f198, %f3, %f37;
+mul.f32 %f199, %f3, %f38;
+mul.f32 %f200, %f3, %f39;
+st.shared.v4.f32 [%r254+16384], {%f197, %f198, %f199, %f200};
+add.s32 %r740, %r246, 64;
+
+tcgen05.ld.sync.aligned.32x32b.x32.b32{%r708, %r709, %r710, %r711,%r712, %r713, %r714, %r715,%r716, %r717, %r718, %r719,%r720, %r721, %r722, %r723,%r724, %r725, %r726, %r727,%r728, %r729, %r730, %r731,%r732, %r733, %r734, %r735,%r736, %r737, %r738, %r739},[%r740];
+
+
+mov.b32 %f40, %r708;
+mov.b32 %f41, %r709;
+mov.b32 %f42, %r710;
+mov.b32 %f43, %r711;
+mov.b32 %f44, %r712;
+mov.b32 %f45, %r713;
+mov.b32 %f46, %r714;
+mov.b32 %f47, %r715;
+mov.b32 %f48, %r716;
+mov.b32 %f49, %r717;
+mov.b32 %f50, %r718;
+mov.b32 %f51, %r719;
+mov.b32 %f52, %r720;
+mov.b32 %f53, %r721;
+mov.b32 %f54, %r722;
+mov.b32 %f55, %r723;
+mov.b32 %f56, %r724;
+mov.b32 %f57, %r725;
+mov.b32 %f58, %r726;
+mov.b32 %f59, %r727;
+mov.b32 %f60, %r728;
+mov.b32 %f61, %r729;
+mov.b32 %f62, %r730;
+mov.b32 %f63, %r731;
+mov.b32 %f64, %r732;
+mov.b32 %f65, %r733;
+mov.b32 %f66, %r734;
+mov.b32 %f67, %r735;
+mov.b32 %f68, %r736;
+mov.b32 %f69, %r737;
+mov.b32 %f70, %r738;
+mov.b32 %f71, %r739;
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+
+bar.sync %r741, %r742;
+
+@%p86 bra $L__BB0_124;
+add.s32 %r744, %r244, 32;
+add.s32 %r743, %r564, 17408;
+
+cp.async.bulk.tensor.3d.global.shared::cta.bulk_group [%rd8, {%r744, %r243, %r14}], [%r743];
+
+
+cp.async.bulk.commit_group;
+
+
+cp.async.bulk.wait_group.read 1;
+
+$L__BB0_124:
+setp.ne.s32 %p87, %r199, 0;
+mov.b32 %r784, 1;
+mov.b32 %r785, 128;
+
+bar.sync %r784, %r785;
+
+mul.f32 %f201, %f3, %f40;
+mul.f32 %f202, %f3, %f41;
+mul.f32 %f203, %f3, %f42;
+mul.f32 %f204, %f3, %f43;
+st.shared.v4.f32 [%r247], {%f201, %f202, %f203, %f204};
+mul.f32 %f205, %f3, %f44;
+mul.f32 %f206, %f3, %f45;
+mul.f32 %f207, %f3, %f46;
+mul.f32 %f208, %f3, %f47;
+st.shared.v4.f32 [%r248], {%f205, %f206, %f207, %f208};
+mul.f32 %f209, %f3, %f48;
+mul.f32 %f210, %f3, %f49;
+mul.f32 %f211, %f3, %f50;
+mul.f32 %f212, %f3, %f51;
+st.shared.v4.f32 [%r249], {%f209, %f210, %f211, %f212};
+mul.f32 %f213, %f3, %f52;
+mul.f32 %f214, %f3, %f53;
+mul.f32 %f215, %f3, %f54;
+mul.f32 %f216, %f3, %f55;
+st.shared.v4.f32 [%r250], {%f213, %f214, %f215, %f216};
+mul.f32 %f217, %f3, %f56;
+mul.f32 %f218, %f3, %f57;
+mul.f32 %f219, %f3, %f58;
+mul.f32 %f220, %f3, %f59;
+st.shared.v4.f32 [%r251], {%f217, %f218, %f219, %f220};
+mul.f32 %f221, %f3, %f60;
+mul.f32 %f222, %f3, %f61;
+mul.f32 %f223, %f3, %f62;
+mul.f32 %f224, %f3, %f63;
+st.shared.v4.f32 [%r252], {%f221, %f222, %f223, %f224};
+mul.f32 %f225, %f3, %f64;
+mul.f32 %f226, %f3, %f65;
+mul.f32 %f227, %f3, %f66;
+mul.f32 %f228, %f3, %f67;
+st.shared.v4.f32 [%r253], {%f225, %f226, %f227, %f228};
+mul.f32 %f229, %f3, %f68;
+mul.f32 %f230, %f3, %f69;
+mul.f32 %f231, %f3, %f70;
+mul.f32 %f232, %f3, %f71;
+st.shared.v4.f32 [%r254], {%f229, %f230, %f231, %f232};
+add.s32 %r782, %r246, 96;
+
+tcgen05.ld.sync.aligned.32x32b.x32.b32{%r750, %r751, %r752, %r753,%r754, %r755, %r756, %r757,%r758, %r759, %r760, %r761,%r762, %r763, %r764, %r765,%r766, %r767, %r768, %r769,%r770, %r771, %r772, %r773,%r774, %r775, %r776, %r777,%r778, %r779, %r780, %r781},[%r782];
+
+
+
+{
+tcgen05.wait::ld.sync.aligned; 
+}
+
+add.s32 %r786, %r245, 32;
+and.b32 %r783, %r786, -16777224;
+
+{
+mbarrier.arrive.shared::cluster.b64 _, [%r783];
+}
+
+add.s32 %r787, %r1290, 1;
+setp.eq.s32 %p88, %r787, 4;
+selp.b32 %r1290, 0, %r787, %p88;
+selp.u32 %r788, 1, 0, %p88;
+xor.b32 %r1291, %r1291, %r788;
+mov.b32 %f72, %r750;
+mov.b32 %f73, %r751;
+mov.b32 %f74, %r752;
+mov.b32 %f75, %r753;
+mov.b32 %f76, %r754;
+mov.b32 %f77, %r755;
+mov.b32 %f78, %r756;
+mov.b32 %f79, %r757;
+mov.b32 %f80, %r758;
+mov.b32 %f81, %r759;
+mov.b32 %f82, %r760;
+mov.b32 %f83, %r761;
+mov.b32 %f84, %r762;
+mov.b32 %f85, %r763;
+mov.b32 %f86, %r764;
+mov.b32 %f87, %r765;
+mov.b32 %f88, %r766;
+mov.b32 %f89, %r767;
+mov.b32 %f90, %r768;
+mov.b32 %f91, %r769;
+mov.b32 %f92, %r770;
+mov.b32 %f93, %r771;
+mov.b32 %f94, %r772;
+mov.b32 %f95, %r773;
+mov.b32 %f96, %r774;
+mov.b32 %f97, %r775;
+mov.b32 %f98, %r776;
+mov.b32 %f99, %r777;
+mov.b32 %f100, %r778;
+mov.b32 %f101, %r779;
+mov.b32 %f102, %r780;
+mov.b32 %f103, %r781;
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+
+bar.sync %r784, %r785;
+
+@%p87 bra $L__BB0_126;
+add.s32 %r790, %r244, 64;
+add.s32 %r789, %r564, 1024;
+
+cp.async.bulk.tensor.3d.global.shared::cta.bulk_group [%rd8, {%r790, %r243, %r14}], [%r789];
+
+
+cp.async.bulk.commit_group;
+
+
+cp.async.bulk.wait_group.read 1;
+
+$L__BB0_126:
+setp.ne.s32 %p89, %r199, 0;
+mov.b32 %r796, 1;
+mov.b32 %r797, 128;
+
+bar.sync %r796, %r797;
+
+mul.f32 %f233, %f3, %f72;
+mul.f32 %f234, %f3, %f73;
+mul.f32 %f235, %f3, %f74;
+mul.f32 %f236, %f3, %f75;
+st.shared.v4.f32 [%r247+16384], {%f233, %f234, %f235, %f236};
+mul.f32 %f237, %f3, %f76;
+mul.f32 %f238, %f3, %f77;
+mul.f32 %f239, %f3, %f78;
+mul.f32 %f240, %f3, %f79;
+st.shared.v4.f32 [%r248+16384], {%f237, %f238, %f239, %f240};
+mul.f32 %f241, %f3, %f80;
+mul.f32 %f242, %f3, %f81;
+mul.f32 %f243, %f3, %f82;
+mul.f32 %f244, %f3, %f83;
+st.shared.v4.f32 [%r249+16384], {%f241, %f242, %f243, %f244};
+mul.f32 %f245, %f3, %f84;
+mul.f32 %f246, %f3, %f85;
+mul.f32 %f247, %f3, %f86;
+mul.f32 %f248, %f3, %f87;
+st.shared.v4.f32 [%r250+16384], {%f245, %f246, %f247, %f248};
+mul.f32 %f249, %f3, %f88;
+mul.f32 %f250, %f3, %f89;
+mul.f32 %f251, %f3, %f90;
+mul.f32 %f252, %f3, %f91;
+st.shared.v4.f32 [%r251+16384], {%f249, %f250, %f251, %f252};
+mul.f32 %f253, %f3, %f92;
+mul.f32 %f254, %f3, %f93;
+mul.f32 %f255, %f3, %f94;
+mul.f32 %f256, %f3, %f95;
+st.shared.v4.f32 [%r252+16384], {%f253, %f254, %f255, %f256};
+mul.f32 %f257, %f3, %f96;
+mul.f32 %f258, %f3, %f97;
+mul.f32 %f259, %f3, %f98;
+mul.f32 %f260, %f3, %f99;
+st.shared.v4.f32 [%r253+16384], {%f257, %f258, %f259, %f260};
+mul.f32 %f261, %f3, %f100;
+mul.f32 %f262, %f3, %f101;
+mul.f32 %f263, %f3, %f102;
+mul.f32 %f264, %f3, %f103;
+st.shared.v4.f32 [%r254+16384], {%f261, %f262, %f263, %f264};
+
+{
+fence.proxy.async.shared::cta; 
+}
+
+
+bar.sync %r796, %r797;
+
+@%p89 bra $L__BB0_128;
+add.s32 %r799, %r244, 96;
+add.s32 %r798, %r564, 17408;
+
+cp.async.bulk.tensor.3d.global.shared::cta.bulk_group [%rd8, {%r799, %r243, %r14}], [%r798];
+
+
+cp.async.bulk.commit_group;
+
+
+cp.async.bulk.wait_group.read 1;
+
+$L__BB0_128:
+setp.eq.s32 %p90, %r242, 2;
+setp.eq.s32 %p91, %r559, 1;
+mov.b32 %r803, 1;
+mov.b32 %r804, 128;
+
+bar.sync %r803, %r804;
+
+selp.u32 %r805, 1, 0, %p90;
+xor.b32 %r1296, %r1296, %r805;
+selp.b32 %r1295, 0, %r242, %p90;
+add.s32 %r1227, %r1302, %r412;
+add.s32 %r1228, %r1303, %r411;
+mov.u32 %r14, %r558;
+@%p91 bra $L__BB0_108;
+$L__BB0_129:
+ret;
+
+}

@@ -1,0 +1,2 @@
+# Function-local PTX excerpts preserve compiler-emitted bytes for hash replay.
+evidence/codegen-sm110a-v2/excerpts/**/target.ptx.txt -whitespace
