@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "CUTLASS 3.x 中新的概念性 GEMM 层次结构",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnp8ReKmEYW0TXzDVjjFpVWh",
+  "board_block_id": "doxcnxspZ5fTiI9JsakgKYweaye",
+  "board_token": "OzuDwLXRNhCk1Mbt0tOcVokynsh",
+  "idempotent_token": "cutlass-r138-01-hierarchy",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "f723c2b561e9c72dffb5d2ad9f023d424ba5c71b0bd1f168fb7e7149f962a0ad",
+    "diagram.openapi.json": "f14709d3a8f495b65eb335298527a0c6dacedccbe94d9f2f1fc99bc268542930",
+    "diagram.png": "3964fd1dda80c754f73b37a89a17f173cb85dc3e1f2e5ee679255a7093768263"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "Collective Builder",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnj5H7HzADGj4ombjW166f0d",
+  "board_block_id": "doxcnz3MfjCkAoRDgbS5I4ELwKf",
+  "board_token": "EYdFwoKnuhYtoYb5E52cpr5nnc0",
+  "idempotent_token": "cutlass-r137-03-builder",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "831482aff2026cf3f7e2508ed95fd23e3524eeabed69ddbecface361c02244fe",
+    "diagram.openapi.json": "2916ee4687d65a438ae6fd1ae43089fe9b5055efecef594b05e31fe3f68d793d",
+    "diagram.png": "3508ad19226750d9a363489edbbde5388af8ff17459718187690bd7f26df1871"
+  }
+}

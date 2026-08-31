@@ -1,0 +1,608 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "x": 20,
+      "y": 20,
+      "width": 1360,
+      "height": "fit-content",
+      "layout": "vertical",
+      "gap": 22,
+      "padding": [34, 40],
+      "alignItems": "center",
+      "fillColor": "#F8FAFC",
+      "borderColor": "#CBD5E1",
+      "borderWidth": 1,
+      "borderRadius": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "width": 1280,
+          "height": "fit-content",
+          "text": "Kernel 层：把动态 GEMM 问题映射到 CTA / cluster grid",
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "width": 1280,
+          "height": "fit-content",
+          "text": "GemmUniversal 组合 Mainloop 与 Epilogue；scheduler 决定谁处理哪个 output tile",
+          "fontSize": 12,
+          "textColor": "#64748B",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "problem_mapping",
+          "width": 1280,
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 30,
+          "padding": [24, 22],
+          "alignItems": "stretch",
+          "fillColor": "#FFFFFF",
+          "borderColor": "#E2E8F0",
+          "borderWidth": 2,
+          "borderRadius": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "problem_shape",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [16, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "problem_shape_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "动态 ProblemShape",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "problem_shape_api",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "[M, N, K, L]",
+                  "fontSize": 14,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#76B900",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "padding": [10, 8]
+                },
+                {
+                  "type": "text",
+                  "id": "problem_shape_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "运行时参数",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "output_tiles",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [16, 14],
+              "alignItems": "center",
+              "fillColor": "#ECFEFF",
+              "borderColor": "#0891B2",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "output_tiles_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "划分 output tiles",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#155E75",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "output_tiles_api",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "ceil(M / TileM) ×\nceil(N / TileN) × L",
+                  "fontSize": 14,
+                  "textColor": "#0E7490",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "output_tiles_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "K 是归约维",
+                  "fontSize": 12,
+                  "textColor": "#0E7490",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tile_scheduler",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [16, 14],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "scheduler_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Tile Scheduler",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "scheduler_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "选择下一个\n(M_tile, N_tile, L)",
+                  "fontSize": 14,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "scheduler_note",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "只分配工作，不替换 Mainloop",
+                  "fontSize": 12,
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "grid",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [16, 14],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "grid_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "CTA / cluster grid",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "grid_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "每个 CTA 或 CTA pair\n领取 scheduler 工作单元",
+                  "fontSize": 14,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gemm_universal",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [16, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "gemm_universal_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "GemmUniversal",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "gemm_universal_api",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "kernel::GemmUniversal<\nProblemShape, Mainloop,\nEpilogue, Scheduler>",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "details",
+          "width": 1280,
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 22,
+          "padding": 0,
+          "alignItems": "stretch",
+          "children": [
+            {
+              "type": "frame",
+              "id": "single_tile",
+              "width": 760,
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [20, 22],
+              "alignItems": "stretch",
+              "fillColor": "#FFFFFF",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "single_tile_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "GemmUniversal 内部：处理一个 output tile",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "single_tile_flow",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "horizontal",
+                  "gap": 46,
+                  "padding": [8, 10],
+                  "alignItems": "stretch",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "mainloop",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [16, 14],
+                      "alignItems": "center",
+                      "fillColor": "#EFF6FF",
+                      "borderColor": "#3B82F6",
+                      "borderWidth": 2,
+                      "borderRadius": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mainloop_title",
+                          "width": "fill-container",
+                          "height": "fit-content",
+                          "text": "Collective Mainloop",
+                          "fontSize": 18,
+                          "fontWeight": "bold",
+                          "textColor": "#1D4ED8",
+                          "textAlign": "center"
+                        },
+                        {
+                          "type": "text",
+                          "id": "mainloop_desc",
+                          "width": "fill-container",
+                          "height": "fit-content",
+                          "text": "TMA → SMEM → TCGen05 MMA\n沿 K 维累加到 TMEM",
+                          "fontSize": 14,
+                          "textColor": "#1E40AF",
+                          "textAlign": "center"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "epilogue",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [16, 14],
+                      "alignItems": "center",
+                      "fillColor": "#FAF5FF",
+                      "borderColor": "#A855F7",
+                      "borderWidth": 2,
+                      "borderRadius": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "epilogue_title",
+                          "width": "fill-container",
+                          "height": "fit-content",
+                          "text": "Collective Epilogue",
+                          "fontSize": 18,
+                          "fontWeight": "bold",
+                          "textColor": "#6B21A8",
+                          "textAlign": "center"
+                        },
+                        {
+                          "type": "text",
+                          "id": "epilogue_desc",
+                          "width": "fill-container",
+                          "height": "fit-content",
+                          "text": "TMEM → tcgen05.ld → EVT\n类型转换并写回 D tile",
+                          "fontSize": 14,
+                          "textColor": "#7E22CE",
+                          "textAlign": "center"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "execution_modes",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [20, 22],
+              "alignItems": "stretch",
+              "fillColor": "#FFFFFF",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "execution_modes_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "同一 Kernel 抽象下的执行拓扑",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "execution_modes_row",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "layout": "horizontal",
+                  "gap": 14,
+                  "padding": [8, 0],
+                  "alignItems": "stretch",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "one_sm",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "text": "1SM\n单个 CTA\ncta_group::1",
+                      "fontSize": 14,
+                      "fontWeight": "bold",
+                      "textColor": "#9A3412",
+                      "textAlign": "center",
+                      "verticalAlign": "middle",
+                      "fillColor": "#FFF7ED",
+                      "borderColor": "#F97316",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "padding": [14, 10]
+                    },
+                    {
+                      "type": "rect",
+                      "id": "two_sm",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "text": "2SM\npeer CTA pair\ncta_group::2",
+                      "fontSize": 14,
+                      "fontWeight": "bold",
+                      "textColor": "#9A3412",
+                      "textAlign": "center",
+                      "verticalAlign": "middle",
+                      "fillColor": "#FFF7ED",
+                      "borderColor": "#F97316",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "padding": [14, 10]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "execution_modes_note",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "ClusterShape 与 schedule 决定协作方式",
+                  "fontSize": 12,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rect",
+          "id": "stateless_note",
+          "width": 1280,
+          "height": "fit-content",
+          "text": "Kernel 无状态：ProblemShape、指针、stride、scheduler 参数都由调用方通过 GemmUniversal::Arguments 传入。",
+          "fontSize": 14,
+          "fontWeight": "bold",
+          "textColor": "#365314",
+          "textAlign": "center",
+          "verticalAlign": "middle",
+          "fillColor": "#F0F9E8",
+          "borderColor": "#76B900",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "padding": [13, 18]
+        },
+        {
+          "type": "rect",
+          "id": "conclusion",
+          "width": 1280,
+          "height": "fit-content",
+          "text": "本图结论：Kernel 层把问题空间分配与单 tile 计算组装起来，但不保存运行时状态，也不改变 Mainloop 的数据通路。",
+          "fontSize": 14,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center",
+          "verticalAlign": "middle",
+          "fillColor": "#FFFFFF",
+          "borderColor": "#94A3B8",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "padding": [13, 18]
+        }
+      ]
+    },
+    {
+      "type": "connector",
+      "id": "edge_problem_tiles",
+      "connector": {
+        "from": "problem_shape",
+        "to": "output_tiles",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_tiles_scheduler",
+      "connector": {
+        "from": "output_tiles",
+        "to": "tile_scheduler",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_scheduler_grid",
+      "connector": {
+        "from": "tile_scheduler",
+        "to": "grid",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_grid_kernel",
+      "connector": {
+        "from": "grid",
+        "to": "gemm_universal",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_mainloop_epilogue",
+      "connector": {
+        "from": "mainloop",
+        "to": "epilogue",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_kernel_single_tile",
+      "connector": {
+        "from": "gemm_universal",
+        "to": "single_tile",
+        "fromAnchor": "bottom",
+        "toAnchor": "top",
+        "lineShape": "rightAngle",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    }
+  ]
+}

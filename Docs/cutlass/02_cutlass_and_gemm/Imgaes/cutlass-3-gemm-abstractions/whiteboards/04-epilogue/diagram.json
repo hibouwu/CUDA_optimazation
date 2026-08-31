@@ -1,0 +1,482 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "x": 20,
+      "y": 20,
+      "layout": "vertical",
+      "width": 1360,
+      "height": "fit-content",
+      "gap": 24,
+      "padding": [34, 38],
+      "alignItems": "center",
+      "fillColor": "#F8FAFC",
+      "borderColor": "#CBD5E1",
+      "borderWidth": 1,
+      "borderRadius": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "text": "Collective Epilogue：从 TMEM 累加器到 D 矩阵",
+          "width": 1240,
+          "height": "fit-content",
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "text": "TCGen05 读回 · EVT 融合计算 · NoSmem / TMA 两种写回路径",
+          "width": 1240,
+          "height": "fit-content",
+          "fontSize": 12,
+          "textColor": "#64748B",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "data_flow",
+          "layout": "dagre",
+          "width": "fit-content",
+          "height": "fit-content",
+          "padding": 28,
+          "fillColor": "#FFFFFF",
+          "borderColor": "#E2E8F0",
+          "borderWidth": 2,
+          "borderRadius": 16,
+          "layoutOptions": {
+            "rankdir": "TB",
+            "nodesep": 48,
+            "ranksep": 64,
+            "edges": [
+              ["tmem_accumulator", "tcgen05_ld", "read"],
+              ["tcgen05_ld", "register_fragment", "registers"],
+              ["register_fragment", "evt", "Acc fragment"],
+              ["evt_inputs", "evt", "inputs"],
+              ["evt", "nosmem_store", "direct"],
+              ["evt", "tma_store", "staged"],
+              ["nosmem_store", "d_gmem", "store"],
+              ["tma_store", "d_gmem", "TMA"]
+            ]
+          },
+          "children": [
+            {
+              "type": "frame",
+              "id": "tmem_accumulator",
+              "layout": "vertical",
+              "width": 180,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 14],
+              "alignItems": "center",
+              "fillColor": "#F5F3FF",
+              "borderColor": "#7C3AED",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "acc_title",
+                  "text": "TMEM accumulator",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#5B21B6",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "acc_desc",
+                  "text": "FP32 累加器矩阵块",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#6D28D9",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "rect",
+              "id": "tcgen05_ld",
+              "text": "tcgen05.ld\nTMEM → registers",
+              "width": 146,
+              "height": 76,
+              "fillColor": "#F5F3FF",
+              "borderColor": "#7C3AED",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "fontSize": 14,
+              "textColor": "#5B21B6"
+            },
+            {
+              "type": "frame",
+              "id": "register_fragment",
+              "layout": "vertical",
+              "width": 180,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 14],
+              "alignItems": "center",
+              "fillColor": "#F5F3FF",
+              "borderColor": "#7C3AED",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fragment_title",
+                  "text": "Register fragment",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#5B21B6",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "fragment_desc",
+                  "text": "供 epilogue 线程消费",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#6D28D9",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "evt_inputs",
+              "layout": "vertical",
+              "width": 180,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "evt_inputs_title",
+                  "text": "Visitor inputs",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "evt_inputs_desc",
+                  "text": "C · alpha · beta · bias",
+                  "width": 152,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "evt",
+              "layout": "vertical",
+              "width": 250,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [15, 16],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "evt_title",
+                  "text": "EVT / FusionCallbacks",
+                  "width": 218,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "evt_desc",
+                  "text": "alpha × Acc + beta × C\n+ bias → activation\nElementCompute → ElementD",
+                  "width": 218,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "nosmem_store",
+              "layout": "vertical",
+              "width": 224,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 14],
+              "alignItems": "center",
+              "fillColor": "#EFF6FF",
+              "borderColor": "#3B82F6",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nosmem_title",
+                  "text": "NoSmem epilogue",
+                  "width": 196,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#1E40AF",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "nosmem_desc",
+                  "text": "NoSmemWarpSpecialized\nregister → global store",
+                  "width": 196,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#1D4ED8",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tma_store",
+              "layout": "vertical",
+              "width": 224,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 14],
+              "alignItems": "center",
+              "fillColor": "#EFF6FF",
+              "borderColor": "#3B82F6",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tma_title",
+                  "text": "TMA epilogue",
+                  "width": 196,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#1E40AF",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "tma_desc",
+                  "text": "TmaWarpSpecialized\nSMEM staging → TMA",
+                  "width": 196,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#1D4ED8",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "cylinder",
+              "id": "d_gmem",
+              "text": "D in GMEM\nElementD / LayoutD",
+              "width": 180,
+              "height": 84,
+              "fillColor": "#ECFEFF",
+              "borderColor": "#0891B2",
+              "borderWidth": 2,
+              "fontSize": 14,
+              "textColor": "#155E75"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "resource_flow",
+          "layout": "dagre",
+          "width": "fit-content",
+          "height": "fit-content",
+          "padding": [22, 28],
+          "fillColor": "#FFFFFF",
+          "borderColor": "#CBD5E1",
+          "borderWidth": 2,
+          "borderDash": "dashed",
+          "borderRadius": 14,
+          "layoutOptions": {
+            "rankdir": "LR",
+            "nodesep": 36,
+            "ranksep": 74,
+            "edges": [
+              ["epilogue_smem", "stage_carveout", "SMEM bytes"],
+              ["stage_carveout", "mainloop_stages", "stage budget"]
+            ]
+          },
+          "children": [
+            {
+              "type": "frame",
+              "id": "epilogue_smem",
+              "layout": "vertical",
+              "width": 246,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 16],
+              "alignItems": "center",
+              "fillColor": "#ECFEFF",
+              "borderColor": "#0891B2",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "epilogue_smem_title",
+                  "text": "Epilogue SharedStorage",
+                  "width": 214,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#155E75",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "epilogue_smem_desc",
+                  "text": "TMA staging / fusion state",
+                  "width": 214,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#0E7490",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "stage_carveout",
+              "layout": "vertical",
+              "width": 300,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 16],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "stage_carveout_title",
+                  "text": "StageCountAutoCarveout",
+                  "width": 268,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "stage_carveout_desc",
+                  "text": "编译期扣除 epilogue SMEM",
+                  "width": 268,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mainloop_stages",
+              "layout": "vertical",
+              "width": 236,
+              "height": "fit-content",
+              "gap": 7,
+              "padding": [14, 16],
+              "alignItems": "center",
+              "fillColor": "#F5F3FF",
+              "borderColor": "#7C3AED",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mainloop_stages_title",
+                  "text": "Mainloop stage 数",
+                  "width": 204,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#5B21B6",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "mainloop_stages_desc",
+                  "text": "A/B pipeline depth",
+                  "width": 204,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#6D28D9",
+                  "textAlign": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "conclusion",
+          "layout": "horizontal",
+          "width": 1240,
+          "height": "fit-content",
+          "padding": [16, 22],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "fillColor": "#F0F9E8",
+          "borderColor": "#76B900",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "conclusion_text",
+              "text": "本图结论：Epilogue 既定义累加器后处理与写回路径，也通过 SharedStorage 反向约束 Mainloop stage 数。",
+              "width": 1160,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#365314",
+              "textAlign": "center"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

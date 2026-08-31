@@ -1,0 +1,411 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "x": 20,
+      "y": 20,
+      "layout": "vertical",
+      "width": 1360,
+      "height": "fit-content",
+      "gap": 26,
+      "padding": [36, 42],
+      "alignItems": "center",
+      "fillColor": "#F8FAFC",
+      "borderColor": "#CBD5E1",
+      "borderWidth": 1,
+      "borderRadius": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "text": "Collective Builder：从高层配置到 SM110a Mainloop 类型",
+          "width": 1220,
+          "height": "fit-content",
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "text": "CUTLASS v4.6.1 · cutlass::arch::Sm100 配方 · compute_110a → sm_110a",
+          "width": 1220,
+          "height": "fit-content",
+          "fontSize": 12,
+          "textColor": "#64748B",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "builder_flow",
+          "layout": "dagre",
+          "width": "fit-content",
+          "height": "fit-content",
+          "padding": 36,
+          "fillColor": "#FFFFFF",
+          "borderColor": "#E2E8F0",
+          "borderWidth": 2,
+          "borderRadius": 16,
+          "layoutOptions": {
+            "rankdir": "TB",
+            "nodesep": 48,
+            "ranksep": 72,
+            "edges": [
+              ["builder_inputs", "collective_epilogue", "先构造"],
+              ["collective_epilogue", "epilogue_storage", "查询"],
+              ["epilogue_storage", "stage_carveout", "预留字节"],
+              ["builder_inputs", "schedule_select", "选择配方"],
+              ["schedule_select", "schedule_1sm", "CTA group::1"],
+              ["schedule_select", "schedule_2sm", "CTA group::2"],
+              ["builder_inputs", "mainloop_inference", "类型 / layout / tile"],
+              ["stage_carveout", "mainloop_inference", "stage budget"],
+              ["schedule_1sm", "mainloop_inference", "1SM dispatch"],
+              ["schedule_2sm", "mainloop_inference", "2SM dispatch"],
+              ["mainloop_inference", "collective_output", "::CollectiveOp"]
+            ]
+          },
+          "children": [
+            {
+              "type": "frame",
+              "id": "builder_inputs",
+              "layout": "vertical",
+              "width": 218,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "inputs_title",
+                  "text": "Builder 输入",
+                  "width": 182,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "inputs_api",
+                  "text": "ArchTag · Element · Layout\nAlignment · TileShape\nClusterShape · Schedule",
+                  "width": 182,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "collective_epilogue",
+              "layout": "vertical",
+              "width": 216,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "epilogue_title",
+                  "text": "① 构造 Epilogue",
+                  "width": 180,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "epilogue_api",
+                  "text": "CollectiveBuilder<...>\n::CollectiveOp",
+                  "width": 180,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "epilogue_storage",
+              "layout": "vertical",
+              "width": 210,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#ECFEFF",
+              "borderColor": "#0891B2",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "storage_title",
+                  "text": "Epilogue SMEM",
+                  "width": 174,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#155E75",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "storage_api",
+                  "text": "sizeof(CollectiveEpilogue\n::SharedStorage)",
+                  "width": 174,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#0E7490",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "stage_carveout",
+              "layout": "vertical",
+              "width": 230,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#ECFEFF",
+              "borderColor": "#0891B2",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "carveout_title",
+                  "text": "② 计算 Stage 预算",
+                  "width": 194,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#155E75",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "carveout_api",
+                  "text": "StageCountAutoCarveout<\nSharedStorageBytes>",
+                  "width": 194,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#0E7490",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "diamond",
+              "id": "schedule_select",
+              "text": "ClusterShape / Schedule\n选择 CTA 协作方式",
+              "width": 210,
+              "height": 116,
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "fontSize": 14,
+              "textColor": "#9A3412"
+            },
+            {
+              "type": "frame",
+              "id": "schedule_1sm",
+              "layout": "vertical",
+              "width": 220,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "schedule_1sm_title",
+                  "text": "1SM 配方",
+                  "width": 184,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "schedule_1sm_api",
+                  "text": "KernelTmaWarpSpecialized\n1SmSm100",
+                  "width": 184,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "schedule_2sm",
+              "layout": "vertical",
+              "width": 220,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "schedule_2sm_title",
+                  "text": "2SM 配方",
+                  "width": 184,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "schedule_2sm_api",
+                  "text": "KernelTmaWarpSpecialized\n2SmSm100",
+                  "width": 184,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#C2410C",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mainloop_inference",
+              "layout": "vertical",
+              "width": 244,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#F5F3FF",
+              "borderColor": "#7C3AED",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "inference_title",
+                  "text": "③ 推导 Mainloop 组件",
+                  "width": 208,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#5B21B6",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "inference_api",
+                  "text": "TMA Copy Atom\nSMEM Layout\nTiledMMA · DispatchPolicy",
+                  "width": 208,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#6D28D9",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "collective_output",
+              "layout": "vertical",
+              "width": 250,
+              "height": "fit-content",
+              "gap": 8,
+              "padding": [18, 20],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "output_title",
+                  "text": "Collective Mainloop",
+                  "width": 210,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "output_api",
+                  "text": "CollectiveMainloop\n::CollectiveOp",
+                  "width": 210,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "conclusion",
+          "layout": "horizontal",
+          "width": 1220,
+          "height": "fit-content",
+          "padding": [16, 22],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "fillColor": "#FFF7ED",
+          "borderColor": "#F97316",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "conclusion_text",
+              "text": "本图结论：Auto 是编译期策略，不是运行时自动调优。",
+              "width": 1120,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#9A3412",
+              "textAlign": "center"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "Collective 层：Mainloop",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnjZSvJhxMa4Xu53TQHtg2B1",
+  "board_block_id": "doxcn0OVyVFJnHNuVu3FcNaGnyh",
+  "board_token": "D9H2w0vuchOTFJbbtCBc3Dk0nzd",
+  "idempotent_token": "cutlass-r140-02-mainloop",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "32b076dbaa25a6769f7d53a9abf09f9a0447603487e5e857508085326b478c05",
+    "diagram.openapi.json": "d573ac3c0253f1b8740211878a7382eed2641477ee2c388488e47373b958ea83",
+    "diagram.png": "4d3115cf8791a17f393696465e0166b7ab2ee821b677b53e1bd3690c7844a8f0"
+  }
+}

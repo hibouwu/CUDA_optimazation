@@ -1,4 +1,4 @@
-## 关于 CuTe Layout Algebra 的笔记　Jay Shah†
+## 关于 CuTe 布局代数的笔记　Jay Shah†
 
 ## 1 引言
 
@@ -90,7 +90,7 @@ $$
 x \mapsto (x \bmod M _ {0}, \left\lfloor \frac {x}{M _ {0}} \right\rfloor \bmod M _ {1}, \dots , \left\lfloor \frac {x}{M _ {0} \cdot \dots \cdot M _ {\alpha - 2}} \right\rfloor \bmod M _ {\alpha - 1}, \left\lfloor \frac {x}{M _ {0} \cdot \dots \cdot M _ {\alpha - 1}} \right\rfloor).
 $$
 
-## 2.1 Complementation
+## 2.1 补布局
 
 本小节在一定假设下，定义 layout A 相对于给定整数 M 的 complement。
 
@@ -208,7 +208,7 @@ $(\_2, \_0, \_4): (\_1, \_4, \_6)$
 
 这是空 layout（`size(B)=0`），因为其 shape tuple 中出现了 0。
 
-## 2.2 Composition
+## 2.2 复合
 
 下面讨论 layout A 与 B 的 composition。为简化起见，假设 shape tuple 不含等于 1 的整数；去掉这些 mode 不会改变关联 layout function。目标是产生记作 $A\circ B$ 的 layout，使其关联函数 $f_{A\circ B}$ 等同于 composition $\widehat f_A\circ f_B$。一般而言，需要一定条件才能定义 $A\circ B$。
 
@@ -218,37 +218,37 @@ $$
 \widehat {M} = M _ {0} \cdot M _ {1} \cdot \ldots \cdot M _ {\alpha - 1} \cdot \infty
 $$
 
-and consider ∞ to be divisible by every positive integer. We say that $M$ is left divisible by $d$ (implicitly, with respect to the given factorization) if there exists $0 \leq i \leq \alpha$ such that: 
+并约定 ∞ 可被每个正整数整除。如果存在 $0 \leq i \leq \alpha$ 满足下列条件，就称 $M$ 可被 $d$ 左整除；这里默认是相对于上述给定分解而言。
 
-(1) $M _ { 0 } . . . M _ { i - 1 }$ divides $d . ^ { 4 }$ 
+(1) $M _ { 0 } \cdots M _ { i - 1 }$ 整除 $d$。$^{4}$
 
-(2) Supposing (1), let $c = d / ( M _ { 0 } . . . M _ { i - 1 } ) . ^ { 5 }$ Then if $\dot { \iota } < \alpha ,$ , we require in addition that $1 \leq c < M _ { i }$ 
+(2) 假设（1）成立，令 $c=d/(M_0\cdots M_{i-1})$。$^{5}$ 当 $i<\alpha$ 时，还要求 $1\leq c<M_i$。
 
-(3) For (2) in the case $i < \alpha ,$ we require in addition that $c$ also divides $M _ { i }$ 
+(3) 在（2）的 $i<\alpha$ 情形下，还要求 $c$ 整除 $M_i$。
 
-Note that $i$ is necessarily unique if it exists. In this case, we will refer to $i$ as the division index and write ${ \widehat { M } } = d \cdot { \widehat { M ^ { \prime } } }$ Moreover, we will endow $\widehat { M ^ { \prime } }$ with the following induced factorization: 
+注意，如果这样的 $i$ 存在，它必然唯一。此时称 $i$ 为除法索引，并写作 $\widehat M=d\cdot\widehat{M'}$。此外，为 $\widehat{M'}$ 赋予下列诱导分解：
 
-(a) I $\begin{array} { r } { 0 \leq i < \alpha , } \end{array}$ then $\widehat { M ^ { \prime } } = M _ { 0 } ^ { \prime } \cdot \ldots \cdot M _ { \alpha - i - 1 } ^ { \prime }$ · ∞ with $M _ { 0 } ^ { \prime } = M _ { i } / c > 1$ and $M _ { j } ^ { \prime } = M _ { i + j }$ for $0 < j < \alpha - i .$ 
+(a) 若 $0\leq i<\alpha$，则 $\widehat{M'}=M'_0\cdots M'_{\alpha-i-1}\cdot\infty$，其中 $M'_0=M_i/c>1$，且对 $0<j<\alpha-i$ 有 $M'_j=M_{i+j}$。
 
-(b) $\operatorname { I f } i = \alpha ,$ , then $\widehat { M } = d \cdot \infty$ and we will let $\widehat { M ^ { \prime } } = \infty$ 
+(b) 若 $i=\alpha$，则 $\widehat M=d\cdot\infty$，并令 $\widehat{M'}=\infty$。
 
 此外，如果存在 $0\leq i\leq\alpha$ 使上述条件（1）和（2）成立、但不一定满足（3），就称 M 可被 d 弱左整除。仍把必然唯一的 i 称为 division index，但不再拥有 $\widehat M$ 的 factorization。
 
-Note that in Definition 2.11, the term $\widehat { M ^ { \prime } }$ with its induced factorization can itself be considered for left divisibility or weak left divisibility (with the step of replacing the last factor by ∞ now being superfluous). 
+注意，定义 2.11 中带有诱导分解的 $\widehat{M'}$ 本身也可以继续讨论左整除或弱左整除；此时无需再次把最后一个因子替换为 ∞。
 
 先考虑第二个 layout 为 length 1 layout 的受限 composition 情况。为此，引入“composition admissibility”概念：
 
 定义 2.12。令 $\mathbf{S}=(M_0,\ldots,M_\alpha)$ 为 shape tuple，$M=M_0\cdots M_\alpha$，$B=(N):(r)$ 为 length 1 layout。如果以下条件成立，就称 pair `{S,B}` 对 composition admissible，或简称 admissible：
 
-(1) $M$ is left divisible by $r$. Write ${ \widehat { M } } = r \cdot { \widehat { M ^ { \prime } } }$ 
+(1) $M$ 可被 $r$ 左整除，记作 $\widehat M=r\cdot\widehat{M'}$。
 
-(2) With respect to its induced factorization, $\widehat { M ^ { \prime } }$ is weakly left divisible by $N .$ 
+(2) 相对于其诱导分解，$\widehat{M'}$ 可被 $N$ 弱左整除。
 
 admissibility 的思想是，layout composition $A\circ B$ 会涉及“沿 A 的 mode 划分 B”。更精确地，有以下定义：
 
 定义 2.13。假设 $\mathbf{S}=(M_0,\ldots,M_\alpha)$ 是 shape tuple，$B=(N):(r)$ 是使 `{S,B}` admissible 的 length 1 layout。令 $\mathbf{D}=(d_0,\ldots,d_\alpha)$ 为任意 stride tuple，$A=\mathbf{S}:\mathbf{D}$。
 
-As in Definition 2.11, let $M = M _ { 0 } \cdot \ldots \cdot M _ { \alpha }$ and ${ \widehat { M } } = r \cdot { \widehat { M ^ { \prime } } }$ with division index $0 \leq i \leq \alpha .$ . We separate the definition of $A \circ B$ into two cases. First suppose that $0 \leq i < \alpha$ , so that 
+与定义 2.11 相同，令 $M=M_0\cdots M_\alpha$，并以 $0\leq i\leq\alpha$ 为除法索引写作 $\widehat M=r\cdot\widehat{M'}$。对 $A\circ B$ 分两种情况定义。首先假设 $0\leq i<\alpha$，于是
 
 $$
 r = M _ {0} \cdot \ldots \cdot M _ {i - 1} \cdot c, \quad \widehat {M ^ {\prime}} = M _ {i} / c \cdot \ldots \cdot \infty .
@@ -257,12 +257,12 @@ $$
 如果 $N\leq M_i/c_*$，令 $A\circ B=(N):(cd_i)$。否则，有 $N=M_i/c\cdots M_{j-1}c\prime$；当 $j\neq\alpha$ 时 $c\prime<M_j$，并按下式定义。
 
 $$
-A \circ B = \left\{ \begin{array}{l l} (M _ {i} / c, M _ {i + 1},..., M _ {j - 1}, c ^ {\prime}): (c d _ {i}, d _ {i + 1},..., d _ {j - 1}, d _ {j}) & \text {if} c ^ {\prime} > 1; \\ (M _ {i} / c, M _ {i + 1},..., M _ {j - 1}): (c d _ {i}, d _ {i + 1},..., d _ {j - 1}) & \text {if} c ^ {\prime} = 1. \end{array} \right.
+A \circ B = \left\{ \begin{array}{l l} (M _ {i} / c, M _ {i + 1},..., M _ {j - 1}, c ^ {\prime}): (c d _ {i}, d _ {i + 1},..., d _ {j - 1}, d _ {j}) & \text {若} c ^ {\prime} > 1; \\ (M _ {i} / c, M _ {i + 1},..., M _ {j - 1}): (c d _ {i}, d _ {i + 1},..., d _ {j - 1}) & \text {若} c ^ {\prime} = 1. \end{array} \right.
 $$
 
 如果 $i=\alpha$，仍有 $r=M_0\cdots M_{\alpha-1}c$，但 $\widehat{M\prime}=\infty$；令 $A\circ B=(N):(cd_\alpha)$。
 
-Note that by definition the size of $A \circ B$ always equals that of $B$. We then have the following soundness proposition for Definition 2.13. In the proof, we will use the following notation: for a given index $0 \leq k \leq \alpha$ , let $\bar { \boldsymbol \delta } _ { k } \doteq \bar { \mathbb { N } } ^ { \times ( \alpha + 1 ) }$ denote the coordinate that is zero everywhere except in the $k$th position, where it is 1. 
+按定义，$A\circ B$ 的 size 始终等于 B 的 size。于是可得到定义 2.13 的下列可靠性命题。证明中使用如下记号：对给定索引 $0\leq k\leq\alpha$，令 $\bar{\boldsymbol\delta}_k\in\bar{\mathbb N}^{\times(\alpha+1)}$ 表示除第 k 个位置为 1 外其余位置均为 0 的坐标。
 
 命题 2.14。在定义 2.13 的设定下，有 $f_{A\circ B}=\widehat f_A\circ f_B$。
 
@@ -272,19 +272,19 @@ $$
 \widehat {\iota}: \mathbb {N} \cong [ 0, M _ {0}) \times \dots \times [ 0, M _ {\alpha - 1}) \times \mathbb {N}
 $$
 
-of Definition 2.3, we have that $x$ is sent to $\boldsymbol { c } \cdot \delta _ { i }$ . Thus, we see that 
+在定义 2.3 的同构下，x 被映射到 $\boldsymbol c\cdot\delta_i$。因此有
 
 $$
 (\widehat {f _ {A}} \circ f _ {B}) (1) = c d _ {i} = f _ {A \circ B} (1).
 $$
 
-In the cases of $i < \alpha$ and $N \leq M _ { i } / c \ \mathrm { o r } \ i = \alpha .$ , this already sufices to show $f _ { A \circ B } = \widehat { f } _ { A } \circ f _ { B }$ . In the remaining case $i < \alpha$ and $N = M _ { i } / c \cdot \ldots \cdot M _ { j - 1 } \cdot c ^ { \prime } ;$ , note that 
+当 $i<\alpha$ 且 $N\leq M_i/c$，或当 $i=\alpha$ 时，这已经足以证明 $f_{A\circ B}=\widehat f_A\circ f_B$。在剩余的 $i<\alpha$ 且 $N=M_i/c\cdots M_{j-1}c'$ 情形下，注意
 
 $$
 \widehat {\iota} ((M _ {i} / c) r) = \delta_ {i + 1}, \widehat {\iota} (M _ {i + 1} (M _ {i} / c) r) = \delta_ {i + 2},..., \widehat {\iota} \bigl (M _ {j - 1}... M _ {i + 1} (M _ {i} / c) r \bigr) = \delta_ {j}.
 $$
 
-Therefore, we see that $f _ { A \circ B }$ and ${ \widehat { f } } _ { A } \circ f _ { B }$ agree on values $\{ 1 , \ M _ { i } / c , \ M _ { i + 1 } ( M _ { i } / c ) , \ . . . , \ M _ { j - 1 } . . . . M _ { i + 1 } ( M _ { i } / c ) \}$ (or drop the last term if $c ^ { \prime } = 1 )$ . In view of the multi-linearity properties of both functions,6 this implies that $f _ { A \circ B } = \widehat { f _ { A } } \circ f _ { B }$ . □ 
+因此，$f_{A\circ B}$ 与 $\widehat f_A\circ f_B$ 在 $\{1,\ M_i/c,\ M_{i+1}(M_i/c),\ldots,\ M_{j-1}\cdots M_{i+1}(M_i/c)\}$ 上取值一致；若 $c'=1$，则去掉最后一项。由两个函数的多线性性质，$^{6}$ 可知 $f_{A\circ B}=\widehat f_A\circ f_B$。□
 
 示例 2.15。令 $A=(M_0,\ldots,M_\alpha):(d_0,\ldots,d_\alpha)$ 为任意 layout。当 $i=0$ 时令 $B_0=(M_0):(1)$；当 $0<i\leq\alpha$ 时令 $B_i=(M_i):(M_0\cdots M_{i-1})$。则 $A\circ B_i=(M_i):(d_i)$。
 
@@ -294,9 +294,9 @@ Therefore, we see that $f _ { A \circ B }$ and ${ \widehat { f } } _ { A } \circ
 
 定义 2.17。令 $\mathbf{S}=(M_0,\ldots,M_\alpha)$ 为 shape tuple，$B=(N_0,\ldots,N_\beta):(r_0,\ldots,r_\beta)$ 为 layout，并令 $B_k=(N_k):(r_k)$，其中 $0\leq k\leq\beta$。如果以下条件成立，就称 pair `{S,B}` 对 composition admissible：
 
-(1) For all $0 \leq k \leq \beta ,$ the pair $\{ \mathsf { S } , B _ { k } \}$ is admissible for composition in the sense of Definition 2.12. 
+(1) 对所有 $0\leq k\leq\beta$，pair $\{\mathbf S,B_k\}$ 均在定义 2.12 的意义下对 composition admissible。
 
-(2) The intervals of definition for the pairs $\{ \mathsf { S } , B _ { k } \} _ { 0 \leq k \leq \beta }$ are disjoint. 
+(2) 各 pair $\{\mathbf S,B_k\}_{0\leq k\leq\beta}$ 的定义区间互不相交。
 
 此时，如果 $\mathbf{D}=(d_0,\ldots,d_\alpha)$ 是任意 stride tuple，$A=\mathbf{S}:\mathbf{D}$，则把 composition $A\circ B$ 定义为下列 concatenated layout。
 
@@ -304,11 +304,11 @@ $$
 A \circ B := (A \circ B _ {0}, A \circ B _ {1},..., A \circ B _ {\beta})
 $$
 
-where each $A \circ B _ { k }$ is defined as in Definition 2.13. 
+其中每个 $A\circ B_k$ 都按定义 2.13 定义。
 
 下面用 soundness 定理验证定义 2.17。
 
-Theorem 2.18. In the situation of Definition 2.17, we have that $f _ { A \circ B } = \widehat { f } _ { A } \circ f _ { B }$ 
+定理 2.18。在定义 2.17 的设定下，有 $f_{A\circ B}=\widehat f_A\circ f_B$。
 
 证明。根据命题 2.14，对所有 $0\leq k\leq\beta$，函数等式 $f_{A\circ B_k}=\widehat f_A\circ f_{B_k}$ 在 domain $[0,\operatorname{size}(B_k))$ 上成立。结合引理 2.19，将问题归约到各 mode。
 
@@ -326,19 +326,19 @@ $$
 ![image](Imgaes/layout-algebra-paper/26a08f65149056049dbc9560744bfbd7ea6729d57a0923c8607e5e16e6910017.jpg)
 
 
-where the upper square commutes, again by Lemma 2.19. Note that the bottom square does not commute in general (i.e., the function ${ \widehat { f _ { A } } } : \mathbb { N } $ N itself is not generally additive). However, with respect to the factorization 
+其中上方方块同样由引理 2.19 可知是交换的。注意，下方方块一般并不交换，也就是说，函数 $\widehat f_A:\mathbb N\to\mathbb N$ 本身通常不满足可加性。不过，相对于下列分解，
 
 $$
 \widehat {f} _ {A}: \mathbb {N} \xrightarrow {\cong} [ 0, M _ {0}) \times \ldots \times [ 0, M _ {\alpha - 1}) \times \mathbb {N} \xrightarrow {(d _ {0} , . . . , d _ {\alpha})} \mathbb {N} \times \ldots \times \mathbb {N} \xrightarrow {+} \mathbb {N},
 $$
 
-our assumption of disjoint intervals of definition ensures that the images of the maps $f _ { B _ { 0 } } , . . . , f _ { B _ { \beta } }$ are disjoint when intersected with $[ 0 , M _ { 0 } ) \times \ldots \times [ 0 , M _ { \alpha - 1 } ) - \{ 0 \}$ . For additivity, it now sufices to check that there do not exist distinct $B _ { k } , B _ { l }$ and non-zero $x$ \in im ${ \left( { f _ { B _ { k } } } \right) } , y \in \mathrm { i m } \left( f _ { B _ { l } } \right)$ that have coordinates $x _ { i } , y _ { i } \in [ 0 , M _ { i } )$ for some $0 \leq i < \alpha$ such that $x _ { i } + y _ { i } \ge M _ { i } ;$ if not, we may have that 
+定义区间互不相交这一假设保证：各映射 $f_{B_0},\ldots,f_{B_\beta}$ 的像与 $[0,M_0)\times\cdots\times[0,M_{\alpha-1})-\{0\}$ 相交后仍互不相交。为了证明可加性，只需验证不存在不同的 $B_k,B_l$ 以及非零元素 $x\in\operatorname{im}(f_{B_k})$、$y\in\operatorname{im}(f_{B_l})$，使得对某个 $0\leq i<\alpha$ 有坐标 $x_i,y_i\in[0,M_i)$ 且 $x_i+y_i\geq M_i$；否则可能出现
 
 $$
 \widehat {f} _ {A} (x + y) \neq \widehat {f} _ {A} (x) + \widehat {f} _ {A} (y)
 $$
 
-due to overflow in the $i$th coordinate, because the strides for the layout $A$ can be arbitrary. Now let $w _ { i _ { 0 } }$ and $z _ { j _ { 0 } }$ be the leftmost non-zero coordinates of $f _ { B _ { k } } ( 1 )$ and $f _ { B _ { l } } ( 1 )$ , respectively. If either of the indices $i _ { 0 }$ or $j _ { 0 }$ equal $\alpha$ then we are already done. Otherwise, we have that $w _ { i _ { 0 } } \leq M _ { i _ { 0 } } / 2$ and $z _ { j _ { 0 } } \leq M _ { j _ { 0 } } / 2$ from the left divisibility assumption. Moreover, the coordinates of subsequent values of $f _ { B _ { k } }$ and $f _ { B _ { l } }$ will increment by multiples of $w _ { i _ { 0 } }$ and $z _ { j _ { 0 } }$ in indices $i _ { 0 }$ and $j _ { 0 } ,$ by increments of 1 for indices greater than $i_0$ and $j _ { 0 }$ up to that occupied by the maximum value, and zero elsewhere. Finally, by disjointness7 we have that either $f _ { B _ { l } } ( 1 )$ is strictly greater than the maximum value attained by $f _ { B _ { k } }$ or vice-versa. Putting this all together, we see that disjointness of the intervals of definition rules out the possibility of overflow. 
+这是第 i 个坐标溢出造成的，因为 layout A 的 stride 可以任意取值。令 $w_{i_0}$ 和 $z_{j_0}$ 分别为 $f_{B_k}(1)$ 与 $f_{B_l}(1)$ 最左侧的非零坐标。如果 $i_0$ 或 $j_0$ 等于 $\alpha$，结论已经成立。否则，由左整除假设可得 $w_{i_0}\leq M_{i_0}/2$ 且 $z_{j_0}\leq M_{j_0}/2$。此外，$f_{B_k}$ 和 $f_{B_l}$ 后续取值在索引 $i_0$ 与 $j_0$ 处分别按 $w_{i_0}$ 与 $z_{j_0}$ 的倍数递增；在更大的索引上一直到最大值占据的位置，每次增加 1；其他位置均为 0。最后，由不相交性 $^{7}$，$f_{B_l}(1)$ 必须严格大于 $f_{B_k}$ 的最大取值，或反之。综合这些事实，定义区间互不相交排除了溢出的可能。
 
 因此，当限制到 $(f_{B_0},\ldots,f_{B_\beta})$ 的像时，$\widehat f_A$ 的确对加法满足分配律，证明完成。□
 
@@ -380,7 +380,7 @@ $$
 
 警告 2.21。定义 2.12 的单 mode admissibility 条件比 CUTLASS 自身的 static assert 检查更宽松。条件（1）与 CUTLASS 检查相同；对条件（2），CUTLASS 使用普通左整除，而本文只要求弱左整除。示例中的 $C=A\circ B$ 在 CUTLASS 中会触发 `Static shape_div failure`，但按本文规则会计算为 `(2,3):(9,5)`。
 
-## 2.3 Logical Division
+## 2.3 逻辑除法
 
 完成这些准备后，可以定义 logical division 操作。
 
@@ -390,35 +390,35 @@ $$
 A / B := A \circ (B, \text { complement } (B, M)).
 $$
 
-Implicit in Definition 2.22 is the following lemma: 
+定义 2.22 隐含了下面的引理。
 
 引理 2.23。假设 $A=\mathbf{S}:\mathbf{D}$、$M=\operatorname{size}(A)$，且 B 如定义 2.22。则 `{S,(B,complement(B,M))}` 对 composition admissible。
 
 $$
-\text { PROOF.   Write } A = \mathbf {S}: \mathbf {D} = (M _ {0},..., M _ {\alpha}): (d _ {0},..., d _ {\alpha}) \text { and } B = (N _ {0},..., N _ {\beta}): (r _ {0},..., r _ {\beta}). \text { Let }
+\text {证明。写作 } A = \mathbf {S}: \mathbf {D} = (M _ {0},..., M _ {\alpha}): (d _ {0},..., d _ {\alpha}) \text {，并令 } B = (N _ {0},..., N _ {\beta}): (r _ {0},..., r _ {\beta})\text {。再令}
 $$
 
 $$
 \varphi : [ 0, \beta ] \stackrel {\cong} {\to} [ 0, \beta ]
 $$
 
-be the automorphism such that $B ^ { \varphi } : = \left( N _ { \varphi ( 0 ) } , . . . , N _ { \varphi ( \beta ) } \right) : \left( r _ { \varphi ( 0 ) } , . . . , r _ { \varphi ( \beta ) } \right)$ is sorted. Then by definition, 
+为使 $B^\varphi:=\left(N_{\varphi(0)},\ldots,N_{\varphi(\beta)}\right):\left(r_{\varphi(0)},\ldots,r_{\varphi(\beta)}\right)$ 已排序的 automorphism。于是根据定义，
 
 $$
 \operatorname{complement} (B, M) = \left(r _ {\varphi (0)}, \frac {r _ {\varphi (1)}}{N _ {\varphi (0)} r _ {\varphi (0)}},..., \frac {M}{N _ {\varphi (\beta)} r _ {\varphi (\beta)}}\right): \left(1, N _ {\varphi (0)} r _ {\varphi (0)},..., N _ {\varphi (\beta)} r _ {\varphi (\beta)}\right).
 $$
 
-Now write 
+再写作
 
 $$
 B _ {0} ^ {\prime} = \left(r _ {\varphi (0)}\right): (1), B _ {1} ^ {\prime} = \left(\frac {r _ {\varphi (1)}}{N _ {\varphi (0)} r _ {\varphi (0)}}\right): \left(N _ {\varphi (0)} r _ {\varphi (0)}\right), \ldots , B _ {\beta} ^ {\prime} = \left(\frac {M}{N _ {\varphi (\beta)} r _ {\varphi (\beta)}}\right): \left(N _ {\varphi (\beta)} r _ {\varphi (\beta)}\right)
 $$
 
-for the length 1 layouts that comprise complement($B$, $M$). We first claim that the pairs $\{ \mathsf { S } , B _ { k } ^ { \prime } \}$ for $0 \le k \le \beta$ are all admissible for composition. By assumption, we have that $M$ is left divisible by $r _ { \varphi ( k ) }$ and its remainder is then weakly left divisible by $N _ { \varphi ( k ) }$ , for all $0 \leq k \leq \beta .$ But since $r _ { \varphi ( k ) } N _ { \varphi ( k ) } | r _ { \varphi ( k + 1 ) }$ for all $0 \le k < \beta$ and $M = { \mathrm { s i z e } } ( A )$ , the additional divisibility condition $( 3 )$ in Definition 2.11 needed to promote weak left divisibility to left divisibility is necessarily satisfied for all the $N _ { \varphi ( k ) }$ terms. Therefore, we deduce that the pairs $\{ \mathsf { S } , B _ { k } ^ { \prime } \}$ are indeed all admissible. Now by Proposition 2.7, we see that the additional disjointness assumption is satisfied so that {$\mathbf{S}$, ($B$, complement($B$, $M$))} is admissible for composition. □ 
+它们是组成 $\operatorname{complement}(B,M)$ 的各个 length 1 layout。首先断言，对所有 $0\leq k\leq\beta$，pair $\{\mathbf S,B'_k\}$ 都对 composition admissible。根据假设，对每个 $0\leq k\leq\beta$，M 可被 $r_{\varphi(k)}$ 左整除，其余项随后可被 $N_{\varphi(k)}$ 弱左整除。又因为对所有 $0\leq k<\beta$ 都有 $r_{\varphi(k)}N_{\varphi(k)}\mid r_{\varphi(k+1)}$，并且 $M=\operatorname{size}(A)$，所以把弱左整除提升为左整除所需的定义 2.11 条件（3），必然对所有 $N_{\varphi(k)}$ 成立。因此，各 pair $\{\mathbf S,B'_k\}$ 的确都 admissible。再由命题 2.7，可知额外的不相交条件也成立，从而 $\{\mathbf S,(B,\operatorname{complement}(B,M))\}$ 对 composition admissible。□
 
 至此完成当前对 logical division 的讨论。暂时把更多 logical division 示例留给 CuTe 文档。
 
-## 3 PERMUTATIONS EXPRESSIBLE AS LAYOUT FUNCTIONS
+## 3 可表示为布局函数的置换
 
 本节说明如何以结构化方式取回所有可表示为 layout function 的置换；更精确的动机参见注记 3.16。假设读者熟悉 category 的基本语言。
 
@@ -430,9 +430,9 @@ for the length 1 layouts that comprise complement($B$, $M$). We first claim that
 
 定义 3.4。按如下方式定义 ordered factorization 的 category **Fact**。
 
-(1) ob(Fact) is the set of objects of Fact. 
+(1) `ob(Fact)` 是 **Fact** 的 object 集合。
 
-(2) For every expression $E = \left[ p _ { 1 } p _ { 2 } . . . p _ { k } \right]$ in ob(Fact) and every morphism of finite sets $\alpha : \underline { n } \to \underline { k } ,$ we have a morphism 
+(2) 对 `ob(Fact)` 中的每个表达式 $E=[p_1p_2\cdots p_k]$，以及有限集合的每个 morphism $\alpha:\underline n\to\underline k$，都有一个 morphism
 
 $$
 E ^ {\alpha} = [ p _ {\alpha (1)} p _ {\alpha (2)} \dots p _ {\alpha (n)} ] \xrightarrow {\alpha_ {E}} E = [ p _ {1} p _ {2} \dots p _ {k} ]
@@ -440,7 +440,7 @@ $$
 
 它位于 **Fact** 中。这定义了 codomain 为 E 的所有 morphism 集合；再让 E 遍历全部 object，就定义了 **Fact** 中的所有 morphism 集合。
 
-(3) The composition of morphisms is defined as follows. Suppose we have morphisms of finite sets $\alpha : \underline { n } \to \underline { k }$ and $\beta : { \underline { { m } } }  { \underline { { n } } }$ and an expression $E = \left[ p _ { 1 } p _ { 2 } . . . p _ { k } \right]$ . Write 
+(3) morphism 的 composition 定义如下。假设有有限集合 morphism $\alpha:\underline n\to\underline k$、$\beta:\underline m\to\underline n$，以及表达式 $E=[p_1p_2\cdots p_k]$。写作
 
 $$
 E ^ {\alpha} = \left[ p _ {\alpha (1)} p _ {\alpha (2)}... p _ {\alpha (n)} \right] = \left[ q _ {1}... q _ {n} \right].
@@ -452,7 +452,7 @@ $$
 \alpha_ {E}: E ^ {\alpha} = [ p _ {\alpha (1)} p _ {\alpha (2)} \dots p _ {\alpha (n)} ] \rightarrow E = [ p _ {1} \dots p _ {k} ], \quad \beta_ {E ^ {\alpha}}: (E ^ {\alpha}) ^ {\beta} = [ q _ {\beta (1)} \dots q _ {\beta (m)} ] \rightarrow E ^ {\alpha} = [ q _ {1} \dots q _ {n} ]
 $$
 
-is given by $\gamma _ { E } : E ^ { \gamma }  E ,$ , where we use that $\left[ q _ { \beta ( 1 ) } . . . q _ { \beta ( m ) } \right] = \left[ p _ { Y ( 1 ) } . . . p _ { Y ( m ) } \right] .$ 
+其结果为 $\gamma_E:E^\gamma\to E$；这里使用了 $[q_{\beta(1)}\cdots q_{\beta(m)}]=[p_{\gamma(1)}\cdots p_{\gamma(m)}]$。
 
 容易检查 **Fact** 中 morphism 的 composition 满足结合律并具有 identity，因此定义 3.4 确实定义了一个 category。
 
@@ -470,7 +470,7 @@ $$
 F _ {E}: \mathbf {F i n S e t} ^ {\underline {{/ k}}} \to \mathbf {F a c t}
 $$
 
-that sends the object $[ \alpha : \underline { { n } } \to \underline { { k } } ] \mathrm { t o } E ^ { \alpha }$ and the unique morphism $[ \alpha ]  [ \mathrm { i d } _ { \underline { { { k } } } } ] \mathrm { t o } \alpha _ { E } : E ^ { \alpha }  E$ . This functor has every morphism in Fact with codomain $E$ in its image. 
+它把 object $[\alpha:\underline n\to\underline k]$ 映射到 $E^\alpha$，并把唯一的 morphism $[\alpha]\to[\operatorname{id}_{\underline k}]$ 映射到 $\alpha_E:E^\alpha\to E$。**Fact** 中所有以 E 为 codomain 的 morphism 都位于该 functor 的像中。
 
 注记 3.8。事实上，可以把 **Fact** 本身识别为某个 overcategory，更准确地说是其 full subcategory。令 $\mathcal P=\{2,3,5,\ldots\}$ 为无限素数集合，**Set** 为集合 category，$\mathbf{FinSet}_{/\mathcal P}$ 为 $\mathbf{Set}_{/\mathcal P}$ 中 domain X 为有限集合的 morphism $X\to\mathcal P$ 所组成的 full subcategory。则存在 category equivalence。
 
@@ -478,21 +478,21 @@ $$
 \mathbf {F a c t} \simeq \mathbf {F i n S e t} ^ {\mathcal {P}}
 $$
 
-that sends an expression $E = \left[ \pmb { p } _ { 1 } . . . \pmb { p } _ { k } \right]$ to the morphism $E _ { \bullet } : \underline { { k } } \to \mathcal { P }$ given by $i \mapsto p _ { i }$ . Under this equivalence, the functor $F _ { E }$ of Remark 3.7 identifies with the functor 
+该等价把表达式 $E=[p_1\cdots p_k]$ 映射到 morphism $E_\bullet:\underline k\to\mathcal P$，其中 $i\mapsto p_i$。在此等价下，注记 3.7 的 functor $F_E$ 等同于下列 functor：
 
 $$
 \operatorname{FinSet} ^ {\underline {{k}}} \simeq \left(\operatorname{FinSet} ^ {\mathcal {P}}\right) ^ {/ E _ {\bullet}} \rightarrow \operatorname{FinSet} ^ {\mathcal {P}}
 $$
 
-that forgets the map to $E _ { \bullet }$ . 
+它会遗忘到 $E_\bullet$ 的映射。
 
 下面说明如何为 **Fact** 中每个 morphism 关联一个 layout。
 
 定义 3.9。假设 $E=[p_1\cdots p_k]$，$\alpha:\underline n\to\underline k$。按如下方式定义 layout $L_{(E,\alpha)}$。
 
-(1) Its shape tuple is $( p _ { \alpha ( 1 ) } , p _ { \alpha ( 2 ) } , . . . , p _ { \alpha ( n ) } )$ 
+(1) 其 shape tuple 为 $(p_{\alpha(1)},p_{\alpha(2)},\ldots,p_{\alpha(n)})$。
 
-(2) Its stride tuple is $( d _ { 1 } , d _ { 2 } , . . . , d _ { n } )$ where $\begin{array} { r } { d _ { i } = \prod _ { j < \alpha ( i ) } p _ { j } . ^ { 1 0 } } \end{array}$ 
+(2) 其 stride tuple 为 $(d_1,d_2,\ldots,d_n)$，其中 $d_i=\prod_{j<\alpha(i)}p_j$。$^{10}$
 
 同时用 $f_{(E,\alpha)}$ 表示关联的 layout function。
 
@@ -514,7 +514,7 @@ $$
 [ 0, p _ {\alpha (1)}) \times [ 0, p _ {\alpha (2)}) \times \dots \times [ 0, p _ {\alpha (n)}) \rightarrow [ 0, p _ {1}) \times [ 0, p _ {2}) \times \dots \times [ 0, p _ {k})
 $$
 
-that sends the basis vector $\delta _ { i }$ for $1 \leq i \leq n \mathrm { t o } \delta _ { \alpha ( i ) }$ , and which restricts to an isomorphism $[ 0 , p _ { \alpha ( i ) } ) \stackrel { \cong } { \longrightarrow } [ 0 , p _ { \alpha ( i ) } )$ for all $1 \leq i \leq n .$ . In particular, if $\alpha$ is itself a bijection, then $f _ { ( E , \alpha ) }$ restricts to an automorphism of [0, $N$). 
+它把 $1\leq i\leq n$ 时的 basis vector $\delta_i$ 映射到 $\delta_{\alpha(i)}$，并且对每个 $1\leq i\leq n$，在 $[0,p_{\alpha(i)})\to[0,p_{\alpha(i)})$ 上限制为同构。特别地，如果 $\alpha$ 本身是双射，则 $f_{(E,\alpha)}$ 在 $[0,N)$ 上限制为 automorphism。
 
 进一步展开注记 3.11，得到以下引理；它说明 category **Fact** 中的 composition 与 layout function 的 composition 相容。
 
@@ -544,7 +544,7 @@ $$
 [ 0, N ^ {\gamma}) \cong [ 0, p _ {\gamma (1)}) \times [ 0, p _ {\gamma (2)}) \times \ldots \times [ 0, p _ {\gamma (m)})
 $$
 
-to write the domains and codomains of the layout functions in question (noting that $f _ { ( E ^ { \alpha } , \beta ) }$ has codomain lying inside $[ 0 , N ^ { \alpha } ) )$ . We are trying to equate the multilinear function 
+用它们表示所讨论 layout function 的 domain 和 codomain；注意，$f_{(E^\alpha,\beta)}$ 的 codomain 位于 $[0,N^\alpha)$ 内。目标是证明下列 multilinear function
 
 $$
 f _ {(E, \gamma)}: [ 0, p _ {\gamma (1)}) \times [ 0, p _ {\gamma (2)}) \times \dots \times [ 0, p _ {\gamma (m)}) \rightarrow [ 0, p _ {\alpha (1)}) \times [ 0, p _ {\alpha (2)}) \times \dots \times [ 0, p _ {\alpha (n)})
@@ -568,9 +568,9 @@ $$
 
 定义 3.14。令 `$R: Fact → FinSet` 为按下述方式定义的 functor。
 
-(1) Let $E = \left[ \pmb { p } _ { 1 } . . . \pmb { p } _ { k } \right]$ be an object of Fact and let $N = p _ { 1 } \cdot \ldots \cdot p _ { k }$ . Then $R ( E ) = [ 0 , N ) . ^ { 1 }$ 11 
+(1) 令 $E=[p_1\cdots p_k]$ 为 **Fact** 的 object，并令 $N=p_1\cdots p_k$。则 $R(E)=[0,N)$。$^{11}$
 
-(2) For every morphism $\alpha _ { E } : E ^ { \alpha } \to E .$ let $R ( \alpha _ { E } ) = f _ { ( E , \alpha ) } : [ 0 , N ^ { \alpha } )  [ 0 , N )$ be as in Definition 3.9. 
+(2) 对每个 morphism $\alpha_E:E^\alpha\to E$，令 $R(\alpha_E)=f_{(E,\alpha)}:[0,N^\alpha)\to[0,N)$，其定义同定义 3.9。
 
 根据引理 3.12，$R$ 确实定义了 functor，因为它保持 morphism composition 和 identity。
 
@@ -584,13 +584,13 @@ $$
 L ^ {\varphi} := \left(p _ {\varphi (1)}, p _ {\varphi (2)},..., p _ {\varphi (k)}\right): \left(1, p _ {\varphi (1)}, p _ {\varphi (1)} p _ {\varphi (2)},..., \Pi_ {1 \leq i <   k} p _ {\varphi (i)}\right)
 $$
 
-for some permutation $\varphi \in \Sigma _ { k }$ , in order for $f _ { L }$ to be an automorphism of $[ 0 , N )$ . But this means that if we let $\psi = \varphi ^ { - 1 }$ be the inverse permutation, then 
+其中 $\varphi\in\Sigma_k$ 是某个置换；这是 $f_L$ 成为 $[0,N)$ 上 automorphism 的必要形式。令逆置换 $\psi=\varphi^{-1}$，则
 
 $$
 \psi_ {E}: E ^ {\psi} = \left[ p _ {1} p _ {2}... p _ {k} \right] = \left[ p _ {\psi (\varphi (1))} p _ {\psi (\varphi (2))}... p _ {\psi (\varphi (k))} \right]\rightarrow E = \left[ p _ {\varphi (1)} p _ {\varphi (2)}... p _ {\varphi (k)} \right]
 $$
 
-is a morphism in Fact such that $R ( \psi _ { E } ) = f _ { L } = f .$ 
+是 **Fact** 中的 morphism，并满足 $R(\psi_E)=f_L=f$。
 
 注记 3.16。命题 3.15 的一种解释是：取 **Fact** 内部的 maximal subgroupoid $\mathbf{Fact}^\simeq$，即所有可逆 morphism 构成的 subcategory，则其 realization 描述了可由 layout function 表达的置换。
 
@@ -598,13 +598,13 @@ $$
 R: \operatorname{Fact} ^ {\simeq} \rightarrow \operatorname{FinSet}
 $$
 
-carves out exactly those permutations expressible as layouts. Our motivation for this description is that for a fixed integer $N > 0$ , the subset $\Sigma _ { N } ^ { L }$ of $\Sigma _ { N }$ on those automorphisms expressible as layout functions is typically not a subgroup (being not generally closed under the group multiplication, i.e. composition). Instead, if we let 
+恰好选出了那些可由 layout 表示的置换。这样描述的动机是：对固定整数 $N>0$，令 $\Sigma_N^L$ 表示 $\Sigma_N$ 中可由 layout function 表示的 automorphism 所构成的子集；它通常不是 subgroup，因为一般不对群乘法，也就是 composition，封闭。另一方面，若令
 
 $$
 \mathbf {F a c t} _ {N} ^ {\simeq} \subset \mathbf {F a c t} ^ {\simeq}
 $$
 
-be the full subgroupoid on those objects $\left[ \hbar \cdot \cdot \cdot \cdot \hbar _ { k } \right]$ with $N = p _ { 1 } \cdot \ldots \cdot p _ { k }$ , then $\Sigma _ { N } ^ { L }$ consists of those morphisms in the image of $R$ on $\mathbf { F a c t } _ { N } ^ { \simeq }$ . However, we see that $\Sigma _ { N } ^ { L }$ is closed under the operation of taking the group inverse. Moreover, in the special case that $N$ is a prime power $p ^ { k }$ , then $\Sigma _ { N } ^ { L }$ is in fact a subgroup and is isomorphic to $\Sigma _ { k }$ This corresponds to $\mathbf { F a c t } _ { p ^ { k } } ^ { \simeq }$ being a groupoid with one object $[ p p . . . p ]$ , i.e., a group. 
+它是由满足 $N=p_1\cdots p_k$ 的 object $[p_1\cdots p_k]$ 生成的 full subgroupoid，那么 $\Sigma_N^L$ 就由 $R$ 在 $\mathbf{Fact}_N^\simeq$ 上的像中的 morphism 构成。不过，$\Sigma_N^L$ 对取群逆封闭。进一步，在 $N$ 为素数幂 $p^k$ 的特殊情况下，$\Sigma_N^L$ 确实是 subgroup，并与 $\Sigma_k$ 同构。这对应于 $\mathbf{Fact}_{p^k}^\simeq$ 是只有一个 object $[pp\cdots p]$ 的 groupoid，也就是一个群。
 
 ## 参考文献
 

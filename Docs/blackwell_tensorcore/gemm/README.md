@@ -103,6 +103,7 @@ gemm/
 
 ## 5. 附录
 
+- [性能与带宽资源总表（最终版）](FINAL_PERFORMANCE_BANDWIDTH_REPORT.md)
 - [可执行 schema reference](appendices/schema_reference.md)
 - [microbenchmark 与完整 GEMM 来源](appendices/microbenchmark_sources.md)
 - [当前模型重放状态](appendices/current_model_replay.md)

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "Device 层",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnGN1uGvNb4ejo1UktRw6IIb",
+  "board_block_id": "doxcnHy2OdOWixle9DNnpzddvsf",
+  "board_token": "ZYAYww6Q0hEhxMbkWKbcjc1enDb",
+  "idempotent_token": "cutlass-r144-07-device",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "dc6c753a4377c1e34d7dcd2dd17c604768a6acaf67803f29c109d02400a1d3f7",
+    "diagram.openapi.json": "4ec40aa687aa00a52a04c1b22c4d2a4ee08763ae3a92cbb2117ebcf45c1ade59",
+    "diagram.png": "612cb8a88cc6d04dcdb54a722bce77f5d355b39f108aa9141296b029bf2d922f"
+  }
+}

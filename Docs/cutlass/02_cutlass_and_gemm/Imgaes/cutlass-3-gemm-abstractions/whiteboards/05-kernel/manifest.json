@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "Kernel 层",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnpbVdLgLhYPB10QKkVj4WTc",
+  "board_block_id": "doxcnhNaJZfyh6UhXaPNOxHzb3e",
+  "board_token": "GMZNwhpIdhicMsb7qHDcFzVHnqe",
+  "idempotent_token": "cutlass-r142-05-kernel",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "e09eb0c1674a3f9337c5ece7da4ea150a7402b1c57ac3f8e5af13ad6857c7168",
+    "diagram.openapi.json": "22e94bb73c152ea068a966113ba09b04517a621ead8880ad83a0c328749a5b5c",
+    "diagram.png": "dfbe30640f66f042326467c81eaec6d45d469749b3de3a6bb86793ae7c31b133"
+  }
+}

@@ -1,0 +1,521 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "x": 20,
+      "y": 20,
+      "width": 1360,
+      "height": "fit-content",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [34, 38],
+      "alignItems": "center",
+      "fillColor": "#F8FAFC",
+      "borderColor": "#CBD5E1",
+      "borderWidth": 1,
+      "borderRadius": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "width": 1284,
+          "height": "fit-content",
+          "text": "CUTLASS 3.x：从硬件原语到主机接口的五层组合",
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "width": 1284,
+          "height": "fit-content",
+          "text": "低层提供能力，高层组合低层；每层只解决一个尺度的问题",
+          "fontSize": 12,
+          "textColor": "#64748B",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "hierarchy",
+          "width": 1284,
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 24,
+          "padding": [26, 18],
+          "alignItems": "stretch",
+          "fillColor": "#FFFFFF",
+          "borderColor": "#E2E8F0",
+          "borderWidth": 2,
+          "borderRadius": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "atom",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [18, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "atom_scope",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "硬件原语",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "atom_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Atom",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "atom_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "一条 copy / MMA 指令\n及其操作数契约",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "atom_compute",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "TCGen05 · TMEM",
+                  "fontSize": 14,
+                  "textColor": "#6B21A8",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FAF5FF",
+                  "borderColor": "#A855F7",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                },
+                {
+                  "type": "rect",
+                  "id": "atom_tma",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "TMA",
+                  "fontSize": 14,
+                  "textColor": "#1D4ED8",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#EFF6FF",
+                  "borderColor": "#3B82F6",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tiled",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [18, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tiled_scope",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "空间组织",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "tiled_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Tiled MMA / Copy",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "tiled_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "把 Atom 铺成 tile\n分配给 thread / warp",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "tiled_api",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "cute::TiledMMA\ncute::TiledCopy",
+                  "fontSize": 14,
+                  "textColor": "#365314",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#76B900",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "collective",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [18, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "collective_scope",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "时间组织",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "collective_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Collective",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "collective_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "组织 TMA、stage、barrier\n与 warp 角色流水线",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "collective_mapping",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "CTA / CTA pair",
+                  "fontSize": 14,
+                  "textColor": "#9A3412",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FFF7ED",
+                  "borderColor": "#F97316",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kernel",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [18, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "kernel_scope",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "问题空间",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "kernel_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Kernel",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "kernel_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "组合 Mainloop 与 Epilogue\n覆盖 [M,N,K,L]",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "kernel_mapping",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "CTA / cluster grid",
+                  "fontSize": 14,
+                  "textColor": "#9A3412",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FFF7ED",
+                  "borderColor": "#F97316",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "device",
+              "width": "fill-container",
+              "height": "fit-content",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [18, 14],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "device_scope",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "主机接口",
+                  "fontSize": 12,
+                  "textColor": "#4D7C0F",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "device_title",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "Device",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "device_desc",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "检查、初始化 workspace\n并在 stream 上启动 kernel",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "rect",
+                  "id": "device_mapping",
+                  "width": "fill-container",
+                  "height": "fit-content",
+                  "text": "GemmUniversalAdapter\nHost API",
+                  "fontSize": 14,
+                  "textColor": "#365314",
+                  "textAlign": "center",
+                  "verticalAlign": "middle",
+                  "fillColor": "#FFFFFF",
+                  "borderColor": "#76B900",
+                  "borderWidth": 2,
+                  "borderRadius": 9,
+                  "padding": [10, 8]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "legend",
+          "width": 1284,
+          "height": "fit-content",
+          "layout": "horizontal",
+          "gap": 20,
+          "padding": [12, 18],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "fillColor": "#FFFFFF",
+          "borderColor": "#E2E8F0",
+          "borderWidth": 1,
+          "borderRadius": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "legend_abstraction",
+              "width": 230,
+              "height": "fit-content",
+              "text": "绿色：CUTLASS 抽象与组合",
+              "fontSize": 12,
+              "textColor": "#4D7C0F",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "legend_copy",
+              "width": 200,
+              "height": "fit-content",
+              "text": "蓝色：TMA 数据搬运",
+              "fontSize": 12,
+              "textColor": "#1D4ED8",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "legend_compute",
+              "width": 230,
+              "height": "fit-content",
+              "text": "紫色：TCGen05 / TMEM",
+              "fontSize": 12,
+              "textColor": "#6B21A8",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "legend_control",
+              "width": 250,
+              "height": "fit-content",
+              "text": "橙色：CTA / cluster 控制域",
+              "fontSize": 12,
+              "textColor": "#9A3412",
+              "textAlign": "center"
+            }
+          ]
+        },
+        {
+          "type": "rect",
+          "id": "conclusion",
+          "width": 1284,
+          "height": "fit-content",
+          "text": "本图结论：CUTLASS 不是一个巨型 GEMM 模板，而是 Atom → Tiled → Collective → Kernel → Device 的逐层组合系统。",
+          "fontSize": 14,
+          "fontWeight": "bold",
+          "textColor": "#365314",
+          "textAlign": "center",
+          "verticalAlign": "middle",
+          "fillColor": "#F0F9E8",
+          "borderColor": "#76B900",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "padding": [14, 18]
+        }
+      ]
+    },
+    {
+      "type": "connector",
+      "id": "edge_atom_tiled",
+      "connector": {
+        "from": "atom",
+        "to": "tiled",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_tiled_collective",
+      "connector": {
+        "from": "tiled",
+        "to": "collective",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_collective_kernel",
+      "connector": {
+        "from": "collective",
+        "to": "kernel",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_kernel_device",
+      "connector": {
+        "from": "kernel",
+        "to": "device",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "lineShape": "straight",
+        "lineWidth": 2,
+        "lineColor": "#BBBFC4",
+        "endArrow": "arrow"
+      }
+    }
+  ]
+}

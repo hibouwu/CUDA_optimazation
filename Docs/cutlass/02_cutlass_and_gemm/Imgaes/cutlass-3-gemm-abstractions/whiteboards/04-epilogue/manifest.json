@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "Collective 层：Epilogue",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnrEtpEy5p03XJmJeK9kG3Be",
+  "board_block_id": "doxcnBvgFQdn1WToojSOgeZFVQb",
+  "board_token": "ELofwlhajhSvgTbEOpnc6w4Znkb",
+  "idempotent_token": "cutlass-r141-04-epilogue",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "b8e5e17be05a1b6ed23793da34a1f22159f8730177226c54f355e91e35192f3a",
+    "diagram.openapi.json": "6548ed211d28520b47c988934ee7f50fc7e627006f1f0eb41decd581830a525d",
+    "diagram.png": "92552179ad3630c947b2363cc7a9b5a1e863268b5e41a972526ed5ba73f50545"
+  }
+}

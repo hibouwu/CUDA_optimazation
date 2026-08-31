@@ -1,0 +1,979 @@
+{
+  "version": 2,
+  "nodes": [
+    {
+      "type": "frame",
+      "id": "root",
+      "x": 20,
+      "y": 20,
+      "layout": "vertical",
+      "width": 1360,
+      "height": "fit-content",
+      "gap": 20,
+      "padding": [32, 28],
+      "alignItems": "center",
+      "fillColor": "#F8FAFC",
+      "borderColor": "#CBD5E1",
+      "borderWidth": 1,
+      "borderRadius": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "text": "Collective Mainloop：TMA 与 TCGen05 的双缓冲流水线",
+          "width": 1260,
+          "height": "fit-content",
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "textColor": "#172B4D",
+          "textAlign": "center"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "text": "FP16 Dense SS · A/B 保存在 SMEM，由 tcgen05.mma 通过 descriptor 消费 · accumulator 位于 TMEM",
+          "width": 1260,
+          "height": "fit-content",
+          "fontSize": 12,
+          "textColor": "#64748B",
+          "textAlign": "center"
+        },
+        {
+          "type": "frame",
+          "id": "stage_ruler",
+          "layout": "horizontal",
+          "width": "fit-content",
+          "height": "fit-content",
+          "gap": 40,
+          "padding": [0, 16],
+          "alignItems": "center",
+          "fillColor": "transparent",
+          "children": [
+            {
+              "type": "text",
+              "id": "ruler_label",
+              "text": "时间 →",
+              "width": 150,
+              "height": "fit-content",
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "left"
+            },
+            {
+              "type": "text",
+              "id": "phase_1",
+              "text": "① 预取",
+              "width": 184,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "phase_2",
+              "text": "② 事务完成",
+              "width": 184,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "phase_3",
+              "text": "③ 消费",
+              "width": 184,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "phase_4",
+              "text": "④ 重叠下一块",
+              "width": 184,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "center"
+            },
+            {
+              "type": "text",
+              "id": "phase_5",
+              "text": "⑤ 回收",
+              "width": 184,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#475569",
+              "textAlign": "center"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "lanes_root",
+          "layout": "vertical",
+          "width": "fit-content",
+          "height": "fit-content",
+          "gap": 16,
+          "padding": 0,
+          "alignItems": "stretch",
+          "fillColor": "transparent",
+          "children": [
+            {
+              "type": "frame",
+              "id": "lane_tma",
+              "layout": "horizontal",
+              "width": "fit-content",
+              "height": "fill-container",
+              "gap": 40,
+              "padding": 16,
+              "alignItems": "center",
+              "fillColor": "#FCFCFC",
+              "borderColor": "#DEE0E3",
+              "borderWidth": 1,
+              "borderDash": "dashed",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lane_tma_label",
+                  "text": "TMA producer",
+                  "width": 150,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#2563EB",
+                  "textAlign": "left",
+                  "verticalAlign": "middle"
+                },
+                {
+                  "type": "frame",
+                  "id": "tma_cell_1",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tma_prefetch",
+                      "text": "cp.async.bulk.tensor\nA/B → SMEM stage 0",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#EFF6FF",
+                      "borderColor": "#2563EB",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#1E3A8A",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tma_cell_2",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                },
+                {
+                  "type": "frame",
+                  "id": "tma_cell_3",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                },
+                {
+                  "type": "frame",
+                  "id": "tma_cell_4",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tma_next",
+                      "text": "预取下一 K tile\nA/B → SMEM stage 1",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#EFF6FF",
+                      "borderColor": "#2563EB",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#1E3A8A",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tma_cell_5",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "producer_acquire",
+                      "text": "producer_acquire\n取得 stage 0",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#EFF6FF",
+                      "borderColor": "#2563EB",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#1E3A8A",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lane_smem",
+              "layout": "horizontal",
+              "width": "fit-content",
+              "height": "fill-container",
+              "gap": 40,
+              "padding": 16,
+              "alignItems": "center",
+              "fillColor": "#FCFCFC",
+              "borderColor": "#DEE0E3",
+              "borderWidth": 1,
+              "borderDash": "dashed",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lane_smem_label",
+                  "text": "SMEM\nstage 0 / 1",
+                  "width": 150,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#0891B2",
+                  "textAlign": "left",
+                  "verticalAlign": "middle"
+                },
+                {
+                  "type": "frame",
+                  "id": "smem_cell_1",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "smem_filling",
+                      "text": "stage 0 · filling\nA/B tile 写入中",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#ECFEFF",
+                      "borderColor": "#0891B2",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#155E75",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "smem_cell_2",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "smem_ready",
+                      "text": "mbarrier phase 切换\nstage 0 对 consumer 可见",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#ECFEFF",
+                      "borderColor": "#0891B2",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#155E75",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "smem_cell_3",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "smem_active",
+                      "text": "stage 0 · reader active\nSMEM descriptor",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#ECFEFF",
+                      "borderColor": "#0891B2",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#155E75",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "smem_cell_4",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "smem_stage1",
+                      "text": "stage 1 · ready\n下一 K tile 待消费",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#ECFEFF",
+                      "borderColor": "#0891B2",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#155E75",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "smem_cell_5",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "smem_reusable",
+                      "text": "stage 0 · reusable\n进入下一轮 phase",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#ECFEFF",
+                      "borderColor": "#0891B2",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#155E75",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lane_tcgen",
+              "layout": "horizontal",
+              "width": "fit-content",
+              "height": "fill-container",
+              "gap": 40,
+              "padding": 16,
+              "alignItems": "center",
+              "fillColor": "#FCFCFC",
+              "borderColor": "#DEE0E3",
+              "borderWidth": 1,
+              "borderDash": "dashed",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lane_tcgen_label",
+                  "text": "TCGen05\nconsumer",
+                  "width": 150,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#7C3AED",
+                  "textAlign": "left",
+                  "verticalAlign": "middle"
+                },
+                {
+                  "type": "frame",
+                  "id": "tc_cell_1",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                },
+                {
+                  "type": "frame",
+                  "id": "tc_cell_2",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tc_wait",
+                      "text": "consumer_wait\n等待 stage 0 ready phase",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#F5F3FF",
+                      "borderColor": "#7C3AED",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#5B21B6",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tc_cell_3",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tc_mma",
+                      "text": "tcgen05.mma\n消费 A/B SMEM descriptor",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#F5F3FF",
+                      "borderColor": "#7C3AED",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#5B21B6",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tc_cell_4",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tc_release",
+                      "text": "consumer_release\n释放 stage 0 phase",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#F5F3FF",
+                      "borderColor": "#7C3AED",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#5B21B6",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tc_cell_5",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lane_tmem",
+              "layout": "horizontal",
+              "width": "fit-content",
+              "height": "fill-container",
+              "gap": 40,
+              "padding": 16,
+              "alignItems": "center",
+              "fillColor": "#FCFCFC",
+              "borderColor": "#DEE0E3",
+              "borderWidth": 1,
+              "borderDash": "dashed",
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lane_tmem_label",
+                  "text": "TMEM\naccumulator",
+                  "width": 150,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9333EA",
+                  "textAlign": "left",
+                  "verticalAlign": "middle"
+                },
+                {
+                  "type": "frame",
+                  "id": "tmem_cell_1",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                },
+                {
+                  "type": "frame",
+                  "id": "tmem_cell_2",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                },
+                {
+                  "type": "frame",
+                  "id": "tmem_cell_3",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tmem_accum",
+                      "text": "FP32 accumulator\n在 TMEM 中累加",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#FAF5FF",
+                      "borderColor": "#9333EA",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#6B21A8",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tmem_cell_4",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": [
+                    {
+                      "type": "rect",
+                      "id": "tmem_continue",
+                      "text": "保持 accumulator\n等待下一 K step",
+                      "width": "fill-container",
+                      "height": "fit-content",
+                      "fillColor": "#FAF5FF",
+                      "borderColor": "#9333EA",
+                      "borderWidth": 2,
+                      "borderRadius": 10,
+                      "fontSize": 14,
+                      "textColor": "#6B21A8",
+                      "textAlign": "center",
+                      "verticalAlign": "middle"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tmem_cell_5",
+                  "layout": "vertical",
+                  "width": 184,
+                  "height": 76,
+                  "padding": 0,
+                  "gap": 8,
+                  "alignItems": "stretch",
+                  "justifyContent": "center",
+                  "fillColor": "transparent",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "cta_comparison",
+          "layout": "horizontal",
+          "width": 1304,
+          "height": "fit-content",
+          "gap": 20,
+          "padding": 0,
+          "alignItems": "stretch",
+          "fillColor": "transparent",
+          "children": [
+            {
+              "type": "frame",
+              "id": "cta_1sm",
+              "layout": "vertical",
+              "width": 360,
+              "height": "fill-container",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#F0F9E8",
+              "borderColor": "#76B900",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cta_1sm_title",
+                  "text": "1SM：单 CTA",
+                  "width": 324,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#365314",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "cta_1sm_body",
+                  "text": "一个 CTA 承担 producer / consumer 角色\nTCGen05 使用 CTA group::1",
+                  "width": 324,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#3F6212",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cta_2sm",
+              "layout": "vertical",
+              "width": 400,
+              "height": "fill-container",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#FFF7ED",
+              "borderColor": "#F97316",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cta_2sm_title",
+                  "text": "2SM：peer CTA pair",
+                  "width": 364,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "cta_2sm_body",
+                  "text": "两个 peer CTA 协同 TMA / MMA 与同步\nTCGen05 使用 CTA group::2",
+                  "width": 364,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#9A3412",
+                  "textAlign": "center"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dense_boundary",
+              "layout": "vertical",
+              "width": 504,
+              "height": "fill-container",
+              "gap": 8,
+              "padding": [16, 18],
+              "alignItems": "center",
+              "fillColor": "#FFFFFF",
+              "borderColor": "#94A3B8",
+              "borderWidth": 2,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dense_boundary_title",
+                  "text": "Dense SS 路径边界",
+                  "width": 468,
+                  "height": "fit-content",
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "textColor": "#334155",
+                  "textAlign": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "dense_boundary_body",
+                  "text": "只有 block-scale / TS operand 路径才需要额外的 SMEM→TMEM copy；Dense SS 的 A/B 由 MMA 通过 SMEM descriptor 直接消费。",
+                  "width": 468,
+                  "height": "fit-content",
+                  "fontSize": 14,
+                  "textColor": "#475569",
+                  "textAlign": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "conclusion",
+          "layout": "vertical",
+          "width": 1304,
+          "height": "fit-content",
+          "gap": 8,
+          "padding": [16, 22],
+          "alignItems": "center",
+          "fillColor": "#F0F9E8",
+          "borderColor": "#76B900",
+          "borderWidth": 2,
+          "borderRadius": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "conclusion_text",
+              "text": "本图结论：Collective Mainloop 用 mbarrier / phase 管理 SMEM stage 生命周期，使下一块 TMA 搬运与当前块 TCGen05 MMA 重叠，并把跨 K-step 的 FP32 累加状态保存在 TMEM。",
+              "width": 1260,
+              "height": "fit-content",
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "textColor": "#365314",
+              "textAlign": "center"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "connector",
+      "id": "edge_tma_to_smem",
+      "connector": {
+        "from": "tma_prefetch",
+        "to": "smem_filling",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "TMA transaction",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_ready_to_wait",
+      "connector": {
+        "from": "smem_ready",
+        "to": "tc_wait",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "mbarrier ready",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_wait_to_mma",
+      "connector": {
+        "from": "tc_wait",
+        "to": "tc_mma",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_smem_to_mma",
+      "connector": {
+        "from": "smem_active",
+        "to": "tc_mma",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "descriptor",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_mma_to_tmem",
+      "connector": {
+        "from": "tc_mma",
+        "to": "tmem_accum",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "FP32 accumulate",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_next_to_stage1",
+      "connector": {
+        "from": "tma_next",
+        "to": "smem_stage1",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "overlap",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_release_to_reuse",
+      "connector": {
+        "from": "tc_release",
+        "to": "smem_reusable",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow",
+        "label": "release phase",
+        "labelFillColor": "#FFFFFF"
+      }
+    },
+    {
+      "type": "connector",
+      "id": "edge_reuse_to_acquire",
+      "connector": {
+        "from": "smem_reusable",
+        "to": "producer_acquire",
+        "lineShape": "rightAngle",
+        "lineColor": "#BBBFC4",
+        "lineWidth": 2,
+        "endArrow": "arrow"
+      }
+    }
+  ]
+}

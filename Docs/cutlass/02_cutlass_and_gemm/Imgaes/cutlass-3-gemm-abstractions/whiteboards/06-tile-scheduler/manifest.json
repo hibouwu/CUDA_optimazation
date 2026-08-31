@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "chapter": "矩阵块调度",
+  "document_id": "G7Kidk1YwoDEftxcqxBc8TpGnCh",
+  "wiki_node_token": "Wod4wss3rirbjXkUcyjcUGJEn3e",
+  "document_revision": 144,
+  "section_heading_id": "doxcnlGrgz25UJLSEu4JnAtLNKn",
+  "board_block_id": "doxcnZzDFHCD41LiImIaxt9b9Te",
+  "board_token": "BgW0wjbHqhmkWXb3i0XcwKEdn0b",
+  "idempotent_token": "cutlass-r143-06-scheduler",
+  "whiteboard_cli_version": "0.2.13",
+  "source_format": "whiteboard-dsl-v2",
+  "write_format": "raw",
+  "remote_preview_exported": true,
+  "artifacts": {
+    "diagram.json": "e390fe21fa63d630b0f74ada142bb52964129aabf1d8ec28745f363383d8de27",
+    "diagram.openapi.json": "334f26f53ed990ae16731e4d91334836f854636d765270942db3721385681071",
+    "diagram.png": "63563a3c2916730e919e8faf233b5cbc1a3730a14ad7dd0c071774be696f54b3"
+  }
+}
