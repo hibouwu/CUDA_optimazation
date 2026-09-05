@@ -1,4 +1,4 @@
-# CUTLASS: Principled Abstractions for Handling Multidimensional Data Through Tensors and Spatial Microkernels
+# CUTLASS 3.x (3): Principled Abstractions for Handling Multidimensional Data Through Tensors and Spatial Microkernels
 
 > Source: [NVIDIA Technical Blog](https://developer.nvidia.com/blog/cutlass-principled-abstractions-for-handling-multidimensional-data-through-tensors-and-spatial-microkernels/)  
 > Authors: Cris Cecka, Vijay Thakkar, and Tejash Shah  

@@ -4,7 +4,7 @@
 
 分析以 `A[133,70]` 为贯穿示例，依次说明它在 GMEM view、SMEM storage、MMA descriptor、TMEM accumulator 和 epilogue 中的坐标与存储变化。
 
-`Layout`、`Tensor`、MMA Atom 和 `TiledMma` 的基本定义可参阅[《CUTLASS：通过张量和空间微内核处理多维数据的原则性抽象》](../../02_cutlass_and_gemm/01-cutlass-principled-abstractions_zh-CN.md)。
+`Layout`、`Tensor`、MMA Atom 和 `TiledMma` 的基本定义可参阅[《CUTLASS：通过张量和空间微内核处理多维数据的原则性抽象》](../../02_cutlass_and_gemm/03-cutlass-principled-abstractions_zh-CN.md)。
 
 代码结构以 NVIDIA CUTLASS 的 C++ CuTe 示例 [`02_mma_tma_sm100.cu`](https://github.com/NVIDIA/cutlass/blob/main/examples/cute/tutorial/blackwell/02_mma_tma_sm100.cu) 为参照。
 
