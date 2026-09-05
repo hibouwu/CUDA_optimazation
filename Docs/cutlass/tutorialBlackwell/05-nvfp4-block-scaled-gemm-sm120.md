@@ -1,4 +1,4 @@
-# Optimizing an NVFP4 Blockscaled GEMM on RTX PRO 6000 Blackwell GPU (SM120)
+# CUTLASS Blackwell Tutorial (5): Optimizing an NVFP4 Block-Scaled GEMM on RTX PRO 6000 (SM120)
  This article is a continuation of our series on NVFP4 blockscaling on SM12x GPUs. In [Part 1](https://research.colfax-intl.com/cutlass-tutorial-nvfp4-blockscaled-gemm-on-nvidia-rtx-pro-blackwell-gpus-sm12x/), we covered relevant PTX instructions, scale-factor layout details, and implementation details in CuTe DSL, including how to convert a CUTLASS dense GEMM example into an NVFP4 blockscaled GEMM. In this article, we optimize the NVFP4 GEMM from Part 1 for the NVIDIA RTX Pro 6000 Blackwell Server Edition GPU. We iteratively apply a series of optimizations, outlining the logic behind each one as well as the implementation steps.
 
 We note at the outset that the version from the previous post is already fairly performant at mid-sized problem shapes (e.g., 8k square). Broadly speaking, the optimizations covered in this article fall into two categories:
