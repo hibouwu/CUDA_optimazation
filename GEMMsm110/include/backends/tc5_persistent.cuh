@@ -2,12 +2,25 @@
 
 // Stage 5 persistent schedulers built on the validated tc4a 1-SM path.
 //
-// Shared computation path:
-//   - fixed 128x256x128 TCGen05 mainloop
-//   - two SW128 TMA stages
-//   - warp 0 issues TCGen05 MMA
-//   - warp 1 issues TMA loads
-//   - all 128 threads read TMEM and write FP32 D
+// Unless a kernel documents a different shape or warp assignment, the shared
+// computation path is:
+//   - a 128x256 output tile and a TCGen05 FP16 x FP16 -> FP32 mainloop;
+//   - SW128 K-major TMA tiles, with each TMA transaction covering K=64;
+//   - warp 0 issuing TCGen05 MMA and warp 1 issuing TMA loads;
+//   - all 128 threads reading the accumulator from TMEM and storing FP32 D.
+//
+// Input layout contract:
+//   A is logically MxK and B is logically KxN, but the TMA descriptor for B
+//   addresses the pre-transposed physical NxK buffer named b_nk.  Output is
+//   row-major unless a runner explicitly selects a transposed-store variant.
+//
+// Synchronization contract:
+//   tma_barrier[s] protects "TMA has filled SMEM stage s"; mma_barrier[s]
+//   protects "TCGen05 has stopped reading SMEM stage s".  Barrier phase bits
+//   toggle whenever a circular buffer wraps.  The overlapped kernels add a
+//   two-entry mainloop/epilogue handshake for double-buffered TMEM.  Changing
+//   a wait, arrive, commit, fence, or phase update can therefore create a
+//   cross-iteration race even when the code still compiles.
 //
 // Stage 5 intentionally keeps the 1-SM tc4a mainloop as the scheduling
 // substrate.  The verified 2-SM path lives in tc4bc_cluster.cuh as a separate
@@ -24,8 +37,15 @@
 
 namespace gemm_sm110::backends {
 
+// SW128 tensor maps require the physical K-leading dimension to be aligned to
+// 64 elements.  Runners use this constant to reject shapes before encoding a
+// descriptor that the kernels cannot consume safely.
 constexpr int kSw128TmaLeadingDimensionAlignment = 64;
 
+// Completes the rows, columns, or K suffix excluded from the aligned TCGen05
+// fast path.  If an element already contains the fast-path prefix dot product,
+// accumulation resumes at fast_k; otherwise the complete scalar dot product
+// is evaluated.  This kernel is a correctness fallback, not a tuned epilogue.
 __global__ void tc5_boundary_cleanup_kernel(
     const half* a, const half* b_nk, float* output, int m, int n, int k,
     int fast_m, int fast_n, int fast_k) {
@@ -48,6 +68,8 @@ __global__ void tc5_boundary_cleanup_kernel(
   output[static_cast<size_t>(row) * n + col] = acc;
 }
 
+// Split-K writes one full MxN partial matrix per split.  This second kernel
+// performs the deterministic elementwise reduction into the user output.
 template <int SplitK>
 __global__ void tc5_splitk_reduce_kernel(const float* partials,
                                          float* output,
@@ -63,6 +85,15 @@ __global__ void tc5_splitk_reduce_kernel(const float* partials,
   output[idx] = value;
 }
 
+// Baseline 1-SM persistent kernel.  Each resident CTA uses a static grid-stride
+// sequence of (split, tile_m, tile_n) work items, avoiding a global work
+// counter.  The same implementation supplies row-major, transposed-store,
+// M=64, strided-output, and Split-K runners through template parameters.
+//
+// Required fast-path bounds are supplied by the runner: M/N/K must already be
+// rounded to complete tiles, and each Split-K slice must contain an integral
+// number of TileK chunks.  output_stride applies only to row-major output;
+// Split-K places consecutive partial matrices at split * M * output_stride.
 template <int TileN = 256, int TileK = 128, int Stages = 2,
           bool StoreTransposed = false, int TileM = 128,
           bool StoreTransposedViaSmem = false>
@@ -93,6 +124,9 @@ void tc5_raw_persistent_1sm_kernel(
   extern __shared__ __align__(1024) char dynamic_smem[];
   const uint32_t smem = ptx::smem_address(dynamic_smem);
 
+  // One producer/consumer handshake per circular SMEM stage.  TMEM is CTA-wide
+  // storage; the elected lane performs control instructions, while all lanes
+  // later participate in readback.
   __shared__ alignas(16) uint64_t tma_barrier[Stages];
   __shared__ alignas(16) uint64_t mma_barrier[Stages];
   __shared__ alignas(16) uint32_t tmem_base;
@@ -119,6 +153,9 @@ void tc5_raw_persistent_1sm_kernel(
       (static_cast<uint32_t>(TileN) >> 3U << 17U) |
       (static_cast<uint32_t>(kTileM) >> 4U << 24U);
 
+  // Phase bits are local replicas of each mbarrier generation.  They toggle
+  // after a wait because the next use of the same stage belongs to the next
+  // circular-buffer generation.
   int tma_phase[Stages] = {};
   int mma_phase[Stages] = {};
   const int slice_k = k / split_k_count;
@@ -127,6 +164,8 @@ void tc5_raw_persistent_1sm_kernel(
   const int total_tiles = tiles_per_split * split_k_count;
   int static_work_id = static_cast<int>(blockIdx.x);
 
+  // Broadcast one CTA-wide work id.  Every CTA owns blockIdx.x + q*gridDim.x;
+  // this is static persistent scheduling, not CLC and not an atomic queue.
   auto fetch_work = [&]() {
     if (warp == 0 && ptx::elect_one()) {
       shared_work_id = static_work_id;
@@ -136,6 +175,8 @@ void tc5_raw_persistent_1sm_kernel(
     return shared_work_id;
   };
 
+  // Warp 1's elected lane produces one SMEM stage.  The expected byte count
+  // must exactly match all TMA requests associated with this barrier.
   auto issue_load = [&](int k_tile, int tile_m, int tile_n,
                         int split_k_start) {
     if (warp != 1 || !ptx::elect_one()) return;
@@ -162,6 +203,9 @@ void tc5_raw_persistent_1sm_kernel(
                                    kAStageBytes + kBStageBytes);
   };
 
+  // All threads first observe TMA completion; then warp 0's elected lane emits
+  // the TCGen05 sequence.  mma_commit releases the SMEM stage for reuse only
+  // after TCGen05 has finished consuming its descriptors.
   auto issue_mma = [&](int k_tile) {
     const int stage = k_tile % Stages;
     const uint32_t tma_barrier_address =
@@ -193,6 +237,9 @@ void tc5_raw_persistent_1sm_kernel(
     ptx::mma_commit(mma_barrier_base + stage * sizeof(uint64_t));
   };
 
+  // Read one completed accumulator tile from TMEM.  Direct row-major stores are
+  // vectorized across N.  A transposed output either uses scalar stores or an
+  // explicit SMEM transpose so that the final global writes remain vectorized.
   auto store_tile = [&](int tile_m, int tile_n, int split) {
     const int offset_m = tile_m * kTileM;
     const int offset_n = tile_n * TileN;
@@ -277,6 +324,9 @@ void tc5_raw_persistent_1sm_kernel(
     }
   };
 
+  // For every output tile: prefill the circular pipeline, alternate MMA with
+  // refills, drain all outstanding MMA consumers, then reuse the sole TMEM
+  // accumulator for the next work item.
   while (true) {
     const int work_id = fetch_work();
     if (work_id >= total_tiles) break;
@@ -336,6 +386,10 @@ void tc5_raw_persistent_1sm_kernel(
 #endif
 }
 
+// N-pair specialization for tail-oriented shapes.  Two adjacent M128xN256
+// tiles share the same A load and occupy consecutive TMEM column ranges.  The
+// final pair may contain one tile; pair_count keeps its TMA byte contract,
+// TCGen05 issue count, and store loop consistent.
 template <int TileK = 64, int Stages = 2>
 __global__ __launch_bounds__(128)
 void tc5_tail_mn_pair_n_kernel(
@@ -396,6 +450,8 @@ void tc5_tail_mn_pair_n_kernel(
   const int total_tiles = tiles_m * tile_pairs_n;
   int static_work_id = static_cast<int>(blockIdx.x);
 
+  // Static persistent work assignment; shared_work_id makes all four warps
+  // agree on the pair before any warp starts touching barriers or TMEM.
   auto fetch_work = [&]() {
     if (warp == 0 && ptx::elect_one()) {
       shared_work_id = static_work_id;
@@ -405,6 +461,8 @@ void tc5_tail_mn_pair_n_kernel(
     return shared_work_id;
   };
 
+  // Load A once and one or two B tiles.  The expected transaction bytes vary
+  // with pair_count, so an absent tail tile never leaves the barrier waiting.
   auto issue_load = [&](int k_tile, int tile_m, int pair_n,
                         int pair_count) {
     if (warp != 1 || !ptx::elect_one()) return;
@@ -554,6 +612,9 @@ void tc5_tail_mn_pair_n_kernel(
 #endif
 }
 
+// M-pair counterpart of tc5_tail_mn_pair_n_kernel.  Two vertically adjacent
+// M128 tiles share B, while A0/A1 and their accumulators remain independent.
+// StoreTransposed selects D[N,M] addressing without changing the GEMM math.
 template <int TileK = 64, int Stages = 2, int PairTileN = 256,
           bool StoreTransposed = false>
 __global__ __launch_bounds__(128)
@@ -786,6 +847,18 @@ void tc5_tail_mn_pair_m_kernel(
 #endif
 }
 
+// Warp-specialized persistent kernel used by tc5a and its tuning variants.
+// EpilogueWarps store tile q while the dedicated TMA and MMA warps build tile
+// q+1.  Two TMEM accumulator buffers make that overlap legal; Stages controls
+// the independent circular SMEM pipeline feeding the MMA warp.
+//
+// Warp assignment:
+//   [0, EpilogueWarps) : TMEM readback and global stores
+//   EpilogueWarps      : elected TMA producer lane
+//   EpilogueWarps + 1  : elected TCGen05 consumer lane and TMEM allocator
+//
+// FixedTilesN/FixedKTiles/FixedTotalTiles are compile-time experiment knobs for
+// fixed benchmark shapes.  Zero means derive the value from runtime dimensions.
 template <int TileM = 128, int TileN = 256, int TileK = 64,
           int Stages = 4, int EpilogueWarps = TileM / 32,
           bool StoreTransposed = false, int FixedTilesN = 0,
@@ -823,6 +896,9 @@ void tc5a_overlap_epilogue_1sm_kernel(
   extern __shared__ __align__(1024) char dynamic_smem[];
   const uint32_t smem = ptx::smem_address(dynamic_smem);
 
+  // tma/mma barriers own circular SMEM stages.  mainloop/epilogue barriers own
+  // the two TMEM buffers: mainloop announces a completed accumulator, while
+  // all epilogue warps arrive before MMA is allowed to overwrite that buffer.
   __shared__ alignas(16) uint64_t tma_barrier[Stages];
   __shared__ alignas(16) uint64_t mma_barrier[Stages];
   __shared__ alignas(16) uint64_t mainloop_barrier[2];
@@ -870,6 +946,8 @@ void tc5a_overlap_epilogue_1sm_kernel(
   const bool tiles_n_power2 =
       (effective_tiles_n & tiles_n_mask) == 0;
 
+  // Division-free mappings are kept for common/fixed N-tile counts because
+  // every persistent warp repeats this conversion for every output tile.
   auto tile_coordinates = [&](int work_id, int& tile_m, int& tile_n) {
     if constexpr (FixedTilesN == 3) {
       tile_m = work_id / 3;
@@ -930,6 +1008,8 @@ void tc5a_overlap_epilogue_1sm_kernel(
     }
   };
 
+  // Named barrier 1 synchronizes only the epilogue warps.  A CTA-wide barrier
+  // would deadlock because the producer warps execute independent loops.
   auto epilogue_sync = []() {
     asm volatile("bar.sync %0, %1;"
                  :
@@ -992,6 +1072,8 @@ void tc5a_overlap_epilogue_1sm_kernel(
       return;
     }
 
+    // Double-buffer TMEM loads in registers: while one x8 vector is being
+    // written to GMEM, the next no-wait read can make progress.
     float values_even[8];
     float values_odd[8];
     ptx::tmem_load_32x32b_x8_no_wait(base_address, values_even);
@@ -1078,7 +1160,10 @@ void tc5a_overlap_epilogue_1sm_kernel(
     }
   };
 
+  // The three branches below are long-lived warp roles.  Their independent
+  // loops communicate only through the barrier generations described above.
   if (warp == kTmaWarp && ptx::elect_one()) {
+    // Producer: wait until MMA releases a SMEM stage, then refill it by TMA.
     int tma_stage = 0;
     int mma_phase = 1;
     for (int work_id = static_cast<int>(blockIdx.x);
@@ -1095,6 +1180,8 @@ void tc5a_overlap_epilogue_1sm_kernel(
       }
     }
   } else if (warp == kMmaWarp && ptx::elect_one()) {
+    // Consumer: wait for TMA, accumulate one output tile, then publish the
+    // completed TMEM buffer.  The epilogue wait prevents premature overwrite.
     int tma_stage = 0;
     int tma_phase = 0;
     int tmem_stage = 0;
@@ -1120,6 +1207,8 @@ void tc5a_overlap_epilogue_1sm_kernel(
       if (tmem_stage == 0) epilogue_phase ^= 1;
     }
   } else if (warp < kEpilogueWarps) {
+    // Epilogue: wait once per TMEM buffer, cooperatively store the tile, and
+    // return one arrival per warp so the MMA role can recycle the buffer.
     int tmem_stage = 0;
     int mainloop_phase = 0;
     for (int work_id = static_cast<int>(blockIdx.x);
@@ -1162,6 +1251,10 @@ void tc5a_overlap_epilogue_1sm_kernel(
 #endif
 }
 
+// M-pair warp-specialized kernel for transposed output.  It computes two
+// M128xTileN tiles that share B, places them side by side in each TMEM buffer,
+// and overlaps their combined epilogue with the next pair's mainloop.  Unlike
+// the non-overlapped pair-M kernel, this variant requires complete M pairs.
 template <int TileN = 64, int TileK = 64, int Stages = 2,
           int EpilogueWarps = 4>
 __global__ __launch_bounds__(
@@ -1198,6 +1291,8 @@ void tc5_pair_m_overlap_transposed_kernel(
   extern __shared__ __align__(1024) char dynamic_smem[];
   const uint32_t smem = ptx::smem_address(dynamic_smem);
 
+  // The barrier topology mirrors tc5a_overlap_epilogue_1sm_kernel; only the
+  // per-stage payload (A0 + A1 + B) and TMEM ownership (two M tiles) differ.
   __shared__ alignas(16) uint64_t tma_barrier[Stages];
   __shared__ alignas(16) uint64_t mma_barrier[Stages];
   __shared__ alignas(16) uint64_t mainloop_barrier[2];
@@ -1445,6 +1540,18 @@ void tc5_pair_m_overlap_transposed_kernel(
 #endif
 }
 
+// ---------------------------------------------------------------------------
+// Host launch wrappers
+// ---------------------------------------------------------------------------
+// Constructors validate the shape contract, encode persistent CUtensorMap
+// descriptors, and opt the selected specialization into its dynamic-SMEM size.
+// launch() only enqueues work and checks launch errors; it does not synchronize
+// the device.  Most aligned-only tuning runners honor TC5H_WORKERS to cap the
+// number of resident CTAs for controlled scheduling experiments.
+
+// General row-major wrapper.  It rounds arbitrary M/N/K down to a legal tiled
+// interior, launches the raw persistent kernel there, and uses the scalar
+// cleanup kernel for all excluded rows, columns, and K suffix values.
 template <int RunnerTileN = 256, int RunnerTileK = 128,
           int RunnerStages = 2>
 class Tc5Runner {
@@ -1560,6 +1667,9 @@ class Tc5Runner {
   bool has_fast_path_ = false;
 };
 
+// Aligned row-major wrapper with a caller-provided leading dimension for D.
+// Padding between rows is preserved; unlike Tc5Runner, no boundary cleanup is
+// available, so all three problem dimensions must satisfy the tile contract.
 template <int RunnerTileN = 256, int RunnerTileK = 128,
           int RunnerStages = 2>
 class Tc5StridedRunner {
@@ -1654,6 +1764,8 @@ class Tc5StridedRunner {
   int output_stride_ = 0;
 };
 
+// Launches the N-pair kernel.  Pairing reuses A across two adjacent N256 tiles;
+// an odd final N tile is handled by pair_count inside the kernel.
 template <int RunnerTileK = 64, int RunnerStages = 2>
 class Tc5TailMnPairNRunner {
  public:
@@ -1740,6 +1852,8 @@ class Tc5TailMnPairNRunner {
   int k_ = 0;
 };
 
+// Launches the M-pair kernel.  Pairing reuses B across two adjacent M128 tiles;
+// an odd final M tile is handled by pair_count inside the kernel.
 template <int RunnerTileK = 64, int RunnerStages = 2>
 class Tc5TailMnPairMRunner {
  public:
@@ -1826,6 +1940,8 @@ class Tc5TailMnPairMRunner {
   int k_ = 0;
 };
 
+// Non-overlapped M-pair variant that writes transposed D[N,M].  This separates
+// pairwise operand reuse from the cost/benefit of epilogue overlap.
 template <int RunnerTileN = 64, int RunnerTileK = 64,
           int RunnerStages = 2>
 class Tc5PairMTransposedStoreRunner {
@@ -1917,6 +2033,8 @@ class Tc5PairMTransposedStoreRunner {
   int k_ = 0;
 };
 
+// Warp-specialized M-pair transposed-store variant.  Complete M256 groups are
+// mandatory because the kernel always overlaps a two-tile TMEM epilogue.
 template <int RunnerTileN = 64, int RunnerTileK = 64,
           int RunnerStages = 2, int RunnerEpilogueWarps = 4>
 class Tc5PairMOverlapTransposedStoreRunner {
@@ -2018,6 +2136,15 @@ class Tc5PairMOverlapTransposedStoreRunner {
   int k_ = 0;
 };
 
+// N=192 tail kernel with a 128+64 decomposition.  TCGen05 descriptors encode
+// N=128 and N=64 separately, but both operations accumulate into adjacent
+// ranges of a 256-column TMEM buffer and appear as one M128xN192 output tile.
+//
+// ClusterMOrder changes only the static work-id traversal order; this remains
+// a 1-SM MMA kernel even when a host runner launches CTAs in clusters of two.
+// SkipEpilogueWait is an experimental no-wait switch: it removes explicit TMEM
+// reuse back-pressure, so its numerical correctness must be validated for the
+// selected schedule instead of being inferred from the default path.
 template <int TileK = 64, int Stages = 4, bool ClusterMOrder = false,
           bool SkipEpilogueWait = false>
 __global__ __launch_bounds__(192)
@@ -2107,6 +2234,8 @@ void tc5_tail_mn_n192_overlap_kernel(
   const int total_tiles = tiles_m * tiles_n;
   const int worker_ctas = static_cast<int>(gridDim.x);
 
+  // The default mapping specializes the observed four-N-tile shape.  Cluster
+  // M order groups adjacent M tiles when CTAs are launched as x=2 clusters.
   auto tile_coordinates = [&](int work_id, int& tile_m, int& tile_n) {
     if constexpr (ClusterMOrder) {
       tile_n = work_id / tiles_m;
@@ -2117,6 +2246,8 @@ void tc5_tail_mn_n192_overlap_kernel(
     }
   };
 
+  // A is shared by the N=128 body and N=64 tail; B uses two tensor maps so each
+  // TMA transfer retains a native, aligned box shape.
   auto issue_load = [&](int k_tile, int tile_m, int tile_n,
                         int tma_stage) {
     const uint32_t barrier =
@@ -2144,6 +2275,8 @@ void tc5_tail_mn_n192_overlap_kernel(
         barrier, kAStageBytes + kB0StageBytes + kB1StageBytes);
   };
 
+  // Emit two MMAs per K block.  The second accumulator starts at TMEM column
+  // 128, immediately following the body accumulator.
   auto issue_mma = [&](int k_tile, int tma_stage, int tmem_stage) {
     const uint32_t stage_smem = smem + tma_stage * kStageBytes;
     const uint32_t a_smem = stage_smem;
@@ -2322,6 +2455,9 @@ void tc5_tail_mn_n192_overlap_kernel(
 #endif
 }
 
+// N=192 aligned wrapper.  The worker heuristic intentionally uses at most one
+// initial CTA per SM and may reduce the count for two- or three-wave workloads,
+// trading fewer resident workers for a longer persistent sequence per worker.
 template <int RunnerTileK = 64, int RunnerStages = 4,
           bool SkipEpilogueWait = false>
 class Tc5TailMnN192Runner {
@@ -2419,6 +2555,10 @@ class Tc5TailMnN192Runner {
   int worker_ctas_ = 1;
 };
 
+// Same 1-SM N=192 computation, launched in x=2 CTA clusters to study launch and
+// traversal effects.  The kernel does not issue cta_group::2 MMA.  Grid size is
+// rounded to a positive even number because every hardware cluster needs two
+// CTAs, even when the last CTA receives no work item.
 template <int RunnerTileK = 64, int RunnerStages = 4,
           bool ClusterMOrder = false, bool SkipEpilogueWait = false>
 class Tc5TailMnN192ClusterLaunchRunner {
@@ -2537,6 +2677,8 @@ class Tc5TailMnN192ClusterLaunchRunner {
   int worker_ctas_ = 2;
 };
 
+// Direct transposed-store wrapper around the baseline persistent kernel.
+// RunnerTileM selects the M128 or M64 accumulator readback mapping.
 template <int RunnerTileN = 64, int RunnerTileK = 128,
           int RunnerStages = 2, int RunnerTileM = 128>
 class Tc5TransposedStoreRunner {
@@ -2629,6 +2771,9 @@ class Tc5TransposedStoreRunner {
   int k_ = 0;
 };
 
+// Transposed output via an explicit TileN x TileM FP32 SMEM scratch tile.  This
+// consumes additional dynamic SMEM but converts scattered scalar writes into
+// coalesced x8 stores, allowing the two epilogue strategies to be compared.
 template <int RunnerTileN = 64, int RunnerTileK = 128,
           int RunnerStages = 2>
 class Tc5TransposedSmemStoreRunner {
@@ -2722,6 +2867,9 @@ class Tc5TransposedSmemStoreRunner {
   int k_ = 0;
 };
 
+// Transposed Split-K wrapper.  Each K slice writes a private MxN partial
+// buffer; tc5_splitk_reduce_kernel then combines the slices in D[N,M] order.
+// The owned device buffer makes this runner non-copyable.
 template <int SplitK = 4, int RunnerTileN = 64, int RunnerTileK = 128,
           int RunnerStages = 2>
 class Tc5TransposedStoreSplitKRunner {
@@ -2832,6 +2980,9 @@ class Tc5TransposedStoreSplitKRunner {
   int k_ = 0;
 };
 
+// Warp-specialized transposed-store wrapper for the tc5a overlap kernel.
+// StoreTransposedViaSmem chooses scalar direct stores or the coalescing scratch
+// path without changing the mainloop or worker-count experiment.
 template <int RunnerTileN = 64, int RunnerTileK = 64,
           int RunnerStages = 4, int RunnerEpilogueWarps = 4,
           bool StoreTransposedViaSmem = false>
@@ -2935,6 +3086,9 @@ class Tc5OverlapTransposedStoreRunner {
   int worker_ctas_ = 1;
 };
 
+// Cluster-launch version of Tc5OverlapTransposedStoreRunner.  Clustering
+// changes CTA placement only; each CTA still owns an independent 1-SM
+// tile and an independent TMEM allocation.
 template <int RunnerTileN = 64, int RunnerTileK = 64,
           int RunnerStages = 4, int RunnerEpilogueWarps = 4>
 class Tc5OverlapTransposedStoreClusterLaunchRunner {
@@ -3052,6 +3206,8 @@ class Tc5OverlapTransposedStoreClusterLaunchRunner {
   int worker_ctas_ = 2;
 };
 
+// M64 specialization of the baseline row-major persistent kernel.  Only the
+// first 64 logical rows participate in TMEM readback for each output tile.
 template <int RunnerTileN = 64, int RunnerTileK = 128,
           int RunnerStages = 2>
 class Tc5M64Runner {
@@ -3135,6 +3291,9 @@ class Tc5M64Runner {
   int k_ = 0;
 };
 
+// Row-major Split-K counterpart of Tc5TransposedStoreSplitKRunner.  The main
+// kernel writes SplitK contiguous MxN partial matrices, followed by a separate
+// elementwise reduction kernel.  No atomic accumulation is used.
 template <int SplitK = 4, int RunnerTileN = 256, int RunnerTileK = 128,
           int RunnerStages = 1, int RunnerTileM = 64>
 class Tc5RowMajorSplitKRunner {
@@ -3250,6 +3409,10 @@ class Tc5RowMajorSplitKRunner {
   int k_ = 0;
 };
 
+// General row-major wrapper for the warp-specialized overlap kernel.  Like
+// Tc5Runner, it accepts arbitrary shapes by combining a rounded tiled interior
+// with scalar cleanup.  Fixed* parameters exist only for shape-specialized
+// experiments and must agree with the runtime problem supplied by the caller.
 template <int RunnerTileM = 128, int RunnerTileN = 256,
           int RunnerTileK = 64, int RunnerStages = 4,
           int RunnerEpilogueWarps = RunnerTileM / 32,
@@ -3389,14 +3552,17 @@ class Tc5OverlapRunner {
   int worker_ctas_ = 1;
   bool has_fast_path_ = false;
 };
-using Tc5aRunner = Tc5OverlapRunner<128, 256, 64, 4>;
-using Tc5cRunner = Tc5Runner<>;
-using Tc5dRunner = Tc5Runner<128, 128, 2>;
-using Tc5eRunner = Tc5Runner<256, 64, 2>;
-using Tc5fRunner = Tc5Runner<128, 64, 2>;
-using Tc5gRunner = Tc5Runner<256, 128, 1>;
-using Tc5hRunner = Tc5Runner<256, 64, 1>;
-using Tc5iRunner = Tc5OverlapRunner<128, 128, 64, 6>;
-using Tc5jRunner = Tc5OverlapRunner<128, 256, 128, 2>;
+// Public stage-5 experiment names.  Keep these aliases explicit: the lettered
+// backends are benchmark identities, while their template arguments record the
+// actual MxNxK tile, SMEM stage count, and scheduling family being compared.
+using Tc5aRunner = Tc5OverlapRunner<128, 256, 64, 4>;   // overlap, M128N256K64
+using Tc5cRunner = Tc5Runner<>;                         // raw, M128N256K128 S2
+using Tc5dRunner = Tc5Runner<128, 128, 2>;              // raw, M128N128K128 S2
+using Tc5eRunner = Tc5Runner<256, 64, 2>;               // raw, M128N256K64 S2
+using Tc5fRunner = Tc5Runner<128, 64, 2>;               // raw, M128N128K64 S2
+using Tc5gRunner = Tc5Runner<256, 128, 1>;              // raw, M128N256K128 S1
+using Tc5hRunner = Tc5Runner<256, 64, 1>;               // raw, M128N256K64 S1
+using Tc5iRunner = Tc5OverlapRunner<128, 128, 64, 6>;   // overlap, N128 K64 S6
+using Tc5jRunner = Tc5OverlapRunner<128, 256, 128, 2>;  // overlap, N256 K128 S2
 
 }  // namespace gemm_sm110::backends
