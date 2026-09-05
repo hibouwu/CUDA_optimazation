@@ -1,12 +1,12 @@
 # CUTLASS 3.x (2)：面向 GEMM 内核设计的正交、可复用、可组合的抽象结构
 
-前置阅读：[CUTLASS 3.x (1)：Cutlass 的张量和空间微内核处理多维数据的原则性抽象 - CuTe](https://xiaopeng.feishu.cn/wiki/QJLZwqhRCiZYeBk5eL1cyU5kntg)、[Cutlass NVFP4 GEMM 技术分享](https://xiaopeng.feishu.cn/wiki/S8N2wn26piQePNkBjiNcwFRCnRc)
+系列阅读：建议先从[CUTLASS 3.x (1)：Thor GEMM 编程入口指南](https://xiaopeng.feishu.cn/wiki/ObOywTfbDi8HP6kf4orcvcgFnah)开始，文章从 GEMM 问题、典型算子场景和 CUTLASS 3.x 的整体结构出发，并用一个 Thor GEMM 串起 Builder、`GemmUniversal` 与 `GemmUniversalAdapter` 的构造和调用过程；本篇继续进入这个 Kernel 的内部，沿 Collective、Kernel 和 Device 追踪 Mainloop、Epilogue、Warp Role、Tile Scheduler、Arguments、Workspace 与 Cluster Launch 如何共同完成一次执行；随后可以阅读[CUTLASS 3.x (3)：Cutlass 的张量和空间微内核处理多维数据的原则性抽象 - CuTe](https://xiaopeng.feishu.cn/wiki/QJLZwqhRCiZYeBk5eL1cyU5kntg)，从 Layout、Tensor、Atom、`TiledMMA` 与 `TiledCopy` 出发理解空间划分，并在 Blackwell 实例中观察 TMA、TCGen05 与 TMEM 怎样承接这些抽象。若希望进一步了解 NVFP4 的数据类型、量化参数和整体数据流，可以补充阅读[Cutlass NVFP4 GEMM 技术分享](https://xiaopeng.feishu.cn/wiki/S8N2wn26piQePNkBjiNcwFRCnRc)。
 
 # 引言
 
 为了构建一套可以兼容不同架构的 GEMM 的通用和融合内核，CUTLASS 设计了一套高性能的模板和抽象库，并且当前的 CUTLASS 3.x 按从设备层到单个 mma 的指令提供了多个层级的 GEMM API。
 
-不像 CPU 的 GEMM，GPU 上的 GEMM 优化是一个互相解耦的模块化问题。高性能实现需要指定矩阵块形状、计算与拷贝指令、warp 特化方案等超参数。这些超参数在很大程度上彼此独立；而且，根据硬件、问题形状或其他用户需求的不同，最佳选择可能有显著差异。本文涉及 CUTLASS 的上层结构，底层的tiled和atom层的api请查阅前文。
+本文从一个已经构造完成的 SM100 GEMM Kernel 出发，先解析 Mainloop 和 Epilogue 两个 Collective 如何由 Builder 生成，并沿 Blackwell SS 路径追踪 TMA Load、SMEM 多阶段流水线、Barrier、TCGen05 MMA、TMEM Accumulator、融合计算和 D 写回；随后进入 `GemmUniversal`，说明 Warp Role 与 Tile Scheduler 如何组织 CTA/Cluster 的协同以及 Work Tile 的领取；最后回到 `GemmUniversalAdapter`，说明 Arguments 如何降低为 Params、Workspace 如何初始化、Cluster Kernel 如何异步启动，以及立即启动错误、设备执行错误和数值验证为什么需要分别检查。
 
 在本文讨论的基础 GEMM 中，一个 kernel 需要完成 `D = alpha * A * B + beta * C`。更具体的数据类型、量化参数和数据流，可以参考[《CUTLASS NVFP4 GEMM 技术分享》](https://xiaopeng.feishu.cn/wiki/S8N2wn26piQePNkBjiNcwFRCnRc)以及前置材料中的数据流图。
 
@@ -14,137 +14,7 @@
 
 Epilogue 在当前输出 tile 完成全部 K 维累加后，消费 Mainloop 产生的累加器，执行 `D = alpha * Acc + beta * C`，以及可选的 bias、activation、requantization 等融合操作，最后把结果写回 D。复杂的融合数据流可以通过 EVT 表达。
 
-因此，一个 GEMM kernel 的逻辑数据流可以概括为：`A、B → Mainloop → Accumulator → Epilogue + C → D`。下面将介绍 CUTLASS 如何通过五层 API 构造这一过程。
-
-# CUTLASS 3.x 中新的概念性 GEMM 层次结构
-
-CUTLASS 为 GPU 系统层次结构中不同层级的矩阵乘积累加（MMA）操作提供了一种统一的编程模型。CUTLASS 3.0 提供了相应的 GEMM API，这些 API 按从最高层级到最低层级的顺序对应于以下层级。CUTLASS 3.x 建立了一套独立于具体硬件特性的概念性 GEMM 层次结构（[cutlass/media/docs/cpp/gemm_api_3x.md at main · NVIDIA/cutlass](https://github.com/NVIDIA/cutlass/blob/main/media/docs/cpp/gemm_api_3x.md)）。它由五层组成：
-
-![图 1. 与硬件无关的 CUTLASS GEMM 概念层次结构 由相互嵌套的绿色半圆表示 GEMM 层次结构；从 Atom 到 Device](Imgaes/cutlass-3-gemm-abstractions/CUTLASS-GEMM-hierarchy-png.webp)
-
-- [Atom 层接口](https://github.com/NVIDIA/cutlass/tree/main/include/cute/atom)：特定于架构的指令及其相关元信息（通常定义一条 MMA  / TMA硬件指令、原始参数及其操作数契约，操作数契约由 `MMA_Traits` / `Copy_Traits` 结构体声明和定义， CuTe 从此结构体得知这条指令的 shape、数据类型和 Thread–Value layout，详细定义见[前文](https://xiaopeng.feishu.cn/wiki/QJLZwqhRCiZYeBk5eL1cyU5kntg)。Atom 将 traits 的 bit layout 按实际数据类型转换成 value layout 供 Tiled MMA/Copy 层消费。）
-
-  - [`cute::MMA_Atom<>`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/mma_atom.hpp)：将一条 mma 指令和 [traits](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/mma_traits.hpp)（定义shape、SMEM descriptor、TMEM fragment、thread/value layout） 包装成 atom 的 call、fragment 等统一接口。
-  - [`cute::Copy_Atom<>`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/copy_atom.hpp)：对 tma/cp.async 的指令和[ traits](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/copy_traits.hpp) （定义 ThrID 线程ID、SrcLayout 搬运来源操作数布局、DstLayout 搬运目标操作数布局、RefLayout 逻辑参考布局）包装成统一接口。
-- Tiled MMA/Copy 层接口：**空间微内核**，允许对特定于架构的 atom 进行任意交织与分块（生成 work tile 内部的线程—数据分块（partition） ，然后将Atom层的单个 mma 和 tma 指令在 M/N/K 上重复 Atom）
-
-  - [`cute::TiledMMA<>`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/atom/mma_atom.hpp#L199-L240)：`TiledMma` 将一个 `Mma_Atom` 按指定的 Atom layout、value layout 和 permutation 展开到一组参与计算的线程上。它决定每个逻辑线程负责累加器中的哪些元素，以及一次局部矩阵乘法需要调用底层 MMA operation 多少次。
-  - [`cute::TiledCopy<>`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/atom/copy_atom.hpp#L176-L223)：`TiledCopy` 将一个 `Copy_Atom` 展开到一组参与搬运的线程或逻辑参与者上。它决定源张量和目标张量如何分区，以及每个参与者负责搬运哪些元素。
-  - 注意：`TiledMma` 负责计算的空间分块，`TiledCopy` 负责数据搬运的空间分块；二者在 Tiled 层仍是独立对象。 Collective 层才把它们与 SMEM layout、流水线阶段、barrier 和 warp specialization 组织在一起。
-- Collective 层接口：面向一个输出 tile 的**时间微内核**，它把 `TiledCopy`、`TiledMMA`、流水级和同步机制组织起来，规定数据加载、MMA 累加、后处理与结果写回的执行顺序。
-
-  - [`cutlass::gemm::collective::CollectiveMma<>`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/collective_mma_decl.hpp)：Mainloop Collective，沿 K 维组织 A、B tile 的加载、同步和 MMA 累加，产生当前输出 tile 的累加器。
-  - [`cutlass::epilogue::collective::CollectiveEpilogue<>`](https://github.com/NVIDIA/cutlass/tree/main/include/cutlass/epilogue/collective)：Epilogue Collective，消费 Mainloop 产生的累加器，执行 alpha \* Acc + beta \* C、可选融合操作和 D 矩阵写回。
-- Kernel 层：面向整个 GEMM 问题空间的无状态设备内核。它组合 `CollectiveMainloop` 和 `CollectiveEpilogue`，把 M/N/L 方向的输出 tile 分配给 threadblock 或 threadblock cluster，并通过 tile scheduler 组织整个 grid 的执行。
-
-  - [`cutlass::gemm::kernel::GemmUniversal<>`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/kernel/gemm_universal_decl.h)：根据问题形状、Mainloop Collective、Epilogue Collective 和可选 Tile Scheduler 构造完整的设备端 GEMM kernel。
-- Device 层：面向一次具体 GEMM 调用的有状态主机接口。它将一次具体 GEMM 的问题形状、张量地址、stride、epilogue 和 scheduler 参数转换为 Kernel 所需的运行时状态，并负责合法性检查、workspace 管理和 CUDA kernel 启动。
-
-  - [`cutlass::gemm::device::GemmUniversalAdapter<>`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/device/gemm_universal_adapter.h)：把 `GemmUniversal` 内核包装成主机端 GEMM 句柄，提供 `can_implement`、`get_workspace_size`、`initialize` 和 `run` 等接口。
-
-**代码：从线程块簇到 Atom 的 GEMM 分层执行伪代码**
-
-```C++
-// cutlass::gemm::kernel::GemmUniversal: ClusterTileM and ClusterTileN loops
-//   are either rasterized by the hardware or scheduled by the kernel in persistent kernels.
-// Parallelism over thread block clusters
-for (int cluster_m = 0; cluster_m < GemmM; cluster_m += ClusterTileM) {
-  for (int cluster_n = 0; cluster_n < GemmN; cluster_n += ClusterTileN) {
-    // collective mainloop 层：mainloop that iterates over all k-tiles
-    // cutlass::gemm::collective::CollectiveMma
-    // No loop unrolling is performed at this stage
-    for (int k_tile = 0; k_tile < size<2>(gmem_tensor_A); k_tile++) {
-      // Tiled 层
-      // loops inside cute::gemm(tiled_mma, a, b, c); Dispatch 5: (V,M,K) x (V,N,K) => (V,M,N)
-      // TiledMma uses the hardware instruction provided through its Mma_Atom
-      // TiledMma's atom layout, value layout, and permutations define the iteration order
-      for (int tiled_mma_k = 0; tiled_mma_k < size<2>(A); tiled_mma_k++) {
-        for (int tiled_mma_m = 0; tiled_mma_m < size<1>(A); tiled_mma_m++) {
-          for (int tiled_mma_n = 0; tiled_mma_n < size<1>(B); tiled_mma_n++) {
-            // TiledMma's vector mode dispatches to the underlying instruction.
-            mma.call(d, a, b, c);
-          } // tiled_mma_n
-        } // tiled_mma_m
-      } // tiled_mma_k
-    } // k_tile mainloop
-  } // cluster_m
-} // cluster_n
-```
-
-每一层都作为前一层抽象的组合点，并可通过模板参数进行高度定制。用户可以只使用最高层，相信 CUTLASS 的编译期逻辑会给出高性能 GEMM 实现；也可以选择使用层次结构低层暴露的高级修改能力。Atom 和 Tiled MMA/Copy 层提供的空间微内核的抽象属于 CuTe 的范畴，已在[CUTLASS 3.x (1)：Cutlass 的张量和空间微内核处理多维数据的原则性抽象 - CuTe](https://xiaopeng.feishu.cn/wiki/QJLZwqhRCiZYeBk5eL1cyU5kntg)这篇文章中讨论。本文余下内容将介绍高层所提供的 GEMM 时间组织和内核级组织。
-
-后续示例是 NVIDIA Thor/SM110a 上的 CUTLASS 3.x GEMM：A、B 使用 FP16，累加和输出使用 FP32，MMA tile 为 256×128×64，cluster 为 2×2×1。
-
-这里 的CUTLASS C++ Builder 继续使用 `cutlass::arch::Sm100` 选择可复用的 Blackwell TCGen05 配方；CUDA 13.0 及以上则用 `-gencode arch=compute_110a,code=sm_110a` 生成 Thor/SM110a 二进制。以下是一个代码的示例：
-
-**代码：Thor/SM110a 上的 CUTLASS 3.x GEMM 基线类型组合**
-
-```C++
-// CUTLASS 配方标签：当前 C++ CollectiveBuilder 复用 Sm100 实现族
-using ArchTag = cutlass::arch::Sm100;
-using OperatorClass = cutlass::arch::OpClassTensorOp;
-
-using ElementA = cutlass::half_t;
-using ElementB = cutlass::half_t;
-using ElementC = float;
-using ElementD = float;
-using ElementAccumulator = float;
-using ElementCompute = float;
-
-using LayoutA = cutlass::layout::RowMajor;
-using LayoutB = cutlass::layout::RowMajor;
-using LayoutC = cutlass::layout::RowMajor;
-using LayoutD = cutlass::layout::RowMajor;
-
-static constexpr int AlignmentA = 128 / cutlass::sizeof_bits<ElementA>::value;
-static constexpr int AlignmentB = 128 / cutlass::sizeof_bits<ElementB>::value;
-static constexpr int AlignmentC = 128 / cutlass::sizeof_bits<ElementC>::value;
-static constexpr int AlignmentD = 128 / cutlass::sizeof_bits<ElementD>::value;
-
-using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;
-using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;
-
-// 第 1 步：先生成 epilogue，以便为 mainloop 计算 SMEM carveout
-using EpilogueOperation = cutlass::epilogue::fusion::LinearCombination<
-    ElementD, ElementCompute, ElementC, float,
-    cutlass::FloatRoundStyle::round_to_nearest>;
-
-using CollectiveEpilogue = typename cutlass::epilogue::collective::CollectiveBuilder<
-    ArchTag, OperatorClass, MmaTileShape, ClusterShape,
-    cutlass::epilogue::collective::EpilogueTileAuto,
-    ElementAccumulator, ElementCompute,
-    ElementC, LayoutC, AlignmentC,
-    ElementD, LayoutD, AlignmentD,
-    cutlass::epilogue::collective::EpilogueScheduleAuto,
-    EpilogueOperation>::CollectiveOp;
-
-// 第 2 步：生成 SM110a 使用的 TCGen05 collective mainloop
-using CollectiveMainloop = typename cutlass::gemm::collective::CollectiveBuilder<
-    ArchTag, OperatorClass,
-    ElementA, LayoutA, AlignmentA,
-    ElementB, LayoutB, AlignmentB,
-    ElementAccumulator,
-    MmaTileShape, ClusterShape,
-    cutlass::gemm::collective::StageCountAutoCarveout<
-        static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>,
-    cutlass::gemm::collective::KernelScheduleAuto>::CollectiveOp;
-
-// 第 3 步：在 Kernel 层组合 mainloop 与 epilogue
-using GemmKernel = cutlass::gemm::kernel::GemmUniversal<
-    cute::Shape<int, int, int, int>, // [M, N, K, L]
-    CollectiveMainloop,
-    CollectiveEpilogue>;
-
-// 第 4 步：生成主机端可复用句柄
-using GemmHandle = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
-
-// 使用 CUDA 13.0+ 编译：
-// nvcc -std=c++17 --expt-relaxed-constexpr -gencode arch=compute_110a,code=sm_110a ...
-```
-
-根据这个代码的实例我们能看到我们在 collectie、kernel、device 层是怎么调用 api 的，具体必要的 api 的调用参数我们将在下面详细讲解。
-
-另外注意 CUTLASS2.x 的 device::Gemm、kernel::Gemm、threadblock::Mma\*、warp::Mma\*、arch::Mma 等接口不要与 3.x 的 GEMM 组件混用。CUTLASS 2.x 的 `threadblock::Mma* → warp::Mma* → arch::Mma` 主要面向由一个 warp 使用线程私有寄存器 fragment 执行同步 MMA 的经典模型。Blackwell 原生 `tcgen05.mma` 则具有 `cta_group::1/2` 协作范围，累加器位于 TMEM，并通过 TMA、SMEM descriptor、warp specialization 和 pipeline barrier 构成异步流水线。因此，TCGen05 kernel 应使用 CUTLASS 3.x 的 `CollectiveMma → TiledMMA → MMA_Atom` 组合模型，而不应把 `tcgen05.mma` 当作可以直接替换传统 `arch::Mma` 的 warp-level 指令。
+因此，一个 GEMM Kernel 的逻辑数据流可以概括为：`A、B → Mainloop → Accumulator → Epilogue + C → D`。下面先从两个 `CollectiveBuilder` 如何生成 Mainloop 与 Epilogue 开始，再沿 Kernel 和 Device 一直追踪到完整的设备端执行、启动与验证过程。
 
 # Collective 层
 
@@ -154,7 +24,7 @@ using GemmHandle = cutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
 
 首先，Builder 的编译期类型构造顺序是从 `CollectiveEpilogue` 到 `CollectiveMainloop`。这是因为 Mainloop 的自动流水级推导需要考虑 Epilogue 的 CTA 级共享存储需求。只有先构造 `CollectiveEpilogue`，才能通过 `sizeof(CollectiveEpilogue::SharedStorage)` 得到 Epilogue 所需的 SharedStorage 大小；Mainloop Builder 再将其作为 `StageCountAutoCarveout` 的 carveout，结合目标架构可用的 SMEM 容量和单个 A/B stage 的存储开销，推导剩余共享内存能够容纳的 Mainloop stage 数量。
 
-简单的推导公式大致如下，Layout、padding、swizzle 和对齐带来的开销未被记入：
+简单的推导公式大致如下，未记入 Layout、padding、swizzle 和对齐带来的开销：
 
 $$\begin{equation}\begin{split} S_{stage} & = S_{A} + S_{B} + S_{MainloopPipeline::SharedStorage} \\&= sizeof(A) \times M_{tile} \times K_{tile} + sizeof(B) \times N_{tile} \times K_{tile} + S_{pipelnie控制数据}\end{split}\notag\end{equation}$$
 
@@ -164,9 +34,9 @@ $$N_{stage} = \left\lfloor \frac{S_{capacity,reduced} - S_{epilogue carveout} }{
 
 构造 CollectiveEpilogue 时，首先定义 Epilogue 的数学操作。LinearCombination 表达基础的 alpha \* Acc + beta \* C，并根据 ElementD 完成输出类型转换；下面的 INT8 输出配置没有独立的 requant_scale 与 zero_point，因此不等同于完整 Requant：
 
-**代码：定义 INT8 LinearCombination 输出操作（不含完整 Requant）**
+**定义 INT8 LinearCombination 输出操作（不含完整 Requant）**
 
-```C++
+```cpp
 using ElementD = int8_t;
 using ElementCompute = float;
 using ElementScalar = float;
@@ -182,9 +52,9 @@ using EpilogueOperation =
 
 使用 Epilogue 的 CollectiveBuilder 构造具体的 CollectiveEpilogue 类型：
 
-**代码：构造 CollectiveEpilogue：绑定输出类型、调度与融合操作**
+**构造 CollectiveEpilogue：绑定输出类型、调度与融合操作**
 
-```C++
+```cpp
 using CollectiveEpilogue =
     typename cutlass::epilogue::collective::CollectiveBuilder<
         ArchTag,            // Builder 使用它选择对应的 Epilogue 实现族、DispatchPolicy、
@@ -236,7 +106,7 @@ Builder中定义的操作也可以自由[选择预定义的 Fusion Operation](ht
 
 在得到 `CollectiveEpilogue` 之后，再用 Builder 构造 Mainloop：
 
-**代码：构造 CollectiveMainloop：预留 Epilogue SMEM 并推导 Stage**
+**构造 CollectiveMainloop：预留 Epilogue SMEM 并推导 Stage**
 
 ```Markdown
 using CollectiveMainloop =
@@ -298,9 +168,9 @@ Mainloop `CollectiveBuilder` 的分派是编译期类型决策树：Builder 根�
 
 Collective 层的架构信息由 `CollectiveBuilder` 的 `ArchTag` 参数传入，Builder 再结合 Stage Count、Cluster Shape 和 Kernel Schedule 构造具体的 `DispatchPolicy`结构体，比如一个能被 thor 接受的 MainloopSm100TmaUmmaWarpSpecializedBlockScaled 如下：
 
-**代码：定义 SM100 Block-Scaled Mainloop 的 DispatchPolicy**
+**定义 SM100 Block-Scaled Mainloop 的 DispatchPolicy**
 
-```C++
+```cpp
 struct MainloopSm100TmaUmmaWarpSpecializedBlockScaled {
   constexpr static int Stages = Stages_;
   using ClusterShape = ClusterShape_;
@@ -350,7 +220,7 @@ template<
 
 对 Mainloop Builder 而言，其输出在结构上可以展开为：
 
-**代码：展开 Builder 输出：显式 CollectiveMma 类型契约**
+**展开 Builder 输出：显式 CollectiveMma 类型契约**
 
 ```Plain Text
 // 当前示例：FP16、SM100 TMA + TCGen05 SS、TMEM Accumulator。
@@ -403,7 +273,7 @@ using CollectiveMainloopManual =
 
 前一节已经把 Mainloop Builder 的输出展开为一个具体的 `CollectiveMma` 类型。本节从该类型的类体继续向下分析。本文使用的 SM100 TMA + TCGen05 SS 路径会匹配 [`sm100_mma_warpspecialized.hpp`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp) 中的偏特化，其第一模板参数为 [`MainloopSm100TmaUmmaWarpSpecialized`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/dispatch_policy.hpp)。Builder 传入的 [`TiledMma`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/mma_atom.hpp)、TMA Copy 类型和 SMEM Layout 描述空间分块，DispatchPolicy 中的 Stage、Cluster Shape 和内部 Schedule 描述时间组织；`CollectiveMma` 把两者合成为沿 K 维持续执行的异步 Mainloop。
 
-**代码：匹配 SM100 TMA + TCGen05 的 CollectiveMma 偏特化**
+**匹配 SM100 TMA + TCGen05 的 CollectiveMma 偏特化**
 
 ```cpp
 template<
@@ -452,7 +322,7 @@ struct CollectiveMma<
 
 图：`TiledMma`、SMEM Layout 与 Pipeline State 如何共同构成多阶段 A/B SMEM Pipeline。一个逻辑 Stage 同时关联一份 A/B 数据、一组 Full/Empty Barrier，以及 Producer/Consumer Warp 当前持有的 index 与 phase。
 
-**代码：把 A/B SMEM Layout 扩展为多 Stage PIPE 布局**
+**把 A/B SMEM Layout 扩展为多 Stage PIPE 布局**
 
 ```cpp
 using SmemLayoutA = decltype(
@@ -477,7 +347,7 @@ using SmemLayoutB = decltype(
 
 Kernel 会分别取得 `CollectiveMainloop::TensorStorage` 和 `CollectiveMainloop::PipelineStorage`，再与 Epilogue、Accumulator Pipeline 和 TileScheduler 的共享状态一起排入 Kernel 级 SharedStorage。
 
-**代码：组合 A/B 张量存储与 Mainloop Pipeline 共享状态**
+**组合 A/B 张量存储与 Mainloop Pipeline 共享状态**
 
 ```cpp
 struct SharedStorage {
@@ -500,7 +370,7 @@ struct SharedStorage {
 
 `MainloopPipeline` 使用 [`PipelineTmaUmmaAsync`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 实现 A/B Stage 的 Producer/Consumer 协议。这个类型绑定 `DispatchPolicy::Stages`、Cluster Shape 和 MMA Atom 的 CTA 参与范围，并通过 `MainloopPipeline::PipelineState` 暴露对应的运行时状态类型：
 
-**代码：定义 MainloopPipeline 与运行时 PipelineState 类型**
+**定义 MainloopPipeline 与运行时 PipelineState 类型**
 
 ```cpp
 using MainloopPipeline =
@@ -515,7 +385,7 @@ using MainloopPipelineState =
 
 Kernel 随后创建两份相互独立的本地状态：MainloopLoad Producer 使用 `mainloop_pipe_producer_state`，MMA Consumer 使用 `mainloop_pipe_consumer_state`。这些状态是 Kernel 的局部变量，通常驻留在参与线程的寄存器中，不属于 SMEM 中的 `PipelineStorage`：
 
-**代码：初始化 TMA Producer 与 MMA Consumer 的 PipelineState**
+**初始化 TMA Producer 与 MMA Consumer 的 PipelineState**
 
 ```Plain Text
 // MMA Consumer 当前持有的 Stage 游标
@@ -529,7 +399,7 @@ MainloopPipelineState mainloop_pipe_producer_state =
 
 [`PipelineState`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm90_pipeline.hpp) 内部记录：
 
-**代码：PipelineState：物理 Stage、Barrier 代次与推进计数**
+**PipelineState：物理 Stage、Barrier 代次与推进计数**
 
 ```Plain Text
 PipelineState {
@@ -541,7 +411,7 @@ PipelineState {
 
 对于某个状态 `state`，`state.index()` 同时选择当前的 A/B Buffer 和对应的 Barrier：
 
-**代码：用 Stage 索引绑定 A/B Buffer 与 Full/Empty Barrier**
+**用 Stage 索引绑定 A/B Buffer 与 Full/Empty Barrier**
 
 ```Plain Text
 smem_A[..., state.index()]
@@ -557,7 +427,7 @@ empty_barrier_[state.index()]
 
 [`Arguments`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp) 保存用户提供的 A/B Pointer、Stride 和可选运行时数据类型。[`to_underlying_arguments()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp) 将它们与 Problem Shape、Tile Shape、Cluster Layout、TiledMma 和 SMEM Layout 合并，构造设备端 [`Params`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp) 中的 `TMA_A`、`TMA_B` 及 fallback descriptor。Builder 决定 TMA 类型，`Arguments → Params` 转换则把某一次 GEMM 的实际地址和 Shape 写入描述符。
 
-**代码：Arguments 到 TMA Descriptor 与 Params 的构造链路**
+**Arguments 到 TMA Descriptor 与 Params 的构造链路**
 
 ```text
 Pointer + Stride + ProblemShape
@@ -573,7 +443,7 @@ CollectiveMma::Params
 
 设备端的 [`load_init()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp) 首先从 TMA Params 建立完整的 GMEM Tensor，再使用 `local_tile` 取得当前 Collective 对应的 A/B Tile。随后，[`TiledMma::get_slice()`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/mma_atom.hpp) 根据当前 CTA 在 1SM 或 2SM MMA 中的位置生成 CTA Slice，`partition_A()` 与 `partition_B()` 将 TiledMma 的空间映射应用到全局 Tile。最后，[`tma_partition()`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/copy_traits_sm90_tma.hpp) 将 GMEM Source View、SMEM Destination View、Cluster Layout 和 Multicast Mask 连接起来。
 
-**代码：按 CTA Slice 划分 A/B Tile 并建立 TMA 分区**
+**按 CTA Slice 划分 A/B Tile 并建立 TMA 分区**
 
 ```cpp
 ThrMMA cta_mma = TiledMma{}.get_slice(
@@ -592,7 +462,7 @@ auto [tBgB_nkl, tBsB] = tma_partition(...);
 
 运行时的 Warp Role 由 [`sm100_gemm_tma_warpspecialized.hpp`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp) 分配。Kernel 创建一个共享的 `CollectiveMainloop` 对象，并把 Warp 划分为 `Sched`、`MainloopLoad`、`MMA`、`EpilogueLoad` 和 `Epilogue`。MainloopLoad Warp 作为 `MainloopPipeline` Producer 调用 [`load()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp)，MMA Warp 作为 Consumer 调用 [`mma()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp)。Collective 定义两条接口及其依赖协议，Kernel 将具体 Warp 映射到这些接口。
 
-**代码：MainloopLoad 与 MMA Warp 的 CollectiveMma 调用接口**
+**MainloopLoad 与 MMA Warp 的 CollectiveMma 调用接口**
 
 ```cpp
 // MainloopLoad Warp
@@ -616,7 +486,7 @@ collective_mainloop.mma(
 
 `load()` 先通过 [`producer_try_acquire()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 与 [`producer_acquire()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 等待 Empty Barrier，取得可写的 `write_stage` 后，把该 Stage 的 Transaction Barrier 与 A/B TMA Copy 绑定。TMA 发射完成后，Producer 推进自身 Stage State，继续准备后续 K tile。MMA Warp 使用 [`consumer_try_wait()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 与 [`consumer_wait()`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 等待 Full Barrier，取得 `read_stage` 后，沿 Stage 内部的 MMA_K 模式调用 [`cute::gemm()`](https://github.com/NVIDIA/cutlass/blob/main/include/cute/algorithm/gemm.hpp)：
 
-**代码：消费当前 SMEM Stage 并执行 TCGen05 MMA**
+**消费当前 SMEM Stage 并执行 TCGen05 MMA**
 
 ```cpp
 cute::gemm(
@@ -634,7 +504,7 @@ cute::gemm(
 
 A/B Mainloop Pipeline 连接 MainloopLoad Warp 与 MMA Warp；完整 Kernel 还通过 [`PipelineUmmaAsync`](https://github.com/NVIDIA/cutlass/blob/main/include/cutlass/pipeline/sm100_pipeline.hpp) 建立 Accumulator Pipeline，连接 MMA Warp 与 Epilogue Warp。MMA Warp 在写入某个 TMEM Accumulator Stage 前取得 Producer 权限，完成当前输出 Tile 的全部 K 维累加后执行 `producer_commit()`；Epilogue Warp 等待对应 Stage 进入 Ready，读取 Accumulator 并在处理结束后释放该 Stage。两条 Pipeline 串联为 `GMEM A/B → SMEM Stage → MMA Warp → TMEM Accumulator Stage → Epilogue Warp`，分别保护 A/B SMEM Buffer 和 TMEM Accumulator Buffer。
 
-**代码：定义 MMA 到 Epilogue 的 TMEM Accumulator Pipeline**
+**定义 MMA 到 Epilogue 的 TMEM Accumulator Pipeline**
 
 ```cpp
 using AccumulatorPipeline =
@@ -655,7 +525,7 @@ Mainloop 完成当前输出 Tile 的全部 K 维累加后，Accumulator Pipeline
 
 前面的 Epilogue Builder 最终产生一个具体的 [`CollectiveEpilogue`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L70-L101)[ 偏特化](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L70-L101)。本节源码链接固定到 CUTLASS commit `8f50b052e1099fb982392a622caab69b97b63128`。第一模板参数 `Sm100TmaWarpSpecialized` 给出 C/D Stage 数、一次 Visitor 处理的 Fragment 大小、C/D 是否复用同一片 SMEM，以及 TMA Store 是否延后一轮发射；其余模板参数分别描述 CTA/Epilogue 空间分块、C/D 接口、FusionCallbacks 和 TMEM/SMEM/GMEM 之间的 Copy Atom。
 
-**代码：SM100 CollectiveEpilogue 偏特化的模板参数与类型契约**
+**SM100 CollectiveEpilogue 偏特化的模板参数与类型契约**
 
 ```cpp
 template<
@@ -701,7 +571,7 @@ class CollectiveEpilogue<
 
 这条路径同时使用三套状态。[`LoadPipeline`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L195-L219) 是 `PipelineTransactionAsync<StagesC>`，连接 EpilogueLoad Warp 与 Epilogue Warp；Accumulator Pipeline 由 Kernel 创建，连接 MMA Warp 的 TMEM 写入与 Epilogue Warp 的 TMEM 读取；`StorePipeline` 是 `PipelineTmaStore`，限制在途 TMA Store 数量，并控制 D 的 SMEM Stage 何时可以复用。三者各自持有 `PipelineState`，所以 C Stage、TMEM Accumulator Stage 与 D Stage 可以独立轮转。
 
-**代码：C Load、D Store Pipeline 与 Epilogue SharedStorage**
+**C Load、D Store Pipeline 与 Epilogue SharedStorage**
 
 ```cpp
 using LoadPipeline  = PipelineTransactionAsync<StagesC>;
@@ -727,7 +597,7 @@ struct SharedStorage {
 
 [`Arguments`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L226-L318) 保存 FusionCallbacks 的运行时参数、C/D Pointer 与 Stride；`to_underlying_arguments()` 把它们转换成设备端 `Params`，其中包括 FusionCallbacks Params、C 的 TMA Load Descriptor 和 D 的 TMA Store Descriptor。C 的逻辑类型为 `void` 时不会构造有效的 C Load 路径，FusionCallbacks 也可以根据 `beta`、Aux 输入或具体 Operation 判断某次执行是否需要 Producer Load。
 
-**代码：CollectiveEpilogue 的 Arguments → Params 参数降级**
+**CollectiveEpilogue 的 Arguments → Params 参数降级**
 
 ```cpp
 struct Arguments {
@@ -751,7 +621,7 @@ Kernel 把 Epilogue 工作拆给两个 Warp Category。[`EpilogueLoad`](https://
 
 [`load()`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L460-L549) 先取得当前 CTA 的 C Tile，再按 `EpilogueTile` 划分为 `gC_epi`。每次循环通过 `producer_acquire()` 取得一个空闲 C Stage，把该 Stage 的 Transaction Barrier 绑定到 TMA Load，然后执行 FusionCallbacks 的 Producer Load Hook。[`store()`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L573-L955) 在同一 Subtile 次序上推进三套状态：等待 C Load Ready，等待 TMEM Accumulator Ready，执行 Fragment 计算，把 D 写入当前 SMEM Store Stage，最后提交 TMA Store。
 
-**代码：Epilogue Subtile 循环中的三路等待、Fusion 与 D Store**
+**Epilogue Subtile 循环中的三路等待、Fusion 与 D Store**
 
 ```cpp
 // 对每个 (epi_m, epi_n) Subtile：
@@ -778,7 +648,7 @@ Accumulator Stage 的释放点位于最后一次 TMEM Load 之后，而 D Store 
 
 Epilogue Builder 的最后一个输入既可以是预定义的 `FusionOperation`，也可以是已经构造好的回调类型。[`CallbacksBuilder`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/collective_builder.hpp#L75-L111) 对这两种输入作编译期分流：传入 `LinearCombination`、`LinCombEltAct` 等 Operation Tag 时，它根据 DispatchPolicy、CTA Tile 和 EpilogueTile 实例化架构特化的 `FusionCallbacks`；传入自定义 EVT 或回调类型时，Builder 直接透传该类型。
 
-**代码：CallbacksBuilder 对预定义 Operation 与自定义 EVT 的分流**
+**CallbacksBuilder 对预定义 Operation 与自定义 EVT 的分流**
 
 ```cpp
 // 预定义 Operation Tag：由 Builder 生成架构特化回调
@@ -811,7 +681,7 @@ using Callbacks = UserProvidedCallbacks;
 
 预定义 Operation 无法表达目标量化格式时，可以把 Requant 写成自定义 EVT。以 `D = saturate_round(requant_scale × (alpha × Acc + beta × C) + zero_point)` 为例，Accumulator、C、alpha、beta、requant_scale 和 zero_point 分别作为叶节点，Multiply/Add 组成中间节点，根节点完成目标整数类型的舍入与饱和转换。EVT 的后序遍历保证子节点先产生 Fragment，父节点再消费这些结果。
 
-**代码：Requant EVT 的后序求值树与量化输入节点**
+**Requant EVT 的后序求值树与量化输入节点**
 
 ```text
 OutputConvert<ElementD, round, saturate>
@@ -836,7 +706,7 @@ Requant 的公式必须同时说明 scale 的方向、zero-point、目标舍入�
 
 [`GemmUniversal`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/gemm_universal_decl.h#L36-L57) 的 CUTLASS 3.x 参数依次是 Problem Shape、CollectiveMainloop、CollectiveEpilogue 和 TileSchedulerTag。第四个参数即使使用默认值也值得显式写出，因为 Kernel 实现族与输出 Tile 分配方式由两条不同的类型链选择：
 
-**代码：组合 Mainloop、Epilogue 与 TileSchedulerTag，定义 GemmUniversal Kernel 类型**
+**组合 Mainloop、Epilogue 与 TileSchedulerTag，定义 GemmUniversal Kernel 类型**
 
 ```cpp
 using GemmKernel = cutlass::gemm::kernel::GemmUniversal<
@@ -861,7 +731,7 @@ using GemmKernel = cutlass::gemm::kernel::GemmUniversal<
 
 Kernel 的 [`Arguments`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L214-L232) 保存 host-facing 的 mode、ProblemShape、MainloopArguments、EpilogueArguments、KernelHardwareInfo 和 TileSchedulerArguments；`Params` 保留相同的顶层结构，但三个组件已经被降低为 MainloopParams、EpilogueParams 和 TileSchedulerParams。[`to_underlying_arguments()`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L254-L298) 划分外部 workspace，并分别调用 Mainloop、Epilogue 和 Tile Scheduler 的参数转换函数。
 
-**代码：定义 Kernel 的 Arguments 与 Params 两级运行参数**
+**定义 Kernel 的 Arguments 与 Params 两级运行参数**
 
 ```cpp
 struct Arguments {
@@ -889,7 +759,7 @@ struct Params {
 
 [`operator()(Params const&, char* smem_buf)`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L403-L454) 先取得 Cluster Rank、MMA Leader CTA 和 Warp Category，把动态 SMEM 解释为 Kernel SharedStorage，并构造 CollectiveMainloop、CollectiveEpilogue 及各条 Pipeline。Kernel 使用下面五种角色划分线程：
 
-**代码：定义 Kernel 状态机中的五类 Warp 执行角色**
+**定义 Kernel 状态机中的五类 Warp 执行角色**
 
 ```cpp
 enum class WarpCategory {
@@ -924,7 +794,7 @@ Device 层是主机端运行参数进入异步 CUDA Kernel 启动的边界。`Ge
 
 [`GemmUniversalAdapter`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L122-L137) 从 GemmKernel 导出 TileShape、Element、DispatchPolicy 和两个 Collective，并直接复用 `GemmKernel::Arguments` 与 `GemmKernel::Params`。类中唯一保存的 Kernel 运行状态是 [`Params params_`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L213-L227)：
 
-**代码：定义 GemmUniversalAdapter 类型与持久化 Params 状态**
+**定义 GemmUniversalAdapter 类型与持久化 Params 状态**
 
 ```cpp
 using Gemm =
@@ -963,7 +833,7 @@ Arguments 保存用户语义：mode、ProblemShape、A/B/C/D 指针与 Stride、
 
 ## 完整启动与验证流程
 
-**代码：执行参数检查、Workspace 初始化、异步启动与结果验证**
+**执行参数检查、Workspace 初始化、异步启动与结果验证**
 
 ```cpp
 using Gemm =

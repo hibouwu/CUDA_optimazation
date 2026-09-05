@@ -1,4 +1,4 @@
-# CUTLASS 3.x: Orthogonal, Reusable, and Composable Abstractions for GEMM Kernel Design
+# CUTLASS 3.x (2): Orthogonal, Reusable, and Composable Abstractions for GEMM Kernel Design
 
 ![](Imgaes/cutlass-3-gemm-abstractions/cutlass-featured.png)
 
