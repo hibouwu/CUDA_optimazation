@@ -54,9 +54,10 @@ printf '示例程序目录：%s\n' "$EXAMPLE_BUILD_DIR"
 
 编译和链接成功只能证明类型、接口与代码生成可用，不能代替目标设备上的数值验证。运行这些程序也只验证所列固定场景，不构成性能或完整模型正确性的结论。
 
-## 本轮验证状态（2026-09-07）
+## 本轮验证状态（2026-09-07，Thor 实机）
 
-- 四个新增程序已在 CUDA 13.0、Ubuntu 24.04 的环境中编译并链接，均包含 `sm_110a` 设备代码；Attention 包含两套 GEMM 和独立 Softmax。
-- NVFP4 的 CPU 量化函数另行通过了不使用 GPU 的检查，覆盖已知量化值、packed FP4 读写、Scale 布局、全零输入、非有限输入拒绝与 Scale 下溢拒绝。这不等于 NVFP4 GEMM 数值验证通过。
-- 沙箱内无法访问 CUDA 设备，程序报告 `ERROR: no CUDA-capable device is detected`。沙箱外确认主机具有 RTX 5070 Laptop GPU，计算能力为 12.0，驱动版本为 580.173.02；此前“主机没有 GPU”的判断不能成立。
-- 五个示例在沙箱外实际运行均返回 `ERROR: Error Internal`，退出码为 `2`。进一步用 CUDA 驱动 API 加载 Dense 可执行文件中的 `sm_110a` CUBIN，返回 `CUDA_ERROR_NO_BINARY_FOR_GPU`（209）：当前 Thor 目标设备代码不适用于本机 GPU。尚未取得 GPU 数值验证结果，也不能把这次启动失败归为矩阵结果不正确。
+- 在 NVIDIA Thor 设备（计算能力 11.0，驱动 580.00）、CUDA 13.0、Ubuntu 24.04 环境中，五个示例全部编译、链接并运行通过，退出码均为 `0`。
+- 本轮使用的 CUTLASS 为上文固定的 commit `8f50b052e1099fb982392a622caab69b97b63128`（浅检出自 NVIDIA/cutlass 上游），编译仅有 `#20012-D` 类无害警告。此前用 4.x 较新 commit `ae6bccf3` 的一轮编译运行结果与固定版本完全一致。
+- 数值验证结果：`dense_baseline` PASS（max_abs_error=0）；`nvfp4_block_scaled` PASS（max_abs_error=0，量化误差另报 input_mse_a≈0.0132、input_mse_b≈0.0121、output_quantization_mse≈6.30）；`grouped_gemm` 三组全部 PASS（max_abs_error=0）；`moe_expert_gemm` 三个 Expert（tokens=8/17/32）与 top1_restore 全部 PASS（max_abs_error=0）；`attention_unfused` 的 QK/softmax_fp16/PV 端到端全部 PASS（最大误差 ≤ 3.8e-06）。
+- 早前一轮（RTX 5070 Laptop，计算能力 12.0）加载 `sm_110a` CUBIN 返回 `CUDA_ERROR_NO_BINARY_FOR_GPU`（209）、程序退出码为 `2` 的失败，属于设备代码与 GPU 架构不匹配，在 Thor 实机上不复现。
+- NVFP4 的 CPU 量化函数此前已通过不使用 GPU 的检查，覆盖已知量化值、packed FP4 读写、Scale 布局、全零输入、非有限输入拒绝与 Scale 下溢拒绝；本轮在 GPU 上进一步取得了 NVFP4 GEMM 数值验证通过。
