@@ -595,7 +595,7 @@ nvcc -std=c++17 --expt-relaxed-constexpr \
 
 # 6. 相对 Dense 的四条场景路径
 
-第5部分给出了 Dense 调用的完整过程。本章讨论数值表示、问题集合和阶段依赖变化时，数据与组件需要怎样调整。前三节沿用 Dense 的 Adapter 调用顺序；Attention 则先复用两次 GEMM，再进入专用融合 Kernel。各节的类型或参数代码为根据固定示例整理的节选。
+第5部分给出了 Dense 调用的完整过程。本章讨论数值表示、问题集合和阶段依赖变化时，数据与组件需要怎样调整。前三节沿用 Dense 的 Adapter 调用顺序；Attention 则先复用两次 GEMM，再进入专用融合 Kernel。各节的类型或参数代码为根据固定示例整理的节选。对应的完整 `.cu` 程序放在 [exemples](exemples/README.md)，各文件按本章小节组织注释，编译命令和验证范围见该目录说明。
 
 回到第四部分的配置维度，四条路径分别从不同位置改变 Dense 基线：
 
@@ -615,6 +615,8 @@ NVFP4 用一组窄精度值和两级缩放因子表示原始张量。先说明�
 - **量化生成数据。** 调用者通过量化函数或 Kernel，从原始浮点输入生成低精度量化值和对应的 Scale。可以先在 CPU 上量化，再把结果复制到 GPU；也可以让 GPU 上的量化 Kernel 读取原始数据后生成结果。因此，量化应在这些输入被本节 GEMM 使用之前完成，而不一定发生在所有数据搬运之前。
 - **CuTe view 描述数据访问。** 普通 `make_tensor(ptr, layout)` 将已有数据的访问方式与坐标布局组合起来。Engine 包装指针或迭代器，Layout 将坐标映射为偏移；创建或传递这个 view 不会自动求 Scale、执行缩放或生成低精度值。量化需要由实际的数值运算与转换完成，相关对象定义见 [CuTe Tensor 与 Engine](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/media/docs/cpp/cute/03_tensor.md)。
 - **GEMM 消费量化结果。** 本节的硬件 Block-Scaled Mainloop 接收已经准备好的 Payload 与 Block Scale，并将它们交给支持块缩放的 MMA。调用者不需要先把 Block Scale 乘回 Payload、还原成完整浮点矩阵再提交。NVFP4 的 Tensor Scale 则按后文推导并入 Epilogue 的乘积系数。
+
+完整示例见 [nvfp4_block_scaled.cu](exemples/nvfp4_block_scaled.cu)。它沿用下文的类型配置，取 `(M,N,K)=(256,1024,256)`，从原始浮点输入开始执行 CPU 量化，再构造 packed Payload、SFA/SFB 并调用 GEMM；量化误差与 GEMM 计算误差分开检查。
 
 ### NVFP4 由哪些数据组成
 
@@ -872,6 +874,8 @@ MSE 对所有元素的平方误差求平均；$\|\mathbf{x}-\mathbf{x}^{\mathrm{
 
 Grouped GEMM 一次处理 G 项独立矩阵乘法。各组的 Shape、矩阵地址和 Stride 可以不同，数值类型与局部计算方式由同一个 Kernel 类型确定。先计算各组产生多少个输出 Tile，再看这些工作如何分配。
 
+完整示例见 [grouped_gemm.cu](exemples/grouped_gemm.cu)，使用下面三组问题、1SM 类型与动态 Cluster，包含描述数组的分配、复制、一次调用和逐组参考比较。
+
 ### 每组问题产生自己的输出 Tile
 
 取输出 Tile 大小 $(T_M,T_N)=(128,256)$，考虑三组矩阵：
@@ -1051,6 +1055,8 @@ Y_e=X_eW_e\in\mathbb R^{T_e\times M}$$
 
 K 是输入特征数，M 是输出特征数，$T_e$ 随路由结果变化。一次 MoE 调用由这些不同 Token 数的 Expert 计算组成，外层算法还负责输入聚集和最终结果合并。
 
+完整示例见 [moe_expert_gemm.cu](exemples/moe_expert_gemm.cu)。它取三个 Expert、Token Count 为 `8、17、32`，按下文的最大槽位接口计算，并用固定 Top-1 路由展示输入聚集和输出恢复。路由关系由示例预先给定，不包含 Router 网络、Top-k 加权合并或完整 Expert FFN。
+
 ### 从矩阵方向理解 Token Count 为什么位于 N
 
 固定版本 [Example 92 的普通 MoE Grouped 路径](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/examples/92_blackwell_moe_gemm/92_blackwell_moe_gemm_grouped.cu#L171-L231)把权重放在 A、激活放在 B。将上面的乘法转置，可得：
@@ -1154,6 +1160,8 @@ p_{i,j}=\frac{\exp(s_{i,j}-m_i)}{\ell_i},\qquad{}
 o_i=\sum_j p_{i,j}v_j$$
 
 其中 $m_i=\max_j s_{i,j}$，$\ell_i=\sum_j\exp(s_{i,j}-m_i)$。下面假定每个 Query 行至少有一个有效 Key，先说明这一行如何完成计算。
+
+本地 [attention_unfused.cu](exemples/attention_unfused.cu)实现下面的分离路径，取单 Batch、单 Head、等长 Q/K 序列和因果 Mask。它使用 FP16 Q/K/V，Softmax 后还将 P 显式转为 FP16，分数、累加与输出使用 FP32；参考计算计入相同的类型转换。这个教学实例与后文 BF16 Q、INT8 K/V 的专用融合示例是两套不同配置。
 
 ### 先把阶段依赖表示为两个独立 GEMM
 
