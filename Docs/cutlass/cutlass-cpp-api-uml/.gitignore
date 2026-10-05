@@ -1,0 +1,9 @@
+.venv/
+.cache/
+__pycache__/
+snapshot/
+site/
+!data/
+!data/**
+!audits/
+!audits/**

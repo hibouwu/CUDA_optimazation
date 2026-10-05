@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "module_id": "cute_array_full_header",
+  "title": "CuTe array：完整成员、重载与标准库适配",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "role": "full_file_work_package_with_explicit_dependency_perimeter",
+  "reading_priority": 12,
+  "status": "canonical_join_verified_generated_dependency_gap_and_use_acceptance_pending",
+  "parts": ["relations.json"],
+  "source_owner_module": "cute_core",
+  "configuration": {"template_policy": "Keep T/N/I, element operations and ADL dependent; preserve preprocessor branches and ordinary-loop versus if-constexpr distinctions"},
+  "full_file_scope": ["include/cute/container/array.hpp"],
+  "global_scope_files": 824,
+  "global_completion_claimed": false,
+  "runtime_execution_claimed": false,
+  "acceptance": {
+    "source_identity": "87_physical_declarations_92_conditional_bindings_canonical_join_verified",
+    "relationships": "independent_source_review_and_source_inventory_checks_completed",
+    "contracts": "source_level_array_contracts_with_host_clang_examples_not_all_instantiations",
+    "dependency_gaps": ["type_traits.hpp_using_declaration_lookup_identity"],
+    "offline_use": "generated_mechanical_checks_passed_actual_browser_pending",
+    "independent_meeting_review": "not_performed"
+  }
+}

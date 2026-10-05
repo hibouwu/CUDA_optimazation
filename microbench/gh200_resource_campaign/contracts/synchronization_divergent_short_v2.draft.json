@@ -1,0 +1,105 @@
+{
+  "schema_version": 2,
+  "stage": "S11",
+  "status": "short_only_not_formal_qualified",
+  "family": "synchronization_divergent",
+  "adapter_id": "synchronization_divergent_short_v2",
+  "source": "microbench/gh200_resource_campaign/probes/synchronization_short_r4.cu",
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "dependencies": [
+    "microbench/gh200_resource_campaign/probes/synchronization.cu",
+    "microbench/gh200_resource_campaign/probes/feasibility/warp_sync_divergent_pair_v2.cu",
+    "microbench/gh200_resource_campaign/common/synchronization_reference.hpp",
+    "microbench/gh200_resource_campaign/common/synchronization_pair_reference_v2.hpp",
+    "microbench/gh200_resource_campaign/common/synchronization_role_bindings_r4.hpp",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp"
+  ],
+  "cases": [
+    {
+      "id": "warp_divergent_shared_pair",
+      "iterations": 2048,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "pairs_per_iteration": 8,
+        "barriers_per_pair": 2,
+        "warp_mask": 4294967295,
+        "peer": "thread XOR16",
+        "transport": "volatile_shared_word",
+        "comparison": "same producer-consumer data task; no bare barrier subtraction"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "cross_half_producer_consumer_pair_v2",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/producer_consumer_pair/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "cta_cross_half_shared_pair",
+      "iterations": 2048,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "pairs_per_iteration": 8,
+        "barriers_per_pair": 2,
+        "warp_mask": 4294967295,
+        "peer": "thread XOR16",
+        "transport": "volatile_shared_word",
+        "comparison": "same producer-consumer data task; no bare barrier subtraction"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "cross_half_producer_consumer_pair_v2",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/producer_consumer_pair/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    }
+  ],
+  "review_dependencies": [
+    {
+      "stage": "S11",
+      "phase": "A",
+      "path": "reviews/S11-A-review.json"
+    },
+    {
+      "stage": "S11",
+      "phase": "early-validation-A",
+      "path": "reviews/S11-early-validation-A-review-r4.json"
+    }
+  ]
+}

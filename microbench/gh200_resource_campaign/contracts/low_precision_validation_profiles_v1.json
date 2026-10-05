@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "family": "low_precision",
+  "profiles": [
+    {
+      "id": "short_uniform_nonuniform_1_2",
+      "target_iterations": [1, 2],
+      "input_profiles": ["uniform", "nonuniform"],
+      "maximum_target_launches": 4,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {"launch_index": 0, "iterations": 1, "input_profile": "uniform"},
+        {"launch_index": 1, "iterations": 2, "input_profile": "uniform"},
+        {"launch_index": 2, "iterations": 1, "input_profile": "nonuniform"},
+        {"launch_index": 3, "iterations": 2, "input_profile": "nonuniform"}
+      ],
+      "completion_requirements": [
+        "same case specialization, threads, groups, chains, batch, shapes, layouts and WGMMA completion waits",
+        "fresh accumulators and cudaMemset poison output/stamps before each target launch; no custom auxiliary kernel",
+        "CUDA launch and completion event synchronization succeed before checking outputs",
+        "all launched CTA stamp entries overwritten and all declared output elements checked",
+        "short globaltimer/clock64 intervals and all-SM coverage are not acceptance criteria",
+        "stop after first CUDA, completion or numerical failure and emit partial failed validation when possible"
+      ],
+      "reference_identity": {
+        "model": "low_precision_logical_integer_v1",
+        "path": "microbench/gh200_resource_campaign/common/low_precision_reference.hpp",
+        "sha256": "13345802f9ea6523b42437bdaa5277bca9df5c01add140dcf0b08bff1fe07093"
+      },
+      "declared_output_check": {
+        "method": "all logical matrix outputs via independent integer/dyadic host reference",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "blocks*groups*chains*M*N",
+        "poison": "all output double bytes=0xff before launch; NaN/Inf or any mismatch rejected",
+        "sampling": false
+      },
+      "output_evidence_kind": "error_count_only",
+      "output_evidence_limit": "all outputs are compared but values are not persisted; this evidence cannot support offline rechecking with a changed reference",
+      "resource_extensions": {},
+      "kernel_symbol_convention": "unmangled lp_{path}_{input_type}_g{groups}, bound to the actual target symbol by B2 SASS review",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    }
+  ]
+}

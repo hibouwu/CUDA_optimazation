@@ -1,0 +1,26 @@
+/workspace/cutlass/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __device__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/workspace/cutlass/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __host__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                                                     ^
+
+/workspace/cutlass/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __device__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/workspace/cutlass/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __host__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                                                     ^
+
+ptxas info    : 1569 bytes gmem
+ptxas info    : Compiling entry function '_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_15MoEProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_47MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedILi12ELi3ELi2ENS6_IJNS5_1CILi1EEESD_SD_EEENS_4arch5Sm100EEENS6_IJNSC_ILi128EEENSC_ILi16EEESI_EEENS_12float_e4m3_tENS6_IJlSD_lEEESL_SM_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_19SM100_MMA_F8F6F4_SSISL_SL_fLi128ELi16ELNS5_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS5_6LayoutISE_NS6_IJNSC_ILi0EEESW_SW_EEEEENS6_IJNS5_10UnderscoreESZ_SZ_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi8EEENSV_INS6_IJNSC_ILi8EEESI_EEENS6_IJSI_SD_EEEEEEEvNS5_8identityENS5_9TiledCopyINS5_9Copy_AtomIJNS5_31SM80_CP_ASYNC_CACHEGLOBAL_ZFILLINS_9uint128_tES1H_EESL_EEENSV_INS6_IJNS6_IJS18_SJ_EEESJ_EEENS6_IJNS6_IJNSC_ILi256EEESD_EEESJ_EEEEENS6_IJSJ_SI_EEEEES1C_vS1D_EENS_8epilogue10collective18CollectiveEpilogueINS1T_23Sm100TmaWarpSpecializedILi2ELi1ELi16ELb1ELb0EEEJSK_NS6_IJNSV_ISI_SD_EENSV_ISJ_SD_EEEEENS_6half_tENS6_IJSD_llEEES21_S22_NS1T_6fusion15FusionCallbacksIS1X_NS23_17LinearCombinationIS21_fS21_fLNS_15FloatRoundStyleE2EEESK_S20_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_16dp256b2xES12_NS13_IS15_NS16_ILi16EEENSV_INS6_IJNSC_ILi64EEES18_EEENS6_IJSD_S2E_EEEEEEENS5_17SM75_U16x8_LDSM_TENS5_14SM90_TMA_STOREES2I_NS5_17SM90_U16x8_STSM_TENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEEEEEvvEEEEvNT_6ParamsE' for 'sm_110a'
+ptxas info    : Function properties for _ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalINS1_15MoEProblemShapeIN4cute5tupleIJiiiEEEEENS1_10collective13CollectiveMmaINS1_47MainloopSm100UmmaMixedTmaCpAsyncWarpSpecializedILi12ELi3ELi2ENS6_IJNS5_1CILi1EEESD_SD_EEENS_4arch5Sm100EEENS6_IJNSC_ILi128EEENSC_ILi16EEESI_EEENS_12float_e4m3_tENS6_IJlSD_lEEESL_SM_NS5_8TiledMMAINS5_8MMA_AtomIJNS5_19SM100_MMA_F8F6F4_SSISL_SL_fLi128ELi16ELNS5_4UMMA5MajorE0ELSR_0ELNSQ_7ScaleInE0ELSS_0EEEEEENS5_6LayoutISE_NS6_IJNSC_ILi0EEESW_SW_EEEEENS6_IJNS5_10UnderscoreESZ_SZ_EEEEENS5_13SM90_TMA_LOADENS5_14ComposedLayoutINS5_7SwizzleILi3ELi4ELi3EEENS5_18smem_ptr_flag_bitsILi8EEENSV_INS6_IJNSC_ILi8EEESI_EEENS6_IJSI_SD_EEEEEEEvNS5_8identityENS5_9TiledCopyINS5_9Copy_AtomIJNS5_31SM80_CP_ASYNC_CACHEGLOBAL_ZFILLINS_9uint128_tES1H_EESL_EEENSV_INS6_IJNS6_IJS18_SJ_EEESJ_EEENS6_IJNS6_IJNSC_ILi256EEESD_EEESJ_EEEEENS6_IJSJ_SI_EEEEES1C_vS1D_EENS_8epilogue10collective18CollectiveEpilogueINS1T_23Sm100TmaWarpSpecializedILi2ELi1ELi16ELb1ELb0EEEJSK_NS6_IJNSV_ISI_SD_EENSV_ISJ_SD_EEEEENS_6half_tENS6_IJSD_llEEES21_S22_NS1T_6fusion15FusionCallbacksIS1X_NS23_17LinearCombinationIS21_fS21_fLNS_15FloatRoundStyleE2EEESK_S20_JEEENS5_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_16dp256b2xES12_NS13_IS15_NS16_ILi16EEENSV_INS6_IJNSC_ILi64EEES18_EEENS6_IJSD_S2E_EEEEEEENS5_17SM75_U16x8_LDSM_TENS5_14SM90_TMA_STOREES2I_NS5_17SM90_U16x8_STSM_TENS5_39AutoVectorizingCopyWithAssumedAlignmentILi128EEEEEEvvEEEEvNT_6ParamsE
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 60 registers, used 7 barriers
+ptxas info    : Compile time = 136.843 ms

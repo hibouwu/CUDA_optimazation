@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-08",
+  "cutlass_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "nvcc": "13.0.48",
+  "host_compiler": "GCC 13.3.0 Ubuntu 24.04",
+  "target": "compute_110a/sm_110a",
+  "runtime_gpu_launched": false,
+  "source_hashes": {
+    "dense_baseline.cu": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+    "nvfp4_block_scaled.cu": "51edcac96b06e30ec9068f71635b7d6d7b0f7d86cf062ca27deee41f7ef38e80",
+    "grouped_gemm.cu": "21df1cc84b68e4441033c108cb0fd10b9c339c7e32c07e835d49f5c0632fd9c1",
+    "moe_expert_gemm.cu": "cf878efcef67376b7064b5ee463ebc9ae7799c1c8b9a357ddd75653908158c96",
+    "attention_unfused.cu": "4683b29400f86f88475bf94f7064fd69d8bd06b0a5f364e0e42988d0734099e3",
+    "verification/inspect_auto.cu": "9596e7697f136e7ae48de74fabbb56373934111f5b377f219cd488d7f62f3711"
+  },
+  "artifacts": [
+    {
+      "case": "dense",
+      "ptx_sha256": "942e19f41fa472662da3acf61ff3d00f0d6238c6a68f03743c70192067505608",
+      "cubin_sha256": "9d6c7b5dba330e4129fcf871681d44da3b2dba9a06aed74030040998ed79bf70",
+      "executable_sha256": "ad094068cb53a99735b8ab056b43f5d218a4054f351628113a84af444922f080",
+      "device_entries": 1
+    },
+    {
+      "case": "nvfp4",
+      "ptx_sha256": "3c116d62b47eafed77874eb3e752bf1c9f4358c0d9f47a9cd93dd543ae620c8d",
+      "cubin_sha256": "e006418b84f695a1750ae01fdc2aec34d0e29439e7f172ad443adebae927b712",
+      "executable_sha256": "4736080101aaf1b7f99355094fffe30e14810279e658c0c978ac1b4a2b16ceb2",
+      "device_entries": 1
+    },
+    {
+      "case": "grouped",
+      "ptx_sha256": "22fa3523a80b5b0a34c0566a1fe374287acd1226c277001d351f2cb51b0c8d70",
+      "cubin_sha256": "9e917bdf0c3fb37f8dbed5c05a4e396b9dcfc9b0798743a5c61ae0f332cd0c79",
+      "executable_sha256": "6dbf25a4e848438a8d3aab9e8460893b453056a7f0d233c7e186df3219769336",
+      "device_entries": 1
+    },
+    {
+      "case": "moe",
+      "ptx_sha256": "4b96723cf875bc41f8247a251218ba1cceeeab7cb9ab8f468c0820a30b3b9cde",
+      "cubin_sha256": "cd8dad1efee10bb1ca06aefa78eaef47a7b18ca9d123dcb6c8cdf8c18874d8a2",
+      "executable_sha256": "004f1d1e8a7cff40c0c89583f960ba8cbfdf0de1601d7233c8c34b2206f8d2de",
+      "device_entries": 1
+    },
+    {
+      "case": "attention",
+      "ptx_sha256": "31c10ba6e66b182ee8e77849a14ede42efddc6df929df33280966c4b884648ff",
+      "cubin_sha256": "ff6f1d9772ea6ffac3f82df17c7c6110ea064ab51864fb8db922ec466bcade22",
+      "executable_sha256": "67525e4300e61c115dca82d0894bcfa9c38319437554806461f8dca23480035a",
+      "device_entries": 3
+    }
+  ]
+}

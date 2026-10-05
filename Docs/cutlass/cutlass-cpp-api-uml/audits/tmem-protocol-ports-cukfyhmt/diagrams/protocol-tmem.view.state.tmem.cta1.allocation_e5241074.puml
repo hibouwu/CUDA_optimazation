@@ -1,0 +1,48 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA 1 TMEM allocation / 512-column request
+state "本次CTA调用尚无allocation记录" as s0
+note right of s0
+no live allocation yet
+end note
+state "已核查本侧各线程释放前置路径" as s1
+note right of s1
+logical history fact; not all threads must finish before the
+first thread enters free
+end note
+state "已记录本侧各线程进入free" as s2
+note right of s2
+thread instances remain distinct; no paired completion follows
+from this record
+end note
+state "已记录本侧allocation结果" as s3
+note right of s3
+allocation live; per-stage read/write protocol separate
+end note
+state "已记录CTA放弃再分配许可" as s4
+note right of s4
+no subsequent alloc by this CTA; no deallocation implied
+end note
+state "已记录本侧warp dealloc操作（非配对完成时刻）" as s5
+note right of s5
+local operation evidence only; paired participation needs the
+separate validity rule; no physical paired-completion timestamp
+end note
+s0 --> s3 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.allocate tmem.transition.015\nAllocator2Sm::allocate(512, &base) · 指定效果满足\nvalid paired warp participation]]
+s3 --> s4 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.release_permit tmem.transition.016\nrelease_allocation_lock() · 指定效果满足]]
+s4 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.arrive795 tmem.transition.017\ndealloc arrive(peer, leader) · 调用返回\nleader tail has returned directly (leader) or its premise is\ninherited from leader795 (peer)]]
+s1 --> s2 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.free tmem.transition.018\nAllocator2Sm::free(base,512) · 调用进入\nproper peer warp participation remains required]]
+s2 --> s5 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.free tmem.transition.019\nAllocator2Sm::free(base,512) · 指定效果满足\npaired operation validity is a separate all_of obligation; no\nphysical paired-completion timestamp or relative CTA return\norder is inferred]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

@@ -1,0 +1,22 @@
+@startuml
+title 沿同一 Buffer、同一 Stage 追问安全条件
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 18
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+start
+:确定资源身份与本次使用者\n地址空间、范围、stage / phase、参与者;
+:证明该存储允许写入\n前一次使用已结束，或这是首次初始化;
+:生产者提交本次写入 / 搬运;
+:消费者取得本次数据就绪的证据\n等待条件必须对应本资源、本轮次、本参与范围;
+:消费者读取并发起计算;
+:取得所有相关消费者不再使用该存储的证据\n发出计算指令不自动等于读完源数据;
+:允许下一轮覆盖这块存储;
+stop
+legend bottom
+这是逻辑条件图，不是 CUTLASS API 时序，也不规定实际调度必须串行。
+请同事给每一步补上：实际接口、调用者、通知者、等待者与异常出口。
+源 Buffer 允许复用 ≠ 输出全局写入已完成 ≠ 整个 GEMM 已完成。
+动态资源释放还要核对共同拥有者和释放协议；见 Dense TMEM 详细图。
+endlegend
+@enduml

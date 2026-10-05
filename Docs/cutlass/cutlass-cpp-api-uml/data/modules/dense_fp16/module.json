@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "module_id": "dense_fp16_2sm_sm110a",
+  "title": "Dense FP16：2SM GEMM 端到端路径",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "role": "representative_design_path_not_global_coverage",
+  "reading_priority": 0,
+  "status": "source_reviewed_design_path_with_open_boundaries",
+  "parts": ["host.json", "type_path.json", "contracts.json", "gemm_dispatch.json", "tmem_protocol.json", "scheduler_handoff.json", "clc_handoff.json"],
+  "configuration": {
+    "architecture_recipe": "cutlass::arch::Sm100",
+    "binary_target": "sm_110a",
+    "elements": {"A": "cutlass::half_t", "B": "cutlass::half_t", "C": "float", "D": "float", "accumulator": "float"},
+    "layouts": "A/B/C/D RowMajor",
+    "tile_mnk": [256, 128, 64],
+    "cluster_mnk": [2, 2, 1],
+    "alpha": 1.0,
+    "beta": 0.5,
+    "mainloop_schedule": "KernelScheduleAuto",
+    "epilogue_schedule": "EpilogueScheduleAuto"
+  },
+  "global_scope_files": 824,
+  "global_completion_claimed": false,
+  "runtime_execution_claimed": false,
+  "reading_order": ["Host参数与调用", "编译期类型选择", "设备协作与硬件事件", "输出与完成边界"],
+  "acceptance": {
+    "source_identity": "reviewed_for_selected_nodes_not_all_file_entities",
+    "relationships": "reviewed_for_recorded_path_not_all_source_relationships",
+    "protocols": "tmem_lifetime_bounded_model_reviewed_other_resource_state_views_pending",
+    "offline_use": "not_yet_verified",
+    "independent_meeting_review": "not_yet_performed"
+  }
+}

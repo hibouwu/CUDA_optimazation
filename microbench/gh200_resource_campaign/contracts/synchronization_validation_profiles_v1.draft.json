@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "stage": "S11",
+  "status": "draft_pending_independent_A_review",
+  "profiles": [
+    {
+      "id": "sync_measured_1_2_33_v1",
+      "required_seed": 3,
+      "applicable_cases": "all13 frozen synchronization_lowering_v3 cases",
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "warmup": false,
+      "pilot": false,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 8
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 16
+        },
+        {
+          "launch_index": 2,
+          "iterations": 33,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 264
+        }
+      ],
+      "artifacts_per_launch": [
+        {
+          "path": "sync_threads_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "threads",
+            14
+          ],
+          "evidence_kind": "full_values"
+        },
+        {
+          "path": "sync_stamp_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            9
+          ],
+          "evidence_kind": "full_values"
+        }
+      ],
+      "thread_fields": [
+        "value",
+        "errors",
+        "timeout",
+        "smid",
+        "completed_low",
+        "completed_high",
+        "attempts_low",
+        "attempts_high",
+        "checked_low",
+        "checked_high",
+        "arrival_cycle_low",
+        "arrival_cycle_high",
+        "departure_cycle_low",
+        "departure_cycle_high"
+      ],
+      "checked_elements_per_process": "3*(threads*14+9)",
+      "reference_model": "sync_affine_thread_phase_and_lifecycle_v1",
+      "comparison": "exact with explicit lifecycle predicates",
+      "performance_eligible": false,
+      "target_iterations": [
+        1,
+        2,
+        33
+      ],
+      "input_profiles": [
+        "measured_nonuniform_lcg"
+      ],
+      "kernel_roles_by_launch_index": [
+        "measured",
+        "measured",
+        "measured"
+      ],
+      "completion_requirements": [
+        "exact fixed launch order and per-index role; no Cartesian role/length expansion",
+        "all original case threads and all14thread/9stamp words checked; uint64 low/high encoding",
+        "mbarrier timeout/abort/shared phase lifecycle intact; unknown outputs reject sentinels",
+        "resource.extensions role_resources and role_target_identities bind all3 actual B2 specializations; primary is measured or correctness according to profile",
+        "actual measured branch before any pilot/warmup; no corepolicy alteration"
+      ],
+      "reference_identity": {
+        "model": "sync_affine_thread_phase_and_lifecycle_v1",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_reference.hpp",
+        "sha256": "1d773dde0cc26c31729e2280ccca949c6e30005b34ffaf280ec7094f383ba87d"
+      },
+      "declared_output_check": {
+        "comparison": "exact and explicit lifecycle predicates",
+        "elements_per_launch": "threads*14+9",
+        "sampling": false
+      },
+      "output_evidence_kind": "full_values"
+    },
+    {
+      "id": "sync_aux_correctness2_arrival1_v1",
+      "required_seed": 3,
+      "applicable_cases": "all13 frozen synchronization_lowering_v3 cases",
+      "maximum_target_launches": 2,
+      "maximum_explicit_auxiliary_launches": 0,
+      "warmup": false,
+      "pilot": false,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 2,
+          "input_profile": "paired_auxiliary_nonuniform_tokens",
+          "batch": 1,
+          "completed_phases": 2
+        },
+        {
+          "launch_index": 1,
+          "iterations": 1,
+          "input_profile": "paired_auxiliary_nonuniform_tokens",
+          "batch": 1,
+          "completed_phases": 1
+        }
+      ],
+      "artifacts_per_launch": [
+        {
+          "path": "sync_threads_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "threads",
+            14
+          ],
+          "evidence_kind": "full_values"
+        },
+        {
+          "path": "sync_stamp_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            9
+          ],
+          "evidence_kind": "full_values"
+        }
+      ],
+      "thread_fields": [
+        "value",
+        "errors",
+        "timeout",
+        "smid",
+        "completed_low",
+        "completed_high",
+        "attempts_low",
+        "attempts_high",
+        "checked_low",
+        "checked_high",
+        "arrival_cycle_low",
+        "arrival_cycle_high",
+        "departure_cycle_low",
+        "departure_cycle_high"
+      ],
+      "checked_elements_per_process": "2*(threads*14+9)",
+      "reference_model": "sync_affine_thread_phase_and_lifecycle_v1",
+      "comparison": "exact with explicit lifecycle predicates",
+      "performance_eligible": false,
+      "target_iterations": [
+        2,
+        1
+      ],
+      "input_profiles": [
+        "paired_auxiliary_nonuniform_tokens"
+      ],
+      "kernel_roles_by_launch_index": [
+        "correctness",
+        "arrival"
+      ],
+      "completion_requirements": [
+        "exact fixed launch order and per-index role; no Cartesian role/length expansion",
+        "all original case threads and all14thread/9stamp words checked; uint64 low/high encoding",
+        "mbarrier timeout/abort/shared phase lifecycle intact; unknown outputs reject sentinels",
+        "resource.extensions role_resources and role_target_identities bind all3 actual B2 specializations; primary is measured or correctness according to profile",
+        "actual measured branch before any pilot/warmup; no corepolicy alteration"
+      ],
+      "reference_identity": {
+        "model": "sync_affine_thread_phase_and_lifecycle_v1",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_reference.hpp",
+        "sha256": "1d773dde0cc26c31729e2280ccca949c6e30005b34ffaf280ec7094f383ba87d"
+      },
+      "declared_output_check": {
+        "comparison": "exact and explicit lifecycle predicates",
+        "elements_per_launch": "threads*14+9",
+        "sampling": false
+      },
+      "output_evidence_kind": "full_values"
+    }
+  ],
+  "candidate_warp_supplement": {
+    "id": "warp_divergent_shared_rendezvous_v2",
+    "status": "v2_actual_compile_WARPSYNC_present_pending_independent_A_B2",
+    "cases": [
+      "warp_divergent_shared_pair",
+      "cta_cross_half_shared_pair"
+    ],
+    "threads": 32,
+    "blocks": 1,
+    "seed": 3,
+    "short_iterations": [
+      1,
+      2,
+      33
+    ],
+    "pairs_per_iteration": 8,
+    "barriers_per_pair": 2,
+    "warp_mask": 4294967295,
+    "warp_mask_source": "runtime kernel parameter",
+    "metric": "clock64_cycle/producer_consumer_pair/CTA",
+    "no_bare_barrier_cost_claim": true,
+    "performance_eligible": false,
+    "first_feasibility_candidate": "job730803 bare and common-path shared had zero WARPSYNC, retained as negative codegen evidence",
+    "warp_member_paths": "lane<16 and lane>=16; each path produce/bar.warp.sync fullmask/read opposite half/bar.warp.sync fullmask",
+    "peer_lane": "tid XOR16",
+    "output_fields": [
+      "initial",
+      "last_peer_value",
+      "sum_peer_values_mod32",
+      "completed_pairs"
+    ],
+    "thread_artifact_shape": [
+      32,
+      4
+    ],
+    "clock_artifact_shape": [
+      2,
+      2
+    ],
+    "source": "microbench/gh200_resource_campaign/probes/feasibility/warp_sync_divergent_pair_v2.cu",
+    "kernel_symbols": {
+      "warp_divergent_shared_pair": "warp_divergent_pair_v2",
+      "cta_cross_half_shared_pair": "cta_divergent_pair_v2"
+    },
+    "actual_compile_evidence": "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-warp-divergent-a",
+    "target_lowering_notes": {
+      "WARPSYNC_COLLECTIVE_static_positions": 32,
+      "WARPSYNC_ALL_static_positions": 1,
+      "target_helpers_outlined_after_EXIT": true,
+      "source_barriers_per_pair_per_participant": 2,
+      "no_static_count_as_dynamic_work": true
+    },
+    "checked_artifact_words_per_process": 396
+  },
+  "family": "synchronization",
+  "legacy_profile_processes": 26,
+  "legacy_target_launches": 65,
+  "resource_extensions": {
+    "primary_kernel_role": {
+      "measured_profile": "measured",
+      "aux_profile": "correctness"
+    },
+    "role_resources": {
+      "required_roles": [
+        "measured",
+        "correctness",
+        "arrival"
+      ],
+      "per_role_fields": [
+        "kernel_symbol",
+        "registers_per_thread",
+        "static_smem_bytes",
+        "dynamic_smem_bytes",
+        "local_size_bytes",
+        "occupancy_limit_ctas_per_sm"
+      ],
+      "dynamic_smem_bytes": 0,
+      "local_size_bytes": 0,
+      "source": "each actual B2 specialization plus runtime attributes and occupancy API; never copy from primary"
+    },
+    "role_target_identities": {
+      "required_roles": [
+        "measured",
+        "correctness",
+        "arrival"
+      ],
+      "per_role_fields": [
+        "kernel_symbol",
+        "instruction_count",
+        "target_identity_sha256"
+      ],
+      "digest_definition": "sha256 canonical JSON actual function instruction rows including PC, full opcode/predicate/operands and both 64-bit encoding words; exact B2 binding"
+    }
+  }
+}

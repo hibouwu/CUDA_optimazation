@@ -1,0 +1,23 @@
+/usr/include/c++/14/bits/std_mutex.h(185): error: identifier "pthread_cond_clockwait" is undefined
+        pthread_cond_clockwait(&_M_cond, __m.native_handle(), __clock,
+        ^
+
+/usr/include/c++/14/mutex(303): error: identifier "pthread_mutex_clocklock" is undefined
+        { return !pthread_mutex_clocklock(&_M_mutex, __clockid, &__ts); }
+                  ^
+
+/usr/include/c++/14/mutex(381): error: identifier "pthread_mutex_clocklock" is undefined
+        { return !pthread_mutex_clocklock(&_M_mutex, __clockid, &__ts); }
+                  ^
+
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __device__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __host__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                                                     ^
+
+3 errors detected in the compilation of "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu".

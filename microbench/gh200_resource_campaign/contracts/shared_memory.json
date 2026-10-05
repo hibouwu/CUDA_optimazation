@@ -1,0 +1,553 @@
+{
+  "schema_version": 2,
+  "stage": "S09",
+  "family": "shared_memory",
+  "adapter_id": "shared_memory_v2",
+  "source": "microbench/gh200_resource_campaign/probes/shared_memory.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S09",
+      "phase": "A",
+      "path": "reviews/S09-A-review.json"
+    },
+    {
+      "stage": "S09",
+      "phase": "B",
+      "path": "reviews/S09-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "read_w4_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_stride2",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 2,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_stride4",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 4,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_stride8",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 8,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_stride16",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 16,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_stride32",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 32,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w8_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 8,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w16_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 16,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "write_w4_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "write",
+        "access_bytes": 4,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "write_w8_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "write",
+        "access_bytes": 8,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "write_w16_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "write",
+        "access_bytes": 16,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "read_w4_broadcast",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "read",
+        "access_bytes": 4,
+        "stride": 1,
+        "broadcast": true,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "duplex_w4_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "duplex",
+        "access_bytes": 4,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "duplex_w8_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "duplex",
+        "access_bytes": 8,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "duplex_w16_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "duplex",
+        "access_bytes": 16,
+        "stride": 1,
+        "broadcast": false,
+        "accesses_per_thread_iteration": 8,
+        "array_words": 8192,
+        "arrays": 2,
+        "store_depends_on_load": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "smem_vector_requests",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    }
+  ],
+  "formulas": {
+    "direction_bytes": "blocks*threads*8*access_bytes*iterations for each enabled direction",
+    "address": "W=access_bytes/4; regular word base=((tid+q*256)*stride*W)&8191; broadcast base=(tid/32)*8+q (scalar only)",
+    "unique_addresses": "derive by enumerating all tid/q/lane word indices for one iteration; do not multiply distinct address count into requested payload again"
+  },
+  "correctness": {
+    "read": "all loaded components contribute to checksum; host enumerates addresses, widths and uint32 arithmetic independently",
+    "write": "all written words compared post-timer against address/seed-derived values; poison initialized",
+    "duplex": "distinct input/output arrays; stores computed solely from indices/seed, never loaded data; validate both paths",
+    "broadcast": "read-only; every lane consumes data; no same-address concurrent writes"
+  },
+  "timing": "all threads prepared; recorded start then CTA barrier; counted access loops; end CTA barrier then stop; result validation/copy excluded",
+  "storage": "two 8192-word arrays, 64 KiB/CTA, even for read/write controls; initialization excluded",
+  "sass_contracts": {
+    "requirements": "family B binds exact kernel symbols and timed loop LDS/STS counts by scalar/vector width; PTX volatile does not replace SASS verification"
+  },
+  "claims": {
+    "cache_residency_proven": false,
+    "physical_hbm_bytes_proven": false,
+    "physical_smem_upper_bound": false,
+    "bare_latency": false
+  }
+}

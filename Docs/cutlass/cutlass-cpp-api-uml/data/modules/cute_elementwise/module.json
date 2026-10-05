@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "module_id": "cute_elementwise_full_headers",
+  "title": "CuTe clear、fill 与 axpby：完整文件接口",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "role": "full_file_work_package_with_explicit_dependency_perimeter",
+  "reading_priority": 10,
+  "status": "source_reviewed_records_pending_module_acceptance",
+  "parts": ["relations.json"],
+  "source_owner_module": "cute_core",
+  "configuration": {
+    "template_policy": "preserve Engine/Layout/Alpha/Beta/PrdTensor dependencies; no single instantiation selected"
+  },
+  "full_file_scope": [
+    "include/cute/algorithm/clear.hpp",
+    "include/cute/algorithm/fill.hpp",
+    "include/cute/algorithm/axpby.hpp"
+  ],
+  "global_scope_files": 824,
+  "global_completion_claimed": false,
+  "runtime_execution_claimed": false,
+  "acceptance": {
+    "source_identity": "source_checked_eight_templates_and_all_listed_local_entities",
+    "relationships": "root_counterexamples_repaired_and_source_checker_passed",
+    "protocols": "source_level_data_and_control_contracts_no_architecture_binding",
+    "offline_use": "generation_pending",
+    "independent_meeting_review": "not_performed"
+  }
+}

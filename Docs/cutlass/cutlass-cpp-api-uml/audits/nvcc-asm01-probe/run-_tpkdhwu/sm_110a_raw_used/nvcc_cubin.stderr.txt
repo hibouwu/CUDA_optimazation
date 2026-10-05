@@ -1,0 +1,61 @@
+/usr/include/c++/14/cwchar(148): error: the global scope has no "fwide"
+    using ::fwide;
+            ^
+
+/usr/include/c++/14/cwchar(149): error: the global scope has no "fwprintf"
+    using ::fwprintf;
+            ^
+
+/usr/include/c++/14/cwchar(150): error: the global scope has no "fwscanf"
+    using ::fwscanf;
+            ^
+
+/usr/include/c++/14/cwchar(160): error: the global scope has no "swprintf"
+    using ::swprintf;
+            ^
+
+/usr/include/c++/14/cwchar(162): error: the global scope has no "swscanf"
+    using ::swscanf;
+            ^
+
+/usr/include/c++/14/cwchar(164): error: the global scope has no "vfwprintf"
+    using ::vfwprintf;
+            ^
+
+/usr/include/c++/14/cwchar(169): error: the global scope has no "vswprintf"
+    using ::vswprintf;
+            ^
+
+/usr/include/c++/14/cwchar(174): error: the global scope has no "vwprintf"
+    using ::vwprintf;
+            ^
+
+/usr/include/c++/14/cwchar(204): error: the global scope has no "wprintf"
+    using ::wprintf;
+            ^
+
+/usr/include/c++/14/cwchar(205): error: the global scope has no "wscanf"
+    using ::wscanf;
+            ^
+
+/usr/include/c++/14/x86_64-redhat-linux/bits/c++locale.h(52): error: identifier "uselocale" is undefined
+    extern "C" __typeof(uselocale) __uselocale;
+                        ^
+
+/usr/include/c++/14/x86_64-redhat-linux/bits/c++locale.h(62): error: identifier "__locale_t" is undefined
+    typedef __locale_t __c_locale;
+            ^
+
+/usr/include/c++/14/x86_64-redhat-linux/bits/gthr-default.h(782): error: identifier "pthread_mutex_timedlock" is undefined
+      return pthread_mutex_timedlock (__mutex, __abs_timeout);
+             ^
+
+/usr/include/c++/14/x86_64-redhat-linux/bits/gthr-default.h(810): error: identifier "PTHREAD_MUTEX_RECURSIVE" is undefined
+           PTHREAD_MUTEX_RECURSIVE);
+           ^
+
+/usr/include/c++/14/x86_64-redhat-linux/bits/gthr-default.h(809): error: identifier "pthread_mutexattr_settype" is undefined
+   __r = pthread_mutexattr_settype (&__attr,
+         ^
+
+15 errors detected in the compilation of "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/raw.cu".

@@ -1,0 +1,221 @@
+{
+  "local_links_checked": 317,
+  "svg": {
+    "01-responsibilities.svg": {
+      "width": "1089px",
+      "height": "1198px",
+      "viewBox": "0 0 1089 1198"
+    },
+    "02-prepare.svg": {
+      "width": "1441px",
+      "height": "1634px",
+      "viewBox": "0 0 1441 1634"
+    },
+    "03-launch.svg": {
+      "width": "1726px",
+      "height": "1220px",
+      "viewBox": "0 0 1726 1220"
+    },
+    "04-handoff.svg": {
+      "width": "1595px",
+      "height": "811px",
+      "viewBox": "0 0 1595 811"
+    },
+    "05-buffer-contract.svg": {
+      "width": "512px",
+      "height": "807px",
+      "viewBox": "0 0 512 807"
+    }
+  },
+  "actual_browser_verified": false,
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "published_atlas_sha256": "fe8f6d3171614f8163d0815420215c2f3525749c9f0939e4b9ab48073c02ccf1",
+  "selected_api_count": 26,
+  "selected_sources": [
+    {
+      "id": "host.can_implement",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 231,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "独立检查请求能否实现；initialize 不会自动调用它。"
+    },
+    {
+      "id": "host.get_workspace_size",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 242,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "返回所需字节数，不负责分配。查询、分配、初始化和回收分别核对。"
+    },
+    {
+      "id": "host.initialize",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 312,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "初始化 workspace 后重建 params_，按条件设置共享内存属性；不是执行 GEMM。"
+    },
+    {
+      "id": "host.update",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 359,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "不调用 initialize_workspace，也不保证轻量更新。变更问题或存储之前要重新确认前提。"
+    },
+    {
+      "id": "host.run.stream",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 610,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "使用成员 params_ 的实例重载；与下面的静态 run 保持独立。"
+    },
+    {
+      "id": "host.run.params",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 374,
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "claim": "提交设备任务并检查启动/API 状态；返回成功不能证明设备完成。"
+    },
+    {
+      "id": "host.cluster.launch",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 259,
+      "source_sha256": "9c469ab9068cc75ca421ab82b077ad87d804784481a42f8314fafa73fb0f0052",
+      "claim": "当前已选分支的 Cluster launch 包装。不要推广到其他架构、PDL 或 Host Adapter 分支。"
+    },
+    {
+      "id": "host.device_kernel",
+      "path": "include/cutlass/device_kernel.h",
+      "line": 112,
+      "source_sha256": "1975f6b0567dd4cfd3a10cdd7d4b037c934b1b799220d331cad76e570eef1332",
+      "claim": "CUDA 运行时调度的设备入口；入口内才调用设备 functor。"
+    },
+    {
+      "id": "types.builder_entry",
+      "path": "include/cutlass/gemm/collective/collective_builder_decl.hpp",
+      "line": 93,
+      "source_sha256": "a6259aa068058fa5ecc7c21f1db5cb643dbc7d6e28cebfc379b43e83394b6453",
+      "claim": "GEMM CollectiveBuilder 主模板入口；完整模板参数如下。没有适用实现的组合在编译期拒绝。"
+    },
+    {
+      "id": "types.builder_sm100",
+      "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+      "line": 169,
+      "source_sha256": "d1ca4ad8f22d15734afb5e699b40f20d885947644a3c18b7005156ed3a5f665c",
+      "claim": "已选 SM100 偏特化；特化条件决定适用性，CollectiveOp 是产生的类型，不是运行时返回对象。"
+    },
+    {
+      "id": "types.atom_call",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 94,
+      "source_sha256": "cfa5a9877c4f2b1bf97bb1236b7b7509333d5be0cb53819934175799c330d3f1",
+      "claim": "MMA_Atom 的一次操作接口。操作数表示必须符合具体 Atom/Traits，不能从 Fragment 名字直接推出存储位置。"
+    },
+    {
+      "id": "types.fma",
+      "path": "include/cute/arch/mma_sm100_umma.hpp",
+      "line": 563,
+      "source_sha256": "cb373dd73b0a0a77b76eca4740f5fa1c78ef0585be172241a921a3a5cbabce1c",
+      "claim": "当前类型选择最终使用的 2SM 硬件包装；其约束不自动适用于其他硬件。"
+    },
+    {
+      "id": "host.kernel.arguments",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 215,
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "claim": "面向调用方的参数，包括 mode、problem_shape、mainloop、epilogue、hw_info、scheduler。"
+    },
+    {
+      "id": "host.kernel.params",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 225,
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "claim": "设备所用参数，嵌套字段已转换为各组件的 Params；不是 Arguments 的别名。"
+    },
+    {
+      "id": "host.kernel.initialize_workspace",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 354,
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "claim": "Kernel 将 workspace 初始化交给具体组件；与下面的参数转换操作不同。"
+    },
+    {
+      "id": "host.kernel.lower",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 255,
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "claim": "划分并对齐 workspace，分别调用三个转换接口；当前实现的 mainloop_workspace 为 nullptr。"
+    },
+    {
+      "id": "host.mainloop.lower",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 353,
+      "source_sha256": "5d47ce4d6fd43757cb648c15adb13cafe9fb0f6e5d549d6eec11a241a7b8b7d3",
+      "claim": "转换 Mainloop 输入；TMA 描述符内部构造尚未由本会议图完整展开。"
+    },
+    {
+      "id": "host.epilogue.lower",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 299,
+      "source_sha256": "edf0f073c6685fca1b99a5e224d376f76be71392033fd612fdb94f7f0aed4244",
+      "claim": "转换 Epilogue 输入；C/D、融合参数和空间依赖需要独立核对。"
+    },
+    {
+      "id": "host.scheduler.lower",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 135,
+      "source_sha256": "4c6c339133cae649a465ceceff9fce3f52ffa2872f0589a456525360685a8fe9",
+      "claim": "转换工作分配参数；它不等于 Mainloop Schedule，也不是 MMA Atom 选择器。"
+    },
+    {
+      "id": "host.kernel.operator",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 403,
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "claim": "设备 functor 收到 Params 与共享内存地址，组织角色和各组件执行。"
+    },
+    {
+      "id": "contract.api.input_acquire",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 684,
+      "source_sha256": "da9852dc2f490c83c9980d9ecf2263b026329bbcb0d71be0903244e001473ca7",
+      "claim": "取得当前输入 stage 的可写条件；参与角色、stage/phase 与事务计数必须一致。"
+    },
+    {
+      "id": "contract.api.input_wait",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 720,
+      "source_sha256": "da9852dc2f490c83c9980d9ecf2263b026329bbcb0d71be0903244e001473ca7",
+      "claim": "等待当前输入 stage 可读；发起搬运与完成搬运是不同事件。"
+    },
+    {
+      "id": "contract.api.input_release",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 725,
+      "source_sha256": "da9852dc2f490c83c9980d9ecf2263b026329bbcb0d71be0903244e001473ca7",
+      "claim": "把相关 MMA 完成和 empty 通知联系起来；发出通知不等于下一轮 acquire 已成功。"
+    },
+    {
+      "id": "contract.api.store_wait",
+      "path": "include/cute/arch/copy_sm90_tma.hpp",
+      "line": 1248,
+      "source_sha256": "78d928e2551e698a46fe7f282792613cc9ca6dc679a00a8914e918de618b19e7",
+      "claim": "实际 PTX 是 wait_group.read；源 SMEM 读完不等于全局 D 写完。"
+    },
+    {
+      "id": "contract.api.allocate",
+      "path": "include/cute/arch/tmem_allocator_sm100.hpp",
+      "line": 135,
+      "source_sha256": "5ec2455cb09a33b759b8dc0c71be07ac9c93d21f08138c1e9e6ccf54d853efbf",
+      "claim": "双 CTA TMEM 分配有参与 warp 与配对条件；不能把它当作任意线程均可调用的通用分配器。"
+    },
+    {
+      "id": "contract.api.free",
+      "path": "include/cute/arch/tmem_allocator_sm100.hpp",
+      "line": 159,
+      "source_sha256": "5ec2455cb09a33b759b8dc0c71be07ac9c93d21f08138c1e9e6ccf54d853efbf",
+      "claim": "释放前要满足拥有者与协作完成条件；单侧 free 发出不等于配对释放完成。"
+    }
+  ],
+  "full_library_complete": false,
+  "scope": "finite_meeting_pack",
+  "source_inputs_verified": true
+}

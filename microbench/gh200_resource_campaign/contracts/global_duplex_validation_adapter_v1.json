@@ -1,0 +1,44 @@
+{
+  "adapter_id": "global_duplex_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.global_duplex_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/global_duplex.py": "340318f22fe8390f64d4cf9987883369dd43d6ce8740ea30e7db0503fdf57908",
+    "microbench/gh200_resource_campaign/auditors/global_duplex_validation.py": "4d8f6f78c857a03fae93f8f20a181a4fc8ba7ee8b33c0ad551ed59fdef444257",
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/common/global_duplex_reference.hpp": "e6b29111204b1f379188737712aa75334cf9ae1c813a51f02efea44b20c5a696",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/probes/global_duplex.cu": "7fed973c00d6b6741d5c9c9e032437587e50cba7a3e1f590effb2a76287cda19",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex.py": "ca1a0ac5505fea10e4fdb3fb4a350838e5d62006ab784fae75eee9360a512f09",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex_reference.py": "49897170a4393bb8554694864b256f6fbb018c6496a68a0047993b1031863ed9",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex_validation.py": "6cc05d86d4f2a9b30f7042241775642328450c89a5c3513f50cd185a322c2c7d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-global-duplex-a/diagnostics/global_duplex/sass.txt": "c8cdb417207934a54932399d2acbc92ce985d2fe7bd1e82963e12db78b1a3423"
+  },
+  "contract_sha256": "f2393676c1b89c20407d07b25eb791a82f0ccb3a6fc86c56161c42b8aa0418a1",
+  "profiles_sha256": "e571e593e53b64fee81d4ad20dddbdbcd54ca49216732c07527bd320e8c9960e",
+  "review_dependencies": [
+    {
+      "stage": "S13",
+      "phase": "A",
+      "path": "reviews/S13-A-review-r2.json"
+    },
+    {
+      "stage": "S13",
+      "phase": "early-validation-A",
+      "path": "reviews/S13-early-validation-A-review-r3.json"
+    },
+    {
+      "stage": "S13",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S13-early-validation-source-B-review-r2.json"
+    }
+  ]
+}

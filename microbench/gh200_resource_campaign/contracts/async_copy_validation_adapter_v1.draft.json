@@ -1,0 +1,41 @@
+{
+  "adapter_id": "async_copy_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.async_copy_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "draft_status": "pending_independent_A_review_not_executable",
+  "files_sha256": {},
+  "planned_files": [
+    "microbench/gh200_resource_campaign/auditors/async_copy_validation.py",
+    "microbench/gh200_resource_campaign/auditors/async_copy.py",
+    "microbench/gh200_resource_campaign/common/suite_io.py",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/async_copy_reference.hpp",
+    "microbench/gh200_resource_campaign/probes/async_copy.cu",
+    "microbench/gh200_resource_campaign/tests/test_async_copy_reference.py",
+    "microbench/gh200_resource_campaign/tests/test_async_copy_validation.py"
+  ],
+  "contract_sha256": "ec441344f5635cc364782f024d5df8c36643089977abf50a4d0030ed8f2f5d9c",
+  "profiles_sha256": "c86cedb6ff56f1027d6e82e471a9eca34d2d4adb6b1efcb54292b7bc7de0b6cc",
+  "review_dependencies": [
+    {
+      "stage": "S12",
+      "phase": "A",
+      "path": "reviews/S12-A-review.json"
+    },
+    {
+      "stage": "S12",
+      "phase": "early-validation-A",
+      "path": "reviews/S12-early-validation-A-review.json"
+    },
+    {
+      "stage": "S12",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S12-early-validation-source-B-review.json"
+    }
+  ]
+}

@@ -1,12 +1,16 @@
-# Microbenchmarks for SM110 Thor
+# GPU Microbenchmarks
 
-This directory contains small, standalone component probes for NVIDIA Thor /
-SM110 / `sm_110a`.  The goal is to isolate runtime setup, TCGen05/TMEM bring-up,
-CLC-style persistent work scheduling, and TCGen05 MMA behavior before turning
-them into a full GEMM.
+本目录保存 Thor/SM110 与 GH200/SM90 的组件测量，架构专用源码和条件分别维护。
 
-This is intentionally **not** an SM120, Hopper, Ampere, CUTLASS, or
-`mma.sync.aligned.kind::f8f6f4` path.
+## GH200/SM90
+
+- [已有计算测试](gh200_l0/README.md)：FMA、MMA、WGMMA 及历史归档。
+- [资源测试与独立审查](gh200_resource_campaign/README.md)：设备、SMEM、全局路径、旧数据审查和运行脚本。
+- [实验范围与目录计划](../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)。
+
+## Thor/SM110
+
+下列原有组件和操作流程针对 Thor / SM110 / sm_110a，不作为 GH200 指令或环境配置。
 
 ## Layout
 

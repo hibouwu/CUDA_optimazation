@@ -1,0 +1,564 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>官方接口速查</title><link rel="stylesheet" href="style.css"></head><body><nav aria-label="会议材料"><a href="index.html">图与使用顺序</a><a href="handbook.html">现场手册</a><a href="references.html">官方接口速查</a><a href="review-record-template.html">空白记录</a><a href="review-record-template.md" download>下载记录模板</a><a href="../site/index.html">详细图集</a></nav><main><h1 id="官方接口速查">官方接口速查</h1>
+<p>固定提交
+<code>8f50b052e1099fb982392a622caab69b97b63128</code>；库版本
+4.6.0，采用其中的 3.x API 体系。以下仅为会议精选接口，不是完整 API
+清单。</p>
+<p>每项保留独立身份、原始完整声明、仓库相对路径和固定行号。在线原文仅作可选核对；离线源码和已有详细图无需联网。具体语义说明适用于会议包所列
+Dense 配置。</p>
+<p><a id="ref-host"></a></p>
+<h2 id="host-调用">Host 调用</h2>
+<p><a id="api-host.can_implement"></a></p>
+<h3 id="can_implementarguments-const">can_implement(Arguments
+const&amp;)</h3>
+<p>独立检查请求能否实现；initialize 不会自动调用它。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:231</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L231">离线源码</a>
+· <a
+href="../site/index.html?api=host.can_implement">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L231">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::can_implement</code></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> Status</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  can_implement<span class="op">(</span>Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.get_workspace_size"></a></p>
+<h3 id="get_workspace_sizearguments-const">get_workspace_size(Arguments
+const&amp;)</h3>
+<p>返回所需字节数，不负责分配。查询、分配、初始化和回收分别核对。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:242</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L242">离线源码</a>
+· <a
+href="../site/index.html?api=host.get_workspace_size">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L242">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::get_workspace_size</code></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> <span class="dt">size_t</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  get_workspace_size<span class="op">(</span>Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.initialize"></a></p>
+<h3 id="initializeargs-workspace-stream-cuda_adapter">initialize(args,
+workspace, stream, cuda_adapter)</h3>
+<p>初始化 workspace 后重建 params_，按条件设置共享内存属性；不是执行
+GEMM。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:312</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L312">离线源码</a>
+· <a
+href="../site/index.html?api=host.initialize">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L312">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::initialize</code></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Status</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  initialize<span class="op">(</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span><span class="op">*</span> workspace <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">cudaStream_t</span> stream <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    CudaHostAdapter<span class="op">*</span> cuda_adapter <span class="op">=</span> <span class="kw">nullptr</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.update"></a></p>
+<h3 id="updateargs-workspace">update(args, workspace)</h3>
+<p>不调用
+initialize_workspace，也不保证轻量更新。变更问题或存储之前要重新确认前提。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:359</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L359">离线源码</a>
+· <a href="../site/index.html?api=host.update">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L359">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::update</code></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Status</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  update<span class="op">(</span>Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span> <span class="dt">void</span><span class="op">*</span> workspace <span class="op">=</span> <span class="kw">nullptr</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.run.stream"></a></p>
+<h3 id="runstream-cuda_adapter-launch_with_pdl">run(stream,
+cuda_adapter, launch_with_pdl)</h3>
+<p>使用成员 params_ 的实例重载；与下面的静态 run 保持独立。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:610</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L610">离线源码</a>
+· <a
+href="../site/index.html?api=host.run.stream">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L610">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::run</code></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Status</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  run<span class="op">(</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">cudaStream_t</span> stream <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    CudaHostAdapter <span class="op">*</span>cuda_adapter <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bool</span> launch_with_pdl <span class="op">=</span> <span class="kw">false</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.run.params"></a></p>
+<h3 id="static-runparams-stream-cuda_adapter-launch_with_pdl">static
+run(Params&amp;, stream, cuda_adapter, launch_with_pdl)</h3>
+<p>提交设备任务并检查启动/API 状态；返回成功不能证明设备完成。</p>
+<p><code>include/cutlass/gemm/device/gemm_universal_adapter.h:374</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L374">离线源码</a>
+· <a
+href="../site/index.html?api=host.run.params">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/device/gemm_universal_adapter.h#L374">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::device::GemmUniversalAdapter&lt;   GemmKernel_,   cute::enable_if_t&lt;gemm::detail::IsCutlass3GemmKernel&lt;GetUnderlyingKernel_t&lt;GemmKernel_&gt;&gt;::value&gt;&gt;::run</code></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> Status</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  run<span class="op">(</span>Params<span class="op">&amp;</span> params<span class="op">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>      <span class="dt">cudaStream_t</span> stream <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      CudaHostAdapter <span class="op">*</span>cuda_adapter <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">bool</span> launch_with_pdl <span class="op">=</span> <span class="kw">false</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.cluster.launch"></a></p>
+<h3
+id="clusterlauncherlaunch_with_fallback_cluster">ClusterLauncher::launch_with_fallback_cluster(…)</h3>
+<p>当前已选分支的 Cluster launch 包装。不要推广到其他架构、PDL 或 Host
+Adapter 分支。</p>
+<p><code>include/cutlass/cluster_launch.hpp:259</code></p>
+<p><a
+href="../site/source/include/cutlass/cluster_launch.hpp.html#L259">离线源码</a>
+· <a
+href="../site/index.html?api=host.cluster.launch">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/cluster_launch.hpp#L259">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::ClusterLauncher::launch_with_fallback_cluster</code></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> <span class="kw">inline</span> CUTLASS_HOST</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  Status launch_with_fallback_cluster<span class="op">(</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>      dim3 <span class="at">const</span> grid_dims<span class="op">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      dim3 <span class="at">const</span> preferred_cluster_dims<span class="op">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      dim3 <span class="at">const</span> fallback_cluster_dims<span class="op">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>      dim3 <span class="at">const</span> block_dims<span class="op">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">size_t</span> <span class="at">const</span> smem_size<span class="op">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">cudaStream_t</span> cuda_stream<span class="op">,</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">void</span> <span class="at">const</span><span class="op">*</span> kernel<span class="op">,</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">void</span><span class="op">**</span> kernel_params<span class="op">,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">bool</span> launch_with_pdl <span class="op">=</span> <span class="kw">false</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.device_kernel"></a></p>
+<h3
+id="device_kerneloperatorparams-const-params">device_kernel<Operator>(Operator::Params
+const params)</h3>
+<p>CUDA 运行时调度的设备入口；入口内才调用设备 functor。</p>
+<p><code>include/cutlass/device_kernel.h:112</code></p>
+<p><a
+href="../site/source/include/cutlass/device_kernel.h.html#L112">离线源码</a>
+· <a
+href="../site/index.html?api=host.device_kernel">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/device_kernel.h#L112">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::device_kernel</code></p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">typename</span> Operator<span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>CUTLASS_GLOBAL</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef __CUDACC__</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Enclosing this in __CUDACC__ suppresses MSVC warnings.</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>__launch_bounds__<span class="op">(</span>Operator<span class="op">::</span>MaxThreadsPerBlock<span class="op">,</span> Operator<span class="op">::</span>MinBlocksPerMultiprocessor<span class="op">)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif </span><span class="co">// __CUDACC__</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> device_kernel<span class="op">(</span>CUTLASS_GRID_CONSTANT <span class="kw">typename</span> Operator<span class="op">::</span>Params <span class="at">const</span> params<span class="op">)</span></span></code></pre></div>
+<p><a id="ref-build"></a></p>
+<h2 id="编译期选择">编译期选择</h2>
+<p><a id="api-types.builder_entry"></a></p>
+<h3 id="collectivebuilder-主模板入口">CollectiveBuilder 主模板入口</h3>
+<p>GEMM CollectiveBuilder
+主模板入口；完整模板参数如下。没有适用实现的组合在编译期拒绝。</p>
+<p><code>include/cutlass/gemm/collective/collective_builder_decl.hpp:93</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/collective/collective_builder_decl.hpp.html#L77">离线源码</a>
+· <a
+href="../site/index.html?api=types.builder_entry">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/collective/collective_builder_decl.hpp#L93">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::collective::CollectiveBuilder</code></p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ArchTag<span class="op">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> OpClass<span class="op">,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementA<span class="op">,</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> GmemLayoutA<span class="op">,</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> AlignmentA<span class="op">,</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementB<span class="op">,</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> GmemLayoutB<span class="op">,</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> AlignmentB<span class="op">,</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementAccumulator<span class="op">,</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> TileShape_MNK<span class="op">,</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ClusterShape_MNK<span class="op">,</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> StageCountType<span class="op">,</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> KernelScheduleType<span class="op">,</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> Enable <span class="op">=</span> <span class="dt">void</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> CollectiveBuilder</span></code></pre></div>
+<p><a id="api-types.builder_sm100"></a></p>
+<h3 id="sm100-dense-umma-builder-偏特化">SM100 Dense UMMA Builder
+偏特化</h3>
+<p>已选 SM100 偏特化；特化条件决定适用性，CollectiveOp
+是产生的类型，不是运行时返回对象。</p>
+<p><code>include/cutlass/gemm/collective/builders/sm100_umma_builder.inl:169</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/collective/builders/sm100_umma_builder.inl.html#L155">离线源码</a>
+· <a
+href="../site/index.html?api=types.builder_sm100">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/collective/builders/sm100_umma_builder.inl#L169">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::collective::CollectiveBuilder&lt;     ArchTag,     arch::OpClassTensorOp,     ElementA,     GmemLayoutATag,     AlignmentA,     ElementB,     GmemLayoutBTag,     AlignmentB,     ElementAccumulator,     TileShape_MNK,    // (MmaAtomShapeM, MmaAtomShapeN, TileK)     ClusterShape_MNK, // Static cluster shape or dynamic (int, int, _1)     StageCountType,     BuilderScheduleTag,     cute::enable_if_t&lt;       (cute::is_same_v&lt;ArchTag, arch::Sm100&gt;        ) &amp;&amp;       not cute::is_tuple_v&lt;ElementA&gt;   &amp;&amp; not cute::is_tuple_v&lt;ElementB&gt; &amp;&amp;       not cute::is_complex_v&lt;ElementA&gt; &amp;&amp; not cute::is_complex_v&lt;ElementB&gt; &amp;&amp;       // Dense Gemm / PtrArrayDenseGemm       (        (not cute::is_same_v&lt;KernelMixedTmaCpAsyncWarpSpecialized1SmSm100, BuilderScheduleTag&gt;) &amp;&amp;         (not cute::is_same_v&lt;KernelMixedTmaCpAsyncWarpSpecialized2SmSm100, BuilderScheduleTag&gt;) &amp;&amp;         (not cute::is_same_v&lt;KernelWarpSpecialized1SmSm100, BuilderScheduleTag&gt;) &amp;&amp;         (cute::is_base_of_v&lt;KernelScheduleSm100DenseGemm, BuilderScheduleTag&gt; ||         cute::is_same_v&lt;KernelScheduleAuto, BuilderScheduleTag&gt;)) &amp;&amp;       // Alignment check       detail::sm1xx_gemm_is_aligned&lt;ElementA, AlignmentA, ElementB, AlignmentB, BuilderScheduleTag&gt;()&gt;&gt;</code></p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ArchTag<span class="op">,</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementA<span class="op">,</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> GmemLayoutATag<span class="op">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> AlignmentA<span class="op">,</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementB<span class="op">,</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> GmemLayoutBTag<span class="op">,</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">int</span> AlignmentB<span class="op">,</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ElementAccumulator<span class="op">,</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> TileShape_MNK<span class="op">,</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> ClusterShape_MNK<span class="op">,</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> StageCountType<span class="op">,</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">class</span> BuilderScheduleTag</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> CollectiveBuilder<span class="op">&lt;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    ArchTag<span class="op">,</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    arch<span class="op">::</span>OpClassTensorOp<span class="op">,</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    ElementA<span class="op">,</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    GmemLayoutATag<span class="op">,</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    AlignmentA<span class="op">,</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    ElementB<span class="op">,</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    GmemLayoutBTag<span class="op">,</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    AlignmentB<span class="op">,</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    ElementAccumulator<span class="op">,</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    TileShape_MNK<span class="op">,</span>    <span class="co">// (MmaAtomShapeM, MmaAtomShapeN, TileK)</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    ClusterShape_MNK<span class="op">,</span> <span class="co">// Static cluster shape or dynamic (int, int, _1)</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    StageCountType<span class="op">,</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    BuilderScheduleTag<span class="op">,</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    cute<span class="op">::</span><span class="dt">enable_if_t</span><span class="op">&lt;</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>      <span class="op">(</span>cute<span class="op">::</span>is_same_v<span class="op">&lt;</span>ArchTag<span class="op">,</span> arch<span class="op">::</span>Sm100<span class="op">&gt;</span> </span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>      <span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>      <span class="kw">not</span> cute<span class="op">::</span>is_tuple_v<span class="op">&lt;</span>ElementA<span class="op">&gt;</span>   <span class="op">&amp;&amp;</span> <span class="kw">not</span> cute<span class="op">::</span>is_tuple_v<span class="op">&lt;</span>ElementB<span class="op">&gt;</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>      <span class="kw">not</span> cute<span class="op">::</span>is_complex_v<span class="op">&lt;</span>ElementA<span class="op">&gt;</span> <span class="op">&amp;&amp;</span> <span class="kw">not</span> cute<span class="op">::</span>is_complex_v<span class="op">&lt;</span>ElementB<span class="op">&gt;</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Dense Gemm / PtrArrayDenseGemm</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>      <span class="op">(</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>       <span class="op">(</span><span class="kw">not</span> cute<span class="op">::</span>is_same_v<span class="op">&lt;</span>KernelMixedTmaCpAsyncWarpSpecialized1SmSm100<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;)</span> <span class="op">&amp;&amp;</span> </span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>       <span class="op">(</span><span class="kw">not</span> cute<span class="op">::</span>is_same_v<span class="op">&lt;</span>KernelMixedTmaCpAsyncWarpSpecialized2SmSm100<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;)</span> <span class="op">&amp;&amp;</span> </span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>       <span class="op">(</span><span class="kw">not</span> cute<span class="op">::</span>is_same_v<span class="op">&lt;</span>KernelWarpSpecialized1SmSm100<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;)</span> <span class="op">&amp;&amp;</span> </span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>       <span class="op">(</span>cute<span class="op">::</span>is_base_of_v<span class="op">&lt;</span>KernelScheduleSm100DenseGemm<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;</span> <span class="op">||</span></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>        cute<span class="op">::</span>is_same_v<span class="op">&lt;</span>KernelScheduleAuto<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;))</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Alignment check</span></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>      detail::sm1xx_gemm_is_aligned<span class="op">&lt;</span>ElementA<span class="op">,</span> AlignmentA<span class="op">,</span> ElementB<span class="op">,</span> AlignmentB<span class="op">,</span> BuilderScheduleTag<span class="op">&gt;()&gt;&gt;</span></span></code></pre></div>
+<p><a id="api-types.atom_call"></a></p>
+<h3 id="mma_atomcalldabc">MMA_Atom::call(D,A,B,C)</h3>
+<p>MMA_Atom 的一次操作接口。操作数表示必须符合具体 Atom/Traits，不能从
+Fragment 名字直接推出存储位置。</p>
+<p><code>include/cute/atom/mma_atom.hpp:94</code></p>
+<p><a
+href="../site/source/include/cute/atom/mma_atom.hpp.html#L88">离线源码</a>
+· <a
+href="../site/index.html?api=types.atom_call">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/atom/mma_atom.hpp#L94">固定提交原文（联网）</a></p>
+<p>限定名：<code>cute::MMA_Atom&lt;MMA_Traits&lt;MMAOperation, Args...&gt;&gt;::call</code></p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">class</span> TD<span class="op">,</span> <span class="kw">class</span> DLayout<span class="op">,</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>            <span class="kw">class</span> TA<span class="op">,</span> <span class="kw">class</span> ALayout<span class="op">,</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>            <span class="kw">class</span> TB<span class="op">,</span> <span class="kw">class</span> BLayout<span class="op">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            <span class="kw">class</span> TC<span class="op">,</span> <span class="kw">class</span> CLayout<span class="op">&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  CUTE_HOST_DEVICE <span class="kw">constexpr</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  call<span class="op">(</span>Tensor<span class="op">&lt;</span>TD<span class="op">,</span> DLayout<span class="op">&gt;</span>      <span class="op">&amp;</span> D<span class="op">,</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>       Tensor<span class="op">&lt;</span>TA<span class="op">,</span> ALayout<span class="op">&gt;</span> <span class="at">const</span><span class="op">&amp;</span> A<span class="op">,</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>       Tensor<span class="op">&lt;</span>TB<span class="op">,</span> BLayout<span class="op">&gt;</span> <span class="at">const</span><span class="op">&amp;</span> B<span class="op">,</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>       Tensor<span class="op">&lt;</span>TC<span class="op">,</span> CLayout<span class="op">&gt;</span> <span class="at">const</span><span class="op">&amp;</span> C<span class="op">)</span> <span class="at">const</span></span></code></pre></div>
+<p><a id="api-types.fma"></a></p>
+<h3
+id="sm100_mma_f16bf16_2x1sm_ssfma">SM100_MMA_F16BF16_2x1SM_SS::fma</h3>
+<p>当前类型选择最终使用的 2SM 硬件包装；其约束不自动适用于其他硬件。</p>
+<p><code>include/cute/arch/mma_sm100_umma.hpp:563</code></p>
+<p><a
+href="../site/source/include/cute/arch/mma_sm100_umma.hpp.html#L562">离线源码</a>
+· <a href="../site/index.html?api=types.fma">完整接口与独立关系</a> · <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/arch/mma_sm100_umma.hpp#L563">固定提交原文（联网）</a></p>
+<p>限定名：<code>cute::SM100_MMA_F16BF16_2x1SM_SS::fma</code></p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>CUTE_HOST_DEVICE <span class="at">static</span> <span class="dt">void</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  fma<span class="op">(</span><span class="dt">uint64_t</span> <span class="at">const</span><span class="op">&amp;</span> desc_a<span class="op">,</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>      <span class="dt">uint64_t</span> <span class="at">const</span><span class="op">&amp;</span> desc_b<span class="op">,</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">uint32_t</span> <span class="at">const</span><span class="op">&amp;</span> tmem_c<span class="op">,</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">uint32_t</span> <span class="at">const</span><span class="op">&amp;</span> scaleC<span class="op">,</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">uint64_t</span> <span class="at">const</span><span class="op">&amp;</span> idescE<span class="op">)</span></span></code></pre></div>
+<p><a id="ref-handoff"></a></p>
+<h2 id="参数和职责交接">参数和职责交接</h2>
+<p><a id="api-host.kernel.arguments"></a></p>
+<h3 id="gemmkernelarguments">GemmKernel::Arguments</h3>
+<p>面向调用方的参数，包括
+mode、problem_shape、mainloop、epilogue、hw_info、scheduler。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp:215</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L215">离线源码</a>
+· <a
+href="../site/index.html?api=host.kernel.arguments">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L215">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::GemmUniversal&lt;   ProblemShape_,   CollectiveMainloop_,   CollectiveEpilogue_,   TileSchedulerTag_,   cute::enable_if_t&lt;     cute::disjunction_v&lt;cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedSm100&gt;,     cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedBlockScaledSm100&gt;&gt;&gt;&gt;::Arguments</code></p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Arguments</span></code></pre></div>
+<p>字段定义（固定源码）：</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">struct</span> Arguments <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    GemmUniversalMode mode<span class="op">{};</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    ProblemShape problem_shape<span class="op">{};</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    MainloopArguments mainloop<span class="op">{};</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    EpilogueArguments epilogue<span class="op">{};</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    KernelHardwareInfo hw_info<span class="op">{};</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    TileSchedulerArguments scheduler<span class="op">{};</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span></code></pre></div>
+<p><a id="api-host.kernel.params"></a></p>
+<h3 id="gemmkernelparams">GemmKernel::Params</h3>
+<p>设备所用参数，嵌套字段已转换为各组件的 Params；不是 Arguments
+的别名。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp:225</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L225">离线源码</a>
+· <a
+href="../site/index.html?api=host.kernel.params">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L225">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::GemmUniversal&lt;   ProblemShape_,   CollectiveMainloop_,   CollectiveEpilogue_,   TileSchedulerTag_,   cute::enable_if_t&lt;     cute::disjunction_v&lt;cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedSm100&gt;,     cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedBlockScaledSm100&gt;&gt;&gt;&gt;::Params</code></p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> Params</span></code></pre></div>
+<p>字段定义（固定源码）：</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>  <span class="kw">struct</span> Params <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    GemmUniversalMode mode<span class="op">{};</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    ProblemShape problem_shape<span class="op">{};</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    MainloopParams mainloop<span class="op">{};</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    EpilogueParams epilogue<span class="op">{};</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    TileSchedulerParams scheduler<span class="op">{};</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    KernelHardwareInfo hw_info<span class="op">{};</span> </span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">};</span></span></code></pre></div>
+<p><a id="api-host.kernel.initialize_workspace"></a></p>
+<h3
+id="gemmkernelinitialize_workspaceargs-workspace-stream-cuda_adapter">GemmKernel::initialize_workspace(args,
+workspace, stream, cuda_adapter)</h3>
+<p>Kernel 将 workspace
+初始化交给具体组件；与下面的参数转换操作不同。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp:354</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L354">离线源码</a>
+· <a
+href="../site/index.html?api=host.kernel.initialize_workspace">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L354">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::GemmUniversal&lt;   ProblemShape_,   CollectiveMainloop_,   CollectiveEpilogue_,   TileSchedulerTag_,   cute::enable_if_t&lt;     cute::disjunction_v&lt;cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedSm100&gt;,     cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedBlockScaledSm100&gt;&gt;&gt;&gt;::initialize_workspace</code></p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span> cutlass<span class="op">::</span>Status</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  initialize_workspace<span class="op">(</span>Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span> <span class="dt">void</span><span class="op">*</span> workspace <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span> <span class="dt">cudaStream_t</span> stream <span class="op">=</span> <span class="kw">nullptr</span><span class="op">,</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    CudaHostAdapter<span class="op">*</span> cuda_adapter <span class="op">=</span> <span class="kw">nullptr</span><span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.kernel.lower"></a></p>
+<h3
+id="gemmkernelto_underlying_argumentsargs-workspace">GemmKernel::to_underlying_arguments(args,
+workspace)</h3>
+<p>划分并对齐 workspace，分别调用三个转换接口；当前实现的
+mainloop_workspace 为 nullptr。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp:255</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L255">离线源码</a>
+· <a
+href="../site/index.html?api=host.kernel.lower">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L255">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::GemmUniversal&lt;   ProblemShape_,   CollectiveMainloop_,   CollectiveEpilogue_,   TileSchedulerTag_,   cute::enable_if_t&lt;     cute::disjunction_v&lt;cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedSm100&gt;,     cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedBlockScaledSm100&gt;&gt;&gt;&gt;::to_underlying_arguments</code></p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="at">static</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  Params</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  to_underlying_arguments<span class="op">(</span>Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span> <span class="dt">void</span><span class="op">*</span> workspace<span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.mainloop.lower"></a></p>
+<h3
+id="collectivemainloopto_underlying_argumentsproblem_shape-args-workspace-hw_info">CollectiveMainloop::to_underlying_arguments(problem_shape,
+args, workspace, hw_info)</h3>
+<p>转换 Mainloop 输入；TMA 描述符内部构造尚未由本会议图完整展开。</p>
+<p><code>include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp:353</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp.html#L353">离线源码</a>
+· <a
+href="../site/index.html?api=host.mainloop.lower">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp#L353">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::collective::CollectiveMma&lt;     MainloopSm100TmaUmmaWarpSpecialized&lt;       Stages,       SchedulerPipelineStageCount,       AccumulatorPipelineStageCount,       ClusterShape,       ArchTag_&gt;,     TileShape_,     ElementA_,     StrideA_,     ElementB_,     StrideB_,     TiledMma_,     GmemTiledCopyA_,     SmemLayoutAtomA_,     SmemCopyAtomA_,     TransformA_,     GmemTiledCopyB_,     SmemLayoutAtomB_,     SmemCopyAtomB_,     TransformB_&gt;::to_underlying_arguments</code></p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">class</span> ProblemShape<span class="op">&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">static</span> <span class="kw">constexpr</span> Params</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  to_underlying_arguments<span class="op">(</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    ProblemShape <span class="at">const</span><span class="op">&amp;</span> problem_shape<span class="op">,</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">[[</span><span class="at">maybe_unused</span><span class="op">]]</span> <span class="dt">void</span><span class="op">*</span> workspace<span class="op">,</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    cutlass<span class="op">::</span>KernelHardwareInfo <span class="at">const</span><span class="op">&amp;</span> hw_info <span class="op">=</span> cutlass<span class="op">::</span>KernelHardwareInfo<span class="op">{})</span></span></code></pre></div>
+<p><a id="api-host.epilogue.lower"></a></p>
+<h3
+id="collectiveepilogueto_underlying_argumentsproblem_shape-args-workspace">CollectiveEpilogue::to_underlying_arguments(problem_shape,
+args, workspace)</h3>
+<p>转换 Epilogue 输入；C/D、融合参数和空间依赖需要独立核对。</p>
+<p><code>include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp:299</code></p>
+<p><a
+href="../site/source/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp.html#L299">离线源码</a>
+· <a
+href="../site/index.html?api=host.epilogue.lower">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp#L299">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::epilogue::collective::CollectiveEpilogue&lt;     Sm100TmaWarpSpecialized&lt;StagesC_, StagesD_, FragmentSize_, ReuseSmemC_, DelayTmaStore_&gt;,     CtaTileShape_,     EpilogueTile_,     ElementC_,     StrideC_,     ElementD_,     StrideD_,     FusionCallbacks_,     CopyOpT2R_,     CopyOpG2S_,     SmemLayoutAtomC_,     CopyOpS2R_,     CopyOpS2G_,     SmemLayoutAtomD_,     CopyOpR2S_,     CopyOpR2R_ &gt;::to_underlying_arguments</code></p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">class</span> ProblemShape<span class="op">&gt;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">static</span> <span class="kw">constexpr</span> Params</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  to_underlying_arguments<span class="op">(</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>      ProblemShape <span class="at">const</span><span class="op">&amp;</span> problem_shape<span class="op">,</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>      Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>      <span class="op">[[</span><span class="at">maybe_unused</span><span class="op">]]</span> <span class="dt">void</span><span class="op">*</span> workspace<span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.scheduler.lower"></a></p>
+<h3
+id="tileschedulerto_underlying_argumentsproblem_shape-tile-atom_thr-cluster-hw_info-args-workspace">TileScheduler::to_underlying_arguments(problem_shape,
+tile, atom_thr, cluster, hw_info, args, workspace)</h3>
+<p>转换工作分配参数；它不等于 Mainloop Schedule，也不是 MMA Atom
+选择器。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp:135</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp.html#L135">离线源码</a>
+· <a
+href="../site/index.html?api=host.scheduler.lower">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp#L135">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::to_underlying_arguments</code></p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="kw">class</span> ProblemShapeMNKL<span class="op">,</span> <span class="kw">class</span> TileShape<span class="op">,</span> <span class="kw">class</span> AtomThrShape<span class="op">,</span> <span class="kw">class</span> ClusterShape<span class="op">&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">static</span> Params</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  to_underlying_arguments<span class="op">(</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>      ProblemShapeMNKL problem_shape_mnkl<span class="op">,</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>      TileShape tile_shape_mnk<span class="op">,</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>      AtomThrShape atom_thr_shape_mnk<span class="op">,</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>      ClusterShape cluster_shape_mnk<span class="op">,</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>      KernelHardwareInfo <span class="at">const</span><span class="op">&amp;</span> hw_info<span class="op">,</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>      Arguments <span class="at">const</span><span class="op">&amp;</span> args<span class="op">,</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">void</span><span class="op">*</span> workspace <span class="op">=</span> <span class="kw">nullptr</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">)</span></span></code></pre></div>
+<p><a id="api-host.kernel.operator"></a></p>
+<h3
+id="gemmkerneloperatorparams-const-char">GemmKernel::operator()(Params
+const&amp;, char*)</h3>
+<p>设备 functor 收到 Params 与共享内存地址，组织角色和各组件执行。</p>
+<p><code>include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp:403</code></p>
+<p><a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L403">离线源码</a>
+· <a
+href="../site/index.html?api=host.kernel.operator">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp#L403">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::gemm::kernel::GemmUniversal&lt;   ProblemShape_,   CollectiveMainloop_,   CollectiveEpilogue_,   TileSchedulerTag_,   cute::enable_if_t&lt;     cute::disjunction_v&lt;cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedSm100&gt;,     cutlass::detail::is_kernel_tag_of&lt;typename CollectiveMainloop_::DispatchPolicy::Schedule,                                 KernelTmaWarpSpecializedBlockScaledSm100&gt;&gt;&gt;&gt;::operator()</code></p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>CUTLASS_DEVICE</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">operator</span><span class="op">()</span> <span class="op">(</span>Params <span class="at">const</span><span class="op">&amp;</span> params<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> smem_buf<span class="op">)</span></span></code></pre></div>
+<p><a id="ref-sync"></a></p>
+<h2 id="同步与资源使用">同步与资源使用</h2>
+<p><a id="api-contract.api.input_acquire"></a></p>
+<h3
+id="pipelinetmaummaasyncproducer_acquire">PipelineTmaUmmaAsync::producer_acquire</h3>
+<p>取得当前输入 stage 的可写条件；参与角色、stage/phase
+与事务计数必须一致。</p>
+<p><code>include/cutlass/pipeline/sm100_pipeline.hpp:684</code></p>
+<p><a
+href="../site/source/include/cutlass/pipeline/sm100_pipeline.hpp.html#L683">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.input_acquire">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/pipeline/sm100_pipeline.hpp#L684">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::PipelineTmaUmmaAsync::producer_acquire</code></p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>CUTLASS_DEVICE</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span> producer_acquire<span class="op">(</span>PipelineState state<span class="op">,</span> ProducerToken barrier_token <span class="op">=</span> <span class="op">{</span>BarrierStatus<span class="op">::</span>WaitAgain<span class="op">})</span></span></code></pre></div>
+<p><a id="api-contract.api.input_wait"></a></p>
+<h3
+id="pipelinetmaummaasyncconsumer_wait">PipelineTmaUmmaAsync::consumer_wait</h3>
+<p>等待当前输入 stage 可读；发起搬运与完成搬运是不同事件。</p>
+<p><code>include/cutlass/pipeline/sm100_pipeline.hpp:720</code></p>
+<p><a
+href="../site/source/include/cutlass/pipeline/sm100_pipeline.hpp.html#L719">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.input_wait">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/pipeline/sm100_pipeline.hpp#L720">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::PipelineTmaUmmaAsync::consumer_wait</code></p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>CUTLASS_DEVICE</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span> consumer_wait<span class="op">(</span>PipelineState state<span class="op">,</span> ConsumerToken barrier_token <span class="op">=</span> <span class="op">{</span>BarrierStatus<span class="op">::</span>WaitAgain<span class="op">})</span></span></code></pre></div>
+<p><a id="api-contract.api.input_release"></a></p>
+<h3
+id="pipelinetmaummaasyncconsumer_release">PipelineTmaUmmaAsync::consumer_release</h3>
+<p>把相关 MMA 完成和 empty 通知联系起来；发出通知不等于下一轮 acquire
+已成功。</p>
+<p><code>include/cutlass/pipeline/sm100_pipeline.hpp:725</code></p>
+<p><a
+href="../site/source/include/cutlass/pipeline/sm100_pipeline.hpp.html#L724">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.input_release">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/pipeline/sm100_pipeline.hpp#L725">固定提交原文（联网）</a></p>
+<p>限定名：<code>cutlass::PipelineTmaUmmaAsync::consumer_release</code></p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>CUTLASS_DEVICE</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span> consumer_release<span class="op">(</span>PipelineState state<span class="op">)</span></span></code></pre></div>
+<p><a id="api-contract.api.store_wait"></a></p>
+<h3 id="cutetma_store_wait">cute::tma_store_wait<Count></h3>
+<p>实际 PTX 是 wait_group.read；源 SMEM 读完不等于全局 D 写完。</p>
+<p><code>include/cute/arch/copy_sm90_tma.hpp:1248</code></p>
+<p><a
+href="../site/source/include/cute/arch/copy_sm90_tma.hpp.html#L1246">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.store_wait">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/arch/copy_sm90_tma.hpp#L1248">固定提交原文（联网）</a></p>
+<p>限定名：<code>cute::tma_store_wait</code></p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span> <span class="op">&lt;</span><span class="dt">int</span> Count<span class="op">&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>CUTE_HOST_DEVICE <span class="at">static</span> <span class="dt">void</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>tma_store_wait<span class="op">()</span></span></code></pre></div>
+<p><a id="api-contract.api.allocate"></a></p>
+<h3 id="tmemallocator2smallocate">TMEM::Allocator2Sm::allocate</h3>
+<p>双 CTA TMEM 分配有参与 warp
+与配对条件；不能把它当作任意线程均可调用的通用分配器。</p>
+<p><code>include/cute/arch/tmem_allocator_sm100.hpp:135</code></p>
+<p><a
+href="../site/source/include/cute/arch/tmem_allocator_sm100.hpp.html#L134">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.allocate">完整接口与独立关系</a>
+· <a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/arch/tmem_allocator_sm100.hpp#L135">固定提交原文（联网）</a></p>
+<p>限定名：<code>cute::TMEM::Allocator2Sm::allocate</code></p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>CUTE_HOST_DEVICE <span class="dt">void</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  allocate<span class="op">(</span><span class="dt">int</span> num_columns<span class="op">,</span> <span class="dt">uint32_t</span><span class="op">*</span> dst_ptr<span class="op">)</span></span></code></pre></div>
+<p><a id="api-contract.api.free"></a></p>
+<h3 id="tmemallocator2smfree">TMEM::Allocator2Sm::free</h3>
+<p>释放前要满足拥有者与协作完成条件；单侧 free
+发出不等于配对释放完成。</p>
+<p><code>include/cute/arch/tmem_allocator_sm100.hpp:159</code></p>
+<p><a
+href="../site/source/include/cute/arch/tmem_allocator_sm100.hpp.html#L157">离线源码</a>
+· <a
+href="../site/index.html?api=contract.api.free">完整接口与独立关系</a> ·
+<a
+href="https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cute/arch/tmem_allocator_sm100.hpp#L159">固定提交原文（联网）</a></p>
+<p>限定名：<code>cute::TMEM::Allocator2Sm::free</code></p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>__device__</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">void</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  free<span class="op">(</span><span class="dt">uint32_t</span> tmem_ptr<span class="op">,</span> <span class="dt">int</span> num_columns<span class="op">)</span></span></code></pre></div>
+<h2 id="同步接口之外还要查什么">同步接口之外还要查什么</h2>
+<p><code>Allocator2Sm::release_allocation_lock()</code>
+只是放弃分配许可，不是释放已分配的 TMEM。其声明见 <a
+href="../site/source/include/cute/arch/tmem_allocator_sm100.hpp.html#L174">固定源码第
+174 行</a>。Kernel 在调用 <code>free()</code> 前的独立等待、双 CTA
+握手与条件分支见 <a
+href="../site/source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L783">第
+783 行起</a> 和 <a
+href="../site/index.html?protocol=dense.protocol_draft.tmem_lifetime">TMEM
+协议详细图</a>。</p>
+<p><code>cudaStreamSynchronize(stream)</code>
+是本参考应用的显式等待，不在 Adapter 内部。见 <a
+href="../site/evidence/6c1d941eb5a1b64f-dense_baseline.cu.html#L250">已保存的示例调用位置</a>。其他实现应说明自己的等价完成条件；不能只检查执行接口的返回值。</p>
+<p>本包引用已发布的静态编译材料，但没有新增 GPU 执行。完整 Copy
+分派、全部描述符/调度/融合行为和其他配置尚不能由这些接口证明。未展开事项在会议记录中另立问题，不由简图补猜。</p>
+</main><footer>会议精选参考 · CUTLASS 4.6.0 / 3.x API 体系 · 全库图集未完成</footer></body></html>

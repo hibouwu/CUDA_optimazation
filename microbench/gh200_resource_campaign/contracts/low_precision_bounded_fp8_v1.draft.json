@@ -1,0 +1,619 @@
+{
+  "schema_version": 1,
+  "kind": "bounded_fp8_wgmma_input_amendment_design",
+  "stage": "S08",
+  "status": "draft_pending_independent_A",
+  "author": "/root/s11_independent",
+  "parent_contract": {
+    "path": "microbench/gh200_resource_campaign/contracts/low_precision_lowering_v3.json",
+    "sha256": "24a46269a210033c79eb1e4d8e3d6b312442b7a441ee802b47e662e2fc52ea4c"
+  },
+  "future_contract_id": "low_precision_bounded_fp8_v1",
+  "future_family": "low_precision_bounded_fp8",
+  "future_source": "microbench/gh200_resource_campaign/probes/low_precision_bounded_fp8_v1.cu",
+  "future_reference": "microbench/gh200_resource_campaign/common/low_precision_bounded_fp8_reference_v1.hpp",
+  "implementation_status": "not_implemented",
+  "case_count": 8,
+  "unchanged_parent_cases": 24,
+  "selected_cases": [
+    {
+      "id": "bounded_v1_wgmma_e4m3_g1_one_cta",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e4m3",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 1,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "FLOP/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "original_case_id": "wgmma_e4m3_g1_one_cta"
+    },
+    {
+      "id": "bounded_v1_wgmma_e4m3_g1_all_gpu",
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "threads": 128,
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e4m3",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 1,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GFLOP/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "original_case_id": "wgmma_e4m3_g1_all_gpu"
+    },
+    {
+      "id": "bounded_v1_wgmma_e4m3_g2_one_cta",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e4m3",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 2,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "FLOP/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "original_case_id": "wgmma_e4m3_g2_one_cta"
+    },
+    {
+      "id": "bounded_v1_wgmma_e4m3_g2_all_gpu",
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e4m3",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 2,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GFLOP/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "original_case_id": "wgmma_e4m3_g2_all_gpu"
+    },
+    {
+      "id": "bounded_v1_wgmma_e5m2_g1_one_cta",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e5m2",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e5m2",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 1,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "FLOP/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "original_case_id": "wgmma_e5m2_g1_one_cta"
+    },
+    {
+      "id": "bounded_v1_wgmma_e5m2_g1_all_gpu",
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "threads": 128,
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e5m2",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e5m2",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 1,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GFLOP/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "original_case_id": "wgmma_e5m2_g1_all_gpu"
+    },
+    {
+      "id": "bounded_v1_wgmma_e5m2_g2_one_cta",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e5m2",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e5m2",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 2,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "FLOP/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "original_case_id": "wgmma_e5m2_g2_one_cta"
+    },
+    {
+      "id": "bounded_v1_wgmma_e5m2_g2_all_gpu",
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "path": "wgmma",
+        "input_type": "e5m2",
+        "accumulator_type": "f32",
+        "ptx": "wgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e5m2",
+        "shape": [
+          64,
+          64,
+          32
+        ],
+        "groups": 2,
+        "collective_width_threads": 128,
+        "chains": 2,
+        "batch": 16,
+        "wait": 0,
+        "operand_source_form": "SS",
+        "saturating": false,
+        "uniform_input_value": null,
+        "nonuniform_validation_iterations": [
+          1,
+          2
+        ],
+        "formal_input_profile": "nonzero_K_alternating_cancellation_v1",
+        "bounded_D0": "(1+2*warpgroup_in_CTA+chain)/8",
+        "nonuniform_D0": "unchanged:(1+warpgroup_in_CTA+chain)/8"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "dense_lowprecision_collective_v1",
+      "work_unit": "FLOP",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GFLOP/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "original_case_id": "wgmma_e5m2_g2_all_gpu"
+    }
+  ],
+  "scope": {
+    "types": [
+      "e4m3",
+      "e5m2"
+    ],
+    "groups_per_CTA": [
+      1,
+      2
+    ],
+    "scopes": [
+      "one_cta",
+      "all_gpu"
+    ],
+    "shape": [
+      64,
+      64,
+      32
+    ],
+    "operand_source": "SS",
+    "chains": 2,
+    "batch_per_chain": 16,
+    "wait": 0,
+    "iterations": 8192,
+    "threads_per_CTA": "128*groups_per_CTA",
+    "changes_allowed": [
+      "new formal FP8 WGMMA operand values before timing",
+      "new nonzero formal D0 before timing",
+      "new explicit family/input identity and matching CPU reference/host validation"
+    ],
+    "unchanged": [
+      "all24 unselected parent cases, source, contracts, references and old failure archives",
+      "WGMMA instruction type/shape/SS descriptor addressing/shared layouts",
+      "groups,chains,batch,wait0,rolled iteration loop,drain and output mapping",
+      "original seeded nonuniform1/2 numerical input and initial D semantics on revised same target kernel"
+    ],
+    "forbidden": [
+      "modify old files in place",
+      "relax tolerance",
+      "implicit instruction deletion for zero result",
+      "reset D inside timed loop",
+      "insert additional marker/timing/calibration MMA",
+      "datatype/shape/layout scan",
+      "replay8192 old positive input",
+      "unapproved dense/sparse6-point diagnostic",
+      "infer internal mantissa or rounding"
+    ]
+  },
+  "formal_input": {
+    "profile_id": "nonzero_K_alternating_cancellation_v1",
+    "A_logical": "A[m,k]=+1/16 for allm0..63,k0..31",
+    "B_logical": "B[k,n]=+1/16 if k even, -1/16 if k odd; alln0..63",
+    "positive_product_K_indices": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30
+    ],
+    "negative_product_K_indices": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "product_magnitude": "1/256, all32 products nonzero in every output dot",
+    "FP8_bits": {
+      "e4m3": {
+        "positive_one_sixteenth": 24,
+        "negative_one_sixteenth": 152
+      },
+      "e5m2": {
+        "positive_one_sixteenth": 44,
+        "negative_one_sixteenth": 172
+      }
+    },
+    "D0": "float((1+2*g+c)/8), g=warpgroup_in_CTA,c=chain; g1:[1/8,2/8],g2 additionally[3/8,4/8]",
+    "expected_output": "D0 for everym,n,iteration count1/2/8192",
+    "CPU_exact_dot": "sum_k sign(k)/256=(16-16)/256=0, repeated16 times perchain periteration",
+    "exact_scaled_model": "unit1/256; eachproduct=+1 or-1; initialinteger=32*(1+2*g+c). A complete dot returns the same initialinteger. Any order of32 products has prefix in D0±16/256, hence overall [1/16,9/16] for groups<=2. CPU IEEE-f32 can represent every such dyadic value exactly. This is a mathematical reference, not a guarantee about hidden device accumulation.",
+    "seed_semantics": "seed metadata follows existing invocation exactly; bounded tile values do not vary withseed. original_nonuniform shortprofile remainsseed3 anditsoriginalseeddependent formula.",
+    "seed_policy": "inherit unchanged suite formal schedule seed=3+19*trial+1009*batch; fixed3 only for preflight/short"
+  },
+  "layout": {
+    "shared_A_B_bytes": "unchanged2048 each,128-aligned,sharedacrosswarpgroups asparent",
+    "shared_byte_offset": "for outer0..63,innerK0..31: (outer%8)*16+(outer/8)*128+inner%16+(inner/16)*1024; A outer=m,B outer=n",
+    "descriptor": "unchanged original lp_descriptor offsets/strides; no extra tile/buffer or instruction-level alternate descriptor",
+    "output_physical_index": "((block*threads+thread)*2+chain)*32+fragment",
+    "logical_from_fragment": "local=thread%128;lane=local%32;row=16*(local/32)+lane/4+8*((fragment/2)%2);col=2*(lane%4)+fragment%2+8*(fragment/4)",
+    "group": "thread/128; all participating groups execute same request stream with independent registers"
+  },
+  "nonuniform_validation": {
+    "profile_id": "original_seeded_nonuniform_v1",
+    "iterations": [
+      1,
+      2
+    ],
+    "A_numerator": "((m+2*k+seed)%7)-3",
+    "B_numerator": "((n+3*k+seed)%7)-3",
+    "value": "numerator/8",
+    "D0": "(1+g+c)/8 exactly as parent",
+    "reference": "old immutable low_precision_reference.hpp logicaldot then original fragment mapping; full output compare allCTA/groups/chains/fragments, neverchecksum-only",
+    "same_kernel": "new bounded-version target accepts bounded/original_nonuniform selector only in pre-timing operand/D0 setup; exact same measured body and outputs, no alternate validation-only arithmetic kernel"
+  },
+  "short_validation": {
+    "profile_id": "bounded_fp8_and_original_nonuniform_1_2_v1",
+    "target_iterations": [
+      1,
+      2
+    ],
+    "input_profiles": [
+      "nonzero_K_alternating_cancellation_v1",
+      "original_seeded_nonuniform_v1"
+    ],
+    "seed": 3,
+    "maximum_target_launches": 4,
+    "maximum_explicit_auxiliary_launches": 0,
+    "scope": "one independently controlled process percase,4known targets; counts/types/schema per existing early-validation ABI",
+    "family_order": "all8 revised cases must complete exact samekernel full-output bounded1/2 and original_nonuniform1/2 before any new warmup/longpreflight/formal sampling",
+    "old_short_evidence": "retained but cannot alone qualify modified input setup; original shortnonuniform values/expected arithmetic unchanged and are rechecked on newtarget",
+    "poison": "output storage initialized nonfinite sentinel before everylaunch, stamp poisoned; alloutputs finite/exactF32bits/double conversion, allCTA fullcoverage; preserve counts/errors/firstfail and failureartifacts"
+  },
+  "long_B4": {
+    "iterations": 8192,
+    "input": "bounded only",
+    "warmup": "existing8..30 windows andtail5CV0.02, everywarmup also fulloutput checked; no pilot/calibration",
+    "full_output_reference": "D0 for alloutputs, exact(no epsilon), poison and completion/stamps/resource checks",
+    "pass_scope": "only bounded-input resource service variant; does not reverse old uniform positive failure or prove internalprecision",
+    "failure": "any numerical/completion/resource issue failsclosed, noauto tolerance/reference change and no auto alternateinput sweep"
+  },
+  "execution_evidence_boundary": {
+    "nonzero_D0_proves": "checked output differs fromNaN poison; distinguishes allzero overwrite and group/chain identitymixups that changeD0; combined withfullcoverage provesalllocations written correct observedD0",
+    "not_proved_by_D0": "a skipped complete zero-net dot, cancelling pair, iteration, or even entire arithmeticloop can leaveD0 unchanged. NonzeroD0 does not make output an executioncounter. No claim that finalvalues alone prove dynamic instructioncount.",
+    "evidence_for_service_work": "volatile inlinePTX with nonzero runtime sharedinputs; independent actualSASS/PTX measuredloop proof preserving32 PTX WGMMA perwarpgroup/iteration, original backedge8192, participatinggroups,descriptorlayout,fence/commit/wait/drain andoutputdependence. Short original_nonuniform1/2 changesoutputs and detects omitted work there. Rawclock/envelope is completion/measurement evidence, not instructioncounter.",
+    "remaining_limit": "shortnonuniform plusstaticloop proof still is not a hardware perinstruction retired-counter measurement; whole zero-net pairs may cancel numerically. Label modeled issued work under reviewed control flow, never independently counterverified work."
+  },
+  "work_and_metric": {
+    "per_WGMMA_FLOP": 262144,
+    "per_warpgroup_iteration_PTX_WGMMA": 32,
+    "work_count": "uint64(blocks)*groups*chains(2)*batch(16)*iterations*2*64*64*32",
+    "no_extra_factor": "128 cooperatingthreads are not128fullmatrices; chain/group multiplicities eachcountonce; cancellation does not reduce dense instruction FLOPs tozero",
+    "conditions": "export input_profile_id/FP8bits/D0/shape/operandform/groups/chains/batch/wait/actualresources; compare withold positive mode only as different operands, nevermerge samples",
+    "one_cta": "sameCTA clock64 basis inherited parent",
+    "all_gpu": "globaltimer envelope inherited parent",
+    "not_claimed": [
+      "GEMMapplication quality",
+      "old positive longaccuracy repaired",
+      "physical TensorCore peak",
+      "data independent intrinsicthroughput"
+    ]
+  },
+  "B_requirements": [
+    "independentA beforeGPU; new generator/source/reference/adapter andactualdependencyclosure independentlysource-B",
+    "CPU decoder/exactrational model verifies signpositions/nonzeroinputs/dot0/nonzeroD0/mapping andexplicitomission counterexamples",
+    "targetCUDA12.9 actualcompile new4specializations; original arithmeticPTX/rolledloop32instructions andactual SASS multiplicity/layout/groups/drain checked; no wholefunctionbyteidentity claim acrosschangedprologue",
+    "actualregs/shared/local/occupancy queried andbound per8cases; ifresourcechanged recordimpact/review,neverreuseoldB silently",
+    "newall8 shortcorrectness beforewarmup; B4 thencompleteB beforeten-processformal; currentcoregate/budget/UUIDlocks/cleanup/snapshot exactreviewset",
+    "separateC andnewinputconditionlabels; preserveold32case source/contract/failures andfourpointdiagnostic"
+  ],
+  "frozen_existing_files_sha256": {
+    "microbench/gh200_resource_campaign/contracts/low_precision_lowering_v3.json": "24a46269a210033c79eb1e4d8e3d6b312442b7a441ee802b47e662e2fc52ea4c",
+    "microbench/gh200_resource_campaign/probes/low_precision.cu": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "microbench/gh200_resource_campaign/common/low_precision_reference.hpp": "13345802f9ea6523b42437bdaa5277bca9df5c01add140dcf0b08bff1fe07093",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S08-accumulation-boundary-result-review.json": "18674630c48b2654571cd9634f6b99b4c3fbcd0dd6ac0cd64d73ad0a9c59c659",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S08-long-accumulation-result-review.json": "83287980f461e6841a05b4cb3592356d44a25e41c1fa2ba396e602c77d0eb789"
+  },
+  "claims": {
+    "independent_A_pass": false,
+    "new_device_source_implemented": false,
+    "target_compile_verified": false,
+    "GPU_validated": false,
+    "performance_eligible": false
+  }
+}

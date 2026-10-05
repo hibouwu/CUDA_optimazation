@@ -1,0 +1,801 @@
+{
+  "schema_version": 2,
+  "stage": "S11",
+  "status": "lowering_amendment_pending_independent_A_review",
+  "family": "synchronization",
+  "adapter_id": "synchronization_lowering_v3",
+  "source": "microbench/gh200_resource_campaign/probes/synchronization.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/synchronization_reference.hpp"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S11",
+      "phase": "A",
+      "path": "reviews/S11-A-review.json"
+    },
+    {
+      "stage": "S11",
+      "phase": "lowering-A",
+      "path": "reviews/S11-lowering-A-review.json"
+    },
+    {
+      "stage": "S11",
+      "phase": "B",
+      "path": "reviews/S11-lowering-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "warp_t32_aligned",
+      "iterations": 2048,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "warp",
+        "ptx": [
+          "bar.warp.sync 0xffffffff;"
+        ],
+        "batch": 8,
+        "skew": false,
+        "skew_steps": 0,
+        "skew_participants": "lane>=16",
+        "barrier_id": null,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "compiled_warp_phase_v3",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/logical_phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "warp_t32_fixed_work_skew",
+      "iterations": 2048,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "warp",
+        "ptx": [
+          "bar.warp.sync 0xffffffff;"
+        ],
+        "batch": 8,
+        "skew": true,
+        "skew_steps": 256,
+        "skew_participants": "lane>=16",
+        "barrier_id": null,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "compiled_warp_phase_v3",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/logical_phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "cta_t128_aligned",
+      "iterations": 2048,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "cta",
+        "ptx": [
+          "bar.sync 1;"
+        ],
+        "batch": 8,
+        "skew": false,
+        "skew_steps": 0,
+        "skew_participants": "warp==last",
+        "barrier_id": 1,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cta_t128_fixed_work_skew",
+      "iterations": 2048,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "cta",
+        "ptx": [
+          "bar.sync 1;"
+        ],
+        "batch": 8,
+        "skew": true,
+        "skew_steps": 256,
+        "skew_participants": "warp==last",
+        "barrier_id": 1,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cta_t256_aligned",
+      "iterations": 2048,
+      "threads": 256,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "cta",
+        "ptx": [
+          "bar.sync 1;"
+        ],
+        "batch": 8,
+        "skew": false,
+        "skew_steps": 0,
+        "skew_participants": "warp==last",
+        "barrier_id": 1,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cta_t256_fixed_work_skew",
+      "iterations": 2048,
+      "threads": 256,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "cta",
+        "ptx": [
+          "bar.sync 1;"
+        ],
+        "batch": 8,
+        "skew": true,
+        "skew_steps": 256,
+        "skew_participants": "warp==last",
+        "barrier_id": 1,
+        "arrival_count": null,
+        "wait_timeout_ns_per_thread": null
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "mbarrier_t128_aligned",
+      "iterations": 2048,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "mbarrier",
+        "ptx": [
+          "mbarrier.arrive.release.cta.shared::cta.b64",
+          "mbarrier.try_wait.acquire.cta.shared::cta.b64"
+        ],
+        "batch": 8,
+        "skew": false,
+        "skew_steps": 0,
+        "skew_participants": "warp==last",
+        "barrier_id": null,
+        "arrival_count": 128,
+        "wait_timeout_ns_per_thread": 1000000000
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "mbarrier_t128_fixed_work_skew",
+      "iterations": 2048,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "mbarrier",
+        "ptx": [
+          "mbarrier.arrive.release.cta.shared::cta.b64",
+          "mbarrier.try_wait.acquire.cta.shared::cta.b64"
+        ],
+        "batch": 8,
+        "skew": true,
+        "skew_steps": 256,
+        "skew_participants": "warp==last",
+        "barrier_id": null,
+        "arrival_count": 128,
+        "wait_timeout_ns_per_thread": 1000000000
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "mbarrier_t256_aligned",
+      "iterations": 2048,
+      "threads": 256,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "mbarrier",
+        "ptx": [
+          "mbarrier.arrive.release.cta.shared::cta.b64",
+          "mbarrier.try_wait.acquire.cta.shared::cta.b64"
+        ],
+        "batch": 8,
+        "skew": false,
+        "skew_steps": 0,
+        "skew_participants": "warp==last",
+        "barrier_id": null,
+        "arrival_count": 256,
+        "wait_timeout_ns_per_thread": 1000000000
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "mbarrier_t256_fixed_work_skew",
+      "iterations": 2048,
+      "threads": 256,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "mbarrier",
+        "ptx": [
+          "mbarrier.arrive.release.cta.shared::cta.b64",
+          "mbarrier.try_wait.acquire.cta.shared::cta.b64"
+        ],
+        "batch": 8,
+        "skew": true,
+        "skew_steps": 256,
+        "skew_participants": "warp==last",
+        "barrier_id": null,
+        "arrival_count": 256,
+        "wait_timeout_ns_per_thread": 1000000000
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "synchronization_phase_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/phase/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "fence_cta_no_outstanding_work",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "fence_cta",
+        "ptx": [
+          "fence.acq_rel.cta;"
+        ],
+        "batch": 8,
+        "outstanding_memory_requests": 0,
+        "skew": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "fence_warp_issue_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/warp_instruction/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "fence_gpu_no_outstanding_work",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "fence_gpu",
+        "ptx": [
+          "fence.acq_rel.gpu;"
+        ],
+        "batch": 8,
+        "outstanding_memory_requests": 0,
+        "skew": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "fence_warp_issue_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/warp_instruction/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "proxy_async_no_outstanding_work",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "proxy_async",
+        "ptx": [
+          "fence.proxy.async.shared::cta;"
+        ],
+        "batch": 8,
+        "outstanding_memory_requests": 0,
+        "skew": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "fence_warp_issue_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "work_count",
+        "scale": 1,
+        "unit": "clock64_cycle/warp_instruction/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    }
+  ],
+  "semantics": {
+    "work": "warp points count logical PTX phases after compilation, WARPSYNC=0 and not exportable; CTA/mbarrier remain one collective phase; fence remains warp issue count; no thread multiplication",
+    "mbarrier": "8-byte aligned shared object; thread0 initializes expected arrivals=CTA threads, CTA barrier before use; every thread arrives once and waits with its returned opaque state; bounded polling; invalidate only after all final waits and CTA barrier",
+    "mbarrier_polling": "record each thread total wait attempts and timeout flag; attempts are not known instruction work_count; loop bookkeeping part of service",
+    "skew_work": "selected participants run256 volatile dependent mad.lo.u32 x=1664525*x+1013904223 modulo2^32 before every phase; unselected perform0; host checks each final x",
+    "arrival_diagnostic": "separate untimed correctness launch records per-thread same-SM clock64 before/after one synchronization and delay values; actual arrival spread reported; intended skew alone is not evidence of observed skew",
+    "formal_overhead": "do not put per-phase timestamp arrays in formal loop; one CTA start/end and final result drain only; fixed-work skew metric includes computation and waiting; never subtract aligned median and call difference intrinsic barrier cost; mbarrier internal timeout clock reads are retained service bookkeeping, not additional measurement boundaries.",
+    "timing": "initialization -> barrier0 -> thread0 start -> barrier0 -> loop -> final per-thread output drain/barrier0 -> stop; timed CTA rendezvous uses barrier1",
+    "correctness": "separate phase-token producer/consumer validation: store unique seed/thread/phase value, target synchronization, read neighbor in participating group, second target synchronization before next overwrite; all elements checked; fence correctness uses explicit consumer synchronization outside issue-only timing",
+    "fence_limit": "issue-only under no prior outstanding work; final CTA barrier is explicit, fence itself is not completion proof of cp.async/TMA/WGMMA; no general ordering proof from timing",
+    "sass": "count actual warp/CTA/mbarrier/fence instructions in function scoped backedges, verify skew256 dependency instructions; initialized barrier operations outside timing; extra dynamic wait attempts recorded, not assumed one",
+    "acceptance": "CPU recurrences and work count negatives; target compile and SASS; real finite-time numerical preflight; independent B before10-process formal batches",
+    "sources": [
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar-warp-sync",
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier",
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar"
+    ]
+  },
+  "sass_contracts": {
+    "requirements": "Exact known CUDA12.9 measured instruction streams plus explicit boundary/control-flow checks; retain timeout and abort. Other compiler streams require fresh observed evidence and independent review, never token-only acceptance. B still requires numerical correctness and arrival-diagnostic kernels and full raw validation.",
+    "observed_sass_path": "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-synchronization-a/diagnostics/synchronization/sass.txt",
+    "observed_sass_sha256": "f2607fccb114a0899711e6423e49281e1eb78ffc21c26581b4d3a47643196e18",
+    "observed_kernels": {
+      "warp_t32_aligned": {
+        "symbol": "_Z13sync_measuredILi0ELi32ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "d1cb148edf290ec49b66ffd0ad8b3b1e75d72d5fc7149c36013419f2f9d96dd9",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 784,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 768,
+          "outer_loop": [
+            416,
+            608
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "warp_t32_fixed_work_skew": {
+        "symbol": "_Z13sync_measuredILi0ELi32ELb1EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "721071383b9910a7c9276d5bd4875601eceeccad9e2ac1bd15f9440cb97fb010",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 34128,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 34112,
+          "outer_loop": [
+            416,
+            33888
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "cta_t128_aligned": {
+        "symbol": "_Z13sync_measuredILi1ELi128ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "f3b69ad6eb199981d331de702215bbe387ba03d215ced3643b83240bbcbfae4e",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 784,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 768,
+          "outer_loop": [
+            416,
+            608
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "cta_t128_fixed_work_skew": {
+        "symbol": "_Z13sync_measuredILi1ELi128ELb1EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "29c8f6750dec146074f225da0864ce7cfc9f1166d5317b26106ba91be701ffd2",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 34144,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 34128,
+          "outer_loop": [
+            432,
+            33904
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "cta_t256_aligned": {
+        "symbol": "_Z13sync_measuredILi1ELi256ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "9fa3af7c85ecc83bf03391d1e8d3b6ecb4618797cca3215c0782086b9bbd336d",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 784,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 768,
+          "outer_loop": [
+            416,
+            608
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "cta_t256_fixed_work_skew": {
+        "symbol": "_Z13sync_measuredILi1ELi256ELb1EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "6528601288b977ec46f871d409d7fc0270ed4dbfc6276c53f0b45342d6c3d746",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 34144,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 34128,
+          "outer_loop": [
+            432,
+            33904
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "mbarrier_t128_aligned": {
+        "symbol": "_Z13sync_measuredILi2ELi128ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "6f303f015accc8424ac5c227f5addc63e97b0ecb102338d3f42e652553c700e7",
+        "boundaries": {
+          "start_ns_pc": 368,
+          "stop_ns_pc": 5888,
+          "start_cycle_pc": 400,
+          "stop_cycle_pc": 5872,
+          "outer_loop": [
+            720,
+            5616
+          ],
+          "timeout_timer_pcs": [
+            960,
+            1232,
+            1552,
+            1792,
+            2144,
+            2384,
+            2736,
+            2976,
+            3328,
+            3568,
+            3920,
+            4160,
+            4512,
+            4752,
+            5104,
+            5344
+          ]
+        }
+      },
+      "mbarrier_t128_fixed_work_skew": {
+        "symbol": "_Z13sync_measuredILi2ELi128ELb1EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "4d7a9ab7a06199c3c55fa41465a9c09c408a2c33784f16230817c16a6cf28553",
+        "boundaries": {
+          "start_ns_pc": 368,
+          "stop_ns_pc": 39200,
+          "start_cycle_pc": 400,
+          "stop_cycle_pc": 39184,
+          "outer_loop": [
+            704,
+            38928
+          ],
+          "timeout_timer_pcs": [
+            5152,
+            5424,
+            9904,
+            10144,
+            14656,
+            14896,
+            19408,
+            19648,
+            24160,
+            24400,
+            28912,
+            29152,
+            33664,
+            33904,
+            38416,
+            38656
+          ]
+        }
+      },
+      "mbarrier_t256_aligned": {
+        "symbol": "_Z13sync_measuredILi2ELi256ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "402f4186e9896c6ada74c7794fefc68bcb8dca3457f86c872ee21f7240144141",
+        "boundaries": {
+          "start_ns_pc": 368,
+          "stop_ns_pc": 5888,
+          "start_cycle_pc": 400,
+          "stop_cycle_pc": 5872,
+          "outer_loop": [
+            720,
+            5616
+          ],
+          "timeout_timer_pcs": [
+            960,
+            1232,
+            1552,
+            1792,
+            2144,
+            2384,
+            2736,
+            2976,
+            3328,
+            3568,
+            3920,
+            4160,
+            4512,
+            4752,
+            5104,
+            5344
+          ]
+        }
+      },
+      "mbarrier_t256_fixed_work_skew": {
+        "symbol": "_Z13sync_measuredILi2ELi256ELb1EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "c987d8658764e5fd7522953dbe5101cb9df8e83158e7b86644e7f7acd3199263",
+        "boundaries": {
+          "start_ns_pc": 368,
+          "stop_ns_pc": 39200,
+          "start_cycle_pc": 400,
+          "stop_cycle_pc": 39184,
+          "outer_loop": [
+            704,
+            38928
+          ],
+          "timeout_timer_pcs": [
+            5152,
+            5424,
+            9904,
+            10144,
+            14656,
+            14896,
+            19408,
+            19648,
+            24160,
+            24400,
+            28912,
+            29152,
+            33664,
+            33904,
+            38416,
+            38656
+          ]
+        }
+      },
+      "fence_cta_no_outstanding_work": {
+        "symbol": "_Z13sync_measuredILi3ELi32ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "844c12daa254cdbfa4b583da16d6c23a3cafcaf37600c493915cd8db4e0e21a7",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 832,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 816,
+          "outer_loop": [
+            400,
+            592
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "fence_gpu_no_outstanding_work": {
+        "symbol": "_Z13sync_measuredILi4ELi32ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "29e2627409d163847749332db094f723df79c93fe436f8ae27411244c39d0839",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 1216,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 1200,
+          "outer_loop": [
+            400,
+            976
+          ],
+          "timeout_timer_pcs": []
+        }
+      },
+      "proxy_async_no_outstanding_work": {
+        "symbol": "_Z13sync_measuredILi5ELi32ELb0EEvijPN2gh5StampEP10SyncThread",
+        "instructions_sha256": "ff35cb13c06cdfd7fce5e6fa9947ccaa3e6180c6f32fb039f1537b6d810bf231",
+        "boundaries": {
+          "start_ns_pc": 192,
+          "stop_ns_pc": 912,
+          "start_cycle_pc": 208,
+          "stop_cycle_pc": 896,
+          "outer_loop": [
+            416,
+            736
+          ],
+          "timeout_timer_pcs": []
+        }
+      }
+    }
+  },
+  "lowering_revision": {
+    "id": "cuda129_sm90a_synchronization_v3",
+    "base_contract_path": "microbench/gh200_resource_campaign/contracts/synchronization.json",
+    "base_contract_sha256": "b8d8e02fcd33ff0be9036bc54893cdf3e7fec0d6960dfc471f8921c5f320406a",
+    "unchanged_source_sha256": "20aaf88ca4dbd70df5b77680bf4527f2ee451c9f285015401b7f67673568bba2",
+    "warp_native_parameter_export": false,
+    "warp_meaning": "Two warp points measure the compiled logical-phase loop (and selected-thread work when skewed); observed WARPSYNC count is0. No native warp-barrier latency/throughput parameter.",
+    "mbarrier_timers": "Separate2 outer measurement timestamps from16 internal timeout sites per static outer iteration. Retain1second per-thread timeout and collective abort;28 phasecheck sites are static lowering, not dynamic wait attempts.",
+    "evidence_scope": "CUDA12.9 V12.9.41 sm90a archived compilation only; exact measured instruction stream required. No GPU validation or A/B approval claimed."
+  }
+}

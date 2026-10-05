@@ -1,0 +1,28 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA2/3：分配结果发布 · CTA 3 peer epilogue · 25
+state "CTA 3 peer epilogue" as actor0 {
+state "NamedBarrier::arrive_and_wait()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.alloc_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.alloc_wait]]
+state "Epilogue等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a3 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.epi_init_wait]]
+state "Epilogue等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a4 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.epi_init_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.alloc_wait]]
+}
+a0 --> a2 : tmem.order.108\nSame CTA epilogue contribution family required as\nwell as MMA publication.
+a3 --> a4 : tmem.order.218\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a1 --> a0 : tmem.order.107\nEpilogue arrive_and_wait contributes its own arrivals\nbefore waiting.
+a1 --> a2 : tmem.order.226\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

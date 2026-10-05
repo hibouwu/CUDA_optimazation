@@ -1,0 +1,13 @@
+# 压缩证据的一次扫描与有界小对象缓存
+
+本增量补充已审压缩证据 A r3，只减少反复解码同一历史包，不改变完整成员集合、数值检查或 GPU 准入。当前 `read_json` 每次重新扫描 XZ；原84份归档含约12GB输出，逐个解析数百份metadata会产生TB级重复解码。
+
+`verify_all(small_objects=(), observer=None)` 仍核对实际包/index身份、XZ EOF与CRC、完整tar成员集合以及每成员长度/SHA。small_objects是调用代码给出的明确逻辑路径白名单，所有路径先检查属于独立closure，每对象上限16MiB、白名单总声明长度上限64MiB。只在原本完整hash的同一次扫描中保留这些小对象；全部验证成功后才发布缓存。异常、重复/额外/缺失成员、错误内容、observer失败或调用未到EOF时清空本轮缓存，verified保持false。
+
+observer为受审调用代码直接提供的只读chunk检查函数，签名 `(logical_path, byte_offset, chunk)`，chunk最大1MiB，按每个member从offset0连续调用到完整长度。函数入口和依赖源码SHA由调用方桥接/独立B绑定，不能从合同、包或index指定模块或执行代码。observer只进行完整word参考比较，不能改变tar成员、计量、缓存或verified；抛错则整个验证失败。word比较需维护跨chunk残余和预期长度，外部checker必须在verify_all后独立确认所有预声明目标数组均完成。不是所有chunk都被识别就算通过，也不能在中途返回时生成合格证书。
+
+先完整扫描建立小metadata缓存与证明，再利用缓存构造固定word参考，第二次完整verify_all用observer一次核对全部payload；两次逻辑verify_all调用各自核包/index字节身份，禁止不同包的metadata与payload混用。第二次扫描可以使用同一白名单，仍须再次逐字节hash全部成员。
+
+缓存仅存在于本实例的本次成功扫描结果；不跨进程或写磁盘。read_bytes/read_json使用缓存前重算实际包与index字节SHA，缓存内容还须与当前独立closure成员SHA一致，漂移则清空缓存并拒绝。桥接/checker/closure任何修订需新实例和新的冻结证据；当前实现不提供跨checker复用缓存机制。非白名单小对象仍可用有界流式扫描读取，大对象不能read_bytes。
+
+增量B负例覆盖：超64MiB白名单总量、未知路径、单对象超限、observer抛错、末成员损坏后不发布缓存、包/index修改后缓存拒绝，以及字节跨chunk的完整word数值检查。当前每次verify_all先做XZ EOF/CRC解码，再做tar成员SHA解码；两次逻辑verify_all实际是四次完整decoder pass。后续若改为一次有界解码并完整排空EOF，须另经实现审查，不能自动按两次物理解码计量。实际S14包记录每个decoder pass数、实际解码字节，以及两次逻辑核验与metadata读取总耗时、内存峰值和完整word数；证明没有把运行时间问题转嫁成删减数据。

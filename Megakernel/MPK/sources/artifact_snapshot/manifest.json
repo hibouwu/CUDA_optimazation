@@ -1,0 +1,66 @@
+{
+  "commit": "8b981a44959727b9a31873cd78cf8cd80ab97e65",
+  "retrieved_on": "2026-09-21",
+  "files": [
+    {
+      "path": "artifact_evaluation/setup.sh",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/artifact_evaluation/setup.sh",
+      "sha256": "3e12a625ac1f0eb78cbaf7a750656d030ac38f9c95bc8e2d03b57390ac4c838f",
+      "bytes": 8620
+    },
+    {
+      "path": "artifact_evaluation/H100/README.md",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/artifact_evaluation/H100/README.md",
+      "sha256": "c457969f279fd3bfe84a49e36b1900b43a482ef2ec55b1955862352c01c481b2",
+      "bytes": 11979
+    },
+    {
+      "path": "artifact_evaluation/H100/run_tgx.sh",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/artifact_evaluation/H100/run_tgx.sh",
+      "sha256": "ea8f990d4478b076e731a271adb1efce9a529c53d4d019a6e43a2d28d2768ed2",
+      "bytes": 3376
+    },
+    {
+      "path": "artifact_evaluation/H100/run_sglang.sh",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/artifact_evaluation/H100/run_sglang.sh",
+      "sha256": "bd517068d7e816c9b002624523114b40e9706abf8cfa81902e56221fed3bbcb4",
+      "bytes": 3496
+    },
+    {
+      "path": "include/mirage/persistent_kernel/runtime_header.h",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/include/mirage/persistent_kernel/runtime_header.h",
+      "sha256": "a758ed5ecff4dc025f278463490b3414d95c2f3551aa5da38d78f3c1ee5f4239",
+      "bytes": 13476
+    },
+    {
+      "path": "include/mirage/persistent_kernel/persistent_kernel.cuh",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/include/mirage/persistent_kernel/persistent_kernel.cuh",
+      "sha256": "655cc7cd5e035c3ea1c378ace092b9b8779afba51de1ebb1d0c7c8732459ca32",
+      "bytes": 64602
+    },
+    {
+      "path": "python/mirage/mpk/persistent_kernel.py",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/python/mirage/mpk/persistent_kernel.py",
+      "sha256": "9c14f150831a70c511b1b85442d55121337168895e802d01cbceb5db19582e27",
+      "bytes": 116903
+    },
+    {
+      "path": "README.md",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/README.md",
+      "sha256": "117b5ce99e620c5b4069fad2471640e6acda9ec4312c4d0794ce1f7ba01ba95e",
+      "bytes": 17631
+    },
+    {
+      "path": "demo/qwen3/demo_hopper.py",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/demo/qwen3/demo_hopper.py",
+      "sha256": "b092081a03956d36b6c50d58c317c4e3308f09494c1a63935eca82ef6acb8818",
+      "bytes": 30210
+    },
+    {
+      "path": "include/mirage/persistent_kernel/mpk_atoms.cuh",
+      "url": "https://raw.githubusercontent.com/mirage-project/mirage/8b981a44959727b9a31873cd78cf8cd80ab97e65/include/mirage/persistent_kernel/mpk_atoms.cuh",
+      "sha256": "3f3fcf1c59a33ce2676acb6406f0b96ddc204057f0430e145e8f097f535a5cd3",
+      "bytes": 2642
+    }
+  ]
+}

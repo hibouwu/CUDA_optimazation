@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "family": "synchronization",
+  "profiles": [
+    {
+      "id": "sync_measured_1_2_33_v1",
+      "required_seed": 3,
+      "applicable_cases": "all13 frozen synchronization_lowering_v3 cases",
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "warmup": false,
+      "pilot": false,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 8
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 16
+        },
+        {
+          "launch_index": 2,
+          "iterations": 33,
+          "input_profile": "measured_nonuniform_lcg",
+          "batch": 8,
+          "completed_phases": 264
+        }
+      ],
+      "artifacts_per_launch": [
+        {
+          "path": "sync_threads_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "threads",
+            14
+          ],
+          "evidence_kind": "full_values"
+        },
+        {
+          "path": "sync_stamp_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            9
+          ],
+          "evidence_kind": "full_values"
+        }
+      ],
+      "thread_fields": [
+        "value",
+        "errors",
+        "timeout",
+        "smid",
+        "completed_low",
+        "completed_high",
+        "attempts_low",
+        "attempts_high",
+        "checked_low",
+        "checked_high",
+        "arrival_cycle_low",
+        "arrival_cycle_high",
+        "departure_cycle_low",
+        "departure_cycle_high"
+      ],
+      "checked_elements_per_process": "3*(threads*14+9)",
+      "reference_model": "sync_affine_thread_phase_and_lifecycle_v1",
+      "comparison": "exact with explicit lifecycle predicates",
+      "performance_eligible": false,
+      "target_iterations": [
+        1,
+        2,
+        33
+      ],
+      "input_profiles": [
+        "measured_nonuniform_lcg"
+      ],
+      "kernel_roles_by_launch_index": [
+        "measured",
+        "measured",
+        "measured"
+      ],
+      "completion_requirements": [
+        "exact fixed launch order and per-index role; no Cartesian role/length expansion",
+        "all original case threads and all14thread/9stamp words checked; uint64 low/high encoding",
+        "mbarrier timeout/abort/shared phase lifecycle intact; unknown outputs reject sentinels",
+        "resource.extensions role_resources and role_target_identities bind all3 actual B2 specializations; primary is measured or correctness according to profile",
+        "actual measured branch before any pilot/warmup; no corepolicy alteration"
+      ],
+      "reference_identity": {
+        "model": "sync_affine_thread_phase_and_lifecycle_v1",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_reference.hpp",
+        "sha256": "1d773dde0cc26c31729e2280ccca949c6e30005b34ffaf280ec7094f383ba87d"
+      },
+      "declared_output_check": {
+        "comparison": "exact and explicit lifecycle predicates",
+        "elements_per_launch": "threads*14+9",
+        "sampling": false
+      },
+      "output_evidence_kind": "full_values"
+    },
+    {
+      "id": "sync_aux_correctness2_arrival1_v1",
+      "required_seed": 3,
+      "applicable_cases": "all13 frozen synchronization_lowering_v3 cases",
+      "maximum_target_launches": 2,
+      "maximum_explicit_auxiliary_launches": 0,
+      "warmup": false,
+      "pilot": false,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 2,
+          "input_profile": "paired_auxiliary_nonuniform_tokens",
+          "batch": 1,
+          "completed_phases": 2
+        },
+        {
+          "launch_index": 1,
+          "iterations": 1,
+          "input_profile": "paired_auxiliary_nonuniform_tokens",
+          "batch": 1,
+          "completed_phases": 1
+        }
+      ],
+      "artifacts_per_launch": [
+        {
+          "path": "sync_threads_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "threads",
+            14
+          ],
+          "evidence_kind": "full_values"
+        },
+        {
+          "path": "sync_stamp_<index>.u32le",
+          "dtype": "uint32",
+          "shape": [
+            9
+          ],
+          "evidence_kind": "full_values"
+        }
+      ],
+      "thread_fields": [
+        "value",
+        "errors",
+        "timeout",
+        "smid",
+        "completed_low",
+        "completed_high",
+        "attempts_low",
+        "attempts_high",
+        "checked_low",
+        "checked_high",
+        "arrival_cycle_low",
+        "arrival_cycle_high",
+        "departure_cycle_low",
+        "departure_cycle_high"
+      ],
+      "checked_elements_per_process": "2*(threads*14+9)",
+      "reference_model": "sync_affine_thread_phase_and_lifecycle_v1",
+      "comparison": "exact with explicit lifecycle predicates",
+      "performance_eligible": false,
+      "target_iterations": [
+        2,
+        1
+      ],
+      "input_profiles": [
+        "paired_auxiliary_nonuniform_tokens"
+      ],
+      "kernel_roles_by_launch_index": [
+        "correctness",
+        "arrival"
+      ],
+      "completion_requirements": [
+        "exact fixed launch order and per-index role; no Cartesian role/length expansion",
+        "all original case threads and all14thread/9stamp words checked; uint64 low/high encoding",
+        "mbarrier timeout/abort/shared phase lifecycle intact; unknown outputs reject sentinels",
+        "resource.extensions role_resources and role_target_identities bind all3 actual B2 specializations; primary is measured or correctness according to profile",
+        "actual measured branch before any pilot/warmup; no corepolicy alteration"
+      ],
+      "reference_identity": {
+        "model": "sync_affine_thread_phase_and_lifecycle_v1",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_reference.hpp",
+        "sha256": "1d773dde0cc26c31729e2280ccca949c6e30005b34ffaf280ec7094f383ba87d"
+      },
+      "declared_output_check": {
+        "comparison": "exact and explicit lifecycle predicates",
+        "elements_per_launch": "threads*14+9",
+        "sampling": false
+      },
+      "output_evidence_kind": "full_values"
+    },
+    {
+      "id": "sync_divergent_pair_1_2_33_v2",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        33
+      ],
+      "input_profiles": [
+        "divergent_cross_half_tokens"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "single32thread CTA/fullmask,three fixed1/2/33launches,no warmup/pilot",
+        "all128output words plus4clock64low-high words each launch;exact peer-token/checksum/paircount",
+        "actual outlined WARPSYNC helpers preserved afterEXIT and separately reviewed; no bare barrier performance"
+      ],
+      "reference_identity": {
+        "model": "sync_divergent_peer_sum_v2",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_pair_reference_v2.hpp",
+        "sha256": "c011a9162da5b40de38918d74c6c7c62efcce3502e6ce539b3dc56994ede3fc0"
+      },
+      "declared_output_check": "all132uint32words per launch",
+      "output_evidence_kind": "full_values"
+    }
+  ]
+}

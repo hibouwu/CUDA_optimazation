@@ -1,0 +1,41 @@
+{
+  "adapter_id": "tma_bulk_formal_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.tma_bulk_formal_validation_v1",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk.py": "163d3b5274bf139c944924abe4d74c019298d0636113a06fc153f3602eb13ab9",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_formal_v1.py": "4d96e7085d313f475c8aadef3f9052dcacf2e86ebe8dc90caa3ec36b9d7fcc29",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_formal_validation_v1.py": "f1930fd241abffc37274bf230ec3ae94ae5b481a71ba06eb22b70d7b42a4e4ea",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_sass_baseline.py": "f15ccb12a5fe0462a7f2222b0f294f4207b04ec11553c0016c6ad150f0ac4583",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_validation.py": "bd0093c5f2e551f73f22f059194b92589b0cd99b044c3d86fa514a0ea609cb07",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/probes/tma_bulk.cu": "e50d9ae825a5b59baf1096dfbe188c9c7089b315b505a7770ba4d99fc35884e0",
+    "microbench/gh200_resource_campaign/probes/tma_bulk_formal_v1.cu": "bef54123d66065ccdf3fe5096aaa71f813c9716ad6abf2ffc1a65a93e3a553db",
+    "microbench/gh200_resource_campaign/tests/test_tma_bulk_formal_v1.py": "94c38fd91de31c2412b520de5865de44e3c50fa53eb169c751f67099a0cfa8d0"
+  },
+  "contract_sha256": "5b332c37fd5d35358e0767f76437d018036074ffe7f4af2f038ffc1ac55dfeff",
+  "profiles_sha256": "cbfc383201363e8c8cf61db6c852044b6c7e54affc5d7894b0c8c8bee79d1c37",
+  "review_dependencies": [
+    {
+      "stage": "S14",
+      "phase": "formal-host-A",
+      "path": "reviews/S14-formal-host-A-review-r2.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S14-formal-host-source-B-review.json"
+    }
+  ]
+}

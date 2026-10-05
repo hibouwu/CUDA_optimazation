@@ -1,0 +1,961 @@
+{
+  "schema_version": 2,
+  "stage": "S12",
+  "status": "smid_host_portability_fix_pending_independent_review",
+  "family": "async_copy",
+  "adapter_id": "async_copy_v2",
+  "source": "microbench/gh200_resource_campaign/probes/async_copy_smid_v2.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S12",
+      "phase": "A",
+      "path": "reviews/S12-A-review.json"
+    },
+    {
+      "stage": "S12",
+      "phase": "B",
+      "path": "reviews/S12-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "ca_w4_stages1_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 512,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w4_stages1_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 512,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w4_stages2_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 1024,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w4_stages2_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 1024,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w4_stages4_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w4_stages4_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 4,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 4,
+        "destination_alignment_bytes": 4,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages1_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 1024,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages1_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 1024,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages2_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages2_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages4_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w8_stages4_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 8,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 8,
+        "destination_alignment_bytes": 8,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages1_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages1_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages2_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages2_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages4_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 8192,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "ca_w16_stages4_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.ca.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 8192,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages1_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages1_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 1,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 2048,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages2_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages2_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 2,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 4096,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages4_one_cta",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 8192,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "cg_w16_stages4_all_gpu",
+      "threads": 128,
+      "iterations": 8192,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "ptx": "cp.async.cg.shared.global",
+        "request_bytes_per_thread": 16,
+        "stages": 4,
+        "copies_per_thread_iteration": 8,
+        "requests_per_commit_group": 1,
+        "global_array_bytes": 8388608,
+        "consumer_thread": "(thread+1)%128",
+        "shared_payload_bytes": 8192,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "input_word": "uint32(17*word_index+seed)",
+        "consumer": "read every uint32 word copied by neighbor and accumulate modulo2^32"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "async_copy_transport_payload_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_transport/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    }
+  ],
+  "sass_contracts": {
+    "requirements": "B binds actual copy instruction width/cache hint, commit and wait lowering, finite loop and drain, source/destination address domains and active128 threads; reject hoisted copies or missing waits/CTA synchronization; do not assume cp.async commit group equals a physical queue entry"
+  },
+  "pipeline": {
+    "total_copy_steps_per_thread": "iterations*8",
+    "source_byte_offset": "((block_id*128+thread_id+step*grid_blocks*128)*request_bytes) modulo global_array_bytes",
+    "source_footprint": "one shared8MiB read-only GMEM array for whole launch; no per-CTA8MiB allocation; cache state unproven",
+    "destination_byte_offset": "(step modulo stages)*128*request_bytes + thread_id*request_bytes",
+    "prefill": "issue min(stages,total_steps) copies, each followed by commit_group per thread, inside timed window",
+    "consume": "for step i, wait_group min(stages-1,total_steps-i-1); use literal0/1/2/3 branch as required; CTA barrier after each producer waits, then consume neighbor thread full payload and CTA barrier before reuse",
+    "refill": "after consume and release barrier, if i+stages<total_steps issue copy i+stages into released slot and commit; never overwrite an unconsumed slot",
+    "drain": "final wait_group0 plus CTA barrier and result-dependent drain before stop; no uncommitted requests remain",
+    "tail": "remaining pending groups decrease near end; must lower wait immediate with tail, never use fixed stages-1 after refill stops",
+    "timing": "init and poison outside timer; thread0 start then CTA gate; prefill/mainloop/tail/drain all timed; stop before host/readback output",
+    "work": "Q=blocks*128*iterations*8*request_bytes; primary work_count=Q (transport payload once), GMEM read_payload_bytes=Q, SMEM write_payload_bytes=Q; consumer_read_bytes=Q recorded separately, do not add into transport payload",
+    "correctness": "short full-case validate-only lengths1/2 iterations plus final-stage snapshots; all payload words checked, including cross-thread consumption; formal checksum unsigned modular host oracle; source can be shared across CTAs because read-only",
+    "short_validation_priority": "all24 cases pass short correctness before any calibration or formal warmup; family contains fixed iteration policy; retain10 processes and bounded warmup formal protocol",
+    "constraints": "source/dest fit aligned domains, no overlapping destinations within a group; old stage consumption completes before reuse; clamp grid to actual occupancy and reject infeasible shared memory",
+    "limits": "measures controlled copy+commit/wait+cross-thread-consume+barrier service, not isolated issue latency or physical HBM bandwidth; ca/cg are requested cache policies, not cache-hit proof",
+    "sources": [
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async",
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-wait-group-cp-async-wait-all"
+    ]
+  }
+}

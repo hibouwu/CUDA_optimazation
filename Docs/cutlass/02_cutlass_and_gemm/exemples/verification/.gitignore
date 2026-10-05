@@ -1,0 +1,5 @@
+# 这些是文档引用的精简编译证据，不是可丢弃的构建目录。
+!results/
+!results/*.txt
+!results/*.json
+!results/*.log

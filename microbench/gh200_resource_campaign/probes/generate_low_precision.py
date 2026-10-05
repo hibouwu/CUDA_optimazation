@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""Deterministically emit the frozen S08 finite matrix; never invokes CUDA."""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+CONTRACT = Path('microbench/gh200_resource_campaign/contracts/low_precision.json')
+OUTPUT = Path('microbench/gh200_resource_campaign/probes/low_precision.cu')
+KINDS = ('e4m3', 'e5m2', 's8', 'u8')
+
+
+def symbol(path, kind, groups):
+    return f'lp_{path}_{kind}_g{groups}'
+
+
+def register_boundary(constraint, label):
+    # Bind every accumulator register, not only memory. CUDA/PTX side effects
+    # alone do not stop the compiler moving ordinary register initialization/use.
+    return f'''  // S08_REGISTER_BOUNDARY {label}
+  #pragma unroll
+  for(int c=0;c<2;++c) {{
+    #pragma unroll
+    for(int j=0;j<32;++j) asm volatile("" : "+{constraint}"(d[c][j]) :: "memory");
+  }}
+'''
+
+
+def kernel(path, kind, groups):
+    wg = path == 'wgmma'; floating = kind in KINDS[:2]
+    width = 128 if wg else 32; threads = width * groups; outputs = 32 if wg else 4
+    dtype = 'float' if floating else 'int'; constraint = 'f' if floating else 'r'
+    kind_id = KINDS.index(kind)
+    setup = f'''  constexpr int Kind={kind_id};
+  const unsigned local=threadIdx.x%{width},group=threadIdx.x/{width};
+  {dtype} d[2][{outputs}];
+  #pragma unroll
+  for(int c=0;c<2;++c) {{
+    #pragma unroll
+    for(int j=0;j<{outputs};++j)d[c][j]=nonuniform?{dtype}(1+group+c)/{8 if floating else 1}:0;
+  }}
+'''
+    if wg:
+        setup += '''  __shared__ __align__(128) unsigned char as[2048],bs[2048];
+  for(unsigned i=threadIdx.x;i<2048;i+=blockDim.x) {
+    const unsigned outer=i/32,inner=i%32;
+    const unsigned offset=(outer%8)*16+(outer/8)*128+inner%16+(inner/16)*1024;
+    as[offset]=lp_operand<Kind>(outer,inner,seed,true,nonuniform);
+    bs[offset]=lp_operand<Kind>(outer,inner,seed,false,nonuniform);
+  }
+  __syncthreads();
+  asm volatile("fence.proxy.async.shared::cta;" ::: "memory");
+  const unsigned long long ad=lp_descriptor(as),bd=lp_descriptor(bs);
+'''
+        setup += register_boundary(constraint, 'BEFORE_WGMMA_FENCE')
+        setup += '  asm volatile("wgmma.fence.sync.aligned;" ::: "memory");\n'
+    else:
+        setup += '''  unsigned a[4]={},b[2]={};
+  #pragma unroll
+  for(int e=0;e<16;++e) {
+    const int row=local/4+8*((e/4)%2),col=4*(local%4)+e%4+16*(e/8);
+    a[e/4]|=unsigned(lp_operand<Kind>(row,col,seed,true,nonuniform))<<(8*(e%4));
+  }
+  #pragma unroll
+  for(int e=0;e<8;++e) {
+    const int row=4*(local%4)+e%4+16*(e/4),col=local/4;
+    b[e/4]|=unsigned(lp_operand<Kind>(col,row,seed,false,nonuniform))<<(8*(e%4));
+  }
+'''
+    regs = lambda start, n: '{'+','.join('%'+str(i) for i in range(start,start+n))+'}'
+    out = ','.join(f'"+{constraint}"(d[c][{j}])' for j in range(outputs))
+    if wg:
+        ptx=f'wgmma.mma_async.sync.aligned.m64n64k32.{"f32" if floating else "s32"}.{kind}.{kind}'
+        instruction=f'asm volatile("{ptx} {regs(0,32)}, %32, %33, 1'+(', 1, 1' if floating else '')+f';" : {out} : "l"(ad),"l"(bd) : "memory");'
+    else:
+        acc='f32' if floating else 's32'
+        ptx=f'mma.sync.aligned.m16n8k32.row.col.{acc}.{kind}.{kind}.{acc}'
+        inputs=','.join(f'"r"({a}[{i}])' for a,n in [('a',4),('b',2)] for i in range(n))
+        instruction=f'asm volatile("{ptx} {regs(0,4)}, {regs(4,4)}, {regs(8,2)}, {regs(0,4)};" : {out} : {inputs});'
+    wait='    asm volatile("wgmma.commit_group.sync.aligned; wgmma.wait_group.sync.aligned 0;" ::: "memory");\n' if wg else ''
+    final_wait='  asm volatile("wgmma.wait_group.sync.aligned 0;" ::: "memory");\n' if wg else ''
+    if wg:
+        final_wait += register_boundary(constraint, 'AFTER_FINAL_WAIT')
+    return f'''// {path}/{kind}: groups={groups}, chains=2, batch=16. Runtime loop stays rolled.
+__global__ void {symbol(path,kind,groups)}(int iterations,unsigned seed,bool nonuniform,gh::Stamp* stamps,double* output) {{
+{setup}
+  __shared__ volatile double drain[{threads}];
+  __shared__ unsigned long long start_ns,start_cycle;
+  __syncthreads();
+  if(threadIdx.x==0) {{start_ns=lp_ns();start_cycle=lp_cycle();}}
+  __syncthreads();
+  #pragma unroll 1
+  for(int it=0;it<iterations;++it) {{
+    #pragma unroll
+    for(int q=0;q<16;++q) {{
+      #pragma unroll
+      for(int c=0;c<2;++c) {{{instruction}}}
+    }}
+{wait}  }}
+{final_wait}  double sum=0;
+  #pragma unroll
+  for(int c=0;c<2;++c) {{
+    #pragma unroll
+    for(int j=0;j<{outputs};++j)sum+=double(d[c][j]);
+  }}
+  drain[threadIdx.x]=sum;
+  __syncthreads();
+  if(threadIdx.x==0) {{
+    const auto end_cycle=lp_cycle(),end_ns=lp_ns();
+    stamps[blockIdx.x]={{start_ns,end_ns,start_cycle,end_cycle,lp_smid()}};
+  }}
+  #pragma unroll
+  for(int c=0;c<2;++c) {{
+    #pragma unroll
+    for(int j=0;j<{outputs};++j)
+      output[((blockIdx.x*blockDim.x+threadIdx.x)*2+c)*{outputs}+j]=double(d[c][j]);
+  }}
+}}
+'''
+
+
+PREFIX = r'''// Generated by generate_low_precision.py. Review generator and regenerate; no CUDA invoked by generation.
+#include "../common/probe_runtime.cuh"
+#include "../common/low_precision_reference.hpp"
+
+__device__ __forceinline__ unsigned long long lp_ns() {
+  unsigned long long x;asm volatile("mov.u64 %0, %%globaltimer;":"=l"(x));return x;
+}
+__device__ __forceinline__ unsigned long long lp_cycle() {
+  unsigned long long x;asm volatile("mov.u64 %0, %%clock64;":"=l"(x));return x;
+}
+__device__ __forceinline__ unsigned lp_smid() {
+  unsigned x;asm volatile("mov.u32 %0, %%smid;":"=r"(x));return x;
+}
+__device__ __forceinline__ unsigned long long lp_descriptor(void* ptr) {
+  unsigned address=static_cast<unsigned>(__cvta_generic_to_shared(ptr));
+  return ((address&0x3ffffu)>>4)|(64ull<<16)|(8ull<<32);
+}
+template<int Kind> __device__ __forceinline__ unsigned char lp_operand(
+    unsigned outer,unsigned inner,unsigned seed,bool a,bool nonuniform) {
+  // Cast after modulo: signed test values must not underflow through unsigned arithmetic.
+  const unsigned long long index=static_cast<unsigned long long>(outer)+(a?2ull:3ull)*inner+seed;
+  if constexpr(Kind<2) {
+    if(!nonuniform)return Kind==0?0x18:0x2c; // exactly 1/16 in E4M3 / E5M2
+    const int numerator=int(index%7)-3,absolute=numerator<0?-numerator:numerator;
+    unsigned char bits=0;
+    if(absolute==1)bits=Kind==0?0x20:0x30; // 1/8
+    if(absolute==2)bits=Kind==0?0x28:0x34; // 1/4
+    if(absolute==3)bits=Kind==0?0x2c:0x36; // 3/8
+    return bits|(numerator<0?0x80:0);
+  } else {
+    const int value=!nonuniform?1:Kind==2?int(index%5)-2:int(index%3);
+    return static_cast<unsigned char>(value);
+  }
+}
+struct LowCase {
+  const char* id;void(*kernel)(int,unsigned,bool,gh::Stamp*,double*);
+  int kind,groups,width;bool all_gpu;
+};
+'''
+
+HOST = r'''
+inline std::string lp_difference(std::size_t index,std::size_t per_cta,int width,
+                                 double actual,double expected) {
+  const std::size_t local=index%per_cta;
+  const int fragment_size=width==128?32:4;
+  const int fragment=local%fragment_size,chain=(local/fragment_size)%2;
+  const int thread=local/(fragment_size*2),group=thread/width,lane=thread%32;
+  const int row=width==128?16*((thread%width)/32)+lane/4+8*((fragment/2)%2):lane/4+8*(fragment/2);
+  const int col=2*(lane%4)+fragment%2+(width==128?8*(fragment/4):0);
+  std::ostringstream s;s<<std::setprecision(17)
+    <<"index="<<index<<" block="<<index/per_cta<<" thread="<<thread<<" group="<<group
+    <<" lane="<<lane<<" chain="<<chain<<" fragment="<<fragment<<" row="<<row<<" col="<<col
+    <<" actual="<<actual<<" expected="<<expected<<std::hexfloat
+    <<" actual_hex="<<actual<<" expected_hex="<<expected;
+  return s.str();
+}
+struct LowValidationCheck {
+  int index, iterations;
+  bool nonuniform, completed=false;
+  std::size_t checked=0, expected=0;
+  gh::u64 errors=0;
+  std::vector<int> cta_ids;
+};
+inline void lp_emit_validation(const LowCase& c,unsigned seed,int blocks,
+                               const cudaFuncAttributes& attr,int occupancy,
+                               const std::vector<LowValidationCheck>& checks) {
+  gh::u64 errors=0;for(const auto& check:checks)errors+=check.errors;
+  std::string kernel=std::string("lp_")+c.id;
+  kernel.resize(kernel.size()-8); // remove _all_gpu or _one_cta
+  std::cout<<"{\"schema_version\":2,\"validation_schema_version\":1,\"type\":\"validation\","
+    <<"\"case_id\":"<<gh::quote(c.id)<<",\"profile_id\":\"short_uniform_nonuniform_1_2\","
+    <<"\"seed\":"<<seed<<",\"scope\":"<<gh::quote(c.all_gpu?"all_gpu":"one_cta")
+    <<",\"threads\":"<<c.groups*c.width<<",\"blocks\":"<<blocks<<",\"errors\":"<<errors
+    <<",\"performance_eligible\":false,\"warmup_executed\":false,\"pilot_executed\":false,"
+    <<"\"target_launches\":[";
+  for(std::size_t i=0;i<checks.size();++i) {
+    const auto& check=checks[i];if(i)std::cout<<',';
+    std::cout<<"{\"launch_index\":"<<check.index<<",\"iterations\":"<<check.iterations
+      <<",\"input_profile\":"<<gh::quote(check.nonuniform?"nonuniform":"uniform")
+      <<",\"threads\":"<<c.groups*c.width<<",\"blocks\":"<<blocks<<'}';
+  }
+  std::cout<<"],\"checks\":[";
+  for(std::size_t i=0;i<checks.size();++i) {
+    const auto& check=checks[i];if(i)std::cout<<',';
+    std::cout<<"{\"launch_index\":"<<check.index
+      <<",\"reference_model\":\"low_precision_logical_integer_v1\","
+      <<"\"reference_sha256\":\"@REFERENCE_SHA256@\",\"comparison\":\"exact\","
+      <<"\"tolerance_id\":null,\"checked_elements\":"<<check.checked
+      <<",\"expected_elements\":"<<check.expected<<",\"errors\":"<<check.errors
+      <<",\"completed\":"<<(check.completed?"true":"false")<<",\"verified_CTA_ids\":[";
+    for(std::size_t j=0;j<check.cta_ids.size();++j)std::cout<<(j?",":"")<<check.cta_ids[j];
+    std::cout<<"],\"output_artifacts\":[]}";
+  }
+  std::cout<<"],\"resource_identity\":{\"kernel_symbol\":"<<gh::quote(kernel)
+    <<",\"registers_per_thread\":"<<attr.numRegs<<",\"static_smem_bytes\":"<<attr.sharedSizeBytes
+    <<",\"dynamic_smem_bytes\":0,\"local_size_bytes\":"<<attr.localSizeBytes
+    <<",\"occupancy_limit_ctas_per_sm\":"<<occupancy<<",\"extensions\":{}}}\n"<<std::flush;
+}
+int main(int argc,char**argv) try {
+  auto device=gh::device();gh::emit_device(device);
+  if(argc==2&&std::string(argv[1])=="device")return 0;
+  const bool validate_only=argc==5&&std::string(argv[1])=="validate-only";
+  if(!validate_only&&argc!=4)throw std::runtime_error("CASE_ID ITERATIONS SEED or validate-only CASE_ID PROFILE_ID SEED required");
+  if(validate_only&&std::string(argv[3])!="short_uniform_nonuniform_1_2")
+    throw std::runtime_error("unknown S08 validation profile");
+  const int iterations=validate_only?1:gh::integer(argv[2],1,8192);
+  unsigned seed=gh::integer(argv[validate_only?4:3],0,4294967295ull);
+  if(!validate_only&&iterations!=8192)throw std::runtime_error("S08 fixed iteration mismatch");
+  const std::string case_id=argv[validate_only?2:1];
+  auto found=std::find_if(cases.begin(),cases.end(),[&](const LowCase& c){return c.id==case_id;});
+  if(found==cases.end())throw std::runtime_error("unknown S08 case");
+  const LowCase c=*found;const int threads=c.groups*c.width;
+  cudaFuncAttributes attr{};GH_CUDA(cudaFuncGetAttributes(&attr,reinterpret_cast<const void*>(c.kernel)));
+  if(attr.localSizeBytes)throw std::runtime_error("S08 local memory/spill forbidden");
+  int occupancy=0;GH_CUDA(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&occupancy,c.kernel,threads,0));
+  if(occupancy<1)throw std::runtime_error("no resident CTA");
+  const int blocks=c.all_gpu?device.prop.multiProcessorCount*std::min(4,occupancy):1;
+  const bool wg=c.width==128;
+  const auto uniform=low_precision_reference::outputs(c.kind,wg,c.groups,iterations,seed,false);
+  const std::size_t per_cta=uniform.size(),elements=per_cta*blocks;
+  gh::Stamp* stamps;double* output;
+  GH_CUDA(cudaMalloc(&stamps,blocks*sizeof(gh::Stamp)));GH_CUDA(cudaMalloc(&output,elements*sizeof(double)));
+  cudaEvent_t begin,end;GH_CUDA(cudaEventCreate(&begin));GH_CUDA(cudaEventCreate(&end));
+  std::vector<double> got(elements);
+  unsigned invocation=0;
+  auto execute=[&](int length,bool nonuniform,const std::vector<double>& expected) {
+    ++invocation;
+    GH_CUDA(cudaMemset(output,0xff,elements*sizeof(double))); // NaN poison, outside both timers.
+    if(validate_only)GH_CUDA(cudaMemset(stamps,0xff,blocks*sizeof(gh::Stamp)));
+    void* args[]={&length,&seed,&nonuniform,&stamps,&output};
+    GH_CUDA(cudaEventRecord(begin));
+    GH_CUDA(cudaLaunchKernel(reinterpret_cast<const void*>(c.kernel),dim3(blocks),dim3(threads),args,0,nullptr));
+    GH_CUDA(cudaGetLastError());GH_CUDA(cudaEventRecord(end));GH_CUDA(cudaEventSynchronize(end));
+    gh::Observation o;o.stamps.resize(blocks);float ms=0;GH_CUDA(cudaEventElapsedTime(&ms,begin,end));o.event_ms=ms;
+    GH_CUDA(cudaMemcpy(o.stamps.data(),stamps,blocks*sizeof(gh::Stamp),cudaMemcpyDeviceToHost));
+    GH_CUDA(cudaMemcpy(got.data(),output,elements*sizeof(double),cudaMemcpyDeviceToHost));
+    std::ostringstream mismatches;
+    for(std::size_t i=0;i<elements;++i)
+      if(!std::isfinite(got[i])||got[i]!=expected[i%per_cta]) {
+        ++o.errors;
+        if(o.errors<=8)mismatches<<"\n"<<lp_difference(i,per_cta,c.width,got[i],expected[i%per_cta]);
+      }
+    o.checked_elements=elements;o.method="low_precision_full_output_integer_reference_v1";
+    o.input_conditions="formal uniform; separate seeded 1/2-iteration nonuniform full-output checks; fresh D0";
+    if(validate_only) {
+      for(const auto& stamp:o.stamps)
+        if(stamp.smid==0xffffffffu||stamp.begin_ns==~0ull||stamp.end_ns==~0ull
+           ||stamp.begin_cycle==~0ull||stamp.end_cycle==~0ull)++o.errors;
+    }
+    if(o.errors) {
+      std::ostringstream message;
+      message<<"S08 full-output numerical mismatch case="<<c.id<<" invocation="<<invocation
+        <<" phase="<<(nonuniform?"nonuniform_validation":"uniform")<<" iterations="<<length
+        <<" seed="<<seed<<" errors="<<o.errors<<" checked_elements="<<elements
+        <<" details_limit=8"<<mismatches.str();
+      if(validate_only)std::cerr<<message.str()<<'\n';
+      else throw std::runtime_error(message.str());
+    }
+    if(c.all_gpu&&!validate_only) {
+      std::set<unsigned> ids;for(auto s:o.stamps)ids.insert(s.smid);
+      if(int(ids.size())!=device.prop.multiProcessorCount)throw std::runtime_error("S08 incomplete SM coverage");
+    }
+    return o;
+  };
+  if(validate_only) {
+    std::vector<LowValidationCheck> checks;
+    bool failed=false;
+    for(bool nonuniform:{false,true}) {
+      for(int length:{1,2}) {
+        LowValidationCheck check;
+        check.index=int(checks.size());check.iterations=length;
+        check.nonuniform=nonuniform;check.expected=elements;
+        try {
+          const auto expected=low_precision_reference::outputs(c.kind,wg,c.groups,length,seed,nonuniform);
+          const auto result=execute(length,nonuniform,expected);
+          check.checked=result.checked_elements;check.errors=result.errors;check.completed=true;
+          for(int block=0;block<blocks;++block) {
+            const auto& stamp=result.stamps[block];
+            if(stamp.smid!=0xffffffffu&&stamp.begin_ns!=~0ull&&stamp.end_ns!=~0ull
+               &&stamp.begin_cycle!=~0ull&&stamp.end_cycle!=~0ull)check.cta_ids.push_back(block);
+          }
+        } catch(const std::exception& error) {
+          check.errors=1;
+          std::cerr<<"S08 validate-only CUDA/completion failure case="<<c.id
+            <<" launch="<<check.index<<" iterations="<<length<<" error="<<error.what()<<'\n';
+        }
+        failed=check.errors!=0||!check.completed;
+        checks.push_back(check);
+        if(failed)break;
+      }
+      if(failed)break;
+    }
+    lp_emit_validation(c,seed,blocks,attr,occupancy,checks);
+    GH_CUDA(cudaEventDestroy(begin));GH_CUDA(cudaEventDestroy(end));
+    GH_CUDA(cudaFree(stamps));GH_CUDA(cudaFree(output));
+    return failed?2:0;
+  }
+  // Correctness-only launches deliberately do not require short local timers to resolve.
+  // They are never emitted as timed samples; CUDA errors and every output are still checked.
+  for(int length:{1,2})execute(length,true,low_precision_reference::outputs(c.kind,wg,c.groups,length,seed,true));
+  auto measured=[&](){auto o=execute(iterations,false,uniform);gh::envelope(o);return o;};
+  auto warm=gh::warmup(measured);auto observation=measured();
+  const gh::u64 work=gh::u64(blocks)*c.groups*2*16*iterations*2*(wg?64:16)*(wg?64:8)*32;
+  std::ostringstream extension;
+  extension<<"\"timing_model\":\"low_precision_start_gate_result_drain_v1\",\"phase\":\"measure\""
+    <<",\"registers_per_thread\":"<<attr.numRegs<<",\"static_smem_bytes\":"<<attr.sharedSizeBytes
+    <<",\"local_size_bytes\":"<<attr.localSizeBytes<<",\"occupancy_limit_ctas_per_sm\":"<<occupancy
+    <<",\"max_abs_error\":0,\"output_elements_checked\":"<<elements
+    <<",\"nonuniform_validation\":{\"iterations\":[1,2],\"checked_elements\":"<<elements*2
+    <<",\"input_seed\":"<<seed<<",\"errors\":0,\"reference_model\":\"low_precision_logical_integer_v1\"}"
+    <<",\"input_encoding\":"<<gh::quote(c.kind==0?"e4m3":c.kind==1?"e5m2":c.kind==2?"s8":"u8");
+  if(!wg && c.kind<2) {
+    extension<<",\"compiled_demand_contract\":{\"id\":\"cuda129_sm90a_fp8_mma_compiled_sequence_v1\","
+      <<"\"basis\":\"static_per_warp_iteration_requires_archived_sass_audit\",\"instruction_counts\":{" 
+      <<gh::quote(c.kind==0?"F2FP.F16.E4M3.UNPACK_B":"F2FP.F16.E5M2.UNPACK_B")
+      <<":12,\"HMMA.16816.F32\":2,\"FADD\":128},\"tensor_flop\":8192,\"simt_add_operations\":4096,"
+      <<"\"logical_flop\":262144,\"native_fp8_exportable\":false,\"dynamic_counter_verified\":false}";
+  }
+  gh::emit_trial(c.id,iterations,seed,threads,c.all_gpu?"all_gpu":"one_cta",c.kind<2?"FLOP":"OP",work,0,0,
+                 observation,warm,extension.str());
+  GH_CUDA(cudaEventDestroy(begin));GH_CUDA(cudaEventDestroy(end));
+  GH_CUDA(cudaFree(stamps));GH_CUDA(cudaFree(output));return 0;
+} catch(const std::exception& e) {std::cerr<<e.what()<<"\n";return 2;}
+'''
+
+
+def generate(root=ROOT):
+    contract=json.loads((root/CONTRACT).read_text())
+    cases=contract['cases']
+    rows={(c['parameters']['path'],c['parameters']['input_type'],c['parameters']['groups'],c['scope']) for c in cases}
+    expected={(p,k,g,s) for p in ('mma','wgmma') for k in KINDS for g in (1,2) for s in ('one_cta','all_gpu')}
+    if len(cases)!=32 or rows!=expected:raise ValueError('not the frozen S08 matrix')
+    text=PREFIX+'\n'
+    for path in ('mma','wgmma'):
+        for kind in KINDS:
+            for groups in (1,2):text+='\n'+kernel(path,kind,groups)
+    text+='\nconst std::vector<LowCase> cases={\n'
+    for c in cases:
+        p=c['parameters'];path=p['path'];kind=p['input_type'];groups=p['groups']
+        text+=f'  {{"{c["id"]}",{symbol(path,kind,groups)},{KINDS.index(kind)},{groups},{p["collective_width_threads"]},{str(c["scope"]=="all_gpu").lower()}}},\n'
+    reference_sha=hashlib.sha256((root/'microbench/gh200_resource_campaign/common/low_precision_reference.hpp').read_bytes()).hexdigest()
+    return text+'};\n'+HOST.replace('@REFERENCE_SHA256@',reference_sha)
+
+
+def main():
+    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--check',action='store_true');args=ap.parse_args()
+    generated=generate();path=ROOT/OUTPUT
+    if args.check:
+        if path.read_text()!=generated:raise ValueError('generated S08 source differs')
+    else:path.write_text(generated)
+    print(json.dumps({'check_only':args.check,'cases':32,'kernels':16,'output':str(OUTPUT)}))
+
+
+if __name__=='__main__':main()

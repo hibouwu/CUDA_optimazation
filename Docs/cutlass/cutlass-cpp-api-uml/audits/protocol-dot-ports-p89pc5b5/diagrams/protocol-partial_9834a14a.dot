@@ -1,0 +1,13 @@
+digraph protocol {
+graph [rankdir=TB, bgcolor="white", pad="0.18", nodesep="0.5", ranksep="0.7", splines=polyline, fontname="Noto Sans CJK SC", fontsize=15, labelloc=t];
+node [shape=plain, fontname="Noto Sans CJK SC", fontsize=14];
+edge [fontname="Noto Sans CJK SC", fontsize=11, color="#4C647B", arrowsize=0.7];
+label="No global free order";
+e0 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#57718A"><TR><TD BGCOLOR="#ECF2F8" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" TARGET="_top">leader<BR ALIGN="LEFT"/>free leader<BR ALIGN="LEFT"/>include/a.hpp:4</TD></TR><TR><TD PORT="enter" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" TARGET="_top">enter · 调用进入</TD></TR><TR><TD PORT="return" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" TARGET="_top">return · 调用返回</TD></TR></TABLE>>];
+e1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#57718A"><TR><TD BGCOLOR="#ECF2F8" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" TARGET="_top">peer<BR ALIGN="LEFT"/>free peer<BR ALIGN="LEFT"/>include/a.hpp:4</TD></TR><TR><TD PORT="enter" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" TARGET="_top">enter · 调用进入</TD></TR><TR><TD PORT="return" ALIGN="LEFT" HREF="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" TARGET="_top">return · 调用返回</TD></TR></TABLE>>];
+e0:enter:e -> e0:return:e [id="l_free.intra", label="l_free.intra\n明确约束\nsame invocation", URL="../index.html?protocol=protocol&protocol_view=partial&order=l_free.intra", target="_top"];
+e1:enter:e -> e1:return:e [id="p_free.intra", label="p_free.intra\n明确约束\nsame invocation", URL="../index.html?protocol=protocol&protocol_view=partial&order=p_free.intra", target="_top"];
+legend [shape=box, color="#BAC8D5", fontsize=12, label="event框不是C++类；每个API锚点都有独立连接点。
+同线程逐实例关系不是整族屏障；只画明示的量词化约束。"];
+{rank=sink; legend;}
+}

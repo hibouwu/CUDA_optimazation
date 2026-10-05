@@ -1,0 +1,26 @@
+@startuml
+title 同名不等于同一个接口：Arguments → Params
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 17
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+hide footbox
+participant "Kernel 转换入口\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:255" as K
+participant "CollectiveMainloop\ninclude/cutlass/gemm/collective/\nsm100_mma_warpspecialized.hpp:353" as M
+participant "CollectiveEpilogue\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:299" as E
+participant "TileScheduler\ninclude/cutlass/gemm/kernel/\nsm100_tile_scheduler.hpp:135" as S
+note over K : 输入：mode、problem_shape、mainloop、\nepilogue、hw_info、scheduler 与 workspace。
+note over K, S : 先按大小与对齐要求划分 workspace；此实现 mainloop_workspace=nullptr。\n这些不是对任意 Kernel 的通用假设。大小查询调用在详细视图单独列出。
+K -> M : to_underlying_arguments(args.problem_shape, args.mainloop,\nmainloop_workspace, args.hw_info) [调用点 L290]
+M --> K : MainloopParams
+K -> E : to_underlying_arguments(args.problem_shape, args.epilogue,\nepilogue_workspace) [调用点 L291]
+E --> K : EpilogueParams
+K -> S : to_underlying_arguments(problem_shape_MNKL, TileShape{},\nAtomThrShapeMNK{}, ClusterShape{}, args.hw_info,\nargs.scheduler, scheduler_workspace) [调用点 L292]
+S --> K : TileSchedulerParams
+note over K : 组装 Kernel::Params。\n转换结构不等于深拷贝 A/B/C/D，\n也不能推出底层数据所有权已转给 Kernel。
+legend bottom
+三个转换操作、三个独立端点、三个源码调用位置。
+会议追问：每个字段的单位、地址空间、派生规则、有效期和错误处理是什么？
+模板类型确定实现形态；Arguments 填入本次问题。两者分别审查。
+endlegend
+@enduml

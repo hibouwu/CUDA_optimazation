@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "stage": "S17",
+  "status": "A_period_compile_feasibility_only_not_a_probe_contract",
+  "family": "s17_cluster_forms",
+  "source": "microbench/gh200_resource_campaign/probes/feasibility/cluster_dsm_multicast_forms_v1.cu",
+  "build": {
+    "compiler": "nvcc",
+    "flags": ["-std=c++17", "-O3", "-lineinfo", "-gencode", "arch=compute_90a,code=sm_90a", "-Xptxas=-v"],
+    "include_dirs": []
+  },
+  "threads_per_CTA": 128,
+  "cluster_sizes": [2, 4, 8],
+  "forms": ["local_read", "dsm_read", "local_write", "dsm_write", "cluster_sync", "bulk_single", "bulk_all"],
+  "expected_global_targets": 21,
+  "DSM_tile_bytes": 4096,
+  "bulk_payload_bytes": 16384,
+  "bulk_source_ring_items": 32,
+  "GPU_execution_allowed": false,
+  "capability_query_helper_execution_allowed": false,
+  "runtime_capability_supported": "unknown pending separately authorized query",
+  "full_probe_qualification": false
+}

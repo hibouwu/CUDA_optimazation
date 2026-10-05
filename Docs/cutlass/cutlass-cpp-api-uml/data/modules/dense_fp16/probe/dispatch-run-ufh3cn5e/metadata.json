@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "snapshot_scope_sha256": "2b8a0094ff40dcd0a47c4da64e309fda8af98dc1ecdeb9b28a6e8a8692c2970f",
+  "all_snapshot_file_hashes_verified": 824,
+  "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+  "host_version": "g++-14 (GCC) 14.4.1 20260724 (Red Hat 14.4.1-2)\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "target": "sm_110a",
+  "recipe_arch_tag": "cutlass::arch::Sm100",
+  "gpu_executed": false,
+  "executed_artifact": "Host-only shape/type printer",
+  "full_kernel_evidence": "data/modules/dense_fp16/probe/run-334xibhm/metadata.json",
+  "inputs": {
+    "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu": "1db6bf830d818807a5086e43a3c9a34cd6f55bf4d516338be4e13a6bb4135cb9",
+    "data/modules/dense_fp16/probe/run-334xibhm/input.cu": "7bf51e33bc6e0193ac93f3511d75e0a69d7c7b56a1deb60e3c2ea1cb63387688",
+    "data/modules/dense_fp16/probe/run-334xibhm/host_compat.hpp": "7cab830cce404efce900fb6636bc2d148d9644d2be93e08da432212dce06df55",
+    "data/modules/dense_fp16/probe/run_dispatch_probe.py": "ec3f132a3a760a90c0cc8de562d8237a7cc2534493cfc842b0842728a1cce1b4"
+  },
+  "commands": [
+    {
+      "label": "nvcc_host_types",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "--expt-relaxed-constexpr",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe",
+        "-arch=sm_110a",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_types"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 19.14114540000446,
+      "stdout": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/nvcc_host_types.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/nvcc_host_types.stderr.txt"
+    },
+    {
+      "label": "nvcc_debug_ptx",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "--expt-relaxed-constexpr",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe",
+        "-arch=sm_110a",
+        "-DCOMPILE_DISPATCH_KERNEL",
+        "--ptx",
+        "-G",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/probe.ptx"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 5.51969999098219,
+      "stdout": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/nvcc_debug_ptx.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/nvcc_debug_ptx.stderr.txt"
+    },
+    {
+      "label": "host_type_dump",
+      "command": [
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_types"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.0019249629986006767,
+      "stdout": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stderr.txt"
+    },
+    {
+      "label": "ptxas_debug",
+      "command": [
+        "/usr/local/cuda-13.0/bin/ptxas",
+        "-arch=sm_110a",
+        "-g",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/probe.ptx",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/probe.cubin"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.3933910700143315,
+      "stdout": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/ptxas_debug.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/ptxas_debug.stderr.txt"
+    },
+    {
+      "label": "readelf_debug_info",
+      "command": [
+        "/usr/bin/readelf",
+        "--debug-dump=info",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/probe.cubin"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.017590069997822866,
+      "stdout": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stderr.txt"
+    }
+  ],
+  "static_observations": {
+    "selected_source_locations": [
+      {
+        "ptx_line": 6409,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 88,
+        "column": 3
+      },
+      {
+        "ptx_line": 6589,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 88,
+        "column": 3
+      },
+      {
+        "ptx_line": 6637,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 6654,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 8112,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 8127,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 9142,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 9157,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 10172,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 10191,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 11649,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 11664,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 298,
+        "column": 9
+      },
+      {
+        "ptx_line": 11667,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 148,
+        "column": 3
+      },
+      {
+        "ptx_line": 11684,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 148,
+        "column": 3
+      },
+      {
+        "ptx_line": 11687,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 197,
+        "column": 3
+      },
+      {
+        "ptx_line": 11703,
+        "path": "include/cute/algorithm/gemm.hpp",
+        "source_line": 197,
+        "column": 3
+      },
+      {
+        "ptx_line": 11706,
+        "path": "include/cute/atom/mma_atom.hpp",
+        "source_line": 104,
+        "column": 5
+      },
+      {
+        "ptx_line": 11723,
+        "path": "include/cute/atom/mma_atom.hpp",
+        "source_line": 104,
+        "column": 5
+      },
+      {
+        "ptx_line": 12740,
+        "path": "include/cute/atom/mma_atom.hpp",
+        "source_line": 104,
+        "column": 5
+      }
+    ],
+    "all_expected_source_locations_present": true,
+    "ptx_tcgen05_f16_2sm_count": 1
+  },
+  "status": "static_dispatch_probe_pass",
+  "artifacts": {
+    "host_type_dump.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "host_type_dump.stdout.txt": {
+      "sha256": "7e25f286b43d01297074dd0808aecd33b77777922b754aacd0680447b18c6aba",
+      "bytes": 3495
+    },
+    "host_types": {
+      "sha256": "0ae8419f2e6a1fe90918db1303e2ddd2b5c920f8324ab4bd096b796a564a5d25",
+      "bytes": 1246960
+    },
+    "input.cu": {
+      "sha256": "1db6bf830d818807a5086e43a3c9a34cd6f55bf4d516338be4e13a6bb4135cb9",
+      "bytes": 4924
+    },
+    "nvcc_debug_ptx.stderr.txt": {
+      "sha256": "ebb77d4b264527ce7a7032df5ddeb5b6e01175de20ce4ad853bcf50e93980e97",
+      "bytes": 1297
+    },
+    "nvcc_debug_ptx.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "nvcc_host_types.stderr.txt": {
+      "sha256": "0714e5750ba001b89138062ce20eb6b56d984cd96029ab2e8cd630c7133b3579",
+      "bytes": 4311
+    },
+    "nvcc_host_types.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "probe.cubin": {
+      "sha256": "d911ff7e09e3138a0a667be0859a9bb4f782afbe520f8e1caaadd350c6ede26b",
+      "bytes": 2906280
+    },
+    "probe.ptx": {
+      "sha256": "27946e86c319fcdd64d53e2d91d54fd9ad1431a1f52bb5fe83927b9bfa343966",
+      "bytes": 2870514
+    },
+    "ptxas_debug.stderr.txt": {
+      "sha256": "a31529734f756a5afbb81f75928ead52d5385fb4b625f6da85b9d6379f38a334",
+      "bytes": 493
+    },
+    "ptxas_debug.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "readelf_debug_info.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "readelf_debug_info.stdout.txt": {
+      "sha256": "4986a9fdc1f426110c195b08315b5b85d4f44587300b67ff83520d2e002a9681",
+      "bytes": 2105223
+    }
+  }
+}

@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA2/3：排空、握手与释放 · CTA 2 leader mma · 6
+state "CTA 2 leader mma" as actor0 {
+state "dealloc arrive(peer, leader)\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:795" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.arrive795]]
+state "dealloc arrive(peer, leader)\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:795" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.arrive795]]
+state "Allocator2Sm::free(base,512)\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:803" as a4 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.free]]
+state "Allocator2Sm::free(base,512)\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:803" as a3 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.free]]
+state "dealloc arrive(peer, leader)\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:795" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.arrive795]]
+state "Allocator2Sm::free(base,512)\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:803" as a5 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.free]]
+}
+a1 --> a0 : tmem.order.093\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a4 --> a3 : tmem.order.094\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a1 --> a2 : tmem.order.210\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a4 --> a5 : tmem.order.211\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

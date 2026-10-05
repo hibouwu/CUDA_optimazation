@@ -1,0 +1,46 @@
+{
+  "adapter_id": "cluster_dsm_multicast_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.cluster_dsm_validation_v1",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_validation_v1.py": "413b574b592ae61845d3cbe8c701b7c743ef179a6d5049c0e1fd10a9bbb6d3d6",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_reference_v1.py": "c90301cd04783219af628ad81a25b1724a916d9ab2553f9289faf19a87ac39d6",
+    "microbench/gh200_resource_campaign/auditors/async_copy.py": "23b33b1595febad697e1cadb43a43a561975b2b36d7d56858d6b247cf1f83541",
+    "microbench/gh200_resource_campaign/auditors/async_copy_sass_baseline.py": "dbe7c5d2630b5649defcaecad45c502787385ce4094ba97cdb81247123d73f7e",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/common/cluster_dsm_reference_v1.hpp": "b65cac3b2ed65ff881b9cfadec619731791960899dd68b2011c8ae2cc220cf4d",
+    "microbench/gh200_resource_campaign/probes/cluster_dsm_multicast_v1.cu": "8c02cec9a009f4df6fe9b9ecdf194bdffbf33b7d03c5e0dd4fa3ba5832ce76c3",
+    "microbench/gh200_resource_campaign/tests/test_cluster_dsm_reference_v1.py": "038b80bf6dc5fb35a97db5b14c12d0a7782762986432335f61990e5907445c22",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_sass_v1.py": "f224b564617c39fe210a83cdfbaf29a3296112e9cc37a9044bb1473dbb1ff255",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_sass_baseline_v1.py": "6a478c81d9592c9c03a2930df0c47ca9636ce44d1114d2ea454fd8c36b0d71f8",
+    "microbench/gh200_resource_campaign/tests/test_cluster_dsm_sass_v1.py": "c7c7e97e3c1c876e234bbd8be077d779eba29844cf1f9cffe5e1fb5d0d305228",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/compile.receipt.json": "9a0bf8ca195c16635b4827e917350b21b9f66c0e5e0e633bf1ee3d3e9b8f6036",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/compile.stderr": "403db581336504e1766c5e4a0e0e884585151e8c20337c6108123aafd42aadd6",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/probe": "288d5f6461fb49f62cf4cba975f7208ec29063b315f77758f10db260bd2b6a3b",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/sass.receipt.json": "75436518a2c4890e4e31207c2307ab5eef7f7e881bcfca6b9bf59faf93b244c5",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/sass.txt": "ec49113979e37d244fa49316e29374f762aacfcb3fe3e2f6f9e6beed429251ac",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s17-short-r2/diagnostics/cluster_dsm_multicast/probe.d": "04c68535aa46d411e232ae915442d3cbeab601da040292634980c03b71aaed99"
+  },
+  "contract_sha256": "a7b064910c5597ad7e43a3804b6e7337fd8d9fd15fcddeb8f3290228f4a90189",
+  "profiles_sha256": "3e4ccf68568037cda30ad68834666af040de174347c326c5786f2a7ad65d0c04",
+  "review_dependencies": [
+    {
+      "stage": "S17",
+      "phase": "A",
+      "path": "reviews/S17-A-review.json"
+    },
+    {
+      "stage": "S17",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S17-short-source-B-review.json"
+    }
+  ]
+}

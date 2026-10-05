@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "extension_id": "early-validation-v1",
+  "status": "draft_pending_independent_A_review",
+  "archive_schema_version": 2,
+  "adapter_abi_version": 1,
+  "proposed_entrypoint": "validate_suite.py",
+  "commands": [
+    "run",
+    "resume",
+    "audit",
+    "status"
+  ],
+  "selection_scopes": [
+    "full_family",
+    "case_diagnostic"
+  ],
+  "ordering_scope": "full_frozen_family_case_matrix_before_any_new_pilot_warmup_or_long_smoke",
+  "unrelated_families_wait_for_all_S04_S20": false,
+  "probe_argv": [
+    "BINARY",
+    "validate-only",
+    "CASE_ID",
+    "PROFILE_ID",
+    "SEED"
+  ],
+  "stdout_types": [
+    "device",
+    "validation"
+  ],
+  "validation_schema_version": 1,
+  "validation_required_fields": [
+    "schema_version",
+    "validation_schema_version",
+    "type",
+    "case_id",
+    "profile_id",
+    "seed",
+    "scope",
+    "threads",
+    "blocks",
+    "errors",
+    "target_launches",
+    "checks",
+    "resource_identity",
+    "performance_eligible",
+    "warmup_executed",
+    "pilot_executed"
+  ],
+  "fixed_false_fields": [
+    "performance_eligible",
+    "warmup_executed",
+    "pilot_executed"
+  ],
+  "profile_required_fields": [
+    "id",
+    "target_iterations",
+    "input_profiles",
+    "maximum_target_launches",
+    "maximum_explicit_auxiliary_launches",
+    "completion_requirements",
+    "reference_identity",
+    "declared_output_check",
+    "output_evidence_kind"
+  ],
+  "target_iterations_domain": {
+    "minimum": 0,
+    "maximum": 64,
+    "zero_only_explicit_zero_work_case": true
+  },
+  "maximum_target_launches_per_case": 4,
+  "process_timeout_seconds": 30,
+  "cleanup_checkpoint_reserve_seconds": 20,
+  "output_evidence_kinds": [
+    "full_values",
+    "full_declared_checksum_outputs",
+    "error_count_only"
+  ],
+  "case_states": [
+    "pending",
+    "running",
+    "passed",
+    "reused_prior_numeric_evidence",
+    "failed_implementation",
+    "failed_numerics",
+    "failed_completion",
+    "interrupted",
+    "blocked_by_dependency",
+    "verified_unsupported"
+  ],
+  "family_states": [
+    "validation_pending",
+    "validation_checkpoint",
+    "validation_failed",
+    "validation_collected_pending_B3_review",
+    "B3_review_passed"
+  ],
+  "diagnostic_authorizes_family_B": false,
+  "B3_review_phase": "early-validation-B3",
+  "B3_review_authorizes": [
+    "pilot",
+    "warmup",
+    "B4_length_and_metering_checks"
+  ],
+  "formal_run_still_requires": [
+    "full_family_B_pass",
+    "existing_C_sampling_protocol"
+  ],
+  "reuse_required_fields": [
+    "source_run_identity",
+    "source_case_id",
+    "source_artifacts_sha256",
+    "destination_case_id",
+    "semantic_identity",
+    "reference_identity",
+    "coverage_argument",
+    "impact_review",
+    "independent_review"
+  ],
+  "reuse_does_not_claim_old_validate_only_execution": true,
+  "adapter_manifest_required_fields": [
+    "adapter_id",
+    "adapter_abi_version",
+    "module",
+    "exports",
+    "files_sha256",
+    "contract_sha256",
+    "profiles_sha256",
+    "review_dependencies"
+  ],
+  "adapter_module_namespace": "snapshot_local_auditors_only",
+  "new_adapter_exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "core_gate_binds_growing_family_registry": false,
+  "future_core_extension_gate": "S02/early-validation-B",
+  "legacy_frozen_behavior": "unchanged",
+  "forbidden": [
+    "warmup_in_validate_only",
+    "pilot_in_validate_only",
+    "validation_as_performance_sample",
+    "single_case_promoted_to_family_pass",
+    "silent_legacy_evidence_relabel",
+    "overwrite_old_run",
+    "unreviewed_adapter_import",
+    "unknown_failure_as_unsupported"
+  ],
+  "review_dependencies": [
+    {
+      "stage": "S02",
+      "phase": "early-validation-A",
+      "path": "reviews/S02-early-validation-A-review-r2.json"
+    }
+  ],
+  "adapter_signatures": {
+    "validation_argv": "(binary_relative: str, case: dict, profile: dict, seed: int) -> list[str]",
+    "validate_validation": "(device: dict, row: dict, case: dict, profile: dict, seed: int) -> dict",
+    "validate_prior_evidence": "(evidence: dict, request: dict, frozen_refs: dict[str,str]) -> dict"
+  },
+  "adapter_exception_policy": "ValueError_for_invalid_identity_or_evidence_other_exceptions_implementation_failure_no_GPU_or_writes",
+  "validation_result_fields": [
+    "status",
+    "case_id",
+    "profile_id",
+    "target_launches",
+    "checked_elements",
+    "output_evidence_kind",
+    "performance_eligible"
+  ],
+  "reuse_result_variants": {
+    "reusable": [
+      "status",
+      "case_id",
+      "source_case_id",
+      "mapping_sha256",
+      "bound_artifacts"
+    ],
+    "insufficient": [
+      "status",
+      "case_id",
+      "missing_requirements"
+    ]
+  },
+  "launch_fields": [
+    "launch_index",
+    "iterations",
+    "input_profile",
+    "threads",
+    "blocks"
+  ],
+  "check_fields": [
+    "launch_index",
+    "reference_model",
+    "reference_sha256",
+    "comparison",
+    "tolerance_id",
+    "checked_elements",
+    "expected_elements",
+    "errors",
+    "completed",
+    "verified_CTA_ids",
+    "output_artifacts"
+  ],
+  "output_artifact_fields": [
+    "path",
+    "sha256",
+    "dtype",
+    "shape",
+    "evidence_kind"
+  ],
+  "resource_identity_fields": [
+    "kernel_symbol",
+    "registers_per_thread",
+    "static_smem_bytes",
+    "dynamic_smem_bytes",
+    "local_size_bytes",
+    "occupancy_limit_ctas_per_sm",
+    "extensions"
+  ],
+  "resource_extension_policy": "family_A_declared_keys_only",
+  "first_S08_profile_non_executable_example": {
+    "id": "short_uniform_nonuniform_1_2",
+    "target_iterations": [
+      1,
+      2
+    ],
+    "input_profiles": [
+      "uniform",
+      "nonuniform"
+    ],
+    "maximum_target_launches": 4,
+    "note": "Partial illustrative profile, not executable; family A must supply all profile_required_fields and frozen reference identity."
+  }
+}

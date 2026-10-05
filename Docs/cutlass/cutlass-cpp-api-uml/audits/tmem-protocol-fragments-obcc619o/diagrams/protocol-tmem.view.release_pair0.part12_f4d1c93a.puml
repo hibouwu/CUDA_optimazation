@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA0/1：排空、握手与释放 · CTA 0 leader epilogue · 12
+state "CTA 0 leader epilogue" as actor0 {
+state "Epilogue绑定TMEM Tensor地址\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a4 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_set_tmem]]
+state "fence_view_async_tmem_load()\n调用进入\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:887" as a5 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.read_fence]]
+state "fence_view_async_tmem_load()\n调用返回\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:887" as a6 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.read_fence]]
+state "PipelineUmmaAsync::consumer_release\n调用进入\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:888" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_release]]
+state "PipelineUmmaAsync::consumer_release\n指定效果满足\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:888" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_release]]
+state "Epilogue绑定TMEM Tensor地址\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a3 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_set_tmem]]
+state "PipelineUmmaAsync::consumer_release\n调用返回\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp:888" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_release]]
+}
+a4 --> a5 : tmem.order.022\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a6 --> a1 : tmem.order.023\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a1 --> a0 : tmem.order.032\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a3 --> a4 : tmem.order.148\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a5 --> a6 : tmem.order.159\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a1 --> a2 : tmem.order.160\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

@@ -1,0 +1,49 @@
+{
+  "adapter_id": "low_precision_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.low_precision_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/low_precision_validation.py": "da9a1bd75653bf6d0735f02ee90eed49f506f5588466dcceee6904a5b029e5bd",
+    "microbench/gh200_resource_campaign/auditors/low_precision.py": "1814441a300037f6a93b91c09b16b1e018ec257aee9f98082b39058c09b38061",
+    "microbench/gh200_resource_campaign/auditors/low_precision_reference.py": "4efda49128295467aa1381934ba3c999a8f2cafe7d27304244805bcba837a740",
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/low_precision_reference.hpp": "13345802f9ea6523b42437bdaa5277bca9df5c01add140dcf0b08bff1fe07093",
+    "microbench/gh200_resource_campaign/probes/generate_low_precision.py": "e2f542aaabcf4070f2511eccf27459fc646def05323ef797ada7b34bc2a67b58",
+    "microbench/gh200_resource_campaign/probes/low_precision.cu": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "microbench/gh200_resource_campaign/tests/test_low_precision.py": "0821aa7d910ee55d16449f7d3411223df6d6411b60b98c59cc6ea4f6b94b31f7",
+    "microbench/gh200_resource_campaign/tests/test_low_precision_validation.py": "47d5f31b40949f19f1b0ecaf45d67a9c82cc9e2f5d6e678f6eb0563055193170",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c"
+  },
+  "contract_sha256": "24a46269a210033c79eb1e4d8e3d6b312442b7a441ee802b47e662e2fc52ea4c",
+  "profiles_sha256": "e13e820b45e755eae2de8cc557dd9fd87d3854b8a7fcff3626b291104e373685",
+  "review_dependencies": [
+    {
+      "stage": "S08",
+      "phase": "A",
+      "path": "reviews/S08-A-review.json"
+    },
+    {
+      "stage": "S08",
+      "phase": "A",
+      "path": "reviews/S08-lowering-A-review.json"
+    },
+    {
+      "stage": "S08",
+      "phase": "early-validation-A",
+      "path": "reviews/S08-early-validation-A-review.json"
+    },
+    {
+      "stage": "S08",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S08-early-validation-source-B-review-r2.json"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Source-reviewed explanations for the selected CLC handoff APIs."""
+from stage_scheduler_handoff import ROOT,dump
+
+T={
+ 'Stages_':'编译期流水线槽数。CLC状态以此环转，full/empty数组按此定长；它不是响应字节数或消费者线程数。',
+ 'ClusterShape':'CLC流水线的集群形状类型，编译期确定；选中构造路径从形状对象取得实际集群大小。',
+ 'ClusterShape_':'Scheduler的集群形状类型，编译期确定；不能据类型名省略实际CTA参与条件。',
+}
+STATE='本次CLC流水线状态，按值传入；index选择响应槽，phase区分同一槽的不同轮次，不是累加器状态。'
+TOKEN='与本次槽和轮次匹配的等待结果，默认WaitAgain。只有有效的WaitDone才可省去等待，不能把“请求已发出”当成完成token。'
+
+
+def r(summary,parameters=None,execution=None):
+ return {'layer':'跨CTA调度同步：CLC响应流水线','summary':summary,
+ 'execution':execution or '当前路径在设备侧运行。槽数和相关类型由模板在编译期确定，槽索引、phase、地址和通知参数属于本次设备调用。',
+ 'template_notes':T,'parameter_notes':parameters or {}}
+
+
+def build():
+ n={
+ 'type':r('组织集群CLC响应的发布与消费。每个CTA有本地响应和full屏障，消费者读完后向生产者CTA的empty屏障到达；producer_acquire等待可复用，再登记下一轮期待字节。Params的role是接口角色约定，不代替Kernel实际参与者筛选。',execution='这是编译期类型；其屏障存储、构造参数、参与者和流水线状态在设备执行时发挥作用。'),
+ 'advance':r('Scheduler生产者取得当前full屏障地址，等待响应槽可复用并登记期待字节，再由elected lane发出查询。它递增自己的生产者状态副本并返回，不等待响应写入完成；当前硬件路径不另外调用producer_commit。',{'clc_pipeline':'CLC响应流水线引用，用于屏障地址和producer_acquire，不是控制负载节奏的throttle流水线。','clc_pipe_producer_state':STATE+' 该副本在请求发起后递增，返回给调用方保存。'}),
+ 'issue':r('发出clusterlaunchcontrol.try_cancel异步指令，响应以b128形式多播到集群共享内存，并使用complete_tx字节完成语义。函数返回不是响应就绪；未启用CLC宏时走NOT_IMPLEMENTED，不能当作有效备用响应。',{'state':STATE+' 用index选择写入的CLCResponse槽。','mbarrier_addr':'对应full屏障的32位共享内存地址表示，不是普通Host指针；硬件用它完成关联事务。','clc_response_ptr':'本CTA共享内存中CLCResponse数组的基址；硬件向集群对应位置写响应，地址、对齐与有效期必须满足调用约定。'},'虽然声明带Host/Device标记，当前CLC指令属于设备硬件路径，不支持据此在普通Host函数中发起查询。'),
+ 'decode':r('从已经就绪的共享内存响应中解码取消是否成功，成功时取得下一组CTA索引；返回WorkTileInfo的is_valid_tile表示有没有下一任务。它不会代替外层consumer_wait或consumer_release，无效响应也需要释放读取槽。',{'result_addr':'已就绪CLC响应的32位共享内存地址表示；不是一个可忽略等待而直接读取的普通指针。'}),
+ 'barrier_address':r('把当前stage的full屏障地址转换为32位共享内存地址表示，供CLC指令使用。只取得地址，不执行可复用等待，也没有完成任何transaction。',{'state':STATE+' 此函数只取index定位full屏障。'}),
+ 'acquire':r('公共PipelineState重载，将index、phase和等待token传给内部重载。内部先保证empty对应轮次可复用，再给各目标CTA的full登记到达和期待响应字节。',{'state':STATE,'barrier_token':TOKEN}),
+ 'acquire_stage':r('内部重载在WaitAgain时等待生产者CTA的empty；随后由lane_idx小于cluster_size的lane，分别为对应CTA登记一次full到达和transaction_bytes。登记线程与最后发CLC指令的elected lane不是同一个参与者集合。',{'stage':'要复用的响应槽索引，必须与本轮CLCResponse和full/empty数组一致。','phase':'生产者用于辨别该槽轮次的等待phase；同一index不足以确定是否可写。','barrier_token':TOKEN}),
+ 'wait':r('公共消费者等待入口，把CLC状态分解为index和phase并传给内部等待。返回之后才能按协议读取这个响应；它不表示下一任务一定有效。',{'state':STATE,'barrier_token':TOKEN}),
+ 'wait_stage':r('内部消费者等待：当token为WaitAgain时，等待本CTA当前full屏障满足对应phase。FullBarrier是ClusterTransactionBarrier，通过继承使用ClusterBarrier的wait；transaction与到达条件共同参与就绪。',{'stage':'本CTA将要读取的响应槽索引。','phase':'对应消费者轮次的phase，防止把旧响应当成新响应。','barrier_token':TOKEN}),
+ 'release':r('消费者读取完响应后调用的公共入口，只把stage index交给内部释放。即使解码结果没有下一任务，也要释放已经消费的响应；此接口不推进调用者的PipelineState。',{'state':STATE+' release只取index；状态推进仍由外层处理。'}),
+ 'release_stage':r('向producer_blockid对应CTA的empty屏障发送一次到达，表明本消费者已不再使用响应槽。一次到达不是全部消费者完成，生产者还需满足约定的consumer_arv_count并观测正确轮次。',{'stage':'本消费者已经读完的槽索引；目标生产者CTA从Params取得。'}),
+ 'tail':r('生产者退出前逐槽test_wait，必要时等待empty，防止其他CTA的消费者还在使用响应存储。循环只推进局部state，不重新登记transaction bytes，也不证明GEMM输出D已经可供Host读取。',{'state':STATE+' 按值传入，从此状态连续检查Stages个槽；函数不返回更新后的状态。'}),
+ 'commit':r('显式手工完成transaction计数的公共入口，把index和phase交给内部complete路径。这不是正常CLC查询的必经步骤；当前advance通过硬件complete_tx完成，不能把手工complete当成请求提交后的自动步骤。',{'state':STATE}),
+ 'commit_stage':r('按目标lane/CTA手工调用complete_transaction。phase形参在此实现未被使用；本函数也没有发起实际CLC查询或等待消费者。当前基线cluster z=1，局部cluster_size按x*y取得。',{'stage':'手工完成哪一个full槽的transaction字节。','phase':'为转发接口保留，但当前函数体未使用，不能据此认为complete操作额外验证了phase。'}),
+ 'expect_remote':r('ClusterTransactionBarrier的远端重载，将一次到达及期待字节登记到指定CTA的对应屏障。CLC producer_acquire按lane映射各目标CTA调用它；不要与单参数本地重载合并。',{'transaction_bytes':'本目标屏障期待完成的字节数，CLC响应是16字节，不是消费者数量。','cta_id':'目标CTA的集群rank；本路径由lane_idx提供。','pred':'非零时执行登记，默认1；本路径用lane_idx小于cluster_size控制有效目标。'}),
+ 'complete_remote':r('ClusterTransactionBarrier的远端手工完成重载，减少目标屏障待完成的transaction字节计数。它不能证明某块实际数据已经由硬件写入，调用者必须满足真实数据与计数的协议。',{'dst_cta_id':'目标CTA的集群rank。','transaction_bytes':'由软件声明完成的transaction字节数，不是到达线程数。','pred':'非零时执行手工完成；该条件必须与预期的目标和字节对应。'}),
+ }
+ dump(ROOT/'data/interface-notes/clc.json',{'nodes':{'clc.'+k:v for k,v in n.items()}})
+
+if __name__=='__main__':build()

@@ -1,0 +1,10 @@
+{
+  "checked_on": "2026-09-21",
+  "authored_markdown_files": 4,
+  "local_links_checked": 34,
+  "source_hashes_verified": 14,
+  "artifact_formula_patterns_confirmed": true,
+  "gpu_inventory": "NVIDIA GeForce RTX 5070 Laptop GPU, 8151 MiB, 580.178.04",
+  "gpu_kernels_executed": false,
+  "validation": "PASS"
+}

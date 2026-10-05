@@ -1,0 +1,12 @@
+{
+  "mechanical_audit_passed": true,
+  "phase_1_passed": false,
+  "coverage_claim": "Identity and source-position consistency only; candidate reconciliation and semantic review remain separate",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "files": 824,
+  "entities": 150777,
+  "occurrences": 155592,
+  "blocking_diagnostics": 633,
+  "issue_count": 0,
+  "issues": []
+}

@@ -1,0 +1,892 @@
+{
+  "module_id": "dense_fp16_2sm_sm110a",
+  "part": "scheduler_handoff",
+  "nodes": [
+    {
+      "id": "scheduler.work_info",
+      "kind": "type",
+      "name": "WorkTileInfo",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::WorkTileInfo",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 76,
+      "role": "selected_scheduler_handoff",
+      "notes": "当前调度器沿用底层调度器的工作描述类型；它不是 K 分段描述。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "alias",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::WorkTileInfo",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 76,
+          "end_line": 76,
+          "start_byte": 3171,
+          "end_byte": 3239
+        },
+        "signature_sha256": "843b128d3e03886c3e2f35d660e6494c1586eef025affbe08af5ce913c4b002c"
+      }
+    },
+    {
+      "id": "scheduler.initial",
+      "kind": "api",
+      "name": "initial_work_tile_info",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::initial_work_tile_info",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 369,
+      "role": "selected_scheduler_handoff",
+      "notes": "用本CTA的初始blockIdx经swizzle/raster转换得到首个任务，初始valid=true；不是逐元素边界谓词。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::initial_work_tile_info",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 366,
+          "end_line": 369,
+          "start_byte": 13420,
+          "end_byte": 13535
+        },
+        "signature_sha256": "8ba76b40280713ab7caa4291d28b0948ce091d8fd093ce015ea7db5ce6296485"
+      }
+    },
+    {
+      "id": "scheduler.coordinate",
+      "kind": "api",
+      "name": "work_tile_to_cta_coord",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::work_tile_to_cta_coord",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 375,
+      "role": "selected_scheduler_handoff",
+      "notes": "把M/N/L任务索引组成CTA坐标，K位置使用占位符；不能把该占位符当作运行时K起点。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::work_tile_to_cta_coord",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 373,
+          "end_line": 375,
+          "start_byte": 13678,
+          "end_byte": 13754
+        },
+        "signature_sha256": "e07a1a0ce347eb04b5b38ed2bef5876cb8962ba5066d3e22d74ad29b77e7049f"
+      }
+    },
+    {
+      "id": "scheduler.fetch",
+      "kind": "api",
+      "name": "fetch_next_work",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fetch_next_work",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 460,
+      "role": "selected_scheduler_handoff",
+      "notes": "等待当前CLC响应槽，读取并转换下一任务，再释放响应槽；返回的true通知调用方推进CLC消费者状态。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fetch_next_work",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 454,
+          "end_line": 460,
+          "start_byte": 16613,
+          "end_byte": 16876
+        },
+        "signature_sha256": "beff0db4dd4fa7f2ad3953a7e2532ce8944883c30dd8abdba770c24576bfceec"
+      }
+    },
+    {
+      "id": "scheduler.fetch_compat",
+      "kind": "api",
+      "name": "fetch_next_work(WorkTileInfo)",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fetch_next_work",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 662,
+      "role": "selected_scheduler_handoff",
+      "notes": "单参数兼容重载原样返回任务与true，不读取CLC；不能与三参数重载合并。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fetch_next_work",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 660,
+          "end_line": 662,
+          "start_byte": 23897,
+          "end_byte": 23966
+        },
+        "signature_sha256": "3db1de507f813899723109a02ef71fc1103a50aa38ccf8e24ec51b9e84a0266d"
+      }
+    },
+    {
+      "id": "scheduler.k_iterator",
+      "kind": "api",
+      "name": "get_k_tile_iterator",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_k_tile_iterator",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 482,
+      "role": "selected_scheduler_handoff",
+      "notes": "按问题K形状与CTA Tile K构造完整K遍历；仅高秩K模式使用编译期的迭代次序分支。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_k_tile_iterator",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 479,
+          "end_line": 482,
+          "start_byte": 17638,
+          "end_byte": 17850
+        },
+        "signature_sha256": "c2c6f2927ff5d9d4714da3ade0d398003a4c209f4e6c18a70694fd60f9c0c36e"
+      }
+    },
+    {
+      "id": "scheduler.k_count",
+      "kind": "api",
+      "name": "get_work_k_tile_count",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_work_k_tile_count",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 502,
+      "role": "selected_scheduler_handoff",
+      "notes": "此调度器每个输出任务覆盖完整K归约，计数为size(ceil_div(K,TileK))，并不按WorkTileInfo切分K。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_work_k_tile_count",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 499,
+          "end_line": 502,
+          "start_byte": 18432,
+          "end_byte": 18624
+        },
+        "signature_sha256": "260f7285fb4e1d973b6f284e66c770f9a218dc4ed0e0463594576fd17b7fe6e7"
+      }
+    },
+    {
+      "id": "scheduler.k_start",
+      "kind": "api",
+      "name": "get_work_k_tile_start",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_work_k_tile_start",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 511,
+      "role": "selected_scheduler_handoff",
+      "notes": "兼容接口固定返回K tile 0，当前Kernel主线未调用它。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_work_k_tile_start",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 509,
+          "end_line": 511,
+          "start_byte": 18905,
+          "end_byte": 18988
+        },
+        "signature_sha256": "7f13b0ecabebbf97e92920ebe9bacb29fed3f5c0c75d135c324769731bd07ba2"
+      }
+    },
+    {
+      "id": "scheduler.epilogue",
+      "kind": "api",
+      "name": "compute_epilogue",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::compute_epilogue",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 526,
+      "role": "selected_scheduler_handoff",
+      "notes": "当前使用的单参数重载始终允许该任务做Epilogue；它自身不检查任务是否有效。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::compute_epilogue",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 524,
+          "end_line": 526,
+          "start_byte": 19365,
+          "end_byte": 19439
+        },
+        "signature_sha256": "7f1be1a1f48060bd72185e75c6fb83453d3402f4468a246d9b3c2a2e09936836"
+      }
+    },
+    {
+      "id": "scheduler.epilogue_compat",
+      "kind": "api",
+      "name": "compute_epilogue(WorkTileInfo, Params)",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::compute_epilogue",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 520,
+      "role": "selected_scheduler_handoff",
+      "notes": "Epilogue输入搬运分支使用的双参数重载同样返回true；与后处理使用的单参数重载分别保留。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::compute_epilogue",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 518,
+          "end_line": 520,
+          "start_byte": 19250,
+          "end_byte": 19339
+        },
+        "signature_sha256": "135f585c9da8c17b2ac7277847601845d0bac942c8942ea89744fb84c3eb8f10"
+      }
+    },
+    {
+      "id": "scheduler.requires_fixup",
+      "kind": "api",
+      "name": "requires_fixup",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::requires_fixup",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 534,
+      "role": "selected_scheduler_handoff",
+      "notes": "此完整K任务调度不需要跨split归约，返回false；不能推广为Stream-K的规则。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::requires_fixup",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 532,
+          "end_line": 534,
+          "start_byte": 19655,
+          "end_byte": 19763
+        },
+        "signature_sha256": "766351b5dc179cb9dc9ce6ee9804c88d271ffaab399281bc5f516227ff41e81c"
+      }
+    },
+    {
+      "id": "scheduler.fixup_state",
+      "kind": "api",
+      "name": "fixup",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fixup",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 562,
+      "role": "selected_scheduler_handoff",
+      "notes": "当前Kernel调用的六参数模板重载原样返回accumulator消费者状态，不执行归约、拷贝或额外等待。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::fixup",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 545,
+          "end_line": 562,
+          "start_byte": 20067,
+          "end_byte": 20504
+        },
+        "signature_sha256": "7c748d346f1fb5a0131441da93f8b61f26923ec2bcea57c01895dff2bbb7e296"
+      }
+    },
+    {
+      "id": "scheduler.continue",
+      "kind": "api",
+      "name": "continue_current_work",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::continue_current_work",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 571,
+      "role": "selected_scheduler_handoff",
+      "notes": "完整输出任务处理后不继续沿用该工作描述，返回false；当前主线不是借一个描述处理多个K分段。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::continue_current_work",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 569,
+          "end_line": 571,
+          "start_byte": 20798,
+          "end_byte": 20866
+        },
+        "signature_sha256": "a4b6589842bdd8fcfd8990964233e10f9a8c1d1e72f252a5b9daacc9d8d05a14"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "scheduler.call.initial.607",
+      "source": "host.kernel.operator",
+      "target": "scheduler.initial",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "共同准备首任务，使用当前blockIdx；selected Scheduler为Sm100动态persistent",
+      "source_expression": "scheduler.initial_work_tile_info(cluster_shape)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 607,
+        "end_line": 607,
+        "start_byte": 29097,
+        "end_byte": 29144,
+        "source_expression": "scheduler.initial_work_tile_info(cluster_shape)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 607,
+          "end_line": 607,
+          "start_byte": 29039,
+          "end_byte": 29146,
+          "source_text": "    typename TileScheduler::WorkTileInfo work_tile_info = scheduler.initial_work_tile_info(cluster_shape);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.coordinate.608",
+      "source": "host.kernel.operator",
+      "target": "scheduler.coordinate",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "共同准备首任务的CTA坐标",
+      "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 608,
+        "end_line": 608,
+        "start_byte": 29172,
+        "end_byte": 29220,
+        "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 608,
+          "end_line": 608,
+          "start_byte": 29146,
+          "end_byte": 29222,
+          "source_text": "    auto cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.k_iterator.626",
+      "source": "host.kernel.operator",
+      "target": "scheduler.k_iterator",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.main_load分支，处理当前任务；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.get_k_tile_iterator(work_tile_info, problem_shape_MNKL, CtaShape_MNK{}, load_inputs.k_tiles)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 626,
+        "end_line": 626,
+        "start_byte": 29869,
+        "end_byte": 29971,
+        "source_expression": "scheduler.get_k_tile_iterator(work_tile_info, problem_shape_MNKL, CtaShape_MNK{}, load_inputs.k_tiles)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 626,
+          "end_line": 626,
+          "start_byte": 29842,
+          "end_byte": 29973,
+          "source_text": "        auto k_tile_iter = scheduler.get_k_tile_iterator(work_tile_info, problem_shape_MNKL, CtaShape_MNK{}, load_inputs.k_tiles);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.k_count.627",
+      "source": "host.kernel.operator",
+      "target": "scheduler.k_count",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.main_load分支，计算当前任务完整K计数；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{})",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 627,
+        "end_line": 627,
+        "start_byte": 30001,
+        "end_byte": 30089,
+        "source_expression": "TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{})"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 627,
+          "end_line": 627,
+          "start_byte": 29973,
+          "end_byte": 30091,
+          "source_text": "        auto k_tile_count = TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{});\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.fetch.664",
+      "source": "host.kernel.operator",
+      "target": "scheduler.fetch",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.main_load；当前输入搬运后取得下一任务；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 664,
+        "end_line": 668,
+        "start_byte": 31586,
+        "end_byte": 31706,
+        "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 664,
+          "end_line": 668,
+          "start_byte": 31533,
+          "end_byte": 31708,
+          "source_text": "        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.coordinate.670",
+      "source": "host.kernel.operator",
+      "target": "scheduler.coordinate",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "main_load中已赋值work_tile_info=next_work_tile_info后更新坐标；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 670,
+        "end_line": 670,
+        "start_byte": 31779,
+        "end_byte": 31827,
+        "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 670,
+          "end_line": 670,
+          "start_byte": 31754,
+          "end_byte": 31829,
+          "source_text": "        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.fetch.701",
+      "source": "host.kernel.operator",
+      "target": "scheduler.fetch",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.sched && IsSchedDynamicPersistent；读取新CLC响应；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.fetch_next_work(\n            work_tile_info,\n            clc_pipeline,\n            clc_pipe_consumer_state\n          )",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 701,
+        "end_line": 705,
+        "start_byte": 33083,
+        "end_byte": 33211,
+        "source_expression": "scheduler.fetch_next_work(\n            work_tile_info,\n            clc_pipeline,\n            clc_pipe_consumer_state\n          )"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 701,
+          "end_line": 705,
+          "start_byte": 33028,
+          "end_byte": 33213,
+          "source_text": "          auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n            work_tile_info,\n            clc_pipeline,\n            clc_pipe_consumer_state\n          );\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.k_count.738",
+      "source": "host.kernel.operator",
+      "target": "scheduler.k_count",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.mma；next_work取得前为当前任务计算完整K计数；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{})",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 738,
+        "end_line": 738,
+        "start_byte": 34625,
+        "end_byte": 34713,
+        "source_expression": "TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{})"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 738,
+          "end_line": 738,
+          "start_byte": 34597,
+          "end_byte": 34715,
+          "source_text": "        auto k_tile_count = TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{});\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.fetch.741",
+      "source": "host.kernel.operator",
+      "target": "scheduler.fetch",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.mma；预先取得next，当前任务尚未结束；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 741,
+        "end_line": 745,
+        "start_byte": 34801,
+        "end_byte": 34921,
+        "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 741,
+          "end_line": 745,
+          "start_byte": 34748,
+          "end_byte": 34923,
+          "source_text": "        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.coordinate.774",
+      "source": "host.kernel.operator",
+      "target": "scheduler.coordinate",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "mma分支当前计算完成、赋值next后更新坐标；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 774,
+        "end_line": 774,
+        "start_byte": 35931,
+        "end_byte": 35979,
+        "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 774,
+          "end_line": 774,
+          "start_byte": 35906,
+          "end_byte": 35981,
+          "source_text": "        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.epilogue_compat.816",
+      "source": "host.kernel.operator",
+      "target": "scheduler.epilogue_compat",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.epi_load；双参数重载决定当前任务是否需要Epilogue输入处理；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "TileScheduler::compute_epilogue(work_tile_info, params.scheduler)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 816,
+        "end_line": 816,
+        "start_byte": 37667,
+        "end_byte": 37732,
+        "source_expression": "TileScheduler::compute_epilogue(work_tile_info, params.scheduler)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 816,
+          "end_line": 816,
+          "start_byte": 37635,
+          "end_byte": 37734,
+          "source_text": "        bool compute_epilogue = TileScheduler::compute_epilogue(work_tile_info, params.scheduler);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.fetch.819",
+      "source": "host.kernel.operator",
+      "target": "scheduler.fetch",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.epi_load；随后提前赋值work_tile_info=next，但仍保留旧坐标和旧compute_epilogue判定处理当前输入；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 819,
+        "end_line": 823,
+        "start_byte": 37846,
+        "end_byte": 37966,
+        "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 819,
+          "end_line": 823,
+          "start_byte": 37793,
+          "end_byte": 37968,
+          "source_text": "        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.coordinate.854",
+      "source": "host.kernel.operator",
+      "target": "scheduler.coordinate",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "epi_load的work_tile_info已提前设为next；旧坐标的本轮输入处理完后，此处才更新下一轮坐标；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 854,
+        "end_line": 854,
+        "start_byte": 38876,
+        "end_byte": 38924,
+        "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 854,
+          "end_line": 854,
+          "start_byte": 38851,
+          "end_byte": 38926,
+          "source_text": "        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.fetch.877",
+      "source": "host.kernel.operator",
+      "target": "scheduler.fetch",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.epilogue；取得next不跳过current的store；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 877,
+        "end_line": 881,
+        "start_byte": 39875,
+        "end_byte": 39995,
+        "source_expression": "scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        )"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 877,
+          "end_line": 881,
+          "start_byte": 39822,
+          "end_byte": 39997,
+          "source_text": "        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.epilogue.910",
+      "source": "host.kernel.operator",
+      "target": "scheduler.epilogue",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.epilogue；单参数重载返回true，任务有效性由外层循环控制；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.compute_epilogue(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 910,
+        "end_line": 910,
+        "start_byte": 40822,
+        "end_byte": 40864,
+        "source_expression": "scheduler.compute_epilogue(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 910,
+          "end_line": 910,
+          "start_byte": 40810,
+          "end_byte": 40868,
+          "source_text": "        if (scheduler.compute_epilogue(work_tile_info)) {\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.call.coordinate.932",
+      "source": "host.kernel.operator",
+      "target": "scheduler.coordinate",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "epilogue当前store完成并采用next后更新坐标；位于该角色do-while的当前迭代，尾部用更新后的work_tile_info.is_valid()决定继续。",
+      "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 932,
+        "end_line": 932,
+        "start_byte": 41730,
+        "end_byte": 41778,
+        "source_expression": "scheduler.work_tile_to_cta_coord(work_tile_info)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 932,
+          "end_line": 932,
+          "start_byte": 41705,
+          "end_byte": 41780,
+          "source_text": "        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n"
+        }
+      ]
+    },
+    {
+      "id": "scheduler.type.work_info",
+      "source": "host.scheduler",
+      "target": "scheduler.work_info",
+      "relation": "type_uses",
+      "resolution": "configured",
+      "source_expression": "using WorkTileInfo = typename UnderlyingTileScheduler::WorkTileInfo;",
+      "condition": "Sm100 Scheduler使用底层WorkTileInfo类型；别名不是运行时调用",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 60,
+          "end_line": 76,
+          "start_byte": 2722,
+          "end_byte": 3240,
+          "source_text": "\nprivate:\n\n  using UnderlyingTileScheduler = PersistentTileSchedulerSm90;\n\npublic:\n  using ClusterShape = ClusterShape_;\n  using RasterOrder = UnderlyingTileScheduler::RasterOrder;\n  using RasterOrderOptions = UnderlyingTileScheduler::RasterOrderOptions;\n  static constexpr bool IsDynamicPersistent = true;\n\n  static constexpr uint32_t Stages = Stages_;\n\n  // CLC response is an opaque 16B value\n  struct CLCResponse { uint32_t data[4] = {0}; };\n\n  using WorkTileInfo = typename UnderlyingTileScheduler::WorkTileInfo;\n"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "scheduler.handoff.entry",
+      "title": "工作描述、坐标与完整K",
+      "node_ids": [
+        "host.kernel.operator",
+        "scheduler.initial",
+        "scheduler.coordinate",
+        "scheduler.k_iterator",
+        "scheduler.k_count",
+        "host.scheduler",
+        "scheduler.work_info"
+      ],
+      "edge_ids": [
+        "scheduler.call.initial.607",
+        "scheduler.call.coordinate.608",
+        "scheduler.call.k_iterator.626",
+        "scheduler.call.k_count.627",
+        "scheduler.call.coordinate.670",
+        "scheduler.call.k_count.738",
+        "scheduler.call.coordinate.774",
+        "scheduler.call.coordinate.854",
+        "scheduler.call.coordinate.932",
+        "scheduler.type.work_info"
+      ]
+    },
+    {
+      "id": "scheduler.handoff.next",
+      "title": "当前任务与下一任务：各参与角色独立取响应",
+      "node_ids": [
+        "host.kernel.operator",
+        "scheduler.coordinate",
+        "scheduler.fetch"
+      ],
+      "edge_ids": [
+        "scheduler.call.coordinate.608",
+        "scheduler.call.fetch.664",
+        "scheduler.call.coordinate.670",
+        "scheduler.call.fetch.701",
+        "scheduler.call.fetch.741",
+        "scheduler.call.coordinate.774",
+        "scheduler.call.fetch.819",
+        "scheduler.call.coordinate.854",
+        "scheduler.call.fetch.877",
+        "scheduler.call.coordinate.932"
+      ]
+    },
+    {
+      "id": "scheduler.handoff.output",
+      "title": "当前任务的Epilogue与无跨split归约",
+      "node_ids": [
+        "host.kernel.operator",
+        "scheduler.epilogue_compat",
+        "scheduler.epilogue",
+        "contract.api.kernel",
+        "scheduler.fixup_state"
+      ],
+      "edge_ids": [
+        "scheduler.call.epilogue_compat.816",
+        "scheduler.call.epilogue.910",
+        "contract.edge.kernel_fixup"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "scheduler.handoff.remaining",
+      "description": "此贡献只核对已列接口声明与Kernel直接交接；完整swizzle/raster、CLC发布/完成/无效响应和各方法内部调用仍未全量提取，不表示Scheduler文件或调度唯一性已验收。"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "scheduler.handoff.full_k",
+      "kind": "source_contract",
+      "title": "选中Scheduler的任务单位与前后任务交接",
+      "participants": [
+        "host.kernel.operator",
+        "host.scheduler",
+        "scheduler.fetch",
+        "scheduler.k_count",
+        "scheduler.fixup_state",
+        "scheduler.epilogue"
+      ],
+      "claims": [
+        "选中Scheduler的每个输出任务覆盖完整K空间，K起点为0；基线K=128、CTA TileK=64，对应2个K tile。",
+        "fetch_next_work三参数重载返回新任务和true；调用方按increment_pipe推进CLC状态，不把它当作累加器状态。",
+        "MMA/Epilogue预取next之后仍完成current，再赋值current=next并检查有效性；next无效不等于立即跳过current。",
+        "Epilogue输入搬运分支不同：它提前把work_tile_info设为next，但仍用旧cta_coord_mnkl和旧compute_epilogue判定处理本轮，最后才更新坐标。",
+        "本选择的fixup不归约也不等待，仅原样返回accumulator消费者状态；compute_epilogue本身不是任务或矩阵边界检查。"
+      ],
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 454,
+          "end_line": 474,
+          "start_byte": 16611,
+          "end_byte": 17514,
+          "source_text": "  template <class TileSchedulerPipeline, class TileSchedulerPipelineState>\n  CUTLASS_HOST_DEVICE\n  auto\n  fetch_next_work(\n    WorkTileInfo work_tile_info,\n    TileSchedulerPipeline& scheduler_pipeline,\n    TileSchedulerPipelineState scheduler_pipe_consumer_state) {\n\n    scheduler_pipeline.consumer_wait(scheduler_pipe_consumer_state);\n    uint32_t smem_addr = cute::cast_smem_ptr_to_uint(&clc_response_ptr_[scheduler_pipe_consumer_state.index()]);\n    auto work_tile = work_tile_info_from_clc_response(smem_addr);\n    scheduler_pipeline.consumer_release(scheduler_pipe_consumer_state);\n\n    work_tile = swizzle_and_rasterize(\n      work_tile.M_idx, work_tile.N_idx, work_tile.L_idx, work_tile.is_valid(),\n      block_id_in_cluster_.x, block_id_in_cluster_.y);\n\n    // Return true to indicate that the tile scheduler pipeline state should be advanced\n    return cute::make_tuple(work_tile, true);\n  }\n\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 499,
+          "end_line": 535,
+          "start_byte": 18430,
+          "end_byte": 19783,
+          "source_text": "  template <class ProblemShape, class TileShape>\n  CUTLASS_HOST_DEVICE\n  static int\n  get_work_k_tile_count(WorkTileInfo const& work_tile_info, ProblemShape problem_shape, TileShape tile_shape) {\n    // All work units returned by this scheduler cover the entire K iteration\n    // space of the output tile assigned to the work unit.\n    return cute::size(cute::ceil_div(cute::get<2>(problem_shape), cute::get<2>(tile_shape)));\n  }\n\n  // Compatible with sm90 kernel layers \n  CUTLASS_HOST_DEVICE\n  static uint32_t\n  get_work_k_tile_start(WorkTileInfo const&) {\n    // All work units returned by this scheduler start from K tile 0\n    return 0u;\n  }\n\n  // Returns whether the block assigned this work should compute the epilogue for the corresponding\n  // output tile. For the basic tile scheduler, this is always true.\n  CUTLASS_HOST_DEVICE\n  static bool\n  compute_epilogue(WorkTileInfo const&, Params const&) {\n    return true;\n  }\n\n  CUTLASS_HOST_DEVICE\n  static bool\n  compute_epilogue(WorkTileInfo const&) {\n    return true;\n  }\n\n  // Returns whether fixup is needed for `work_tile_info`. None of the work units returned by\n  // this scheduler require fixup, since none of the work units partition the reduction extent.\n  CUTLASS_HOST_DEVICE\n  static bool\n  requires_fixup(Params const& params, WorkTileInfo const work_tile_info) {\n    return false;\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 545,
+          "end_line": 572,
+          "start_byte": 20065,
+          "end_byte": 20886,
+          "source_text": "  template <\n    bool IsComplex,\n    class TiledMma,\n    class AccEngine,\n    class AccLayout,\n    class AccumulatorPipeline,\n    class AccumulatorPipelineState,\n    class CopyOpT2R\n  >\n  CUTLASS_DEVICE\n  AccumulatorPipelineState\n  fixup(\n      TiledMma const& ,\n      WorkTileInfo const&,\n      cute::Tensor<AccEngine, AccLayout>&,\n      AccumulatorPipeline,\n      AccumulatorPipelineState acc_pipe_consumer_state,\n      CopyOpT2R) const {\n    return acc_pipe_consumer_state;\n  }\n\n  // Returns whether the current WorkTileInfo passed in should continue to be used. Since\n  // this scheduler only schedules work in units of single, full output tiles, the WorkTileInfo\n  // passed in should not be used after having been processed.\n  CUTLASS_DEVICE\n  static bool\n  continue_current_work(WorkTileInfo&) {\n    return false;\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 737,
+          "end_line": 775,
+          "start_byte": 34586,
+          "end_byte": 36024,
+          "source_text": "      do {\n        auto k_tile_count = TileScheduler::get_work_k_tile_count(work_tile_info, problem_shape_MNKL, CtaShape_MNK{});\n\n        // Fetch next work tile\n        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n\n        if (increment_pipe) {\n          ++clc_pipe_consumer_state;\n        }\n\n        // Accumulator stage slice\n        int acc_stage = [&] () {\n          if constexpr (IsOverlappingAccum) {\n            return accumulator_pipe_producer_state.phase() ^ 1;\n          }\n          else {\n            return accumulator_pipe_producer_state.index();\n          }\n        }();\n\n        if (is_mma_leader_cta) {\n          mainloop_pipe_consumer_state = collective_mainloop.mma(\n            cute::make_tuple(mainloop_pipeline, accumulator_pipeline),\n            cute::make_tuple(mainloop_pipe_consumer_state, accumulator_pipe_producer_state),\n            collective_mainloop.slice_accumulator(tmem_storage, acc_stage),\n            mma_inputs,\n            cta_coord_mnkl,\n            k_tile_count\n            );\n          accumulator_pipeline.producer_commit(accumulator_pipe_producer_state);\n        }\n        ++accumulator_pipe_producer_state;\n        work_tile_info = next_work_tile_info;\n        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n      } while (work_tile_info.is_valid());\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 876,
+          "end_line": 934,
+          "start_byte": 39790,
+          "end_byte": 41824,
+          "source_text": "        // Fetch next work tile\n        auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n          work_tile_info,\n          clc_pipeline,\n          clc_pipe_consumer_state\n        );\n\n        if (increment_pipe) {\n          ++clc_pipe_consumer_state;\n        }\n\n        // Accumulator stage slice\n        int acc_stage = [&] () {\n          if constexpr (IsOverlappingAccum) {\n            return accumulator_pipe_consumer_state.phase();\n          }\n          else {\n            return accumulator_pipe_consumer_state.index();\n          }\n        }();\n\n        auto accumulator = get<0>(collective_mainloop.slice_accumulator(tmem_storage, acc_stage));\n        accumulator_pipe_consumer_state = scheduler.template fixup<IsComplex>(\n          TiledMma{},\n          work_tile_info,\n          accumulator,\n          accumulator_pipeline,\n          accumulator_pipe_consumer_state,\n          typename CollectiveEpilogue::CopyOpT2R{}\n        );\n\n        //\n        // Epilogue and write to gD\n        //\n        if (scheduler.compute_epilogue(work_tile_info)) {\n          auto [load_state_next, store_state_next, acc_state_next] = collective_epilogue.template store<IsOverlappingAccum>(\n            epi_load_pipeline,\n            epi_load_pipe_consumer_state,\n            epi_store_pipeline,\n            epi_store_pipe_producer_state,\n            accumulator_pipeline,\n            accumulator_pipe_consumer_state,\n            problem_shape_MNKL,\n            CtaShape_MNK{},\n            cta_coord_mnkl,\n            TileShape{},\n            TiledMma{},\n            accumulator,\n            shared_storage.tensors.epilogue\n          );\n          epi_load_pipe_consumer_state = load_state_next;\n          epi_store_pipe_producer_state = store_state_next;\n          accumulator_pipe_consumer_state = acc_state_next;\n          do_tail_store = true;\n        }\n        work_tile_info = next_work_tile_info;\n        cta_coord_mnkl = scheduler.work_tile_to_cta_coord(work_tile_info);\n\n      } while (work_tile_info.is_valid());\n"
+        }
+      ]
+    }
+  ]
+}

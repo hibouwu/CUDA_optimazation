@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="652.00px" height="284.00px" viewBox="0.00 0.00 652.00 284.00" data-dot-sha256="182fdaf7c9ab74e90e1e53acea3ea8b1477a8ea2c1c1f15c02fccc39fe2ddcf1" data-renderer="graphviz_explicit_row_ports">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(12.96 271.46)">
+<title>protocol</title>
+<polygon fill="white" stroke="none" points="-12.96,12.96 -12.96,-271.46 639.21,-271.46 639.21,12.96 -12.96,12.96" />
+<text xml:space="preserve" text-anchor="middle" x="313.12" y="-240.25" font-family="Noto Sans CJK SC" font-size="15.00">No global free order</text>
+
+<g id="node1" class="node">
+<title>e0</title>
+<g id="a_node1_0"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="#ecf2f8" stroke="none" points="96.5,-147 96.5,-228 231.5,-228 231.5,-147 96.5,-147" />
+<polygon fill="none" stroke="#57718a" points="96.5,-147 96.5,-228 231.5,-228 231.5,-147 96.5,-147" />
+<text xml:space="preserve" text-anchor="start" x="105.5" y="-205.7" font-family="Noto Sans CJK SC" font-size="14.00">leader</text>
+<text xml:space="preserve" text-anchor="start" x="105.5" y="-184.7" font-family="Noto Sans CJK SC" font-size="14.00">free leader</text>
+<text xml:space="preserve" text-anchor="start" x="105.5" y="-163.7" font-family="Noto Sans CJK SC" font-size="14.00">include/a.hpp:4</text>
+</a>
+</g>
+<g id="a_node1_1"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="none" stroke="#57718a" points="96.5,-108 96.5,-147 231.5,-147 231.5,-108 96.5,-108" />
+<text xml:space="preserve" text-anchor="start" x="105.5" y="-124.7" font-family="Noto Sans CJK SC" font-size="14.00">enter · 调用进入</text>
+</a>
+</g>
+<g id="a_node1_2"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=l_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="none" stroke="#57718a" points="96.5,-69 96.5,-108 231.5,-108 231.5,-69 96.5,-69" />
+<text xml:space="preserve" text-anchor="start" x="105.5" y="-85.7" font-family="Noto Sans CJK SC" font-size="14.00">return · 调用返回</text>
+</a>
+</g>
+</g>
+
+<g id="l_free.intra" class="edge">
+<title>e0:e-&gt;e0:e</title>
+<g id="a_l_free.intra"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;order=l_free.intra" xlink:title="l_free.intra\n明确约束\nsame invocation" target="_top">
+<path fill="none" stroke="#4c647b" d="M231.5,-127.5C243.5,-159.12 267.5,-159.12 267.5,-108 267.5,-61.47 247.62,-57.29 235,-80.76" />
+<polygon fill="#4c647b" stroke="#4c647b" points="232.77,-79.73 232.12,-87.12 237.24,-81.75 232.77,-79.73" />
+</a>
+</g>
+<g id="a_l_free.intra-label"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;order=l_free.intra" xlink:title="l_free.intra\n明确约束\nsame invocation" target="_top">
+<text xml:space="preserve" text-anchor="middle" x="309.88" y="-163.93" font-family="Noto Sans CJK SC" font-size="11.00">l_free.intra</text>
+<text xml:space="preserve" text-anchor="middle" x="309.88" y="-146.68" font-family="Noto Sans CJK SC" font-size="11.00">明确约束</text>
+<text xml:space="preserve" text-anchor="middle" x="309.88" y="-129.43" font-family="Noto Sans CJK SC" font-size="11.00">same invocation</text>
+</a>
+</g>
+</g>
+
+<g id="node2" class="node">
+<title>e1</title>
+<g id="a_node2_3"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="#ecf2f8" stroke="none" points="370.5,-147 370.5,-228 505.5,-228 505.5,-147 370.5,-147" />
+<polygon fill="none" stroke="#57718a" points="370.5,-147 370.5,-228 505.5,-228 505.5,-147 370.5,-147" />
+<text xml:space="preserve" text-anchor="start" x="379.5" y="-205.7" font-family="Noto Sans CJK SC" font-size="14.00">peer</text>
+<text xml:space="preserve" text-anchor="start" x="379.5" y="-184.7" font-family="Noto Sans CJK SC" font-size="14.00">free peer</text>
+<text xml:space="preserve" text-anchor="start" x="379.5" y="-163.7" font-family="Noto Sans CJK SC" font-size="14.00">include/a.hpp:4</text>
+</a>
+</g>
+<g id="a_node2_4"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="none" stroke="#57718a" points="370.5,-108 370.5,-147 505.5,-147 505.5,-108 370.5,-108" />
+<text xml:space="preserve" text-anchor="start" x="379.5" y="-124.7" font-family="Noto Sans CJK SC" font-size="14.00">enter · 调用进入</text>
+</a>
+</g>
+<g id="a_node2_5"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;event=p_free" xlink:title="&lt;TABLE&gt;" target="_top">
+<polygon fill="none" stroke="#57718a" points="370.5,-69 370.5,-108 505.5,-108 505.5,-69 370.5,-69" />
+<text xml:space="preserve" text-anchor="start" x="379.5" y="-85.7" font-family="Noto Sans CJK SC" font-size="14.00">return · 调用返回</text>
+</a>
+</g>
+</g>
+
+<g id="p_free.intra" class="edge">
+<title>e1:e-&gt;e1:e</title>
+<g id="a_p_free.intra"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;order=p_free.intra" xlink:title="p_free.intra\n明确约束\nsame invocation" target="_top">
+<path fill="none" stroke="#4c647b" d="M505.5,-127.5C517.5,-159.12 541.5,-159.12 541.5,-108 541.5,-61.47 521.62,-57.29 509,-80.76" />
+<polygon fill="#4c647b" stroke="#4c647b" points="506.77,-79.73 506.12,-87.12 511.24,-81.75 506.77,-79.73" />
+</a>
+</g>
+<g id="a_p_free.intra-label"><a xlink:href="../index.html?protocol=protocol&amp;protocol_view=partial&amp;order=p_free.intra" xlink:title="p_free.intra\n明确约束\nsame invocation" target="_top">
+<text xml:space="preserve" text-anchor="middle" x="583.88" y="-163.93" font-family="Noto Sans CJK SC" font-size="11.00">p_free.intra</text>
+<text xml:space="preserve" text-anchor="middle" x="583.88" y="-146.68" font-family="Noto Sans CJK SC" font-size="11.00">明确约束</text>
+<text xml:space="preserve" text-anchor="middle" x="583.88" y="-129.43" font-family="Noto Sans CJK SC" font-size="11.00">same invocation</text>
+</a>
+</g>
+</g>
+
+<g id="node3" class="node">
+<title>legend</title>
+<polygon fill="none" stroke="#bac8d5" points="328,-44 0,-44 0,0 328,0 328,-44" />
+<text xml:space="preserve" text-anchor="middle" x="164" y="-28.6" font-family="Noto Sans CJK SC" font-size="12.00">event框不是C++类；每个API锚点都有独立连接点。</text>
+<text xml:space="preserve" text-anchor="middle" x="164" y="-10.6" font-family="Noto Sans CJK SC" font-size="12.00">同线程逐实例关系不是整族屏障；只画明示的量词化约束。</text>
+</g>
+</g>
+</svg>

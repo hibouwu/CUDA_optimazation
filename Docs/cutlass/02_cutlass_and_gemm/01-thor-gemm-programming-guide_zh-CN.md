@@ -236,7 +236,9 @@ using ClusterShape = cute::Shape<
 
 `AlignmentA/B` 声明输入访问所能满足的对齐粒度，以元素为单位，8 个 FP16 对应 16 字节；`AlignmentC/D` 的 4 个 FP32 也对应 16 字节。Builder 据此选择搬运实现。调用者负责准备满足该实现要求的基址、连续维长度及行或批次的字节步长；需要填充时也应在数据准备阶段完成。后文构造 Stride 时会把这些访问要求与实际存储对应起来。
 
-`MmaTileShape=(256,128,64)` 表示完整 Collective 输出区域为 256 行、128 列，每次 K Tile 迭代消费 64 个归约位置。`ClusterShape=(2,2,1)` 则组织四个 CTA；每个 CTA 对应的数据范围仍按第三部分的 1SM／2SM 规则确定。运行时 M/N/K 可以变化，这两个静态 Shape 则属于已经生成的 Kernel 类型。
+`MmaTileShape=(256,128,64)` 表示完整 Collective 输出区域为 256 行、128 列，每次 K Tile 迭代消费 64 个归约位置。`ClusterShape=(2,2,1)` 组织四个 CTA，两个 Shape 都在编译期固定。后面的 Builder 为这组配置选择 2SM MMA：沿 M 方向的一对 CTA 共同完成一个 256×128 的 Collective 输出区域，每个 CTA 对应的 `CtaShape_MNK` 为 `(128,128,64)`。这个 Cluster 因而包含两组协作计算，沿 N 方向分别覆盖一个 Collective 输出区域。
+
+这组分工是当前类型配置的结果。运行时 M/N/K 决定本次矩阵有多大，Scheduler 据此确定需要覆盖哪些工作坐标；它们不会改变已经编译好的 CTA Tile 或 Cluster。下一节构造两个 Collective，并给出 Auto 在这组配置上实际生成的类型。
 
 ## 5.2 先构造 Epilogue，再确定 Mainloop 的存储预算
 
@@ -325,7 +327,16 @@ using GemmHandle = cutlass::gemm::device::GemmUniversalAdapter<
 ```
 
 
-`cute::Shape<int,int,int,int>` 为运行时 M/N/K/L 留出位置。这里生成了可调用的 Kernel 类型，调用时还要填入问题的具体值。[Example 71](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/examples/71_blackwell_gemm_with_collective_builder/71_blackwell_gemm_with_collective_builder.cu#L155-L250)提供相同的类型组合结构，但其默认 B/C/D 为 ColumnMajor，C/D 为 FP16。本文独立固定了全 RowMajor 和 FP32 C/D；对照示例时，应区分 API 组合方式与实例的具体配置。
+`cute::Shape<int,int,int,int>` 为运行时 M/N/K/L 留出位置。到这里，两个 Collective、Kernel 和 Adapter 都已成为具体类型。为核对 Auto 的结果，本文使用固定 CUTLASS 版本和 CUDA 13.0.48，按 `compute_110a/sm_110a` 编译这份完整示例，读取实例化类型，并检查生成的 PTX 与设备二进制。当前配置的实测编译结果如下：
+
+- **Mainloop：** `DispatchPolicy` 为 `MainloopSm100TmaUmmaWarpSpecialized<8,2,4,ClusterShape,Sm100>`。前三个整数分别是 A/B 数据流水级数、Scheduler 流水级数和 Accumulator 流水级数；它们保存不同阶段的数据或状态。本例 `StageCountAutoCarveout` 得到 8 级 A/B 缓冲，实际 K Tile 迭代次数仍由运行时 K 决定。
+- **MMA：** 基本操作为 `SM100_MMA_F16BF16_2x1SM_SS`，本例的 A/B 为 FP16、累加为 FP32，完整 MMA Shape 的 M/N 为 256/128。`2x1SM` 对应一对 CTA 协作，`SS` 表示两侧操作数均来自共享内存描述符；实例化的 CTA Tile 为 `(128,128,64)`。
+- **Epilogue：** `EpilogueTileAuto` 得到 128×16 子分块，`DispatchPolicy` 为 `Sm100TmaWarpSpecialized<4,2,16,true,false>`，依次给出 C 加载级数、D 存储级数、Fragment 大小、共享内存复用与延迟存储选择。它的 `SharedStorage` 为 33792 字节，这个值正是前面传给 Mainloop Carveout 的预留量。
+- **Kernel Tile Scheduler：** 默认类型实际生成 `PersistentTileSchedulerSm100<ClusterShape,2>`。它负责继续取得工作坐标，两个 Collective 按自己的流水线完成所取得的工作。这个类型来自 Kernel 的默认调度选择，与 Mainloop 的 `KernelScheduleAuto` 分别属于两个配置位置。
+
+设备代码也包含 `tcgen05.mma.cta_group::2.kind::f16` 和双 CTA 的 TMA 加载，与上面的 2SM SS 类型一致。这里的“实测编译”说明这些类型已经实例化，并生成了对应的 `sm_110a` 设备代码；没有把 Auto 当成运行时性能搜索。完整类型、编译方式及 PTX/SASS 证据保存在[编译核对记录](exemples/verification/auto_compile_report.md)，本例既有的 Thor 数值验证记录则单独保留在[示例说明](exemples/README.md)。
+
+[Example 71](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/examples/71_blackwell_gemm_with_collective_builder/71_blackwell_gemm_with_collective_builder.cu#L155-L250)提供相同的类型组合结构，但其默认 B/C/D 为 ColumnMajor，C/D 为 FP16。本文独立固定了全 RowMajor 和 FP32 C/D，上面的 Auto 结果属于本文配置。换用示例默认类型后，应重新检查生成结果。下一步为已经构造好的 Kernel 填入本次矩阵尺寸和实际步长。
 
 ## 5.3 用 Shape 与 Stride 描述本次矩阵
 
@@ -1029,6 +1040,10 @@ constexpr int V   = ScaleConfig::SFVecSize;  // 当前 NVFP4 路径为 16
 
 [`nv_float4_t`](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/float_subbyte.h#L505-L513)把 `DataType` 设为 `float_e2m1_t`、`ScaleFactorType` 设为 `float_ue4m3_t`，供 Builder 识别数据和 Scale 格式。这个包装类型供编译期识别两种格式；运行时的 Payload 和 Scale 存在分别分配的 Buffer 中，生成的 `ScaleConfig::SFVecSize` 给出当前 Kernel 使用的量化块长度 V。
 
+这组配置也经过同一轮静态编译核对。Mainloop 的 `DispatchPolicy` 为 `MainloopSm100TmaUmmaWarpSpecializedBlockScaled<3,2,1,ClusterShape,Sm100>`，即 3 级输入缓冲、2 级 Scheduler 流水和 1 级 Accumulator 流水；基本操作为 `SM100_MMA_MXF4_2x1SM_SS`，其模板实参明确包含 E2M1 Payload、UE4M3 Scale 与 V=16。操作类名中的 MXF4 用于这一 MMA 实现族，当前输入格式仍由这些实参确定为本节的 NVFP4 配方。CTA Tile 为 `(128,256,256)`，两个 CTA 共同覆盖完整 `(256,256,256)` Collective Tile。
+
+Epilogue 的 Auto 子分块为 128×128，`SharedStorage` 为 100352 字节；Mainloop 在预留这部分空间后得到上述 3 级缓冲。它与 Dense 的 8 级不同，因为输入表示、Tile、Scale 搬运和 Epilogue 存储需求都已变化。具体类型及设备指令见[编译核对记录](exemples/verification/auto_compile_report.md)。
+
 [Scale Layout 构造函数](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/detail/sm100_blockscaled_layout.hpp#L66-L124)把编译期 Scale 配方与本次 `(M,N,K,L)` 结合起来，生成覆盖完整问题的物理 Layout：
 
 ```cpp
@@ -1138,7 +1153,7 @@ $$\operatorname{MSE}
 =\frac{1}{n_x}\sum_{i=0}^{n_x-1}
   \left(x_i-x_{\mathrm{dequant},i}\right)^2$$
 
-MSE 对所有元素的平方误差求平均；$\|\mathbf{x}-\mathbf{x}^{\mathrm{rec}}\|_2$ 则是误差向量的 L2 范数，两者不是同一指标。使用 MSE 比较不同量化方案时，应采用同一份输入，并说明缩放规则和舍入方式。
+MSE 对所有元素的平方误差求平均；$\|\mathbf{x}-\mathbf{x}_{\mathrm{dequant}}\|_2$ 则是误差向量的 L2 范数，两者不是同一指标。这里的重建值仍使用前文的 dequant 下标。使用 MSE 比较不同量化方案时，应采用同一份输入，并说明缩放规则和舍入方式。
 
 将量化输入的参考结果记为 $D_{\mathrm{ref,quant}}$，原始浮点输入的参考结果记为 $D_{\mathrm{ref,fp}}$。前者的元素 $d_{\mathrm{ref,quant},m,n}$ 对应代码中的 `quantized_ref`，后者的元素对应 `original_ref`；与 Kernel 输出比较前仍需计入相同的输出类型转换。验证分为两步：先检查 Kernel 对量化输入的计算，再评估量化相对原始输入的误差。
 
@@ -1193,7 +1208,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 32, AlignmentB = 32;  // 元素数。
 constexpr int AlignmentC = 8, AlignmentD = 8;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_256, cute::_256>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_4, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_4, cute::_1>;  // 编译期固定的 CTA Cluster：(2,4,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;
@@ -1300,7 +1315,7 @@ struct Quantization {
 template<class ScaleLayout>
 static Quantization quantize(
     std::vector<float> const& original,  // 原始浮点值，按 outer×K 保存。
-    int outer, int K,                    // 外维长度和归约长度，K 必须整除 V。
+    int outer, int K,                    // 外维长度和归约长度，K 必须是 V 的整数倍。
     PackedPayload& packed,              // 子字节打包目标，不是 vector<FP4>。
     ScaleBuffer& scale_buffer,          // 按 Kernel 物理布局分配的 Scale 存储。
     ScaleLayout const& scale_layout) {  // 元素坐标 (outer,k,l) 到 Scale 位置。
@@ -1478,7 +1493,7 @@ int main() {
 
 ## 6.2 Grouped GEMM：从多组矩阵到 Work Tile 分配
 
-Grouped GEMM 一次处理 G 项独立矩阵乘法。各组的 Shape、矩阵地址和 Stride 可以不同，数值类型与局部计算方式由同一个 Kernel 类型确定。先计算各组产生多少个输出 Tile，再看这些工作如何分配。
+Grouped GEMM 一次处理 G 项独立矩阵乘法。各组的 Shape、矩阵地址和 Stride 可以不同，数值类型与局部计算方式由同一个 Kernel 类型确定。各组先按自己的尺寸形成输出 Tile，Scheduler 再结合 CTA Cluster 组织这些工作。有效输出范围由问题尺寸确定，调度范围还要满足 Cluster 的组织要求。
 
 本节末尾给出完整程序 `grouped_gemm.cu`，使用下面三组问题、1SM 类型与动态 Cluster，包含描述数组的分配、复制、一次调用和逐组参考比较。
 
@@ -1490,12 +1505,14 @@ Grouped GEMM 一次处理 G 项独立矩阵乘法。各组的 Shape、矩阵地�
 - Group 1 的 Shape 为 $(256,256,128)$，输出空间需要 $2\times1=2$ 个 Tile。
 - Group 2 的 Shape 为 $(64,768,256)$，输出空间需要 $1\times3=3$ 个 Tile，其中 M 方向只有 64 行有效数据。
 
-默认完整 K 归约下，第 g 组的输出 Tile 数为：
+本节采用 1SM 路径，一个 CTA 对应一个输出 Tile。在完整 K 归约下，第 g 组包含有效输出的 Tile 数为：
 
 $$W_g=\left\lceil\frac{M_g}{T_M}\right\rceil
       \left\lceil\frac{N_g}{T_N}\right\rceil$$
 
-三组一共有七个输出 Tile。Scheduler 取得一项工作后，需要确定它属于哪个 Group，以及该组内的 M/N Tile 坐标。Kernel 随后用同一组的 Shape、地址和 Stride 完成加载、K 维归约和输出写回。K 长度可以因组而异，因此相同的输出 Tile 数也未必意味着相同计算量。
+三组一共有七个包含有效输出的 Tile。这个数描述矩阵输出的覆盖范围。当前 [Grouped Scheduler](https://github.com/NVIDIA/cutlass/blob/8f50b052e1099fb982392a622caab69b97b63128/include/cutlass/gemm/kernel/sm90_tile_scheduler_group.hpp)还会将各组的 M/N Tile 数按 Cluster 及重排要求向上取整，使参与同一 Cluster 的 CTA 保持完整的组织。取整增加的是边界处的调度位置，原矩阵的有效尺寸保持不变。
+
+Scheduler 取得一项工作后，确定它所属的 Group 和组内 M/N Tile 坐标。Kernel 用同一组的 Shape、地址和 Stride 定位数据，并按真实矩阵边界完成加载与写回。Persistent 执行还允许一个 CTA 继续处理后续工作，因此有效输出 Tile 数、取整后的调度位置数和实际启动的 CTA 数分别描述不同对象。K 长度可以因组而异，相同的有效输出 Tile 数也未必意味着相同计算量。
 
 Dense 使用一份 Shape 和地址描述。Grouped 有多份描述，因此每个工作项都要先确定自己属于哪一项问题。
 
@@ -1597,6 +1614,8 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<
     GemmKernel  // GemmKernel_：被包装的设备端 Kernel 类型。
 >;
 ```
+
+当前完整程序编译得到的 Mainloop `DispatchPolicy` 为 `MainloopSm100ArrayTmaUmmaWarpSpecialized<3,8,2,ClusterShape,Sm100>`，基本操作是 1SM 的 `SM100_MMA_F8F6F4_SS`，CTA Tile 与 Collective Tile 同为 `(128,256,128)`。这里的 1SM Mainloop/Epilogue Schedule 由调用者显式指定；自动推导的是 3 级输入缓冲和 128×64 的 Epilogue 子分块。Epilogue 的 `DispatchPolicy` 为 `Sm100PtrArrayTmaWarpSpecialized<4,2,64,true,false>`，Kernel 则使用 `PersistentTileSchedulerSm100Group<ProblemShape,8>`。这组结果同时确认了逐组地址路径和独立的 Grouped 调度入口，完整证据见[编译核对记录](exemples/verification/auto_compile_report.md)。
 
 各组 Stride 数组的元素类型取自 `GemmKernel::InternalStrideA/B/C/D`，用于描述单组矩阵。按每组尺寸生成步长并填入数组后，再把数组指针交给 Kernel。数组元素使用这些 InternalStride 类型，Kernel 的对外参数类型则用于传递整个数组的地址。
 
@@ -1958,7 +1977,9 @@ $$D_e=Y_e^T=W_e^TX_e^T=A_eB_e$$
 
 本节按该示例的 1SM、静态 Cluster `(1,1,1)` 配置解释后面的参数。它沿用 `Sm100`、`OpClassTensorOp`、FP32 累加与 Epilogue 计算，A/B 使用 `cutlass::float_e4m3_t`，C/D 使用 `cutlass::half_t`；A 为 RowMajor，B/C/D 为 ColumnMajor。AlignmentA/B 为 16，AlignmentC/D 为 8，Tile 为 `(128,16,128)`。
 
-权重 A 由 TMA 加载，随 Token 数变化的激活 B 由 cp.async 加载，对应 `KernelMixedTmaCpAsyncWarpSpecialized1SmSm100`。Epilogue 使用 `EpilogueTileAuto`、`EpilogueScheduleAuto` 和线性组合，Mainloop Stage 仍由 Epilogue 存储占用推导。较小的 Tile N 用于覆盖少量 Token 的输出宽度。这组类型与 `MoEProblemShape` 一起生成后文的 `Gemm`。迁移时应一并调整这些类型和第5部分 Kernel 的问题尺寸。
+权重 A 由 TMA 加载，随 Token 数变化的激活 B 由 cp.async 加载，对应显式指定的 `KernelMixedTmaCpAsyncWarpSpecialized1SmSm100`。Epilogue 使用 `EpilogueTileAuto`、`EpilogueScheduleAuto` 和线性组合，Mainloop Stage 仍由 Epilogue 存储占用推导。较小的 Tile N 用于覆盖少量 Token 的输出宽度。这组类型与 `MoEProblemShape` 一起生成后文的 `Gemm`。迁移时应一并调整这些类型和第5部分 Kernel 的问题尺寸。
+
+当前完整程序编译得到的 Mainloop `DispatchPolicy` 为 `MainloopSm100UmmaMixedTmaCpAsyncWarpSpecialized<12,3,2,ClusterShape,Sm100>`，其中输入缓冲为 12 级，Scheduler 和 Accumulator 流水分别为 3 级、2 级。基本操作为 1SM 的 `SM100_MMA_F8F6F4_SS`，CTA Tile 为 `(128,16,128)`。Epilogue Auto 得到 128×16 子分块，`DispatchPolicy` 为 `Sm100TmaWarpSpecialized<2,1,16,true,false>`，Kernel 的调度器为 `PersistentTileSchedulerSm100Group<ProblemShape,3>`。生成的设备代码同时包含 TMA 与 cp.async 加载，符合权重和激活的两条搬运路径，证据见[编译核对记录](exemples/verification/auto_compile_report.md)。
 
 ### 6.3.2 用最大尺寸和 Token Count 描述每个 Expert
 
@@ -2081,7 +2102,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 16, AlignmentB = 16;  // 元素数。
 constexpr int AlignmentC = 8, AlignmentD = 8;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_128, cute::_16, cute::_128>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_1, cute::_1, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_1, cute::_1, cute::_1>;  // 编译期固定的 CTA Cluster：(1,1,1)。
 using ProblemShape = cutlass::gemm::MoEProblemShape<cute::Shape<int, int, int>>;
 using MainloopSchedule = cutlass::gemm::KernelMixedTmaCpAsyncWarpSpecialized1SmSm100;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;
@@ -2325,14 +2346,19 @@ p_{\mathrm{prob},i,j}=\frac{\exp(s_{\mathrm{score},i,j}-m_{\mathrm{row},i})}{\el
 
 ### 6.4.1 先把阶段依赖表示为两个独立 GEMM
 
-最直接的实现先生成 $QK^T$，应用 $1/\sqrt d$ 和 Mask，再执行逐行 Softmax，最后计算 PV。两个 GEMM 的问题尺寸分别是：
+分离实现按 QKᵀ、Mask/Softmax、PV 三个阶段执行。Q/K/V 都按 RowMajor 保存，下面将每个阶段的矩阵关系落实到第五章的 GEMM 参数。
 
-- QKᵀ：$(M,N,K)=(S_q,S_k,d)$。
-- PV：$(M,N,K)=(S_q,d_v,S_k)$。
+第一次 GEMM 取 A=Q、B=Kᵀ，问题尺寸为 $(M,N,K)=(S_q,S_k,d)$。Q 使用 RowMajor 布局；原始 K 的第 j 行、第 f 个特征保存在 `j*d+f`，将同一段存储解释为 ColumnMajor 的 Kᵀ 后，第 f 行、第 j 列仍位于 `f+j*d`。两个地址相同，因此可以直接传入 K 的基址，由 ColumnMajor B 的 Stride 解释转置后的坐标，无须另行复制转置。这里矩阵名 K 表示 Key，GEMM Shape 中的 K 表示归约长度 d。
 
-第一项 GEMM 的输出经过缩放、Mask 和行归约后，成为第二项 GEMM 的输入。S/P 可显式保存在全局内存中，各阶段通过同一 stream 或事件依赖连接。这种实现可以分别观察分数、概率和最终输出，适合作为理解与核对融合算法的基础。
+第一次 GEMM 的 Epilogue 取 `alpha=1/sqrt(d)`、`beta=0`，将缩放后的 FP32 分数写入 `scores`。本例 Q/K 等长，独立的 Softmax Kernel 按 `j<=i` 选出因果 Mask 下的有效位置，再求行最大值、指数和与归一化概率。无效位置写入零；有效概率转换为 FP16，保存到 RowMajor 的 P。这个转换使 P 能直接作为第二次 FP16 GEMM 的输入，参考计算也要计入同一次转换。
 
-显式分数矩阵包含 $S_qS_k$ 个元素，随序列增长而增大。融合实现处理一个分数 Tile 后便消费它，省去完整 S/P 的存取。这要求 Softmax 能随 K/V Tile 逐步更新。
+第二次 GEMM 取 A=P、B=V，问题尺寸为 $(M,N,K)=(S_q,d_v,S_k)$。P/V 都采用 RowMajor，因而 B 的布局与第一次 GEMM 不同。它取 `alpha=1`、`beta=0`，沿 Key 序列维归约，生成 FP32 的 O。完整程序分别在 `qk` 与 `pv` 命名空间中构造两套类型，保留各自的 B 布局和 Stride；两者都沿用 Dense 的 Builder、Kernel 和 Adapter 组合过程。
+
+两套类型的实测编译结果都采用 2SM 的 `SM100_MMA_F16BF16_2x1SM_SS`，Mainloop 输入缓冲为 8 级，CTA Tile 为 `(128,128,64)`，Epilogue 子分块为 128×16。它们与 Dense 具有相同的流水级数和分块，但 B 的 MMA Major 不同：QKᵀ 为 K-major，PV 为 MN-major，与各自的 ColumnMajor/RowMajor B 相符。这里的 Major 描述 MMA 操作数的主序，不能直接用矩阵布局标签代替。两项生成结果和各自的设备函数见[编译核对记录](exemples/verification/auto_compile_report.md)，本轮没有编译后文的专用 Python 融合 Kernel。
+
+这条路径把分数和概率显式保存在全局内存中，各阶段通过同一 stream 或事件依赖连接。本文程序在每次 GEMM 和 Softmax 后同步，便于检查阶段结果；在同一 stream 上保持提交顺序也能建立这些数据依赖。验证时可以分别观察分数、概率及其行和，最后核对 PV 与端到端输出。
+
+分数和概率矩阵各包含 $S_qS_k$ 个元素，序列增长会同时增加它们的存储量和读写量。融合实现希望在得到一个分数 Tile 后立即使用它，并保留后续 Tile 仍需的少量行状态。下面推导在线 Softmax 如何维护这些状态，进而省去完整 S/P 的存取；这一推导与本节分离程序承担不同的教学任务。
 
 ### 6.4.2 从第一个有效 Tile 建立状态
 
@@ -2449,7 +2475,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 8, AlignmentB = 8;  // 元素数。
 constexpr int AlignmentC = 4, AlignmentD = 4;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // 编译期固定的 CTA Cluster：(2,2,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;
@@ -2518,7 +2544,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 8, AlignmentB = 8;  // 元素数。
 constexpr int AlignmentC = 4, AlignmentD = 4;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // 编译期固定的 CTA Cluster：(2,2,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;

@@ -1,0 +1,143 @@
+{
+  "schema_version": 2,
+  "stages": [
+    {
+      "id": "S00",
+      "title": "现状与范围冻结",
+      "family": "baseline",
+      "scope": "现有修改、历史工件与有效/否决结果；资源逐项分类。"
+    },
+    {
+      "id": "S01",
+      "title": "旧配置映射",
+      "family": "legacy_mapping",
+      "scope": "81 个旧配置行映射；62 个指令/启动组合不意味着计时约定相同。"
+    },
+    {
+      "id": "S02",
+      "title": "总控与归档基础",
+      "family": "orchestration",
+      "scope": "plan/run/status/resume/audit/report；Slurm、两类锁、版本和依赖快照。"
+    },
+    {
+      "id": "S03",
+      "title": "审查器负例",
+      "family": "negative_tests",
+      "scope": "拒绝错误工作量、单位、循环外提、缺样本、损坏哈希和完成状态。"
+    },
+    {
+      "id": "S04",
+      "title": "环境与稳定性",
+      "family": "memory_baseline",
+      "scope": "重新测当前12点；计时空窗口、遥测、SMEM stride=1 稳定性。"
+    },
+    {
+      "id": "S05",
+      "title": "旧 FMA 重测",
+      "family": "legacy_fma",
+      "scope": "FP32/FP64/FP16/FP16x2/BF16/BF16x2；旧链数、线程规模、长度及范围。"
+    },
+    {
+      "id": "S06",
+      "title": "旧 mma.sync 重测",
+      "family": "legacy_mma",
+      "scope": "FP16/BF16/TF32/FP64；片段、形状、warp 参与数、累加类型。"
+    },
+    {
+      "id": "S07",
+      "title": "旧 WGMMA 重测",
+      "family": "legacy_wgmma",
+      "scope": "FP16/BF16；batch、wait 0/3/7、warpgroup；另加 BF16 A 寄存器来源代表点。"
+    },
+    {
+      "id": "S08",
+      "title": "FP8 与 INT8",
+      "family": "low_precision",
+      "scope": "E4M3xE4M3/E5M2xE5M2→FP32；S8xS8/U8xU8→S32；mma M16N8K32/WGMMA M64N64K32，单/双参与组、单CTA/全GPU。"
+    },
+    {
+      "id": "S09",
+      "title": "SMEM 服务补充",
+      "family": "shared_memory",
+      "scope": "scalar/向量、连续/跨步/广播、独立读写与联合读写；保留 stride 1/2/4/8/16/32。"
+    },
+    {
+      "id": "S10",
+      "title": "矩阵搬运与 warp 交换",
+      "family": "matrix_exchange",
+      "scope": "ldmatrix/stmatrix x1/x2/x4、合法转置、往返；shfl.sync 依赖链与独立流。"
+    },
+    {
+      "id": "S11",
+      "title": "同步与完成",
+      "family": "synchronization",
+      "scope": "warp/CTA barrier、mbarrier、必要 fence；齐步/固定工作量造成的到达偏斜。"
+    },
+    {
+      "id": "S12",
+      "title": "cp.async",
+      "family": "async_copy",
+      "scope": "ca 4/8/16 B、cg 16 B；单组/有限流水、跨线程消费与缓冲复用。"
+    },
+    {
+      "id": "S13",
+      "title": "全局读写联合服务",
+      "family": "global_duplex",
+      "scope": "ca/cg读、写、依赖复制、独立读写；比例1:0/0:1/1:1/2:1/4:1/1:2/1:4；小/大两档工作集由L2容量定义。"
+    },
+    {
+      "id": "S14",
+      "title": "TMA 普通 bulk 双向",
+      "family": "tma_bulk",
+      "scope": "无tensor-map的1D bulk；GMEM↔SMEM；1/4/8/16/32/64 KiB；区分输入完成、源复用、完整输出完成。"
+    },
+    {
+      "id": "S15",
+      "title": "TMA 2D tensor",
+      "family": "tma_tensor",
+      "scope": "16-bit运输数据，同组payload；连续/padding行stride；none/合法SW128；一次只改变一个条件。"
+    },
+    {
+      "id": "S16",
+      "title": "TMA 并发与缓冲",
+      "family": "tma_concurrency",
+      "scope": "固定16 KiB请求；stage与每stage请求数独立取1/2/4；合法组合、单CTA/全GPU；资源超限启动前拒绝。"
+    },
+    {
+      "id": "S17",
+      "title": "DSM 与多播",
+      "family": "cluster",
+      "scope": "cluster=2/4/8且设备查询支持；DSM读写、本地对照、cluster同步、TMA单/全目标多播。"
+    },
+    {
+      "id": "S18",
+      "title": "驻留与辅助",
+      "family": "auxiliary",
+      "scope": "线程/寄存器/SMEM、carveout、local/spill；setmaxnreg合法性；地址、转换、原子同址/无争用代表点。"
+    },
+    {
+      "id": "S19",
+      "title": "FP32 受控组合",
+      "family": "simt_pipeline",
+      "scope": "固定32x32x32、128线程；compute-only/transport-only/serial/overlap/带输出；stage1/2/4。"
+    },
+    {
+      "id": "S20",
+      "title": "BF16 WGMMA 受控组合",
+      "family": "wgmma_pipeline",
+      "scope": "固定64x64x64、128线程、FP32累加、A/B在SMEM；每Ktile四条M64N64K16；同五类对照和stage1/2/4。"
+    },
+    {
+      "id": "S21",
+      "title": "教学与参数引用",
+      "family": "documentation",
+      "scope": "覆盖表、实验教学、两套组合算例、来源、硬件引用；有效经验与未知量分开。"
+    },
+    {
+      "id": "S22",
+      "title": "离线重放交付",
+      "family": "delivery",
+      "scope": "换目录重算summary/审查/图表；阶段审查完整、终态明确、历史未损坏。"
+    }
+  ]
+}

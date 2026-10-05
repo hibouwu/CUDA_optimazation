@@ -1,0 +1,1196 @@
+{
+  "module_id": "dense_fp16_2sm_sm110a",
+  "part": "clc_handoff",
+  "nodes": [
+    {
+      "id": "clc.type",
+      "kind": "type",
+      "name": "PipelineCLCFetchAsync",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 935,
+      "role": "selected_clc_handoff",
+      "notes": "CLC响应流水线，full按transaction bytes就绪，empty按消费者到达允许复用。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "class_specifier",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 934,
+          "end_line": 935,
+          "start_byte": 38543,
+          "end_byte": 38634
+        },
+        "signature_sha256": "04beb5e309f99a7c8967d0132d2ba1975d1cd1c56e233c98ab1f976a55658e9d"
+      }
+    },
+    {
+      "id": "clc.advance",
+      "kind": "api",
+      "name": "advance_to_next_work",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::advance_to_next_work",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 440,
+      "role": "selected_clc_handoff",
+      "notes": "生产者先取得可复用槽并登记期待字节，再由elected lane发出CLC请求。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::advance_to_next_work",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 438,
+          "end_line": 440,
+          "start_byte": 16008,
+          "end_byte": 16148
+        },
+        "signature_sha256": "92d6486c8c53ac5e8fa913a35b7e007ac97a38ee19672367693d825a8044041b"
+      }
+    },
+    {
+      "id": "clc.issue",
+      "kind": "api",
+      "name": "issue_clc_query",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::issue_clc_query",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 394,
+      "role": "selected_clc_handoff",
+      "notes": "发起异步CLC取消查询，响应多播到集群共享内存；不是响应完成通知。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::issue_clc_query",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 392,
+          "end_line": 394,
+          "start_byte": 14457,
+          "end_byte": 14593
+        },
+        "signature_sha256": "623cdf3384ec08e51249a72e10c972c488ad87b850be5a83a19971e48910c829"
+      }
+    },
+    {
+      "id": "clc.decode",
+      "kind": "api",
+      "name": "work_tile_info_from_clc_response",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::work_tile_info_from_clc_response",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 411,
+      "role": "selected_clc_handoff",
+      "notes": "在响应可读后解码取消结果，valid决定是否有下一任务，不决定是否应释放响应槽。",
+      "source_selector": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::work_tile_info_from_clc_response",
+        "signature_range": {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 409,
+          "end_line": 411,
+          "start_byte": 15072,
+          "end_byte": 15166
+        },
+        "signature_sha256": "0d2c6bef0f4b27af6ff10381082338174bc379228773124e382c5653444168a3"
+      }
+    },
+    {
+      "id": "clc.barrier_address",
+      "kind": "api",
+      "name": "producer_get_barrier",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_get_barrier",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1073,
+      "role": "selected_clc_handoff",
+      "notes": "返回当前full屏障的共享内存地址，不等待也不完成事务。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_get_barrier",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1072,
+          "end_line": 1073,
+          "start_byte": 44065,
+          "end_byte": 44138
+        },
+        "signature_sha256": "2b844bdae6ed25f01fd80eadbea940d7d044d83a174957ebe6e038cc9d4efa8a"
+      }
+    },
+    {
+      "id": "clc.acquire",
+      "kind": "api",
+      "name": "producer_acquire",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_acquire",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1027,
+      "role": "selected_clc_handoff",
+      "notes": "PipelineState重载将index、phase和token分别传给底层重载。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_acquire",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1026,
+          "end_line": 1027,
+          "start_byte": 42567,
+          "end_byte": 42685
+        },
+        "signature_sha256": "9c53e89f692783950b159506503b92dd511721f201fd856e656e687911d57967"
+      }
+    },
+    {
+      "id": "clc.acquire_stage",
+      "kind": "api",
+      "name": "producer_acquire",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_acquire",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1095,
+      "role": "selected_clc_handoff",
+      "notes": "等待empty后，按lane目标为各CTA登记full到达与期待的响应字节。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_acquire",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1094,
+          "end_line": 1095,
+          "start_byte": 44782,
+          "end_byte": 44882
+        },
+        "signature_sha256": "ad9200b82b090f4b6366816f0adc37aac586e52aacc00da330a76f02fbc605cb"
+      }
+    },
+    {
+      "id": "clc.wait",
+      "kind": "api",
+      "name": "consumer_wait",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_wait",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1061,
+      "role": "selected_clc_handoff",
+      "notes": "PipelineState重载按当前轮次等待本CTA响应full屏障。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_wait",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1060,
+          "end_line": 1061,
+          "start_byte": 43675,
+          "end_byte": 43790
+        },
+        "signature_sha256": "9058f4af3cb4bb772e41083ee769838f1532dcf49f16a0a978a2912b8e550896"
+      }
+    },
+    {
+      "id": "clc.wait_stage",
+      "kind": "api",
+      "name": "consumer_wait",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_wait",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1124,
+      "role": "selected_clc_handoff",
+      "notes": "WaitAgain token时等待对应stage/phase的full；不能把请求已发出当作WaitDone。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_wait",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1123,
+          "end_line": 1124,
+          "start_byte": 45998,
+          "end_byte": 46095
+        },
+        "signature_sha256": "d350a28e6628a39534957aff7c36fdbf3d926264fed724de7cfddd4496ef0779"
+      }
+    },
+    {
+      "id": "clc.release",
+      "kind": "api",
+      "name": "consumer_release",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_release",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1068,
+      "role": "selected_clc_handoff",
+      "notes": "读取响应后按index转发释放通知，不代表所有消费者已经释放。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_release",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1067,
+          "end_line": 1068,
+          "start_byte": 43959,
+          "end_byte": 44019
+        },
+        "signature_sha256": "9751d802db831acb0c0a615f170152219605f09391c42e89921d092c94222a11"
+      }
+    },
+    {
+      "id": "clc.release_stage",
+      "kind": "api",
+      "name": "consumer_release",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_release",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1132,
+      "role": "selected_clc_handoff",
+      "notes": "向producer_blockid对应的empty屏障发送到达通知。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::consumer_release",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1131,
+          "end_line": 1132,
+          "start_byte": 46261,
+          "end_byte": 46316
+        },
+        "signature_sha256": "f7826c4214de6bc638176874552e31e21d8b626aa00bca6f0757290940fe8c36"
+      }
+    },
+    {
+      "id": "clc.tail",
+      "kind": "api",
+      "name": "producer_tail",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_tail",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1041,
+      "role": "selected_clc_handoff",
+      "notes": "生产者退出前检查全部环形槽的empty轮次；不重置期待字节，也不完成整个GEMM输出。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_tail",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1040,
+          "end_line": 1041,
+          "start_byte": 43072,
+          "end_byte": 43129
+        },
+        "signature_sha256": "dbf8c9b576bf18dc2648babb5d62b746b5112ba4697ad4e2f983aab63735dd4f"
+      }
+    },
+    {
+      "id": "clc.commit",
+      "kind": "api",
+      "name": "producer_commit",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_commit",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1033,
+      "role": "selected_clc_handoff",
+      "notes": "手工完成transaction字节的入口；当前硬件CLC查询路径没有调用它。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_commit",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1032,
+          "end_line": 1033,
+          "start_byte": 42805,
+          "end_byte": 42864
+        },
+        "signature_sha256": "d16b2e9eedb19627f69edad6f64ed36d00de6009b9d9601c1f625184766419a8"
+      }
+    },
+    {
+      "id": "clc.commit_stage",
+      "kind": "api",
+      "name": "producer_commit",
+      "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_commit",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 1107,
+      "role": "selected_clc_handoff",
+      "notes": "手工complete_transaction，当前函数体不使用phase参数。",
+      "source_selector": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "kind": "method",
+        "qualified_name": "cutlass::PipelineCLCFetchAsync::producer_commit",
+        "signature_range": {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1106,
+          "end_line": 1107,
+          "start_byte": 45305,
+          "end_byte": 45375
+        },
+        "signature_sha256": "6009260b8299c137bba53e9f061748457bf102e55c58eeacc8cdbf10edfb00a2"
+      }
+    },
+    {
+      "id": "clc.expect_remote",
+      "kind": "api",
+      "name": "arrive_and_expect_tx",
+      "qualified_name": "cutlass::arch::ClusterTransactionBarrier::arrive_and_expect_tx",
+      "path": "include/cutlass/arch/barrier.h",
+      "line": 559,
+      "role": "selected_clc_handoff",
+      "notes": "向指定CTA的屏障登记到达及期待字节，区别于单参数本地重载。",
+      "source_selector": {
+        "path": "include/cutlass/arch/barrier.h",
+        "kind": "method",
+        "qualified_name": "cutlass::arch::ClusterTransactionBarrier::arrive_and_expect_tx",
+        "signature_range": {
+          "path": "include/cutlass/arch/barrier.h",
+          "start_line": 558,
+          "end_line": 559,
+          "start_byte": 18665,
+          "end_byte": 18779
+        },
+        "signature_sha256": "57c39917dc44ec348f4a47e4836b60fa275e1e6bccd380b1b3d05c890c9aa520"
+      }
+    },
+    {
+      "id": "clc.complete_remote",
+      "kind": "api",
+      "name": "complete_transaction",
+      "qualified_name": "cutlass::arch::ClusterTransactionBarrier::complete_transaction",
+      "path": "include/cutlass/arch/barrier.h",
+      "line": 578,
+      "role": "selected_clc_handoff",
+      "notes": "软件手工完成指定CTA的transaction字节，不能等同于发起真实CLC请求。",
+      "source_selector": {
+        "path": "include/cutlass/arch/barrier.h",
+        "kind": "method",
+        "qualified_name": "cutlass::arch::ClusterTransactionBarrier::complete_transaction",
+        "signature_range": {
+          "path": "include/cutlass/arch/barrier.h",
+          "start_line": 577,
+          "end_line": 578,
+          "start_byte": 19592,
+          "end_byte": 19705
+        },
+        "signature_sha256": "e4b94a83da052beca63f5ab296800a1954ec5ef8ce2cee60c3acab8c63ee5313"
+      }
+    },
+    {
+      "id": "clc.res.response",
+      "kind": "binding",
+      "name": "CLCResponse[stage]",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 200,
+      "role": "runtime_resource_binding",
+      "notes": "各CTA本地共享内存中的16字节响应槽；相同index仍需区分轮次。"
+    },
+    {
+      "id": "clc.res.full",
+      "kind": "binding",
+      "name": "CLC full[stage]（各CTA本地）",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 928,
+      "role": "runtime_resource_binding",
+      "notes": "full结合到达计数和期待transaction字节，表示对应轮次响应就绪。"
+    },
+    {
+      "id": "clc.res.empty",
+      "kind": "binding",
+      "name": "CLC empty[stage]（生产者CTA）",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "line": 929,
+      "role": "runtime_resource_binding",
+      "notes": "生产者等待的empty槽，需收到约定消费者到达，单个release不足以代表全部读完。"
+    },
+    {
+      "id": "clc.hw.query",
+      "kind": "hardware_event",
+      "name": "CLC异步查询与响应写入",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 400,
+      "role": "asynchronous_hardware_operation",
+      "notes": "启用CLC时发起b128响应的集群多播；complete_tx是硬件效果，API返回不表示响应已经写完。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "clc.call.host_kernel_operator.697",
+      "source": "host.kernel.operator",
+      "target": "clc.advance",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "is_participant.sched && IsSchedDynamicPersistent && requires_clc_query；仅集群首CTA的Scheduler角色",
+      "source_expression": "scheduler.advance_to_next_work(clc_pipeline, clc_pipe_producer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 697,
+        "end_line": 697,
+        "start_byte": 32910,
+        "end_byte": 32979,
+        "source_expression": "scheduler.advance_to_next_work(clc_pipeline, clc_pipe_producer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 697,
+          "end_line": 697,
+          "start_byte": 32872,
+          "end_byte": 32981,
+          "source_text": "            clc_pipe_producer_state = scheduler.advance_to_next_work(clc_pipeline, clc_pipe_producer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.host_kernel_operator.721",
+      "source": "host.kernel.operator",
+      "target": "clc.tail",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "Scheduler循环结束后，生产者等待各响应槽的消费者释放",
+      "source_expression": "clc_pipeline.producer_tail(clc_pipe_producer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+        "start_line": 721,
+        "end_line": 721,
+        "start_byte": 34025,
+        "end_byte": 34076,
+        "source_expression": "clc_pipeline.producer_tail(clc_pipe_producer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 721,
+          "end_line": 721,
+          "start_byte": 34017,
+          "end_byte": 34078,
+          "source_text": "        clc_pipeline.producer_tail(clc_pipe_producer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_advance.441",
+      "source": "clc.advance",
+      "target": "clc.barrier_address",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "取得当前full屏障地址；不是等待",
+      "source_expression": "clc_pipeline.producer_get_barrier(clc_pipe_producer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 441,
+        "end_line": 441,
+        "start_byte": 16179,
+        "end_byte": 16237,
+        "source_expression": "clc_pipeline.producer_get_barrier(clc_pipe_producer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 441,
+          "end_line": 441,
+          "start_byte": 16150,
+          "end_byte": 16239,
+          "source_text": "    uint32_t mbarrier_addr = clc_pipeline.producer_get_barrier(clc_pipe_producer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_advance.443",
+      "source": "clc.advance",
+      "target": "clc.acquire",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "发起请求前等待可复用响应槽并登记期待字节",
+      "source_expression": "clc_pipeline.producer_acquire(clc_pipe_producer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 443,
+        "end_line": 443,
+        "start_byte": 16309,
+        "end_byte": 16363,
+        "source_expression": "clc_pipeline.producer_acquire(clc_pipe_producer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 443,
+          "end_line": 443,
+          "start_byte": 16305,
+          "end_byte": 16365,
+          "source_text": "    clc_pipeline.producer_acquire(clc_pipe_producer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_advance.446",
+      "source": "clc.advance",
+      "target": "clc.issue",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "cute::elect_one_sync()成立的lane发起；其他lane仍参与此前的barrier登记",
+      "source_expression": "issue_clc_query(clc_pipe_producer_state, mbarrier_addr, clc_response_ptr_)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 446,
+        "end_line": 446,
+        "start_byte": 16406,
+        "end_byte": 16480,
+        "source_expression": "issue_clc_query(clc_pipe_producer_state, mbarrier_addr, clc_response_ptr_)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 446,
+          "end_line": 446,
+          "start_byte": 16400,
+          "end_byte": 16482,
+          "source_text": "      issue_clc_query(clc_pipe_producer_state, mbarrier_addr, clc_response_ptr_);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.scheduler_fetch.462",
+      "source": "scheduler.fetch",
+      "target": "clc.wait",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "已选PipelineCLCFetchAsync；读取该stage响应之前",
+      "source_expression": "scheduler_pipeline.consumer_wait(scheduler_pipe_consumer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 462,
+        "end_line": 462,
+        "start_byte": 16883,
+        "end_byte": 16946,
+        "source_expression": "scheduler_pipeline.consumer_wait(scheduler_pipe_consumer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 462,
+          "end_line": 462,
+          "start_byte": 16879,
+          "end_byte": 16948,
+          "source_text": "    scheduler_pipeline.consumer_wait(scheduler_pipe_consumer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.scheduler_fetch.464",
+      "source": "scheduler.fetch",
+      "target": "clc.decode",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "consumer_wait后读取响应；有效与无效响应都走此调用",
+      "source_expression": "work_tile_info_from_clc_response(smem_addr)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 464,
+        "end_line": 464,
+        "start_byte": 17082,
+        "end_byte": 17125,
+        "source_expression": "work_tile_info_from_clc_response(smem_addr)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 464,
+          "end_line": 464,
+          "start_byte": 17061,
+          "end_byte": 17127,
+          "source_text": "    auto work_tile = work_tile_info_from_clc_response(smem_addr);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.scheduler_fetch.465",
+      "source": "scheduler.fetch",
+      "target": "clc.release",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "响应已复制到局部WorkTileInfo；解码无效也执行，不等下一任务有效才释放",
+      "source_expression": "scheduler_pipeline.consumer_release(scheduler_pipe_consumer_state)",
+      "callsite": {
+        "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+        "start_line": 465,
+        "end_line": 465,
+        "start_byte": 17131,
+        "end_byte": 17197,
+        "source_expression": "scheduler_pipeline.consumer_release(scheduler_pipe_consumer_state)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 465,
+          "end_line": 465,
+          "start_byte": 17127,
+          "end_byte": 17199,
+          "source_text": "    scheduler_pipeline.consumer_release(scheduler_pipe_consumer_state);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_acquire.1028",
+      "source": "clc.acquire",
+      "target": "clc.acquire_stage",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "以state.index()/state.phase()和token转发；两个重载不合并",
+      "source_expression": "producer_acquire(state.index(), state.phase(), barrier_token)",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1028,
+        "end_line": 1028,
+        "start_byte": 42691,
+        "end_byte": 42752,
+        "source_expression": "producer_acquire(state.index(), state.phase(), barrier_token)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1028,
+          "end_line": 1028,
+          "start_byte": 42687,
+          "end_byte": 42754,
+          "source_text": "    producer_acquire(state.index(), state.phase(), barrier_token);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_wait.1062",
+      "source": "clc.wait",
+      "target": "clc.wait_stage",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "以state.index()/state.phase()和token转发",
+      "source_expression": "consumer_wait(state.index(), state.phase(), barrier_token)",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1062,
+        "end_line": 1062,
+        "start_byte": 43796,
+        "end_byte": 43854,
+        "source_expression": "consumer_wait(state.index(), state.phase(), barrier_token)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1062,
+          "end_line": 1062,
+          "start_byte": 43792,
+          "end_byte": 43856,
+          "source_text": "    consumer_wait(state.index(), state.phase(), barrier_token);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_release.1069",
+      "source": "clc.release",
+      "target": "clc.release_stage",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "仅传stage index；目标CTA来自Params",
+      "source_expression": "consumer_release(state.index())",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1069,
+        "end_line": 1069,
+        "start_byte": 44025,
+        "end_byte": 44056,
+        "source_expression": "consumer_release(state.index())"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1069,
+          "end_line": 1069,
+          "start_byte": 44021,
+          "end_byte": 44058,
+          "source_text": "    consumer_release(state.index());\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_acquire_stage.1100",
+      "source": "clc.acquire_stage",
+      "target": "contract.api.cluster_wait_member",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "barrier_token==WaitAgain；等待生产者CTA的empty对应轮次",
+      "source_expression": "empty_barrier_ptr_[stage].wait(phase)",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1100,
+        "end_line": 1100,
+        "start_byte": 45126,
+        "end_byte": 45163,
+        "source_expression": "empty_barrier_ptr_[stage].wait(phase)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1100,
+          "end_line": 1100,
+          "start_byte": 45120,
+          "end_byte": 45165,
+          "source_text": "      empty_barrier_ptr_[stage].wait(phase);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_acquire_stage.1103",
+      "source": "clc.acquire_stage",
+      "target": "clc.expect_remote",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "lane_idx_ < cluster_size_时作用于对应CTA；每个目标登记transaction_bytes",
+      "source_expression": "full_barrier_ptr_[stage].arrive_and_expect_tx(params_.transaction_bytes, lane_idx_, uint32_t(lane_idx_ < cluster_size_))",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1103,
+        "end_line": 1103,
+        "start_byte": 45176,
+        "end_byte": 45296,
+        "source_expression": "full_barrier_ptr_[stage].arrive_and_expect_tx(params_.transaction_bytes, lane_idx_, uint32_t(lane_idx_ < cluster_size_))"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1103,
+          "end_line": 1103,
+          "start_byte": 45172,
+          "end_byte": 45298,
+          "source_text": "    full_barrier_ptr_[stage].arrive_and_expect_tx(params_.transaction_bytes, lane_idx_, uint32_t(lane_idx_ < cluster_size_));\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_wait_stage.1127",
+      "source": "clc.wait_stage",
+      "target": "contract.api.cluster_wait_member",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "barrier_token==WaitAgain；FullBarrier继承ClusterBarrier的wait",
+      "source_expression": "full_barrier_ptr_[stage].wait(phase)",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1127,
+        "end_line": 1127,
+        "start_byte": 46210,
+        "end_byte": 46246,
+        "source_expression": "full_barrier_ptr_[stage].wait(phase)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1127,
+          "end_line": 1127,
+          "start_byte": 46204,
+          "end_byte": 46248,
+          "source_text": "      full_barrier_ptr_[stage].wait(phase);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_release_stage.1134",
+      "source": "clc.release_stage",
+      "target": "contract.api.dealloc_arrive",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "目标是params_.producer_blockid；复用已有ClusterBarrier::arrive声明，不是TMEM释放事件",
+      "source_expression": "empty_barrier_ptr_[stage].arrive(params_.producer_blockid)",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1134,
+        "end_line": 1134,
+        "start_byte": 46376,
+        "end_byte": 46434,
+        "source_expression": "empty_barrier_ptr_[stage].arrive(params_.producer_blockid)"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1134,
+          "end_line": 1134,
+          "start_byte": 46372,
+          "end_byte": 46436,
+          "source_text": "    empty_barrier_ptr_[stage].arrive(params_.producer_blockid);\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_tail.1046",
+      "source": "clc.tail",
+      "target": "contract.api.cluster_wait_member",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "逐槽test_wait未通过时等待；不重新登记transaction字节",
+      "source_expression": "empty_barrier_ptr_[state.index()",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1046,
+        "end_line": 1046,
+        "start_byte": 43341,
+        "end_byte": 43373,
+        "source_expression": "empty_barrier_ptr_[state.index()"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1046,
+          "end_line": 1046,
+          "start_byte": 43333,
+          "end_byte": 43396,
+          "source_text": "        empty_barrier_ptr_[state.index()].wait(state.phase());\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_commit.1034",
+      "source": "clc.commit",
+      "target": "clc.commit_stage",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "手工完成入口；未声称当前Scheduler.advance调用它",
+      "source_expression": "producer_commit(state.index(), state.phase())",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1034,
+        "end_line": 1034,
+        "start_byte": 42870,
+        "end_byte": 42915,
+        "source_expression": "producer_commit(state.index(), state.phase())"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1034,
+          "end_line": 1034,
+          "start_byte": 42866,
+          "end_byte": 42917,
+          "source_text": "    producer_commit(state.index(), state.phase());\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.call.clc_commit_stage.1109",
+      "source": "clc.commit_stage",
+      "target": "clc.complete_remote",
+      "relation": "calls",
+      "resolution": "configured",
+      "condition": "lane_idx_ < cluster_size_；当前分支cluster z=1，手工完成与硬件complete_tx不能混用解释",
+      "source_expression": "full_barrier_ptr_[stage].complete_transaction(lane_idx_, params_.transaction_bytes,  uint32_t(lane_idx_ < cluster_size_))",
+      "callsite": {
+        "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+        "start_line": 1109,
+        "end_line": 1109,
+        "start_byte": 45470,
+        "end_byte": 45591,
+        "source_expression": "full_barrier_ptr_[stage].complete_transaction(lane_idx_, params_.transaction_bytes,  uint32_t(lane_idx_ < cluster_size_))"
+      },
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1109,
+          "end_line": 1109,
+          "start_byte": 45466,
+          "end_byte": 45593,
+          "source_text": "    full_barrier_ptr_[stage].complete_transaction(lane_idx_, params_.transaction_bytes,  uint32_t(lane_idx_ < cluster_size_));\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.issue",
+      "source": "clc.issue",
+      "target": "clc.hw.query",
+      "relation": "issues",
+      "resolution": "source_proven",
+      "condition": "defined(CUTLASS_ARCH_CLC_ENABLED)；否则走NOT_IMPLEMENTED，不是备用有效响应",
+      "source_expression": "clusterlaunchcontrol.try_cancel.async...b128",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 392,
+          "end_line": 407,
+          "start_byte": 14455,
+          "end_byte": 15069,
+          "source_text": "  CUTLASS_HOST_DEVICE\n  static void\n  issue_clc_query(PipelineState<Stages> state, uint32_t mbarrier_addr, CLCResponse* clc_response_ptr) {\n  #if defined(CUTLASS_ARCH_CLC_ENABLED)\n      uint32_t result_addr = cute::cast_smem_ptr_to_uint(reinterpret_cast<const void*>(\n            &clc_response_ptr[state.index()]));\n      asm volatile(\n        \"{\\n\\t\"\n        \"clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%0], [%1];\\n\\t\" \n        \"}\\n\"\n        :\n        : \"r\"(result_addr), \"r\"(mbarrier_addr));\n  #else\n      CUTLASS_NOT_IMPLEMENTED();\n  #endif\n  }\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.write_response",
+      "source": "clc.hw.query",
+      "target": "clc.res.response",
+      "relation": "writes",
+      "resolution": "source_proven",
+      "condition": "异步硬件响应写入，不表示issue函数返回时已经完成",
+      "source_expression": "multicast::cluster::all.b128",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 396,
+          "end_line": 403,
+          "start_byte": 14635,
+          "end_byte": 15015,
+          "source_text": "      uint32_t result_addr = cute::cast_smem_ptr_to_uint(reinterpret_cast<const void*>(\n            &clc_response_ptr[state.index()]));\n      asm volatile(\n        \"{\\n\\t\"\n        \"clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%0], [%1];\\n\\t\" \n        \"}\\n\"\n        :\n        : \"r\"(result_addr), \"r\"(mbarrier_addr));\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.notify_full",
+      "source": "clc.hw.query",
+      "target": "clc.res.full",
+      "relation": "signals",
+      "resolution": "source_proven",
+      "condition": "响应写入的complete_tx硬件效果；消费仍须满足full的相应phase/字节条件",
+      "source_expression": "mbarrier::complete_tx::bytes",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 400,
+          "end_line": 403,
+          "start_byte": 14807,
+          "end_byte": 15015,
+          "source_text": "        \"clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%0], [%1];\\n\\t\" \n        \"}\\n\"\n        :\n        : \"r\"(result_addr), \"r\"(mbarrier_addr));\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.wait_full",
+      "source": "clc.wait_stage",
+      "target": "clc.res.full",
+      "relation": "waits_for",
+      "resolution": "source_proven",
+      "condition": "WaitAgain路径等待对应轮次响应；已有正确WaitDone token的路径可不再次等待",
+      "source_expression": "full_barrier_ptr_[stage].wait(phase)",
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1123,
+          "end_line": 1128,
+          "start_byte": 45996,
+          "end_byte": 46254,
+          "source_text": "  CUTLASS_DEVICE\n  void consumer_wait(uint32_t stage, uint32_t phase, ConsumerToken barrier_token) {\n    detail::pipeline_check_is_consumer(params_.role);\n    if (barrier_token == BarrierStatus::WaitAgain) {\n      full_barrier_ptr_[stage].wait(phase);\n    }\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.read_response",
+      "source": "clc.decode",
+      "target": "clc.res.response",
+      "relation": "reads",
+      "resolution": "source_proven",
+      "condition": "在fetch中已经完成consumer_wait后解码；不是请求发出后立即读",
+      "source_expression": "ld.shared.b128; query_cancel.is_canceled",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 415,
+          "end_line": 435,
+          "start_byte": 15226,
+          "end_byte": 16001,
+          "source_text": "    #if defined(CUTLASS_ARCH_CLC_ENABLED)\n      asm volatile(\n        \"{\\n\"\n        \".reg .pred p1;\\n\\t\"\n        \".reg .b128 clc_result;\\n\\t\"\n        \"ld.shared.b128 clc_result, [%4];\\n\\t\"\n        \"clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;\\n\\t\"\n        \"selp.u32 %3, 1, 0, p1;\\n\\t\"\n        \"@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%0, %1, %2, _}, clc_result;\\n\\t\"\n        \"}\\n\"\n        : \"=r\"(work_tile_info.M_idx), \"=r\"(work_tile_info.N_idx), \"=r\"(work_tile_info.L_idx), \"=r\"(valid)\n        : \"r\"(result_addr)\n        : \"memory\"\n      );\n\n      cutlass::arch::fence_view_async_shared();\n    #else\n      CUTLASS_NOT_IMPLEMENTED();\n    #endif\n    work_tile_info.is_valid_tile = (valid == 1);\n    return work_tile_info;\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.release_empty",
+      "source": "clc.release_stage",
+      "target": "clc.res.empty",
+      "relation": "signals",
+      "resolution": "source_proven",
+      "condition": "一次消费者到达，不能单独推出约定的全部消费者均已结束",
+      "source_expression": "empty_barrier_ptr_[stage].arrive(params_.producer_blockid)",
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1131,
+          "end_line": 1135,
+          "start_byte": 46259,
+          "end_byte": 46440,
+          "source_text": "  CUTLASS_DEVICE\n  void consumer_release(uint32_t stage) {\n    detail::pipeline_check_is_consumer(params_.role);\n    empty_barrier_ptr_[stage].arrive(params_.producer_blockid);\n  }\n"
+        }
+      ]
+    },
+    {
+      "id": "clc.effect.wait_empty",
+      "source": "clc.acquire_stage",
+      "target": "clc.res.empty",
+      "relation": "waits_for",
+      "resolution": "source_proven",
+      "condition": "生产者等待本轮empty；复用需要正确token/index/phase与到达计数",
+      "source_expression": "empty_barrier_ptr_[stage].wait(phase)",
+      "evidence": [
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1094,
+          "end_line": 1103,
+          "start_byte": 44780,
+          "end_byte": 45298,
+          "source_text": "  CUTLASS_DEVICE\n  void producer_acquire(uint32_t stage, uint32_t phase, ProducerToken barrier_token) {\n    detail::pipeline_check_is_producer(params_.role);\n    // 1. Wait for empty barrier to be ready\n    // 2. Set the transaction bytes set to occur on the Full barrier for all blocks\n    if (barrier_token == BarrierStatus::WaitAgain) {\n      empty_barrier_ptr_[stage].wait(phase);\n    }\n\n    full_barrier_ptr_[stage].arrive_and_expect_tx(params_.transaction_bytes, lane_idx_, uint32_t(lane_idx_ < cluster_size_));\n"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "clc.handoff.publish",
+      "title": "CLC响应发布：先取得空槽，再发起请求",
+      "node_ids": [
+        "host.kernel.operator",
+        "clc.advance",
+        "clc.barrier_address",
+        "clc.acquire",
+        "clc.issue",
+        "clc.acquire_stage",
+        "contract.api.cluster_wait_member",
+        "clc.expect_remote",
+        "clc.hw.query",
+        "clc.res.response",
+        "clc.res.full",
+        "clc.res.empty"
+      ],
+      "edge_ids": [
+        "clc.call.host_kernel_operator.697",
+        "clc.call.clc_advance.441",
+        "clc.call.clc_advance.443",
+        "clc.call.clc_advance.446",
+        "clc.call.clc_acquire.1028",
+        "clc.call.clc_acquire_stage.1100",
+        "clc.call.clc_acquire_stage.1103",
+        "clc.effect.issue",
+        "clc.effect.write_response",
+        "clc.effect.notify_full",
+        "clc.effect.wait_empty"
+      ]
+    },
+    {
+      "id": "clc.handoff.consume",
+      "title": "CLC响应消费与复用：有效和无效响应都要释放",
+      "node_ids": [
+        "host.kernel.operator",
+        "clc.tail",
+        "scheduler.fetch",
+        "clc.wait",
+        "clc.decode",
+        "clc.release",
+        "clc.wait_stage",
+        "clc.release_stage",
+        "contract.api.cluster_wait_member",
+        "contract.api.dealloc_arrive",
+        "clc.res.full",
+        "clc.res.response",
+        "clc.res.empty"
+      ],
+      "edge_ids": [
+        "clc.call.host_kernel_operator.721",
+        "clc.call.scheduler_fetch.462",
+        "clc.call.scheduler_fetch.464",
+        "clc.call.scheduler_fetch.465",
+        "clc.call.clc_wait.1062",
+        "clc.call.clc_release.1069",
+        "clc.call.clc_wait_stage.1127",
+        "clc.call.clc_release_stage.1134",
+        "clc.call.clc_tail.1046",
+        "clc.effect.wait_full",
+        "clc.effect.read_response",
+        "clc.effect.release_empty"
+      ]
+    },
+    {
+      "id": "clc.handoff.manual",
+      "title": "CLC手工完成接口：不是当前查询路径的必经调用",
+      "node_ids": [
+        "clc.commit",
+        "clc.commit_stage",
+        "clc.complete_remote"
+      ],
+      "edge_ids": [
+        "clc.call.clc_commit.1034",
+        "clc.call.clc_commit_stage.1109"
+      ]
+    }
+  ],
+  "contracts": [
+    {
+      "id": "clc.contract.response_lifetime",
+      "kind": "source_contract",
+      "title": "CLC响应槽的发布、消费和复用条件",
+      "participants": [
+        "host.kernel.operator",
+        "clc.type",
+        "clc.advance",
+        "scheduler.fetch",
+        "clc.tail"
+      ],
+      "claims": [
+        "Kernel仅让集群首CTA的Scheduler角色发起查询；Params.role的ProducerConsumer标记不等于其他CTA的Scheduler线程也实际参与。",
+        "每个响应是16字节。producer_arv_count=1；前cluster_size个lane按目标CTA分别登记full到达与transaction_bytes，发出CLC指令则由elected lane完成。",
+        "consumer_arv_count按实际线程计：32 + cluster_size*(32+128+32)，若需要Epilogue输入再加cluster_size*32。本例cluster_size=4时分别为800或928，不是4个CTA或若干warp的计数。",
+        "fetch先等full，再读响应，再release empty；取消失败/无下一任务的响应也释放，valid决定任务循环是否继续而不是槽是否需要释放。",
+        "单个消费者release不等于槽已可覆盖；生产者再次使用前必须观测相应empty条件。state.index定位槽，phase区分轮次，CLC状态与累加器状态独立。",
+        "producer_tail等待各槽empty以防过早退出，不重置transaction bytes；正常CLC硬件complete_tx路径没有额外调用producer_commit。"
+      ],
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 449,
+          "end_line": 517,
+          "start_byte": 20702,
+          "end_byte": 24486,
+          "source_text": "      (warp_category == WarpCategory::MMA),                                 // mma\n      (warp_category == WarpCategory::Sched) && is_first_cta_in_cluster,    // sched\n      (warp_category == WarpCategory::MainloopLoad),                        // main_load\n      (warp_category == WarpCategory::EpilogueLoad) && is_epi_load_needed,  // epi_load\n      (warp_category == WarpCategory::Epilogue)                             // epilogue\n    };\n\n    // Mainloop Load pipeline\n    typename MainloopPipeline::Params mainloop_pipeline_params;\n    if (WarpCategory::MainloopLoad == warp_category) {\n      mainloop_pipeline_params.role = MainloopPipeline::ThreadCategory::Producer;\n    }\n    if (WarpCategory::MMA == warp_category) {\n      mainloop_pipeline_params.role = MainloopPipeline::ThreadCategory::Consumer;\n    }\n    mainloop_pipeline_params.is_leader = lane_predicate && is_mma_leader_cta && is_participant.main_load;\n    mainloop_pipeline_params.transaction_bytes = CollectiveMainloop::TmaTransactionBytes;\n    mainloop_pipeline_params.initializing_warp = 0;\n    MainloopPipeline mainloop_pipeline(shared_storage.pipelines.mainloop,\n                                       mainloop_pipeline_params,\n                                       cluster_shape,\n                                       cute::true_type{},   // Perform barrier init\n                                       cute::false_type{}); // Delay mask calculation\n\n    // Epilogue Load pipeline\n    typename EpiLoadPipeline::Params epi_load_pipeline_params;\n    if (WarpCategory::EpilogueLoad == warp_category) {\n      epi_load_pipeline_params.role = EpiLoadPipeline::ThreadCategory::Producer;\n    }\n    if (WarpCategory::Epilogue == warp_category) {\n      epi_load_pipeline_params.role = EpiLoadPipeline::ThreadCategory::Consumer;\n    }\n    epi_load_pipeline_params.dst_blockid = cta_rank_in_cluster;\n    epi_load_pipeline_params.producer_arv_count = NumEpilogueLoadThreads;\n    epi_load_pipeline_params.consumer_arv_count = NumEpilogueThreads;\n    epi_load_pipeline_params.transaction_bytes = CollectiveEpilogue::TmaTransactionBytes;\n    epi_load_pipeline_params.initializing_warp = 1;\n    EpiLoadPipeline epi_load_pipeline(shared_storage.pipelines.epi_load, epi_load_pipeline_params);\n\n    // Epilogue Store pipeline\n    typename EpiStorePipeline::Params epi_store_pipeline_params;\n    epi_store_pipeline_params.always_wait = true;\n    EpiStorePipeline epi_store_pipeline(epi_store_pipeline_params);\n\n    // Load order barrier\n    typename LoadOrderBarrier::Params load_order_barrier_params;\n    load_order_barrier_params.group_id = (warp_category == WarpCategory::MainloopLoad) ? 0 : 1;\n    load_order_barrier_params.group_size = NumMainloopLoadThreads;\n    load_order_barrier_params.initializing_warp = 3;\n    LoadOrderBarrier load_order_barrier(shared_storage.pipelines.load_order, load_order_barrier_params);\n\n    // CLC pipeline\n    typename CLCPipeline::Params clc_pipeline_params;\n    if (WarpCategory::Sched == warp_category) {\n      clc_pipeline_params.role = CLCPipeline::ThreadCategory::ProducerConsumer;\n    }\n    else {\n      clc_pipeline_params.role = CLCPipeline::ThreadCategory::Consumer;\n    }\n    clc_pipeline_params.producer_blockid = 0;\n    clc_pipeline_params.producer_arv_count = 1;\n    clc_pipeline_params.consumer_arv_count = NumSchedThreads + cluster_size *\n                                                 (NumMainloopLoadThreads + NumEpilogueThreads + NumMMAThreads);\n    if (is_epi_load_needed) {\n      clc_pipeline_params.consumer_arv_count += cluster_size * NumEpilogueLoadThreads;\n    }\n    clc_pipeline_params.transaction_bytes = CLCResponseSize;\n    clc_pipeline_params.initializing_warp = 4;\n    CLCPipeline clc_pipeline(shared_storage.pipelines.clc, clc_pipeline_params, cluster_shape);\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 590,
+          "end_line": 598,
+          "start_byte": 28120,
+          "end_byte": 28657,
+          "source_text": "    // epilogue store pipe is producer-only (consumer is TMA unit, waits via scoreboarding)\n    EpiStorePipelineState epi_store_pipe_producer_state = cutlass::make_producer_start_state<EpiStorePipeline>();\n\n    CLCPipelineState clc_pipe_consumer_state;\n    CLCPipelineState clc_pipe_producer_state = cutlass::make_producer_start_state<CLCPipeline>();\n\n    AccumulatorPipelineState accumulator_pipe_consumer_state;\n    AccumulatorPipelineState accumulator_pipe_producer_state = cutlass::make_producer_start_state<AccumulatorPipeline>();\n\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 680,
+          "end_line": 723,
+          "start_byte": 32088,
+          "end_byte": 34092,
+          "source_text": "    else if (is_participant.sched) {\n      if constexpr (IsSchedDynamicPersistent) {\n        // Whether a new CLC query must be performed.\n        // See comment below where this variable is updated for a description of\n        // why this variable is needed.\n        bool requires_clc_query = true;\n\n        cutlass::arch::wait_on_dependent_grids();\n\n        do {\n          if (requires_clc_query) {\n            // Throttle CLC query to mitigate workload imbalance caused by skews among persistent workers.\n            clc_throttle_pipeline.consumer_wait(clc_pipe_throttle_consumer_state);\n            clc_throttle_pipeline.consumer_release(clc_pipe_throttle_consumer_state);\n            ++clc_pipe_throttle_consumer_state;\n\n            // Query next clcID and update producer state\n            clc_pipe_producer_state = scheduler.advance_to_next_work(clc_pipeline, clc_pipe_producer_state);\n          }\n\n          // Fetch next work tile\n          auto [next_work_tile_info, increment_pipe] = scheduler.fetch_next_work(\n            work_tile_info,\n            clc_pipeline,\n            clc_pipe_consumer_state\n          );\n\n          // Only perform a new CLC query if we consumed a new CLC query result in\n          // `fetch_next_work`. An example of a case in which CLC `fetch_next_work` does\n          // not consume a new CLC query response is when processing stream-K units.\n          // The current stream-K scheduler uses single WorkTileInfo to track multiple\n          // (potentially-partial) tiles to be computed via stream-K. In this case,\n          // `fetch_next_work` simply performs in-place updates on the existing WorkTileInfo,\n          // rather than consuming a CLC query response.\n          requires_clc_query = increment_pipe;\n          if (increment_pipe) {\n            ++clc_pipe_consumer_state;\n          }\n\n          work_tile_info = next_work_tile_info;\n        } while (work_tile_info.is_valid());\n        clc_pipeline.producer_tail(clc_pipe_producer_state);\n      }\n    }\n"
+        },
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 982,
+          "end_line": 1000,
+          "start_byte": 40350,
+          "end_byte": 41355,
+          "source_text": "  CUTLASS_DEVICE\n  PipelineCLCFetchAsync(SharedStorage& storage, Params const& params, ClusterShape cluster_shape)\n  : params_(params)\n  , full_barrier_ptr_(&storage.full_barrier_[0])\n  , empty_barrier_ptr_(&storage.empty_barrier_[0]) {\n    int warp_idx = canonical_warp_idx_sync();\n    if (warp_idx == params.initializing_warp) {\n      // Barrier FULL and EMPTY init\n      CUTLASS_ASSERT(params.producer_arv_count > 0 && \"Producer arrival count must be non-zero\");\n      CUTLASS_ASSERT(params.consumer_arv_count > 0 && \"Consumer arrival count must be non-zero\");\n      cutlass::arch::detail::initialize_barrier_array_pair_aligned<decltype(full_barrier_ptr_), decltype(empty_barrier_ptr_), Stages>(\n          full_barrier_ptr_, empty_barrier_ptr_, params_.producer_arv_count, params_.consumer_arv_count);\n    }\n    cutlass::arch::fence_barrier_init();\n\n    cluster_size_ = cute::size<0>(cluster_shape)\n                  * cute::size<1>(cluster_shape)\n                  * cute::size<2>(cluster_shape);\n  }\n"
+        },
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 1026,
+          "end_line": 1135,
+          "start_byte": 42565,
+          "end_byte": 46440,
+          "source_text": "  CUTLASS_DEVICE\n  void producer_acquire(PipelineState state, ProducerToken barrier_token = {BarrierStatus::WaitAgain}) {\n    producer_acquire(state.index(), state.phase(), barrier_token);\n  }\n\n  // Manual completion of transaction count\n  CUTLASS_DEVICE\n  void producer_commit(PipelineState state) {\n    producer_commit(state.index(), state.phase());\n  }\n\n  // Prevents early exit of producer blocks in Cluster.\n  // Does NOT reset transaction bytes.\n  // This should be called once before kernel exits.\n  CUTLASS_DEVICE\n  void producer_tail(PipelineState state) {\n    detail::pipeline_check_is_producer(params_.role);\n    for (int count = 0; count < Stages; ++count) {\n      bool done = empty_barrier_ptr_[state.index()].test_wait(state.phase());\n      if (!done) {\n        empty_barrier_ptr_[state.index()].wait(state.phase());\n      }\n      ++state;\n    }\n  }\n\n  ////////////////////\n  // Consumer APIs\n  ////////////////////\n  CUTLASS_DEVICE\n  ConsumerToken consumer_try_wait(PipelineState state, uint32_t skip_wait = false) {\n    return consumer_try_wait(state.index(), state.phase(), skip_wait);\n  }\n\n  CUTLASS_DEVICE\n  void consumer_wait(PipelineState state, ConsumerToken barrier_token = {BarrierStatus::WaitAgain}) {\n    consumer_wait(state.index(), state.phase(), barrier_token);\n  }\n\n  // Consumer signalling Producer of completion\n  // Notifies the producer block in the Cluster\n  CUTLASS_DEVICE\n  void consumer_release(PipelineState state) {\n    consumer_release(state.index());\n  }\n\n  CUTLASS_HOST_DEVICE\n  uint32_t producer_get_barrier(PipelineState state) {\n    return cute::cast_smem_ptr_to_uint(reinterpret_cast<void*>(&full_barrier_ptr_[state.index()]));\n  }\n\nprivate:\n  FullBarrier *full_barrier_ptr_ = nullptr;\n  EmptyBarrier *empty_barrier_ptr_ = nullptr;\n  Params params_;\n  int lane_idx_ = canonical_lane_idx();\n  int cluster_size_;\n\n  CUTLASS_DEVICE\n  ProducerToken producer_try_acquire(uint32_t stage, uint32_t phase, uint32_t skip_wait) {\n    detail::pipeline_check_is_producer(params_.role);\n    if (skip_wait) {\n      return {BarrierStatus::WaitDone};\n    }\n    bool barrier_stat = empty_barrier_ptr_[stage].try_wait(phase);\n    return {static_cast<BarrierStatus>(barrier_stat)};\n  }\n\n  CUTLASS_DEVICE\n  void producer_acquire(uint32_t stage, uint32_t phase, ProducerToken barrier_token) {\n    detail::pipeline_check_is_producer(params_.role);\n    // 1. Wait for empty barrier to be ready\n    // 2. Set the transaction bytes set to occur on the Full barrier for all blocks\n    if (barrier_token == BarrierStatus::WaitAgain) {\n      empty_barrier_ptr_[stage].wait(phase);\n    }\n\n    full_barrier_ptr_[stage].arrive_and_expect_tx(params_.transaction_bytes, lane_idx_, uint32_t(lane_idx_ < cluster_size_));\n  }\n\n  CUTLASS_DEVICE\n  void producer_commit(uint32_t stage, uint32_t phase) {\n    int cluster_size_ = []() { auto cs = cute::cluster_shape(); return cs.x * cs.y; }();\n    full_barrier_ptr_[stage].complete_transaction(lane_idx_, params_.transaction_bytes,  uint32_t(lane_idx_ < cluster_size_));\n  }\n\n  CUTLASS_DEVICE\n  ConsumerToken consumer_try_wait(uint32_t stage, uint32_t phase, uint32_t skip_wait) {\n    detail::pipeline_check_is_consumer(params_.role);\n    if (skip_wait) {\n      return {BarrierStatus::WaitDone};\n    }\n    bool barrier_stat = full_barrier_ptr_[stage].try_wait(phase);\n    return {static_cast<BarrierStatus>(barrier_stat)};\n  }\n\n  // Wait for producer to commit transactions\n  CUTLASS_DEVICE\n  void consumer_wait(uint32_t stage, uint32_t phase, ConsumerToken barrier_token) {\n    detail::pipeline_check_is_consumer(params_.role);\n    if (barrier_token == BarrierStatus::WaitAgain) {\n      full_barrier_ptr_[stage].wait(phase);\n    }\n  }\n\n  CUTLASS_DEVICE\n  void consumer_release(uint32_t stage) {\n    detail::pipeline_check_is_consumer(params_.role);\n    empty_barrier_ptr_[stage].arrive(params_.producer_blockid);\n  }\n"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 392,
+          "end_line": 474,
+          "start_byte": 14455,
+          "end_byte": 17514,
+          "source_text": "  CUTLASS_HOST_DEVICE\n  static void\n  issue_clc_query(PipelineState<Stages> state, uint32_t mbarrier_addr, CLCResponse* clc_response_ptr) {\n  #if defined(CUTLASS_ARCH_CLC_ENABLED)\n      uint32_t result_addr = cute::cast_smem_ptr_to_uint(reinterpret_cast<const void*>(\n            &clc_response_ptr[state.index()]));\n      asm volatile(\n        \"{\\n\\t\"\n        \"clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%0], [%1];\\n\\t\" \n        \"}\\n\"\n        :\n        : \"r\"(result_addr), \"r\"(mbarrier_addr));\n  #else\n      CUTLASS_NOT_IMPLEMENTED();\n  #endif\n  }\n\n  CUTLASS_DEVICE\n  static WorkTileInfo\n  work_tile_info_from_clc_response(uint32_t result_addr) {\n    WorkTileInfo work_tile_info;\n    uint32_t valid = 0;\n\n    #if defined(CUTLASS_ARCH_CLC_ENABLED)\n      asm volatile(\n        \"{\\n\"\n        \".reg .pred p1;\\n\\t\"\n        \".reg .b128 clc_result;\\n\\t\"\n        \"ld.shared.b128 clc_result, [%4];\\n\\t\"\n        \"clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 p1, clc_result;\\n\\t\"\n        \"selp.u32 %3, 1, 0, p1;\\n\\t\"\n        \"@p1 clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {%0, %1, %2, _}, clc_result;\\n\\t\"\n        \"}\\n\"\n        : \"=r\"(work_tile_info.M_idx), \"=r\"(work_tile_info.N_idx), \"=r\"(work_tile_info.L_idx), \"=r\"(valid)\n        : \"r\"(result_addr)\n        : \"memory\"\n      );\n\n      cutlass::arch::fence_view_async_shared();\n    #else\n      CUTLASS_NOT_IMPLEMENTED();\n    #endif\n    work_tile_info.is_valid_tile = (valid == 1);\n    return work_tile_info;\n  }\n\n  CUTLASS_DEVICE\n  PipelineState<Stages> \n  advance_to_next_work(Pipeline& clc_pipeline, PipelineState<Stages> clc_pipe_producer_state) const {\n    uint32_t mbarrier_addr = clc_pipeline.producer_get_barrier(clc_pipe_producer_state);\n    // Wait for clcID buffer to become empty with a flipped phase\n    clc_pipeline.producer_acquire(clc_pipe_producer_state);\n\n    if (cute::elect_one_sync()) {\n      issue_clc_query(clc_pipe_producer_state, mbarrier_addr, clc_response_ptr_);\n    }\n\n    ++clc_pipe_producer_state;\n    return clc_pipe_producer_state;\n  }\n\n  // Kernel helper function to get next work tile\n  template <class TileSchedulerPipeline, class TileSchedulerPipelineState>\n  CUTLASS_HOST_DEVICE\n  auto\n  fetch_next_work(\n    WorkTileInfo work_tile_info,\n    TileSchedulerPipeline& scheduler_pipeline,\n    TileSchedulerPipelineState scheduler_pipe_consumer_state) {\n\n    scheduler_pipeline.consumer_wait(scheduler_pipe_consumer_state);\n    uint32_t smem_addr = cute::cast_smem_ptr_to_uint(&clc_response_ptr_[scheduler_pipe_consumer_state.index()]);\n    auto work_tile = work_tile_info_from_clc_response(smem_addr);\n    scheduler_pipeline.consumer_release(scheduler_pipe_consumer_state);\n\n    work_tile = swizzle_and_rasterize(\n      work_tile.M_idx, work_tile.N_idx, work_tile.L_idx, work_tile.is_valid(),\n      block_id_in_cluster_.x, block_id_in_cluster_.y);\n\n    // Return true to indicate that the tile scheduler pipeline state should be advanced\n    return cute::make_tuple(work_tile, true);\n  }\n\n"
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 123,
+          "end_line": 128,
+          "start_byte": 4307,
+          "end_byte": 4528,
+          "source_text": "  using ThreadEpilogueOp = typename epilogue::fusion::FusionCallbacksTraits<FusionCallbacks>::Operation;\n  using GmemTiledCopyC = CopyOpG2S;\n  using GmemTiledCopyD = CopyOpS2G;\n\n  constexpr static int ThreadCount = 128;\n\n"
+        }
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "clc.handoff.remaining",
+      "description": "已列关键发布/消费/释放调用与参数公式。初始化屏障辅助函数、throttle全协议、PTX运行时正确性、全部CLC配置及完整swizzle仍未全量核对；未宣称全库或GPU验收。"
+    }
+  ]
+}

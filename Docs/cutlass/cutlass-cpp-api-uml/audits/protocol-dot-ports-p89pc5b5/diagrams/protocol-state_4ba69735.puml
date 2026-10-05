@@ -1,0 +1,19 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title Resource
+state "allocated" as s0
+state "released" as s1
+s0 --> s1 : [[../index.html?protocol=protocol&event=l_free release\nfree leader · 调用返回\npeer uses completed before free]]
+legend bottom
+状态是非互斥的历史事实判定；箭头表示推导规则，不添加API时间顺序。
+实际先后只由量词化偏序规定；本图不是本轮GPU执行轨迹。
+endlegend
+@enduml

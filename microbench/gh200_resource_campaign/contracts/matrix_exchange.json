@@ -1,0 +1,902 @@
+{
+  "schema_version": 2,
+  "stage": "S10",
+  "status": "draft_pending_independent_A_review",
+  "family": "matrix_exchange",
+  "adapter_id": "matrix_exchange_v2",
+  "source": "microbench/gh200_resource_campaign/probes/matrix_exchange.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S10",
+      "phase": "A",
+      "path": "reviews/S10-A-review-r3.json"
+    },
+    {
+      "stage": "S10",
+      "phase": "B",
+      "path": "reviews/S10-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "load_x1_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 1,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x1.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "load_x1_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 1,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x1.trans.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "load_x2_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 2,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x2.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "load_x2_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 2,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x2.trans.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "load_x4_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 4,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x4.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "load_x4_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "load",
+        "matrices": 4,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x4.trans.shared.b16",
+        "store_ptx": null,
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x1_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 1,
+        "transpose": false,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x1.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x1_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 1,
+        "transpose": true,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x1.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x2_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 2,
+        "transpose": false,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x2.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x2_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 2,
+        "transpose": true,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x2.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x4_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 4,
+        "transpose": false,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x4.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "store_x4_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "store",
+        "matrices": 4,
+        "transpose": true,
+        "load_ptx": null,
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x4.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": false,
+        "roundtrip_load_and_store_same_transpose": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x1_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 1,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x1.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x1.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x1_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 1,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x1.trans.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x1.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x2_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 2,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x2.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x2.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x2_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 2,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x2.trans.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x2.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x4_normal",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 4,
+        "transpose": false,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x4.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x4.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "roundtrip_x4_trans",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "roundtrip",
+        "matrices": 4,
+        "transpose": true,
+        "load_ptx": "ldmatrix.sync.aligned.m8n8.x4.trans.shared.b16",
+        "store_ptx": "stmatrix.sync.aligned.m8n8.x4.trans.shared.b16",
+        "batch": 8,
+        "slots": 8,
+        "slot_bytes": 512,
+        "input_array_bytes": 4096,
+        "output_array_bytes": 4096,
+        "dynamic_smem_bytes": 8192,
+        "barrier_per_pair": true,
+        "roundtrip_load_and_store_same_transpose": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_matrix_requests_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "shuffle_t32_streams1",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "shuffle",
+        "ptx": "shfl.sync.idx.b32",
+        "streams": 1,
+        "batch": 8,
+        "source_lane": "(lane+1)%32",
+        "clamp": 31,
+        "membermask": 4294967295,
+        "each_stream_depends_on_previous_shuffle": true,
+        "validation_steps": [
+          1,
+          3,
+          33
+        ]
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_shuffle_instruction_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "warp_instruction/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "shuffle_t32_streams4",
+      "iterations": 8192,
+      "threads": 32,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "shuffle",
+        "ptx": "shfl.sync.idx.b32",
+        "streams": 4,
+        "batch": 8,
+        "source_lane": "(lane+1)%32",
+        "clamp": 31,
+        "membermask": 4294967295,
+        "each_stream_depends_on_previous_shuffle": true,
+        "validation_steps": [
+          1,
+          3,
+          33
+        ]
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_shuffle_instruction_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "warp_instruction/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "shuffle_t128_streams1",
+      "iterations": 8192,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "shuffle",
+        "ptx": "shfl.sync.idx.b32",
+        "streams": 1,
+        "batch": 8,
+        "source_lane": "(lane+1)%32",
+        "clamp": 31,
+        "membermask": 4294967295,
+        "each_stream_depends_on_previous_shuffle": true,
+        "validation_steps": [
+          1,
+          3,
+          33
+        ]
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_shuffle_instruction_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "warp_instruction/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "shuffle_t128_streams4",
+      "iterations": 8192,
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "shuffle",
+        "ptx": "shfl.sync.idx.b32",
+        "streams": 4,
+        "batch": 8,
+        "source_lane": "(lane+1)%32",
+        "clamp": 31,
+        "membermask": 4294967295,
+        "each_stream_depends_on_previous_shuffle": true,
+        "validation_steps": [
+          1,
+          3,
+          33
+        ]
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "warp_shuffle_instruction_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "warp_instruction/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    }
+  ],
+  "semantics": {
+    "matrix_element": "raw uint16 bits; no floating arithmetic",
+    "shared_layout": "8 slots of 512 bytes per array; each slot contains up to four row-major 8x8 uint16 matrices",
+    "address_lane": "matrix=lane//8,row=lane%8; unused lanes repeat valid rows; row starts aligned16B",
+    "fragment_normal": "register[matrix], low/high half e=0/1 holds row=lane//4,col=2*(lane%4)+e",
+    "fragment_transpose": "register[matrix], low/high half e=0/1 holds row=2*(lane%4)+e,col=lane//4",
+    "input_value": "uint16(1+row+11*col+97*matrix+997*slot+(seed%8191))",
+    "load_loop": "each q loads slot q; accumulate all registers into per-lane unsigned checksum; final full-fragment snapshot plus checksum validated",
+    "store_loop": "each q stores slot q with input coordinate value XOR uint16(iteration+1); final complete output array validated; no read in timed loop",
+    "roundtrip_loop": "each q ldmatrix from input slot q then stmatrix into output slot q, same transpose modifier; bar.warp.sync 0xffffffff before slot reuse; registers accumulated into checksum",
+    "shuffle_input": "uint32(seed+17*lane+131*stream+8191*warp)",
+    "shuffle_reference": "at each step all lanes simultaneously read source lane (lane+1)%32; same independent recurrence per stream",
+    "timing": "initialization -> CTA barrier -> thread0 saves ns/cycles -> CTA barrier -> loop -> value-dependent result drain and CTA barrier -> stop ns/cycles; output copy outside interval",
+    "store_completion": "final CTA barrier establishes shared writes visible before stop; host full-array readback after kernel",
+    "work_matrix": "iterations*8*matrices*128 bytes per enabled direction; roundtrip sums read+write and records each separately",
+    "work_shuffle": "iterations*8*streams*(threads/32) warp instructions; not 32x lane instructions; read/write payload zero",
+    "validation": "each process full nonuniform values; short 1/2 matrix iterations and shuffle steps1/3/33; no conversion/roundtrip-halving claims",
+    "sass": "actual matrix/shuffle op remains inside timed backedge; direction,width,count checked per specialization; reject unexpected timed LDS/STS replacing intended matrix operation; record checksum and barrier instructions as overhead",
+    "acceptance": "CPU pack/unpack and corrupted-coordinate rejection, target compile, numerical GPU preflight, independent B, then10 processes with bounded warmup and at most3batches",
+    "limits": "controlled loop service includes address and checksum/dependency/sync overhead; no bare instruction latency; roundtrip time never divided by2",
+    "sources": [
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#warp-level-matrix-instructions-ldmatrix",
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#warp-level-matrix-instructions-stmatrix",
+      "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-shfl-sync"
+    ]
+  },
+  "sass_contracts": {
+    "requirements": "actual matrix/shuffle op remains inside timed backedge; direction,width,count checked per specialization; reject unexpected timed LDS/STS replacing intended matrix operation; record checksum and barrier instructions as overhead; family B binds exact kernel symbols and timed-loop instruction counts for each matrix direction or shuffle stream configuration"
+  }
+}

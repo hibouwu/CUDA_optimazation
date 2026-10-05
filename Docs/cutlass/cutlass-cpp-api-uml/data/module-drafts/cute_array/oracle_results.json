@@ -1,0 +1,481 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-08T19:10:00.811877+00:00",
+  "source_header": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp",
+  "source_header_sha256": "a5a6c8357cf4311bed395db7dfa8fcc5c28b3d295fdfec9ad2b00b75253ad8ee",
+  "compiler": "/usr/bin/clang++-21",
+  "compiler_version": "clang version 21.1.8 (Fedora 21.1.8-6.fc43)\nTarget: x86_64-redhat-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\nConfiguration file: /etc/clang/x86_64-redhat-linux-gnu-clang++.cfg",
+  "scope": "Host Clang 21 C++17 syntax-only and constant-expression checks. No object, executable, GPU execution, runtime safety, codegen, or performance validation.",
+  "sample_count": 6,
+  "compilation_count": 14,
+  "expectations_met": 14,
+  "results": [
+    {
+      "id": "clear_zero_member_vs_free",
+      "source_lines": [
+        326,
+        332,
+        351,
+        355
+      ],
+      "question": "N=0 的成员 clear 不要求 T(0)，free clear 是否仍要求？",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\nstruct NoZero {\n  NoZero() = delete;\n  NoZero(int) = delete;\n};\nvoid probe() {\n  cute::array<NoZero, 0> a{};\n#if FREE_CLEAR\n  cute::clear(a);\n#else\n  a.clear();\n#endif\n}\n",
+      "variants": [
+        {
+          "id": "member",
+          "defines": [
+            "FREE_CLEAR=0"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DFREE_CLEAR=0",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        },
+        {
+          "id": "free",
+          "defines": [
+            "FREE_CLEAR=1"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "functional-style cast from 'int' to 'NoZero' uses deleted function",
+            "a.fill(T(0))"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DFREE_CLEAR=1",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:355:10: error: functional-style cast from 'int' to 'NoZero' uses deleted function\n  355 |   a.fill(T(0));\n      |          ^~~~\n<stdin>:12:9: note: in instantiation of function template specialization 'cute::clear<NoZero, 0UL>' requested here\n   12 |   cute::clear(a);\n      |         ^\n<stdin>:7:3: note: candidate constructor has been explicitly deleted\n    7 |   NoZero(int) = delete;\n      |   ^\n<stdin>:5:8: note: candidate constructor (the implicit copy constructor)\n    5 | struct NoZero {\n      |        ^\n<stdin>:5:8: note: candidate constructor (the implicit move constructor)\n1 error generated.\n",
+          "expectation_met": true
+        }
+      ]
+    },
+    {
+      "id": "equality_zero_still_checks_not_equal",
+      "source_lines": [
+        339,
+        349
+      ],
+      "question": "普通 for 的 N=0 是否免去 T 的 != 要求？仅有 == 是否足够？",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\nstruct Element {};\n#if COMPARISON == 1\nconstexpr bool operator==(Element const&, Element const&) { return true; }\n#elif COMPARISON == 2\nconstexpr bool operator!=(Element const&, Element const&) { return false; }\n#endif\nconstexpr cute::array<Element, 0> a{}, b{};\nstatic_assert(a == b);\n",
+      "variants": [
+        {
+          "id": "no_comparison",
+          "defines": [
+            "COMPARISON=0"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "invalid operands to binary expression",
+            "lhs[i] != rhs[i]"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DCOMPARISON=0",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:344:16: error: invalid operands to binary expression ('const element_type' (aka 'const Element') and 'const element_type')\n  344 |     if (lhs[i] != rhs[i]) {\n      |         ~~~~~~ ^  ~~~~~~\n<stdin>:12:17: note: in instantiation of function template specialization 'cute::operator==<Element, 0UL>' requested here\n   12 | static_assert(a == b);\n      |                 ^\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_fp16.hpp:256:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __half' for 1st argument\n  256 | __CUDA_HOSTDEVICE__ __CUDA_FP16_FORCEINLINE__ bool operator!=(const __half &lh, const __half &rh) { return __hneu(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_fp16.hpp:344:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __half2' for 1st argument\n  344 | __CUDA_HOSTDEVICE__ __CUDA_FP16_FORCEINLINE__ bool operator!=(const __half2 &lh, const __half2 &rh) { return __hbneu2(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_bf16.hpp:237:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __nv_bfloat16' for 1st argument\n  237 | __CUDA_HOSTDEVICE__ __CUDA_BF16_FORCEINLINE__ bool operator!=(const __nv_bfloat16 &lh, const __nv_bfloat16 &rh) { return __hneu(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_bf16.hpp:356:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __nv_bfloat162' for 1st argument\n  356 | __CUDA_HOSTDEVICE__ __CUDA_BF16_FORCEINLINE__ bool operator!=(const __nv_bfloat162 &lh, const __nv_bfloat162 &rh) { return __hbneu2(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~~~~~~~~\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/numeric/integral_constant.hpp:244:1: note: candidate template ignored: could not match 'C<t>' against 'element_type' (aka 'Element')\n  244 | CUTE_BINARY_OP(!=);\n      | ^\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/numeric/integral_constant.hpp:219:15: note: expanded from macro 'CUTE_BINARY_OP'\n  219 |   C<(t OP u)> operator OP (C<t>, C<u>) {                             \\\n      |               ^\n<stdin>:12:17: error: static assertion expression is not an integral constant expression\n   12 | static_assert(a == b);\n      |               ~~^~~~\n2 errors generated.\n",
+          "expectation_met": true
+        },
+        {
+          "id": "only_equal",
+          "defines": [
+            "COMPARISON=1"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "invalid operands to binary expression",
+            "lhs[i] != rhs[i]"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DCOMPARISON=1",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:344:16: error: invalid operands to binary expression ('const element_type' (aka 'const Element') and 'const element_type')\n  344 |     if (lhs[i] != rhs[i]) {\n      |         ~~~~~~ ^  ~~~~~~\n<stdin>:12:17: note: in instantiation of function template specialization 'cute::operator==<Element, 0UL>' requested here\n   12 | static_assert(a == b);\n      |                 ^\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_fp16.hpp:256:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __half' for 1st argument\n  256 | __CUDA_HOSTDEVICE__ __CUDA_FP16_FORCEINLINE__ bool operator!=(const __half &lh, const __half &rh) { return __hneu(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_fp16.hpp:344:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __half2' for 1st argument\n  344 | __CUDA_HOSTDEVICE__ __CUDA_FP16_FORCEINLINE__ bool operator!=(const __half2 &lh, const __half2 &rh) { return __hbneu2(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_bf16.hpp:237:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __nv_bfloat16' for 1st argument\n  237 | __CUDA_HOSTDEVICE__ __CUDA_BF16_FORCEINLINE__ bool operator!=(const __nv_bfloat16 &lh, const __nv_bfloat16 &rh) { return __hneu(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~~~~~~~\n/usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_bf16.hpp:356:52: note: candidate function not viable: no known conversion from 'const element_type' (aka 'const Element') to 'const __nv_bfloat162' for 1st argument\n  356 | __CUDA_HOSTDEVICE__ __CUDA_BF16_FORCEINLINE__ bool operator!=(const __nv_bfloat162 &lh, const __nv_bfloat162 &rh) { return __hbneu2(lh, rh); }\n      |                                                    ^          ~~~~~~~~~~~~~~~~~~~~~~~~\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/numeric/integral_constant.hpp:244:1: note: candidate template ignored: could not match 'C<t>' against 'element_type' (aka 'Element')\n  244 | CUTE_BINARY_OP(!=);\n      | ^\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/numeric/integral_constant.hpp:219:15: note: expanded from macro 'CUTE_BINARY_OP'\n  219 |   C<(t OP u)> operator OP (C<t>, C<u>) {                             \\\n      |               ^\n<stdin>:12:17: error: static assertion expression is not an integral constant expression\n   12 | static_assert(a == b);\n      |               ~~^~~~\n2 errors generated.\n",
+          "expectation_met": true
+        },
+        {
+          "id": "not_equal_available",
+          "defines": [
+            "COMPARISON=2"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DCOMPARISON=2",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        }
+      ]
+    },
+    {
+      "id": "reverse_zero_vs_nonzero_element_requirements",
+      "source_lines": [
+        372,
+        385
+      ],
+      "question": "if constexpr 的零长度分支与非零分支分别实例化哪些元素操作？",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\n#if REVERSE_CASE == 0\nstruct Element {\n  Element() = delete;\n  Element(Element const&) = delete;\n  Element(Element&&) = delete;\n  Element& operator=(Element const&) = delete;\n};\nvoid probe() {\n  cute::array<Element, 0> a{};\n  auto result = cute::reverse(a);\n  static_assert(std::is_empty_v<decltype(result)>);\n}\n#elif REVERSE_CASE == 1\nstruct Element {\n  Element() = delete;\n  Element(Element const&) = default;\n  Element& operator=(Element const&) = default;\n};\nstatic_assert(std::is_aggregate_v<Element>);\nstatic_assert(!std::is_default_constructible_v<Element>);\nvoid probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n#elif REVERSE_CASE == 2\nstruct Element {\n  Element() = default;\n  Element(Element const&) = default;\n  Element& operator=(Element const&) = delete;\n};\nvoid probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n#elif REVERSE_CASE == 3\nstruct Element {\n  Element() = default;\n  Element(Element const&) = delete;\n  Element(Element&&) = default;\n  Element& operator=(Element const&) = default;\n};\nstatic_assert(!std::is_copy_constructible_v<Element>);\nstatic_assert(std::is_move_constructible_v<Element>);\nvoid probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n#elif REVERSE_CASE == 4\nstruct Element {\n  Element() = delete;\n  explicit Element(int) {}\n  Element(Element const&) = default;\n  Element& operator=(Element const&) = default;\n};\nstatic_assert(!std::is_aggregate_v<Element>);\nvoid probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n#endif\n",
+      "variants": [
+        {
+          "id": "zero_no_element_construction_or_assignment",
+          "defines": [
+            "REVERSE_CASE=0"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DREVERSE_CASE=0",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        },
+        {
+          "id": "nonzero_aggregate_deleted_default_constructor_still_passes",
+          "defines": [
+            "REVERSE_CASE=1"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DREVERSE_CASE=1",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        },
+        {
+          "id": "nonzero_deleted_copy_assignment",
+          "defines": [
+            "REVERSE_CASE=2"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "overload resolution selected deleted operator '='",
+            "t_r[k] = t[N - k - 1]"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DREVERSE_CASE=2",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:382:14: error: overload resolution selected deleted operator '='\n  382 |       t_r[k] = t[N - k - 1];\n      |       ~~~~~~ ^ ~~~~~~~~~~~~\n<stdin>:32:60: note: in instantiation of function template specialization 'cute::reverse<Element, 1UL>' requested here\n   32 | void probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n      |                                                            ^\n<stdin>:30:12: note: candidate function has been explicitly deleted\n   30 |   Element& operator=(Element const&) = delete;\n      |            ^\n1 error generated.\n",
+          "expectation_met": true
+        },
+        {
+          "id": "nonzero_no_copy_constructor_but_movable",
+          "defines": [
+            "REVERSE_CASE=3"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DREVERSE_CASE=3",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        },
+        {
+          "id": "nonzero_nonaggregate_deleted_default_constructor",
+          "defines": [
+            "REVERSE_CASE=4"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "call to deleted constructor of 'element_type'",
+            "t_r{}"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DREVERSE_CASE=4",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:380:26: error: call to deleted constructor of 'element_type' (aka 'Element')\n  380 |     cute::array<T,N> t_r{};\n      |                          ^\n<stdin>:51:60: note: in instantiation of function template specialization 'cute::reverse<Element, 1UL>' requested here\n   51 | void probe(cute::array<Element, 1> const& a) { (void)cute::reverse(a); }\n      |                                                            ^\n<stdin>:45:3: note: 'Element' has been explicitly marked deleted here\n   45 |   Element() = delete;\n      |   ^\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:380:26: note: in implicit initialization of array element 0 with omitted initializer\n  380 |     cute::array<T,N> t_r{};\n      |                          ^\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:194:16: note: in implicit initialization of field '__elems_' with omitted initializer\n  194 |   element_type __elems_[N];\n      |                ^\n1 error generated.\n",
+          "expectation_met": true
+        }
+      ]
+    },
+    {
+      "id": "get_cvref_and_original_storage",
+      "source_lines": [
+        404,
+        426
+      ],
+      "question": "三个 get 重载的 cv/ref 返回类型、const&& 回退以及原存储别名。",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\nusing A = cute::array<int, 1>;\nstatic_assert(std::is_same_v<decltype(cute::get<0>(std::declval<A&>())), int&>);\nstatic_assert(std::is_same_v<decltype(cute::get<0>(std::declval<A const&>())), int const&>);\nstatic_assert(std::is_same_v<decltype(cute::get<0>(std::declval<A&&>())), int&&>);\nstatic_assert(std::is_same_v<decltype(cute::get<0>(std::declval<A const&&>())), int const&>);\ntemplate<class X, class = void> struct accepts_get : std::false_type {};\ntemplate<class X> struct accepts_get<X, std::void_t<decltype(cute::get<0>(std::declval<X>()))>>\n    : std::true_type {};\nstatic_assert(!accepts_get<A volatile&>::value);\nstatic_assert(!accepts_get<A const volatile&>::value);\nconstexpr bool refers_to_original_element() {\n  A a{{7}};\n  int&& element = cute::get<0>(static_cast<A&&>(a));\n  element = 11;\n  return &element == a.data() && a[0] == 11;\n}\nstatic_assert(refers_to_original_element());\n",
+      "variants": [
+        {
+          "id": "cvref_and_constexpr_alias",
+          "defines": [],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        }
+      ]
+    },
+    {
+      "id": "tuple_element_vs_get_body_bound_check",
+      "source_lines": [
+        404,
+        426,
+        438,
+        442
+      ],
+      "question": "tuple_element 不检查 I<N；get 的 static_assert 何时触发？",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\nusing Empty = cute::array<int, 0>;\nstatic_assert(std::tuple_size<Empty>::value == 0);\nstatic_assert(std::is_same_v<std::tuple_element<999, Empty>::type, int>);\n// Unevaluated return-type inspection does not instantiate this function body.\nstatic_assert(std::is_same_v<decltype(cute::get<999>(std::declval<Empty&>())), int&>);\n#if CALL_GET\nvoid probe(Empty& a) { (void)cute::get<999>(a); }\n#endif\n",
+      "variants": [
+        {
+          "id": "traits_and_unevaluated_get",
+          "defines": [
+            "CALL_GET=0"
+          ],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DCALL_GET=0",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        },
+        {
+          "id": "instantiate_get_body",
+          "defines": [
+            "CALL_GET=1"
+          ],
+          "expected_exit_code": 1,
+          "diagnostic_contains": [
+            "static assertion failed",
+            "Index out of range",
+            "999UL < 0UL"
+          ],
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-DCALL_GET=1",
+            "-"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "In file included from <stdin>:1:\n/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cute/container/array.hpp:408:17: error: static assertion failed due to requirement '999UL < 0UL': Index out of range\n  408 |   static_assert(I < N, \"Index out of range\");\n      |                 ^~~~~\n<stdin>:11:36: note: in instantiation of function template specialization 'cute::get<999UL, int, 0UL>' requested here\n   11 | void probe(Empty& a) { (void)cute::get<999>(a); }\n      |                                    ^\n1 error generated.\n",
+          "expectation_met": true
+        }
+      ]
+    },
+    {
+      "id": "empty_logical_size_not_zero_object_size",
+      "source_lines": [
+        198,
+        337
+      ],
+      "question": "N=0 是无元素/逻辑长度零，不是 sizeof 为零。",
+      "source": "#include <cute/container/array.hpp>\n#include <type_traits>\n#include <utility>\n\nstruct NoDefault { NoDefault() = delete; };\nusing Empty = cute::array<NoDefault, 0>;\nstatic_assert(std::is_empty_v<Empty>);\nstatic_assert(std::is_default_constructible_v<Empty>);\nstatic_assert(sizeof(Empty) > 0);\n// This exact size is a recorded property of this host compiler/ABI, not a portable API guarantee.\nstatic_assert(sizeof(Empty) == 1);\nconstexpr Empty a{};\nstatic_assert(a.empty() && a.size() == 0 && a.max_size() == 0);\nstatic_assert(a.data() == nullptr && a.begin() == nullptr && a.end() == nullptr);\n",
+      "variants": [
+        {
+          "id": "logical_zero_object_nonzero",
+          "defines": [],
+          "expected_exit_code": 0,
+          "command": [
+            "/usr/bin/clang++-21",
+            "-std=c++17",
+            "-fsyntax-only",
+            "-fno-color-diagnostics",
+            "-x",
+            "c++",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+            "-I",
+            "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+            "-"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "expectation_met": true
+        }
+      ]
+    }
+  ]
+}

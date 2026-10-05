@@ -1,0 +1,73 @@
+{
+  "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+  "host_compiler_version": "g++-14 (GCC) 14.4.1 20260724 (Red Hat 14.4.1-2)\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "snapshot_path": "include/cute/arch/copy_sm100.hpp",
+  "snapshot_sha256": "0fe82cbfc7c5a5e4629e16efa992d18801f1c136acb5fb63401f396e5965b305",
+  "source_lines": [
+    366,
+    599
+  ],
+  "source_section_sha256": "5f4a803bb36afbbc0297fa00b4b2457fe6f311e8ecee6b39940387a48d1d380a",
+  "wrapper_names": [
+    "SM100_UTCCP_128dp256bit_1cta",
+    "SM100_UTCCP_128dp256bit_2cta",
+    "SM100_UTCCP_128dp128bit_1cta",
+    "SM100_UTCCP_128dp128bit_2cta",
+    "SM100_UTCCP_4dp256bit_1cta",
+    "SM100_UTCCP_4dp256bit_2cta",
+    "SM100_UTCCP_4x32dp128bit_1cta",
+    "SM100_UTCCP_4x32dp128bit_2cta",
+    "SM100_UTCCP_2x64dp128bitlw0213_1cta",
+    "SM100_UTCCP_2x64dp128bitlw0213_2cta",
+    "SM100_UTCCP_2x64dp128bitlw0123_1cta",
+    "SM100_UTCCP_2x64dp128bitlw0123_2cta"
+  ],
+  "entry_mapping": {
+    "asm01_emit_00": "SM100_UTCCP_128dp256bit_1cta",
+    "asm01_emit_01": "SM100_UTCCP_128dp256bit_2cta",
+    "asm01_emit_02": "SM100_UTCCP_128dp128bit_1cta",
+    "asm01_emit_03": "SM100_UTCCP_128dp128bit_2cta",
+    "asm01_emit_04": "SM100_UTCCP_4dp256bit_1cta",
+    "asm01_emit_05": "SM100_UTCCP_4dp256bit_2cta",
+    "asm01_emit_06": "SM100_UTCCP_4x32dp128bit_1cta",
+    "asm01_emit_07": "SM100_UTCCP_4x32dp128bit_2cta",
+    "asm01_emit_08": "SM100_UTCCP_2x64dp128bitlw0213_1cta",
+    "asm01_emit_09": "SM100_UTCCP_2x64dp128bitlw0213_2cta",
+    "asm01_emit_10": "SM100_UTCCP_2x64dp128bitlw0123_1cta",
+    "asm01_emit_11": "SM100_UTCCP_2x64dp128bitlw0123_2cta"
+  },
+  "generated_source_sha256": {
+    "raw": "89bbd44683a3b291b78f3a829b12e3c6374a419555060b3c649fffcf9943a023",
+    "comma_control": "1b303b183fa5871eeb6b91c36c366e4eee2e5ae90224f04fb5e563bafc0bad0b"
+  },
+  "scope": "NVCC device parsing, PTX emission, PTXAS and SASS only; no runtime or GPU use",
+  "source_condition": "defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)",
+  "configuration_headers": {
+    "include/cute/config.hpp": "99d1ab9b25680fe19cd804e654ce3e7fcb3b3c03b06b81aff11d65254d296c41",
+    "include/cute/arch/config.hpp": "47dbe891dabdbfda797e4c1efc5cbdfbd84975eed1be5cf6ce606a7af545458a",
+    "include/cutlass/arch/config.h": "1baf70cb9b5c0feba43b78e5791f0befca0a38de0806e15f66ef1c46d95cb6e9"
+  },
+  "initial_host_compatibility": {
+    "command": [
+      "/usr/local/cuda-13.0/bin/nvcc",
+      "-std=c++17",
+      "-ccbin",
+      "/usr/bin/g++-14",
+      "-arch=sm_100a",
+      "--ptx",
+      "-DPROBE_EMIT",
+      "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/minimal.cu",
+      "-o",
+      "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/initial_host_compatibility/minimal.ptx"
+    ],
+    "returncode": 1,
+    "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/initial_host_compatibility/nvcc_without_host_workaround.stdout.txt",
+    "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/initial_host_compatibility/nvcc_without_host_workaround.stderr.txt"
+  },
+  "host_compatibility_flags": [
+    "-Xcompiler",
+    "-U_GNU_SOURCE",
+    "-D_DEFAULT_SOURCE=1",
+    "-D_POSIX_C_SOURCE=200809L"
+  ]
+}

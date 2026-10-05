@@ -1,0 +1,832 @@
+{
+  "id": "dense-scheme-review",
+  "title": "沿一次 GEMM 验证接口方案",
+  "module_id": "dense_fp16_2sm_sm110a",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "purpose": "先请同事用一段实际支持的调用说明输入到输出的完整过程，再对照职责、交接对象和成立条件。官方接口是参照；同事可以采用不同分层和硬件机制，但必要职责不能无人承担。",
+  "reading_order_notice": "下面是审查顺序，不是把所有组件串行执行的时间线。各步骤始终使用同一份配置；详细参数、重载和源码在需要时再展开。",
+  "fixture": {
+    "problem_mnkl": [
+      256,
+      256,
+      128,
+      1
+    ],
+    "formula": "D = A × B + 0.5 × C",
+    "matrices": "A：256×128，B：128×256，C/D：256×256；A/B 为 FP16，累加器与 C/D 为 FP32。",
+    "layout": "A/B/C/D 按 RowMajor 紧密存储。本例数学 B 的形状是 K×N，CuTe 中 B 的步长坐标按 (n,k,l) 解释。",
+    "binary_note": "C++ 架构配方 Sm100，编译目标 sm_110a；Tile 256×128×64，Cluster 2×2×1，Host Adapter 和 PDL 关闭。",
+    "origin": "已保存的 dense_baseline.cu 调用示例；图集记录过静态编译，不将这段示例当作已经执行过的 GPU 运行轨迹。",
+    "example_file": "evidence/6c1d941eb5a1b64f-dense_baseline.cu",
+    "example_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+    "shape_literal": "int M = 256, N = 256, K = 128, L = 1;"
+  },
+  "steps": [
+    {
+      "id": "problem",
+      "title": "问题与支持范围",
+      "summary": "把一个计算请求表达完整，并说明何时允许执行。",
+      "input": "调用方要计算 D = AB + 0.5C，提供同一组 M/N/K/L、矩阵地址与实际步长。数据类型、布局类别和 Tile 等类型选择先由编译配置确定。",
+      "responsibility": "Builder 决定适用的实现类型，Arguments 描述本次问题，能力检查判定所声明限制。不能把 Auto 理解成任意输入都能由运行时自动适配。",
+      "handoff": "交付一份可以按既定规则解释的 Arguments，以及明确的支持范围和调用方前提。",
+      "conditions": [
+        "数学维度与内存坐标含义一致；元素类型、stride 单位、地址对齐和有效范围可被调用者明确表达。",
+        "检查失败时不进入后续准备。存在 can_implement 接口不代表 initialize 会自动调用它。",
+        "类型参数在编译期确定，不代表所有形状和步长值都静态；实际可变部分必须有运行时字段。"
+      ],
+      "questions": [
+        {
+          "question": "同事声称兼容 CUTLASS，具体是源码可直接编译、通过适配层使用，还是只提供相同计算能力？",
+          "evidence": "列出这次审查支持的入口、类型、布局和硬件；未支持范围应明确，不因没有某个官方类名就判错。"
+        },
+        {
+          "question": "把 B 的一个逻辑元素定位到实际内存，再给出一个不支持的输入，它在哪里被拒绝？",
+          "evidence": "用本例地址/步长说明坐标对应；补一个可定位的编译错误或运行时拒绝结果，而不是只展示合法输入。"
+        }
+      ],
+      "api_refs": [
+        "types.builder_entry",
+        "host.kernel.arguments",
+        "host.can_implement"
+      ],
+      "edge_refs": [
+        "types.edge.selected_specialization",
+        "host.app.can_implement.231",
+        "host.adapter.check.233"
+      ],
+      "evidence_ids": [
+        "example.shape",
+        "example.arguments",
+        "kernel.check"
+      ],
+      "detail_routes": [
+        {
+          "label": "编译期类型选择",
+          "view": "types.view.entry"
+        },
+        {
+          "label": "合法性检查过程",
+          "api": "host.kernel",
+          "overview": "process-host.kernel.check"
+        }
+      ],
+      "boundary": "能力检查只覆盖源码明确检查的条件，不能从 kSuccess 推出所有指针、生命周期和数值语义都已验证。"
+    },
+    {
+      "id": "prepare",
+      "title": "参数与资源准备",
+      "summary": "把用户参数交给执行组件，明确临时空间和状态的所有者。",
+      "input": "沿用上一步的 Arguments。调用方按查询结果准备 workspace，保留矩阵存储，并选择初始化与执行使用的 stream。",
+      "responsibility": "Adapter 的 initialize 先交给 Kernel 初始化 workspace，再生成并保存 Params。Kernel 分别调用 Mainloop、Epilogue、Scheduler 的参数转换接口；这些转换不是运行 GEMM，也不等于深拷贝所有矩阵。",
+      "handoff": "交付可供当前 Kernel 使用的 Params，以及仍有效的矩阵、辅助存储和必要描述符。",
+      "conditions": [
+        "工作区的大小、对齐、分区和有效期满足实际实现；查询、分配、初始化和释放四项职责分开。",
+        "当前 Kernel 给 Mainloop 的 workspace 是 nullptr，Epilogue 与 Scheduler 的区间另行划分。这是具体实现，不是所有方案都必须如此。",
+        "workspace 初始化或后续属性设置失败时，调用方不得将对象视为已经成功准备；必要的流顺序也必须成立。"
+      ],
+      "questions": [
+        {
+          "question": "从一个输入字段开始，说明它最后出现在设备参数的哪里，是否转换成描述符，依赖谁拥有的内存？",
+          "evidence": "对照用户参数、转换代码与设备入口参数，指出复制的是值、地址还是实际矩阵内容。"
+        },
+        {
+          "question": "同一对象换尺寸、换指针或换 workspace 后，哪些初始化必须重做？",
+          "evidence": "分别给出 initialize 与 update 的前置条件；同名接口或同一返回类型不代表二者行为等价。"
+        }
+      ],
+      "api_refs": [
+        "host.get_workspace_size",
+        "host.initialize",
+        "host.kernel.lower"
+      ],
+      "edge_refs": [
+        "host.adapter.init_workspace.323",
+        "host.adapter.init_lower.328",
+        "host.kernel.lower_mainloop.290",
+        "host.kernel.lower_epilogue.291",
+        "host.kernel.lower_scheduler.292"
+      ],
+      "evidence_ids": [
+        "adapter.initialize",
+        "kernel.lower"
+      ],
+      "detail_routes": [
+        {
+          "label": "参数交接过程",
+          "api": "host.kernel",
+          "overview": "process-host.kernel.lowering"
+        },
+        {
+          "label": "工作区过程",
+          "api": "host.kernel",
+          "overview": "process-host.kernel.workspace"
+        }
+      ],
+      "boundary": "完整 TMA 描述符构造及其所有坐标参数尚未在主线中逐项验证；若方案差异影响地址解释或访问安全，应从此处继续查证。"
+    },
+    {
+      "id": "execute",
+      "title": "工作分配与计算",
+      "summary": "说明谁取得工作、谁准备输入，以及计算为什么不会提前读取。",
+      "input": "使用刚准备好的 Params 提交同一次任务。运行时调度设备入口，设备入口再调用 Kernel 的 operator()；Host 并不直接同步调用设备 functor。",
+      "responsibility": "Kernel 组织工作分配和各协作角色，Mainloop 组织输入搬运与乘加。选中的 Scheduler 交付 CTA 级 Tile 坐标，每项工作覆盖完整 K；本例按 K=128、CTA TileK=64 推导为2个K块，不是把K拆成两个独立归约任务。同步协议再把同一输入stage的生产与消费衔接起来。",
+      "handoff": "为正确的输出区域形成累加结果，并保留后处理取得该结果所需要的完成条件。",
+      "conditions": [
+        "每个输出区域有明确写入者；本选择不要求跨任务补归约。WorkTileInfo的有效标志表示调度任务，不是矩阵元素的边界检查，尾块访问仍须由实际实现保护。",
+        "发出搬运不等于输入可读。等待条件必须对应当前资源、stage/phase 和参与范围，计算只能在所需输入就绪后消费它。",
+        "发出 MMA 不等于已经读完源缓冲。下一轮覆盖前，必须取得上一轮相关消费者不再使用该输入的证据。",
+        "MMA/Epilogue先取得next_work，再完成current_work，随后才替换当前任务并检查下一任务有效性。取得无效的下一任务不等于可以跳过当前任务；CLC状态与累加器状态也不能混为一套状态。",
+        "CLC响应要先等待可读，再解码并释放响应槽；无下一任务的响应也必须释放。期待的响应字节数、消费者到达计数与真正参与的线程集合分别匹配，不能把role标记、CTA数或warp数当作实际线程计数。"
+      ],
+      "questions": [
+        {
+          "question": "选一个输出区域，追踪谁取得它、从哪里开始归约、谁最终写回；会不会遗漏或重复？",
+          "evidence": "给出实际工作描述到坐标的映射，至少包含一个边界或无工作情形；不能只展示 Scheduler 的类图。"
+        },
+        {
+          "question": "沿同一块输入缓冲走两轮，指出谁发起写入、谁等待可读、谁确认读完并允许覆盖？",
+          "evidence": "标出资源身份、参与者和等待条件；另一种硬件可以用不同机制，但不能缺少等价保证。"
+        }
+      ],
+      "api_refs": [
+        "scheduler.k_count",
+        "scheduler.fetch",
+        "clc.advance",
+        "clc.wait",
+        "clc.release"
+      ],
+      "edge_refs": [
+        "host.adapter.run_stream_submit.615",
+        "host.cuda.submit_device_kernel.294",
+        "host.device.call_functor.123",
+        "contract.edge.kernel_load",
+        "contract.edge.kernel_mma",
+        "contract.edge.mma_wait_input",
+        "scheduler.call.k_count.738",
+        "scheduler.call.fetch.741"
+      ],
+      "evidence_ids": [
+        "kernel.work",
+        "mma.wait",
+        "scheduler.full_k",
+        "scheduler.next_work",
+        "kernel.mma_current",
+        "clc.participants",
+        "clc.slot_protocol"
+      ],
+      "detail_routes": [
+        {
+          "label": "工作描述与完整K",
+          "view": "scheduler.handoff.entry"
+        },
+        {
+          "label": "CLC响应发布",
+          "view": "clc.handoff.publish"
+        },
+        {
+          "label": "CLC消费与释放",
+          "view": "clc.handoff.consume"
+        },
+        {
+          "label": "各角色的下一任务交接",
+          "view": "scheduler.handoff.next"
+        },
+        {
+          "label": "提交与设备入口",
+          "view": "host.launch"
+        }
+      ],
+      "boundary": "已核对选中Scheduler的完整K、任务交接与CLC关键槽约束；swizzle、throttle和初始化辅助的完整协议、其他调度器及全工作覆盖性仍未验证，不能据此宣称调度唯一性或GPU运行正确。"
+    },
+    {
+      "id": "complete",
+      "title": "结果交接与完成",
+      "summary": "区分累加结果可读、源缓冲可复用和调用方可以读取 D。",
+      "input": "继续处理同一个工作块的累加结果。本例后处理需要计算 Acc + 0.5C，因此 C 的数据和访问条件仍是本次执行的一部分。",
+      "responsibility": "当前完整K调度器的fixup原样返回累加器消费者状态，不归约、不复制，也不额外等待；compute_epilogue返回true。真正的累加器可读等待与结果转换、写回由Epilogue协议承担。Adapter的run返回提交/API状态；示例由调用方单独等待stream，然后复制D到Host。",
+      "handoff": "只有相应工作已经完成、错误状态得到处理且数据可访问，才把 D 交给调用方使用。",
+      "conditions": [
+        "累加器的精度、布局和存储位置必须与后处理的读取方式匹配；不能仅由 Fragment 这个名字推断存储位置。",
+        "TMA store 的 wait_group.read 说明有关源共享内存读取完成，不能单独证明 D 的全局写入完成或 Host 可见。",
+        "成功提交不等于成功执行，更不等于数值正确。示例显式检查 cudaStreamSynchronize，并在复制到 Host 后计算参考误差。"
+      ],
+      "questions": [
+        {
+          "question": "后处理依据什么事件读取累加结果，α、β、C 的参与和精度转换发生在哪里？",
+          "evidence": "把累加结果的表示与后处理接口对应起来；再给出实际计算顺序和一份可复现的参考结果。"
+        },
+        {
+          "question": "调用返回时究竟保证到哪一步，哪个事件才允许下一位使用者读取输出？",
+          "evidence": "指出 stream、事件或其他完成机制，以及异步错误的处理位置；不能只给 run 返回成功的截图。"
+        }
+      ],
+      "api_refs": [
+        "scheduler.fixup_state",
+        "scheduler.epilogue",
+        "contract.api.ep_store",
+        "host.cuda.stream_sync"
+      ],
+      "edge_refs": [
+        "contract.edge.kernel_epilogue",
+        "contract.edge.store_wait_read_complete",
+        "host.app.sync.250",
+        "contract.edge.kernel_fixup",
+        "scheduler.call.epilogue.910"
+      ],
+      "evidence_ids": [
+        "store.read_wait",
+        "example.completion",
+        "example.reference",
+        "scheduler.fixup",
+        "kernel.epilogue_current"
+      ],
+      "detail_routes": [
+        {
+          "label": "Epilogue判定与空fixup",
+          "view": "scheduler.handoff.output"
+        },
+        {
+          "label": "结果与资源契约",
+          "mode": "contracts"
+        },
+        {
+          "label": "接口总览",
+          "api": "host.kernel"
+        }
+      ],
+      "boundary": "FusionCallbacks 全链路和所有输出缓冲复用分支尚未完整展开；现有源码与静态编译证据不能替代本次 GPU 数值验证。"
+    },
+    {
+      "id": "reuse",
+      "title": "复用、失败与验证证据",
+      "summary": "明确重复调用和错误出口，再把结论限制在证据真正覆盖的范围内。",
+      "input": "本次提交可能完成，也可能在准备、提交或设备执行中失败。继续执行、更新参数或释放存储之前，要判断哪些对象仍被在途工作使用。",
+      "responsibility": "调用方管理矩阵和 workspace 的使用寿命；Kernel 内部按对应协议结束协作和释放内部资源。更新接口负责的状态与完整初始化不同，不能只因名字相近就互换。",
+      "handoff": "留下已确认的设计约定、可定位的差异和待验证项。每个未关闭问题都应有补充材料、负责人和完成判据，而不是笼统写“总体通过”。",
+      "conditions": [
+        "update 重建 Params，但不调用 initialize_workspace。新尺寸或新 workspace 是否能安全复用，必须重新确认所需初始化。",
+        "错误返回不能自动推导出设备已经停止，也不自动授权释放仍被使用的存储。最后一轮、无工作与异常退出要分别说明。",
+        "TMEM 的 release_allocation_lock 只释放分配许可，不等于 free；其配对释放也不代表整个 GEMM 的输出已经对 Host 可见。",
+        "CLC生产者退出前用producer_tail等待响应槽的消费者释放。它不重置transaction字节，也不是D写回完成事件；正常硬件complete_tx路径不能被画成必须再调用一次手工producer_commit。"
+      ],
+      "questions": [
+        {
+          "question": "准备失败、提交失败和异步执行失败之后，哪些状态还有效，谁负责等待与清理？",
+          "evidence": "给出失败出口及在途资源处理规则；至少能解释一次重复调用和一次更新参数后的行为。"
+        },
+        {
+          "question": "哪些结论只是设计说明，哪些有源码、编译、运行和性能证据支持？",
+          "evidence": "每项注明版本、输入、配置和证据位置。没有同事实现或运行结果时，只确认设计约定并记录后续验证，不提前判定实现正确。"
+        }
+      ],
+      "api_refs": [
+        "host.update",
+        "clc.tail",
+        "contract.api.release_permit",
+        "contract.api.free"
+      ],
+      "edge_refs": [
+        "host.adapter.update_workspace.363",
+        "host.adapter.update_lower.368",
+        "contract.edge.kernel_release_permit",
+        "contract.edge.kernel_free"
+      ],
+      "evidence_ids": [
+        "adapter.update",
+        "kernel.release",
+        "clc.producer_path"
+      ],
+      "detail_routes": [
+        {
+          "label": "TMEM 生命周期证据",
+          "protocol": "dense.protocol_draft.tmem_lifetime"
+        },
+        {
+          "label": "已保存编译记录",
+          "mode": "compile"
+        },
+        {
+          "label": "未完成项",
+          "mode": "issues"
+        }
+      ],
+      "boundary": "主线能支持方案讨论，不代表完整实现、全部场景或全库审查已经完成。真实浏览器使用验收和 GPU 验证仍分别记录。"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "example.shape",
+      "source_url": "evidence/6c1d941eb5a1b64f-dense_baseline.cu.html#L144",
+      "artifact": "site/evidence/6c1d941eb5a1b64f-dense_baseline.cu",
+      "start_line": 144,
+      "end_line": 167,
+      "needle": "int M = 256, N = 256, K = 128, L = 1;",
+      "claim": "本次形状以及 A/B/C/D 的实际坐标与步长准备。",
+      "source_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+      "path": "已保存示例 / dense_baseline.cu"
+    },
+    {
+      "id": "example.arguments",
+      "source_url": "evidence/6c1d941eb5a1b64f-dense_baseline.cu.html#L204",
+      "artifact": "site/evidence/6c1d941eb5a1b64f-dense_baseline.cu",
+      "start_line": 204,
+      "end_line": 235,
+      "needle": "float alpha = 1.0f, beta = 0.5f;",
+      "claim": "同一组矩阵、α/β 和 hardware_info 进入 Arguments，调用方单独执行能力检查。",
+      "source_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+      "path": "已保存示例 / dense_baseline.cu"
+    },
+    {
+      "id": "kernel.check",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 300,
+      "end_line": 312,
+      "needle": "CollectiveMainloop::can_implement",
+      "claim": "Kernel 的能力检查分别交给各组件；其 bool 结果不承担所有调用方前提。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L300"
+    },
+    {
+      "id": "adapter.initialize",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "start_line": 312,
+      "end_line": 355,
+      "needle": "GemmKernel::initialize_workspace(args, workspace, stream, cuda_adapter)",
+      "claim": "initialize 的 workspace 初始化、参数转换及后续失败路径。",
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "source_url": "source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L312"
+    },
+    {
+      "id": "kernel.lower",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 255,
+      "end_line": 297,
+      "needle": "void* mainloop_workspace = nullptr;",
+      "claim": "工作区分段与三个独立的参数转换调用。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L255"
+    },
+    {
+      "id": "kernel.work",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 605,
+      "end_line": 643,
+      "needle": "scheduler.work_tile_to_cta_coord(work_tile_info)",
+      "claim": "已选 Kernel 的工作描述、坐标与 K 范围接到输入搬运；不是全部调度分支的正确性证明。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L605"
+    },
+    {
+      "id": "mma.wait",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "start_line": 680,
+      "end_line": 709,
+      "needle": "consumer_wait",
+      "claim": "Mainloop 中的输入等待和计算交接，需要保留对应 PipelineState。",
+      "source_sha256": "5d47ce4d6fd43757cb648c15adb13cafe9fb0f6e5d549d6eec11a241a7b8b7d3",
+      "source_url": "source/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp.html#L680"
+    },
+    {
+      "id": "store.read_wait",
+      "path": "include/cute/arch/copy_sm90_tma.hpp",
+      "start_line": 1243,
+      "end_line": 1257,
+      "needle": "cp.async.bulk.wait_group.read",
+      "claim": "store 等待的 read 边界，不等于 Host 输出可见。",
+      "source_sha256": "78d928e2551e698a46fe7f282792613cc9ca6dc679a00a8914e918de618b19e7",
+      "source_url": "source/include/cute/arch/copy_sm90_tma.hpp.html#L1243"
+    },
+    {
+      "id": "example.completion",
+      "source_url": "evidence/6c1d941eb5a1b64f-dense_baseline.cu.html#L240",
+      "artifact": "site/evidence/6c1d941eb5a1b64f-dense_baseline.cu",
+      "start_line": 240,
+      "end_line": 256,
+      "needle": "cudaStreamSynchronize",
+      "claim": "应用单独等待 stream，然后复制 D 到 Host；不是 Adapter 内部同步。",
+      "source_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+      "path": "已保存示例 / dense_baseline.cu"
+    },
+    {
+      "id": "example.reference",
+      "source_url": "evidence/6c1d941eb5a1b64f-dense_baseline.cu.html#L260",
+      "artifact": "site/evidence/6c1d941eb5a1b64f-dense_baseline.cu",
+      "start_line": 260,
+      "end_line": 280,
+      "needle": "std::isfinite(actual)",
+      "claim": "示例存在参考误差检查代码，不表示该检查已经在本任务运行通过。",
+      "source_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+      "path": "已保存示例 / dense_baseline.cu"
+    },
+    {
+      "id": "adapter.update",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "start_line": 359,
+      "end_line": 370,
+      "needle": "GemmKernel::to_underlying_arguments(args, workspace)",
+      "claim": "update 重新生成 params_，没有初始化 workspace 的调用。",
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "source_url": "source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L359"
+    },
+    {
+      "id": "kernel.release",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 780,
+      "end_line": 807,
+      "needle": "release_allocation_lock",
+      "claim": "内部许可释放、累加器消费结束、CTA 配对握手与 free 是不同事件。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L780"
+    },
+    {
+      "id": "layout.stride_tags",
+      "path": "include/cutlass/detail/layout.hpp",
+      "start_line": 57,
+      "end_line": 82,
+      "needle": "Stride<cute::Int<1>, int64_t, int64_t>",
+      "claim": "RowMajor A 的可变行步长位于第一个模式，B 按 (n,k,l) 解释，可变行步长位于第二个模式。",
+      "source_sha256": "c1c1868c93e56696b3eec10080d028ad57e6e6844036e8f7f85e79e84dac7226",
+      "source_url": "source/include/cutlass/detail/layout.hpp.html#L57"
+    },
+    {
+      "id": "layout.row_major",
+      "path": "include/cutlass/layout/matrix.h",
+      "start_line": 90,
+      "end_line": 110,
+      "needle": "LongIndex(coord.row()) * LongIndex(stride_[0]) + coord.column()",
+      "claim": "RowMajor 使用实际行步长计算地址；packed 是另外的紧密存储构造。",
+      "source_sha256": "6c62ec676d26d5d63b51f936f81707aca6af3fb837b77cd953537908294fbc35",
+      "source_url": "source/include/cutlass/layout/matrix.h.html#L90"
+    },
+    {
+      "id": "adapter.saved_run",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "start_line": 609,
+      "end_line": 621,
+      "needle": "return run(params_, stream, cuda_adapter, launch_with_pdl);",
+      "claim": "仅带 stream 的重载读取保存的 params_，不重新接收用户 Arguments。",
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "source_url": "source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L609"
+    },
+    {
+      "id": "adapter.launch_status",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "start_line": 564,
+      "end_line": 574,
+      "needle": "cudaGetLastError()",
+      "claim": "此返回分支检查提交/API 状态，不包含完成等待。",
+      "source_sha256": "0350f6e22eb15ad18715fd365950bcf6153eab3b86f6d2839fc3b4309cc463bb",
+      "source_url": "source/include/cutlass/gemm/device/gemm_universal_adapter.h.html#L564"
+    },
+    {
+      "id": "mainloop.address_lowering",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "start_line": 353,
+      "end_line": 372,
+      "needle": "make_layout(make_shape(N,K,L), args.dB)",
+      "claim": "转换时从本次 Arguments 取得 A/B 地址和实际步长，建立输入张量表示。",
+      "source_sha256": "5d47ce4d6fd43757cb648c15adb13cafe9fb0f6e5d549d6eec11a241a7b8b7d3",
+      "source_url": "source/include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp.html#L353"
+    },
+    {
+      "id": "scheduler.full_k",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "start_line": 499,
+      "end_line": 535,
+      "needle": "return cute::size(cute::ceil_div",
+      "claim": "选中Scheduler返回完整K块数、K起点0；两个Epilogue重载均返回true，requires_fixup返回false。",
+      "source_sha256": "4c6c339133cae649a465ceceff9fce3f52ffa2872f0589a456525360685a8fe9",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp.html#L499"
+    },
+    {
+      "id": "scheduler.next_work",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "start_line": 454,
+      "end_line": 474,
+      "needle": "return cute::make_tuple(work_tile, true)",
+      "claim": "三参数fetch等待、读取并释放CLC响应，返回下一任务与状态推进标志；不是单参数兼容重载。",
+      "source_sha256": "4c6c339133cae649a465ceceff9fce3f52ffa2872f0589a456525360685a8fe9",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp.html#L454"
+    },
+    {
+      "id": "scheduler.fixup",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "start_line": 545,
+      "end_line": 564,
+      "needle": "return acc_pipe_consumer_state",
+      "claim": "当前Kernel调用的六参数fixup只返回累加器消费者状态，不执行额外归约或等待。",
+      "source_sha256": "4c6c339133cae649a465ceceff9fce3f52ffa2872f0589a456525360685a8fe9",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp.html#L545"
+    },
+    {
+      "id": "kernel.mma_current",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 737,
+      "end_line": 775,
+      "needle": "work_tile_info = next_work_tile_info",
+      "claim": "MMA分支先取得下一任务，在本轮计算之后才替换current并检查有效性；leader条件单独保留。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L737"
+    },
+    {
+      "id": "kernel.epilogue_current",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 876,
+      "end_line": 934,
+      "needle": "scheduler.compute_epilogue(work_tile_info)",
+      "claim": "Epilogue取得next后仍对current做fixup与store，完成本轮后才采用next；这不是对下一任务提前写回。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L876"
+    },
+    {
+      "id": "clc.participants",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "start_line": 449,
+      "end_line": 517,
+      "needle": "clc_pipeline_params.consumer_arv_count",
+      "claim": "Kernel实际参与者与CLC Params分开定义；字节数、生产者到达和消费者线程计数也分开。",
+      "source_sha256": "847f884a93c82329fc0b3869473943361185baa47d7d3a10f3357c5dbe9e1c58",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp.html#L449"
+    },
+    {
+      "id": "clc.slot_protocol",
+      "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+      "start_line": 1094,
+      "end_line": 1135,
+      "needle": "empty_barrier_ptr_[stage].arrive(params_.producer_blockid)",
+      "claim": "先等empty并登记各CTA full期待字节；消费侧等full后，读完向生产者CTA的empty到达。",
+      "source_sha256": "da9852dc2f490c83c9980d9ecf2263b026329bbcb0d71be0903244e001473ca7",
+      "source_url": "source/include/cutlass/pipeline/sm100_pipeline.hpp.html#L1094"
+    },
+    {
+      "id": "clc.producer_path",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "start_line": 438,
+      "end_line": 473,
+      "needle": "issue_clc_query(clc_pipe_producer_state, mbarrier_addr, clc_response_ptr_)",
+      "claim": "生产者acquire后由elected lane发起硬件查询；消费者wait、decode、release后返回，路径没有额外手工commit。",
+      "source_sha256": "4c6c339133cae649a465ceceff9fce3f52ffa2872f0589a456525360685a8fe9",
+      "source_url": "source/include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp.html#L438"
+    }
+  ],
+  "review_case_notice": "以下是假设的方案说法，用来演练如何判定差异，不是同事已经给出的实现。先核对支持承诺，再区分有意限制、缺少条件和实现矛盾。",
+  "review_cases": [
+    {
+      "id": "layout-contract",
+      "steps": [
+        "problem",
+        "prepare"
+      ],
+      "title": "同样是 RowMajor，能否省略实际行步长？",
+      "claim_to_test": "只传 RowMajor、M/N/K 和矩阵地址，就能支持所有 RowMajor 存储。",
+      "setup": "保留主线 M/N/K/L=256/256/128/1，只比较两种物理存储：原连续存储 lda=128、ldb=256；每行增加8个元素的填充后 lda=136、ldb=264。这是对布局承诺的变体检查，不是更换主线问题。",
+      "observation": "固定 CUTLASS Host 布局接口实测：A(1,0) 的元素偏移从128变为136，B(1,1) 从257变为265。相同形状与 RowMajor 标签不能唯一决定这些地址；B 的数学 (k,n) 与 CuTe 的 (n,k,l) 还必须对应。",
+      "decisions": [
+        {
+          "when": "仅承诺连续存储，并明确要求或检查这个限制。",
+          "judgment": "这是支持范围取舍，不能仅因没有可变 stride 参数就判错。",
+          "next_evidence": "让调用方能看见这项限制；确认不支持的输入怎样拒绝或避免传入。"
+        },
+        {
+          "when": "承诺支持带填充的 RowMajor，但调用方无法表达实际行步长。",
+          "judgment": "接口缺少区分两种实际存储所需的信息。",
+          "next_evidence": "补齐步长或等价布局描述，并用两个地址不同的输入核对转换和访问。"
+        },
+        {
+          "when": "接口已经接收 stride，但转换或执行仍按 K/N 推导紧密步长。",
+          "judgment": "这不是少一个参数，而是实现没有遵守已声明的布局。",
+          "next_evidence": "沿同一逻辑坐标跟踪真实地址，检查是否忽略步长或把元素单位误当字节。"
+        }
+      ],
+      "evidence_ids": [
+        "layout.stride_tags",
+        "layout.row_major",
+        "mainloop.address_lowering"
+      ],
+      "edge_refs": [
+        "host.kernel.lower_mainloop.290"
+      ],
+      "boundary": "本次运行的是 Host 地址映射检查，没有提交 GEMM；这些结果不证明当前 GPU Kernel 对填充布局的 can_implement、数值或性能已经通过。",
+      "host_probe": true
+    },
+    {
+      "id": "completion-contract",
+      "steps": [
+        "execute",
+        "complete"
+      ],
+      "title": "执行接口返回成功，下一步能否立即使用结果？",
+      "claim_to_test": "run 返回 kSuccess，所以调用方可以立即读取 D，或者释放仍可能被设备使用的输入。",
+      "setup": "沿用本次 GEMM 的同一个 stream。分别指出任务提交、源缓冲读完、D 写入完成，以及调用方获得可访问结果的边界；不要把这几个事件合成一个“完成”。",
+      "observation": "官方 Adapter 的返回检查针对 launch_result 与 cudaGetLastError；保存的示例随后单独等待 stream，再复制 D。TMA 的 wait_group.read 只涉及源共享内存读取，不能替代整个输出完成的证据。",
+      "decisions": [
+        {
+          "when": "接口明确返回提交状态，并提供 stream、事件或等价的后续完成机制。",
+          "judgment": "异步接口可以成立；还要核对调用方确实建立了所需依赖。",
+          "next_evidence": "给出何时读取输出、何时释放输入及如何处理异步错误的调用顺序。"
+        },
+        {
+          "when": "承诺返回后结果可用，却没有任何保证设备完成与可见性的机制。",
+          "judgment": "缺少结果交付条件，或实现与承诺矛盾。",
+          "next_evidence": "找出真正的完成事件和观察者；不能拿提交返回值或源缓冲复用事件充当证据。"
+        },
+        {
+          "when": "自研执行接口内部等待完成后才返回。",
+          "judgment": "可以是一种同步设计，不因与 CUTLASS 的异步入口不同而直接判错。",
+          "next_evidence": "确认该行为符合兼容承诺，并明确它对调用方并发、排队与性能预期的影响。"
+        }
+      ],
+      "evidence_ids": [
+        "adapter.launch_status",
+        "example.completion",
+        "store.read_wait"
+      ],
+      "edge_refs": [
+        "host.app.sync.250",
+        "contract.edge.store_wait_read_complete"
+      ],
+      "boundary": "这里核对的是源码合同和假设方案，不是实际设备运行轨迹。错误返回也不能自动证明没有在途工作。"
+    },
+    {
+      "id": "reuse-contract",
+      "steps": [
+        "prepare",
+        "reuse"
+      ],
+      "title": "改了原 Arguments，旧句柄会自动改用新输入吗？",
+      "claim_to_test": "initialize 之后修改原 Arguments，再调用 run(stream)，就等于运行了新参数。",
+      "setup": "把第一次初始化用的输入地址记为 P0。之后只把原 Arguments 的地址字段改成 P1，暂不调用 update 或 initialize。P0/P1 是用于讨论的地址符号，不是本次运行过的设备指针。",
+      "observation": "initialize 按当时的 Arguments 构造并保存 params_；run(stream) 使用这个保存状态，不重新接收 Arguments。只改原对象的地址字段不能据此推断 params_ 已更新。与此同时，保存地址也不等于深拷贝矩阵内容：同一地址处的数据更新是另一个问题，仍需要正确的流依赖和有效期。",
+      "decisions": [
+        {
+          "when": "只复用原参数，矩阵与辅助存储仍有效，前后任务依赖也满足。",
+          "judgment": "重复调用本身不构成错误；不能要求每次都重新初始化。",
+          "next_evidence": "明确哪些字段固定、哪些缓冲内容可更新，以及允许并发或顺序复用的条件。"
+        },
+        {
+          "when": "希望更换地址或形状，却仅修改原 Arguments 后调用旧状态重载。",
+          "judgment": "需要证明存在更新路径；官方这个重载本身没有重新读取 Arguments。",
+          "next_evidence": "追踪新字段怎样进入 Params 或描述符，不要只看用户对象已经改值。"
+        },
+        {
+          "when": "已经调用 update，并据此认为任意新 workspace 都完成了初始化。",
+          "judgment": "更新参数不等于初始化资源；非空指针也不证明容量与初始状态正确。",
+          "next_evidence": "按新问题确认大小、对齐、初始化要求和生命周期；必要时重新初始化，但不要一概否定合法的 update 用法。"
+        }
+      ],
+      "evidence_ids": [
+        "adapter.initialize",
+        "adapter.update",
+        "adapter.saved_run",
+        "mainloop.address_lowering"
+      ],
+      "edge_refs": [
+        "host.adapter.init_write.328",
+        "host.adapter.update_lower.368",
+        "host.adapter.run_stream_submit.615"
+      ],
+      "boundary": "以上是基于固定源码的状态交接分析，不把假设的 P0/P1 当作已执行的 GPU 复用测试。"
+    }
+  ],
+  "scenario_branches": [
+    {
+      "title": "Grouped GEMM",
+      "question": "每个问题的形状、指针、步长和工作归属怎样进入上述主线？"
+    },
+    {
+      "title": "MoE",
+      "question": "路由和 token 排列由谁完成，专家 GEMM 实际接收什么？只实现专家矩阵乘不能当作整个 MoE 已实现。"
+    },
+    {
+      "title": "Block-Scaled",
+      "question": "数值与 scale 的格式、粒度、坐标对应和存储有效期怎样一起表达？"
+    },
+    {
+      "title": "Attention",
+      "question": "承诺覆盖哪些计算，mask、归一化及中间结果由谁管理？"
+    }
+  ],
+  "scenario_notice": "只在同事实际承诺支持、且本次会议需要审查时展开。以下是差异追问入口，不是这些场景已经完成实现或验证的声明。",
+  "evidence_status": [
+    {
+      "label": "源码",
+      "text": "关键接口与已记录关系可定位到固定源码；外围 Scheduler、描述符和融合分支仍有明确未完成项。"
+    },
+    {
+      "label": "编译",
+      "text": "保留具体类型选择、设备入口及 PTX/SASS 静态证据；不以编译成功证明执行正确。"
+    },
+    {
+      "label": "Host 布局检查",
+      "text": "固定源码的布局接口已在 Host 运行，对照连续与带行尾填充的地址映射；它不证明 GEMM Kernel 支持该变体，也不替代 GPU 数值验证。"
+    },
+    {
+      "label": "运行与性能",
+      "text": "本图集任务没有运行 GPU Kernel，不提供本例数值正确性或性能通过结论。"
+    },
+    {
+      "label": "会议结论",
+      "text": "同事方案尚未提供；现场可确认设计约定并列待验证项，不能提前宣布对方实现通过。"
+    }
+  ],
+  "host_layout_probe": {
+    "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+    "command": [
+      "/usr/bin/g++",
+      "-x",
+      "c++",
+      "-std=c++17",
+      "-I",
+      "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+      "-I",
+      "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+      "-I",
+      "/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+      "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/verification/scheme-layout/layout_probe.cu",
+      "-o",
+      "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/verification/scheme-layout/artifacts/layout-probe"
+    ],
+    "compiler_version": "g++ (GCC) 15.3.1 20260722 (Red Hat 15.3.1-1)\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "source_sha256": "d927ac9e7458a8ce41ac8746ec2010e22cf183a0e44ed7d0a1c9928a7c4e6c00",
+    "runner_sha256": "f6ed41d4d391b8fcb2e9317f3d4d7a75ca9d5cd0c5643e5b145cc4d1ec6b8de8",
+    "fixed_header_sha256": {
+      "include/cutlass/detail/layout.hpp": "c1c1868c93e56696b3eec10080d028ad57e6e6844036e8f7f85e79e84dac7226",
+      "include/cutlass/layout/matrix.h": "6c62ec676d26d5d63b51f936f81707aca6af3fb837b77cd953537908294fbc35",
+      "include/cute/layout.hpp": "7ecaab029ea5a065a029f44c7e44142860f70bcb2fad53eb0d27ad460a68aa46",
+      "include/cute/stride.hpp": "b8b240f0b78aa4fcbadfd763e14216064884481aa12db5ed7131de6e454580f6"
+    },
+    "compile_exit_code": 0,
+    "scope": "host_layout_coordinate_mapping_only",
+    "gpu_kernel_launched": false,
+    "gemm_runtime_verified": false,
+    "performance_verified": false,
+    "execution_exit_code": 0,
+    "output": "padding=0 lda=128 ldb=256 A(1,0)=128 B(1,1)=257\npadding=8 lda=136 ldb=264 A(1,0)=136 B(1,1)=265\nHOST_LAYOUT_PASS checked=131072 ignored_padding_mismatches=65152 wrong_B_coordinate_mismatches=65533 gpu_kernel_launched=false\n",
+    "binary_sha256": "d25910776a28f7f7d8ca80ec29e28a86435195c3c53ba7a8c95fb88cbc50fe3e",
+    "cases": [
+      {
+        "padding": 0,
+        "lda": 128,
+        "ldb": 256,
+        "a_offset_1_0": 128,
+        "b_offset_1_1": 257
+      },
+      {
+        "padding": 8,
+        "lda": 136,
+        "ldb": 264,
+        "a_offset_1_0": 136,
+        "b_offset_1_1": 265
+      }
+    ],
+    "status": "host_layout_pass",
+    "coordinates_checked": 131072,
+    "ignored_padding_mismatches": 65152,
+    "wrong_B_coordinate_mismatches": 65533,
+    "source_url": "evidence/scheme-layout-results.json",
+    "download_url": "evidence/scheme-layout-probe.cu"
+  },
+  "base_atlas_sha256": "9a2db32d1164d8244cd2cbeb4aea99bb52a9be19d9f33ccb77ce601bfe3b1cea",
+  "input_sha256": {
+    "data/main-path-spec.json": "e3a09ddc13b8642fbf6205fbe37287ac14450b056b3db7aa8985631f6b07978a",
+    "data/atlas.json": "9a2db32d1164d8244cd2cbeb4aea99bb52a9be19d9f33ccb77ce601bfe3b1cea",
+    "data/overviews.json": "23283cc5ad3aad6ccc3474d239e2d62166968069e3ff5fa3c9427d03cedd8a00",
+    "scripts/build_main_path.py": "f54fd785de47f9b7ca4b4af59897acad8f2fc4cf56c406b2c2de3cbf58acbcc9",
+    "verification/scheme-layout/layout_probe.cu": "d927ac9e7458a8ce41ac8746ec2010e22cf183a0e44ed7d0a1c9928a7c4e6c00",
+    "verification/scheme-layout/run.py": "f6ed41d4d391b8fcb2e9317f3d4d7a75ca9d5cd0c5643e5b145cc4d1ec6b8de8",
+    "verification/scheme-layout/results.json": "f5eb2c866a45644b5f747f0b719fe307c709a815553202c4ea14f4c54c4bf10b",
+    "verification/scheme-layout/artifacts/run.log": "0dddeccfea2efe25c5eb983a092066057bf528fafaffd42d6cd39066af3e2e1b",
+    "verification/scheme-layout/artifacts/layout-probe": "d25910776a28f7f7d8ca80ec29e28a86435195c3c53ba7a8c95fb88cbc50fe3e"
+  },
+  "scope": "dense_scheme_review_path_not_full_library",
+  "configuration": {
+    "architecture_recipe": "cutlass::arch::Sm100",
+    "binary_target": "sm_110a",
+    "elements": {
+      "A": "cutlass::half_t",
+      "B": "cutlass::half_t",
+      "C": "float",
+      "D": "float",
+      "accumulator": "float"
+    },
+    "layouts": "A/B/C/D RowMajor",
+    "tile_mnk": [
+      256,
+      128,
+      64
+    ],
+    "cluster_mnk": [
+      2,
+      2,
+      1
+    ],
+    "alpha": 1.0,
+    "beta": 0.5,
+    "mainloop_schedule": "KernelScheduleAuto",
+    "epilogue_schedule": "EpilogueScheduleAuto"
+  },
+  "runtime_verified": false,
+  "actual_browser_verified": false,
+  "independent_use_review_passed": false,
+  "global_complete": false
+}

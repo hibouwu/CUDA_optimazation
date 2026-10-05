@@ -1,0 +1,38 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title TMEM：初始化与全局初始化前提 · CTA 0 leader mma · 1
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F4F7FB
+skinparam classBorderColor #57718A
+skinparam ArrowFontSize 11
+package "CTA 0 leader mma" as actor0 {
+class "CTA 0 leader mma\n初始化本CTA dealloc barrier\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as e0 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.init_dealloc]] {
+  enter : 调用进入
+  effect : 指定效果满足
+  return : 调用返回
+}
+class "CTA 0 leader mma\nMMA等待cluster初始化完成\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as e1 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init_wait]] {
+  enter : 调用进入
+  return : 调用返回
+}
+}
+e0::return --> e1::enter : tmem.order.001\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e0::enter --> e0::effect : tmem.order.025\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+e0::enter --> e0::return : tmem.order.135\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e0::effect --> e0::return : tmem.order.136\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+e1::enter --> e1::return : tmem.order.137\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+event框不是新增C++类；每个锚点有独立连接点，不同API和CTA事件不合并。
+endlegend
+@enduml

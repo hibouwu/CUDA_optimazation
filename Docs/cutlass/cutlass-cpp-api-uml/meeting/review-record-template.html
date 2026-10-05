@@ -1,0 +1,92 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>接口对齐会记录</title><link rel="stylesheet" href="style.css"></head><body><nav aria-label="会议材料"><a href="index.html">图与使用顺序</a><a href="handbook.html">现场手册</a><a href="references.html">官方接口速查</a><a href="review-record-template.html">空白记录</a><a href="review-record-template.md" download>下载记录模板</a><a href="../site/index.html">详细图集</a></nav><main><h1 id="接口对齐会记录">接口对齐会记录</h1>
+<blockquote>
+<p>复制本文件后填写。未展示或尚未取得的证据留空，并在待办中说明；不预填“通过”。每个接口交接和每条差异分别记录，需要时复制对应段落。</p>
+</blockquote>
+<h2 id="会议与兼容范围">1. 会议与兼容范围</h2>
+<ul>
+<li>日期、参会人：</li>
+<li>被审阅实现及版本：</li>
+<li>目标硬件、编译器与运行环境：</li>
+<li>承诺的兼容程度（源代码、适配层或功能）：</li>
+<li>当前已实现的入口与能力：</li>
+<li>仅完成设计或计划支持的能力：</li>
+<li>明确不支持的范围：</li>
+<li>本次官方参照：CUTLASS 提交
+<code>8f50b052e1099fb982392a622caab69b97b63128</code>，库版本
+4.6.0，其中的 3.x API 体系。</li>
+<li>本次审阅范围与未审阅部分：</li>
+</ul>
+<h2 id="现场走过的计算">2. 现场走过的计算</h2>
+<ul>
+<li>计算式、形状及边界条件：</li>
+<li>输入、累加与输出数据类型：</li>
+<li>布局、stride、对齐及额外数值信息：</li>
+<li>编译期配置与运行时参数：</li>
+<li>调用方准备、分配和检查的内容：</li>
+<li>参数转换与执行前初始化：</li>
+<li>提交入口、设备入口与工作分配：</li>
+<li>搬运、计算及后处理的交接顺序：</li>
+<li>结果可读的条件与调用方等待方式：</li>
+<li>资源复用和释放条件：</li>
+<li>尚未走通或仅有口头描述的步骤：</li>
+</ul>
+<h2 id="接口交接记录按交接逐条复制">3.
+接口交接记录（按交接逐条复制）</h2>
+<ul>
+<li>编号：</li>
+<li>同事的接口、签名与源码位置：</li>
+<li>负责的工作及明确不负责的工作：</li>
+<li>上游交付的对象、类型和前提：</li>
+<li>本接口输出或修改的对象：</li>
+<li>下游接口及允许交接的条件：</li>
+<li>编译期条件、运行时条件与不支持情形：</li>
+<li>对象所有者、有效期、并发使用限制：</li>
+<li>官方对应职责、API 与固定源码位置：</li>
+<li>双方差异及对使用者的影响：</li>
+<li>已展示证据及其适用范围：</li>
+<li>当前判断与仍需验证的内容：</li>
+</ul>
+<h2 id="同步或资源记录按对象逐条复制">4.
+同步或资源记录（按对象逐条复制）</h2>
+<ul>
+<li>缓冲、同步对象或其他资源：</li>
+<li>创建、初始化与持有者：</li>
+<li>写入发起者、协作参与者及通知范围：</li>
+<li>写入完成条件、等待者及读取者：</li>
+<li>读取完成条件与允许复用的时刻：</li>
+<li>轮次、stage 或 phase 的推进方式：</li>
+<li>最后一轮、无工作与异常退出的处理：</li>
+<li>释放条件与负责释放的接口：</li>
+<li>源码或硬件约束证据：</li>
+<li>实际运行证据及尚未验证的条件：</li>
+</ul>
+<h2 id="差异与待办按问题逐条复制">5. 差异与待办（按问题逐条复制）</h2>
+<ul>
+<li>问题编号、涉及接口或交接编号：</li>
+<li>当前说明或观察到的行为：</li>
+<li>反例、缺少的条件或与约定冲突之处：</li>
+<li>对兼容范围、正确使用或实现的影响：</li>
+<li>状态（可并列：已解释 / 证据支持 / 有意差异 / 待验证）：</li>
+<li>本次已达成的结论：</li>
+<li>尚未达成的结论与原因：</li>
+<li>需要修改的内容或补交的证据：</li>
+<li>验证输入、条件与完成判据：</li>
+<li>负责人、约定时间与后续结果：</li>
+</ul>
+<h2 id="会议结论">6. 会议结论</h2>
+<ul>
+<li>已确认的设计约定及其范围：</li>
+<li>有源码或编译证据支持的结论：</li>
+<li>有运行正确性证据支持的结论：</li>
+<li>有性能证据支持的结论与测量条件：</li>
+<li>已接受的有意差异及调用方责任：</li>
+<li>影响下一步使用的未关闭问题：</li>
+<li>其他待办与下一次审阅所需材料：</li>
+<li>本次未作出的保证：</li>
+</ul>
+<p>查阅：<a href="handbook.html">现场手册</a> · <a
+href="references.html#ref-host">Host 调用</a> · <a
+href="references.html#ref-build">编译期选择</a> · <a
+href="references.html#ref-handoff">参数交接</a> · <a
+href="references.html#ref-sync">同步与资源</a>。</p>
+</main><footer>会议精选参考 · CUTLASS 4.6.0 / 3.x API 体系 · 全库图集未完成</footer></body></html>

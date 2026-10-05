@@ -1,0 +1,114 @@
+{
+  "case": "sm_110a_raw_used",
+  "target": "sm_110a",
+  "variant": "raw",
+  "forced_device_use": true,
+  "stages": [
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_EXPECT_ARCH=1100",
+        "-DPROBE_EMIT",
+        "--ptx",
+        "--keep",
+        "--keep-dir",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/keep",
+        "-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/raw.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/probe.ptx"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvcc_ptx.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvcc_ptx.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_EXPECT_ARCH=1100",
+        "-DPROBE_EMIT",
+        "--cubin",
+        "-Xptxas=-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/raw.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/probe.cubin"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvcc_cubin.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvcc_cubin.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/ptxas",
+        "-arch=sm_110a",
+        "-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/probe.ptx",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/direct_ptxas.cubin"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/direct_ptxas.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/direct_ptxas.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvdisasm",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/probe.cubin"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvdisasm.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_110a_raw_used/nvdisasm.stderr.txt"
+    }
+  ],
+  "ptx_instruction_count": 12,
+  "ptx_instructions": [
+    "tcgen05.cp.cta_group::1.128x256b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.128x256b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::1.128x128b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.128x128b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::1.4x256b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.4x256b [%r1], %rd1;",
+    "tcgen05.cp.cta_group::1.32x128b.warpx4 [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.32x128b.warpx4 [%r1], %rd1;",
+    "tcgen05.cp.cta_group::1.64x128b.warpx2::02_13  [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.64x128b.warpx2::02_13  [%r1], %rd1;",
+    "tcgen05.cp.cta_group::1.64x128b.warpx2::01_23 [%r1], %rd1;",
+    "tcgen05.cp.cta_group::2.64x128b.warpx2::01_23 [%r1], %rd1;"
+  ],
+  "ptx_sha256": "49074639f92640d907f76bd4b720ff43a8c2495e5872dbd7d7e7b73d242a1d0c",
+  "cubin_sha256": "1a39549b016b49f0c37051b2f914a793fba027e35416056999283d7b50fa11fa",
+  "sass_UTCCP_lines": [
+    "/*0060*/                   UTCCP.T.S.2CTA.2x64dp128bit_lw01_lw23 tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2x64dp128bit_lw01_lw23 tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2CTA.2x64dp128bit_lw02_lw13 tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2x64dp128bit_lw02_lw13 tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2CTA.4x32dp128bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.4x32dp128bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2CTA.4dp256bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.4dp256bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2CTA.128dp128bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.128dp128bit tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S.2CTA tmem[UR4], gdesc[UR6] ;",
+    "/*0060*/                   UTCCP.T.S tmem[UR4], gdesc[UR6] ;"
+  ]
+}

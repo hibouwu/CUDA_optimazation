@@ -1,0 +1,2 @@
+ptxas error   : Function 'asm01_emit_all' uses single CTA(.cta_group::1) and CTA pair granularity(.cta_group::2) and that is not allowed.
+ptxas fatal   : Ptx assembly aborted due to errors

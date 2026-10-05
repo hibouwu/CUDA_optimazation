@@ -1,0 +1,19 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title Resource
+state "allocated" as s0
+state "released" as s1
+s0 --> s1 : [[../index.html?protocol=protocol&event=l_free release\nfree leader · 调用返回\npeer uses completed before free]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

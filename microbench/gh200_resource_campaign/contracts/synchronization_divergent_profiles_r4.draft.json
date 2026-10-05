@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "family": "synchronization_divergent",
+  "profiles": [
+    {
+      "id": "sync_divergent_pair_1_2_33_v2",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        33
+      ],
+      "input_profiles": [
+        "divergent_cross_half_tokens"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "single32thread CTA/fullmask,three fixed1/2/33launches,no warmup/pilot",
+        "all128output words plus4clock64low-high words each launch;exact peer-token/checksum/paircount",
+        "actual outlined WARPSYNC helpers preserved afterEXIT and separately reviewed; no bare barrier performance"
+      ],
+      "reference_identity": {
+        "model": "sync_divergent_peer_sum_v2",
+        "path": "microbench/gh200_resource_campaign/common/synchronization_pair_reference_v2.hpp",
+        "sha256": "c011a9162da5b40de38918d74c6c7c62efcce3502e6ce539b3dc56994ede3fc0"
+      },
+      "declared_output_check": "all132uint32words per launch",
+      "output_evidence_kind": "full_values"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "family": "global_duplex",
+  "profiles": [
+    {
+      "id": "short_global_duplex_1_2",
+      "target_iterations": [
+        1,
+        2
+      ],
+      "input_profiles": [
+        "address_seed_nonuniform"
+      ],
+      "maximum_target_launches": 2,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "address_seed_nonuniform"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "address_seed_nonuniform"
+        }
+      ],
+      "completion_requirements": [
+        "same original case specialization, vector16,256threads, ratios,cache policy,actual occupancy grid and aligned array allocation",
+        "group issue order: r loads consuming all uint4 words then w independent address/seed stores; dependent copy stores each loaded uint4 directly to same index in separate output array",
+        "all threads write their checksum into volatile shared uint32[256] drain; writing modes execute device threadfence before final CTA barrier and timer stop; 1024B static drain is bookkeeping, excluded from requested payload",
+        "fresh host input uint32(17*word_index+seed); before each launch every destination word and per-thread checksum is poisoned with its expected uint32 value XOR UINT32_MAX via host cudaMemcpy, including pure-write zero-sum bookkeeping; stamp bytes=0xff; no explicit auxiliary kernel",
+        "CUDA launch/event synchronization/readback succeed; all launched CTA stamp members overwritten; SMID must not equal UINT32_MAX, physical SMIDs need not be contiguous",
+        "read paths compare one complete modular checksum for every launched thread; write paths compare every word of the entire allocated destination",
+        "pure-write per-thread sum=0 is checked only as completion bookkeeping, never counted as read/data coverage; all destination words still checked",
+        "short timing may be zero and short launched grid need not visit every physical SM; no warmup/pilot/formal rate",
+        "stop on first CUDA/completion/numerical failure and emit failed partial validation when possible"
+      ],
+      "reference_identity": {
+        "model": "global_duplex_modular_sweep_v1",
+        "path": "microbench/gh200_resource_campaign/common/global_duplex_reference.hpp",
+        "sha256": "e6b29111204b1f379188737712aa75334cf9ae1c813a51f02efea44b20c5a696"
+      },
+      "declared_output_check": {
+        "method": "all per-thread nonempty read checksums and every destination uint32 word; pure-write zero sums are completion only",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "(reads>0?blocks*256:0)+(writes>0?array_bytes/4:0)",
+        "sampling": false,
+        "destination_reference": "copy:uint32(17*word_index+seed); independent/pure write:uint32(29*word_index+seed)",
+        "poison": "per-element expected XOR UINT32_MAX, constructed on host outside timing; shared reference/poison construction does not replace independent reference tests"
+      },
+      "resource_extensions": {
+        "requested_array_bytes": "small:floor(L2/4);large:4*L2",
+        "array_bytes": "ceil(requested/(blocks*256*16))*(blocks*256*16)",
+        "aggregate_array_bytes": "array_bytes*((reads>0)+(writes>0))",
+        "read_requests_per_group": "frozen case reads",
+        "write_requests_per_group": "frozen case writes"
+      },
+      "output_evidence_kind": "error_count_only",
+      "output_evidence_limit": "all declared outputs checked but values not persisted; cannot support offline rechecking after changing the reference",
+      "kernel_symbol_convention": "gd_{mode}_{cache}_r{reads}_w{writes}; unmangled wrapper per nine operation specializations, two sizes share target",
+      "resource_requirements": {
+        "threads": 256,
+        "static_smem_bytes": 1024,
+        "dynamic_smem_bytes": 0,
+        "local_size_bytes": 0,
+        "blocks": "sms*min(4,actual_occupancy_limit_ctas_per_sm)",
+        "allocation": "small aggregate<L2;large perarray>=4*L2; reject allocation over available GPU memory"
+      },
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    }
+  ]
+}

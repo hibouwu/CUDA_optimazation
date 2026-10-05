@@ -1,0 +1,1238 @@
+                                            ForgeMegakernel: A General Framework for
+                                         Efficient Auto-Regressive Model Decode Megakernels
+                                                            Leshan Li                            Zhui Zhu                            Xianglong Deng
+                                                      Tsinghua University                   Tsinghua University              University of Chinese Academy of
+                                                         Beijing, China                        Beijing, China                             Sciences
+                                                 lils25@mails.tsinghua.edu.cn          z-zhu22@mails.tsinghua.edu.cn                   Beijing, China
+                                                                                                                               dengxianglong02@gmail.com
+
+                                                         Yaojian Chen                          Qingfeng He                               Yuxuan Li∗
+                                                       ModelBest Inc.                        Tsinghua University                        ModelBest Inc.
+arXiv:2609.12379v1 [cs.DC] 11 Sep 2026
+
+
+
+
+                                                       Beijing, China                           Beijing, China                          Beijing, China
+                                                  chenyaojian17@gmail.com               heqf21@mails.tsinghua.edu.cn               liyuxuan@modelbest.cn
+
+                                                           Rong Zhao                              Xu Han∗                              Zhiyuan Liu∗
+                                                      Tsinghua University                   Tsinghua University                      Tsinghua University
+                                                         Beijing, China                        Beijing, China                           Beijing, China
+                                                    r_zhao@tsinghua.edu.cn              han-xu@mail.tsinghua.edu.cn                liuzy@tsinghua.edu.cn
+
+                                         Abstract                                                       1   Introduction
+                                         Auto-regressive model decode is bandwidth-bound, since ev-     A megakernel executes an entire computation in a single per-
+                                         ery weight and key/value-cache byte crosses high-bandwidth     sistent kernel launch instead of one launch per operator [1, 2].
+                                         memory once per token. A megakernel is an ideal solution,      The most important application is auto-regressive model de-
+                                         but existing automatic megakernel generation approaches        coding, which dominates the latency of interactive services.
+                                         cannot achieve both generalization across models and cor-      Decoding generates one token at a time by reading model
+                                         rectness guarantees.                                           weights and performing matrix-vector multiplications [3, 4],
+                                            We present ForgeMegakernel, which generates a per-          an arithmetic intensity near one floating-point operation
+                                         model high-performance decode megakernel using coding          per byte that leaves GPU arithmetic units idle and makes
+                                         agents. ForgeMegakernel pairs a universal knowledge base       decoding memory-bound.
+                                         of ten progressive milestones with an independent mid-state       Current serving engines execute each decoding step as a
+                                         test oracle. The milestones provide the megakernel’s struc-    sequence of operator-specific kernels. For example, vLLM [5]
+                                         tural properties: a fine-grained instruction stream for each   and SGLang [6] construct each step using precompiled li-
+                                         SM, dependency counters replacing the global synchroniza-      brary kernels [7–10], launching one kernel per operator.
+                                         tion, and a shared-memory buffer pool for workload bal-        On an H100 GPU, this approach requires 280–448 kernel
+                                         ance across SMs and greater parallelism. The test oracle       launches per decoded token. Each kernel launch incurs
+                                         derives the mid-states of the megakernel and checks the per-   startup and retirement overhead, making the decoding step
+                                         formance, error and precision during the generation process,   take 1.06–1.45× than a single persistent-kernel execution
+                                         guaranteeing a correct and trustworthy forged megakernel.      that transfers the same number of bytes. Moreover, in the
+                                            We evaluated ForgeMegakernel on 14 representative           280-launch case, 158 launches execute small RMSNorm,
+                                         decoding operations across eight model families spanning       RoPE, or KV-store kernels. These kernels induce memory
+                                         0.6B–13B parameters. The generated megakernels achieved        transfer of intermediate values between HBM and shared
+                                         50.5–85.9% MBU and geometric mean speedups of 1.21× over       memory, which accounts for one-fifth of the per-token
+                                         SGLang 0.5.18 and 1.54× over a megakernel compiler under       decoding latency. (§5.2.3)
+                                         identical configurations. Inside SGLang, evaluated on GSM8K       A decode megakernel removes this overhead by fusing
+                                         with ragged prompts, all 14 megakernels decoded faster than    the entire decoding step into that single launch and execut-
+                                         the SGLang engine at comparable answer accuracy.               ing the small operations in place within the thread blocks.
+                                                                                                        Handwritten implementations [11, 12], built on optimized
+                                         Keywords: large language model inference, megakernel,          operators and tile-based programming languages [13–15],
+                                         GPU kernel synthesis, LLM agents, memory bandwidth             achieve 74–78% of H100 memory bandwidth. However, these
+                                         utilization, measurement methodology                           implementations lack reusability: each targets a single model,
+                                                                                                        and adapting it to a different model requires weeks of spe-
+                                                                                                        cialist effort.
+                                         ∗ Corresponding authors.
+   For rapid development, several works [16–22] focus                               In each iteration, a newly initialized coding agent receives
+on automatic megakernel generation. These works fall                             the milestone matrix, the previous gate summary, and the
+into two categories, namely compiler-based [16–18] and                           campaign rules. The coding agent modifies the kernel, runs
+agent-driven [19–22]. However, neither consistently pro-                         the validation gate on an H100 GPU, and retains or reverts
+duces high-performance megakernels on arbitrary cells                            the changes based on the measured results. Only measured
+(model size, batch size, sequence length).1 Compiler-based                       values are carried forward to the next round; the hypothesis,
+approches [16–18] follow strict lowering rules and exhibits                      code diff, and measurement results are recorded in a ledger.
+performance degradation on the cells those rules do not                          Before the next milestone becomes available, a second agent
+cover. Agent-driven approaches generate a megakernel for                         audits each round that passes the gate, using the code diff
+any cell in this space [19–22]. However, with no guide or                        and run identifiers as evidence.
+knowledge for the generation task, the generated kernel is                          In this work, we make the following contributions:
+generally slower than the serving engine (§3.1). We view                           C1. We propose a universal knowledge base compris-
+agent-driven generation as a promising approach for ar-                                 ing ten milestones that specify the structural
+bitrary cells; the missing component is a knowledge base                                properties of high-performance megakernels for
+that guides high-performance megakernel generation across                               auto-regressive models. Each ordered milestone
+auto-regressive models. This leads to Challenge 1: how to                               identifies a structural property, including a single per-
+formulate a knowledge base that supports agent generalization,                          sistent launch, a per-SM instruction stream, counter
+contains no model-specific parameters, and is precise enough                            dependencies without a grid-wide barrier, and shared-
+to guide implementation and verification.                                               memory buffer pooling (M5–M8). Each milestone also
+   Guaranteeing the correctness of an agent-generated                                   specifies an MBU floor. A milestone constrains the
+megakernel remains an open problem. A megakernel fuses                                  kernel structure without fixing parameter values. For
+the operators of a decoding step, including RMSNorm, at-                                a given model, the agent derives all required constants,
+tention, and projection operations, keeping intermediate                                allowing the same ten milestones to apply across the
+results within the kernel and preventing direct external                                entire design space (§4.1, §5.2).
+inspection. Checking only the final output leaves the fu-                          C2. We propose a standardized test oracle for validat-
+sion process unchecked and prone to errors, while output                                ing megakernel mid-states during construction,
+discrepancies do not identify where those errors originate.                             thereby ensuring correctness and trustworthi-
+Moreover, if a correctness check is specified in the prompt                             ness. The oracle reads the mid-state key/value cache,
+but implemented and executed by the agent, the build is                                 enabling divergence to be localized within the ker-
+gated by an agent-defined check rather than a standardized                              nel. The oracle also derives every quantity used in
+one. Loopholes in this check may allow the agent to bypass                              evaluation from the model configuration. This de-
+the intended correctness requirements (§3.2). This leads to                             sign prevents the agent from altering the performance
+Challenge 2: recovering verifiable mid-states of the megakernel                         threshold against which the kernel is assessed. Accu-
+and validating them through a standardized correctness gate                             racy inside SGLang matches that of SGLang’s own
+during megakernel generation.                                                           decoder for every megakernel included in our evalua-
+   We present ForgeMegakernel, an end-to-end framework                                  tion (§4.2, §5.2.2).
+that generates a deployable decoding megakernel from a                             C3. We develop an end-to-end generation framework
+model configuration. Generation follows a sequence of ten                               that incorporates feedback from the GPU. Each
+milestones, each specifying a structural property of a high-                            iteration runs on the device. A newly initialized agent
+performance decoding megakernel and a diagnostic for eval-                              edits the kernel, the evaluation gate returns measured
+uating that property. These milestones contain no model-                                latency, utilization, profiler counters, and error infor-
+specific parameters and thus apply across all cells in the                              mation, and the subsequent edit is guided by these
+target space (Challenge 1). A mid-state test oracle serves as                           measurements rather than by estimates. An inser-
+the validation gate, deriving all quantities and contracts re-                          tion path registers the completed kernel in a pro-
+quired for evaluation, including the byte counts underlying                             duction serving engine without further modification
+MBU, precision contracts, and a float64 error bound. The                                (§4.3, §5.3).
+oracle performs these checks during megakernel generation,
+                                                                                    We evaluate ForgeMegakernel at the kernel and serving
+evaluating every kernel against a uniform standard rather
+                                                                                 levels. The megakernel generation campaigns produced 14
+than agent-defined checks (Challenge 2). An iterative loop
+                                                                                 megakernels for eight models (0.6B–13B parameters), with
+coordinates milestone-guided generation and oracle-based
+                                                                                 MBU ranging from 50.5% to 85.9%. On byte-identical mea-
+validation, with GPU execution in every iteration.
+                                                                                 surement cells, the megakernels achieved geometric-mean
+                                                                                 speedups of 1.21× over SGLang 0.5.18 and 1.54× over a
+1 A cell is one (model, batch size, sequence length) triple, the configuration
+                                                                                 megakernel compiler.
+a decode megakernel is compiled and measured for.
+   When integrated into SGLang, all 14 megakernels reduced               where 𝑡 is the wall-clock time per generated token and 𝛽 peak
+end-to-end latency. When evaluated against an independent                is peak HBM bandwidth. We use an H100 80GB with HBM3
+float64 reference, all megakernels exhibit comparable accu-              and 𝛽 peak = 3350 GB/s throughout. Because bandwidth is the
+racy compared with SGLang. In serving-level evaluations,                 binding resource during decode, the 100% reference applies
+all megakernels remain consistent with SGLang in GSM8K                   to bandwidth rather than to an unsaturated resource. At fixed
+accuracy.                                                                (𝑏, 𝑆), 𝐵(𝑏, 𝑆) is determined by the model and measurement
+   In the ablation study, removing a milestone’s structural              configuration, so an MBU ratio is also a latency ratio.
+requirement while retaining its MBU floor reduced the final
+campaign result for every pair tested (§A).                              2.3   Megakernels
+                                                                         A conventional serving engine executes a decode step as
+2     Background                                                         several hundred kernels, launched individually or replayed
+2.1     The decode step                                                  from a captured CUDA graph as vLLM and SGLang do by
+Auto-regressive model serving splits into prefill, which pro-            default [29]. Graph replay removes fixed launch overhead
+cesses the prompt in parallel and is compute-bound, and de-              but not the transition between kernels: the memory system
+code, which generates one token at a time and is bandwidth-              must finish one grid before the next can make progress. A
+bound at interactive batch sizes [3, 4, 23].                             megakernel keeps the step within one host launch, so the
+    One decode step of a auto-regressive transformer [24]                weight stream never stops at an operator boundary and the
+applies per layer RMSNorm, the 𝑄𝐾𝑉 projections, RoPE [25],               weightless operators of §2.1 run in place.
+attention, the 𝑂 projection and a gate/up–SiLU–down MLP,                    Published megakernels are point designs [11, 12, 16]. Each
+then a final RMSNorm and the LM head. Every projection                   holds the GPU’s streaming multiprocessors (SMs) for the
+reads a whole weight matrix; attention alone reads state from            whole step and arranges the work among them inside the
+earlier steps, the whole key/value (KV) cache per token, with            kernel, but how it does so, and the constants that go with it,
+𝑞 𝑗 the query of head 𝑗 and 𝐾𝑔 ( 𝑗 ) , 𝑉𝑔 ( 𝑗 ) ∈ R𝑆 ×𝑑ℎ the cache of    are settled for one model in advance: a hand-written megak-
+its KV head 𝑔( 𝑗) over 𝑆 positions:                                      ernel reaches 74–78% of H100 bandwidth on the one model it
+                                                                         was written for [11], and the compiler-based design lowers
+                               𝑞 𝑗 𝐾𝑔⊤( 𝑗 )
+                                               !
+                                                                         any model through rules fixed before it. Neither says what a
+                 𝑎 𝑗 = softmax √                 𝑉𝑔 ( 𝑗 ) ,       (1)    kernel for a model it has not seen must look like.
+                                       𝑑ℎ
+                                                                            Persistent threads originated in general-purpose GPU com-
+                                                                         puting [1], and graphics systems documented their draw-
+2.2     Model bandwidth utilization
+                                                                         backs for monolithic kernels [2]; decode’s regularity, the
+For a model with 𝐿 layers, hidden size ℎ, 𝑛ℎ query heads, 𝑛𝑘𝑣            same matrix–vector products and normalizations applied to
+grouped key/value heads [26, 27], intermediate width 𝑖 and               a weight stream, is what makes the approach apply here.
+vocabulary size 𝑉 , summing the operators that read memory,
+one decode step at batch size 𝑏 reads
+                                                                         3     Observations
+                                                                         We evaluate the performance of megakernels produced by
+    𝐵(𝑏, 𝑆) = [𝐿(ℎ𝑛ℎ𝑑ℎ + 2ℎ𝑛𝑘𝑣 𝑑ℎ + 𝑛ℎ𝑑ℎ ℎ + 3ℎ𝑖) + 𝑉 ℎ] 𝑤               two automatic generation approaches on five cells (§3.1),
+              |                   {z                     }
+                                   weights
+                                                                         and examine what a correctness check placed at the model
+                                                                   (2)   output accepts (§3.2). Every run uses one H100 and the byte
+                             + 2𝐿 𝑛𝑘𝑣 𝑑ℎ 𝑆𝑏 𝑤 +      𝑏ℎ𝑤
+                               | {z }                |{z}                count of Eq. (2); Figure 1 reports both measurements.
+                                   KV cache       embedding rows
+                                                                         3.1   Limited performance across cells
+bytes from high-bandwidth memory (HBM), where 𝑤 is the
+element width: the projections and the LM head, the atten-               Two approaches generate a decode megakernel without a
+tion reads of the cache, and the gathered embedding rows.                specialist: a coding agent asked for one directly, and a com-
+The embedding table is excluded from Eq. (2) because decode              piler that lowers the model through fixed rules. We measure
+gathers 𝑏 rows rather than reading the full table. Including             both against SGLang on five cells, at one byte count and
+the full table can inflate reported utilization by up to 1.22×           card.
+for untied embeddings. We observed this over-count in the                   Agent under a naive prompt. An agent given no struc-
+reported measurements of two published megakernel sys-                   tural target writes a kernel that runs but does not run fast.
+tems.                                                                    Our naive prompt names the model, the cell and the single-
+   Model bandwidth utilization (MBU) [28] is defined as                  launch requirement, and no structural property of the kernel;
+                                                                         the agent produced a working megakernel on all five cells,
+                                   𝐵(𝑏, 𝑆)                               and all five are slower than SGLang: 0.59 to 0.95 times its uti-
+                        MBU =                ,                     (3)
+                                  𝑡 · 𝛽 peak                             lization, geometric mean 0.75 (Fig. 1a). They lose their time
+                            (a) limited performance across cells                                                                                                                      (b) accuracy loss in real inference
+
+                                SGLang              agent with naive prompt                        MPK (megakernel compiler)                                                              SGLang           output-only check        agent's own check
+
+
+
+
+                                                                                                                                             GSM8K accuracy (%), in the engine
+                      60                           57                                                                                                                                                                       97.0 96.0 95.5
+                                                                52       54                                         52
+MBU (%), end to end
+
+
+
+
+                                                                                                                         50
+                              45                        45                                                                                                                       80
+                                   39 40                                                      40
+                      40                                                                                                                                                                                   64.0 61.5 61.5
+                                                                              34 32                                                                                                     58.0 56.5
+                                                                                                                                                                                 60                 53.0
+                                                                                                   24                            25
+                                                                                                           21                                                                    40
+                      20
+                                                                                                                                                                                 20
+                                   0.86×
+
+                                           0.88×
+
+
+
+
+                                                        0.78×
+
+                                                                0.91×
+
+
+
+
+                                                                              0.62×
+
+                                                                                      0.60×
+
+
+
+
+                                                                                                   0.59×
+
+                                                                                                           0.51×
+
+
+
+
+                                                                                                                         0.95×
+
+                                                                                                                                 0.47×
+                                                                                                                                                                                             -1.5 -5.0          -2.5 -2.5        -1.0 -1.5
+                       0                                                                                                                                                         0
+                             MiniCPM4-1B           Qwen3-4B             MiniCPM4-3B           Qwen3-0.6B           Llama-3.2-1B                                                          Qwen3-0.6B        MiniCPM4-3B       Qwen3-8B
+                              b1×128               b8×1024               b8×2048              b16×1024             b16×1024                                                              b16×1024           b1×128           b1×128
+
+ Figure 1. One H100, identical bytes. (a) five cells under SGLang, an agent given a naive prompt, and a megakernel compiler
+ (MPK), ratios against SGLang. (b) three cells scored on GSM8K against SGLang. The output-only check reads the final logits
+ alone, the agent’s own check is one session told in its prompt to guarantee correctness, with no harness and no gate.
+
+ at different places: one leaves 28% of the machine idle inside                                                                          indistinguishable from a correct one whenever the prompts
+ the kernel; one retains 225 grid-wide barriers in a step, syn-                                                                          have equal length, and a single distance at the logits cannot
+ chronized through a single dependency counter; one spends                                                                               identify which of the 7𝐿 fused operator sites of an 𝐿-layer
+ more time selecting a token than computing the logits. A                                                                                model produced an error. Kernels accepted under such a
+ bandwidth target is no substitute, since MBU is one figure                                                                              check are measurably worse in the serving engine: the output-
+ over a fused step and does not indicate which part to change:                                                                           only check kernels of Fig. 1b lose 1.5 GSM8K points on Qwen3-
+ in one campaign the agent kept a grid-barrier phase structure                                                                           0.6B at 𝑏16×1024, 2.5 points on MiniCPM4-3B at 𝑏1×128 and
+ for 35 measured rounds and stopped at 34.2%, above the 31%                                                                              1.0 point on Qwen3-8B at 𝑏1×128, each against the SGLang
+ SGLang reaches on that cell and well below a hand-written                                                                               engine on the same prompts.
+ megakernel’s 74.5% on the same card.                                                                                                       The agent’s own check. Stating the check in the prompt
+    Compiler under fixed rules. A compiler is repeatable,                                                                                does not recover the missing mid-state signals. The agent’s
+ but its rules cover some cells better than others. MPK lowers                                                                           own check kernels of Fig. 1b come from single sessions asked
+ the same five cells and is no faster than the agent, at 0.47                                                                            to guarantee the correctness of the megakernel they wrote,
+ to 0.91 times SGLang’s utilization with a geometric mean                                                                                with no harness and no gate. Each session wrote its own tests
+ of 0.65 (Fig. 1a), and the lowering is brittle where a shape                                                                            and cleared an MBU bar set at SGLang’s utilization on its
+ crosses a rule: one line in a hand-written task kernel pads                                                                             cell, and each kernel still lost accuracy against the SGLang
+ the batch to 8 or to 16, and MPK’s utilization falls by about                                                                           engine: 5.0 GSM8K points on Qwen3-0.6B at 𝑏16×1024, 2.5
+ 44% when a ninth sequence enters a batch of eight.                                                                                      points on MiniCPM4-3B at 𝑏1×128 and 1.5 points on Qwen3-
+    The above experiments show that fixed compilation rules                                                                              8B at 𝑏1×128. Besides, no two agents write the same check
+ have limited coverage across cells, while an agent without                                                                              gate, so an agent’s own check cannot be standardized and is
+ structural guidance cannot reliably find effective optimiza-                                                                            therefore hard to trust.
+ tion directions; an aggregate bandwidth metric does not indi-                                                                              The above experiments show that final-output checks may
+ cate which structure should be improved. High-performance                                                                               miss specific defects in a fused kernel and cannot identify
+ megakernel generation therefore requires a set of reusable,                                                                             their sources, while acceptance criteria defined by the gen-
+ structured milestones that provide the agent with explicit                                                                              erating agent may treat defects as acceptable limitations.
+ implementation goals and optimization steps.                                                                                            Correctness validation therefore requires observable inter-
+                                                                                                                                         mediate states and criteria independent of the generating
+ 3.2                       Unverifiable correctness of kernel fusing                                                                     agent to detect and localize errors in the internal computa-
+                                                                                                                                         tion.
+ A generated megakernel is checked in one of two ways today:
+ its final output is compared against a reference, or the check
+ is stated in the prompt and the agent establishes correctness                                                                           4                    Design
+ itself. Fusing keeps every internal value in registers and                                                                              ForgeMegakernel takes a model configuration and returns
+ shared memory, so the logits are the only surface an outside                                                                            a decode megakernel a serving engine can load. §3 leaves
+ checker can read.                                                                                                                       two obstacles: an agent has no statement of what a fast
+    The output-only check. An output-only check cannot                                                                                   megakernel looks like, and a fused kernel offers nothing
+ localize the defects it does detect. A kernel that broadcasts                                                                           to check against. The milestone ladder (§4.1) supplies the
+ one sequence’s decode position across a ragged batch is                                                                                 first and the mid-state test Oracle (§4.2) the second, deriving
+           C1. the universal knowledge base (§4.1)                       C2. the mid-state test Oracle (§4.2)
+
+                      M0–M4 functional                                                                                                             precision contract
+                                                                                  config                  byte-accounted performance
+                         M5 megakernel                                         model.toml +                    host-owned 𝐵 (𝑏, 𝑆 ) ,        bf16 at boundaries, fp32 inside,
+                       M6 instruction stream                                   machine.toml                     elapsed time only                   𝛼 ≤ 0.5 of the
+                                                                                                                                                   narrowed reference
+                            M7 barrier-free
+                            M8 buffer pooling
+                    adds a shared-memory buffer pool                           derived math              float64-referenced error              functional checks (M5+)
+                             + an MBU floor                                                            KV mid-state per layer, 𝐶 < 2𝐵 ,        finite logits, poisoned KV,
+                    closed by a source scan and MBU                                                   logit distance priced against bf16          one position per lane
+                                                                               request.json
+                                                                               whole config +
+                                                                                derived block
+             milestones providing structural properties
+
+                                                dme run mX — build and measure on the GPU                                             verdict + metrics
+
+                dev round          commit        review round        verdict       milestone matrix         advance   committed ledger      deploy       deployment
+            fresh-context agent,              fresh-context agent,                    status × tier,                    perf_log.md,                  SGLang model class,
+            writes src/, notes/                  audits the diff                  strike + stall budget                 state.jsonl                    forward(DECODE)
+
+
+           C3. the generation framework (§4.3)
+
+Figure 2. ForgeMegakernel overview. C1 states the structure a kernel must reach, one card per milestone. C2 derives every
+quantity a verdict rests on. C3 runs one fresh-context round per edit and deploys the kernel.
+
+every quantity a verdict rests on before a kernel exists; the                                   its own inputs are ready. Replacing grid-wide barriers with
+generation framework (§4.3) drives both and deploys the                                         these counters converts the scheduling freedom of the first
+forged megakernel in a serving engine (Figure 2).                                               step into independent progress. Neither step suffices alone.
+                                                                                                Without counters, the slowest SM still sets every phase tran-
+4.1 The universal knowledge base and the                                                        sition; with counters over a coarse phase schedule, the same
+    milestones                                                                                  waits return under another name.
+Building a decode megakernel takes two kinds of progress,                                          The third step is a shared-memory buffer pool. Indepen-
+preserving the model’s computation as operators fuse and re-                                    dent progress still exposes memory latency while each in-
+organizing execution so that fusion keeps the GPU busy, and                                     struction loads, computes and stores in turn. A buffer pool
+ForgeMegakernel takes the two in order, first establishing                                      provides staging space whose lifetime follows the instruc-
+correctness from individual operators through the full de-                                      tions that use that space, so the loads of instruction 𝑘+1
+coder, then bringing the entire step, including the LM head,                                    overlap the stores of instruction 𝑘 and no buffer is reclaimed
+into one persistent cooperative launch kernel, a megakernel.                                    before its consumers finish. Without the pool, independent
+The single launch removes per-operator launch boundaries.                                       streams need not form a memory pipeline; buffer pooling
+However, data dependencies between SMs remain, so the                                           therefore follows scheduling and dependency management
+megakernel can still run one operator at a time behind grid-                                    rather than standing on its own.
+wide barriers, and §3.1 shows that an agent tuning inside                                          Together the three steps close the decomposition: instruc-
+that barrier-serialized structure, with no knowledge or guide,                                  tion streams assign work, counters order that work, and
+stays well below the roofline. We divide the tuning work into                                   buffers hold the operands whose movement consecutive in-
+three steps: what each SM executes, when that SM may pro-                                       structions overlap, each step covering an obligation the other
+ceed, and where the SM’s operands are staged.                                                   two leave open. This sufficiency is structural. We do not
+   The first step is a per-SM instruction stream. The host                                      claim that these implementations are the only ones, nor that
+compiles the decoder into typed instructions, each carrying                                     satisfying the three obligations guarantees a given band-
+explicit operand descriptors, and assigns one stream to each                                    width, since scheduling balance, instruction granularity and
+SM; an interpreter inside the kernel dispatches those instruc-                                  prefetch distance still have to be tuned. The ladder therefore
+tions. SMs then advance through different work instead of                                       requires structure and measured performance together.
+sharing a single program position. This step is a precondi-                                        These dependencies become the ten milestones of Table 1.
+tion rather than a gain: the instruction stream grants the                                      The functional prefix validates the toolchain, individual op-
+scheduling freedom the next two steps require, but by itself                                    erators, a fused layer, the 𝐿-layer stack and decode on a real
+removes no wait and hides no memory latency.                                                    checkpoint against the float64 golden. The next milestone
+   The second step is a dependency counter. Separate streams                                    establishes one persistent launch, checking the launch count
+help only when an SM waits for the instructions that pro-                                       and forbidden library calls so that no operator, the LM head
+duce its inputs rather than for the whole grid. A counter                                       included, remains outside. The three steps above form the
+semaphore records each such edge: a producer increments                                         performance core, each adding a structural requirement and
+the counter on completion, and a consumer proceeds once                                         raising the MBU floor. The final milestone is an optional
+Table 1. The ten milestones. Each milestone adds one prop-              to an external checker. This makes the existing verification
+erty to the megakernel that passes the previous milestone.              methods insufficient: such methods cannot inspect the inter-
+          name                what it adds             checked by
+                                                                        mediates where many errors originate. We therefore propose
+                                                                        a mid-state test oracle that compares a kernel’s intermediates
+ M0–M4    functional         toolchain, operators, a   float64 golden
+                                                                        with an external reference, placing the acceptance criteria
+                             layer, the stack,
+                             decode                                     beyond the agent’s reach. The oracle has three complemen-
+ M5       megakernel         one persistent launch,    launch count     tary measurements, alongside a set of tolerance-free func-
+                             no library calls                           tional checks (Figure 2): (i) a byte-accounted performance
+ M6       instruction stream a per-SM instruction      schedule audit   measurement, which checks whether a kernel appears fast
+                             stream + MBU floor
+                                                                        only because it moves fewer bytes than the model requires;
+ M7       barrier-free       counter dependencies      scan, timeline
+                             + MBU floor                                (ii) a float64-referenced error measurement, which checks
+ M8       buffer pooling     a shared-memory           source scan      whether a kernel appears close to its reference only because
+                             buffer pool + MBU                          the reference rounds wherever the kernel does; and (iii) a
+                             floor                                      precision contract (a field consensus that certain operators,
+ M9       stability          a 1000-step run           greedy drift
+                                                                        such as softmax and the accumulators, must not be narrowed
+                             (optional)
+                                                                        below fp32) on arithmetic width, which checks whether a
+                                                                        kernel produces the right output while computing at the
+stability run: 1000 greedy tokens with no NaN or infinity, at           wrong width (Algorithm 1).
+most five positions of drift from the bf16 reference, and a free            All three oracle components use configuration-derived
+run to 4000 tokens. The stability run targets index overflow,           quantities that the host fixes before kernel generation. The
+buffer-pool fragmentation and counter wraparound.                       host combines the task configuration (architecture, dimen-
+   Structural gates inspect the source and the host schedule,           sions, dtype, and gated (𝑏, 𝑆) cells) with the machine config-
+and measure each structural effect that is observable. The              uration (GPU, transport, and peak HBM bandwidth). From
+interpreter gate requires at least five instruction types and           the combined configuration, the host computes the param-
+six instructions per layer, with queue imbalance within 1.35×           eter count, the byte count 𝐵(𝑏, 𝑆) defined in Eq. (2), the KV
+the mean, which rules out an interpreter that assigns most              share, and all tolerances specified below, then transmits these
+work to one SM. The dependency gate requires zero grid-                 quantities with hashes. Each gate receives only the required
+wide barriers, at least 4𝐿 distinct counters, busy_frac ≥ 0.85          quantities and is prohibited from recomputing those quan-
+(instruction spans over SMs × 𝑡) and tail_spread ≤ 0.05 (first-         tities. To protect the evaluator, the agent’s write access is
+to-last SM finish), both read from a %globaltimer timeline              restricted to the kernel source and notes; any round that
+the gate holds within 25% of the step’s CUDA-event latency.             modifies the evaluator is reverted.
+The buffer-pooling gate requires shared-memory buffer allo-                 In addition to the configuration-derived tolerances, the
+cation. Algorithm 1 states these checks alongside the perfor-           protected evaluator enforces three functional checks from
+mance tests of the same milestone.                                      M5 onward. The three functional checks admit no tolerance:
+   A campaign always works on its lowest unpassed mile-                 numerical agreement with a reference does not substitute for
+stone. A fallback pass records partial progress, but only the           passing the functional checks. First, the logit-finiteness check
+target threshold opens the next milestone. Every gate re-               requires all logits to be finite. Second, the KV-read-boundary
+turns the same envelope, {status, suite, summary, metrics,              check requires poisoning the KV arena past the write cursor
+details}, so each round receives both the obligation the cam-           with 𝜎 = 100 noise to leave the logits bit-identical, since an
+paign has not met and the measurements to act on.                       out-of-bounds read may otherwise produce plausible outputs.
+   The ladder specifies execution properties, not a kernel tem-         Third, the per-lane-position check requires lanes at different
+plate or a language above CUDA. Layer count, head count                 positions to decode at the position assigned to each lane,
+and batch size change the instruction streams, the depen-               rather than all using lane 0’s position.
+dency graph and the storage sizes, but not the three obli-                  Besides the functional checks, the oracle evaluates effi-
+gations; the agent derives those quantities from the model              ciency using byte-accounted performance measurements.
+dimensions and writes the kernel from scratch. One lad-                 Since self-reported utilization depends on a backend’s own
+der therefore guides every auto-regressive-model campaign,              accounting, the oracle accepts only elapsed times obtained
+while each gate checks the implementation for the model at              through host-assisted measurement. The host calculates
+hand.                                                                   the byte count 𝐵(𝑏, 𝑆) required per decoding step from
+                                                                        the model configuration, which includes activated parame-
+4.2   The mid-state test oracle                                         ters, accessed cache entries, and gathered embedding rows.
+As discussed in Section 3.2, kernel fusion removes the op-              The per-step latency is estimated as the two-point slope
+erator boundaries at which an implementation is normally                𝑡 = min𝑟 {𝑡𝑟 (80)
+                                                                                       64
+                                                                                          −𝑡𝑟 (16) }
+                                                                                                     across replicates 𝑟 , eliminating prefill
+compared against a reference, leaving only the logits visible
+Algorithm 1 The oracle gate design.                                layer without instrumenting the agent’s code, and the rows
+gate(m, kernel):                                                   arrive in execution order, which locates the first divergence.
+  d = derive(model_cfg, machine_cfg)                               The rows are compared against a PyTorch implementation
+     # B(b,S), tolerances, D, floors                               in the kernel’s own arithmetic, since a bf16 tensor differs
+  # 1. numerics, on the kernel this milestone built                from exact arithmetic by about 10−2 whatever the kernel
+  if m == M1: # per op, on the oracle’s taps
+     alpha(kernel.op, A, A’) ≤ 0.5 # width, Eq. (6)
+                                                                   does, a floor that hides real defects; float64 sets the scale of
+     # A == A’: abstain, never pass                                the comparison instead. Over the 2𝐿 rows R, one key and
+  if m ≥ M5:                                                       one value per layer, with |𝑟 | elements in row 𝑟 and 𝜖 = 10−6
+     finite(logits) # no NaN or infinity                           in the denominator, write
+     logits == logits(poison(kv)) # OOB KV read
+     decode(lane, pos[lane]) # no lane-0 broadcast                                       1 ∑︁ 1 ∑︁ 2 |𝑋𝑟 𝑗 − 𝑌𝑟 𝑗 |
+                                                                            𝛿 (𝑋, 𝑌 ) =                                           . (4)
+     C(kernel, torch) < 2·B(torch, fp64) # Eq. (4)                                      |R| 𝑟 ∈ R |𝑟 | 𝑗 ∈𝑟 |𝑋𝑟 𝑗 | + |𝑌𝑟 𝑗 | + 𝜖
+     err ≤ 5·d.D, err ≤ err(sgl), # the three bars
+                     err_max ≤ 2·err_max(sgl)                      With 𝐾 the kernel, 𝑃 the PyTorch reference and 𝐺 the golden,
+     # no fp64 family: abstain, never pass                         the bar is 𝐶 < 2𝐵 for 𝐶 = 𝛿 (𝐾, 𝑃) and 𝐵 = 𝛿 (𝑃, 𝐺): the
+  # 2. structure, by source scan and schedule audit                kernel’s distance from the reference implementation may
+  if m == M5: launches/step ≤ 1, no libcalls                       not exceed twice that implementation’s distance from exact
+  if m == M6: types ≥ 5, instr./layer ≥ 6,
+                     imbalance ≤ 1.35
+                                                                   arithmetic.
+  if m == M7: barriers == 0, counters ≥ 4L,                           While the KV-cache comparison locates intermediate di-
+                     busy_frac ≥ 0.85, tail_spread ≤ 0.05          vergences, the logit-level check measures their effect on the
+  if m == M8: shared-memory buffer pool present                    output distribution. At the logits the golden is used directly,
+  if m == M9: drift(1000 steps) ≤ 5                                on the log-softmax over the golden’s own top 64 entries, at
+  # 3. the number; the kernel returns only us                      teacher-forced taps along that continuation, which keeps the
+  us = (kernel.decode(80) − kernel.decode(16))/64
+  # kernel.scope declared, never mixed
+                                                                   taps independent, since a kernel that diverges once is answer-
+  mbu = d.B / (us · d.beta_peak) # from the config                 ing a different prompt from that point on. With T the taps,
+  mbu ≤ 100, mbu ≤ 1/rho(ncu) # bytes actually read                K𝑡 the golden’s top 64 entries at tap 𝑡 and ℓ = log softmax,
+  if m ∈ {M6, M7, M8}: mbu ≥ d.floor[m]                            the distance of an engine 𝐸 from the golden is
+  return {status, suite, summary, metrics, details}
+                                                                                      1 ∑︁ 1 ∑︁
+                                                                             𝜀 (𝐸) =                   ℓ (𝐸𝑡 )𝑣 − ℓ (𝐺𝑡 )𝑣 ,  (5)
+                                                                                     |T | 𝑡 ∈ T 64
+and all length-independent costs. MBU is then computed                                             𝑣 ∈ K𝑡
+
+using Eq. (3) and the host-derived 𝐵(𝑏, 𝑆). To ensure mea-         and 𝜀 max is the same quantity taking maxima in place of
+surement correctness, three additional independent checks          both means. Writing 𝐷 = 𝜀 (HF bf16) for the bf16 reference’s
+are performed: (i) Nsight Compute counters measure the             own distance on this surface, measured in the campaign’s
+bytes a kernel actually moves, from which we define the            own oracle build, the three bars are 𝜀 (𝐾) ≤ 5𝐷, 𝜀 (𝐾) ≤
+read amplification 𝜌 as the ratio of those measured bytes to       𝜀 (SGLang) and 𝜀 max (𝐾) ≤ 2 𝜀 max (SGLang). Each is either
+𝐵(𝑏, 𝑆). Moving 𝜌𝐵(𝑏, 𝑆) bytes takes at least 𝜌𝐵(𝑏, 𝑆)/𝛽 peak      what bf16 costs on this model or what the production engine
+seconds under the bandwidth roofline [30], so Eq. (3) bounds       achieves on the same taps, so none is a value we chose.
+MBU by 𝜌 −1 , giving an upper bound of approximately 71.4%         Greedy agreement is scored against a floor derived the same
+for 𝜌 = 1.4 regardless of execution speed. This check mea-         way, and where no float64 family exists the check abstains
+sures redundant traffic directly rather than inferring it from     rather than passes.
+latency; (ii) the gate enforces MBU ≤ 100% to detect byte             An error bound scores the output and says nothing about
+counts that include data the step never accesses; counting         the arithmetic behind that output, and the two can move in
+the full embedding table alone violates this bound by 1.22×;       opposite directions, since rounding an intermediate to bf16
+(iii) each backend declares its timing scope as kernel-only,       moves a kernel toward any reference that rounds there too.
+step-no-sampling, or end-to-end, ensuring that compar-             The operator tolerance leaves room for that move, at 2 × 10−2
+isons use the same scope.                                          against a bf16 ulp of 1.95 × 10−3 . The oracle therefore stores
+    Performance measurements establish how fast a kernel           a precision contract read-only, bf16 at operator boundaries
+runs, but not how accurately it computes. The oracle there-        only and fp32 between an operator’s input and its output,
+fore checks numerical error in both the intermediate KV            including accumulators, norm gains and the rotary table. The
+cache and the final logits. Both error surfaces are read against   gate tests the contract per boundary-carrying operator. From
+a float64 forward pass, exactly upcast from the canonical          one operator’s tap inputs it builds two references, 𝐴 com-
+bf16 checkpoint with nothing rounded in between. A fault           puted to the contract and 𝐴′ computed with that operator’s
+must be located before it can be fixed, and the only interme-      intermediate narrowed to bf16, and writes their difference
+diate that must reach global memory is the KV cache. The           𝑑 = 𝐴′ − 𝐴, the rounding under test. With 𝐾 the kernel’s
+harness owns that buffer, so the gate reads the cache per          output on those same inputs, the gate regresses 𝐾 − 𝐴 onto
+𝑑,                                                                memory manager and detokenizer on the same card, so the
+                 ⟨𝐾 − 𝐴, 𝑑⟩                                       engine’s per-token cost falls inside the measurement (§5.3).
+            𝛼=              ,     pass if 𝛼 ≤ 0.5.         (6)
+                   ⟨𝑑, 𝑑⟩
+                                                                  5     Evaluation
+Here 𝛼 is the fraction of that extra rounding the kernel
+adopted, 0 for the contract and 1 for the narrowed variant.       5.1   Setup
+The unit of 𝛼 is the deviation being tested for, so the thresh-   Measurements use one NVIDIA H100 80GB HBM3 at
+old needs no calibration, and reduction reordering moves          1980 MHz with 𝛽 peak = 3350 GB/s. Each run uses one GPU,
+the output in an unrelated direction without raising 𝛼. The       bf16 weights and KV cache. Runs on clock-locked cards are
+check abstains if the two references coincide.                    excluded rather than rescaled. We compute every latency as
+   Taken together, the three parts leave the agent nothing        the two-point slope defined in §4.2. All reported measure-
+to redefine: the byte count, the float64 references and the       ments use the end-to-end clock, which is also the clock used
+arithmetic widths are all fixed by the model configuration        by SGLang and MPK.
+before a kernel exists, and every verdict is recomputable from       Baselines. We compare against SGLang 0.5.18 [6] with
+them by an outside reader. The oracle therefore provides          CUDA graphs and torch.compile enabled, vLLM 0.27.1 [5]
+a standard and clear check on the speed, correctness and          with CUDA graphs enabled and detokenize=False,
+precision of a megakernel.                                        llama.cpp [32] with bf16 weights in its GGUF format,
+                                                                  all layers resident, and flash attention, and the Mirage
+4.3   The end-to-end generation framework                         Persistent Kernel (MPK) [16], executed through its demo
+The ladder says what to build and the oracle what a verdict       path. We measure each engine at its newest release, tuned
+means; the loop turns the two into a search. Every round          to the best settings we could find.
+ends on the GPU: a fresh agent edits the kernel, the kernel is       Models and configurations. We run 14 representa-
+built and measured on an H100, and the gate returns latency,      tive cells drawn from eight model families: Llama-3.2-
+utilization, profiler counters and error. Each edit follows       1B [33], Llama-3.1-8B, Llama-2-13B-chat [34], Qwen3-
+from a measurement rather than an estimate, and a cell takes      0.6B/1.7B/4B/8B [35], Qwen2.5-3B, MiniCPM4-0.5B/1B/3B,
+about 48 rounds.                                                  MiniCPM5-1B [36], and NanBeige4-3B. A configuration
+   To ensure that successive search rounds are guided by mea-     denotes one (𝑏, 𝑆) pair, with batch sizes from 1 to 16 and
+sured evidence rather than unverified claims, the framework       contexts from 96 to 4096 tokens.
+begins each round with a fresh headless coding agent [31],           Agent. Each round uses the same headless coding agent,
+as shown in the lower band of Figure 2. The agent receives        Claude Code [31] running Claude Opus 5 with a 1M-token
+the milestone matrix, the current milestone, the last gate        context window, with a fresh context and access only to a
+summary and the campaign’s rules, and nothing else; the           shell, the repository, and the ForgeMegakernel command.
+agent edits the kernel, runs the gate, keeps or reverts the
+change, appends one ledger entry and commits. Because a           5.2   Kernel experiment
+fresh context discards whatever the previous agent learned        5.2.1 Main results. Figure 3 compares the 14 forged
+but did not record, each entry must carry the hypothesis,         megakernels with four baselines at the same configurations.
+the change, the result and the decision, and only measured        The Llama-3.2-1B 𝑏1×96 kernel is forged against the hand-
+values cross a round boundary.                                    written reference and is excluded from the aggregates below.
+   A gate reads the kernel’s behaviour, not the way the round     The forged megakernels reach 50.5–85.9% MBU, whereas
+produced that behaviour, so a few defect classes remain visi-     SGLang reaches 36.5–78.9% and MPK 20.6–75.9%; smaller
+ble only in the diff (§3.2). After a passing development round,   models have less matrix work to keep each SM busy, so their
+a review round therefore gives a fresh agent the diff and the     MBU is lower. Our method improves on SGLang by 1.10–
+run identifiers to audit for those classes: edits outside the     1.61× (geometric mean 1.21×) and on MPK by 1.14–2.51×
+writable surface, a metric obtained by special-casing a gate’s    (geometric mean 1.54×).
+input, and an optimization the preprocessor constants show           On Llama-3.2-1B, a hand-written megakernel [11] reaches
+was never compiled. A milestone advances only on a gate           74.6% MBU (our own measurement of the reproduced ker-
+pass together with a review pass.                                 nel on our card; its authors report 78% on theirs), and the
+   Although passing the gate and the subsequent review            forged kernel reaches a comparable 74.0% on the same
+establishes milestone completion, evaluating end-to-end per-      configuration—a gain of 1.37×, 1.50×, 1.52×, and 1.84× over
+formance requires deployment within a serving engine to           SGLang, vLLM, MPK, and llama.cpp, respectively.
+account for its per-token overhead. As an SGLang model
+class, the megakernel implements forward(EXTEND) as a loop        5.2.2 Correctness. We check each kernel against a float64
+of single-token steps and forward(DECODE) as the batched          forward pass of the same checkpoint. Both forward passes
+step. Both paths run through the same scheduler, sampler,         are teacher-forced on the same prompts.
+                                         ForgeMegakernel                         SGLang 0.5.18              MPK                          vLLM 0.27.1                      llama.cpp                 hand-written
+                   100
+                                                                                                                                                                                                        hand-written reference
+
+
+
+
+                                                                                                                                                       86
+                                                                                          83
+
+
+
+                                                                                                      83
+
+
+
+                                                                                                                  80
+
+
+
+
+                                                                                                                                                           79
+                                                                                                                                        79
+                   80
+
+
+
+
+                                                       77
+
+
+
+
+                                                                                                                                                          76
+
+
+
+
+                                                                                                                                                                                                                               75
+                                                                   74
+
+
+
+
+                                                                                                                                                         74
+
+
+
+
+                                                                                                                                                                                                                74
+                                                                                                                                                        73
+                                                                                             73
+
+
+
+
+                                                                                                                                                                                              72
+                                                                                                                           72
+                                                                                                          72
+                                                                                            70
+
+
+
+
+                                                                                                                         70
+                                                                                                         70
+
+
+
+
+                                                                                                                                         70
+                                                                                                                                         69
+    MBU (%)
+
+
+
+
+                                                                                           68
+                                                                                           68
+
+
+
+                                                                                                        68
+
+
+
+                                                                                                                        67
+                                                                              65
+
+
+
+
+                                                                                                       65
+                                                         64
+                                                        62
+
+
+
+
+                                                                                                                                                                                               62
+                                                                                                                                             62
+                                                                        61
+
+
+
+
+                                                                                                                                                                    59
+                                                                                   58
+                   60
+
+
+
+
+                                                                                   57
+
+
+
+
+                                                                                                                                                                                 56
+                                                                      56
+                         56
+
+
+
+
+                                                                                                                                                  55
+                                                                     54
+
+
+
+
+                                                                                                                                                                                                                   54
+                                                                                                                                                                                                    54
+                                                                                                                               54
+
+
+
+
+                                                                                                                                                                                                    53
+                                                                                 52
+                                                                    51
+                                        51
+
+
+
+
+                                                                                                                                                                                                                 49
+                                                                                                                                                                                                                 49
+                                                                                                                                                                                                   47
+                                                                                                                                                                                  45
+                           41
+
+
+
+
+                                                                                                                                                                                                                          40
+                                          40
+
+
+
+
+                                                                                                                                                                                      40
+                                                                                                                                                                                      40
+                          39
+
+
+
+
+                                                                                                                                                                                      38
+                                         38
+                   40
+
+
+
+
+                                                                                                                                                                        36
+                                                                                     32
+
+
+
+
+                                                                                                                                                                     31
+                                                                                                                                                                     31
+                              31
+
+
+
+
+                                                              29
+
+
+
+
+                                                                                                                                                                           25
+                                                            24
+                                             21
+
+
+
+
+                   20
+                                   16
+   mean |Δlog p|
+
+
+
+
+                                                  10
+
+
+
+
+                     0
+
+
+
+
+                                                                                                                                          .001
+                                                        .002
+
+
+
+
+                                                                                                                         .002
+                                                        .002
+                           .003
+
+
+
+
+                                                                                                                                         .003
+                                                                                                                        .004
+                   .01
+                          .004
+
+
+
+
+                                                                                  .005
+                                          .006
+
+
+
+
+                                                                                 .008
+
+
+
+
+                                                                                                         .008
+                                         .008
+
+
+
+
+                                                                                                                                                           .012
+
+
+
+
+                                                                                                                                                                                                                 .012
+                                                                                                                                                                                                 .012
+                                                                                                                                                                                    .013
+                                                                                               .014
+
+
+
+
+                                                                                                       .014
+                   .02
+
+
+
+
+                                                                                                                                                                        .016
+
+
+
+
+                                                                                                                                                                                               .017
+                                                                                                                                                                                  .017
+                                                                       .017
+
+
+
+
+                                                                                                                                                        .019
+                   .03
+
+
+
+
+                                                                                                                                                                     .024
+                                                                                           .025
+                                                                    .026
+
+
+
+
+                                                                                                                                                                                                                        .026
+                    48         24        96          8        24        8           2          48         48           8         8          8         8             96
+                 20         10        40         12        10         12        51         20         20            12         12         12       12
+               ×          ×         ×         1 ×        ×         1×        1 ×         ×           ×            1×        1×         1×        1×              b1×
+            b8          6          6         b         b8         b         b          b1         b4           b          b          b          b              B
+          B           b1         b1       4B         B         8B        8B         B           B           3B         1B         1B         3B              -1
+      -0.6        .6B        .6B       n3-        3-4       n3-       n3-        3-8        .1-8        -2-1
+                                                                                                                    M
+                                                                                                                     5-
+                                                                                                                              M
+                                                                                                                                4-
+                                                                                                                                         M
+                                                                                                                                           4-
+                                                                                                                                                        a-3.2
+                 0          0         e         n          e         e         n                       a
+   en
+     3         3-         3-        Qw
+                                               e
+                                                         Qw        Qw
+                                                                              e          a-3        am           CP         CP         CP            am
+ Qw
+             en         en                   Qw                             Qw         am         Ll          ini        ini        ini            Ll
+          Qw         Qw                                                              Ll                      M          M          M
+
+Figure 3. The 14 forged megakernels against four baselines: isolated-step MBU (upward) and log-probability error against a
+float64 forward pass (downward).
+(a) SGLang: several kernel launches                                                                               (b)               streaming work                        wait                             bytes at peak HBM
+              QKV       RoPE, KV                                   attention               MLP                                      extra streaming work                  launch: ramp + drain
+       SM0                                                                                                                                                                             2248              2271
+
+       SM1                                                                                                                     2000                                                    653                653
+                                                                                                                                                                                              1776               1691
+                                                                                                                μs per token
+
+
+
+
+       SM2                                                                                                                                                                                     304                218
+                                                                                                                               1500           1392                 1332                184                198
+                             decode step                        gap
+       Ours: one megakernel launch                                                                                                            449      1032        301    1029         455                427
+               one ramp, one drain    no global sync, even SM load                                                             1000                                225
+                                                                                                                                                        288                278
+                                                                                                                                              285                                             1463               1464
+       SM0
+                                                                                                                                500                                                    957                994
+                                                                                                                                              633       734        774     743
+       SM1
+                                                                                                                                    0
+       SM2                                                                                                                                   SGLang ours          SGLang ours         SGLang ours       SGLang ours
+                                              decode step                                                                                MiniCPM5-1B Llama-3.2-1B Qwen3-0.6B                             Qwen3-0.6B
+               compute                   memory                         launch            global sync                                     b1×128       b1×96      b8×2048                                b16×1024
+
+Figure 4. Decoding latency per SM, the terms of Eq. (7). (a) the two engines drawn schematically: grey is the launch cost ℓ,
+which SGLang repeats with a grid-wide sync per kernel and ours incurs once. (b) a decode step’s measured microseconds on
+four cells, split into the same terms; the dashed line is what Eq. (2) alone would take at 𝛽 peak .
+
+   Log-probability error. We take the value a decoder as-                                                              one. For the launches K of one step and one SM 𝑖,
+signs to the token that actually follows, in log space, and                                                                             ∑︁                       
+compare it with the float64 value at the same position. The                                                                        𝑡 =       ℓ𝑘 + max 𝑠𝑖,𝑘 + 𝑤𝑖,𝑘 ,                                                                 (7)
+                                                                                                                                                                                  𝑖
+downward bars of Figure 3 report the mean absolute differ-                                                                                                  𝑘∈K
+
+ence, in nats, over all positions of a configuration.                                                                 where ℓ is the grid’s own ramp and drain, 𝑠 is the time an SM
+   The forged megakernels are closer to exact arithmetic                                                              spends streaming bytes and computing on them, and 𝑤 is
+than SGLang on every configuration. The ratio of their mean                                                           the time it spends waiting for another SM. Figure 4(a) draws
+error to SGLang’s ranges from 0.38 to 0.72, with a median of                                                          these terms for both engines. The SGLang backend runs one
+0.66.                                                                                                                 grid per operator, so it repeats ℓ at every launch and 𝑤 at
+                                                                                                                      every launch boundary. Ours runs one grid per step, so it
+5.2.3 Decomposing a decode step. We profile four con-                                                                 incurs ℓ once and waits only where its own counters require.
+figurations to locate the forged megakernels’ advantage. A                                                            Figure 4(b) splits each engine’s measured step into the same
+decode step is a sequence of grid launches, where a launch                                                            slots, so the difference between the two bars is the gap.
+is the device-side start and retirement of a grid rather than a                                                          Launch time. The largest term is ℓ, the grey bands in the
+host call: graph replay removes the host cost and leaves this                                                         SGLang panel of Figure 4(a). The profiled SGLang runs replay
+Table 2. GSM8K inside SGLang: answer accuracy and latency                                route to:
+                                                                                        Sf = 128            Sf = 512                         Sf = 4096
+per decoded token.                                                                 90      83.7      83.1      82.9       82.2       81.5        81.0    79.6
+
+
+
+
+                                                                         MBU (%)
+                                     latency ( 𝜇s/tok)     accuracy                80
+
+      Model              𝑏      𝑆    ours    baseline    ours baseline             70
+                                                                                              SGLang        Sf = 512
+      Qwen3-0.6B          8   2048   1406        1576    0.560   0.555             60         Sf = 4096     Sf = 128
+      Qwen3-0.6B         16   1024   1457        1709    0.555   0.555                        Sf = 2048
+      Qwen3-0.6B         16   4096   1322        1688    0.545   0.550             50
+                                                                                         64          128      256         512        1024       2048      4096
+      Qwen3-4B            1    128   3387        3804    0.935   0.930
+      Qwen3-4B            8   1024   4217        4459    0.940   0.930                                           sequence length S
+      Qwen3-8B            1    128   5601        6009    0.965   0.975   Figure 5. Sequence-length sweep of four Qwen3-8B 𝑏=1
+      Qwen3-8B            1    512   5757        6116    0.965   0.970
+      Qwen3-8B            1   2048   5847        6219    0.970   0.970
+                                                                         forged megakernels.
+      Llama-3.1-8B       4 2048 6130             6378 0.880      0.865
+                                                                             Prompt (Qwen3-4B, greedy, after a fixed solve step by step, end with
+      Llama-2-13B-chat   1 128 9498              9761 0.315      0.315
+                                                                             Answer: \boxed{$Answer} preamble). Ryan plants 2 flowers a day
+      MiniCPM5-1B        1    128 1181           1430 0.550      0.555       in his garden. After 15 days, how many flowers does he have if 5 did not
+      MiniCPM4-1B        1    128 1718           1970 0.640      0.650       grow?                                                           gold: 25
+      MiniCPM4-3B        1    128 3145           3394 0.620      0.635
+                                                                             llama.cpp                        4768 𝜇s/tok        50.5% MBU     87 tok    25 ✓
+                                                                             Ryan plants 2 flowers each day for 15 days. So, the total number
+a captured CUDA graph, which removes the host cost (the                      of flowers planted is: $$ 2 \times 15 = 30 $$ However, 5 of the
+CPU work of issuing each kernel), but still starts and retires               flowers did not grow. So, the number of flowers that actually grew
+a grid per kernel on the GPU, and the ramp and drain of                      is: $$ 30 - 5 = 25 $$ Answer: \boxed{25}
+
+each grid cause the launch latency ℓ. We model each SGLang                   vLLM 0.27.1                     4382 𝜇s/tok     54.9% MBU        102 tok    25 ✓
+matvec grid latency as 𝑡𝑘 = 𝑐 + 𝐵𝑘 /𝛽 peak for its bytes 𝐵𝑘 ,                Ryan plants 2 flowers each day for 15 days. So, the total number
+regressing the measured durations and giving 𝑐 = 4.63 𝜇s per                 of flowers planted is: $$ 2 \text{ flowers/day} \times 15 \text{
+                                                                             days} = 30 \text{ flowers} $$ However, 5 of the flowers did not
+launch (𝑅 2 = 0.9993), or 301–653 𝜇s over the 65–141 GEMV-
+                                                                             grow. So, the number of flowers that actually grew is: $$ 30 - 5 =
+family launches per token, which covers 99–138% of every                     25 $$ Answer: \boxed{25}
+gap in Figure 4(b). The megakernel launches once per step
+                                                                             SGLang 0.5.18                    3932 𝜇s/tok        61.2% MBU     87 tok    25 ✓
+and costs only 9.3 𝜇s.
+                                                                             Ryan plants 2 flowers each day for 15 days. So, the total number
+   Kernel sync. A launch boundary is also a grid-wide sync:                  of flowers planted is: $$ 2 \times 15 = 30 $$ However, 5 of the
+no SM starts the next kernel until every SM has arrived, so                  flowers did not grow. So, the number of flowers that actually grew
+the slowest sets the boundary and the rest wait. Counted                     is: $$ 30 - 5 = 25 $$ Answer: \boxed{25}
+this way, with a ramp and a drain recorded as SMs waiting,                   ForgeMegakernel                3781 𝜇s/tok      63.7% MBU        102 tok    25 ✓
+SGLang waits 333–851 𝜇s per token and the megakernel 227–                    Ryan plants 2 flowers each day for 15 days. So, the total number
+313 𝜇s, of which 218–304 𝜇s is spent at dependency counters                  of flowers planted is: $$ 2 \text{ flowers/day} \times 15 \text{
+rather than at launch boundaries.                                            days} = 30 \text{ flowers} $$ However, 5 of the flowers did not
+                                                                             grow. So, the number of flowers that actually grew is: $$ 30 - 5 =
+   Fusion. Splitting the step with multiple launches also
+                                                                             25 $$ Answer: \boxed{25}
+forces 111–239 launches per token that carry almost no
+model bytes, including standalone RMSNorm, RoPE, the KV                  Figure 6. One GSM8K question and the answer from four
+store and the attention-combine. They cost 225–455 𝜇s, 17–               engines on the same prompt.
+21% of the step, while the megakernel performs the same
+arithmetic in the next instruction of the same kernel, on                Engine.generate (§4.3), so the generated megakernel and the
+operands that are still in registers. Eq. (2) counts reads, and          unmodified baseline use the same serving stack: scheduler,
+both engines read the same bytes; they differ in their writes.           sampler, memory manager, and detokenizer. CUDA graphs
+A split step passes each intermediate to the next kernel                 are enabled for the baseline and disabled for the generated
+through DRAM, and ncu measures SGLang writing 7.7 MB                     megakernel. The workload is GSM8K [37]: 200 test questions
+per token on MiniCPM5-1B and 67–168 MB on Qwen3-0.6B                     with ragged prompt lengths, identical for both. We extract
+at 𝑏8×2048, against 1.4 and 2.3 MB for the megakernel. At                the predicted number from each answer and compare it nu-
+𝛽 peak those differences cost 0.8 and 43 𝜇s, far less than the           merically with the gold answer.
+launch and sync time the same kernels incur.                                Table 2 reports the results for the 13 generated megaker-
+                                                                         nels. The speedups range from 1.03× to 1.28× with a geo-
+5.3    Serving experiment                                                metric mean of 1.11×. On accuracy, the forged megakernels
+We evaluate the generated megakernels inside a produc-                   stay within 1.5 percentage points of the baseline and match
+tion engine on the GSM8K workload. Each megakernel is                    or exceed it on seven configurations. The difference falls
+deployed as an SGLang model class and executed through                   within run-to-run noise: the baseline itself varies by the
+         Table 3. Cost of forging each megakernel.                     deployments, this cost is readily justified by the efficiency
+                                                     tokens (M)
+                                                                       gains delivered by the megakernel.
+Model            𝑏   𝑆 rounds gates agent h span d prompt out cost
+                                                                       7   Related Work
+Qwen3-0.6B       8 2048    40   62     22.7    1.0    176.0 1.91 177
+Qwen3-0.6B      16 1024    76   90     21.1   12.2    295.8 3.11 307      Hand-written megakernels. Two recent systems imple-
+Qwen3-0.6B      16 4096    71   59     17.6    9.0    304.3 2.29 275   ment the complete forward pass as a megakernel: a Llama-1B
+Qwen3-4B         1 128    102   77     25.1    2.6    339.6 3.70 366   implementation built around an on-GPU interpreter, report-
+Qwen3-4B         8 1024    58   62     40.4   11.1    330.9 3.49 335   ing 78% of H100 bandwidth [11] and reproduced at 74.6% on
+Qwen3-8B         1 128     37   32      6.1    8.4    114.5 1.02 109
+                                                                       our card, and FlashFormer, built around a shared pipelined
+Qwen3-8B         1 512     29   27      8.6    1.2    131.7 1.15 127
+Qwen3-8B         1 2048    23   16      7.1    1.2     84.0 0.57 77    buffer [12]. Both target one model and one configuration
+Llama-3.1-8B     4 2048    69   57     22.4    8.9    414.2 2.90 362   per kernel, as do extensions to multiple GPUs [38] and other
+Llama-2-13B-chat 1 128     27   21      5.3    8.4     95.5 0.65 83    vendors [39]. The ThunderKittens authors subsequently iden-
+MiniCPM5-1B      1 128     37   28      5.8    0.3     97.0 1.03 104   tified the need for an oracle independent of the generated
+MiniCPM4-1B      1 128     60   57     14.7   13.2    195.3 2.30 214
+                                                                       layer [40]. Their validation relies on expert-defined checks
+MiniCPM4-3B      1 128     47   42      8.9   14.4    136.3 1.21 132
+Llama-3.2-1B     1 96      77   92     27.1    2.7    401.6 4.46 414   per kernel; ForgeMegakernel derives the measurement
+                                                                       quantities from each model configuration.
+median                     47   57     14.7    8.4    176.0 1.91 177
+                                                                          Compiled megakernels. MPK lowers tensor programs
+same margin across repeated runs, because ragged batches               to task graphs with event-driven synchronization and
+are scheduled differently.                                             an on-GPU scheduler [16], using a multi-level superopti-
+   Figure 6 shows one GSM8K question with the full gen-                mizer [41]. Event Tensor adds shape- and data-dependent
+erated answer from four engines on the same prompt and                 dynamism [17], Ada-MK performs offline graph search [18],
+greedy decoding: the SGLang engine, vLLM, llama.cpp, and               and Fleet adds a chiplet-level task tier [42]. These compilers
+the generated megakernel. All four produce the correct an-             reuse one program across models without per-model forging.
+swer, and the generated megakernel has the lowest measured             In our measurements MPK utilization declines as model
+per-token latency on this question: 1.04× SGLang, 1.16×                size decreases (§3.1), and the corresponding implementation
+vLLM and 1.26× llama.cpp. The generated texts differ token             uses constants derived from model dimensions, including
+for token, yet every answer is correct; the same holds across          greatest-common-divisor constraints and predicates (§4.1).
+the six questions we generated this way.                               Schedule-based compilers, learned search, graph substitu-
+   Each megakernel fixes its batch size and context bound              tion, tile-level languages, autotuning and sparse abstractions
+at compile time, so the deployment retains several kernels             similarly search predefined program spaces [9, 43–52]; for a
+and routes requests by context length. Figure 5 sweeps four            megakernel, task decomposition, counter granularity and
+Qwen3-8B 𝑏=1 kernels, generated from one seed at four                  buffer layout are compilation decisions.
+context bins, across 𝑆 ∈ {64, . . . , 4096}. The upper envelope
+of the four kernels determines the best measured MBU at                   Agent harnesses for kernels. Several harnesses generate
+each length, and the shading indicates the selected kernel.            or optimize GPU kernels automatically, through multi-agent
+The kernel generated at a larger bin is generally the better           decomposition [20], hardware feedback [21], data-flow in-
+choice, and only the 𝑆 𝑓 =4096 kernel can serve 𝑆=4096. The            variants with counterexample feedback [53], formal verifi-
+selected kernel set reaches 79.6–83.7% MBU over 𝑆 = 64–                cation of generated CUDA [54] and in-place operator opti-
+4096, against SGLang’s 72.8–74.1%.                                     mization for PyTorch models [22], alongside broader agent
+                                                                       programming capability [55–57]. All search and replace im-
+                                                                       plementations within an existing model or operator struc-
+6   Discussion and Limitations                                         ture. AutoMegaKernel (AMK) is the closest to ours: an agent-
+Our evaluation runs on one GPU architecture (an H100 80GB,             driven loop generates a persistent cooperative kernel for
+132 SMs, HBM3 at 𝛽 peak = 3350 GB/s). Whether the same                 Llama-family models, with a static validator for deadlock-
+milestones hold on different hardware, with another shared-            ing and racing schedules [58]. AMK reports 4–8% of the
+memory budget, core count or launch model, is open, and                weight-bandwidth ceiling up to 1.1B parameters and trails
+answering it calls for further experiments across architec-            cuBLAS on datacenter GPUs, whereas ForgeMegakernel
+tures and configurations.                                              reports 50.5–85.9% MBU from 0.6B to 13B inside a serving
+  Table 3 reports the resources consumed while forging                 engine. Its validator addresses schedule safety, while our
+each megakernel, summed from the per-round envelopes                   oracle also checks numerical outputs, arithmetic precision
+that record wall-clock time, token usage, and billed cost. The         and memory-traffic accounting; a race-free schedule alone
+median megakernel required 47 rounds, 14.7 agent-hours and             does not establish correctness of the rotary embedding, as
+178 Mtok, or $177. For large-scale or long-running serving             five kernels in our experiments show.
+8    Conclusion                                                                   Phoenix, AZ, USA, 10–19.
+                                                                             [10] Zihao Ye, Lequn Chen, Ruihang Lai, Wuwei Lin, Yineng Zhang,
+We presented ForgeMegakernel, a framework that employs                            Stephanie Wang, Tianqi Chen, Baris Kasikci, Vinod Grover, Arvind
+coding agents to generate model-specific megakernels for                          Krishnamurthy, and Luis Ceze. 2025. FlashInfer: Efficient and Cus-
+autoregressive decoding. ForgeMegakernel consists of a                            tomizable Attention Engine for LLM Inference Serving. In Proceedings
+universal knowledge base containing ten progressive mile-                         of the Eighth Annual Conference on Machine Learning and Systems
+stones and an independent mid-state test oracle. The mile-                        (MLSys). Santa Clara, CA, USA.
+                                                                             [11] Benjamin F. Spector, Jordan Juravsky, Stuart Sul, Owen Dugan, Dylan
+stones state what structure to build, and the oracle checks
+                                                                                  Lim, Daniel Y. Fu, Simran Arora, and Christopher Ré. 2025. Look
+the per-layer mid-states the kernel produces as well as its                       Ma, No Bubbles! Designing a Low-Latency Megakernel for Llama-1B.
+final output, making the megakernel checkable and trust-                          Hazy Research blog, https://hazyresearch.stanford.edu/blog/2025-05-
+worthy. Across 14 decoding megakernel generation tasks on                         27-no-bubbles.
+models of 0.6B–13B parameters, the generated megakernels                     [12] Aniruddha Nrusimha, William Brandon, Mayank Mishra, Yikang
+                                                                                  Shen, Rameswar Panda, Jonathan Ragan-Kelley, and Yoon Kim. 2025.
+reach 50.5–85.9% model bandwidth utilization, a geometric
+                                                                                  FlashFormer: Whole-Model Kernels for Efficient Low-Batch Inference.
+mean of 1.21× over tuned SGLang and 1.54× over a megak-                           arXiv:2505.22758.
+ernel compiler, and 1.11× decoding speedup inside SGLang                     [13] Tri Dao, Daniel Y. Fu, Stefano Ermon, Atri Rudra, and Christopher Ré.
+at comparable accuracy. These results demonstrate the prac-                       2022. FlashAttention: Fast and Memory-Efficient Exact Attention with
+tical value of coupling reusable structural guidance with                         IO-Awareness. In Advances in Neural Information Processing Systems
+                                                                                  (NeurIPS). New Orleans, LA, USA.
+independent validation and hardware feedback, paving a                       [14] Tri Dao. 2024. FlashAttention-2: Faster Attention with Better Paral-
+path toward reducing reliance on model-specific manual                            lelism and Work Partitioning. In The Twelfth International Conference
+kernel development while continually improving inference                          on Learning Representations (ICLR). Vienna, Austria.
+efficiency.                                                                  [15] Benjamin F. Spector, Simran Arora, Aaryan Singhal, Arjun
+                                                                                  Parthasarathy, Daniel Y. Fu, and Christopher Ré. 2025. ThunderKittens:
+                                                                                  Simple, Fast, and Adorable AI Kernels. In The Thirteenth International
+References                                                                        Conference on Learning Representations (ICLR). Singapore.
+                                                                             [16] Xinhao Cheng, Zhihao Zhang, Yu Zhou, Jianan Ji, Jinchen Jiang,
+ [1] Kshitij Gupta, Jeff A. Stuart, and John D. Owens. 2012. A Study of           Zepeng Zhao, Ziruo Xiao, Zihao Ye, Yingyi Huang, Ruihang Lai,
+     Persistent Threads Style GPU Programming for GPGPU Workloads.                Hongyi Jin, Bohan Hou, Mengdi Wu, Yixin Dong, Anthony Yip, Songt-
+     In Innovative Parallel Computing (InPar). San Jose, CA, USA, 1–14.           ing Wang, Wenqin Yang, Xupeng Miao, Tianqi Chen, and Zhihao Jia.
+ [2] Samuli Laine, Tero Karras, and Timo Aila. 2013. Megakernels Consid-          2025. MPK: A Compiler and Runtime for Mega-Kernelizing Tensor
+     ered Harmful: Wavefront Path Tracing on GPUs. In Proceedings of the          Programs. arXiv:2512.22219.
+     5th High-Performance Graphics Conference (HPG). Anaheim, CA, USA,       [17] Hongyi Jin, Bohan Hou, Guanjie Wang, Ruihang Lai, Jinqi Chen, Zi-
+     137–143.                                                                     hao Ye, Yaxing Cai, Yixin Dong, Xinhao Cheng, Zhihao Zhang, Yilong
+ [3] Gyeong-In Yu, Joo Seong Jeong, Geon-Woo Kim, Soojeong Kim, and               Zhao, Yingyi Huang, Lijie Yang, Jinchen Jiang, Gabriele Oliaro, Jianan
+     Byung-Gon Chun. 2022. Orca: A Distributed Serving System for                 Ji, Xupeng Miao, Vinod Grover, Todd C. Mowry, Zhihao Jia, and Tianqi
+     Transformer-Based Generative Models. In 16th USENIX Symposium on             Chen. 2026. Event Tensor: A Unified Abstraction for Compiling Dy-
+     Operating Systems Design and Implementation (OSDI). Carlsbad, CA,            namic Megakernels. arXiv:2604.13327.
+     USA, 521–538.                                                           [18] Wenxin Dong, Mingqing Hu, Guanghui Yu, Qiang Fu, Peng Xu, Hui
+ [4] Amey Agrawal, Nitin Kedia, Ashish Panwar, Jayashree Mohan, Nipun             Xu, Yue Xing, Xuewu Jiao, Shuanglong Li, and Lin Liu. 2026. Ada-MK:
+     Kwatra, Bhargav S. Gulavani, Alexey Tumanov, and Ramachandran                Adaptive MegaKernel Optimization via Automated DAG-based Search
+     Ramjee. 2024. Taming Throughput-Latency Tradeoff in LLM Inference
+                                                                                  for LLM Inference. arXiv:2605.11581.
+     with Sarathi-Serve. In 18th USENIX Symposium on Operating Systems       [19] Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu,
+     Design and Implementation (OSDI). Santa Clara, CA, USA, 117–134.             Christopher Ré, and Azalia Mirhoseini. 2025. KernelBench: Can LLMs
+ [5] Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin                  Write Efficient GPU Kernels? arXiv:2502.10517.
+     Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, and Ion Stoica.      [20] Anjiang Wei, Tianran Sun, Yogesh Seenichamy, Hang Song, Anne
+     2023. Efficient Memory Management for Large Language Model                   Ouyang, Azalia Mirhoseini, Ke Wang, and Alex Aiken. 2025. Astra:
+     Serving with PagedAttention. In Proceedings of the 29th Symposium            A Multi-Agent System for GPU Kernel Performance Optimization.
+     on Operating Systems Principles (SOSP). ACM, Koblenz, Germany, 611–          arXiv:2509.07506.
+     626.                                                                    [21] Zijian Zhang, Rong Wang, Shiyang Li, Yuebo Luo, Mingyi Hong, and
+ [6] Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Livia Sun,               Caiwen Ding. 2025. CudaForge: An Agent Framework with Hardware
+     Jeff Huang, Cody Hao Yu, Shiyi Cao, Christos Kozyrakis, Ion Stoica,          Feedback for CUDA Kernel Optimization. arXiv:2511.01884.
+     Joseph E. Gonzalez, Clark Barrett, and Ying Sheng. 2024. SGLang:        [22] Joshua Brodsky, Dhravid Kumar, Savini Kashmira, Jayanaka Danata-
+     Efficient Execution of Structured Language Model Programs. In Ad-            narayana, Jason Mars, Krisztian Flautner, and Lingjia Tang. 2026. Ker-
+     vances in Neural Information Processing Systems (NeurIPS). Vancouver,        nel Forge: An Agent Harness for LLM-based Generation and Opti-
+     Canada.                                                                      mization of CUDA Kernels. arXiv:2607.24762.
+ [7] NVIDIA Corporation. 2025. cuBLAS Library User Guide, Version 12.8.      [23] Aditya K. Kamath, Ramya Prabhu, Jayashree Mohan, Simon Peter,
+     https://docs.nvidia.com/cuda/cublas/.                                        Ramachandran Ramjee, and Ashish Panwar. 2025. POD-Attention:
+ [8] NVIDIA Corporation. 2025. CUTLASS: CUDA Templates for Linear                 Unlocking Full Prefill-Decode Overlap for Faster LLM Inference. In
+     Algebra Subroutines. https://github.com/NVIDIA/cutlass.                      Proceedings of the 30th ACM International Conference on Architectural
+ [9] Philippe Tillet, Hsiang-Tsung Kung, and David Cox. 2019. Triton:             Support for Programming Languages and Operating Systems (ASPLOS).
+     An Intermediate Language and Compiler for Tiled Neural Network               Rotterdam, Netherlands, 897–912.
+     Computations. In Proceedings of the 3rd ACM SIGPLAN International
+     Workshop on Machine Learning and Programming Languages (MAPL).
+[24] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion         [42] Sangeeta Chowdhary, Ryan Swann, Sean Siddens, Muhammad Osama,
+     Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017.              Stephen Neuendorffer, Alexandru Dutu, Karthik Sangaiah, Sandeepa
+     Attention Is All You Need. In Advances in Neural Information Processing        Bhuyan, Samuel Bayliss, and Ganesh Dasika. 2026. Fleet: Hierar-
+     Systems (NeurIPS).                                                             chical Task-based Abstraction for Megakernels on Multi-Die GPUs.
+[25] Jianlin Su, Murtadha Ahmed, Yu Lu, Shengfeng Pan, Wen Bo, and                  arXiv:2604.15379.
+     Yunfeng Liu. 2024. RoFormer: Enhanced Transformer with Rotary             [43] Jonathan Ragan-Kelley, Connelly Barnes, Andrew Adams, Sylvain
+     Position Embedding. Neurocomputing 568 (2024), 127063.                         Paris, Frédo Durand, and Saman Amarasinghe. 2013. Halide: A Lan-
+[26] Noam Shazeer. 2019. Fast Transformer Decoding: One Write-Head is               guage and Compiler for Optimizing Parallelism, Locality, and Recom-
+     All You Need. arXiv:1911.02150 (2019).                                         putation in Image Processing Pipelines. In Proceedings of the 34th ACM
+[27] Joshua Ainslie, James Lee-Thorp, Michiel de Jong, Yury Zemlyanskiy,            SIGPLAN Conference on Programming Language Design and Implemen-
+     Federico Lebrón, and Sumit Sanghai. 2023. GQA: Training Generalized            tation (PLDI). Seattle, WA, USA, 519–530.
+     Multi-Query Transformer Models from Multi-Head Checkpoints. In            [44] Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie
+     Proceedings of the 2023 Conference on Empirical Methods in Natural             Yan, Meghan Cowan, Haichen Shen, Leyuan Wang, Yuwei Hu, Luis
+     Language Processing (EMNLP). Singapore, 4895–4901.                             Ceze, Carlos Guestrin, and Arvind Krishnamurthy. 2018. TVM: An Au-
+[28] Megha Agarwal, Asfandyar Qureshi, Nikhil Sardana, Linden Li,                   tomated End-to-End Optimizing Compiler for Deep Learning. In 13th
+     Julian Quevedo, and Daya Khudia. 2023. LLM Inference Per-                      USENIX Symposium on Operating Systems Design and Implementation
+     formance Engineering: Best Practices. Databricks Engineering                   (OSDI). Carlsbad, CA, USA, 578–594.
+     Blog, https://www.databricks.com/blog/llm-inference-performance-          [45] Hongyu Zhu, Ruofan Wu, Yijia Diao, Shanbin Ke, Haoyu Li, Chen
+     engineering-best-practices.                                                    Zhang, Jilong Xue, Lingxiao Ma, Yuqing Xia, Wei Cui, Fan Yang, Mao
+[29] NVIDIA Corporation. 2025. CUDA C++ Programming Guide, Version                  Yang, Lidong Zhou, Asaf Cidon, and Gennady Pekhimenko. 2022.
+     12.8. https://docs.nvidia.com/cuda/cuda-c-programming-guide/.                  ROLLER: Fast and Efficient Tensor Compilation for Deep Learning. In
+[30] Samuel Williams, Andrew Waterman, and David Patterson. 2009.                   USENIX Symposium on Operating Systems Design and Implementation
+     Roofline: An Insightful Visual Performance Model for Multicore Ar-             (OSDI).
+     chitectures. Commun. ACM 52, 4 (2009), 65–76.                             [46] Yining Shi, Zhi Yang, Jilong Xue, Lingxiao Ma, Yuqing Xia, Ziming
+[31] Anthropic. 2025. Claude Code: An Agentic Command-Line Tool for                 Miao, Yuxiao Guo, Fan Yang, and Lidong Zhou. 2023. Welder: Sched-
+     Software Engineering. https://www.anthropic.com/claude-code.                   uling Deep Learning Memory Access via Tile-graph. In USENIX Sym-
+[32] Georgi Gerganov and llama.cpp contributors. 2026. llama.cpp: LLM               posium on Operating Systems Design and Implementation (OSDI).
+     inference in C/C++. https://github.com/ggml-org/llama.cpp.                [47] Lianmin Zheng, Chengfan Jia, Minmin Sun, Zhao Wu, Cody Hao Yu,
+[33] Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav                    Ameer Haj-Ali, Yida Wang, Jun Yang, Danyang Zhuo, Koushik Sen,
+     Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil                  Joseph E. Gonzalez, and Ion Stoica. 2020. Ansor: Generating High-
+     Mathur, Alan Schelten, and Alex Vaughan. 2024. The Llama 3 Herd of             Performance Tensor Programs for Deep Learning. In 14th USENIX
+     Models. arXiv:2407.21783.                                                      Symposium on Operating Systems Design and Implementation (OSDI).
+[34] Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Alma-             Banff, Canada, 863–879.
+     hairi, Yasmine Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal          [48] Zhihao Jia, Oded Padon, James Thomas, Todd Warszawski, Matei
+     Bhargava, and Shruti Bhosale. 2023. Llama 2: Open Foundation and               Zaharia, and Alex Aiken. 2019. TASO: Optimizing Deep Learning
+     Fine-Tuned Chat Models. arXiv:2307.09288.                                      Computation with Automatic Generation of Graph Substitutions. In
+[35] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo               Proceedings of the 27th ACM Symposium on Operating Systems Princi-
+     Zheng, Bowen Yu, Chang Gao, Chengen Huang, and Chenxu Lv. 2025.                ples (SOSP). Huntsville, Canada, 47–62.
+     Qwen3 Technical Report. arXiv:2505.09388.                                 [49] Lei Wang, Lingxiao Ma, Shijie Cao, Quanlu Zhang, Jilong Xue, Yin-
+[36] Shengding Hu, Yuge Tu, Xu Han, Chaoqun He, Ganqu Cui, Xiang                    ing Shi, Ningxin Zheng, Ziming Miao, Fan Yang, Ting Cao, Yuqing
+     Long, Zhi Zheng, Yewei Fang, Yuxiang Huang, and Weilin Zhao. 2024.             Yang, and Mao Yang. 2024. Ladder: Enabling Efficient Low-Precision
+     MiniCPM: Unveiling the Potential of Small Language Models with                 Deep Learning Computing through Hardware-aware Tensor Trans-
+     Scalable Training Strategies. arXiv:2404.06395.                                formation. In USENIX Symposium on Operating Systems Design and
+[37] Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen,                     Implementation (OSDI).
+     Heewoo Jun, Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob         [50] Muhammad Osama, Duane Merrill, Cris Cecka, Michael Garland, and
+     Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman.                John D. Owens. 2023. Stream-K: Work-Centric Parallel Decomposition
+     2021. Training Verifiers to Solve Math Word Problems. arXiv preprint           for Dense Matrix-Matrix Multiplication on the GPU. In ACM SIGPLAN
+     arXiv:2110.14168 (2021).                                                       Symposium on Principles and Practice of Parallel Programming (PPoPP).
+[38] Jordan Juravsky, Stuart Sul, Benjamin F. Spector, and Christopher         [51] Jason Ansel, Shoaib Kamil, Kalyan Veeramachaneni, Jonathan Ragan-
+     Ré. 2025. One Kernel for All Your GPUs. Hazy Research blog, https:             Kelley, Jeffrey Bosboom, Una-May O’Reilly, and Saman Amarasinghe.
+     //hazyresearch.stanford.edu/blog/2025-09-22-pgl.                               2014. OpenTuner: An Extensible Framework for Program Autotun-
+[39] Kog AI. 2026. Building a Single-Kernel, Latency-Optimized LLM                  ing. In Proceedings of the 23rd International Conference on Parallel
+     Inference Engine on AMD MI300X GPUs. https://blog.kog.ai/building-             Architectures and Compilation (PACT). Edmonton, Canada, 303–316.
+     a-single-kernel-latency-optimized-llm-inference-engine-on-amd-            [52] Jaeyeon Won, Willow Ahrens, Joel S. Emer, and Saman Amarasinghe.
+     mi300x-gpus/.                                                                  2026. Insum: Sparse GPU Kernels Simplified and Optimized with Indi-
+[40] Stuart Sul and Christopher Ré. 2026. Retire the Abstractions. Hazy             rect Einsums. In Proceedings of the 31st ACM International Conference
+     Research blog, https://hazyresearch.stanford.edu/blog/2026-08-05-              on Architectural Support for Programming Languages and Operating
+     retire-the-abstractions.                                                       Systems (ASPLOS). Pittsburgh, PA, USA.
+[41] Mengdi Wu, Xinhao Cheng, Shengyu Liu, Chunan Shi, Jianan Ji,              [53] Haohui Mai, Xiaoyan Guo, Xiangyun Ding, Christos Kozyrakis, and
+     Man Kit Ao, Praveen Velliengiri, Xupeng Miao, Oded Padon, and                  Binhang Yuan. 2026. ARGUS: Agentic GPU Optimization Guided by
+     Zhihao Jia. 2025. Mirage: A Multi-Level Superoptimizer for Tensor              Data-Flow Invariants. arXiv:2604.18616.
+     Programs. In 19th USENIX Symposium on Operating Systems Design            [54] Bodhisatwa Chatterjee, Drew Zagieboylo, Sana Damani, Siva Ku-
+     and Implementation (OSDI). Boston, MA, USA.                                    mar Sastry Hari, and Christos Kozyrakis. 2025. ProofWright: Towards
+                                                                                    Agentic Formal Verification of CUDA. arXiv:2511.12294.
+ [55] Yujia Li, David Choi, Junyoung Chung, Nate Kushman, Julian Schrit-                                Table 4. Qwen3-0.6B at 𝑏1×128, ceiling 39.87% MBU, forged
+      twieser, Rémi Leblond, Tom Eccles, James Keeling, Felix Gimeno,                                   by two coding agents.
+      Agustin Dal Lago, Thomas Hubert, Peter Choy, Cyprien de Mas-
+      son d’Autume, Igor Babuschkin, Xinyun Chen, Po-Sen Huang, Jo-                                         Agent                           rounds   MBU (%)   Mtok   cost
+      hannes Welbl, Sven Gowal, Alexey Cherepanov, James Molloy, Daniel J.                                  Claude Code, Claude Opus 5 1M       55      35.0    378 $362
+      Mankowitz, Esme Sutherland Robson, Pushmeet Kohli, Nando de Fre-                                      codex exec, GPT-5.6-sol             84      35.7    279  n/a
+      itas, Koray Kavukcuoglu, and Oriol Vinyals. 2022. Competition-Level
+      Code Generation with AlphaCode. Science 378, 6624 (2022), 1092–
+      1097.                                                                                             ablated arms finish below the floor they kept. The arm with-
+ [56] Bernardino Romera-Paredes, Mohammadamin Barekatain, Alexander                                     out the instruction stream improves slowly throughout and
+      Novikov, Matej Balog, M. Pawan Kumar, Emilien Dupont, Francisco                                   ends at 26.54%. The arm without the counters gains most
+      J. R. Ruiz, Jordan S. Ellenberg, Pengming Wang, Omar Fawzi, Pushmeet
+                                                                                                        of its ground in the last five rounds and still ends at 29.60%,
+      Kohli, and Alhussein Fawzi. 2024. Mathematical Discoveries from
+      Program Search with Large Language Models. Nature 625 (2024),                                     short of 35%. The arm without the buffer pool reaches 34.00%,
+      468–475.                                                                                          short of 38%.
+ [57] Carlos E. Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin                                    The instruction-stream requirement at M6 does real work
+      Pei, Ofir Press, and Karthik Narasimhan. 2024. SWE-bench: Can                                     on this configuration. The control clears the 28% floor while
+      Language Models Resolve Real-World GitHub Issues?. In The Twelfth
+                                                                                                        the arm that lost the stream stops 1.5 points short of it on the
+      International Conference on Learning Representations (ICLR). Vienna,
+      Austria.                                                                                          same budget, and the two campaigns differ in nothing else.
+ [58] Jaber Jaber and Osama Jaber. 2026. AutoMegaKernel: A Statically-                                  The counter requirement at M7 points the same way, though
+      Checked Agent Harness for Self-Retargeting Megakernel Synthesis.                                  its arm was still climbing when the budget ran out, which
+      arXiv:2606.09682.                                                                                 leaves room for it to be slower rather than blocked. M8 sets
+                                                                                                        the ceiling at the other end of the range, where a batched
+                                                                                                        cell with a long context makes the staged working set large
+ A                         Milestone ablation                                                           enough to bound the step, and that is where we would take
+§4.1 requires structure and measured performance together,                                              the experiment next. The evidence here is one campaign on
+and this experiment tests whether the structure earns its                                               one model at one shape, so it reports the direction of each
+place. Each ablation arm removes one of its three steps and                                             requirement rather than its size.
+keeps the MBU floor that step carries, both in the gate and in
+the rules file the agent reads: the per-SM instruction stream at                                        B     A second coding agent
+M6, the dependency counters at M7 and the shared-memory                                                 Every campaign above is driven by the same coding agent.
+buffer pool at M8. Every arm forges Qwen3-0.6B at 𝑏1×128                                                To check that ForgeMegakernel does not depend on it, we
+from the same seeded scaffold, with the same agent, prompt                                              re-forge Qwen3-0.6B at 𝑏1×128 with codex exec on GPT-5.6-
+and thresholds, so the ladder is the only thing that differs.                                           sol, leaving the seeded scaffold, the rungs, the thresholds
+The configuration’s MBU ceiling is 39.87%, and the retained                                             and the prompt unchanged.
+thresholds are 28%, 35% and 38%. Absolute MBU does not                                                     Table 4 puts that run beside the strongest of the four
+travel between machines here, so every arm runs beside a                                                default-harness runs of the same cell. The campaign climbs
+control that shares its host, its cards and its measurement                                             the ladder unaided and produces a working megakernel at
+window, under a fixed budget of 50 rounds.                                                              round 44 of 84: one block per SM, a 14,916-instruction inter-
+                                                                                                        preter, and a decode step of 1009.6 𝜇s end to end, or 35.7%
+                             measured ceiling of this cell
+                      40                                                                                MBU, 89.5% of the cell’s ceiling and 1.73× SGLang and 1.50×
+best MBU so far (%)
+
+
+
+
+                             M6 floor
+                                                                                                        MPK on the same card. The default-harness runs reach 26.4%
+                      30
+                                                                                                        to 35.0% MBU for 194 to 378 Mtok, so the ladder and its oracle
+                      20                                                                                transfer to a different agent at comparable token cost.
+                      10                                      full ladder            no M7 structure
+                                                              no M6 structure        no M8 structure
+                       0
+                                   20         25         30         35          40       45        50
+                                                              round
+ Figure 7. Milestone ablation, best MBU so far against round.
+ Each arm removes one step of §4.1 and keeps the MBU floor
+ it carries.
+
+    Figure 7 draws the four arms of the campaign. The control
+ clears the 28% floor at round 25 and finishes at 35.69%, just
+ under 90% of what this configuration can reach. All three
+

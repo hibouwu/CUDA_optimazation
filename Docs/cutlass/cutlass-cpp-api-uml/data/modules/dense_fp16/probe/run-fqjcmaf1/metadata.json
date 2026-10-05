@@ -1,0 +1,102 @@
+{
+  "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "snapshot_scope_sha256": "2b8a0094ff40dcd0a47c4da64e309fda8af98dc1ecdeb9b28a6e8a8692c2970f",
+  "all_snapshot_file_hashes_verified": 824,
+  "baseline": {
+    "path": "02_cutlass_and_gemm/exemples/dense_baseline.cu",
+    "sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217"
+  },
+  "prior_evidence": {
+    "manifest_path": "02_cutlass_and_gemm/exemples/verification/results/manifest.json",
+    "manifest_sha256": "e603521fbaca0e9833f9c02a055ff448a9db4c2371890260a9340e2f874158fe",
+    "baseline_hash_matches": true,
+    "commit_matches": true,
+    "prior_nvcc": "13.0.48",
+    "prior_types_sha256": "2089eb56f190bebf8f9f1d89817ee8cb3085bdfadee3046f2e67e8bc0253d99b"
+  },
+  "probe_source_sha256": "da9eb7d6cf1adfc0e700d1cf05482fc1894c962fda713799004df29464efa9df",
+  "runner_sha256": "beefe11494376924c682aed0c394e47a9a28266d7ed76e975d43c2fc50802df2",
+  "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+  "host_compiler_version": "g++-14 (GCC) 14.4.1 20260724 (Red Hat 14.4.1-2)\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "target": "sm_110a",
+  "recipe_arch_tag": "cutlass::arch::Sm100",
+  "runtime_gpu_launched": false,
+  "runtime_validation": "not performed",
+  "host_type_printer_only": true,
+  "commands": [
+    {
+      "label": "nvcc_ptx",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "--ptx",
+        "-lineinfo",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-fqjcmaf1/probe.ptx"
+      ],
+      "returncode": 1,
+      "elapsed_seconds": 10.450915652007097,
+      "stdout": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_ptx.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_ptx.stderr.txt"
+    },
+    {
+      "label": "nvcc_host_types",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_HOST_TYPES",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-fqjcmaf1/host_types"
+      ],
+      "returncode": 2,
+      "elapsed_seconds": 4.109748301998479,
+      "stdout": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_host_types.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_host_types.stderr.txt"
+    }
+  ],
+  "artifacts": {
+    "nvcc_host_types.stderr.txt": {
+      "sha256": "7bda69ed4a3dba5f194e3466f077bf3203dd464dcdd2b5e8c1f8350d4f1a8f05",
+      "bytes": 1768
+    },
+    "nvcc_host_types.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "nvcc_ptx.stderr.txt": {
+      "sha256": "4ba24da358039f29bfe589f58dc1ed80f84375a6e01aba3de513aa6bac015551",
+      "bytes": 1524006
+    },
+    "nvcc_ptx.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "static_observations": {
+    "device_entry_count": 0,
+    "target_directives": [],
+    "mma_f16_cta_group_2_count": 0,
+    "sass_mma_lines": []
+  },
+  "status": "probe_incomplete_or_failed"
+}

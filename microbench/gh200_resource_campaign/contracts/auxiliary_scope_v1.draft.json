@@ -1,0 +1,357 @@
+{
+  "schema_version": 1,
+  "stage": "S18",
+  "status": "draft_not_runtime_admitted",
+  "family": "auxiliary",
+  "points": [
+    {
+      "id": "resource_threads64",
+      "family": "capacity",
+      "threads": 64,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_threads128",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_threads256",
+      "family": "capacity",
+      "threads": 256,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_threads512",
+      "family": "capacity",
+      "threads": 512,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_live64",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 64,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_live128",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 128,
+      "dynamic_smem_bytes": 0,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_smem32k",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 32768,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_smem64k",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 65536,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "resource_smem128k",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 131072,
+      "carveout": "default",
+      "scope": "one_cta"
+    },
+    {
+      "id": "carveout_hint0",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 32768,
+      "carveout": 0,
+      "scope": "one_cta"
+    },
+    {
+      "id": "carveout_hint100",
+      "family": "capacity",
+      "threads": 128,
+      "live_u32_values": 32,
+      "dynamic_smem_bytes": 32768,
+      "carveout": 100,
+      "scope": "one_cta"
+    },
+    {
+      "id": "local_explicit_words32",
+      "family": "local_explicit",
+      "threads": 128,
+      "words_per_thread": 32,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "local_explicit_words128",
+      "family": "local_explicit",
+      "threads": 128,
+      "words_per_thread": 128,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "spill_pressure_words32",
+      "family": "spill_pressure",
+      "threads": 128,
+      "words_per_thread": 32,
+      "streams": 1,
+      "scope": "one_cta",
+      "compiler_max_registers_request": 32
+    },
+    {
+      "id": "spill_pressure_words128",
+      "family": "spill_pressure",
+      "threads": 128,
+      "words_per_thread": 128,
+      "streams": 1,
+      "scope": "one_cta",
+      "compiler_max_registers_request": 32
+    },
+    {
+      "id": "add_u64_streams1",
+      "family": "auxiliary_service",
+      "operation": "add_u64",
+      "threads": 128,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "add_u64_streams4",
+      "family": "auxiliary_service",
+      "operation": "add_u64",
+      "threads": 128,
+      "streams": 4,
+      "scope": "one_cta"
+    },
+    {
+      "id": "mad_wide_u32_streams1",
+      "family": "auxiliary_service",
+      "operation": "mad_wide_u32",
+      "threads": 128,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "mad_wide_u32_streams4",
+      "family": "auxiliary_service",
+      "operation": "mad_wide_u32",
+      "threads": 128,
+      "streams": 4,
+      "scope": "one_cta"
+    },
+    {
+      "id": "cvt_rn_f16_f32_streams1",
+      "family": "auxiliary_service",
+      "operation": "cvt_rn_f16_f32",
+      "threads": 128,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "cvt_rn_f16_f32_streams4",
+      "family": "auxiliary_service",
+      "operation": "cvt_rn_f16_f32",
+      "threads": 128,
+      "streams": 4,
+      "scope": "one_cta"
+    },
+    {
+      "id": "cvt_f32_f16_streams1",
+      "family": "auxiliary_service",
+      "operation": "cvt_f32_f16",
+      "threads": 128,
+      "streams": 1,
+      "scope": "one_cta"
+    },
+    {
+      "id": "cvt_f32_f16_streams4",
+      "family": "auxiliary_service",
+      "operation": "cvt_f32_f16",
+      "threads": 128,
+      "streams": 4,
+      "scope": "one_cta"
+    },
+    {
+      "id": "atomic_add_u32_global_same_word",
+      "family": "atomic",
+      "operation": "add_u32",
+      "threads": 128,
+      "address_space": "global",
+      "address_pattern": "same_word",
+      "scope": "one_cta"
+    },
+    {
+      "id": "atomic_add_u32_global_per_thread_word",
+      "family": "atomic",
+      "operation": "add_u32",
+      "threads": 128,
+      "address_space": "global",
+      "address_pattern": "per_thread_word",
+      "scope": "one_cta"
+    },
+    {
+      "id": "atomic_add_u32_shared_same_word",
+      "family": "atomic",
+      "operation": "add_u32",
+      "threads": 128,
+      "address_space": "shared",
+      "address_pattern": "same_word",
+      "scope": "one_cta"
+    },
+    {
+      "id": "atomic_add_u32_shared_per_thread_word",
+      "family": "atomic",
+      "operation": "add_u32",
+      "threads": 128,
+      "address_space": "shared",
+      "address_pattern": "per_thread_word",
+      "scope": "one_cta"
+    },
+    {
+      "id": "setmaxnreg_dec32_inc64",
+      "family": "setmaxnreg_legality",
+      "threads": 128,
+      "required_initial_register_limit": 64,
+      "sequence": [
+        "dec32",
+        "CTA_sync",
+        "inc64",
+        "CTA_sync"
+      ],
+      "performance_export": false,
+      "scope": "one_cta",
+      "architecture": "sm_90a",
+      "words_per_thread_per_phase": 60,
+      "output_phases": 2,
+      "initial_actual_registers_required": 64,
+      "warpgroup_count": 1,
+      "candidate": {
+        "path": "microbench/gh200_resource_campaign/probes/feasibility/setmax_initial64_v1.ptx",
+        "sha256": "57b8490fa36389ebe19b5f5881cd75ee73501103741a52c0cab603f70f23a93c"
+      },
+      "execution_conditions": [
+        "all four warps execute identical adjustment sequence",
+        "CTA synchronization between adjustments",
+        "no live high registers across dec",
+        "initialize newly allocated registers before use",
+        "one CTA launch; no competing CTA uses this SM register pool in the controlled job",
+        "initial actual allocation must be 64; maxnreg option alone is insufficient",
+        "inc may wait for register allocation; bounded process timeout failure is not unsupported"
+      ]
+    }
+  ],
+  "short_iterations": [
+    1,
+    2,
+    5
+  ],
+  "short_seeds": [
+    0,
+    3,
+    4294967295
+  ],
+  "seed_iteration_pairing": "three paired launches, not Cartesian product",
+  "formal_policy": "existing bounded calibration/warmup/10 independent process policy after all applicable short cases pass",
+  "resource_requests_are_not_actual_register_allocation": true,
+  "register_and_spill_actuals_required": true,
+  "capability_compile_pending": true,
+  "service_metric": "explicit per-thread PTX operation requests per CTA clock64 covered-cycle; globaltimer duration also preserved",
+  "forbid_claims": [
+    "actual_residency_from_occupancy_API",
+    "physical_local_or_HBM_traffic_from_logical_bytes",
+    "hardware_peak_from_fixed_service",
+    "general_setmaxnreg_cost"
+  ],
+  "sources": {
+    "PTX8.8": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html",
+    "Hopper": "https://docs.nvidia.com/cuda/archive/12.9.1/hopper-tuning-guide/index.html",
+    "CUDA12.9.1": "https://docs.nvidia.com/cuda/archive/12.9.1/cuda-c-programming-guide/index.html"
+  },
+  "integer_semantics": {
+    "u32": "modulo 2^32",
+    "u64": "modulo 2^64",
+    "indices": "thread t, word/stream j, iteration i are zero-based",
+    "I": "I(seed,t,j) = (seed + 65537*(t+1) + 257*(j+1)) mod 2^32"
+  },
+  "operations": {
+    "capacity_and_local_and_pressure": {
+      "initial_word": "I(seed,t,j)",
+      "update": "x = (1664525*x + 1013904223) mod 2^32",
+      "updates_per_iteration": "threads * words_per_thread (or live_u32_values)",
+      "final_output": "all words, thread-major"
+    },
+    "add_u64": {
+      "initial": "(uint64(I(seed,t,j)) << 32) | I(seed,t,j+17)",
+      "increment": "((uint64(seed) << 32) + 65537*(t+1) + 257*(j+1)) | 1",
+      "update": "x = (x + increment) mod 2^64",
+      "target_requests_per_iteration": "threads * streams"
+    },
+    "mad_wide_u32": {
+      "initial_x": "I(seed,t,j)",
+      "a": "I(seed XOR 0xa5a5a5a5,t,j) | 1",
+      "c": "(uint64(I(seed XOR 0x5a5a5a5a,t,j)) << 32) | I(seed XOR 0xc3c3c3c3,t,j)",
+      "update": "r = (uint64(x)*uint64(a) + c) mod 2^64; x = low32(r)",
+      "final_output": "full r for every stream",
+      "target_requests_per_iteration": "threads * streams"
+    },
+    "conversion": {
+      "initial_q": "I(seed,t,j) & 1023",
+      "salt": "(I(seed XOR 0x9e3779b9,t,j) & 1023) | 1",
+      "update_before_conversion": "q = (previous_q + salt + i) & 1023",
+      "f32_input_bits": "0x3f800000 | (q << 13)",
+      "f16_input_bits": "0x3c00 | q",
+      "f32_to_f16_feedback": "previous_q = output_half_bits & 1023",
+      "f16_to_f32_feedback": "previous_q = (output_float_bits >> 13) & 1023",
+      "final_output": "all raw target output bit patterns",
+      "target_requests_per_iteration": "threads * streams"
+    },
+    "atomic": {
+      "initial": "I(seed,0,address_index), address_index=0 for same_word; t for per_thread_word",
+      "increment": "1 + (t % 7)",
+      "requests_per_iteration": "threads",
+      "return_value": "unused",
+      "memory_order": "relaxed",
+      "global_scope": "gpu",
+      "shared_scope": "cta",
+      "output": "one u32 for same_word; threads u32 for per_thread_word",
+      "completion": "CTA barrier after all atomic iterations, then final values copied to global, then CTA barrier before stop stamp"
+    }
+  },
+  "dynamic_smem_lifecycle": {
+    "initialization": "before start stamp: t writes j=t,t+threads,...<dynamic_smem_bytes/4 with I(seed,0,j), once per word; CTA barrier",
+    "loop": "no SMEM payload access; only the declared register recurrence",
+    "drain": "after stop stamp: t reads the same j sequence and writes every SMEM word to a separate global output; kernel completion and host copy validate it",
+    "effective_loop_work": "zero additional dynamic-SMEM payload requests; setup/drain excluded from CTA timing",
+    "final_resource_check": "requested dynamic SMEM must be present in actual launch/resource metadata"
+  }
+}

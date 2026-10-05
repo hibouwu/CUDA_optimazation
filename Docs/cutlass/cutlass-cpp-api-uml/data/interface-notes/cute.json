@@ -1,0 +1,1414 @@
+{
+  "nodes": {
+    "elementwise.api.clear_rvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "接收临时或右值 Tensor，函数体将有名字的 tensor 当作左值转交 clear(Tensor&)；清零的是该 Tensor 所表示的数据，不因 && 自动复制或接管底层存储。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.api.clear_lvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "取 Tensor::value_type 为 T，以 T{} 值初始化得到填充值，再调用 fill(tensor, T{})。这是逐元素赋值入口；T{} 的含义取决于元素类型，不能一概解释成逐字节 memset(0)。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.api.fill_rvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "接收临时或右值 Tensor，将有名字的 tensor 当作左值转交 fill(Tensor&, value)，使临时视图也能修改其指向的数据；本重载不另建缓冲区。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。",
+        "value": "调用时只读填充值，按元素赋值给目标；需要与目标元素或专用 fill 接口兼容，不是字节模式。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "T": "编译期类型参数：填充值 value 的类型，决定赋值/转换或底层 fill 重载是否可用；数值通过 value 实参传入。"
+      }
+    },
+    "elementwise.api.fill_prefer1": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "优先尝试 fill(tensor.data(), value)，让底层迭代器类型通过重载解析及 ADL 提供专用填充。尾随 decltype 检查该表达式是否有效；函数体只有调用而没有 return，不能据此保证任意非 void 自定义 fill 都具有有效的返回行为。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。",
+        "value": "调用时只读填充值，按元素赋值给目标；需要与目标元素或专用 fill 接口兼容，不是字节模式。",
+        "#2": "调用形式中的无名优先级标签对象；prefer<1> 或 prefer<0> 的类型在编译期参与重载选择，其值不携带数据或运行时优先级。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "T": "编译期类型参数：填充值 value 的类型，决定赋值/转换或底层 fill 重载是否可用；数值通过 value 实参传入。"
+      }
+    },
+    "elementwise.api.fill_prefer0": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "当更高优先级的数据入口填充不可用时，按 i = 0 到 size(tensor)-1 逐一执行 tensor(i) = value。访问仍经过 Tensor 的布局映射，不假定逻辑元素在物理地址上连续。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。",
+        "value": "调用时只读填充值，按元素赋值给目标；需要与目标元素或专用 fill 接口兼容，不是字节模式。",
+        "#2": "调用形式中的无名优先级标签对象；prefer<1> 或 prefer<0> 的类型在编译期参与重载选择，其值不携带数据或运行时优先级。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "T": "编译期类型参数：填充值 value 的类型，决定赋值/转换或底层 fill 重载是否可用；数值通过 value 实参传入。"
+      }
+    },
+    "elementwise.api.fill_lvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "向 detail::fill 传入 prefer<1>{}，先参与专用数据入口填充的重载选择；若该候选替换失败，利用 prefer 的继承关系回退到 prefer<0> 的逐元素实现。选择发生在编译期，实际赋值发生在调用时。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "tensor": "调用时 Tensor 对象，提供数据入口和布局；本算法写入其逻辑元素，要求实际引用可赋值且存储有效。",
+        "value": "调用时只读填充值，按元素赋值给目标；需要与目标元素或专用 fill 接口兼容，不是字节模式。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "T": "编译期类型参数：填充值 value 的类型，决定赋值/转换或底层 fill 重载是否可用；数值通过 value 实参传入。"
+      }
+    },
+    "elementwise.api.axpby_rvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "接收作为右值的输出 Tensor y，再将有名字的 y 当作左值转交 axpby 的主要实现。它不搬迁 y 的数据，也不创建独立输出；alpha、x、beta 和谓词原样传递。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "alpha": "调用时只读系数，乘以每个选中位置的 x(i)；其类型由 Alpha 确定，数值单位由调用问题决定。",
+        "x": "调用时只读输入 Tensor；遍历长度取 size(x)，选中位置读取 x(i)，逻辑范围须与 y 和谓词匹配。",
+        "beta": "调用时只读系数，用于旧 y(i) 的缩放；为零时算法不读取旧 y(i)，复数需实部和虚部同时为零。",
+        "y": "调用时输出 Tensor；谓词选中时写入，且 beta 非零时先读取同位置旧值。&& 重载只转发临时视图，不接管数据。",
+        "p": "调用时只读谓词对象，通过 p(i) 决定是否访问并更新第 i 个逻辑位置；默认 {} 构造的 constant_fn<true_type> 全部选中。"
+      },
+      "template_notes": {
+        "Alpha": "编译期类型参数：alpha 系数的数值表示及乘法重载，实际系数由函数实参 alpha 提供。",
+        "XEngine": "编译期类型参数：输入 x 的数据入口与元素/引用类型；调用时的 x 对象提供实际存储或视图。",
+        "XLayout": "编译期类型参数：输入 x 的布局表示；实际布局值随 x 对象传入，可含动态大小或步长。",
+        "Beta": "编译期类型参数：beta 系数的表示；is_complex<Beta> 决定判零分支，实际是否为零由 beta 的值决定。",
+        "YEngine": "编译期类型参数：输出 y 的数据入口与可赋值引用表示；不单凭类型名认定物理存储空间。",
+        "YLayout": "编译期类型参数：输出 y 的布局表示；调用时将逻辑 i 映射到对应输出元素。",
+        "PrdTensor": "编译期类型参数：逐位置谓词 p 的可调用类型；默认为 constant_fn<true_type>，实际掩码由调用时的 p 对象提供。"
+      }
+    },
+    "elementwise.api.axpby_lvalue": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "遍历 size(x) 个逻辑位置；仅当 p(i) 为真时写入 y(i) = alpha*x(i) + beta*y(i)。beta 为零时走不读取旧 y(i) 的表达式，谓词为假时不访问该位置的 x/y。调用方须保证 x、y 和谓词的索引范围及别名关系符合逐元素执行的要求。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {
+        "alpha": "调用时只读系数，乘以每个选中位置的 x(i)；其类型由 Alpha 确定，数值单位由调用问题决定。",
+        "x": "调用时只读输入 Tensor；遍历长度取 size(x)，选中位置读取 x(i)，逻辑范围须与 y 和谓词匹配。",
+        "beta": "调用时只读系数，用于旧 y(i) 的缩放；为零时算法不读取旧 y(i)，复数需实部和虚部同时为零。",
+        "y": "调用时输出 Tensor；谓词选中时写入，且 beta 非零时先读取同位置旧值。&& 重载只转发临时视图，不接管数据。",
+        "p": "调用时只读谓词对象，通过 p(i) 决定是否访问并更新第 i 个逻辑位置；默认 {} 构造的 constant_fn<true_type> 全部选中。"
+      },
+      "template_notes": {
+        "Alpha": "编译期类型参数：alpha 系数的数值表示及乘法重载，实际系数由函数实参 alpha 提供。",
+        "XEngine": "编译期类型参数：输入 x 的数据入口与元素/引用类型；调用时的 x 对象提供实际存储或视图。",
+        "XLayout": "编译期类型参数：输入 x 的布局表示；实际布局值随 x 对象传入，可含动态大小或步长。",
+        "Beta": "编译期类型参数：beta 系数的表示；is_complex<Beta> 决定判零分支，实际是否为零由 beta 的值决定。",
+        "YEngine": "编译期类型参数：输出 y 的数据入口与可赋值引用表示；不单凭类型名认定物理存储空间。",
+        "YLayout": "编译期类型参数：输出 y 的布局表示；调用时将逻辑 i 映射到对应输出元素。",
+        "PrdTensor": "编译期类型参数：逐位置谓词 p 的可调用类型；默认为 constant_fn<true_type>，实际掩码由调用时的 p 对象提供。"
+      }
+    },
+    "elementwise.type.Tensor": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "CuTe 的张量表示由 Engine 提供数据入口，由 Layout 把逻辑坐标映射为偏移；上层逐元素算法通过它访问数据。Engine 可以拥有存储，也可以只是视图，因此 Tensor 类型本身不指定寄存器、共享内存或全局内存。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.type.value_type": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "将 Engine::value_type 暴露为 Tensor 的数值类型，供 clear 构造填充值等算法使用。它是类型别名，不是数据指针、存储空间或实际元素对象。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.type.prefer": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "通过继承 prefer<N-1> 建立重载优先级链。传入 prefer<1>{} 时，精确匹配的高优先级候选优先；不可用时允许转换到较低优先级标签。它不是运行时优先队列。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "N": "编译期 size_t 模板值：重载优先级标签级别，通过继承 N-1 逐级回退；不是运行时调度优先级。"
+      }
+    },
+    "elementwise.type.prefer0": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "prefer 优先级链的零级终点；在 fill 中为通用逐元素实现提供最后一个可匹配的标签类型，不再继承更低一级。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "elementwise.type.constant_fn": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "保存一个 R 类型的成员 r_，调用运算符忽略输入并返回该成员的值。axpby 用 constant_fn<true_type> 作为默认谓词；一般 R 的存储值并不由类型名自动固定。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "R": "编译期类型参数：constant_fn 保存并返回的值类型；实际 r_ 可以是运行时数值，只有特定 R 如 true_type 自带静态值。"
+      }
+    },
+    "elementwise.type.true_type": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "bool_constant<true> 的类型别名，用类型携带真值；作为 axpby 默认谓词的返回类型时，每个位置都被选中。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "elementwise.type.bool_constant": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "将 bool 模板值包装为 C<b>，使真假值可以参与类型推导和编译期选择；没有独立的调用时布尔参数。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "b": "编译期 bool 模板值：决定该 bool_constant 类型所携带的真或假。"
+      }
+    },
+    "elementwise.type.C": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "把模板常量 v 放入类型身份，提供对应的静态 value 和值转换；用于静态形状、常量比较等。不同 v 是不同类型，不等同于可随每次调用改变的普通变量。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "v": "编译期非类型模板参数：指定该常量类型携带的值；C 接受 auto，Int 限定为 int。"
+      }
+    },
+    "elementwise.type.Int": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "为 int 模板常量 v 提供 C<v> 的简写；axpby 中的 Int<0>{} 是携带整数零的类型对象，用于 beta 比较。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "v": "编译期非类型模板参数：指定该常量类型携带的值；C 接受 auto，Int 限定为 int。"
+      }
+    },
+    "elementwise.type.is_complex": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "复数类型判定的主模板，value 为 false；axpby 用它选择普通数值的 beta == 0 比较。此主模板不是所有用户自定义复数类型的自动识别器。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：要判定是否为 cutlass::complex 特化的完整被测类型；本主模板给出 false。"
+      }
+    },
+    "elementwise.type.is_complex_complex": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "针对 cutlass::complex<T> 的判定特化，value 为 true；使 axpby 改为同时检查 beta 的实部和虚部是否为零。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：cutlass::complex<T> 的实部和虚部所用标量类型。"
+      }
+    },
+    "elementwise.api.tensor_data": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "非 const Tensor 的数据入口访问器，返回 engine().begin()，保留其实际返回类型。对拥有存储的 Engine 可能得到指针，对视图可能得到迭代器引用；本函数不读取所有张量元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.api.tensor_at_mutable": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "非 const Tensor 的坐标访问入口。普通坐标经 layout()(coord) 转为偏移后访问 data()[offset]；含下划线的坐标则生成切片布局与偏移并返回子 Tensor 视图。是否可写仍由 Engine 的引用或迭代器类型决定。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "coord": "调用时逻辑坐标，动态分量以元素位置计，不是字节偏移；Coord 类型含下划线时请求切片，否则由 Layout 映射后访问元素。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "Coord": "编译期类型参数：坐标的结构与静态分量，并决定是否含下划线切片；实际动态坐标值由 coord 提供。"
+      }
+    },
+    "elementwise.api.tensor_at_const": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "const Tensor 的坐标访问入口，同样在编译期按 Coord 是否含下划线选择元素访问或切片。const 限定的是 Tensor 对象；非拥有视图的底层元素是否只读，应继续检查 Engine 返回类型，不能仅据 const Tensor 推断。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "coord": "调用时逻辑坐标，动态分量以元素位置计，不是字节偏移；Coord 类型含下划线时请求切片，否则由 Layout 映射后访问元素。"
+      },
+      "template_notes": {
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。",
+        "Coord": "编译期类型参数：坐标的结构与静态分量，并决定是否含下划线切片；实际动态坐标值由 coord 提供。"
+      }
+    },
+    "elementwise.api.tensor_size": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "把 size<Is...> 查询转交给 tensor.layout()，返回整个逻辑域或所选嵌套模式的元素数量。它不读取元素数据，返回类型可以是静态整数类型，也可以携带运行时大小。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "tensor": "调用时只读 Tensor 对象，只读取其布局信息以求逻辑大小，不读取或改写张量元素。"
+      },
+      "template_notes": {
+        "Is": "编译期整数参数包：选择布局中要查询大小的嵌套模式路径；空包查询整个布局，单位为逻辑元素个数。",
+        "Engine": "编译期类型参数：提供张量的数据入口、数值和引用类型以及拥有存储或视图的表示；实际地址由 Engine 对象携带。",
+        "Layout": "编译期类型参数：选择坐标到偏移的布局表示；其 shape/stride 可以含运行时成员，类型已确定不等于所有尺寸都固定。"
+      }
+    },
+    "elementwise.api.constant_fn_call": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "忽略传入的整个实参包，返回保存的 r_。源码使用未加括号的成员名配合 decltype(auto)，因此返回的是 R 值而不是 R const&；默认谓词中的 R 为 true_type。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "#0": "调用时的无名转发引用实参包，可有零个或多个输入；函数体全部忽略。实参表达式仍会按 C++ 调用规则求值。"
+      },
+      "template_notes": {
+        "R": "编译期类型参数：constant_fn 保存并返回的值类型；实际 r_ 可以是运行时数值，只有特定 R 如 true_type 自带静态值。",
+        "T": "编译期类型参数包：由任意调用实参推导，使常量函数接受不同数量和类型的输入；函数体不使用这些输入。"
+      }
+    },
+    "elementwise.api.complex_real": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "返回 complex<T> 内实部成员的 const 引用，axpby 的复数 beta 判零通过它读取实部。引用依赖原复数对象的生命周期，不创建独立分量存储。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：cutlass::complex<T> 的实部和虚部所用标量类型。"
+      }
+    },
+    "elementwise.api.complex_imag": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "返回 complex<T> 内虚部成员的 const 引用，axpby 的复数 beta 判零通过它读取虚部。引用依赖原复数对象的生命周期，不创建独立分量存储。",
+      "execution": "可在 Host 或 Device 调用；模板实例和重载选择在编译期确定，数据访问与数值操作由实际调用执行。本声明没有把算法规定为必须在编译期求值。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：cutlass::complex<T> 的实部和虚部所用标量类型。"
+      }
+    },
+    "elementwise.api.beta_zero_lambda": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "在 axpby 内立即执行一次，通过引用捕获 beta 得到 isBetaZero。if constexpr 按 Beta 类型选择普通比较或实部/虚部比较；beta 是否为零是该调用的数值判断，而不是仅由 Beta 类型决定。",
+      "execution": "随外层 Host/Device axpby 调用立即求值。if constexpr 按 Beta 类型选择比较方式，捕获的 beta 数值仍来自调用，不保证编译期判零。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "elementwise.local.T": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "clear 函数体内对 Tensor<Engine,Layout>::value_type 的局部别名，用于构造 T{} 填充值；不引入新的元素类型或存储对象。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "elementwise.external.gnu_unreachable": {
+      "layer": "CuTe 张量与逐元素算法层",
+      "summary": "编译器内建的不可达标记，由满足条件的 CUTE_GCC_UNREACHABLE 展开产生。它向编译器声明控制流不应到达此处；不是错误恢复、线程同步或运行时检查接口。",
+      "execution": "编译器内建的控制流假设；可用性由编译器/预处理分支决定。若执行真的到达此处，将违反不可达前提，不能把它当作运行时安全检查。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.builtin.int": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "C++ 有符号整数类型；这里用于固定对齐 N 或索引运算，具体位宽和算术规则由目标编译环境决定。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.builtin.bool": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "C++ 的真假值类型，用于空数组、相等比较或地址检查的结果；结果值可以在运行时产生。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.builtin.void": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "C++ 的无返回值/无具体对象类型标记；函数返回 void 不产生结果对象，void 指针还需结合具体对象类型解释。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.external.size_t": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "标准的无符号对象大小类型，本模块主要以元素数和索引为单位使用；参数名为 Alignment 时才是字节数。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.external.uintptr_t": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "可承载指针整数表示的无符号整数类型，用于检查地址低位；整数化地址不等于验证该地址可访问。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "alignment.api.is_byte_aligned": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "把 ptr 转成 uintptr_t，用低位掩码 (N-1) 检查地址是否为 N 字节的整数倍，返回 bool；不会解引用指针，也不会证明对象容量、生命周期或访问合法。N 的二次幂要求由 static_assert 检查。",
+      "execution": "可在 Host 或 Device 调用。N 与 static_assert 在编译期确定，ptr 地址检查在调用时进行；虽声明 constexpr，指针 reinterpret_cast 并不因此成为标准常量表达式。",
+      "parameter_notes": {
+        "ptr": "调用时的只读指针值；检查其整数地址是否满足 N 字节对齐，不解引用、不修改指针或对象。"
+      },
+      "template_notes": {
+        "N": "编译期 int 模板值：要检查的对齐字节数；static_assert 要求 has_single_bit(N)，即非零的二次幂。"
+      }
+    },
+    "alignment.type.aligned_primary": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "aligned_struct 的空主模板，只建立由 Alignment 与 Child 区分的类型；源码没有给主模板附加对齐属性。只有列出的 1 到 256 的二次幂特化显式声明对齐，不能假定任意 Alignment 都得到请求对齐。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Alignment": "编译期字节数：指定所请求的类型对齐，具体支持范围及生效方式见当前类型；不是元素数量或运行时地址。",
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_1": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=1 字节提供显式带 CUTE_ALIGNAS(1) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_2": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=2 字节提供显式带 CUTE_ALIGNAS(2) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_4": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=4 字节提供显式带 CUTE_ALIGNAS(4) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_8": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=8 字节提供显式带 CUTE_ALIGNAS(8) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_16": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=16 字节提供显式带 CUTE_ALIGNAS(16) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_32": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=32 字节提供显式带 CUTE_ALIGNAS(32) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_64": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=64 字节提供显式带 CUTE_ALIGNAS(64) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_128": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=128 字节提供显式带 CUTE_ALIGNAS(128) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.aligned_256": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "为 Alignment=256 字节提供显式带 CUTE_ALIGNAS(256) 的空类型特化。Child 只区分类型身份，不是基类或成员；对齐属性约束该类型对象布局，不分配或对齐一个已有指针。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Child": "编译期类型参数：用于区分 aligned_struct 类型身份，默认 void；源码未把它声明为基类或数据成员。"
+      }
+    },
+    "alignment.type.array_aligned": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "在公开继承 cute::array<T,N> 的固定长度存储外添加 CUTE_ALIGNAS(Alignment) 类型对齐。Alignment 默认为 16 字节，但可显式修改；实际布局还须符合成员自然对齐和编译器要求，不能推断 sizeof 恰为 N*sizeof(T)。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。",
+        "Alignment": "编译期字节数：指定所请求的类型对齐，具体支持范围及生效方式见当前类型；不是元素数量或运行时地址。"
+      }
+    },
+    "alignment.dep.array": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "CuTe 的固定长度聚合数组，直接包含 T 类型的 N 个元素，为局部数值和容器算法提供统一访问接口。对象声明与使用方式决定实际存储位置；该类型不会自行分配 CUDA 全局内存或保证使用线程寄存器。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "alignment.dep.has_single_bit": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "用 x!=0 且 (x & (x-1))==0 判断数值是否恰有一个置位，用于 is_byte_aligned 的编译期 N 检查。它返回 bool，不执行对齐或修正地址。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "x": "调用时按值传入的被测整数。用于 static_assert(has_single_bit(N)) 时该实参来自模板常量 N；接口本身也可检查运行时值。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：待检查值 x 的数值类型，必须支持源码中的非零比较、减法及按位与运算。"
+      }
+    },
+    "alignment.macro.cuda": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "在 __CUDACC__ 分支中将 CUTE_ALIGNAS(n) 替换为 __align__(n)，供 aligned_struct 特化和 array_aligned 声明类型对齐。这是预处理替换，不是一次函数调用。",
+      "execution": "预处理期的函数式宏：n 是文本参数，展开后由编译器解释对齐说明。没有 Host/Device 调用，也没有 C++ 模板实参。",
+      "parameter_notes": {
+        "n": "预处理期文本参数：替换到 __align__(n) 或 alignas(n) 的括号内；本文件调用处用作对齐字节数常量表达式。不是运行时数值或 C++ 模板参数。"
+      },
+      "template_notes": {}
+    },
+    "alignment.macro.cpp": {
+      "layer": "CuTe 基础容器与对齐约束层",
+      "summary": "在非 __CUDACC__ 分支中将 CUTE_ALIGNAS(n) 替换为标准 alignas(n)，供类型或成员声明使用。它只生成对齐说明，不会在运行时调整对象地址。",
+      "execution": "预处理期的函数式宏：n 是文本参数，展开后由编译器解释对齐说明。没有 Host/Device 调用，也没有 C++ 模板实参。",
+      "parameter_notes": {
+        "n": "预处理期文本参数：替换到 __align__(n) 或 alignas(n) 的括号内；本文件调用处用作对齐字节数常量表达式。不是运行时数值或 C++ 模板参数。"
+      },
+      "template_notes": {}
+    },
+    "array.type.decl_42": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "CuTe 的固定长度聚合数组，直接包含 T 类型的 N 个元素，为局部数值和容器算法提供统一访问接口。对象声明与使用方式决定实际存储位置；该类型不会自行分配 CUDA 全局内存或保证使用线程寄存器。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_44": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：数组元素的原始声明类型 T，保留其 cv 限定。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_45": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：通过 remove_cv_t<T> 得到去掉顶层 const/volatile 的数值类型，与保留 T 的 element_type 分开。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_46": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：元素数量与下标使用的 size_t 类型，计数单位为元素，不是字节。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_47": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：两个位置的有符号差值类型 ptrdiff_t；别名本身不执行指针相减。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_48": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：指向 element_type 的左值引用类型；可否写入还取决于 T 自身是否带 const。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_49": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：指向 const element_type 的左值引用类型，用于只读元素访问。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_50": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：element_type* 指针类型，不携带地址值或存储空间标签。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_51": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：const element_type* 指针类型，通过该类型的指针只读访问元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_52": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：pointer 的别名，本容器以原始元素指针充当迭代器；不是单独的迭代器类。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.decl_53": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "固定长度数组中的类型别名：const_pointer 的别名，供只读遍历及 cbegin/cend 使用。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_56": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组调用时下标 pos，通过 begin()[pos]得到的元素引用；可写性仍取决于 T。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "pos": "调用时 size_type 下标，单位为元素而非字节；允许动态值，调用方必须保证 0<=pos<N。N=0 没有合法下标。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_62": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组调用时下标 pos，通过 begin()[pos]得到的const 元素引用。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "pos": "调用时 size_type 下标，单位为元素而非字节；允许动态值，调用方必须保证 0<=pos<N。N=0 没有合法下标。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_68": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组首元素，通过 *begin()得到的元素引用；可写性仍取决于 T。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_74": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组首元素，通过 *begin()得到的const 元素引用。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_80": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组末元素，通过 operator[](N-1)得到的元素引用；可写性仍取决于 T。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_87": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回数组末元素，通过 operator[](N-1)得到的const 元素引用。不复制元素，也不进行运行时越界检查；调用方负责保证访问位置有效。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_94": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回内部 __elems_ 数组的首地址，类型为 T*；不复制元素，不新建存储。指针有效期由当前 array 对象决定。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_100": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回内部 __elems_ 数组的首地址，类型为 T const*；不复制元素，不新建存储。指针有效期由当前 array 对象决定。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_106": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "通过 data() 返回首元素迭代器。当前重载提供非 const访问，不分配存储或改变元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_112": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "通过 data() 返回首元素迭代器。当前重载提供只读访问，不分配存储或改变元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_118": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回只读迭代器，内部调用当前对象的 begin()。本重载的 this 非 const，实际先选中非 const begin()，再转换为 const_iterator；不能画成直接调用 const 重载。结果是首位置。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_124": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回只读迭代器，内部调用当前对象的 begin()。本重载的 this 为 const，选择 const begin()。结果是首位置。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_130": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "通过 data()+size() 返回尾后迭代器，不能解引用。当前重载提供非 const访问，不分配存储或改变元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_136": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "通过 data()+size() 返回尾后迭代器，不能解引用。当前重载提供只读访问，不分配存储或改变元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_142": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回只读迭代器，内部调用当前对象的 end()。本重载的 this 非 const，实际先选中非 const end()，再转换为 const_iterator；不能画成直接调用 const 重载。结果是尾后位置，不可解引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_148": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回只读迭代器，内部调用当前对象的 end()。本重载的 this 为 const，选择 const end()。结果是尾后位置，不可解引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_154": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "调用 size() 并与零比较，返回数组是否为空；不读取元素。此处普通模板的 N 值由编译期配置确定。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_160": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回模板参数 N，单位为元素；这是固定容量，不是通过指针或运行时计数器推算。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_166": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "调用 size() 返回固定容量 N，单位为元素；本容器没有可增长容量。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_172": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "范围 for 遍历本数组，并把 value 赋给每个元素；使用 begin/end 构成范围，不是原始字节填充。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "value": "调用时只读 T 类型填充值，用于逐元素赋值；空数组成员 fill 不读取它，但实参的求值仍发生。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_180": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "构造 T(0) 并调用成员 fill，将每个元素赋为该值；它不把容器大小改成零，也不是释放存储。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_186": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "遍历相同位置，用引入的标准库 swap 加 ADL 交换两个数组的对应元素；调用目标取决于 T。两个数组地址与固定长度保持不变。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "other": "调用时同一 array 特化的另一可变数组，普通数组双方对应元素被交换；空数组成员 swap 不访问它。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.decl_199": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "array<T,0> 的空数组特化，不声明元素存储；数据与迭代器入口返回 nullptr，size/max_size 为零，成员 fill/clear/swap 为空操作。保留元素访问签名不代表空数组可以被解引用。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_201": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：数组元素的原始声明类型 T，保留其 cv 限定。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_202": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：通过 remove_cv_t<T> 得到去掉顶层 const/volatile 的数值类型，与保留 T 的 element_type 分开。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_203": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：元素数量与下标使用的 size_t 类型，计数单位为元素，不是字节。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_204": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：两个位置的有符号差值类型 ptrdiff_t；别名本身不执行指针相减。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_205": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：指向 element_type 的左值引用类型；可否写入还取决于 T 自身是否带 const。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_206": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：指向 const element_type 的左值引用类型，用于只读元素访问。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_207": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：element_type* 指针类型，不携带地址值或存储空间标签。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_208": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：const element_type* 指针类型，通过该类型的指针只读访问元素。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_209": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：const_pointer 的别名，供只读遍历及 cbegin/cend 使用。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.alias.decl_210": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化中的类型别名：pointer 的别名，本容器以原始元素指针充当迭代器；不是单独的迭代器类。保留这些别名不表示实际存在元素。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_213": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const operator[] 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "pos": "调用时 size_type 下标，单位为元素而非字节；允许动态值，调用方必须保证 0<=pos<N。N=0 没有合法下标。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_219": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 operator[] 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "pos": "调用时 size_type 下标，单位为元素而非字节；允许动态值，调用方必须保证 0<=pos<N。N=0 没有合法下标。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_225": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const front 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_231": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 front 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_237": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const back 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_243": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 back 接口保留返回引用的签名，但内部会经 begin() 的 nullptr 尝试访问元素。空数组不存在合法元素；本接口不做可恢复的越界检查，不能调用来取得有效引用。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_249": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const data 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_255": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 data 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_261": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const begin 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_267": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 begin 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_273": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 cbegin 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_279": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 cbegin 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_285": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 非 const end 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_291": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 end 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_297": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 cend 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_303": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组的 只读 cend 接口直接返回 nullptr，没有调用另一重载或计算指针偏移；它表示空区间而非一个可解引用的元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_309": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化直接返回 true，不查询数据或迭代器。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_315": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化直接返回 0，单位为元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_321": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化直接返回 0，单位为元素。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_327": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化的成员 fill 函数体为空，不读取 value、不构造或赋值元素；调用表达式中的实参求值仍由调用方执行。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "value": "调用时只读 T 类型填充值，用于逐元素赋值；空数组成员 fill 不读取它，但实参的求值仍发生。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_331": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化的成员 clear 函数体为空，不构造 T(0)，这与自由函数 clear(array&) 的实现不同。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_335": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "空数组特化的成员 swap 函数体为空，不访问 other，也不调用元素 swap；两个空对象没有元素需要交换。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "other": "调用时同一 array 特化的另一可变数组，普通数组双方对应元素被交换；空数组成员 swap 不访问它。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。"
+      }
+    },
+    "array.api.fn_341": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "逐元素用 lhs[i] != rhs[i] 判断是否存在差异，发现首个差异即返回 false，否则返回 true。源码调用的是元素 != 而不是 ==；N=0 时循环不执行，但普通 for 的函数体仍必须满足实例化的表达式要求。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "lhs": "调用时只读的比较左侧数组，与另一数组具有相同 T 和 N；用元素 != 判断差异。",
+        "rhs": "调用时只读的比较右侧数组，与另一数组具有相同 T 和 N；用元素 != 判断差异。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_353": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "自由函数 clear 先构造 T(0)，再调用 a.fill；没有转交成员 a.clear。即使 N=0、成员 fill 为空，T(0) 的构造表达式仍存在，不能套用空数组成员 clear 的无构造要求。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时要填充的可变数组，其逻辑长度由模板 N 决定；函数不改变数组容量或地址。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_360": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "自由函数 fill 把 value 转交 a.fill(value)，由普通数组或 N=0 特化的成员实现决定逐元素赋值或空操作。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时要填充的可变数组，其逻辑长度由模板 N 决定；函数不改变数组容量或地址。",
+        "value": "调用时只读 T 类型填充值，用于逐元素赋值；空数组成员 fill 不读取它，但实参的求值仍发生。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_367": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "自由函数 swap 转交 a.swap(b)，普通数组按元素交换，N=0 特化不执行元素操作；它不交换两个数组对象的地址。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时参与逐元素交换的可变数组，与另一个数组具有相同 T 和 N；本对象元素可能被改写。",
+        "b": "调用时参与逐元素交换的可变数组，与另一个数组具有相同 T 和 N；本对象元素可能被改写。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_375": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "返回元素次序反转的新数组，不修改输入 t。if constexpr(N==0) 时直接返回 t，并丢弃非空分支；非空时值初始化结果数组，再逐元素反向赋值，相关构造与赋值要求取决于 T。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "t": "调用时只读输入数组，元素按反序复制/赋值到返回的新数组；原 t 不被修改。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_406": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "按编译期索引 I 返回非 const 数组元素的 T&，函数体先 static_assert(I<N) 再调用 a[I]。越界是实例化错误，不是运行时异常，也不是 SFINAE 筛选。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时非 const 数组，返回其中第 I 个元素的 T&；本次查询不写入，但返回引用可用于后续赋值（取决于 T）。"
+      },
+      "template_notes": {
+        "I": "编译期 size_t 元素下标：get 的函数体用 static_assert 检查 I<N；不同于 operator[] 调用时传入的 pos。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_414": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "按编译期索引 I 返回 const 数组元素的 T const&，保留只读引用和原数组生命周期；函数体以 static_assert(I<N) 拒绝越界。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时只读数组，返回其中第 I 个元素的 const 引用；数组须在引用使用期间存活。"
+      },
+      "template_notes": {
+        "I": "编译期 size_t 元素下标：get 的函数体用 static_assert 检查 I<N；不同于 operator[] 调用时传入的 pos。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.api.fn_422": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "接收右值数组并返回第 I 个元素的 T&&。有名字的参数 a 在函数体内仍是左值，先通过 a[I] 取 T&，再用 cute::move 转为 T&&；不在此搬迁元素，不延长临时数组生命周期。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "a": "调用时以右值引用接收的数组；返回其元素 T&&，不复制元素也不延长临时数组生命周期。"
+      },
+      "template_notes": {
+        "I": "编译期 size_t 元素下标：get 的函数体用 static_assert 检查 I<N；不同于 operator[] 调用时传入的 pos。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.std.tuple_size": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "std 的 tuple_size 对 cute::array<T,N> 的特化，通过 integral_constant<size_t,N> 提供静态元素数量，供 tuple 协议与结构化绑定使用；它不遍历数组。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.cuda_std.tuple_size": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "cuda::std 的 tuple_size 对 cute::array<T,N> 的特化，通过 integral_constant<size_t,N> 提供静态元素数量，供 tuple 协议与结构化绑定使用；它不遍历数组。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.std.tuple_element": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "std 的数组 tuple_element 特化直接提供 type=T。源码未在此检查 I<N；不能把它当成 get<I> 的越界诊断。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "I": "编译期 size_t 元素位置；本 tuple_element 特化仍直接给出 type=T，没有自行检查 I<N。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.cuda_std.tuple_element": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "cuda::std 的数组 tuple_element 特化直接提供 type=T。源码未在此检查 I<N；不能把它当成 get<I> 的越界诊断。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "I": "编译期 size_t 元素位置；本 tuple_element 特化仍直接给出 type=T，没有自行检查 I<N。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.std.tuple_element.type": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "std 的数组 tuple_element 内部 type 别名直接指向 T。源码未在此检查 I<N；不能把它当成 get<I> 的越界诊断。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "I": "编译期 size_t 元素位置；本 tuple_element 特化仍直接给出 type=T，没有自行检查 I<N。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.alias.cuda_std.tuple_element.type": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "cuda::std 的数组 tuple_element 内部 type 别名直接指向 T。源码未在此检查 I<N；不能把它当成 get<I> 的越界诊断。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "I": "编译期 size_t 元素位置；本 tuple_element 特化仍直接给出 type=T，没有自行检查 I<N。",
+        "T": "编译期类型参数：数组元素的声明类型，决定存储、引用和元素运算；实际元素值属于数组对象。",
+        "N": "编译期 size_t 模板值：固定的数组逻辑元素数量，单位为元素；N=0 使用无元素存储的特化。"
+      }
+    },
+    "array.type.decl_457": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "特定 CUDA 标准库兼容分支中的 std::tuple_size 前置声明，为随后写入 std 命名空间的数组特化建立主模板声明；这里没有实现或运行时行为。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "_Tp": "编译期类型参数包：标准 tuple trait 前置声明保留的类型占位；这里没有对象实参或 trait 实现。"
+      }
+    },
+    "array.type.decl_460": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "特定 CUDA 标准库兼容分支中的 std::tuple_element 前置声明，为随后数组特化建立主模板声明；它保留索引与类型参数包，但本身不提供元素类型。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {
+        "_Ip": "编译期 size_t 索引：tuple_element 前置声明的元素位置占位，不是运行时下标。",
+        "_Tp": "编译期类型参数包：标准 tuple trait 前置声明保留的类型占位；这里没有对象实参或 trait 实现。"
+      }
+    },
+    "array.external.void": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "C++ 的无返回值/无具体对象类型标记；函数返回 void 不产生结果对象，void 指针还需结合具体对象类型解释。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.bool": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "C++ 的真假值类型，用于空数组、相等比较或地址检查的结果；结果值可以在运行时产生。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.size_t": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "标准的无符号对象大小类型，本模块主要以元素数和索引为单位使用；参数名为 Alignment 时才是字节数。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.ptrdiff_t": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "标准的有符号指针差值类型，在数组接口中通过 difference_type 对外提供；类型别名本身不执行地址计算。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.dependency.move": {
+      "layer": "CuTe 基础容器与 tuple 适配层",
+      "summary": "把实参转换为去掉引用后的类型的右值引用，供 get(array&&) 返回元素 T&&。此函数只是值类别转换，不执行复制、移动构造、显存搬运或资源所有权转移。",
+      "execution": "可在 Host 或 Device 调用；constexpr 允许满足常量表达式条件时在编译期求值，不要求每次调用都在编译期执行。类型/模板索引在编译期确定，对象、指针及普通实参可以在运行时提供。",
+      "parameter_notes": {
+        "t": "调用时被转换值类别的对象，以转发引用接收；不修改对象内容，返回引用的有效期仍由原对象决定。"
+      },
+      "template_notes": {
+        "T": "编译期类型参数：从转发引用实参推导，可能自身为引用类型；remove_reference_t<T> 得到返回右值引用的目标类型。"
+      }
+    },
+    "array.external.std.tuple_size": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "std::tuple_size 是外部标准库 tuple 协议的类型 trait 入口；本文件只为 cute::array 提供特化，主模板及其他类型的实现位于外部标准库。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.cuda_std.tuple_size": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "cuda::std::tuple_size 是外部标准库 tuple 协议的类型 trait 入口；本文件只为 cute::array 提供特化，主模板及其他类型的实现位于外部标准库。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.std.tuple_element": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "std::tuple_element 是外部标准库按静态索引查询元素类型的 trait 入口；本文件的 array 特化直接给出 T，不意味着已审核所有外部实现。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.cuda_std.tuple_element": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "cuda::std::tuple_element 是外部标准库按静态索引查询元素类型的 trait 入口；本文件的 array 特化直接给出 T，不意味着已审核所有外部实现。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "array.external.integral_constant": {
+      "layer": "C++ 类型系统与标准库边界",
+      "summary": "标准库的常量包装模板边界，为数组 tuple_size 提供静态 N 与值类型；CUTE_STL_NAMESPACE 条件决定使用 std 或 cuda::std，不是运行时函数。",
+      "execution": "编译期类型、别名或外部类型边界；它本身不是一次 Host/Device 调用。该类型的对象或相关函数仍可能在运行时使用。",
+      "parameter_notes": {},
+      "template_notes": {}
+    }
+  }
+}

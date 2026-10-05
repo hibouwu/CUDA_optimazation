@@ -1,0 +1,142 @@
+{
+  "schema_version": 2,
+  "resources": [
+    {
+      "resource": "compute",
+      "stages": [
+        "S05",
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "treatment": "measure",
+      "boundary": "FMA/MMA/WGMMA，包括固定来源差异和稠密FP8/INT8代表形式"
+    },
+    {
+      "resource": "shared_access",
+      "stages": [
+        "S04",
+        "S09"
+      ],
+      "treatment": "measure",
+      "boundary": "scalar/vector/stride/broadcast/联合读写"
+    },
+    {
+      "resource": "matrix_and_warp",
+      "stages": [
+        "S10"
+      ],
+      "treatment": "measure",
+      "boundary": "ldmatrix/stmatrix/shfl"
+    },
+    {
+      "resource": "sync",
+      "stages": [
+        "S11"
+      ],
+      "treatment": "measure",
+      "boundary": "warp/CTA/mbarrier/fence，等待条件区分"
+    },
+    {
+      "resource": "async_copy",
+      "stages": [
+        "S12"
+      ],
+      "treatment": "measure",
+      "boundary": "cp.async分组与可见性"
+    },
+    {
+      "resource": "global_path",
+      "stages": [
+        "S13"
+      ],
+      "treatment": "measure",
+      "boundary": "请求吞吐与读写联合服务"
+    },
+    {
+      "resource": "tma",
+      "stages": [
+        "S14",
+        "S15",
+        "S16"
+      ],
+      "treatment": "measure",
+      "boundary": "bulk/tensor双向与有限并发"
+    },
+    {
+      "resource": "cluster",
+      "stages": [
+        "S17"
+      ],
+      "treatment": "measure",
+      "boundary": "DSM/多播/cluster同步"
+    },
+    {
+      "resource": "occupancy",
+      "stages": [
+        "S18"
+      ],
+      "treatment": "measure_constraints",
+      "boundary": "分配/线程/寄存器/SMEM、carveout；API上限与观测分开"
+    },
+    {
+      "resource": "local_spill",
+      "stages": [
+        "S18"
+      ],
+      "treatment": "measure",
+      "boundary": "受控local/spill代表路径"
+    },
+    {
+      "resource": "setmaxnreg",
+      "stages": [
+        "S18"
+      ],
+      "treatment": "constraints_only",
+      "boundary": "合法性和资源条件，不承诺通用成本模型"
+    },
+    {
+      "resource": "auxiliary",
+      "stages": [
+        "S18"
+      ],
+      "treatment": "measure",
+      "boundary": "整数地址、转换、同址/无争用原子代表点"
+    },
+    {
+      "resource": "param_const_descriptor",
+      "stages": [
+        "S18",
+        "S19",
+        "S20"
+      ],
+      "treatment": "account_in_probes",
+      "boundary": "记录实际需求与生成指令，不扫描全部性能"
+    },
+    {
+      "resource": "pipeline",
+      "stages": [
+        "S19",
+        "S20"
+      ],
+      "treatment": "measure",
+      "boundary": "固定FP32 SIMT和BF16 WGMMA受控组合"
+    },
+    {
+      "resource": "physical_queue_depth",
+      "stages": [
+        "none"
+      ],
+      "treatment": "deferred",
+      "boundary": "软件stage扫描不证明物理在途容量"
+    },
+    {
+      "resource": "full_gemm_and_autotune",
+      "stages": [
+        "none"
+      ],
+      "treatment": "out_of_scope",
+      "boundary": "后续独立目标"
+    }
+  ]
+}

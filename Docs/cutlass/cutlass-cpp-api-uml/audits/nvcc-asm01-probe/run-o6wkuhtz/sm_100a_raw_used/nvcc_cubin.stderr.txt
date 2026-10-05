@@ -1,0 +1,61 @@
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function 'asm01_emit_11' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_11
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 1.023 ms
+ptxas info    : Compiling entry function 'asm01_emit_10' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_10
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.516 ms
+ptxas info    : Compiling entry function 'asm01_emit_09' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_09
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.534 ms
+ptxas info    : Compiling entry function 'asm01_emit_08' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_08
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.365 ms
+ptxas info    : Compiling entry function 'asm01_emit_07' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_07
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.369 ms
+ptxas info    : Compiling entry function 'asm01_emit_06' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_06
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.367 ms
+ptxas info    : Compiling entry function 'asm01_emit_05' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_05
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.359 ms
+ptxas info    : Compiling entry function 'asm01_emit_04' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_04
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.486 ms
+ptxas info    : Compiling entry function 'asm01_emit_03' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_03
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.405 ms
+ptxas info    : Compiling entry function 'asm01_emit_02' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_02
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.562 ms
+ptxas info    : Compiling entry function 'asm01_emit_01' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_01
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.376 ms
+ptxas info    : Compiling entry function 'asm01_emit_00' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_00
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 0.374 ms

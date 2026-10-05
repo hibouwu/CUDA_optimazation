@@ -1,0 +1,21 @@
+#$ _NVVM_BRANCH_=nvvm
+#$ _SPACE_= 
+#$ _CUDART_=cudart
+#$ _HERE_=/usr/local/cuda-13.0/bin
+#$ _THERE_=/usr/local/cuda-13.0/bin
+#$ _TARGET_SIZE_=
+#$ _TARGET_DIR_=
+#$ _TARGET_DIR_=targets/x86_64-linux
+#$ TOP=/usr/local/cuda-13.0/bin/..
+#$ CICC_PATH=/usr/local/cuda-13.0/bin/../nvvm/bin
+#$ NVVMIR_LIBRARY_DIR=/usr/local/cuda-13.0/bin/../nvvm/libdevice
+#$ LD_LIBRARY_PATH=/usr/local/cuda-13.0/bin/../lib:/usr/local/cuda-13.0/lib64
+#$ PATH=/usr/local/cuda-13.0/bin/../nvvm/bin:/usr/local/cuda-13.0/bin:/home/jianyeshi/.codex/tmp/arg0/codex-arg07Ri8QD:/home/jianyeshi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/home/jianyeshi/.opencode/bin:/home/jianyeshi/.local/bin:/home/jianyeshi/.local/npm/bin:/usr/local/cuda-13.0/bin:/usr/share/Modules/bin:/home/jianyeshi/.cargo/bin:/usr/local/bin:/usr/bin:/home/jianyeshi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/usr/lib/chatgpt/resources
+#$ INCLUDES="-I/usr/local/cuda-13.0/bin/../targets/x86_64-linux/include"  
+#$ SYSTEM_INCLUDES="-isystem" "/usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/cccl"  
+#$ LIBRARIES=  "-L/usr/local/cuda-13.0/bin/../targets/x86_64-linux/lib/stubs" "-L/usr/local/cuda-13.0/bin/../targets/x86_64-linux/lib"
+#$ CUDAFE_FLAGS=
+#$ PTXAS_FLAGS=
+#$ "/usr/bin"/g++-14 -std=c++17 -D__CUDA_ARCH__=1000 -D__CUDA_ARCH_FEAT_SM100_ALL -D__CUDA_ARCH_SPECIFIC__=1000 -D__CUDA_ARCH_FAMILY_SPECIFIC__=1000 -D__CUDA_ARCH_LIST__=1000 -E -x c++  -DCUDA_DOUBLE_MATH_FUNCTIONS -D__CUDACC__ -D__NVCC__  -U_GNU_SOURCE -I"/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include" "-I/usr/local/cuda-13.0/bin/../targets/x86_64-linux/include"   "-isystem" "/usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/cccl"    -D "_DEFAULT_SOURCE=1" -D "_POSIX_C_SOURCE=200809L" -D "PROBE_EXPECT_ARCH=1000" -D "PROBE_EMIT" -D__CUDACC_VER_MAJOR__=13 -D__CUDACC_VER_MINOR__=0 -D__CUDACC_VER_BUILD__=88 -D__CUDA_API_VER_MAJOR__=13 -D__CUDA_API_VER_MINOR__=0 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -D__CUDACC_DEVICE_ATOMIC_BUILTINS__=1 -include "cuda_runtime.h" -m64 "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/raw.cu" -o "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_100a_raw_used/keep/raw.cpp1.ii" 
+#$ "$CICC_PATH/cicc" --c++17 --static-host-stub --device-hidden-visibility --gnu_version=140401 --display_error_number --orig_src_file_name "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/raw.cu" --orig_src_path_name "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/raw.cu" --allow_managed   -arch compute_100a -m64 --no-version-ident -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name "raw.fatbin.c" -tused --gen_module_id_file --module_id_file_name "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_100a_raw_used/keep/raw.module_id"  "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_100a_raw_used/keep/raw.cpp1.ii" -o "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_100a_raw_used/probe.ptx"
+#$ ptxas -arch=compute_100a -m64  "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-o6wkuhtz/sm_100a_raw_used/probe.ptx" 

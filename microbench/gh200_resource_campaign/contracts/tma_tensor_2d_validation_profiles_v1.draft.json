@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "family": "tma_tensor_2d",
+  "profiles": [
+    {
+      "id": "tensor_short_1_seed0_v1",
+      "required_seed": 0,
+      "target_iterations": [
+        1
+      ],
+      "input_profiles": [
+        "nonuniform_uint16_tensor_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "one process one target; fixed paired seed",
+        "all logical/physical uint16 capture,whole global32slots padding/guards",
+        "descriptor immutable128bytes and all encoding inputs/return; grid-constant parameter; complete lifecycle/stamps"
+      ],
+      "reference_identity": {
+        "model": "tma_tensor_2d_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_tensor_2d_reference.hpp",
+        "sha256": "58791bc1c67434b450af2be8115f9ae47335a9f2c9d45519ef27171483ed3ec6"
+      },
+      "declared_output_check": "all logical/physical/global elements includingpadding/guards; opaque descriptor identity; lifecycle/stamps",
+      "output_evidence_kind": "full_values"
+    },
+    {
+      "id": "tensor_short_2_seed3_v1",
+      "required_seed": 3,
+      "target_iterations": [
+        2
+      ],
+      "input_profiles": [
+        "nonuniform_uint16_tensor_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "one process one target; fixed paired seed",
+        "all logical/physical uint16 capture,whole global32slots padding/guards",
+        "descriptor immutable128bytes and all encoding inputs/return; grid-constant parameter; complete lifecycle/stamps"
+      ],
+      "reference_identity": {
+        "model": "tma_tensor_2d_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_tensor_2d_reference.hpp",
+        "sha256": "58791bc1c67434b450af2be8115f9ae47335a9f2c9d45519ef27171483ed3ec6"
+      },
+      "declared_output_check": "all logical/physical/global elements includingpadding/guards; opaque descriptor identity; lifecycle/stamps",
+      "output_evidence_kind": "full_values"
+    },
+    {
+      "id": "tensor_short_33_seed4294967295_v1",
+      "required_seed": 4294967295,
+      "target_iterations": [
+        33
+      ],
+      "input_profiles": [
+        "nonuniform_uint16_tensor_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "one process one target; fixed paired seed",
+        "all logical/physical uint16 capture,whole global32slots padding/guards",
+        "descriptor immutable128bytes and all encoding inputs/return; grid-constant parameter; complete lifecycle/stamps"
+      ],
+      "reference_identity": {
+        "model": "tma_tensor_2d_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_tensor_2d_reference.hpp",
+        "sha256": "58791bc1c67434b450af2be8115f9ae47335a9f2c9d45519ef27171483ed3ec6"
+      },
+      "declared_output_check": "all logical/physical/global elements includingpadding/guards; opaque descriptor identity; lifecycle/stamps",
+      "output_evidence_kind": "full_values"
+    }
+  ]
+}

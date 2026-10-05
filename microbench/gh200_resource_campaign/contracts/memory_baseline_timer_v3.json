@@ -1,0 +1,547 @@
+{
+  "schema_version": 2,
+  "stage": "S04",
+  "family": "memory_baseline",
+  "source": "microbench/gh200_resource_campaign/probes/memory_baseline.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/INTERFACE-TIMER-RESOLUTION.md",
+    "microbench/gh200_resource_campaign/contracts/memory_baseline.json"
+  ],
+  "cases": [
+    {
+      "id": "smem_read_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 1
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_read_stride2",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 2
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_read_stride4",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 4
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_read_stride8",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 8
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_read_stride16",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 16
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_read_stride32",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_read",
+        "bytes": 32768,
+        "stride": 32
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "smem_write_stride1",
+      "iterations": 8192,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "smem_write",
+        "bytes": 32768,
+        "stride": 1
+      },
+      "work_model": "shared_scalar8",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "global_read_ca_8m",
+      "iterations": 64,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "global_read_ca",
+        "bytes": 8388608,
+        "stride": 1
+      },
+      "work_model": "global_vector16",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "global_read_cg_8m",
+      "iterations": 64,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "global_read_cg",
+        "bytes": 8388608,
+        "stride": 1
+      },
+      "work_model": "global_vector16",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "global_read_cg_256m",
+      "iterations": 16,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "global_read_cg",
+        "bytes": 268435456,
+        "stride": 1
+      },
+      "work_model": "global_vector16",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "global_write_256m",
+      "iterations": 16,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "global_write",
+        "bytes": 268435456,
+        "stride": 1
+      },
+      "work_model": "global_vector16",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "global_duplex_128m",
+      "iterations": 16,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "global_duplex",
+        "bytes": 134217728,
+        "stride": 1
+      },
+      "work_model": "global_vector16",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "strict_positive_ns"
+    },
+    {
+      "id": "empty_one_cta",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 256,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "empty",
+        "bytes": 0,
+        "stride": 1
+      },
+      "work_model": "empty_window",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "one",
+        "scale": 1,
+        "unit": "cycles/window"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "zero_work_one_cta_local_cycles"
+    },
+    {
+      "id": "empty_all_gpu",
+      "iterations": 1,
+      "scope": "all_gpu",
+      "threads": 256,
+      "launch": {
+        "kind": "sms_multiple",
+        "multiplier": 4
+      },
+      "parameters": {
+        "mode": "empty",
+        "bytes": 0,
+        "stride": 1
+      },
+      "work_model": "empty_window",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "elapsed_ns",
+        "denominator": "one",
+        "scale": 1,
+        "unit": "ns/window"
+      },
+      "coverage_policy": "observed_subset",
+      "exportable": false,
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "timer_resolution_revision": "zero-work-controls-v3",
+      "timer_acceptance": "zero_work_grid_ns"
+    }
+  ],
+  "reference_run": "20261001-memory-c",
+  "protocol": "contracts/protocol.json",
+  "correctness": {
+    "shared_read": "all eight scalar loads enter per-thread checksum; independently evaluate addresses on host",
+    "shared_write": "initialize poison; compare checksum of actually written disjoint region on host",
+    "global_read": "all uint4 lanes used; host formula checks each thread checksum",
+    "global_write": "separate untimed full-array validation kernel",
+    "global_duplex": "both full-array write check and read checksum",
+    "empty": "zero workload; validate timestamps and CTA record coverage only"
+  },
+  "formulas": {
+    "shared_scalar8": "threads * 8 scalar accesses * 4 bytes * iterations * blocks; direction by mode",
+    "global_vector16": "quantum=blocks*threads*16; allocation=ceil(requested_bytes/quantum)*quantum; reads/writes=allocation*iterations for enabled directions",
+    "empty_window": "work=read=write=0; one_cta primary output local clock64 cycles/window; all_gpu primary output positive grid globaltimer ns/window; never subtract from payload windows"
+  },
+  "warmup": "8 to 30 same-allocation windows, last 5 CV<=0.02; all timing samples retained, no thermal-equilibrium assertion",
+  "timing": "CTA globaltimer and local clock64; end CTA barrier; global stores include device fence; data initialization and result copies/validation excluded; timer revision: zero-work CTA ns may equal, local cycles must be positive; all_gpu grid ns must remain positive",
+  "sass_contracts": [
+    {
+      "function": "shared_pathILb0",
+      "loop_token": "LDS",
+      "count_per_unrolled_body": 8
+    },
+    {
+      "function": "shared_pathILb1",
+      "loop_token": "STS",
+      "count_per_unrolled_body": 8
+    },
+    {
+      "function": "global_path",
+      "loop_tokens": [
+        "LDG",
+        "STG"
+      ],
+      "note": "predication selects mode; function contains both; each timed loop retains paths"
+    }
+  ],
+  "claims": {
+    "cache_residency_proven": false,
+    "physical_hbm_bytes_proven": false,
+    "bare_instruction_latency": false
+  },
+  "ncu": {
+    "case": "global_read_cg_256m",
+    "target_kernel": "global_path",
+    "metrics": [
+      "dram__bytes_read.sum",
+      "dram__bytes_write.sum"
+    ],
+    "failure_policy": "permission denial is evidence gap; target timing remains independently audited"
+  },
+  "adapter_id": "memory_baseline_v2",
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v",
+      "-DGH_TIMER_RESOLUTION_V3=1"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S04",
+      "phase": "A",
+      "path": "reviews/S04-A-review.json"
+    },
+    {
+      "stage": "S04",
+      "phase": "B",
+      "path": "reviews/S04-B-review.json"
+    },
+    {
+      "stage": "S02",
+      "phase": "timer-resolution-A",
+      "path": "reviews/S02-timer-resolution-A-review.json"
+    },
+    {
+      "stage": "S04",
+      "phase": "timer-resolution-A",
+      "path": "reviews/S04-timer-resolution-A-review.json"
+    }
+  ],
+  "contract_revision": 3,
+  "previous_contract": {
+    "path": "microbench/gh200_resource_campaign/contracts/memory_baseline.json",
+    "sha256": "db6364a6ee86d2e986561bd3107db685f9b45e787d7a965a94a65ba7ea76fe39"
+  },
+  "timer_resolution": {
+    "id": "zero-work-controls-v3",
+    "supplement_path": "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/INTERFACE-TIMER-RESOLUTION.md",
+    "supplement_sha256": "56f07f07e96b32c915cf38153abd481cbdbb513bf8f4c088f3f5244639be0add",
+    "new_run_required": true,
+    "old_contract_and_run_unchanged": true
+  },
+  "timer_raw_fields": {
+    "revision": "timer_resolution_revision=zero-work-controls-v3",
+    "warmup_basis": "cta_clock64_cycles for one_cta zero work; elapsed_ns otherwise",
+    "warmup_samples_ns": "original integer grid-envelope ns; zero only allowed for one_cta zero work",
+    "warmup_samples_cycles": "same-length positive local CTA cycle deltas when one_cta; [] for all_gpu, never cross-CTA arithmetic",
+    "globaltimer_distinguishable": "stop_ns>start_ns; false does not report zero physical latency",
+    "zero_ns_ctas": "number of equal CTA globaltimer pairs; independently recompute from blocks_detail",
+    "ordinary": "strict positive per-CTA ns and cycles; no empty exception"
+  }
+}

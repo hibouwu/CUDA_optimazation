@@ -1,0 +1,33 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA 0 allocation-result NamedBarrier / 160 threads
+state "32+128到达条件已满足" as s0
+state "epilogue已进入；MMA到达尚未收齐" as s1
+state "MMA到达已收齐；epilogue尚未收齐" as s2
+state "两类参与者均尚未收齐" as s3
+note right of s3
+flags represent complete contribution families, not zero partial
+arrivals
+end note
+state "epilogue wait已成功返回" as s4
+note right of s4
+publication observed in same CTA; no cross-CTA barrier identity
+end note
+s3 --> s2 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_arrive tmem.transition.010\nNamedBarrier::arrive() · 指定效果满足]]
+s1 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_arrive tmem.transition.011\nNamedBarrier::arrive() · 指定效果满足]]
+s3 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait tmem.transition.012\nNamedBarrier::arrive_and_wait() · 指定效果满足]]
+s2 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait tmem.transition.013\nNamedBarrier::arrive_and_wait() · 指定效果满足]]
+s0 --> s4 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait tmem.transition.014\nNamedBarrier::arrive_and_wait() · 调用返回]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

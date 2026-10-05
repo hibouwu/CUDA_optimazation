@@ -1,0 +1,33 @@
+#pragma once
+// Generated finite case identities from the frozen S18 A matrix.
+struct AuxiliaryCase { const char* id;const char* symbol;unsigned kind,operation,threads,words,dynamic;int carveout;const void* function; };
+static const AuxiliaryCase auxiliary_cases[] = {
+  {"resource_threads64","s18_capacity32",0,0,64,32,0,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_threads128","s18_capacity32",0,0,128,32,0,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_threads256","s18_capacity32",0,0,256,32,0,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_threads512","s18_capacity32",0,0,512,32,0,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_live64","s18_capacity64",0,0,128,64,0,-1,reinterpret_cast<const void*>(s18_capacity64)},
+  {"resource_live128","s18_capacity128",0,0,128,128,0,-1,reinterpret_cast<const void*>(s18_capacity128)},
+  {"resource_smem32k","s18_capacity32",0,0,128,32,32768,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_smem64k","s18_capacity32",0,0,128,32,65536,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"resource_smem128k","s18_capacity32",0,0,128,32,131072,-1,reinterpret_cast<const void*>(s18_capacity32)},
+  {"carveout_hint0","s18_capacity32",0,0,128,32,32768,0,reinterpret_cast<const void*>(s18_capacity32)},
+  {"carveout_hint100","s18_capacity32",0,0,128,32,32768,100,reinterpret_cast<const void*>(s18_capacity32)},
+  {"local_explicit_words32","s18_local32",0,1,128,32,0,-1,reinterpret_cast<const void*>(s18_local32)},
+  {"local_explicit_words128","s18_local128",0,1,128,128,0,-1,reinterpret_cast<const void*>(s18_local128)},
+  {"spill_pressure_words32","s18_pressure32",0,2,128,32,0,-1,reinterpret_cast<const void*>(s18_pressure32)},
+  {"spill_pressure_words128","s18_pressure128",0,2,128,128,0,-1,reinterpret_cast<const void*>(s18_pressure128)},
+  {"add_u64_streams1","s18_add64_s1",1,0,128,1,0,-1,reinterpret_cast<const void*>(s18_add64_s1)},
+  {"add_u64_streams4","s18_add64_s4",1,0,128,4,0,-1,reinterpret_cast<const void*>(s18_add64_s4)},
+  {"mad_wide_u32_streams1","s18_madwide_s1",1,1,128,1,0,-1,reinterpret_cast<const void*>(s18_madwide_s1)},
+  {"mad_wide_u32_streams4","s18_madwide_s4",1,1,128,4,0,-1,reinterpret_cast<const void*>(s18_madwide_s4)},
+  {"cvt_rn_f16_f32_streams1","s18_cvt_f16_f32_s1",1,2,128,1,0,-1,reinterpret_cast<const void*>(s18_cvt_f16_f32_s1)},
+  {"cvt_rn_f16_f32_streams4","s18_cvt_f16_f32_s4",1,2,128,4,0,-1,reinterpret_cast<const void*>(s18_cvt_f16_f32_s4)},
+  {"cvt_f32_f16_streams1","s18_cvt_f32_f16_s1",1,3,128,1,0,-1,reinterpret_cast<const void*>(s18_cvt_f32_f16_s1)},
+  {"cvt_f32_f16_streams4","s18_cvt_f32_f16_s4",1,3,128,4,0,-1,reinterpret_cast<const void*>(s18_cvt_f32_f16_s4)},
+  {"atomic_add_u32_global_same_word","s18_atomic_global_same",2,1,128,1,0,-1,reinterpret_cast<const void*>(s18_atomic_global_same)},
+  {"atomic_add_u32_global_per_thread_word","s18_atomic_global_independent",2,0,128,128,0,-1,reinterpret_cast<const void*>(s18_atomic_global_independent)},
+  {"atomic_add_u32_shared_same_word","s18_atomic_shared_same",2,3,128,1,0,-1,reinterpret_cast<const void*>(s18_atomic_shared_same)},
+  {"atomic_add_u32_shared_per_thread_word","s18_atomic_shared_independent",2,2,128,128,0,-1,reinterpret_cast<const void*>(s18_atomic_shared_independent)},
+  {"setmaxnreg_dec32_inc64","aux_setmax_initial64_v1",3,0,128,60,0,-1,nullptr},
+};

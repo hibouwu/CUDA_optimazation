@@ -1,0 +1,671 @@
+{
+  "schema_version": 2,
+  "stage": "S18",
+  "status": "short_source_candidate_not_runtime_admitted",
+  "family": "auxiliary",
+  "adapter_id": "auxiliary_short_v1",
+  "source": "microbench/gh200_resource_campaign/probes/auxiliary_short_v1.cu",
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/auxiliary_device_v1.cuh",
+    "microbench/gh200_resource_campaign/common/auxiliary_cases_v1.hpp",
+    "microbench/gh200_resource_campaign/common/auxiliary_setmax_image_v1.hpp",
+    "microbench/gh200_resource_campaign/common/auxiliary_host_reference_v1.hpp",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp"
+  ],
+  "review_dependencies": [
+    {
+      "stage": "S18",
+      "phase": "A",
+      "path": "reviews/S18-A-review.json"
+    },
+    {
+      "stage": "S18",
+      "phase": "B",
+      "path": "reviews/S18-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "resource_threads64",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_threads64",
+        "family": "capacity",
+        "threads": 64,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 64
+      },
+      "threads": 64,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_threads128",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_threads128",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_threads256",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_threads256",
+        "family": "capacity",
+        "threads": 256,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 256
+      },
+      "threads": 256,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_threads512",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_threads512",
+        "family": "capacity",
+        "threads": 512,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 512
+      },
+      "threads": 512,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_live64",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_live64",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 64,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_live128",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_live128",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 128,
+        "dynamic_smem_bytes": 0,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_smem32k",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_smem32k",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 32768,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_smem64k",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_smem64k",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 65536,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "resource_smem128k",
+      "stage": "S18",
+      "parameters": {
+        "id": "resource_smem128k",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 131072,
+        "carveout": "default",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "carveout_hint0",
+      "stage": "S18",
+      "parameters": {
+        "id": "carveout_hint0",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 32768,
+        "carveout": 0,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "carveout_hint100",
+      "stage": "S18",
+      "parameters": {
+        "id": "carveout_hint100",
+        "family": "capacity",
+        "threads": 128,
+        "live_u32_values": 32,
+        "dynamic_smem_bytes": 32768,
+        "carveout": 100,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "local_explicit_words32",
+      "stage": "S18",
+      "parameters": {
+        "id": "local_explicit_words32",
+        "family": "local_explicit",
+        "threads": 128,
+        "words_per_thread": 32,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "local_explicit_words128",
+      "stage": "S18",
+      "parameters": {
+        "id": "local_explicit_words128",
+        "family": "local_explicit",
+        "threads": 128,
+        "words_per_thread": 128,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "spill_pressure_words32",
+      "stage": "S18",
+      "parameters": {
+        "id": "spill_pressure_words32",
+        "family": "spill_pressure",
+        "threads": 128,
+        "words_per_thread": 32,
+        "streams": 1,
+        "scope": "one_cta",
+        "compiler_max_registers_request": 32
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "spill_pressure_words128",
+      "stage": "S18",
+      "parameters": {
+        "id": "spill_pressure_words128",
+        "family": "spill_pressure",
+        "threads": 128,
+        "words_per_thread": 128,
+        "streams": 1,
+        "scope": "one_cta",
+        "compiler_max_registers_request": 32
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "add_u64_streams1",
+      "stage": "S18",
+      "parameters": {
+        "id": "add_u64_streams1",
+        "family": "auxiliary_service",
+        "operation": "add_u64",
+        "threads": 128,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "add_u64_streams4",
+      "stage": "S18",
+      "parameters": {
+        "id": "add_u64_streams4",
+        "family": "auxiliary_service",
+        "operation": "add_u64",
+        "threads": 128,
+        "streams": 4,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "mad_wide_u32_streams1",
+      "stage": "S18",
+      "parameters": {
+        "id": "mad_wide_u32_streams1",
+        "family": "auxiliary_service",
+        "operation": "mad_wide_u32",
+        "threads": 128,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "mad_wide_u32_streams4",
+      "stage": "S18",
+      "parameters": {
+        "id": "mad_wide_u32_streams4",
+        "family": "auxiliary_service",
+        "operation": "mad_wide_u32",
+        "threads": 128,
+        "streams": 4,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "cvt_rn_f16_f32_streams1",
+      "stage": "S18",
+      "parameters": {
+        "id": "cvt_rn_f16_f32_streams1",
+        "family": "auxiliary_service",
+        "operation": "cvt_rn_f16_f32",
+        "threads": 128,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "cvt_rn_f16_f32_streams4",
+      "stage": "S18",
+      "parameters": {
+        "id": "cvt_rn_f16_f32_streams4",
+        "family": "auxiliary_service",
+        "operation": "cvt_rn_f16_f32",
+        "threads": 128,
+        "streams": 4,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "cvt_f32_f16_streams1",
+      "stage": "S18",
+      "parameters": {
+        "id": "cvt_f32_f16_streams1",
+        "family": "auxiliary_service",
+        "operation": "cvt_f32_f16",
+        "threads": 128,
+        "streams": 1,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "cvt_f32_f16_streams4",
+      "stage": "S18",
+      "parameters": {
+        "id": "cvt_f32_f16_streams4",
+        "family": "auxiliary_service",
+        "operation": "cvt_f32_f16",
+        "threads": 128,
+        "streams": 4,
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "atomic_add_u32_global_same_word",
+      "stage": "S18",
+      "parameters": {
+        "id": "atomic_add_u32_global_same_word",
+        "family": "atomic",
+        "operation": "add_u32",
+        "threads": 128,
+        "address_space": "global",
+        "address_pattern": "same_word",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "atomic_add_u32_global_per_thread_word",
+      "stage": "S18",
+      "parameters": {
+        "id": "atomic_add_u32_global_per_thread_word",
+        "family": "atomic",
+        "operation": "add_u32",
+        "threads": 128,
+        "address_space": "global",
+        "address_pattern": "per_thread_word",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "atomic_add_u32_shared_same_word",
+      "stage": "S18",
+      "parameters": {
+        "id": "atomic_add_u32_shared_same_word",
+        "family": "atomic",
+        "operation": "add_u32",
+        "threads": 128,
+        "address_space": "shared",
+        "address_pattern": "same_word",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "atomic_add_u32_shared_per_thread_word",
+      "stage": "S18",
+      "parameters": {
+        "id": "atomic_add_u32_shared_per_thread_word",
+        "family": "atomic",
+        "operation": "add_u32",
+        "threads": 128,
+        "address_space": "shared",
+        "address_pattern": "per_thread_word",
+        "scope": "one_cta"
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    },
+    {
+      "id": "setmaxnreg_dec32_inc64",
+      "stage": "S18",
+      "parameters": {
+        "id": "setmaxnreg_dec32_inc64",
+        "family": "setmaxnreg_legality",
+        "threads": 128,
+        "required_initial_register_limit": 64,
+        "sequence": [
+          "dec32",
+          "CTA_sync",
+          "inc64",
+          "CTA_sync"
+        ],
+        "performance_export": false,
+        "scope": "one_cta",
+        "architecture": "sm_90a",
+        "words_per_thread_per_phase": 60,
+        "output_phases": 2,
+        "initial_actual_registers_required": 64,
+        "warpgroup_count": 1,
+        "candidate": {
+          "path": "microbench/gh200_resource_campaign/probes/feasibility/setmax_initial64_v1.ptx",
+          "sha256": "57b8490fa36389ebe19b5f5881cd75ee73501103741a52c0cab603f70f23a93c"
+        },
+        "execution_conditions": [
+          "all four warps execute identical adjustment sequence",
+          "CTA synchronization between adjustments",
+          "no live high registers across dec",
+          "initialize newly allocated registers before use",
+          "one CTA launch; no competing CTA uses this SM register pool in the controlled job",
+          "initial actual allocation must be 64; maxnreg option alone is insufficient",
+          "inc may wait for register allocation; bounded process timeout failure is not unsupported"
+        ]
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "iterations": 128,
+      "metric": "operation",
+      "exportable": false
+    }
+  ]
+}

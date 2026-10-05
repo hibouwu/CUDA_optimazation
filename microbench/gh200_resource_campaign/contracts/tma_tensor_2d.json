@@ -1,0 +1,4142 @@
+{
+  "schema_version": 2,
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v",
+      "-lcuda"
+    ],
+    "include_dirs": []
+  },
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh"
+  ],
+  "timing": {
+    "start": "operand/input/shared producer preparation and mbarrier init before timing; thread0 reads globaltimer then clock64; CTA gate after start before first request",
+    "loop": "oneQ copy per iteration, complete target-specific wait and CTA gate each iteration; no per-request timestamp array, no perword consumer in formal loop",
+    "stop": "final request fully complete and CTA gate passed; thread0 reads clock64 then globaltimer; output readback, validation and mbarrier invalidation after stop",
+    "one_cta": "sameCTA stop_cycle-start_cycle only",
+    "all_gpu": "maxCTA stop_ns-minCTA start_ns; CUDA event is auxiliary enclosure check",
+    "timeout_reads": "mbarrier internal globaltimer reads belong to service overhead, never extra performance samples",
+    "metric_boundary": "completed transfer plus issue/wait/CTA control service; no intrinsic bulk-engine latency/peak claim"
+  },
+  "calibration": {
+    "pilot_only_case_iterations": 32,
+    "model": "legacy_event_ms_truncate_then_clamp_v1",
+    "formula": "clamp(int(32*(20000000/1e6)/max(pilot_event_ms,10000/1e6)),128,65536)",
+    "hook": "future explicit adapter.resolve_iterations; no formula eval",
+    "artifact": "resolved_cases.json with pilot raw/receipt hashes and source/binary/contract/device identity; freeze percase before formal run",
+    "formal_reuse": "all ten processes, retries and resumes use identical resolved length; changing length creates new run",
+    "status": "adapter and calibration integration not implemented or approved"
+  },
+  "failure_policy": {
+    "mbarrier_timeout_ns": 1000000000,
+    "wait_bulk_timeout": "wait_group has no software-poll timeout; controlled host process timeout/TERM/KILL with confirmed cleanup is mandatory",
+    "mbarrier_timeout_action": "record failure evidence and fail kernel/process; never normally return/reuse/invalidate a possibly pending barrier or shared destination; a fatal trap is an allowed implementation path only with verified controlled cleanup",
+    "classification": "timeout/incomplete copy/unknown CUDA failure is failed correctness, never unsupported or accepted sample"
+  },
+  "stage": "S15",
+  "status": "draft_pending_independent_A_and_descriptor_encoding",
+  "family": "tma_tensor_2d",
+  "adapter_id": "tma_tensor_2d_v1",
+  "source": "microbench/gh200_resource_campaign/probes/tma_tensor_2d.cu",
+  "source_status": "not_implemented",
+  "review_dependencies": [
+    {
+      "stage": "S15",
+      "phase": "A",
+      "path": "reviews/S15-A-review-r2.json"
+    },
+    {
+      "stage": "S15",
+      "phase": "B",
+      "path": "reviews/S15-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "gmem_to_smem_1kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 256,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 272,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 256,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 272,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "completion": "mbarrier_acquire_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_continuous_sw128_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_continuous_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 256,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_padding_none_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 272,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          8
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 2080,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          32
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 5152,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          64
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 9248,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          128
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 17440,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 144,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_continuous_sw128_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "element_bytes": 2,
+        "box_dim": [
+          64,
+          256
+        ],
+        "row_stride_bytes": 128,
+        "layout": "continuous_sw128",
+        "swizzle": "SW128",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 33824,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_continuous_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 256,
+        "layout": "continuous_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_padding_none_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "element_bytes": 2,
+        "box_dim": [
+          128,
+          256
+        ],
+        "row_stride_bytes": 272,
+        "layout": "padding_none",
+        "swizzle": "none",
+        "copies_per_iteration": 1,
+        "stages": 1,
+        "issuer_thread": 0,
+        "global_slots_per_cta": 32,
+        "dynamic_shared_bytes": 66592,
+        "shared_tile_alignment_bytes": 1024,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "completion": "bulk_commit_full_wait0_then_CTA_gate",
+        "tensor_map": true,
+        "tensor_rank": 2
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_tensor_2d_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    }
+  ],
+  "coverage": {
+    "formal_cases": 68,
+    "directions": [
+      "gmem_to_smem",
+      "smem_to_gmem"
+    ],
+    "scopes": [
+      "one_cta",
+      "all_gpu"
+    ],
+    "baseline": "continuous_none at each fixed direction/Q/scope",
+    "contrasts": [
+      "padding_none vs continuous_none: only global row stride +16B",
+      "continuous_sw128 vs continuous_none: only descriptor swizzle and matching shared index interpretation"
+    ],
+    "excluded": [
+      "padding_sw128",
+      "64KiB_SW128",
+      "rank3",
+      "multiple requests per iteration",
+      "transpose",
+      "im2col",
+      "gather/scatter",
+      "multicast",
+      "tensor arithmetic",
+      "datatype/layout/cache-policy scan"
+    ],
+    "SW128_limit_derivation": "2B*64 columns*256 rows=32768B;64KiB remains none, never split into two requests"
+  },
+  "descriptor": {
+    "API": "cuTensorMapEncodeTiled",
+    "data_type": "CU_TENSOR_MAP_DATA_TYPE_UINT16",
+    "tensor_rank": 2,
+    "global_dim": "[W, uint64(H)*32*blocks]",
+    "global_strides": "[P] bytes, P=2W or2W+16",
+    "box_dim": "[W,H]",
+    "element_strides": [
+      1,
+      1
+    ],
+    "interleave": "CU_TENSOR_MAP_INTERLEAVE_NONE",
+    "swizzle": "CU_TENSOR_MAP_SWIZZLE_NONE or CU_TENSOR_MAP_SWIZZLE_128B",
+    "l2_promotion": "CU_TENSOR_MAP_L2_PROMOTION_NONE",
+    "oob_fill": "CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE",
+    "coordinates": "s32 {0,H*(32*block_id+iteration%32)} after checked64bit construction",
+    "host_alignment_bytes": 64,
+    "global_base_alignment_bytes": 128,
+    "kernel_parameter": "const __grid_constant__ CUtensorMap passed by value; take generic address of parameter, never per-thread local copy",
+    "lifetime": "encode once percase after allocation; archive exact128bytes/hash and all inputs/returncode; CUDA_SUCCESS mandatory before launch; immutable until all kernel work completes; no device descriptor patching/tensormap.replace",
+    "proxy": "host-created launch parameter follows CUDA tensor-map parameter publication; no generic device descriptor writes to publish. Shared generic producer writes and mbarrier init still require fence.proxy.async.shared::cta. Any future global/device-updated descriptor changes this contract and needs distinct proxy-fence review."
+  },
+  "address_layout": {
+    "allocation_bytes": "uint64(blocks)*32*H*P plus128B leading/trailing guards; record payload footprint blocks*32*Q separately from allocated footprint",
+    "element_address": "base+(32*block_id+slot)*H*P+y*P+2*x, x<W,y<H",
+    "tile_ownership": "32 exclusive tiles per CTA; no overlapping output tiles or cross-CTA consumers; G2S input immutable",
+    "padding": "P-2W bytes at every row initialized guard and checked unchanged, excluded from payload",
+    "shared_allocation": "Q+1056 bytes for every layout; align tile start upward to1024 within allocation; at most1023 prefix bytes; reserve32 control bytes afterQ; disjoint8-aligned mbarrier; identical allocation policy for none/SW128",
+    "none_index": "uint16 offset y*W+x",
+    "sw128_index": "W=64; uint16 offset y*64 + ((x/8) XOR (y%8))*8 + (x%8); 16B chunks, 1024-aligned tile eliminates nonzero swizzle base offset",
+    "swizzle_contract": "same mapping for G2S consumer and S2G generic producer; TMA tensor store unswizzles to ordinary row-major global destination; source/destination always use fixed W/H and independent logical reference",
+    "checked_widths": "Q/box/elementStride/shared address operands uint32; tensor coordinates signed32 checked range; globalDim/stride/allocation/offset/work/checkcounts uint64 with checked multiply/add before narrowing; values only uint16 modulo arithmetic"
+  },
+  "input": {
+    "type": "uint16 transport bit pattern only",
+    "G2S": "uint16(17*x+31*y+73*slot+151*block_id+uint64(seed))",
+    "S2G": "uint16(17*x+31*y+151*block_id+uint64(seed)); shared unchanged during timed loop",
+    "poison": "Per-output uint16 bitwise complement of the original expected copied value. Host initializes global allocations once perlaunch; each short target resets its selected destination before each internal request using the explicit short_reset_protocol. No extra kernel; no formal-loop reset. S2G untouched slots retain complement(original shared source), never complement(the expected untouched poison).",
+    "guards": "check global128B guard regions, every row padding byte, and shared prefix/control separation where observable"
+  },
+  "completion": {
+    "G2S": [
+      "init mbarrier expected1; publish init with async proxy fence andCTA gate before timing",
+      "expect_tx Q, exactlyone cp.async.bulk.tensor.2d.shared::cta.global.mbarrier::complete_tx::bytes, release arrive token, bounded acquire try_wait",
+      "CTA gate before consumer/reuse; Q is logical payload, not row pitch footprint; invalidate after all completion outside timing"
+    ],
+    "S2G": [
+      "generic producers fill mapped shared tile before timer; everyproducer async proxy fence thenCTA gate",
+      "one cp.async.bulk.tensor.2d.global.shared::cta.bulk_group periteration; issuingthread commit_group then wait_group0",
+      "CTA gate before source/output reuse or timer stop; wait_group.read0 is insufficient and prohibited as formal full endpoint"
+    ],
+    "source_release_scope": "S15 uses full completion only; no additional source-release matrix. S14 separate diagnostics cannot substitute for S15 numerical correctness."
+  },
+  "work_models": {
+    "tma_tensor_2d_completed_transport_v1": {
+      "work_count": "uint64(blocks)*iterations*Q",
+      "G2S_global_read_bytes": "work_count",
+      "G2S_global_write_bytes": 0,
+      "S2G_global_read_bytes": 0,
+      "S2G_global_write_bytes": "work_count",
+      "count_once": "transport Q once; not2Q, not128*Q; padding/descriptor fetch/control/shared init/posttimer copy excluded",
+      "post_timing_G2S_export_bytes": "blocks*Q ordinary global write recorded separately, not numerator or timed transfer",
+      "S2G_readback": "host validation reads all slots andpadding after kernel, not a second transport request or numerator",
+      "physical_HBM_bytes_proven": false
+    }
+  },
+  "correctness": {
+    "ordering": "all68 cases three exact paired short profiles complete before anypilot/warmup; no partial-family advance",
+    "short_profile_runs": [
+      {
+        "profile_id": "tensor2d_short_1_seed0_v1",
+        "target_iterations": [
+          1
+        ],
+        "input_profiles": [
+          "nonuniform_uint16_pattern"
+        ],
+        "seed": 0,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      },
+      {
+        "profile_id": "tensor2d_short_2_seed3_v1",
+        "target_iterations": [
+          2
+        ],
+        "input_profiles": [
+          "nonuniform_uint16_pattern"
+        ],
+        "seed": 3,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      },
+      {
+        "profile_id": "tensor2d_short_33_seed4294967295_v1",
+        "target_iterations": [
+          33
+        ],
+        "input_profiles": [
+          "nonuniform_uint16_pattern"
+        ],
+        "seed": 4294967295,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      }
+    ],
+    "profile_adaptation": "IDs tensor2d_short_1_seed0_v1/tensor2d_short_2_seed3_v1/tensor2d_short_33_seed4294967295_v1; one target per independent process, top-level seed; exactly3 targets percase, no9fold Cartesian expansion",
+    "per_request": "short mode captures and independently checks every logical element after each completed request before reuse, SW128 logical decode and raw physical output both retained; untouched slots/padding/guards remain their initial values",
+    "formal_G2S": "posttiming decode/export all Q/2 elements of final shared tile, expected slot=(I-1)%32; completed request count I and allwait/timeouts retained",
+    "formal_S2G": "readback all32 slots everyelement pluspadding/guards; pilot32 covers allslots, formalmin128; short1/2 untouchedslots remain perword poison,33 wraps slot0",
+    "evidence": "complete value artifacts and hashes with checked-element counts; no checksum-only correctness",
+    "negative_tests": [
+      "wrong descriptor rank/dim/stride/encoding status",
+      "64KiB SW128 rejectedbeforelaunch",
+      "padding included inQ or work counted2Q",
+      "wrong swizzle base/index/row/CTA/slot",
+      "single-element corruption incllast16bit element",
+      "poison collision",
+      "missing/fullwait replaced readwait",
+      "descriptor altered or freed beforecompletion",
+      "integer overflow/truncation/OOB/overlap",
+      "partial shortprofile set or resume identity drift"
+    ],
+    "short_reset_protocol": {
+      "launch_count": "Each paired profile remains one target process/one target kernel containing1/2/33 internal requests. No auxiliary reset kernel or re-launch. Short mode is untimed and does not export throughput; formal timer path contains no per-request poisoning/capture.",
+      "host_before_launch": [
+        "G2S: prepare immutable logical global input including fixed rowpadding/guards; initialize full perrequest physical/logical capture arrays to complement of their expected values. Shared cannot be host-initialized.",
+        "S2G: initialize every logical element in all32 destination slots to complement(original shared-source expected value for thatCTA/row/column); initialize allpadding/guards separately. Initialize perrequest capture arrays to complement(original expected source). Untouched slots must retain this exact initialvalue.",
+        "Check uint64 allocation/offset for all request×CTA×Q capture arrays beforeallocation and record additional validation-only storage; no payload/work denominator change."
+      ],
+      "G2S_each_request": [
+        "After prior request acquire+CTA gate and prior capture+CTA gate have completed, allthreads cooperatively write complement(expected current-slot logical element) into the mapped shared tile (none orSW128).",
+        "Every writing thread executes fence.proxy.async.shared::cta, then allCTA barrier before thread0 expectQ/issue/arrive/acquire sequence. Barrier control storage is never overwritten.",
+        "After acquire succeeds andCTA gate, cooperatively capture every raw physical tile element and every logical mapped element into disjoint perrequest global evidence arrays. CTA gate after all capture loads/stores before next sharedreset."
+      ],
+      "S2G_each_request": [
+        "Shared source is prepared once before shortloop, everyproducer fence.proxy.async.shared::cta thenCTA gate; source remains unchanged.",
+        "After prior fullwait0+CTA gate and prior capture+CTA gate, allthreads reset only the selected global slot logical payload to complement(original sharedsource values); do not touch its padding/guards oranyotherCTA/slot.",
+        "Every global reset writer executes fence.proxy.async.global, thenCTA barrier before thread0 tensor store/commit/fullwait0. Thus generic reset precedes async destination writes across proxies.",
+        "After thread0 fullwait0 thenCTA gate, every capture consumer executes fence.proxy.async.global before loading all copied logical global elements into its disjoint perrequest evidence slice; CTA gate after capture before next globalreset.",
+        "Host validates every perrequest capture after kernel completion; additionally validate allvisited slots against originalsource and everyunvisited slot against its originally initialized complement(source), plus allpadding/guards."
+      ],
+      "failure": "Any timeout/incomplete copy/capture/poison/guard mismatch is failure; no retry or replacement launch hidden insideprofile."
+    }
+  },
+  "raw_extensions": {
+    "required": [
+      "all descriptor fields/128B blob/hash/encode_result",
+      "logical Q andallocated P*H footprint",
+      "dynamic_shared_bytes/tile_offset/tile_alignment",
+      "direction/completion_kind/request_counts",
+      "perCTA timeout/wait information",
+      "complete_output_artifacts/padding_and_guard_checks",
+      "short_all68_case_binding",
+      "post_timing_export_bytes"
+    ],
+    "clock_basis": "oneCTA localclock64; allGPU globaltimer envelope; CUDA event auxiliary only",
+    "resource_gate": "actual specialization attrs/occupancy/opt-in capacity; bound static+dynamic+register/local resources; reject beforelaunch if zero occupancy orspill"
+  },
+  "feasibility": {
+    "source": "microbench/gh200_resource_campaign/probes/feasibility/tma_tensor_2d_forms.cu",
+    "compile_only": true,
+    "status": "source_written_not_compiled",
+    "not_claimed": [
+      "descriptor runtime encoding",
+      "GPU correctness",
+      "formal runner implemented",
+      "independent A/B"
+    ],
+    "representative_symbols": [
+      "tma_tensor_2d_g2s_form",
+      "tma_tensor_2d_s2g_form"
+    ]
+  },
+  "references": [
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html",
+      "topic": "descriptor constraints"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor",
+      "topic": "2D directions and completion"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/cuda-c-programming-guide/index.html#tma-swizzle",
+      "topic": "shared swizzle and unswizzle"
+    }
+  ],
+  "claims": {
+    "A_approved": false,
+    "B_approved": false,
+    "GPU_validated": false,
+    "descriptor_encoding_verified": false,
+    "target_compile_verified": false,
+    "isolated_engine_peak": false
+  },
+  "sass_contracts": {
+    "descriptor_operands": "Each actual specialization uses immutable 128B tensorMap kernel parameter with generic64bit address; no compiler-generated perthread local descriptor copy. Inspect actual source/PTX/SASS and parameter ABI; coordinates are checked s32 andglobal/address calculations64bit before narrowing.",
+    "measured_loop": "Exactlyone rank2 cp.async.bulk.tensor transport per iteration onthread0; retain measured backedge/selectedring coordinate update andQ shape; no rankpromotion/splitrequests orhiddenextra tensor requests. Actualkernel symbols/SASS tokens determined from realcompile, not guessed now.",
+    "completion": "G2S expect_txQ andonearrive/token-acquire wait beforeCTA reuse; S2G onecommit/full wait_group0 (notread0) beforetimerstop/reuse. Verify shared/global proxy fences andCTA gates match formal versus shortprotocol.",
+    "swizzle": "Validate actualproducer S2G andconsumer G2S addressmapping and1024B shared alignment/baseoffset; no linear consumer ofSW128data; padding remains global-only, notQ.",
+    "timing": "Two outer performance endpoints surround only agreed formalissue/wait/CTA service; internaltimeout globaltimer reads are permitted anddistinct fromperformance samples. Short poison/capture hasno performance export andis outsideformal measuredloop.",
+    "resources": "ActualPTX/SASS/ptxas attrs for allspecializations: no local spills, recordregister/static/dynamic shared/barriers/occupancy; sharedalignment slack/control region explicit. Reject resourceinfeasibility beforelaunch.",
+    "binding": "IndependentB must bind exact source/includes/descriptor encoding metadata andbytes/PTX/SASS/binary/toolchain; compiler acceptancealone grantsno numerical orparameter qualification."
+  }
+}

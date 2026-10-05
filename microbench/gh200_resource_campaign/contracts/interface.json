@@ -1,0 +1,357 @@
+{
+  "schema_version": 2,
+  "interface_id": "gh200-resource-suite-v2",
+  "stage": "S02-A",
+  "status": "design_pending_independent_review",
+  "commands": [
+    "plan",
+    "run",
+    "status",
+    "resume",
+    "audit",
+    "report",
+    "finalize"
+  ],
+  "read_only_commands": [
+    "plan",
+    "status",
+    "audit",
+    "report"
+  ],
+  "v1_policy": "byte_preserved_sources_and_archives_read_only_no_new_measurements",
+  "adapter": {
+    "registration": "explicit_family_and_adapter_id",
+    "required_contract_fields": [
+      "schema_version",
+      "family",
+      "stage",
+      "adapter_id",
+      "source",
+      "dependencies",
+      "build",
+      "cases",
+      "review_dependencies",
+      "sass_contracts"
+    ],
+    "required_case_fields": [
+      "id",
+      "iterations",
+      "scope",
+      "threads",
+      "launch",
+      "parameters",
+      "capabilities",
+      "work_model",
+      "work_unit",
+      "metric",
+      "coverage_policy"
+    ],
+    "responsibilities": [
+      "validate_contract",
+      "build_arguments",
+      "probe_arguments",
+      "validate_device",
+      "validate_raw_extensions",
+      "recompute_work",
+      "audit_sass",
+      "extract_metric"
+    ],
+    "unknown_adapter_policy": "reject",
+    "unknown_work_model_policy": "reject",
+    "formula_eval_allowed": false,
+    "direct_gpu_subprocess_allowed": false,
+    "build_example": {
+      "compiler": "nvcc",
+      "flags": [
+        "-std=c++17",
+        "-O3",
+        "-lineinfo",
+        "-gencode",
+        "arch=compute_90a,code=sm_90a",
+        "-Xptxas=-v"
+      ],
+      "include_dirs": []
+    },
+    "review_dependency_example": {
+      "stage": "S04",
+      "phase": "A",
+      "path": "reviews/S04-A-review.json"
+    },
+    "adapter_id_example": "memory_baseline_v2",
+    "capabilities_example": {
+      "cc": "9.0",
+      "device_name_contains": "GH200"
+    }
+  },
+  "probe": {
+    "device_argv": [
+      "BINARY",
+      "device"
+    ],
+    "trial_argv": [
+      "BINARY",
+      "CASE_ID",
+      "ITERATIONS",
+      "SEED"
+    ],
+    "device_stdout": {
+      "format": "jsonl",
+      "rows": [
+        "device"
+      ]
+    },
+    "trial_stdout": {
+      "format": "jsonl",
+      "rows": [
+        "device",
+        "trial"
+      ]
+    },
+    "stderr": "diagnostics_preserved",
+    "device_required_fields": [
+      "schema_version",
+      "type",
+      "uuid",
+      "name",
+      "cc",
+      "sms",
+      "driver_version",
+      "runtime_version"
+    ],
+    "trial_required_fields": [
+      "schema_version",
+      "type",
+      "case_id",
+      "iterations",
+      "seed",
+      "threads",
+      "blocks",
+      "scope",
+      "errors",
+      "correctness",
+      "work_unit",
+      "work_count",
+      "read_payload_bytes",
+      "write_payload_bytes",
+      "start_ns",
+      "stop_ns",
+      "event_ms",
+      "blocks_detail",
+      "warmup_samples_ns",
+      "warmup_converged"
+    ],
+    "block_required_fields": [
+      "block_id",
+      "smid",
+      "start_ns",
+      "stop_ns",
+      "start_cycle",
+      "stop_cycle"
+    ],
+    "block_id_rule": "unique_exact_integer_range_0_to_blocks_minus_1",
+    "scopes": [
+      "one_cta",
+      "all_gpu"
+    ],
+    "scope_extension_policy": "explicit_interface_revision_and_independent_family_A_review",
+    "work_units": [
+      "FLOP",
+      "OP",
+      "byte",
+      "operation"
+    ],
+    "extensions": "family_contract_declares_and_independent_adapter_validates",
+    "correctness_fields": [
+      "method",
+      "checked_elements",
+      "input_conditions"
+    ],
+    "top_level_timer_rule": "min_CTA_start_ns_and_max_CTA_stop_ns",
+    "clock64_rule": "same_CTA_subtraction_only",
+    "coverage_policies": [
+      "one_sm",
+      "exact_sms",
+      "observed_subset"
+    ],
+    "coverage_policy_rule": "explicit_case_policy_with_family_legal_launch_validation_never_inferred_from_scope"
+  },
+  "metric": {
+    "required_fields": [
+      "numerator",
+      "denominator",
+      "scale",
+      "unit"
+    ],
+    "quantities": [
+      "work_count",
+      "read_payload_bytes",
+      "write_payload_bytes",
+      "payload_bytes",
+      "elapsed_ns",
+      "cta_clock64_cycles",
+      "operation_count",
+      "one"
+    ],
+    "payload_bytes_definition": "independently_recomputed_read_plus_write_payload_bytes",
+    "elapsed_ns_definition": "max_CTA_stop_ns_minus_min_CTA_start_ns",
+    "operation_count_definition": "family_work_model_independently_recomputed_count",
+    "one_definition": "constant_1",
+    "clock64_scope": "one_cta",
+    "formula": "independently_recomputed_numerator_divided_by_positive_denominator_times_scale",
+    "unit_validation": "family_adapter_checks_quantity_scope_and_scale"
+  },
+  "sampling": {
+    "threshold_source": "contracts/protocol.json",
+    "cv_definition": "sample_standard_deviation_divided_by_positive_mean",
+    "processes": "exactly_10_per_complete_case_batch",
+    "warmup": "same_kernel_configuration_and_allocation_8_to_30_windows_tail_5_cv_le_0.02",
+    "warmup_failure": "preserve_evidence_consume_this_case_batch_attempt_no_replacement_selection_continue_unrelated_cases",
+    "formal_retry": "full_identical_protocol_batch_if_batch_or_merged_cv_gt_0.05",
+    "max_batches": 3,
+    "reporting": "all_batches_and_all_valid_formal_samples_merged_no_best_batch_selection",
+    "stable_qualification": "merged_cv_le_0.05_and_all_required_validations_pass",
+    "protocol_change": "new_run_required",
+    "retry_scope": "per_case_not_whole_family"
+  },
+  "review_gate": {
+    "phases": [
+      "A",
+      "B",
+      "C"
+    ],
+    "required_fields": [
+      "schema_version",
+      "stage",
+      "phase",
+      "status",
+      "reviewer",
+      "implementer",
+      "checks",
+      "findings",
+      "gate_files"
+    ],
+    "gate_files_format": "relative_path_to_sha256_mapping",
+    "mutable_files_excluded": [
+      "implementation_status.json"
+    ],
+    "pass_rule": "independent_reviewer_all_five_dimensions_pass_no_open_blocker_all_gate_hashes_match",
+    "B_requires": [
+      "A_pass"
+    ],
+    "C_requires": [
+      "A_pass",
+      "B_pass"
+    ],
+    "completion_requires": [
+      "C_pass"
+    ],
+    "review_history": "preserve_original_findings_and_rechecks",
+    "snapshot_rule": "copy_review_and_all_gate_files_into_run"
+  },
+  "archive": {
+    "layout": "suite/family/run",
+    "paths": "relative_no_parent_escape_no_symlink_escape",
+    "directories": [
+      "snapshot",
+      "binary",
+      "build",
+      "environment",
+      "reviews",
+      "batches",
+      "failures"
+    ],
+    "snapshot_project_dependencies": [
+      "python_imports",
+      "cpp_local_includes",
+      "probe",
+      "launcher",
+      "contracts",
+      "auditors",
+      "tests",
+      "references",
+      "plotting_sources",
+      "reviews_and_gate_files"
+    ],
+    "dependency_closure_check": "declared_closure_and_compiler_depfile_no_worktree_fallback",
+    "external_toolchain": "version_path_and_sha256_manifest_not_offline_rebuild_claim",
+    "identity": "per_file_sha256_not_git_HEAD_alone",
+    "resume": "frozen_snapshot_and_binary_no_recompile_no_current_worktree_contract_reload",
+    "environment_drift": "reject_resume_require_new_run",
+    "orphan_raw": "retain_as_interrupted_evidence_never_overwrite_or_accept_without_receipt",
+    "receipt_fields": [
+      "relative_command",
+      "case_id",
+      "batch",
+      "trial",
+      "seed",
+      "binary_sha256",
+      "raw_sha256",
+      "host_start_ns",
+      "host_stop_ns",
+      "pid",
+      "pgid"
+    ],
+    "read_only_replay": "no_archive_writes_no_lock_creation_no_bytecode_cache_no_GPU",
+    "completion_binding": [
+      "summary_sha256",
+      "measurement_manifest_sha256",
+      "C_review_sha256"
+    ],
+    "manifest_self_exclusions": [
+      "measurement_manifest",
+      "campaign_status.json",
+      "COMPLETE",
+      "C_review_added_after_measurement"
+    ],
+    "collected_state": "collected_pending_review",
+    "pre_C_evidence": [
+      "immutable_measurement_manifest",
+      "summary",
+      "raw_receipts",
+      "frozen_sources_and_reviews"
+    ],
+    "finalize": "offline_suite_lock_only_C_gate_pass_writes_final_state_and_COMPLETE_no_sampling",
+    "C_gate_mutable_exclusions": [
+      "campaign_status.json",
+      "implementation_status.json",
+      "COMPLETE"
+    ]
+  },
+  "runtime": {
+    "required_environment": "ROMEO_valid_single_GPU_Slurm_GH200_SM90_CUDA12.9",
+    "lock_order": [
+      "suite_output",
+      "gpu_uuid"
+    ],
+    "suite_output_lock": "canonical_suite_path_identity_entire_mutation_lifetime",
+    "gpu_lock": "fixed_node_global_controlled_runner_lock_root_actual_UUID",
+    "gpu_lock_scope": [
+      "correctness",
+      "warmup",
+      "timing",
+      "ncu"
+    ],
+    "lock_validation": "reject_symlinks_and_untrusted_existing_files",
+    "timeout_policy": "own_new_process_group_TERM_then_KILL_confirm_group_absent_preserve_failure_receipt",
+    "unconfirmed_cleanup": "persist_GPU_UUID_quarantine_stop_controlled_sampling",
+    "ncu_fingerprint": [
+      "gpu_uuid",
+      "driver_version",
+      "ncu_version",
+      "execution_identity",
+      "observable_permission_configuration"
+    ],
+    "ncu_policy": "one_check_per_fingerprint_fixed_node_cache_archive_original_evidence_no_blind_retry",
+    "ncu_permission_denial": "blocks_counter_dependent_claims_only",
+    "ncu_other_failures": "distinct_tool_missing_timeout_unknown_failure_states"
+  },
+  "qualification_dimensions": [
+    "code_numerics",
+    "timing",
+    "stability",
+    "counters",
+    "archive"
+  ],
+  "implementation_errors_are_allowed_gaps": false,
+  "cpu_fixture_policy": "test_only_never_GH200_runtime_qualification"
+}

@@ -1,0 +1,61 @@
+{
+  "case": "sm_100a_raw_used",
+  "target": "sm_100a",
+  "variant": "raw",
+  "forced_device_use": true,
+  "stages": [
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_100a",
+        "-DPROBE_EXPECT_ARCH=1000",
+        "-DPROBE_EMIT",
+        "--ptx",
+        "--keep",
+        "--keep-dir",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/keep",
+        "-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/raw.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/probe.ptx"
+      ],
+      "returncode": 1,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/nvcc_ptx.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/nvcc_ptx.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_100a",
+        "-DPROBE_EXPECT_ARCH=1000",
+        "-DPROBE_EMIT",
+        "--cubin",
+        "-Xptxas=-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/raw.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/probe.cubin"
+      ],
+      "returncode": 1,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/nvcc_cubin.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-_tpkdhwu/sm_100a_raw_used/nvcc_cubin.stderr.txt"
+    }
+  ],
+  "ptx_instruction_count": 0,
+  "ptx_instructions": [],
+  "ptx_sha256": null,
+  "cubin_sha256": null
+}

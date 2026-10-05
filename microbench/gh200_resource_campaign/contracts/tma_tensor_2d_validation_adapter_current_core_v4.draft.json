@@ -1,0 +1,54 @@
+{
+  "adapter_id": "tma_tensor_2d_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.tma_tensor_2d_validation_v1",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk.py": "163d3b5274bf139c944924abe4d74c019298d0636113a06fc153f3602eb13ab9",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_sass_baseline.py": "f15ccb12a5fe0462a7f2222b0f294f4207b04ec11553c0016c6ad150f0ac4583",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_validation.py": "bd0093c5f2e551f73f22f059194b92589b0cd99b044c3d86fa514a0ea609cb07",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_sass_baseline_v1.py": "5c04e1499764dd8d083641edb94c14cc1fac9d893f6fd07d4a413e506497d83a",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_sass_v1.py": "8f45ae9e8d2eeea083118897edccf19bcf8fd9a6cf6c3d4b26ae5cb5b461fa12",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_validation_v1.py": "8b6386316394c967072628216c91fc25c0f1e546053c5e2df1d4d2080dbf28af",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/tensor_artifacts.hpp": "1b3faf33830f4253d4392497f1a24c08856ce5521794d4643cf44130e68ff7a2",
+    "microbench/gh200_resource_campaign/common/tma_tensor_2d_reference.hpp": "58791bc1c67434b450af2be8115f9ae47335a9f2c9d45519ef27171483ed3ec6",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/probes/tma_tensor_2d.cu": "2f35865aeb3796cf25344d6f6af2db3b77b5420ed684126b6ada4c9d1cf9a413",
+    "microbench/gh200_resource_campaign/tests/test_tma_tensor_2d_host_v1.py": "690ec59fd0c38203dd093ee3ddc8e5753ffcacb138529df6644c99dde607db1b",
+    "microbench/gh200_resource_campaign/tests/test_tma_tensor_2d_reference_v1.py": "6d5f50ad103e227dc1fb0bd82a529cef1f35f7e57f3997bcafe1971a85a72e67",
+    "microbench/gh200_resource_campaign/tests/test_tma_tensor_2d_sass_v1.py": "f50195099779d85e96ad500f385d8093bc0b47f92cce70ae58e5969c0a71536a",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s15-short-a/diagnostics/tma_tensor_2d/compile.receipt.json": "96ec29b543de1afa63d06ab69e0b539ea440d15d286cf3c8d3160e92b3a895f2",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s15-short-a/diagnostics/tma_tensor_2d/compile.stderr": "26951792825c81479e3362976b613bfcb8361bac387e13f62da77fbe7298236d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s15-short-a/diagnostics/tma_tensor_2d/probe": "799c9bc2e8e9fccb9e45bad55a0a5766e9e4348e6ec466560c158eca7a04f469",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s15-short-a/diagnostics/tma_tensor_2d/sass.receipt.json": "3158918cb62752cc5cca89ec0778532caf4789cca56b44f29d8b1d21420e945d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s15-short-a/diagnostics/tma_tensor_2d/sass.txt": "8c4397bc3ed2d9e5d1eebb8bd71f283c3d7705231af9bf941ceb5b61e89e67e0"
+  },
+  "contract_sha256": "4c78d4bc40af03c59dc98a9b2bbbb7b9bab57f745476f957b9c703eede63cc74",
+  "profiles_sha256": "694eef6ecf1a6738538d2668bb80518cc9f3a1ac5b1b81d8eed31ec707b846ca",
+  "review_dependencies": [
+    {
+      "stage": "S15",
+      "phase": "A",
+      "path": "reviews/S15-A-review-r2.json"
+    },
+    {
+      "stage": "S15",
+      "phase": "early-validation-A",
+      "path": "reviews/S15-early-validation-A-review-r4.json"
+    },
+    {
+      "stage": "S15",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S15-early-validation-source-B-review-r4.json"
+    }
+  ]
+}

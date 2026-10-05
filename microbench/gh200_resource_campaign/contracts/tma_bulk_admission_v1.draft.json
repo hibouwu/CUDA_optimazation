@@ -1,0 +1,1639 @@
+{
+  "schema_version": 2,
+  "stage": "S14",
+  "status": "draft_pending_current_admission_source_B_full_B",
+  "family": "tma_bulk",
+  "adapter_id": "tma_bulk_admission_v1",
+  "source": "microbench/gh200_resource_campaign/probes/tma_bulk_formal_v1.cu",
+  "source_status": "unregistered_formal_and_capture_false_short_host_pending_A_compile_B",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/probes/tma_bulk.cu",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S14",
+      "phase": "A",
+      "path": "reviews/S14-A-review-r2.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "B",
+      "path": "reviews/S14-B-review.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "formal-host-A",
+      "path": "reviews/S14-formal-host-A-review-r2.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "formal-interface-A",
+      "path": "reviews/S14-formal-interface-A-review.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "formal-b3-source-B",
+      "path": "reviews/S14-formal-admission-source-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "gmem_to_smem_1kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 1024,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_1kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 1024,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 1024,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 1024,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 4096,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_4kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 4096,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 4096,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 4096,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 8192,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_8kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 8192,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 8192,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 8192,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 16384,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_16kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 16384,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 16384,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 16384,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 32768,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_32kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 32768,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 32768,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 32768,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 65536,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "gmem_to_smem_64kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "payload_bytes": 65536,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": null,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 65536,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": 1,
+        "expected_transaction_bytes_per_phase": 65536,
+        "formal_completion": "mbarrier_acquire_then_CTA_gate",
+        "ptx": "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes",
+        "tensor_map": false,
+        "source_reuse_diagnostic": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 1024,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_1kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 1024,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 1024,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 4096,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_4kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 4096,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 4096,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 8192,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_8kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 8192,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 8192,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 16384,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_16kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 16384,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 16384,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 32768,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_32kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 32768,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 32768,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_one_cta",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "one_cta",
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 65536,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": true
+    },
+    {
+      "id": "smem_to_gmem_64kib_all_gpu",
+      "iterations": 32,
+      "iteration_policy": {
+        "kind": "calibrated",
+        "pilot_iterations": 32,
+        "target_ns": 20000000,
+        "minimum_pilot_ns": 10000,
+        "min_iterations": 128,
+        "max_iterations": 65536,
+        "rounding_model": "legacy_event_ms_truncate_then_clamp_v1"
+      },
+      "threads": 128,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "payload_bytes": 65536,
+        "copies_per_iteration": 1,
+        "issuer_thread": 0,
+        "stages": 1,
+        "requests_per_commit_group": 1,
+        "global_slots_per_cta": 32,
+        "shared_payload_bytes": 65536,
+        "shared_control_bytes": 32,
+        "source_alignment_bytes": 16,
+        "destination_alignment_bytes": 16,
+        "mbarrier_alignment_bytes": 8,
+        "expected_arrivals": null,
+        "expected_transaction_bytes_per_phase": null,
+        "formal_completion": "bulk_wait_group_0_then_CTA_gate",
+        "ptx": "cp.async.bulk.global.shared::cta.bulk_group",
+        "tensor_map": false,
+        "source_reuse_diagnostic": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "tma_bulk_completed_transport_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    }
+  ],
+  "coverage": {
+    "formal_cases": 24,
+    "directions": 2,
+    "payload_bytes": [
+      1024,
+      4096,
+      8192,
+      16384,
+      32768,
+      65536
+    ],
+    "scopes": [
+      "one_cta",
+      "all_gpu"
+    ],
+    "threads": 128,
+    "stages": 1,
+    "source_release_diagnostic_cases": 12,
+    "diagnostics_are_extra_formal_coordinates": false,
+    "excluded": [
+      "tensor_map",
+      "tensor_2D",
+      "swizzle",
+      "multicast",
+      "remote_DSM",
+      "multiple_inflight_stages",
+      "cache_policy_sweep",
+      "cp_mask"
+    ]
+  },
+  "work_models": {
+    "tma_bulk_completed_transport_v1": {
+      "work_count": "uint64(blocks)*uint64(iterations)*uint64(payload_bytes)",
+      "gmem_to_smem": {
+        "read_payload_bytes": "work_count",
+        "write_payload_bytes": 0
+      },
+      "smem_to_gmem": {
+        "read_payload_bytes": 0,
+        "write_payload_bytes": "work_count"
+      },
+      "payload_bytes": "read_payload_bytes+write_payload_bytes == work_count",
+      "counting_rule": "Count transported Q once, never Q read plus Q write across both memory spaces, and never multiply by128 consumer threads. Read/write payload fields refer only to the global-memory side.",
+      "exclusions": [
+        "mbarrier/control traffic",
+        "shared producer initialization",
+        "post-timing result copy",
+        "guards",
+        "validation readback"
+      ],
+      "not_claimed": "physical HBM bytes, HBM peak, isolated engine throughput or tensor-map throughput"
+    }
+  },
+  "global_layout": {
+    "allocation_bytes": "uint64(blocks)*32*payload_bytes per active global array, plus16-byte guards around whole allocation",
+    "slot_byte_offset": "(uint64(block_id)*32 + uint64(iteration)%32)*uint64(payload_bytes)",
+    "ownership": "disjoint32-slot segment per CTA; GMEM->SMEM input immutable; SMEM->GMEM no other CTA writes this segment",
+    "address_reuse": "exact32-slot ring; full completion before issuing next request; same destination slot is never reused while previous write pending",
+    "working_set_claim": "record actual footprint and L2 bytes; no guaranteed cold/HBM-resident or cache-hit claim",
+    "allocation_check": "all multiply/add/address-range checks in uint64 or size_t before allocation; actual cudaMemGetInfo and shared opt-in capacity/occupancy check before launch"
+  },
+  "input": {
+    "word_type": "uint32_t",
+    "gmem_to_smem_word": "uint32(17*uint64(global_word_index)+uint64(seed))",
+    "smem_to_gmem_word": "uint32(29*(uint64(block_id)*(Q/4)+word_in_tile)+uint64(seed))",
+    "arithmetic": "unsigned modulo2^32 only for word values/checksum; all indices, word counts, completion counts, byte totals and ns/cycle values are uint64",
+    "formal_source": "GMEM immutable input or prefilled shared tile unchanged across measured iterations",
+    "destination_initialization": "poison every destination word before launch; preserve16-byte guards; correctness compares every word not checksum alone"
+  },
+  "completion": {
+    "gmem_to_smem": [
+      "thread0 initializes8-byte-aligned local mbarrier expected arrivals=1, not128 and notQ; publish initialization with fence.proxy.async.shared::cta and CTA barrier before timing",
+      "each iteration thread0 executes mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [bar], Q before launching exactly one bulk copy",
+      "issue cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes then mbarrier.arrive.release.cta.shared::cta.b64 to capture opaque64-bit phase token; one thread arrival and Q completion bytes must both finish",
+      "thread0 polls mbarrier.try_wait.acquire.cta.shared::cta.b64 with that token and bounded globaltimer timeout; completion is never inferred from issuance or plain CTA barrier",
+      "after successful wait all128 threads pass CTA barrier, transferring completion to consumers; no shared overwrite/reuse before this gate",
+      "reuse same mbarrier for next completed phase without reinitialization; invalidate only after final completion and CTA rendezvous, outside timing"
+    ],
+    "smem_to_gmem": [
+      "all128 producers fill their shared words before timing; each producer executes fence.proxy.async.shared::cta then CTA barrier before thread0 uses async proxy",
+      "thread0 issues exactly one cp.async.bulk.global.shared::cta.bulk_group then cp.async.bulk.commit_group",
+      "same issuing thread executes cp.async.bulk.wait_group 0; completion includes destination writes visible to the issuer; follow with CTA barrier before generic consumers or source/destination reuse",
+      "formal loop uses full wait0, not read.wait0; only one request/group can remain outstanding and all complete before timer stop",
+      "CUDA completion/event/host transfer follows kernel; never interpret issuer-local visibility as unsynchronized cross-CTA or system-wide visibility"
+    ],
+    "source_release_diagnostic": {
+      "purpose": "separate single-request diagnostic before warmup for each SMEM->GMEM coordinate, not formal throughput sample",
+      "sequence": [
+        "same issuer thread0 reads start clock64, issues one request, commits group",
+        "thread0 wait_group.read0 then reads source_release clock64",
+        "allCTA barrier broadcasts source reuse permission; all producers overwrite every source word with bitwise complement",
+        "allCTA barrier; thread0 wait_group0 then reads full_completion clock64; allCTA barrier before output validation",
+        "host validates every original destination word unchanged despite source overwrite; retain full output and allthree same-CTA timestamps"
+      ],
+      "metrics": [
+        "source_release-start clock64_cycle/request/CTA",
+        "full_completion-start clock64_cycle/request/CTA"
+      ],
+      "full_endpoint_includes": "source-overwrite and diagnostic CTA barriers, so not comparable to formal wait0 service; no subtraction yields pure write tail",
+      "all_gpu": "retain perCTA local deltas separately; do not subtract clock64 between CTAs or export aggregate release bandwidth",
+      "claim": "wait.read proves source reusable only; it does not establish destination completion, numeric output, or a guaranteed gap before full wait",
+      "exportable": false,
+      "profile": {
+        "profile_id": "bulk_source_release_one_request_v1",
+        "target_iterations": [
+          1
+        ],
+        "input_profiles": [
+          "original_pattern_then_source_complement"
+        ],
+        "seed": 3,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0,
+        "seed_location": "existing top-level invocation and validation row; launch_fields unchanged",
+        "separate_from_short_profile_runs": true,
+        "included_in_formal_throughput_matrix": false
+      }
+    }
+  },
+  "failure_policy": {
+    "mbarrier_timeout_ns": 1000000000,
+    "wait_bulk_timeout": "wait_group has no software-poll timeout; controlled host process timeout/TERM/KILL with confirmed cleanup is mandatory",
+    "mbarrier_timeout_action": "record failure evidence and fail kernel/process; never normally return/reuse/invalidate a possibly pending barrier or shared destination; a fatal trap is an allowed implementation path only with verified controlled cleanup",
+    "classification": "timeout/incomplete copy/unknown CUDA failure is failed correctness, never unsupported or accepted sample"
+  },
+  "shared_layout": {
+    "dynamic_allocation_bytes": "payload_bytes+32",
+    "payload": "[0,Q),16-byte aligned",
+    "control": "[Q,Q+32),8-byte-aligned mbarrier and disjoint status/timing words",
+    "opt_in": "64KiB payload exceeds default per-block dynamic threshold: set cudaFuncAttributeMaxDynamicSharedMemorySize on actual specialization; include static+dynamic bytes in occupancy/capacity checks; reject unsupported before launch"
+  },
+  "correctness": {
+    "whole_family_order": "CPU references and representative target compile/SASS -> all24 coordinates short GPU validation -> calibration pilots -> warmup -> formal ten-process sampling; do not warmup/calibrate first case before remaining short profiles pass",
+    "short_rule": "same primitive, actual threads/grid/Q/stage layout; inspect every copied word after every request before reuse, independently derive expected from seed/CTA/slot/word; the33-iteration profile covers32-slot wrap and remains within early_validation_v1 maximum64; three paired profiles together launch exactly3 targets percase, without warmup",
+    "formal_gmem_to_smem": "after final timed completion, copy allQ/4 shared words perCTA to separate output and compare with final slot=((iterations-1)%32); count every completed request and record wait attempts",
+    "formal_smem_to_gmem": "after kernel completion read back and compare every word in all32 slots perCTA; formal min_iterations128 ensures every slot touched; check guards",
+    "source_release": "SMEM->GMEM only: separate bulk_source_release_one_request_v1 profile, own process and receipt, one request/one target, top-level seed3; not implicitly included in any of the three short profiles or24 formal throughput cases; each CTA owns its destination, all original words checked after source overwrite and full completion",
+    "checks": "all output words plus guard words; raw all-word values or full output artifacts with hashes, never just errors=0 or sampled checksum",
+    "negative_tests": [
+      "Q counted twice or multiplied bythreads",
+      "wrong expected bytes or arrival count rejected onCPU beforeGPU",
+      "misaligned base, wrong size or overlapping ranges rejected beforeGPU",
+      "wrong source slot or uint32 address truncation",
+      "single-word corruption including final word of64KiB",
+      "reuse before acquire/full completion",
+      "read.wait substituted for full destination completion",
+      "full-family ordering violation and resume with changed validation identity"
+    ],
+    "pilot_destination_coverage": "pilot32 visits all32 slots0..31 exactly once perCTA; verify every destination word and guards; short1/2 visit only their requested slots and all other slots remain poison; short33 revisits slot0 after one full ring",
+    "short_profile_runs": [
+      {
+        "profile_id": "bulk_short_1_seed0_v1",
+        "target_iterations": [
+          1
+        ],
+        "input_profiles": [
+          "nonuniform_word_pattern"
+        ],
+        "seed": 0,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      },
+      {
+        "profile_id": "bulk_short_2_seed3_v1",
+        "target_iterations": [
+          2
+        ],
+        "input_profiles": [
+          "nonuniform_word_pattern"
+        ],
+        "seed": 3,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      },
+      {
+        "profile_id": "bulk_short_33_seed4294967295_v1",
+        "target_iterations": [
+          33
+        ],
+        "input_profiles": [
+          "nonuniform_word_pattern"
+        ],
+        "seed": 4294967295,
+        "processes": 1,
+        "maximum_target_launches": 1,
+        "maximum_explicit_auxiliary_launches": 0
+      }
+    ],
+    "short_profile_execution": "Exactly these three paired runs per formal case, one separate process and one target launch each; no Cartesian product. seed is the existing top-level invocation/validation seed, never an added launch-record field. Each profile has a single iterations/input-profile pair.",
+    "short_completion_gate": "All three exact profile/seed receipts and complete per-request word outputs must pass for each of24 formal cases before that case is short-complete; the entire24-case set must pass before any new pilot or warmup. No profile may replace another or authorize partial-family advancement."
+  },
+  "calibration": {
+    "pilot_only_case_iterations": 32,
+    "model": "legacy_event_ms_truncate_then_clamp_v1",
+    "formula": "clamp(int(32*(20000000/1e6)/max(pilot_event_ms,10000/1e6)),128,65536)",
+    "hook": "future explicit adapter.resolve_iterations; no formula eval",
+    "artifact": "resolved_cases.json with pilot raw/receipt hashes and source/binary/contract/device identity; freeze percase before formal run",
+    "formal_reuse": "all ten processes, retries and resumes use identical resolved length; changing length creates new run",
+    "status": "adapter and calibration integration not implemented or approved"
+  },
+  "raw_extensions": {
+    "required": [
+      "payload_bytes",
+      "copies_completed_per_cta",
+      "global_slots_per_cta",
+      "global_allocation_bytes",
+      "dynamic_smem_bytes",
+      "static_smem_bytes",
+      "registers_per_thread",
+      "occupancy_limit_ctas_per_sm",
+      "local_size_bytes",
+      "completion_kind",
+      "mbarrier_wait_attempts_per_cta",
+      "timeout_flags_per_cta",
+      "output_artifacts",
+      "short_validation_binding",
+      "source_release_diagnostic_binding"
+    ],
+    "type_rules": "JSON integers for byte/count/address-offset fields; size operand uint32 Q<=65536, shared address uint32 after cvta, global pointers64-bit, mbarrier state uint64; require zero local spills",
+    "output_artifacts": "full perword output arrays for short/diagnostic and final formal destination coverage; hashes and checked word counts independently verified",
+    "source_release_binding": "null only forGMEM->SMEM; otherwise separate launch receipt, seed, original-output artifact, sameCTA timestamp triplets and no metric export"
+  },
+  "sass_contracts": {
+    "feasibility": "compile-only source checks two bulk directions, expect_tx/arrive/token wait, async proxy fence, bulk commit, wait.read0 and full wait0 onCUDA12.9 sm90a; no hardcoded undocumented SASS mnemonic",
+    "formal": "each actual direction/payload specialization must retain one request in measured loop, correct operand widths/addresses/Q, matched expectQ and one arrive or one commit/fullwait, CTA gates, no spill; inspect measured backedge and timing position",
+    "timer_rule": "two outer measurement endpoints; internal timeout globaltimer reads are not performance samples and must not be rejected merely for exceeding two static timer sites",
+    "diagnostic": "actual separate release/full-wait kernel audited independently; ensure source overwrite occurs after read endpoint and output consumed only after full endpoint",
+    "fail_closed": "actual source/PTX/SASS/binary binding and independentB required; compiler acceptance alone grants no GPU runtime or parameter qualification"
+  },
+  "feasibility": {
+    "source": "microbench/gh200_resource_campaign/probes/feasibility/tma_bulk_forms.cu",
+    "compile_only": true,
+    "host_main": "return0 without CUDA launch",
+    "runtime_payload_domain": [
+      1024,
+      4096,
+      8192,
+      16384,
+      32768,
+      65536
+    ],
+    "representative_symbols": [
+      "tma_bulk_g2s_form",
+      "tma_bulk_s2g_full_form",
+      "tma_bulk_s2g_read_then_full_form"
+    ],
+    "formal_probe": false,
+    "target_compile_status": "not_run"
+  },
+  "references": [
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk",
+      "topic": "PTX8.8 size/alignment/directions/completion and sm90 support; shared::cta destination sincePTX8.6"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group",
+      "topic": "read modifier versus full destination completion"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-commit-group",
+      "topic": "perissuing-thread groups"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx",
+      "topic": "expected transaction bytes"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive",
+      "topic": "release arrival and opaque64-bit token"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait",
+      "topic": "acquire completion"
+    },
+    {
+      "url": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#async-proxy",
+      "topic": "proxy ordering"
+    }
+  ],
+  "claims": {
+    "target_compile_verified": false,
+    "GPU_validated": false,
+    "A_approved": false,
+    "B_approved": false,
+    "physical_HBM_bytes_proven": false,
+    "tensor_map_covered": false,
+    "native_engine_peak": false
+  },
+  "timing": {
+    "start": "operand/input/shared producer preparation and mbarrier init before timing; thread0 reads globaltimer then clock64; CTA gate after start before first request",
+    "loop": "oneQ copy per iteration, complete target-specific wait and CTA gate each iteration; no per-request timestamp array, no perword consumer in formal loop",
+    "stop": "final request fully complete and CTA gate passed; thread0 reads clock64 then globaltimer; output readback, validation and mbarrier invalidation after stop",
+    "one_cta": "sameCTA stop_cycle-start_cycle only",
+    "all_gpu": "maxCTA stop_ns-minCTA start_ns; CUDA event is auxiliary enclosure check",
+    "timeout_reads": "mbarrier internal globaltimer reads belong to service overhead, never extra performance samples",
+    "metric_boundary": "completed transfer plus issue/wait/CTA control service; no intrinsic bulk-engine latency/peak claim"
+  },
+  "execution_revision": "family-b3-s14-v1",
+  "family_b3": {
+    "parent_contract": {
+      "path": "microbench/gh200_resource_campaign/contracts/tma_bulk_formal_host_v1.draft.json",
+      "sha256": "5b332c37fd5d35358e0767f76437d018036074ffe7f4af2f038ffc1ac55dfeff"
+    },
+    "profiles": {
+      "path": "microbench/gh200_resource_campaign/contracts/tma_bulk_formal_validation_profiles_v1.draft.json",
+      "sha256": "cbfc383201363e8c8cf61db6c852044b6c7e54affc5d7894b0c8c8bee79d1c37"
+    },
+    "review": {
+      "path": "results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S14-formal-packed-bridge-B-review.json",
+      "sha256": "187fbe7a60196ba984196678f595b7916182054c2d7f169aca72c26163954c8c"
+    },
+    "coverage": {
+      "path": "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s14-formal-packed-bridge-a/construction.json",
+      "sha256": "19c50547d51bab152019101175a8b42da3737207e0fc359d766ccd398ea3d317"
+    },
+    "original_transport": {
+      "path": "results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S14-original84-packed-bridge-B-review.json",
+      "sha256": "84ae425dccbf3bbc53b9901277400a489c98b7e8e5b70d2baf258dc8befb8432"
+    }
+  }
+}

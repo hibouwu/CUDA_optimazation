@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "inputs": {
+    "candidates_sha256": "e495161d977171d1d76415879fd9112908d9d83b948c564fa32af5e28d1b1769",
+    "declarations_sha256": "1f23c206f53aeee0caf9ec5e4007a3578ec72ea3870db2a4f625353a4414af6a",
+    "reconciler_sha256": "5b3d610fc77a04829e2a0e4406a46f9ce12711d578ddacf324602fc54688e2d2",
+    "lexer_sha256": "0ab808f4e0c1f35d8b2e9ff3dca193c8be0d83946a383ec656027d283abeade6"
+  },
+  "file_count": 824,
+  "candidate_count": 470518,
+  "frozen_candidate_count": 470518,
+  "candidate_identity_and_cardinality_preserved": true,
+  "statuses": {
+    "classified_non_api": 341187,
+    "mapped_occurrences": 117269,
+    "pending": 12062
+  },
+  "obligations": {
+    "preprocessing_structure": 45699,
+    "phase2_file_dependency": 6479,
+    "phase1_declaration": 116556,
+    "phase1_declaration_attribute": 14154,
+    "syntax_structure": 74105,
+    "phase1_declaration_or_non_api_review": 3619,
+    "phase2_expression": 192353,
+    "phase1_declaration_component": 5890,
+    "phase1_macro_generated_declaration": 4172,
+    "phase1_declaration_or_macro": 3853,
+    "phase1_macro_definition": 744,
+    "phase1_macro_expansion_dependency": 145,
+    "phase1_constraint_expression": 2359,
+    "phase1_conditional_declaration_pending": 378,
+    "phase1_conditional_declaration": 9,
+    "phase1_conditional_type_expression": 3
+  },
+  "rules": {
+    "condition_or_region_container_not_a_declaration": 24477,
+    "directive_not_standalone_cpp_api": 21222,
+    "include_connects_files_not_api_entities": 6479,
+    "compatible_kind_and_all_significant_tokens_in_verified_signature_ranges": 101796,
+    "exact_attribute_token_in_verified_declaration_signature": 14154,
+    "callable_spelling_is_its_own_declaration_not_a_call": 14173,
+    "delimiter_or_access_label_only": 74105,
+    "source_obligation_not_silently_discarded": 3619,
+    "statement_inside_independently_brace_verified_callable_body_and_outside_local_type": 100740,
+    "lexical_invocation_inside_verified_callable_body_not_library_declaration": 73920,
+    "exact_syntax_component_of_verified_signature": 6477,
+    "declaration_capable_macro_requires_generated_occurrences": 4108,
+    "exact_expression_subrange_of_verified_declaration_signature": 17693,
+    "unresolved_lexical_invocation_retained": 3853,
+    "exact_macro_definition_occurrence_not_expansion_proof": 744,
+    "replacement_list_token_not_a_separate_source_declaration": 145,
+    "static_assert_is_constraint_not_named_library_api": 2359,
+    "exact_invocation_and_definition_provenance_with_generated_kind_guard": 32,
+    "syntax_exactly_accounts_for_verified_macro_invocations": 32,
+    "conditional_non_alias_form_not_silently_reinterpreted": 378,
+    "exact_piecewise_source_variant_with_all_branches_and_binding_instances_verified": 12
+  },
+  "pending_by_obligation": {
+    "phase1_declaration_or_non_api_review": 3619,
+    "phase1_macro_generated_declaration": 4108,
+    "phase1_declaration_or_macro": 3853,
+    "phase1_macro_definition": 104,
+    "phase1_conditional_declaration_pending": 378
+  },
+  "pending_by_reason": {
+    "significant_source_tokens_not_covered_by_compatible_declaration_signatures": 3481,
+    "declaration_macro_invocation_has_no_generated_entity": 4108,
+    "occurrence_not_cleanly_parsed": 1057,
+    "no_compatible_declaration_or_verified_non_api_context": 3673,
+    "overlapping_blocking_extraction_diagnostic": 1361,
+    "source_interval_contains_unexpanded_declaration_macro": 70,
+    "macro_definition_occurrence_missing_or_invalid": 104,
+    "candidate_and_occurrence_local_branch_disagree": 6,
+    "conditional_declaration_form_requires_dedicated_proof:function_header_variant": 378,
+    "comma_declarator_tokens_missing_from_declarator_ranges": 11,
+    "first_comma_declarator_has_no_occurrence": 1,
+    "namespace_or_type_signature_improperly_contains_body": 4
+  },
+  "all_candidates_reproduced_from_source_and_frozen_scanner": true,
+  "special_macro_classifications": {
+    "CUDA_ARCH_FAMILY_condition_uses": 15,
+    "CUDA_STD_HEADER_include_operands": 55
+  },
+  "phase_1_passed": false,
+  "reason": "Lexical over-inclusion is not an API denominator; pending rows and semantic coverage require independent review. Phase-2 obligations are not declaration gaps.",
+  "mapping_sha256": "aaa2a8782a654ff33d1a0f1098da350baa7bfddeda3f8969b54863a3ef8ece69"
+}

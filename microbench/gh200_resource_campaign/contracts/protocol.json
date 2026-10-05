@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "suite_id": "20261001-resource-suite-v2",
+  "target": "GH200/SM90a",
+  "compiler": "CUDA 12.9",
+  "trials_per_batch": 10,
+  "max_sampling_batches": 3,
+  "shuffle_seed": 20261001,
+  "warmup_min_windows": 8,
+  "warmup_max_windows": 30,
+  "warmup_tail_windows": 5,
+  "warmup_cv_limit": 0.02,
+  "formal_cv_limit": 0.05,
+  "process_timeout_seconds": 120,
+  "compile_timeout_seconds": 180,
+  "slurm_time_limit": "00:10:00",
+  "ncu_policy": "check once per device/driver/permission environment; denied blocks counter-qualified claims only",
+  "locks": [
+    "GPU UUID global lock within controlled runner domain",
+    "suite/output lock"
+  ],
+  "units": [
+    "FLOP",
+    "OP",
+    "requested bytes",
+    "local clock64 cycles",
+    "globaltimer ns"
+  ],
+  "source_policy": "full dependency closure frozen by file sha256; dirty files not identified by HEAD alone",
+  "retry_policy": "preserve and aggregate all same-protocol batches; never select best attempt",
+  "allowed_gaps": [
+    "counter_permission_denied",
+    "unstable_after_bounded_remeasurement",
+    "verified_unsupported_capability"
+  ],
+  "implementation_errors_are_not_allowed_gaps": true,
+  "out_of_scope": [
+    "full GEMM implementation",
+    "full prediction engine",
+    "tile optimizer",
+    "sparse compute",
+    "Batched/Grouped",
+    "Distributed",
+    "whole ISA sweep",
+    "TCGen05/TMEM"
+  ],
+  "review_dimensions": [
+    "goal_alignment",
+    "correctness",
+    "evidence_reproducibility",
+    "readability",
+    "compatibility_regression"
+  ]
+}

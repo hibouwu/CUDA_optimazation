@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "long_accumulation_diagnostic",
+  "stage": "S08",
+  "family": "low_precision",
+  "profile_id": "wgmma_e4m3_uniform_8192_full_output",
+  "status": "draft_pending_independent_A_review",
+  "case_id": "wgmma_e4m3_g1_one_cta",
+  "target_symbol": "lp_wgmma_e4m3_g1",
+  "iterations": 8192,
+  "threads": 128,
+  "blocks": 1,
+  "seed": 3,
+  "input_profile": {
+    "A": 0.0625,
+    "B": 0.0625,
+    "accumulator_initial": 0,
+    "nonuniform": false
+  },
+  "shape": [
+    64,
+    64,
+    32
+  ],
+  "chains": 2,
+  "batch_per_chain": 16,
+  "target_launches": 1,
+  "explicit_auxiliary_launches": 0,
+  "warmup": false,
+  "pilot": false,
+  "performance_eligible": false,
+  "family_B3_eligible": false,
+  "numerical_kernel_qualification": false,
+  "source_reuse": {
+    "path": "microbench/gh200_resource_campaign/probes/low_precision.cu",
+    "sha256": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "method": "wrapper translation unit includes the existing source after renaming its host main; invoke original target symbol with original arguments",
+    "required_SASS_equality": "normalized complete target function instructions and register/shared/local resource identity equal to diagnostic-wgmma-e4m3-v2 baseline; changed codegen requires separate review"
+  },
+  "outputs": {
+    "count": 8192,
+    "order": "((thread*2+chain)*32+fragment)",
+    "persist": "every output as index, decimal double and exact float32 uint32 bits; never only first differences or histogram",
+    "initialization": "output doubles=0xff poison and stamp=0xff before the single launch",
+    "completion": "CUDA launch and event completion succeed; all output doubles finite and equal to their own float32 roundtrip; all stamp fields overwritten; no positive minimum duration or all-SM coverage requirement",
+    "comparison": "each value compared with mathematical_expected16384 only as diagnostic difference, never accepted accuracy tolerance",
+    "summary": "difference_count, finite_count, min,max and distinct-value counts independently recomputed from complete values"
+  },
+  "reference": {
+    "mathematical_expected": 16384,
+    "derivation": "8192 iterations *16 MMA per chain *32 dot products *(1/16)^2 =16384",
+    "semantic_limit": "not asserted as a mandatory result of the hardware long FP8 accumulator; retained solely to characterize the previous mismatch"
+  },
+  "execution": {
+    "platform": "ROMEO valid single-GPU Slurm allocation, CUDA12.9 sm90a",
+    "locks": "existing suite/output lock and separate GPU UUID lock with active process registry",
+    "snapshot": "freeze wrapper, included source and recursive headers, contract, runner, auditor, compiler/toolchain and old-source/SASS references before any target execution",
+    "process_timeout_seconds": 120,
+    "compile_timeout_seconds": 180,
+    "resume": "completed or numerical-difference collection never automatically rerun; interrupted process requires confirmed cleanup before new attempt",
+    "failure": "CUDA failure, incomplete output, NaN/Inf/poison, malformed identity or mismatched SASS remains a rejected diagnostic; finite differing output is retained as evidence and grants no correctness/performance qualification"
+  },
+  "reviews": {
+    "A": "reviews/S08-long-accumulation-A-review.json",
+    "source_B": "reviews/S08-long-accumulation-source-B-review.json",
+    "result": "reviews/S08-long-accumulation-result-review.json"
+  },
+  "followup": "If finite mismatch appears, examine its pattern and plan bounded length comparison separately; if exact pass, next hypothesis is original launch sequence/occasional behavior. Neither followup is implicitly run by this profile."
+}

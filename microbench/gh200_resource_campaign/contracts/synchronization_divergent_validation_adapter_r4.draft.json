@@ -1,0 +1,53 @@
+{
+  "adapter_id": "synchronization_short_r4",
+  "adapter_abi_version": 1,
+  "module": "auditors.synchronization_short_r4",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/auditors/synchronization.py": "66d4924b6afc87de12d5873bb274155d13e0c0e672f549525c6d274c1ef75195",
+    "microbench/gh200_resource_campaign/auditors/synchronization_lowering_v3.py": "bb01baf0a5fb1e45ce52f6e2b5cab52c2f8cc8e0bee9e2d0617c007360650ce5",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_baseline_r4.py": "a865b46e8192684e86397e29a6912ca8e48485e368292ecd2a5ef458855dc1d1",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_r4.py": "a07e93262ae7e79d67178763500ac4050e86ec72efa7bea621b2cb7aa38c9413",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_sass_r4.py": "27f3cec8f4f554516cfe56b72e479ffe6a1e9bc2cdcefc72598f3037a941f6a5",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk.py": "163d3b5274bf139c944924abe4d74c019298d0636113a06fc153f3602eb13ab9",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_sass_baseline.py": "f15ccb12a5fe0462a7f2222b0f294f4207b04ec11553c0016c6ad150f0ac4583",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_validation.py": "bd0093c5f2e551f73f22f059194b92589b0cd99b044c3d86fa514a0ea609cb07",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/synchronization_pair_reference_v2.hpp": "c011a9162da5b40de38918d74c6c7c62efcce3502e6ce539b3dc56994ede3fc0",
+    "microbench/gh200_resource_campaign/common/synchronization_reference.hpp": "1d773dde0cc26c31729e2280ccca949c6e30005b34ffaf280ec7094f383ba87d",
+    "microbench/gh200_resource_campaign/common/synchronization_role_bindings_r4.hpp": "b7d3e34665b8cdc75a818076fc4e03cdf3e826f5bef4820e9a2bc53b0c8558a9",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/probes/feasibility/warp_sync_divergent_pair_v2.cu": "b04ae868a81259ff427d62b014719a997a8ceeec84d1306a95797132fba3f863",
+    "microbench/gh200_resource_campaign/probes/synchronization.cu": "20aaf88ca4dbd70df5b77680bf4527f2ee451c9f285015401b7f67673568bba2",
+    "microbench/gh200_resource_campaign/probes/synchronization_short_r4.cu": "0abec7a58f7e21ca1c96c34a0ff03b81ee09474f296e370c2c254ac7bcf58f0e",
+    "microbench/gh200_resource_campaign/tests/test_synchronization_short_r4.py": "3c284d6330b53be707be8912ba8c6ad2cd19b67b45d7a8082017aa793392a399",
+    "microbench/gh200_resource_campaign/tests/test_synchronization_short_sass_r4.py": "c548dd679471fcc8b9d8b2749fb94b629a8ccd8ddd4301ae68398bea04adf5af",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s11-short-a/diagnostics/synchronization_short_r4/compile.receipt.json": "b19a2b896b3cea2b3212f4358305c8cb4aa776eec1b18f77db4f55e547cd71f5",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s11-short-a/diagnostics/synchronization_short_r4/compile.stderr": "1c8768e53f24e32220b26a2d7998242aefde854478a428f1badf5af5a891627b",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s11-short-a/diagnostics/synchronization_short_r4/probe": "60ba7e0639959879d173eccdea12bce3083ba76456c2c8ba84ec3f4551c654d1",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s11-short-a/diagnostics/synchronization_short_r4/sass.receipt.json": "3f0cbf95a8772b8e04a999c62dda853525e511f75fc90bcdbafdbe4325bfdf61",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-s11-short-a/diagnostics/synchronization_short_r4/sass.txt": "444022c6ba1b18169832312a0c0fc0f38cac3ab5adc83badbee5fc87d1f058ee"
+  },
+  "contract_sha256": "f239060901b08aa9af1ed8291a88ab9a39fcf9e95f380df5ce831410471c470b",
+  "profiles_sha256": "92d6a9a8c7658ae7f709566436a4fbb0fe773d0c14deac0215479ebdc1e0db34",
+  "review_dependencies": [
+    {
+      "stage": "S11",
+      "phase": "early-validation-A",
+      "path": "reviews/S11-early-validation-A-review-r4.json"
+    },
+    {
+      "stage": "S11",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S11-early-validation-source-B-review-r4.json"
+    }
+  ]
+}

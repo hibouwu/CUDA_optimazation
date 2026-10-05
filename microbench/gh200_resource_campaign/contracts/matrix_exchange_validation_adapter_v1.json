@@ -1,0 +1,44 @@
+{
+  "adapter_id": "matrix_exchange_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.matrix_exchange_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange.py": "a3829a670b078ffa38a9c2c8b82de562f1cfba081775dc46c528d2e4a3f330bc",
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange_validation.py": "ef8a5d889a4eca3167438b69d67bb6cea7a285446f00a0d41bedc76e958e5311",
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange_validation_baseline.py": "6662980ac5e4cac5f9cfcc8ff900ab0bac8f00debf8469ca1eefa1e1126ae7ea",
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/probes/matrix_exchange.cu": "89d1c0a266a93c0e6f8545b19102ae7a6e0bcf9a0150293237eda1b64b69e272",
+    "microbench/gh200_resource_campaign/tests/test_matrix_exchange.py": "51c47f6a1af68a9ab309a67bd2b67f03d5dd79a991e9f928548fd07726abd9c5",
+    "microbench/gh200_resource_campaign/tests/test_matrix_exchange_validation.py": "73de378ebb22b55bc2e224b5e6dcc051dadf57e3c34148b62e417ab9b00b757d",
+    "microbench/gh200_resource_campaign/tests/test_word_artifacts.py": "8e307cad694a189a4ceb5951646d151c096943a18b0e3dbf9b2c4e9f5f9fe33f"
+  },
+  "contract_sha256": "ad52912ad6a156b008996c5cf81ff682f0cb89b5946bc328ef8caffd1479996c",
+  "profiles_sha256": "e07a360b8ef20224e2507bf054c9574702e5ab75d797716921ed488e88a473fa",
+  "review_dependencies": [
+    {
+      "stage": "S10",
+      "phase": "A",
+      "path": "reviews/S10-A-review-r3.json"
+    },
+    {
+      "stage": "S10",
+      "phase": "early-validation-A",
+      "path": "reviews/S10-early-validation-A-review.json"
+    },
+    {
+      "stage": "S10",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S10-early-validation-source-B-review.json"
+    }
+  ]
+}

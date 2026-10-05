@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "kind": "accumulation_boundary_diagnostic_design",
+  "stage": "S08",
+  "family": "low_precision",
+  "status": "draft_pending_independent_A_review",
+  "author": "/root/gate_reviewer",
+  "executable_manifest": false,
+  "purpose": "Locate whether the already observed uniform8192=64 difference is present around mathematical output64, without rerunning8192 or granting correctness/performance qualification.",
+  "case_id": "wgmma_e4m3_g1_one_cta",
+  "target_symbol": "lp_wgmma_e4m3_g1",
+  "threads": 128,
+  "blocks": 1,
+  "seed": 3,
+  "shape": [
+    64,
+    64,
+    32
+  ],
+  "chains": 2,
+  "batch_per_chain": 16,
+  "input_profile": {
+    "id": "uniform_original",
+    "A": 0.0625,
+    "B": 0.0625,
+    "accumulator_initial": 0,
+    "nonuniform": false
+  },
+  "profiles": [
+    {
+      "id": "original_uniform_31",
+      "iterations": 31,
+      "target_launches": 1,
+      "explicit_auxiliary_launches": 0,
+      "output_count": 8192,
+      "mathematical_expected": 62
+    },
+    {
+      "id": "original_uniform_32",
+      "iterations": 32,
+      "target_launches": 1,
+      "explicit_auxiliary_launches": 0,
+      "output_count": 8192,
+      "mathematical_expected": 64
+    },
+    {
+      "id": "original_uniform_33",
+      "iterations": 33,
+      "target_launches": 1,
+      "explicit_auxiliary_launches": 0,
+      "output_count": 8192,
+      "mathematical_expected": 66
+    },
+    {
+      "id": "original_uniform_64",
+      "iterations": 64,
+      "target_launches": 1,
+      "explicit_auxiliary_launches": 0,
+      "output_count": 8192,
+      "mathematical_expected": 128
+    }
+  ],
+  "limits": {
+    "max_new_target_launches": 4,
+    "max_iterations": 64,
+    "max_output_values": 32768,
+    "one_profile_per_process": true,
+    "automatic_retries": 0,
+    "automatic_bisection": false,
+    "repeat8192": false,
+    "additional_dtypes_or_groups_or_scopes": false,
+    "warmup": false,
+    "pilot": false
+  },
+  "classification": "Separate numerical diagnostic. Length<=64 does not make this a registered early_validation profile or family B3 evidence.",
+  "source_reuse": {
+    "path": "microbench/gh200_resource_campaign/probes/low_precision.cu",
+    "sha256": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "device_source_modified": false,
+    "method": "new separately reviewed host wrapper includes original source with main renamed; runtime iterations only differ",
+    "required_complete_target_instruction_count": 496,
+    "SASS_gate": "complete normalized target instruction stream, register/shared/local/occupancy identity equals frozen short and long baselines; exact normalization algorithm pinned at source-B",
+    "expected_resources": {
+      "registers_per_thread": 148,
+      "static_smem_bytes": 5136,
+      "dynamic_smem_bytes": 0,
+      "local_size_bytes": 0,
+      "occupancy_limit_ctas_per_sm": 3
+    }
+  },
+  "evidence_requirements": {
+    "outputs": "all8192 index/decimal-double/exactFP32bits per launch; poison before launch; finite float32 roundtrip, complete unique index range; no histogram-only evidence",
+    "stamp": "all poisoned stamp fields overwritten, CUDA event completion and launch success, zero elapsed duration allowed, no full-SM requirement",
+    "summary": "recompute finite/difference counts, min/max, all distinct-value counts and per-index adjacent-length differences; compare two chains and physical thread/fragment positions",
+    "reference": "2*iterations is mathematical descriptive reference, not relaxed tolerance or compulsory long-FP8 hardware result; ordinary exact checks remain unchanged",
+    "identity": "freeze source/recursive dependencies/runner/auditor/contracts/reference, include original short and long records and their reviews; persist each source/binary/SASS/receipt",
+    "reject": "CUDA errors, timeout, incomplete/NaN/Inf/poison outputs, malformed schema or identities, failed SASS/resource/snapshot gate; finite numeric differences are observations"
+  },
+  "execution": {
+    "allocation": "same GH200 UUID/toolchain/runtime policy as frozen original diagnosis; mismatch fails closed",
+    "locks": "suite/output lock and GPU UUID lock, active PID/PGID registry, confirmed cleanup",
+    "process_timeout_seconds": 120,
+    "compile_timeout_seconds": 180,
+    "cleanup_budget_seconds": 20,
+    "remaining_allocation_budget_required": true,
+    "profile_order": [
+      "original_uniform_31",
+      "original_uniform_32",
+      "original_uniform_33",
+      "original_uniform_64"
+    ],
+    "resume": "Only profiles with positive evidence that their target launch never started may continue after confirmed cleanup and unchanged hashes. Once a target may have started, missing/incomplete output or receipt is unknown/failed, never pending; no automatic retry. Re-execution requires a separately reviewed amendment. The lifetime total of started or possibly-started target launches is at most4; failed/interrupted launches consume the budget."
+  },
+  "reuse_evidence": {
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S08-long-accumulation-result-review.json": "83287980f461e6841a05b4cb3592356d44a25e41c1fa2ba396e602c77d0eb789",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/low_precision/long-uniform8192-v1/diagnostic_manifest.json": "e46d7c634ef8ccf3b4a422e5ad26e0a877294c24c78b2f513af6171d54a3ba27",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/low_precision/long-uniform8192-v1/attempts/attempt_00/raw.jsonl": "f3ee719fc06981e198d3ffef92ec7201ceb47bf022d22f288ffdff0644b12c06",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/low_precision/diagnostic-wgmma-e4m3-v2/validation_manifest.json": "51643da3659daf520a5f0d87dc8ad936cce42874c48853f82ee3a027bd4222e8",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/low_precision/diagnostic-wgmma-e4m3-v2/attempts/attempt_00/raw.jsonl": "0ec02046477f22647b8734b192e4d5b574f6b5e0572901c09726ab4714b621c8"
+  },
+  "qualification": {
+    "performance_eligible": false,
+    "numerical_kernel_qualification": false,
+    "family_B3_eligible": false,
+    "full_family_B": false
+  },
+  "decision_rules": [
+    {
+      "observation": "all elements at31/32/33/64 equal62/64/64/64",
+      "decision": "uniform accumulation growth stops at this observed boundary; fixed32-iteration truncation and input-dependent loss remain observationally indistinguishable. Do not fit internal mantissa. Consider the separately specified same-dot/different-product control."
+    },
+    {
+      "observation": "all elements equal62/64/66/128",
+      "decision": "no boundary at32; existing8192 difference remains. Stop four-profile set and redesign a bounded length bracket from these facts, without automatic expansion."
+    },
+    {
+      "observation": "position/chain-dependent finite pattern or decrease/inconsistent boundary",
+      "decision": "inspect archived inputs/index mapping/SASS/register dependencies and synchronization before changing reference or gathering performance; do not assume monotonicity."
+    },
+    {
+      "observation": "source/SASS/resource/CUDA/completeness failure",
+      "decision": "reject diagnostic and repair identity/implementation issue first; no numerical interpretation or automatic rerun."
+    }
+  ],
+  "conditional_input_control": {
+    "status": "design_suggestion_only_requires_separate_contract_and_independent_A_source_B_before_implementation_execution",
+    "max_proposed_launches": 6,
+    "mechanism": "one new runtime-tile diagnostic kernel shared by all input modes, same shape/chains/batch/wait/drain; no changes to frozen performance kernel",
+    "coordinates": [
+      {
+        "input": "dense_original",
+        "iterations": 1
+      },
+      {
+        "input": "dense_original",
+        "iterations": 64
+      },
+      {
+        "input": "sparse_same_dot",
+        "iterations": 1
+      },
+      {
+        "input": "sparse_same_dot",
+        "iterations": 64
+      },
+      {
+        "input": "original_nonuniform_seed3",
+        "iterations": 1
+      },
+      {
+        "input": "original_nonuniform_seed3",
+        "iterations": 2
+      }
+    ],
+    "dense": "all A=B=1/16, D0",
+    "sparse": "A[m,k]=1/4 iff k in{0,16}, else0; B[k,n]=1/4 for all k,n; D0; dense and sparse both have exact dot1/8 and expected2*iterations",
+    "nonuniform": "exact existing seed3 logical input formula and chain initial values; only1/2 supported by existing reference, do not silently extend",
+    "bridge": "dense1/64 must reproduce original source1/64 per-index before causally interpreting sparse; all modes share one binary/symbol and loop; actual SASS proof required for retained issue count, loop and waits. Original whole-function equality is not falsely claimed for the new tile-loading prologue.",
+    "mapping": "persist complete logical and packed A/B plus independent CPU pack-unpack bijection and dense/sparse dot enumeration; nonuniform1/2 tests mapping/initialization on new path",
+    "limits": "sparse64 growth while dense64 stops weakens a data-independent32-iteration cutoff; identical stops do not distinguish dot-level rounding from cutoff. Mapping failure or bridge failure blocks inference. No exact hardware precision inferred. No automatic synchronization variant."
+  },
+  "required_reviews": {
+    "A": "independent author other than /root/gate_reviewer",
+    "source_B": "new wrapper/CLI/manifest and actual compile/SASS/resources; none supplied by this design",
+    "result": "independent full-output result review"
+  },
+  "frozen_existing_files_sha256": {
+    "microbench/gh200_resource_campaign/contracts/low_precision.json": "f8eb72346b1ee240845118ff869d41b6a6a8ed480d9a094078cbfac4c018d41a",
+    "microbench/gh200_resource_campaign/contracts/low_precision_lowering_v3.json": "24a46269a210033c79eb1e4d8e3d6b312442b7a441ee802b47e662e2fc52ea4c",
+    "microbench/gh200_resource_campaign/contracts/low_precision_accumulation_diagnostic_v1.json": "d9c2f883c4acfb0e4908a4e2b222219e156bed17ed48754ea52fd39b712adaf2",
+    "microbench/gh200_resource_campaign/probes/low_precision.cu": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "microbench/gh200_resource_campaign/probes/diagnostics/low_precision_accumulation.cu": "f202bdc479e4f1ba1534acc2b8f5f698a3d2a344225d263ea2b8b3a92edc1bd0"
+  }
+}

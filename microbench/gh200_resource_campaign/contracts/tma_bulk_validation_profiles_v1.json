@@ -1,0 +1,527 @@
+{
+  "schema_version": 1,
+  "family": "tma_bulk",
+  "profiles": [
+    {
+      "id": "bulk_short_1_seed0_v1",
+      "role": "short_transport",
+      "applicable_directions": [
+        "gmem_to_smem",
+        "smem_to_gmem"
+      ],
+      "required_seed": 0,
+      "target_iterations": [
+        1
+      ],
+      "input_profiles": [
+        "nonuniform_word_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "nonuniform_word_pattern"
+        }
+      ],
+      "completion_requirements": [
+        "one independent process and one target; exact required_seed at top-level CLI/row, never Cartesian product",
+        "same128threads,Q,32global slots perCTA and actual kernel occupancy grid; dynamic shared Q+32 and explicit optin; allocation guard16B on both sides",
+        "all CUDA calls/launch/event/readback succeed; every CTA stamp and completion record overwritten; SMID not UINT32_MAX, no contiguous physical-ID assumption",
+        "g2s each phase expectQ before copy then one release arrive with actual64bit token; issuer try_wait acquire with1s per-request timeout; timeout records failure then fatal trap, never normal reuse/inval; final successful CTA rendezvous before invalidation",
+        "s2g every producer proxy fence plus CTA gate; same issuer bulk commit/fullwait; short per-request complete word capture followed by CTA release barrier before reuse",
+        "s2g ring every slot initially equals bitwise complement of shared_input_word, independent of whether the slot will be visited; only mandatory-written trace/source_after captures use their final expected XOR UINT32_MAX; every global guard compared",
+        "source-release only: issuer readwait then local release clock, CTA gate, all source words volatile-complemented, CTA gate, issuer fullwait and local completion clock, CTA gate; original destination and final complemented source both checked",
+        "short may have zero duration, no physical-SM coverage requirement; ordinary exact_sms remains formal-only",
+        "artifact lifecycle uint64 values encoded losslessly as low/high uint32 pairs because fixed core artifact verifier supports uint32 but not uint64",
+        "stop on first failure, nonzero exit and partial validation when possible; only complete checked artifacts can be accepted"
+      ],
+      "reference_identity": {
+        "model": "tma_bulk_ring_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+        "sha256": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "every captured request word, all s2g ring words including unvisited poison, both global guards; release also every complemented source word",
+        "elements_per_launch": "blocks*iterations*payload_words+(direction==smem_to_gmem?blocks*32*payload_words:0)+8",
+        "completion_artifacts": "completion counters and local clocks are fully checked by lifecycle/order predicates; not counted as payload/guard numerical elements"
+      },
+      "artifact_layouts": {
+        "trace": {
+          "path": "bulk_trace.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            1,
+            "payload_words"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "ring": {
+          "path": "bulk_ring.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            32,
+            "payload_words"
+          ],
+          "directions": [
+            "smem_to_gmem"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "guards": {
+          "path": "bulk_guards.u32le",
+          "dtype": "uint32",
+          "shape": [
+            2,
+            4
+          ],
+          "evidence_kind": "full_values"
+        },
+        "completion": {
+          "path": "bulk_completion.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            5,
+            2
+          ],
+          "fields": [
+            "completed_requests",
+            "mbarrier_wait_attempts",
+            "timeout_flag",
+            "read_release_waits",
+            "full_bulk_waits"
+          ],
+          "uint64_encoding": "low32 then high32 little-endian words",
+          "evidence_kind": "full_values"
+        },
+        "source_after": null,
+        "release_clocks": null
+      },
+      "guard_values": [
+        3512640992,
+        3512640993,
+        3512640994,
+        3512640995,
+        3512640996,
+        3512640997,
+        3512640998,
+        3512640999
+      ],
+      "resource_extensions": {
+        "payload_bytes": "frozen Q",
+        "global_slots_per_cta": 32,
+        "global_allocation_bytes": "blocks*32*Q+32",
+        "completion_kind": "mbarrier_acquire_then_CTA_gate or bulk_wait_group_0_then_CTA_gate or separate_source_release_then_full_wait",
+        "validation_role": "short_transport or source_release"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "all declared data words and lifecycle records persisted with dtype/shape/path/SHA256; ABI validates metadata, core validates bytes/hash, independent family offline replay reads arrays and rechecks values",
+      "kernel_symbol_convention": "tb_g2s_q{Q} or tb_s2g_q{Q}; source-release tb_release_q{Q}",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    },
+    {
+      "id": "bulk_short_2_seed3_v1",
+      "role": "short_transport",
+      "applicable_directions": [
+        "gmem_to_smem",
+        "smem_to_gmem"
+      ],
+      "required_seed": 3,
+      "target_iterations": [
+        2
+      ],
+      "input_profiles": [
+        "nonuniform_word_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 2,
+          "input_profile": "nonuniform_word_pattern"
+        }
+      ],
+      "completion_requirements": [
+        "one independent process and one target; exact required_seed at top-level CLI/row, never Cartesian product",
+        "same128threads,Q,32global slots perCTA and actual kernel occupancy grid; dynamic shared Q+32 and explicit optin; allocation guard16B on both sides",
+        "all CUDA calls/launch/event/readback succeed; every CTA stamp and completion record overwritten; SMID not UINT32_MAX, no contiguous physical-ID assumption",
+        "g2s each phase expectQ before copy then one release arrive with actual64bit token; issuer try_wait acquire with1s per-request timeout; timeout records failure then fatal trap, never normal reuse/inval; final successful CTA rendezvous before invalidation",
+        "s2g every producer proxy fence plus CTA gate; same issuer bulk commit/fullwait; short per-request complete word capture followed by CTA release barrier before reuse",
+        "s2g ring every slot initially equals bitwise complement of shared_input_word, independent of whether the slot will be visited; only mandatory-written trace/source_after captures use their final expected XOR UINT32_MAX; every global guard compared",
+        "source-release only: issuer readwait then local release clock, CTA gate, all source words volatile-complemented, CTA gate, issuer fullwait and local completion clock, CTA gate; original destination and final complemented source both checked",
+        "short may have zero duration, no physical-SM coverage requirement; ordinary exact_sms remains formal-only",
+        "artifact lifecycle uint64 values encoded losslessly as low/high uint32 pairs because fixed core artifact verifier supports uint32 but not uint64",
+        "stop on first failure, nonzero exit and partial validation when possible; only complete checked artifacts can be accepted"
+      ],
+      "reference_identity": {
+        "model": "tma_bulk_ring_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+        "sha256": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "every captured request word, all s2g ring words including unvisited poison, both global guards; release also every complemented source word",
+        "elements_per_launch": "blocks*iterations*payload_words+(direction==smem_to_gmem?blocks*32*payload_words:0)+8",
+        "completion_artifacts": "completion counters and local clocks are fully checked by lifecycle/order predicates; not counted as payload/guard numerical elements"
+      },
+      "artifact_layouts": {
+        "trace": {
+          "path": "bulk_trace.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            2,
+            "payload_words"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "ring": {
+          "path": "bulk_ring.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            32,
+            "payload_words"
+          ],
+          "directions": [
+            "smem_to_gmem"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "guards": {
+          "path": "bulk_guards.u32le",
+          "dtype": "uint32",
+          "shape": [
+            2,
+            4
+          ],
+          "evidence_kind": "full_values"
+        },
+        "completion": {
+          "path": "bulk_completion.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            5,
+            2
+          ],
+          "fields": [
+            "completed_requests",
+            "mbarrier_wait_attempts",
+            "timeout_flag",
+            "read_release_waits",
+            "full_bulk_waits"
+          ],
+          "uint64_encoding": "low32 then high32 little-endian words",
+          "evidence_kind": "full_values"
+        },
+        "source_after": null,
+        "release_clocks": null
+      },
+      "guard_values": [
+        3512640992,
+        3512640993,
+        3512640994,
+        3512640995,
+        3512640996,
+        3512640997,
+        3512640998,
+        3512640999
+      ],
+      "resource_extensions": {
+        "payload_bytes": "frozen Q",
+        "global_slots_per_cta": 32,
+        "global_allocation_bytes": "blocks*32*Q+32",
+        "completion_kind": "mbarrier_acquire_then_CTA_gate or bulk_wait_group_0_then_CTA_gate or separate_source_release_then_full_wait",
+        "validation_role": "short_transport or source_release"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "all declared data words and lifecycle records persisted with dtype/shape/path/SHA256; ABI validates metadata, core validates bytes/hash, independent family offline replay reads arrays and rechecks values",
+      "kernel_symbol_convention": "tb_g2s_q{Q} or tb_s2g_q{Q}; source-release tb_release_q{Q}",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    },
+    {
+      "id": "bulk_short_33_seed4294967295_v1",
+      "role": "short_transport",
+      "applicable_directions": [
+        "gmem_to_smem",
+        "smem_to_gmem"
+      ],
+      "required_seed": 4294967295,
+      "target_iterations": [
+        33
+      ],
+      "input_profiles": [
+        "nonuniform_word_pattern"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 33,
+          "input_profile": "nonuniform_word_pattern"
+        }
+      ],
+      "completion_requirements": [
+        "one independent process and one target; exact required_seed at top-level CLI/row, never Cartesian product",
+        "same128threads,Q,32global slots perCTA and actual kernel occupancy grid; dynamic shared Q+32 and explicit optin; allocation guard16B on both sides",
+        "all CUDA calls/launch/event/readback succeed; every CTA stamp and completion record overwritten; SMID not UINT32_MAX, no contiguous physical-ID assumption",
+        "g2s each phase expectQ before copy then one release arrive with actual64bit token; issuer try_wait acquire with1s per-request timeout; timeout records failure then fatal trap, never normal reuse/inval; final successful CTA rendezvous before invalidation",
+        "s2g every producer proxy fence plus CTA gate; same issuer bulk commit/fullwait; short per-request complete word capture followed by CTA release barrier before reuse",
+        "s2g ring every slot initially equals bitwise complement of shared_input_word, independent of whether the slot will be visited; only mandatory-written trace/source_after captures use their final expected XOR UINT32_MAX; every global guard compared",
+        "source-release only: issuer readwait then local release clock, CTA gate, all source words volatile-complemented, CTA gate, issuer fullwait and local completion clock, CTA gate; original destination and final complemented source both checked",
+        "short may have zero duration, no physical-SM coverage requirement; ordinary exact_sms remains formal-only",
+        "artifact lifecycle uint64 values encoded losslessly as low/high uint32 pairs because fixed core artifact verifier supports uint32 but not uint64",
+        "stop on first failure, nonzero exit and partial validation when possible; only complete checked artifacts can be accepted"
+      ],
+      "reference_identity": {
+        "model": "tma_bulk_ring_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+        "sha256": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "every captured request word, all s2g ring words including unvisited poison, both global guards; release also every complemented source word",
+        "elements_per_launch": "blocks*iterations*payload_words+(direction==smem_to_gmem?blocks*32*payload_words:0)+8",
+        "completion_artifacts": "completion counters and local clocks are fully checked by lifecycle/order predicates; not counted as payload/guard numerical elements"
+      },
+      "artifact_layouts": {
+        "trace": {
+          "path": "bulk_trace.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            33,
+            "payload_words"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "ring": {
+          "path": "bulk_ring.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            32,
+            "payload_words"
+          ],
+          "directions": [
+            "smem_to_gmem"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "guards": {
+          "path": "bulk_guards.u32le",
+          "dtype": "uint32",
+          "shape": [
+            2,
+            4
+          ],
+          "evidence_kind": "full_values"
+        },
+        "completion": {
+          "path": "bulk_completion.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            5,
+            2
+          ],
+          "fields": [
+            "completed_requests",
+            "mbarrier_wait_attempts",
+            "timeout_flag",
+            "read_release_waits",
+            "full_bulk_waits"
+          ],
+          "uint64_encoding": "low32 then high32 little-endian words",
+          "evidence_kind": "full_values"
+        },
+        "source_after": null,
+        "release_clocks": null
+      },
+      "guard_values": [
+        3512640992,
+        3512640993,
+        3512640994,
+        3512640995,
+        3512640996,
+        3512640997,
+        3512640998,
+        3512640999
+      ],
+      "resource_extensions": {
+        "payload_bytes": "frozen Q",
+        "global_slots_per_cta": 32,
+        "global_allocation_bytes": "blocks*32*Q+32",
+        "completion_kind": "mbarrier_acquire_then_CTA_gate or bulk_wait_group_0_then_CTA_gate or separate_source_release_then_full_wait",
+        "validation_role": "short_transport or source_release"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "all declared data words and lifecycle records persisted with dtype/shape/path/SHA256; ABI validates metadata, core validates bytes/hash, independent family offline replay reads arrays and rechecks values",
+      "kernel_symbol_convention": "tb_g2s_q{Q} or tb_s2g_q{Q}; source-release tb_release_q{Q}",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    },
+    {
+      "id": "bulk_source_release_one_request_v1",
+      "role": "source_release",
+      "applicable_directions": [
+        "smem_to_gmem"
+      ],
+      "required_seed": 3,
+      "target_iterations": [
+        1
+      ],
+      "input_profiles": [
+        "original_pattern_then_source_complement"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "original_pattern_then_source_complement"
+        }
+      ],
+      "completion_requirements": [
+        "one independent process and one target; exact required_seed at top-level CLI/row, never Cartesian product",
+        "same128threads,Q,32global slots perCTA and actual kernel occupancy grid; dynamic shared Q+32 and explicit optin; allocation guard16B on both sides",
+        "all CUDA calls/launch/event/readback succeed; every CTA stamp and completion record overwritten; SMID not UINT32_MAX, no contiguous physical-ID assumption",
+        "g2s each phase expectQ before copy then one release arrive with actual64bit token; issuer try_wait acquire with1s per-request timeout; timeout records failure then fatal trap, never normal reuse/inval; final successful CTA rendezvous before invalidation",
+        "s2g every producer proxy fence plus CTA gate; same issuer bulk commit/fullwait; short per-request complete word capture followed by CTA release barrier before reuse",
+        "s2g ring every slot initially equals bitwise complement of shared_input_word, independent of whether the slot will be visited; only mandatory-written trace/source_after captures use their final expected XOR UINT32_MAX; every global guard compared",
+        "source-release only: issuer readwait then local release clock, CTA gate, all source words volatile-complemented, CTA gate, issuer fullwait and local completion clock, CTA gate; original destination and final complemented source both checked",
+        "short may have zero duration, no physical-SM coverage requirement; ordinary exact_sms remains formal-only",
+        "artifact lifecycle uint64 values encoded losslessly as low/high uint32 pairs because fixed core artifact verifier supports uint32 but not uint64",
+        "stop on first failure, nonzero exit and partial validation when possible; only complete checked artifacts can be accepted"
+      ],
+      "reference_identity": {
+        "model": "tma_bulk_ring_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+        "sha256": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "every captured request word, all s2g ring words including unvisited poison, both global guards; release also every complemented source word",
+        "elements_per_launch": "blocks*33*payload_words+8",
+        "completion_artifacts": "completion counters and local clocks are fully checked by lifecycle/order predicates; not counted as payload/guard numerical elements"
+      },
+      "artifact_layouts": {
+        "trace": null,
+        "ring": {
+          "path": "bulk_ring.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            32,
+            "payload_words"
+          ],
+          "directions": [
+            "smem_to_gmem"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "guards": {
+          "path": "bulk_guards.u32le",
+          "dtype": "uint32",
+          "shape": [
+            2,
+            4
+          ],
+          "evidence_kind": "full_values"
+        },
+        "completion": {
+          "path": "bulk_completion.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            5,
+            2
+          ],
+          "fields": [
+            "completed_requests",
+            "mbarrier_wait_attempts",
+            "timeout_flag",
+            "read_release_waits",
+            "full_bulk_waits"
+          ],
+          "uint64_encoding": "low32 then high32 little-endian words",
+          "evidence_kind": "full_values"
+        },
+        "source_after": {
+          "path": "bulk_source_after.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            "payload_words"
+          ],
+          "evidence_kind": "full_values"
+        },
+        "release_clocks": {
+          "path": "bulk_release_clocks.u32le",
+          "dtype": "uint32",
+          "shape": [
+            "blocks",
+            3,
+            2
+          ],
+          "fields": [
+            "start_cycle",
+            "source_release_cycle",
+            "full_completion_cycle"
+          ],
+          "uint64_encoding": "low32 then high32 little-endian words",
+          "evidence_kind": "full_values"
+        }
+      },
+      "guard_values": [
+        3512640992,
+        3512640993,
+        3512640994,
+        3512640995,
+        3512640996,
+        3512640997,
+        3512640998,
+        3512640999
+      ],
+      "resource_extensions": {
+        "payload_bytes": "frozen Q",
+        "global_slots_per_cta": 32,
+        "global_allocation_bytes": "blocks*32*Q+32",
+        "completion_kind": "mbarrier_acquire_then_CTA_gate or bulk_wait_group_0_then_CTA_gate or separate_source_release_then_full_wait",
+        "validation_role": "short_transport or source_release"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "all declared data words and lifecycle records persisted with dtype/shape/path/SHA256; ABI validates metadata, core validates bytes/hash, independent family offline replay reads arrays and rechecks values",
+      "kernel_symbol_convention": "tb_g2s_q{Q} or tb_s2g_q{Q}; source-release tb_release_q{Q}",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    }
+  ]
+}

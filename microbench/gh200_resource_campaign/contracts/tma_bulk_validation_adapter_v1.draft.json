@@ -1,0 +1,41 @@
+{
+  "adapter_id": "tma_bulk_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.tma_bulk_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "draft_status": "pending_independent_A_review_not_executable",
+  "files_sha256": {},
+  "planned_files": [
+    "microbench/gh200_resource_campaign/probes/tma_bulk.cu",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp",
+    "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk.py",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_validation.py",
+    "microbench/gh200_resource_campaign/tests/test_tma_bulk_reference.py",
+    "microbench/gh200_resource_campaign/tests/test_tma_bulk.py",
+    "microbench/gh200_resource_campaign/tests/test_tma_bulk_validation.py"
+  ],
+  "contract_sha256": "ba1774087167c9c4c27584f51845fa9a04808deb1d5d9389d76979285f1294c8",
+  "profiles_sha256": "35e4a428ea8d7178ebbaf4c76fa3100c14cf63cfc441bee52f8ee3f3897465a8",
+  "review_dependencies": [
+    {
+      "stage": "S14",
+      "phase": "A",
+      "path": "reviews/S14-A-review-r2.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "early-validation-A",
+      "path": "reviews/S14-early-validation-A-review.json"
+    },
+    {
+      "stage": "S14",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S14-early-validation-source-B-review.json"
+    }
+  ]
+}

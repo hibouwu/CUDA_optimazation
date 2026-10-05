@@ -1,0 +1,1020 @@
+{
+  "schema_version": 1,
+  "module_id": "dense_fp16",
+  "part": "gemm_dispatch",
+  "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "scope": "Fixed Dense FP16 recipe. Exact overload identities, branch predicates, Tensor bindings and compiler inline origins. No GPU run.",
+  "nodes": [
+    {
+      "id": "dispatch.api.rank4",
+      "kind": "api",
+      "name": "cute::gemm：五参 dispatch [4]",
+      "path": "include/cute/algorithm/gemm.hpp",
+      "line": 275,
+      "role": "唯一的D/C rank3、A/B rank2且四个Engine满足is_rmem的五参重载。",
+      "signature": "template <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout,\n          __CUTE_REQUIRES(DLayout::rank == 3 && is_rmem<TD>::value &&\n                          ALayout::rank == 2 && is_rmem<TA>::value &&\n                          BLayout::rank == 2 && is_rmem<TB>::value &&\n                          CLayout::rank == 3 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V,M,N) Logical data\n     Tensor<TA, ALayout> const& A,  // (V,M)   Logical data\n     Tensor<TB, BLayout> const& B,  // (V,N)   Logical data\n     Tensor<TC, CLayout> const& C)  // (V,M,N) Logical data",
+      "qualified_name": "cute::gemm"
+    },
+    {
+      "id": "dispatch.api.five_rvalue",
+      "kind": "api",
+      "name": "cute::gemm：五参 D&& 转发",
+      "path": "include/cute/algorithm/gemm.hpp",
+      "line": 142,
+      "role": "接受D(_,m,ns)产生的临时Tensor；命名D变成lvalue后再次调用gemm。",
+      "signature": "template <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>     && D,\n     Tensor<TA, ALayout> const& A,\n     Tensor<TB, BLayout> const& B,\n     Tensor<TC, CLayout> const& C)",
+      "qualified_name": "cute::gemm"
+    },
+    {
+      "id": "dispatch.binding.ASlice",
+      "kind": "binding",
+      "name": "A：tCrA(_,_,k_block,read_stage)",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 703,
+      "role": "rank2、shape(1,1)；V=1个64位DescriptorIterator值，不是1个FP16输入值。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >",
+      "shape": "(_1,_1)",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >"
+    },
+    {
+      "id": "dispatch.binding.BSlice",
+      "kind": "binding",
+      "name": "B：tCrB(_,_,k_block,read_stage)",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 704,
+      "role": "rank2、shape(1,1)；V=1个64位DescriptorIterator值。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >",
+      "shape": "(_1,_1)",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >"
+    },
+    {
+      "id": "dispatch.binding.Accumulator",
+      "kind": "binding",
+      "name": "D/C：accumulators",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 664,
+      "role": "rank3、shape((128,128),1,1)；Engine是TMEM视图，虽同时满足广义is_rmem谓词。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >",
+      "shape": "((_128,_128),_1,_1)",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >"
+    },
+    {
+      "id": "dispatch.binding.AVector",
+      "kind": "binding",
+      "name": "A(_,m)：rank1描述符切片",
+      "path": "include/cute/algorithm/gemm.hpp",
+      "line": 298,
+      "role": "shape(1)，rank1的A正式参数；DescriptorIterator值为64位。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "shape": "(_1)",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+    },
+    {
+      "id": "dispatch.binding.BVector",
+      "kind": "binding",
+      "name": "B(_,ns)：rank1描述符切片",
+      "path": "include/cute/algorithm/gemm.hpp",
+      "line": 298,
+      "role": "shape(1)，rank1的B正式参数。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "shape": "(_1)",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+    },
+    {
+      "id": "dispatch.binding.DVector",
+      "kind": "binding",
+      "name": "D(_,m,ns) / C(_,m,ns)：rank1 TMEM视图",
+      "path": "include/cute/algorithm/gemm.hpp",
+      "line": 298,
+      "role": "shape((128,128))只有一个顶层mode，故rank1；D临时值进入D&&，命名D再绑定rank1 D&；C类型相同但绑定const&。",
+      "tensor_type": "cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >",
+      "shape": "((_128,_128))",
+      "qualified_name": "cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >"
+    }
+  ],
+  "edges": [
+    {
+      "id": "dispatch.edge.four_to_rank4",
+      "source": "contract.api.gemm",
+      "target": "dispatch.api.rank4",
+      "relation": "calls",
+      "source_expression": "gemm(mma, C, A, B, C)",
+      "condition": "DLayout::rank=3; ALayout::rank=2; BLayout::rank=2; CLayout::rank=3; is_rmem<TD/TA/TB/TC>::value=true。D/C仍是TMEM。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 88,
+          "end_line": 88,
+          "quote": "  return gemm(mma, C, A, B, C);"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 269,
+          "end_line": 279,
+          "quote": "          __CUTE_REQUIRES(DLayout::rank == 3 && is_rmem<TD>::value &&\n                          ALayout::rank == 2 && is_rmem<TA>::value &&\n                          BLayout::rank == 2 && is_rmem<TB>::value &&\n                          CLayout::rank == 3 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V,M,N) Logical data\n     Tensor<TA, ALayout> const& A,  // (V,M)   Logical data\n     Tensor<TB, BLayout> const& B,  // (V,N)   Logical data\n     Tensor<TC, CLayout> const& C)  // (V,M,N) Logical data"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 24,
+          "end_line": 24,
+          "quote": "ASlice.rank=2"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 31,
+          "end_line": 31,
+          "quote": "BSlice.rank=2"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 38,
+          "end_line": 38,
+          "quote": "Accumulator.rank=3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 41,
+          "end_line": 41,
+          "quote": "Accumulator.is_rmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 42,
+          "end_line": 42,
+          "quote": "Accumulator.is_tmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 34670,
+          "end_line": 34676,
+          "quote": " <4><3b7c1>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3b7c2>   DW_AT_abstract_origin: <0x2f8cb>\n    <3b7c6>   DW_AT_low_pc      : 0x21e30\n    <3b7ce>   DW_AT_high_pc     : 0x46220\n    <3b7d6>   DW_AT_call_file   : 43\n    <3b7d7>   DW_AT_call_line   : 88\n    <3b7d8>   DW_AT_call_column : 3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 26889,
+          "end_line": 26895,
+          "quote": " <1><2f8cb>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <2f8cc>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEENSE_ILi1EEESH_EEENSD_IJNSD_IJNSE_ILi65536EEESH_EEENSE_ILi0EEESL_EEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSH_SH_EEENSD_IJSL_SL_EEEEESP_SS_SB_SN_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <2fa92>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <2fbb6>   DW_AT_decl_file   : 43\n    <2fbb7>   DW_AT_decl_line   : 275\n    <2fbb9>   DW_AT_type        : <0x25f1e>\n    <2fbbd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ],
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 88
+      },
+      "selection_kind": "template_overload_resolution",
+      "template_bindings": {
+        "MMA": "cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>",
+        "Tensor<TA,ALayout>": "dispatch.binding.ASlice",
+        "Tensor<TB,BLayout>": "dispatch.binding.BSlice",
+        "Tensor<TD,DLayout>": "dispatch.binding.Accumulator",
+        "Tensor<TC,CLayout>": "dispatch.binding.Accumulator"
+      }
+    },
+    {
+      "id": "dispatch.edge.rank4_to_rvalue",
+      "source": "dispatch.api.rank4",
+      "target": "dispatch.api.five_rvalue",
+      "relation": "calls",
+      "source_expression": "gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns))",
+      "condition": "if constexpr: A V字节=1×8=8且B V字节=1×8=8；源码#if 1选row-major serpentine；for m<M、n<N。本例M=N=1，故m=n=ns=0。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 288,
+          "end_line": 297,
+          "quote": "  if constexpr (decltype(size<0>(A))::value * sizeof(typename TA::value_type) == 8 &&\n                decltype(size<0>(B))::value * sizeof(typename TB::value_type) == 8)\n  {\n#if 1 // NOTE: Row- vs Col- major could depend on the C-matrix order... (which we can test)\n    // Row-major serpentine iteration\n    CUTE_UNROLL\n    for (int m = 0; m < M; ++m) {\n      CUTE_UNROLL\n      for (int n = 0; n < N; ++n) {\n        int ns = (m & 1) ? N-1-n : n;  // Serpentine coordinate"
+        },
+        {
+          "path": "include/cute/tensor_impl.hpp",
+          "start_line": 233,
+          "end_line": 254,
+          "quote": "  template <class Coord>\n  CUTE_HOST_DEVICE constexpr\n  decltype(auto)\n  operator()(Coord const& coord) {\n    if constexpr (has_underscore<Coord>::value) {\n      auto [sliced_layout,offset] = slice_and_offset(coord, layout());\n      return make_tensor(data() + offset, sliced_layout);\n    } else {\n      return data()[layout()(coord)];\n    }\n\n    CUTE_GCC_UNREACHABLE;\n  }\n\n  template <class Coord>\n  CUTE_HOST_DEVICE constexpr\n  decltype(auto)\n  operator()(Coord const& coord) const {\n    if constexpr (has_underscore<Coord>::value) {\n      auto [sliced_layout,offset] = slice_and_offset(coord, layout());\n      return make_tensor(data() + offset, sliced_layout);\n    } else {"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 72,
+          "end_line": 72,
+          "quote": "Dispatch4.A_V_bytes=8"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 73,
+          "end_line": 73,
+          "quote": "Dispatch4.B_V_bytes=8"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 74,
+          "end_line": 74,
+          "quote": "Dispatch4.M=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 75,
+          "end_line": 75,
+          "quote": "Dispatch4.N=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 77,
+          "end_line": 77,
+          "quote": "DVector.is_reference=0"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39121,
+          "end_line": 39127,
+          "quote": " <9><3f60d>: Abbrev Number: 46 (DW_TAG_inlined_subroutine)\n    <3f60e>   DW_AT_abstract_origin: <0x35603>\n    <3f612>   DW_AT_low_pc      : 0x3e950\n    <3f61a>   DW_AT_high_pc     : 0x46060\n    <3f622>   DW_AT_call_file   : 43\n    <3f623>   DW_AT_call_line   : 298\n    <3f625>   DW_AT_call_column : 9"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29221,
+          "end_line": 29227,
+          "quote": " <1><35603>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35604>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_EEvRKNS_8MMA_AtomIJT_EEEONS_6TensorIT0_T1_EERKNSY_IT2_T3_EERKNSY_IT4_T5_EERKNSY_IT6_T7_EE\n    <357b3>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <358c7>   DW_AT_decl_file   : 43\n    <358c8>   DW_AT_decl_line   : 142\n    <358c9>   DW_AT_type        : <0x25f1e>\n    <358cd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ],
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 298
+      },
+      "selection_kind": "if_constexpr_and_preprocessor_branch",
+      "compile_time_selection": {
+        "expression": "decltype(size<0>(A))::value * sizeof(typename TA::value_type) == 8 && decltype(size<0>(B))::value * sizeof(typename TB::value_type) == 8",
+        "value": true,
+        "preprocessor": {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "line": 291,
+          "expression": "1",
+          "value": true
+        }
+      },
+      "runtime_condition": "for (int m=0;m<M;++m) and for (int n=0;n<N;++n); M=N=1 in this recipe"
+    },
+    {
+      "id": "dispatch.edge.rvalue_to_rank1",
+      "source": "dispatch.api.five_rvalue",
+      "target": "contract.api.gemm_rank1",
+      "relation": "calls",
+      "source_expression": "gemm(mma, D, A, B, C)",
+      "condition": "D是命名左值；D/A/B/C的layout rank均1，四个Engine均满足is_rmem。D/C实际仍是TMEM，不经UniversalFMA。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 148,
+          "end_line": 148,
+          "quote": "  return gemm(mma, D, A, B, C);"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 178,
+          "end_line": 197,
+          "quote": "// Dispatch [1]: (V) x (V) => (V)\ntemplate <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout,\n          __CUTE_REQUIRES(DLayout::rank == 1 && is_rmem<TD>::value &&\n                          ALayout::rank == 1 && is_rmem<TA>::value &&\n                          BLayout::rank == 1 && is_rmem<TB>::value &&\n                          CLayout::rank == 1 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V) Logical data\n     Tensor<TA, ALayout> const& A,  // (V) Logical data\n     Tensor<TB, BLayout> const& B,  // (V) Logical data\n     Tensor<TC, CLayout> const& C)  // (V) Logical data\n{\n  // No static assertions on (V), MMA checks compatibility\n  mma.call(D, A, B, C);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 45,
+          "end_line": 45,
+          "quote": "AVector.rank=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 52,
+          "end_line": 52,
+          "quote": "BVector.rank=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 59,
+          "end_line": 59,
+          "quote": "DVector.rank=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 66,
+          "end_line": 66,
+          "quote": "CVector.rank=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 63,
+          "end_line": 63,
+          "quote": "DVector.is_tmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39148,
+          "end_line": 39154,
+          "quote": " <10><3f676>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f677>   DW_AT_abstract_origin: <0x35923>\n    <3f67b>   DW_AT_low_pc      : 0x3ebd0\n    <3f683>   DW_AT_high_pc     : 0x46060\n    <3f68b>   DW_AT_call_file   : 43\n    <3f68c>   DW_AT_call_line   : 148\n    <3f68d>   DW_AT_call_column : 3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29267,
+          "end_line": 29273,
+          "quote": " <1><35923>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35924>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <35ad8>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <35bfc>   DW_AT_decl_file   : 43\n    <35bfd>   DW_AT_decl_line   : 190\n    <35bfe>   DW_AT_type        : <0x25f1e>\n    <35c02>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ],
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 148
+      },
+      "selection_kind": "template_overload_resolution"
+    },
+    {
+      "id": "dispatch.edge.bind_rank4_ASlice",
+      "source": "dispatch.binding.ASlice",
+      "target": "dispatch.api.rank4",
+      "relation": "template_binds",
+      "source_expression": "TA, ALayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >",
+      "condition": "DLayout::rank=3; ALayout::rank=2; BLayout::rank=2; CLayout::rank=3; is_rmem<TD/TA/TB/TC>::value=true。D/C仍是TMEM。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 554,
+          "end_line": 563,
+          "quote": "    TensorStorage& shared_tensors) const {\n\n    // Allocate \"fragments/descriptors\" for A and B matrices\n    Tensor sA = make_tensor(make_smem_ptr(shared_tensors.smem_A.begin()), SmemLayoutA{});          // (BLK_M,BLK_K,PIPE)\n    Tensor sB = make_tensor(make_smem_ptr(shared_tensors.smem_B.begin()), SmemLayoutB{});          // (BLK_N,BLK_K,PIPE)\n\n    // Allocate \"fragments/descriptors\" for A and B matrices\n    Tensor tCrA = TiledMma::make_fragment_A(sA);                                           // (MMA,MMA_M,MMA_K,PIPE)\n    Tensor tCrB = TiledMma::make_fragment_B(sB);                                           // (MMA,MMA_N,MMA_K,PIPE)\n"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 700,
+          "end_line": 705,
+          "quote": "      for (int k_block = 0; k_block < size<2>(tCrA); ++k_block) {\n        // (V,M) x (V,N) => (V,M,N)\n        cute::gemm(tiled_mma,\n                   tCrA(_,_,k_block,read_stage),\n                   tCrB(_,_,k_block,read_stage),\n                   accumulators);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 22,
+          "end_line": 22,
+          "quote": "ASlice=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 23,
+          "end_line": 23,
+          "quote": "ASlice.shape=(_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 24,
+          "end_line": 24,
+          "quote": "ASlice.rank=2"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 25,
+          "end_line": 25,
+          "quote": "ASlice.value_bytes=8"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 27,
+          "end_line": 27,
+          "quote": "ASlice.is_rmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 28,
+          "end_line": 28,
+          "quote": "ASlice.is_tmem=0"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_rank4_BSlice",
+      "source": "dispatch.binding.BSlice",
+      "target": "dispatch.api.rank4",
+      "relation": "template_binds",
+      "source_expression": "TB, BLayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >",
+      "condition": "DLayout::rank=3; ALayout::rank=2; BLayout::rank=2; CLayout::rank=3; is_rmem<TD/TA/TB/TC>::value=true。D/C仍是TMEM。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 554,
+          "end_line": 563,
+          "quote": "    TensorStorage& shared_tensors) const {\n\n    // Allocate \"fragments/descriptors\" for A and B matrices\n    Tensor sA = make_tensor(make_smem_ptr(shared_tensors.smem_A.begin()), SmemLayoutA{});          // (BLK_M,BLK_K,PIPE)\n    Tensor sB = make_tensor(make_smem_ptr(shared_tensors.smem_B.begin()), SmemLayoutB{});          // (BLK_N,BLK_K,PIPE)\n\n    // Allocate \"fragments/descriptors\" for A and B matrices\n    Tensor tCrA = TiledMma::make_fragment_A(sA);                                           // (MMA,MMA_M,MMA_K,PIPE)\n    Tensor tCrB = TiledMma::make_fragment_B(sB);                                           // (MMA,MMA_N,MMA_K,PIPE)\n"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 700,
+          "end_line": 705,
+          "quote": "      for (int k_block = 0; k_block < size<2>(tCrA); ++k_block) {\n        // (V,M) x (V,N) => (V,M,N)\n        cute::gemm(tiled_mma,\n                   tCrA(_,_,k_block,read_stage),\n                   tCrB(_,_,k_block,read_stage),\n                   accumulators);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 29,
+          "end_line": 29,
+          "quote": "BSlice=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 30,
+          "end_line": 30,
+          "quote": "BSlice.shape=(_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 31,
+          "end_line": 31,
+          "quote": "BSlice.rank=2"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 32,
+          "end_line": 32,
+          "quote": "BSlice.value_bytes=8"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 34,
+          "end_line": 34,
+          "quote": "BSlice.is_rmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 35,
+          "end_line": 35,
+          "quote": "BSlice.is_tmem=0"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_rank4_Accumulator",
+      "source": "dispatch.binding.Accumulator",
+      "target": "dispatch.api.rank4",
+      "relation": "template_binds",
+      "source_expression": "TD, DLayout; TC, CLayout from cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >",
+      "condition": "DLayout::rank=3; ALayout::rank=2; BLayout::rank=2; CLayout::rank=3; is_rmem<TD/TA/TB/TC>::value=true。D/C仍是TMEM。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 612,
+          "end_line": 612,
+          "quote": "    auto tmem_storage = collective_mainloop.template init_tmem_tensors<EpilogueTile, IsOverlappingAccum>(EpilogueTile{});"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 453,
+          "end_line": 477,
+          "quote": "  CUTLASS_DEVICE static\n  auto\n  partition_accumulator_shape() {\n    auto acc_shape = partition_shape_C(TiledMma{}, take<0,2>(TileShape{}));  // ((MMA_TILE_M,MMA_TILE_N),MMA_M,MMA_N)\n\n    return acc_shape;\n  }\n\n  template <class TmemStorage>\n  CUTLASS_DEVICE static\n  auto\n  slice_accumulator(TmemStorage tmem_storage, int stage) {\n    return cute::make_tuple(tmem_storage.accumulators(_,_,_,stage));\n  }\n\n  template <class EpilogueTile, bool IsOverlappingAccum = false>\n  CUTLASS_DEVICE static\n  auto\n  init_tmem_tensors(EpilogueTile epi_tile) {\n    TiledMma tiled_mma;\n    auto acc_shape = partition_accumulator_shape();\n    // ((MMA_TILE_M,MMA_TILE_N),MMA_M,MMA_N,ACC_PIPE) where ACC_PIPE=2 so we can double buffer our accumulators for mainloop and epilogue.\n    Tensor accumulators = cutlass::detail::make_sm100_accumulator<AccumulatorPipelineStageCount, IsOverlappingAccum>(\n        tiled_mma, acc_shape, EpilogueTile{});\n    TmemStorage<decltype(accumulators)> tmem_storage;"
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 762,
+          "end_line": 766,
+          "quote": "          mainloop_pipe_consumer_state = collective_mainloop.mma(\n            cute::make_tuple(mainloop_pipeline, accumulator_pipeline),\n            cute::make_tuple(mainloop_pipe_consumer_state, accumulator_pipe_producer_state),\n            collective_mainloop.slice_accumulator(tmem_storage, acc_stage),\n            mma_inputs,"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 36,
+          "end_line": 36,
+          "quote": "Accumulator=cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 37,
+          "end_line": 37,
+          "quote": "Accumulator.shape=((_128,_128),_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 38,
+          "end_line": 38,
+          "quote": "Accumulator.rank=3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 39,
+          "end_line": 39,
+          "quote": "Accumulator.value_bytes=4"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 41,
+          "end_line": 41,
+          "quote": "Accumulator.is_rmem=1"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 42,
+          "end_line": 42,
+          "quote": "Accumulator.is_tmem=1"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_rank1_AVector",
+      "source": "dispatch.binding.AVector",
+      "target": "contract.api.gemm_rank1",
+      "relation": "template_binds",
+      "source_expression": "TA, ALayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "condition": "rank1重载中的实际Tensor绑定；D和C的engine/layout相同，引用类别不同。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 148,
+          "end_line": 148,
+          "quote": "  return gemm(mma, D, A, B, C);"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 178,
+          "end_line": 194,
+          "quote": "// Dispatch [1]: (V) x (V) => (V)\ntemplate <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout,\n          __CUTE_REQUIRES(DLayout::rank == 1 && is_rmem<TD>::value &&\n                          ALayout::rank == 1 && is_rmem<TA>::value &&\n                          BLayout::rank == 1 && is_rmem<TB>::value &&\n                          CLayout::rank == 1 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V) Logical data\n     Tensor<TA, ALayout> const& A,  // (V) Logical data\n     Tensor<TB, BLayout> const& B,  // (V) Logical data\n     Tensor<TC, CLayout> const& C)  // (V) Logical data"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 43,
+          "end_line": 43,
+          "quote": "AVector=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 44,
+          "end_line": 44,
+          "quote": "AVector.shape=(_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 45,
+          "end_line": 45,
+          "quote": "AVector.rank=1"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_atom_AVector",
+      "source": "dispatch.binding.AVector",
+      "target": "contract.api.mma_atom_call",
+      "relation": "template_binds",
+      "source_expression": "TA, ALayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "condition": "gemm rank1直接mma.call(D,A,B,C)，未更换Tensor类型；外层MMA_Atom实现属于本例F16 2×1SM Traits。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 197,
+          "end_line": 197,
+          "quote": "  mma.call(D, A, B, C);"
+        },
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 94,
+          "end_line": 104,
+          "quote": "  call(Tensor<TD, DLayout>      & D,\n       Tensor<TA, ALayout> const& A,\n       Tensor<TB, BLayout> const& B,\n       Tensor<TC, CLayout> const& C) const\n  {\n    static_assert(DLayout::rank == 1, \"Expected rank-1 D tensor\");\n    static_assert(ALayout::rank == 1, \"Expected rank-1 A tensor\");\n    static_assert(BLayout::rank == 1, \"Expected rank-1 B tensor\");\n    static_assert(CLayout::rank == 1, \"Expected rank-1 C tensor\");\n\n    return mma_unpack(static_cast<Traits const&>(*this), D, A, B, C);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 43,
+          "end_line": 43,
+          "quote": "AVector=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39175,
+          "end_line": 39181,
+          "quote": " <11><3f6de>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f6df>   DW_AT_abstract_origin: <0x35c3c>\n    <3f6e3>   DW_AT_low_pc      : 0x3ee30\n    <3f6eb>   DW_AT_high_pc     : 0x46060\n    <3f6f3>   DW_AT_call_file   : 43\n    <3f6f4>   DW_AT_call_line   : 197\n    <3f6f5>   DW_AT_call_column : 3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29303,
+          "end_line": 29309,
+          "quote": " <1><35c3c>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35c3d>   DW_AT_MIPS_linkage_name: _ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <35df8>   DW_AT_name        : call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <35e88>   DW_AT_decl_file   : 19\n    <35e89>   DW_AT_decl_line   : 94\n    <35e8a>   DW_AT_type        : <0x25f1e>\n    <35e8e>   DW_AT_inline      : 1\t(inlined)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39202,
+          "end_line": 39208,
+          "quote": " <12><3f745>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f746>   DW_AT_abstract_origin: <0x35ed1>\n    <3f74a>   DW_AT_low_pc      : 0x3f0b0\n    <3f752>   DW_AT_high_pc     : 0x46010\n    <3f75a>   DW_AT_call_file   : 19\n    <3f75b>   DW_AT_call_line   : 104\n    <3f75c>   DW_AT_call_column : 5"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29341,
+          "end_line": 29347,
+          "quote": " <1><35ed1>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <35ed2>   DW_AT_MIPS_linkage_name: _ZN4cute10mma_unpackINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNS6_IJNS_1CILi128EEES8_EEEEEENS6_IJNS6_IJNS7_ILi65536EEENS7_ILi1EEEEEEEEEEENS1_INS_4UMMA18DescriptorIteratorEEENS5_INS6_IJSC_EEENS6_IJNS7_ILi0EEEEEEEESI_SM_S4_SF_EEvRKNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tESQ_fLi256ELi128ELNSG_5MajorE0ELSR_1ELNSG_7ScaleInE0ELSS_0EEEJEEERNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <36088>   DW_AT_name        : mma_unpack<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <3611e>   DW_AT_decl_file   : 13\n    <3611f>   DW_AT_decl_line   : 2072\n    <36121>   DW_AT_type        : <0x25f1e>\n    <36125>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_rank1_BVector",
+      "source": "dispatch.binding.BVector",
+      "target": "contract.api.gemm_rank1",
+      "relation": "template_binds",
+      "source_expression": "TB, BLayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "condition": "rank1重载中的实际Tensor绑定；D和C的engine/layout相同，引用类别不同。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 148,
+          "end_line": 148,
+          "quote": "  return gemm(mma, D, A, B, C);"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 178,
+          "end_line": 194,
+          "quote": "// Dispatch [1]: (V) x (V) => (V)\ntemplate <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout,\n          __CUTE_REQUIRES(DLayout::rank == 1 && is_rmem<TD>::value &&\n                          ALayout::rank == 1 && is_rmem<TA>::value &&\n                          BLayout::rank == 1 && is_rmem<TB>::value &&\n                          CLayout::rank == 1 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V) Logical data\n     Tensor<TA, ALayout> const& A,  // (V) Logical data\n     Tensor<TB, BLayout> const& B,  // (V) Logical data\n     Tensor<TC, CLayout> const& C)  // (V) Logical data"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 50,
+          "end_line": 50,
+          "quote": "BVector=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 51,
+          "end_line": 51,
+          "quote": "BVector.shape=(_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 52,
+          "end_line": 52,
+          "quote": "BVector.rank=1"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_atom_BVector",
+      "source": "dispatch.binding.BVector",
+      "target": "contract.api.mma_atom_call",
+      "relation": "template_binds",
+      "source_expression": "TB, BLayout from cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >",
+      "condition": "gemm rank1直接mma.call(D,A,B,C)，未更换Tensor类型；外层MMA_Atom实现属于本例F16 2×1SM Traits。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 197,
+          "end_line": 197,
+          "quote": "  mma.call(D, A, B, C);"
+        },
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 94,
+          "end_line": 104,
+          "quote": "  call(Tensor<TD, DLayout>      & D,\n       Tensor<TA, ALayout> const& A,\n       Tensor<TB, BLayout> const& B,\n       Tensor<TC, CLayout> const& C) const\n  {\n    static_assert(DLayout::rank == 1, \"Expected rank-1 D tensor\");\n    static_assert(ALayout::rank == 1, \"Expected rank-1 A tensor\");\n    static_assert(BLayout::rank == 1, \"Expected rank-1 B tensor\");\n    static_assert(CLayout::rank == 1, \"Expected rank-1 C tensor\");\n\n    return mma_unpack(static_cast<Traits const&>(*this), D, A, B, C);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 50,
+          "end_line": 50,
+          "quote": "BVector=cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39175,
+          "end_line": 39181,
+          "quote": " <11><3f6de>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f6df>   DW_AT_abstract_origin: <0x35c3c>\n    <3f6e3>   DW_AT_low_pc      : 0x3ee30\n    <3f6eb>   DW_AT_high_pc     : 0x46060\n    <3f6f3>   DW_AT_call_file   : 43\n    <3f6f4>   DW_AT_call_line   : 197\n    <3f6f5>   DW_AT_call_column : 3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29303,
+          "end_line": 29309,
+          "quote": " <1><35c3c>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35c3d>   DW_AT_MIPS_linkage_name: _ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <35df8>   DW_AT_name        : call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <35e88>   DW_AT_decl_file   : 19\n    <35e89>   DW_AT_decl_line   : 94\n    <35e8a>   DW_AT_type        : <0x25f1e>\n    <35e8e>   DW_AT_inline      : 1\t(inlined)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39202,
+          "end_line": 39208,
+          "quote": " <12><3f745>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f746>   DW_AT_abstract_origin: <0x35ed1>\n    <3f74a>   DW_AT_low_pc      : 0x3f0b0\n    <3f752>   DW_AT_high_pc     : 0x46010\n    <3f75a>   DW_AT_call_file   : 19\n    <3f75b>   DW_AT_call_line   : 104\n    <3f75c>   DW_AT_call_column : 5"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29341,
+          "end_line": 29347,
+          "quote": " <1><35ed1>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <35ed2>   DW_AT_MIPS_linkage_name: _ZN4cute10mma_unpackINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNS6_IJNS_1CILi128EEES8_EEEEEENS6_IJNS6_IJNS7_ILi65536EEENS7_ILi1EEEEEEEEEEENS1_INS_4UMMA18DescriptorIteratorEEENS5_INS6_IJSC_EEENS6_IJNS7_ILi0EEEEEEEESI_SM_S4_SF_EEvRKNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tESQ_fLi256ELi128ELNSG_5MajorE0ELSR_1ELNSG_7ScaleInE0ELSS_0EEEJEEERNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <36088>   DW_AT_name        : mma_unpack<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <3611e>   DW_AT_decl_file   : 13\n    <3611f>   DW_AT_decl_line   : 2072\n    <36121>   DW_AT_type        : <0x25f1e>\n    <36125>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_rank1_DVector",
+      "source": "dispatch.binding.DVector",
+      "target": "contract.api.gemm_rank1",
+      "relation": "template_binds",
+      "source_expression": "TD, DLayout; TC, CLayout from cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >",
+      "condition": "rank1重载中的实际Tensor绑定；D和C的engine/layout相同，引用类别不同。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 148,
+          "end_line": 148,
+          "quote": "  return gemm(mma, D, A, B, C);"
+        },
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 178,
+          "end_line": 194,
+          "quote": "// Dispatch [1]: (V) x (V) => (V)\ntemplate <class MMA,\n          class TD, class DLayout,\n          class TA, class ALayout,\n          class TB, class BLayout,\n          class TC, class CLayout,\n          __CUTE_REQUIRES(DLayout::rank == 1 && is_rmem<TD>::value &&\n                          ALayout::rank == 1 && is_rmem<TA>::value &&\n                          BLayout::rank == 1 && is_rmem<TB>::value &&\n                          CLayout::rank == 1 && is_rmem<TC>::value)>\nCUTE_HOST_DEVICE\nvoid\ngemm(MMA_Atom<MMA>       const& mma,\n     Tensor<TD, DLayout>      & D,  // (V) Logical data\n     Tensor<TA, ALayout> const& A,  // (V) Logical data\n     Tensor<TB, BLayout> const& B,  // (V) Logical data\n     Tensor<TC, CLayout> const& C)  // (V) Logical data"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 57,
+          "end_line": 57,
+          "quote": "DVector=cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 58,
+          "end_line": 58,
+          "quote": "DVector.shape=((_128,_128))"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 59,
+          "end_line": 59,
+          "quote": "DVector.rank=1"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.bind_atom_DVector",
+      "source": "dispatch.binding.DVector",
+      "target": "contract.api.mma_atom_call",
+      "relation": "template_binds",
+      "source_expression": "TD, DLayout; TC, CLayout from cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >",
+      "condition": "gemm rank1直接mma.call(D,A,B,C)，未更换Tensor类型；外层MMA_Atom实现属于本例F16 2×1SM Traits。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 197,
+          "end_line": 197,
+          "quote": "  mma.call(D, A, B, C);"
+        },
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 94,
+          "end_line": 104,
+          "quote": "  call(Tensor<TD, DLayout>      & D,\n       Tensor<TA, ALayout> const& A,\n       Tensor<TB, BLayout> const& B,\n       Tensor<TC, CLayout> const& C) const\n  {\n    static_assert(DLayout::rank == 1, \"Expected rank-1 D tensor\");\n    static_assert(ALayout::rank == 1, \"Expected rank-1 A tensor\");\n    static_assert(BLayout::rank == 1, \"Expected rank-1 B tensor\");\n    static_assert(CLayout::rank == 1, \"Expected rank-1 C tensor\");\n\n    return mma_unpack(static_cast<Traits const&>(*this), D, A, B, C);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 57,
+          "end_line": 57,
+          "quote": "DVector=cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39175,
+          "end_line": 39181,
+          "quote": " <11><3f6de>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f6df>   DW_AT_abstract_origin: <0x35c3c>\n    <3f6e3>   DW_AT_low_pc      : 0x3ee30\n    <3f6eb>   DW_AT_high_pc     : 0x46060\n    <3f6f3>   DW_AT_call_file   : 43\n    <3f6f4>   DW_AT_call_line   : 197\n    <3f6f5>   DW_AT_call_column : 3"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29303,
+          "end_line": 29309,
+          "quote": " <1><35c3c>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35c3d>   DW_AT_MIPS_linkage_name: _ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <35df8>   DW_AT_name        : call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <35e88>   DW_AT_decl_file   : 19\n    <35e89>   DW_AT_decl_line   : 94\n    <35e8a>   DW_AT_type        : <0x25f1e>\n    <35e8e>   DW_AT_inline      : 1\t(inlined)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 39202,
+          "end_line": 39208,
+          "quote": " <12><3f745>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f746>   DW_AT_abstract_origin: <0x35ed1>\n    <3f74a>   DW_AT_low_pc      : 0x3f0b0\n    <3f752>   DW_AT_high_pc     : 0x46010\n    <3f75a>   DW_AT_call_file   : 19\n    <3f75b>   DW_AT_call_line   : 104\n    <3f75c>   DW_AT_call_column : 5"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29341,
+          "end_line": 29347,
+          "quote": " <1><35ed1>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <35ed2>   DW_AT_MIPS_linkage_name: _ZN4cute10mma_unpackINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNS6_IJNS_1CILi128EEES8_EEEEEENS6_IJNS6_IJNS7_ILi65536EEENS7_ILi1EEEEEEEEEEENS1_INS_4UMMA18DescriptorIteratorEEENS5_INS6_IJSC_EEENS6_IJNS7_ILi0EEEEEEEESI_SM_S4_SF_EEvRKNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tESQ_fLi256ELi128ELNSG_5MajorE0ELSR_1ELNSG_7ScaleInE0ELSS_0EEEJEEERNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <36088>   DW_AT_name        : mma_unpack<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <3611e>   DW_AT_decl_file   : 13\n    <3611f>   DW_AT_decl_line   : 2072\n    <36121>   DW_AT_type        : <0x25f1e>\n    <36125>   DW_AT_inline      : 1\t(inlined)"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.slice_ASlice",
+      "source": "dispatch.binding.ASlice",
+      "target": "dispatch.binding.AVector",
+      "relation": "type_uses",
+      "source_expression": "decltype(A(_,m))",
+      "condition": "切片保留V顶层mode、移除M/N modes；编译期类型关系，不是额外运行调用边。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+          "start_line": 18,
+          "end_line": 35,
+          "quote": "    GemmKernel::AccumulatorPipelineStageCount, GemmKernel::IsOverlappingAccum>(\n    TiledMma{}, AccShape{}, GemmKernel::EpilogueTile{}));\nusing Accumulator = decltype(std::declval<BulkAccumulator&>()(_,_,_,int{}));\nusing ASlice = decltype(std::declval<FragmentA&>()(_,_,int{},int{}));\nusing BSlice = decltype(std::declval<FragmentB&>()(_,_,int{},int{}));\nusing AVector = decltype(std::declval<ASlice const&>()(_,int{}));\nusing BVector = decltype(std::declval<BSlice const&>()(_,int{}));\nusing DVector = decltype(std::declval<Accumulator&>()(_,int{},int{}));\nusing CVector = decltype(std::declval<Accumulator const&>()(_,int{},int{}));\ntemplate<class T> constexpr int rank_of = T::layout_type::rank;\ntemplate<class T> constexpr int value_bytes = decltype(size<0>(typename T::layout_type{}))::value * sizeof(typename T::engine_type::value_type);\nstatic_assert(rank_of<FragmentA> == 4 && rank_of<FragmentB> == 4);\nstatic_assert(rank_of<ASlice> == 2 && rank_of<BSlice> == 2 && rank_of<Accumulator> == 3);\nstatic_assert(is_rmem<typename ASlice::engine_type>::value && is_rmem<typename BSlice::engine_type>::value);\nstatic_assert(is_rmem<typename Accumulator::engine_type>::value && is_tmem<typename Accumulator::engine_type>::value);\nstatic_assert(value_bytes<ASlice> == 8 && value_bytes<BSlice> == 8);\nstatic_assert(rank_of<AVector> == 1 && rank_of<BVector> == 1 && rank_of<DVector> == 1 && rank_of<CVector> == 1);\nstatic_assert(!std::is_reference_v<DVector>, \"D(_,m,ns) is a temporary, requiring gemm's D&& forwarding overload\");"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 23,
+          "end_line": 23,
+          "quote": "ASlice.shape=(_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 44,
+          "end_line": 44,
+          "quote": "AVector.shape=(_1)"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.slice_BSlice",
+      "source": "dispatch.binding.BSlice",
+      "target": "dispatch.binding.BVector",
+      "relation": "type_uses",
+      "source_expression": "decltype(B(_,ns))",
+      "condition": "切片保留V顶层mode、移除M/N modes；编译期类型关系，不是额外运行调用边。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+          "start_line": 18,
+          "end_line": 35,
+          "quote": "    GemmKernel::AccumulatorPipelineStageCount, GemmKernel::IsOverlappingAccum>(\n    TiledMma{}, AccShape{}, GemmKernel::EpilogueTile{}));\nusing Accumulator = decltype(std::declval<BulkAccumulator&>()(_,_,_,int{}));\nusing ASlice = decltype(std::declval<FragmentA&>()(_,_,int{},int{}));\nusing BSlice = decltype(std::declval<FragmentB&>()(_,_,int{},int{}));\nusing AVector = decltype(std::declval<ASlice const&>()(_,int{}));\nusing BVector = decltype(std::declval<BSlice const&>()(_,int{}));\nusing DVector = decltype(std::declval<Accumulator&>()(_,int{},int{}));\nusing CVector = decltype(std::declval<Accumulator const&>()(_,int{},int{}));\ntemplate<class T> constexpr int rank_of = T::layout_type::rank;\ntemplate<class T> constexpr int value_bytes = decltype(size<0>(typename T::layout_type{}))::value * sizeof(typename T::engine_type::value_type);\nstatic_assert(rank_of<FragmentA> == 4 && rank_of<FragmentB> == 4);\nstatic_assert(rank_of<ASlice> == 2 && rank_of<BSlice> == 2 && rank_of<Accumulator> == 3);\nstatic_assert(is_rmem<typename ASlice::engine_type>::value && is_rmem<typename BSlice::engine_type>::value);\nstatic_assert(is_rmem<typename Accumulator::engine_type>::value && is_tmem<typename Accumulator::engine_type>::value);\nstatic_assert(value_bytes<ASlice> == 8 && value_bytes<BSlice> == 8);\nstatic_assert(rank_of<AVector> == 1 && rank_of<BVector> == 1 && rank_of<DVector> == 1 && rank_of<CVector> == 1);\nstatic_assert(!std::is_reference_v<DVector>, \"D(_,m,ns) is a temporary, requiring gemm's D&& forwarding overload\");"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 30,
+          "end_line": 30,
+          "quote": "BSlice.shape=(_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 51,
+          "end_line": 51,
+          "quote": "BVector.shape=(_1)"
+        }
+      ]
+    },
+    {
+      "id": "dispatch.edge.slice_Accumulator",
+      "source": "dispatch.binding.Accumulator",
+      "target": "dispatch.binding.DVector",
+      "relation": "type_uses",
+      "source_expression": "decltype(D(_,m,ns) / C(_,m,ns))",
+      "condition": "切片保留V顶层mode、移除M/N modes；编译期类型关系，不是额外运行调用边。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/gemm.hpp",
+          "start_line": 298,
+          "end_line": 298,
+          "quote": "        gemm(mma, D(_,m,ns), A(_,m), B(_,ns), C(_,m,ns));"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+          "start_line": 18,
+          "end_line": 35,
+          "quote": "    GemmKernel::AccumulatorPipelineStageCount, GemmKernel::IsOverlappingAccum>(\n    TiledMma{}, AccShape{}, GemmKernel::EpilogueTile{}));\nusing Accumulator = decltype(std::declval<BulkAccumulator&>()(_,_,_,int{}));\nusing ASlice = decltype(std::declval<FragmentA&>()(_,_,int{},int{}));\nusing BSlice = decltype(std::declval<FragmentB&>()(_,_,int{},int{}));\nusing AVector = decltype(std::declval<ASlice const&>()(_,int{}));\nusing BVector = decltype(std::declval<BSlice const&>()(_,int{}));\nusing DVector = decltype(std::declval<Accumulator&>()(_,int{},int{}));\nusing CVector = decltype(std::declval<Accumulator const&>()(_,int{},int{}));\ntemplate<class T> constexpr int rank_of = T::layout_type::rank;\ntemplate<class T> constexpr int value_bytes = decltype(size<0>(typename T::layout_type{}))::value * sizeof(typename T::engine_type::value_type);\nstatic_assert(rank_of<FragmentA> == 4 && rank_of<FragmentB> == 4);\nstatic_assert(rank_of<ASlice> == 2 && rank_of<BSlice> == 2 && rank_of<Accumulator> == 3);\nstatic_assert(is_rmem<typename ASlice::engine_type>::value && is_rmem<typename BSlice::engine_type>::value);\nstatic_assert(is_rmem<typename Accumulator::engine_type>::value && is_tmem<typename Accumulator::engine_type>::value);\nstatic_assert(value_bytes<ASlice> == 8 && value_bytes<BSlice> == 8);\nstatic_assert(rank_of<AVector> == 1 && rank_of<BVector> == 1 && rank_of<DVector> == 1 && rank_of<CVector> == 1);\nstatic_assert(!std::is_reference_v<DVector>, \"D(_,m,ns) is a temporary, requiring gemm's D&& forwarding overload\");"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 37,
+          "end_line": 37,
+          "quote": "Accumulator.shape=((_128,_128),_1,_1)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+          "start_line": 58,
+          "end_line": 58,
+          "quote": "DVector.shape=((_128,_128))"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "dispatch.view.calls",
+      "title": "Dense：Mainloop到MMA_Atom的真实重载调用链",
+      "node_ids": [
+        "contract.api.mma",
+        "contract.api.gemm",
+        "dispatch.api.rank4",
+        "dispatch.api.five_rvalue",
+        "contract.api.gemm_rank1",
+        "contract.api.mma_atom_call"
+      ],
+      "edge_ids": [
+        "contract.edge.mma_gemm",
+        "dispatch.edge.four_to_rank4",
+        "dispatch.edge.rank4_to_rvalue",
+        "dispatch.edge.rvalue_to_rank1",
+        "contract.edge.gemm_atom"
+      ]
+    },
+    {
+      "id": "dispatch.view.tensor_bindings",
+      "title": "Dense：描述符与TMEM切片如何决定rank分派",
+      "node_ids": [
+        "dispatch.binding.ASlice",
+        "dispatch.binding.BSlice",
+        "dispatch.binding.Accumulator",
+        "dispatch.binding.AVector",
+        "dispatch.binding.BVector",
+        "dispatch.binding.DVector",
+        "dispatch.api.rank4",
+        "contract.api.gemm_rank1",
+        "contract.api.mma_atom_call"
+      ],
+      "edge_ids": [
+        "dispatch.edge.bind_rank4_ASlice",
+        "dispatch.edge.bind_rank4_BSlice",
+        "dispatch.edge.bind_rank4_Accumulator",
+        "dispatch.edge.bind_rank1_AVector",
+        "dispatch.edge.bind_atom_AVector",
+        "dispatch.edge.bind_rank1_BVector",
+        "dispatch.edge.bind_atom_BVector",
+        "dispatch.edge.bind_rank1_DVector",
+        "dispatch.edge.bind_atom_DVector",
+        "dispatch.edge.slice_ASlice",
+        "dispatch.edge.slice_BSlice",
+        "dispatch.edge.slice_Accumulator"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "dispatch.issue.runtime_not_tested",
+      "status": "not_in_scope",
+      "message": "静态探针不验证合法启动、TMEM分配/地址、同步完成、数值正确性或性能；probe kernel未运行。"
+    },
+    {
+      "id": "dispatch.issue.other_configurations",
+      "status": "not_in_scope",
+      "message": "未枚举其他Tile/Cluster/数据类型，也不把本例M=N=1的row分支当作普遍遍历策略或优化收益。"
+    }
+  ],
+  "resolves_external_issues": [
+    {
+      "id": "types.issue.tensor_callsite_bindings",
+      "scope": "Only this fixed Dense mma callsite; actual rank1 Tensor bindings and Traits2072 DWARF origin are now provided.",
+      "evidence_path": "data/modules/dense_fp16/gemm_dispatch_debug_index.json"
+    }
+  ],
+  "compile_evidence": [
+    {
+      "id": "dispatch.compile.snapshot_sm110a",
+      "status": "static_dispatch_probe_pass",
+      "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/metadata.json",
+      "sha256": "214bd8175e74785dd09479e4614ca5309483032dcaf5a5101bbc1d8c234102db",
+      "target": "sm_110a",
+      "recipe_arch_tag": "cutlass::arch::Sm100",
+      "gpu_executed": false,
+      "probe_source": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/input.cu",
+      "type_log": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/host_type_dump.stdout.txt",
+      "ptx_path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/probe.ptx",
+      "dwarf_index": "data/modules/dense_fp16/gemm_dispatch_debug_index.json",
+      "all_commands_returned_zero": true,
+      "limitations": "One synthetic kernel reproduces source Tensor construction/slices and compiles original gemm bodies. Full real-kernel emission is separately evidenced by immutable run-334xibhm. Debug register/stack properties are not performance measurements."
+    }
+  ],
+  "provenance": {
+    "generator_sha256": "9abd521fcb137585b40b59bbfcb989578b6b666d68d9a0bce1a71daf16b93f73",
+    "snapshot_scope_sha256": "2b8a0094ff40dcd0a47c4da64e309fda8af98dc1ecdeb9b28a6e8a8692c2970f",
+    "external_node_ids": [
+      "contract.api.mma",
+      "contract.api.gemm",
+      "contract.api.gemm_rank1",
+      "contract.api.mma_atom_call"
+    ],
+    "external_edge_ids": [
+      "contract.edge.mma_gemm",
+      "contract.edge.gemm_atom"
+    ],
+    "source_paths_are_snapshot_include_relative": true
+  }
+}

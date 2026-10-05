@@ -1,0 +1,1441 @@
+{
+  "nodes": {
+    "contract.type.recipe": {
+      "layer": "调度策略类型",
+      "summary": "把输入、调度与累加器的阶段数及 cluster/架构标签组合成 Mainloop DispatchPolicy，供 Collective/Kernel 在编译期选择类型和容量；它不执行搬运或乘加。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Stages_": "输入 A/B 流水的编译期阶段数，决定 MainloopPipeline 的缓冲槽数；本代表配置为 8。",
+        "SchedulerPipelineStageCount_": "调度数据流水的编译期阶段数；DispatchPolicy 将它交给后续 Kernel 与 Collective 使用。",
+        "AccumulatorPipelineStageCount_": "累加结果交接流水的编译期阶段数；不是输入 A/B 的共享内存阶段数。",
+        "ClusterShape_": "CTA cluster 的形状类型，决定协作范围和实现选择；本代表配置为 Shape<_2,_2,_1>。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。"
+      }
+    },
+    "contract.type.kernel": {
+      "layer": "Kernel 层",
+      "summary": "GemmUniversal 的已选 SM100 TMA warp-specialized 类特化，把 Mainloop、Epilogue、Scheduler 和共享资源组合成完整 Kernel；Host 参数准备与设备 operator() 是该类型的不同职责。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "ProblemShape_": "GEMM 问题形状类型，规定维数及静态/动态分量；一次计算的具体 M/N/K/L 由 Arguments/Params 对象承载。",
+        "CollectiveMainloop_": "执行输入搬运和乘加主循环的 Collective 类型，向 Kernel 提供数据类型、Tile、Pipeline 和设备接口。",
+        "CollectiveEpilogue_": "处理累加器、融合操作和输出的 Collective 类型；它与 Mainloop 通过累加器表示及交接协议配合。",
+        "TileSchedulerTag_": "编译期工作调度策略标签，参与选择 TileScheduler 类型；不是当前 work tile 的坐标或运行状态。"
+      }
+    },
+    "contract.type.mainloop": {
+      "layer": "Collective 主循环层",
+      "summary": "CollectiveMma 的已选实现将 A/B 的 TMA load 与 UMMA 计算分给不同参与者，通过输入 Pipeline 保护共享内存，并通过累加器 Pipeline 与 Epilogue 交接 TMEM 结果。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。"
+      }
+    },
+    "contract.type.input_pipeline": {
+      "layer": "Collective 的输入流水类型",
+      "summary": "MainloopPipeline 是 CollectiveMma 内的类型别名，绑定 PipelineTmaUmmaAsync；它保护 A/B 的共享内存阶段，让 TMA 完成后 MMA 才读取，并在 MMA 不再读取后允许生产者复用。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。"
+      }
+    },
+    "contract.type.acc_pipeline": {
+      "layer": "Kernel 的累加器流水类型",
+      "summary": "AccumulatorPipeline 是 Kernel 内的类型别名，绑定 PipelineUmmaAsync；full 表示 MMA 结果可以消费，empty 表示 Epilogue 已不再读取对应累加器阶段。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "ProblemShape_": "GEMM 问题形状类型，规定维数及静态/动态分量；一次计算的具体 M/N/K/L 由 Arguments/Params 对象承载。",
+        "CollectiveMainloop_": "执行输入搬运和乘加主循环的 Collective 类型，向 Kernel 提供数据类型、Tile、Pipeline 和设备接口。",
+        "CollectiveEpilogue_": "处理累加器、融合操作和输出的 Collective 类型；它与 Mainloop 通过累加器表示及交接协议配合。",
+        "TileSchedulerTag_": "编译期工作调度策略标签，参与选择 TileScheduler 类型；不是当前 work tile 的坐标或运行状态。"
+      }
+    },
+    "contract.type.epilogue": {
+      "layer": "Collective 输出层",
+      "summary": "CollectiveEpilogue 的已选 TMA 特化消费 TMEM 累加器，组织 C 的读取、寄存器融合、D 的共享内存中转和 TMA store；不同缓冲各自有对应流水和复用条件。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "StagesC_": "Epilogue 输入 C 的编译期缓冲阶段数。",
+        "StagesD_": "Epilogue 输出 D 的编译期缓冲阶段数；实际 StorePipeline 类型还受共享内存复用配置影响。",
+        "FragmentSize_": "Epilogue 每次交给融合回调处理的片段元素数，决定寄存器侧向量组织。",
+        "ReuseSmemC_": "编译期布尔配置，控制 C 的共享内存空间是否可供输出阶段复用；改变容量和复用等待条件。",
+        "DelayTmaStore_": "编译期请求延迟 TMA store 的布尔配置；固定实现还要求 UnrollEpiLoop，最终 DelayTmaStore 是二者的逻辑与，不表示写回已经完成。",
+        "CtaTileShape_": "Epilogue 所处理 CTA 工作块的形状类型，规定输出分区的外层范围。",
+        "EpilogueTile_": "一个 CTA 工作块内部 Epilogue 子块的形状类型，控制累加器读取和输出循环的分块。",
+        "ElementC_": "C 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideC_": "C 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementD_": "D 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideD_": "D 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "FusionCallbacks_": "融合回调类型，提供残差读取、逐元素变换和各处理阶段钩子；具体操作和所需状态由该类型决定。",
+        "CopyOpT2R_": "将 TMEM 累加器读取到线程寄存器的复制操作类型。",
+        "CopyOpG2S_": "将全局输入 C 搬到共享内存的复制操作类型。",
+        "SmemLayoutAtomC_": "C 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpS2R_": "将共享内存 C 读取到寄存器片段的复制操作类型。",
+        "CopyOpS2G_": "将共享内存输出 D 写回全局内存的复制操作类型。",
+        "SmemLayoutAtomD_": "D 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpR2S_": "将寄存器中的输出片段写入共享内存 D 的复制操作类型。",
+        "CopyOpR2R_": "Epilogue 寄存器片段之间重排或复制所用的操作类型。"
+      }
+    },
+    "contract.type.store_pipeline": {
+      "layer": "Collective 的输出流水类型",
+      "summary": "StorePipeline 是 Epilogue 内的类型别名，管理已提交 TMA store 批次的源读取等待；当前类型为 PipelineTmaStore<4,1>，允许的未回收批次数与环形槽总数是两个参数。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "StagesC_": "Epilogue 输入 C 的编译期缓冲阶段数。",
+        "StagesD_": "Epilogue 输出 D 的编译期缓冲阶段数；实际 StorePipeline 类型还受共享内存复用配置影响。",
+        "FragmentSize_": "Epilogue 每次交给融合回调处理的片段元素数，决定寄存器侧向量组织。",
+        "ReuseSmemC_": "编译期布尔配置，控制 C 的共享内存空间是否可供输出阶段复用；改变容量和复用等待条件。",
+        "DelayTmaStore_": "编译期请求延迟 TMA store 的布尔配置；固定实现还要求 UnrollEpiLoop，最终 DelayTmaStore 是二者的逻辑与，不表示写回已经完成。",
+        "CtaTileShape_": "Epilogue 所处理 CTA 工作块的形状类型，规定输出分区的外层范围。",
+        "EpilogueTile_": "一个 CTA 工作块内部 Epilogue 子块的形状类型，控制累加器读取和输出循环的分块。",
+        "ElementC_": "C 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideC_": "C 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementD_": "D 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideD_": "D 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "FusionCallbacks_": "融合回调类型，提供残差读取、逐元素变换和各处理阶段钩子；具体操作和所需状态由该类型决定。",
+        "CopyOpT2R_": "将 TMEM 累加器读取到线程寄存器的复制操作类型。",
+        "CopyOpG2S_": "将全局输入 C 搬到共享内存的复制操作类型。",
+        "SmemLayoutAtomC_": "C 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpS2R_": "将共享内存 C 读取到寄存器片段的复制操作类型。",
+        "CopyOpS2G_": "将共享内存输出 D 写回全局内存的复制操作类型。",
+        "SmemLayoutAtomD_": "D 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpR2S_": "将寄存器中的输出片段写入共享内存 D 的复制操作类型。",
+        "CopyOpR2R_": "Epilogue 寄存器片段之间重排或复制所用的操作类型。"
+      }
+    },
+    "contract.type.mma_atom": {
+      "layer": "CuTe 架构操作类型",
+      "summary": "SM100_MMA_F16BF16_2x1SM_SS 封装两 CTA 协作的 FP16/BF16 MMA 指令族；A/B 使用共享内存描述符，结果地址属于 TMEM。类型参数决定尺寸、格式和输入布局，不是一次 kernel launch 的参数。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {
+        "a_type": "编译期 A 元素类型，用于生成 MMA 指令描述符和数值格式约束。",
+        "b_type": "编译期 B 元素类型，用于生成 MMA 指令描述符和数值格式约束。",
+        "c_type": "编译期累加结果元素类型，用于生成 MMA 描述符；不是指向累加器的地址类型。",
+        "M": "单次 2SM MMA 的 M 方向规模，单位为元素；此包装限制为 128 或 256。",
+        "N": "单次 2SM MMA 的 N 方向规模，单位为元素；此包装限制为 16 至 256 且为 16 的倍数。",
+        "a_major": "A 共享内存描述符所采用的主方向枚举，决定指令如何解释 A 的矩阵布局。",
+        "b_major": "B 共享内存描述符所采用的主方向枚举，决定指令如何解释 B 的矩阵布局。",
+        "a_neg": "编译期 A 输入符号控制，默认保持原符号；不是 Block-Scaled 的数据缩放数组。",
+        "b_neg": "编译期 B 输入符号控制，默认保持原符号；不是运行时传入的缩放张量。"
+      }
+    },
+    "contract.type.tma_a": {
+      "layer": "CuTe 架构复制类型",
+      "summary": "SM100_TMA_2SM_LOAD_MULTICAST 汇集不同 tensor-map rank 的 2SM TMA load 重载；它标识带 cluster multicast 的指令路径，实际描述符、屏障和目的集合在执行对象中绑定。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.type.tma_b": {
+      "layer": "CuTe 架构复制类型",
+      "summary": "SM100_TMA_2SM_LOAD 汇集不同 rank 的 2SM TMA load 重载；它没有 multicast 目的掩码操作数，实际搬运对象仍需绑定描述符和完成屏障。",
+      "execution": "编译期类型或别名选择；本节点本身不执行设备操作。对象中的描述符、地址和流水状态等值仍须由后续调用提供。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.kernel": {
+      "layer": "Kernel 设备入口",
+      "summary": "按 warp/CTA 角色组织主循环搬运、MMA、Epilogue、工作调度及 TMEM 分配/收尾。内部调用有参与角色和阶段条件，不是所有线程按同一路径串行执行。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "params": "设备调用时只读的 Kernel::Params，携带已经转换的 Mainloop、Epilogue、Scheduler 参数及问题信息；不是原始 Host Arguments。",
+        "smem_buf": "设备入口提供的动态共享内存基址，Kernel 将其解释成自己的 SharedStorage；调用方必须提供足够容量并满足该类型的对齐要求。"
+      },
+      "template_notes": {
+        "ProblemShape_": "GEMM 问题形状类型，规定维数及静态/动态分量；一次计算的具体 M/N/K/L 由 Arguments/Params 对象承载。",
+        "CollectiveMainloop_": "执行输入搬运和乘加主循环的 Collective 类型，向 Kernel 提供数据类型、Tile、Pipeline 和设备接口。",
+        "CollectiveEpilogue_": "处理累加器、融合操作和输出的 Collective 类型；它与 Mainloop 通过累加器表示及交接协议配合。",
+        "TileSchedulerTag_": "编译期工作调度策略标签，参与选择 TileScheduler 类型；不是当前 work tile 的坐标或运行状态。"
+      }
+    },
+    "contract.api.init_wait": {
+      "layer": "Pipeline 初始化交接",
+      "summary": "等待 Pipeline 屏障的初始化对参与 CTA 可用；依据 cluster_size 在 cluster 等待和单 CTA 同步之间选择，完成后才允许开始生产/消费协议。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "cluster_size": "调用时的 cluster CTA 数量；据此选择 cluster 级等待或单 CTA 同步，不是 warp 数。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.load": {
+      "layer": "Collective 主循环层",
+      "summary": "针对当前工作 tile，先取得可写输入阶段，再把 A/B TMA 复制绑定到该阶段的完成屏障并发起搬运。函数返回推进后的生产者状态及 K 迭代器；返回不表示所有搬运已完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "mainloop_pipeline": "按值传入的输入流水对象，持有共享屏障地址和角色配置；复制对象不复制底层屏障。",
+        "mainloop_pipe_producer_state": "调用时输入流水的生产者状态，含环形槽索引和相位；load 在局部推进它并通过返回值交还新状态。",
+        "load_inputs": "load_init 生成的只读集合，含 A/B 全局视图、共享内存目标分区、K 分块信息和 multicast mask。",
+        "cta_coord_mnkl": "调用时工作块的 M/N/K/L 坐标；用于选择 A/B 或输出张量中当前 CTA 所负责的区域，不是字节偏移。",
+        "k_tile_iter": "调用时 K 分块迭代器；解引用得到本次输入分块位置，load 每提交一块即推进，并返回推进后的迭代器。",
+        "k_tile_count": "此次处理的 K 分块数量，单位是 tile 而不是 K 元素数；可为 0，函数据此控制循环和等待。"
+      },
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "LoadParams": "load_init 返回的输入视图与 multicast mask 集合类型；值在设备调用时传入 load。",
+        "TileCoordMNKL": "当前工作 tile 坐标的类型，保留 M/N/K/L 坐标结构；坐标值不是模板整数。",
+        "KTileIterator": "遍历 K 分块的迭代器类型，规定解引用和推进操作；当前位置由调用时对象持有。"
+      }
+    },
+    "contract.api.input_try": {
+      "layer": "Pipeline 输入生产者",
+      "summary": "尝试确认指定输入阶段的旧消费者已经释放，返回 ProducerToken；需要等待时由 producer_acquire 继续完成，try 的返回本身不一概表示槽位可写。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "skip_wait": "调用时的跳过标志，非零时 try 接口可以直接给出已满足 token；调用方必须先确认没有实际数据消费等条件，不能用它强行绕过未完成任务。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.input_acquire": {
+      "layer": "Pipeline 输入生产者",
+      "summary": "取得指定 A/B 输入阶段的写入许可：必要时等待 empty 屏障，并由生产者 leader 为本阶段 full 事务屏障登记预期字节数，随后才可发起 TMA load。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.input_impl_acquire": {
+      "layer": "Pipeline 输入生产者",
+      "summary": "取得指定 A/B 输入阶段的写入许可：必要时等待 empty 屏障，并由生产者 leader 为本阶段 full 事务屏障登记预期字节数，随后才可发起 TMA load。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.expect_tx": {
+      "layer": "硬件屏障包装",
+      "summary": "向 ClusterTransactionBarrier 提交一次到达并增加预期事务字节数。只有到达条件与异步传输字节完成条件都满足，这一轮屏障才能完成；登记字节数不是搬运数据。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "transaction_bytes": "调用时登记的本阶段预期异步搬运字节数，单位为 byte；full 屏障除了到达计数，还需收到对应 complete_tx 字节完成通知。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.get_input_barrier": {
+      "layer": "Pipeline 输入生产者",
+      "summary": "返回当前生产阶段对应的 full 事务屏障地址，供 TMA Traits::with 绑定完成通知；取得地址不等于等待屏障或提交 TMA。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.with_a": {
+      "layer": "CuTe TMA Traits 绑定",
+      "summary": "把现有 TMA 描述符与本次完成屏障、multicast mask、缓存提示组合为可执行的 multicast Traits，之后 copy 才使用这些参数发起指令。",
+      "execution": "这是调用时对象绑定；虽标记 constexpr，包含运行时屏障引用的调用不会因此变成编译期执行。返回类型由模板确定，绑定的地址和掩码由本次调用确定。",
+      "parameter_notes": {
+        "tma_load_mbar": "对当前 TMA 完成屏障的可写引用；with 保存其地址供之后 copy 发起时使用，本调用本身不等待也不提交搬运。",
+        "multicast_mask": "调用时的 16 位 CTA 目的集合掩码，每一位对应 cluster 中一个 CTA；是否实际使用取决于 multicast 与非 multicast 重载。",
+        "cache_hint": "调用时传入的 L2 缓存提示编码，传给 TMA 指令；不是数据地址，也不改变屏障完成协议。"
+      },
+      "template_notes": {
+        "NumBitsPerTMA": "携带单次 TMA 搬运位数的静态整数类型，用于构造源、目标及参考布局；单位为 bit。",
+        "AuxParams_": "TMA Traits 附加信息的类型，保存张量映射等构造信息；内容随具体复制对象实例保存。"
+      }
+    },
+    "contract.api.with_b": {
+      "layer": "CuTe TMA Traits 绑定",
+      "summary": "把现有 TMA 描述符与本次完成屏障和缓存提示组合为可执行的非 multicast Traits。此重载接受 multicast_mask 仅为保持接口一致，固定实现忽略它。",
+      "execution": "这是调用时对象绑定；constexpr 允许适合条件的常量求值，但本路径仍绑定设备运行时屏障地址，不能画成纯类型选择。",
+      "parameter_notes": {
+        "tma_mbar": "对当前 TMA 完成屏障的可写引用；with 将其地址绑定到可执行 Traits，不复制屏障状态。",
+        "multicast_mask": "调用时为接口统一而接受的 16 位掩码；此非 multicast 重载明确标记 maybe_unused，返回执行 Traits 时不保存也不使用它。",
+        "cache_hint": "调用时传入的 L2 缓存提示编码，传给 TMA 指令；不是数据地址，也不改变屏障完成协议。"
+      },
+      "template_notes": {
+        "NumBitsPerTMA": "携带单次 TMA 搬运位数的静态整数类型，用于构造源、目标及参考布局；单位为 bit。",
+        "AuxParams_": "TMA Traits 附加信息的类型，保存张量映射等构造信息；内容随具体复制对象实例保存。"
+      }
+    },
+    "contract.api.tma_unpack": {
+      "layer": "CuTe Traits 解包",
+      "summary": "从 Traits 的可执行参数及源坐标张量、目标共享内存视图中取出底层 copy 操作所需的参数，再调用具体 rank 的 TMA 包装。它是源代码中的 namespace friend，不是 Traits 的普通成员方法。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "traits": "调用时的可执行 Copy_Traits，保存描述符、屏障及可能的 multicast/cache 参数；copy_unpack 从 opargs_ 展开成底层 copy 操作数。",
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "TS": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TD": "D 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.tma_a_3d": {
+      "layer": "CuTe TMA 指令包装",
+      "summary": "发起 3D tensor-map 的 2SM multicast TMA load：从描述符指向的全局张量读取到共享内存，并按掩码投递；完成字节通知配对 CTA0 的屏障，调用返回不表示数据已可消费。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "desc_ptr": "调用时读取的 TMA TensorMap 描述符地址，描述全局张量的形状、步长及搬运布局；不是 A/B/D 数据的基址参数。",
+        "mbar_ptr": "本次 TMA 完成通知所用的共享内存 mbarrier 地址；2SM 包装清除 peer 位，使事务字节更新配对 CTA0 的屏障。",
+        "multicast_mask": "调用时的 16 位 CTA 目的集合掩码，每一位对应 cluster 中一个 CTA；是否实际使用取决于 multicast 与非 multicast 重载。",
+        "cache_hint": "调用时传入的 L2 缓存提示编码，传给 TMA 指令；不是数据地址，也不改变屏障完成协议。",
+        "smem_ptr": "本次 TMA load 的可写共享内存目标地址；包装将它转换为共享地址编码，数据完成后才能消费。",
+        "crd0": "调用时第 0 维 tensor-map 坐标；单位和维度含义由 TMA 描述符决定，不可不经映射就认作 M 或字节地址。",
+        "crd1": "调用时第 1 维 tensor-map 坐标；与 crd0/crd2 一起定位本次 tile，不是共享内存偏移。",
+        "crd2": "调用时第 2 维 tensor-map 坐标；具体对应 K、batch 或重排维度需查看所绑定描述符。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.tma_b_3d": {
+      "layer": "CuTe TMA 指令包装",
+      "summary": "发起 3D tensor-map 的非 multicast 2SM TMA load，将全局输入搬到共享内存；两 CTA 使用配对规则向 CTA0 的屏障累计完成字节。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "desc_ptr": "调用时读取的 TMA TensorMap 描述符地址，描述全局张量的形状、步长及搬运布局；不是 A/B/D 数据的基址参数。",
+        "mbar_ptr": "本次 TMA 完成通知所用的共享内存 mbarrier 地址；2SM 包装清除 peer 位，使事务字节更新配对 CTA0 的屏障。",
+        "cache_hint": "调用时传入的 L2 缓存提示编码，传给 TMA 指令；不是数据地址，也不改变屏障完成协议。",
+        "smem_ptr": "本次 TMA load 的可写共享内存目标地址；maybe_unused 用于编译条件分支，启用 TMA 时实际传给指令。",
+        "crd0": "调用时第 0 维 tensor-map 坐标；单位和维度含义由 TMA 描述符决定，不可不经映射就认作 M 或字节地址。",
+        "crd1": "调用时第 1 维 tensor-map 坐标；与 crd0/crd2 一起定位本次 tile，不是共享内存偏移。",
+        "crd2": "调用时第 2 维 tensor-map 坐标；具体对应 K、batch 或重排维度需查看所绑定描述符。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.mma": {
+      "layer": "Collective 主循环层",
+      "summary": "先取得可写累加器阶段，再逐 K tile 等待 A/B 输入完成，调用 CuTe gemm 发起 UMMA，最后提交输入消费完成通知。首次乘加忽略旧累加器，后续乘加读取旧值；累加器 full 的最终提交由上层完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "pipelines": "调用时输入 Pipeline 与累加器 Pipeline 的二元组；前者保护 A/B 共享内存，后者保护 MMA/Epilogue 间的 TMEM 累加器。",
+        "pipeline_states": "与 pipelines 顺序对应的输入消费者状态及累加器生产者状态；按值接收，MMA 返回推进后的输入消费者状态。",
+        "accumulators_pair": "只读元组外壳中的累加器张量视图；本实现取第 0 项，要求引擎表示 TMEM、布局是 MMA 分区后的三维形状。",
+        "mma_inputs": "mma_init 生成的只读集合，包含 TiledMma 和各 stage 的 A/B 共享内存描述符张量。",
+        "cta_tile_coord": "调用方提供的当前 CTA tile 坐标；固定源码中的此 mma 实现未读取其值，不能据形参存在虚构坐标相关行为。",
+        "k_tile_count": "此次处理的 K 分块数量，单位是 tile 而不是 K 元素数；可为 0，函数据此控制循环和等待。"
+      },
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "AccumulatorPipeline": "MMA 与 Epilogue 交接累加结果的 Pipeline 类型，提供阶段状态和生产/消费接口。",
+        "FrgEngine": "MMA 累加器张量的存储引擎类型；当前 Collective 要求它表示 TMEM，而不是普通寄存器数组。",
+        "FrgLayout": "MMA 分区后的累加器布局类型；此入口要求 rank 为 3，对应 MMA、MMA_M、MMA_N。",
+        "MmaParams": "mma_init 生成的 TiledMma 和 A/B 描述符集合类型；此类型确定后，实例提供调用时的实际描述符。",
+        "CtaTileCoord": "当前 CTA 工作块坐标的类型；此主循环实现接收该对象，但没有读取它的值。"
+      }
+    },
+    "contract.api.input_try_wait": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "尝试确认指定 A/B 输入阶段的 TMA 完成，返回 ConsumerToken；有后续实际读取时必须把 token 交给 consumer_wait 完成确认。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "skip_wait": "调用时的跳过标志，非零时 try 接口可以直接给出已满足 token；调用方必须先确认没有实际数据消费等条件，不能用它强行绕过未完成任务。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.input_wait": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "在 token 尚未确认完成时等待指定阶段的 full 事务屏障，让 MMA 只读取已经完成 TMA 搬运的 A/B；调用不释放输入缓冲。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.input_impl_wait": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "在 token 尚未确认完成时等待指定阶段的 full 事务屏障，让 MMA 只读取已经完成 TMA 搬运的 A/B；调用不释放输入缓冲。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.gemm": {
+      "layer": "CuTe 算法分派层",
+      "summary": "四形参 gemm 将 C 同时用作输入累加器与输出 D，继续进入按 rank 分派的五形参重载；它连接逻辑张量调用与 MMA_Atom，而不是独立的 Host GEMM 启动接口。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "mma": "调用时的 MMA_Atom 对象引用，静态类型决定分派，对象状态可携带 accumulate_ 等控制；不是纯编译期模板标签。",
+        "A": "只读 A 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符，不是传入一个完整数值矩阵。",
+        "B": "只读 B 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符。",
+        "C": "输入累加器张量表示；gemm 四参数入口同时把它作为结果，五参数接口则另外接收 D。本 2SM SS 实现通过 TMEM 目的地址及 accumulate_ 控制保留/清零旧值。"
+      },
+      "template_notes": {
+        "MMA": "MMA_Atom 所包装的操作或 Traits 类型，决定后续指令分派和操作数要求。",
+        "TA": "A 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "ALayout": "A 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TB": "B 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "BLayout": "B 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TC": "C 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "CLayout": "C 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.mma_atom_call": {
+      "layer": "CuTe Atom 层",
+      "summary": "MMA_Atom::call 接收 A/B/C/D 张量表示，把已经满足 Atom 分区要求的操作数交给 Traits 的 mma_unpack；此层的类型断言不等同于同步等待。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "D": "结果累加器张量的可写引用；本 2SM SS Traits 要求其引擎为 TMEM，并从 D.data() 提取硬件 TMEM 地址。",
+        "A": "只读 A 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符，不是传入一个完整数值矩阵。",
+        "B": "只读 B 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符。",
+        "C": "输入累加器张量表示；gemm 四参数入口同时把它作为结果，五参数接口则另外接收 D。本 2SM SS 实现通过 TMEM 目的地址及 accumulate_ 控制保留/清零旧值。"
+      },
+      "template_notes": {
+        "MMAOperation": "MMA_Atom 的底层 MMA 操作类型，决定硬件包装及其 Traits。",
+        "Args": "所属 Atom/Traits 特化的附加模板类型包；决定编译期 Traits 组织，不是每次 call 传入的数值参数包。",
+        "TD": "D 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TA": "A 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "ALayout": "A 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TB": "B 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "BLayout": "B 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TC": "C 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "CLayout": "C 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.mma_unpack": {
+      "layer": "CuTe MMA Traits 层",
+      "summary": "验证 D/C 为 TMEM、A/B 为描述符张量，提取 A[0]、B[0] 和 D.data()，将 Traits 的累加控制及指令描述符交给 2SM fma 包装。源码中的 friend 以 ADL 参与分派。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "traits": "调用时的 MMA_Traits 对象，保存 idesc_ 和 accumulate_；解包函数用它形成指令描述符及旧累加器保留标志。",
+        "D": "结果累加器张量的可写引用；本 2SM SS Traits 要求其引擎为 TMEM，并从 D.data() 提取硬件 TMEM 地址。",
+        "A": "只读 A 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符，不是传入一个完整数值矩阵。",
+        "B": "只读 B 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符。",
+        "C": "只读输入累加器张量形参；此 2SM SS Traits 仅检查其引擎属于 TMEM，没有读取 C.data() 或 C 数值，硬件累加位置实际从 D.data() 提取。"
+      },
+      "template_notes": {
+        "TD": "D 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TA": "A 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "ALayout": "A 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TB": "B 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "BLayout": "B 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TC": "C 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "CLayout": "C 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.fma": {
+      "layer": "CuTe MMA 指令包装",
+      "summary": "从参与 warp 选一个发起者，将 A/B 共享内存描述符、TMEM 地址及指令描述符传给 tcgen05.mma.cta_group::2。返回只说明指令已发起，后续结果交接仍依赖 commit 和屏障协议。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "desc_a": "调用时的 64 位 A 共享内存描述符值，指定 MMA 读取 A 的地址与布局；不是裸 global pointer。",
+        "desc_b": "调用时的 64 位 B 共享内存描述符值，指定 MMA 读取 B 的地址与布局。",
+        "tmem_c": "调用时的 32 位 TMEM 目的累加器地址编码，由 D.data() 提取；不是 C 的数值，也不能当普通 CUDA 指针解引用。",
+        "scaleC": "调用时旧累加器是否参与的标志：源码将非零转为 predicate，0 忽略旧 C、非零累加旧 C；不是任意浮点缩放系数，也不是量化 scale 数组。",
+        "idescE": "调用时的 64 位打包指令描述信息；此 fma 包装把其高 32 位交给 MMA 指令，格式由 Traits 的 make_runtime_instr_desc 生成。"
+      },
+      "template_notes": {
+        "a_type": "编译期 A 元素类型，用于生成 MMA 指令描述符和数值格式约束。",
+        "b_type": "编译期 B 元素类型，用于生成 MMA 指令描述符和数值格式约束。",
+        "c_type": "编译期累加结果元素类型，用于生成 MMA 描述符；不是指向累加器的地址类型。",
+        "M": "单次 2SM MMA 的 M 方向规模，单位为元素；此包装限制为 128 或 256。",
+        "N": "单次 2SM MMA 的 N 方向规模，单位为元素；此包装限制为 16 至 256 且为 16 的倍数。",
+        "a_major": "A 共享内存描述符所采用的主方向枚举，决定指令如何解释 A 的矩阵布局。",
+        "b_major": "B 共享内存描述符所采用的主方向枚举，决定指令如何解释 B 的矩阵布局。",
+        "a_neg": "编译期 A 输入符号控制，默认保持原符号；不是 Block-Scaled 的数据缩放数组。",
+        "b_neg": "编译期 B 输入符号控制，默认保持原符号；不是运行时传入的缩放张量。"
+      }
+    },
+    "contract.api.input_release": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "在 MMA 已发起对当前 A/B 的使用后，把该阶段 empty 屏障交给 UMMA 完成通知路径；只有对应硬件消费完成，生产者才可复用输入共享内存。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.input_commit": {
+      "layer": "硬件完成通知包装",
+      "summary": "为输入 empty 屏障发起 2SM UMMA commit，并按 CTA mask 通知需要复用该输入阶段的生产者；这是输入读取完成的通知绑定，不是累加结果可读的 full 绑定。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中输入阶段的 empty 屏障的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。",
+        "cta_mask": "调用时的 16 位 cluster CTA 目标掩码；通知针对哪些 CTA 的对应屏障由该掩码决定，不是线程掩码。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.load_tail": {
+      "layer": "Pipeline 输入生产者收尾",
+      "summary": "生产者工作循环结束后等待所有相关输入阶段被消费者释放，防止仍被其他 CTA 或异步 MMA 使用的共享资源因本 CTA 提前退出而失效。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "mainloop_pipeline": "按值传入的输入流水对象，持有共享屏障地址和角色配置；复制对象不复制底层屏障。",
+        "mainloop_pipe_producer_state": "输入生产者结束工作时的当前状态，作为遍历各阶段、等待消费者释放的起点；按值传入收尾函数。"
+      },
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。"
+      }
+    },
+    "contract.api.input_tail": {
+      "layer": "Pipeline 输入生产者收尾",
+      "summary": "生产者工作循环结束后等待所有相关输入阶段被消费者释放，防止仍被其他 CTA 或异步 MMA 使用的共享资源因本 CTA 提前退出而失效。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_acquire": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "MMA 生产者等待累加器阶段的 empty 屏障，确认上一次 Epilogue 已释放该阶段后才允许写入；此普通异步 Pipeline 获取不登记 TMA transaction_bytes。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_impl_acquire": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "MMA 生产者等待累加器阶段的 empty 屏障，确认上一次 Epilogue 已释放该阶段后才允许写入；此普通异步 Pipeline 获取不登记 TMA transaction_bytes。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.acc_commit": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "对指定累加器阶段的 full 屏障发起 UMMA 完成通知；MMA 完成后 Epilogue 才能通过 consumer_wait 取得结果。此提交不能替代调用方等待。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_commit_hw": {
+      "layer": "硬件完成通知包装",
+      "summary": "为累加结果 full 屏障发起 2SM UMMA commit，通知掩码内的 Epilogue 消费者结果何时可读；虽然与输入通知复用同一函数，资源绑定和语义不同。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中累加器阶段的 full 屏障的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。",
+        "cta_mask": "调用时的 16 位 cluster CTA 目标掩码；通知针对哪些 CTA 的对应屏障由该掩码决定，不是线程掩码。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.ep_store": {
+      "layer": "Collective 输出层",
+      "summary": "等待并消费当前 TMEM 累加器阶段，结合 C 与融合回调得到输出，写入 D 的共享缓冲后发起 TMA store；TMEM 可释放、共享缓冲可复用、Host 可读取 D 是三个不同完成条件。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "load_pipeline": "调用时 Epilogue 输入 C 的流水对象，负责读取 C 的可用性和共享缓冲复用通知。",
+        "load_pipe_consumer_state": "Epilogue 对 C 输入流水的消费者状态，含当前槽位和相位；状态推进由函数返回值交还调用方。",
+        "store_pipeline": "调用时输出 TMA store 的流水对象，记录等待策略并提交/回收输出批次。",
+        "store_pipe_producer_state": "输出 TMA store 的生产者状态，提供 stage 和累计批次计数；不是 GPU 全局完成状态。",
+        "acc_pipeline": "调用时累加器交接流水，Epilogue 通过它等待 MMA 完成并在 TMEM 读取结束后释放当前阶段。",
+        "acc_pipe_consumer_state": "Epilogue 当前消费的累加器 stage 与 phase；必须与 MMA 生产者提交的阶段对应。",
+        "problem_shape_mnkl": "调用时整体问题的 M/N/K/L 形状；与 CTA 坐标一起决定输出边界及有效元素。",
+        "cta_tile_mnk": "CTA 工作块 M/N/K 尺寸对象；可含静态类型分量，用于分割输出区域，不是 CTA 索引。",
+        "cta_coord_mnkl": "调用时工作块的 M/N/K/L 坐标；用于选择 A/B 或输出张量中当前 CTA 所负责的区域，不是字节偏移。",
+        "mma_tile_mnk": "MMA 铺排的 M/N/K 尺寸对象；当前所列 store 重载的函数体没有读取它，不能据接口名称推断额外的布局运算。",
+        "tiled_mma": "调用时 MMA 铺排对象，类型确定布局和操作，Epilogue 使用其分区接口找到各线程的累加器片段。",
+        "accumulators": "调用时的累加器张量视图，按值传递视图而不复制整个结果；本路径从 TMEM 读取到寄存器进行融合。",
+        "shared_tensors": "当前 CTA 的共享内存 TensorStorage 引用；提供本阶段 A/B 或 C/D 的实际缓冲，使用前必须满足相应 Pipeline 条件。"
+      },
+      "template_notes": {
+        "StagesC_": "Epilogue 输入 C 的编译期缓冲阶段数。",
+        "StagesD_": "Epilogue 输出 D 的编译期缓冲阶段数；实际 StorePipeline 类型还受共享内存复用配置影响。",
+        "FragmentSize_": "Epilogue 每次交给融合回调处理的片段元素数，决定寄存器侧向量组织。",
+        "ReuseSmemC_": "编译期布尔配置，控制 C 的共享内存空间是否可供输出阶段复用；改变容量和复用等待条件。",
+        "DelayTmaStore_": "编译期请求延迟 TMA store 的布尔配置；固定实现还要求 UnrollEpiLoop，最终 DelayTmaStore 是二者的逻辑与，不表示写回已经完成。",
+        "CtaTileShape_": "Epilogue 所处理 CTA 工作块的形状类型，规定输出分区的外层范围。",
+        "EpilogueTile_": "一个 CTA 工作块内部 Epilogue 子块的形状类型，控制累加器读取和输出循环的分块。",
+        "ElementC_": "C 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideC_": "C 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementD_": "D 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideD_": "D 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "FusionCallbacks_": "融合回调类型，提供残差读取、逐元素变换和各处理阶段钩子；具体操作和所需状态由该类型决定。",
+        "CopyOpT2R_": "将 TMEM 累加器读取到线程寄存器的复制操作类型。",
+        "CopyOpG2S_": "将全局输入 C 搬到共享内存的复制操作类型。",
+        "SmemLayoutAtomC_": "C 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpS2R_": "将共享内存 C 读取到寄存器片段的复制操作类型。",
+        "CopyOpS2G_": "将共享内存输出 D 写回全局内存的复制操作类型。",
+        "SmemLayoutAtomD_": "D 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpR2S_": "将寄存器中的输出片段写入共享内存 D 的复制操作类型。",
+        "CopyOpR2R_": "Epilogue 寄存器片段之间重排或复制所用的操作类型。",
+        "ReuseTmem": "编译期布尔参数，选择 Epilogue 是否复用 TMEM，并影响累加器消费和释放的条件。",
+        "AccumulatorPipeline": "MMA 与 Epilogue 交接累加结果的 Pipeline 类型，提供阶段状态和生产/消费接口。",
+        "AccumulatorPipelineState": "累加器 Pipeline 状态类型，规定阶段索引与相位的表示；其当前值由函数形参传入。",
+        "ProblemShapeMNKL": "问题整体 M/N/K/L 形状对象的类型；支持静态或动态分量，实际动态尺寸由函数形参承载。",
+        "CtaTileMNK": "CTA 的 M/N/K 工作块尺寸类型，控制输出 tile 的边界与分区。",
+        "CtaCoordMNKL": "CTA 在问题 M/N/K/L 空间中的 tile 坐标类型；决定输出片段属于哪一个工作块。",
+        "MmaTileMNK": "MMA 操作铺排尺寸对象的类型；所列 store 重载为保持统一接口接收该对象，函数体未读取此形参。",
+        "TiledMma": "MMA 铺排对象的类型，决定累加器的线程/CTA 分区；调用时可通过对象访问其分区接口。",
+        "AccEngine": "Epilogue 接收的累加器张量引擎类型；本代表路径承载 TMEM 地址表示。",
+        "AccLayout": "Epilogue 接收的累加器张量布局类型，描述各子块如何对应 MMA 结果。"
+      }
+    },
+    "contract.api.acc_try_wait": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "尝试查询 MMA 对当前累加器阶段的 full 通知，得到后续 consumer_wait 所需 token；不能把 try 返回视为无条件允许 TMEM 读取。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "skip_wait": "调用时的跳过标志，非零时 try 接口可以直接给出已满足 token；调用方必须先确认没有实际数据消费等条件，不能用它强行绕过未完成任务。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_wait": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "必要时等待累加器 full 屏障的指定相位完成，保证 Epilogue 在 MMA 完成写入后再读取当前 TMEM 阶段；随后仍需单独完成读取和释放。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_impl_wait": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "必要时等待累加器 full 屏障的指定相位完成，保证 Epilogue 在 MMA 完成写入后再读取当前 TMEM 阶段；随后仍需单独完成读取和释放。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.tmem_copy": {
+      "layer": "CuTe TMEM 指令包装",
+      "summary": "发起 tcgen05.ld 的 32 数据路径、32 位、16 次重复读取，把 TMEM 数据放入 16 个 32 位寄存器输出槽；上层以 wait::ld 确认读取完成后才可使用结果或释放被读阶段。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "src_addr": "调用时 TMEM 源地址的 32 位编码；指令从该 TMEM 区域读取，不能当普通主机/全局指针解释。",
+        "dst00": "调用时第 0 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 0 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst01": "调用时第 1 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 1 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst02": "调用时第 2 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 2 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst03": "调用时第 3 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 3 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst04": "调用时第 4 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 4 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst05": "调用时第 5 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 5 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst06": "调用时第 6 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 6 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst07": "调用时第 7 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 7 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst08": "调用时第 8 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 8 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst09": "调用时第 9 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 9 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst10": "调用时第 10 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 10 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst11": "调用时第 11 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 11 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst12": "调用时第 12 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 12 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst13": "调用时第 13 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 13 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst14": "调用时第 14 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 14 个输出操作数写入此处，位值的数值解释由上层张量类型决定。",
+        "dst15": "调用时第 15 个 32 位输出寄存器槽的可写引用；tcgen05.ld 的第 15 个输出操作数写入此处，位值的数值解释由上层张量类型决定。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.tmem_read_fence": {
+      "layer": "硬件读取完成等待",
+      "summary": "执行 tcgen05.wait::ld.sync.aligned，等待相应 TMEM load 完成；它保护寄存器使用与 TMEM 释放顺序，不是等待全局输出写回。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.acc_release": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "Epilogue 完成当前 TMEM 阶段的读取后，向累加器 empty 屏障发到达通知，允许 MMA 生产者下一轮复用；2SM 特化将通知路由到配对偶数侧 CTA。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_release_sm0": {
+      "layer": "硬件屏障到达包装",
+      "summary": "清除共享地址的配对位后，对协作 2SM 的偶数侧屏障执行 mbarrier.arrive。它是普通到达，不是 UMMA commit；上层须先确保 TMEM load 已完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中累加器阶段的 empty 屏障的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.shared_fence": {
+      "layer": "共享内存可见性交接",
+      "summary": "执行共享内存 generic/async 访问视图的 fence，让之前由普通访问写入的输出缓冲能被随后 TMA store 的异步代理读取；它不是跨 CTA 计算完成屏障。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.tma_store_lambda": {
+      "layer": "Collective 输出层的局部操作",
+      "summary": "store 内部的 tma_store_fn 针对指定 Epilogue 子块完成共享内存可见性交接，发起当前 D 子块的 TMA store 并维护 StorePipeline；这是有捕获状态的设备局部 lambda。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "epi_m": "调用时 Epilogue 子块在 M 方向的索引，选择本次 TMA store 对应的输出片段。",
+        "epi_n": "调用时 Epilogue 子块在 N 方向的索引，与 epi_m 共同确定一次输出子块。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.tma_store_3d": {
+      "layer": "CuTe TMA 指令包装",
+      "summary": "根据 3D TensorMap 描述符和坐标，从共享内存读取 D 子块并异步写到全局输出；源缓冲在相应 store 读取完成前不能覆盖。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "desc_ptr": "调用时读取的 TMA TensorMap 描述符地址，描述全局张量的形状、步长及搬运布局；不是 A/B/D 数据的基址参数。",
+        "smem_ptr": "本次 TMA store 的只读共享内存源地址；必须先完成普通写入到异步读取的可见性交接，在源读取完成前不得覆盖。",
+        "crd0": "调用时第 0 维 tensor-map 坐标；单位和维度含义由 TMA 描述符决定，不可不经映射就认作 M 或字节地址。",
+        "crd1": "调用时第 1 维 tensor-map 坐标；与 crd0/crd2 一起定位本次 tile，不是共享内存偏移。",
+        "crd2": "调用时第 2 维 tensor-map 坐标；具体对应 K、batch 或重排维度需查看所绑定描述符。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.store_commit": {
+      "layer": "Pipeline 输出生产者",
+      "summary": "把最近发起的一批 TMA store 提交为一个可等待的 group；此实现最终调用 tma_store_arrive，stage/count 形参只是统一接口所保留的状态信息。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期逻辑环形阶段数，决定 PipelineState<Stages> 的索引轮转，并为 UnacquiredStages_ 提供 Stages_-1 的默认值。PipelineTmaStore 本身不分配 full/empty 屏障数组，等待使用 TMA bulk group，而不是逐槽 mbarrier。",
+        "UnacquiredStages_": "producer_acquire 使用的编译期 bulk-group 等待阈值，默认 Stages_-1；它作为 tma_store_wait 的立即数，限制尚未完成源读取的已提交 store 批次数，不是共享屏障数量或字节数。"
+      }
+    },
+    "contract.api.store_arrive": {
+      "layer": "硬件输出提交包装",
+      "summary": "执行 cp.async.bulk.commit_group，将当前发起者此前未提交的 TMA store 归入一个 group；提交不表示共享源读取或全局目标写入已经完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.store_acquire": {
+      "layer": "Pipeline 输出生产者",
+      "summary": "输出缓冲再次使用前，按累计提交数和 always_wait 策略等待更早的 TMA store group 源读取，将仍在途的批次数限制在 UnacquiredStages 内。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期逻辑环形阶段数，决定 PipelineState<Stages> 的索引轮转，并为 UnacquiredStages_ 提供 Stages_-1 的默认值。PipelineTmaStore 本身不分配 full/empty 屏障数组，等待使用 TMA bulk group，而不是逐槽 mbarrier。",
+        "UnacquiredStages_": "producer_acquire 使用的编译期 bulk-group 等待阈值，默认 Stages_-1；它作为 tma_store_wait 的立即数，限制尚未完成源读取的已提交 store 批次数，不是共享屏障数量或字节数。"
+      }
+    },
+    "contract.api.store_wait": {
+      "layer": "硬件输出源读取等待",
+      "summary": "执行 cp.async.bulk.wait_group.read<Count>，限制仍未完成源读取的已提交 group 数。read 等待用于保护共享源缓冲复用，不能据此宣称 D 已经可被 Host 读取。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {
+        "Count": "编译期 TMA store 已提交批次等待阈值，作为 wait_group.read 的立即数；0 表示不保留更早批次的源读取。"
+      }
+    },
+    "contract.api.ep_store_tail": {
+      "layer": "Collective 输出层收尾",
+      "summary": "仅在 ReuseSmemC 为真且融合回调需要输入加载时，等待尚在途 store 的源读取，再补发至多指定数量的 C load-pipeline 消费完成通知。此函数返回 void，传入状态仅在局部推进。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "load_pipeline": "调用时 Epilogue 输入 C 的流水对象，负责读取 C 的可用性和共享缓冲复用通知。",
+        "load_pipe_consumer_state": "按值传入的 C load-pipeline 消费者状态；需要补发释放通知时在函数局部推进，本 void 函数不把新状态返回给调用方。",
+        "store_pipeline": "调用时输出 TMA store 的流水对象，记录等待策略并提交/回收输出批次。",
+        "store_pipe_producer_state": "按值传入的输出 store-pipeline 生产者状态；满足共享内存复用与输入加载条件时传给 producer_tail。",
+        "cta_tile_mnk": "CTA 工作块 M/N/K 尺寸对象；可含静态类型分量，用于分割输出区域，不是 CTA 索引。"
+      },
+      "template_notes": {
+        "StagesC_": "Epilogue 输入 C 的编译期缓冲阶段数。",
+        "StagesD_": "Epilogue 输出 D 的编译期缓冲阶段数；实际 StorePipeline 类型还受共享内存复用配置影响。",
+        "FragmentSize_": "Epilogue 每次交给融合回调处理的片段元素数，决定寄存器侧向量组织。",
+        "ReuseSmemC_": "编译期布尔配置，控制 C 的共享内存空间是否可供输出阶段复用；改变容量和复用等待条件。",
+        "DelayTmaStore_": "编译期请求延迟 TMA store 的布尔配置；固定实现还要求 UnrollEpiLoop，最终 DelayTmaStore 是二者的逻辑与，不表示写回已经完成。",
+        "CtaTileShape_": "Epilogue 所处理 CTA 工作块的形状类型，规定输出分区的外层范围。",
+        "EpilogueTile_": "一个 CTA 工作块内部 Epilogue 子块的形状类型，控制累加器读取和输出循环的分块。",
+        "ElementC_": "C 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideC_": "C 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementD_": "D 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideD_": "D 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "FusionCallbacks_": "融合回调类型，提供残差读取、逐元素变换和各处理阶段钩子；具体操作和所需状态由该类型决定。",
+        "CopyOpT2R_": "将 TMEM 累加器读取到线程寄存器的复制操作类型。",
+        "CopyOpG2S_": "将全局输入 C 搬到共享内存的复制操作类型。",
+        "SmemLayoutAtomC_": "C 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpS2R_": "将共享内存 C 读取到寄存器片段的复制操作类型。",
+        "CopyOpS2G_": "将共享内存输出 D 写回全局内存的复制操作类型。",
+        "SmemLayoutAtomD_": "D 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "CopyOpR2S_": "将寄存器中的输出片段写入共享内存 D 的复制操作类型。",
+        "CopyOpR2R_": "Epilogue 寄存器片段之间重排或复制所用的操作类型。",
+        "CtaTileMNK": "CTA 的 M/N/K 工作块尺寸类型，控制输出 tile 的边界与分区。"
+      }
+    },
+    "contract.api.store_tail": {
+      "layer": "Pipeline 输出生产者收尾",
+      "summary": "调用 tma_store_wait<0>，等待此前提交输出批次的源读取全部完成，以便安全结束共享源缓冲生命周期；调用不是 Host 的 stream 同步。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "为统一收尾接口接收的 PipelineState；此实现标记 maybe_unused，直接等待全部已提交 group 的源读取。"
+      },
+      "template_notes": {
+        "Stages_": "编译期逻辑环形阶段数，决定 PipelineState<Stages> 的索引轮转，并为 UnacquiredStages_ 提供 Stages_-1 的默认值。PipelineTmaStore 本身不分配 full/empty 屏障数组，等待使用 TMA bulk group，而不是逐槽 mbarrier。",
+        "UnacquiredStages_": "producer_acquire 使用的编译期 bulk-group 等待阈值，默认 Stages_-1；它作为 tma_store_wait 的立即数，限制尚未完成源读取的已提交 store 批次数，不是共享屏障数量或字节数。"
+      }
+    },
+    "contract.api.allocate": {
+      "layer": "CuTe TMEM 资源管理",
+      "summary": "由两个配对 CTA 中相同逻辑编号的完整 warp 发起 TMEM 列分配，将得到的基址写入共享内存结果槽。其他参与者须经过分配结果屏障后再读取和绑定地址。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "num_columns": "调用时 TMEM 列数，单位为 column；Allocator2Sm 要求 32 至 512 且为 2 的幂，释放数量必须与拥有的分配范围一致。",
+        "dst_ptr": "调用时指向共享内存中 32 位结果槽的地址，allocation 将得到的 TMEM 基址写入此槽；配对 CTA 必须提供相同的共享地址。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.alloc_arrive": {
+      "layer": "CTA 内分配结果通知",
+      "summary": "NamedBarrier::arrive 通知本轮 TMEM 分配结果已由生产者准备，使用对象保存的线程计数和 barrier ID；它只到达，不等待其他参与者。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.alloc_wait": {
+      "layer": "CTA 内分配结果等待",
+      "summary": "NamedBarrier::arrive_and_wait 对同一分配结果屏障到达并等待，完成后 Epilogue 参与者才能读取共享内存中的 TMEM 基址；它与 TMEM 回收屏障不是同一个对象。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.set_tmem": {
+      "layer": "Collective 的 TMEM 地址绑定",
+      "summary": "把已分配 TMEM 基址写入 tmem_storage.accumulators.data()，让累加器张量视图指向这次分配；函数本身不分配内存、不等待分配完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "tmem_storage": "包含累加器张量的存储描述对象；set_tmem_offsets 修改其地址表示，不拷贝累加器数值、不另行分配 TMEM。",
+        "tmem_base_addr": "已经分配得到的 32 位 TMEM 基址编码，用来绑定 accumulators.data()；必须先完成分配结果在参与者间的交接。"
+      },
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "TmemStorage": "包含 accumulators 张量的存储描述类型；这里的类型封装 TMEM 视图，不代表创建新的 TMEM 分配。"
+      }
+    },
+    "contract.api.release_permit": {
+      "layer": "CuTe TMEM 资源管理",
+      "summary": "向 2SM 分配器归还继续分配的许可；该操作与释放已经占有的 TMEM 列不同，后者仍须在消费及配对退出条件满足后调用 free。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.acc_tail": {
+      "layer": "Pipeline 累加器生产者收尾",
+      "summary": "从当前状态遍历所有环形阶段并逐个取得生产许可，确认消费者已经释放所有阶段，避免生产者先退出导致跨 CTA 交接对象失效。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.dealloc_arrive": {
+      "layer": "跨 CTA 到达通知：按屏障对象区分用途",
+      "summary": "向指定cluster CTA的ClusterBarrier发到达通知，predicate控制是否真正发起。当前图集的TMEM回收握手和CLC响应槽释放都引用这一声明，但屏障对象和计数不同；单次arrive不等于所有参与者到齐、响应槽可复用或TMEM已经释放。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "cta_id": "调用时目的 CTA 在 cluster 内的编号；静态 arrive 将屏障地址映射到该 CTA，而不是设备号或线程号。",
+        "pred": "调用时到达通知的谓词，默认非零；为 0 时不发起此次 arrive，必须与实际参与计数一致。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.free": {
+      "layer": "CuTe TMEM 资源管理",
+      "summary": "对本 CTA 拥有的 TMEM 列发起 2SM 配对释放。调用前必须确保所有累加器使用、消费通知和配对握手满足要求；一侧发起 free 不能单独证明整对释放完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "tmem_ptr": "调用时待释放分配的 TMEM 基址编码；调用 CTA 必须拥有相应列，且此前所有使用者已满足释放协议。",
+        "num_columns": "调用时 TMEM 列数，单位为 column；Allocator2Sm 要求 32 至 512 且为 2 的幂，释放数量必须与拥有的分配范围一致。"
+      },
+      "template_notes": {}
+    },
+    "contract.external.scheduler_fixup": {
+      "layer": "Scheduler 尚未展开的调用边界",
+      "summary": "保留历史的Scheduler未展开边界记录，不是单一可调用API。当前选中完整K分支的fixup与compute_epilogue已接入独立接口；其他CLC、swizzle、GDC等内部关系仍未全量核对，不能把局部补齐推广为完整调度验证。",
+      "execution": "这是源码范围边界，不是可直接调用的函数声明；具体设备方法和条件须从对应 Scheduler 实现继续核对。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.external.stream_sync": {
+      "layer": "应用侧完成边界",
+      "summary": "调用方的 cudaStreamSynchronize 等待所用 stream 的先前工作，并检查同步结果；它不在 GemmUniversalAdapter 内部，也不是 Kernel 自行等待 Host。",
+      "execution": "Host 调用时发生的 CUDA 外部接口；本节点记录示例调用点而非 CUDA API 的完整声明。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.external.output_visible": {
+      "layer": "应用侧结果可用边界",
+      "summary": "表示示例在 stream 同步成功后才进入 Host 结果读取/验证阶段；这是完成条件节点，不是一个名为“D 可读”的 C++ 函数。",
+      "execution": "Host 观察到的完成条件；没有可传入的函数形参。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.external.kernel_exit": {
+      "layer": "Kernel 控制流边界",
+      "summary": "表示各参与 warp 完成自己分支的收尾后返回设备入口；此节点不把所有 warp 的不同分支合并成一次无条件函数调用。",
+      "execution": "设备控制流的退出边界，不是独立可调用 API；Kernel 返回仍不同于 Host 已经完成 stream 同步。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "contract.api.copy_mutable_temporary": {
+      "layer": "CuTe 复制转发层",
+      "summary": "接受可写临时 Tensor 视图，通过具名右值引用转发给左值可写复制重载。它不复制整个张量、不额外分配目标内存，也不把异步完成责任转交给临时对象。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "copy_policy": "调用时复制策略对象；静态类型决定重载，实例可能携带 TMA 描述符、屏障等运行信息。",
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "CopyPolicy": "复制分派策略类型，可以是 Atom 或 TiledCopy 等对象类型；决定源/目标张量如何继续分派。",
+        "SrcEngine": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SrcLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "DstEngine": "复制目标 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DstLayout": "复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.copy_atom_entry": {
+      "layer": "CuTe 复制算法层",
+      "summary": "根据 Copy_Atom 的源/目标布局检查张量形状并组织逐片复制，最终进入 Atom::call；它保留每个源目标分区，不是 Host 全局 memcpy。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "copy_atom": "调用时原子复制对象，静态类型规定源/目标布局，实例可绑定本次复制所需的屏障和缓存提示。",
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "CopyArgs": "Copy_Atom 特化所需的模板类型包，确定底层复制操作及 Traits 组织。",
+        "SrcEngine": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SrcLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "DstEngine": "复制目标 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DstLayout": "复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.copy_tiled_entry": {
+      "layer": "CuTe 复制算法层",
+      "summary": "此重载把 TiledCopy 显式转换成所继承的 CopyAtom 引用，然后转发给 copy(Atom, src, dst)；函数体不再次按 TV/Tiler 对张量分区，传入视图应由调用方按相应布局准备。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "tiled_copy": "调用时 TiledCopy 对象引用；此重载仅取其 CopyAtom 基类并转发，不在函数体内重新读取 TV/Tiler 来划分张量。",
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "CopyAtom": "TiledCopy 的原子复制类型，规定一次复制的源/目标数据布局与硬件操作。",
+        "TV": "TiledCopy 的线程—数值布局类型，规定每个参与线程负责哪些值。",
+        "Tiler": "TiledCopy 的逻辑分块器类型，规定被复制区域的 tile 形状及划分。",
+        "SrcEngine": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SrcLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "DstEngine": "复制目标 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DstLayout": "复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.copy_atom_call": {
+      "layer": "CuTe Copy Atom 层",
+      "summary": "先要求源和目标为 rank-1 张量；当静态元素数满足 Atom 要求时进入 copy_unpack，否则在可拆分的 tuple 形状上递归复制，再不匹配就触发编译错误。不能把此层所有调用都直接连到硬件指令。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "Args": "所属 Atom/Traits 特化的附加模板类型包；决定编译期 Traits 组织，不是每次 call 传入的数值参数包。",
+        "CopyInternalType": "Copy_Atom 内部重解释和排列数据所用的元素类型，不一定等于用户张量的原始元素类型。",
+        "SEngine": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "DEngine": "复制目标 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.copy_atom_call_temporary": {
+      "layer": "CuTe 复制转发层",
+      "summary": "接受可写临时 Tensor 视图，通过具名右值引用转发给左值可写复制重载。它不复制整个张量、不额外分配目标内存，也不把异步完成责任转交给临时对象。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "src": "只读源张量视图，提供源引擎及布局；TMA load 中它可承载 tensor-map 坐标，普通 copy 中则承载实际可读取的数据视图。",
+        "dst": "可写目标张量视图；右值引用重载只是接受临时视图并转发到可写版本，不额外分配目标缓冲，也不表示对象生命周期自动延长到异步完成。"
+      },
+      "template_notes": {
+        "Args": "所属 Atom/Traits 特化的附加模板类型包；决定编译期 Traits 组织，不是每次 call 传入的数值参数包。",
+        "CopyInternalType": "Copy_Atom 内部重解释和排列数据所用的元素类型，不一定等于用户张量的原始元素类型。",
+        "SEngine": "复制源 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "SLayout": "复制源 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "DEngine": "复制目标 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。"
+      }
+    },
+    "contract.api.gemm_rank1": {
+      "layer": "CuTe 算法分派层",
+      "summary": "当 A/B/C/D 满足 rank-1 与 is_rmem 的模板约束时，此五形参重载直接调用 MMA_Atom::call；函数体没有额外元素计数断言，兼容性检查交给 Atom，约束也不是运行时分支。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "mma": "调用时的 MMA_Atom 对象引用，静态类型决定分派，对象状态可携带 accumulate_ 等控制；不是纯编译期模板标签。",
+        "D": "结果累加器张量的可写引用；本 2SM SS Traits 要求其引擎为 TMEM，并从 D.data() 提取硬件 TMEM 地址。",
+        "A": "只读 A 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符，不是传入一个完整数值矩阵。",
+        "B": "只读 B 操作数张量表示；在此 SS 硬件路径中最终取出的是共享内存描述符。",
+        "C": "输入累加器张量表示；gemm 四参数入口同时把它作为结果，五参数接口则另外接收 D。本 2SM SS 实现通过 TMEM 目的地址及 accumulate_ 控制保留/清零旧值。"
+      },
+      "template_notes": {
+        "MMA": "MMA_Atom 所包装的操作或 Traits 类型，决定后续指令分派和操作数要求。",
+        "TD": "D 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "DLayout": "D/复制目标 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TA": "A 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "ALayout": "A 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TB": "B 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "BLayout": "B 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "TC": "C 张量的引擎类型，决定数据访问或地址/描述符表示；类型名本身不保证数值存放在某一种存储空间。",
+        "CLayout": "C 张量的布局类型，规定坐标到元素/位位置的映射、rank 和分区；静态类型与调用时动态布局值分别保留。",
+        "#9": "无名 SFINAE 模板约束，要求 A/B/C/D 都是 rank-1 且引擎满足 is_rmem，才使此 gemm 重载参与候选；is_rmem 的类型谓词不应直接翻译成普通线程寄存器存储。"
+      }
+    },
+    "contract.api.input_impl_acquire_stage": {
+      "layer": "Pipeline 输入生产者内部接口",
+      "summary": "直接以 stage/phase 获取输入槽：当 token 未确认完成时等待 empty，leader 再对 full 执行 arrive_and_expect_tx。它不仅是空闲检测，还准备本轮 TMA 完成记账。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.input_impl_wait_stage": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "在 token 尚未确认完成时等待指定阶段的 full 事务屏障，让 MMA 只读取已经完成 TMA 搬运的 A/B；调用不释放输入缓冲。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.acc_impl_acquire_stage": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "MMA 生产者等待累加器阶段的 empty 屏障，确认上一次 Epilogue 已释放该阶段后才允许写入；此普通异步 Pipeline 获取不登记 TMA transaction_bytes。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.acc_impl_wait_stage": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "必要时等待累加器 full 屏障的指定相位完成，保证 Epilogue 在 MMA 完成写入后再读取当前 TMEM 阶段；随后仍需单独完成读取和释放。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "contract.api.cluster_wait_member": {
+      "layer": "硬件屏障等待",
+      "summary": "在共享内存ClusterBarrier上等待给定旧相位完成；member版本使用对象自身地址，static版本接收显式地址，两者不是同一签名。实际等待的是CLC响应full、槽复用empty还是其他握手，取决于绑定的屏障对象及其计数协议，不能只从wait这个名称推断。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.cluster_wait_static": {
+      "layer": "硬件屏障等待",
+      "summary": "在共享内存 ClusterBarrier 上循环等待给定旧相位完成；member 版本取对象自身地址，static 版本接收显式屏障地址，两者不能混成相同签名。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中需要等待或更新的屏障对象的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.expect_tx_static": {
+      "layer": "硬件屏障包装",
+      "summary": "向 ClusterTransactionBarrier 提交一次到达并增加预期事务字节数。只有到达条件与异步传输字节完成条件都满足，这一轮屏障才能完成；登记字节数不是搬运数据。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中需要等待或更新的屏障对象的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。",
+        "transaction_bytes": "调用时登记的本阶段预期异步搬运字节数，单位为 byte；full 屏障除了到达计数，还需收到对应 complete_tx 字节完成通知。"
+      },
+      "template_notes": {}
+    },
+    "contract.api.input_release_stage": {
+      "layer": "Pipeline 输入消费者",
+      "summary": "在 MMA 已发起对当前 A/B 的使用后，把该阶段 empty 屏障交给 UMMA 完成通知路径；只有对应硬件消费完成，生产者才可复用输入共享内存。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "skip": "调用时的跳过通知标志；非零时不发起本次 consumer release 硬件通知，必须与参与角色和调度分支一致。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_commit_stage": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "对指定累加器阶段的 full 屏障发起 UMMA 完成通知；MMA 完成后 Epilogue 才能通过 consumer_wait 取得结果。此提交不能替代调用方等待。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.acc_release_stage": {
+      "layer": "Pipeline 累加器消费者",
+      "summary": "Epilogue 完成当前 TMEM 阶段的读取后，向累加器 empty 屏障发到达通知，允许 MMA 生产者下一轮复用；2SM 特化将通知路由到配对偶数侧 CTA。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。",
+        "AtomThrShape_MNK_": "单次 MMA 操作在 M/N/K 方向协作的 CTA 形状类型；这里据其规模选择 1SM 或 2SM 的通知方法，不是线程块总维度。"
+      }
+    },
+    "contract.api.store_commit_stage": {
+      "layer": "Pipeline 输出生产者",
+      "summary": "把最近发起的一批 TMA store 提交为一个可等待的 group；此实现最终调用 tma_store_arrive，stage/count 形参只是统一接口所保留的状态信息。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "为统一 Pipeline 接口接收的环形槽索引；固定实现标记 maybe_unused，提交 group 不读取它。",
+        "count": "为统一 Pipeline 接口接收的累计批次计数；此提交实现标记 maybe_unused，实际仅执行 tma_store_arrive。"
+      },
+      "template_notes": {
+        "Stages_": "编译期逻辑环形阶段数，决定 PipelineState<Stages> 的索引轮转，并为 UnacquiredStages_ 提供 Stages_-1 的默认值。PipelineTmaStore 本身不分配 full/empty 屏障数组，等待使用 TMA bulk group，而不是逐槽 mbarrier。",
+        "UnacquiredStages_": "producer_acquire 使用的编译期 bulk-group 等待阈值，默认 Stages_-1；它作为 tma_store_wait 的立即数，限制尚未完成源读取的已提交 store 批次数，不是共享屏障数量或字节数。"
+      }
+    },
+    "contract.api.store_acquire_stage": {
+      "layer": "Pipeline 输出生产者",
+      "summary": "输出缓冲再次使用前，按累计提交数和 always_wait 策略等待更早的 TMA store group 源读取，将仍在途的批次数限制在 UnacquiredStages 内。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "为统一 Pipeline 接口接收的环形槽索引；固定实现标记 maybe_unused，等待判断只使用 count 和 params_.always_wait。",
+        "count": "调用时流水状态中的累计批次计数，用于判断是否超过可不等待的初始批次数；不是当前 ring stage 索引。"
+      },
+      "template_notes": {
+        "Stages_": "编译期逻辑环形阶段数，决定 PipelineState<Stages> 的索引轮转，并为 UnacquiredStages_ 提供 Stages_-1 的默认值。PipelineTmaStore 本身不分配 full/empty 屏障数组，等待使用 TMA bulk group，而不是逐槽 mbarrier。",
+        "UnacquiredStages_": "producer_acquire 使用的编译期 bulk-group 等待阈值，默认 Stages_-1；它作为 tma_store_wait 的立即数，限制尚未完成源读取的已提交 store 批次数，不是共享屏障数量或字节数。"
+      }
+    },
+    "contract.api.copy_atom_with": {
+      "layer": "CuTe Copy Atom 执行绑定",
+      "summary": "把本次参数包转交 Traits::with，再用返回的执行 Traits 构造新的 Copy_Atom；绑定对象不发起 copy，也不以 constexpr 保证该调用发生在编译期。",
+      "execution": "参数类型在模板实例化时决定 with 重载与返回类型；屏障地址、掩码等实参按本次调用绑定，本路径在设备执行期使用。",
+      "parameter_notes": {
+        "args": "调用时完美转发给 Traits::with 的实参包；本 TMA 路径用于绑定 mbarrier、multicast mask 和缓存提示等执行信息。"
+      },
+      "template_notes": {
+        "Args": "所属 Atom/Traits 特化的附加模板类型包；决定编译期 Traits 组织，不是每次 call 传入的数值参数包。",
+        "CopyInternalType": "Copy_Atom 内部重解释和排列数据所用的元素类型，不一定等于用户张量的原始元素类型。",
+        "TraitsArgs": "传给 Copy_Atom::with 的各实参类型包；决定所选 Traits::with 重载及返回 Atom 类型。"
+      }
+    },
+    "tmem.api.adcaca0e37dbe70dfb51": {
+      "layer": "跨 CTA 回收屏障初始化",
+      "summary": "以给定到达计数初始化 ClusterBarrier；初始化必须在所有使用者开始 arrive/wait 前完成，并通过相应初始化同步对其他参与者可见。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "arrive_count": "初始化时每一轮屏障需要的到达计数；不是事务字节数，数值须与实际参与者及通知次数匹配。"
+      },
+      "template_notes": {}
+    },
+    "tmem.external.45b7bd7bec43c2249606": {
+      "layer": "CUDA warp 协作边界",
+      "summary": "记录 Kernel 中 __syncwarp 的调用，用于当前 warp 内协作和分配结果交接；它不能替代 CTA named barrier、cluster 屏障或其他 CTA 的等待。",
+      "execution": "设备调用时执行的 CUDA 内建同步操作；当前外部节点没有收录完整声明，不伪造形参。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "tmem.api.5dc2c8733b96cd5ff8be": {
+      "layer": "Collective 的 MMA 操作数准备",
+      "summary": "从当前 CTA 共享内存 A/B 布局构造与 TiledMma 对应的描述符张量，连同 TiledMma 返回给 mma。此实现的 tmem_storage 形参未使用，不负责分配或绑定 TMEM。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "tmem_storage": "按值接收的 TMEM 存储描述；此 mma_init 实现明确 maybe_unused，不读取、不修改，也不据此分配 TMEM。",
+        "shared_tensors": "当前 CTA 共享内存 A/B TensorStorage 引用；mma_init 由它的 smem_A/smem_B 基址及 SmemLayoutA/B 构造描述符张量。"
+      },
+      "template_notes": {
+        "Stages": "输入 A/B 的编译期流水阶段数，决定共享内存缓冲和输入 Pipeline 的槽位数。",
+        "SchedulerPipelineStageCount": "调度数据流水的编译期阶段数；与 A/B 输入缓冲阶段和累加器阶段分别设置。",
+        "AccumulatorPipelineStageCount": "累加结果交接流水的编译期阶段数，决定 MMA 与 Epilogue 之间可轮转的累加器阶段。",
+        "ArchTag_": "编译期架构标签，用于选择实现和约束；Sm100 类型配方与编译器最终生成的 sm_110a 目标不是同一个参数。",
+        "ClusterShape": "CTA cluster 的形状类型，描述沿各维协作的 CTA 数；类型可以包含动态维，其具体值再由调用时对象提供。",
+        "TileShape_": "主循环工作块的 M/N/K 形状类型；限定操作数分块、共享内存布局和 MMA 铺排范围。",
+        "ElementA_": "A 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideA_": "A 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "ElementB_": "B 张量的编译期元素类型，决定存储单位、数值格式及后续复制/计算接口要求。",
+        "StrideB_": "B 张量的步长类型，规定各维地址增量的结构和静态/动态分量；动态步长值仍由运行参数提供。",
+        "TiledMma_": "编译期 MMA 铺排类型，规定 Atom、CTA 协作及操作数/累加器分区。",
+        "GmemTiledCopyA_": "从全局内存读取 A 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomA_": "A 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomA_": "A 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformA_": "A 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "GmemTiledCopyB_": "从全局内存读取 B 的复制类型；本路径携带 TMA 张量描述与对应分区方法。",
+        "SmemLayoutAtomB_": "B 在共享内存中使用的基础布局类型；经铺排形成完整缓冲布局，影响 swizzle 与访问映射。",
+        "SmemCopyAtomB_": "B 共享内存侧复制 Atom 的类型参数；当前 SS 特化以 static_assert 要求它为 void，直接使用共享内存描述符，没有此 Atom 发起的额外 S2R 搬运。",
+        "TransformB_": "B 操作数变换的编译期类型参数；当前特化只保留对应类型别名，没有在 load/mma 中调用该变换，不能把绑定画成运行时处理步骤。",
+        "TmemStorage": "包含 accumulators 张量的存储描述类型；这里的类型封装 TMEM 视图，不代表创建新的 TMEM 分配。"
+      }
+    },
+    "tmem.api.99a4903f389b222914e9": {
+      "layer": "Kernel 间依赖控制包装",
+      "summary": "在启用 GDC 的设备分支发起 launch_dependents 信号，允许按依赖启动协议继续启动后续 grid；这不是当前 GEMM 已对 Host 完成的通知。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {},
+      "template_notes": {}
+    },
+    "tmem.api.c1398ee47cc2f1649a7b": {
+      "layer": "CTA 内 named barrier 底层包装",
+      "summary": "以明确线程计数和硬件 barrier ID 执行 named barrier arrive；调用仅通知到达，既不等待该轮其他线程，也不加用户屏障 ID 偏移。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "num_threads": "调用时此 named barrier 一轮要求的参与线程数；同一个屏障的各参与方必须采用一致计数。",
+        "barrier_id": "调用时的 named barrier 硬件编号；internal 接口直接使用它，不再替用户屏障编号加保留区偏移。"
+      },
+      "template_notes": {}
+    },
+    "tmem.api.e3ccb8fc2e529898504e": {
+      "layer": "CTA 内 named barrier 底层包装",
+      "summary": "以明确线程计数和硬件 barrier ID 执行 named barrier 到达并等待；所有参与方须使用一致的屏障编号与线程计数。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "num_threads": "调用时此 named barrier 一轮要求的参与线程数；同一个屏障的各参与方必须采用一致计数。",
+        "barrier_id": "调用时的 named barrier 硬件编号；internal 接口直接使用它，不再替用户屏障编号加保留区偏移。"
+      },
+      "template_notes": {}
+    },
+    "tmem.api.4be6b74bf91e974a56fa": {
+      "layer": "跨 CTA 回收握手",
+      "summary": "向指定 cluster CTA 的 ClusterBarrier 发到达通知，predicate 控制是否真正发起；Kernel 用它协调配对 CTA 的 TMEM 回收，单次 arrive 不等于两边都已释放。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中需要等待或更新的屏障对象的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。",
+        "cta_id": "调用时目的 CTA 在 cluster 内的编号；静态 arrive 将屏障地址映射到该 CTA，而不是设备号或线程号。",
+        "pred": "调用时到达通知的谓词，默认非零；为 0 时不发起此次 arrive，必须与实际参与计数一致。"
+      },
+      "template_notes": {}
+    },
+    "tmem.api.8c30950e7a917504663d": {
+      "layer": "Pipeline 累加器生产者收尾",
+      "summary": "从当前状态遍历所有环形阶段并逐个取得生产许可，确认消费者已经释放所有阶段，避免生产者先退出导致跨 CTA 交接对象失效。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "tmem.api.d6fd9b3aa96f2181d2be": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "MMA 生产者等待累加器阶段的 empty 屏障，确认上一次 Epilogue 已释放该阶段后才允许写入；此普通异步 Pipeline 获取不登记 TMA transaction_bytes。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "state": "调用时 Pipeline 状态值，包含环形 stage 索引、相位及计数；按值传递，不能仅因类型固定便把当前状态视为编译期常量。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "tmem.api.5d1d398869b0beec826c": {
+      "layer": "Pipeline 累加器生产者",
+      "summary": "MMA 生产者等待累加器阶段的 empty 屏障，确认上一次 Epilogue 已释放该阶段后才允许写入；此普通异步 Pipeline 获取不登记 TMA transaction_bytes。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "stage": "调用时环形缓冲槽索引，用于选择 full/empty 屏障数组元素；不是阶段总数，也不是随执行一直增长的序号。",
+        "phase": "调用时屏障等待的旧相位奇偶值（通常为 0/1）；等待对应一轮完成并翻转相位，避免把上一次完成误认作本次完成。",
+        "barrier_token": "先前 try_acquire/try_wait 返回的等待结果；WaitAgain 要继续等待，WaitDone 允许直接完成本次获取/等待，不能把别的槽或相位的 token 混用。"
+      },
+      "template_notes": {
+        "Stages_": "编译期阶段数，决定此 Pipeline 的环形槽位数量及其屏障数组、状态索引类型；不是本次已经完成的阶段数。"
+      }
+    },
+    "tmem.api.06081e609635d8bdb9fe": {
+      "layer": "硬件屏障到达包装",
+      "summary": "清除共享地址的配对位后，对协作 2SM 的偶数侧屏障执行 mbarrier.arrive。它是普通到达，不是 UMMA commit；上层须先确保 TMEM load 已完成。",
+      "execution": "此代表路径在设备调用时执行。模板参数决定实现、布局与静态约束；地址、坐标和状态等值随调用提供。静态 Shape/Layout 或空策略对象可将信息放在类型里，并不一定产生实际运行时传参；constexpr 也不等于本次调用在编译期完成。",
+      "parameter_notes": {
+        "smem_ptr": "调用时共享内存中累加器阶段的 empty 屏障的地址；它指向屏障状态而不是矩阵数据，const 修饰不阻止硬件到达/等待操作。"
+      },
+      "template_notes": {}
+    }
+  }
+}

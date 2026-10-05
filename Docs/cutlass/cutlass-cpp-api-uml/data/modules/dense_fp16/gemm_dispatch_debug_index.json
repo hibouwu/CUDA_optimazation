@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "kind": "NVCC/PTXAS DWARF inline origin chain",
+  "source": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+  "source_sha256": "4986a9fdc1f426110c195b08315b5b85d4f44587300b67ff83520d2e002a9681",
+  "file_number_map_source": "probe.ptx .file directives",
+  "entries": [
+    {
+      "source": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 83,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS4_18DescriptorIteratorEEENS_6LayoutINS_5tupleIJNS_1CILi1EEESE_EEENSC_IJNSD_ILi0EEESG_EEEEESA_SI_NS8_INS_8tmem_ptrIfEEEENSB_INSC_IJNSC_IJNSD_ILi128EEESM_EEESE_SE_EEENSC_IJNSC_IJNSD_ILi65536EEESE_EEESG_SG_EEEEEEEvRKNS_8MMA_AtomIJT_EEERKNS_6TensorIT0_T1_EERKNSY_IT2_T3_EERNSY_IT4_T5_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >&)",
+        "die_offset": "2f44f",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 26824,
+          "end_line": 26830,
+          "quote": " <1><2f44f>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <2f450>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS4_18DescriptorIteratorEEENS_6LayoutINS_5tupleIJNS_1CILi1EEESE_EEENSC_IJNSD_ILi0EEESG_EEEEESA_SI_NS8_INS_8tmem_ptrIfEEEENSB_INSC_IJNSC_IJNSD_ILi128EEESM_EEESE_SE_EEENSC_IJNSC_IJNSD_ILi65536EEESE_EEESG_SG_EEEEEEEvRKNS_8MMA_AtomIJT_EEERKNS_6TensorIT0_T1_EERKNSY_IT2_T3_EERNSY_IT4_T5_EE\n    <2f5fc>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <2f6ef>   DW_AT_decl_file   : 43\n    <2f6f0>   DW_AT_decl_line   : 83\n    <2f6f1>   DW_AT_type        : <0x25f1e>\n    <2f6f5>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "target": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 275,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEENSE_ILi1EEESH_EEENSD_IJNSD_IJNSE_ILi65536EEESH_EEENSE_ILi0EEESL_EEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSH_SH_EEENSD_IJSL_SL_EEEEESP_SS_SB_SN_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > >, (void*)0>(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > > const&)",
+        "die_offset": "2f8cb",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 26889,
+          "end_line": 26895,
+          "quote": " <1><2f8cb>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <2f8cc>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEENSE_ILi1EEESH_EEENSD_IJNSD_IJNSE_ILi65536EEESH_EEENSE_ILi0EEESL_EEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSH_SH_EEENSD_IJSL_SL_EEEEESP_SS_SB_SN_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <2fa92>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <2fbb6>   DW_AT_decl_file   : 43\n    <2fbb7>   DW_AT_decl_line   : 275\n    <2fbb9>   DW_AT_type        : <0x25f1e>\n    <2fbbd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 88
+      },
+      "inline_die_offset": "3b7c1",
+      "inline_evidence": {
+        "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+        "start_line": 34670,
+        "end_line": 34676,
+        "quote": " <4><3b7c1>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3b7c2>   DW_AT_abstract_origin: <0x2f8cb>\n    <3b7c6>   DW_AT_low_pc      : 0x21e30\n    <3b7ce>   DW_AT_high_pc     : 0x46220\n    <3b7d6>   DW_AT_call_file   : 43\n    <3b7d7>   DW_AT_call_line   : 88\n    <3b7d8>   DW_AT_call_column : 3"
+      }
+    },
+    {
+      "source": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 275,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEENSE_ILi1EEESH_EEENSD_IJNSD_IJNSE_ILi65536EEESH_EEENSE_ILi0EEESL_EEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSH_SH_EEENSD_IJSL_SL_EEEEESP_SS_SB_SN_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > >, (void*)0>(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> >, cute::C<1>, cute::C<1> >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> >, cute::C<0>, cute::C<0> > > > const&)",
+        "die_offset": "2f8cb",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 26889,
+          "end_line": 26895,
+          "quote": " <1><2f8cb>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <2f8cc>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEENSE_ILi1EEESH_EEENSD_IJNSD_IJNSE_ILi65536EEESH_EEENSE_ILi0EEESL_EEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSH_SH_EEENSD_IJSL_SL_EEEEESP_SS_SB_SN_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <2fa92>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <2fbb6>   DW_AT_decl_file   : 43\n    <2fbb7>   DW_AT_decl_line   : 275\n    <2fbb9>   DW_AT_type        : <0x25f1e>\n    <2fbbd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "target": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 142,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_EEvRKNS_8MMA_AtomIJT_EEEONS_6TensorIT0_T1_EERKNSY_IT2_T3_EERKNSY_IT4_T5_EERKNSY_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&)",
+        "die_offset": "35603",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29221,
+          "end_line": 29227,
+          "quote": " <1><35603>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35604>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_EEvRKNS_8MMA_AtomIJT_EEEONS_6TensorIT0_T1_EERKNSY_IT2_T3_EERKNSY_IT4_T5_EERKNSY_IT6_T7_EE\n    <357b3>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <358c7>   DW_AT_decl_file   : 43\n    <358c8>   DW_AT_decl_line   : 142\n    <358c9>   DW_AT_type        : <0x25f1e>\n    <358cd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 298
+      },
+      "inline_die_offset": "3f60d",
+      "inline_evidence": {
+        "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+        "start_line": 39121,
+        "end_line": 39127,
+        "quote": " <9><3f60d>: Abbrev Number: 46 (DW_TAG_inlined_subroutine)\n    <3f60e>   DW_AT_abstract_origin: <0x35603>\n    <3f612>   DW_AT_low_pc      : 0x3e950\n    <3f61a>   DW_AT_high_pc     : 0x46060\n    <3f622>   DW_AT_call_file   : 43\n    <3f623>   DW_AT_call_line   : 298\n    <3f625>   DW_AT_call_column : 9"
+      }
+    },
+    {
+      "source": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 142,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_EEvRKNS_8MMA_AtomIJT_EEEONS_6TensorIT0_T1_EERKNSY_IT2_T3_EERKNSY_IT4_T5_EERKNSY_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&)",
+        "die_offset": "35603",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29221,
+          "end_line": 29227,
+          "quote": " <1><35603>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35604>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_EEvRKNS_8MMA_AtomIJT_EEEONS_6TensorIT0_T1_EERKNSY_IT2_T3_EERKNSY_IT4_T5_EERKNSY_IT6_T7_EE\n    <357b3>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <358c7>   DW_AT_decl_file   : 43\n    <358c8>   DW_AT_decl_line   : 142\n    <358c9>   DW_AT_type        : <0x25f1e>\n    <358cd>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "target": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 190,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, (void*)0>(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&)",
+        "die_offset": "35923",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29267,
+          "end_line": 29273,
+          "quote": " <1><35923>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35924>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <35ad8>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <35bfc>   DW_AT_decl_file   : 43\n    <35bfd>   DW_AT_decl_line   : 190\n    <35bfe>   DW_AT_type        : <0x25f1e>\n    <35c02>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 148
+      },
+      "inline_die_offset": "3f676",
+      "inline_evidence": {
+        "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+        "start_line": 39148,
+        "end_line": 39154,
+        "quote": " <10><3f676>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f677>   DW_AT_abstract_origin: <0x35923>\n    <3f67b>   DW_AT_low_pc      : 0x3ebd0\n    <3f683>   DW_AT_high_pc     : 0x46060\n    <3f68b>   DW_AT_call_file   : 43\n    <3f68c>   DW_AT_call_line   : 148\n    <3f68d>   DW_AT_call_column : 3"
+      }
+    },
+    {
+      "source": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 190,
+        "name": "gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>",
+        "linkage_name": "_ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE",
+        "demangled": "void cute::gemm<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, (void*)0>(cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&)",
+        "die_offset": "35923",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29267,
+          "end_line": 29273,
+          "quote": " <1><35923>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35924>   DW_AT_MIPS_linkage_name: _ZN4cute4gemmINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES3_fLi256ELi128ELNS_4UMMA5MajorE0ELS5_1ELNS4_7ScaleInE0ELS6_0EEENS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSD_IJNS_1CILi128EEESF_EEEEEENSD_IJNSD_IJNSE_ILi65536EEENSE_ILi1EEEEEEEEEEENS8_INS4_18DescriptorIteratorEEENSC_INSD_IJSJ_EEENSD_IJNSE_ILi0EEEEEEEESO_SS_SB_SM_LPv0EEEvRKNS_8MMA_AtomIJT_EEERNS_6TensorIT0_T1_EERKNSZ_IT2_T3_EERKNSZ_IT4_T5_EERKNSZ_IT6_T7_EE\n    <35ad8>   DW_AT_name        : gemm<SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAccumulator, 256, 128, Major::K, Major::MN, ScaleIn::One, ScaleIn::One>,ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type,(type *)nullptr>\n    <35bfc>   DW_AT_decl_file   : 43\n    <35bfd>   DW_AT_decl_line   : 190\n    <35bfe>   DW_AT_type        : <0x25f1e>\n    <35c02>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "target": {
+        "path": "include/cute/atom/mma_atom.hpp",
+        "line": 94,
+        "name": "call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE",
+        "demangled": "void cute::MMA_Atom<cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>> >::call<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >(cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&) const",
+        "die_offset": "35c3c",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29303,
+          "end_line": 29309,
+          "quote": " <1><35c3c>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35c3d>   DW_AT_MIPS_linkage_name: _ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <35df8>   DW_AT_name        : call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <35e88>   DW_AT_decl_file   : 19\n    <35e89>   DW_AT_decl_line   : 94\n    <35e8a>   DW_AT_type        : <0x25f1e>\n    <35e8e>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "callsite": {
+        "path": "include/cute/algorithm/gemm.hpp",
+        "line": 197
+      },
+      "inline_die_offset": "3f6de",
+      "inline_evidence": {
+        "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+        "start_line": 39175,
+        "end_line": 39181,
+        "quote": " <11><3f6de>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f6df>   DW_AT_abstract_origin: <0x35c3c>\n    <3f6e3>   DW_AT_low_pc      : 0x3ee30\n    <3f6eb>   DW_AT_high_pc     : 0x46060\n    <3f6f3>   DW_AT_call_file   : 43\n    <3f6f4>   DW_AT_call_line   : 197\n    <3f6f5>   DW_AT_call_column : 3"
+      }
+    },
+    {
+      "source": {
+        "path": "include/cute/atom/mma_atom.hpp",
+        "line": 94,
+        "name": "call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE",
+        "demangled": "void cute::MMA_Atom<cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>> >::call<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >(cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&) const",
+        "die_offset": "35c3c",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29303,
+          "end_line": 29309,
+          "quote": " <1><35c3c>: Abbrev Number: 35 (DW_TAG_subprogram)\n    <35c3d>   DW_AT_MIPS_linkage_name: _ZNK4cute8MMA_AtomIJNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tES4_fLi256ELi128ELNS_4UMMA5MajorE0ELS6_1ELNS5_7ScaleInE0ELS7_0EEEJEEEEE4callINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNSH_IJNS_1CILi128EEESJ_EEEEEENSH_IJNSH_IJNSI_ILi65536EEENSI_ILi1EEEEEEEEEEENSC_INS5_18DescriptorIteratorEEENSG_INSH_IJSN_EEENSH_IJNSI_ILi0EEEEEEEESS_SW_SF_SQ_EEvRNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <35df8>   DW_AT_name        : call<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <35e88>   DW_AT_decl_file   : 19\n    <35e89>   DW_AT_decl_line   : 94\n    <35e8a>   DW_AT_type        : <0x25f1e>\n    <35e8e>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "target": {
+        "path": "include/cute/atom/mma_traits_sm100.hpp",
+        "line": 2072,
+        "name": "mma_unpack<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>",
+        "linkage_name": "_ZN4cute10mma_unpackINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNS6_IJNS_1CILi128EEES8_EEEEEENS6_IJNS6_IJNS7_ILi65536EEENS7_ILi1EEEEEEEEEEENS1_INS_4UMMA18DescriptorIteratorEEENS5_INS6_IJSC_EEENS6_IJNS7_ILi0EEEEEEEESI_SM_S4_SF_EEvRKNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tESQ_fLi256ELi128ELNSG_5MajorE0ELSR_1ELNSG_7ScaleInE0ELSS_0EEEJEEERNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE",
+        "demangled": "void cute::mma_unpack<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > >, cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >(cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>> const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > >&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::UMMA::DescriptorIterator>, cute::Layout<cute::tuple<cute::C<1> >, cute::tuple<cute::C<0> > > > const&, cute::Tensor<cute::ViewEngine<cute::tmem_ptr<float> >, cute::Layout<cute::tuple<cute::tuple<cute::C<128>, cute::C<128> > >, cute::tuple<cute::tuple<cute::C<65536>, cute::C<1> > > > > const&)",
+        "die_offset": "35ed1",
+        "evidence": {
+          "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+          "start_line": 29341,
+          "end_line": 29347,
+          "quote": " <1><35ed1>: Abbrev Number: 32 (DW_TAG_subprogram)\n    <35ed2>   DW_AT_MIPS_linkage_name: _ZN4cute10mma_unpackINS_10ViewEngineINS_8tmem_ptrIfEEEENS_6LayoutINS_5tupleIJNS6_IJNS_1CILi128EEES8_EEEEEENS6_IJNS6_IJNS7_ILi65536EEENS7_ILi1EEEEEEEEEEENS1_INS_4UMMA18DescriptorIteratorEEENS5_INS6_IJSC_EEENS6_IJNS7_ILi0EEEEEEEESI_SM_S4_SF_EEvRKNS_10MMA_TraitsINS_26SM100_MMA_F16BF16_2x1SM_SSIN7cutlass6half_tESQ_fLi256ELi128ELNSG_5MajorE0ELSR_1ELNSG_7ScaleInE0ELSS_0EEEJEEERNS_6TensorIT_T0_EERKNSX_IT1_T2_EERKNSX_IT3_T4_EERKNSX_IT5_T6_EE\n    <36088>   DW_AT_name        : mma_unpack<ViewEngine<tmem_ptr<float>>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<DescriptorIterator>,type,ViewEngine<tmem_ptr<float>>,type>\n    <3611e>   DW_AT_decl_file   : 13\n    <3611f>   DW_AT_decl_line   : 2072\n    <36121>   DW_AT_type        : <0x25f1e>\n    <36125>   DW_AT_inline      : 1\t(inlined)"
+        }
+      },
+      "callsite": {
+        "path": "include/cute/atom/mma_atom.hpp",
+        "line": 104
+      },
+      "inline_die_offset": "3f745",
+      "inline_evidence": {
+        "path": "data/modules/dense_fp16/probe/dispatch-run-ufh3cn5e/readelf_debug_info.stdout.txt",
+        "start_line": 39202,
+        "end_line": 39208,
+        "quote": " <12><3f745>: Abbrev Number: 49 (DW_TAG_inlined_subroutine)\n    <3f746>   DW_AT_abstract_origin: <0x35ed1>\n    <3f74a>   DW_AT_low_pc      : 0x3f0b0\n    <3f752>   DW_AT_high_pc     : 0x46010\n    <3f75a>   DW_AT_call_file   : 19\n    <3f75b>   DW_AT_call_line   : 104\n    <3f75c>   DW_AT_call_column : 5"
+      }
+    }
+  ],
+  "note": "Compiler-generated inline call provenance. This is not proof of runtime launches, numerical correctness, or performance."
+}

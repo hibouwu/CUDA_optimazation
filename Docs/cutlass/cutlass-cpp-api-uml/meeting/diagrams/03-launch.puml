@@ -1,0 +1,41 @@
+@startuml
+title 提交任务与设备完成是两个边界
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 17
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+hide footbox
+actor 调用方 as App
+participant "Adapter\ninclude/cutlass/gemm/device/\ngemm_universal_adapter.h" as A
+participant "ClusterLauncher\ninclude/cutlass/cluster_launch.hpp" as C
+participant "CUDA Runtime\n外部接口" as R
+App -> A : run(stream, cuda_adapter, launch_with_pdl) [L610]
+A -> A : run(params_, stream, cuda_adapter, launch_with_pdl) [L615 → L374]
+note right of A : 两个不同 run 重载；\n读取已准备的 params_。
+A -> C : launch_with_fallback_cluster(...) [调用点 L509]
+note over C : 该函数完整参数及分支见速查与详细图，不泛化到所有 launch。
+alt Cluster/Grid 检查和 kernel 属性初始化通过
+ C -> R : cudaLaunchKernelExC(...) [调用点 L294]
+ R --> C : 提交/API 状态
+ C --> A : launch_result
+else 检查或初始化失败 [L275–283]
+ C --> A : kInvalid；未调用 CUDA 提交接口
+end
+A -> R : cudaGetLastError() [调用点 L564]
+R --> A : 当前错误状态
+A --> App : Status；不代表设备计算已完成
+note over App, R : 提交成功表示任务已提交；错误返回不等于设备已停止。\n设备入口见下方独立说明；本图不强加设备开始/结束的时刻。
+alt 提交成功，调用方等待本次工作
+App -> R : cudaStreamSynchronize(stream) [调用方显式同步]
+R --> App : 同步结果：必须检查异步错误
+note over App : 只有相应设备工作完成且结果可访问，才读取结果或释放仍被使用的存储。\n其他实现可以提供不同的等价完成/依赖机制。
+else 提交失败
+ note over App : 处理失败；不得把本次输出当作已完成结果。\n释放前仍须确认有关资源没有被在途任务使用。
+end
+legend bottom
+已选分支：Sm100 recipe、静态 Cluster 2×2×1、Host Adapter 关闭、PDL=false。
+设备侧：device_kernel<Operator> 在 include/cutlass/device_kernel.h:112 声明；
+其 L123 调用 op(params, smem)，进入 GemmKernel::operator()。
+这是运行时调度后的设备侧调用，不是 Host 直接调用 functor。
+endlegend
+@enduml

@@ -1,0 +1,123 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA0/1：分配结果发布
+state "CTA 0 leader mma" as actor0 {
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a17 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init_wait]]
+state "Allocator2Sm::allocate(512, &base)\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a7 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.allocate]]
+state "Allocator2Sm::allocate(512, &base)\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a8 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.allocate]]
+state "__syncwarp()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:728" as a22 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.syncwarp]]
+state "__syncwarp()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:728" as a23 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.syncwarp]]
+state "NamedBarrier::arrive()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_arrive]]
+state "NamedBarrier::arrive()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_arrive]]
+state "MMA读取SMEM base pointer\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:730" as a18 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_read_base]]
+state "MMA读取SMEM base pointer\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:730" as a19 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_read_base]]
+state "MMA绑定TMEM Tensor地址\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:731" as a20 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_set_tmem]]
+state "MMA绑定TMEM Tensor地址\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:731" as a21 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_set_tmem]]
+state "CollectiveMma::mma_init\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:733" as a15 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init]]
+state "NamedBarrier::arrive()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_arrive]]
+state "Allocator2Sm::allocate(512, &base)\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a6 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.allocate]]
+state "CollectiveMma::mma_init\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:733" as a16 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init]]
+}
+state "CTA 0 leader epilogue" as actor1 {
+state "Epilogue等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a10 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_init_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a4 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a5 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait]]
+state "Epilogue读取SMEM base pointer\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:871" as a11 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_read_base]]
+state "Epilogue读取SMEM base pointer\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:871" as a12 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_read_base]]
+state "Epilogue绑定TMEM Tensor地址\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a13 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_set_tmem]]
+state "NamedBarrier::arrive_and_wait()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a3 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.alloc_wait]]
+state "Epilogue等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a9 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_init_wait]]
+state "Epilogue绑定TMEM Tensor地址\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a14 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.epi_set_tmem]]
+}
+state "CTA 1 peer mma" as actor2 {
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a41 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_init_wait]]
+state "Allocator2Sm::allocate(512, &base)\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a31 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.allocate]]
+state "Allocator2Sm::allocate(512, &base)\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a32 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.allocate]]
+state "__syncwarp()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:728" as a46 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.syncwarp]]
+state "__syncwarp()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:728" as a47 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.syncwarp]]
+state "NamedBarrier::arrive()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a25 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_arrive]]
+state "NamedBarrier::arrive()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a26 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_arrive]]
+state "MMA读取SMEM base pointer\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:730" as a42 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_read_base]]
+state "MMA读取SMEM base pointer\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:730" as a43 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_read_base]]
+state "MMA绑定TMEM Tensor地址\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:731" as a44 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_set_tmem]]
+state "MMA绑定TMEM Tensor地址\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:731" as a45 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_set_tmem]]
+state "CollectiveMma::mma_init\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:733" as a39 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_init]]
+state "NamedBarrier::arrive()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:729" as a24 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_arrive]]
+state "Allocator2Sm::allocate(512, &base)\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:727" as a30 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.allocate]]
+state "CollectiveMma::mma_init\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:733" as a40 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_init]]
+}
+state "CTA 1 peer epilogue" as actor3 {
+state "Epilogue等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a34 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_init_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a28 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait]]
+state "NamedBarrier::arrive_and_wait()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a29 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait]]
+state "Epilogue读取SMEM base pointer\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:871" as a35 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_read_base]]
+state "Epilogue读取SMEM base pointer\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:871" as a36 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_read_base]]
+state "Epilogue绑定TMEM Tensor地址\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a37 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_set_tmem]]
+state "NamedBarrier::arrive_and_wait()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as a27 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait]]
+state "Epilogue等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a33 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_init_wait]]
+state "Epilogue绑定TMEM Tensor地址\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as a38 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_set_tmem]]
+}
+a17 --> a7 : tmem.order.002\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a8 --> a22 : tmem.order.003\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a23 --> a1 : tmem.order.004\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a2 --> a18 : tmem.order.005\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a19 --> a20 : tmem.order.006\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a21 --> a15 : tmem.order.007\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a10 --> a4 : tmem.order.008\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a5 --> a11 : tmem.order.009\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a12 --> a13 : tmem.order.010\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a0 --> a5 : tmem.order.011\nAll 32 MMA arrivals plus the 128 epilogue\nparticipants in this same CTA; no required ordering\nbetween arrive_and_wait.enter and MMA arrival.
+a4 --> a3 : tmem.order.012\nEpilogue arrive_and_wait contributes its own arrivals\nbefore waiting.
+a3 --> a5 : tmem.order.013\nSame CTA epilogue contribution family required as\nwell as MMA publication.
+a7 --> a6 : tmem.order.026\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a1 --> a0 : tmem.order.027\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a41 --> a31 : tmem.order.034\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a32 --> a46 : tmem.order.035\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a47 --> a25 : tmem.order.036\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a26 --> a42 : tmem.order.037\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a43 --> a44 : tmem.order.038\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a45 --> a39 : tmem.order.039\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a34 --> a28 : tmem.order.040\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a29 --> a35 : tmem.order.041\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a36 --> a37 : tmem.order.042\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a24 --> a29 : tmem.order.043\nAll 32 MMA arrivals plus the 128 epilogue\nparticipants in this same CTA; no required ordering\nbetween arrive_and_wait.enter and MMA arrival.
+a28 --> a27 : tmem.order.044\nEpilogue arrive_and_wait contributes its own arrivals\nbefore waiting.
+a27 --> a29 : tmem.order.045\nSame CTA epilogue contribution family required as\nwell as MMA publication.
+a31 --> a30 : tmem.order.057\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a25 --> a24 : tmem.order.058\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a9 --> a10 : tmem.order.138\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a7 --> a8 : tmem.order.139\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a22 --> a23 : tmem.order.140\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a1 --> a2 : tmem.order.141\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a0 --> a2 : tmem.order.142\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a18 --> a19 : tmem.order.143\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a20 --> a21 : tmem.order.144\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a15 --> a16 : tmem.order.145\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a4 --> a5 : tmem.order.146\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a11 --> a12 : tmem.order.147\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a13 --> a14 : tmem.order.148\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a33 --> a34 : tmem.order.165\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a31 --> a32 : tmem.order.166\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a46 --> a47 : tmem.order.167\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a25 --> a26 : tmem.order.168\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a24 --> a26 : tmem.order.169\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a42 --> a43 : tmem.order.170\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a44 --> a45 : tmem.order.171\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a39 --> a40 : tmem.order.172\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a28 --> a29 : tmem.order.173\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a35 --> a36 : tmem.order.174\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a37 --> a38 : tmem.order.175\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

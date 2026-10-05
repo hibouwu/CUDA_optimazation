@@ -1,0 +1,234 @@
+namespace SM100::TMEM::UTCCP {
+
+// 128 data path lanes, 256-bit pattern, 1cta mode
+struct SM100_UTCCP_128dp256bit_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.128x256b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 128 data path lanes, 256-bit pattern, 2cta mode
+struct SM100_UTCCP_128dp256bit_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::2.128x256b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+struct SM100_UTCCP_128dp128bit_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.128x128b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+struct SM100_UTCCP_128dp128bit_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::2.128x128b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+
+// 4 data path lanes, 256-bit pattern, 1cta mode
+struct SM100_UTCCP_4dp256bit_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.4x256b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 4 data path lanes, 256-bit pattern, 2cta mode
+struct SM100_UTCCP_4dp256bit_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+        asm volatile ("tcgen05.cp.cta_group::2.4x256b [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 4x32 data path lanes (broadcast), 128-bit pattern, 1cta mode
+struct SM100_UTCCP_4x32dp128bit_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.32x128b.warpx4 [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 4x32 data path lanes (broadcast), 128-bit pattern, 2cta mode
+struct SM100_UTCCP_4x32dp128bit_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::2.32x128b.warpx4 [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 2x64 data path lanes (broadcast like 4x32dp), 128-bit pattern, 1cta mode
+struct SM100_UTCCP_2x64dp128bitlw0213_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.64x128b.warpx2::02_13  [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 2x64 data path lanes (broadcast like 4x32dp), 128-bit pattern, 2cta mode
+struct SM100_UTCCP_2x64dp128bitlw0213_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::2.64x128b.warpx2::02_13  [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 2x64 data path lanes (broadcast seperately in upper and lower 64dp), 128-bit pattern, 1cta mode
+// data_row[0:31] -> DP[0:63]
+// data_row[32:63] -> DP[64:127]
+struct SM100_UTCCP_2x64dp128bitlw0123_1cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::1.64x128b.warpx2::01_23 [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+// 2x64 data path lanes (broadcast seperately in upper and lower 64dp), 128-bit pattern, 2cta mode
+// data_row[0:31] -> DP[0:63]
+// data_row[32:63] -> DP[64:127]
+struct SM100_UTCCP_2x64dp128bitlw0123_2cta
+{
+  using SRegisters = uint64_t[1];
+  using DRegisters = uint32_t[1];
+
+  CUTE_HOST_DEVICE static void
+  copy(uint64_t const& src_addr, uint32_t const& dst_addr)
+  {
+#if defined(CUTE_ARCH_TCGEN05_TMEM_ENABLED)
+    asm volatile ("tcgen05.cp.cta_group::2.64x128b.warpx2::01_23 [%0], %1;"
+    :
+    : "r"(dst_addr)  "l"(src_addr));
+#else
+    CUTE_INVALID_CONTROL_PATH("Trying to use UTCCP without CUTE_ARCH_TCGEN05_TMEM_ENABLED.");
+#endif
+  }
+};
+
+} // end namespace SM100::TMEM::UTCCP

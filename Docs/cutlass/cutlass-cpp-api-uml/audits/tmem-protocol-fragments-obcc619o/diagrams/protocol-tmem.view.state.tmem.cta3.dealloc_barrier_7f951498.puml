@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA 3 local tmem_dealloc phase 0
+state "阶段0等待32次到达" as s0
+note right of s0
+arrive count=NumMMAThreads=32; only incoming peer MMA arrivals
+count
+end note
+state "阶段0已满足" as s1
+note right of s1
+remote predicate-true peer MMA arrival family contributed 32;
+wait is on this CTA local barrier
+end note
+state "未初始化" as s2
+s2 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.init_dealloc tmem.transition.051\n初始化本CTA dealloc barrier · 指定效果满足]]
+s0 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.arrive795 tmem.transition.064\ndealloc arrive(peer, leader) · 指定效果满足]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

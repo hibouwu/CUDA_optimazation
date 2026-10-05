@@ -1,0 +1,765 @@
+{
+  "schema_version": 2,
+  "stage": "S13",
+  "status": "draft_pending_independent_A_review",
+  "family": "global_duplex",
+  "adapter_id": "global_duplex_v2",
+  "source": "microbench/gh200_resource_campaign/probes/global_duplex.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S13",
+      "phase": "A",
+      "path": "reviews/S13-A-review-r2.json"
+    },
+    {
+      "stage": "S13",
+      "phase": "B",
+      "path": "reviews/S13-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "read_ca_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "read",
+        "read_cache_policy": "ca",
+        "write_cache_policy": null,
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 0,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "read_cg_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "read",
+        "read_cache_policy": "cg",
+        "write_cache_policy": null,
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 0,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "write_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "write",
+        "read_cache_policy": null,
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 0,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "dependent_copy_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "copy",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w1_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r2_w1_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 2,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r4_w1_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 4,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w2_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 2,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w4_small",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 4,
+        "vector_bytes": 16,
+        "working_set_class": "small",
+        "requested_bytes_per_active_array": "floor(device.l2_cache_bytes/4)",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "read_ca_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "read",
+        "read_cache_policy": "ca",
+        "write_cache_policy": null,
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 0,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "read_cg_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "read",
+        "read_cache_policy": "cg",
+        "write_cache_policy": null,
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 0,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "write_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "write",
+        "read_cache_policy": null,
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 0,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "dependent_copy_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "copy",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w1_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r2_w1_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 2,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r4_w1_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 4,
+        "write_requests_per_group": 1,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w2_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 2,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    },
+    {
+      "id": "independent_r1_w4_large",
+      "threads": 256,
+      "iterations": 16,
+      "scope": "all_gpu",
+      "launch": {
+        "kind": "sms_capped_occupancy",
+        "maximum_ctas_per_sm": 4
+      },
+      "parameters": {
+        "mode": "independent",
+        "read_cache_policy": "cg",
+        "write_cache_policy": "wb",
+        "read_requests_per_group": 1,
+        "write_requests_per_group": 4,
+        "vector_bytes": 16,
+        "working_set_class": "large",
+        "requested_bytes_per_active_array": "4*device.l2_cache_bytes",
+        "allocation_alignment": "blocks*threads*16",
+        "allocation_bytes_per_active_array": "ceil(requested/alignment)*alignment",
+        "input_word": "uint32(17*word_index+seed)",
+        "independent_store_word": "uint32(29*word_index+seed)",
+        "copy_output": "exact source word"
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "global_requested_read_plus_write_v1",
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB/s_requested_payload/GPU"
+      },
+      "coverage_policy": "exact_sms",
+      "exportable": true
+    }
+  ],
+  "ratio_endpoints": {
+    "1:0": "read_cg of corresponding size",
+    "0:1": "write of corresponding size",
+    "reason": "same operation and timing conditions; aliases retain requested coordinate without duplicate sampling"
+  },
+  "execution": {
+    "T": "blocks*256",
+    "V": "allocation_bytes_per_active_array/16; multiple of T",
+    "groups_per_sweep": "V/T",
+    "read_vector_index": "((group*read_requests_per_group+read_index)*T+global_thread_id) modulo V",
+    "write_vector_index": "((group*write_requests_per_group+write_index)*T+global_thread_id) modulo V",
+    "independence": "read accumulators never feed independent stores; stores depend only on destination address and seed",
+    "copy": "each loaded uint4 is directly stored to distinct destination array at same index; not independent read/write",
+    "ownership": "vector index modulo T equals global_thread_id; no cross-thread writer even on wrap",
+    "work": "Qread=iterations*allocation_bytes_per_active_array*r; Qwrite=iterations*allocation_bytes_per_active_array*w; Q=Qread+Qwrite, with64-bit arithmetic",
+    "read_consumption": "consume all four32-bit words per uint4 in checksum; reference independent of timed device loop",
+    "timing": "thread0 start followed by CTA gate; all sweeps and read-result-dependent completion; all writing modes include device fence and CTA drain before globaltimer stop; host init/checks excluded",
+    "correctness": "validate every CTA/read checksum and every destination word; seed/address-distinct input, output poison every launch; short1/2 sweeps for whole18-point family before warmup",
+    "l2_bounds": "small single active array rounded near L2/4, two arrays near L2/2; large each array at least4*L2. Record actual aggregate allocation and reject if rounding makes small aggregate >=L2 or allocation exceeds available memory",
+    "warmup": "common bounded8-30 protocol; no claim of cold cache or long-term thermal equilibrium",
+    "limitations": "requested payload only; cache policy and relative size do not prove cache residency or physicalHBM traffic",
+    "sass": "verify actual LDG cache form/STG vector width, all lane consumption, requested read/write counts and loop, store input independence vs dependent-copy dataflow, write fence and timing completion"
+  },
+  "sass_contracts": {
+    "requirements": "verify actual LDG cache form/STG vector width, all lane consumption, requested read/write counts and loop, store input independence vs dependent-copy dataflow, write fence and timing completion; B must bind each actual kernel symbol, measured loop boundaries and complete per-iteration demand counts rather than matching mnemonics anywhere in the function"
+  }
+}

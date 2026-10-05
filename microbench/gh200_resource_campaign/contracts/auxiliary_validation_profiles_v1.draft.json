@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "family": "auxiliary",
+  "profiles": [
+    {
+      "id": "auxiliary_short_1_2_5_v1",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        5
+      ],
+      "input_profiles": [
+        "auxiliary_nonuniform_paired_seeds_v1"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "complete per-thread values and input/output guards",
+        "positive same-SM CTA cycles and nondecreasing globaltimer; quantized ns/event zero retained for numerical short only, no rate qualification; CUDA event synchronization for setmax",
+        "full untimed dynamic SMEM drain",
+        "same-word atomic logical128 requests versus static4 native updates preserved",
+        "three ordered internal seeds 0,3,UINT32_MAX; no Cartesian expansion",
+        "setmax exact reviewed offline cubin and all I*2*128*60 phase outputs"
+      ],
+      "reference_identity": {
+        "model": "auxiliary_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/auxiliary_host_reference_v1.hpp",
+        "sha256": "f6c401eb8e544b88f13054d4abf0db37081f7ac3ffeb1a88e336d8ae5c35af1f"
+      },
+      "declared_output_check": "exact full values/input/guards/SMEM + timer domain predicate; no checksum-only evidence",
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false
+    }
+  ]
+}

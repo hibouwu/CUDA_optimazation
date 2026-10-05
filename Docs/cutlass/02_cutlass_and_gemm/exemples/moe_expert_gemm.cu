@@ -38,7 +38,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 16, AlignmentB = 16;  // 元素数。
 constexpr int AlignmentC = 8, AlignmentD = 8;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_128, cute::_16, cute::_128>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_1, cute::_1, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_1, cute::_1, cute::_1>;  // 编译期固定的 CTA Cluster：(1,1,1)。
 using ProblemShape = cutlass::gemm::MoEProblemShape<cute::Shape<int, int, int>>;
 using MainloopSchedule = cutlass::gemm::KernelMixedTmaCpAsyncWarpSpecialized1SmSm100;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;

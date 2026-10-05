@@ -1,0 +1,879 @@
+{
+  "schema_version": 2,
+  "stage": "S17",
+  "status": "B1_short_only_pending_independent_review",
+  "family": "cluster_dsm_multicast",
+  "adapter_id": "cluster_dsm_multicast_v1",
+  "source": "microbench/gh200_resource_campaign/probes/cluster_dsm_multicast_v1.cu",
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/cluster_dsm_reference_v1.hpp",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp"
+  ],
+  "review_dependencies": [
+    {
+      "stage": "S17",
+      "phase": "A",
+      "path": "reviews/S17-A-review.json"
+    },
+    {
+      "stage": "S17",
+      "phase": "B",
+      "path": "reviews/S17-B-review.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "local_read_c2_one_cluster",
+      "form": "local_read",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c2_one_cluster",
+      "form": "dsm_read",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c2_one_cluster",
+      "form": "local_write",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c2_one_cluster",
+      "form": "dsm_write",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c2_one_cluster",
+      "form": "cluster_sync",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c2_one_cluster",
+      "form": "bulk_single_target",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c2_one_cluster",
+      "form": "bulk_all_targets",
+      "cluster_size": 2,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_read_c2_cluster_grid",
+      "form": "local_read",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c2_cluster_grid",
+      "form": "dsm_read",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c2_cluster_grid",
+      "form": "local_write",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c2_cluster_grid",
+      "form": "dsm_write",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c2_cluster_grid",
+      "form": "cluster_sync",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c2_cluster_grid",
+      "form": "bulk_single_target",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c2_cluster_grid",
+      "form": "bulk_all_targets",
+      "cluster_size": 2,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 2
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_read_c4_one_cluster",
+      "form": "local_read",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c4_one_cluster",
+      "form": "dsm_read",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c4_one_cluster",
+      "form": "local_write",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c4_one_cluster",
+      "form": "dsm_write",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c4_one_cluster",
+      "form": "cluster_sync",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c4_one_cluster",
+      "form": "bulk_single_target",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c4_one_cluster",
+      "form": "bulk_all_targets",
+      "cluster_size": 4,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_read_c4_cluster_grid",
+      "form": "local_read",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c4_cluster_grid",
+      "form": "dsm_read",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c4_cluster_grid",
+      "form": "local_write",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c4_cluster_grid",
+      "form": "dsm_write",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c4_cluster_grid",
+      "form": "cluster_sync",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c4_cluster_grid",
+      "form": "bulk_single_target",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c4_cluster_grid",
+      "form": "bulk_all_targets",
+      "cluster_size": 4,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 4
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_read_c8_one_cluster",
+      "form": "local_read",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c8_one_cluster",
+      "form": "dsm_read",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c8_one_cluster",
+      "form": "local_write",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c8_one_cluster",
+      "form": "dsm_write",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c8_one_cluster",
+      "form": "cluster_sync",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c8_one_cluster",
+      "form": "bulk_single_target",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c8_one_cluster",
+      "form": "bulk_all_targets",
+      "cluster_size": 8,
+      "scope": "one_cluster",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "one_cluster",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_read_c8_cluster_grid",
+      "form": "local_read",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_read",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_read_c8_cluster_grid",
+      "form": "dsm_read",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_read",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "local_write_c8_cluster_grid",
+      "form": "local_write",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "local_write",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "dsm_write_c8_cluster_grid",
+      "form": "dsm_write",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "dsm_write",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "cluster_sync_c8_cluster_grid",
+      "form": "cluster_sync",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "cluster_sync",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "collective_sync",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_single_target_c8_cluster_grid",
+      "form": "bulk_single_target",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_single_target",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    },
+    {
+      "id": "bulk_all_targets_c8_cluster_grid",
+      "form": "bulk_all_targets",
+      "cluster_size": 8,
+      "scope": "cluster_grid",
+      "threads_per_cta": 128,
+      "stage": "S17",
+      "parameters": {
+        "form": "bulk_all_targets",
+        "cluster_size": 8
+      },
+      "launch": {
+        "scope": "cluster_grid",
+        "threads": 128
+      },
+      "iterations": 128,
+      "metric": "byte",
+      "exportable": false,
+      "threads": 128
+    }
+  ]
+}

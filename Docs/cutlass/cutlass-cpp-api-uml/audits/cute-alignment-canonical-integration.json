@@ -1,0 +1,25 @@
+{
+  "inputs": {
+    "data/module-drafts/cute_alignment/relations.json": "3ce53c482b36d388c43e76367f2570528c2a535384a53fc76019679ecbc0b121",
+    "data/module-drafts/cute_alignment/check_source.py": "3e9783ff600b5cb0e8cdc13c54a9cd2a732c0161353a743e1cfea0812fd443fe",
+    "data/declarations.json": "d5d3c4e7be930915294639549b461081cf3f66fe0d52c743195cd523e78bd987",
+    "scripts/stage_cute_alignment.py": "f53b9b7c07a6b495fd8901f63fac47facba9237feee33a37ace22bd6a57313b5",
+    "scripts/build_atlas.py": "dfe607e7e4d698d61cccd9a1bbecad5d11fff05124c902cf4d568dccb3fe7cbd",
+    "scripts/reconcile_candidates.py": "9ea91ad5a2ebe41c8914b4418d3381131dd9baabeca2e05cb998730334b29a79",
+    "scripts/audit_declarations.py": "719335949981d91624c506581cde091cba719f11b406ae406aa8e030eae29d6f",
+    "scripts/scan_candidates.py": "0ab808f4e0c1f35d8b2e9ff3dca193c8be0d83946a383ec656027d283abeade6"
+  },
+  "independent_source_check": {
+    "source_accounting_check_passed": true,
+    "physical_declaration_selectors": 16,
+    "alignment_uses": 10,
+    "obligations": 100,
+    "parameters": 18,
+    "api_coverage_passed": false,
+    "reason": "Corrected canonical identity enrichment and independent semantic review remain required."
+  },
+  "physical_declarations_linked": 16,
+  "current_manual_overrides": 0,
+  "alignment_owners_linked": 10,
+  "global_completion_claimed": false
+}

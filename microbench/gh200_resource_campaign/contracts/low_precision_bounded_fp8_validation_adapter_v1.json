@@ -1,0 +1,51 @@
+{
+  "adapter_id": "low_precision_bounded_fp8_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.low_precision_bounded_fp8_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/low_precision.py": "1814441a300037f6a93b91c09b16b1e018ec257aee9f98082b39058c09b38061",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8.py": "038c0eb77cbfc7786c05756d791faf1630bb6d5eac77d4b5c59742a587c25e69",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8_sass_baseline.py": "2064cc73cad7e73f93364bdb04647f540e7dcc440086af255c4a376e67092cee",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8_validation.py": "d839ca3a5f357a1e0a80779c7f4a0891d0501e17792e33f42a44a827d2dcc082",
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/low_precision_bounded_fp8_reference_v1.hpp": "41b77e330956da7750ad499b0245e3225ba202ecdaad79d7646fa05929c3f489",
+    "microbench/gh200_resource_campaign/common/low_precision_reference.hpp": "13345802f9ea6523b42437bdaa5277bca9df5c01add140dcf0b08bff1fe07093",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/probes/generate_low_precision_bounded_fp8_v1.py": "df27715846637b7c912ecb49a60372750f886bef8c17d1a3603d04095ebf344d",
+    "microbench/gh200_resource_campaign/probes/low_precision.cu": "2b2793915dd136f57c0f7de0aa334595fac93a744e7fc1f87e13abb9629bc2b4",
+    "microbench/gh200_resource_campaign/probes/low_precision_bounded_fp8_v1.cu": "afeb6561ef2df0c348238d01e6e6d01f6834ac2ec21624e6c0a1bd2bd0f695b0",
+    "microbench/gh200_resource_campaign/tests/test_low_precision_bounded_fp8.py": "34602f03e2ca894216f789dad1cebf1de6c4d4769d896bf76b8192add3cc0114",
+    "microbench/gh200_resource_campaign/tests/test_low_precision_bounded_fp8_host.py": "737e6b4d48477bf23d0994e6b31dc6285cb3b24852d31f2ac7607e15b865fe1f",
+    "microbench/gh200_resource_campaign/tests/test_low_precision_bounded_fp8_sass.py": "c677aa3b7a022fbe2635367e2930698f40ee60599475a180a0aff44c8bc13b43",
+    "microbench/gh200_resource_campaign/tests/test_low_precision_bounded_fp8_validation.py": "09aa0798a71949686e75fcd49c9fac9bf6c291d2a99f82c8023dfb5673299532",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-bounded-fp8-a/diagnostics/low_precision_bounded_fp8_v1/compile.stderr": "7035b55f8b5a84943c6daba8e490ce880f088cc65f3780976f37294a07e99111",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/target-compile-bounded-fp8-a/diagnostics/low_precision_bounded_fp8_v1/sass.txt": "33034b585e5da776481af094b9771c63e9614c1277e0f14238a64c757837ff01"
+  },
+  "contract_sha256": "828f4ffd66a69cee89e531b0890dd20b9aa2f88d7d7a7c7fd30042fe6a0f9b76",
+  "profiles_sha256": "094a9f6081e1f5210e5ebfbceef716f34eccd804d9cb997fe747940e1aff0ac1",
+  "review_dependencies": [
+    {
+      "stage": "S08",
+      "phase": "A",
+      "path": "reviews/S08-A-review.json"
+    },
+    {
+      "stage": "S08",
+      "phase": "bounded-fp8-A",
+      "path": "reviews/S08-bounded-fp8-A-review.json"
+    },
+    {
+      "stage": "S08",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S08-bounded-fp8-source-B-review.json"
+    }
+  ]
+}

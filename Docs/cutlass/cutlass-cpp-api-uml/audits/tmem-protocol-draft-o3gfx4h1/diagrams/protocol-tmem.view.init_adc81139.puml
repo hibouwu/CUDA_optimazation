@@ -1,0 +1,65 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title TMEM：初始化与全局初始化前提
+state "CTA 0 leader mma" as actor0 {
+state "初始化本CTA dealloc barrier\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a3 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init_wait]]
+state "初始化本CTA dealloc barrier\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.init_dealloc]]
+state "初始化本CTA dealloc barrier\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a4 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init_wait]]
+}
+state "CTA 1 peer mma" as actor1 {
+state "初始化本CTA dealloc barrier\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a7 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a8 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_init_wait]]
+state "初始化本CTA dealloc barrier\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a6 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.init_dealloc]]
+state "初始化本CTA dealloc barrier\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a5 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a9 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.mma_init_wait]]
+}
+state "CTA 2 leader mma" as actor2 {
+state "初始化本CTA dealloc barrier\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a12 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a13 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.mma_init_wait]]
+state "初始化本CTA dealloc barrier\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a11 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.init_dealloc]]
+state "初始化本CTA dealloc barrier\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a10 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a14 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta2.mma_init_wait]]
+}
+state "CTA 3 peer mma" as actor3 {
+state "初始化本CTA dealloc barrier\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a17 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a18 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.mma_init_wait]]
+state "初始化本CTA dealloc barrier\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a16 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.init_dealloc]]
+state "初始化本CTA dealloc barrier\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:564" as a15 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.init_dealloc]]
+state "MMA等待cluster初始化完成\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:614" as a19 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.mma_init_wait]]
+}
+a2 --> a3 : tmem.order.001\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a1 --> a0 : tmem.order.025\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a7 --> a8 : tmem.order.033\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a6 --> a5 : tmem.order.056\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a12 --> a13 : tmem.order.064\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a11 --> a10 : tmem.order.088\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a17 --> a18 : tmem.order.096\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+a16 --> a15 : tmem.order.119\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a1 --> a2 : tmem.order.135\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a0 --> a2 : tmem.order.136\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a3 --> a4 : tmem.order.137\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a6 --> a7 : tmem.order.162\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a5 --> a7 : tmem.order.163\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a8 --> a9 : tmem.order.164\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a11 --> a12 : tmem.order.188\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a10 --> a12 : tmem.order.189\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a13 --> a14 : tmem.order.190\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a16 --> a17 : tmem.order.215\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a15 --> a17 : tmem.order.216\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a18 --> a19 : tmem.order.217\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

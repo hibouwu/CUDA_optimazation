@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "module_id": "cute_alignment_full_headers",
+  "title": "CuTe 对齐属性与对齐容器：完整文件接口",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "role": "full_file_work_package_with_explicit_dependency_perimeter",
+  "reading_priority": 11,
+  "status": "source_reviewed_records_generated_pending_use_acceptance",
+  "parts": ["relations.json"],
+  "source_owner_module": "cute_core",
+  "configuration": {
+    "template_policy": "Preserve Alignment, Child, T and N; retain both __CUDACC__ macro branches without claiming all instantiations were compiled"
+  },
+  "full_file_scope": ["include/cute/container/alignment.hpp", "include/cute/container/array_aligned.hpp"],
+  "global_scope_files": 824,
+  "global_completion_claimed": false,
+  "runtime_execution_claimed": false,
+  "acceptance": {
+    "source_identity": "sixteen_physical_declarations_canonical_linked_and_independently_reviewed",
+    "relationships": "independent_source_accounting_and_mutation_checks_passed",
+    "protocols": "source_level_type_alignment_and_pointer_predicate_contracts",
+    "offline_use": "generated_and_mechanically_checked_actual_browser_pending",
+    "independent_meeting_review": "not_performed"
+  }
+}

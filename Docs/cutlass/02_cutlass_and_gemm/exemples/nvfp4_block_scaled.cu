@@ -39,7 +39,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 32, AlignmentB = 32;  // 元素数。
 constexpr int AlignmentC = 8, AlignmentD = 8;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_256, cute::_256>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_4, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_4, cute::_1>;  // 编译期固定的 CTA Cluster：(2,4,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;
@@ -146,7 +146,7 @@ struct Quantization {
 template<class ScaleLayout>
 static Quantization quantize(
     std::vector<float> const& original,  // 原始浮点值，按 outer×K 保存。
-    int outer, int K,                    // 外维长度和归约长度，K 必须整除 V。
+    int outer, int K,                    // 外维长度和归约长度，K 必须是 V 的整数倍。
     PackedPayload& packed,              // 子字节打包目标，不是 vector<FP4>。
     ScaleBuffer& scale_buffer,          // 按 Kernel 物理布局分配的 Scale 存储。
     ScaleLayout const& scale_layout) {  // 元素坐标 (outer,k,l) 到 Scale 位置。

@@ -1,0 +1,30 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA2/3：排空、握手与释放 · CTA 3 peer mma · 23
+state "CTA 3 peer mma" as actor0 {
+state "release_allocation_lock()\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:783" as a3 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.release_permit]]
+state "release_allocation_lock()\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:783" as a5 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.release_permit]]
+state "dealloc arrive(peer, !leader)\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:793" as a1 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.arrive793]]
+state "dealloc arrive(peer, !leader)\n调用返回\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:793" as a2 <<return>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.arrive793]]
+state "release_allocation_lock()\n调用进入\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:783" as a4 <<enter>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.release_permit]]
+state "dealloc arrive(peer, !leader)\n指定效果满足\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:793" as a0 <<effect>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.arrive793]]
+}
+a3 --> a5 : tmem.order.232\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+a1 --> a2 : tmem.order.233\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+a4 --> a3 : tmem.order.122\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a1 --> a0 : tmem.order.123\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+a4 --> a5 : tmem.order.231\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+端点链接保留每个API事件、参与范围、源码和条件。不同CTA事件不合并。
+endlegend
+@enduml

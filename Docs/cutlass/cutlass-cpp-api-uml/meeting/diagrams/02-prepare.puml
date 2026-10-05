@@ -1,0 +1,52 @@
+@startuml
+title Host 准备：检查、初始化、更新分别核对
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 17
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+hide footbox
+actor 调用方 as App
+participant "Adapter\ninclude/cutlass/gemm/device/\ngemm_universal_adapter.h" as A
+participant "GemmKernel\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp" as K
+App -> A : can_implement(args) [L231]
+A -> K : can_implement(args) [调用点 L233]
+A --> App : 检查状态
+note over App : 以下准备路径仅在检查成功后继续；\n失败则由调用方拒绝本次请求。
+App -> A : get_workspace_size(args) [L242]
+A -> K : get_workspace_size(args) [调用点 L249]
+A --> App : 所需字节数
+note over App : 调用方准备容量和生命周期均满足要求的 workspace
+App -> A : initialize(args, workspace, stream, cuda_adapter) [L312]
+A -> K : initialize_workspace(args, workspace, stream, cuda_adapter) [L323]
+K --> A : 初始化状态
+alt workspace 初始化成功
+ A -> K : to_underlying_arguments(args, workspace) [L328]
+ K --> A : Params
+ note right of A : Adapter 保存自身 params_；按条件设置动态共享内存属性。
+ alt 无需设置属性，或设置成功
+  A --> App : kSuccess
+ else 属性设置失败
+  A --> App : kErrorInternal；调用方不得按成功继续执行
+ end
+else workspace 初始化失败
+ A --> App : 原错误状态；不继续转换参数
+end
+note over App, K : initialize 不调用 can_implement；这里的检查是调用方独立执行的。
+== 后续参数更新：独立路径，不与 initialize 合并 ==
+App -> A : update(args, workspace) [L359]
+A -> A : get_workspace_size(args) [调用点 L363]
+alt 所需 workspace 非零但指针为空
+ A --> App : kErrorWorkspaceNull
+else 检查通过
+ A -> K : to_underlying_arguments(args, workspace) [L368]
+ K --> A : Params
+ note right of A : Adapter 覆盖自身 params_
+ A --> App : kSuccess
+end
+note over App, K : update 不调用 initialize_workspace，不保证轻量更新。\n不能据此认为任意新形状、新 workspace 都可以直接复用。
+legend bottom
+具体参考：3.x Adapter + 已选 SM100 Dense Kernel。
+每条调用线对应一个操作/调用点；完整签名与未展开分支见官方接口速查。
+省略 trace 与属性设置等细节，不把该图当作完整控制流。
+endlegend
+@enduml

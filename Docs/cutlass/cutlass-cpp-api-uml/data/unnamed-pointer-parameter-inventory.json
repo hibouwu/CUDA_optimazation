@@ -1,0 +1,31 @@
+{
+  "scope_files_verified": 824,
+  "files_with_edits": 1,
+  "edit_count": 1,
+  "records": [
+    {
+      "path": "include/cutlass/pipeline/sm90_pipeline.hpp",
+      "edits": [
+        {
+          "projection_id": "syntax-projection:7244a29f55093033b53c0544",
+          "kind": "unnamed_pointer_parameter_default",
+          "path": "include/cutlass/pipeline/sm90_pipeline.hpp",
+          "start_byte": 25438,
+          "end_byte": 25438,
+          "start_line": 732,
+          "end_line": 732,
+          "parser_only": true,
+          "expanded": "",
+          "semantic_spelling": "",
+          "parse_projection": " __codex_parser_unnamed_fnparam_25438 ",
+          "temporary_identifier": "__codex_parser_unnamed_fnparam_25438",
+          "conditions": [],
+          "detection_basis": "clean_optional_function_parameter_after_grammar_only_name_insertion",
+          "restoration_contract": "Original parameter remains unnamed; exact type/default/signature and physical scope boundaries are preserved by SourceProjection"
+        }
+      ]
+    }
+  ],
+  "syntax_generator_sha256": "bbefbaeb974132c3375739bfa3754cc0032c3ff3e78b7dcd80bd120913d8bd89",
+  "api_coverage_claimed": false
+}

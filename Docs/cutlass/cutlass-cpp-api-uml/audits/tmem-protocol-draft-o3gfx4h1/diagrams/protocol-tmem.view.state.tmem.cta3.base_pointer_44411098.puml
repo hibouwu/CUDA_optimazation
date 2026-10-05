@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA 3 shared_storage.tmem_base_ptr
+state "epilogue同步完成后读取base pointer" as s0
+note right of s0
+TMEM Tensor binding remains a separate API call
+end note
+state "MMA已同步并向NamedBarrier到达" as s1
+note right of s1
+epilogue still needs its own arrive_and_wait completion
+end note
+state "尚未取得分配结果" as s2
+state "alloc写入本CTA的SMEM结果槽" as s3
+note right of s3
+weak store; not yet a cross-warp publication claim
+end note
+s2 --> s3 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.allocate tmem.transition.048\nAllocator2Sm::allocate(512, &base) · 指定效果满足]]
+s3 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.alloc_arrive tmem.transition.049\nNamedBarrier::arrive() · 指定效果满足]]
+s1 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta3.epi_read_base tmem.transition.050\nEpilogue读取SMEM base pointer · 调用返回]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "family": "matrix_exchange",
+  "status": "draft_pending_independent_A",
+  "profiles": [
+    {
+      "id": "matrix_short_1_2_v1",
+      "target_iterations": [
+        1,
+        2
+      ],
+      "input_profiles": [
+        "coordinate_seed_nonuniform"
+      ],
+      "maximum_target_launches": 2,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "coordinate_seed_nonuniform"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "coordinate_seed_nonuniform"
+        }
+      ],
+      "completion_requirements": [
+        "same actual specialization, one CTA, original participants, matrix count/transpose or shuffle streams",
+        "fresh destination poison expected XOR UINT32_MAX for every output word, stamp bytes0xff; no auxiliary kernel",
+        "CUDA launch/event completion and complete stamp overwrite; reject poison SMID rather than assume contiguous physical SM numbering",
+        "all output words compared exactly; save one complete little-endian uint32 artifact per launch with shape and SHA256",
+        "zero-duration short intervals allowed; no pilot/warmup or performance rate; stop first failure and preserve partial evidence"
+      ],
+      "reference_identity": {
+        "model": "matrix_exchange_python_coordinate_reference_v1",
+        "path": "microbench/gh200_resource_campaign/auditors/matrix_exchange.py",
+        "sha256": "a3829a670b078ffa38a9c2c8b82de562f1cfba081775dc46c528d2e4a3f330bc"
+      },
+      "reference_implementation_note": "host mx_reference must be independently cross-checked against this frozen Python reference for every declared short coordinate; source-B binds actual host reference and CUDA source",
+      "declared_output_check": {
+        "method": "all checksums, fragments and full padded matrix region",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "32+256*matrices+2048",
+        "sampling": false,
+        "poison": "each expected uint32 XOR UINT32_MAX; stamps allbits1"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "generic ABI verifies artifact identity/size; separate independent value replay must compare every saved word to the frozen reference before B3 qualification",
+      "resource_extensions": {},
+      "resource_requirements": {
+        "blocks": 1,
+        "dynamic_smem_bytes": 8192,
+        "local_size_bytes": 0,
+        "other_resources": "actual target B2 register/static shared and occupancy evidence"
+      },
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    },
+    {
+      "id": "shuffle_short_1_8_33_v1",
+      "target_iterations": [
+        1,
+        8,
+        33
+      ],
+      "input_profiles": [
+        "coordinate_seed_nonuniform"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "coordinate_seed_nonuniform"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 8,
+          "input_profile": "coordinate_seed_nonuniform"
+        },
+        {
+          "launch_index": 2,
+          "iterations": 33,
+          "input_profile": "coordinate_seed_nonuniform"
+        }
+      ],
+      "completion_requirements": [
+        "same actual specialization, one CTA, original participants, matrix count/transpose or shuffle streams",
+        "fresh destination poison expected XOR UINT32_MAX for every output word, stamp bytes0xff; no auxiliary kernel",
+        "CUDA launch/event completion and complete stamp overwrite; reject poison SMID rather than assume contiguous physical SM numbering",
+        "all output words compared exactly; save one complete little-endian uint32 artifact per launch with shape and SHA256",
+        "zero-duration short intervals allowed; no pilot/warmup or performance rate; stop first failure and preserve partial evidence"
+      ],
+      "reference_identity": {
+        "model": "matrix_exchange_python_coordinate_reference_v1",
+        "path": "microbench/gh200_resource_campaign/auditors/matrix_exchange.py",
+        "sha256": "a3829a670b078ffa38a9c2c8b82de562f1cfba081775dc46c528d2e4a3f330bc"
+      },
+      "reference_implementation_note": "host mx_reference must be independently cross-checked against this frozen Python reference for every declared short coordinate; source-B binds actual host reference and CUDA source",
+      "declared_output_check": {
+        "method": "all warp/lane/stream values",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "threads*streams",
+        "sampling": false,
+        "poison": "each expected uint32 XOR UINT32_MAX; stamps allbits1"
+      },
+      "output_evidence_kind": "full_values",
+      "output_evidence_limit": "generic ABI verifies artifact identity/size; separate independent value replay must compare every saved word to the frozen reference before B3 qualification",
+      "resource_extensions": {},
+      "resource_requirements": {
+        "blocks": 1,
+        "dynamic_smem_bytes": 0,
+        "local_size_bytes": 0,
+        "other_resources": "actual target B2 register/static shared and occupancy evidence"
+      },
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    }
+  ]
+}

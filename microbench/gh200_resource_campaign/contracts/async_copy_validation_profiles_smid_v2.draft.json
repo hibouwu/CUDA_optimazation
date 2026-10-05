@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "family": "async_copy",
+  "profiles": [
+    {
+      "id": "short_copy_1_2",
+      "target_iterations": [
+        1,
+        2
+      ],
+      "input_profiles": [
+        "address_seed_nonuniform"
+      ],
+      "maximum_target_launches": 2,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "address_seed_nonuniform"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "address_seed_nonuniform"
+        }
+      ],
+      "completion_requirements": [
+        "same ac_pipeline specialization, 128 threads, request width, cache policy, stage count and launch geometry as the frozen case",
+        "input_word=uint32(17*word_index+seed) across the complete shared 8MiB read-only input array",
+        "fresh cudaMemset poison sums/final_slots/trace before each launch; all stamp bytes=0xff before each short launch; no explicit auxiliary kernel",
+        "CUDA launch and completion event synchronization succeed; all stamp fields overwritten, SMID uint32 output overwritten (reject UINT32_MAX poison); physical IDs need not be contiguous or smaller than active SM count, all launched CTA entries checked",
+        "preserve producer wait, consumer CTA barrier, release CTA barrier, decreasing tail waits and final wait0/CTA barrier; device source bytes unchanged",
+        "all trace words, each thread modular sum and every final-slot word compared exactly with the independent host oracle",
+        "stamp values may have zero-duration intervals; positive elapsed time and all physical SM coverage are not acceptance criteria",
+        "stop after first CUDA/completion/numerical failure; emit partial failed validation when possible and exit nonzero"
+      ],
+      "reference_identity": {
+        "model": "async_copy_modular_address_v1",
+        "path": "microbench/gh200_resource_campaign/common/async_copy_reference.hpp",
+        "sha256": "110adb7b6f54088ef79e275e5c20f1193020b7504c9d3969cbde5bd2f3a3b1f7"
+      },
+      "declared_output_check": {
+        "method": "all consumed uint32 trace words, all uint32 thread modular sums, and all uint32 final-slot words",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "blocks*128*(iterations*8*(request_bytes_per_thread/4)+1+stages*(request_bytes_per_thread/4))",
+        "components": {
+          "trace": "blocks*128*iterations*8*(request_bytes_per_thread/4)",
+          "sums": "blocks*128",
+          "final_slots": "blocks*128*stages*(request_bytes_per_thread/4)"
+        },
+        "poison": "sum/final/trace bytes=0xa5; stamp bytes=0xff before launch; compare every declared output, no sampling",
+        "sampling": false
+      },
+      "output_evidence_kind": "error_count_only",
+      "output_evidence_limit": "all outputs are compared but values are not persisted; this evidence cannot support offline rechecking with a changed reference",
+      "resource_extensions": {},
+      "kernel_symbol_convention": "_Z11ac_pipelineILi{request_bytes_per_thread}ELi{stages}ELb{cg_as_0_or_1}EEvPKjiPN2gh5StampEPjS5_S5_",
+      "resource_requirements": {
+        "static_smem_bytes": 0,
+        "dynamic_smem_bytes": "128*stages*request_bytes_per_thread",
+        "local_size_bytes": 0,
+        "registers_per_thread": "positive integer <=255; bound to actual B2 target compile",
+        "occupancy_limit_ctas_per_sm": "positive integer <=32; check necessary shared/register/thread capacity bounds",
+        "blocks": "one_cta:1; all_gpu:sms*min(4,occupancy_limit_ctas_per_sm)"
+      },
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8
+    }
+  ]
+}

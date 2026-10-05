@@ -39,7 +39,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 8, AlignmentB = 8;  // 元素数。
 constexpr int AlignmentC = 4, AlignmentD = 4;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // 编译期固定的 CTA Cluster：(2,2,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;
@@ -108,7 +108,7 @@ using LayoutD = LayoutC;
 constexpr int AlignmentA = 8, AlignmentB = 8;  // 元素数。
 constexpr int AlignmentC = 4, AlignmentD = 4;  // 元素数。
 using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;  // Collective M/N/K。
-using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // CTA 个数；int 维度在运行时指定。
+using ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;  // 编译期固定的 CTA Cluster：(2,2,1)。
 using ProblemShape = cute::Shape<int, int, int, int>;
 using MainloopSchedule = cutlass::gemm::collective::KernelScheduleAuto;
 using EpilogueSchedule = cutlass::epilogue::collective::EpilogueScheduleAuto;

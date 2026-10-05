@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA0/1 accumulator.empty[4] at leader CTA0
+state "已记录leader排空返回/4槽观察结果" as s0
+note right of s0
+all required outstanding reader releases accounted; no output-D
+completion inferred
+end note
+state "已记录leader尾部排空调用" as s1
+note right of s1
+not only the last slot; caller state not advanced by this
+by-value tail
+end note
+state "已记录4槽pipeline前置" as s2
+note right of s2
+matching index/phase and prior full/empty protocol required
+end note
+s2 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_tail tmem.transition.057\nPipelineUmmaAsync::producer_tail · 调用进入]]
+s1 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_tail tmem.transition.058\nPipelineUmmaAsync::producer_tail · 调用返回\ninitially empty stages require no fictional release event]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

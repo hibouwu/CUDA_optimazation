@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "extension_id": "bounded-float-replay-v1",
+  "status": "draft_pending_independent_A_review",
+  "supported_archive_schema_versions": [2],
+  "entrypoint_proposed": "audit_replay.py",
+  "input_read_only": true,
+  "GPU_execution": false,
+  "max_binary64_ULP_distance": 2,
+  "float_domain": "finite_nonnegative_positive_zero_exact_no_negative_zero",
+  "preflight_float_paths": ["/cases/*/value", "/cases/*/warmup_cv"],
+  "formal_float_paths": [
+    "/cases/*/merged/mean", "/cases/*/merged/median", "/cases/*/merged/min", "/cases/*/merged/max", "/cases/*/merged/cv",
+    "/cases/*/batches/*/stats/mean", "/cases/*/batches/*/stats/median", "/cases/*/batches/*/stats/min", "/cases/*/batches/*/stats/max", "/cases/*/batches/*/stats/cv",
+    "/cases/*/batches/*/samples/*/value", "/cases/*/batches/*/samples/*/warmup_cv"
+  ],
+  "other_fields": "strict_schema_type_and_value_comparison_no_ignored_unknown_fields",
+  "raw_float_comparison_relaxed": false,
+  "threshold_policy": "exact_rational_raw_recomputation_no_tolerance_and_no_status_override",
+  "warmup_CV_limit_fraction": [1, 50],
+  "formal_CV_limit_fraction": [1, 20],
+  "receipt_required_fields": ["schema_version", "extension_id", "policy_sha256", "auditor_files_sha256", "replay_environment", "input_artifacts_sha256", "original_strict_audit", "float_comparisons", "threshold_checks", "failed_checks", "status"],
+  "receipt_statuses": ["pass_under_bounded_float_replay_v1", "replay_rejected"],
+  "float_comparison_fields": ["json_pointer", "recorded", "recomputed", "ulp_distance", "accepted"],
+  "formal_import_mode": "bounded_float_replay_v1",
+  "formal_import_requires": ["extension_B_pass", "family_B_direct_receipt_binding", "complete_input_hash_match", "unchanged_binary_SASS_build_pilot_resolved_identity"],
+  "forbidden": ["rewrite_old_artifacts", "patch_frozen_auditor", "pretend_old_strict_audit_passed", "GPU_retry", "threshold_tolerance", "integer_or_identity_tolerance", "automatic_legacy_import_bypass"]
+}

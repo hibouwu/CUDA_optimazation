@@ -1,0 +1,502 @@
+{
+  "scope_files": 824,
+  "modules": 4,
+  "nodes": 639,
+  "edges": 1019,
+  "views": 37,
+  "panels": 653,
+  "auxiliary_files": 26,
+  "protocols": 1,
+  "protocol_views": 86,
+  "source_linked_nodes": 321,
+  "issues": [
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.scope.partial_adapter",
+      "kind": "scope_boundary",
+      "message": "本文件不是整个GemmUniversalAdapter的完整关系清单：只含3.x特化的列明生命周期/重载/grid路径；未展开maximum_active_blocks、2.x特化、兼容别名全集、trace/assert/error-formatting调用。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 122,
+          "end_line": 125
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 269,
+          "end_line": 309
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 625,
+          "end_line": 640
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.scope.unselected_launch_paths",
+      "kind": "scope_boundary",
+      "message": "未绘制kEnableCudaHostAdapter=true、SM90 kClusterLaunch、static1x1x1、Arch<90、动态cluster/fallback以及PDL=true的替代路径；它们不是本配置关系缺失。若配置改变，必须重新选分支。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 388,
+          "end_line": 552
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.scope.collective_scheduler_internals",
+      "kind": "scope_boundary",
+      "message": "第2图在列出的CollectiveMainloop/CollectiveEpilogue/TileScheduler Host接口止步；TMA描述符构造、FusionCallbacks、Scheduler::Params及辅助round_nearest/select_cluster_shape的内部关系未在此展开。不能据本图宣称这些函数/整模块接口完全覆盖。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 353,
+          "end_line": 442
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 299,
+          "end_line": 372
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 135,
+          "end_line": 160
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 252,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.scope.device_boundary",
+      "kind": "scope_boundary",
+      "message": "设备入口仅覆盖device_kernel的模板参数、op(params,smem)及synclog调用；GemmKernel::operator()内部CTA/warp职责与异步协议由设备部分继续连接。",
+      "evidence": [
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 112,
+          "end_line": 126
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 403,
+          "end_line": 429
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.boundary.cuda_declarations",
+      "kind": "external_boundary",
+      "message": "CUDA Runtime声明不在824个固定include文件中，external节点path/line为null；真实调用位置均在edge.evidence。不得把这些库外声明当missing_definition或把调用点伪作声明点。",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 38,
+          "end_line": 38
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 344,
+          "end_line": 347
+        },
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 294,
+          "end_line": 294
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.boundary.application_example",
+      "kind": "auxiliary_source_boundary",
+      "message": "dense_baseline.cu是配置与应用调用证据，位于824文件分母之外。main节点与示例边需作为aux源码链接，不增加库源分母。实际同步为cudaStreamSynchronize，不是Adapter内的cudaDeviceSynchronize。",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 28,
+          "end_line": 53
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 230,
+          "end_line": 252
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.assumption.build_defaults",
+      "kind": "configuration_boundary",
+      "message": "代表Host分支采用CUDA13.x、无CUTLASS_ENABLE_CUDA_HOST_ADAPTER覆写、launch_with_pdl=false和默认stream；Sm100 recipe与sm_110a编译目标分属不同轴。若外部编译参数覆写宏，本图配置不再成立。未在本轮运行GPU或证明数值/性能。",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 3,
+          "end_line": 5
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 28,
+          "end_line": 53
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 240,
+          "end_line": 252
+        },
+        {
+          "path": "include/cutlass/cuda_host_adapter.hpp",
+          "start_line": 73,
+          "end_line": 77
+        },
+        {
+          "path": "include/cutlass/arch/arch.h",
+          "start_line": 100,
+          "end_line": 102
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "host",
+      "id": "host.contract.no_implicit_validation_or_completion",
+      "kind": "contract_boundary",
+      "message": "initialize不调用can_implement；update不调用initialize_workspace；run成功是launch/API状态，不是GPU完成。应用在run之后独立cudaStreamSynchronize。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 311,
+          "end_line": 369
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 564,
+          "end_line": 574
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 241,
+          "end_line": 252
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "type_path",
+      "id": "types.issue.tensor_callsite_bindings",
+      "status": "closed_for_selected_configuration",
+      "scope": "types.edge.atom_calls_unpack",
+      "message": "该边依据已选Traits定位具体mma_unpack重载；未逐调用点列出TD/TA/TB/TC及其Tensor Layout模板实参。不能把本类型分图当作完整callsite实参对账。",
+      "does_not_invalidate": "已核验的Builder、Collective、TiledMMA、Atom、MMA_Op类型选择与静态设备指令发射。",
+      "closure": {
+        "part": "gemm_dispatch",
+        "id": "types.issue.tensor_callsite_bindings",
+        "scope": "Only this fixed Dense mma callsite; actual rank1 Tensor bindings and Traits2072 DWARF origin are now provided.",
+        "evidence_path": "data/modules/dense_fp16/gemm_dispatch_debug_index.json"
+      }
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.no_fresh_execution",
+      "status": "pending",
+      "description": "本contracts贡献主要核对静态源码协议；gemm_dispatch/type_path parts另有本轮types、PTX/CUBIN静态证据。GPU kernel没有执行，不能由静态链闭合声称异步协议运行正确或数值/性能已验证。",
+      "evidence": [
+        {
+          "path": "../02_cutlass_and_gemm/exemples/verification/results/dense.types.txt",
+          "start_line": 2,
+          "end_line": 11,
+          "space": "aux"
+        },
+        {
+          "path": "../02_cutlass_and_gemm/exemples/verification/results/dense.instructions.txt",
+          "start_line": 1,
+          "end_line": 8,
+          "space": "aux"
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.copy_dispatch",
+      "status": "pending",
+      "description": "已核三个Tensor临时目标调用先到copy.hpp541；A/B转发Copy_Atom189，R2S转发TiledCopy439再到189；Copy_Atom::call及其临时重载分别建模。NumVal匹配/recursion及完整静态shape选择仍待复核，不能把条件边一概当实际执行分支。",
+      "evidence": [
+        {
+          "path": "include/cute/algorithm/copy.hpp",
+          "start_line": 536,
+          "end_line": 546
+        },
+        {
+          "path": "include/cute/algorithm/copy.hpp",
+          "start_line": 184,
+          "end_line": 234
+        },
+        {
+          "path": "include/cute/algorithm/copy.hpp",
+          "start_line": 434,
+          "end_line": 444
+        },
+        {
+          "path": "include/cute/atom/copy_atom.hpp",
+          "start_line": 89,
+          "end_line": 125
+        },
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 620,
+          "end_line": 621
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 671,
+          "end_line": 682
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 922,
+          "end_line": 922
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.scheduler_fixup",
+      "status": "pending",
+      "description": "已补PersistentTileSchedulerSm100选中完整K分支的Kernel任务交接、六参数fixup及两个compute_epilogue重载；其余CLC/swizzle内部调用与GDC分支仍未全量审计，不假定其他Split/Stream-K路径不存在。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 605,
+          "end_line": 608
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 737,
+          "end_line": 748
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 897,
+          "end_line": 910
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.epilogue_perimeter",
+      "status": "pending",
+      "description": "已核累加器消费、R2S、最终TMA提交/计数组和store_tail条件；fusion callback内部数值公式、C residual加载全链与所有SMEM复用边界未逐个API展开。",
+      "evidence": [
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 835,
+          "end_line": 861
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 892,
+          "end_line": 930
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 1277,
+          "end_line": 1288
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.global_output_visibility",
+      "status": "pending",
+      "description": "wait_group.read只证明源读取完成，不能作为D写完成。Host示例真实cudaStreamSynchronize与copy_to_host已定位，但本轮没有运行；需与Host端模块连接外部完成契约。",
+      "evidence": [
+        {
+          "path": "../02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 246,
+          "end_line": 255,
+          "space": "aux"
+        },
+        {
+          "path": "include/cute/arch/copy_sm90_tma.hpp",
+          "start_line": 1248,
+          "end_line": 1255
+        },
+        {
+          "space": "external_doc",
+          "url": "https://docs.nvidia.com/cuda/archive/13.0.0/parallel-thread-execution/index.html",
+          "title": "NVIDIA PTX ISA 9.0",
+          "section": "9.7.9.25.6.2 cp.async.bulk.wait_group",
+          "claim": "read只等待源和描述符读取，不证明目标写完成。"
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": null,
+      "id": "contract.issue.symbolic_counts_layouts",
+      "status": "pending",
+      "description": "TmaTransactionBytes、multicast masks、NumEpilogueThreads、实际descriptor坐标/rank推导及SMEM/TMEM layout数值未全部重新求值；保留源码公式和旧配置，不用示意图替代计算。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 237,
+          "end_line": 240
+        },
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 563,
+          "end_line": 570
+        },
+        {
+          "path": "include/cutlass/pipeline/sm100_pipeline.hpp",
+          "start_line": 598,
+          "end_line": 603
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 529,
+          "end_line": 529
+        }
+      ]
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "gemm_dispatch",
+      "id": "dispatch.issue.runtime_not_tested",
+      "status": "not_in_scope",
+      "message": "静态探针不验证合法启动、TMEM分配/地址、同步完成、数值正确性或性能；probe kernel未运行。"
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "gemm_dispatch",
+      "id": "dispatch.issue.other_configurations",
+      "status": "not_in_scope",
+      "message": "未枚举其他Tile/Cluster/数据类型，也不把本例M=N=1的row分支当作普遍遍历策略或优化收益。"
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "scheduler_handoff",
+      "id": "scheduler.handoff.remaining",
+      "description": "此贡献只核对已列接口声明与Kernel直接交接；完整swizzle/raster、CLC发布/完成/无效响应和各方法内部调用仍未全量提取，不表示Scheduler文件或调度唯一性已验收。"
+    },
+    {
+      "module_id": "dense_fp16_2sm_sm110a",
+      "part": "clc_handoff",
+      "id": "clc.handoff.remaining",
+      "description": "已列关键发布/消费/释放调用与参数公式。初始化屏障辅助函数、throttle全协议、PTX运行时正确性、全部CLC配置及完整swizzle仍未全量核对；未宣称全库或GPU验收。"
+    },
+    {
+      "module_id": "cute_elementwise_full_headers",
+      "part": "complete_three_headers",
+      "id": "elementwise.issue.template_closure",
+      "kind": "template_dependent_boundary",
+      "status": "symbolic_not_parse_failure",
+      "description": "没有选择Engine/Layout/Alpha/Beta/PrdTensor：ADL目标、scalar/reference运算、用户特化与存储行为保持原表达式和依赖参数。全文件源码义务覆盖不等于所有实例语义闭合。"
+    },
+    {
+      "module_id": "cute_elementwise_full_headers",
+      "part": "complete_three_headers",
+      "id": "elementwise.issue.dependency_bodies",
+      "kind": "bounded_dependency_perimeter",
+      "status": "explicitly_outside_full_file_denominator",
+      "description": "dependency目标已连到真实声明；tensor_impl/prefer/functional/integral_constant/complex/config只核本模块所需证据，不宣称这些依赖header全文件已覆盖。"
+    },
+    {
+      "module_id": "cute_elementwise_full_headers",
+      "part": "complete_three_headers",
+      "id": "elementwise.issue.validation",
+      "kind": "verification_boundary",
+      "status": "not_claimed",
+      "description": "本草稿是完整源范围与关系审查；独立checker验证位置/调用枚举/覆盖义务/ledger身份。不包含编译实例化、GPU执行、数值正确性或性能实测。"
+    },
+    {
+      "module_id": "cute_alignment_full_headers",
+      "part": "complete_two_headers",
+      "id": "alignment.issue.adapter_and_identity",
+      "status": "closed",
+      "message": "Corrected canonical identity enrichment and retirement of temporary manual selectors remain pending; source-selector accounting is not API coverage acceptance.",
+      "resolution": "All 16 physical declarations and ten attribute owners match the reviewed current canonical ledger; manual identity overrides retired."
+    },
+    {
+      "module_id": "cute_alignment_full_headers",
+      "part": "complete_two_headers",
+      "id": "alignment.issue.external_typedefs",
+      "status": "boundary",
+      "message": "size_t/uintptr_t exact external declarations/ABI widths are not attributed to invented in-scope entities."
+    },
+    {
+      "module_id": "cute_alignment_full_headers",
+      "part": "complete_two_headers",
+      "id": "alignment.issue.implicit_members",
+      "status": "boundary",
+      "message": "Compiler-generated special members and all inherited array implementations are not separately written in these headers; dependency inheritance is recorded, not duplicated."
+    },
+    {
+      "module_id": "cute_alignment_full_headers",
+      "part": "complete_two_headers",
+      "id": "alignment.issue.arbitrary_instantiations",
+      "status": "boundary",
+      "message": "All written declarations/branches are targeted; arbitrary Alignment/T/N/Child instantiations and CUDA backend layout are not universally validated."
+    },
+    {
+      "module_id": "cute_array_full_header",
+      "part": "complete_array_header",
+      "id": "array.issue.canonical_join",
+      "status": "closed",
+      "message": "Strict canonical source-selector enrichment and independent review remain pending; no entity ID was guessed.",
+      "resolution": "All 87 physical declarations / 92 conditional bindings joined to the canonical ledger with parameter, qualifier, source-condition and owner checks; no manual identity."
+    },
+    {
+      "module_id": "cute_array_full_header",
+      "part": "complete_array_header",
+      "id": "array.issue.remove_cv_using",
+      "status": "open",
+      "message": "type_traits.hpp92 canonical currently conflates imported target expression and cute lookup QName. Draft retains true using declaration and lookup binding separately; root repair required."
+    },
+    {
+      "module_id": "cute_array_full_header",
+      "part": "complete_array_header",
+      "id": "array.issue.external_boundaries",
+      "status": "boundary",
+      "message": "Exact external std/CCCL declarations, typedef ABI widths, CUDA13 structured-bindings header content are not part of this complete-file source denominator."
+    },
+    {
+      "module_id": "cute_array_full_header",
+      "part": "complete_array_header",
+      "id": "array.issue.element_semantics",
+      "status": "boundary",
+      "message": "All T/N instances, ADL candidate sets, constructor/assignment deletion and implicit special-member generation cannot be selected without concrete bindings; exact dependent expressions retained."
+    },
+    {
+      "module_id": "cute_array_full_header",
+      "part": "complete_array_header",
+      "id": "array.issue.configuration_oracles",
+      "status": "open",
+      "message": "14 host C++17 Clang syntax-only cases exist; CUDA/RTC/header-version branch compilation and arbitrary instantiations are not yet verified."
+    }
+  ],
+  "global_complete": false,
+  "runtime_verified": false
+}

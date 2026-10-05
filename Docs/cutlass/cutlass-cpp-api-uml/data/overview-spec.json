@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "scope": "已发布 Dense FP16/2SM 配置的 Host 接口与 Kernel 交接；不是全库或整个 Kernel 的完整调用图。",
+  "views": [
+    {"id": "host.lifecycle", "title": "Host 生命周期与重载：接口关系总图", "expected_edge_count": 25},
+    {"id": "host.preparation", "title": "Kernel 的 Host 准备：接口关系总图", "expected_edge_count": 24},
+    {"id": "host.launch", "title": "Host 提交到设备入口：接口关系总图", "expected_edge_count": 24},
+    {"id": "scheduler.handoff.entry", "title": "Scheduler 交接：工作描述、坐标与完整K", "expected_edge_count": 10},
+    {"id": "scheduler.handoff.next", "title": "Scheduler 交接：各角色的下一任务请求", "expected_edge_count": 10},
+    {"id": "scheduler.handoff.output", "title": "Scheduler 交接：Epilogue判定与空fixup", "expected_edge_count": 3},
+    {"id": "clc.handoff.publish", "title": "CLC响应发布：空槽、期待字节与异步请求", "expected_edge_count": 11},
+    {"id": "clc.handoff.consume", "title": "CLC响应消费：可读、释放与退出", "expected_edge_count": 12},
+    {"id": "clc.handoff.manual", "title": "CLC手工完成：独立接口，不插入正常请求路径", "expected_edge_count": 2}
+  ],
+  "view_processes": {
+    "host.launch": [
+      {"id": "request", "title": "提交请求：形状、共享内存与参数", "sources": ["host.app.main", "host.run.stream", "host.run.params", "host.grid.params", "host.kernel.grid"]},
+      {"id": "cluster", "title": "Cluster 配置与 CUDA 提交", "sources": ["host.cluster.launch", "host.cluster.make_config", "host.cluster.init", "host.cuda.launch_ex"]},
+      {"id": "entry", "title": "设备入口：Params 与 Kernel functor", "sources": ["host.device_kernel"]}
+    ]
+  },
+  "kernel": {
+    "id": "host.kernel",
+    "aliases": ["contract.type.kernel"],
+    "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+    "qualified_name": "cutlass::gemm::kernel::GemmUniversal",
+    "members": [
+      {"id": "host.kernel.arguments", "name": "Arguments", "line": 215},
+      {"id": "host.kernel.params", "name": "Params", "line": 225},
+      {"id": "host.kernel.smem_size", "name": "SharedStorageSize", "line": 212},
+      {"id": "contract.type.acc_pipeline", "name": "AccumulatorPipeline", "line": 169},
+      {"id": "host.kernel.can_implement", "name": "can_implement", "line": 300},
+      {"id": "host.kernel.workspace", "name": "get_workspace_size", "line": 338},
+      {"id": "host.kernel.initialize_workspace", "name": "initialize_workspace", "line": 354},
+      {"id": "host.kernel.lower", "name": "to_underlying_arguments", "line": 255},
+      {"id": "host.kernel.grid", "name": "get_grid_shape", "line": 383},
+      {"id": "host.kernel.block", "name": "get_block_shape", "line": 398},
+      {"id": "host.kernel.operator", "name": "operator()", "line": 403}
+    ],
+    "relation_part": "host",
+    "operator_alias": "contract.api.kernel",
+    "process_views": ["host.preparation", "host.launch", "scheduler.handoff.entry", "scheduler.handoff.next", "scheduler.handoff.output", "clc.handoff.publish", "clc.handoff.consume", "contract.view.input_smem", "contract.view.accumulator", "contract.view.output", "contract.view.lifetime", "contract.view.types"]
+  }
+}

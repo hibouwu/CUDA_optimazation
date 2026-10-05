@@ -1,0 +1,28 @@
+# 沿用旧模型实例作为建模参考；calibration 等历史字段不表示当前已进入实验阶段。
+workloads:
+  - id: n2048_fp16_cold_calibration
+    role: primary
+    validation_split: calibration
+    problem: single_dense_gemm
+    gpu_count: 1
+    shape: {M: 2048, N: 2048, K: 2048}
+    alpha: 1
+    beta: 0
+    storage_types: {A: fp16, B: fp16, C: null, D: fp32}  # C 不读取
+    compute:
+      multiply: fp16
+      accumulate: fp32
+      epilogue: none  # 无额外结果运算；仍需读回累加器并写出 D
+      output_mode: accumulator  # 输出使用累加精度 FP32，不表示结果停留在片上
+      scalar_type: fp32
+    layout:
+      A: {order: row_major, leading_dimension: 2048}
+      B: {order: row_major, leading_dimension: 2048}  # 逻辑 B[K,N]；具体方案需满足该输入要求
+      C: null
+      D: {order: row_major, leading_dimension: 2048}
+    residency: cold_hbm  # 旧模型名称；Thor 外存为 LPDDR5X。缓存初态的具体建模定义待补，不能仅由名称推定
+    validation:
+      input_generation: GEMMsm110/include/gemm_benchmark.cuh::fill_inputs
+      reference: null  # 参考实现留待后续选择
+      error_metric: null  # 由问题的数值正确性要求确定
+      tolerance: null  # 不由某个候选实现的默认容差决定

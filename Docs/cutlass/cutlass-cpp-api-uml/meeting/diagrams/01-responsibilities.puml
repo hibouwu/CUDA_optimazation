@@ -1,0 +1,31 @@
+@startuml
+title 先核对职责，再核对接口名称
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 17
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+top to bottom direction
+component "调用方\n定义问题、准备存储、处理结果" as App
+component "Device Adapter\n主机参数准备、提交入口\ninclude/cutlass/gemm/device/\ngemm_universal_adapter.h" as Adapter
+component "Kernel\n组织一次设备执行及各协作角色\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp" as Kernel
+component "Collective Mainloop\n组织分块乘加与搬运协作\ninclude/cutlass/gemm/collective/\nsm100_mma_warpspecialized.hpp" as Main
+component "Collective Epilogue\n累加结果转换与输出\ninclude/cutlass/epilogue/collective/\nsm100_epilogue_tma_warpspecialized.hpp" as Epi
+component "Tile Scheduler\n工作块分配\ninclude/cutlass/gemm/kernel/\nsm100_tile_scheduler.hpp" as Sched
+component "CuTe TiledMMA / MMA_Atom\n参与线程、值的组织与操作约束\ninclude/cute/atom/mma_atom.hpp" as Atom
+component "硬件操作包装\n描述符、操作数及指令约束\ninclude/cute/arch/mma_sm100_umma.hpp" as HW
+component "CollectiveBuilder\n编译期选择具体 Collective 类型\ninclude/cutlass/gemm/collective/\ncollective_builder_decl.hpp" as Builder
+App --> Adapter : 使用主机接口
+Adapter ..> Kernel : 模板类型绑定
+Kernel --> Main : 组织计算
+Kernel --> Epi : 组织后处理
+Kernel --> Sched : 取得工作
+Builder ..> Main : 类型选择
+Main --> Atom : 分解为协作操作
+Atom ..> HW : Atom / Traits 约束具体包装
+legend bottom
+职责导航图，不表示完整 API 调用关系。
+实线：职责交接或操作分解；虚线：类型/操作约束。
+不要求同事采用相同类层次；要求每项必要职责有明确承担者。
+endlegend
+@enduml

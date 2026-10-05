@@ -1,0 +1,1098 @@
+{
+  "before_sha256": "369c550cc1b8564dd44e2989c94f0aad3fba89c1a2808694ebb5ec297ed03658",
+  "after_sha256": "0510c02ef665753f6b31ef7ea7bb907aeb47bf4309c7e06e8028a9b766818b43",
+  "before_summary": {
+    "files": 824,
+    "entities": 150777,
+    "occurrences": 155592,
+    "diagnostics": 633,
+    "blocking_diagnostics": 633,
+    "scope_review_occurrences": 104,
+    "scope_integrity_uncertainties": 0,
+    "syntax_diagnostics_in_function_bodies": 269,
+    "syntax_diagnostics_outside_function_bodies": 153,
+    "other_blocking_diagnostics": 211,
+    "kinds": {
+      "alias": 76990,
+      "class_specifier": 1319,
+      "constant": 260,
+      "constructor": 3856,
+      "destructor": 6,
+      "enum": 224,
+      "enumerator": 718,
+      "friend_type_reference": 137,
+      "function": 2850,
+      "macro_definition": 421,
+      "member": 14516,
+      "member_constant": 14647,
+      "method": 16493,
+      "namespace": 4470,
+      "namespace_alias": 1,
+      "operator": 4998,
+      "struct_specifier": 12579,
+      "typedef": 58,
+      "union_specifier": 144,
+      "using_declaration": 807,
+      "variable": 8,
+      "variable_template": 90
+    },
+    "diagnostic_categories": {
+      "conditional_function_header_pending": 1,
+      "conditional_function_variant_parse_pending": 1,
+      "declaration_macro_expansion_pending": 18,
+      "function_scope_declaration_pending": 186,
+      "macro_definition_ambiguous": 2,
+      "missing_syntax": 71,
+      "parse_error": 351,
+      "scope_closure_mismatch": 3
+    }
+  },
+  "after_summary": {
+    "files": 824,
+    "entities": 150883,
+    "occurrences": 155698,
+    "diagnostics": 625,
+    "blocking_diagnostics": 609,
+    "scope_review_occurrences": 0,
+    "scope_integrity_uncertainties": 0,
+    "syntax_diagnostics_in_function_bodies": 269,
+    "syntax_diagnostics_outside_function_bodies": 132,
+    "other_blocking_diagnostics": 208,
+    "kinds": {
+      "alias": 77032,
+      "class_specifier": 1319,
+      "constant": 260,
+      "constructor": 3856,
+      "destructor": 6,
+      "enum": 224,
+      "enumerator": 718,
+      "friend_type_reference": 137,
+      "function": 2850,
+      "macro_definition": 421,
+      "member": 14529,
+      "member_constant": 14674,
+      "method": 16506,
+      "namespace": 4476,
+      "namespace_alias": 1,
+      "operator": 4998,
+      "struct_specifier": 12584,
+      "typedef": 58,
+      "union_specifier": 144,
+      "using_declaration": 808,
+      "variable": 8,
+      "variable_template": 89
+    },
+    "diagnostic_categories": {
+      "conditional_function_header_pending": 1,
+      "conditional_function_variant_parse_pending": 1,
+      "declaration_macro_expansion_pending": 34,
+      "function_scope_declaration_pending": 186,
+      "macro_definition_ambiguous": 2,
+      "missing_syntax": 65,
+      "parse_error": 336
+    }
+  },
+  "semantic_changed_files": [
+    {
+      "path": "include/cute/container/alignment.hpp",
+      "before_occurrences": 14,
+      "after_occurrences": 14,
+      "removed_semantic_records": 9,
+      "added_semantic_records": 9,
+      "removed_examples": [
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 60,
+          "signature_end_line": 60,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 61,
+          "signature_end_line": 61,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 62,
+          "signature_end_line": 62,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 63,
+          "signature_end_line": 63,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 64,
+          "signature_end_line": 64,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 65,
+          "signature_end_line": 65,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 66,
+          "signature_end_line": 66,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 67,
+          "signature_end_line": 67,
+          "count": 1
+        }
+      ],
+      "added_examples": [
+        {
+          "qualified_name": "cute::aligned_struct<  1, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 60,
+          "signature_end_line": 60,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct<  2, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 61,
+          "signature_end_line": 61,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct<  4, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 62,
+          "signature_end_line": 62,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct<  8, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 63,
+          "signature_end_line": 63,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct< 16, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 64,
+          "signature_end_line": 64,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct< 32, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 65,
+          "signature_end_line": 65,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct< 64, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 66,
+          "signature_end_line": 66,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::aligned_struct<128, Child>",
+          "kind": "struct_specifier",
+          "signature_start_line": 67,
+          "signature_end_line": 67,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "include/cute/container/array_aligned.hpp",
+      "before_occurrences": 3,
+      "after_occurrences": 2,
+      "removed_semantic_records": 2,
+      "added_semantic_records": 1,
+      "removed_examples": [
+        {
+          "qualified_name": "cute::CUTE_ALIGNAS",
+          "kind": "struct_specifier",
+          "signature_start_line": 39,
+          "signature_end_line": 40,
+          "count": 1
+        },
+        {
+          "qualified_name": "cute::Alignment",
+          "kind": "variable_template",
+          "signature_start_line": 39,
+          "signature_end_line": 40,
+          "count": 1
+        }
+      ],
+      "added_examples": [
+        {
+          "qualified_name": "cute::array_aligned",
+          "kind": "struct_specifier",
+          "signature_start_line": 39,
+          "signature_end_line": 40,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "include/cutlass/gemm/collective/sm90_mma_array_tma_gmma_rs_warpspecialized_mixed_input.hpp",
+      "before_occurrences": 318,
+      "after_occurrences": 314,
+      "removed_semantic_records": 8,
+      "added_semantic_records": 4,
+      "removed_examples": [
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentA",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentB",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentA",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentB",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        }
+      ],
+      "added_examples": [
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 271,
+          "signature_end_line": 271,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90ArrayTmaGmmaWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 272,
+          "signature_end_line": 272,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_rs_warpspecialized_mixed_input.hpp",
+      "before_occurrences": 264,
+      "after_occurrences": 260,
+      "removed_semantic_records": 8,
+      "added_semantic_records": 4,
+      "removed_examples": [
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentA",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentB",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentA",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::SmemAlignmentB",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        }
+      ],
+      "added_examples": [
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_A",
+          "kind": "member",
+          "signature_start_line": 291,
+          "signature_end_line": 291,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaRmemAWarpSpecializedMixedInput<Stages, ClusterShape, KernelSchedule_>,\n    TileShape_,\n    ElementAOptionalTuple,\n    StrideA_,\n    ElementBOptionalTuple,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::SharedStorage::TensorStorage::smem_B",
+          "kind": "member",
+          "signature_start_line": 292,
+          "signature_end_line": 292,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+      "before_occurrences": 105,
+      "after_occurrences": 220,
+      "removed_semantic_records": 105,
+      "added_semantic_records": 220,
+      "removed_examples": [
+        {
+          "qualified_name": "cute",
+          "kind": "using_declaration",
+          "signature_start_line": 54,
+          "signature_end_line": 54,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>",
+          "kind": "struct_specifier",
+          "signature_start_line": 77,
+          "signature_end_line": 92,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::DispatchPolicy",
+          "kind": "alias",
+          "signature_start_line": 96,
+          "signature_end_line": 96,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::TileShape",
+          "kind": "alias",
+          "signature_start_line": 97,
+          "signature_end_line": 97,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::ElementA",
+          "kind": "alias",
+          "signature_start_line": 98,
+          "signature_end_line": 98,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::StrideA",
+          "kind": "alias",
+          "signature_start_line": 99,
+          "signature_end_line": 99,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::LayoutSFA",
+          "kind": "alias",
+          "signature_start_line": 100,
+          "signature_end_line": 100,
+          "count": 1
+        },
+        {
+          "qualified_name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>::ElementB",
+          "kind": "alias",
+          "signature_start_line": 101,
+          "signature_end_line": 101,
+          "count": 1
+        }
+      ],
+      "added_examples": [
+        {
+          "qualified_name": "cutlass",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "<cutlass_namespace(CUTLASS_NAMESPACE)>::gemm::collective",
+          "kind": "namespace",
+          "signature_start_line": 53,
+          "signature_end_line": 53,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::cute",
+          "kind": "using_declaration",
+          "signature_start_line": 54,
+          "signature_end_line": 54,
+          "count": 1
+        },
+        {
+          "qualified_name": "cutlass::gemm::collective::CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>",
+          "kind": "struct_specifier",
+          "signature_start_line": 59,
+          "signature_end_line": 92,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "scope_review_before": {
+    "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp": 104
+  },
+  "scope_review_after": {},
+  "scope_findings_before": [
+    {
+      "diagnostic_id": "diag_398433f5768c283d70a42c25",
+      "category": "scope_closure_mismatch",
+      "blocks_phase_1": true,
+      "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+      "start_byte": 3434,
+      "end_byte": 49970,
+      "start_line": 92,
+      "end_line": 1087,
+      "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+      "source_excerpt": "{\n  //\n  // Type Aliases\n  //\n  using DispatchPolicy = MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>;\n  using TileShape = TileShape_;\n  using ElementA = ElementA_;\n  using StrideA = cute::tuple_element_t<0,StridePairA_>;\n  using LayoutSFA = cute::tuple_element_t<1,StridePairA_>;\n  using ElementB = ElementB_;\n  using StrideB = cute::tuple_element_t<0,StridePairB_>;\n  using LayoutSFB = cute::tuple_element_t<1,StridePairB_>;\n  using TiledMma = TiledMma_;\n  using ElementAccumulator = typename TiledMma::ValTypeC;\n  using ElementBlockScale = ElementAccumulator;\n  using GmemTiledCopyA = GmemTiledCopyA_;\n  using GmemTiledCopyB = GmemTiledCopyB_;\n  using GmemTiledCopyScaleTMA = cute::SM90_TMA_LOAD;\n  using SmemLayoutAtomA = SmemLayoutAtomA_;\n  using SmemLayoutAtomB = SmemLayoutAtomB_;\n  using SmemCopyAtomA = SmemCopyAtomA_;\n  using SmemCopyAtomB = SmemCopyAtomB_;\n  using TransformA = TransformA_;\n  using TransformB = TransformB_;\n  using ArchTag = typename",
+      "preprocessor_conditions": [],
+      "scope_evidence": {
+        "category": "scope_closure_mismatch",
+        "blocks_phase_1": true,
+        "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+        "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+        "start_byte": 3434,
+        "end_byte": 49970,
+        "start_line": 92,
+        "end_line": 1087,
+        "scope_id": "scope-integrity:a643667c4c47949cd2b6b7e8",
+        "kind": "struct_specifier",
+        "name": "CollectiveMma<\n    MainloopSm90TmaGmmaWarpSpecializedBlockwiseFP8<Stages, ClusterShape, KernelSchedule>,\n    TileShape_,\n    ElementA_,\n    StridePairA_,\n    ElementB_,\n    StridePairB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>",
+        "declaration_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 3065,
+          "end_byte": 49970,
+          "start_line": 77,
+          "end_line": 1087,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 3065,
+            "end_byte": 50042,
+            "start_line": 77,
+            "end_line": 1087
+          }
+        },
+        "parsed_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 3434,
+          "end_byte": 49970,
+          "start_line": 92,
+          "end_line": 1087,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 3434,
+            "end_byte": 50042,
+            "start_line": 92,
+            "end_line": 1087
+          }
+        },
+        "parser_node_has_error": true,
+        "parsed_closing_token": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49969,
+          "end_byte": 49970,
+          "start_line": 1087,
+          "end_line": 1087,
+          "is_missing": false,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 50041,
+            "end_byte": 50042,
+            "start_line": 1087,
+            "end_line": 1087
+          }
+        },
+        "opening_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 3434,
+          "end_byte": 3435,
+          "start_line": 92,
+          "end_line": 92,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 3434,
+            "end_byte": 3435,
+            "start_line": 92,
+            "end_line": 92
+          }
+        },
+        "enclosing_conditions": [],
+        "candidate_closing_braces": [
+          {
+            "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+            "start_byte": 49866,
+            "end_byte": 49867,
+            "start_line": 1083,
+            "end_line": 1083,
+            "constraint_projection_range": {
+              "coordinate_space": "constraint_expanded_source",
+              "start_byte": 49938,
+              "end_byte": 49939,
+              "start_line": 1083,
+              "end_line": 1083
+            }
+          }
+        ],
+        "conditional_groups_considered": [],
+        "parsed_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49969,
+          "end_byte": 49970,
+          "start_line": 1087,
+          "end_line": 1087,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 50041,
+            "end_byte": 50042,
+            "start_line": 1087,
+            "end_line": 1087
+          }
+        },
+        "expected_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49866,
+          "end_byte": 49867,
+          "start_line": 1083,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 49938,
+            "end_byte": 49939,
+            "start_line": 1083,
+            "end_line": 1083
+          }
+        },
+        "expected_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 3434,
+          "end_byte": 49867,
+          "start_line": 92,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 3434,
+            "end_byte": 49939,
+            "start_line": 92,
+            "end_line": 1083
+          }
+        },
+        "status": "proven_closing_mismatch",
+        "trust_scope_bounds": false,
+        "mismatch_direction": "late_close",
+        "affected_tail": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49867,
+          "end_byte": 49970,
+          "start_line": 1083,
+          "end_line": 1087,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 49939,
+            "end_byte": 50042,
+            "start_line": 1083,
+            "end_line": 1087
+          }
+        },
+        "constraint_projection_range": {
+          "coordinate_space": "constraint_expanded_source",
+          "start_byte": 3434,
+          "end_byte": 50042,
+          "start_line": 92,
+          "end_line": 1087
+        }
+      },
+      "constraint_projection_range": {
+        "coordinate_space": "constraint_expanded_source",
+        "start_byte": 3434,
+        "end_byte": 50042,
+        "start_line": 92,
+        "end_line": 1087
+      }
+    },
+    {
+      "diagnostic_id": "diag_f82e94239ab91fe3c1a53eb8",
+      "category": "scope_closure_mismatch",
+      "blocks_phase_1": true,
+      "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+      "start_byte": 10570,
+      "end_byte": 49867,
+      "start_line": 212,
+      "end_line": 1083,
+      "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+      "source_excerpt": "{\n    struct TensorStorage : cute::aligned_struct<128> {\n      cute::array_aligned<typename TiledMma::ValTypeA, cute::cosize_v<SmemLayoutA>> smem_A;  // TILE_M x PIPE_K\n      cute::array_aligned<typename TiledMma::ValTypeB, cute::cosize_v<SmemLayoutB>> smem_B;  // TILE_N x PIPE_K\n      CUTE_ALIGNAS(128) cute::array<ElementBlockScale, cute::cosize_v<SmemLayoutSFA>> smem_SFA; // ScaleMsPerTile x PIPE_K\n      CUTE_ALIGNAS(128) cute::array<ElementBlockScale, cute::cosize_v<SmemLayoutSFB>> smem_SFB; // ScaleNsPerTile x PIPE_K\n    } tensors;\n\n    using PipelineStorage = typename MainloopPipeline::SharedStorage;\n    PipelineStorage pipeline;\n  };\n  using TensorStorage = typename SharedStorage::TensorStorage;\n  using PipelineStorage = typename SharedStorage::PipelineStorage;\n\n  // Host side kernel arguments\n  struct Arguments {\n    ElementA const* ptr_A;\n    StrideA dA;\n    ElementB const* ptr_B;\n    StrideB dB;\n    ElementBlockScale const* ptr_SFA;\n    LayoutSFA layout_SFA;\n    ElementBlockSc",
+      "preprocessor_conditions": [],
+      "scope_evidence": {
+        "category": "scope_closure_mismatch",
+        "blocks_phase_1": true,
+        "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+        "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+        "start_byte": 10570,
+        "end_byte": 49867,
+        "start_line": 212,
+        "end_line": 1083,
+        "scope_id": "scope-integrity:79a85ef829fe71398b20d41b",
+        "kind": "struct_specifier",
+        "name": "SharedStorage",
+        "declaration_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10547,
+          "end_byte": 49867,
+          "start_line": 211,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10551,
+            "end_byte": 49939,
+            "start_line": 211,
+            "end_line": 1083
+          }
+        },
+        "parsed_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10570,
+          "end_byte": 49867,
+          "start_line": 212,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10574,
+            "end_byte": 49939,
+            "start_line": 212,
+            "end_line": 1083
+          }
+        },
+        "parser_node_has_error": true,
+        "parsed_closing_token": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49866,
+          "end_byte": 49867,
+          "start_line": 1083,
+          "end_line": 1083,
+          "is_missing": false,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 49938,
+            "end_byte": 49939,
+            "start_line": 1083,
+            "end_line": 1083
+          }
+        },
+        "opening_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10570,
+          "end_byte": 10571,
+          "start_line": 212,
+          "end_line": 212,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10574,
+            "end_byte": 10575,
+            "start_line": 212,
+            "end_line": 212
+          }
+        },
+        "enclosing_conditions": [],
+        "candidate_closing_braces": [
+          {
+            "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+            "start_byte": 11215,
+            "end_byte": 11216,
+            "start_line": 222,
+            "end_line": 222,
+            "constraint_projection_range": {
+              "coordinate_space": "constraint_expanded_source",
+              "start_byte": 11219,
+              "end_byte": 11220,
+              "start_line": 222,
+              "end_line": 222
+            }
+          }
+        ],
+        "conditional_groups_considered": [],
+        "parsed_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 49866,
+          "end_byte": 49867,
+          "start_line": 1083,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 49938,
+            "end_byte": 49939,
+            "start_line": 1083,
+            "end_line": 1083
+          }
+        },
+        "expected_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11215,
+          "end_byte": 11216,
+          "start_line": 222,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11219,
+            "end_byte": 11220,
+            "start_line": 222,
+            "end_line": 222
+          }
+        },
+        "expected_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10570,
+          "end_byte": 11216,
+          "start_line": 212,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10574,
+            "end_byte": 11220,
+            "start_line": 212,
+            "end_line": 222
+          }
+        },
+        "status": "proven_closing_mismatch",
+        "trust_scope_bounds": false,
+        "mismatch_direction": "late_close",
+        "affected_tail": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11216,
+          "end_byte": 49867,
+          "start_line": 222,
+          "end_line": 1083,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11220,
+            "end_byte": 49939,
+            "start_line": 222,
+            "end_line": 1083
+          }
+        },
+        "constraint_projection_range": {
+          "coordinate_space": "constraint_expanded_source",
+          "start_byte": 10574,
+          "end_byte": 49939,
+          "start_line": 212,
+          "end_line": 1083
+        }
+      },
+      "constraint_projection_range": {
+        "coordinate_space": "constraint_expanded_source",
+        "start_byte": 10574,
+        "end_byte": 49939,
+        "start_line": 212,
+        "end_line": 1083
+      }
+    },
+    {
+      "diagnostic_id": "diag_dcd6383bd32553e1426c8453",
+      "category": "scope_closure_mismatch",
+      "blocks_phase_1": true,
+      "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+      "start_byte": 10625,
+      "end_byte": 11216,
+      "start_line": 213,
+      "end_line": 222,
+      "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+      "source_excerpt": "{\n      cute::array_aligned<typename TiledMma::ValTypeA, cute::cosize_v<SmemLayoutA>> smem_A;  // TILE_M x PIPE_K\n      cute::array_aligned<typename TiledMma::ValTypeB, cute::cosize_v<SmemLayoutB>> smem_B;  // TILE_N x PIPE_K\n      CUTE_ALIGNAS(128) cute::array<ElementBlockScale, cute::cosize_v<SmemLayoutSFA>> smem_SFA; // ScaleMsPerTile x PIPE_K\n      CUTE_ALIGNAS(128) cute::array<ElementBlockScale, cute::cosize_v<SmemLayoutSFB>> smem_SFB; // ScaleNsPerTile x PIPE_K\n    } tensors;\n\n    using PipelineStorage = typename MainloopPipeline::SharedStorage;\n    PipelineStorage pipeline;\n  }",
+      "preprocessor_conditions": [],
+      "scope_evidence": {
+        "category": "scope_closure_mismatch",
+        "blocks_phase_1": true,
+        "message": "Tree-sitter scope closing differs from the unique literal physical closing across all considered branches; no owner repair is performed.",
+        "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+        "start_byte": 10625,
+        "end_byte": 11216,
+        "start_line": 213,
+        "end_line": 222,
+        "scope_id": "scope-integrity:2d6040f3a49752496525b6e3",
+        "kind": "struct_specifier",
+        "name": "TensorStorage",
+        "declaration_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10576,
+          "end_byte": 11216,
+          "start_line": 213,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10580,
+            "end_byte": 11220,
+            "start_line": 213,
+            "end_line": 222
+          }
+        },
+        "parsed_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10625,
+          "end_byte": 11216,
+          "start_line": 213,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10629,
+            "end_byte": 11220,
+            "start_line": 213,
+            "end_line": 222
+          }
+        },
+        "parser_node_has_error": true,
+        "parsed_closing_token": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11215,
+          "end_byte": 11216,
+          "start_line": 222,
+          "end_line": 222,
+          "is_missing": false,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11219,
+            "end_byte": 11220,
+            "start_line": 222,
+            "end_line": 222
+          }
+        },
+        "opening_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10625,
+          "end_byte": 10626,
+          "start_line": 213,
+          "end_line": 213,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10629,
+            "end_byte": 10630,
+            "start_line": 213,
+            "end_line": 213
+          }
+        },
+        "enclosing_conditions": [],
+        "candidate_closing_braces": [
+          {
+            "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+            "start_byte": 11101,
+            "end_byte": 11102,
+            "start_line": 218,
+            "end_line": 218,
+            "constraint_projection_range": {
+              "coordinate_space": "constraint_expanded_source",
+              "start_byte": 11105,
+              "end_byte": 11106,
+              "start_line": 218,
+              "end_line": 218
+            }
+          }
+        ],
+        "conditional_groups_considered": [],
+        "parsed_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11215,
+          "end_byte": 11216,
+          "start_line": 222,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11219,
+            "end_byte": 11220,
+            "start_line": 222,
+            "end_line": 222
+          }
+        },
+        "expected_closing_brace": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11101,
+          "end_byte": 11102,
+          "start_line": 218,
+          "end_line": 218,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11105,
+            "end_byte": 11106,
+            "start_line": 218,
+            "end_line": 218
+          }
+        },
+        "expected_body_range": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 10625,
+          "end_byte": 11102,
+          "start_line": 213,
+          "end_line": 218,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 10629,
+            "end_byte": 11106,
+            "start_line": 213,
+            "end_line": 218
+          }
+        },
+        "status": "proven_closing_mismatch",
+        "trust_scope_bounds": false,
+        "mismatch_direction": "late_close",
+        "affected_tail": {
+          "path": "include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized_fp8_blockwise_scaling.hpp",
+          "start_byte": 11102,
+          "end_byte": 11216,
+          "start_line": 218,
+          "end_line": 222,
+          "constraint_projection_range": {
+            "coordinate_space": "constraint_expanded_source",
+            "start_byte": 11106,
+            "end_byte": 11220,
+            "start_line": 218,
+            "end_line": 222
+          }
+        },
+        "constraint_projection_range": {
+          "coordinate_space": "constraint_expanded_source",
+          "start_byte": 10629,
+          "end_byte": 11220,
+          "start_line": 213,
+          "end_line": 222
+        }
+      },
+      "constraint_projection_range": {
+        "coordinate_space": "constraint_expanded_source",
+        "start_byte": 10629,
+        "end_byte": 11220,
+        "start_line": 213,
+        "end_line": 222
+      }
+    }
+  ],
+  "scope_findings_after": [],
+  "policy": "Compares physical signature ranges and semantic fields; parser traces, IDs and new scope-trust metadata excluded. This is a change audit, not completeness proof."
+}

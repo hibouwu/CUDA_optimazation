@@ -1,0 +1,46 @@
+{
+  "adapter_id": "auxiliary_short_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.auxiliary_validation_v1",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/async_copy.py": "23b33b1595febad697e1cadb43a43a561975b2b36d7d56858d6b247cf1f83541",
+    "microbench/gh200_resource_campaign/auditors/async_copy_sass_baseline.py": "dbe7c5d2630b5649defcaecad45c502787385ce4094ba97cdb81247123d73f7e",
+    "microbench/gh200_resource_campaign/auditors/auxiliary_sass_v1.py": "b7282952f97b4df083544581dcb11cc7755a47fc78d336252909e57c2975e97a",
+    "microbench/gh200_resource_campaign/auditors/auxiliary_validation_v1.py": "858da5ae7ee53d99d5c4818cfe271b5f937099b00d688953c098be51d7b35e19",
+    "microbench/gh200_resource_campaign/common/auxiliary_cases_v1.hpp": "7dc22cfe9f4179896cc6708d1882ae35c6988dcec9c683e4354a025ccc16df85",
+    "microbench/gh200_resource_campaign/common/auxiliary_device_v1.cuh": "816362c86514de1891df26930f1571fdbb96166c62fbfcc51e027d62fadaa205",
+    "microbench/gh200_resource_campaign/common/auxiliary_host_reference_v1.hpp": "f6c401eb8e544b88f13054d4abf0db37081f7ac3ffeb1a88e336d8ae5c35af1f",
+    "microbench/gh200_resource_campaign/common/auxiliary_reference_v1.py": "e66b1b6b0a8b79e7ae9ef33465b2edd97d6d215b7bd0383b916716c60cdb04f1",
+    "microbench/gh200_resource_campaign/common/auxiliary_setmax_image_v1.hpp": "583d241c6e7c2722c1939c06aff88244b02263844a7b81ad9d0fce66f3f79bfa",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/contracts/auxiliary_sass_baseline_v1.draft.json": "be3c7037f8f89fbf7cfeffa4d6cc630bdca1c2716ca92266925ca36190fbeb62",
+    "microbench/gh200_resource_campaign/contracts/auxiliary_scope_v1.draft.json": "576fb4c82cdd3084f0faca5e6cec61881f8090bb2e95416351d8597ff7af7c0c",
+    "microbench/gh200_resource_campaign/contracts/auxiliary_short_v1.draft.json": "fd60eeb856dd4e1d1b5d37e33d7e4ba2062d3dbdcf529e97916f93279bf04835",
+    "microbench/gh200_resource_campaign/contracts/auxiliary_validation_profiles_v1.draft.json": "f86eb8c6741fd6587db97c50d192eccdcfc44396156a51c4d5b71ff6d80bc10e",
+    "microbench/gh200_resource_campaign/probes/auxiliary_short_v1.cu": "134851dc04d8ea659d9a7952bb3c9f6a77d863979bb72d57fb66f1b6c3566996",
+    "microbench/gh200_resource_campaign/tests/test_auxiliary_reference_v1.py": "0cceec18758498ca12033556866f01243e373a27ca571547a64c5c5ca865a360",
+    "microbench/gh200_resource_campaign/tests/test_auxiliary_validation_v1.py": "8f970d94ef2f58cbd65bd381ff79a6fe690fdfabff9b47fd784bf8fa526298fc"
+  },
+  "contract_sha256": "fd60eeb856dd4e1d1b5d37e33d7e4ba2062d3dbdcf529e97916f93279bf04835",
+  "profiles_sha256": "f86eb8c6741fd6587db97c50d192eccdcfc44396156a51c4d5b71ff6d80bc10e",
+  "review_dependencies": [
+    {
+      "stage": "S18",
+      "phase": "A",
+      "path": "reviews/S18-A-review.json"
+    },
+    {
+      "stage": "S18",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S18-short-source-B-review-r2.json"
+    }
+  ]
+}

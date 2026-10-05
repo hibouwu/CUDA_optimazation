@@ -1,0 +1,41 @@
+{
+  "adapter_id": "async_copy_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.async_copy_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/async_copy.py": "23b33b1595febad697e1cadb43a43a561975b2b36d7d56858d6b247cf1f83541",
+    "microbench/gh200_resource_campaign/auditors/async_copy_sass_baseline.py": "dbe7c5d2630b5649defcaecad45c502787385ce4094ba97cdb81247123d73f7e",
+    "microbench/gh200_resource_campaign/auditors/async_copy_validation.py": "3eeb3672640465eb73204b30347a9830de6b844666e5c0580ba4aba39308c89b",
+    "microbench/gh200_resource_campaign/common/async_copy_reference.hpp": "110adb7b6f54088ef79e275e5c20f1193020b7504c9d3969cbde5bd2f3a3b1f7",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/probes/async_copy.cu": "2868e08a8cf21e2846408d9e8a7f1152edf4c4cb3907747c03049105fc496775",
+    "microbench/gh200_resource_campaign/tests/test_async_copy_reference.py": "5ce4d260e620c32e30960f08c05b4344b3d177e714232abc39bae3bf82f85472",
+    "microbench/gh200_resource_campaign/tests/test_async_copy_validation.py": "6f17c5f7963b2bae70f4ce84ce867955d4bf1c00ce8050735acb98cbab04e956"
+  },
+  "contract_sha256": "ec441344f5635cc364782f024d5df8c36643089977abf50a4d0030ed8f2f5d9c",
+  "profiles_sha256": "c86cedb6ff56f1027d6e82e471a9eca34d2d4adb6b1efcb54292b7bc7de0b6cc",
+  "review_dependencies": [
+    {
+      "stage": "S12",
+      "phase": "A",
+      "path": "reviews/S12-A-review.json"
+    },
+    {
+      "stage": "S12",
+      "phase": "early-validation-A",
+      "path": "reviews/S12-early-validation-A-review.json"
+    },
+    {
+      "stage": "S12",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S12-early-validation-source-B-review.json"
+    }
+  ]
+}

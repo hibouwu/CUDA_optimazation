@@ -1,0 +1,71 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA0/1：排空、握手与释放 · CTA 0 leader mma · 1
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F4F7FB
+skinparam classBorderColor #57718A
+skinparam ArrowFontSize 11
+package "CTA 0 leader mma" as actor0 {
+class "CTA 0 leader mma\nPipelineUmmaAsync::producer_tail\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:788" as e0 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.acc_tail]] {
+  enter : 调用进入
+  return : 调用返回
+}
+class "CTA 0 leader mma\ndealloc arrive(peer, !leader)\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:793" as e1 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.arrive793]] {
+  enter : 调用进入
+  effect : 指定效果满足
+  return : 调用返回
+}
+class "CTA 0 leader mma\nlaunch_dependent_grids()\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:780" as e2 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.launch_dependent_grids]] {
+  enter : 调用进入
+  return : 调用返回
+}
+class "CTA 0 leader mma\nCollectiveMma::mma_init\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:733" as e3 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.mma_init]] {
+  enter : 调用进入
+  return : 调用返回
+}
+class "CTA 0 leader mma\nrelease_allocation_lock()\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:783" as e4 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.release_permit]] {
+  enter : 调用进入
+  effect : 指定效果满足
+  return : 调用返回
+}
+class "CTA 0 leader mma\nwait(local dealloc barrier, phase=0)\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:794" as e5 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.wait794]] {
+  enter : 调用进入
+  return : 调用返回
+}
+class "CTA 0 leader mma\nMMA工作循环已退出\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:775" as e6 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta0.work_loop_exit]] {
+  enter : 调用进入
+  return : 调用返回
+}
+}
+e3::return --> e6::enter : tmem.order.014\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e6::return --> e2::enter : tmem.order.015\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e2::return --> e4::enter : tmem.order.016\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e4::return --> e0::enter : tmem.order.017\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e0::return --> e1::enter : tmem.order.018\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e1::return --> e5::enter : tmem.order.019\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e4::enter --> e4::effect : tmem.order.028\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+e1::enter --> e1::effect : tmem.order.029\nOnly if the invocation guard is active;\npredicate-false effect is explicitly no arrival.
+e3::enter --> e3::return : tmem.order.145\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e6::enter --> e6::return : tmem.order.149\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e2::enter --> e2::return : tmem.order.150\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e4::enter --> e4::return : tmem.order.151\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e4::effect --> e4::return : tmem.order.152\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+e0::enter --> e0::return : tmem.order.153\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e1::enter --> e1::return : tmem.order.154\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e1::effect --> e1::return : tmem.order.155\nOnly the stated local effect / contribution issue,\nnot a remote barrier completion or a deallocation\neffect.
+e5::enter --> e5::return : tmem.order.156\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+event框不是新增C++类；每个锚点有独立连接点，不同API和CTA事件不合并。
+endlegend
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA 1 allocation-result NamedBarrier / 160 threads
+state "双方完整贡献均已记录" as s0
+state "已记录epilogue完整贡献（不判断谁先）" as s1
+note right of s1
+only the named contribution fact is added here; no negative fact
+about other participants is inferred
+end note
+state "已记录MMA完整贡献（不判断谁先）" as s2
+note right of s2
+only the named contribution fact is added here; no negative fact
+about other participants is inferred
+end note
+state "尚未登记完整贡献族" as s3
+note right of s3
+only the named contribution fact is added here; no negative fact
+about other participants is inferred
+end note
+state "已记录epilogue等待成功返回" as s4
+note right of s4
+publication observed in same CTA; no cross-CTA barrier identity
+end note
+s3 --> s2 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_arrive tmem.transition.024\nNamedBarrier::arrive() · 指定效果满足]]
+s1 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_arrive tmem.transition.025\nNamedBarrier::arrive() · 指定效果满足]]
+s3 --> s1 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait tmem.transition.026\nNamedBarrier::arrive_and_wait() · 指定效果满足]]
+s2 --> s0 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait tmem.transition.027\nNamedBarrier::arrive_and_wait() · 指定效果满足]]
+s0 --> s4 : [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait tmem.transition.028\nNamedBarrier::arrive_and_wait() · 调用返回]]
+legend bottom
+资源状态不等于函数调用栈。每条状态转换单独保留触发事件与前置条件。
+本图是固定源码与条件的契约模型，不是本轮GPU执行轨迹。
+endlegend
+@enduml

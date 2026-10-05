@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "family": "tma_bulk",
+  "profiles": [
+    {
+      "id": "formal_final_1_2_33_v1",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        33
+      ],
+      "input_profiles": [
+        "paired_nonuniform_final_tile"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "internal_seed": 0,
+          "input_profile": "paired_nonuniform_final_tile"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "internal_seed": 3,
+          "input_profile": "paired_nonuniform_final_tile"
+        },
+        {
+          "launch_index": 2,
+          "iterations": 33,
+          "internal_seed": 4294967295,
+          "input_profile": "paired_nonuniform_final_tile"
+        }
+      ],
+      "completion_requirements": [
+        "capture=false original target functions; no warmup/pilot",
+        "all24 cases; one process three fixed pairs; full final tile or all32ring slots and8guards",
+        "five lifecycle counters and five stamp fields perCTA encoded low/high uint32 little endian; timestamp uint64 and SMID uint32 exact integers",
+        "device/grid/regs/shared/local/occupancy checked; one_cta must launch one",
+        "short zero time allowed; no performance or family qualification"
+      ],
+      "reference_identity": {
+        "model": "tma_bulk_ring_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_bulk_reference.hpp",
+        "sha256": "98d20cfdfbdf5fc627976764ce87ceba032c94f09341bdac0e41ac95ec7bcf7b"
+      },
+      "declared_output_check": "all final tile/ring words,guards,lifecycle and stamps",
+      "output_evidence_kind": "full_values"
+    }
+  ]
+}

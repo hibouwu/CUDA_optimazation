@@ -1,0 +1,36 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title No global free order
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F4F7FB
+skinparam classBorderColor #57718A
+skinparam ArrowFontSize 11
+package "leader" as actor0 {
+class "leader\nfree leader\ninclude/a.hpp:4" as e0 <<event>> [[../index.html?protocol=protocol&event=l_free]] {
+  enter : 调用进入
+  return : 调用返回
+}
+}
+package "peer" as actor1 {
+class "peer\nfree peer\ninclude/a.hpp:4" as e1 <<event>> [[../index.html?protocol=protocol&event=p_free]] {
+  enter : 调用进入
+  return : 调用返回
+}
+}
+e0::enter --> e0::return : l_free.intra\nsame invocation
+e1::enter --> e1::return : p_free.intra\nsame invocation
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+event框不是新增C++类；每个锚点有独立连接点，不同API和CTA事件不合并。
+endlegend
+@enduml

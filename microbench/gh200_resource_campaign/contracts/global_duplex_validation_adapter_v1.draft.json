@@ -1,0 +1,40 @@
+{
+  "adapter_id": "global_duplex_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.global_duplex_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "draft_status": "pending_independent_A_review_not_executable",
+  "files_sha256": {},
+  "planned_files": [
+    "microbench/gh200_resource_campaign/probes/global_duplex.cu",
+    "microbench/gh200_resource_campaign/auditors/global_duplex.py",
+    "microbench/gh200_resource_campaign/auditors/global_duplex_validation.py",
+    "microbench/gh200_resource_campaign/common/global_duplex_reference.hpp",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex_reference.py",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex.py",
+    "microbench/gh200_resource_campaign/tests/test_global_duplex_validation.py"
+  ],
+  "contract_sha256": "f2393676c1b89c20407d07b25eb791a82f0ccb3a6fc86c56161c42b8aa0418a1",
+  "profiles_sha256": "e571e593e53b64fee81d4ad20dddbdbcd54ca49216732c07527bd320e8c9960e",
+  "review_dependencies": [
+    {
+      "stage": "S13",
+      "phase": "A",
+      "path": "reviews/S13-A-review-r2.json"
+    },
+    {
+      "stage": "S13",
+      "phase": "early-validation-A",
+      "path": "reviews/S13-early-validation-A-review-r3.json"
+    },
+    {
+      "stage": "S13",
+      "phase": "early-validation-source-B",
+      "path": "reviews/S13-early-validation-source-B-review.json"
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "run_kind": "CPU arithmetic and counterexample checks",
+  "gpu_kernel_executed": false,
+  "forge_table2": {
+    "rows": 13,
+    "all_listed_rows_faster": true,
+    "speedup_min": 1.0276900400084228,
+    "speedup_max": 1.2768532526475038,
+    "speedup_geometric_mean": 1.109755601943304,
+    "accuracy_equal_or_higher_count": 7,
+    "maximum_absolute_accuracy_gap_percentage_points": 1.5000000000000013,
+    "sample_size": 200,
+    "one_question_percentage_points": 0.5,
+    "data": [
+      {
+        "model": "Qwen3-0.6B",
+        "batch": 8,
+        "context": 2048,
+        "generated_us": 1406,
+        "baseline_us": 1576,
+        "generated_accuracy": 0.56,
+        "baseline_accuracy": 0.555
+      },
+      {
+        "model": "Qwen3-0.6B",
+        "batch": 16,
+        "context": 1024,
+        "generated_us": 1457,
+        "baseline_us": 1709,
+        "generated_accuracy": 0.555,
+        "baseline_accuracy": 0.555
+      },
+      {
+        "model": "Qwen3-0.6B",
+        "batch": 16,
+        "context": 4096,
+        "generated_us": 1322,
+        "baseline_us": 1688,
+        "generated_accuracy": 0.545,
+        "baseline_accuracy": 0.55
+      },
+      {
+        "model": "Qwen3-4B",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 3387,
+        "baseline_us": 3804,
+        "generated_accuracy": 0.935,
+        "baseline_accuracy": 0.93
+      },
+      {
+        "model": "Qwen3-4B",
+        "batch": 8,
+        "context": 1024,
+        "generated_us": 4217,
+        "baseline_us": 4459,
+        "generated_accuracy": 0.94,
+        "baseline_accuracy": 0.93
+      },
+      {
+        "model": "Qwen3-8B",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 5601,
+        "baseline_us": 6009,
+        "generated_accuracy": 0.965,
+        "baseline_accuracy": 0.975
+      },
+      {
+        "model": "Qwen3-8B",
+        "batch": 1,
+        "context": 512,
+        "generated_us": 5757,
+        "baseline_us": 6116,
+        "generated_accuracy": 0.965,
+        "baseline_accuracy": 0.97
+      },
+      {
+        "model": "Qwen3-8B",
+        "batch": 1,
+        "context": 2048,
+        "generated_us": 5847,
+        "baseline_us": 6219,
+        "generated_accuracy": 0.97,
+        "baseline_accuracy": 0.97
+      },
+      {
+        "model": "Llama-3.1-8B",
+        "batch": 4,
+        "context": 2048,
+        "generated_us": 6130,
+        "baseline_us": 6378,
+        "generated_accuracy": 0.88,
+        "baseline_accuracy": 0.865
+      },
+      {
+        "model": "Llama-2-13B-chat",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 9498,
+        "baseline_us": 9761,
+        "generated_accuracy": 0.315,
+        "baseline_accuracy": 0.315
+      },
+      {
+        "model": "MiniCPM5-1B",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 1181,
+        "baseline_us": 1430,
+        "generated_accuracy": 0.55,
+        "baseline_accuracy": 0.555
+      },
+      {
+        "model": "MiniCPM4-1B",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 1718,
+        "baseline_us": 1970,
+        "generated_accuracy": 0.64,
+        "baseline_accuracy": 0.65
+      },
+      {
+        "model": "MiniCPM4-3B",
+        "batch": 1,
+        "context": 128,
+        "generated_us": 3145,
+        "baseline_us": 3394,
+        "generated_accuracy": 0.62,
+        "baseline_accuracy": 0.635
+      }
+    ]
+  },
+  "forge_precision_projection_boundary": {
+    "reference": [
+      0.0,
+      0.0
+    ],
+    "narrowed_reference": [
+      1.0,
+      0.0
+    ],
+    "candidate": [
+      0.0,
+      100.0
+    ],
+    "alpha": 0.0,
+    "passes_alpha_only": true,
+    "l2_error": 100.0,
+    "interpretation": "The projection test alone is not a norm bound or a proof of arithmetic width. This is not a bypass of the full oracle."
+  },
+  "mpk_artifact_denominator_example": {
+    "kind": "synthetic arithmetic example, not GPU data",
+    "elapsed_ms": 1088.0,
+    "sequence_length": 1088,
+    "batch": 8,
+    "mpk_demo_formula_ms": 1.0,
+    "sglang_wrapper_formula_ms": 0.125,
+    "ratio_for_identical_elapsed_time": 8
+  },
+  "checks_completed": true
+}

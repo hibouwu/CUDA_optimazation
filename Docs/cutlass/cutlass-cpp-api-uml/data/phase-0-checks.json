@@ -1,0 +1,26 @@
+{
+  "stage": 0,
+  "scope_content_check": "pass",
+  "files": 824,
+  "declaration_coverage_claimed": false,
+  "relationship_coverage_claimed": false,
+  "mutation_tests": {
+    "missing_file": "detected",
+    "duplicate_file": "detected",
+    "wrong_commit": "detected",
+    "corrupt_hash": "detected",
+    "forged_blob": "detected",
+    "wrong_mode": "detected",
+    "forged_version": "detected",
+    "wrong_scope_roots": "detected",
+    "wrong_file_counts": "detected",
+    "wrong_line_count": "detected",
+    "wrong_navigation": "detected",
+    "wrong_architecture_hint": "detected",
+    "wrong_license": "detected",
+    "coordinated_snapshot_and_manifest_tampering": "detected",
+    "symlink_snapshot_entry": "detected",
+    "extra_snapshot_file": "detected",
+    "special_snapshot_object": "detected"
+  }
+}

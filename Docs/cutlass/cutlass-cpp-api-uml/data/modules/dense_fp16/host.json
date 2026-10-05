@@ -1,0 +1,2065 @@
+{
+  "module_id": "dense_fp16_2sm_sm110a",
+  "part": "host",
+  "nodes": [
+    {
+      "id": "host.adapter",
+      "kind": "type",
+      "name": "GemmUniversalAdapter（3.x 特化）",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 122,
+      "role": "configured_adapter_type",
+      "notes": "代表配置：Sm100 C++ recipe、sm_110a目标、FP16 A/B、row-major A/B/C/D、float C/D与accumulator、Tile256x128x64、静态Cluster2x2x1、Auto；已给定Mainloop阶段8/2/4与2SM类型证据。未覆写CUTLASS_ENABLE_CUDA_HOST_ADAPTER，采用源码默认false；本次stream=nullptr、launch_with_pdl=false。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter"
+    },
+    {
+      "id": "host.kernel",
+      "kind": "type",
+      "name": "GemmUniversal（SM100 TMA warp-specialized 特化）",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 61,
+      "role": "configured_kernel_type",
+      "notes": "特化约束位于72–76行；这里的ArchTag来自CollectiveMainloop。其他GemmUniversal实现不在本模块。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal"
+    },
+    {
+      "id": "host.adapter.arguments",
+      "kind": "type",
+      "name": "using Arguments = GemmKernel::Arguments",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 214,
+      "role": "host_argument_alias",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::Arguments"
+    },
+    {
+      "id": "host.adapter.params",
+      "kind": "type",
+      "name": "using Params = GemmKernel::Params",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 216,
+      "role": "kernel_parameter_alias",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::Params"
+    },
+    {
+      "id": "host.kernel.arguments",
+      "kind": "type",
+      "name": "GemmKernel::Arguments",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 215,
+      "role": "host_argument_type",
+      "notes": "包含mode、problem_shape、mainloop、epilogue、hw_info、scheduler；不是设备入口Params。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::Arguments"
+    },
+    {
+      "id": "host.kernel.params",
+      "kind": "type",
+      "name": "GemmKernel::Params",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 225,
+      "role": "device_parameter_type",
+      "notes": "包含转换后的mainloop/epilogue/scheduler Params。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::Params"
+    },
+    {
+      "id": "host.state.params",
+      "kind": "resource",
+      "name": "Params params_",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 221,
+      "role": "adapter_member_state",
+      "notes": "private成员；initialize/update重建此对象，无参run复用它。reads/writes在本图指此实例状态，不是写入Params类型。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::params_",
+      "entity_kind": "member"
+    },
+    {
+      "id": "host.kernel.smem_size",
+      "kind": "resource",
+      "name": "static constexpr int SharedStorageSize = sizeof(SharedStorage)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 212,
+      "role": "compile_time_constant",
+      "notes": "本图保存源码公式，不猜具体字节数；>=48KiB条件不据阶段数擅自消去。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::SharedStorageSize",
+      "entity_kind": "member"
+    },
+    {
+      "id": "host.run.kernel_params",
+      "kind": "resource",
+      "name": "void* kernel_params[] = {&params}",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 416,
+      "role": "launch_argument_pointer_array",
+      "notes": "static run内局部数组；元素指向Params对象。取地址不等于此处已经上传或读取全部Params字段。",
+      "entity_kind": "local_object"
+    },
+    {
+      "id": "host.can_implement",
+      "kind": "api",
+      "name": "can_implement(Arguments const&)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 231,
+      "role": "host_eligibility_check",
+      "notes": "完整声明：static Status can_implement(Arguments const& args)。只把Kernel bool转换为kSuccess/kInvalid；不是initialize内部步骤。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::can_implement"
+    },
+    {
+      "id": "host.get_workspace_size",
+      "kind": "api",
+      "name": "get_workspace_size(Arguments const&)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 242,
+      "role": "host_workspace_query",
+      "notes": "完整声明：static size_t get_workspace_size(Arguments const& args)。kGemmSplitKParallel额外项在245–247；基线mode=kGemm，不进入额外项。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::get_workspace_size"
+    },
+    {
+      "id": "host.initialize",
+      "kind": "api",
+      "name": "initialize(args, workspace, stream, cuda_adapter)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 312,
+      "role": "host_state_initialization",
+      "notes": "完整声明：Status initialize(Arguments const& args, void* workspace = nullptr, cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr)。不调用can_implement。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::initialize"
+    },
+    {
+      "id": "host.update",
+      "kind": "api",
+      "name": "update(args, workspace)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 359,
+      "role": "host_state_update",
+      "notes": "完整声明：Status update(Arguments const& args, void* workspace = nullptr)。不保证轻量更新；没有initialize_workspace调用。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::update"
+    },
+    {
+      "id": "host.run.params",
+      "kind": "api",
+      "name": "static run(Params&, stream, cuda_adapter, launch_with_pdl)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 374,
+      "role": "primary_host_submission",
+      "notes": "完整声明：static Status run(Params& params, cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr, bool launch_with_pdl = false)。返回launch/API错误状态，不证明设备执行完成。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::run"
+    },
+    {
+      "id": "host.run.args",
+      "kind": "api",
+      "name": "run(Arguments const&, workspace, stream, cuda_adapter, launch_with_pdl)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 582,
+      "role": "initializing_run_overload",
+      "notes": "完整声明：Status run(Arguments const& args, void* workspace = nullptr, cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr, bool launch_with_pdl = false)。本基线未直接用这个重载，但转发关系单独记录。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::run"
+    },
+    {
+      "id": "host.run.stream",
+      "kind": "api",
+      "name": "run(stream, cuda_adapter, launch_with_pdl)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 610,
+      "role": "state_reusing_run_overload",
+      "notes": "完整声明：Status run(cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr, bool launch_with_pdl = false)。基线实际调用此重载。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::run"
+    },
+    {
+      "id": "host.call.args",
+      "kind": "api",
+      "name": "operator()(Arguments const&, workspace, stream, cuda_adapter, launch_with_pdl)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 599,
+      "role": "argument_call_operator",
+      "notes": "完整声明：Status operator()(Arguments const& args, void* workspace = nullptr, cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr, bool launch_with_pdl = false)。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::operator()"
+    },
+    {
+      "id": "host.call.stream",
+      "kind": "api",
+      "name": "operator()(stream, cuda_adapter, launch_with_pdl)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 619,
+      "role": "state_reusing_call_operator",
+      "notes": "完整声明：Status operator()(cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr, bool launch_with_pdl = false)。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::operator()"
+    },
+    {
+      "id": "host.grid.args",
+      "kind": "api",
+      "name": "get_grid_shape(Arguments const&, workspace)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 257,
+      "role": "argument_grid_query",
+      "notes": "完整声明：static dim3 get_grid_shape(Arguments const& args, void* workspace = nullptr)。临时转换Params，不写params_。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::get_grid_shape"
+    },
+    {
+      "id": "host.grid.params",
+      "kind": "api",
+      "name": "get_grid_shape(Params const&)",
+      "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+      "line": 264,
+      "role": "parameter_grid_query",
+      "notes": "完整声明：static dim3 get_grid_shape(Params const& params)。static run调用此重载。",
+      "qualified_name": "cutlass::gemm::device::GemmUniversalAdapter::get_grid_shape"
+    },
+    {
+      "id": "host.kernel.can_implement",
+      "kind": "api",
+      "name": "GemmKernel::can_implement(Arguments const&)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 300,
+      "role": "kernel_host_check",
+      "notes": "完整声明：static bool can_implement(Arguments const& args)。检查mode并调用Mainloop/Epilogue/Scheduler；静态dense配置不进入动态cluster和block-scaled附加分支。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::can_implement"
+    },
+    {
+      "id": "host.kernel.workspace",
+      "kind": "api",
+      "name": "GemmKernel::get_workspace_size(Arguments const&)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 338,
+      "role": "kernel_workspace_query",
+      "notes": "完整声明：static size_t get_workspace_size(Arguments const& args)。Epilogue和Scheduler分别累加、按MinWorkspaceAlignment对齐。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::get_workspace_size"
+    },
+    {
+      "id": "host.kernel.initialize_workspace",
+      "kind": "api",
+      "name": "GemmKernel::initialize_workspace(args, workspace, stream, cuda_adapter)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 354,
+      "role": "kernel_workspace_initialization",
+      "notes": "完整声明：static cutlass::Status initialize_workspace(Arguments const& args, void* workspace = nullptr, cudaStream_t stream = nullptr, CudaHostAdapter* cuda_adapter = nullptr)。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::initialize_workspace"
+    },
+    {
+      "id": "host.kernel.lower",
+      "kind": "api",
+      "name": "GemmKernel::to_underlying_arguments(args, workspace)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 255,
+      "role": "host_to_device_parameter_conversion",
+      "notes": "完整声明：static Params to_underlying_arguments(Arguments const& args, void* workspace)。Mainloop workspace=nullptr；Epilogue和Scheduler按offset划分workspace。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::to_underlying_arguments"
+    },
+    {
+      "id": "host.kernel.grid",
+      "kind": "api",
+      "name": "GemmKernel::get_grid_shape(Params const&)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 383,
+      "role": "kernel_grid_query",
+      "notes": "完整声明：static dim3 get_grid_shape(Params const& params)。grid由问题形状和Scheduler决定，本图不凭Tile数猜具体grid。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::get_grid_shape"
+    },
+    {
+      "id": "host.kernel.block",
+      "kind": "api",
+      "name": "GemmKernel::get_block_shape()",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 398,
+      "role": "kernel_block_query",
+      "notes": "完整声明：static dim3 get_block_shape()；返回dim3(MaxThreadsPerBlock,1,1)。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::get_block_shape"
+    },
+    {
+      "id": "host.mainloop.can_implement",
+      "kind": "api",
+      "name": "CollectiveMainloop::can_implement(problem_shape, args)",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 420,
+      "role": "mainloop_host_boundary",
+      "notes": "完整声明：template<class ProblemShape> static bool can_implement(ProblemShape const& problem_shape, [[maybe_unused]] Arguments const& args)。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveMma::can_implement"
+    },
+    {
+      "id": "host.mainloop.lower",
+      "kind": "api",
+      "name": "CollectiveMainloop::to_underlying_arguments(problem_shape, args, workspace, hw_info)",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 353,
+      "role": "mainloop_descriptor_boundary",
+      "notes": "完整声明：template<class ProblemShape> static constexpr Params to_underlying_arguments(ProblemShape const& problem_shape, Arguments const& args, [[maybe_unused]] void* workspace, cutlass::KernelHardwareInfo const& hw_info = cutlass::KernelHardwareInfo{})。内部TMA构造调用在本Host图边界之外。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveMma::to_underlying_arguments"
+    },
+    {
+      "id": "host.epilogue.can_implement",
+      "kind": "api",
+      "name": "CollectiveEpilogue::can_implement(problem_shape, args)",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 334,
+      "role": "epilogue_host_boundary",
+      "notes": "完整声明：template<class ProblemShape> static bool can_implement(ProblemShape const& problem_shape, [[maybe_unused]] Arguments const& args)。",
+      "qualified_name": "cutlass::epilogue::collective::CollectiveEpilogue::can_implement"
+    },
+    {
+      "id": "host.epilogue.workspace",
+      "kind": "api",
+      "name": "CollectiveEpilogue::get_workspace_size(problem_shape, args)",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 321,
+      "role": "epilogue_workspace_boundary",
+      "notes": "完整声明：template<class ProblemShape> static size_t get_workspace_size(ProblemShape const& problem_shape, Arguments const& args)。内部委托FusionCallbacks。",
+      "qualified_name": "cutlass::epilogue::collective::CollectiveEpilogue::get_workspace_size"
+    },
+    {
+      "id": "host.epilogue.initialize_workspace",
+      "kind": "api",
+      "name": "CollectiveEpilogue::initialize_workspace(problem_shape, args, workspace, stream, cuda_adapter)",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 327,
+      "role": "epilogue_workspace_boundary",
+      "notes": "完整声明：template<class ProblemShape> static cutlass::Status initialize_workspace(ProblemShape const& problem_shape, Arguments const& args, void* workspace, cudaStream_t stream, CudaHostAdapter* cuda_adapter = nullptr)。",
+      "qualified_name": "cutlass::epilogue::collective::CollectiveEpilogue::initialize_workspace"
+    },
+    {
+      "id": "host.epilogue.lower",
+      "kind": "api",
+      "name": "CollectiveEpilogue::to_underlying_arguments(problem_shape, args, workspace)",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 299,
+      "role": "epilogue_descriptor_boundary",
+      "notes": "完整声明：template<class ProblemShape> static constexpr Params to_underlying_arguments(ProblemShape const& problem_shape, Arguments const& args, [[maybe_unused]] void* workspace)。",
+      "qualified_name": "cutlass::epilogue::collective::CollectiveEpilogue::to_underlying_arguments"
+    },
+    {
+      "id": "host.scheduler",
+      "kind": "type",
+      "name": "PersistentTileSchedulerSm100<ClusterShape, SchedulerPipelineStageCount>",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 55,
+      "role": "configured_scheduler_type",
+      "notes": "TileSchedulerTag_=void且ArchTag=Sm100时由tile_scheduler.hpp:208–218选择；不是Mainloop Schedule。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100"
+    },
+    {
+      "id": "host.scheduler.can_implement",
+      "kind": "api",
+      "name": "TileScheduler::can_implement(args, hw_info)",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 340,
+      "role": "scheduler_host_boundary",
+      "notes": "完整声明：static bool can_implement(Arguments const& args, KernelHardwareInfo const&)；当前实现返回true。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::can_implement"
+    },
+    {
+      "id": "host.scheduler.workspace",
+      "kind": "api",
+      "name": "TileScheduler::get_workspace_size<ProblemShape, ElementAccumulator>(...)",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 252,
+      "role": "scheduler_workspace_boundary",
+      "notes": "完整声明：template<class ProblemShape, class ElementAccumulator> static size_t get_workspace_size(Arguments const& args, ProblemShape problem_shape, KernelHardwareInfo const& hw_info, uint32_t reduction_warp_groups, const uint32_t epilogue_subtile = 1, uint32_t num_accumulator_mtxs = 1)。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_workspace_size"
+    },
+    {
+      "id": "host.scheduler.initialize_workspace",
+      "kind": "api",
+      "name": "TileScheduler::initialize_workspace<ProblemShape, ElementAccumulator>(...)",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 283,
+      "role": "scheduler_workspace_boundary",
+      "notes": "完整声明：template<class ProblemShape, class ElementAccumulator> static cutlass::Status initialize_workspace(Arguments const& args, void* workspace, cudaStream_t stream, ProblemShape const& problem_shape, KernelHardwareInfo const& hw_info, uint32_t /*reduction_warp_groups*/, uint32_t = 1 /*epilogue_subtile*/, uint32_t = 1 /*num_accumulator_mtxs*/, CudaHostAdapter* cuda_adapter = nullptr)。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::initialize_workspace"
+    },
+    {
+      "id": "host.scheduler.lower",
+      "kind": "api",
+      "name": "TileScheduler::to_underlying_arguments(problem_shape, tile, atom_thr, cluster, hw_info, args, workspace)",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 135,
+      "role": "scheduler_parameter_boundary",
+      "notes": "完整声明：template<class ProblemShapeMNKL,class TileShape,class AtomThrShape,class ClusterShape> static Params to_underlying_arguments(ProblemShapeMNKL problem_shape_mnkl, TileShape tile_shape_mnk, AtomThrShape atom_thr_shape_mnk, ClusterShape cluster_shape_mnk, KernelHardwareInfo const& hw_info, Arguments const& args, void* workspace = nullptr)。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::to_underlying_arguments"
+    },
+    {
+      "id": "host.scheduler.grid",
+      "kind": "api",
+      "name": "TileScheduler::get_grid_shape(params, problem_shape, tile, atom_thr, cluster, hw_info)",
+      "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+      "line": 220,
+      "role": "scheduler_grid_boundary",
+      "notes": "完整声明：template<class ProblemShapeMNKL,class TileShape,class AtomThrShape,class ClusterShape> CUTLASS_HOST_DEVICE static dim3 get_grid_shape(Params const& params, ProblemShapeMNKL problem_shape_mnkl, TileShape tile_shape_mnk, AtomThrShape atom_thr_shape_mnk, ClusterShape cluster_shape_mnk, KernelHardwareInfo hw_info)。",
+      "qualified_name": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100::get_grid_shape"
+    },
+    {
+      "id": "host.cluster.launch",
+      "kind": "api",
+      "name": "ClusterLauncher::launch_with_fallback_cluster(...)",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 259,
+      "role": "selected_host_launch_wrapper",
+      "notes": "完整声明：static inline CUTLASS_HOST Status launch_with_fallback_cluster(dim3 const grid_dims, dim3 const preferred_cluster_dims, dim3 const fallback_cluster_dims, dim3 const block_dims, size_t const smem_size, cudaStream_t cuda_stream, void const* kernel, void** kernel_params, bool launch_with_pdl = false)。名字含fallback，但本配置fallback=(0,0,0)。",
+      "qualified_name": "cutlass::ClusterLauncher::launch_with_fallback_cluster"
+    },
+    {
+      "id": "host.cluster.make_config",
+      "kind": "api",
+      "name": "ClusterLauncher::make_cluster_launch_config(...)",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 150,
+      "role": "cluster_launch_configuration",
+      "notes": "完整声明：static inline CUTLASS_HOST LaunchConfig make_cluster_launch_config(dim3 const grid_dims, dim3 const cluster_dims, dim3 const block_dims, size_t const smem_size = 0, cudaStream_t cuda_stream = 0, bool launch_with_pdl = false, dim3 const fallback_cluster_dims = {0,0,0})。当前have_fallback=false，只用clusterDim=(2,2,1)，不启用PDL。",
+      "qualified_name": "cutlass::ClusterLauncher::make_cluster_launch_config"
+    },
+    {
+      "id": "host.cluster.config",
+      "kind": "type",
+      "name": "ClusterLauncher::LaunchConfig",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 84,
+      "role": "launch_configuration_type",
+      "notes": "包含cudaLaunchConfig_t和launch_attribute数组；CUDA声明本体为库外边界。",
+      "qualified_name": "cutlass::ClusterLauncher::LaunchConfig"
+    },
+    {
+      "id": "host.cluster.grid_dim",
+      "kind": "api",
+      "name": "LaunchConfig::gridDim()",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 96,
+      "role": "launch_config_accessor",
+      "notes": "完整声明：dim3 gridDim() { return launch_config.gridDim; }。",
+      "qualified_name": "cutlass::ClusterLauncher::LaunchConfig::gridDim"
+    },
+    {
+      "id": "host.cluster.check_dims",
+      "kind": "api",
+      "name": "ClusterLauncher::check_cluster_dims(grid, cluster)",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 102,
+      "role": "host_cluster_validation",
+      "notes": "完整声明：static inline CUTLASS_HOST Status check_cluster_dims(dim3 grid, dim3 cluster)。检查cluster体积<=32及grid各维整除cluster各维；不等同完整硬件合法性证明。",
+      "qualified_name": "cutlass::ClusterLauncher::check_cluster_dims"
+    },
+    {
+      "id": "host.cluster.init",
+      "kind": "api",
+      "name": "ClusterLauncher::init(kernel_function)",
+      "path": "include/cutlass/cluster_launch.hpp",
+      "line": 114,
+      "role": "cuda_function_attribute_setup",
+      "notes": "完整声明（CUDA cluster launch enabled分支）：static inline CUTLASS_HOST Status init(void const* kernel_function)。",
+      "qualified_name": "cutlass::ClusterLauncher::init"
+    },
+    {
+      "id": "host.synclog.setup",
+      "kind": "api",
+      "name": "synclog_setup()",
+      "path": "include/cutlass/arch/synclog.hpp",
+      "line": 279,
+      "role": "instrumentation_boundary",
+      "notes": "内部CUDA行为依赖CUTLASS_ENABLE_SYNCLOG；本图仅保留已出现的调用点。",
+      "qualified_name": "cutlass::arch::synclog_setup"
+    },
+    {
+      "id": "host.synclog.print",
+      "kind": "api",
+      "name": "synclog_print()",
+      "path": "include/cutlass/arch/synclog.hpp",
+      "line": 962,
+      "role": "instrumentation_boundary",
+      "notes": "device_kernel中另一个设备侧调用；不是主计算或完成信号。",
+      "qualified_name": "cutlass::arch::synclog_print"
+    },
+    {
+      "id": "host.device_kernel",
+      "kind": "api",
+      "name": "device_kernel<Operator>(Operator::Params const params)",
+      "path": "include/cutlass/device_kernel.h",
+      "line": 112,
+      "role": "cuda_global_entry",
+      "notes": "完整声明：template<typename Operator> CUTLASS_GLOBAL __launch_bounds__(Operator::MaxThreadsPerBlock,Operator::MinBlocksPerMultiprocessor) void device_kernel(CUTLASS_GRID_CONSTANT typename Operator::Params const params)。Operator绑定本模块GemmKernel；不是Host普通函数调用。",
+      "qualified_name": "cutlass::device_kernel"
+    },
+    {
+      "id": "host.kernel.operator",
+      "kind": "api",
+      "name": "GemmKernel::operator()(Params const&, char*)",
+      "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+      "line": 403,
+      "role": "device_functor_entry_boundary",
+      "notes": "完整声明：CUTLASS_DEVICE void operator()(Params const& params, char* smem_buf)。Host图在入口止步，后续CTA/warp角色和异步协议交给设备模块。",
+      "qualified_name": "cutlass::gemm::kernel::GemmUniversal::operator()"
+    },
+    {
+      "id": "host.cuda.set_attribute",
+      "kind": "external",
+      "name": "cudaFuncSetAttribute",
+      "path": null,
+      "line": null,
+      "role": "cuda_runtime_api_boundary",
+      "notes": "CUDA Runtime外部声明；两个不同属性设置调用点分别保留。",
+      "qualified_name": "cudaFuncSetAttribute"
+    },
+    {
+      "id": "host.cuda.last_error",
+      "kind": "external",
+      "name": "cudaGetLastError",
+      "path": null,
+      "line": null,
+      "role": "cuda_runtime_api_boundary",
+      "notes": "这里只检查/清除CUDA错误状态，不代表GPU工作完成。",
+      "qualified_name": "cudaGetLastError"
+    },
+    {
+      "id": "host.cuda.launch_ex",
+      "kind": "external",
+      "name": "cudaLaunchKernelExC",
+      "path": null,
+      "line": null,
+      "role": "cuda_runtime_api_boundary",
+      "notes": "CUDA Runtime外部launch API；Host函数调用与提交device_kernel分成calls/launches两种关系。",
+      "qualified_name": "cudaLaunchKernelExC"
+    },
+    {
+      "id": "host.cuda.stream_sync",
+      "kind": "external",
+      "name": "cudaStreamSynchronize",
+      "path": null,
+      "line": null,
+      "role": "cuda_runtime_api_boundary",
+      "notes": "示例显式调用的流同步边界；不是Adapter内部行为。",
+      "qualified_name": "cudaStreamSynchronize"
+    },
+    {
+      "id": "host.app.main",
+      "kind": "external",
+      "name": "dense_baseline.cu::main()",
+      "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+      "line": 133,
+      "role": "auxiliary_application_driver",
+      "notes": "应用示例不属于824文件源码分母。运行时M=256、N=256、K=128、L=1，alpha=1.0f、beta=0.5f（207行）；这里实际调用250–252行cudaStreamSynchronize(stream)，不是Adapter内部的同步。check、分配、拷贝、参考比较等辅助流程不展开。",
+      "qualified_name": "main"
+    }
+  ],
+  "edges": [
+    {
+      "id": "host.type.adapter_kernel",
+      "source": "host.adapter",
+      "target": "host.kernel",
+      "relation": "template_binds",
+      "source_expression": "GemmKernel = GetUnderlyingKernel_t<GemmKernel_>",
+      "condition": "模块已给定dense FP16/2SM实例；GemmKernel_为基线GemmUniversal",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 122,
+          "end_line": 128
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 61,
+          "end_line": 76
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 104,
+          "end_line": 119
+        }
+      ]
+    },
+    {
+      "id": "host.type.args_alias",
+      "source": "host.adapter.arguments",
+      "target": "host.kernel.arguments",
+      "relation": "type_uses",
+      "source_expression": "using Arguments = typename GemmKernel::Arguments",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 213,
+          "end_line": 214
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 214,
+          "end_line": 222
+        }
+      ]
+    },
+    {
+      "id": "host.type.params_alias",
+      "source": "host.adapter.params",
+      "target": "host.kernel.params",
+      "relation": "type_uses",
+      "source_expression": "using Params = typename GemmKernel::Params",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 215,
+          "end_line": 216
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 224,
+          "end_line": 232
+        }
+      ]
+    },
+    {
+      "id": "host.type.params_state",
+      "source": "host.state.params",
+      "target": "host.adapter.params",
+      "relation": "type_uses",
+      "source_expression": "Params params_",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 216,
+          "end_line": 221
+        }
+      ]
+    },
+    {
+      "id": "host.type.scheduler",
+      "source": "host.kernel",
+      "target": "host.scheduler",
+      "relation": "template_binds",
+      "source_expression": "TileSchedulerSelector<TileSchedulerTag, ArchTag, CtaShape_MNK, ClusterShape, SchedulerPipelineStageCount>::Scheduler",
+      "condition": "TileSchedulerTag_=void, ArchTag=Sm100",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 122,
+          "end_line": 130
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/gemm_universal_decl.h",
+          "start_line": 50,
+          "end_line": 57
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/tile_scheduler.hpp",
+          "start_line": 207,
+          "end_line": 219
+        }
+      ]
+    },
+    {
+      "id": "host.app.can_implement.231",
+      "source": "host.app.main",
+      "target": "host.can_implement",
+      "relation": "calls",
+      "source_expression": "gemm.can_implement(arguments)",
+      "condition": "示例准备arguments之后；成功与否由check处理",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 208,
+          "end_line": 233
+        }
+      ]
+    },
+    {
+      "id": "host.app.workspace.234",
+      "source": "host.app.main",
+      "target": "host.get_workspace_size",
+      "relation": "calls",
+      "source_expression": "GemmHandle::get_workspace_size(arguments)",
+      "condition": "can_implement对应check未抛异常后",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 230,
+          "end_line": 236
+        }
+      ]
+    },
+    {
+      "id": "host.app.initialize.241",
+      "source": "host.app.main",
+      "target": "host.initialize",
+      "relation": "calls",
+      "source_expression": "gemm.initialize(arguments, workspace.get(), stream)",
+      "condition": "已分配workspace；stream=nullptr；cuda_adapter使用默认nullptr",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 237,
+          "end_line": 245
+        }
+      ]
+    },
+    {
+      "id": "host.app.run_stream.247",
+      "source": "host.app.main",
+      "target": "host.run.stream",
+      "relation": "calls",
+      "source_expression": "gemm.run(stream)",
+      "condition": "initialize对应check未抛异常；其余参数取默认值",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 241,
+          "end_line": 249
+        }
+      ]
+    },
+    {
+      "id": "host.app.sync.250",
+      "source": "host.app.main",
+      "target": "host.cuda.stream_sync",
+      "relation": "calls",
+      "source_expression": "cudaStreamSynchronize(stream)",
+      "condition": "gemm.run对应check未抛异常后，由应用显式等待同一stream；不是adapter中的调用",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 246,
+          "end_line": 252
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.check.233",
+      "source": "host.can_implement",
+      "target": "host.kernel.can_implement",
+      "relation": "calls",
+      "source_expression": "GemmKernel::can_implement(args)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 231,
+          "end_line": 238
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.workspace.249",
+      "source": "host.get_workspace_size",
+      "target": "host.kernel.workspace",
+      "relation": "calls",
+      "source_expression": "GemmKernel::get_workspace_size(args)",
+      "condition": "总会调用；基线mode=kGemm，不进入245–247的split-K额外项",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 243,
+          "end_line": 253
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_workspace.323",
+      "source": "host.initialize",
+      "target": "host.kernel.initialize_workspace",
+      "relation": "calls",
+      "source_expression": "GemmKernel::initialize_workspace(args, workspace, stream, cuda_adapter)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 322,
+          "end_line": 326
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_lower.328",
+      "source": "host.initialize",
+      "target": "host.kernel.lower",
+      "relation": "calls",
+      "source_expression": "GemmKernel::to_underlying_arguments(args, workspace)",
+      "condition": "initialize_workspace返回Status::kSuccess后",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 323,
+          "end_line": 328
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_write.328",
+      "source": "host.initialize",
+      "target": "host.state.params",
+      "relation": "writes",
+      "source_expression": "params_ = GemmKernel::to_underlying_arguments(args, workspace)",
+      "condition": "workspace初始化成功后重建句柄Params",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 327,
+          "end_line": 328
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_smem.338",
+      "source": "host.initialize",
+      "target": "host.kernel.smem_size",
+      "relation": "reads",
+      "source_expression": "int smem_size = GemmKernel::SharedStorageSize",
+      "condition": "!kEnableCudaHostAdapter；使用编译期常量，不宣称运行时全局内存读取",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 329,
+          "end_line": 342
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 212,
+          "end_line": 212
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_cuda_attribute.344",
+      "source": "host.initialize",
+      "target": "host.cuda.set_attribute",
+      "relation": "calls",
+      "source_expression": "cudaFuncSetAttribute(device_kernel<GemmKernel>, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_size)",
+      "condition": "!kEnableCudaHostAdapter && smem_size >= (48 << 10)",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 340,
+          "end_line": 347
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.init_clear_error.349",
+      "source": "host.initialize",
+      "target": "host.cuda.last_error",
+      "relation": "calls",
+      "source_expression": "cudaGetLastError()",
+      "condition": "上述cudaFuncSetAttribute结果!=cudaSuccess；随后返回kErrorInternal",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 348,
+          "end_line": 352
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.update_workspace.363",
+      "source": "host.update",
+      "target": "host.get_workspace_size",
+      "relation": "calls",
+      "source_expression": "get_workspace_size(args)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 360,
+          "end_line": 366
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.update_lower.368",
+      "source": "host.update",
+      "target": "host.kernel.lower",
+      "relation": "calls",
+      "source_expression": "GemmKernel::to_underlying_arguments(args, workspace)",
+      "condition": "workspace_bytes==0或workspace!=nullptr；未调用initialize_workspace",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 363,
+          "end_line": 369
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.update_write.368",
+      "source": "host.update",
+      "target": "host.state.params",
+      "relation": "writes",
+      "source_expression": "params_ = GemmKernel::to_underlying_arguments(args, workspace)",
+      "condition": "workspace空指针检查通过后",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 363,
+          "end_line": 369
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.call_args.606",
+      "source": "host.call.args",
+      "target": "host.run.args",
+      "relation": "calls",
+      "source_expression": "run(args, workspace, stream, cuda_adapter, launch_with_pdl)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 599,
+          "end_line": 607
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.run_args_init.590",
+      "source": "host.run.args",
+      "target": "host.initialize",
+      "relation": "calls",
+      "source_expression": "initialize(args, workspace, stream, cuda_adapter)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 582,
+          "end_line": 590
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.run_args_submit.593",
+      "source": "host.run.args",
+      "target": "host.run.params",
+      "relation": "calls",
+      "source_expression": "run(params_, stream, cuda_adapter, launch_with_pdl)",
+      "condition": "initialize返回Status::kSuccess后；Params与Arguments是不同结构",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 590,
+          "end_line": 595
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 215,
+          "end_line": 232
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.run_stream_submit.615",
+      "source": "host.run.stream",
+      "target": "host.run.params",
+      "relation": "calls",
+      "source_expression": "run(params_, stream, cuda_adapter, launch_with_pdl)",
+      "condition": "复用此前保存的params_；不重新initialize",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 609,
+          "end_line": 616
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.call_stream_submit.621",
+      "source": "host.call.stream",
+      "target": "host.run.params",
+      "relation": "calls",
+      "source_expression": "run(params_, stream, cuda_adapter, launch_with_pdl)",
+      "condition": "直接复用params_；不是调用run(stream)重载",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 618,
+          "end_line": 622
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.grid_args_lower.259",
+      "source": "host.grid.args",
+      "target": "host.kernel.lower",
+      "relation": "calls",
+      "source_expression": "GemmKernel::to_underlying_arguments(args, workspace)",
+      "condition": "临时Params，仅用于此grid查询",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 256,
+          "end_line": 260
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.grid_args_kernel.260",
+      "source": "host.grid.args",
+      "target": "host.kernel.grid",
+      "relation": "calls",
+      "source_expression": "GemmKernel::get_grid_shape(tmp_params)",
+      "condition": "使用上一行构造的临时Params",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 258,
+          "end_line": 261
+        }
+      ]
+    },
+    {
+      "id": "host.adapter.grid_params_kernel.266",
+      "source": "host.grid.params",
+      "target": "host.kernel.grid",
+      "relation": "calls",
+      "source_expression": "GemmKernel::get_grid_shape(params)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 263,
+          "end_line": 267
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.check_mainloop.308",
+      "source": "host.kernel.can_implement",
+      "target": "host.mainloop.can_implement",
+      "relation": "calls",
+      "source_expression": "CollectiveMainloop::can_implement(args.problem_shape, args.mainloop)",
+      "condition": "mode为kGemm，或kBatched且ProblemShape rank=4",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 301,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.check_epilogue.309",
+      "source": "host.kernel.can_implement",
+      "target": "host.epilogue.can_implement",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::can_implement(args.problem_shape, args.epilogue)",
+      "condition": "mode检查通过；&=不会因前一个bool=false而短路本调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 302,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.check_scheduler.310",
+      "source": "host.kernel.can_implement",
+      "target": "host.scheduler.can_implement",
+      "relation": "calls",
+      "source_expression": "TileScheduler::can_implement(args.scheduler, args.hw_info)",
+      "condition": "mode检查通过；&=不短路",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 308,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.workspace_epilogue.343",
+      "source": "host.kernel.workspace",
+      "target": "host.epilogue.workspace",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::get_workspace_size(args.problem_shape, args.epilogue)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 338,
+          "end_line": 344
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.workspace_scheduler.347",
+      "source": "host.kernel.workspace",
+      "target": "host.scheduler.workspace",
+      "relation": "calls",
+      "source_expression": "TileScheduler::template get_workspace_size<ProblemShape, ElementAccumulator>(args.scheduler, args.problem_shape, args.hw_info, NumFixupBarriers, NumEpilogueSubTiles, CollectiveEpilogue::NumAccumulatorMtxs)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 346,
+          "end_line": 349
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.init_epilogue.362",
+      "source": "host.kernel.initialize_workspace",
+      "target": "host.epilogue.initialize_workspace",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::initialize_workspace(args.problem_shape, args.epilogue, workspace_ptr + workspace_offset, stream, cuda_adapter)",
+      "condition": "初始workspace_offset=0",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 355,
+          "end_line": 362
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.init_epi_size.363",
+      "source": "host.kernel.initialize_workspace",
+      "target": "host.epilogue.workspace",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::get_workspace_size(args.problem_shape, args.epilogue)",
+      "condition": "紧接Epilogue初始化；状态检查在365行，因此本调用不以该status成功为前置条件",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 362,
+          "end_line": 367
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.init_scheduler.370",
+      "source": "host.kernel.initialize_workspace",
+      "target": "host.scheduler.initialize_workspace",
+      "relation": "calls",
+      "source_expression": "TileScheduler::template initialize_workspace<ProblemShape, ElementAccumulator>(args.scheduler, workspace_ptr + workspace_offset, stream, args.problem_shape, args.hw_info, NumFixupBarriers, NumEpilogueSubTiles, CollectiveEpilogue::NumAccumulatorMtxs, cuda_adapter)",
+      "condition": "Epilogue initialize_workspace返回kSuccess后；workspace_offset已对齐",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 365,
+          "end_line": 371
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.init_scheduler_size.372",
+      "source": "host.kernel.initialize_workspace",
+      "target": "host.scheduler.workspace",
+      "relation": "calls",
+      "source_expression": "TileScheduler::template get_workspace_size<ProblemShape, ElementAccumulator>(args.scheduler, args.problem_shape, args.hw_info, NumFixupBarriers, NumEpilogueSubTiles, CollectiveEpilogue::NumAccumulatorMtxs)",
+      "condition": "紧接Scheduler初始化；状态检查在375行",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 370,
+          "end_line": 377
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.lower_epi_size.276",
+      "source": "host.kernel.lower",
+      "target": "host.epilogue.workspace",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::get_workspace_size(args.problem_shape, args.epilogue)",
+      "condition": "为epilogue_workspace和后续scheduler_workspace计算offset",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 270,
+          "end_line": 282
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.lower_scheduler_size.283",
+      "source": "host.kernel.lower",
+      "target": "host.scheduler.workspace",
+      "relation": "calls",
+      "source_expression": "TileScheduler::template get_workspace_size<ProblemShape, ElementAccumulator>(args.scheduler, args.problem_shape, args.hw_info, NumFixupBarriers, NumEpilogueSubTiles, CollectiveEpilogue::NumAccumulatorMtxs)",
+      "condition": "计算scheduler_workspace后的offset；不初始化workspace内容",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 281,
+          "end_line": 285
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.lower_mainloop.290",
+      "source": "host.kernel.lower",
+      "target": "host.mainloop.lower",
+      "relation": "calls",
+      "source_expression": "CollectiveMainloop::to_underlying_arguments(args.problem_shape, args.mainloop, mainloop_workspace, args.hw_info)",
+      "condition": "mainloop_workspace=nullptr（279行）",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 279,
+          "end_line": 290
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.lower_epilogue.291",
+      "source": "host.kernel.lower",
+      "target": "host.epilogue.lower",
+      "relation": "calls",
+      "source_expression": "CollectiveEpilogue::to_underlying_arguments(args.problem_shape, args.epilogue, epilogue_workspace)",
+      "condition": "epilogue_workspace=workspace_ptr+原始offset",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 274,
+          "end_line": 277
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 287,
+          "end_line": 291
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.lower_scheduler.292",
+      "source": "host.kernel.lower",
+      "target": "host.scheduler.lower",
+      "relation": "calls",
+      "source_expression": "TileScheduler::to_underlying_arguments(problem_shape_MNKL, TileShape{}, AtomThrShapeMNK{}, ClusterShape{}, args.hw_info, args.scheduler, scheduler_workspace)",
+      "condition": "problem_shape_MNKL由append<4>得到；TileSchedulerTag_=void/Sm100选中已列重载",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 259,
+          "end_line": 260
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 287,
+          "end_line": 296
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 135,
+          "end_line": 160
+        }
+      ]
+    },
+    {
+      "id": "host.kernel.grid_scheduler.389",
+      "source": "host.kernel.grid",
+      "target": "host.scheduler.grid",
+      "relation": "calls",
+      "source_expression": "TileScheduler::get_grid_shape(params.scheduler, problem_shape_MNKL, TileShape{}, AtomThrShapeMNK{}, cluster_shape, params.hw_info)",
+      "condition": "静态ClusterShape2x2x1；由源码select_cluster_shape取得cluster_shape",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 384,
+          "end_line": 395
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 220,
+          "end_line": 231
+        }
+      ]
+    },
+    {
+      "id": "host.run.block.380",
+      "source": "host.run.params",
+      "target": "host.kernel.block",
+      "relation": "calls",
+      "source_expression": "GemmKernel::get_block_shape()",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 379,
+          "end_line": 381
+        }
+      ]
+    },
+    {
+      "id": "host.run.grid.381",
+      "source": "host.run.params",
+      "target": "host.grid.params",
+      "relation": "calls",
+      "source_expression": "get_grid_shape(params)",
+      "condition": "所示3.x特化的对应方法被调用",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 380,
+          "end_line": 381
+        }
+      ]
+    },
+    {
+      "id": "host.run.smem.384",
+      "source": "host.run.params",
+      "target": "host.kernel.smem_size",
+      "relation": "reads",
+      "source_expression": "int smem_size = GemmKernel::SharedStorageSize",
+      "condition": "使用类型常量作为动态共享内存字节数",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 383,
+          "end_line": 384
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 212,
+          "end_line": 212
+        }
+      ]
+    },
+    {
+      "id": "host.run.marshal.416",
+      "source": "host.run.params",
+      "target": "host.run.kernel_params",
+      "relation": "writes",
+      "source_expression": "void* kernel_params[] = {&params}",
+      "condition": "ArchTag::kMinComputeCapability>=90；仅建立参数指针数组",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 388,
+          "end_line": 416
+        }
+      ]
+    },
+    {
+      "id": "host.run.launch_fallback.509",
+      "source": "host.run.params",
+      "target": "host.cluster.launch",
+      "relation": "calls",
+      "source_expression": "ClusterLauncher::launch_with_fallback_cluster(grid, cluster, fallback_cluster, block, smem_size, stream, kernel, kernel_params, launch_with_pdl)",
+      "condition": "ArchTag=Sm100=>cap100；!kEnableCudaHostAdapter；!is_static_1x1x1；cluster=(2,2,1)，fallback=(0,0,0)，PDL=false",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 392,
+          "end_line": 414
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 456,
+          "end_line": 459
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 485,
+          "end_line": 519
+        },
+        {
+          "path": "include/cutlass/arch/arch.h",
+          "start_line": 100,
+          "end_line": 102
+        },
+        {
+          "path": "include/cutlass/cuda_host_adapter.hpp",
+          "start_line": 73,
+          "end_line": 77
+        }
+      ]
+    },
+    {
+      "id": "host.run.last_error.564",
+      "source": "host.run.params",
+      "target": "host.cuda.last_error",
+      "relation": "calls",
+      "source_expression": "cudaGetLastError()",
+      "condition": "所选launch分支返回后；结合launch_result判断kSuccess/kErrorInternal，不等待GPU完成",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 564,
+          "end_line": 574
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.make_config.271",
+      "source": "host.cluster.launch",
+      "target": "host.cluster.make_config",
+      "relation": "calls",
+      "source_expression": "make_cluster_launch_config(grid_dims, preferred_cluster_dims, block_dims, smem_size, cuda_stream, launch_with_pdl, fallback_cluster_dims)",
+      "condition": "CUTLASS_SM90_CLUSTER_LAUNCH_ENABLED；CUDA13.x满足宏定义条件",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 51,
+          "end_line": 57
+        },
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 259,
+          "end_line": 272
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.config_type",
+      "source": "host.cluster.make_config",
+      "target": "host.cluster.config",
+      "relation": "type_uses",
+      "source_expression": "LaunchConfig cluster_launch_config; auto &launch_config = cluster_launch_config.launch_config",
+      "condition": "本配置have_fallback=false，PDL=false；填充clusterDim、gridDim、blockDim、dynamicSmemBytes、stream与attrs",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 160,
+          "end_line": 177
+        },
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 183,
+          "end_line": 207
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.grid_dim.274",
+      "source": "host.cluster.launch",
+      "target": "host.cluster.grid_dim",
+      "relation": "calls",
+      "source_expression": "cluster_launch_config.gridDim()",
+      "condition": "配置生成后",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 271,
+          "end_line": 275
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.check_dims.275",
+      "source": "host.cluster.launch",
+      "target": "host.cluster.check_dims",
+      "relation": "calls",
+      "source_expression": "check_cluster_dims(launch_grid_dims, preferred_cluster_dims)",
+      "condition": "配置生成后；失败即返回kInvalid，不继续init/launch",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 274,
+          "end_line": 278
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.init.280",
+      "source": "host.cluster.launch",
+      "target": "host.cluster.init",
+      "relation": "calls",
+      "source_expression": "init(kernel)",
+      "condition": "check_cluster_dims返回kSuccess；失败不调用cudaLaunchKernelExC",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 275,
+          "end_line": 283
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.init_attribute.142",
+      "source": "host.cluster.init",
+      "target": "host.cuda.set_attribute",
+      "relation": "calls",
+      "source_expression": "cudaFuncSetAttribute(kernel_function, cudaFuncAttributeNonPortableClusterSizeAllowed, 1)",
+      "condition": "CUTLASS_SM90_CLUSTER_LAUNCH_ENABLED；调试检查分支未在本配置展开",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 114,
+          "end_line": 143
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.synclog.293",
+      "source": "host.cluster.launch",
+      "target": "host.synclog.setup",
+      "relation": "calls",
+      "source_expression": "cutlass::arch::synclog_setup()",
+      "condition": "cluster检查及init均成功之后",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 280,
+          "end_line": 294
+        }
+      ]
+    },
+    {
+      "id": "host.cluster.cuda_call.294",
+      "source": "host.cluster.launch",
+      "target": "host.cuda.launch_ex",
+      "relation": "calls",
+      "source_expression": "cudaLaunchKernelExC(&cluster_launch_config.launch_config, kernel, kernel_params)",
+      "condition": "cluster检查与init均成功；CUDA>=11.8 cluster launch enabled",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 270,
+          "end_line": 295
+        }
+      ]
+    },
+    {
+      "id": "host.cuda.submit_device_kernel.294",
+      "source": "host.cuda.launch_ex",
+      "target": "host.device_kernel",
+      "relation": "launches",
+      "source_expression": "cudaLaunchKernelExC(&cluster_launch_config.launch_config, kernel, kernel_params)",
+      "condition": "表示同一294行Host API调用的GPU提交边界，不是额外普通C++调用点；具体global目标来自Adapter静态绑定",
+      "resolution": "configured",
+      "launch_site": {
+        "path": "include/cutlass/cluster_launch.hpp",
+        "start_line": 294,
+        "end_line": 294,
+        "source_api": "host.cluster.launch",
+        "shared_callsite_edge_id": "host.cluster.cuda_call.294",
+        "source_expression": "cudaLaunchKernelExC(&cluster_launch_config.launch_config, kernel, kernel_params)",
+        "statement": "cudaError_t status = cudaLaunchKernelExC(&cluster_launch_config.launch_config, kernel, kernel_params);"
+      },
+      "binding_evidence": [
+        {
+          "binding": "kernel_function",
+          "launch_argument": "kernel",
+          "resolved_expression": "(void const*) device_kernel<GemmKernel>",
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 458,
+          "end_line": 458,
+          "source_expression": "[[maybe_unused]] void const* kernel = (void const*) device_kernel<GemmKernel>;",
+          "notes": "这是Adapter中被转发的kernel值定义，不是cudaLaunchKernelExC调用表达式；GemmKernel按本代表配置绑定。"
+        },
+        {
+          "binding": "kernel_params[0]",
+          "launch_argument": "kernel_params",
+          "resolved_expression": "&params",
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 416,
+          "end_line": 416,
+          "source_expression": "[[maybe_unused]] void* kernel_params[] = {&params};",
+          "notes": "原文是数组初始化，不是单独的kernel_params[0]赋值；第一个元素指向Adapter::run(Params&)收到的params对象。"
+        },
+        {
+          "binding": "Adapter调用的实参kernel/kernel_params到ClusterLauncher形参kernel/kernel_params",
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 509,
+          "end_line": 518,
+          "parameter_declaration": {
+            "path": "include/cutlass/cluster_launch.hpp",
+            "start_line": 260,
+            "end_line": 269
+          },
+          "argument_bindings": [
+            {
+              "argument_index": 6,
+              "argument": "kernel",
+              "parameter": "kernel"
+            },
+            {
+              "argument_index": 7,
+              "argument": "kernel_params",
+              "parameter": "kernel_params"
+            }
+          ],
+          "notes": "argument_index为零基；ClusterLauncher在294行将这两个形参原样交给CUDA launch API。这里只保存跨处绑定证据，不将这些位置拼成新的调用点。"
+        },
+        {
+          "binding": "device_kernel<GemmKernel>的Operator及唯一按值Params形参",
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 112,
+          "end_line": 118,
+          "notes": "Operator=GemmKernel；kernel_params[0]提供对应Params实参的Host地址。GPU functor调用另由host.device.call_functor.123记录，不是本launch边的直接C++调用。"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 294,
+          "end_line": 294,
+          "quote": "    cudaError_t status = cudaLaunchKernelExC(&cluster_launch_config.launch_config, kernel, kernel_params);"
+        }
+      ]
+    },
+    {
+      "id": "host.device.bind_operator",
+      "source": "host.device_kernel",
+      "target": "host.kernel",
+      "relation": "template_binds",
+      "source_expression": "Operator = configured GemmKernel",
+      "condition": "global entry的模板Operator由device_kernel<GemmKernel>确定",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 458,
+          "end_line": 458
+        },
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 112,
+          "end_line": 123
+        }
+      ]
+    },
+    {
+      "id": "host.device.params_type",
+      "source": "host.device_kernel",
+      "target": "host.kernel.params",
+      "relation": "type_uses",
+      "source_expression": "CUTLASS_GRID_CONSTANT typename Operator::Params const params",
+      "condition": "设备入口按值接收Params；grid-constant修饰受编译器条件控制",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 41,
+          "end_line": 56
+        },
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 112,
+          "end_line": 118
+        }
+      ]
+    },
+    {
+      "id": "host.device.call_functor.123",
+      "source": "host.device_kernel",
+      "target": "host.kernel.operator",
+      "relation": "calls",
+      "source_expression": "Operator op; op(params, smem)",
+      "condition": "设备线程已进入global kernel后；smem为extern __shared__ char smem[]",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 118,
+          "end_line": 124
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 403,
+          "end_line": 405
+        }
+      ]
+    },
+    {
+      "id": "host.device.synclog.124",
+      "source": "host.device_kernel",
+      "target": "host.synclog.print",
+      "relation": "calls",
+      "source_expression": "cutlass::arch::synclog_print()",
+      "condition": "op返回之后，仍在设备代码中；不是Host同步或GPU完成证明",
+      "resolution": "source_proven",
+      "evidence": [
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 121,
+          "end_line": 124
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "host.lifecycle",
+      "title": "1. Host句柄生命周期与重载转发：检查、workspace、initialize/update、run与应用同步",
+      "node_ids": [
+        "host.adapter",
+        "host.kernel",
+        "host.adapter.arguments",
+        "host.kernel.arguments",
+        "host.adapter.params",
+        "host.kernel.params",
+        "host.state.params",
+        "host.app.main",
+        "host.can_implement",
+        "host.get_workspace_size",
+        "host.initialize",
+        "host.run.stream",
+        "host.cuda.stream_sync",
+        "host.kernel.can_implement",
+        "host.kernel.workspace",
+        "host.kernel.initialize_workspace",
+        "host.kernel.lower",
+        "host.kernel.smem_size",
+        "host.cuda.set_attribute",
+        "host.cuda.last_error",
+        "host.update",
+        "host.call.args",
+        "host.run.args",
+        "host.run.params",
+        "host.call.stream"
+      ],
+      "edge_ids": [
+        "host.type.adapter_kernel",
+        "host.type.args_alias",
+        "host.type.params_alias",
+        "host.type.params_state",
+        "host.app.can_implement.231",
+        "host.app.workspace.234",
+        "host.app.initialize.241",
+        "host.app.run_stream.247",
+        "host.app.sync.250",
+        "host.adapter.check.233",
+        "host.adapter.workspace.249",
+        "host.adapter.init_workspace.323",
+        "host.adapter.init_lower.328",
+        "host.adapter.init_write.328",
+        "host.adapter.init_smem.338",
+        "host.adapter.init_cuda_attribute.344",
+        "host.adapter.init_clear_error.349",
+        "host.adapter.update_workspace.363",
+        "host.adapter.update_lower.368",
+        "host.adapter.update_write.368",
+        "host.adapter.call_args.606",
+        "host.adapter.run_args_init.590",
+        "host.adapter.run_args_submit.593",
+        "host.adapter.run_stream_submit.615",
+        "host.adapter.call_stream_submit.621"
+      ]
+    },
+    {
+      "id": "host.preparation",
+      "title": "2. Kernel Host准备：检查分派、workspace划分与Arguments→Params（下游方法为明确边界）",
+      "node_ids": [
+        "host.kernel",
+        "host.scheduler",
+        "host.can_implement",
+        "host.kernel.can_implement",
+        "host.get_workspace_size",
+        "host.kernel.workspace",
+        "host.initialize",
+        "host.kernel.initialize_workspace",
+        "host.kernel.lower",
+        "host.update",
+        "host.grid.args",
+        "host.kernel.grid",
+        "host.grid.params",
+        "host.mainloop.can_implement",
+        "host.epilogue.can_implement",
+        "host.scheduler.can_implement",
+        "host.epilogue.workspace",
+        "host.scheduler.workspace",
+        "host.epilogue.initialize_workspace",
+        "host.scheduler.initialize_workspace",
+        "host.mainloop.lower",
+        "host.epilogue.lower",
+        "host.scheduler.lower",
+        "host.scheduler.grid"
+      ],
+      "edge_ids": [
+        "host.type.scheduler",
+        "host.adapter.check.233",
+        "host.adapter.workspace.249",
+        "host.adapter.init_workspace.323",
+        "host.adapter.init_lower.328",
+        "host.adapter.update_lower.368",
+        "host.adapter.grid_args_lower.259",
+        "host.adapter.grid_args_kernel.260",
+        "host.adapter.grid_params_kernel.266",
+        "host.kernel.check_mainloop.308",
+        "host.kernel.check_epilogue.309",
+        "host.kernel.check_scheduler.310",
+        "host.kernel.workspace_epilogue.343",
+        "host.kernel.workspace_scheduler.347",
+        "host.kernel.init_epilogue.362",
+        "host.kernel.init_epi_size.363",
+        "host.kernel.init_scheduler.370",
+        "host.kernel.init_scheduler_size.372",
+        "host.kernel.lower_epi_size.276",
+        "host.kernel.lower_scheduler_size.283",
+        "host.kernel.lower_mainloop.290",
+        "host.kernel.lower_epilogue.291",
+        "host.kernel.lower_scheduler.292",
+        "host.kernel.grid_scheduler.389"
+      ]
+    },
+    {
+      "id": "host.launch",
+      "title": "3. Sm100静态Cluster提交：Host wrapper → CUDA launch → device_kernel → 设备functor",
+      "node_ids": [
+        "host.app.main",
+        "host.run.stream",
+        "host.cuda.stream_sync",
+        "host.run.params",
+        "host.grid.params",
+        "host.kernel.grid",
+        "host.scheduler.grid",
+        "host.kernel.block",
+        "host.kernel.smem_size",
+        "host.run.kernel_params",
+        "host.cluster.launch",
+        "host.cuda.last_error",
+        "host.cluster.make_config",
+        "host.cluster.config",
+        "host.cluster.grid_dim",
+        "host.cluster.check_dims",
+        "host.cluster.init",
+        "host.cuda.set_attribute",
+        "host.synclog.setup",
+        "host.cuda.launch_ex",
+        "host.device_kernel",
+        "host.kernel",
+        "host.kernel.params",
+        "host.kernel.operator",
+        "host.synclog.print"
+      ],
+      "edge_ids": [
+        "host.app.run_stream.247",
+        "host.app.sync.250",
+        "host.adapter.run_stream_submit.615",
+        "host.adapter.grid_params_kernel.266",
+        "host.kernel.grid_scheduler.389",
+        "host.run.block.380",
+        "host.run.grid.381",
+        "host.run.smem.384",
+        "host.run.marshal.416",
+        "host.run.launch_fallback.509",
+        "host.run.last_error.564",
+        "host.cluster.make_config.271",
+        "host.cluster.config_type",
+        "host.cluster.grid_dim.274",
+        "host.cluster.check_dims.275",
+        "host.cluster.init.280",
+        "host.cluster.init_attribute.142",
+        "host.cluster.synclog.293",
+        "host.cluster.cuda_call.294",
+        "host.cuda.submit_device_kernel.294",
+        "host.device.bind_operator",
+        "host.device.params_type",
+        "host.device.call_functor.123",
+        "host.device.synclog.124"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "host.scope.partial_adapter",
+      "kind": "scope_boundary",
+      "message": "本文件不是整个GemmUniversalAdapter的完整关系清单：只含3.x特化的列明生命周期/重载/grid路径；未展开maximum_active_blocks、2.x特化、兼容别名全集、trace/assert/error-formatting调用。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 122,
+          "end_line": 125
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 269,
+          "end_line": 309
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 625,
+          "end_line": 640
+        }
+      ]
+    },
+    {
+      "id": "host.scope.unselected_launch_paths",
+      "kind": "scope_boundary",
+      "message": "未绘制kEnableCudaHostAdapter=true、SM90 kClusterLaunch、static1x1x1、Arch<90、动态cluster/fallback以及PDL=true的替代路径；它们不是本配置关系缺失。若配置改变，必须重新选分支。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 388,
+          "end_line": 552
+        }
+      ]
+    },
+    {
+      "id": "host.scope.collective_scheduler_internals",
+      "kind": "scope_boundary",
+      "message": "第2图在列出的CollectiveMainloop/CollectiveEpilogue/TileScheduler Host接口止步；TMA描述符构造、FusionCallbacks、Scheduler::Params及辅助round_nearest/select_cluster_shape的内部关系未在此展开。不能据本图宣称这些函数/整模块接口完全覆盖。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 353,
+          "end_line": 442
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 299,
+          "end_line": 372
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 135,
+          "end_line": 160
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_tile_scheduler.hpp",
+          "start_line": 252,
+          "end_line": 310
+        }
+      ]
+    },
+    {
+      "id": "host.scope.device_boundary",
+      "kind": "scope_boundary",
+      "message": "设备入口仅覆盖device_kernel的模板参数、op(params,smem)及synclog调用；GemmKernel::operator()内部CTA/warp职责与异步协议由设备部分继续连接。",
+      "evidence": [
+        {
+          "path": "include/cutlass/device_kernel.h",
+          "start_line": 112,
+          "end_line": 126
+        },
+        {
+          "path": "include/cutlass/gemm/kernel/sm100_gemm_tma_warpspecialized.hpp",
+          "start_line": 403,
+          "end_line": 429
+        }
+      ]
+    },
+    {
+      "id": "host.boundary.cuda_declarations",
+      "kind": "external_boundary",
+      "message": "CUDA Runtime声明不在824个固定include文件中，external节点path/line为null；真实调用位置均在edge.evidence。不得把这些库外声明当missing_definition或把调用点伪作声明点。",
+      "evidence": [
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 38,
+          "end_line": 38
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 344,
+          "end_line": 347
+        },
+        {
+          "path": "include/cutlass/cluster_launch.hpp",
+          "start_line": 294,
+          "end_line": 294
+        }
+      ]
+    },
+    {
+      "id": "host.boundary.application_example",
+      "kind": "auxiliary_source_boundary",
+      "message": "dense_baseline.cu是配置与应用调用证据，位于824文件分母之外。main节点与示例边需作为aux源码链接，不增加库源分母。实际同步为cudaStreamSynchronize，不是Adapter内的cudaDeviceSynchronize。",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 28,
+          "end_line": 53
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 230,
+          "end_line": 252
+        }
+      ]
+    },
+    {
+      "id": "host.assumption.build_defaults",
+      "kind": "configuration_boundary",
+      "message": "代表Host分支采用CUDA13.x、无CUTLASS_ENABLE_CUDA_HOST_ADAPTER覆写、launch_with_pdl=false和默认stream；Sm100 recipe与sm_110a编译目标分属不同轴。若外部编译参数覆写宏，本图配置不再成立。未在本轮运行GPU或证明数值/性能。",
+      "evidence": [
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 3,
+          "end_line": 5
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 28,
+          "end_line": 53
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 240,
+          "end_line": 252
+        },
+        {
+          "path": "include/cutlass/cuda_host_adapter.hpp",
+          "start_line": 73,
+          "end_line": 77
+        },
+        {
+          "path": "include/cutlass/arch/arch.h",
+          "start_line": 100,
+          "end_line": 102
+        }
+      ]
+    },
+    {
+      "id": "host.contract.no_implicit_validation_or_completion",
+      "kind": "contract_boundary",
+      "message": "initialize不调用can_implement；update不调用initialize_workspace；run成功是launch/API状态，不是GPU完成。应用在run之后独立cudaStreamSynchronize。",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 311,
+          "end_line": 369
+        },
+        {
+          "path": "include/cutlass/gemm/device/gemm_universal_adapter.h",
+          "start_line": 564,
+          "end_line": 574
+        },
+        {
+          "path": "Docs/cutlass/02_cutlass_and_gemm/exemples/dense_baseline.cu",
+          "start_line": 241,
+          "end_line": 252
+        }
+      ]
+    }
+  ]
+}

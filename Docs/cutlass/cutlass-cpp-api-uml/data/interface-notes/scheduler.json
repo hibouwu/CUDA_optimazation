@@ -1,0 +1,354 @@
+{
+  "nodes": {
+    "scheduler.work_info": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "Sm100 Scheduler沿用底层调度器的WorkTileInfo类型，用来描述输出工作的索引与有效性。这里是类型别名，不是一次取任务操作；K范围由本调度器的完整K策略决定。",
+      "execution": "这是编译期类型别名；具体工作描述对象在设备运行时产生。",
+      "parameter_notes": {},
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.initial": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "根据当前CTA的blockIdx，经保存的swizzle和raster参数生成首个工作描述，初始valid设为true。该valid表示调度任务，不检查矩阵中每一个元素是否越界。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "cluster_shape": "兼容的Cluster形状对象；当前函数体没有使用它，而是将blockIdx交给swizzle_and_rasterize。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.coordinate": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "把工作描述的M_idx、N_idx、L_idx组织为CTA级Tile坐标，K位置填入CuTe占位符。它不是元素坐标，也不能直接当作尚未按协作CTA划分的MMA Tile坐标。这个接口不获取新任务、不修改WorkTileInfo；下游结合CTA形状、步长与分块处理实际寻址。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "work_tile_info": "当前任务的索引记录，按值传入；读取M/N/L索引，未在这里检查is_valid_tile。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.fetch": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "等待当前CLC响应槽可读，读取硬件响应，再释放该槽并把响应中的CTA索引做swizzle/raster转换。返回的是下一任务与true，true要求调用方推进CLC消费者状态；此函数不负责把调用方的current变量替换成next。",
+      "execution": "虽有Host/Device标记，本实现的CLC共享内存与硬件响应读取属于设备执行路径；不能据该标记推断在普通Host程序中可执行CLC查询。",
+      "parameter_notes": {
+        "work_tile_info": "兼容的旧工作描述，按值传入；此完整K调度器的函数体没有使用它，而是消费新的CLC响应。",
+        "scheduler_pipeline": "CLC响应流水线的引用。先consumer_wait，读取响应后consumer_release；它不是累加器流水线。",
+        "scheduler_pipe_consumer_state": "本次响应的消费者状态，按值传入；用其index定位响应槽，配合phase等待。调用方根据返回的increment标志推进自己的状态。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.fetch_compat": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "单参数fetch_next_work是独立兼容重载，只返回传入工作描述与true。它不等待响应、不调用CLC，也不产生新的工作索引。当前Kernel使用三参数版本，不能把两者混成一条调用。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "work_tile_info": "原样放进返回元组的工作描述，按值传入。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.k_iterator": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "由问题K形状与CTA Tile K计算全部K块，构造遍历迭代器。高秩K模式在编译期选择特定次序；当前Dense标量K走普通顺序，不从WorkTileInfo取得split起点。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "work_tile_info": "为调度器接口兼容而接收的任务引用；此完整K实现不使用它切分归约。",
+        "problem_shape_MNKL": "本次问题形状，读取K维参与ceil_div；K模式的秩由其类型确定。",
+        "tile_shape": "本次CTA Tile形状，读取K维作为每个归约块的跨度。",
+        "#3": "未命名的兼容形状对象，当前函数体没有使用。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.k_count": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "计算当前输出任务需要的完整K块数，返回size(ceil_div(K,TileK))。任务描述不参与这个计数，因为该Scheduler不沿K拆分工作；主线K=128、CTA TileK=64时为2个K块。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "work_tile_info": "兼容任务引用，当前实现未使用；不能将其索引理解为K分段编号。",
+        "problem_shape": "问题形状，提供本次完整K范围。",
+        "tile_shape": "CTA Tile形状，提供K块跨度；不把较大的集群M/N Tile当成额外K拆分。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.k_start": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "兼容的K起点接口固定返回0，因为此Scheduler每个任务都从完整K空间的起点开始。当前主线Kernel不调用此接口，保留它是为了说明调度语义，而非新增调用边。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "#0": "未使用的工作描述引用。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.epilogue": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "Kernel后处理分支调用的单参数判定固定返回true。完整K工作无需等待其他split补归约，因此允许本任务做Epilogue；函数本身不检查任务有效性，也不是元素边界谓词。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "#0": "未使用的工作描述引用；任务是否继续由外层循环控制。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.epilogue_compat": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "Kernel的Epilogue输入搬运分支使用这一双参数重载，结果同样固定为true。它和后处理分支的单参数重载有独立声明与调用点，不能因为同名同返回值就合并。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "#0": "未使用的工作描述引用。",
+        "#1": "未使用的Scheduler参数引用。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.requires_fixup": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "此Scheduler的任务不切分K，故不要求跨split修正，函数返回false。这只是选中完整K调度器的规则，不能推广到Stream-K或其他归约方案。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "params": "当前实现未使用的Scheduler参数引用。",
+        "work_tile_info": "当前实现未使用的任务描述，按值传入。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.fixup_state": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "Kernel在调用Epilogue前使用的六参数fixup模板是空操作：它不归约、不复制累加器、不额外等待，只把累加器消费者状态原样返回。任务已覆盖完整K，真正的累加器可读等待仍由相应后处理协议承担。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "#0": "未命名的TiledMma对象引用，此实现未使用。",
+        "#1": "未命名的工作描述引用，此实现未使用。",
+        "#2": "累加器Tensor引用，此实现既不读也不修改其中数值。",
+        "#3": "兼容的累加器流水线对象，此实现不调用。",
+        "acc_pipe_consumer_state": "累加器消费者状态，按值传入并原样返回；不是CLC响应状态，也不会由这个空操作递增。",
+        "#5": "兼容的TMEM到寄存器复制操作对象，此实现不调用。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    },
+    "scheduler.continue": {
+      "layer": "Kernel 调度基础设施：工作任务交接",
+      "summary": "已处理的完整输出任务不再继续沿用，返回false。与用一个描述跟踪多个归约片段的调度方式不同；该结论只针对当前Scheduler。",
+      "execution": "本路径在设备Kernel中调用。所属类型及函数模板参数在编译期确定；传入的任务索引、流水线对象及其状态按本次调用使用。",
+      "parameter_notes": {
+        "#0": "未命名的任务引用，当前函数体不修改它。"
+      },
+      "template_notes": {
+        "ClusterShape_": "所属Scheduler的编译期Cluster形状类型；实际坐标转换还读取Params中的布局参数，不能仅凭类型名推出全部运行值。",
+        "Stages_": "编译期CLC响应流水线阶段数，决定响应槽和相关PipelineState类型；不是Mainloop的K循环次数。",
+        "ClusterShape": "本方法推导的Cluster类型；initial_work_tile_info当前函数体不读取这个形参，初始任务来自blockIdx与保存的Params。",
+        "TileSchedulerPipeline": "接收CLC响应的流水线类型，编译期确定等待和释放接口；实际对象在设备调用时传入。",
+        "TileSchedulerPipelineState": "CLC消费者状态的类型；当前槽索引和phase等属于传入对象，不由此类型名给出具体值。",
+        "ProblemShapeMNKL": "问题形状类型，包含K模式的静态秩；K值可动态，K模式秩用于编译期选择遍历次序。",
+        "ProblemShape": "问题形状类型；当前完整K计数读取其K维大小，可能由静态或动态成分组成。",
+        "TileShape": "CTA Tile形状类型；本路径由Kernel传入CtaShape_MNK，其K维用于计算归约块数。",
+        "Shape": "最后一个兼容形参的类型，当前get_k_tile_iterator既不使用该对象，也不按此类型决定遍历。",
+        "IsComplex": "fixup接口的编译期兼容标志；这个完整K调度器的空操作实现不按它分支。",
+        "TiledMma": "MMA组织类型，编译期推导；当前fixup空操作不使用传入的对象。",
+        "AccEngine": "累加器Tensor引擎类型，参与形参类型匹配；当前fixup不访问其存储。",
+        "AccLayout": "累加器Tensor布局类型，参与形参类型匹配；当前fixup不遍历其中元素。",
+        "AccumulatorPipeline": "累加器流水线类型，编译期确定；当前fixup不调用该流水线。",
+        "AccumulatorPipelineState": "累加器消费者状态类型；该fixup将传入状态按值返回，不自行推进。",
+        "CopyOpT2R": "TMEM到寄存器复制操作的兼容类型；当前fixup不调用它。"
+      }
+    }
+  }
+}

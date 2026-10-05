@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "family": "low_precision_bounded_fp8",
+  "profiles": [
+    {
+      "id": "bounded_fp8_and_original_nonuniform_1_2_v1",
+      "target_iterations": [
+        1,
+        2
+      ],
+      "input_profiles": [
+        "nonzero_K_alternating_cancellation_v1",
+        "original_seeded_nonuniform_v1"
+      ],
+      "maximum_target_launches": 4,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "nonzero_K_alternating_cancellation_v1"
+        },
+        {
+          "launch_index": 1,
+          "iterations": 2,
+          "input_profile": "nonzero_K_alternating_cancellation_v1"
+        },
+        {
+          "launch_index": 2,
+          "iterations": 1,
+          "input_profile": "original_seeded_nonuniform_v1"
+        },
+        {
+          "launch_index": 3,
+          "iterations": 2,
+          "input_profile": "original_seeded_nonuniform_v1"
+        }
+      ],
+      "completion_requirements": [
+        "same case specialization, threads, groups, chains, batch, shapes, layouts and WGMMA completion waits",
+        "fresh accumulators and cudaMemset poison output/stamps before each target launch; no custom auxiliary kernel",
+        "CUDA launch and completion event synchronization succeed before checking outputs",
+        "all launched CTA stamp entries overwritten and all declared output elements checked",
+        "short globaltimer/clock64 intervals and all-SM coverage are not acceptance criteria",
+        "stop after first CUDA, completion or numerical failure and emit partial failed validation when possible",
+        "nonzero D0 is not an execution counter; original nonuniform same-body and actual PTX/SASS control proof required"
+      ],
+      "reference_identity": {
+        "model": "low_precision_bounded_fp8_logical_v1",
+        "path": "microbench/gh200_resource_campaign/common/low_precision_bounded_fp8_reference_v1.hpp",
+        "sha256": "41b77e330956da7750ad499b0245e3225ba202ecdaad79d7646fa05929c3f489"
+      },
+      "declared_output_check": {
+        "method": "all logical matrix outputs via independent integer/dyadic host reference",
+        "comparison": "exact",
+        "tolerance_id": null,
+        "elements_per_launch": "blocks*groups*chains*M*N",
+        "poison": "all output double bytes=0xff before launch; NaN/Inf or any mismatch rejected",
+        "sampling": false
+      },
+      "output_evidence_kind": "error_count_only",
+      "output_evidence_limit": "all outputs are compared but values are not persisted; this evidence cannot support offline rechecking with a changed reference",
+      "resource_extensions": {},
+      "kernel_symbol_convention": "lp_bounded_v1_wgmma_{input_type}_g{groups}; actual mangled symbol requires B2",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "diagnostic_failure_detail_limit": 8,
+      "seed": 3
+    }
+  ]
+}

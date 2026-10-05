@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "inputs": {
+    "candidates_sha256": "e495161d977171d1d76415879fd9112908d9d83b948c564fa32af5e28d1b1769",
+    "declarations_sha256": "369c550cc1b8564dd44e2989c94f0aad3fba89c1a2808694ebb5ec297ed03658",
+    "reconciler_sha256": "efe0b591ad10632ce2744cc9c4b0f99455536d396e7bed5070653afbe3f6ae2e",
+    "lexer_sha256": "0ab808f4e0c1f35d8b2e9ff3dca193c8be0d83946a383ec656027d283abeade6"
+  },
+  "file_count": 824,
+  "candidate_count": 470518,
+  "frozen_candidate_count": 470518,
+  "candidate_identity_and_cardinality_preserved": true,
+  "statuses": {
+    "classified_non_api": 341520,
+    "mapped_occurrences": 117274,
+    "pending": 11724
+  },
+  "obligations": {
+    "preprocessing_structure": 45699,
+    "phase2_file_dependency": 6479,
+    "phase1_declaration": 116555,
+    "phase1_declaration_attribute": 14146,
+    "syntax_structure": 74105,
+    "phase1_declaration_or_non_api_review": 3622,
+    "phase2_expression": 192722,
+    "phase1_declaration_component": 5855,
+    "phase1_macro_generated_declaration": 4172,
+    "phase1_declaration_or_macro": 3890,
+    "phase1_macro_definition": 744,
+    "phase1_macro_expansion_dependency": 145,
+    "phase1_constraint_expression": 2359,
+    "phase1_conditional_function_header": 13,
+    "phase1_conditional_declaration": 9,
+    "phase1_conditional_type_expression": 3
+  },
+  "rules": {
+    "condition_or_region_container_not_a_declaration": 24477,
+    "directive_not_standalone_cpp_api": 21222,
+    "include_connects_files_not_api_entities": 6479,
+    "compatible_kind_and_all_significant_tokens_in_verified_signature_ranges": 101806,
+    "exact_attribute_token_in_verified_declaration_signature": 14146,
+    "callable_spelling_is_its_own_declaration_not_a_call": 14161,
+    "delimiter_or_access_label_only": 74105,
+    "source_obligation_not_silently_discarded": 3622,
+    "statement_inside_independently_brace_verified_callable_body_and_outside_local_type": 100984,
+    "lexical_invocation_inside_verified_callable_body_not_library_declaration": 74042,
+    "exact_syntax_component_of_verified_signature": 6443,
+    "declaration_capable_macro_requires_generated_occurrences": 4108,
+    "exact_expression_subrange_of_verified_declaration_signature": 17696,
+    "unresolved_lexical_invocation_retained": 3890,
+    "exact_macro_definition_occurrence_not_expansion_proof": 744,
+    "replacement_list_token_not_a_separate_source_declaration": 145,
+    "static_assert_is_constraint_not_named_library_api": 2359,
+    "exact_invocation_and_definition_provenance_with_generated_kind_guard": 32,
+    "syntax_exactly_accounts_for_verified_macro_invocations": 32,
+    "header_branches_and_shared_body_verified_separately": 13,
+    "exact_piecewise_source_variant_with_all_branches_and_binding_instances_verified": 12
+  },
+  "pending_by_obligation": {
+    "phase1_declaration_or_non_api_review": 3622,
+    "phase1_macro_generated_declaration": 4108,
+    "phase1_declaration_or_macro": 3890,
+    "phase1_macro_definition": 104
+  },
+  "pending_by_reason": {
+    "significant_source_tokens_not_covered_by_compatible_declaration_signatures": 3591,
+    "declaration_macro_invocation_has_no_generated_entity": 4108,
+    "occurrence_not_cleanly_parsed": 1169,
+    "no_compatible_declaration_or_verified_non_api_context": 3697,
+    "overlapping_blocking_extraction_diagnostic": 1364,
+    "source_interval_contains_unexpanded_declaration_macro": 70,
+    "macro_definition_occurrence_missing_or_invalid": 104,
+    "candidate_and_occurrence_local_branch_disagree": 6,
+    "comma_declarator_tokens_missing_from_declarator_ranges": 11,
+    "first_comma_declarator_has_no_occurrence": 1,
+    "namespace_or_type_signature_improperly_contains_body": 4,
+    "enclosing_scope_requires_source_review": 116
+  },
+  "all_candidates_reproduced_from_source_and_frozen_scanner": true,
+  "special_macro_classifications": {
+    "CUDA_ARCH_FAMILY_condition_uses": 15,
+    "CUDA_STD_HEADER_include_operands": 55
+  },
+  "phase_1_passed": false,
+  "reason": "Lexical over-inclusion is not an API denominator; pending rows and semantic coverage require independent review. Phase-2 obligations are not declaration gaps.",
+  "mapping_sha256": "daae6bd0ace53056ffb6fb5cb306188386da99aa9b2f02c7d7e45295fe498aef"
+}

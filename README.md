@@ -149,6 +149,8 @@ Planned sequence:
 
 ## Quick Start
 
+ROMEO GH200：从本地通过 SSH 登录 `hibouwu@romeo1.univ-reims.fr`，再用 Slurm 进入 GPU 计算节点。连接命令、三小时申请示例和 CUDA 环境见 [GH200 远程访问](docs/romeo_gh200_access.md)。
+
 ### Option A: Docker / CUDA Container
 
 This is the recommended path on very new Linux systems where local CUDA headers

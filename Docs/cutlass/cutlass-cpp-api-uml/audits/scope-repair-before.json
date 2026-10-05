@@ -1,0 +1,61 @@
+{
+  "declarations_sha256": "1f23c206f53aeee0caf9ec5e4007a3578ec72ea3870db2a4f625353a4414af6a",
+  "metadata": {
+    "schema_version": 1,
+    "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+    "parser": {
+      "engine": "tree-sitter",
+      "language": "tree-sitter-cpp",
+      "branch_policy": "raw_source_all_preprocessor_branches",
+      "normalization_policy": "explicit_annotation_allowlist_equal_length_whitespace"
+    },
+    "completion": {
+      "phase_1_passed": false,
+      "reason": "Requires independent candidate reconciliation and zero declaration/macro gaps"
+    },
+    "summary": {
+      "files": 824,
+      "entities": 150642,
+      "occurrences": 155454,
+      "diagnostics": 636,
+      "blocking_diagnostics": 636,
+      "syntax_diagnostics_in_function_bodies": 269,
+      "syntax_diagnostics_outside_function_bodies": 159,
+      "other_blocking_diagnostics": 208,
+      "kinds": {
+        "alias": 76973,
+        "class_specifier": 1314,
+        "constant": 264,
+        "constructor": 3843,
+        "destructor": 5,
+        "enum": 222,
+        "enumerator": 710,
+        "friend_type_reference": 137,
+        "function": 2855,
+        "macro_definition": 421,
+        "member": 14486,
+        "member_constant": 14637,
+        "method": 16441,
+        "namespace": 4468,
+        "namespace_alias": 1,
+        "operator": 4996,
+        "struct_specifier": 12573,
+        "typedef": 58,
+        "union_specifier": 144,
+        "using_declaration": 807,
+        "variable": 9,
+        "variable_template": 90
+      },
+      "diagnostic_categories": {
+        "conditional_function_header_pending": 1,
+        "conditional_function_variant_parse_pending": 1,
+        "declaration_macro_expansion_pending": 18,
+        "function_scope_declaration_pending": 186,
+        "macro_definition_ambiguous": 2,
+        "missing_syntax": 71,
+        "parse_error": 357
+      }
+    }
+  },
+  "scope_commit": "8f50b052e1099fb982392a622caab69b97b63128"
+}

@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "goal_status": "active",
+  "commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "current_phase": "modular_1_to_4",
+  "current_priority": "main_execution_path_for_scheme_validation",
+  "main_path_checkpoint": {
+    "status": "implemented_source_checked_pending_independent_use_review",
+    "reading_steps": 5,
+    "fixture_mnkl": [256, 256, 128, 1],
+    "original_atlas_changed": true,
+    "source_graph_change": "13 canonical Scheduler declarations, 17 new relations, original fixup callsite resolved without duplication",
+    "source_reference_tests_passed": 17,
+    "dom_unit_tests_passed": 42,
+    "scheduler_handoff_tests_passed": 12,
+    "scheduler_handoff_audit": "audits/scheduler-handoff-review.md",
+    "published_nodes": 619,
+    "published_relations": 994,
+    "conditional_scheme_review_cases": 3,
+    "host_layout_execution_verified": true,
+    "host_layout_coordinates_checked": 131072,
+    "host_layout_evidence": "verification/scheme-layout/results.json",
+    "actual_browser_verified": false,
+    "gpu_execution_verified": false,
+    "independent_use_review_passed": false,
+    "audit": "audits/main-path-review.md"
+  },
+  "phases": {
+    "0": {
+      "status": "passed",
+      "files": 824,
+      "mutation_tests": 17,
+      "reviews": [
+        "audits/phase-0-source.md",
+        "audits/phase-0-contract.md"
+      ]
+    },
+    "1": {
+      "status": "in_progress_not_passed",
+      "candidate_ledger_frozen": true,
+      "api_denominator_frozen": false,
+      "candidate_count": 470518,
+      "draft_occurrences": 155698,
+      "draft_entities": 150883,
+      "blocking_diagnostics": 609,
+      "scope_review_occurrences": 0,
+      "candidate_reconciliation_complete": false,
+      "candidate_mapping_full_run_completed": true,
+      "candidate_mapping_current_ledger_verified": true,
+      "candidate_mapping_statuses": {
+        "mapped_occurrences": 117415,
+        "classified_non_api": 342615,
+        "pending": 10488
+      },
+      "regression_tests_passed": 495,
+      "tests_include_explicit_pending_checks": true,
+      "declaration_mechanical_audit_passed": true,
+      "bitfield_module_integrated": true,
+      "unnamed_pointer_parameter_projection_integrated": true,
+      "scope_closure_guard_integrated": true,
+      "cute_alignment_attribute_owners_integrated": 16,
+      "repaired_pipeline_manual_identities_retired": 4,
+      "metadata_upgrade": {
+        "identity_and_signature_invariants_passed": true,
+        "callable_qualifier_lists_corrected": 241,
+        "declarator_type_spellings_added": 29560,
+        "audit": "audits/array-metadata-upgrade-invariants.json"
+      },
+      "known_semantic_identity_gaps": ["using imports, namespace directives and inherited constructors require separate identity/lookup/target records"]
+    },
+    "2": {
+      "status": "in_progress_by_module"
+    },
+    "3": {
+      "status": "in_progress_by_module",
+      "bounded_protocol_models_reviewed": ["dense_nonoverlap_2sm_tmem_lifetime"],
+      "protocol_model_runtime_validation_claimed": false
+    },
+    "4": {
+      "status": "four_work_packages_generated_pending_use_acceptance",
+      "dom_unit_tests_passed": 42,
+      "protocol_views_generated": 86,
+      "actual_browser_verified": false
+    },
+    "5": {
+      "status": "not_started"
+    }
+  },
+  "next_actions": [
+    "Implement the reviewed fixed-source using interface model; repair fake qualified names without conflating imported lookup, namespace directives or inherited constructor families",
+    "Complete reviewed full-file modules and retain declaration, call, expression, macro and file-dependency obligations",
+    "Build dedicated protocol sequence/state views from source-proven partial orders without serializing concurrent events",
+    "Verify offline artifacts, full signatures, links and reproducibility; keep actual browser acceptance separate",
+    "Expand verified modules with declaration/relationship/non-API obligations kept distinct",
+    "Complete fixed-snapshot macro and declaration gaps only where relevant to module scope",
+    "Merge all 824 files and complete global source/relationship/contract/use acceptance before ending the goal"
+  ],
+  "final_uml_atlas_delivered": false,
+  "upstream_modified": false,
+  "existing_teaching_documents_modified_by_this_goal": false,
+  "external_publication_performed": false,
+  "execution_strategy": "full_scope_ledger_modular_end_to_end_global_merge",
+  "file_ownership": {
+    "registry": "data/module-registry.json",
+    "modules": 20,
+    "files": 824,
+    "inl_files": 40,
+    "unassigned_or_multiply_assigned": 0,
+    "api_or_relationship_coverage_claimed": false
+  },
+  "modules": {
+    "cute_array_full_header": {
+      "role": "complete_one_file_work_package_with_explicit_dependency_identity_gap",
+      "source_owner": "cute_core",
+      "status": "canonical_join_verified_generated_dependency_gap_and_use_acceptance_pending",
+      "full_files": 1,
+      "physical_declaration_occurrences": 87,
+      "conditional_declaration_bindings": 92,
+      "callable_definitions": 52,
+      "source_obligations": 536,
+      "parameter_records": 54,
+      "current_manual_overrides": 0,
+      "work_package_tests_passed": 32,
+      "canonical_join_mutation_tests_passed": 16,
+      "independently_inspected_svg_samples": 6,
+      "actual_source_display_endpoints_checked": 66,
+      "root_review": "audits/cute-array-root-integration.md",
+      "dependency_identity_errors": ["type_traits.hpp using import QName"],
+      "runtime_gpu_verified": false,
+      "arbitrary_template_instances_verified": false,
+      "browser_viewport_acceptance": "not_performed"
+    },
+    "cute_alignment_full_headers": {
+      "role": "complete_two_file_work_package_with_explicit_dependency_perimeter",
+      "source_owner": "cute_core",
+      "status": "source_and_canonical_join_reviewed_generated_pending_use_acceptance",
+      "full_files": 2,
+      "physical_declaration_occurrences": 16,
+      "source_obligations": 100,
+      "parameter_records": 18,
+      "current_manual_overrides": 0,
+      "work_package_tests_passed": 15,
+      "canonical_join_mutation_tests_passed": 14,
+      "independently_inspected_svg_samples": 4,
+      "root_review": "audits/cute-alignment-root-integration.md",
+      "runtime_gpu_verified": false,
+      "arbitrary_template_instances_verified": false,
+      "browser_viewport_acceptance": "not_performed"
+    },
+    "cute_elementwise_full_headers": {
+      "role": "complete_three_file_work_package_with_explicit_dependency_perimeter",
+      "source_owner": "cute_core",
+      "status": "source_reviewed_records_generated_pending_use_acceptance",
+      "full_files": 3,
+      "function_templates": 8,
+      "source_obligations": 91,
+      "parameter_records": 52,
+      "work_package_tests_passed": 11,
+      "runtime_gpu_verified": false,
+      "arbitrary_template_instances_verified": false,
+      "browser_viewport_acceptance": "not_performed"
+    },
+    "dense_fp16_2sm_sm110a": {
+      "role": "representative_design_path_not_coverage_proof",
+      "status": "source_review_and_artifact_validation",
+      "source_inputs": [
+        "host.json",
+        "type_path.json",
+        "contracts.json",
+        "gemm_dispatch.json",
+        "tmem_protocol.json",
+        "protocol_api_overrides.json"
+      ],
+      "tmem_protocol": {
+        "raw_v3_sha256": "3cd91a827e83be05fd397cebbfdf1d76775313c93917a36fa6e0bfba223ab633",
+        "source_and_bounded_model_review": "passed",
+        "events": 90,
+        "quantified_partial_orders": 252,
+        "logical_state_derivations": 64,
+        "pair_validity_rules": 2,
+        "semantic_counterexample_tests_passed": 10,
+        "source_review": "audits/dense-tmem-protocol-independent-review.md",
+        "static_display_review": {
+          "sample_views": 3,
+          "status": "passed_for_selected_svg_samples",
+          "audit": "audits/dense-tmem-static-display-review.md",
+          "all_protocol_views_visually_checked": false,
+          "real_browser_acceptance": false
+        },
+        "actual_gpu_trace_claimed": false
+      },
+      "runtime_gpu_verified": false,
+      "browser_viewport_acceptance": "not_performed_security_policy_blocked",
+      "required_user_action": "Manual or otherwise explicitly authorized compliant viewport acceptance remains necessary; no bypass."
+    }
+  }
+}

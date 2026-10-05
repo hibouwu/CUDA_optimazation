@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor #ffffff
+skinparam shadowing false
+skinparam defaultFontName Noto Sans CJK SC
+skinparam defaultFontSize 14
+skinparam ArrowFontSize 12
+skinparam svgLinkTarget _top
+top to bottom direction
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #57718A
+title CTA0/1：分配结果发布 · CTA 1 peer epilogue · 11
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F4F7FB
+skinparam classBorderColor #57718A
+skinparam ArrowFontSize 11
+package "CTA 1 peer epilogue" as actor0 {
+class "CTA 1 peer epilogue\nNamedBarrier::arrive_and_wait()\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:870" as e0 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.alloc_wait]] {
+  enter : 调用进入
+  effect : 指定效果满足
+  return : 调用返回
+}
+class "CTA 1 peer epilogue\nEpilogue读取SMEM base pointer\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:871" as e1 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_read_base]] {
+  enter : 调用进入
+  return : 调用返回
+}
+class "CTA 1 peer epilogue\nEpilogue绑定TMEM Tensor地址\ninclude/cutlass/gemm/kernel/\nsm100_gemm_tma_warpspecialized.hpp:872" as e2 <<event>> [[../index.html?protocol=dense.protocol_draft.tmem_lifetime&event=tmem.cta1.epi_set_tmem]] {
+  enter : 调用进入
+  return : 调用返回
+}
+}
+e0::enter --> e0::return : tmem.order.173\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e1::enter --> e1::return : tmem.order.174\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e2::enter --> e2::return : tmem.order.175\nFor the same executing thread and invocation, if it\nreturns. This edge does not assert bounded progress\nor that an asynchronous external effect has completed.
+e0::return --> e1::enter : tmem.order.041\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e1::return --> e2::enter : tmem.order.042\nOnly corresponding actor/thread invocations that\nexecute this path; not a global total order.
+e0::enter --> e0::effect : tmem.order.044\nEpilogue arrive_and_wait contributes its own arrivals\nbefore waiting.
+e0::effect --> e0::return : tmem.order.045\nSame CTA epilogue contribution family required as\nwell as MMA publication.
+legend bottom
+箭头只表示记录的偏序约束；图中高度和数组顺序均不构成额外先后关系。
+enter / return / effect分别指调用进入、返回和明确定义的效果；不将返回等同异步完成。
+event框不是新增C++类；每个锚点有独立连接点，不同API和CTA事件不合并。
+endlegend
+@enduml

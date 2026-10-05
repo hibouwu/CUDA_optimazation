@@ -1,0 +1,15 @@
+{
+  "metadata_upgrade_invariants_passed": true,
+  "before_sha256": "0510c02ef665753f6b31ef7ea7bb907aeb47bf4309c7e06e8028a9b766818b43",
+  "after_sha256": "d5d3c4e7be930915294639549b461081cf3f66fe0d52c743195cd523e78bd987",
+  "entity_count": 150883,
+  "occurrence_count": 155698,
+  "allowed_changes": {
+    "callable_return_cv_records": 28216,
+    "complete_declarator_spelling_records": 29560,
+    "qualifier_lists_corrected": 241
+  },
+  "issue_count": 0,
+  "issues": [],
+  "coverage_claim": "Identity/source preservation and planned metadata delta only; source semantics and completeness reviewed separately"
+}

@@ -1,0 +1,9 @@
+/usr/include/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/crt/math_functions.h)
+  extern double rsqrt (double __x) noexcept (true); extern double __rsqrt (double __x) noexcept (true);
+                                   ^
+
+/usr/include/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrtf" (declared at line 653 of /usr/local/cuda-13.0/bin/../targets/x86_64-linux/include/crt/math_functions.h)
+  extern float rsqrtf (float __x) noexcept (true); extern float __rsqrtf (float __x) noexcept (true);
+                                  ^
+
+2 errors detected in the compilation of "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/minimal.cu".

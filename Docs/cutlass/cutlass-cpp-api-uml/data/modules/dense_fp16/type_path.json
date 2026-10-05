@@ -1,0 +1,1487 @@
+{
+  "schema_version": 1,
+  "module_id": "dense_fp16",
+  "part": "type_path",
+  "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "scope": "One fixed Dense FP16 recipe. Type selection is separate from runtime calls and from the sm_110a binary target.",
+  "nodes": [
+    {
+      "id": "types.builder_entry",
+      "kind": "api",
+      "name": "CollectiveBuilder 主模板入口",
+      "path": "include/cutlass/gemm/collective/collective_builder_decl.hpp",
+      "line": 93,
+      "role": "接收ArchTag、OpClass、元素/布局/对齐、Tile、Cluster、Stage与Schedule；默认模板不是本例实现。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveBuilder"
+    },
+    {
+      "id": "types.builder_sm100",
+      "kind": "api",
+      "name": "SM100 Dense UMMA Builder 偏特化",
+      "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+      "line": 169,
+      "role": "固定源码中实际命中的Dense TensorOp偏特化。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveBuilder"
+    },
+    {
+      "id": "types.builder_bound",
+      "kind": "type",
+      "name": "本例 CollectiveBuilder 实例",
+      "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+      "line": 169,
+      "role": "单个已绑定Builder类型：FP16 A/B RowMajor、FP32累加、Tile 256×128×64、Cluster 2×2×1、Auto。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveBuilder<cutlass::arch::Sm100, cutlass::arch::OpClassTensorOp, cutlass::half_t, cutlass::layout::RowMajor, 8, cutlass::half_t, cutlass::layout::RowMajor, 8, float, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::gemm::collective::StageCountAutoCarveout<33792>, cutlass::gemm::collective::KernelScheduleAuto, void>",
+      "notes": "ArchTag=Sm100是C++配方；新静态二进制目标是sm_110a。"
+    },
+    {
+      "id": "types.arch_recipe",
+      "kind": "api",
+      "name": "Sm100",
+      "path": "include/cutlass/arch/arch.h",
+      "line": 100,
+      "role": "本例C++ ArchTag；不等于把实际NVCC目标改写成SM100。",
+      "qualified_name": "cutlass::arch::Sm100"
+    },
+    {
+      "id": "types.schedule_auto",
+      "kind": "api",
+      "name": "KernelScheduleAuto",
+      "path": "include/cutlass/gemm/collective/collective_builder_decl.hpp",
+      "line": 73,
+      "role": "编译期选择标记，不是运行时调度调用。",
+      "qualified_name": "cutlass::gemm::collective::KernelScheduleAuto"
+    },
+    {
+      "id": "types.epilogue_bound",
+      "kind": "type",
+      "name": "本例 CollectiveEpilogue 实例",
+      "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+      "line": 84,
+      "role": "FP32 C/D线性组合Epilogue；SharedStorage实测33792字节。",
+      "qualified_name": "cutlass::epilogue::collective::CollectiveEpilogue<cutlass::epilogue::Sm100TmaWarpSpecialized<4, 2, 16, true, false>, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cute::tuple<cute::Layout<cute::C<128>, cute::C<1> >, cute::Layout<cute::C<16>, cute::C<1> > >, float, cute::tuple<long, cute::C<1>, long>, float, cute::tuple<long, cute::C<1>, long>, cutlass::epilogue::fusion::FusionCallbacks<cutlass::epilogue::Sm100TmaWarpSpecialized<4, 2, 16, true, false>, cutlass::epilogue::fusion::LinearCombination<float, float, float, float, (cutlass::FloatRoundStyle)2>, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cute::tuple<cute::Layout<cute::C<128>, cute::C<1> >, cute::Layout<cute::C<16>, cute::C<1> > >>, cute::SM100::TMEM::LOAD::SM100_TMEM_LOAD_32dp32b16x, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<2, 4, 3>, cute::smem_ptr_flag_bits<32>, cute::Layout<cute::tuple<cute::C<8>, cute::C<16> >, cute::tuple<cute::C<16>, cute::C<1> > > >, cute::AutoVectorizingCopyWithAssumedAlignment<128>, cute::SM90_TMA_STORE, cute::ComposedLayout<cute::Swizzle<2, 4, 3>, cute::smem_ptr_flag_bits<32>, cute::Layout<cute::tuple<cute::C<8>, cute::C<16> >, cute::tuple<cute::C<16>, cute::C<1> > > >, cute::AutoVectorizingCopyWithAssumedAlignment<128>, cute::AutoVectorizingCopyWithAssumedAlignment<128> >"
+    },
+    {
+      "id": "types.stage_bound",
+      "kind": "binding",
+      "name": "StageCountAutoCarveout<33792>",
+      "path": "include/cutlass/gemm/collective/collective_builder_decl.hpp",
+      "line": 50,
+      "role": "Epilogue先确定存储预算，再给Mainloop留下可用SMEM。",
+      "qualified_name": "cutlass::gemm::collective::StageCountAutoCarveout<33792>"
+    },
+    {
+      "id": "types.stage_compute",
+      "kind": "api",
+      "name": "sm100_compute_stage_count_or_override（AutoCarveout）",
+      "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+      "line": 84,
+      "role": "本例编译期阶段数计算；保留实际公式而非运行时调优步骤。",
+      "qualified_name": "cutlass::gemm::collective::detail::sm100_compute_stage_count_or_override"
+    },
+    {
+      "id": "types.dispatch_bound",
+      "kind": "type",
+      "name": "MainloopSm100TmaUmmaWarpSpecialized<8,2,4,…>",
+      "path": "include/cutlass/gemm/dispatch_policy.hpp",
+      "line": 1029,
+      "role": "本例Stages=8、SchedulerPipelineStageCount=2、AccumulatorPipelineStageCount=4。",
+      "qualified_name": "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>"
+    },
+    {
+      "id": "types.collective_api",
+      "kind": "api",
+      "name": "CollectiveMma：SM100 TMA UMMA 偏特化",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 81,
+      "role": "DispatchPolicy命中的Collective实现，独立于Builder入口。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveMma"
+    },
+    {
+      "id": "types.collective_bound",
+      "kind": "type",
+      "name": "本例 CollectiveMma 实例",
+      "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+      "line": 81,
+      "role": "带实际TiledMma、SMEM布局、TMA copy atom的完整Mainloop类型。",
+      "qualified_name": "cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>"
+    },
+    {
+      "id": "types.major_a",
+      "kind": "api",
+      "name": "tag_to_umma_major_A<RowMajor>",
+      "path": "include/cutlass/gemm/collective/builders/sm1xx_common.inl",
+      "line": 95,
+      "role": "A的RowMajor映射到UMMA::Major::K。",
+      "qualified_name": "cutlass::gemm::collective::detail::tag_to_umma_major_A"
+    },
+    {
+      "id": "types.major_b",
+      "kind": "api",
+      "name": "tag_to_umma_major_B<RowMajor>",
+      "path": "include/cutlass/gemm/collective/builders/sm1xx_common.inl",
+      "line": 117,
+      "role": "B的RowMajor映射到UMMA::Major::MN。",
+      "qualified_name": "cutlass::gemm::collective::detail::tag_to_umma_major_B"
+    },
+    {
+      "id": "types.auto_selector",
+      "kind": "api",
+      "name": "sm100_make_trivial_tiled_mma",
+      "path": "include/cutlass/gemm/collective/builders/sm100_common.inl",
+      "line": 444,
+      "role": "依固定Schedule与静态Cluster/Tile进行编译期2SM/1SM选择。",
+      "qualified_name": "cutlass::gemm::collective::detail::sm100_make_trivial_tiled_mma"
+    },
+    {
+      "id": "types.two_sm_selector",
+      "kind": "api",
+      "name": "sm100_make_2sm_trivial_tiled_mma",
+      "path": "include/cutlass/gemm/collective/builders/sm100_common.inl",
+      "line": 372,
+      "role": "本例half_t、M=256、N=128落到F16/BF16 2×1SM SS操作。",
+      "qualified_name": "cutlass::gemm::collective::detail::sm100_make_2sm_trivial_tiled_mma"
+    },
+    {
+      "id": "types.factory_op",
+      "kind": "api",
+      "name": "make_tiled_mma(MMA_Op const&, …)",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 548,
+      "role": "以操作类型构造MMA_Atom并转交Atom重载，属于类型构造路径。",
+      "qualified_name": "cute::make_tiled_mma"
+    },
+    {
+      "id": "types.factory_atom",
+      "kind": "api",
+      "name": "make_tiled_mma(MMA_Atom<MMA_Op> const&, …)",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 531,
+      "role": "构造TiledMMA的Atom、线程布局与置换模板参数。",
+      "qualified_name": "cute::make_tiled_mma"
+    },
+    {
+      "id": "types.tiled_bound",
+      "kind": "type",
+      "name": "本例 TiledMMA 实例",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 211,
+      "role": "TiledMMA::Atom为已选MMA_Atom；AtomThrID来自Traits，不把Cluster总CTA数当Atom复制数。",
+      "qualified_name": "cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >"
+    },
+    {
+      "id": "types.atom_bound",
+      "kind": "type",
+      "name": "MMA_Atom<本例MMA_Op>",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 45,
+      "role": "操作包装入口，继承基于MMA_Traits的Atom实现。",
+      "qualified_name": "cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >"
+    },
+    {
+      "id": "types.atom_impl",
+      "kind": "api",
+      "name": "MMA_Atom<MMA_Traits<MMAOperation,…>>",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 49,
+      "role": "通过Traits取得值类型、片段类型、形状与线程—值布局。",
+      "qualified_name": "cute::MMA_Atom"
+    },
+    {
+      "id": "types.traits_bound",
+      "kind": "type",
+      "name": "本例 MMA_Traits 实例",
+      "path": "include/cute/atom/mma_traits_sm100.hpp",
+      "line": 2034,
+      "role": "Shape_MNK实测为256×128×16，ThrID为Layout<2>；Collective K=64不是单条MMA的K。",
+      "qualified_name": "cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>"
+    },
+    {
+      "id": "types.wrapper",
+      "kind": "api",
+      "name": "SM100_MMA_F16BF16_2x1SM_SS",
+      "path": "include/cute/arch/mma_sm100_umma.hpp",
+      "line": 552,
+      "role": "实际选中的指令操作包装模板；本例a/b=half_t,c=float,M=256,N=128,Major=K/MN。",
+      "qualified_name": "cute::SM100_MMA_F16BF16_2x1SM_SS",
+      "notes": "名称保留SM100；实际sm_110a设备分支由原cutlass/arch/config.h和cute/arch/config.hpp启用，并非按类名前缀推测。"
+    },
+    {
+      "id": "types.atom_call",
+      "kind": "api",
+      "name": "MMA_Atom::call(D,A,B,C)",
+      "path": "include/cute/atom/mma_atom.hpp",
+      "line": 94,
+      "role": "4-tensor call重载，以实际Traits参与mma_unpack的ADL选择。",
+      "qualified_name": "cute::MMA_Atom::call"
+    },
+    {
+      "id": "types.mma_unpack",
+      "kind": "api",
+      "name": "mma_unpack（F16/BF16 2×1SM SS Traits）",
+      "path": "include/cute/atom/mma_traits_sm100.hpp",
+      "line": 2072,
+      "role": "这个特定friend重载将寄存器描述符及TMEM地址交给实际wrapper；不是把所有mma_unpack重载合并。",
+      "qualified_name": "cute::mma_unpack"
+    },
+    {
+      "id": "types.fma",
+      "kind": "api",
+      "name": "SM100_MMA_F16BF16_2x1SM_SS::fma",
+      "path": "include/cute/arch/mma_sm100_umma.hpp",
+      "line": 563,
+      "role": "静态fma操作数为desc_a、desc_b、tmem_c、scaleC、idescE；内部elect_one_sync后发射tcgen05.mma。",
+      "qualified_name": "cute::SM100_MMA_F16BF16_2x1SM_SS::fma"
+    }
+  ],
+  "edges": [
+    {
+      "id": "types.edge.instantiate_builder",
+      "source": "types.builder_bound",
+      "target": "types.builder_entry",
+      "relation": "template_binds",
+      "source_expression": "CollectiveBuilder<Sm100,OpClassTensorOp,half_t,RowMajor,8,half_t,RowMajor,8,float,Shape<256,128,64>,Shape<2,2,1>,StageCountAutoCarveout<33792>,KernelScheduleAuto>",
+      "condition": "固定Dense recipe；旧baseline hash与新probe均核验。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 18,
+          "end_line": 48,
+          "quote": "using ArchTag = cutlass::arch::Sm100;\nusing OperatorClass = cutlass::arch::OpClassTensorOp;\nusing ElementA = cutlass::half_t;\nusing ElementB = cutlass::half_t;\nusing ElementC = float;\nusing ElementD = float;\nusing ElementAccumulator = float;\nusing ElementCompute = float;\nusing LayoutA = cutlass::layout::RowMajor;\nusing LayoutB = cutlass::layout::RowMajor;\nusing LayoutC = cutlass::layout::RowMajor;\nusing LayoutD = cutlass::layout::RowMajor;\nconstexpr int AlignmentA = 8, AlignmentB = 8, AlignmentC = 4, AlignmentD = 4;\nusing MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;\nusing ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;\nusing EpilogueOperation = cutlass::epilogue::fusion::LinearCombination<\n    ElementD, ElementCompute, ElementC, float, cutlass::FloatRoundStyle::round_to_nearest>;\nusing EpilogueBuilder = cutlass::epilogue::collective::CollectiveBuilder<\n    ArchTag, OperatorClass, MmaTileShape, ClusterShape,\n    cutlass::epilogue::collective::EpilogueTileAuto,\n    ElementAccumulator, ElementCompute, ElementC, LayoutC, AlignmentC,\n    ElementD, LayoutD, AlignmentD,\n    cutlass::epilogue::collective::EpilogueScheduleAuto, EpilogueOperation>;\nusing CollectiveEpilogue = typename EpilogueBuilder::CollectiveOp;\nusing StagePolicy = cutlass::gemm::collective::StageCountAutoCarveout<\n    static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>;\nusing MainloopBuilder = cutlass::gemm::collective::CollectiveBuilder<\n    ArchTag, OperatorClass, ElementA, LayoutA, AlignmentA,\n    ElementB, LayoutB, AlignmentB, ElementAccumulator,\n    MmaTileShape, ClusterShape, StagePolicy,\n    cutlass::gemm::collective::KernelScheduleAuto>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 1,
+          "end_line": 1,
+          "quote": "Mainloop.Builder=cutlass::gemm::collective::CollectiveBuilder<cutlass::arch::Sm100, cutlass::arch::OpClassTensorOp, cutlass::half_t, cutlass::layout::RowMajor, 8, cutlass::half_t, cutlass::layout::RowMajor, 8, float, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::gemm::collective::StageCountAutoCarveout<33792>, cutlass::gemm::collective::KernelScheduleAuto, void>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.arch_recipe",
+      "source": "types.builder_bound",
+      "target": "types.arch_recipe",
+      "relation": "type_uses",
+      "source_expression": "ArchTag = cutlass::arch::Sm100",
+      "condition": "C++配方轴；NVCC设备目标另见compile_evidence。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 18,
+          "end_line": 18,
+          "quote": "using ArchTag = cutlass::arch::Sm100;"
+        },
+        {
+          "path": "include/cutlass/arch/arch.h",
+          "start_line": 100,
+          "end_line": 108,
+          "quote": "struct Sm100 {\n  static int const kMinComputeCapability = 100; \n};\n\nstruct Sm101 {\n  static int const kMinComputeCapability = 101; \n};\n\nstruct Sm120 {"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.auto_tag",
+      "source": "types.builder_bound",
+      "target": "types.schedule_auto",
+      "relation": "type_uses",
+      "source_expression": "KernelScheduleType = KernelScheduleAuto",
+      "condition": "编译期参数，不表示运行时调用。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 44,
+          "end_line": 48,
+          "quote": "using MainloopBuilder = cutlass::gemm::collective::CollectiveBuilder<\n    ArchTag, OperatorClass, ElementA, LayoutA, AlignmentA,\n    ElementB, LayoutB, AlignmentB, ElementAccumulator,\n    MmaTileShape, ClusterShape, StagePolicy,\n    cutlass::gemm::collective::KernelScheduleAuto>;"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/collective_builder_decl.hpp",
+          "start_line": 70,
+          "end_line": 73,
+          "quote": "\n// Used to automatically let the builder pick the kernel schedule.\n// Can be overridden with kernel schedule tags in cutlass/gemm/dispatch_policy.hpp\nstruct KernelScheduleAuto final {};"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.sm100_specializes_entry",
+      "source": "types.builder_sm100",
+      "target": "types.builder_entry",
+      "relation": "specializes",
+      "source_expression": "CollectiveBuilder<ArchTag,arch::OpClassTensorOp,...,BuilderScheduleTag,enable_if_t<...>>",
+      "condition": "ArchTag=Sm100，标量非complex输入，Dense/Auto schedule且对齐谓词满足。",
+      "resolution": "direct",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 169,
+          "end_line": 198,
+          "quote": "struct CollectiveBuilder<\n    ArchTag,\n    arch::OpClassTensorOp,\n    ElementA,\n    GmemLayoutATag,\n    AlignmentA,\n    ElementB,\n    GmemLayoutBTag,\n    AlignmentB,\n    ElementAccumulator,\n    TileShape_MNK,    // (MmaAtomShapeM, MmaAtomShapeN, TileK)\n    ClusterShape_MNK, // Static cluster shape or dynamic (int, int, _1)\n    StageCountType,\n    BuilderScheduleTag,\n    cute::enable_if_t<\n      (cute::is_same_v<ArchTag, arch::Sm100> \n      ) &&\n      not cute::is_tuple_v<ElementA>   && not cute::is_tuple_v<ElementB> &&\n      not cute::is_complex_v<ElementA> && not cute::is_complex_v<ElementB> &&\n      // Dense Gemm / PtrArrayDenseGemm\n      (\n       (not cute::is_same_v<KernelMixedTmaCpAsyncWarpSpecialized1SmSm100, BuilderScheduleTag>) && \n       (not cute::is_same_v<KernelMixedTmaCpAsyncWarpSpecialized2SmSm100, BuilderScheduleTag>) && \n       (not cute::is_same_v<KernelWarpSpecialized1SmSm100, BuilderScheduleTag>) && \n       (cute::is_base_of_v<KernelScheduleSm100DenseGemm, BuilderScheduleTag> ||\n        cute::is_same_v<KernelScheduleAuto, BuilderScheduleTag>)) &&\n      // Alignment check\n      detail::sm1xx_gemm_is_aligned<ElementA, AlignmentA, ElementB, AlignmentB, BuilderScheduleTag>()>>\n{\n  static_assert(cute::is_static_v<TileShape_MNK>, \"TileShape has to be static\");"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.selected_specialization",
+      "source": "types.builder_bound",
+      "target": "types.builder_sm100",
+      "relation": "template_binds",
+      "source_expression": "ArchTag=Sm100; ElementA=ElementB=half_t; BuilderScheduleTag=KernelScheduleAuto; AlignmentA=AlignmentB=8",
+      "condition": "新NVCC实际类型及TMA/UMMA Collective产物确认该选中结果。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 184,
+          "end_line": 223,
+          "quote": "      (cute::is_same_v<ArchTag, arch::Sm100> \n      ) &&\n      not cute::is_tuple_v<ElementA>   && not cute::is_tuple_v<ElementB> &&\n      not cute::is_complex_v<ElementA> && not cute::is_complex_v<ElementB> &&\n      // Dense Gemm / PtrArrayDenseGemm\n      (\n       (not cute::is_same_v<KernelMixedTmaCpAsyncWarpSpecialized1SmSm100, BuilderScheduleTag>) && \n       (not cute::is_same_v<KernelMixedTmaCpAsyncWarpSpecialized2SmSm100, BuilderScheduleTag>) && \n       (not cute::is_same_v<KernelWarpSpecialized1SmSm100, BuilderScheduleTag>) && \n       (cute::is_base_of_v<KernelScheduleSm100DenseGemm, BuilderScheduleTag> ||\n        cute::is_same_v<KernelScheduleAuto, BuilderScheduleTag>)) &&\n      // Alignment check\n      detail::sm1xx_gemm_is_aligned<ElementA, AlignmentA, ElementB, AlignmentB, BuilderScheduleTag>()>>\n{\n  static_assert(cute::is_static_v<TileShape_MNK>, \"TileShape has to be static\");\n  static_assert(detail::check_input_datatypes<ElementA, ElementB>(), \"Incorrect input types\");\n\n  static constexpr cute::UMMA::Major UmmaMajorA = cutlass::gemm::collective::detail::tag_to_umma_major_A<GmemLayoutATag>();\n  static constexpr cute::UMMA::Major UmmaMajorB = cutlass::gemm::collective::detail::tag_to_umma_major_B<GmemLayoutBTag>();\n\n  // Data type used by MMA instruction\n  using ElementAMma = decltype(cutlass::gemm::collective::detail::sm1xx_kernel_input_element_to_mma_input_element<ElementA>());\n  using ElementBMma = decltype(cutlass::gemm::collective::detail::sm1xx_kernel_input_element_to_mma_input_element<ElementB>());\n\n  static constexpr bool is_2sm = cute::is_base_of_v<KernelSchedule2Sm, BuilderScheduleTag> ||\n                        (not cute::is_base_of_v<KernelSchedule1Sm, BuilderScheduleTag> &&\n                          not cute::is_base_of_v<KernelSchedule2Sm, BuilderScheduleTag> &&\n                          cute::is_static_v<ClusterShape_MNK> &&\n                          cute::get<0>(ClusterShape_MNK{}) % 2 == 0 );\n\n  static_assert(detail::sm1xx_gemm_check_for_f8f6f4_mix8bit_requirement<ElementAMma, ElementBMma,\n                                                                        TileShape_MNK, ClusterShape_MNK,\n                                                                        GmemLayoutATag, GmemLayoutBTag, false /*is_sparse*/, is_2sm>(),\n                \"TileSize and MNK Major does not met with MMA Mix 8-bit TMA load requirement\" );\n\n  using TiledMma = decltype(detail::sm100_make_trivial_tiled_mma<\n      ElementAMma, ElementBMma, ElementAccumulator,\n      decltype(cute::product_each(TileShape_MNK{})), ClusterShape_MNK,\n      UmmaMajorA, UmmaMajorB, BuilderScheduleTag>());\n"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 1,
+          "end_line": 4,
+          "quote": "Mainloop.Builder=cutlass::gemm::collective::CollectiveBuilder<cutlass::arch::Sm100, cutlass::arch::OpClassTensorOp, cutlass::half_t, cutlass::layout::RowMajor, 8, cutlass::half_t, cutlass::layout::RowMajor, 8, float, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::gemm::collective::StageCountAutoCarveout<33792>, cutlass::gemm::collective::KernelScheduleAuto, void>\nMainloop.StagePolicy=cutlass::gemm::collective::StageCountAutoCarveout<33792>\nMainloop.DispatchPolicy=cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>\nMainloop.FullType=cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.epilogue_carveout",
+      "source": "types.epilogue_bound",
+      "target": "types.stage_bound",
+      "relation": "template_binds",
+      "source_expression": "StageCountAutoCarveout<static_cast<int>(sizeof(CollectiveEpilogue::SharedStorage))>",
+      "condition": "sizeof(SharedStorage)=33792；编译期存储依赖。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 41,
+          "end_line": 43,
+          "quote": "using CollectiveEpilogue = typename EpilogueBuilder::CollectiveOp;\nusing StagePolicy = cutlass::gemm::collective::StageCountAutoCarveout<\n    static_cast<int>(sizeof(typename CollectiveEpilogue::SharedStorage))>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 19,
+          "end_line": 19,
+          "quote": "Epilogue.SharedStorage.bytes=33792"
+        },
+        {
+          "path": "include/cutlass/epilogue/collective/sm100_epilogue_tma_warpspecialized.hpp",
+          "start_line": 207,
+          "end_line": 226,
+          "quote": "  struct SharedStorage {\n    struct TensorStorage {\n      using CollectiveStorage = cute::conditional_t<not is_source_supported, CollectiveStorageWithoutC,\n                                  cute::conditional_t<ReuseSmemC, CollectiveStorageReuseC, CollectiveStorageWithC>>;\n      CollectiveStorage collective;\n\n      using FusionStorage = typename FusionCallbacks::SharedStorage;\n      FusionStorage thread;\n    } tensors;\n\n    using PipelineStorage = typename LoadPipeline::SharedStorage;\n    PipelineStorage pipeline;\n  };\n  using TensorStorage = typename SharedStorage::TensorStorage;\n  using PipelineStorage = typename SharedStorage::PipelineStorage;\n\n  // Planar complex kernels have two accumulator copies for the real and imaginary tensors.\n  constexpr static int NumAccumulatorMtxs = 1;\n\n  // Host side epilogue arguments"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.stage_overload",
+      "source": "types.stage_bound",
+      "target": "types.stage_compute",
+      "relation": "template_binds",
+      "source_expression": "sm100_compute_stage_count_or_override(..., StageCountAutoCarveout<carveout_bytes>)",
+      "condition": "carveout_bytes=33792；该函数是编译期类型构造辅助。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 75,
+          "end_line": 99,
+          "quote": "// Returns the maximum number of smem tiles that can be used with a given smem capacity, or overrides with manual count. \ntemplate<\n  int CapacityBytes,\n  class ElementA,\n  class ElementB,\n  class TileShapeMNK,\n  class MainloopPipelineStorage,\n  int carveout_bytes>\nconstexpr int\nsm100_compute_stage_count_or_override(StageCountAutoCarveout<carveout_bytes> stage_count) {\n  // For F8/F6/F4 sub-bytes, ElementA/B will be passed in as uint8_t\n  // For Planar Complex, ElementA/B will be passed in as cutlass::complex<ElementARaw>\n  // Each stage include (CollectiveMma::SharedStorage)\n  // 1. smem for A and smem for B (CollectiveMma::SharedStorage::TensorStorage)\n  // 2. one MainloopPipeline = (CollectiveMma::SharedStorage::PipelineStorage = PipelineTmaUmmaAsync)\n  constexpr auto mainloop_pipeline_bytes = sizeof(MainloopPipelineStorage);\n  constexpr auto a_bits = cute::sizeof_bits_v<ElementA>;\n  constexpr auto b_bits = cute::sizeof_bits_v<ElementB>;\n  constexpr int stage_bytes =\n    cutlass::bits_to_bytes(a_bits * size<0>(TileShapeMNK{}) * size<2>(TileShapeMNK{})) +\n    cutlass::bits_to_bytes(b_bits * size<1>(TileShapeMNK{}) * size<2>(TileShapeMNK{})) +\n    static_cast<int>(mainloop_pipeline_bytes);\n\n  return (CapacityBytes - carveout_bytes) / stage_bytes;\n}"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 2,
+          "end_line": 2,
+          "quote": "Mainloop.StagePolicy=cutlass::gemm::collective::StageCountAutoCarveout<33792>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.computed_stages",
+      "source": "types.stage_compute",
+      "target": "types.dispatch_bound",
+      "relation": "template_binds",
+      "source_expression": "PipelineStages = (CapacityBytes - carveout_bytes) / stage_bytes; DispatchPolicy<PipelineStages,2,4,ClusterShape,ArchTag>",
+      "condition": "本例实际Stages=8，不将这个值推广为所有Auto配置。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 90,
+          "end_line": 98,
+          "quote": "  constexpr auto mainloop_pipeline_bytes = sizeof(MainloopPipelineStorage);\n  constexpr auto a_bits = cute::sizeof_bits_v<ElementA>;\n  constexpr auto b_bits = cute::sizeof_bits_v<ElementB>;\n  constexpr int stage_bytes =\n    cutlass::bits_to_bytes(a_bits * size<0>(TileShapeMNK{}) * size<2>(TileShapeMNK{})) +\n    cutlass::bits_to_bytes(b_bits * size<1>(TileShapeMNK{}) * size<2>(TileShapeMNK{})) +\n    static_cast<int>(mainloop_pipeline_bytes);\n\n  return (CapacityBytes - carveout_bytes) / stage_bytes;"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 295,
+          "end_line": 325,
+          "quote": "  using SmemTileShape = cute::Shape<BlockTileA_M, BlockTileB_N, BlockTileA_K>;\n  using MainloopPipelineStorage = typename cutlass::PipelineTmaUmmaAsync<1>::SharedStorage;\n\n  static constexpr int PipelineStages = cutlass::gemm::collective::detail::sm100_compute_stage_count_or_override<\n      ReducedSmemCapacityBytes, ElementAMma_SmemAllocType, ElementBMma_SmemAllocType, SmemTileShape, MainloopPipelineStorage>(StageCountType{});\n  static_assert(PipelineStages > 0, \"Smem usage is too high. Can't create any SMEM buffers for A, and B.\");\n\n  using DispatchPolicy = \n      cute::conditional_t<IsArrayOfPointersGemm, \n        cute::conditional_t<IsRCGroupGemm, \n          cutlass::gemm::MainloopSm100RCGroupGemmTmaUmmaWarpSpecialized<\n            PipelineStages,\n            SchedulerPipelineStageCount,\n            AccumulatorPipelineStageCount,\n            ClusterShape_MNK,\n            ArchTag\n          >,\n          cutlass::gemm::MainloopSm100ArrayTmaUmmaWarpSpecialized<\n            PipelineStages,\n            SchedulerPipelineStageCount,\n            AccumulatorPipelineStageCount,\n            ClusterShape_MNK,\n            ArchTag\n          >\n        >,\n      cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<\n          PipelineStages,\n          SchedulerPipelineStageCount,\n          AccumulatorPipelineStageCount,\n          ClusterShape_MNK,\n          ArchTag"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 16,
+          "end_line": 18,
+          "quote": "Mainloop.PipelineStages=8\nMainloop.SchedulerStages=2\nMainloop.AccumulatorStages=4"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.builder_collective",
+      "source": "types.builder_sm100",
+      "target": "types.collective_bound",
+      "relation": "template_binds",
+      "source_expression": "using CollectiveOp = CollectiveMma<DispatchPolicy,TileShape_MNK,ElementA,TagToStrideA_t<...>,ElementB,TagToStrideB_t<...>,TiledMma,...>",
+      "condition": "本例完整Collective类型由Host-only打印确认。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 329,
+          "end_line": 344,
+          "quote": "  using CollectiveOp = cutlass::gemm::collective::CollectiveMma<\n      DispatchPolicy,\n      TileShape_MNK,\n      ElementA,\n      cutlass::gemm::TagToStrideA_t<GmemLayoutATag>,\n      ElementB,\n      cutlass::gemm::TagToStrideB_t<GmemLayoutBTag>,\n      TiledMma,\n      GmemTiledCopyA,\n      SmemLayoutAtomA,\n      void,\n      cute::identity,\n      GmemTiledCopyB,\n      SmemLayoutAtomB,\n      void,\n      cute::identity"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 4,
+          "end_line": 4,
+          "quote": "Mainloop.FullType=cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.dispatch_selects_collective",
+      "source": "types.dispatch_bound",
+      "target": "types.collective_api",
+      "relation": "template_binds",
+      "source_expression": "CollectiveMma<MainloopSm100TmaUmmaWarpSpecialized<Stages,SchedulerPipelineStageCount,AccumulatorPipelineStageCount,ClusterShape,ArchTag_>,...>",
+      "condition": "实际策略为<8,2,4,Cluster<2,2,1>,Sm100>。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 81,
+          "end_line": 114,
+          "quote": "struct CollectiveMma<\n    MainloopSm100TmaUmmaWarpSpecialized<\n      Stages,\n      SchedulerPipelineStageCount,\n      AccumulatorPipelineStageCount,\n      ClusterShape,\n      ArchTag_>,\n    TileShape_,\n    ElementA_,\n    StrideA_,\n    ElementB_,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>\n{\n  //\n  // Type Aliases\n  //\n  using TiledMma = TiledMma_;\n  using AtomThrShapeMNK = Shape<decltype(shape<0>(typename TiledMma::ThrLayoutVMNK{})), _1, _1>;\n\n  using DispatchPolicy = MainloopSm100TmaUmmaWarpSpecialized<\n                          Stages,\n                          SchedulerPipelineStageCount,\n                          AccumulatorPipelineStageCount,\n                          ClusterShape,\n                          ArchTag_>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 3,
+          "end_line": 3,
+          "quote": "Mainloop.DispatchPolicy=cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.collective_instance",
+      "source": "types.collective_bound",
+      "target": "types.collective_api",
+      "relation": "template_binds",
+      "source_expression": "cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>",
+      "condition": "固定probe对应这个源偏特化；完整参数不靠短名推测。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 4,
+          "end_line": 4,
+          "quote": "Mainloop.FullType=cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 81,
+          "end_line": 106,
+          "quote": "struct CollectiveMma<\n    MainloopSm100TmaUmmaWarpSpecialized<\n      Stages,\n      SchedulerPipelineStageCount,\n      AccumulatorPipelineStageCount,\n      ClusterShape,\n      ArchTag_>,\n    TileShape_,\n    ElementA_,\n    StrideA_,\n    ElementB_,\n    StrideB_,\n    TiledMma_,\n    GmemTiledCopyA_,\n    SmemLayoutAtomA_,\n    SmemCopyAtomA_,\n    TransformA_,\n    GmemTiledCopyB_,\n    SmemLayoutAtomB_,\n    SmemCopyAtomB_,\n    TransformB_>\n{\n  //\n  // Type Aliases\n  //\n  using TiledMma = TiledMma_;"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.collective_tiled",
+      "source": "types.collective_bound",
+      "target": "types.tiled_bound",
+      "relation": "type_uses",
+      "source_expression": "using TiledMma = TiledMma_;",
+      "condition": "TiledMma_为实际Builder传入类型。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/sm100_mma_warpspecialized.hpp",
+          "start_line": 104,
+          "end_line": 107,
+          "quote": "  // Type Aliases\n  //\n  using TiledMma = TiledMma_;\n  using AtomThrShapeMNK = Shape<decltype(shape<0>(typename TiledMma::ThrLayoutVMNK{})), _1, _1>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 5,
+          "end_line": 5,
+          "quote": "Mainloop.TiledMma=cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.major_a_binding",
+      "source": "types.builder_bound",
+      "target": "types.major_a",
+      "relation": "template_binds",
+      "source_expression": "UmmaMajorA = tag_to_umma_major_A<GmemLayoutATag>(); GmemLayoutATag=RowMajor",
+      "condition": "结果K=0；由源映射和probe static_assert共同确认。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 202,
+          "end_line": 203,
+          "quote": "  static constexpr cute::UMMA::Major UmmaMajorB = cutlass::gemm::collective::detail::tag_to_umma_major_B<GmemLayoutBTag>();\n"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm1xx_common.inl",
+          "start_line": 93,
+          "end_line": 107,
+          "quote": "template <class Layout>\nconstexpr cute::UMMA::Major\ntag_to_umma_major_A() {\n  using LayoutA = cute::remove_pointer_t<Layout>;\n  if constexpr (cute::is_same_v<LayoutA, cutlass::layout::RowMajor>) {\n    return cute::UMMA::Major::K;\n  }\n  else if constexpr (cute::is_same_v<LayoutA, cutlass::layout::ColumnMajor>) {\n    return cute::UMMA::Major::MN;\n  }\n  else if constexpr (cutlass::detail::is_major<0, LayoutA>()) {\n    return cute::UMMA::Major::MN;\n  }\n  else if constexpr (cutlass::detail::is_major<1, LayoutA>()) {\n    return cute::UMMA::Major::K;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 60,
+          "end_line": 60,
+          "quote": "static_assert(MainloopBuilder::UmmaMajorA == cute::UMMA::Major::K);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 14,
+          "end_line": 14,
+          "quote": "Builder.UmmaMajorA=0"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.major_b_binding",
+      "source": "types.builder_bound",
+      "target": "types.major_b",
+      "relation": "template_binds",
+      "source_expression": "UmmaMajorB = tag_to_umma_major_B<GmemLayoutBTag>(); GmemLayoutBTag=RowMajor",
+      "condition": "结果MN=1；B与A的映射不同。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 202,
+          "end_line": 203,
+          "quote": "  static constexpr cute::UMMA::Major UmmaMajorB = cutlass::gemm::collective::detail::tag_to_umma_major_B<GmemLayoutBTag>();\n"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm1xx_common.inl",
+          "start_line": 115,
+          "end_line": 128,
+          "quote": "template <class Layout>\nconstexpr cute::UMMA::Major\ntag_to_umma_major_B() {\n  using LayoutB = cute::remove_pointer_t<Layout>;\n  if constexpr (cute::is_same_v<LayoutB, cutlass::layout::RowMajor>) {\n    return cute::UMMA::Major::MN;\n  }\n  else if constexpr (cute::is_same_v<LayoutB, cutlass::layout::ColumnMajor>) {\n    return cute::UMMA::Major::K;\n  }\n  else if constexpr (cutlass::detail::is_major<0, LayoutB>()) {\n    return cute::UMMA::Major::MN;\n  }\n  else if constexpr (cutlass::detail::is_major<1, LayoutB>()) {"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 61,
+          "end_line": 61,
+          "quote": "static_assert(MainloopBuilder::UmmaMajorB == cute::UMMA::Major::MN);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 15,
+          "end_line": 15,
+          "quote": "Builder.UmmaMajorB=1"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.builder_tiled_selector",
+      "source": "types.builder_bound",
+      "target": "types.auto_selector",
+      "relation": "template_binds",
+      "source_expression": "using TiledMma = decltype(sm100_make_trivial_tiled_mma<ElementAMma,ElementBMma,float,Tile,Cluster,Major::K,Major::MN,KernelScheduleAuto>());",
+      "condition": "half_t经输入元素映射保持half_t；Tile=256×128×64，Cluster=2×2×1。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_umma_builder.inl",
+          "start_line": 205,
+          "end_line": 222,
+          "quote": "  using ElementAMma = decltype(cutlass::gemm::collective::detail::sm1xx_kernel_input_element_to_mma_input_element<ElementA>());\n  using ElementBMma = decltype(cutlass::gemm::collective::detail::sm1xx_kernel_input_element_to_mma_input_element<ElementB>());\n\n  static constexpr bool is_2sm = cute::is_base_of_v<KernelSchedule2Sm, BuilderScheduleTag> ||\n                        (not cute::is_base_of_v<KernelSchedule1Sm, BuilderScheduleTag> &&\n                          not cute::is_base_of_v<KernelSchedule2Sm, BuilderScheduleTag> &&\n                          cute::is_static_v<ClusterShape_MNK> &&\n                          cute::get<0>(ClusterShape_MNK{}) % 2 == 0 );\n\n  static_assert(detail::sm1xx_gemm_check_for_f8f6f4_mix8bit_requirement<ElementAMma, ElementBMma,\n                                                                        TileShape_MNK, ClusterShape_MNK,\n                                                                        GmemLayoutATag, GmemLayoutBTag, false /*is_sparse*/, is_2sm>(),\n                \"TileSize and MNK Major does not met with MMA Mix 8-bit TMA load requirement\" );\n\n  using TiledMma = decltype(detail::sm100_make_trivial_tiled_mma<\n      ElementAMma, ElementBMma, ElementAccumulator,\n      decltype(cute::product_each(TileShape_MNK{})), ClusterShape_MNK,\n      UmmaMajorA, UmmaMajorB, BuilderScheduleTag>());"
+        },
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm1xx_common.inl",
+          "start_line": 65,
+          "end_line": 89,
+          "quote": "// Maps input element to umma element\ntemplate <class Element, bool IsF8F6F4 = true>\nconstexpr auto\nsm1xx_kernel_input_element_to_mma_input_element() {\n  if constexpr (cute::is_same_v<Element, float>) {\n    return cutlass::tfloat32_t{};\n  }\n  else if constexpr (cute::is_same_v<Element, cutlass::float_e2m1_t> && IsF8F6F4) {\n    return cutlass::detail::float_e2m1_unpacksmem_t{};\n  }\n  else if constexpr (cute::is_same_v<Element, cutlass::float_e3m2_t> && IsF8F6F4) {\n    return cutlass::detail::float_e3m2_unpacksmem_t{};\n  }\n  else if constexpr (cute::is_same_v<Element, cutlass::float_e2m3_t> && IsF8F6F4) {\n    return cutlass::detail::float_e2m3_unpacksmem_t{};\n  }\n  else if constexpr (cute::is_same_v<Element, cutlass::type_erased_dynamic_float4_t> && IsF8F6F4) {\n    return cutlass::detail::type_erased_dynamic_float4_unpacksmem_t{};\n  }\n  else if constexpr (cute::is_same_v<Element, cutlass::type_erased_dynamic_float6_t> && IsF8F6F4) {\n    return cutlass::detail::type_erased_dynamic_float6_unpacksmem_t{};\n  }\n  else {\n    return Element{};\n  }"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 5,
+          "end_line": 5,
+          "quote": "Mainloop.TiledMma=cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.auto_chooses_two_sm",
+      "source": "types.auto_selector",
+      "target": "types.two_sm_selector",
+      "relation": "template_binds",
+      "source_expression": "ClusterShape静态 && size<0>(ClusterShape{}) % 2 == 0 && size<0>(TileShape{}) % 128 == 0",
+      "condition": "本例2%2=0且256%128=0；仅为编译期选择，不是运行调用。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_common.inl",
+          "start_line": 444,
+          "end_line": 469,
+          "quote": "sm100_make_trivial_tiled_mma() {\n  // MMA_2SM requested\n  if constexpr (cute::is_base_of_v<KernelSchedule2Sm, BuilderScheduleTag> ) {\n    return sm100_make_2sm_trivial_tiled_mma<ElementAMma, ElementBMma, ElementAccumulator,\n                                    TileShape_MNK, ClusterShape_MNK, UmmaMajorA, UmmaMajorB, ANeg, BNeg>();\n  }\n  // MMA_1SM requested\n  else if constexpr (cute::is_base_of_v<KernelSchedule1Sm, BuilderScheduleTag> ) {\n    return sm100_make_1sm_trivial_tiled_mma<ElementAMma, ElementBMma, ElementAccumulator,\n                                    TileShape_MNK, ClusterShape_MNK, UmmaMajorA, UmmaMajorB, ANeg, BNeg>();\n  }\n  // Auto scheduling requested\n  else if constexpr (cute::is_same_v<BuilderScheduleTag, KernelScheduleAuto>) {\n    // Static cluster\n    if constexpr (cute::is_static_v<ClusterShape_MNK>) {\n      // For MMA_2SM we need a cluster shape that is multiple of 2x1\n      // and only M=128 and M=256 are supported, otherwise, fall back to MMA_1SM\n      if constexpr (cute::size<0>(ClusterShape_MNK{}) % 2 == 0 &&\n                    cute::size<0>(TileShape_MNK{}) % 128 == 0) {\n        return sm100_make_2sm_trivial_tiled_mma<ElementAMma, ElementBMma, ElementAccumulator,\n                                        TileShape_MNK, ClusterShape_MNK, UmmaMajorA, UmmaMajorB, ANeg, BNeg>();\n      }\n      else {\n        return sm100_make_1sm_trivial_tiled_mma<ElementAMma, ElementBMma, ElementAccumulator,\n                                        TileShape_MNK, ClusterShape_MNK, UmmaMajorA, UmmaMajorB, ANeg, BNeg>();\n      }"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 31,
+          "end_line": 32,
+          "quote": "using MmaTileShape = cute::Shape<cute::_256, cute::_128, cute::_64>;\nusing ClusterShape = cute::Shape<cute::_2, cute::_2, cute::_1>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 13,
+          "end_line": 13,
+          "quote": "Builder.is_2sm=1"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.fp16_two_sm_op",
+      "source": "types.two_sm_selector",
+      "target": "types.wrapper",
+      "relation": "template_binds",
+      "source_expression": "SM100_MMA_F16BF16_2x1SM_SS<ElementAMma,ElementBMma,float,M,N,UmmaMajorA,UmmaMajorB,ANeg,BNeg>",
+      "condition": "ElementAMma=ElementBMma=half_t，M=256，N=128，Major K/MN，ScaleIn One/One。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_common.inl",
+          "start_line": 372,
+          "end_line": 391,
+          "quote": "sm100_make_2sm_trivial_tiled_mma() {\n\n  constexpr int M = cute::size<0>(TileShape_MNK{});\n  static_assert(M == 128 || M == 256, \"Invalid TileShape_M.\");\n\n  // Do not allow a tiled MMA N mode > 1, as that is not reasonable.\n  constexpr int N = cute::size<1>(TileShape_MNK{});\n  static_assert(N % 8 == 0 && N <= 256, \"Invalid TileShape_N.\");\n\n  if constexpr     (cute::is_same_v<ElementAMma, cutlass::tfloat32_t>) {\n    static_assert(cute::is_same_v<ElementAMma, ElementBMma>, \"ElementAMma and ElementBMma must match.\");\n    return make_tiled_mma(cute::SM100_MMA_TF32_2x1SM_SS<ElementAMma, ElementBMma, ElementAMmaccumulator,\n                                                     M, N, UmmaMajorA, UmmaMajorB, ANeg, BNeg>{});\n  }\n  else if constexpr (cute::is_same_v<ElementAMma,     cutlass::half_t> ||\n                     cute::is_same_v<ElementAMma, cutlass::bfloat16_t>) {\n    static_assert(cute::is_same_v<ElementAMma, ElementBMma>, \"ElementAMma and ElementBMma must match.\");\n    return make_tiled_mma(cute::SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAMmaccumulator,\n                                                    M, N, UmmaMajorA, UmmaMajorB, ANeg, BNeg>{});\n  }"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 55,
+          "end_line": 58,
+          "quote": "using ExpectedOp = cute::SM100_MMA_F16BF16_2x1SM_SS<\n    ElementA, ElementB, float, 256, 128,\n    cute::UMMA::Major::K, cute::UMMA::Major::MN>;\nstatic_assert(cute::is_same_v<MmaOp, ExpectedOp>, \"Dense Auto must select the verified F16 2x1SM operation\");"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 7,
+          "end_line": 7,
+          "quote": "Mainloop.MMA_Op=cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.op_to_factory",
+      "source": "types.two_sm_selector",
+      "target": "types.factory_op",
+      "relation": "template_binds",
+      "source_expression": "return make_tiled_mma(SM100_MMA_F16BF16_2x1SM_SS<...>{});",
+      "condition": "选择MMA_Op重载，作为返回类型推导的一部分。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cutlass/gemm/collective/builders/sm100_common.inl",
+          "start_line": 385,
+          "end_line": 390,
+          "quote": "  }\n  else if constexpr (cute::is_same_v<ElementAMma,     cutlass::half_t> ||\n                     cute::is_same_v<ElementAMma, cutlass::bfloat16_t>) {\n    static_assert(cute::is_same_v<ElementAMma, ElementBMma>, \"ElementAMma and ElementBMma must match.\");\n    return make_tiled_mma(cute::SM100_MMA_F16BF16_2x1SM_SS<ElementAMma, ElementBMma, ElementAMmaccumulator,\n                                                    M, N, UmmaMajorA, UmmaMajorB, ANeg, BNeg>{});"
+        },
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 543,
+          "end_line": 554,
+          "quote": "template <class MMA_Op,\n          class MMAThrLayout = Layout<Shape<_1,_1,_1>>,\n          class Permutations = Tile<Underscore,Underscore,Underscore>>\nCUTE_HOST_DEVICE constexpr\nauto\nmake_tiled_mma(MMA_Op       const&,\n               MMAThrLayout const& thr_layout   = {},\n               Permutations const& permutations = {})\n{\n  // Attempt to wrap in an MMA_Atom<> and forward\n  return make_tiled_mma(MMA_Atom<MMA_Op>{}, thr_layout, permutations);\n}"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.factory_wraps_atom",
+      "source": "types.factory_op",
+      "target": "types.atom_bound",
+      "relation": "template_binds",
+      "source_expression": "MMA_Atom<MMA_Op>{}",
+      "condition": "MMA_Op为已选F16/BF16 2×1SM SS操作；static_assert核对完全相同类型。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 548,
+          "end_line": 553,
+          "quote": "make_tiled_mma(MMA_Op       const&,\n               MMAThrLayout const& thr_layout   = {},\n               Permutations const& permutations = {})\n{\n  // Attempt to wrap in an MMA_Atom<> and forward\n  return make_tiled_mma(MMA_Atom<MMA_Op>{}, thr_layout, permutations);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 58,
+          "end_line": 59,
+          "quote": "static_assert(cute::is_same_v<MmaOp, ExpectedOp>, \"Dense Auto must select the verified F16 2x1SM operation\");\nstatic_assert(cute::is_same_v<MmaAtom, cute::MMA_Atom<ExpectedOp>>, \"Selected Atom must wrap the selected operation\");"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 6,
+          "end_line": 6,
+          "quote": "Mainloop.MMA_Atom=cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.factory_forward",
+      "source": "types.factory_op",
+      "target": "types.factory_atom",
+      "relation": "template_binds",
+      "source_expression": "make_tiled_mma(MMA_Atom<MMA_Op>{}, thr_layout, permutations)",
+      "condition": "这是类型工厂重载的选择，不用calls表示运行行为。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 531,
+          "end_line": 553,
+          "quote": "make_tiled_mma(MMA_Atom<MMA_Op> const& mma_atom,\n               MMAThrLayout     const& thr_layout   = {},\n               Permutations     const& permutations = {})\n{\n  auto thr_layout_mnk  = append<3>(thr_layout, Layout<_1,_0>{});\n  auto permutation_mnk = append<3>(permutations, _);\n\n  return TiledMMA<MMA_Atom<MMA_Op>,\n                  decltype(thr_layout_mnk),\n                  decltype(permutation_mnk)>{mma_atom, thr_layout_mnk};\n}\n\ntemplate <class MMA_Op,\n          class MMAThrLayout = Layout<Shape<_1,_1,_1>>,\n          class Permutations = Tile<Underscore,Underscore,Underscore>>\nCUTE_HOST_DEVICE constexpr\nauto\nmake_tiled_mma(MMA_Op       const&,\n               MMAThrLayout const& thr_layout   = {},\n               Permutations const& permutations = {})\n{\n  // Attempt to wrap in an MMA_Atom<> and forward\n  return make_tiled_mma(MMA_Atom<MMA_Op>{}, thr_layout, permutations);"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.factory_tiled_type",
+      "source": "types.factory_atom",
+      "target": "types.tiled_bound",
+      "relation": "template_binds",
+      "source_expression": "TiledMMA<MMA_Atom<MMA_Op>,decltype(thr_layout_mnk),decltype(permutation_mnk)>",
+      "condition": "默认Atom layout与permutation的实际类型见新Host打印。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 531,
+          "end_line": 540,
+          "quote": "make_tiled_mma(MMA_Atom<MMA_Op> const& mma_atom,\n               MMAThrLayout     const& thr_layout   = {},\n               Permutations     const& permutations = {})\n{\n  auto thr_layout_mnk  = append<3>(thr_layout, Layout<_1,_0>{});\n  auto permutation_mnk = append<3>(permutations, _);\n\n  return TiledMMA<MMA_Atom<MMA_Op>,\n                  decltype(thr_layout_mnk),\n                  decltype(permutation_mnk)>{mma_atom, thr_layout_mnk};"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 5,
+          "end_line": 5,
+          "quote": "Mainloop.TiledMma=cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.tiled_atom",
+      "source": "types.tiled_bound",
+      "target": "types.atom_bound",
+      "relation": "type_uses",
+      "source_expression": "struct TiledMMA : MMA_Atom; using Atom=MMA_Atom;",
+      "condition": "此处Atom不是按Cluster总CTA数推测；使用TiledMma::Atom的实际类型。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 208,
+          "end_line": 218,
+          "quote": "template <class MMA_Atom,\n          class AtomLayoutMNK,\n          class PermutationMNK = Tile<Underscore,Underscore,Underscore>>\nstruct TiledMMA : MMA_Atom\n{\n  using Atom           = MMA_Atom;\n  using AtomShape_MNK  = typename MMA_Atom::Shape_MNK;\n  using AtomThrID      = typename MMA_Atom::ThrID;\n  using AtomLayoutC_TV = typename MMA_Atom::LayoutC_TV;\n  using AtomLayoutA_TV = typename MMA_Atom::LayoutA_TV;\n  using AtomLayoutB_TV = typename MMA_Atom::LayoutB_TV;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 5,
+          "end_line": 6,
+          "quote": "Mainloop.TiledMma=cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >\nMainloop.MMA_Atom=cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.atom_traits_impl",
+      "source": "types.atom_bound",
+      "target": "types.atom_impl",
+      "relation": "type_uses",
+      "source_expression": "MMA_Atom<MMAOperation> : MMA_Atom<MMA_Traits<MMAOperation>>",
+      "condition": "已选操作包装进入Traits实现。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 44,
+          "end_line": 53,
+          "quote": "template <class MMAOperation>\nstruct MMA_Atom<MMAOperation> : MMA_Atom<MMA_Traits<MMAOperation>>\n{};\n\ntemplate <class MMAOperation, class... Args>\nstruct MMA_Atom<MMA_Traits<MMAOperation, Args...>>\n  : MMA_Traits<MMAOperation, Args...>\n{\n  using MMA_Op = MMAOperation;\n  using Traits = MMA_Traits<MMAOperation, Args...>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 6,
+          "end_line": 8,
+          "quote": "Mainloop.MMA_Atom=cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >\nMainloop.MMA_Op=cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>\nMainloop.MMA_Traits=cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.atom_traits_type",
+      "source": "types.atom_impl",
+      "target": "types.traits_bound",
+      "relation": "template_binds",
+      "source_expression": "using Traits = MMA_Traits<MMAOperation,Args...>;",
+      "condition": "MMAOperation=本例ExpectedOp；完整Traits类型由NVCC编译的Host程序打印。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 49,
+          "end_line": 61,
+          "quote": "struct MMA_Atom<MMA_Traits<MMAOperation, Args...>>\n  : MMA_Traits<MMAOperation, Args...>\n{\n  using MMA_Op = MMAOperation;\n  using Traits = MMA_Traits<MMAOperation, Args...>;\n\n  // Element value types from the MMA_Traits\n  using ValTypeD = typename Traits::ValTypeD;\n  using ValTypeA = typename Traits::ValTypeA;\n  using ValTypeB = typename Traits::ValTypeB;\n  using ValTypeC = typename Traits::ValTypeC;\n\n  // Thr-Val layouts from the MMA_Traits"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 8,
+          "end_line": 8,
+          "quote": "Mainloop.MMA_Traits=cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.traits_uses_wrapper",
+      "source": "types.traits_bound",
+      "target": "types.wrapper",
+      "relation": "type_uses",
+      "source_expression": "MMA_Traits<SM100_MMA_F16BF16_2x1SM_SS<a_type,b_type,c_type,M,N,a_major,b_major,a_neg,b_neg>>",
+      "condition": "ThrID=Layout<2>；Atom K=256/16=16，不能与Collective K=64混同。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_traits_sm100.hpp",
+          "start_line": 2030,
+          "end_line": 2058,
+          "quote": "template <class a_type, class b_type, class c_type,\n          int M, int N,\n          UMMA::Major a_major, UMMA::Major b_major,\n          UMMA::ScaleIn a_neg, UMMA::ScaleIn b_neg>\nstruct MMA_Traits<SM100_MMA_F16BF16_2x1SM_SS<a_type, b_type, c_type,\n                                     M, N, a_major, b_major,\n                                     a_neg, b_neg>>\n{\n  using ValTypeD = c_type;\n  using ValTypeA = a_type;\n  using ValTypeB = b_type;\n  using ValTypeC = c_type;\n  static_assert(cute::sizeof_bits_v<a_type> == cute::sizeof_bits_v<b_type> && cute::sizeof_bits_v<b_type> == 16, \"SM100_MMA_F16BF16_2x1SM_SS supports 16bit types\");\n\n  using FrgTypeA = UMMA::smem_desc<a_major>;\n  using FrgTypeB = UMMA::smem_desc<b_major>;\n  using FrgTypeC = UMMA::tmem_frg_2sm<c_type>;\n\n  // Size of instructions's K extent is always 256bits, convert to units of element\n  constexpr static int K = 256 / cute::sizeof_bits<ValTypeA>::value;\n\n  using Shape_MNK = Shape<Int<M>,Int<N>,Int<K>>;\n  using ThrID   = Layout<_2>;\n  using ALayout = Layout<Shape <      _2,Shape <Int<M/2>,Int<K>>>,\n                         Stride<Int<M/2>,Stride<      _1,Int<M>>>>;\n  using BLayout = Layout<Shape <      _2,Shape <Int<N/2>,Int<K>>>,\n                         Stride<Int<N/2>,Stride<      _1,Int<N>>>>;\n  using CLayout = Layout<Shape <      _2,Shape <Int<M/2>,Int<N>>>,\n                         Stride<Int<M/2>,Stride<      _1,Int<M>>>>;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 7,
+          "end_line": 10,
+          "quote": "Mainloop.MMA_Op=cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>\nMainloop.MMA_Traits=cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>\nMainloop.AtomShape_MNK=cute::tuple<cute::C<256>, cute::C<128>, cute::C<16> >\nKernel.CtaShape_MNK=cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.traits_unpack_binding",
+      "source": "types.traits_bound",
+      "target": "types.mma_unpack",
+      "relation": "template_binds",
+      "source_expression": "mma_unpack(MMA_Traits const& traits, Tensor<D>&, Tensor<A> const&, Tensor<B> const&, Tensor<C> const&)",
+      "condition": "外层Traits已绑定；本页未枚举每个调用点的Tensor布局模板参数。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_traits_sm100.hpp",
+          "start_line": 2065,
+          "end_line": 2086,
+          "quote": "\n  template <class TD, class DLayout,\n            class TA, class ALayout,\n            class TB, class BLayout,\n            class TC, class CLayout>\n  CUTE_HOST_DEVICE constexpr friend\n  void\n  mma_unpack(MMA_Traits          const& traits,\n             Tensor<TD, DLayout>      & D,\n             Tensor<TA, ALayout> const& A,\n             Tensor<TB, BLayout> const& B,\n             Tensor<TC, CLayout> const& C)\n  {\n    static_assert(is_tmem<TD>::value, \"Expected tmem in MMA_Atom::call\");\n    static_assert(is_rmem<TA>::value, \"Expected desc registers in MMA_Atom::call\");\n    static_assert(is_rmem<TB>::value, \"Expected desc registers in MMA_Atom::call\");\n    static_assert(is_tmem<TC>::value, \"Expected tmem in MMA_Atom::call\");\n\n    uint64_t desc_a = A[0];\n    uint64_t desc_b = B[0];\n    uint32_t tmem_c = raw_pointer_cast(D.data());\n    uint64_t idesc = UMMA::make_runtime_instr_desc<>(traits.idesc_);"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 8,
+          "end_line": 8,
+          "quote": "Mainloop.MMA_Traits=cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.atom_calls_unpack",
+      "source": "types.atom_call",
+      "target": "types.mma_unpack",
+      "relation": "calls",
+      "source_expression": "mma_unpack(static_cast<Traits const&>(*this), D, A, B, C)",
+      "condition": "此边表示实际C++调用表达式；通过本例Traits确定这个friend重载，而非所有同名重载。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_atom.hpp",
+          "start_line": 94,
+          "end_line": 104,
+          "quote": "  call(Tensor<TD, DLayout>      & D,\n       Tensor<TA, ALayout> const& A,\n       Tensor<TB, BLayout> const& B,\n       Tensor<TC, CLayout> const& C) const\n  {\n    static_assert(DLayout::rank == 1, \"Expected rank-1 D tensor\");\n    static_assert(ALayout::rank == 1, \"Expected rank-1 A tensor\");\n    static_assert(BLayout::rank == 1, \"Expected rank-1 B tensor\");\n    static_assert(CLayout::rank == 1, \"Expected rank-1 C tensor\");\n\n    return mma_unpack(static_cast<Traits const&>(*this), D, A, B, C);"
+        },
+        {
+          "path": "include/cute/atom/mma_traits_sm100.hpp",
+          "start_line": 2072,
+          "end_line": 2076,
+          "quote": "  mma_unpack(MMA_Traits          const& traits,\n             Tensor<TD, DLayout>      & D,\n             Tensor<TA, ALayout> const& A,\n             Tensor<TB, BLayout> const& B,\n             Tensor<TC, CLayout> const& C)"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "start_line": 8,
+          "end_line": 8,
+          "quote": "Mainloop.MMA_Traits=cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>"
+        }
+      ]
+    },
+    {
+      "id": "types.edge.unpack_calls_fma",
+      "source": "types.mma_unpack",
+      "target": "types.fma",
+      "relation": "calls",
+      "source_expression": "SM100_MMA_F16BF16_2x1SM_SS<a_type,b_type,c_type,M,N,a_major,b_major,a_neg,b_neg>::fma(desc_a,desc_b,tmem_c,uint32_t(traits.accumulate_),idesc)",
+      "condition": "fma内部另以elect_one_sync控制指令发射；未执行GPU。",
+      "resolution": "configured",
+      "evidence": [
+        {
+          "path": "include/cute/atom/mma_traits_sm100.hpp",
+          "start_line": 2083,
+          "end_line": 2092,
+          "quote": "    uint64_t desc_a = A[0];\n    uint64_t desc_b = B[0];\n    uint32_t tmem_c = raw_pointer_cast(D.data());\n    uint64_t idesc = UMMA::make_runtime_instr_desc<>(traits.idesc_);\n\n    SM100_MMA_F16BF16_2x1SM_SS<a_type, b_type, c_type,\n                       M, N,\n                       a_major, b_major,\n                       a_neg, b_neg>::fma(desc_a, desc_b, tmem_c, uint32_t(traits.accumulate_), idesc);\n  }"
+        },
+        {
+          "path": "include/cute/arch/mma_sm100_umma.hpp",
+          "start_line": 563,
+          "end_line": 582,
+          "quote": "  fma(uint64_t const& desc_a,\n      uint64_t const& desc_b,\n      uint32_t const& tmem_c,\n      uint32_t const& scaleC,\n      uint64_t const& idescE)\n  {\n#if defined(CUTE_ARCH_TCGEN05_F16F32_MMA_ENABLED)\n    if (cute::elect_one_sync()) {\n      uint32_t mask[8] = {0, 0, 0, 0, 0, 0, 0, 0};\n      asm volatile(\n        \"{\\n\\t\"\n        \".reg .pred p;\\n\\t\"\n        \"setp.ne.b32 p, %4, 0;\\n\\t\"\n        \"tcgen05.mma.cta_group::2.kind::f16 [%0], %1, %2, %3, {%5, %6, %7, %8, %9, %10, %11, %12}, p; \\n\\t\"\n        \"}\\n\"\n        :\n        : \"r\"(tmem_c), \"l\"(desc_a), \"l\"(desc_b), \"r\"(uint32_t(idescE>>32)), \"r\"(scaleC),\n          \"r\"(mask[0]), \"r\"(mask[1]), \"r\"(mask[2]), \"r\"(mask[3]),\n          \"r\"(mask[4]), \"r\"(mask[5]), \"r\"(mask[6]), \"r\"(mask[7]));\n    }"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "types.view.entry",
+      "title": "Dense配置与SM100 Builder选择",
+      "node_ids": [
+        "types.builder_bound",
+        "types.builder_entry",
+        "types.builder_sm100",
+        "types.arch_recipe",
+        "types.schedule_auto"
+      ],
+      "edge_ids": [
+        "types.edge.instantiate_builder",
+        "types.edge.arch_recipe",
+        "types.edge.auto_tag",
+        "types.edge.sm100_specializes_entry",
+        "types.edge.selected_specialization"
+      ]
+    },
+    {
+      "id": "types.view.collective",
+      "title": "存储预算、DispatchPolicy与CollectiveMma",
+      "node_ids": [
+        "types.epilogue_bound",
+        "types.stage_bound",
+        "types.stage_compute",
+        "types.dispatch_bound",
+        "types.builder_sm100",
+        "types.collective_bound",
+        "types.collective_api",
+        "types.tiled_bound"
+      ],
+      "edge_ids": [
+        "types.edge.epilogue_carveout",
+        "types.edge.stage_overload",
+        "types.edge.computed_stages",
+        "types.edge.builder_collective",
+        "types.edge.dispatch_selects_collective",
+        "types.edge.collective_instance",
+        "types.edge.collective_tiled"
+      ]
+    },
+    {
+      "id": "types.view.mma_construction",
+      "title": "Auto选择2-SM操作与TiledMMA／Atom构造",
+      "node_ids": [
+        "types.builder_bound",
+        "types.major_a",
+        "types.major_b",
+        "types.auto_selector",
+        "types.two_sm_selector",
+        "types.wrapper",
+        "types.factory_op",
+        "types.factory_atom",
+        "types.tiled_bound",
+        "types.atom_bound"
+      ],
+      "edge_ids": [
+        "types.edge.major_a_binding",
+        "types.edge.major_b_binding",
+        "types.edge.builder_tiled_selector",
+        "types.edge.auto_chooses_two_sm",
+        "types.edge.fp16_two_sm_op",
+        "types.edge.op_to_factory",
+        "types.edge.factory_wraps_atom",
+        "types.edge.factory_forward",
+        "types.edge.factory_tiled_type",
+        "types.edge.tiled_atom"
+      ]
+    },
+    {
+      "id": "types.view.wrapper",
+      "title": "已选Traits到指令包装：静态调用证据",
+      "node_ids": [
+        "types.atom_bound",
+        "types.atom_impl",
+        "types.traits_bound",
+        "types.wrapper",
+        "types.atom_call",
+        "types.mma_unpack",
+        "types.fma"
+      ],
+      "edge_ids": [
+        "types.edge.atom_traits_impl",
+        "types.edge.atom_traits_type",
+        "types.edge.traits_uses_wrapper",
+        "types.edge.traits_unpack_binding",
+        "types.edge.atom_calls_unpack",
+        "types.edge.unpack_calls_fma"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "types.issue.tensor_callsite_bindings",
+      "status": "not_expanded_in_this_part",
+      "scope": "types.edge.atom_calls_unpack",
+      "message": "该边依据已选Traits定位具体mma_unpack重载；未逐调用点列出TD/TA/TB/TC及其Tensor Layout模板实参。不能把本类型分图当作完整callsite实参对账。",
+      "does_not_invalidate": "已核验的Builder、Collective、TiledMMA、Atom、MMA_Op类型选择与静态设备指令发射。"
+    }
+  ],
+  "compile_evidence": [
+    {
+      "id": "types.compile.snapshot_sm110a",
+      "status": "static_probe_pass",
+      "path": "data/modules/dense_fp16/probe/run-334xibhm/metadata.json",
+      "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+      "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+      "target": "sm_110a",
+      "recipe_arch_tag": "Sm100",
+      "commands": [
+        {
+          "label": "nvcc_ptx",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "--expt-relaxed-constexpr",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "--ptx",
+            "-lineinfo",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/input.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.ptx"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 13.26528493699152,
+          "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_ptx.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_ptx.stderr.txt"
+        },
+        {
+          "label": "nvcc_host_types",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "--expt-relaxed-constexpr",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "-DPROBE_HOST_TYPES",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/input.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/host_types"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 16.490107243007515,
+          "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_host_types.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_host_types.stderr.txt"
+        },
+        {
+          "label": "host_type_dump",
+          "command": [
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/host_types"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 0.0034163309901487082,
+          "stdout": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stderr.txt"
+        },
+        {
+          "label": "ptxas",
+          "command": [
+            "/usr/local/cuda-13.0/bin/ptxas",
+            "-arch=sm_110a",
+            "-v",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.cubin"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 0.20524831299553625,
+          "stdout": "data/modules/dense_fp16/probe/run-334xibhm/ptxas.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-334xibhm/ptxas.stderr.txt"
+        },
+        {
+          "label": "nvdisasm",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvdisasm",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.cubin"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 0.27810848999070004,
+          "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stderr.txt"
+        }
+      ],
+      "artifacts": {
+        "host_compat.hpp": {
+          "sha256": "7cab830cce404efce900fb6636bc2d148d9644d2be93e08da432212dce06df55",
+          "bytes": 551
+        },
+        "host_type_dump.stderr.txt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "host_type_dump.stdout.txt": {
+          "sha256": "f95c7949df0733bce1146496848d3aab3f380d940644e069781c44b8bbdd1b3d",
+          "bytes": 4714
+        },
+        "host_types": {
+          "sha256": "76a1b1c265f16d88bf4ca3f0f7790d479e17ee793de9c49bf5c66e86ca82d9a3",
+          "bytes": 1189576
+        },
+        "input.cu": {
+          "sha256": "7bf51e33bc6e0193ac93f3511d75e0a69d7c7b56a1deb60e3c2ea1cb63387688",
+          "bytes": 6024
+        },
+        "nvcc_host_types.stderr.txt": {
+          "sha256": "3f896c46d366d0b1749a708f84a08e9a9d3e4c0631881186103ce5c26fb71059",
+          "bytes": 3147
+        },
+        "nvcc_host_types.stdout.txt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "nvcc_ptx.stderr.txt": {
+          "sha256": "17cea9a7cd983ee0293231a36f25244bef9abd59aaeec99376024bee63775024",
+          "bytes": 1049
+        },
+        "nvcc_ptx.stdout.txt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "nvdisasm.stderr.txt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        "nvdisasm.stdout.txt": {
+          "sha256": "1074a6dc0bcd347c818b22d9838dcf58140c1d4045222c00adfd4d8f32b732f0",
+          "bytes": 3355766
+        },
+        "probe.cubin": {
+          "sha256": "eef442304bbdf0df9fab9c5e13acb59c895fabd4c4cba31c7886ca65d8d5ddc4",
+          "bytes": 654888
+        },
+        "probe.ptx": {
+          "sha256": "f7849f232850ab902ddba958cd1efff02f74f613d660268f20eb7a917aaa66a2",
+          "bytes": 1160193
+        },
+        "ptxas.stderr.txt": {
+          "sha256": "df034145de208693c19778a3d27b7e535a8e61d591d3d7ab3a3e5519088a63dd",
+          "bytes": 2943
+        },
+        "ptxas.stdout.txt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      },
+      "actual_types": {
+        "Mainloop.Builder": "cutlass::gemm::collective::CollectiveBuilder<cutlass::arch::Sm100, cutlass::arch::OpClassTensorOp, cutlass::half_t, cutlass::layout::RowMajor, 8, cutlass::half_t, cutlass::layout::RowMajor, 8, float, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::gemm::collective::StageCountAutoCarveout<33792>, cutlass::gemm::collective::KernelScheduleAuto, void>",
+        "Mainloop.StagePolicy": "cutlass::gemm::collective::StageCountAutoCarveout<33792>",
+        "Mainloop.DispatchPolicy": "cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>",
+        "Mainloop.FullType": "cutlass::gemm::collective::CollectiveMma<cutlass::gemm::MainloopSm100TmaUmmaWarpSpecialized<8, 2, 4, cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, cutlass::arch::Sm100>, cute::tuple<cute::C<256>, cute::C<128>, cute::C<64> >, cutlass::half_t, cute::tuple<long, cute::C<1>, long>, cutlass::half_t, cute::tuple<cute::C<1>, long, long>, cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, cute::SM100_TMA_2SM_LOAD_MULTICAST, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<8>, cute::C<64> >, cute::tuple<cute::C<64>, cute::C<1> > > >, void, cute::identity, cute::SM100_TMA_2SM_LOAD, cute::ComposedLayout<cute::Swizzle<3, 4, 3>, cute::smem_ptr_flag_bits<16>, cute::Layout<cute::tuple<cute::C<64>, cute::C<8> >, cute::tuple<cute::C<1>, cute::C<64> > > >, void, cute::identity>",
+        "Mainloop.TiledMma": "cute::TiledMMA<cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >, cute::Layout<cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<0>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >",
+        "Mainloop.MMA_Atom": "cute::MMA_Atom<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0> >",
+        "Mainloop.MMA_Op": "cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>",
+        "Mainloop.MMA_Traits": "cute::MMA_Traits<cute::SM100_MMA_F16BF16_2x1SM_SS<cutlass::half_t, cutlass::half_t, float, 256, 128, (cute::UMMA::Major)0, (cute::UMMA::Major)1, (cute::UMMA::ScaleIn)0, (cute::UMMA::ScaleIn)0>>",
+        "Mainloop.AtomShape_MNK": "cute::tuple<cute::C<256>, cute::C<128>, cute::C<16> >",
+        "Kernel.CtaShape_MNK": "cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >",
+        "Kernel.TileScheduler": "cutlass::gemm::kernel::detail::PersistentTileSchedulerSm100<cute::tuple<cute::C<2>, cute::C<2>, cute::C<1> >, 2u>",
+        "Epilogue.FullType": "cutlass::epilogue::collective::CollectiveEpilogue<cutlass::epilogue::Sm100TmaWarpSpecialized<4, 2, 16, true, false>, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cute::tuple<cute::Layout<cute::C<128>, cute::C<1> >, cute::Layout<cute::C<16>, cute::C<1> > >, float, cute::tuple<long, cute::C<1>, long>, float, cute::tuple<long, cute::C<1>, long>, cutlass::epilogue::fusion::FusionCallbacks<cutlass::epilogue::Sm100TmaWarpSpecialized<4, 2, 16, true, false>, cutlass::epilogue::fusion::LinearCombination<float, float, float, float, (cutlass::FloatRoundStyle)2>, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cute::tuple<cute::Layout<cute::C<128>, cute::C<1> >, cute::Layout<cute::C<16>, cute::C<1> > >>, cute::SM100::TMEM::LOAD::SM100_TMEM_LOAD_32dp32b16x, cute::SM90_TMA_LOAD, cute::ComposedLayout<cute::Swizzle<2, 4, 3>, cute::smem_ptr_flag_bits<32>, cute::Layout<cute::tuple<cute::C<8>, cute::C<16> >, cute::tuple<cute::C<16>, cute::C<1> > > >, cute::AutoVectorizingCopyWithAssumedAlignment<128>, cute::SM90_TMA_STORE, cute::ComposedLayout<cute::Swizzle<2, 4, 3>, cute::smem_ptr_flag_bits<32>, cute::Layout<cute::tuple<cute::C<8>, cute::C<16> >, cute::tuple<cute::C<16>, cute::C<1> > > >, cute::AutoVectorizingCopyWithAssumedAlignment<128>, cute::AutoVectorizingCopyWithAssumedAlignment<128> >",
+        "Builder.is_2sm": "1",
+        "Builder.UmmaMajorA": "0",
+        "Builder.UmmaMajorB": "1",
+        "Mainloop.PipelineStages": "8",
+        "Mainloop.SchedulerStages": "2",
+        "Mainloop.AccumulatorStages": "4",
+        "Epilogue.SharedStorage.bytes": "33792",
+        "Kernel.SharedStorage.bytes": "230400"
+      },
+      "device_entry_count": 1,
+      "device_entry_symbol": "_ZN7cutlass13device_kernelINS_4gemm6kernel13GemmUniversalIN4cute5tupleIJiiiiEEENS1_10collective13CollectiveMmaINS1_35MainloopSm100TmaUmmaWarpSpecializedILi8ELi2ELi4ENS5_IJNS4_1CILi2EEESB_NSA_ILi1EEEEEENS_4arch5Sm100EEENS5_IJNSA_ILi256EEENSA_ILi128EEENSA_ILi64EEEEEENS_6half_tENS5_IJlSC_lEEESL_NS5_IJSC_llEEENS4_8TiledMMAINS4_8MMA_AtomIJNS4_26SM100_MMA_F16BF16_2x1SM_SSISL_SL_fLi256ELi128ELNS4_4UMMA5MajorE0ELSS_1ELNSR_7ScaleInE0ELST_0EEEEEENS4_6LayoutINS5_IJSC_SC_SC_EEENS5_IJNSA_ILi0EEESY_SY_EEEEENS5_IJNS4_10UnderscoreES11_S11_EEEEENS4_28SM100_TMA_2SM_LOAD_MULTICASTENS4_14ComposedLayoutINS4_7SwizzleILi3ELi4ELi3EEENS4_18smem_ptr_flag_bitsILi16EEENSW_INS5_IJNSA_ILi8EEESJ_EEENS5_IJSJ_SC_EEEEEEEvNS4_8identityENS4_18SM100_TMA_2SM_LOADENS15_IS17_S19_NSW_INS5_IJSJ_S1A_EEENS5_IJSC_SJ_EEEEEEEvS1F_EENS_8epilogue10collective18CollectiveEpilogueINS1M_23Sm100TmaWarpSpecializedILi4ELi2ELi16ELb1ELb0EEEJNS5_IJSI_SI_SJ_EEENS5_IJNSW_ISI_SC_EENSW_INSA_ILi16EEESC_EEEEEfSM_fSM_NS1M_6fusion15FusionCallbacksIS1Q_NS1W_17LinearCombinationIffffLNS_15FloatRoundStyleE2EEES1R_S1V_JEEENS4_5SM1004TMEM4LOAD26SM100_TMEM_LOAD_32dp32b16xENS4_13SM90_TMA_LOADENS15_INS16_ILi2ELi4ELi3EEENS18_ILi32EEENSW_INS5_IJS1A_S1T_EEENS5_IJS1T_SC_EEEEEEENS4_39AutoVectorizingCopyWithAssumedAlignmentILi128EEENS4_14SM90_TMA_STOREES2C_S2E_S2E_EEEvvEEEEvNT_6ParamsE",
+      "entry_body_byte_range": [
+        10758,
+        262833
+      ],
+      "instruction_count_interpretation": "Four static instruction sites inside the one emitted entry; this is not a count of runtime GEMM instructions.",
+      "old_type_log_comparison": {
+        "Epilogue.FullType": true,
+        "Epilogue.SharedStorage.bytes": true,
+        "Kernel.CtaShape_MNK": true,
+        "Kernel.SharedStorage.bytes": true,
+        "Kernel.TileScheduler": true,
+        "Mainloop.DispatchPolicy": true,
+        "Mainloop.FullType": true,
+        "Mainloop.MMA_Op": true,
+        "Mainloop.TiledMma": true
+      },
+      "ptx_mma_sites": [
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+          "start_line": 2740,
+          "end_line": 2740,
+          "quote": "\ttcgen05.mma.cta_group::2.kind::f16 [%r167], %rd120, %rd121, %r1433, {%r1442, %r1442, %r1442, %r1442, %r1442, %r1442, %r1442, %r1442}, p; "
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+          "start_line": 2785,
+          "end_line": 2785,
+          "quote": "\ttcgen05.mma.cta_group::2.kind::f16 [%r167], %rd122, %rd123, %r1450, {%r1459, %r1459, %r1459, %r1459, %r1459, %r1459, %r1459, %r1459}, p; "
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+          "start_line": 2824,
+          "end_line": 2824,
+          "quote": "\ttcgen05.mma.cta_group::2.kind::f16 [%r167], %rd124, %rd125, %r1469, {%r1478, %r1478, %r1478, %r1478, %r1478, %r1478, %r1478, %r1478}, p; "
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+          "start_line": 2863,
+          "end_line": 2863,
+          "quote": "\ttcgen05.mma.cta_group::2.kind::f16 [%r167], %rd126, %rd127, %r1488, {%r1497, %r1497, %r1497, %r1497, %r1497, %r1497, %r1497, %r1497}, p; "
+        }
+      ],
+      "sass_mma_sites": [
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+          "start_line": 28996,
+          "end_line": 28996,
+          "quote": "        /*3fe0*/                   UTCHMMA.2CTA gdesc[UR4], gdesc[UR6], tmem[UR11], tmem[UR40], idesc[UR41], UP2 ;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+          "start_line": 29000,
+          "end_line": 29000,
+          "quote": "        /*4020*/                   UTCHMMA.2CTA gdesc[UR18], gdesc[UR20], tmem[UR11], tmem[UR38], idesc[UR39], UPT ;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+          "start_line": 29004,
+          "end_line": 29004,
+          "quote": "        /*4060*/                   UTCHMMA.2CTA gdesc[UR14], gdesc[UR16], tmem[UR11], tmem[UR36], idesc[UR37], UPT ;"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+          "start_line": 29005,
+          "end_line": 29005,
+          "quote": "        /*4070*/                   UTCHMMA.2CTA gdesc[UR8], gdesc[UR12], tmem[UR11], tmem[UR34], idesc[UR35], UPT ;"
+        }
+      ],
+      "architecture_evidence": [
+        {
+          "path": "include/cutlass/arch/config.h",
+          "start_line": 131,
+          "end_line": 147,
+          "quote": "// SM110 and SM110a only on 13.0 and above\n#if !CUTLASS_CLANG_CUDA && (__CUDACC_VER_MAJOR__ > 13 || (__CUDACC_VER_MAJOR__ == 13 && __CUDACC_VER_MINOR__ >= 0))\n  #define CUTLASS_ARCH_MMA_SM110_SUPPORTED 1\n  #if (!defined(CUTLASS_ARCH_MMA_SM110_ENABLED) && defined(__CUDA_ARCH__) && __CUDA_ARCH__ == 1100)\n    #define CUTLASS_ARCH_MMA_SM110_ENABLED 1\n\n    #if (!defined(CUTLASS_ARCH_MMA_SM110A_ENABLED) && defined(__CUDA_ARCH_FEAT_SM110_ALL))\n      #define CUTLASS_ARCH_MMA_SM110A_ENABLED 1\n    #endif\n\n    // SM110f\n    #if (__CUDACC_VER_MAJOR__ > 13 || (__CUDACC_VER_MAJOR__ == 13 && __CUDACC_VER_MINOR__ >= 0))\n    #define CUTLASS_ARCH_MMA_SM110F_SUPPORTED 1\n    #endif\n\n    #if (!defined(CUTLASS_ARCH_MMA_SM110F_ENABLED) && CUDA_ARCH_FAMILY(1100))\n      #define CUTLASS_ARCH_MMA_SM110F_ENABLED CUTLASS_ARCH_MMA_SM110F_SUPPORTED"
+        },
+        {
+          "path": "include/cute/arch/config.hpp",
+          "start_line": 100,
+          "end_line": 113,
+          "quote": "// SM110 specific configs\n#if (defined(CUTLASS_ARCH_MMA_SM110A_ENABLED) || defined(CUTLASS_ARCH_MMA_SM110F_ENABLED))\n#  define CUTE_ARCH_TMA_SM90_ENABLED\n#  define CUTE_ARCH_DEVICE_MODIFIABLE_TMA_SM90_ENABLED\n#  define CUTE_ARCH_STSM_SM90_ENABLED\n#  define CUTE_ARCH_TCGEN05_TF32_MMA_ENABLED\n#  define CUTE_ARCH_TCGEN05_F16F32_MMA_ENABLED\n#  define CUTE_ARCH_TCGEN05_MXF8F6F4_MMA_ENABLED\n#  define CUTE_ARCH_TCGEN05_MXF4_MMA_ENABLED\n#  define CUTE_ARCH_TCGEN05_MXF4NVF4_MMA_ENABLED\n#  define CUTE_ARCH_TCGEN05_S8_MMA_ENABLED\n#  define CUTE_ARCH_LDSM_SM100A_ENABLED\n#  define CUTE_ARCH_STSM_SM100A_ENABLED\n#  define CUTE_ARCH_TCGEN05_TMEM_ENABLED"
+        },
+        {
+          "path": "data/modules/dense_fp16/probe/dense_type_probe.cu",
+          "start_line": 67,
+          "end_line": 73,
+          "quote": "#if defined(__CUDA_ARCH__) && !defined(PROBE_HOST_TYPES)\n#if __CUDA_ARCH__ != 1100\n#error This probe is specifically compiled for the sm_110a binary target.\n#endif\n#if !defined(CUTLASS_ARCH_MMA_SM110A_ENABLED) || !defined(CUTE_ARCH_TCGEN05_F16F32_MMA_ENABLED)\n#error The original snapshot architecture configuration must enable the real F16 TCGen05 branch.\n#endif"
+        }
+      ],
+      "host_type_execution": "Only the PROBE_HOST_TYPES main was run; it prints typeid/sizeof and invokes no launch anchor or CUDA API.",
+      "runtime_gpu_launched": false,
+      "bounds": "Static type selection, device emission, PTXAS and SASS only. Launch legality, synchronization, numeric correctness and performance were not tested.",
+      "host_compatibility": {
+        "flags": [
+          "-Xcompiler -U_GNU_SOURCE",
+          "-D_DEFAULT_SOURCE=1",
+          "-D_POSIX_C_SOURCE=200809L",
+          "--expt-relaxed-constexpr"
+        ],
+        "probe_local_shim": "data/modules/dense_fp16/probe/host_compat.hpp",
+        "shim_sha256": "7cab830cce404efce900fb6636bc2d148d9644d2be93e08da432212dce06df55",
+        "meaning": "Only optional libstdc++ GNU pthread clockwait/clocklock overload paths are disabled for this Host header compatibility check; snapshot/system headers are unchanged."
+      }
+    },
+    {
+      "id": "types.compile.run-fqjcmaf1",
+      "status": "incomplete_or_failed_probe_preserved",
+      "path": "data/modules/dense_fp16/probe/run-fqjcmaf1/metadata.json",
+      "commands": [
+        {
+          "label": "nvcc_ptx",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "--ptx",
+            "-lineinfo",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-fqjcmaf1/probe.ptx"
+          ],
+          "returncode": 1,
+          "elapsed_seconds": 10.450915652007097,
+          "stdout": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_ptx.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_ptx.stderr.txt"
+        },
+        {
+          "label": "nvcc_host_types",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "-DPROBE_HOST_TYPES",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-fqjcmaf1/host_types"
+          ],
+          "returncode": 2,
+          "elapsed_seconds": 4.109748301998479,
+          "stdout": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_host_types.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-fqjcmaf1/nvcc_host_types.stderr.txt"
+        }
+      ],
+      "reason": "Host pthread clockwait/clocklock declarations were hidden after the GNU_SOURCE workaround.",
+      "runtime_gpu_launched": false,
+      "archived_source_path": "data/modules/dense_fp16/probe/run-fqjcmaf1/input.cu",
+      "archived_source_sha256": "da9eb7d6cf1adfc0e700d1cf05482fc1894c962fda713799004df29464efa9df"
+    },
+    {
+      "id": "types.compile.run-topnb8e3",
+      "status": "incomplete_or_failed_probe_preserved",
+      "path": "data/modules/dense_fp16/probe/run-topnb8e3/metadata.json",
+      "commands": [
+        {
+          "label": "nvcc_ptx",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "--expt-relaxed-constexpr",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "--ptx",
+            "-lineinfo",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-topnb8e3/probe.ptx"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 13.36137102599605,
+          "stdout": "data/modules/dense_fp16/probe/run-topnb8e3/nvcc_ptx.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-topnb8e3/nvcc_ptx.stderr.txt"
+        },
+        {
+          "label": "nvcc_host_types",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvcc",
+            "-std=c++17",
+            "--expt-relaxed-constexpr",
+            "-ccbin",
+            "/usr/bin/g++-14",
+            "-Xcompiler",
+            "-U_GNU_SOURCE",
+            "-D_DEFAULT_SOURCE=1",
+            "-D_POSIX_C_SOURCE=200809L",
+            "-I",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+            "-arch=sm_110a",
+            "-DPROBE_HOST_TYPES",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/dense_type_probe.cu",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-topnb8e3/host_types"
+          ],
+          "returncode": 1,
+          "elapsed_seconds": 6.045743869995931,
+          "stdout": "data/modules/dense_fp16/probe/run-topnb8e3/nvcc_host_types.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-topnb8e3/nvcc_host_types.stderr.txt"
+        },
+        {
+          "label": "ptxas",
+          "command": [
+            "/usr/local/cuda-13.0/bin/ptxas",
+            "-arch=sm_110a",
+            "-v",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-topnb8e3/probe.ptx",
+            "-o",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-topnb8e3/probe.cubin"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 0.22472196197486483,
+          "stdout": "data/modules/dense_fp16/probe/run-topnb8e3/ptxas.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-topnb8e3/ptxas.stderr.txt"
+        },
+        {
+          "label": "nvdisasm",
+          "command": [
+            "/usr/local/cuda-13.0/bin/nvdisasm",
+            "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-topnb8e3/probe.cubin"
+          ],
+          "returncode": 0,
+          "elapsed_seconds": 0.27890549099538475,
+          "stdout": "data/modules/dense_fp16/probe/run-topnb8e3/nvdisasm.stdout.txt",
+          "stderr": "data/modules/dense_fp16/probe/run-topnb8e3/nvdisasm.stderr.txt"
+        }
+      ],
+      "reason": "Device PTX/PTXAS/SASS succeeded, but the Host-type branch incorrectly applied the probe device-feature guard. Metadata also used an overly narrow visible-entry regex; this run remains an incomplete probe.",
+      "runtime_gpu_launched": false,
+      "archived_source_path": "data/modules/dense_fp16/probe/run-topnb8e3/input.cu",
+      "archived_source_sha256": "f0dcf92cbfaf7c5d2fb4e4609e58e8aa63feccbc5369be0ae547315b39cba1a1"
+    }
+  ],
+  "provenance": {
+    "baseline_verification": {
+      "manifest_path": "02_cutlass_and_gemm/exemples/verification/results/manifest.json",
+      "manifest_sha256": "e603521fbaca0e9833f9c02a055ff448a9db4c2371890260a9340e2f874158fe",
+      "baseline_hash_matches": true,
+      "commit_matches": true,
+      "prior_nvcc": "13.0.48",
+      "prior_types_sha256": "2089eb56f190bebf8f9f1d89817ee8cb3085bdfadee3046f2e67e8bc0253d99b"
+    },
+    "builder_script_sha256": "792e85f093ccaa18808f4fc769118fbccbb4d2d9054f6d096ce419d002af1605",
+    "baseline_sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217",
+    "source_paths_are_snapshot_include_relative": true,
+    "api_node_policy": "Every API node identifies one declaration/overload or one specialization using its original path and line; complete signatures are joined by the atlas root."
+  }
+}

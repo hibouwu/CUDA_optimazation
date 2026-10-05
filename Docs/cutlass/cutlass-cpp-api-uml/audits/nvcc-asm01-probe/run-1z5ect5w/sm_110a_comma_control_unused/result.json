@@ -1,0 +1,73 @@
+{
+  "case": "sm_110a_comma_control_unused",
+  "target": "sm_110a",
+  "variant": "comma_control",
+  "forced_device_use": false,
+  "stages": [
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_EXPECT_ARCH=1100",
+        "--ptx",
+        "--keep",
+        "--keep-dir",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/keep",
+        "-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/comma_control.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/probe.ptx"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvcc_ptx.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvcc_ptx.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_EXPECT_ARCH=1100",
+        "--cubin",
+        "-Xptxas=-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/comma_control.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/probe.cubin"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvcc_cubin.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvcc_cubin.stderr.txt"
+    },
+    {
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvdisasm",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/probe.cubin"
+      ],
+      "returncode": 0,
+      "stdout_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvdisasm.stdout.txt",
+      "stderr_file": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/audits/nvcc-asm01-probe/run-1z5ect5w/sm_110a_comma_control_unused/nvdisasm.stderr.txt"
+    }
+  ],
+  "ptx_instruction_count": 0,
+  "ptx_instructions": [],
+  "ptx_sha256": "43ef3bd63ceed5adf42bfbde53908370a9a812a38c10d2dea3a650d2e05979ed",
+  "cubin_sha256": "8f9aefb8933d9936638513c08e56fbd740131beb455ccbcf50e3f95c3d819ce8",
+  "sass_UTCCP_lines": []
+}

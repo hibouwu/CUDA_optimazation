@@ -1,0 +1,18 @@
+{
+  "retrieved_on": "2026-09-21",
+  "arxiv_version": "2512.22219v2",
+  "sources": [
+    {
+      "url": "https://arxiv.org/pdf/2512.22219v2",
+      "file": "2512.22219v2.pdf",
+      "sha256": "0069c67600b194c4a935110889df803dd0ff8ca8caebc324ef6e13aeaa4da4cb",
+      "bytes": 829938
+    },
+    {
+      "url": "https://arxiv.org/html/2512.22219v2",
+      "file": "2512.22219v2.html",
+      "sha256": "de9cd1cdd15018a5a1a2deddff9df2ba367e5606fd7685dbf10836773fe8dae2",
+      "bytes": 294926
+    }
+  ]
+}

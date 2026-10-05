@@ -1,0 +1,6 @@
+ptxas info    : 0 bytes gmem
+ptxas info    : Compiling entry function 'asm01_emit_all' for 'sm_100a'
+ptxas info    : Function properties for asm01_emit_all
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, used 0 barriers
+ptxas info    : Compile time = 13.126 ms

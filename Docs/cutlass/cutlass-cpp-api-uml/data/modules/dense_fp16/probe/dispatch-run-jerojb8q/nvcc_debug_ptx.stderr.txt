@@ -1,0 +1,14 @@
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __device__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                             ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include/cutlass/gemm/kernel/sm100_static_tile_scheduler.hpp(53): warning #20012-D: __host__ annotation is ignored on a non-virtual function("StaticPersistentTileScheduler100") that is explicitly defaulted on its first declaration
+    __inline__ __attribute__((always_inline)) __attribute__((device)) __attribute__((host))
+                                                                                     ^
+
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/input.cu(113): warning #940-D: missing return statement at end of non-void function "prior_dense_type_main_not_called"
+  }
+  ^
+

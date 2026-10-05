@@ -1,0 +1,192 @@
+{
+  "snapshot_commit": "8f50b052e1099fb982392a622caab69b97b63128",
+  "snapshot_scope_sha256": "2b8a0094ff40dcd0a47c4da64e309fda8af98dc1ecdeb9b28a6e8a8692c2970f",
+  "all_snapshot_file_hashes_verified": 824,
+  "baseline": {
+    "path": "02_cutlass_and_gemm/exemples/dense_baseline.cu",
+    "sha256": "66f6dfc529bb9e66a1f5bd28acddc95adc4aa903169e851b65601dd3b457e217"
+  },
+  "prior_evidence": {
+    "manifest_path": "02_cutlass_and_gemm/exemples/verification/results/manifest.json",
+    "manifest_sha256": "e603521fbaca0e9833f9c02a055ff448a9db4c2371890260a9340e2f874158fe",
+    "baseline_hash_matches": true,
+    "commit_matches": true,
+    "prior_nvcc": "13.0.48",
+    "prior_types_sha256": "2089eb56f190bebf8f9f1d89817ee8cb3085bdfadee3046f2e67e8bc0253d99b"
+  },
+  "probe_source_sha256": "7bf51e33bc6e0193ac93f3511d75e0a69d7c7b56a1deb60e3c2ea1cb63387688",
+  "runner_sha256": "bddcc0190224847efb37c2b83d2b2b8b3a5b46aa75930876366002d33e612726",
+  "host_compatibility_shim_sha256": "7cab830cce404efce900fb6636bc2d148d9644d2be93e08da432212dce06df55",
+  "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:58:59_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0\n",
+  "host_compiler_version": "g++-14 (GCC) 14.4.1 20260724 (Red Hat 14.4.1-2)\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "target": "sm_110a",
+  "recipe_arch_tag": "cutlass::arch::Sm100",
+  "runtime_gpu_launched": false,
+  "runtime_validation": "not performed",
+  "host_type_printer_only": true,
+  "commands": [
+    {
+      "label": "nvcc_ptx",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "--expt-relaxed-constexpr",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "--ptx",
+        "-lineinfo",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/input.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.ptx"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 13.26528493699152,
+      "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_ptx.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_ptx.stderr.txt"
+    },
+    {
+      "label": "nvcc_host_types",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvcc",
+        "-std=c++17",
+        "--expt-relaxed-constexpr",
+        "-ccbin",
+        "/usr/bin/g++-14",
+        "-Xcompiler",
+        "-U_GNU_SOURCE",
+        "-D_DEFAULT_SOURCE=1",
+        "-D_POSIX_C_SOURCE=200809L",
+        "-I",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/snapshot/include",
+        "-arch=sm_110a",
+        "-DPROBE_HOST_TYPES",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/input.cu",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/host_types"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 16.490107243007515,
+      "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_host_types.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvcc_host_types.stderr.txt"
+    },
+    {
+      "label": "host_type_dump",
+      "command": [
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/host_types"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.0034163309901487082,
+      "stdout": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-334xibhm/host_type_dump.stderr.txt"
+    },
+    {
+      "label": "ptxas",
+      "command": [
+        "/usr/local/cuda-13.0/bin/ptxas",
+        "-arch=sm_110a",
+        "-v",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.ptx",
+        "-o",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.cubin"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.20524831299553625,
+      "stdout": "data/modules/dense_fp16/probe/run-334xibhm/ptxas.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-334xibhm/ptxas.stderr.txt"
+    },
+    {
+      "label": "nvdisasm",
+      "command": [
+        "/usr/local/cuda-13.0/bin/nvdisasm",
+        "/home/jianyeshi/Note/CUDA/CUDA_optimazation/Docs/cutlass/cutlass-cpp-api-uml/data/modules/dense_fp16/probe/run-334xibhm/probe.cubin"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.27810848999070004,
+      "stdout": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stdout.txt",
+      "stderr": "data/modules/dense_fp16/probe/run-334xibhm/nvdisasm.stderr.txt"
+    }
+  ],
+  "artifacts": {
+    "host_compat.hpp": {
+      "sha256": "7cab830cce404efce900fb6636bc2d148d9644d2be93e08da432212dce06df55",
+      "bytes": 551
+    },
+    "host_type_dump.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "host_type_dump.stdout.txt": {
+      "sha256": "f95c7949df0733bce1146496848d3aab3f380d940644e069781c44b8bbdd1b3d",
+      "bytes": 4714
+    },
+    "host_types": {
+      "sha256": "76a1b1c265f16d88bf4ca3f0f7790d479e17ee793de9c49bf5c66e86ca82d9a3",
+      "bytes": 1189576
+    },
+    "input.cu": {
+      "sha256": "7bf51e33bc6e0193ac93f3511d75e0a69d7c7b56a1deb60e3c2ea1cb63387688",
+      "bytes": 6024
+    },
+    "nvcc_host_types.stderr.txt": {
+      "sha256": "3f896c46d366d0b1749a708f84a08e9a9d3e4c0631881186103ce5c26fb71059",
+      "bytes": 3147
+    },
+    "nvcc_host_types.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "nvcc_ptx.stderr.txt": {
+      "sha256": "17cea9a7cd983ee0293231a36f25244bef9abd59aaeec99376024bee63775024",
+      "bytes": 1049
+    },
+    "nvcc_ptx.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "nvdisasm.stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "nvdisasm.stdout.txt": {
+      "sha256": "1074a6dc0bcd347c818b22d9838dcf58140c1d4045222c00adfd4d8f32b732f0",
+      "bytes": 3355766
+    },
+    "probe.cubin": {
+      "sha256": "eef442304bbdf0df9fab9c5e13acb59c895fabd4c4cba31c7886ca65d8d5ddc4",
+      "bytes": 654888
+    },
+    "probe.ptx": {
+      "sha256": "f7849f232850ab902ddba958cd1efff02f74f613d660268f20eb7a917aaa66a2",
+      "bytes": 1160193
+    },
+    "ptxas.stderr.txt": {
+      "sha256": "df034145de208693c19778a3d27b7e535a8e61d591d3d7ab3a3e5519088a63dd",
+      "bytes": 2943
+    },
+    "ptxas.stdout.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "static_observations": {
+    "device_entry_count": 1,
+    "target_directives": [
+      ".target sm_110a"
+    ],
+    "mma_f16_cta_group_2_count": 4,
+    "sass_mma_lines": [
+      "/*3fe0*/                   UTCHMMA.2CTA gdesc[UR4], gdesc[UR6], tmem[UR11], tmem[UR40], idesc[UR41], UP2 ;",
+      "/*4020*/                   UTCHMMA.2CTA gdesc[UR18], gdesc[UR20], tmem[UR11], tmem[UR38], idesc[UR39], UPT ;",
+      "/*4060*/                   UTCHMMA.2CTA gdesc[UR14], gdesc[UR16], tmem[UR11], tmem[UR36], idesc[UR37], UPT ;",
+      "/*4070*/                   UTCHMMA.2CTA gdesc[UR8], gdesc[UR12], tmem[UR11], tmem[UR34], idesc[UR35], UPT ;"
+    ]
+  },
+  "status": "static_probe_pass"
+}

@@ -8,7 +8,7 @@
 
 - [dense_baseline.cu](dense_baseline.cu)：第五章的完整基线。FP16 A/B、FP32 累加与 C/D，全 RowMajor，问题为 `(256,256,128,1)`。
 - [nvfp4_block_scaled.cu](nvfp4_block_scaled.cu)：从有限的原始浮点输入开始，在 CPU 上确定 Tensor Scale、逐块 UE4M3 Scale 和 E2M1 Payload；用 HostTensor 的子字节访问写入 packed FP4，再按 Kernel 的 SFA/SFB Layout 填充 Scale。采用 Example 72a 的 Tile/Cluster、NVFP4 A/B 和 BF16 C/D，问题为 `(256,1024,256,1)`。独立比较量化输入的 GEMM 结果，同时报告输入和输出的量化误差。全零张量/块有明确约定；非零 Scale 下溢时报告错误，不将下溢当作合法的零 Scale。
-- [grouped_gemm.cu](grouped_gemm.cu)：使用正文三组 `(128,512,128)`、`(256,256,128)`、`(64,768,256)` 问题，共七个输出 Tile。采用 Example 75 的 E4M3 A/B、FP16 C/D 和 1SM Pointer-array 配置，演示不同 Shape、地址和 Stride 数组及动态 Cluster，并逐组验证。矩阵集中分配，但各组仍有独立描述。
+- [grouped_gemm.cu](grouped_gemm.cu)：使用正文三组 `(128,512,128)`、`(256,256,128)`、`(64,768,256)` 问题，共七个包含有效输出的 Tile；Cluster 调度还会对工作范围取整，该数不等于启动 CTA 数。采用 Example 75 的 E4M3 A/B、FP16 C/D 和 1SM Pointer-array 配置，演示不同 Shape、地址和 Stride 数组及动态 Cluster，并逐组验证。矩阵集中分配，但各组仍有独立描述。
 - [moe_expert_gemm.cu](moe_expert_gemm.cu)：采用 Example 92 的 `MoEProblemShape` 与最大槽位寻址，三个 Expert 的实际 Token 数为 `8、17、32`，最大槽位容量为 32，输入/输出特征数均为 128。提供固定 Top-1 路由，展示 Token 聚集、单次 Expert GEMM 和按原 Token 顺序恢复。参考读取聚集前的数据与路由记录。它不包含 Router 网络、Top-k 加权合并或完整 Expert FFN。
 - [attention_unfused.cu](attention_unfused.cu)：对应第六章的分离式 Attention。单 Batch、单 Head，`S_q=S_k=256`、`d=128`、`d_v=256`；Q/K/V 为 FP16，分数、累加和输出为 FP32。两次 Tensor Core GEMM 之间用独立 CUDA Kernel 执行因果 Mask 与 Softmax，并显式将 P 转为 FP16。参考也计入这一步转换，分别检查 QK、概率和 PV/端到端结果。Softmax 每个线程处理一行，便于理解，不是高性能实现。由于 Q/K 等长，这里采用 `j<=i` 的因果条件，不涵盖不等长序列、全 Mask 行或 GQA。正文后续的在线 Softmax、Correction 与专用 Mixed-input 融合 Kernel 不在此文件中实现。
 
@@ -61,3 +61,9 @@ printf '示例程序目录：%s\n' "$EXAMPLE_BUILD_DIR"
 - 数值验证结果：`dense_baseline` PASS（max_abs_error=0）；`nvfp4_block_scaled` PASS（max_abs_error=0，量化误差另报 input_mse_a≈0.0132、input_mse_b≈0.0121、output_quantization_mse≈6.30）；`grouped_gemm` 三组全部 PASS（max_abs_error=0）；`moe_expert_gemm` 三个 Expert（tokens=8/17/32）与 top1_restore 全部 PASS（max_abs_error=0）；`attention_unfused` 的 QK/softmax_fp16/PV 端到端全部 PASS（最大误差 ≤ 3.8e-06）。
 - 早前一轮（RTX 5070 Laptop，计算能力 12.0）加载 `sm_110a` CUBIN 返回 `CUDA_ERROR_NO_BINARY_FOR_GPU`（209）、程序退出码为 `2` 的失败，属于设备代码与 GPU 架构不匹配，在 Thor 实机上不复现。
 - NVFP4 的 CPU 量化函数此前已通过不使用 GPU 的检查，覆盖已知量化值、packed FP4 读写、Scale 布局、全零输入、非有限输入拒绝与 Scale 下溢拒绝；本轮在 GPU 上进一步取得了 NVFP4 GEMM 数值验证通过。
+
+## Auto 与实际生成类型（2026-09-08，静态编译）
+
+五份完整程序中的六套 GEMM 类型已在固定 CUTLASS 版本、CUDA 13.0.48 与 Ubuntu 24.04/GCC 13.3 环境完成编译、PTXAS 汇编和链接。通过包含原示例的 Host 类型检查程序，读取实际 Mainloop/Epilogue Policy、MMA、CTA Tile、Epilogue Tile 和 Tile Scheduler，并核对生成的 PTX/SASS。Dense、NVFP4、Grouped、MoE 的输入缓冲级数分别为 8、3、3、12，Attention 的 QKᵀ/PV 均为 8。
+
+本轮没有启动 GPU Kernel，与上一节的 Thor 数值验证分开记录。完整结果、证据和复现方法见 [Auto 编译核对记录](verification/auto_compile_report.md)。
