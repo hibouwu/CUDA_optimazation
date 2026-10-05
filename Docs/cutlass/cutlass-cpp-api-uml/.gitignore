@@ -7,3 +7,11 @@ site/
 !data/**
 !audits/
 !audits/**
+
+# 超过 GitHub 普通 Git 文件大小限制的本地数据与审计快照
+/data/candidate-mapping.json
+/data/candidates.json
+/data/declarations.json
+/audits/declarations-before-alignment-repair.json
+/audits/declarations-before-array-metadata.json
+/audits/declarations-before-scope-repair.json

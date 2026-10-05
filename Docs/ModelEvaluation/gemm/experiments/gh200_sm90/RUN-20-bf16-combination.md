@@ -10,7 +10,7 @@
 
 ## 一次运行
 
-已有 device 实现和 host-v2 候选，先在 CPU 分配完成真实 `sm_90a` 编译、链接、SASS/资源检查并修复发现的错误，不占 GPU 分配开发。随后一次 GPU 作业内连续完成全部短验证、自身校准、预热和正式采样。
+device 实现和 host-v2 已在 ARM CPU 作业734280完成真实 `sm_90a` 编译、链接、PTX/SASS导出，并通过[独立静态审查](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-v1/review/review.json)。后续准备完整实际短验证与正式入口，再在一次 GPU 作业内连续执行。
 
 每个 stage 的依赖必须闭合：TMA expect_tx/arrive token → acquire 输入就绪 → proxy fence/CTA 发布 → WGMMA fence/commit/wait0 → 消费者离开 → 下一 tile 复用。最后所有请求和使用者排空。脚本不能只凭最终 C 数值正确跳过生命周期检查。
 
@@ -20,7 +20,9 @@
 
 ## 当前需要补的代码与交付
 
-host-v2 源码已通过[当前独立源码审查](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/reviews/S20-host-target-compile-source-B-v2.json)，尚无该版本目标编译或 GPU 结果。旧 host README 的待审标签保留为历史版本，当前资格以这份签录为准。需要完成目标编译、实际短证据、关闭 trace 的正式采样及报告；不能把 CPU 全值模型当作 GPU 正确性。
+host-v2 源码已通过[独立源码审查](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/reviews/S20-host-target-compile-source-B-v2.json)，实际目标编译和静态代码也已通过上述审查。旧 host README 的待审标签保留为历史版本，当前资格以签录为准。仍需实际短证据、正式采样及报告；当前参数只接受1/3次短检查，尚无GPU数值或性能结果。
+
+实际编译只有一个运行时选择mode/stage的 `s20_pipeline_v1`。每线程128寄存器、静态SMEM1024B，加固定动态请求65568B，共66592B；stack/local/spill为零。四条M64N64K16 WGMMA在PTX中保留，SASS对应四条HGMMA。静态资源和编码不替代实际驻留、fragment映射、guard或缓冲生命周期验证。
 
 原实现与计量见[原 S20 约定](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/CONTRACT.md)，[host-v2](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/README.md)为准确候选入口。
 

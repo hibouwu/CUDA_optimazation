@@ -33,6 +33,8 @@ S09 完成15个 SMEM scalar/vector、stride、广播和独立读写配置，见[
 
 ## 参数覆盖状态
 
+S15 的 TMA 二维搬运第一组已有56条合格条件观测，见[正式结果与真实手算](../../experiments/gh200_sm90/EXP-15-tma-2d-results-v1.md)及[条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/published-first56-v1/qualified-parameters.json)。包括34个单CTA和22个全GPU非padding配置；剩余12个全GPU padding点待测。沿用各点的payload、行跨度、SW128/none、N、实际CTA数与完成边界；G2S计时后的两份tile导出不加入运输量。当前合格条件观测共434条，完整家族仍为11个，S15部分交付。
+
 当前范围为单 GPU 的 Single GEMM；Batched / Grouped 暂不考虑，Distributed 暂不实现。cluster / DSM 属于单 GPU 内部路径，按方案需要使用。
 
 - [L0](L0.md)：已补 local、矩阵搬运、warp 交换、辅助及原子操作路径，明确异步分组与完成条件，并引用 7 个代表计算配置的条件化复测值。

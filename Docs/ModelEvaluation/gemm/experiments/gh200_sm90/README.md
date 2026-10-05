@@ -6,6 +6,7 @@
 
 - [PLAN.md](PLAN.md)：唯一完整计划，统一目标、S00–S22 范围、执行与测量规则及交付标准。
 - [剩余六个实验的批量方案](RUN-REMAINING.md)：逐实验固定配置、已有结果、一次运行的顺序、入口缺项与最终输出；后续按家族连续执行。
+- [TMA 二维搬运第一组正式结果](EXP-15-tma-2d-results-v1.md)：56 配置、560 正式样本已通过独立数据 C 与发布复审，表、两图、真实手算及[合格条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/published-first56-v1/qualified-parameters.json)已发布。覆盖34单CTA与22全GPU非padding配置；剩余12点未完成。已有11完整家族378条加本组56条，共434条条件观测，S15仍为部分交付。
 - [GUIDE.md](GUIDE.md)：阅读归档、手算一条真实预检结果及离线重放。
 - [COVERAGE.md](COVERAGE.md)：冻结的资源覆盖范围。
 - [六类条件化参数的使用与真实 raw 手算](EXP-21-parameter-usage.draft.md)：279 条观测已通过独立发布桥接审查，10 个排除项保留。原四份导出和教学文档保留受审前的 draft / 候选标签；当前资格见 [发布桥接 B](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S21-publication-bridge-B-review.json)。[参数文件](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-parameter-export-B/all-six-draft-r4/parameters.json)、[排除项](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-parameter-export-B/all-six-draft-r4/excluded.json)与[来源封套](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-publication-bridge-v1/envelope.json)共同使用；只适用于记录中的单位、工作量、完成边界和设备条件，不是硬件峰值或完整 GEMM 预测。
