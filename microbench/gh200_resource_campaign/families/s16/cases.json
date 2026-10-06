@@ -1,0 +1,1408 @@
+{
+  "cases": [
+    {
+      "id": "gmem_to_smem_16kib_s1_r1_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 16384,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 16424,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s1_r1_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 16384,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 16424,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r1_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 16384,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 16424,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r1_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 16384,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 16424,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s1_r2_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 32808,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s1_r2_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 32808,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r2_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 32808,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r2_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 32808,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s1_r4_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 65576,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s1_r4_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 65576,
+      "mbarrier_objects": 1,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 1,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r4_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 65576,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s1_r4_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 1,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 40,
+      "dynamic_smem_bytes": 65576,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 1,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r1_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 32816,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r1_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 32816,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r1_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 32816,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r1_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 32768,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 32816,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r2_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 65584,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r2_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 65584,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r2_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 65584,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r2_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 65584,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r4_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 131120,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s2_r4_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 131120,
+      "mbarrier_objects": 2,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 2,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r4_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 131120,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s2_r4_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 2,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 48,
+      "dynamic_smem_bytes": 131120,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 2,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r1_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 65600,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r1_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 65600,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r1_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 65600,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r1_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 1,
+      "payload_smem_bytes": 65536,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 65600,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 1,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r2_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 131136,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r2_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 131136,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r2_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 131136,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r2_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 2,
+      "payload_smem_bytes": 131072,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 131136,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "necessary_smem_bound_only",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 2,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r4_one_cta",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 262144,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 262208,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "reject_before_launch",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "gmem_to_smem_16kib_s4_r4_all_gpu",
+      "stage": "S16",
+      "direction": "gmem_to_smem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 262144,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 262208,
+      "mbarrier_objects": 4,
+      "commit_groups_per_item": 0,
+      "snapshot_capacity_class": "reject_before_launch",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "gmem_to_smem",
+        "software_stages": 4,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r4_one_cta",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "one_cta",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 262144,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 262208,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "reject_before_launch",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "one_cta",
+        "threads": 128,
+        "ctas_per_sm": 1
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "cta_clock64_cycles",
+        "scale": 1,
+        "unit": "B_transport/clock64_cycle/CTA"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "one_sm",
+      "work_model": "complete_stage_request_transport_v1"
+    },
+    {
+      "id": "smem_to_gmem_16kib_s4_r4_all_gpu",
+      "stage": "S16",
+      "direction": "smem_to_gmem",
+      "scope": "all_gpu",
+      "threads": 128,
+      "payload_bytes": 16384,
+      "software_stages": 4,
+      "requests_per_item": 4,
+      "payload_smem_bytes": 262144,
+      "control_reserved_bytes": 64,
+      "dynamic_smem_bytes": 262208,
+      "mbarrier_objects": 0,
+      "commit_groups_per_item": 1,
+      "snapshot_capacity_class": "reject_before_launch",
+      "performance_qualified": false,
+      "parameters": {
+        "direction": "smem_to_gmem",
+        "software_stages": 4,
+        "requests_per_item": 4,
+        "payload_bytes": 16384
+      },
+      "launch": {
+        "scope": "all_gpu",
+        "threads": 128,
+        "ctas_per_sm": 4
+      },
+      "iterations": 128,
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/GPU"
+      },
+      "exportable": true,
+      "work_unit": "byte",
+      "coverage_policy": "exact_sms",
+      "work_model": "complete_stage_request_transport_v1"
+    }
+  ]
+}

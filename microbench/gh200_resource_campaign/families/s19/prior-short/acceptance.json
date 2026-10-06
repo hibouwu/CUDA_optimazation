@@ -1,0 +1,19 @@
+{
+  "status": "accepted_four_representative_short_values_only",
+  "reviewer": "/root",
+  "reviewed_utc": "2026-10-04T20:12:08.583430+00:00",
+  "job": "733315",
+  "terminal": "COMPLETED0:0_31s_romeo-a051",
+  "profiles": 4,
+  "target_launches": 4,
+  "compared_u32_words_including_guards_and_stamps": 299944,
+  "replay_receipt_SHA": "790ccdbaad1631c3737d3022e16c7b217a02d2978b75a2df4e496c11da06a4f2",
+  "archive_SHA": "8c4bd536ebfc94cb3f32abb2a363f67b438e4b30a1e9d0cde24808525a3c1508",
+  "qualification": {
+    "representative_short_numeric": true,
+    "full_family_B3": false,
+    "formal_parameters": false,
+    "performance_from_short_timers": false
+  },
+  "next": "Prepare nontrace bounded representative diagnostic and remaining short matrix; GPU scheduling waits for current S14 job"
+}

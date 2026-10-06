@@ -1,0 +1,389 @@
+{
+  "schema_version": 2,
+  "stage": "S20",
+  "phase": "full-value-family-run-source-B",
+  "status": "pass",
+  "implementer": "01a0f11c-af06-7a32-b127-cda0eeaf06a7",
+  "reviewer": "01a10c76-44a8-7451-877e-4228073fa36e",
+  "reviewed_utc": "2026-10-05T23:50:14.049900+00:00",
+  "gate_root": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/repo",
+  "source_manifest_sha256": "1b72b6b06e661ca8b61ed0c393851f677ec197c0bf91abeb754335cf5e50d893",
+  "independence": {
+    "S20_implementation_participated": false,
+    "reviewer_source_modified": false,
+    "reviewer_SSH_Slurm_GPU_calls": 0,
+    "reviewer_new_tests_CPU_metadata_only": true
+  },
+  "scope": "v3 current 106-file runtime closure, new measured target static path and formal host; reuse unchanged BF16 reference/fragment/lifecycle and complete CPU archive. Conditional source-B admission only. No deployment admission, direct GPU submission, actual full-family B3/C, or formal parameter qualification.",
+  "checks": {
+    "goal_alignment": {
+      "status": "pass",
+      "detail": "Fixed oneCTA128, BF16/FP32 SS64x64x64; five controls, stages1/2/4, K1..32 fit and64 holdout. No tile search/full GEMM/predictor/extra precision. report_service.py is outside this admitted runtime closure."
+    },
+    "correctness": {
+      "status": "pass",
+      "detail": "Measured-source delta limited to symbol and pre-timing N128..65536/Periodic/trace-null guard. New actual1744-instruction SASS, 12-parameter ABI, four HGMMA panels, commit gsb0/wait0 before consumer release/refill, timed TMA waits, output32 FFMA/stores before end stamp and post-stop export independently checked. Formal host resets/full-values-checks every launch, saves final or failed warm once, flush/close identity. v3 command-request role guard now rejects wrong pilot/formal/eligibility/warmup before numeric reader."
+    },
+    "evidence_reproducibility": {
+      "status": "pass",
+      "detail": "Current1b72 manifest106 entries exact; gate binds107 files including manifest. Compile734608 COMPLETED0:0/9s/a041/noGPU,47 extracted SHA/bytes/mode plus retained outerTAR all contents verified. ELF9ab948 exact,11 project compiler dependencies normalized and hash-matched. Both target full machine rows equal734600. Old fullCPU exact607f4 snapshot and3172 SHA/size/mode files retained:380 short,90 pilot,1050 formal. Current delta only control/binary identity/ELF/formal host; unchanged mathematical domain not rerun."
+    },
+    "readability": {
+      "status": "pass",
+      "detail": "Contract states compute preload before primary window, scoped clock64, transport bytes vs compute FLOP, output epilogue and write cost, post-timing export, common N and holdout, opaque tokens domain-only. Short and measured resources separately queried/bound. REQUEST still cites v2; this signed gate explicitly binds authoritative runtime-source-freeze-v3/1b72."
+    },
+    "compatibility_regression": {
+      "status": "pass",
+      "detail": "Original20 source dependencies and original kernel retained exact; historical compile/static/math/raw/archive not rewritten. Node/pack/replay retain original failed or completed evidence, refuse namespace overwrite, check original process/custody identity and preserve partial raw on enforced pack ceilings. -O/-OO14 entry refusals independently reconfirmed; CPU fixtures cannot qualify actual GPU results."
+    }
+  },
+  "findings": [
+    {
+      "id": "S20-RUNTIME-PHASE",
+      "priority": 1,
+      "status": "resolved",
+      "file": "control.py",
+      "detail": "Earlier requested pilot=True accepted internally valid formal-style response. v3 now requires requested phase plus exact bool performance_eligible/warmup_executed before verify_values. Independent CPU metadata-only positive1 and negative11 include formal-as-pilot, each role field, reverse formal request and int0/1 bool impostors. Mathematical reader explicitly mocked only for this boundary test; no array or GPU correctness claimed."
+    }
+  ],
+  "authorization": {
+    "formal_after_full_short_and_own_pilot": true,
+    "current_source_B_admitted": true,
+    "allow_direct_GPU_submission": false,
+    "actual_GPU_launch": false,
+    "actual_B3_or_C": false,
+    "formal_parameters_without_C": false
+  },
+  "gate_files": {
+    "reference_formal.py": "d898997588f8c662d3a88db27e28b0e8694fb7c4ec5f2a3acba995636e92fd7f",
+    "control.py": "0aec4a438f1d3c551208369dcdb66a44b63121656aa17df0a048605ca21f4448",
+    "cases.json": "afc5baabe19f0aedd2c1303089add3d1b36420d0bd381ea71aa1e5ee41fa6d6e",
+    "point_pack.py": "77d138a8b06a0fd555f42d76b41df89f197b1c2c3b9b1bf3a17965b20978dcb8",
+    "run_s20.py": "8a5d90f6c47a94a0a6be01615ac09eea10940870de4f82018b59df4069ce5df5",
+    "audit_s20.py": "5934c8df9f90abe00d9947ea293ceb6ae1d38a91259280e8d37127f88a576957",
+    "run_node_s20.py": "3ea672ef3cb24956fb7a2277f2c458a7ec1eb3485331e340a495e70d118f0850",
+    "collect_node_s20.py": "074108f39cc82d6610ceccea63c3f0b585ce3fab88b9fbfffa85393d0681d048",
+    "binary-identity.json": "43b6ef5f31f60285d9df4774b66453afe36b3643cf15add2019c4ccb905277ce",
+    "bin/probe": "9ab948cbe5192ff9b1372c1084401b774b93e816f052dca767bac7caba2ec406",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/s16_quota_v1.py": "45f5615fa425d8ef03c43bf825af41184629d923c37076e66e5ff37e8f882c62",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/calibration.py": "4def29689a6784ddb28b76cc887111e9c48af6e8d9cccb799dc729b728c745b6",
+    "microbench/gh200_resource_campaign/common/family_b3.py": "75b7f739d9e05da8442ff3ad9259d47a73e57f1b95246d333329b6893cd51f8b",
+    "microbench/gh200_resource_campaign/common/packed_evidence.py": "88c4fc2bf67fa749b413763eff5340d829b38715c6d68a649067e95a60950770",
+    "microbench/gh200_resource_campaign/common/packed_transaction.py": "3a6452b2b124b55bf09de1da4b46f7e162e4c579c1409a05c9d55fad36dd9f5c",
+    "microbench/gh200_resource_campaign/common/s14_admission_v1.py": "43976ca4c10c6d42c403827be3bfc6c9eebd306370ecfdddbf8b66ce504864b5",
+    "microbench/gh200_resource_campaign/common/s14_formal_packed_bridge.py": "c5e024616afb920d6ff5f37b68ccb4d94a670a6aa6f192c562fdcda5bb443949",
+    "microbench/gh200_resource_campaign/common/s14_packed_bootstrap.py": "cd3e5d561aea332018dd67764e89154a17afee7dc74e660627cb270780c45596",
+    "microbench/gh200_resource_campaign/common/s14_packed_metadata.py": "a4550e420cf321d0f5c1b0e5def5923bc8f444521943a4ada3db1a2621f5b312",
+    "microbench/gh200_resource_campaign/common/s14_packed_observer.py": "bd7b0628ec80ef0c9fdd4439996d5bd696f5873c79e56b59ca652ea4a713b21d",
+    "microbench/gh200_resource_campaign/common/s14_packed_policy.py": "7d2c832ae411231cb6fceed2d8edf916b773943c1431d18ecd16bc930e229dca",
+    "microbench/gh200_resource_campaign/common/s14_packed_values.py": "0645466a6059c9b04d74f46956cbb3bc9b518e88c7f3b31493369f24048957db",
+    "microbench/gh200_resource_campaign/common/suite_snapshot.py": "29292bffc5ea93e9a77fb85ef43d651e3849fa98ec16906cb0b701c31042568d",
+    "microbench/gh200_resource_campaign/auditors/s19_reference.py": "3954f67a96d78f7dc31a3588c0078910f9c35d020017684735b86208ea321dd6",
+    "microbench/gh200_resource_campaign/auditors/s19_validation.py": "8c4fd35ca601f2ef0a863703663a968611fca3a4b1cd67582cd45d9d23dc4217",
+    "microbench/gh200_resource_campaign/auditors/async_copy.py": "23b33b1595febad697e1cadb43a43a561975b2b36d7d56858d6b247cf1f83541",
+    "microbench/gh200_resource_campaign/auditors/async_copy_formal.py": "66bdd5d7ec8f5db2ec7fb4a2045c3539308b44ba726e9d402fab8a6c711b00c3",
+    "microbench/gh200_resource_campaign/auditors/async_copy_formal_v1.py": "4c88a9213a5b9ef0741f209b3712ddf5b7b4e42c3331a0a88519018f2f168426",
+    "microbench/gh200_resource_campaign/auditors/async_copy_sass_baseline.py": "dbe7c5d2630b5649defcaecad45c502787385ce4094ba97cdb81247123d73f7e",
+    "microbench/gh200_resource_campaign/auditors/async_copy_validation.py": "3eeb3672640465eb73204b30347a9830de6b844666e5c0580ba4aba39308c89b",
+    "microbench/gh200_resource_campaign/auditors/async_copy_validation_smid_v2.py": "f9d874c5233c7f9945b62852c9a795ad18e1eef0c4f8931be23a12910b7a7278",
+    "microbench/gh200_resource_campaign/auditors/global_duplex.py": "340318f22fe8390f64d4cf9987883369dd43d6ce8740ea30e7db0503fdf57908",
+    "microbench/gh200_resource_campaign/auditors/global_duplex_formal_v1.py": "90f08f1054ffd472046b15bc0e5fd47adbb11e3363060f572345293b85b38988",
+    "microbench/gh200_resource_campaign/auditors/global_duplex_validation.py": "4d8f6f78c857a03fae93f8f20a181a4fc8ba7ee8b33c0ad551ed59fdef444257",
+    "microbench/gh200_resource_campaign/auditors/legacy_compute.py": "1edadeed38446f3dbb749261323b0d4cd5ffbcebbb0b4863989120a65ce75900",
+    "microbench/gh200_resource_campaign/auditors/low_precision.py": "1814441a300037f6a93b91c09b16b1e018ec257aee9f98082b39058c09b38061",
+    "microbench/gh200_resource_campaign/auditors/low_precision_accumulation.py": "821ed2311aac0b5980d1148f765296a84d0f0b59f1bb5400fc7662ace49b47c3",
+    "microbench/gh200_resource_campaign/auditors/low_precision_accumulation_boundary.py": "0b7f349f62b4ee28e60ee23f0bd87105641ffc310fe794cc1b42caa1c7e43f02",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8.py": "038c0eb77cbfc7786c05756d791faf1630bb6d5eac77d4b5c59742a587c25e69",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8_sass_baseline.py": "2064cc73cad7e73f93364bdb04647f540e7dcc440086af255c4a376e67092cee",
+    "microbench/gh200_resource_campaign/auditors/low_precision_bounded_fp8_validation.py": "d839ca3a5f357a1e0a80779c7f4a0891d0501e17792e33f42a44a827d2dcc082",
+    "microbench/gh200_resource_campaign/auditors/low_precision_reference.py": "4efda49128295467aa1381934ba3c999a8f2cafe7d27304244805bcba837a740",
+    "microbench/gh200_resource_campaign/auditors/low_precision_validation.py": "da9a1bd75653bf6d0735f02ee90eed49f506f5588466dcceee6904a5b029e5bd",
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange.py": "a3829a670b078ffa38a9c2c8b82de562f1cfba081775dc46c528d2e4a3f330bc",
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange_validation.py": "ef8a5d889a4eca3167438b69d67bb6cea7a285446f00a0d41bedc76e958e5311",
+    "microbench/gh200_resource_campaign/auditors/matrix_exchange_validation_baseline.py": "6662980ac5e4cac5f9cfcc8ff900ab0bac8f00debf8469ca1eefa1e1126ae7ea",
+    "microbench/gh200_resource_campaign/auditors/memory_baseline.py": "a33ebdb22edfdfbfbc52569dacde42b069faa88d746848d1af5a6aadf6d82e6c",
+    "microbench/gh200_resource_campaign/auditors/observation.py": "07bf14561479634b89ab2e4586123d4c68a6c96b372dee865bd3e9b01da34464",
+    "microbench/gh200_resource_campaign/auditors/offline_replay_v1.py": "ffa8807cb884167e5fd02924aee466e65010095c721f4e92a6906608cd3c0c2d",
+    "microbench/gh200_resource_campaign/auditors/offline_replay_worker_v1.py": "438705f6e603ba99a00f5c0ff2bdbd876ad296d625217a84cd8a5ce161e478bd",
+    "microbench/gh200_resource_campaign/auditors/shared_memory.py": "9820ac24246e1070fceaaff79bcd503a54a65d95c9d3e9838ea7750d17d920c1",
+    "microbench/gh200_resource_campaign/auditors/suite.py": "bbd580c79d6524c5c69dd7d25c960629c7527050c77131108ee8ef4da558624a",
+    "microbench/gh200_resource_campaign/auditors/synchronization.py": "66d4924b6afc87de12d5873bb274155d13e0c0e672f549525c6d274c1ef75195",
+    "microbench/gh200_resource_campaign/auditors/synchronization_lowering_v3.py": "bb01baf0a5fb1e45ce52f6e2b5cab52c2f8cc8e0bee9e2d0617c007360650ce5",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_baseline_r4.py": "a865b46e8192684e86397e29a6912ca8e48485e368292ecd2a5ef458855dc1d1",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_r4.py": "a07e93262ae7e79d67178763500ac4050e86ec72efa7bea621b2cb7aa38c9413",
+    "microbench/gh200_resource_campaign/auditors/synchronization_short_sass_r4.py": "27f3cec8f4f554516cfe56b72e479ffe6a1e9bc2cdcefc72598f3037a941f6a5",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk.py": "163d3b5274bf139c944924abe4d74c019298d0636113a06fc153f3602eb13ab9",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_admission_v1.py": "54d1fcc7a1f00015b3923551a0e51eb9bce1ed653408eb0ec5b3c2dc709d8b8d",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_formal_v1.py": "4d96e7085d313f475c8aadef3f9052dcacf2e86ebe8dc90caa3ec36b9d7fcc29",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_formal_validation_v1.py": "f1930fd241abffc37274bf230ec3ae94ae5b481a71ba06eb22b70d7b42a4e4ea",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_fullcode_baseline_v1.py": "faed16a9a4ae939614e5d10ea7253785c33f27dfe630708b790c51ded6910dcc",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_sass_baseline.py": "f15ccb12a5fe0462a7f2222b0f294f4207b04ec11553c0016c6ad150f0ac4583",
+    "microbench/gh200_resource_campaign/auditors/tma_bulk_validation.py": "bd0093c5f2e551f73f22f059194b92589b0cd99b044c3d86fa514a0ea609cb07",
+    "microbench/gh200_resource_campaign/auditors/tma_stage_request_sass_baseline_v1.py": "ec19efe83fef614a203199117ae94f62a99d350c70c7c5760c88962940feba9d",
+    "microbench/gh200_resource_campaign/auditors/tma_stage_request_sass_v1.py": "9c02d53dc48be56f8984b4f936c0a54c9c71d1f50ca8093e6a80d62449245377",
+    "microbench/gh200_resource_campaign/auditors/tma_stage_request_validation_v1.py": "cdf9b117617bd376bc4ac38b9a6189c7240af9adcc47219695664d0f8ab1a011",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_sass_baseline_v1.py": "5c04e1499764dd8d083641edb94c14cc1fac9d893f6fd07d4a413e506497d83a",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_sass_v1.py": "8f45ae9e8d2eeea083118897edccf19bcf8fd9a6cf6c3d4b26ae5cb5b461fa12",
+    "microbench/gh200_resource_campaign/auditors/tma_tensor_2d_validation_v1.py": "8b6386316394c967072628216c91fc25c0f1e546053c5e2df1d4d2080dbf28af",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_validation_v2.py": "a4041aa1da3e8844dd384231e5d7a6ead4337e5cbab4ac8fa8bb7a96aac652fb",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_reference_v2.py": "f8f51083d77b41b1272b8668851c4cd30d8112fc7fbbde304500d19df5b294bb",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_sass_v2.py": "67bc3d7c917dcea2e5450381b5e0feaffa419654b843a72a9b10c2f1a063157d",
+    "microbench/gh200_resource_campaign/auditors/cluster_dsm_sass_baseline_v1.py": "6a478c81d9592c9c03a2930df0c47ca9636ce44d1114d2ea454fd8c36b0d71f8",
+    "microbench/gh200_resource_campaign/runners/accumulation_boundary.py": "15a5781fc24ffcb0b6a23515ee0b0726e25fe28f74a15bcce05aa520bc7b5f01",
+    "microbench/gh200_resource_campaign/runners/accumulation_diagnostic.py": "839b2b4bbb2bc17d6bfcc1a2874c52a68df3aa515f864e9cbb243af81fe5cc32",
+    "microbench/gh200_resource_campaign/runners/environment.py": "bbebf0dec7c41d0a46589d83305153e6ce770b8634eb15f3233539cc00ea1dd5",
+    "microbench/gh200_resource_campaign/runners/s15_short_controller.py": "2d0db321e5e93aa1a6533398f8580169657d25098ebba2c1b91746b52b450949",
+    "microbench/gh200_resource_campaign/runners/s15_storage.py": "f0ab54847d53dcfa1775e53b3d3f954ba09988ee88b80e2c2463092109f3edb9",
+    "microbench/gh200_resource_campaign/runners/s16_short_controller.py": "a26540f5b5a87e8f867993c3fdc35ef854b5c665a3d430e9cfc63e5cc022672f",
+    "microbench/gh200_resource_campaign/runners/s16_storage_v1.py": "35ef4b63707a5dc42eba0d75ff8313e58f9a9d541c17a612d01fae45429a8a94",
+    "microbench/gh200_resource_campaign/runners/suite_runner.py": "ce9461b5b1c595e27801512d8418f9a8ec3b43e875ec40530d6d2aebf036fd30",
+    "microbench/gh200_resource_campaign/runners/validation_diagnostic.py": "d6b666eb4dddedb67f8618c5f4e0df5862abb8bb876aabe907ba5642c49e8b71",
+    "microbench/gh200_resource_campaign/contracts/protocol.json": "df5e74acf78a30f5634b8eea1e4bc8ae711ec5fadb02d7188a97ab61ce4e4d39",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/CONTRACT.md": "790813a2fcb4db98cb394e18293f00d75fe001ead09e0673b381a68c3e157a1d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/contract.json": "c8d950041f0c7733a6e2c7054eb5da737241324712292a411799a2d84f9686ab",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/reference.py": "7ac61ea358febccb1b7f3b0438355aeab3a9525846d7103c550b6cc95c5ba255",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/s20_host.cu": "1c35774c9fa1a6241d76526a80d070fa8eb3939188355cd1932ebbccad1d6f4d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/s20_host_reference.hpp": "38615e2cebbf4ef7c30ddefba886705f64346a131dce0a2ad4677f65954e8434",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/s20_host_cpu.cpp": "5a0e20d8172b578eddc8ff777b44a3dd27fc4798d7374043430a87638a2b9076",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/raw_io.hpp": "0da101f9ee77de0225c69bc845fc250287644495bd8c70527f9e9bf0d2b0ca8f",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/metadata_check.hpp": "9abc6662e94d269c7bcc5e71a1eeed4562d0fb45c81c3abffd1f5d920b1a162d",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/raw_audit.py": "0dac1d69eea7ed31b93e9c7aa8526ecd185948bee0aee72859f66195afa51da1",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/cpu_check.py": "ccc9612e29699b4fd4ee604ebdb9dbff92b1dc5c08eedd5ae2f65e20493e4bad",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/compile_only.py": "2ff8991399ed1dae1b59b95b5df5812c3f4d85ff2d0c3c64d807e557c998efc7",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/check_package.py": "0388541e4cabb2f1c9c3573e5675267f582ef456593ebb316c0b1c94edcb1253",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/README.md": "e84838e40caade8f2a97667d9a36f99d9248ac3627edfede47328dbb3b193256",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/host-v2/s20_formal.cu": "320ffc90c3a8057db60806c4d88ec7275741dd890b98e5f237f5b59d5ed29901",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/implementation-v1/s20_kernel.cu": "2850d1e8037ab26a77b17a4929306138750c3c485f484b8f9d422ea66174f57f",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/implementation-v1/s20_kernel.cuh": "1200e303f6bcb3bd47cac51bc3cbbbc44409b22952ecd33c8ad7dc7a50b2fe44",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/implementation-v1/s20_measured.cu": "51bb81ab65e2decaf568b5d5cc3fac75ac61e9d5e09c90b3a99cd3083a977cac",
+    "results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/combinations/s20-v1/implementation-v1/s20_measured.cuh": "aa031a9ad070b99a21afede7b0afebe1e871514ca3f4314900e7d0cd7a7b566a",
+    "source-manifest.json": "1b72b6b06e661ca8b61ed0c393851f677ec197c0bf91abeb754335cf5e50d893"
+  },
+  "validation": {
+    "manifest": {
+      "sha256": "1b72b6b06e661ca8b61ed0c393851f677ec197c0bf91abeb754335cf5e50d893",
+      "dependency_count": 106
+    },
+    "CPU_preservation": {
+      "file_count": 3172,
+      "all_size_mode_SHA_exact": true,
+      "arrays_replayed_this_review": false,
+      "point_counts": {
+        "short": 380,
+        "pilot": 90,
+        "formal": 1050
+      }
+    },
+    "static": {
+      "original": {
+        "instruction_count": 2088,
+        "full_instructions_sha256": "d5d4cfaa8a5ec79f0288e0ab6e85a1674d9a60dfcf943335cded4ab8cc473749"
+      },
+      "measured": {
+        "instruction_count": 1744,
+        "full_instructions_sha256": "3222749ef59d914bbfc162d3906487678d4ef7403e1ab3d85a9b9163401774d7"
+      },
+      "both_rows_equal_734600": true,
+      "clock64_pcs": [
+        6656,
+        19712
+      ],
+      "HGMMA_pcs": [
+        13840,
+        14048,
+        14256,
+        14416
+      ],
+      "wait0_pc": 14432,
+      "consumer_release_CTA_gate_pc": 15312,
+      "refill_bulk_pc": 15792,
+      "input_publish_CTA_gate_pc": 13392,
+      "tile_backedge": [
+        11216,
+        16272
+      ],
+      "rep_backedge": [
+        7392,
+        19600
+      ],
+      "output_FFMA_static_sites": 32,
+      "output_write_sites": 32,
+      "output_post_store_lowering": [
+        {
+          "pc": 19456,
+          "instruction": "ERRBAR"
+        },
+        {
+          "pc": 19472,
+          "instruction": "CGAERRBAR"
+        },
+        {
+          "pc": 19488,
+          "instruction": "CCTL.IVALL"
+        }
+      ],
+      "end_rep_gate_pc": 19568,
+      "post_stop_gate_pc": 19760,
+      "invalidate_pcs": [
+        19808,
+        19840,
+        19856,
+        19872
+      ],
+      "bulk_static_sites": 9,
+      "static_sites_not_dynamic_requests": true,
+      "local_SASS_ops": 0,
+      "ABI_parameters": [
+        [
+          0,
+          0,
+          8
+        ],
+        [
+          1,
+          8,
+          8
+        ],
+        [
+          2,
+          16,
+          8
+        ],
+        [
+          3,
+          24,
+          8
+        ],
+        [
+          4,
+          32,
+          8
+        ],
+        [
+          5,
+          40,
+          8
+        ],
+        [
+          6,
+          48,
+          8
+        ],
+        [
+          7,
+          56,
+          4
+        ],
+        [
+          8,
+          60,
+          4
+        ],
+        [
+          9,
+          64,
+          4
+        ],
+        [
+          10,
+          68,
+          4
+        ],
+        [
+          11,
+          72,
+          4
+        ]
+      ]
+    },
+    "compiled_CPP_dependencies": {
+      "unique_project_file_count": 11,
+      "all_current_manifest_match": true,
+      "external_toolchain_headers_not_copied_or_rehashed": true
+    },
+    "original_source_reuse": {
+      "original_package_members": 21,
+      "current_exact_members": 20,
+      "original_static_review_sha256": "8b48d2e287789831b6c111f58c414cb7f9ac87f96f611c4b431976c8a515758a"
+    },
+    "frozen_python_AST_pass": true,
+    "role_delta": {
+      "CPU_metadata_only": true,
+      "numeric_checker_explicitly_mocked": true,
+      "positive": 1,
+      "negative": 11,
+      "bad_roles_rejected_before_numeric_checker": true
+    },
+    "optimized_entry_refusals": 14,
+    "compile_collection": {
+      "job": "734608",
+      "terminal": "COMPLETED|0:0|00:00:09|romeo-a041",
+      "GPU_requested": false,
+      "files": 47,
+      "outer_tar_bytes": 2826240,
+      "outer_tar_sha256": "8a95fdee392e118c987b3b97e030430ecf76501ef2e65b46e55c1fa89d8df63c",
+      "project_cpp_dependencies": 11,
+      "ELF_sha256": "9ab948cbe5192ff9b1372c1084401b774b93e816f052dca767bac7caba2ec406",
+      "registers_per_thread": 128,
+      "ptxas_barriers": 1,
+      "ptxas_static_smem_declared_bytes": 0,
+      "cuobjdump_shared_bytes": 1024,
+      "requested_dynamic_smem_bytes": 65568,
+      "total_smem_bytes_for_capacity": 66592,
+      "stack_local_spill_bytes": 0,
+      "actual_API_resource_queries_or_residency_proven": false
+    },
+    "reused_proofs": {
+      "complete_final_records": 117,
+      "lifecycle_negative_cases": 4,
+      "mode_interface_cases": 5,
+      "query_binding_negative_cases": 6,
+      "complete_CPU_runtime_points": 1520,
+      "node_lifecycle_checks": 3,
+      "identity_flush_close_delayed_failure": "S19 source-fixes-v4/CPU-review-delta-proof.json exact statement reuse",
+      "no_old_math_or_complete_array_rerun": true
+    }
+  },
+  "conditions": [
+    "Install exact current1b72 gate/source and9ab948 ARM binary; source changes invalidate this gate.",
+    "Main owner must separately admit deployment/allocation/quota/queue/UUID/storage and serialize measurement; source review is not a submission instruction.",
+    "Within actual allocated run obtain own legacy and measured target queries; pass380 short points and90 own fit-domain pilots, then apply one common N to all105 including K64 holdout.",
+    "Complete actual numerical, warmup, process, all-batch statistics, offhost custody and independent native data C review before any qualified parameter export."
+  ],
+  "limitations": [
+    "CPU fixture1520 verifies reference/pack/replay with GPU/Slurm/gate boundaries mocked; not actual device numerical or performance evidence.",
+    "Old fullCPU archive remains tied to607f4 snapshot. Only exact four-file current delta reviewed; no claim that completeCPU was rerun on current1b72.",
+    "SASS static facts prove observed compiler path preservation, not actual descriptor numerical correctness or elapsed GPU cycles. Nine bulk sites are path dependent static sites, not nine dynamic requests per tile.",
+    "Register/static/dynamic/occupancy query data are distinct from actual residency. Current actual queries and GPU runtime evidence remain required.",
+    "Compiler external headers/libraries not fully copied or rehashed locally; no fully self-contained toolchain rebuild claim.",
+    "Opaque last_token checked only for preservation/domain; exact lifecycle counters checked separately.",
+    "report_service.py candidate and eventual fit/publication are not qualified by this runtime source gate."
+  ],
+  "files_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/runtime-source-freeze-v3.json": "3dcac3feebf675fc6d2120d42e2213e3d7f7603e161edb7cafd08055e41af0de",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/runtime-source-freeze-v2.json": "4b7d18e5e2d0beb6836f63dbd554c5e4070732f30c3223c1e02159b655bbdd39",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-pilot-role-delta-proof.json": "48ed7986ae43ffe27ce55c778e56b9cc98ae4e0603547c395f19d07f6e7babc6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-full-runtime-proof.json": "9903217be1878df5facef746987b82fde796b125fedfe7476b9db834df4e957f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-runtime-archive-preservation.json": "da9fb5cb1db2f59c54665d45c7f25705bdd2ddd26d56adc86b34796889712a8a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-runtime-archive-v1/repo/source-manifest.json": "607f4e60b31549ad88fc72baea253736fa056ed0f8523302442beb3e35f883f6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-final-reference-proof.json": "f19c87787dae7d55a03002886f2f7d07684f696809e0cfc12b2d69cd330edf39",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-observation-interface-proof.json": "e7ef420a9ccdca97c3346c757eead46c62bed0a665d2ca7a0ad081acca3a4a7a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/CPU-node-lifecycle-proof.json": "b7b0e6f6b3ca680c427288503259269b4946890cb24aac7eddec20fa65ef7cb2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/FORMAL-CONTRACT-CANDIDATE.zh.md": "a99b41bd34a3e794bef0387d19a10c93f626b1d6e2dfef3aaad333f6544c35b5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/REQUEST-source-review.md": "6c18ef79fc81108982b84675087ebc72db7dc4b98de227d08fdcb09118faa30f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-v1/review/review.json": "8b48d2e287789831b6c111f58c414cb7f9ac87f96f611c4b431976c8a515758a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/collection-index.json": "67708c6a13bf732e0f2ea116d91ad15f1611d1f10c606556f3cb1d28ffd22aa8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual.tar": "8a95fdee392e118c987b3b97e030430ecf76501ef2e65b46e55c1fa89d8df63c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual/host-source-manifest.json": "453d0fc0c9022ca11559ed09d33d5334b84fad78fee4fa852b77872506d5dfb8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual/compiled/sass.stdout": "67ca2215d404082e647c35941e031b0b97245599c0701f47eb2d4c71c3164101",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual/compiled/resources.stdout": "ed07c528c30d64989017ee08fd110be92f2128c28e55878cccdd2e9961f63fcd",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual/compiled/compile1.stderr": "d8f10588fd735b0f1213c70736bd7e10f3a5d92377922f8e8b989c4f50696ced",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v3/actual/compiled/compile2.stderr": "9821ec24dcdce212f76896d46e1711990256c08420c46dc17ec7f9b555220ea3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s20-main-execution/target-compile-formal-v2/actual/compiled/sass.stdout": "f22ab10135f6613d1239d002a55f5048b95c0339be7daad017200f4714aa9fb0",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s19-main-execution/source-fixes-v4/CPU-review-delta-proof.json": "629456ea5431651e1210b488e33a67fc397ef0e5f1f5ce99816001802896b943"
+  }
+}

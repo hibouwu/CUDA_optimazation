@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "family": "cluster_dsm_multicast",
+  "profiles": [
+    {
+      "id": "cluster_short_1_2_5_v1",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        5
+      ],
+      "input_profiles": [
+        "nonuniform_uint32_cluster_paired_seeds_v1"
+      ],
+      "maximum_target_launches": 3,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "mapped self vs remote same sync counts",
+        "all phase/consumer_done/release/exit full words",
+        "receiver init1 expectQ armed acquire consume done exit; nonreceiver no arrival/wait",
+        "selected opaque tokens preserved/domain_only excluded exact",
+        "paired input label fixes ordered internal (I,seed)=(1,0),(2,3),(5,UINT32_MAX); no Cartesian seed scan"
+      ],
+      "reference_identity": {
+        "model": "cluster_dsm_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/cluster_dsm_reference_v1.hpp",
+        "sha256": "b65cac3b2ed65ff881b9cfadec619731791960899dd68b2011c8ae2cc220cf4d"
+      },
+      "declared_output_check": "exact full trace/guards/sums/source/completion/lifecycle; time interval predicate; opaque token domain only",
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false
+    }
+  ]
+}

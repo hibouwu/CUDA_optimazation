@@ -1,0 +1,40 @@
+{
+  "adapter_id": "s19_validation_v1",
+  "adapter_abi_version": 1,
+  "module": "auditors.s19_validation",
+  "exports": [
+    "validation_argv",
+    "validate_validation",
+    "validate_prior_evidence"
+  ],
+  "files_sha256": {
+    "microbench/gh200_resource_campaign/auditors/s19_reference.py": "3954f67a96d78f7dc31a3588c0078910f9c35d020017684735b86208ea321dd6",
+    "microbench/gh200_resource_campaign/auditors/s19_validation.py": "8c4fd35ca601f2ef0a863703663a968611fca3a4b1cd67582cd45d9d23dc4217",
+    "microbench/gh200_resource_campaign/common/gpu_registry.py": "759c49f1ab78934f9fb8d19079ee6391c628283c38e47be3c042678e9772145c",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh": "92060a560d9da1f0a00c75d6fd45a4e1f64a63a4ad9d39b4676fbc0614059ba3",
+    "microbench/gh200_resource_campaign/common/s19_reference.hpp": "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e",
+    "microbench/gh200_resource_campaign/common/s19_reference_id.hpp": "2030c845e53798964777084f60dddbf6dd7bbdee8f1e002f2e2ec15c65f86c73",
+    "microbench/gh200_resource_campaign/common/suite_io.py": "17bd548fce702014d1b5ca2990e60bd82ca85119344f4467a9daa4caf8ce04c4",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp": "c080ef5710e528974f03a85b554511fb1cb5895ecb0b9c55da33bebae3ed6b79",
+    "microbench/gh200_resource_campaign/probes/s19_probe.cu": "8a5d2b9ae3ef8a956ae1aaba7f4c7f790cb4aa4d889bd4cb6b7c599d7c418ef5"
+  },
+  "contract_sha256": "269343f647345c8263a52c51ee07f88faf5f7366dd9ff1d7fb42b49bcfdeac5e",
+  "profiles_sha256": "e7bed83753a1647c514f803cd6978cd21fbdf9ea6328ef9ea11bd134dcda0b43",
+  "review_dependencies": [
+    {
+      "stage": "S19",
+      "phase": "A",
+      "path": "parallel/combinations/reviews/S19-A-v1.json"
+    },
+    {
+      "stage": "S19",
+      "phase": "early-validation-source-B",
+      "path": "parallel/combinations/reviews/S19-source-B-v2.json"
+    },
+    {
+      "stage": "S19",
+      "phase": "target-compile-SASS-B",
+      "path": "parallel/combinations/reviews/S19-target-compile-SASS-B-v1.json"
+    }
+  ]
+}

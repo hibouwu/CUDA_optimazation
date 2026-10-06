@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "family": "simt_pipeline",
+  "profiles": [
+    {
+      "id": "periodic_1",
+      "target_iterations": [
+        1
+      ],
+      "input_profiles": [
+        "periodic"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "periodic"
+        }
+      ],
+      "completion_requirements": [
+        "cp.async per-thread wait; CTA barrier before cross-thread consumption",
+        "CTA barrier after consumption before same slot refill",
+        "all eight FP32 accumulators complete before final CTA rendezvous",
+        "output mode st.global.wb then each writer threadfence for ordering and CTA rendezvous for this CTA visibility",
+        "all eight artifacts saved before numeric/guard error; full readback after CUDA event; ordered timestamps and retained FP32 event milliseconds independently checked"
+      ],
+      "reference_identity": {
+        "model": "s19_integer_gemm_v1",
+        "path": "microbench/gh200_resource_campaign/common/s19_reference.hpp",
+        "sha256": "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "all input, output, per-tile input and C traces, transport digest, active and poison shared slots, all guards; local timestamps checked separately",
+        "elements_per_launch": "k_tiles*2048+1024+128+8192+iterations*k_tiles*3072+96+10"
+      },
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "applicable_modes": [
+        "compute",
+        "transport",
+        "serial",
+        "overlap",
+        "output"
+      ]
+    },
+    {
+      "id": "periodic_3",
+      "target_iterations": [
+        3
+      ],
+      "input_profiles": [
+        "periodic"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 3,
+          "input_profile": "periodic"
+        }
+      ],
+      "completion_requirements": [
+        "cp.async per-thread wait; CTA barrier before cross-thread consumption",
+        "CTA barrier after consumption before same slot refill",
+        "all eight FP32 accumulators complete before final CTA rendezvous",
+        "output mode st.global.wb then each writer threadfence for ordering and CTA rendezvous for this CTA visibility",
+        "all eight artifacts saved before numeric/guard error; full readback after CUDA event; ordered timestamps and retained FP32 event milliseconds independently checked"
+      ],
+      "reference_identity": {
+        "model": "s19_integer_gemm_v1",
+        "path": "microbench/gh200_resource_campaign/common/s19_reference.hpp",
+        "sha256": "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "all input, output, per-tile input and C traces, transport digest, active and poison shared slots, all guards; local timestamps checked separately",
+        "elements_per_launch": "k_tiles*2048+1024+128+8192+iterations*k_tiles*3072+96+10"
+      },
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "applicable_modes": [
+        "compute",
+        "transport",
+        "serial",
+        "overlap",
+        "output"
+      ]
+    },
+    {
+      "id": "tagged_1",
+      "target_iterations": [
+        1
+      ],
+      "input_profiles": [
+        "tagged"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 1,
+          "input_profile": "tagged"
+        }
+      ],
+      "completion_requirements": [
+        "cp.async per-thread wait; CTA barrier before cross-thread consumption",
+        "CTA barrier after consumption before same slot refill",
+        "all eight FP32 accumulators complete before final CTA rendezvous",
+        "output mode st.global.wb then each writer threadfence for ordering and CTA rendezvous for this CTA visibility",
+        "all eight artifacts saved before numeric/guard error; full readback after CUDA event; ordered timestamps and retained FP32 event milliseconds independently checked"
+      ],
+      "reference_identity": {
+        "model": "s19_integer_gemm_v1",
+        "path": "microbench/gh200_resource_campaign/common/s19_reference.hpp",
+        "sha256": "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "all input, output, per-tile input and C traces, transport digest, active and poison shared slots, all guards; local timestamps checked separately",
+        "elements_per_launch": "k_tiles*2048+1024+128+8192+iterations*k_tiles*3072+96+10"
+      },
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "applicable_modes": [
+        "transport",
+        "serial",
+        "overlap",
+        "output"
+      ]
+    },
+    {
+      "id": "tagged_3",
+      "target_iterations": [
+        3
+      ],
+      "input_profiles": [
+        "tagged"
+      ],
+      "maximum_target_launches": 1,
+      "maximum_explicit_auxiliary_launches": 0,
+      "launch_plan": [
+        {
+          "launch_index": 0,
+          "iterations": 3,
+          "input_profile": "tagged"
+        }
+      ],
+      "completion_requirements": [
+        "cp.async per-thread wait; CTA barrier before cross-thread consumption",
+        "CTA barrier after consumption before same slot refill",
+        "all eight FP32 accumulators complete before final CTA rendezvous",
+        "output mode st.global.wb then each writer threadfence for ordering and CTA rendezvous for this CTA visibility",
+        "all eight artifacts saved before numeric/guard error; full readback after CUDA event; ordered timestamps and retained FP32 event milliseconds independently checked"
+      ],
+      "reference_identity": {
+        "model": "s19_integer_gemm_v1",
+        "path": "microbench/gh200_resource_campaign/common/s19_reference.hpp",
+        "sha256": "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e"
+      },
+      "declared_output_check": {
+        "comparison": "exact",
+        "tolerance_id": null,
+        "sampling": false,
+        "method": "all input, output, per-tile input and C traces, transport digest, active and poison shared slots, all guards; local timestamps checked separately",
+        "elements_per_launch": "k_tiles*2048+1024+128+8192+iterations*k_tiles*3072+96+10"
+      },
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false,
+      "applicable_modes": [
+        "transport",
+        "serial",
+        "overlap",
+        "output"
+      ]
+    }
+  ]
+}

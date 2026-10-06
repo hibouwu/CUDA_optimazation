@@ -1,6 +1,6 @@
 # GEMM 数学建模审查
 
-审查日期：2026-09-30。当前阶段为问题定义与通用数学建模，具体优化方案尚未选定；实现与实验准备不作为本阶段的缺口。
+审查日期：2026-09-30；2026-10-06 补充 GH200 实测审查。通用模型与 GH200 资源微基准均已有产出，但测量尚未接入方案模型，也没有完整 GEMM 对照；当前主要缺口是“测量 → 模型 → 验证”的闭环。
 
 ## 当前范围与暂缓项
 
@@ -40,17 +40,66 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 
 2026-09-30：已在 [GH200 硬件目录](hardware/gh200_sm90/README.md#参数覆盖状态)补入指令路径、分配舍入、寄存器重分配与溢出、同步对象、TMA/DSM/多播及 cluster 驻留规则，并接入带范围与计时条件的代表计算复测。已有产品规格与历史原始结果保留。
 
-本次补充解决资源条目和部分官方约束缺失；2026-10-01 的 [GH200 资源实验](experiments/gh200_sm90/EXP-02-memory-paths.md)已确认实际 L2 cache 60 MiB，并加入普通 SMEM/global 请求服务；裸指令延迟、物理在途容量、方案匹配的片上/全局联合服务与完整时间模型仍待确定。一般 epilogue、尾块及实际方案的需求映射继续属于通用模型和方案推导，不因硬件表补充而标记完成。Batched / Grouped 和 Distributed 保持暂缓。
+本次补充解决资源条目和部分官方约束缺失；2026-10-01 的 [GH200 资源实验](experiments/gh200_sm90_archive/EXP-02-memory-paths.md)已确认实际 L2 cache 60 MiB，并加入普通 SMEM/global 请求服务；裸指令延迟、物理在途容量、方案匹配的片上/全局联合服务与完整时间模型仍待确定。一般 epilogue、尾块及实际方案的需求映射继续属于通用模型和方案推导，不因硬件表补充而标记完成。Batched / Grouped 和 Distributed 保持暂缓。
+
+## GH200 实测审查（2026-10-06）
+
+对象为[结果总览](experiments/gh200_sm90/README.md)中 17 个家族、754 条条件观测。以下理论值按 CC 9.0 每 SM 每周期计：dense FP16 Tensor Core 4096 FLOP，FP32 FMA 256 FLOP，SMEM 128 B。
+
+### 结果与理论值对照
+
+| 路径 | 实测 | 对照 | 判断 |
+|---|---|---|---|
+| FP32 FMA，单 CTA 128 线程 8 链 | 232 FLOP/cycle | 256 | 91%，正常 |
+| WGMMA m64n64k16 SS，wait 3/7 | 4095.5 FLOP/cycle；整卡约 980 TFLOP/s | 4096 | 达到峰值；整卡值反推平均 SM 时钟约 1.81 GHz |
+| mma.sync FP16 / TF32 | 2668 / 1312 FLOP/cycle | 4096 / 2048 | 约 65%，与 Hopper 上 mma.sync 的已知上限一致 |
+| mma.sync FP64 `m8n8k4`，整卡 | 33.45 TFLOP/s | 数据表 FP64 Tensor Core 67 TFLOP/s | 正好一半；只测了旧形状，原因待查 |
+| FP8 WGMMA m64n64k32，单 CTA | 8179 FLOP/cycle | 8192 | 正常 |
+| SMEM w8/w16 读、写、读写合计 | 均约 128 B/cycle | 128 | 读写合计仍约 128，建模时不能把读、写峰值相加 |
+| 整卡 global 读 / TMA 读 / TMA 1D bulk 写 / TMA 2D 写 | 3.52 / 3.83 / 2.74 / 3.83 TB/s | HBM3 产品值 4 TB/s | 1D bulk 写比 `st.global` 写（3.79）低约 30%；2D tensor 写正常，但 GMEM 行间有 padding 时降到 1.33–1.45 TB/s，epilogue 需单独计 |
+
+### 需要补充的解读
+
+- **FP8 累加停在 64**：每个乘积为 \(2^{-8}\)，累加器到 \(64=2^6\) 后二者相差 14 个二进制量级，均匀输入下 31/32/33 轮的边界与“约 14 bit 对齐窗口”的解释相符，也与 DeepSeek‑V3 技术报告对 Hopper FP8 累加精度的描述一致；确切对齐与舍入规则仍需不同量级输入验证。由此，FP8 方案须按 K 分段提升到 CUDA Core FP32 累加（如每 128 个 K），并计入额外 FFMA、寄存器和依赖；问题实例的误差要求须先确定。
+- **S19/S20 是延迟受限的固定配置**：S19 compute 18.4 FLOP/cycle，约为 FP32 峰值的 7%；S20 compute 830 FLOP/cycle，约为峰值的 20%，斜率 606 cycle/Ktile 平均到 4 条依赖 WGMMA 约 150 cycle/条，含 fence、commit、wait0 与循环。两组拟合不能代表实际 GEMM mainloop；该值只能作为依赖 WGMMA 往返的上界，不能填入 L0 裸延迟。
+- **S10 只测了单 warp**：`ldmatrix` x4 为 35 B/cycle，shuffle 每 warp 约 26 cycle/条，均反映延迟而非吞吐上限。
+- **已有数据可推出的量未推**：S14/S16 中每轮只有一个请求的配置给出单请求完整周期，是 TMA 往返时间的上界，例如 S=1、R=1 时 \(16384/14.75\approx1100\) cycle；更大缓冲只给出容量，没有平均在途量，不能直接用 Little 定律换算。它们对应 [FP32 示例](schemes/fp32_simt_tiled.md)中的 \(\ell_g,b_g\)。
+
+### 缺口
+
+| 优先级 | 缺口 | 处理 |
+|---|---|---|
+| 高 | 硬件参数未吸收 v2 结果：[GH200 L0](hardware/gh200_sm90/L0.md) 仍用 09-30 旧复测；[L1](hardware/gh200_sm90/L1.md) 的 SMEM 仍为 EXP-02 v1 的 115.6 B/cycle（CV 12%）；S05–S12、S18 未接入 | 按资源类别引用 S05–S18 的条件参数，替换旧值 |
+| 高 | 没有 Hopper Tensor Core 方案模型；现有方案只有教学参数的 FP32 示例和 Thor 的 tc5a | 新建 TMA producer + WGMMA consumer、多 stage、persistent 的方案文件，用实测参数实例化，缺项保留符号 |
+| 高 | 没有完整 GEMM 锚点 | 在 GH200 上测 cuBLAS / CUTLASS 的 BF16、FP8、FP32 GEMM，作为可达目标与模型验证数据 |
+| 高 | 问题实例未落到 GH200：[workloads.yaml](workloads.yaml) 的输入生成指向 Thor，误差函数与容差为空 | 增加 GH200 实例，确定误差要求，FP8 实例同时规定累加提升 |
+| 中 | 单 CTA clock64 与整卡 globaltimer 缺少负载下的频率换算 | 采样时同 CTA 同时记录两种计时，或记录负载下 SM 频率 |
+| 中 | L0 的裸延迟、启动间隔和混合指令联合服务仍未知 | 见下方指令级测试 |
+| 低 | S21/S22 的验收不在建模关键路径上 | 冻结现有发布状态，后续实验采用 SASS、数值与稳定性三项检查 |
+
+### 指令级测试范围
+
+只测 GEMM 方案会用到、且现有完整循环测量无法分离的量。延迟用展开的依赖链，吞吐逐步增加独立链与 warp 数，竞争采用两两混合；每项核对 SASS。
+
+| 优先级 | 测量内容 | 用途 |
+|---|---|---|
+| 高 | WGMMA N∈{64,128,256}、SS/RS；依赖链延迟随 N 的变化；每 SM 1/2/3 个 warpgroup | 实际 Hopper GEMM 使用 m64n256k16 与两个 consumer warpgroup，目前只有 N=64 |
+| 高 | WGMMA 与 FFMA、IMAD 同时执行 | FP8 累加提升、epilogue 重叠与地址计算的联合服务 |
+| 高 | FP64 `mma` 的 sm_90 新形状（以 PTX ISA 核实 `m16n8k4/k8/k16`） | 解释 FP64 只达数据表一半 |
+| 中 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | SIMT 与 mma.sync 方案的片上供给 |
+| 中 | WGMMA TF32 与 FP16 累加形式 | 补齐精度覆盖 |
+| 低 | 全 ISA 延迟/吞吐表 | 不需要；GEMM 不使用的指令引用公开 Hopper 微基准文献 |
 
 ## 后续推导事项
 
-1. 确定问题实例的数值误差要求；它由问题本身给定，再判断目标硬件与方案能否满足。
-2. 完善 [L0](model/L0.md) 的工作单位、完成延迟、启动间隔、在途及依赖限制，并补齐硬件服务参数的适用域。
-3. 完善 [L1](model/L1.md) 的交错执行、分配与驻留，以及共享服务下的 CTA / SM 组合关系。
-4. 完善 [L2](model/L2.md) 的供给、缓冲复用、启动与排空，以及 mainloop / epilogue 的事件接口。
-5. 完善 [L3](model/L3.md) 的任务分配、跨任务缓存复用、多 SM 共享服务和尾波影响。
-6. 为 [L4](model/L4.md) 给定算子图和融合边界，再实例化数据传递与任务调度。
+1. 确定问题实例的数值误差要求，包括 FP8 累加提升规则；再判断目标硬件与方案能否满足。
+2. 在 GH200 上测量 cuBLAS / CUTLASS 完整 GEMM，作为可达性能与验证锚点。
+3. 将 v2 条件参数接入 GH200 的 L0/L1/L2 硬件文件，补 Little 定律估计与频率换算。
+4. 建立 Hopper Tensor Core 方案模型，用已有参数给出预测，并列出缺失参数。
+5. 只补上表中高优先级的指令级测试；之后用实际配置（如 128×256×64、4 stage、两个 consumer warpgroup）做 S20 的升级组合实验，与第 2 步的锚点对照。
+6. 继续完善 [L0](model/L0.md)–[L3](model/L3.md) 的通用关系：L0 的延迟、启动间隔与在途限制；L1 的交错执行与驻留；L2 的供给、缓冲复用与 mainloop/epilogue 事件；L3 的任务分配、缓存复用、共享服务与尾波。
+7. 为 [L4](model/L4.md) 给定算子图和融合边界，再实例化数据传递与任务调度。
 
-以 [FP32 示例](schemes/fp32_simt_tiled.md)为起点，在明确变量、约束和假设的条件下检查串行、充分并行、单任务及资源不足等情形。未知数值保留符号；本阶段不要求先写 kernel 或运行实验。
+[FP32 示例](schemes/fp32_simt_tiled.md)仍用于检查串行、充分并行、单任务及资源不足等情形；未知数值保留符号。
 
 [tc5a](schemes/tc5a.md) 的输入适配、缓冲、worker 分配和 benchmark 条件保留在独立候选文件，不列入当前通用建模的优先事项。

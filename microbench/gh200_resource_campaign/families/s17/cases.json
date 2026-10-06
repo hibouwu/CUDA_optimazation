@@ -1,0 +1,1141 @@
+{
+  "coordinate_count": 42,
+  "capability_query_count_per_binary_form_set": 21,
+  "cases": [
+    {
+      "id": "local_read_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_read_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "bulk_single_target_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_single_target_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_all_targets_c2_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 2
+    },
+    {
+      "id": "bulk_all_targets_c2_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 2
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 2
+    },
+    {
+      "id": "local_read_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_read_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "bulk_single_target_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_single_target_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_all_targets_c4_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 4
+    },
+    {
+      "id": "bulk_all_targets_c4_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 4
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 4
+    },
+    {
+      "id": "local_read_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_read_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_read",
+        "mode": 0,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_read_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_read",
+        "mode": 1,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "local_write_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "local_write",
+        "mode": 2,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "dsm_write_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "dsm_write",
+        "mode": 3,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": true,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "cluster_sync_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "cluster_sync",
+        "mode": 4,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "cluster_phase",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "cluster_phase/ns/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 0
+    },
+    {
+      "id": "bulk_single_target_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_single_target_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_single_target",
+        "mode": 5,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 1
+    },
+    {
+      "id": "bulk_all_targets_c8_one_cluster",
+      "scope": "one_cluster",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/one_cluster"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 8
+    },
+    {
+      "id": "bulk_all_targets_c8_cluster_grid",
+      "scope": "cluster_grid",
+      "threads": 128,
+      "parameters": {
+        "form": "bulk_all_targets",
+        "mode": 6,
+        "cluster_size": 8
+      },
+      "pilot_iterations": 128,
+      "iteration_domain": [
+        128,
+        65536
+      ],
+      "work_unit": "byte",
+      "metric": {
+        "numerator": "work_count",
+        "denominator": "elapsed_ns",
+        "scale": 1,
+        "unit": "GB_transport/s/cluster_grid"
+      },
+      "work_model": "cluster_completed_service_v1",
+      "coverage_policy": "observed_subset",
+      "exportable": true,
+      "required_readback_bytes_included": false,
+      "receiver_count": 8
+    }
+  ],
+  "no_occupancy_as_residency_claim": true
+}

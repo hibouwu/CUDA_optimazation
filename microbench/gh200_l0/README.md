@@ -1,6 +1,6 @@
 # GH200 L0：FMA / MMA
 
-新一轮独立复审见 [EXP-01](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-01-compute-audit.md)；后续测试由 [gh200_resource_campaign](../gh200_resource_campaign/README.md)管理，旧源码和目录保留。
+新一轮独立复审见 [EXP-01](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90_archive/EXP-01-compute-audit.md)；后续测试由 [gh200_resource_campaign](../gh200_resource_campaign/README.md)管理，旧源码和目录保留。
 
 当前审查结论见 [测试过程审查](AUDIT.md)，代表配置的最新证据见 [审查复测报告](results/20260930-audit/REPORT.md)。下述首批结果保留为探索性记录，不能将固定参考周期或最优测试点提升为无条件硬件上限。
 

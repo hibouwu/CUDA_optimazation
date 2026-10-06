@@ -1,0 +1,3870 @@
+{
+  "schema_version": 2,
+  "stage": "S19",
+  "family": "simt_pipeline",
+  "adapter_id": "s19_validation_v1",
+  "status": "short_candidate_target_compiled_GPU_pending",
+  "source": "microbench/gh200_resource_campaign/probes/s19_probe.cu",
+  "dependencies": [
+    "microbench/gh200_resource_campaign/common/s19_reference.hpp",
+    "microbench/gh200_resource_campaign/common/s19_reference_id.hpp",
+    "microbench/gh200_resource_campaign/common/probe_runtime.cuh",
+    "microbench/gh200_resource_campaign/common/word_artifacts.hpp"
+  ],
+  "build": {
+    "compiler": "nvcc",
+    "flags": [
+      "-std=c++17",
+      "-O3",
+      "-lineinfo",
+      "-gencode",
+      "arch=compute_90a,code=sm_90a",
+      "-Xptxas=-v"
+    ],
+    "include_dirs": []
+  },
+  "review_dependencies": [
+    {
+      "stage": "S19",
+      "phase": "A",
+      "path": "parallel/combinations/reviews/S19-A-v1.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "compute_s1_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s1_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 1,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s2_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 2,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "compute_s4_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "compute",
+        "stages": 4,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s1_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 1,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s2_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 2,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "transport_s4_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "transport",
+        "stages": 4,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s1_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 1,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s2_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 2,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "serial_s4_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "serial",
+        "stages": 4,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s1_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 1,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s2_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 2,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "overlap_s4_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "overlap",
+        "stages": 4,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s1_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 1,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s2_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 2,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k1",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 1,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k2",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 2,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k4",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 4,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k8",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 8,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k16",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 16,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k32",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 32,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": false
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    },
+    {
+      "id": "output_s4_k64",
+      "iterations": 1,
+      "scope": "one_cta",
+      "threads": 128,
+      "launch": {
+        "kind": "one_cta"
+      },
+      "parameters": {
+        "mode": "output",
+        "stages": 4,
+        "k_tiles": 64,
+        "tile": [
+          32,
+          32,
+          32
+        ],
+        "dynamic_smem_bytes": 32768,
+        "input_profile": "periodic",
+        "holdout": true
+      },
+      "capabilities": {
+        "cc": "9.0",
+        "device_name_contains": "GH200"
+      },
+      "work_model": "s19_controlled_sequence_v1",
+      "work_unit": "operation",
+      "metric": {
+        "numerator": "cta_clock64_cycles",
+        "denominator": "operation_count",
+        "scale": 1,
+        "unit": "clock64_cycles/sequence/CTA"
+      },
+      "coverage_policy": "one_sm",
+      "exportable": false
+    }
+  ],
+  "sass_baseline": {
+    "kernel_symbol": "s19_pipeline",
+    "full_encoding_sha256": "c093a6563d13420dfd8703d0038ec68bbd7c19811e8b62612b253f2ba2ad6c08",
+    "instruction_count": 1168,
+    "encoding_bits": 128,
+    "review_path": "parallel/combinations/reviews/S19-target-compile-SASS-B-v1.json",
+    "cubin_sha256": "8aa72362b4b0b853be1929c9898d25b7eb73b788c4fbfd2dd17728b4675e2e7f",
+    "binary_sha256": "63986cc34454cfb2a0af8a3e1b7acc2f13be50d6a83d49c994f1a688518d4b5b"
+  },
+  "sass_contracts": [
+    {
+      "function": "s19_pipeline",
+      "requirements": [
+        "exact one symbol",
+        "four 16-byte copies per thread per tile; commit per tile; wait immediates0..3",
+        "eight FP32 fma per inner-k step,32 runtime k steps",
+        "copy/fma/control loops inside timestamps; no local spills",
+        "wait-before-CTA-ready; CTA-after-read-before-refill",
+        "output global stores then device fence and CTA rendezvous inside timer",
+        "posttimer CTA barrier before correctness stores"
+      ]
+    }
+  ],
+  "formal_sampling": {
+    "status": "not_implemented_or_admitted",
+    "independent_processes": 10,
+    "warmup_windows": [
+      8,
+      30
+    ],
+    "last5_cv_max": 0.02,
+    "formal_cv_max": 0.05,
+    "max_batches": 3,
+    "keep_all_batches": true
+  },
+  "representative": {
+    "case_id": "overlap_s2_k8",
+    "short_profiles": [
+      "periodic_1",
+      "periodic_3",
+      "tagged_1",
+      "tagged_3"
+    ],
+    "diagnostic_repeats": [
+      1,
+      64
+    ],
+    "diagnostic_performance_eligible": false
+  },
+  "cpu_reference": {
+    "path": "microbench/gh200_resource_campaign/auditors/s19_reference.py",
+    "method": "integer_numerators_matrix_multiply_then_exact_FP32_bits"
+  },
+  "holdout_policy": "K64 not used in coefficient fitting, protocol selection or length selection; correctness always checked",
+  "official_ptx": "https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-wait-group-cp-async-wait-all"
+}

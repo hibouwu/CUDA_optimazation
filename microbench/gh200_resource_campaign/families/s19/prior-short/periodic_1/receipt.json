@@ -1,0 +1,83 @@
+{
+  "argv": [
+    "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/binary/probe",
+    "validate-only",
+    "overlap_s2_k8",
+    "periodic_1",
+    "1"
+  ],
+  "cleanup_confirmed": true,
+  "gpu_process_registration": {
+    "archive_record": "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/attempts/attempt_00/raw.jsonl.registry.json",
+    "argv": [
+      "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/binary/probe",
+      "validate-only",
+      "overlap_s2_k8",
+      "periodic_1",
+      "1"
+    ],
+    "cleanup_receipt": {
+      "argv": [
+        "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/binary/probe",
+        "validate-only",
+        "overlap_s2_k8",
+        "periodic_1",
+        "1"
+      ],
+      "cleanup_confirmed": true,
+      "host_start_ns": 1791144296220451425,
+      "host_stop_ns": 1791144296620420091,
+      "pgid": 3485249,
+      "pid": 3485249,
+      "returncode": 0,
+      "signals": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "23140a378cae0949856635080814375689c07140e269e2a78763de72e0905a94",
+      "timed_out": false,
+      "timeout_seconds": 30
+    },
+    "controller": {
+      "boot_id": "f019ed1d-ff8c-4c5e-9538-1e6b505c243b",
+      "host": "romeo-a051",
+      "pid": 3485152,
+      "start_ticks": 417159512,
+      "uid": 100800
+    },
+    "cwd": "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/attempts/attempt_00",
+    "events": [
+      {
+        "state": "launch_intent",
+        "time_ns": 1791144296221414963
+      },
+      {
+        "state": "spawned",
+        "time_ns": 1791144296225291543
+      },
+      {
+        "state": "cleanup_confirmed",
+        "time_ns": 1791144296621190159
+      }
+    ],
+    "gpu_uuid": "gpu-6fc1965d-fcf1-60af-a082-514a3824834a",
+    "pgid": 3485249,
+    "pid": 3485249,
+    "prelaunch_reconciliations": [],
+    "purpose": "probe",
+    "registry_id": "1791144296221002777-3485152-65132c1be0f14b88832c7109718ee2aa",
+    "schema_version": 2,
+    "start_ticks": 417160237,
+    "state": "cleanup_confirmed",
+    "stderr": "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/attempts/attempt_00/stderr",
+    "stdout": "/gpfs/scratch/hibouwu/gh200_resource_campaign/20261004-s19-representative-v1/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/simt_pipeline/representative-20261004-v1-periodic_1/attempts/attempt_00/raw.jsonl"
+  },
+  "host_start_ns": 1791144296220451425,
+  "host_stop_ns": 1791144296620420091,
+  "pgid": 3485249,
+  "pid": 3485249,
+  "returncode": 0,
+  "signals": [],
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "23140a378cae0949856635080814375689c07140e269e2a78763de72e0905a94",
+  "timed_out": false,
+  "timeout_seconds": 30
+}

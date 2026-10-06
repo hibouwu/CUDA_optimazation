@@ -1,0 +1,42 @@
+"""CUDA 12.9 compile-only job 730459 candidate instruction identity.
+
+Independent source-B/B2 review is still required; these constants are not a review.
+Instruction PCs, predicates, operands and control flow are retained. Changed
+lowering requires new independent review, even if structurally equivalent.
+"""
+BASELINE = {'tb_g2s_q1024': {'instruction_count': 600,
+                  'instructions_sha256': '06a4f484a8c28d30e541e53fc4d84a20812c8c66f0940711312f0031e4cd9478'},
+ 'tb_g2s_q16384': {'instruction_count': 808,
+                   'instructions_sha256': '486d1888bc36b8ea22a531231fe675a27da42c7f422889d91dc8d7b454a5fd79'},
+ 'tb_g2s_q32768': {'instruction_count': 808,
+                   'instructions_sha256': 'a7c8822c0982b7cd4971754d89e285e6972efb34011000a5d84801c9a8ef06ae'},
+ 'tb_g2s_q4096': {'instruction_count': 600,
+                  'instructions_sha256': '751740ff5076d395d31ece234c1669cb01fea2fbbb718374d520dc4cfe640be3'},
+ 'tb_g2s_q65536': {'instruction_count': 808,
+                   'instructions_sha256': '216b29bb0700fd7214100421ff44e4828aa9f5f646aae33e2cdf1152e18dc590'},
+ 'tb_g2s_q8192': {'instruction_count': 600,
+                  'instructions_sha256': 'ec1ace34aedcc972badfb4de706d6b67ae35afc7d528be4cde4704d674df648e'},
+ 'tb_release_q1024': {'instruction_count': 248,
+                      'instructions_sha256': 'ad768007be03303a492ab91b6dbdd8b69953067b5fda255846eeafd89a582863'},
+ 'tb_release_q16384': {'instruction_count': 632,
+                       'instructions_sha256': 'cb66436764d79466468410b14da7ba4e00a7d07512dec95b211ed2d57f6014eb'},
+ 'tb_release_q32768': {'instruction_count': 632,
+                       'instructions_sha256': '80e6aab2f478d8dda6ce29a9f9c1fbc00b14dda4294349a4ce8c12066d9f9112'},
+ 'tb_release_q4096': {'instruction_count': 248,
+                      'instructions_sha256': '2287c0385cd2d46c7c7172adc6eca72e95abc4e9d69a3989aa3f4a670065f30a'},
+ 'tb_release_q65536': {'instruction_count': 632,
+                       'instructions_sha256': '7a6b15b3e5156cd98115b5b1fa9073edf44fd44ce60ec8f9ff157944eda9a640'},
+ 'tb_release_q8192': {'instruction_count': 248,
+                      'instructions_sha256': '05b2b6e1aebd313cb83684233564f3f09615c1cfcbde07c00127e9e0fbeb2f2d'},
+ 'tb_s2g_q1024': {'instruction_count': 248,
+                  'instructions_sha256': 'd32ee3cd77d557b016d2436e69d58eba961bbc59aaf012f68ba6a1ae265da284'},
+ 'tb_s2g_q16384': {'instruction_count': 312,
+                   'instructions_sha256': 'eb82d5a4240df3e0f22d06602c94e4f750177af047fe5cbb72cbbd2cc07b3835'},
+ 'tb_s2g_q32768': {'instruction_count': 312,
+                   'instructions_sha256': 'b97eb85174f20b01ebacbb61d465fb77c4374d0f0439433ed28714f72f64681e'},
+ 'tb_s2g_q4096': {'instruction_count': 248,
+                  'instructions_sha256': '853e30cd596f22f497bea9f83ffba9e0f9757afa43394338d710b8b138e6ef12'},
+ 'tb_s2g_q65536': {'instruction_count': 312,
+                   'instructions_sha256': 'a213fc3eb97545f886898365a2dce301d538991a5f395e82b35a5a8dc8ff70e1'},
+ 'tb_s2g_q8192': {'instruction_count': 248,
+                  'instructions_sha256': 'ed6b74ed4ac1fe9e997f10c845bc9405b97b2b7d9ed7d2f983c4176a9ff91542'}}

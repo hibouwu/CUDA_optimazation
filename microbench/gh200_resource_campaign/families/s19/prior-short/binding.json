@@ -1,0 +1,176 @@
+{
+  "job": "733315",
+  "accepted_review_sha256": "5d37556c5583eefb5849f28516900e44d29fc69b45901d278d40f3fe89f327cd",
+  "original_archive_sha256": "8c4bd536ebfc94cb3f32abb2a363f67b438e4b30a1e9d0cde24808525a3c1508",
+  "performance_reused": false,
+  "coordinates": [
+    {
+      "case_id": "overlap_s2_k8",
+      "profile_id": "periodic_1",
+      "directory": "periodic_1",
+      "files": {
+        "raw.jsonl": "23140a378cae0949856635080814375689c07140e269e2a78763de72e0905a94",
+        "receipt.json": "9fc899245ffaa1e7a3957d9ea0376762d3405c21ac536a29428b5de55a0d2ad6",
+        "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input.u32le": "7accbea98fb58b293cf87d9af03af9326a2f2a60bf84d4f22e347680ae19bae7",
+        "output.u32le": "4666e0c67114a3fce5510305ecb82194554935fa7875562e2a95205e2f2bd242",
+        "digest.u32le": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+        "slots.u32le": "afca28b62ea8b3345ed63dbec8e1165bde536744423b28eb13486eb4a7cea404",
+        "trace_input.u32le": "7accbea98fb58b293cf87d9af03af9326a2f2a60bf84d4f22e347680ae19bae7",
+        "trace_c.u32le": "58fa1710c5ff862af1057488f2bdec873ad3cb0446440e985985ea1d301e2c4b",
+        "guards.u32le": "3c1c545e52709acd685b5edfb251cb4801afb706cdcb778ab04dca106416684f",
+        "stamp.u32le": "b8bc09a4b55495db9e9191e776335df9ad73e622f49f9a036529ed0a06608924"
+      },
+      "result": {
+        "status": "pass",
+        "case_id": "overlap_s2_k8",
+        "profile_id": "periodic_1",
+        "checked_elements": 50410,
+        "reference_values": {
+          "case_id": "s19-overlap-s2-k8-periodic-i1-seed1",
+          "holdout": false,
+          "matched_words": {
+            "input_bits": 16384,
+            "output_bits": 1024,
+            "digest": 128,
+            "input_trace_bits": 16384,
+            "c_trace_bits": 8192,
+            "shared_bits": 8192
+          },
+          "numerical_match": true,
+          "evidence_scope": "complete_payload_values_only"
+        },
+        "guard_words": 96,
+        "stamp_words": 10,
+        "GPU_execution_verified": false,
+        "performance_eligible": false
+      }
+    },
+    {
+      "case_id": "overlap_s2_k8",
+      "profile_id": "periodic_3",
+      "directory": "periodic_3",
+      "files": {
+        "raw.jsonl": "35499162c5f55ed2f99a7a7319bea1f1b1df59aa85492ef289b381a53e4de3c6",
+        "receipt.json": "c8cabb99e9caac6f2d617171c3cf2060679031d9635308c0215aa065dd448307",
+        "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input.u32le": "7accbea98fb58b293cf87d9af03af9326a2f2a60bf84d4f22e347680ae19bae7",
+        "output.u32le": "4666e0c67114a3fce5510305ecb82194554935fa7875562e2a95205e2f2bd242",
+        "digest.u32le": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+        "slots.u32le": "afca28b62ea8b3345ed63dbec8e1165bde536744423b28eb13486eb4a7cea404",
+        "trace_input.u32le": "141008cede4f589e225afaf9ec5a481e96f076da6e19b712586f3cf35b2d4365",
+        "trace_c.u32le": "5ae83aa6c9584b1f86b35e6dc8f846fb1af9edd93cfd0d89c63a47b1a79058ae",
+        "guards.u32le": "3c1c545e52709acd685b5edfb251cb4801afb706cdcb778ab04dca106416684f",
+        "stamp.u32le": "d68898c605cd63681164eec6eddc27d2a2050b4bc885c1045b9b6428a4618f65"
+      },
+      "result": {
+        "status": "pass",
+        "case_id": "overlap_s2_k8",
+        "profile_id": "periodic_3",
+        "checked_elements": 99562,
+        "reference_values": {
+          "case_id": "s19-overlap-s2-k8-periodic-i3-seed1",
+          "holdout": false,
+          "matched_words": {
+            "input_bits": 16384,
+            "output_bits": 1024,
+            "digest": 128,
+            "input_trace_bits": 49152,
+            "c_trace_bits": 24576,
+            "shared_bits": 8192
+          },
+          "numerical_match": true,
+          "evidence_scope": "complete_payload_values_only"
+        },
+        "guard_words": 96,
+        "stamp_words": 10,
+        "GPU_execution_verified": false,
+        "performance_eligible": false
+      }
+    },
+    {
+      "case_id": "overlap_s2_k8",
+      "profile_id": "tagged_1",
+      "directory": "tagged_1",
+      "files": {
+        "raw.jsonl": "751e68db106b9c1cf003ac5e6747566d7856059bcfbdbeb6caf69483dd01b7c3",
+        "receipt.json": "34bab3cc70b2e1bf34c4332d97ccbda7b1faf347cff9338930c68182e4ba25bb",
+        "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input.u32le": "34178bbe14f565c2652710aeeb4328e5fe41a8ed837218ff794f1478dfb2579e",
+        "output.u32le": "a63edaa39dc502c4d9834345f777e33cfcc882adf9d73547c58697fe45c85328",
+        "digest.u32le": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+        "slots.u32le": "5e35f1d4f111bf13d63a709763318b84b77f4c750bd474695d35685110e7663f",
+        "trace_input.u32le": "34178bbe14f565c2652710aeeb4328e5fe41a8ed837218ff794f1478dfb2579e",
+        "trace_c.u32le": "53f56ad3e78d63b27bda8d7c1a439f7ac34ec2380bcfb09c06486bb55553a347",
+        "guards.u32le": "3c1c545e52709acd685b5edfb251cb4801afb706cdcb778ab04dca106416684f",
+        "stamp.u32le": "0b9bb9e51e2234d3ea591a279a370b64b1a96810e27cbfe3880bd15c4c4c90c0"
+      },
+      "result": {
+        "status": "pass",
+        "case_id": "overlap_s2_k8",
+        "profile_id": "tagged_1",
+        "checked_elements": 50410,
+        "reference_values": {
+          "case_id": "s19-overlap-s2-k8-tagged-i1-seed1",
+          "holdout": false,
+          "matched_words": {
+            "input_bits": 16384,
+            "output_bits": 1024,
+            "digest": 128,
+            "input_trace_bits": 16384,
+            "c_trace_bits": 8192,
+            "shared_bits": 8192
+          },
+          "numerical_match": true,
+          "evidence_scope": "complete_payload_values_only"
+        },
+        "guard_words": 96,
+        "stamp_words": 10,
+        "GPU_execution_verified": false,
+        "performance_eligible": false
+      }
+    },
+    {
+      "case_id": "overlap_s2_k8",
+      "profile_id": "tagged_3",
+      "directory": "tagged_3",
+      "files": {
+        "raw.jsonl": "f0f233cf8751502069978c32e48189850fe0353110a28a4c1bcc0bd99b7444a4",
+        "receipt.json": "2520c8333d490a71b1a79dcaef5da7f56fb4861b6573b9a01fecd41b5257251b",
+        "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input.u32le": "34178bbe14f565c2652710aeeb4328e5fe41a8ed837218ff794f1478dfb2579e",
+        "output.u32le": "a63edaa39dc502c4d9834345f777e33cfcc882adf9d73547c58697fe45c85328",
+        "digest.u32le": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560",
+        "slots.u32le": "5e35f1d4f111bf13d63a709763318b84b77f4c750bd474695d35685110e7663f",
+        "trace_input.u32le": "a6fbbe900c0fb4668e1196b8e4886583c1404913712dff824d681a77a3419290",
+        "trace_c.u32le": "281e6119242849e32661c584fcc312385e80a58caf240bdc2b3f40918e4dd160",
+        "guards.u32le": "3c1c545e52709acd685b5edfb251cb4801afb706cdcb778ab04dca106416684f",
+        "stamp.u32le": "38c260628b247a757f20a19e5f2d363e795ac8071c6b6c7180a637c7f0846f00"
+      },
+      "result": {
+        "status": "pass",
+        "case_id": "overlap_s2_k8",
+        "profile_id": "tagged_3",
+        "checked_elements": 99562,
+        "reference_values": {
+          "case_id": "s19-overlap-s2-k8-tagged-i3-seed1",
+          "holdout": false,
+          "matched_words": {
+            "input_bits": 16384,
+            "output_bits": 1024,
+            "digest": 128,
+            "input_trace_bits": 49152,
+            "c_trace_bits": 24576,
+            "shared_bits": 8192
+          },
+          "numerical_match": true,
+          "evidence_scope": "complete_payload_values_only"
+        },
+        "guard_words": 96,
+        "stamp_words": 10,
+        "GPU_execution_verified": false,
+        "performance_eligible": false
+      }
+    }
+  ]
+}

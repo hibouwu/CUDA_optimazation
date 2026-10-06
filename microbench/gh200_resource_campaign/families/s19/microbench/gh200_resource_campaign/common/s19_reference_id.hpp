@@ -1,0 +1,2 @@
+#pragma once
+#define S19_REFERENCE_SHA256 "e2e53c1bfd6e786a09074461f0fb452da7b28747fffcd9db42f482ba7c458b1e"

@@ -1,0 +1,10 @@
+{
+  "archive": {
+    "path": "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s16-max0-731220-collection-a/offhost-deployment/repo/results/gh200_resource_campaign/20261001-resource-suite-v2/tma_stage_request_packed/v1/index0-job731220-v1/run.tar.xz",
+    "sha256": "846eb803602259cb8850ac9c45220f4f68b44993cf717fbb9527a48720d811dd"
+  },
+  "raw_member": "results/gh200_resource_campaign/20261001-resource-suite-v2/tma_stage_request/short-v1-gmem_to_smem_16kib_s1_r4_all_gpu--stage_short_1_2_5_33_v1/attempts/attempt_00/raw.jsonl",
+  "raw_sha256": "04babdbc21359837bc95c899904e86f0f5c09c2b218e54a2006116592337b119",
+  "review_sha256": "7fc4477b3b24aadf238f139da8558a651d7286649b5647bcbfae7a9862fb8ebb",
+  "no_new_performance_evidence": true
+}

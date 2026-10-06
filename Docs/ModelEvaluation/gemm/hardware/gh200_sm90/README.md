@@ -17,32 +17,26 @@
 
 产品标称值、架构限制和历史测量分别记录。历史参数保留访问形状、统计范围与并发条件；方案专用的联合服务参数写入方案文件。
 
-[微基准实验与后续计划](../../experiments/gh200_sm90/README.md) · [旧数据独立复审](../../experiments/gh200_sm90/EXP-01-compute-audit.md)
+[微基准实验与后续计划](../../experiments/gh200_sm90/README.md) · [旧数据独立复审](../../experiments/gh200_sm90_archive/EXP-01-compute-audit.md)
 
-## 已审条件化服务观测
+## 已审条件服务与覆盖
 
-六个正式家族（访存基线、FMA、MMA、WGMMA、cp.async、全局读写联合服务）已有 279 条条件化观测取得有限发布资格，10 个排除项继续保留。具体配置、单位、资源与完成边界见[参数使用说明](../../experiments/gh200_sm90/EXP-21-parameter-usage.draft.md)，结构化数值见[参数文件](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-parameter-export-B/all-six-draft-r4/parameters.json)。资格由[独立发布桥接审查](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/reviews/S21-publication-bridge-B-review.json)和完整来源提供，原冻结文件的 draft 标签保留。
+当前17个正式结果家族已发布754条条件观测，24个排除项保留。各实验的结果、图、真实手算和限制统一见[结果总览](../../experiments/gh200_sm90/README.md)，结构化数值与资格记录见[参数来源索引](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-seventeen-family-index-v1/index.json)。原参数文件的历史draft标签保留，当前资格由对应独立审查及来源封套确定。
 
-S18 又完成27个单CTA驻留与辅助资源配置，已通过独立C、原ARM严格封存和换目录重放；见[实验结果与手算](../../experiments/gh200_sm90/EXP-18-auxiliary-results-v1.md)和[27条条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/compute_onchip/s18-integration-v2/operations-v1/job733338-results/published-v1/qualified-parameters.json)。原六家族279条、S18的27配置与S14的24配置加上 S09 的15配置与 S10 的22配置、S11 的11条可导出配置合计378条；S18的C/N和逻辑Q/C保持自身单位。SMEM预留不等于SMEM搬运带宽，occupancy仍是API上限，实际carveout未知。
+| 资源 | 已发布的代表实验 | 使用时必须保留的条件 |
+|---|---|---|
+| 计算 | FMA、mma.sync、WGMMA、FP8/INT8 | 精度、指令形状、依赖链、warp/warpgroup数、提交与等待 |
+| 片上访问与同步 | SMEM、矩阵搬运、shuffle、barrier/fence | 地址和访问宽度、参与范围、校验与同步、完整循环及排空 |
+| 全局与异步搬运 | global联合读写、cp.async、TMA 1D/2D | 工作集、读写比例、payload、方向、stride/swizzle、完成与复用事件 |
+| 分配与辅助操作 | 驻留上限、local/spill、地址、转换、原子 | 实际编译资源、资源预留、争用条件与各自计量单位 |
 
-S14完成24个1D TMA bulk双向配置，见[正式实验与手算](../../experiments/gh200_sm90/EXP-14-tma-bulk-results-v4.md)及[24条条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/parallel/tma_cluster/analysis/s14-formal-733392-qualified/parameter-candidates.json)。参数内部已获得C后资格；单CTA为B_transport/clock64_cycle/CTA，全GPU为GB_transport/s/GPU。它们包含提交、等待和CTA控制，保留32-slot、网格与资源条件，不解释为物理HBM峰值或缓存命中证明。
+这些结果是固定实验条件下的服务观测。单CTA的clock64周期与全GPU的globaltimer完成时间分开；逻辑运输字节不自动等于物理HBM流量。访问、校验、同步或drain在主窗口内的实验不能当作裸指令延迟。occupancy API是上限，不单独证明实际驻留；SMEM预留量也不等于搬运带宽。
 
-S09 完成15个 SMEM scalar/vector、stride、广播和独立读写配置，见[正式结果与手算](../../experiments/gh200_sm90/EXP-09-shared-memory-results-v1.md)及[条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s09-main-execution/device-revalidation-v2/published-v1/qualified-parameters.json)。固定256线程、单CTA、64 KiB动态SMEM、8192轮；访问、checksum和同步均在clock64窗口内。每条保留中位数、范围、CV和批次数；广播全部30样本的CV约4.8%。这组结果不替代物理SMEM端口带宽、多CTA竞争或Tensor Core取数能力。
+TMA并发、DSM/多播和两套受控组合的GPU采样及原环境重算均已完成。S17、S19、S20的252个条件已通过实际C与发布桥接并纳入754条。S16的32个条件已通过最终C r2及发布桥接，17家族共754条。原候选和bridge_pending标签保留，当前资格由独立复核及最终发布状态确定，不能由raw summary的stable标记自行授予。
 
-这些是固定实验条件下的服务观测。选择时同时匹配指令、类型、依赖与并发、线程/CTA 范围、循环长度、设备和工具链；逻辑字节不自动转换为物理 HBM 流量。FP8/INT8、张量映射或并发TMA、DSM和受控组合仍需各自完成测量与审查，不能从已测家族补出未知参数。
+本轮采用单GPU问题范围，Batched/Grouped及Distributed暂不实施。cluster/DSM是单GPU内部路径。GH200不继承Thor的TMEM/TCGen05、tc5a缓冲配置或调度假设。
 
-## 参数覆盖状态
-
-S15 的 TMA 二维搬运第一组已有56条合格条件观测，见[正式结果与真实手算](../../experiments/gh200_sm90/EXP-15-tma-2d-results-v1.md)及[条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/published-first56-v1/qualified-parameters.json)。包括34个单CTA和22个全GPU非padding配置；剩余12个全GPU padding点待测。沿用各点的payload、行跨度、SW128/none、N、实际CTA数与完成边界；G2S计时后的两份tile导出不加入运输量。当前合格条件观测共434条，完整家族仍为11个，S15部分交付。
-
-当前范围为单 GPU 的 Single GEMM；Batched / Grouped 暂不考虑，Distributed 暂不实现。cluster / DSM 属于单 GPU 内部路径，按方案需要使用。
-
-- [L0](L0.md)：已补 local、矩阵搬运、warp 交换、辅助及原子操作路径，明确异步分组与完成条件，并引用 7 个代表计算配置的条件化复测值。
-- [L1](L1.md)：已补 CUDA occupancy 分配舍入、`setmaxnreg`、溢出路径，以及命名 barrier 与 `mbarrier` 的不同资源约束。
-- [L2](L2.md)：已补 tiled TMA 的请求/描述符约束、输出完成、DSM 与多播需求；实际 L2 cache 为 60 MiB；新增普通 global 请求服务，物理 HBM/TMA/DSM 带宽仍待确认。
-- [L3](L3.md)：已补 cluster 的共同调度、大小及驻留约束，区分参考频率、局部周期和整卡完成时间。
-
-规则依据为按 SM90 筛选的 PTX ISA 8.8、CUDA 13.1 文档和本机 CUDA 13.0 occupancy 头文件；经验数据来自已有 CUDA 12.9 [审查复测][audit]。2026-10-01 新增 [EXP-02](../../experiments/gh200_sm90/EXP-02-memory-paths.md) 的 120 次独立进程资源测量及旧三批独立复审；物理在途容量、裸指令延迟、共享通路服务和完整 kernel 预测仍未闭合。
+物理在途容量、裸指令延迟、更广泛共享通路服务和完整kernel预测仍需专门证据。软件stage扫描不证明物理队列深度；本轮微基准不宣称完整GEMM预测已经闭合。
 
 ## 产品与架构条件
 
@@ -74,6 +68,3 @@ GPU 产品算力见 [L0](L0.md)，片上容量及驻留上限见 [L1](L1.md)，�
 
 [audit]: ../../../../../microbench/gh200_l0/AUDIT.md
 
-S10 完成22个矩阵片段搬运与warp交换配置，见[正式结果与手算](../../experiments/gh200_sm90/EXP-10-matrix-exchange-results-v1.md)及[条件参数](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s10-main-execution/runtime-r2/published-v1/qualified-parameters.json)。矩阵是单CTA、32线程、8192轮、8 KiB动态SMEM；shuffle比较32/128线程与1/4条独立流。逻辑B/cycle与warp指令/cycle分开，窗口包含本循环的地址、消费/生成、同步和drain；不能作为裸指令延迟、物理端口峰值或全GPU能力。
-
-S11完成同步与fence的13个单CTA配置，见[结果与手算](../../experiments/gh200_sm90/EXP-11-synchronization-results-v1.md)及[11条条件参数和2个排除项](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s11-main-execution/published-v1/qualified-parameters.json)。CTA/mbarrier按整个CTA共同完成的phase计量，fence采用零未完成请求条件下的warp指令序列；偏斜点包含每选定线程每阶段256条依赖MAD。完整窗口不是裸指令延迟，独立arrival launch的时间差不从正式循环扣除；fence也不作为TMA/cp.async/WGMMA统一完成事件。原ARM严格封存/同leaf重放通过，本机3.14的5处CV末位差异失败明确保留。

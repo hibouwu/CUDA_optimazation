@@ -4,18 +4,31 @@
 
 实验范围和后续顺序见 [GH200 实验入口](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)。通用模型和硬件参数继续使用 `Docs/ModelEvaluation/gemm/`。
 
-剩余六类实验改为[按家族连续执行](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/RUN-REMAINING.md)。S15 新连续入口及参数候选报告为：
+先读[结果总览](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)，再按实验选择脚本。17 个家族的 754 条条件观测均已完成采样、原环境重算和发布；审查流程已冻结，不再推进。
+
+| 最后四个家族 | 冻结脚本与用法 |
+|---|---|
+| TMA并发与缓冲 | [families/s16](families/s16/README.md) |
+| DSM、cluster与多播 | [families/s17](families/s17/README.md) |
+| FP32受控组合 | [families/s19](families/s19/README.md) |
+| BF16 WGMMA受控组合 | [families/s20](families/s20/README.md) |
+
+每个家族的run入口连续执行其有限配置、短检查、自身校准、预热和正式采样；原节点运行包包含准确ARM二进制及来源身份。公开源码保留冻结字节，但不含该二进制，不能直接拿新编译文件冒充原测量文件。各目录README说明完整运行包和审查入口。
+
+[replay_frozen_family.py](replay_frozen_family.py)是S08/S15/S16/S17/S19/S20的换目录CPU重算入口：用原统计源码从 raw 重算统计，记录实际解释器，不执行GPU。需要核对某个家族的数值时使用；完整 S22 重放已随审查流程冻结。
+
+S15的既有连续入口仍保留：
 
 ```sh
 bash microbench/gh200_resource_campaign/runners/run_s15_once.sh --help
 python3 -B microbench/gh200_resource_campaign/report_tma_tensor_2d.py --help
 ```
 
-`run_s15_once.sh` 复用完整已签 formal-sampling 源码包，默认一次 GPU 作业连续运行剩余 12 配置，并自动安排无 GPU 的普通 CPU 重算。提交前核完整源码和全实验容量。其他五类尚需接齐各方案列明的正式入口，不把现有短诊断包装为完整测量。独立结果资格仍以最终 C 为准。
+该入口原任务为剩余12配置，当前S15完整68配置已发布，参见[结果说明](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-15-tma-2d.md)。不因历史入口仍存在就重新提交已完成测量。
 
 ## v2 总控
 
-当前计划和教学入口分别为 [PLAN](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/PLAN.md) 和 [GUIDE](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/GUIDE.md)。`contracts/` 定义实验，`probes/` 实施 CUDA 探针，`common/` 保存公共协议，`runners/` 管理执行，`auditors/` 独立重算，`tests/` 保存 CPU 检查和负例。
+当前计划和教学入口分别为 [PLAN](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90_archive/PLAN.md) 和 [GUIDE](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90_archive/GUIDE.md)。`contracts/` 定义实验，`probes/` 实施 CUDA 探针，`common/` 保存公共协议，`runners/` 管理执行，`auditors/` 独立重算，`tests/` 保存 CPU 检查和负例。
 
 ```sh
 python -B microbench/gh200_resource_campaign/run_suite.py --help
@@ -46,8 +59,8 @@ python -B -m unittest discover -s microbench/gh200_resource_campaign/tests -v
 
 ## 当前结果入口
 
-- [旧三批计算复审](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-01-compute-audit.md)：1,596 次正式记录、84 次空窗口、81 个目标函数循环检查。
-- [SMEM/global 实验与结果](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-02-memory-paths.md)：采用 `20261001-memory-c`，12×10 次独立进程。
+- [旧三批计算复审](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90_archive/EXP-01-compute-audit.md)：1,596 次正式记录、84 次空窗口、81 个目标函数循环检查。
+- [SMEM/global 实验与结果](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90_archive/EXP-02-memory-paths.md)：采用 `20261001-memory-c`，12×10 次独立进程。
 - `memory-a` 编译失败；`memory-b` 的 SMEM load 外提使请求量与实际执行不符，后审否决该批次建模使用。失败和否决记录均保留。
 
 ## 历史复审与计划

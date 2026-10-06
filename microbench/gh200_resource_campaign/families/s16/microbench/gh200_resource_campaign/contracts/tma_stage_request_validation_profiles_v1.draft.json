@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "family": "tma_stage_request",
+  "profiles": [
+    {
+      "id": "stage_short_1_2_5_33_v1",
+      "required_seed": 3,
+      "target_iterations": [
+        1,
+        2,
+        5,
+        33
+      ],
+      "input_profiles": [
+        "nonuniform_uint32_stage_request_pattern"
+      ],
+      "maximum_target_launches": 4,
+      "maximum_explicit_auxiliary_launches": 0,
+      "completion_requirements": [
+        "fixed4 launches; no warmup/pilot",
+        "G2S init/reset async proxy publication, acquire/CTA publication, full R consumer-done then slot release",
+        "S2G R requests onecommit peritem; fullwait S-1 before reuse, tailfullwait0; no read substitution",
+        "full trace/final shared slots/full ring with guards/counts/lifecycle/stamps lossless uint32LE; opaque token recorded with uint64 domain, never decoded",
+        "S4R4 actual capacity reject before attributes/allocation/launch; do not substitute coordinate"
+      ],
+      "reference_identity": {
+        "model": "tma_stage_request_word_reference_v1",
+        "path": "microbench/gh200_resource_campaign/common/tma_stage_request_reference.hpp",
+        "sha256": "0da631ca7585e89cccfb23b804339a0b4ca06c3a6cc37e87e357339a1fa4c6c8"
+      },
+      "declared_output_check": "all transport data exact, lifecycle counters exact/predicates, stamp/order uint64 predicates; G2S opaque token 2*B*I words preserved/domain_only separately and excluded from checked_elements",
+      "output_evidence_kind": "full_values",
+      "performance_eligible": false,
+      "warmup_allowed": false,
+      "pilot_allowed": false
+    }
+  ]
+}
