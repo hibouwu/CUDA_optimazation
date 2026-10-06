@@ -1,0 +1,226 @@
+[
+  {
+    "id": "wgmma_ffma_same_a_only",
+    "family": 0,
+    "order": 2,
+    "a": 160,
+    "b": 0
+  },
+  {
+    "id": "wgmma_ffma_same_b_only",
+    "family": 0,
+    "order": 3,
+    "a": 0,
+    "b": 160
+  },
+  {
+    "id": "wgmma_ffma_same_80:80_serial",
+    "family": 0,
+    "order": 0,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "wgmma_ffma_same_80:80_interleaved",
+    "family": 0,
+    "order": 1,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "wgmma_ffma_same_32:128_serial",
+    "family": 0,
+    "order": 0,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "wgmma_ffma_same_32:128_interleaved",
+    "family": 0,
+    "order": 1,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "wgmma_ffma_same_128:32_serial",
+    "family": 0,
+    "order": 0,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "wgmma_ffma_same_128:32_interleaved",
+    "family": 0,
+    "order": 1,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "wgmma_ffma_cross_a_only",
+    "family": 1,
+    "order": 2,
+    "a": 160,
+    "b": 0
+  },
+  {
+    "id": "wgmma_ffma_cross_b_only",
+    "family": 1,
+    "order": 3,
+    "a": 0,
+    "b": 160
+  },
+  {
+    "id": "wgmma_ffma_cross_80:80_serial",
+    "family": 1,
+    "order": 0,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "wgmma_ffma_cross_80:80_interleaved",
+    "family": 1,
+    "order": 1,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "wgmma_ffma_cross_32:128_serial",
+    "family": 1,
+    "order": 0,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "wgmma_ffma_cross_32:128_interleaved",
+    "family": 1,
+    "order": 1,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "wgmma_ffma_cross_128:32_serial",
+    "family": 1,
+    "order": 0,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "wgmma_ffma_cross_128:32_interleaved",
+    "family": 1,
+    "order": 1,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "lds_ffma_a_only",
+    "family": 2,
+    "order": 2,
+    "a": 160,
+    "b": 0
+  },
+  {
+    "id": "lds_ffma_b_only",
+    "family": 2,
+    "order": 3,
+    "a": 0,
+    "b": 160
+  },
+  {
+    "id": "lds_ffma_80:80_serial",
+    "family": 2,
+    "order": 0,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "lds_ffma_80:80_interleaved",
+    "family": 2,
+    "order": 1,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "lds_ffma_32:128_serial",
+    "family": 2,
+    "order": 0,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "lds_ffma_32:128_interleaved",
+    "family": 2,
+    "order": 1,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "lds_ffma_128:32_serial",
+    "family": 2,
+    "order": 0,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "lds_ffma_128:32_interleaved",
+    "family": 2,
+    "order": 1,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "lds_cvt_a_only",
+    "family": 3,
+    "order": 2,
+    "a": 160,
+    "b": 0
+  },
+  {
+    "id": "lds_cvt_b_only",
+    "family": 3,
+    "order": 3,
+    "a": 0,
+    "b": 160
+  },
+  {
+    "id": "lds_cvt_80:80_serial",
+    "family": 3,
+    "order": 0,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "lds_cvt_80:80_interleaved",
+    "family": 3,
+    "order": 1,
+    "a": 80,
+    "b": 80
+  },
+  {
+    "id": "lds_cvt_32:128_serial",
+    "family": 3,
+    "order": 0,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "lds_cvt_32:128_interleaved",
+    "family": 3,
+    "order": 1,
+    "a": 32,
+    "b": 128
+  },
+  {
+    "id": "lds_cvt_128:32_serial",
+    "family": 3,
+    "order": 0,
+    "a": 128,
+    "b": 32
+  },
+  {
+    "id": "lds_cvt_128:32_interleaved",
+    "family": 3,
+    "order": 1,
+    "a": 128,
+    "b": 32
+  }
+]

@@ -4,6 +4,8 @@
 
 实验范围和后续顺序见 [GH200 实验入口](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)。通用模型和硬件参数继续使用 `Docs/ModelEvaluation/gemm/`。
 
+后续[FP16 Tensor Core GEMM实验](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/README.md)列明锚点、默认规则矩阵、条件扩展及留出验证；当前只有计划。
+
 先读[结果总览](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)，再按实验选择脚本。17 个家族的 754 条条件观测均已完成采样、原环境重算和发布；审查流程已冻结，不再推进。
 
 | 最后四个家族 | 冻结脚本与用法 |
@@ -39,7 +41,7 @@ python -B -m unittest discover -s microbench/gh200_resource_campaign/tests -v
 
 六个主要入口为 `plan/run/status/resume/audit/report`，另有受审查约束的 `finalize`。新运行按 `results/gh200_resource_campaign/<suite-id>/<family>/<run-id>/` 保存。`run --preflight` 用于 B 阶段设备检查，不能通过恢复变成正式样本；正常 `run` 需要相应独立门禁。并非所有计划家族都已实现，未注册的适配器会明确拒绝。
 
-当前尚未完成全轮交付。实际可重放的 v2 示例、证据边界与原始字段手算见 GUIDE。以下内容保留 v1 的原有用法；v1 的两次预热和恢复规则不适用于 v2。
+v2 各实验的结果、手算与数据位置见[结果总览](../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/README.md)。以下内容保留 v1 的原有用法；v1 的两次预热和恢复规则不适用于 v2。
 
 ## v1 文件与结果
 

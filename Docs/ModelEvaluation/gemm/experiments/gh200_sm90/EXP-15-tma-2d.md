@@ -7,7 +7,7 @@
 - 连续布局下，整卡读写都在 payload ≥8 KiB 时达 3.8–3.9 TB/s；**2D tensor 写不像 1D bulk 写（[EXP-14](EXP-14-tma-1d.md)，2.7 TB/s）那样慢**，写 4 KiB 起即达 3.8 TB/s。
 - SW128 swizzle 与无 swizzle 结果相同，在本实验范围内没有代价。
 - **本实验的 padding 布局下写大幅下降**：每行 128 B 有效数据后留 16 B，行距 144 B（64 KiB 时 256 B 数据、行距 272 B），整卡 4–32 KiB 写只有 1.33–1.45 TB/s，约为连续布局的 35–38%；读降到约 3.36 TB/s（降 13%）。1 KiB（8 行）时写反而不降。
-- 推断：这种行距只按 16 B 对齐，行起点不落在 32 B sector 或 128 B 边界上，部分写入可能是下降原因。行距为 128 B 倍数的 padding 没有测，不能把结论推广到所有不连续的 leading dimension。
+- 原因见下方“后续结果”：行起点只按 16 B 对齐；行距 160 B 或 256 B 时不下降。
 - 单 CTA 一次一个请求：连续读 64 KiB 达 55 B/cycle（1D bulk 同 payload 为 31.6，但 box 形状、循环次数不同）；padding 读 34 B/cycle。
 
 ## 配置
@@ -54,9 +54,9 @@
 
 ![整卡](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/all_gpu.png)
 
-## 待补
+## 后续结果
 
-用行距 = 128 B 倍数的 padding（如 256 B）与 144 B 对照，区分"不连续"与"不对齐"；输出 tile 的 TMA 写回建模依赖这项结果。
+[R05-E](access_rules/R05-async-lifecycle.md) 用 16 KiB box 对比了写回行距：128 B 950714 ns、144 B 1314624 ns（慢 38%）、160 B 966899 ns、256 B 898909 ns。行距 160 B（行起点 32 B 对齐）和 256 B（128 B 倍数的 padding）都不慢，所以本页 padding 写回下降的原因是 144 B 行距只按 16 B 对齐，而不是行间有空隙。
 
 ## 数据
 

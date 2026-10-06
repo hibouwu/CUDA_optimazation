@@ -1,0 +1,378 @@
+{
+  "status": "frozen prediction; written before any timed run of target_async",
+  "created_utc": "2026-10-06T16:30:24+00:00",
+  "generator": {
+    "script": "microbench/gh200_resource_campaign/access_rules/v01_predict.py",
+    "sha256": "3918e2ac2d574d3452b97c8a6375af5390e152a921f0e15d33c4f21f8aa2a12e"
+  },
+  "probe": {
+    "path": "microbench/gh200_resource_campaign/access_rules/probes/v01.cu",
+    "sha256": "cb479148289bee2d81e89a7529932885774cec103d27d7c8660a9e65e7001894",
+    "function": "target_async"
+  },
+  "formulas": {
+    "ktile": "T_k = 4194304 FLOP / wgmma_one_cta; supply check 49152 B / T_k <= supply_shared",
+    "one_cta": "fill + (K*T_k + drain) + output",
+    "fill": "cta_barrier + tma_load_16k_ready + 32768 B / supply_shared",
+    "drain": "(wgmma_dependent_step - 128) + cta_barrier",
+    "output": "2 * (65536/sts_4warps + proxy_fence + cta_barrier + 65536/tma_store_64k_one_cta)",
+    "all_gpu": "4 waves * [ (fill + K*T_k + drain)/f + 2*((sts+publish)/f + max(132*65536/tma_store_all_gpu, 65536/tma_store_64k_one_cta/f)) ], f = wgmma_all_gpu / (132 * wgmma_one_cta)",
+    "cutlass": "cluster_sync + fill/f + (K/64*T_k + drain)/f + epilogue + launch(0); epilogue = max(128 tiles*128 KiB/tma_store_all_gpu, 128 KiB/tma_store_64k/f) + first 16 KiB subtile / sts_8warps / f"
+  },
+  "prior_knowledge": [
+    "2026-10-06 serialized target kernel results at 7/19/47 (different kernel)",
+    "CUTLASS 2048^3 31.248 us and 2048x2048x8192 97.952 us on GPU-099dda56 (job 735062)"
+  ],
+  "inputs": {
+    "wgmma_one_cta": {
+      "value": 4095.551519698735,
+      "unit": "FLOP/cycle/CTA",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/cases.csv",
+      "condition": "R00-B FP16 SS m64n256k16, 2 warpgroups, wait1, one CTA"
+    },
+    "wgmma_all_gpu": {
+      "value": 989104933387693.5,
+      "unit": "FLOP/s/GPU",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/cases.csv",
+      "condition": "R00-B same shape, all-GPU globaltimer envelope"
+    },
+    "cutlass_4096_ms": {
+      "value": 0.20740800350904465,
+      "unit": "ms",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/cases.csv",
+      "condition": "R00-A fixed CUTLASS 128x256x64, cluster 2x1x1, 4096^3, repeat input, CUDA event"
+    },
+    "wgmma_dependent_step": {
+      "value": 201.0,
+      "unit": "cycle/step",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-b-job735060/formal-r01-v1/rules.json",
+      "condition": "R01 dependent m64n256k16 chain: issue + execution + completion per step"
+    },
+    "supply_shared": {
+      "value": 55.4751820615953,
+      "unit": "B/cycle/SM",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/rules.json",
+      "condition": "R05-D 1 CTA/SM, 4 x 48 KiB stages in flight, all CTAs share an L2/4 source, no compute"
+    },
+    "supply_independent": {
+      "value": 15.26139800502289,
+      "unit": "B/cycle/SM",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/rules.json",
+      "condition": "R05-D same, independent sources totalling 4 x L2"
+    },
+    "tma_store_all_gpu": {
+      "value": 4927.290759641022,
+      "unit": "B/ns/GPU",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/rules.json",
+      "condition": "R05-E all-GPU TMA 2D store, 16 KiB boxes, 128 B rows at 256 B pitch"
+    },
+    "tma_load_16k_ready": {
+      "value": 860.9347330729166,
+      "unit": "cycle",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-a-formal-v5/rules.json",
+      "condition": "R05-A one 16 KiB TMA load (shared source): request preparation -> mbarrier wait return"
+    },
+    "sts_4warps": {
+      "value": 92.56378993578622,
+      "unit": "B/cycle/CTA",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r03-formal-v1/rules.json",
+      "condition": "R03 store_b16_w4: 16 B shared stores, 4 warps"
+    },
+    "sts_8warps": {
+      "value": 125.30452108396908,
+      "unit": "B/cycle/CTA",
+      "source": "results/gh200_resource_campaign/access_rules/20261006-c-job735059/r03-formal-v1/rules.json",
+      "condition": "R03 store_b16_w8: 16 B shared stores, 8 warps"
+    },
+    "tma_store_64k_one_cta": {
+      "value": 28.819230280206018,
+      "unit": "B/cycle/CTA",
+      "source": "results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/results.csv",
+      "condition": "EXP-15 one CTA, one 64 KiB TMA 2D store in flight, commit + wait_group 0 + CTA barrier"
+    },
+    "cta_barrier": {
+      "value": 29.3,
+      "unit": "cycle",
+      "source": "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-11-sync.md",
+      "condition": "EXP-11 CTA barrier, 256 threads, aligned arrival"
+    },
+    "proxy_fence": {
+      "value": 10.9,
+      "unit": "cycle",
+      "source": "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-11-sync.md",
+      "condition": "EXP-11 fence.proxy.async, no pending accesses"
+    },
+    "cluster_sync": {
+      "value": 190.0,
+      "unit": "ns",
+      "source": "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/EXP-17-cluster.md",
+      "condition": "EXP-17 single-cluster full sync phase"
+    }
+  },
+  "derived": {
+    "ktile_cycles": 1024.1121323529412,
+    "clock_hz": 1829599543.8685644,
+    "ktile_ns": 559.746604542503,
+    "ktile_demand_bytes_per_cycle": 47.994744371469544,
+    "supply_limited": false,
+    "fill_cycles": 1480.9132812499552,
+    "drain_cycles": 102.3,
+    "output_one_cta_cycles": 6044.492358657757,
+    "output_half_store_all_gpu_ns": 1755.68125,
+    "output_all_gpu_cta_ns": 4329.256275667276
+  },
+  "cases": [
+    {
+      "case_id": "target_tc_k7_one_cta",
+      "scope": "one_cta",
+      "length": 7,
+      "predicted_time": 14796.490566378301,
+      "unit": "clock64_cycle/CTA",
+      "segments": {
+        "fill": 1480.9132812499552,
+        "mainloop": 7271.0849264705885,
+        "output": 6044.492358657757
+      },
+      "predicted_mainloop_cycles_per_ktile": 1038.7264180672269,
+      "rules": [
+        "R00-B",
+        "R01",
+        "R05-A",
+        "R05-D",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "8 B STS rate taken from R03 16 B stores (4 warps)",
+        "8 x 8 KiB SW128 boxes in one bulk group taken as one 64 KiB request (EXP-15)",
+        "single-CTA supply taken from R05-D all-SM value (lower bound)",
+        "SMEM shared by WGMMA SS operand reads (~80 B/cycle) and TMA writes (48 B/cycle): no joint-service rule, assumed independent"
+      ]
+    },
+    {
+      "case_id": "target_tc_k19_one_cta",
+      "scope": "one_cta",
+      "length": 19,
+      "predicted_time": 27085.836154613597,
+      "unit": "clock64_cycle/CTA",
+      "segments": {
+        "fill": 1480.9132812499552,
+        "mainloop": 19560.430514705884,
+        "output": 6044.492358657757
+      },
+      "predicted_mainloop_cycles_per_ktile": 1029.496342879257,
+      "rules": [
+        "R00-B",
+        "R01",
+        "R05-A",
+        "R05-D",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "8 B STS rate taken from R03 16 B stores (4 warps)",
+        "8 x 8 KiB SW128 boxes in one bulk group taken as one 64 KiB request (EXP-15)",
+        "single-CTA supply taken from R05-D all-SM value (lower bound)",
+        "SMEM shared by WGMMA SS operand reads (~80 B/cycle) and TMA writes (48 B/cycle): no joint-service rule, assumed independent"
+      ]
+    },
+    {
+      "case_id": "target_tc_k47_one_cta",
+      "scope": "one_cta",
+      "length": 47,
+      "predicted_time": 55760.97586049595,
+      "unit": "clock64_cycle/CTA",
+      "segments": {
+        "fill": 1480.9132812499552,
+        "mainloop": 48235.57022058824,
+        "output": 6044.492358657757
+      },
+      "predicted_mainloop_cycles_per_ktile": 1026.2887280976222,
+      "rules": [
+        "R00-B",
+        "R01",
+        "R05-A",
+        "R05-D",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "8 B STS rate taken from R03 16 B stores (4 warps)",
+        "8 x 8 KiB SW128 boxes in one bulk group taken as one 64 KiB request (EXP-15)",
+        "single-CTA supply taken from R05-D all-SM value (lower bound)",
+        "SMEM shared by WGMMA SS operand reads (~80 B/cycle) and TMA writes (48 B/cycle): no joint-service rule, assumed independent"
+      ]
+    },
+    {
+      "case_id": "target_tc_k7_all_gpu",
+      "scope": "all_gpu",
+      "length": 7,
+      "predicted_time": 36451.26294624669,
+      "unit": "globaltimer_ns/GPU",
+      "segments": {
+        "per_cta_ns": 9112.815736561672,
+        "waves": 4,
+        "relaunch_gap_ns": 0.0
+      },
+      "rules": [
+        "R00-B all-GPU clock",
+        "R05-D",
+        "R05-E",
+        "R05-A",
+        "R01",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "CTA relaunch gap between waves and first-wave launch skew: no rule, taken as 0",
+        "SMEM shared by WGMMA operand reads and TMA writes: assumed independent",
+        "clock during output/fill assumed equal to the WGMMA-loaded clock",
+        "all 132 CTAs of a wave store concurrently (lockstep assumption)"
+      ]
+    },
+    {
+      "case_id": "target_tc_k19_all_gpu",
+      "scope": "all_gpu",
+      "length": 19,
+      "predicted_time": 63319.099964286834,
+      "unit": "globaltimer_ns/GPU",
+      "segments": {
+        "per_cta_ns": 15829.774991071708,
+        "waves": 4,
+        "relaunch_gap_ns": 0.0
+      },
+      "rules": [
+        "R00-B all-GPU clock",
+        "R05-D",
+        "R05-E",
+        "R05-A",
+        "R01",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "CTA relaunch gap between waves and first-wave launch skew: no rule, taken as 0",
+        "SMEM shared by WGMMA operand reads and TMA writes: assumed independent",
+        "clock during output/fill assumed equal to the WGMMA-loaded clock",
+        "all 132 CTAs of a wave store concurrently (lockstep assumption)"
+      ]
+    },
+    {
+      "case_id": "target_tc_k47_all_gpu",
+      "scope": "all_gpu",
+      "length": 47,
+      "predicted_time": 126010.71967304719,
+      "unit": "globaltimer_ns/GPU",
+      "segments": {
+        "per_cta_ns": 31502.679918261798,
+        "waves": 4,
+        "relaunch_gap_ns": 0.0
+      },
+      "rules": [
+        "R00-B all-GPU clock",
+        "R05-D",
+        "R05-E",
+        "R05-A",
+        "R01",
+        "R03",
+        "EXP-11",
+        "EXP-15"
+      ],
+      "missing": [
+        "CTA relaunch gap between waves and first-wave launch skew: no rule, taken as 0",
+        "SMEM shared by WGMMA operand reads and TMA writes: assumed independent",
+        "clock during output/fill assumed equal to the WGMMA-loaded clock",
+        "all 132 CTAs of a wave store concurrently (lockstep assumption)"
+      ]
+    },
+    {
+      "case_id": "cutlass_2048_2048_2048",
+      "scope": "all_gpu",
+      "m": 2048,
+      "n": 2048,
+      "k": 2048,
+      "predicted_time": 0.022443647768441825,
+      "unit": "cuda_event_ms/GPU",
+      "model": "primary: WGMMA-bound mainloop (supply >= demand) + fill + epilogue",
+      "components_ns": {
+        "cluster_sync": 190.0,
+        "fill": 809.419354203961,
+        "mainloop": 17967.805220253013,
+        "epilogue": 3476.423193984851,
+        "launch_and_event": 0.0
+      },
+      "tiles": 128,
+      "rounds": 1,
+      "alternative": {
+        "model": "R00-A anchored: 4096^3 time per (round x Ktile) applied to 1 round",
+        "ktile_ns": 810.1875137072057,
+        "predicted_time": 0.02592600043863058
+      },
+      "rules": [
+        "R00-B",
+        "R05-D",
+        "R05-E",
+        "EXP-15",
+        "R03",
+        "R01",
+        "R05-A",
+        "EXP-17",
+        "R00-A (alternative)"
+      ],
+      "missing": [
+        "launch + CUDA event overhead: no rule, taken as 0",
+        "B MN-major (.tnspB) and cluster multicast assumed to keep R00-B/R05-D rates",
+        "setmaxnreg producer/consumer split and persistent scheduler not modelled",
+        "SMEM shared by WGMMA operand reads and TMA writes: assumed independent",
+        "previous measurements of these two sizes (job 735062) were known when this file was written; the model does not use them"
+      ]
+    },
+    {
+      "case_id": "cutlass_2048_2048_8192",
+      "scope": "all_gpu",
+      "m": 2048,
+      "n": 2048,
+      "k": 8192,
+      "predicted_time": 0.0761793218045221,
+      "unit": "cuda_event_ms/GPU",
+      "model": "primary: WGMMA-bound mainloop (supply >= demand) + fill + epilogue",
+      "components_ns": {
+        "cluster_sync": 190.0,
+        "fill": 809.419354203961,
+        "mainloop": 71703.47925633329,
+        "epilogue": 3476.423193984851,
+        "launch_and_event": 0.0
+      },
+      "tiles": 128,
+      "rounds": 1,
+      "alternative": {
+        "model": "R00-A anchored: 4096^3 time per (round x Ktile) applied to 1 round",
+        "ktile_ns": 810.1875137072057,
+        "predicted_time": 0.10370400175452232
+      },
+      "rules": [
+        "R00-B",
+        "R05-D",
+        "R05-E",
+        "EXP-15",
+        "R03",
+        "R01",
+        "R05-A",
+        "EXP-17",
+        "R00-A (alternative)"
+      ],
+      "missing": [
+        "launch + CUDA event overhead: no rule, taken as 0",
+        "B MN-major (.tnspB) and cluster multicast assumed to keep R00-B/R05-D rates",
+        "setmaxnreg producer/consumer split and persistent scheduler not modelled",
+        "SMEM shared by WGMMA operand reads and TMA writes: assumed independent",
+        "previous measurements of these two sizes (job 735062) were known when this file was written; the model does not use them"
+      ]
+    }
+  ]
+}

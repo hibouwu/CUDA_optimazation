@@ -1,0 +1,126 @@
+[
+  {
+    "id": "lds_ffma_k7_one_cta",
+    "kind": 0,
+    "length": 7,
+    "scope": "one_cta"
+  },
+  {
+    "id": "lds_ffma_k7_all_gpu",
+    "kind": 0,
+    "length": 7,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "lds_ffma_k19_one_cta",
+    "kind": 0,
+    "length": 19,
+    "scope": "one_cta"
+  },
+  {
+    "id": "lds_ffma_k19_all_gpu",
+    "kind": 0,
+    "length": 19,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "lds_ffma_k47_one_cta",
+    "kind": 0,
+    "length": 47,
+    "scope": "one_cta"
+  },
+  {
+    "id": "lds_ffma_k47_all_gpu",
+    "kind": 0,
+    "length": 47,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "small_tc_k7_one_cta",
+    "kind": 1,
+    "length": 7,
+    "scope": "one_cta"
+  },
+  {
+    "id": "small_tc_k7_all_gpu",
+    "kind": 1,
+    "length": 7,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "small_tc_k19_one_cta",
+    "kind": 1,
+    "length": 19,
+    "scope": "one_cta"
+  },
+  {
+    "id": "small_tc_k19_all_gpu",
+    "kind": 1,
+    "length": 19,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "small_tc_k47_one_cta",
+    "kind": 1,
+    "length": 47,
+    "scope": "one_cta"
+  },
+  {
+    "id": "small_tc_k47_all_gpu",
+    "kind": 1,
+    "length": 47,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "target_tc_k7_one_cta",
+    "kind": 2,
+    "length": 7,
+    "scope": "one_cta"
+  },
+  {
+    "id": "target_tc_k7_all_gpu",
+    "kind": 2,
+    "length": 7,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "target_tc_k19_one_cta",
+    "kind": 2,
+    "length": 19,
+    "scope": "one_cta"
+  },
+  {
+    "id": "target_tc_k19_all_gpu",
+    "kind": 2,
+    "length": 19,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "target_tc_k47_one_cta",
+    "kind": 2,
+    "length": 47,
+    "scope": "one_cta"
+  },
+  {
+    "id": "target_tc_k47_all_gpu",
+    "kind": 2,
+    "length": 47,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "cutlass_2048_2048_2048",
+    "kind": "cutlass",
+    "m": 2048,
+    "n": 2048,
+    "k": 2048,
+    "scope": "all_gpu"
+  },
+  {
+    "id": "cutlass_2048_2048_8192",
+    "kind": "cutlass",
+    "m": 2048,
+    "n": 2048,
+    "k": 8192,
+    "scope": "all_gpu"
+  }
+]

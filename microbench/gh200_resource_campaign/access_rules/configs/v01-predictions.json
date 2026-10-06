@@ -1,0 +1,706 @@
+{
+  "status": "parameters unavailable; no fitted times",
+  "cases": [
+    {
+      "case_id": "lds_ffma_k7_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 28672,
+        "smem_read_bytes_per_cta": 28672,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 14448,
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition"
+      ]
+    },
+    {
+      "case_id": "lds_ffma_k7_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 28672,
+        "smem_read_bytes_per_cta": 28672,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 14448,
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "lds_ffma_k19_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 77824,
+        "smem_read_bytes_per_cta": 77824,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 39216,
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition"
+      ]
+    },
+    {
+      "case_id": "lds_ffma_k19_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 77824,
+        "smem_read_bytes_per_cta": 77824,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 39216,
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "lds_ffma_k47_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 192512,
+        "smem_read_bytes_per_cta": 192512,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 97008,
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition"
+      ]
+    },
+    {
+      "case_id": "lds_ffma_k47_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 192512,
+        "smem_read_bytes_per_cta": 192512,
+        "output_bytes_per_cta": 8192
+      },
+      "events": [
+        "SMEM initialized before start",
+        "per K: 8 FP32 loads/lane -> 16 dependent FFMA/lane",
+        "global stores and CTA consumer synchronization -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "dynamic_smem_bytes": 97008,
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R01: 4x4 FFMA dependency graph",
+        "R03: 128-thread eight scalar LDS per K",
+        "R04: dependent LDS->FFMA service interaction",
+        "R06: actual register/residency condition",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "small_tc_k7_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 3670016,
+        "input_bytes_per_cta": 114688,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "small_tc_k7_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 3670016,
+        "input_bytes_per_cta": 114688,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "small_tc_k19_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 9961472,
+        "input_bytes_per_cta": 311296,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "small_tc_k19_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 9961472,
+        "input_bytes_per_cta": 311296,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "small_tc_k47_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 24641536,
+        "input_bytes_per_cta": 770048,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "small_tc_k47_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 24641536,
+        "input_bytes_per_cta": 770048,
+        "output_bytes_per_cta": 16384
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 128,
+        "stages": 2,
+        "input_smem_bytes": 32768,
+        "dynamic_smem_bytes": 33024,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n64k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 2-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "target_tc_k7_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 29360128,
+        "input_bytes_per_cta": 344064,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "target_tc_k7_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 29360128,
+        "input_bytes_per_cta": 344064,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "target_tc_k19_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 79691776,
+        "input_bytes_per_cta": 933888,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "target_tc_k19_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 79691776,
+        "input_bytes_per_cta": 933888,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "target_tc_k47_one_cta",
+      "predicted_time": null,
+      "unit": "clock64_cycle/CTA",
+      "work": {
+        "flop_per_cta": 197132288,
+        "input_bytes_per_cta": 2310144,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "one CTA"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions"
+      ]
+    },
+    {
+      "case_id": "target_tc_k47_all_gpu",
+      "predicted_time": null,
+      "unit": "globaltimer_ns/GPU",
+      "work": {
+        "flop_per_cta": 197132288,
+        "input_bytes_per_cta": 2310144,
+        "output_bytes_per_cta": 131072
+      },
+      "events": [
+        "initialize mbarriers before start",
+        "prefill stages with TMA A/B",
+        "slot ready -> four K16 WGMMA/group -> commit/wait1",
+        "wait1 completes previous tile; refill its slot for tile+stages",
+        "both consumers final wait0 -> reuse input area",
+        "publish each 64-row output half -> TMA store -> full bulk wait0 -> stop"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "input_smem_bytes": 196608,
+        "dynamic_smem_bytes": 196864,
+        "cluster": [
+          1,
+          1,
+          1
+        ],
+        "grid": "4*SM count"
+      },
+      "rules": [],
+      "missing": [
+        "R00: m64n256k16 FP16 SS service on matched UUID",
+        "R01: WGMMA dependency/completion conditions",
+        "R05: 4-stage TMA ready/slot-release/output complete windows",
+        "R03: FP32 shared output publication",
+        "R06: measured register and CTA residency conditions",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "cutlass_2048_2048_2048",
+      "predicted_time": null,
+      "unit": "cuda_event_ms/GPU",
+      "work": {
+        "flop_kernel": 17179869184,
+        "input_bytes": 16777216,
+        "output_bytes": 16777216
+      },
+      "events": [
+        "CUDA event start",
+        "fixed R00 CUTLASS mainloop and epilogue",
+        "CUDA event completion"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "tile": [
+          128,
+          256,
+          64
+        ],
+        "cluster": [
+          2,
+          1,
+          1
+        ],
+        "smem_bytes": 231424
+      },
+      "rules": [],
+      "missing": [
+        "R00: fixed CUTLASS service conditions on matched UUID",
+        "R05/R06: input/output shared service and resource conditions",
+        "cluster2x1x1 task distribution and multicast/L2 reuse",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    },
+    {
+      "case_id": "cutlass_2048_2048_8192",
+      "predicted_time": null,
+      "unit": "cuda_event_ms/GPU",
+      "work": {
+        "flop_kernel": 68719476736,
+        "input_bytes": 67108864,
+        "output_bytes": 16777216
+      },
+      "events": [
+        "CUDA event start",
+        "fixed R00 CUTLASS mainloop and epilogue",
+        "CUDA event completion"
+      ],
+      "resources": {
+        "threads": 384,
+        "stages": 4,
+        "tile": [
+          128,
+          256,
+          64
+        ],
+        "cluster": [
+          2,
+          1,
+          1
+        ],
+        "smem_bytes": 231424
+      },
+      "rules": [],
+      "missing": [
+        "R00: fixed CUTLASS service conditions on matched UUID",
+        "R05/R06: input/output shared service and resource conditions",
+        "cluster2x1x1 task distribution and multicast/L2 reuse",
+        "all-GPU shared service, grid waves and repeat-input L2 reuse"
+      ]
+    }
+  ]
+}

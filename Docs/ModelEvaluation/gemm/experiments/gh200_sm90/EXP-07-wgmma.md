@@ -32,7 +32,7 @@
 
 ## 限制
 
-- 只测了 N=64；实际 GEMM 常用 N=128/256，其 SMEM 取数和延迟需另测。
+- 本页只测了 N=64；N=128/256、1/2 个 warpgroup、SS/RS 见 [R00-B](access_rules/R00-anchor-target.md)，都达到 4095 FLOP/cycle。
 - 没有 TF32、FP16 累加形式，也没有与 FFMA 同时执行的情形。
 - wait 值控制的是未完成 group 数，不能推出硬件队列深度。
 

@@ -27,9 +27,9 @@
 
 ![矩阵搬运](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s10-main-execution/runtime-r2/analysis-v2/matrix.png)
 
-## 待补
+## 后续结果
 
-4–8 warp 的 `ldmatrix` 吞吐，以及 `ldmatrix` 供给 `mma.sync` 的组合；这是 SIMT/mma.sync 方案的片上供给参数。
+多 warp 吞吐见 [R03](access_rules/R03-access-demand.md)：`ldmatrix.x4` 在 1/4/8 warp 时为 31.8/115.1/126.9 B/cycle，`stmatrix.x4` 为 22.9/87.6/115.8。
 
 ## 数据
 

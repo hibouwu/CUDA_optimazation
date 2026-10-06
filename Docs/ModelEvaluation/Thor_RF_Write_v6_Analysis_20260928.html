@@ -1,0 +1,4629 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thor RF 写回 v6.2 分析与累计结论</title><style>body{font:16px/1.75 system-ui,sans-serif;color:#203044;background:#f8fafc;max-width:1160px;margin:40px auto;padding:0 24px}h1{font-size:30px}h3{margin-top:36px;color:#123f64}.lead{background:#eaf3fa;border-left:5px solid #317baa;padding:20px 24px}.meta{font-size:13px;color:#64748b;overflow-wrap:anywhere}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;background:white;font-size:14px}td,th{border:1px solid #d4dfe9;padding:10px 12px;text-align:left}th{background:#edf3f8}pre{white-space:pre-wrap;font-size:12px;overflow-wrap:anywhere}details{margin-top:22px;padding:15px;background:white}li{margin:12px 0}</style></head><body><h1>Thor RF 写回：v6.2 结果与当前结论</h1><p class="meta">更新：2026-09-29 · NVIDIA Thor / sm_110a · 两批，每条件 16 次 · 1,728 次正式采样、216 次门禁检查</p>
+<div class="lead"><strong>本轮已确认：在被测的高吞吐独立计算结果流中，四种目的布局与 32／64／128 个连续前缀结果，没有产生可观测的额外推进限制，也没有改变目标结果的可用性。</strong><p>这一结论有范围：单 warp、32 bit 标量结果、32 个背景目的、指定供给节奏和同址预热条件。不同路径返回的通用限制规律尚未闭合；目前只能保留条件明确的局部观察，不能把它写成统一 RF 写惩罚。</p></div>
+<h3>直接回答最初的三个问题</h3><div class="scroll"><table><thead><tr><th>问题</th><th>当前得到的结论</th><th>怎样量化／边界</th></tr></thead><tbody><tr><td>目的寄存器布局会不会限制推进或可用？</td><td>连续、偶数、奇数、步长 4 的背景目的布局，在本轮没有改变推进窗口或目标正确性。</td><td>576 组布局配对窗口差全部为 0；其中 288 组目标观察配对，可用性判定完全一致。目标 marker 固定 R168，并非枚举所有目标寄存器。</td></tr><tr><td>结果数量会不会带来额外限制？</td><td>固定计时结构下，连续前缀结果数从 32 增到 64、128，没有新增推进延迟，也没有推迟被测目标的可用性。</td><td>普通目的的 384 组数量配对窗口差全部为 0；其中 192 组目标观察无变化。这里改变的是连续结果流长度，单条结果宽度与每条指令的结果数未改变。</td></tr><tr><td>不同路径返回会不会影响推进或可用？</td><td>既有 v6 证实了特定返回条件下的局部消费交互；本轮未新增跨路径测试。</td><td>v6：特定目标/gap 下，有 EX2 时目标消费者窗口 33 周期，预装值/NOP 为 32；不能推广成任意路径碰撞加 1。</td></tr><tr><td>现在是否已有完整统一写规则？</td><td>还没有。布局与连续数量在本轮范围内已有明确结论；跨路径返回限制仍只有条件性证据。</td><td>缺的是返回与消费的实际时间关系，以及这些条件怎样引出限制；不要求为回答功能问题先还原全部物理端口。</td></tr></tbody></table></div><h3>本轮覆盖范围：什么确实被改变，什么保持固定</h3><p>生产者均为高吞吐独立 FADD：普通源寄存器读取为零，生成 32 bit 标量结果。单 warp，背景目的池大小 32；每次正式测量前，同一代码地址执行 32 遍。每遍重置 marker 和观察寄存器，只捕获最后一次观察结果。</p><div class="scroll"><table><thead><tr><th>对照轴</th><th>实际改变</th><th>保持固定</th></tr></thead><tbody><tr><td>布局，N=128</td><td>R8…R39；R8,R10,…R70；R9,R11,…R71；R8,R12,…R132</td><td>只改目的字段。指令、结果数量、控制字段、目的重访距离 32、marker R168 与消费者相同。未假定这些编号对应何种物理 bank。</td></tr><tr><td>数量，连续布局</td><td>128 个前缀位置的最后 N=32/64/128 个是 FADD，其余为 NOP</td><td>计时边界、128 个指令位置及各自 stall=1 固定；最后 32 条前缀、marker 和三条后缀保持相同。</td></tr><tr><td>辅助对照，RZ</td><td>背景结果写 RZ；marker 仍写普通寄存器</td><td>同样的三种 N、两个代码位置与观察间隔。RZ 不是已经证明的完整返回旁路。</td></tr><tr><td>位置与观察</td><td>整个测量结构平移 +48 字节；目标 MOV 或同位置 NOP；gap=4/5/6</td><td>位置内分别比较布局和数量，目标/NOP 的控制字段保持相同。</td></tr></tbody></table></div><p>因此，普通目的组每个测量区间生成 N+4，即 36／68／132 个 warp 级标量计算结果；每个结果对应 32 个 lane 的 32 bit 值。这里没有改变同时返回的结果数或结果宽度。数量组也改变了计算执行活动，所以即便将来观察到数量差异，也不能直接除以 N 得到“每结果 RF 成本”。</p>
+<h3>推进：所有正式观测都等于机器码控制间隔之和</h3><p><code>W = 7 + 128 × 1 + g + 7</code>。两个 7 分别来自起始时钟和观察槽的实际控制字段；128 个前缀槽无论是 FADD 还是 NOP，stall 都为 1；g 来自 marker 及随后三条 FADD 的控制字段之和。所有项均来自上传机器码，不含拟合开销或经验系数。</p><div class="scroll"><table><thead><tr><th>名义 gap</th><th>控制字段之和</th><th>观测窗口，所有布局／数量／位置／观察组</th><th>观测减控制字段之和</th></tr></thead><tbody><tr><td>4</td><td>146</td><td>146 cycles，576/576 次</td><td>0</td></tr><tr><td>5</td><td>147</td><td>147 cycles，576/576 次</td><td>0</td></tr><tr><td>6</td><td>148</td><td>148 cycles，576/576 次</td><td>0</td></tr></tbody></table></div><p>每个条件的 16 次观测均完全相同。目标 MOV 与 NOP 的 864 组配对也全部为 0。故在这些条件下，解释序列推进<strong>不需要额外 RF 惩罚项</strong>。这个零差值是有条件的直接观察，不能解释成“RF 服务耗时为零”。计时终点没有逐个确认所有中间结果完成写入，最终保留值正确也不能证明全部被覆盖的中间结果已在计时区间内写完。</p>
+<h3>可用性：必须独立于总推进窗口判断</h3><div class="scroll"><table><thead><tr><th>gap</th><th>原位置：窗口／全 warp 正确</th><th>平移 +48B：窗口／全 warp 正确</th></tr></thead><tbody><tr><td>4</td><td>146 cycles；144/144 次</td><td>146 cycles；0/144 次</td></tr><tr><td>5</td><td>147 cycles；144/144 次</td><td>147 cycles；144/144 次</td></tr><tr><td>6</td><td>148 cycles；144/144 次</td><td>148 cycles；144/144 次</td></tr></tbody></table></div><p>每格包含 9 个布局/数量配置，各 16 次；每一个配置都符合表中模式，并非平均结果。gap=4 的失败共有 144 个 warp、4,608 个 lane，所有 lane 都既不是正确新值，也不是重置旧值。最终 marker 值均正确；预装消费者和长间隔门禁也全部通过。</p><p><strong>在本轮测过的离散点里，gap=5 是跨两个位置均通过的最小设置。</strong>gap 是程序化控制间隔坐标，不能命名为“RF 写延迟 5 周期”。相同 146 周期总窗口对应相反正确性，已经直接证明：总推进时间不能替代结果可用性约束。这是观察结果是否可用所必需的检查，不扩展为独立的数据依赖模型。</p>
+<h3>目的布局与数量：证据链已经补到哪一步</h3><div class="scroll"><table><thead><tr><th>比较</th><th>逐次配对数</th><th>推进差</th><th>目标可用性变化</th></tr></thead><tbody><tr><td>偶数／奇数／步长 4 对连续布局，N128</td><td>576</td><td>全部 0 cycles</td><td>288 个目标配对，变化 0</td></tr><tr><td>普通目的，N32／N64 对 N128</td><td>384</td><td>全部 0 cycles</td><td>192 个目标配对，变化 0</td></tr><tr><td>RZ 背景，N32／N64 对 N128</td><td>384</td><td>全部 0 cycles</td><td>192 个目标配对，变化 0</td></tr><tr><td>RZ 背景对普通目的，相同 N</td><td>576</td><td>全部 0 cycles</td><td>288 个目标配对，变化 0</td></tr><tr><td>位置 +48B 对原位置</td><td>864</td><td>全部 0 cycles</td><td>432 个目标配对中，144 个变化；全部位于 gap=4</td></tr></tbody></table></div><p>无消费者组也没有布局／数量相关延迟，因而这轮的零差值不只来自目标消费观察。目标消费者组进一步表明，被测标记结果没有因这些布局／数量改变而失去可用性。384 个数量×RZ 差分也全部为 0；它们只是额外的零差对照，不是拟合 RF 系数的依据。</p><p>v6.1 的 8 个正式锚点均复现。与旧 v6 不同，本轮已建立同址预热及控制字段一致的对照，因此本轮的布局／数量结论不再依赖旧 308 周期窗口。现有证据足以结束这个范围内相同布局／数量扫描；无需为了重复零差值再跑同一矩阵。</p>
+<h3>不同路径返回：现有证据与真正缺口</h3><p>保留 v6 已核对的直接事实：gap=6、目标 R12 时，有 EX2 的目标消费窗口为 33 周期，预装值消费与 NOP 为 32；EX2 目的改为奇数、偶数或 RZ 后局部 +1 仍存在。EX2 换 NOP，或目标改为 R15，+1 消失；相邻 gap=5/7 的目标相对 NOP 差值为 0。实际消费者均取得正确新值。</p><p>这说明指定返回条件与目标消费有交互；没有显示无消费者的生产者窗口同样加 1。因而不能把它写成“每次跨路径返回加 1”“偶数寄存器加 1”，也不能给不同 opcode 各设一个 RF 系数。</p><p><strong>剩余缺口是条件到限制的因果关系：</strong>外层时钟没有给出结果实际到达与观察者实际取值的时刻，无法判断局部交互由哪一段返回／供给／取值时序触发。要将局部观察推广为统一规则，需要能区分这些解释的对照或直接的内部时间证据；继续增加布局和 N 的同类零差样本补不上这个缺口。只有明确了可辨别的假设和相反预期，才值得设计下一项测试。</p>
+<h3>当前能交付给上层评估的规则</h3><div class="scroll"><table><thead><tr><th>适用条件</th><th>可直接使用的结论</th><th>禁止的外推</th></tr></thead><tbody><tr><td>本轮固定帧、高密度单 warp 标量结果流</td><td>按实际控制字段求得推进窗口；被测布局与 N 的额外可观测推进差为 0。</td><td>任意指令流的总耗时公式、峰值 RF 带宽、零物理写服务时间。</td></tr><tr><td>本轮两位置及已有 v6.1 观察条件</td><td>推进与可用性分别检查；gap=4 不具备跨条件稳定性，本轮 gap=5/6 均通过。</td><td>把 gap=5 当统一物理延迟；仅凭总窗口认定全部结果已可用。</td></tr><tr><td>v6 特定目标／EX2／gap 条件</td><td>保存精确条件及局部窗口差，作为必须解释的反例。</td><td>将局部 +1 拼成经验惩罚；把未识别的路径限制默认设为 0。</td></tr><tr><td>超出本轮范围的宽结果、多结果同时返回及其他供给条件</td><td>保留未确定状态，不能声称本轮覆盖。</td><td>用不同指令的整段耗时差反推统一每字写成本。</td></tr></tbody></table></div><p><strong>对 work 完成状态的回答：</strong>本轮的目的布局与连续结果数量目标，在明确的测试范围内已完成；“所有不同路径返回条件下的统一限制及量化规则”仍未完成。可交付的是上表中的有证据规则及其适用范围，而不是一个用经验常数补齐的完整模型。</p>
+<h3>原始数据复核</h3><p>独立读取全部正式与门禁原始寄存器缓冲，重新计算窗口及逐 lane 正确性；没有剔除 gap=4 的错误目标值。所有采样均为 SM0。4,517 个归档文件哈希、14 个运行源文件哈希一致；144 个内核的机器码与反汇编一致。核对布局只改目的字段，数量只改指定 FADD/NOP 槽且控制字段不变。下列数据保留用于追溯。</p><details><summary>独立审计结果</summary><pre>{
+  &quot;manifest_files&quot;: 4517,
+  &quot;source_hashes&quot;: 14,
+  &quot;audited_kernels&quot;: 144,
+  &quot;audited_body_instructions&quot;: 165888,
+  &quot;layout_body_pairs&quot;: 96,
+  &quot;count_body_pairs&quot;: 64,
+  &quot;formal_counts&quot;: {
+    &quot;samples&quot;: 1728,
+    &quot;new_lanes&quot;: 23040,
+    &quot;old_lanes&quot;: 0,
+    &quot;other_lanes&quot;: 4608,
+    &quot;unavailable_warps&quot;: 144
+  },
+  &quot;gates_passed&quot;: 216,
+  &quot;smids&quot;: {
+    &quot;0&quot;: 1944
+  },
+  &quot;per_case_deterministic&quot;: true,
+  &quot;every_window_matches_decoded_control_sum&quot;: true,
+  &quot;pair_stats&quot;: {
+    &quot;count&quot;: {
+      &quot;pairs&quot;: 768,
+      &quot;nonzero_window_deltas&quot;: 0,
+      &quot;availability_changes&quot;: 0
+    },
+    &quot;observer&quot;: {
+      &quot;pairs&quot;: 864,
+      &quot;nonzero_window_deltas&quot;: 0,
+      &quot;availability_changes&quot;: 0
+    },
+    &quot;position&quot;: {
+      &quot;pairs&quot;: 864,
+      &quot;nonzero_window_deltas&quot;: 0,
+      &quot;availability_changes&quot;: 144
+    },
+    &quot;layout&quot;: {
+      &quot;pairs&quot;: 576,
+      &quot;nonzero_window_deltas&quot;: 0,
+      &quot;availability_changes&quot;: 0
+    },
+    &quot;RZ_auxiliary&quot;: {
+      &quot;pairs&quot;: 576,
+      &quot;nonzero_window_deltas&quot;: 0,
+      &quot;availability_changes&quot;: 0
+    }
+  },
+  &quot;count_RZ_interactions&quot;: 384,
+  &quot;v61_anchors&quot;: [
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x0_g4_target&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x0_g4_none&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x0_g5_target&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x0_g5_none&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x3_g4_target&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x3_g4_none&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x3_g5_target&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    },
+    {
+      &quot;case_id&quot;: &quot;lc_dense_n128_x3_g5_none&quot;,
+      &quot;complete&quot;: true,
+      &quot;v61_reproduced&quot;: true
+    }
+  ],
+  &quot;percase&quot;: {
+    &quot;lc_dense_n128_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_dense_n128_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n128_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_dense_n32_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n32_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_dense_n64_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_dense_n64_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_discard_n128_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n128_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_discard_n32_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n32_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_discard_n64_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_discard_n64_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_even_n128_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_even_n128_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_odd_n128_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_odd_n128_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x0_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x3_g4_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x3_g4_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 16
+    },
+    &quot;lc_stride4_n128_x3_g5_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x3_g5_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x3_g6_none&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 0,
+      &quot;unavailable&quot;: 0
+    },
+    &quot;lc_stride4_n128_x3_g6_target&quot;: {
+      &quot;samples&quot;: 16,
+      &quot;correct&quot;: 16,
+      &quot;unavailable&quot;: 0
+    }
+  },
+  &quot;distinct_incorrect_words&quot;: 2242
+}</pre></details><details><summary>本轮全部 108 个正式条件</summary><div class="scroll"><table><thead><tr><th>条件</th><th>窗口 min/median/max</th><th>有效次数</th><th>目标正确次数</th><th>目标不可用次数</th></tr></thead><tbody><tr><td>lc_dense_n32_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n32_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n32_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n32_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n32_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n32_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n32_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_dense_n32_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n32_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n32_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n32_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n32_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n64_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n64_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n64_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_dense_n64_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n64_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n64_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n64_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n128_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n128_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n128_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_dense_n128_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n128_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_dense_n128_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_dense_n128_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_even_n128_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_even_n128_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_even_n128_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_even_n128_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_even_n128_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_even_n128_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_even_n128_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_odd_n128_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_odd_n128_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_odd_n128_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_odd_n128_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_odd_n128_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_odd_n128_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_odd_n128_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_stride4_n128_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_stride4_n128_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_stride4_n128_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_stride4_n128_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_stride4_n128_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_stride4_n128_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_stride4_n128_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n32_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n32_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n32_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_discard_n32_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n32_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n32_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n32_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n64_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n64_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n64_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_discard_n64_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n64_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n64_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n64_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x0_g4_target</td><td>146/146.0/146</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n128_x0_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x0_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n128_x0_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x0_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n128_x0_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x3_g4_target</td><td>146/146.0/146</td><td>16</td><td>0</td><td>16</td></tr><tr><td>lc_discard_n128_x3_g4_none</td><td>146/146.0/146</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x3_g5_target</td><td>147/147.0/147</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n128_x3_g5_none</td><td>147/147.0/147</td><td>16</td><td>不观察</td><td>不观察</td></tr><tr><td>lc_discard_n128_x3_g6_target</td><td>148/148.0/148</td><td>16</td><td>16</td><td>0</td></tr><tr><td>lc_discard_n128_x3_g6_none</td><td>148/148.0/148</td><td>16</td><td>不观察</td><td>不观察</td></tr></tbody></table></div></details><details><summary>历史报告：v6.1 与 v6（当时结论及原始证据，范围判断以本页最新部分为准）</summary><h1>Thor RF 写回：v6.1 结果与当前结论</h1><p class="meta">更新：2026-09-28 · 本轮 1,344 次正式采样 / 168 次门禁 · v6 既有结果保留在页末</p>
+<div class="lead"><strong>308 周期不能作为 RF 写服务时间。计时区间机器码不变，同址预热后变为 146 / 147 / 152 周期。</strong><p>在本轮预热条件下，推进窗口逐点等于 SASS 显式控制间隔之和；但相同 146 周期窗口和相同名义 gap=4，代码平移后目标值从全部读对变成全部读错。推进与可用性必须分别约束。</p></div>
+<h3>这轮判别成功在哪里</h3><p>原样复现组完整复现 v6；同址预热 8 遍与 32 遍的所有配对结果一致。改变预热和代码位置确实能改变原窗口，因此旧 308 周期包含执行历史或位置敏感的影响。我的 v6 测试没有建立每次正式采样前的同址预热对照，这一设计缺口已被硬件结果证实会影响测量。</p><p>这不等于已经定位到某一级指令缓存。预热会改变执行历史，代码平移也会改变前端状态；现有证据足以否定“RF 结果流本身唯一决定 308 周期”的解释，不足以指定内部取指/缓存机制。</p>
+<h3>高密度结果流：窗口变化有多大</h3><p>固定 1 warp、32 个连续背景目的、128 条前缀 FADD、相同 marker/消费者。下表为目标消费者组；同条件的 NOP 组窗口完全相同。每点两批共 16 次，所有窗口重复值一致。</p><div class="scroll"><table><thead><tr><th>条件</th><th>gap=4 窗口</th><th>gap=5 窗口</th><th>gap=10 窗口</th><th>gap=4 全 warp 正确次数</th><th>gap=5 正确次数</th><th>gap=10 正确次数</th></tr></thead><tbody><tr><td>v6 原样复现</td><td>308</td><td>308</td><td>308</td><td>16/16</td><td>16/16</td><td>16/16</td></tr><tr><td>同址预热 0 遍 / 原位置</td><td>294</td><td>295</td><td>300</td><td>0/16</td><td>16/16</td><td>16/16</td></tr><tr><td>同址预热 0 遍 / +48B</td><td>253</td><td>254</td><td>259</td><td>0/16</td><td>16/16</td><td>16/16</td></tr><tr><td>同址预热 8/32 遍 / 原位置</td><td>146</td><td>147</td><td>152</td><td>16/16</td><td>16/16</td><td>16/16</td></tr><tr><td>同址预热 8/32 遍 / +48B</td><td>146</td><td>147</td><td>152</td><td>0/16</td><td>16/16</td><td>16/16</td></tr></tbody></table></div><p>8/32 遍共用一行是因为两种次数分别得到完全相同的结果，并非把两次实验平均后合并。未预热位置平移使窗口减少 41 周期；充分同址重复的两种条件下，位置平移的窗口差为 0，但 gap=4 的正确性不同。</p>
+<h3>推进窗口现在可以怎样量化：直接按控制字段求和</h3><p>对实际上传的 SASS 从 clock0（含）到 clock1（不含）逐条解码，控制字段之和为：</p><p><code>W_controls = 7 + 128 × s + g + 7</code></p><div class="scroll"><table><thead><tr><th>项</th><th>来自哪一段代码</th></tr></thead><tbody><tr><td>第一个 7</td><td>clock0 指令后的显式 stall=7</td></tr><tr><td>128 × s</td><td>128 条前缀 FADD，s=1 或 4</td></tr><tr><td>g</td><td>marker 与随后三条 FADD 的 stall 之和；正式点为 4、5、10</td></tr><tr><td>最后一个 7</td><td>目标 MOV 或同位置 NOP 的显式 stall=7</td></tr></tbody></table></div><p><strong>这里没有拟合常数。</strong>两个 7 都来自机器码字段，128 是实际指令数。same8/same32、两个位置、两种供给间隔、目标/NOP 的全部 768 次正式观测均精确满足 <code>W_observed = W_controls</code>；没有剔除异常点，也没有扣除经验开销。</p><div class="scroll"><table><thead><tr><th>前缀 stall</th><th>gap=4</th><th>gap=5</th><th>gap=10</th></tr></thead><tbody><tr><td>1：高密度</td><td>146</td><td>147</td><td>152</td></tr><tr><td>4：低密度</td><td>530</td><td>531</td><td>536</td></tr></tbody></table></div><p><strong>能支持的推进结论：</strong>在上述被测条件中，不需要增加额外的 RF 推进惩罚项来解释窗口。这不是已经求得 RF 峰值带宽：clock1 没有逐个确认所有结果完成 RF 写入；后期捕获正确也不能证明所有写入都在窗口内结束。该等式描述本轮序列的推进，不是任意指令流的 RF 服务公式。</p>
+<h3>结果可用性：同样的总窗口仍然能得到相反结果</h3><div class="scroll"><table><thead><tr><th>同址预热 8 或 32 遍，gap=4</th><th>目标原位置</th><th>整体平移 +48B</th></tr></thead><tbody><tr><td>高密度前缀：总窗口</td><td>146 cycles</td><td>146 cycles</td></tr><tr><td>高密度前缀：目标值</td><td>每点 16/16 次全 warp 正确</td><td>每点 0/16 次全 warp 正确</td></tr><tr><td>低密度前缀：目标值</td><td>每点 0/16 次全 warp 正确</td><td>每点 0/16 次全 warp 正确</td></tr></tbody></table></div><p>gap=5 与 gap=10 在两种位置、两种供给间隔、8/32 遍预热下全部正确。gap=4 不是跨这些条件稳定可用的设置；gap=5 是本轮已测点中满足全部这些条件的最小值。<strong>不能把它写成“RF 写延迟是 5 周期”</strong>，因为 g 仍只是控制字段坐标，而且总窗口相同没有保证窗口内部的实际取值时刻相同。</p><p>本轮失败目标观察共 176 个 warp / 5,632 个 lane，均为既非新值、也非预置旧值的其他位模式。预装消费者和长间隔门禁全部通过；最终 marker 均为正确的 3.5。代码每遍重置 marker/probe，并仅统计最后一遍，因此没有靠保留上一遍的正确结果通过检查。</p>
+<h3>对统一 RF 写规则的实际推进</h3><div class="scroll"><table><thead><tr><th>问题</th><th>现在可以确认</th><th>仍然不能确认</th></tr></thead><tbody><tr><td>连续结果是否额外拖慢推进？</td><td>当前同址重复后的被测 FADD 序列：窗口与控制字段求和精确一致，可观测额外差值为 0。</td><td>RF 是否已饱和、写入端口容量和完成时间。</td></tr><tr><td>目的布局是否造成限制？</td><td>v6 两种布局的整体窗口差为 0 的原始事实保留。</td><td>v6 的窗口可能掩盖内部差异；v6.1 只测一个布局，不能宣称已在新条件下验证所有布局。</td></tr><tr><td>结果是否已可用？</td><td>必须独立检查目标值。g=4 对位置/执行条件敏感；已测 g=5、10 全部通过。</td><td>由总窗口或名义 g 唯一推出实际 RF 可用延迟。</td></tr><tr><td>不同返回路径与数量/宽度？</td><td>v6 的局部 +1 观察仍有效；本轮不改写那些原始事实。</td><td>局部 +1 对应的内部资源、统一仲裁，以及可比宽结果下的每结果服务规律。</td></tr></tbody></table></div><p>这轮已完成“原窗口是否受测量条件影响”的判别，并得到无需经验系数的有限范围推进关系。统一 RF 写规则尚未闭合；剩余问题是结果可用性的内部时间关系，以及尚未在合格测量条件下识别的布局/数量/返回服务约束。下一步应复用已经稳定的同址执行条件；不会把 162、148、107 或 41 等观测差值改名成 RF 补偿参数。</p>
+<h3>复核结果</h3><div class="scroll"><table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td>正式采样</td><td>1,344/1,344；84 个 case 各 16 次；所有 case 的窗口重复值一致</td></tr><tr><td>门禁</td><td>168 次全部通过</td></tr><tr><td>证据完整性</td><td>3,523 个文件的反馈清单哈希全部匹配；112 个 cubin/SASS 与审计哈希一致；运行源码哈希一致</td></tr><tr><td>独立原始解码</td><td>逐样本核对 guard、时钟、SM、未激活线程、结果掩码、背景及 marker 最终值</td></tr><tr><td>区间等价</td><td>所有计时区间（含两个时钟）与对应 bridge 的机器码字节相同；位置平移只改变区间地址</td></tr><tr><td>控制字段推导</td><td>1,344 次逐点比较；其中 768 次同址预热正式样本全部等于字段之和</td></tr><tr><td>适用范围</td><td>本轮 1 warp、单一目的布局；未测试新的结果宽度或其他返回路径</td></tr></tbody></table></div><details><summary>本轮完整独立审计与控制字段核对</summary><pre>{
+  &quot;raw_audit&quot;: {
+    &quot;stream&quot;: {
+      &quot;counts&quot;: {
+        &quot;samples&quot;: 1344,
+        &quot;new_lanes&quot;: 15872,
+        &quot;old_lanes&quot;: 0,
+        &quot;other_lanes&quot;: 5632,
+        &quot;unavailable_warp_observations&quot;: 176
+      },
+      &quot;gates_passed&quot;: 168,
+      &quot;case_count&quot;: 84,
+      &quot;audited_cubins&quot;: 112,
+      &quot;smids&quot;: {
+        &quot;0&quot;: 1344
+      },
+      &quot;start_skews&quot;: {
+        &quot;(1, 0)&quot;: 1344
+      },
+      &quot;guard_cycles&quot;: {
+        &quot;455&quot;: 192,
+        &quot;492&quot;: 1088,
+        &quot;497&quot;: 32,
+        &quot;496&quot;: 32
+      },
+      &quot;all_cases_timing_deterministic&quot;: true,
+      &quot;percase&quot;: {
+        &quot;q_bridge_x0_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            308
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_bridge_x0_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_bridge_x0_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            300
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            300
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            294
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            294
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same0_x0_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            295
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            295
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            539
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            539
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            533
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            533
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same0_x0_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            534
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x0_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            534
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            259
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            259
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            253
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            253
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same0_x3_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            254
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            254
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same0_x3_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same0_x3_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same32_x0_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x0_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same32_x3_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same32_x3_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same32_x3_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same8_x0_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x0_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_dense_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_dense_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            152
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_dense_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_dense_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            146
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same8_x3_dense_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_dense_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            147
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_paced_g10_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_paced_g10_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            536
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_paced_g4_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_paced_g4_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            530
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 16
+        },
+        &quot;q_same8_x3_paced_g5_none&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 0,
+          &quot;unavailable&quot;: 0
+        },
+        &quot;q_same8_x3_paced_g5_target&quot;: {
+          &quot;count&quot;: 16,
+          &quot;windows&quot;: [
+            531
+          ],
+          &quot;new&quot;: 16,
+          &quot;unavailable&quot;: 0
+        }
+      },
+      &quot;perwarp_windows&quot;: {
+        &quot;q_bridge_x0_dense_g10_none&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_dense_g10_target&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_dense_g4_none&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_dense_g4_target&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_dense_g5_none&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_dense_g5_target&quot;: [
+          308
+        ],
+        &quot;q_bridge_x0_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_bridge_x0_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_bridge_x0_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_bridge_x0_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_bridge_x0_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_bridge_x0_paced_g5_target&quot;: [
+          531
+        ],
+        &quot;q_same0_x0_dense_g10_none&quot;: [
+          300
+        ],
+        &quot;q_same0_x0_dense_g10_target&quot;: [
+          300
+        ],
+        &quot;q_same0_x0_dense_g4_none&quot;: [
+          294
+        ],
+        &quot;q_same0_x0_dense_g4_target&quot;: [
+          294
+        ],
+        &quot;q_same0_x0_dense_g5_none&quot;: [
+          295
+        ],
+        &quot;q_same0_x0_dense_g5_target&quot;: [
+          295
+        ],
+        &quot;q_same0_x0_paced_g10_none&quot;: [
+          539
+        ],
+        &quot;q_same0_x0_paced_g10_target&quot;: [
+          539
+        ],
+        &quot;q_same0_x0_paced_g4_none&quot;: [
+          533
+        ],
+        &quot;q_same0_x0_paced_g4_target&quot;: [
+          533
+        ],
+        &quot;q_same0_x0_paced_g5_none&quot;: [
+          534
+        ],
+        &quot;q_same0_x0_paced_g5_target&quot;: [
+          534
+        ],
+        &quot;q_same0_x3_dense_g10_none&quot;: [
+          259
+        ],
+        &quot;q_same0_x3_dense_g10_target&quot;: [
+          259
+        ],
+        &quot;q_same0_x3_dense_g4_none&quot;: [
+          253
+        ],
+        &quot;q_same0_x3_dense_g4_target&quot;: [
+          253
+        ],
+        &quot;q_same0_x3_dense_g5_none&quot;: [
+          254
+        ],
+        &quot;q_same0_x3_dense_g5_target&quot;: [
+          254
+        ],
+        &quot;q_same0_x3_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_same0_x3_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_same0_x3_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_same0_x3_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_same0_x3_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_same0_x3_paced_g5_target&quot;: [
+          531
+        ],
+        &quot;q_same32_x0_dense_g10_none&quot;: [
+          152
+        ],
+        &quot;q_same32_x0_dense_g10_target&quot;: [
+          152
+        ],
+        &quot;q_same32_x0_dense_g4_none&quot;: [
+          146
+        ],
+        &quot;q_same32_x0_dense_g4_target&quot;: [
+          146
+        ],
+        &quot;q_same32_x0_dense_g5_none&quot;: [
+          147
+        ],
+        &quot;q_same32_x0_dense_g5_target&quot;: [
+          147
+        ],
+        &quot;q_same32_x0_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_same32_x0_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_same32_x0_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_same32_x0_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_same32_x0_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_same32_x0_paced_g5_target&quot;: [
+          531
+        ],
+        &quot;q_same32_x3_dense_g10_none&quot;: [
+          152
+        ],
+        &quot;q_same32_x3_dense_g10_target&quot;: [
+          152
+        ],
+        &quot;q_same32_x3_dense_g4_none&quot;: [
+          146
+        ],
+        &quot;q_same32_x3_dense_g4_target&quot;: [
+          146
+        ],
+        &quot;q_same32_x3_dense_g5_none&quot;: [
+          147
+        ],
+        &quot;q_same32_x3_dense_g5_target&quot;: [
+          147
+        ],
+        &quot;q_same32_x3_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_same32_x3_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_same32_x3_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_same32_x3_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_same32_x3_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_same32_x3_paced_g5_target&quot;: [
+          531
+        ],
+        &quot;q_same8_x0_dense_g10_none&quot;: [
+          152
+        ],
+        &quot;q_same8_x0_dense_g10_target&quot;: [
+          152
+        ],
+        &quot;q_same8_x0_dense_g4_none&quot;: [
+          146
+        ],
+        &quot;q_same8_x0_dense_g4_target&quot;: [
+          146
+        ],
+        &quot;q_same8_x0_dense_g5_none&quot;: [
+          147
+        ],
+        &quot;q_same8_x0_dense_g5_target&quot;: [
+          147
+        ],
+        &quot;q_same8_x0_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_same8_x0_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_same8_x0_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_same8_x0_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_same8_x0_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_same8_x0_paced_g5_target&quot;: [
+          531
+        ],
+        &quot;q_same8_x3_dense_g10_none&quot;: [
+          152
+        ],
+        &quot;q_same8_x3_dense_g10_target&quot;: [
+          152
+        ],
+        &quot;q_same8_x3_dense_g4_none&quot;: [
+          146
+        ],
+        &quot;q_same8_x3_dense_g4_target&quot;: [
+          146
+        ],
+        &quot;q_same8_x3_dense_g5_none&quot;: [
+          147
+        ],
+        &quot;q_same8_x3_dense_g5_target&quot;: [
+          147
+        ],
+        &quot;q_same8_x3_paced_g10_none&quot;: [
+          536
+        ],
+        &quot;q_same8_x3_paced_g10_target&quot;: [
+          536
+        ],
+        &quot;q_same8_x3_paced_g4_none&quot;: [
+          530
+        ],
+        &quot;q_same8_x3_paced_g4_target&quot;: [
+          530
+        ],
+        &quot;q_same8_x3_paced_g5_none&quot;: [
+          531
+        ],
+        &quot;q_same8_x3_paced_g5_target&quot;: [
+          531
+        ]
+      },
+      &quot;unavailable_distinct_words&quot;: 2616
+    }
+  },
+  &quot;control_sum_audit&quot;: {
+    &quot;formula&quot;: &quot;7 + 128 * prefix_stall + gap + 7&quot;,
+    &quot;provenance&quot;: &quot;Sum of control fields decoded from actual uploaded SASS, clock0 inclusive to clock1 exclusive. No fit.&quot;,
+    &quot;all_timing_intervals_byte_identical_to_corresponding_bridge&quot;: true,
+    &quot;nominal_by_case&quot;: {
+      &quot;q_same32_x0_dense_g5_target&quot;: 147,
+      &quot;q_bridge_x0_dense_g10_target&quot;: 152,
+      &quot;q_same32_x3_paced_g10_target&quot;: 536,
+      &quot;q_same8_x3_dense_g5_target&quot;: 147,
+      &quot;q_same32_x3_dense_g10_target&quot;: 152,
+      &quot;q_same32_x0_paced_g4_target&quot;: 530,
+      &quot;q_same32_x3_dense_g10_none&quot;: 152,
+      &quot;q_same32_x3_dense_g5_none&quot;: 147,
+      &quot;q_same0_x3_dense_g10_none&quot;: 152,
+      &quot;q_same8_x3_paced_g28_target&quot;: 554,
+      &quot;q_same0_x0_paced_g28_target&quot;: 554,
+      &quot;q_same8_x0_dense_g4_preloaded&quot;: 146,
+      &quot;q_same0_x0_dense_g4_target&quot;: 146,
+      &quot;q_same8_x0_paced_g10_none&quot;: 536,
+      &quot;q_same8_x0_paced_g28_target&quot;: 554,
+      &quot;q_same0_x3_dense_g5_none&quot;: 147,
+      &quot;q_bridge_x0_paced_g4_preloaded&quot;: 530,
+      &quot;q_same8_x0_dense_g4_target&quot;: 146,
+      &quot;q_bridge_x0_dense_g4_target&quot;: 146,
+      &quot;q_same32_x0_dense_g28_target&quot;: 170,
+      &quot;q_bridge_x0_paced_g5_target&quot;: 531,
+      &quot;q_same8_x0_paced_g5_none&quot;: 531,
+      &quot;q_same0_x3_paced_g5_target&quot;: 531,
+      &quot;q_same0_x0_dense_g4_preloaded&quot;: 146,
+      &quot;q_same8_x3_paced_g5_none&quot;: 531,
+      &quot;q_same8_x0_paced_g4_target&quot;: 530,
+      &quot;q_same8_x3_paced_g5_target&quot;: 531,
+      &quot;q_same32_x3_paced_g4_none&quot;: 530,
+      &quot;q_same0_x3_dense_g5_target&quot;: 147,
+      &quot;q_same0_x3_dense_g4_none&quot;: 146,
+      &quot;q_same8_x0_dense_g28_target&quot;: 170,
+      &quot;q_same8_x3_dense_g4_preloaded&quot;: 146,
+      &quot;q_same0_x3_paced_g28_target&quot;: 554,
+      &quot;q_same8_x3_dense_g4_target&quot;: 146,
+      &quot;q_same0_x0_paced_g4_preloaded&quot;: 530,
+      &quot;q_same0_x3_dense_g4_target&quot;: 146,
+      &quot;q_same32_x3_dense_g4_target&quot;: 146,
+      &quot;q_same8_x3_dense_g28_target&quot;: 170,
+      &quot;q_same32_x0_dense_g4_target&quot;: 146,
+      &quot;q_same8_x0_paced_g4_none&quot;: 530,
+      &quot;q_same0_x3_dense_g28_target&quot;: 170,
+      &quot;q_bridge_x0_paced_g4_none&quot;: 530,
+      &quot;q_same0_x0_paced_g4_none&quot;: 530,
+      &quot;q_same8_x0_dense_g10_none&quot;: 152,
+      &quot;q_bridge_x0_dense_g10_none&quot;: 152,
+      &quot;q_same0_x0_paced_g10_target&quot;: 536,
+      &quot;q_bridge_x0_dense_g5_none&quot;: 147,
+      &quot;q_same32_x0_dense_g10_target&quot;: 152,
+      &quot;q_same32_x0_dense_g4_none&quot;: 146,
+      &quot;q_same0_x3_paced_g10_none&quot;: 536,
+      &quot;q_same8_x0_dense_g4_none&quot;: 146,
+      &quot;q_same0_x0_paced_g5_none&quot;: 531,
+      &quot;q_same8_x0_paced_g4_preloaded&quot;: 530,
+      &quot;q_same8_x0_dense_g5_none&quot;: 147,
+      &quot;q_bridge_x0_dense_g28_target&quot;: 170,
+      &quot;q_same8_x3_dense_g5_none&quot;: 147,
+      &quot;q_bridge_x0_paced_g28_target&quot;: 554,
+      &quot;q_same32_x3_paced_g5_target&quot;: 531,
+      &quot;q_bridge_x0_dense_g4_none&quot;: 146,
+      &quot;q_same32_x0_paced_g10_target&quot;: 536,
+      &quot;q_same0_x0_dense_g5_none&quot;: 147,
+      &quot;q_same0_x0_dense_g4_none&quot;: 146,
+      &quot;q_same32_x0_paced_g5_none&quot;: 531,
+      &quot;q_bridge_x0_paced_g10_target&quot;: 536,
+      &quot;q_same32_x3_paced_g4_target&quot;: 530,
+      &quot;q_same8_x3_dense_g10_none&quot;: 152,
+      &quot;q_same32_x0_paced_g4_none&quot;: 530,
+      &quot;q_same32_x3_paced_g5_none&quot;: 531,
+      &quot;q_same32_x0_dense_g5_none&quot;: 147,
+      &quot;q_same32_x0_paced_g28_target&quot;: 554,
+      &quot;q_bridge_x0_paced_g10_none&quot;: 536,
+      &quot;q_bridge_x0_dense_g5_target&quot;: 147,
+      &quot;q_same32_x0_paced_g10_none&quot;: 536,
+      &quot;q_same32_x3_dense_g28_target&quot;: 170,
+      &quot;q_bridge_x0_paced_g4_target&quot;: 530,
+      &quot;q_same8_x0_dense_g5_target&quot;: 147,
+      &quot;q_same0_x3_paced_g4_target&quot;: 530,
+      &quot;q_same8_x3_dense_g10_target&quot;: 152,
+      &quot;q_same0_x3_paced_g10_target&quot;: 536,
+      &quot;q_same8_x0_paced_g10_target&quot;: 536,
+      &quot;q_same0_x0_dense_g28_target&quot;: 170,
+      &quot;q_same0_x0_dense_g10_none&quot;: 152,
+      &quot;q_same8_x0_dense_g10_target&quot;: 152,
+      &quot;q_same32_x0_dense_g10_none&quot;: 152,
+      &quot;q_bridge_x0_paced_g5_none&quot;: 531,
+      &quot;q_same0_x3_paced_g4_none&quot;: 530,
+      &quot;q_same32_x0_dense_g4_preloaded&quot;: 146,
+      &quot;q_same8_x3_paced_g4_none&quot;: 530,
+      &quot;q_same0_x0_paced_g4_target&quot;: 530,
+      &quot;q_same32_x3_paced_g4_preloaded&quot;: 530,
+      &quot;q_same8_x3_paced_g10_none&quot;: 536,
+      &quot;q_same0_x3_dense_g10_target&quot;: 152,
+      &quot;q_same8_x3_paced_g10_target&quot;: 536,
+      &quot;q_bridge_x0_dense_g4_preloaded&quot;: 146,
+      &quot;q_same0_x0_paced_g5_target&quot;: 531,
+      &quot;q_same32_x3_paced_g10_none&quot;: 536,
+      &quot;q_same32_x3_dense_g4_preloaded&quot;: 146,
+      &quot;q_same0_x3_paced_g5_none&quot;: 531,
+      &quot;q_same32_x3_dense_g4_none&quot;: 146,
+      &quot;q_same32_x3_dense_g5_target&quot;: 147,
+      &quot;q_same0_x3_paced_g4_preloaded&quot;: 530,
+      &quot;q_same0_x0_dense_g5_target&quot;: 147,
+      &quot;q_same32_x0_paced_g5_target&quot;: 531,
+      &quot;q_same0_x0_dense_g10_target&quot;: 152,
+      &quot;q_same0_x0_paced_g10_none&quot;: 536,
+      &quot;q_same8_x3_paced_g4_preloaded&quot;: 530,
+      &quot;q_same8_x3_paced_g4_target&quot;: 530,
+      &quot;q_same0_x3_dense_g4_preloaded&quot;: 146,
+      &quot;q_same8_x0_paced_g5_target&quot;: 531,
+      &quot;q_same32_x0_paced_g4_preloaded&quot;: 530,
+      &quot;q_same8_x3_dense_g4_none&quot;: 146,
+      &quot;q_same32_x3_paced_g28_target&quot;: 554
+    },
+    &quot;checked_samples&quot;: 1344,
+    &quot;warm_samples_with_exact_control_sum&quot;: 768,
+    &quot;differences&quot;: {
+      &quot;q_bridge_x0_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_bridge_x0_dense_g4_target&quot;: [
+        162
+      ],
+      &quot;q_bridge_x0_dense_g4_none&quot;: [
+        162
+      ],
+      &quot;q_bridge_x0_dense_g5_target&quot;: [
+        161
+      ],
+      &quot;q_bridge_x0_dense_g5_none&quot;: [
+        161
+      ],
+      &quot;q_bridge_x0_dense_g10_target&quot;: [
+        156
+      ],
+      &quot;q_bridge_x0_dense_g10_none&quot;: [
+        156
+      ],
+      &quot;q_same0_x0_paced_g4_target&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_paced_g4_none&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_paced_g5_target&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_paced_g5_none&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_paced_g10_target&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_paced_g10_none&quot;: [
+        3
+      ],
+      &quot;q_same0_x0_dense_g4_target&quot;: [
+        148
+      ],
+      &quot;q_same0_x0_dense_g4_none&quot;: [
+        148
+      ],
+      &quot;q_same0_x0_dense_g5_target&quot;: [
+        148
+      ],
+      &quot;q_same0_x0_dense_g5_none&quot;: [
+        148
+      ],
+      &quot;q_same0_x0_dense_g10_target&quot;: [
+        148
+      ],
+      &quot;q_same0_x0_dense_g10_none&quot;: [
+        148
+      ],
+      &quot;q_same0_x3_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same0_x3_dense_g4_target&quot;: [
+        107
+      ],
+      &quot;q_same0_x3_dense_g4_none&quot;: [
+        107
+      ],
+      &quot;q_same0_x3_dense_g5_target&quot;: [
+        107
+      ],
+      &quot;q_same0_x3_dense_g5_none&quot;: [
+        107
+      ],
+      &quot;q_same0_x3_dense_g10_target&quot;: [
+        107
+      ],
+      &quot;q_same0_x3_dense_g10_none&quot;: [
+        107
+      ],
+      &quot;q_same8_x0_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x0_dense_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same8_x3_dense_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x0_dense_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_paced_g10_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g4_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g4_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g5_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g5_none&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g10_target&quot;: [
+        0
+      ],
+      &quot;q_same32_x3_dense_g10_none&quot;: [
+        0
+      ]
+    }
+  }
+}</pre></details><p class="meta">v6.1 输入 SHA256：3513dda17daaf357f51e9cb59ad92b7599600ffc9fd002bb563341063fb9f31c</p><details><summary>v6 阶段原报告（历史原文；以本页最新结论为准）</summary><h1>Thor RF 写回：v6 结果与证据边界</h1><p class="meta">2026-09-28 · NVIDIA Thor / cc11.0 / CUDA driver 13000 · 来源：feedback_v6.zip</p>
+<div class="lead"><strong>本轮确认了局部 +1 与目标消费有关，也确认被测高密度 FADD 流没有布局差异；尚未识别统一 RF 写服务规则。</strong><p>4,704 次正式采样完整、原始输出与汇总一致。短序列新增对照收窄了归因；高密度组则证实，程序化 gap 不能直接作为实际可用延迟。</p></div>
+<h3>原来的 +1 周期：现在能够归因到哪一步</h3><p>下面固定名义 gap=6。各条件共 32 次采样，所列窗口每次均相同；所有实际消费者都读到了正确新值。目标原为 R12；预装值消费者读取 R98；NOP 与 MOV 的位置和 stall 相同。</p><div class="scroll"><table><thead><tr><th>改变的条件</th><th>消费目标 / cycles</th><th>消费预装值 / cycles</th><th>无消费者 / cycles</th><th>目标−无消费者</th></tr></thead><tbody><tr><td>原 EX2 目的</td><td>33</td><td>32</td><td>32</td><td>1</td></tr><tr><td>EX2 改写偶数组</td><td>33</td><td>32</td><td>32</td><td>1</td></tr><tr><td>EX2 改写奇数组</td><td>33</td><td>32</td><td>32</td><td>1</td></tr><tr><td>EX2 改写 RZ</td><td>33</td><td>32</td><td>32</td><td>1</td></tr><tr><td>EX2 换同位置 NOP</td><td>32</td><td>32</td><td>32</td><td>0</td></tr><tr><td>目标 R12 改 R15；原 EX2 目的</td><td>32</td><td>32</td><td>32</td><td>0</td></tr></tbody></table></div><p><strong>直接结论：</strong>+1 并没有出现在去掉消费者的生产者窗口里。保留 EX2、将其目的改为偶数组、奇数组或 RZ，+1 都保留；把目标改成 R15 或将 EX2 换为 NOP，+1 消失。原目标在 gap=5/6/7 的差值依次为 0/1/0，不能写成普遍的“偶数目的寄存器加 1 周期”。</p><p><strong>归因边界：</strong>这支持“指定目标消费与返回条件/寄存器编号的局部交互”，不支持直接宣称普通 GPR 写入冲突。RZ 仍可能占用内部返回资源，故不能据此完全排除返回仲裁。RF 阵列写入、结果转发、操作数供给与消费时序在这些观测中仍未分离；本 work 不把这种交互扩展为独立的寄存器依赖模型。</p>
+<h3>高密度 FADD：布局差异为零，可用边界却受背景条件影响</h3><p>连续布局 R8…R39 与偶数布局 R8、R10…R70，各用 32 个背景目的。marker 固定写 R168，值 3.5，只写一次；消费者写 R174。每点 16 次，检查每个 warp 的所有 lane。下表两种布局完全相同；预装值消费者全部正确。</p><div class="scroll"><table><thead><tr><th>warp 数</th><th>前缀供给条件</th><th>gap=4 的目标观察</th><th>gap=5…10 的目标观察</th><th>CTA 窗口：gap=4…10 / cycles</th><th>单 warp 窗口 / cycles</th></tr></thead><tbody><tr><td>1</td><td>前缀 stall=4</td><td>均不正确</td><td>均正确</td><td>530 → 531 → 532 → 533 → 534 → 535 → 536</td><td>530 → 536</td></tr><tr><td>1</td><td>前缀 stall=1</td><td>均正确</td><td>均正确</td><td>308 → 308 → 308 → 308 → 308 → 308 → 308</td><td>308</td></tr><tr><td>4</td><td>前缀 stall=4</td><td>均不正确</td><td>均正确</td><td>536 → 537 → 538 → 539 → 540 → 541 → 542</td><td>530 → 536</td></tr><tr><td>4</td><td>前缀 stall=1</td><td>均正确</td><td>均正确</td><td>314 → 314 → 314 → 314 → 314 → 314 → 314</td><td>308</td></tr></tbody></table></div><p><strong>布局：</strong>1,344 组逐次布局配对的窗口差全部为 0；同条件逐 warp 的可用性结果也一致。这一结论限于这两种布局、当前数量和流形状，不代表所有目的映射都没有限制。</p><p><strong>可用性：</strong>低密度前缀在 gap=4 有 160 次 warp 观察、5,120 个 lane 读不到正确 marker；这些值既不是新值，也不是预置旧值，不能描述成“稳定返回旧值”。gap≥5 全部正确。高密度前缀在 gap=4…10 全部正确，因此它的边界只能说“不大于已测试的最小 gap=4”，不能指定为 4。</p><p><strong>推进：</strong>高密度前缀中，gap 从 4 增至 10，单 warp 总窗口始终 308 cycles；目标 MOV、预装值 MOV、NOP 的窗口差也全部为 0。增加 6 个程序化间隔单位没有增加这个测量窗口。它证明不能把控制字段和直接当作实际经过时间；无法据此判断 RF 本身变快或没有排队。低密度与高密度的窗口差也同时包含主动改变的前缀发出间隔，不能作为 RF 排队成本。</p><p>4 warp 的单 warp 窗口与 1 warp 相同。CTA 多出的 6 cycles 完全对应本轮记录的四个 warp 起点错开 0/2/4/6 cycles；没有证据把它列为 RF 并发惩罚。这里只描述实测时钟关系，不推断子分区映射。</p>
+<h3>对原目标的回答</h3><div class="scroll"><table><thead><tr><th>原目标</th><th>当前证据支持的回答</th><th>不能据此推出</th></tr></thead><tbody><tr><td>目的寄存器布局会不会限制推进/可用？</td><td>本轮 FADD 两布局：推进差 0，观察结果相同。短序列目标 R12/R15：仅特定消费条件相差 1 cycle。</td><td>普遍偶/奇 bank 规则、任意布局无惩罚</td></tr><tr><td>结果数量会不会形成写服务瓶颈？</td><td>本轮固定每 warp 132 个区间内计算结果；已有数量扫描保留为总时序证据。</td><td>RF 每周期结果容量、排队深度、每结果增量成本</td></tr><tr><td>不同返回路径会不会造成限制？</td><td>保留 EX2 时局部 +1 存在，写 RZ 仍存在；EX2 换 NOP 时消失。</td><td>是哪一级资源冲突、跨路径仲裁规则</td></tr><tr><td>能如何量化？</td><td>报告实际窗口差、逐 lane 正确性及已测试 gap 上的边界；本轮差异精确复现。</td><td>把 gap 当物理延迟，或把 308/314 等窗口常数变成模型经验参数</td></tr></tbody></table></div><h3>仍缺的证据，不再用扩大同类扫描代替</h3><ol><li><strong>实际推进与结果可用的时间关系。</strong>本轮只有外层窗口和相对控制字段坐标，没有 marker 实际产生/消费者实际取值之间的时间测量。因此无法把高密度下提前“通过”的名义边界解释为真实可用延迟。</li><li><strong>执行供给与 RF 返回服务的可分离证据。</strong>高吞吐计算是必要的供给方式，但本轮仍未证明限制来自 RF，也未证明已触及 RF 写峰值。RZ 对照能约束解释，不能自动代表绕过全部返回资源。</li><li><strong>可比的结果数量/宽度供给。</strong>现有 IMAD.WIDE、FADD、LDS/LDG 之间的时序差不能唯一换算为每个结果或每 32 bit 的写成本；本轮没有新增解决这一点的证据。</li></ol><p>这轮补齐了定位 +1 的直接对照，但统一 RF 写服务规则的目标仍未完成。继续重复同一 gap×布局矩阵不能补上上述可辨识性缺口；这里不追加经验系数，也不自动再开一轮测试。</p>
+<h3>数据可信度与复核范围</h3><div class="scroll"><table><thead><tr><th>检查</th><th>结果</th></tr></thead><tbody><tr><td>正式采样</td><td>short 2,016/2,016；stream 2,688/2,688；两批齐全</td></tr><tr><td>门禁</td><td>short 84，stream 144，全部通过</td></tr><tr><td>原始证据</td><td>压缩包 SHA256 清单全部匹配；257 个 cubin/SASS 哈希与审计匹配；运行源码哈希匹配</td></tr><tr><td>独立解码</td><td>逐次核对原始字节、guard、时钟、SM、未激活线程、新/旧/其他掩码；FADD marker 与背景最终值正确</td></tr><tr><td>重复性</td><td>231 个正式 case，各自两批所有重复的窗口均相同；全部运行记录 SM0</td></tr><tr><td>计时使用</td><td>主要结论使用 kernel 内逐 warp 时钟；CUDA Event 仅保留整 kernel 外部旁证，不换算 RF 周期</td></tr><tr><td>环境限制</td><td>反馈 nvidia-smi 的频率/功耗/温度为 N/A；不报告基于未测频率的绝对带宽</td></tr></tbody></table></div><details><summary>逐 case 结果与独立复核记录</summary><pre>{
+  &quot;short&quot;: {
+    &quot;counts&quot;: {
+      &quot;samples&quot;: 2016,
+      &quot;new_lanes&quot;: 43008,
+      &quot;old_lanes&quot;: 0,
+      &quot;other_lanes&quot;: 0
+    },
+    &quot;gates_passed&quot;: 84,
+    &quot;case_count&quot;: 63,
+    &quot;audited_cubins&quot;: 65,
+    &quot;smids&quot;: {
+      &quot;0&quot;: 2016
+    },
+    &quot;start_skews&quot;: {
+      &quot;(1, 0)&quot;: 2016
+    },
+    &quot;guard_cycles&quot;: {
+      &quot;455&quot;: 2016
+    },
+    &quot;all_cases_timing_deterministic&quot;: true,
+    &quot;percase&quot;: {
+      &quot;short_discard_r6_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_discard_r6_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_even_r6_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_odd_r6_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r6_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_original_r9_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r6_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g5_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g5_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g5_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          31
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g6_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g6_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g6_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          32
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g7_none&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g7_preloaded&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;short_single_r9_g7_target&quot;: {
+        &quot;count&quot;: 32,
+        &quot;windows&quot;: [
+          33
+        ],
+        &quot;new&quot;: 32,
+        &quot;unavailable&quot;: 0
+      }
+    },
+    &quot;perwarp_windows&quot;: {
+      &quot;short_discard_r6_g5_none&quot;: [
+        31
+      ],
+      &quot;short_discard_r6_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_discard_r6_g5_target&quot;: [
+        31
+      ],
+      &quot;short_discard_r6_g6_none&quot;: [
+        32
+      ],
+      &quot;short_discard_r6_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_discard_r6_g6_target&quot;: [
+        33
+      ],
+      &quot;short_discard_r6_g7_none&quot;: [
+        33
+      ],
+      &quot;short_discard_r6_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_discard_r6_g7_target&quot;: [
+        33
+      ],
+      &quot;short_even_r6_g5_none&quot;: [
+        31
+      ],
+      &quot;short_even_r6_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_even_r6_g5_target&quot;: [
+        31
+      ],
+      &quot;short_even_r6_g6_none&quot;: [
+        32
+      ],
+      &quot;short_even_r6_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_even_r6_g6_target&quot;: [
+        33
+      ],
+      &quot;short_even_r6_g7_none&quot;: [
+        33
+      ],
+      &quot;short_even_r6_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_even_r6_g7_target&quot;: [
+        33
+      ],
+      &quot;short_odd_r6_g5_none&quot;: [
+        31
+      ],
+      &quot;short_odd_r6_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_odd_r6_g5_target&quot;: [
+        31
+      ],
+      &quot;short_odd_r6_g6_none&quot;: [
+        32
+      ],
+      &quot;short_odd_r6_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_odd_r6_g6_target&quot;: [
+        33
+      ],
+      &quot;short_odd_r6_g7_none&quot;: [
+        33
+      ],
+      &quot;short_odd_r6_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_odd_r6_g7_target&quot;: [
+        33
+      ],
+      &quot;short_original_r6_g5_none&quot;: [
+        31
+      ],
+      &quot;short_original_r6_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_original_r6_g5_target&quot;: [
+        31
+      ],
+      &quot;short_original_r6_g6_none&quot;: [
+        32
+      ],
+      &quot;short_original_r6_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_original_r6_g6_target&quot;: [
+        33
+      ],
+      &quot;short_original_r6_g7_none&quot;: [
+        33
+      ],
+      &quot;short_original_r6_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_original_r6_g7_target&quot;: [
+        33
+      ],
+      &quot;short_original_r9_g5_none&quot;: [
+        31
+      ],
+      &quot;short_original_r9_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_original_r9_g5_target&quot;: [
+        31
+      ],
+      &quot;short_original_r9_g6_none&quot;: [
+        32
+      ],
+      &quot;short_original_r9_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_original_r9_g6_target&quot;: [
+        32
+      ],
+      &quot;short_original_r9_g7_none&quot;: [
+        33
+      ],
+      &quot;short_original_r9_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_original_r9_g7_target&quot;: [
+        33
+      ],
+      &quot;short_single_r6_g5_none&quot;: [
+        31
+      ],
+      &quot;short_single_r6_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_single_r6_g5_target&quot;: [
+        31
+      ],
+      &quot;short_single_r6_g6_none&quot;: [
+        32
+      ],
+      &quot;short_single_r6_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_single_r6_g6_target&quot;: [
+        32
+      ],
+      &quot;short_single_r6_g7_none&quot;: [
+        33
+      ],
+      &quot;short_single_r6_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_single_r6_g7_target&quot;: [
+        33
+      ],
+      &quot;short_single_r9_g5_none&quot;: [
+        31
+      ],
+      &quot;short_single_r9_g5_preloaded&quot;: [
+        31
+      ],
+      &quot;short_single_r9_g5_target&quot;: [
+        31
+      ],
+      &quot;short_single_r9_g6_none&quot;: [
+        32
+      ],
+      &quot;short_single_r9_g6_preloaded&quot;: [
+        32
+      ],
+      &quot;short_single_r9_g6_target&quot;: [
+        32
+      ],
+      &quot;short_single_r9_g7_none&quot;: [
+        33
+      ],
+      &quot;short_single_r9_g7_preloaded&quot;: [
+        33
+      ],
+      &quot;short_single_r9_g7_target&quot;: [
+        33
+      ]
+    },
+    &quot;unavailable_distinct_words&quot;: 0
+  },
+  &quot;stream&quot;: {
+    &quot;counts&quot;: {
+      &quot;samples&quot;: 2688,
+      &quot;new_lanes&quot;: 138240,
+      &quot;old_lanes&quot;: 0,
+      &quot;other_lanes&quot;: 5120,
+      &quot;unavailable_warp_observations&quot;: 160
+    },
+    &quot;gates_passed&quot;: 144,
+    &quot;case_count&quot;: 168,
+    &quot;audited_cubins&quot;: 192,
+    &quot;smids&quot;: {
+      &quot;0&quot;: 6720
+    },
+    &quot;start_skews&quot;: {
+      &quot;(1, 0)&quot;: 1344,
+      &quot;(4, 6)&quot;: 1344
+    },
+    &quot;guard_cycles&quot;: {
+      &quot;455&quot;: 6720
+    },
+    &quot;all_cases_timing_deterministic&quot;: true,
+    &quot;percase&quot;: {
+      &quot;stream_w1_dense_dense_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_dense_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_dense_even_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          308
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 16
+      },
+      &quot;stream_w1_paced_dense_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_dense_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          530
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 16
+      },
+      &quot;stream_w1_paced_even_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          531
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          532
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          533
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          534
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w1_paced_even_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          535
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_dense_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_dense_even_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          314
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 16
+      },
+      &quot;stream_w4_paced_dense_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_dense_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g10_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g10_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g10_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          542
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g4_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g4_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g4_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          536
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 16
+      },
+      &quot;stream_w4_paced_even_g5_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g5_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g5_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          537
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g6_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g6_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g6_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          538
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g7_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g7_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g7_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          539
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g8_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g8_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g8_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          540
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g9_none&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 0,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g9_preloaded&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      },
+      &quot;stream_w4_paced_even_g9_target&quot;: {
+        &quot;count&quot;: 16,
+        &quot;windows&quot;: [
+          541
+        ],
+        &quot;new&quot;: 16,
+        &quot;unavailable&quot;: 0
+      }
+    },
+    &quot;perwarp_windows&quot;: {
+      &quot;stream_w1_dense_dense_g10_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g10_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g10_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g4_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g4_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g4_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g5_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g5_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g5_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g6_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g6_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g6_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g7_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g7_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g7_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g8_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g8_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g8_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g9_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g9_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_dense_g9_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g10_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g10_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g10_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g4_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g4_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g4_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g5_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g5_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g5_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g6_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g6_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g6_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g7_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g7_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g7_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g8_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g8_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g8_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g9_none&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g9_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w1_dense_even_g9_target&quot;: [
+        308
+      ],
+      &quot;stream_w1_paced_dense_g10_none&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_dense_g10_preloaded&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_dense_g10_target&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_dense_g4_none&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_dense_g4_preloaded&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_dense_g4_target&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_dense_g5_none&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_dense_g5_preloaded&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_dense_g5_target&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_dense_g6_none&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_dense_g6_preloaded&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_dense_g6_target&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_dense_g7_none&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_dense_g7_preloaded&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_dense_g7_target&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_dense_g8_none&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_dense_g8_preloaded&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_dense_g8_target&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_dense_g9_none&quot;: [
+        535
+      ],
+      &quot;stream_w1_paced_dense_g9_preloaded&quot;: [
+        535
+      ],
+      &quot;stream_w1_paced_dense_g9_target&quot;: [
+        535
+      ],
+      &quot;stream_w1_paced_even_g10_none&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_even_g10_preloaded&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_even_g10_target&quot;: [
+        536
+      ],
+      &quot;stream_w1_paced_even_g4_none&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_even_g4_preloaded&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_even_g4_target&quot;: [
+        530
+      ],
+      &quot;stream_w1_paced_even_g5_none&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_even_g5_preloaded&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_even_g5_target&quot;: [
+        531
+      ],
+      &quot;stream_w1_paced_even_g6_none&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_even_g6_preloaded&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_even_g6_target&quot;: [
+        532
+      ],
+      &quot;stream_w1_paced_even_g7_none&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_even_g7_preloaded&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_even_g7_target&quot;: [
+        533
+      ],
+      &quot;stream_w1_paced_even_g8_none&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_even_g8_preloaded&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_even_g8_target&quot;: [
+        534
+      ],
+      &quot;stream_w1_paced_even_g9_none&quot;: [
+        535
+      ],
+      &quot;stream_w1_paced_even_g9_preloaded&quot;: [
+        535
+      ],
+      &quot;stream_w1_paced_even_g9_target&quot;: [
+        535
+      ],
+      &quot;stream_w4_dense_dense_g10_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g10_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g10_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g4_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g4_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g4_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g5_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g5_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g5_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g6_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g6_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g6_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g7_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g7_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g7_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g8_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g8_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g8_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g9_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g9_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_dense_g9_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g10_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g10_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g10_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g4_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g4_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g4_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g5_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g5_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g5_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g6_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g6_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g6_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g7_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g7_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g7_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g8_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g8_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g8_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g9_none&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g9_preloaded&quot;: [
+        308
+      ],
+      &quot;stream_w4_dense_even_g9_target&quot;: [
+        308
+      ],
+      &quot;stream_w4_paced_dense_g10_none&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_dense_g10_preloaded&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_dense_g10_target&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_dense_g4_none&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_dense_g4_preloaded&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_dense_g4_target&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_dense_g5_none&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_dense_g5_preloaded&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_dense_g5_target&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_dense_g6_none&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_dense_g6_preloaded&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_dense_g6_target&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_dense_g7_none&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_dense_g7_preloaded&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_dense_g7_target&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_dense_g8_none&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_dense_g8_preloaded&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_dense_g8_target&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_dense_g9_none&quot;: [
+        535
+      ],
+      &quot;stream_w4_paced_dense_g9_preloaded&quot;: [
+        535
+      ],
+      &quot;stream_w4_paced_dense_g9_target&quot;: [
+        535
+      ],
+      &quot;stream_w4_paced_even_g10_none&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_even_g10_preloaded&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_even_g10_target&quot;: [
+        536
+      ],
+      &quot;stream_w4_paced_even_g4_none&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_even_g4_preloaded&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_even_g4_target&quot;: [
+        530
+      ],
+      &quot;stream_w4_paced_even_g5_none&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_even_g5_preloaded&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_even_g5_target&quot;: [
+        531
+      ],
+      &quot;stream_w4_paced_even_g6_none&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_even_g6_preloaded&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_even_g6_target&quot;: [
+        532
+      ],
+      &quot;stream_w4_paced_even_g7_none&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_even_g7_preloaded&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_even_g7_target&quot;: [
+        533
+      ],
+      &quot;stream_w4_paced_even_g8_none&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_even_g8_preloaded&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_even_g8_target&quot;: [
+        534
+      ],
+      &quot;stream_w4_paced_even_g9_none&quot;: [
+        535
+      ],
+      &quot;stream_w4_paced_even_g9_preloaded&quot;: [
+        535
+      ],
+      &quot;stream_w4_paced_even_g9_target&quot;: [
+        535
+      ]
+    },
+    &quot;unavailable_distinct_words&quot;: 2548
+  }
+}</pre></details><details><summary>复核脚本（只读反馈，不调用 GPU）</summary><pre>import json,gzip,hashlib,struct,collections
+from pathlib import Path
+root=Path(&#x27;/workspace/scratch/e8eafa00e26d/upload/feedback_v6_extracted&#x27;);out={};h=lambda b:hashlib.sha256(b).hexdigest()
+for exp,slots,threads in [(&#x27;short&#x27;,128,32),(&#x27;stream&#x27;,208,128)]:
+ r=root/&#x27;results&#x27;/exp;f=json.loads((r/&#x27;frame_snapshot.json&#x27;).read_text());run=json.loads((r/&#x27;run.json&#x27;).read_text());cases={c[&#x27;id&#x27;]:c for c in run[&#x27;cases&#x27;]};cap=f[&#x27;captured&#x27;];m=f[&#x27;allocation&#x27;];ix={reg:i for i,reg in enumerate(cap)}
+ mp={k:m[k] for k in [&#x27;clock0&#x27;,&#x27;clock1&#x27;,&#x27;clock2&#x27;,&#x27;smid&#x27;,&#x27;probe&#x27;]} if exp==&#x27;stream&#x27; else dict(clock0=m[&#x27;c0&#x27;],clock1=m[&#x27;c1&#x27;],clock2=m[&#x27;c2&#x27;],smid=m[&#x27;smid&#x27;],probe=m[&#x27;probe&#x27;])
+ for name,sha in run[&#x27;source_hashes&#x27;].items():assert h((root/&#x27;package&#x27;/name).read_bytes())==sha
+ audits={}
+ for p in (r/&#x27;build/cases&#x27;).glob(&#x27;*/audit.json&#x27;):
+  a=json.loads(p.read_text());assert a[&#x27;audit_pass&#x27;];assert h((p.parent/&#x27;probe.cubin&#x27;).read_bytes())==a[&#x27;cubin_sha256&#x27;];assert h((p.parent/&#x27;probe.sass&#x27;).read_bytes())==a[&#x27;full_sass_sha256&#x27;];audits[a[&#x27;id&#x27;]]=a
+ counters=collections.Counter();badvals=collections.Counter();percase={};smids=collections.Counter();windows=collections.defaultdict(set);skews=collections.Counter();guardcycles=collections.Counter()
+ for p in sorted((r/&#x27;samples&#x27;).glob(&#x27;*/*.json&#x27;)):
+  a=json.loads(p.read_text());c=cases[a[&#x27;case_id&#x27;]];raw=gzip.decompress(p.with_suffix(&#x27;.bin.gz&#x27;).read_bytes());assert h(raw)==a[&#x27;raw_sha256&#x27;];assert a[&#x27;cubin_sha256&#x27;]==audits[a[&#x27;case_id&#x27;]][&#x27;cubin_sha256&#x27;];assert a[&#x27;valid&#x27;] and not a[&#x27;errors&#x27;];assert raw[:64]==raw[-64:]==b&#x27;\xa5&#x27;*64
+  arr=struct.unpack(&#x27;&lt;&#x27;+str(slots*threads)+&#x27;I&#x27;,raw[64:-64]);get=lambda reg,lane:arr[ix[reg]*threads+lane]
+  active=c[&#x27;warps&#x27;]*32
+  assert all(get(reg,lane)==0xcdcdcdcd for reg in cap for lane in range(active,threads))
+  starts=[];ends=[]
+  for w in a[&#x27;warps&#x27;]:
+   t=w[&#x27;warp&#x27;]*32
+   for key,field in [(&#x27;clock0&#x27;,&#x27;start&#x27;),(&#x27;clock1&#x27;,&#x27;end&#x27;),(&#x27;clock2&#x27;,&#x27;guard_end&#x27;),(&#x27;smid&#x27;,&#x27;smid&#x27;)]:assert all(get(mp[key],i)==w[field] for i in range(t,t+32))
+   assert (w[&#x27;end&#x27;]-w[&#x27;start&#x27;])&amp;0xffffffff==w[&#x27;window_cycles&#x27;];assert (w[&#x27;guard_end&#x27;]-w[&#x27;end&#x27;])&amp;0xffffffff==w[&#x27;guard_cycles&#x27;]
+   starts.append(w[&#x27;start&#x27;]);ends.append(w[&#x27;end&#x27;]);windows[a[&#x27;case_id&#x27;]].add(w[&#x27;window_cycles&#x27;]);guardcycles[w[&#x27;guard_cycles&#x27;]]+=1;smids[w[&#x27;smid&#x27;]]+=1
+  assert max(ends)-min(starts)==a[&#x27;cta_span_cycles&#x27;];assert max(starts)-min(starts)==a[&#x27;start_skew&#x27;];skews[(c[&#x27;warps&#x27;],a[&#x27;start_skew&#x27;])]+=1
+  if exp==&#x27;stream&#x27;:
+   regs=[m[&#x27;base&#x27;]+i*(2 if c[&#x27;layout&#x27;]==&#x27;even&#x27; else 1) for i in range(c[&#x27;pool&#x27;])]
+   assert all(get(reg,lane)==0x3fa00000 for reg in regs for lane in range(active))
+   assert all(get(m[&#x27;marker&#x27;],lane)==0x40600000 for lane in range(active))
+  for o in a[&#x27;observations&#x27;]:
+   vals=[get(mp[&#x27;probe&#x27;],o[&#x27;warp&#x27;]*32+i) for i in range(32)];assert vals==o[&#x27;values&#x27;]
+   if exp==&#x27;stream&#x27;:assert o[&#x27;expected_new&#x27;]==[0x40600000]*32
+   nm=sum((v==n)&lt;&lt;i for i,(v,n) in enumerate(zip(vals,o[&#x27;expected_new&#x27;])));om=sum((v==n)&lt;&lt;i for i,(v,n) in enumerate(zip(vals,o[&#x27;initial_target&#x27;])))
+   assert nm==o[&#x27;new_mask&#x27;] and om==o[&#x27;old_mask&#x27;] and (~(nm|om))&amp;0xffffffff==o[&#x27;other_mask&#x27;]
+   counters[&#x27;new_lanes&#x27;]+=nm.bit_count();counters[&#x27;old_lanes&#x27;]+=om.bit_count();counters[&#x27;other_lanes&#x27;]+=o[&#x27;other_mask&#x27;].bit_count()
+   if nm!=0xffffffff:
+    counters[&#x27;unavailable_warp_observations&#x27;]+=1
+    for v,n in zip(vals,o[&#x27;expected_new&#x27;]):
+     if v!=n:badvals[hex(v)]+=1
+  assert a[&#x27;all_new&#x27;]==(all(o[&#x27;new_mask&#x27;]==0xffffffff for o in a[&#x27;observations&#x27;]) if a[&#x27;observations&#x27;] else None)
+  pc=percase.setdefault(a[&#x27;case_id&#x27;],dict(count=0,windows=set(),new=0,unavailable=0));pc[&#x27;count&#x27;]+=1;pc[&#x27;windows&#x27;].add(a[&#x27;cta_span_cycles&#x27;]);pc[&#x27;new&#x27;]+=a[&#x27;all_new&#x27;] is True;pc[&#x27;unavailable&#x27;]+=a[&#x27;all_new&#x27;] is False
+  counters[&#x27;samples&#x27;]+=1
+ for c in cases.values():
+  if c[&#x27;stage&#x27;]==&#x27;main&#x27;:assert percase[c[&#x27;id&#x27;]][&#x27;count&#x27;]==run[&#x27;samples&#x27;]*run[&#x27;batches&#x27;]
+ for v in percase.values():v[&#x27;windows&#x27;]=sorted(v[&#x27;windows&#x27;])
+ gates=[json.loads(p.read_text()) for p in (r/&#x27;gates&#x27;).glob(&#x27;*.json&#x27;)];assert all(g[&#x27;valid&#x27;] for g in gates)
+ out[exp]=dict(counts=dict(counters),gates_passed=len(gates),case_count=len(percase),audited_cubins=len(audits),smids=dict(smids),start_skews={str(k):v for k,v in skews.items()},guard_cycles=dict(guardcycles),all_cases_timing_deterministic=all(len(v[&#x27;windows&#x27;])==1 for v in percase.values()),percase=percase,perwarp_windows={k:sorted(v) for k,v in windows.items()},unavailable_distinct_words=len(badvals))
+ print(exp,{k:v for k,v in out[exp].items() if k not in [&#x27;percase&#x27;,&#x27;perwarp_windows&#x27;]})
+Path(&#x27;/workspace/scratch/e8eafa00e26d/v6_independent_audit.json&#x27;).write_text(json.dumps(out,ensure_ascii=False,indent=2)+&#x27;\n&#x27;)
+</pre></details><p class="meta">输入压缩包 SHA256：0bd5cfb9443d847e5bb1aecdd6ec2c0fed4578370b3ed91ef08e5e0dbc0a6198</p></details></details></body></html>

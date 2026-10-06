@@ -56,13 +56,14 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 | mma.sync FP64 `m8n8k4`，整卡 | 33.45 TFLOP/s | 数据表 FP64 Tensor Core 67 TFLOP/s | 正好一半；只测了旧形状，原因待查 |
 | FP8 WGMMA m64n64k32，单 CTA | 8179 FLOP/cycle | 8192 | 正常 |
 | SMEM w8/w16 读、写、读写合计 | 均约 128 B/cycle | 128 | 读写合计仍约 128，建模时不能把读、写峰值相加 |
-| 整卡 global 读 / TMA 读 / TMA 1D bulk 写 / TMA 2D 写 | 3.52 / 3.83 / 2.74 / 3.83 TB/s | HBM3 产品值 4 TB/s | 1D bulk 写比 `st.global` 写（3.79）低约 30%；2D tensor 写正常，但 GMEM 行间有 padding 时降到 1.33–1.45 TB/s，epilogue 需单独计 |
+| 整卡 global 读 / TMA 读 / TMA 1D bulk 写 / TMA 2D 写 | 3.52 / 3.83 / 2.74 / 3.83 TB/s | HBM3 产品值 4 TB/s | 1D bulk 写比 `st.global` 写（3.79）低约 30%；2D tensor 写正常，行起点只按 16 B 对齐（行距 144 B）时降到 1.33–1.45 TB/s，32 B 对齐即恢复（R05-E） |
 
 ### 需要补充的解读
 
-- **FP8 累加停在 64**：每个乘积为 \(2^{-8}\)，累加器到 \(64=2^6\) 后二者相差 14 个二进制量级，均匀输入下 31/32/33 轮的边界与“约 14 bit 对齐窗口”的解释相符，也与 DeepSeek‑V3 技术报告对 Hopper FP8 累加精度的描述一致；确切对齐与舍入规则仍需不同量级输入验证。由此，FP8 方案须按 K 分段提升到 CUDA Core FP32 累加（如每 128 个 K），并计入额外 FFMA、寄存器和依赖；问题实例的误差要求须先确定。
-- **S19/S20 是延迟受限的固定配置**：S19 compute 18.4 FLOP/cycle，约为 FP32 峰值的 7%；S20 compute 830 FLOP/cycle，约为峰值的 20%，斜率 606 cycle/Ktile 平均到 4 条依赖 WGMMA 约 150 cycle/条，含 fence、commit、wait0 与循环。两组拟合不能代表实际 GEMM mainloop；该值只能作为依赖 WGMMA 往返的上界，不能填入 L0 裸延迟。
+- **FP8 累加停在 64**：每个乘积为 \(2^{-8}\)，累加器到 \(64=2^6\) 后二者相差 14 个二进制量级，均匀输入下 31/32/33 轮的边界与“约 14 bit 对齐窗口”的解释相符，也与 DeepSeek‑V3 技术报告对 Hopper FP8 累加精度的描述一致；确切对齐与舍入规则仍需不同量级输入验证。这说明某些输入下长累加会产生明显误差；是否需要处理取决于问题实例的输入范围和误差要求。若直接 FP8 WGMMA 累加不能满足误差要求，可采用按 K 分段的 FP32 累加（如每 128 个 K），并计入额外计算、寄存器和依赖成本。
+- **S19/S20 是远离峰值的固定配置**：S19 compute 18.4 FLOP/cycle，约为 FP32 峰值的 7%；S20 compute 830 FLOP/cycle，约为峰值的 20%，斜率 606 cycle/Ktile，平均到每条 WGMMA 约 150 cycle；这是包含 fence、commit、wait0、同步和循环控制的平均循环成本，不能当作 L0 的裸延迟。两组拟合不能代表实际 GEMM mainloop。
 - **S10 只测了单 warp**：`ldmatrix` x4 为 35 B/cycle，shuffle 每 warp 约 26 cycle/条，均反映延迟而非吞吐上限。
+- **R05-D 的供给结论**：目标在途量下，有 L2 复用时每 SM 供给 55.5 B/cycle，高于满速 WGMMA 的 48 B/cycle；没有复用时只有 15.3。Tensor Core 方案模型的 mainloop 供给应按 L2 复用程度取值，而不是按 HBM 带宽均分。
 - **已有数据可推出的量未推**：S14/S16 中每轮只有一个请求的配置给出单请求完整周期，是 TMA 往返时间的上界，例如 S=1、R=1 时 \(16384/14.75\approx1100\) cycle；更大缓冲只给出容量，没有平均在途量，不能直接用 Little 定律换算。它们对应 [FP32 示例](schemes/fp32_simt_tiled.md)中的 \(\ell_g,b_g\)。
 
 ### 缺口
@@ -71,7 +72,7 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 |---|---|---|
 | 高 | 硬件参数未吸收 v2 结果：[GH200 L0](hardware/gh200_sm90/L0.md) 仍用 09-30 旧复测；[L1](hardware/gh200_sm90/L1.md) 的 SMEM 仍为 EXP-02 v1 的 115.6 B/cycle（CV 12%）；S05–S12、S18 未接入 | 按资源类别引用 S05–S18 的条件参数，替换旧值 |
 | 高 | 没有 Hopper Tensor Core 方案模型；现有方案只有教学参数的 FP32 示例和 Thor 的 tc5a | 新建 TMA producer + WGMMA consumer、多 stage、persistent 的方案文件，用实测参数实例化，缺项保留符号 |
-| 高 | 没有完整 GEMM 锚点 | 在 GH200 上测 cuBLAS / CUTLASS 的 BF16、FP8、FP32 GEMM，作为可达目标与模型验证数据 |
+| 已完成 | 完整 GEMM 锚点 | [R00](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：cuBLASLt FP16 8192³ 715 TFLOP/s、2048³ 555；FP8 8192³ 1127；固定 CUTLASS 643 |
 | 高 | 问题实例未落到 GH200：[workloads.yaml](workloads.yaml) 的输入生成指向 Thor，误差函数与容差为空 | 增加 GH200 实例，确定误差要求，FP8 实例同时规定累加提升 |
 | 中 | 单 CTA clock64 与整卡 globaltimer 缺少负载下的频率换算 | 采样时同 CTA 同时记录两种计时，或记录负载下 SM 频率 |
 | 中 | L0 的裸延迟、启动间隔和混合指令联合服务仍未知 | 见下方指令级测试 |
@@ -83,10 +84,10 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 
 | 优先级 | 测量内容 | 用途 |
 |---|---|---|
-| 高 | WGMMA N∈{64,128,256}、SS/RS；依赖链延迟随 N 的变化；每 SM 1/2/3 个 warpgroup | 实际 Hopper GEMM 使用 m64n256k16 与两个 consumer warpgroup，目前只有 N=64 |
-| 高 | WGMMA 与 FFMA、IMAD 同时执行 | FP8 累加提升、epilogue 重叠与地址计算的联合服务 |
+| 已完成 | WGMMA N∈{64,128,256}、SS/RS、1/2 个 warpgroup | [R00-B](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：全部 4095 FLOP/cycle；依赖时间随 N 的变化在 R01 重测中 |
+| 进行中 | WGMMA 与 FFMA、IMAD 同时执行 | 同一 warpgroup 的配对已测（[R04](experiments/gh200_sm90/access_rules/R04-joint-service.md)）；跨 warpgroup 改用异步 WGMMA 重做中 |
 | 高 | FP64 `mma` 的 sm_90 新形状（以 PTX ISA 核实 `m16n8k4/k8/k16`） | 解释 FP64 只达数据表一半 |
-| 中 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | SIMT 与 mma.sync 方案的片上供给 |
+| 已完成 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | [R03](experiments/gh200_sm90/access_rules/R03-access-demand.md)：8 warp 时 124–127 B/cycle |
 | 中 | WGMMA TF32 与 FP16 累加形式 | 补齐精度覆盖 |
 | 低 | 全 ISA 延迟/吞吐表 | 不需要；GEMM 不使用的指令引用公开 Hopper 微基准文献 |
 
