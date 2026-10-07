@@ -42,7 +42,7 @@ ready原5个均值超限条件经CTA0有界补查后，仅n128_s2_c1均值4.703%
 
 ## 证据与复现
 
-- [v8 ready正式报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735876-v8-formal-ready-review-B/report.md)：parameters.json、逐plain/SM覆盖、逐pair扰动、图与分析源码身份同目录。
+- [v8 ready正式报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735876-v8-formal-ready-review-B/report.md)：parameters.json、逐plain/SM覆盖、逐pair扰动、图与分析源码身份同目录。该报告依据的原始运行 `20261007-R13-job735985-v9-ready-recheck` 已压缩归档到 `CUDA_optimazation_archive/gh200_access_rules/`（见其 README 与 SHA256SUMS）。
 - [v9 ready补查报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-ready-recheck-review-B/report.md)：parameters.json、逐plain/SM覆盖、逐pair扰动、图与分析源码身份同目录。
 - [v9 retire正式报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-formal-retire-review-B/report.md)：parameters.json、逐plain/SM覆盖、逐pair扰动、图与分析源码身份同目录。
 - [retire独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job735985-v9-formal-retire/reviews/independent-C.md)。
@@ -106,3 +106,5 @@ n128_s4_c2代表批4.781%通过与正式批5.903%失败分别保留，正式资�
 [完整复核报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse-review-B/report.md)及其`analysis/report.md`给出18点服务/扰动统计；`continuation_review.json`保存来源、复制哈希和分段；`reuse_event_boundaries.json`保存180条边界及资格，`qualified_reuse_intervals.json`只含16个合格条件。[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse/reviews/independent-C.md)绑定完整冻结工件。
 
 R13的18条件已完成plain及ready/retire/reuse三个事件对的采样终态；原缺少的槽可复用/补发字段已直接补齐。事件对来自独立调用，不能拼接同一次完整绝对时间线。字段完整、数值正确和扰动合格分别判定：历史ready/retire失败及本reuse两项失败均保留，不能宣称18条件所有阶段时长全部取得。
+
+2026-10-08：被取代的 R13 运行（v8-rep-ready、v8-rep-retire、v9-ready-recheck、v10-rep-reuse 与 job735985 的旧 v11-formal-reuse）已压缩归档到仓库外的 `CUDA_optimazation_archive/gh200_access_rules/`。最终目录 `20261007-R13-job736169-v11-formal-reuse` 已包含续采所需的全部原始样本（326 个结果文件哈希一致），可独立重算；`v8-formal-ready` 仍保留在 results。
