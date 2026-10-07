@@ -1,0 +1,413 @@
+{
+  "model": "V02: rule-based time prediction for the fixed CUTLASS GEMM, frozen before measurement.\n\nKernel: CUTLASS v3.9.2 FP16->FP32, tile 128x256x64, cluster 2x1x1, TMA warp-specialized\ncooperative, 4 stage, ElementC=void, epilogue 128x32, -DNDEBUG, default persistent scheduler\n(raster heuristic, swizzle 1), 1 CTA/SM on 132 SMs. Protocol: R00/R09 \"warm\" single call\n(synchronized warm-up until the last 5 calls have CV<=2%, then one CUDA-event-timed call).\n\nModel (every constant is read from an R08/R09 file below; nothing is fitted to the test sizes):\n\n  tiles_m = ceil(M/128), tiles_n = ceil(N/256), Kt = ceil(K/64)\n  U       = 2*ceil(tiles_m/2) * tiles_n            cluster 2x1 pads odd tiles_m   (R08)\n  R       = ceil(U/132)                            rounds of the critical CTA     (R08)\n  C       = P + R*(c_k*Kt + c_0 + E)               critical-CTA cycles            (R09)\n  W       = C / f(W)                               CTA window, fixed point        (R09 clock rule)\n  f(W)    = a - b*ln(W/us)                          in-call clock, GHz             (R09 fit)\n  T_dev   = skew + W + post_store + tail           first entry -> last exit       (R09)\n  T_event = host_gap + T_dev                        CUDA event, warm single call   (R09)\n\n  P: prefill (entry -> first HGMMA), paid once per CTA; c_k, c_0: mainloop cycles per Ktile and\n  per tile; E: per-tile cost beyond the mainloop in a persistent CTA (epilogue + transitions),\n  from the 15- vs 16-tile CTAs of R09 8192^3. Mainloop is assumed compute-bound (1024 cycle/Ktile)\n  at every size: R08 found no L2-supply rule, and R09 measured 1024 cycle/Ktile at 8192^3 too.",
+  "rules": {
+    "c_k": {
+      "value": 1024.034190188172,
+      "unit": "cycle/Ktile",
+      "source": "R09 summary.json fits.stages_m2048.mainloop_cycles.b"
+    },
+    "c_0": {
+      "value": 186.30208333333212,
+      "unit": "cycle/tile",
+      "source": "R09 summary.json fits.stages_m2048.mainloop_cycles.a"
+    },
+    "prefill": {
+      "value": 4172.5,
+      "unit": "cycle/CTA",
+      "source": "R09 cases.csv prefill_cycles_med, median over warm trace_m2048_k256,trace_m2048_k512,trace_m2048_k1024,trace_m2048_k2048,trace_m2048_k4096"
+    },
+    "tile_extra": {
+      "value": 5448.321572580637,
+      "unit": "cycle/tile",
+      "marginal_tile_cycles": 136711.0,
+      "marginal_per_process": [
+        136448.0,
+        137061.5,
+        136534.5,
+        137328.0,
+        136961.5,
+        136625.0,
+        136217.5,
+        136797.0,
+        136956.5,
+        136331.0
+      ],
+      "source": "R09 samples/idle_m8192_k8192 raw traces: median(16-tile CTA cycles) - median(15-tile CTA cycles) - (c_k*128 + c_0)"
+    },
+    "post_store": {
+      "value": 0.29166666666666663,
+      "unit": "us",
+      "source": "R09 summary.json fits.stages_m2048.post_store.a"
+    },
+    "entry_skew": {
+      "value": 0.064,
+      "unit": "us",
+      "source": "R09 summary.json fits.stages_m2048.entry_skew.a"
+    },
+    "tail": {
+      "value": 0.45866666666666656,
+      "unit": "us",
+      "source": "R09 summary.json fits.stages_m2048.tail_ns.a"
+    },
+    "host_gap": {
+      "value": 3.8573333493749997,
+      "unit": "us",
+      "source": "R09 summary.json fits.stages_m2048.host_gap_ns.a (warm)"
+    },
+    "clock": {
+      "a": 2.008740777846032,
+      "b": 0.08495995030315455,
+      "unit": "GHz = a - b*ln(W/us)",
+      "points": [
+        [
+          8.08,
+          1.843332918793801
+        ],
+        [
+          10.424,
+          1.8148946709248694
+        ],
+        [
+          15.264,
+          1.7679993728753898
+        ],
+        [
+          25.264,
+          1.7177412489781174
+        ],
+        [
+          45.728,
+          1.6797249576049356
+        ],
+        [
+          86.088,
+          1.6425405478461106
+        ],
+        [
+          1561.04,
+          1.3843304676352843
+        ]
+      ],
+      "residuals": [
+        0.012106770601987948,
+        0.005309433535246599,
+        -0.009183305553835286,
+        -0.016631525687607285,
+        -0.0042385005013003685,
+        0.012327786237424698,
+        0.0003093413680848034
+      ],
+      "source": "R09 cases.csv cta_window_ns_median_med / window_ghz_median_med, warm: trace_m2048_k256,trace_m2048_k512,trace_m2048_k1024,trace_m2048_k2048,trace_m2048_k4096,idle_m2048_k8192,idle_m8192_k8192"
+    },
+    "resident_ctas": {
+      "value": 132,
+      "source": "R08 doc 配置 (66 clusters x 2)"
+    },
+    "rounds_rule": {
+      "source": "R08 doc 结论: T ~ a + t*ceil(U/132), U after cluster padding"
+    }
+  },
+  "predictions": [
+    {
+      "label": "partial_wave",
+      "m": 1536,
+      "n": 2560,
+      "k": 4096,
+      "tiles_m": 12,
+      "tiles_n": 10,
+      "tiles": 120,
+      "tiles_m_padded": 12,
+      "units": 120,
+      "rounds": 1,
+      "grid_ctas": 120,
+      "ctas_at_max_rounds": 120,
+      "ktiles": 64,
+      "mainloop_cycles_per_tile": 65724.49025537634,
+      "tile_cycles": 71172.81182795698,
+      "cta_cycles": 75345.31182795698,
+      "clock_ghz": 1.6859120834154155,
+      "cta_window_us": 44.69112747286217,
+      "device_us": 45.5054608061955,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 49.3627941555705,
+      "tflops": 652.5614133284412
+    },
+    {
+      "label": "pad_crosses_wave",
+      "m": 1600,
+      "n": 2496,
+      "k": 4096,
+      "tiles_m": 13,
+      "tiles_n": 10,
+      "tiles": 130,
+      "tiles_m_padded": 14,
+      "units": 140,
+      "rounds": 2,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 8,
+      "ktiles": 64,
+      "mainloop_cycles_per_tile": 65724.49025537634,
+      "tile_cycles": 71172.81182795698,
+      "cta_cycles": 146518.12365591395,
+      "clock_ghz": 1.6263522243674111,
+      "cta_window_us": 90.09003182745602,
+      "device_us": 90.90436516078935,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 94.76169851016435,
+      "tflops": 345.240447505179
+    },
+    {
+      "label": "just_over_wave",
+      "m": 2304,
+      "n": 2048,
+      "k": 3072,
+      "tiles_m": 18,
+      "tiles_n": 8,
+      "tiles": 144,
+      "tiles_m_padded": 18,
+      "units": 144,
+      "rounds": 2,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 12,
+      "ktiles": 48,
+      "mainloop_cycles_per_tile": 49339.943212365586,
+      "tile_cycles": 54788.26478494622,
+      "cta_cycles": 113749.02956989245,
+      "clock_ghz": 1.6490370859457064,
+      "cta_window_us": 68.97906089520025,
+      "device_us": 69.79339422853359,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 73.65072757790858,
+      "tflops": 393.62855196960487
+    },
+    {
+      "label": "long_k",
+      "m": 1024,
+      "n": 4096,
+      "k": 16384,
+      "tiles_m": 8,
+      "tiles_n": 16,
+      "tiles": 128,
+      "tiles_m_padded": 8,
+      "units": 128,
+      "rounds": 1,
+      "grid_ctas": 128,
+      "ctas_at_max_rounds": 128,
+      "ktiles": 256,
+      "mainloop_cycles_per_tile": 262339.05477150535,
+      "tile_cycles": 267787.376344086,
+      "cta_cycles": 271959.876344086,
+      "clock_ghz": 1.57085422207754,
+      "cta_window_us": 173.12865351974185,
+      "device_us": 173.94298685307515,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 177.80032020245017,
+      "tflops": 772.9960964946903
+    },
+    {
+      "label": "edges_odd_pad",
+      "m": 2600,
+      "n": 3496,
+      "k": 2000,
+      "tiles_m": 21,
+      "tiles_n": 14,
+      "tiles": 294,
+      "tiles_m_padded": 22,
+      "units": 308,
+      "rounds": 3,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 44,
+      "ktiles": 32,
+      "mainloop_cycles_per_tile": 32955.39616935483,
+      "tile_cycles": 38403.71774193547,
+      "cta_cycles": 119383.65322580641,
+      "clock_ghz": 1.6447060291973408,
+      "cta_window_us": 72.58662101705113,
+      "device_us": 73.40095435038447,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 77.25828769975946,
+      "tflops": 470.60841085807806
+    },
+    {
+      "label": "multi_tail_a",
+      "m": 3000,
+      "n": 5000,
+      "k": 4096,
+      "tiles_m": 24,
+      "tiles_n": 20,
+      "tiles": 480,
+      "tiles_m_padded": 24,
+      "units": 480,
+      "rounds": 4,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 84,
+      "ktiles": 64,
+      "mainloop_cycles_per_tile": 65724.49025537634,
+      "tile_cycles": 71172.81182795698,
+      "cta_cycles": 288863.7473118279,
+      "clock_ghz": 1.5654376244802797,
+      "cta_window_us": 184.5258749340011,
+      "device_us": 185.34020826733442,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 189.19754161670943,
+      "tflops": 649.4798978357738
+    },
+    {
+      "label": "multi_tail_b",
+      "m": 3072,
+      "n": 6144,
+      "k": 3072,
+      "tiles_m": 24,
+      "tiles_n": 24,
+      "tiles": 576,
+      "tiles_m_padded": 24,
+      "units": 576,
+      "rounds": 5,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 48,
+      "ktiles": 48,
+      "mainloop_cycles_per_tile": 49339.943212365586,
+      "tile_cycles": 54788.26478494622,
+      "cta_cycles": 278113.8239247311,
+      "clock_ghz": 1.5688443928799516,
+      "cta_window_us": 177.27304580806344,
+      "device_us": 178.08737914139675,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 181.94471249077176,
+      "tflops": 637.3590933448078
+    },
+    {
+      "label": "short_k",
+      "m": 4096,
+      "n": 4096,
+      "k": 512,
+      "tiles_m": 32,
+      "tiles_n": 16,
+      "tiles": 512,
+      "tiles_m_padded": 32,
+      "units": 512,
+      "rounds": 4,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 116,
+      "ktiles": 8,
+      "mainloop_cycles_per_tile": 8378.575604838708,
+      "tile_cycles": 13826.897177419345,
+      "cta_cycles": 59480.08870967738,
+      "clock_ghz": 1.7070590763682125,
+      "cta_window_us": 34.84360297373067,
+      "device_us": 35.657936307064,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 39.515269656438996,
+      "tflops": 434.7653282735614
+    },
+    {
+      "label": "mid_k1024",
+      "m": 4096,
+      "n": 8192,
+      "k": 1024,
+      "tiles_m": 32,
+      "tiles_n": 32,
+      "tiles": 1024,
+      "tiles_m_padded": 32,
+      "units": 1024,
+      "rounds": 8,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 100,
+      "ktiles": 16,
+      "mainloop_cycles_per_tile": 16570.849126344085,
+      "tile_cycles": 22019.17069892472,
+      "cta_cycles": 180325.86559139777,
+      "clock_ghz": 1.6077349747448202,
+      "cta_window_us": 112.1614373165074,
+      "device_us": 112.97577064984074,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 116.83310399921574,
+      "tflops": 588.1849782614804
+    },
+    {
+      "label": "large_cube",
+      "m": 6144,
+      "n": 6144,
+      "k": 6144,
+      "tiles_m": 48,
+      "tiles_n": 24,
+      "tiles": 1152,
+      "tiles_m_padded": 48,
+      "units": 1152,
+      "rounds": 9,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 96,
+      "ktiles": 96,
+      "mainloop_cycles_per_tile": 98493.58434139784,
+      "tile_cycles": 103941.90591397848,
+      "cta_cycles": 939649.6532258063,
+      "clock_ghz": 1.4592554374561977,
+      "cta_window_us": 643.9240376337551,
+      "device_us": 644.7383709670884,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 648.5957043164634,
+      "tflops": 715.1704287909911
+    },
+    {
+      "label": "large_flat",
+      "m": 10240,
+      "n": 10240,
+      "k": 4096,
+      "tiles_m": 80,
+      "tiles_n": 40,
+      "tiles": 3200,
+      "tiles_m_padded": 80,
+      "units": 3200,
+      "rounds": 25,
+      "grid_ctas": 132,
+      "ctas_at_max_rounds": 32,
+      "ktiles": 64,
+      "mainloop_cycles_per_tile": 65724.49025537634,
+      "tile_cycles": 71172.81182795698,
+      "cta_cycles": 1783492.7956989245,
+      "clock_ghz": 1.4013725593904924,
+      "cta_window_us": 1272.6756948021232,
+      "device_us": 1273.4900281354567,
+      "host_gap_us": 3.8573333493749997,
+      "event_us": 1277.3473614848317,
+      "tflops": 672.4822746738812
+    }
+  ],
+  "replay_prior_points_not_scored": [
+    {
+      "label": "R09 plain warm 2048^2 K512",
+      "case": "plain_m2048_k512",
+      "predicted_us": 14.595451967730526,
+      "measured_us": 14.27199971,
+      "error": 0.022663415379968965
+    },
+    {
+      "label": "R09 plain warm 2048^2 K2048",
+      "case": "plain_m2048_k2048",
+      "predicted_us": 29.183874219604373,
+      "measured_us": 29.34399992,
+      "error": -0.00545684640240518
+    },
+    {
+      "label": "R09 plain warm 2048^2 K4096",
+      "case": "plain_m2048_k4096",
+      "predicted_us": 49.3627941555705,
+      "measured_us": 49.95200038,
+      "error": -0.011795448029052524
+    },
+    {
+      "label": "R09 trace warm 2048^2 K8192",
+      "case": "idle_m2048_k8192",
+      "predicted_us": 91.1102917428846,
+      "measured_us": 91.471999885,
+      "error": -0.003954304514716567
+    },
+    {
+      "label": "R09 trace warm 8192^3",
+      "case": "idle_m8192_k8192",
+      "predicted_us": 1589.614798466411,
+      "measured_us": 1598.031998,
+      "error": -0.005267228406016566
+    }
+  ]
+}

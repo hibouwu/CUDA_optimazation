@@ -69,7 +69,9 @@ e=\frac{\widehat T-T_{\mathrm{measured}}}{T_{\mathrm{measured}}}
 
 1. **规则组合在单 CTA 层面成立。** 异步目标组合（2 个 consumer warpgroup、每 Ktile 4 条 `m64n256k16`、`wait_group 1`、4 stage）主循环约 1026 cycle/Ktile，理想值 1024，WGMMA 已满速。
 2. **整卡误差与频率假设一致。** K=47 时窗口比值频率比假设低 10.3%，误差 −9.95%；这是优先解释，尚未做固定频率对照。整卡预测需要负载下的频率，见 [R07](R07-anchor-clock-fixedcost.md)。
-3. **完整 kernel 的规则缺少固定开销与组合成本。** 同一 kernel 的经验关系（[R07](R07-anchor-clock-fixedcost.md)，`NDEBUG` 构建）为 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048）；截距在 2048³ 约占 1/3，与规则预测的 −28% 量级一致。斜率已包含组合执行成本，使用经验关系时不能再另加组合开销。
+3. **完整 kernel 的规则缺少固定开销与组合成本。** 同一 kernel 的经验关系（[R07](R07-anchor-clock-fixedcost.md)，`NDEBUG` 构建）为 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048）；截距在 2048³ 约占 1/3，与规则预测的 −28% 量级一致。[R09](R09-inkernel-clock-stages.md) 拆分后，该关系可由各段重建：主循环 1024 cycle/Ktile（已达计算下界），时间斜率来自调用内频率约 1.64 GHz；截距约 9.2 µs = 主机间隙 3.7–3.9 + 预填约 2.2 + epilogue 约 2.9 + store 后与尾部约 0.8 µs。规则模型漏掉的是这些固定段与调用内频率。
+后续：补入 R07–R09 的输入后，[V02](V02-kernel-prediction.md) 对 11 个未测尺寸的完整 kernel 预测误差中位数 6.0%、最大 10.3%。
+
 4. **R00 的 CUTLASS 没开 `NDEBUG`**，编译器把每条 MMA 都改成提交后 wait0；加 `NDEBUG` 后快 5–6%。重测见 R07。
 
 预测文件冻结后计时探针改过一次；单 CTA 各段误差互相抵消（预填预测 1481、实测 1148 cycle；输出预测 6044、实测 6629）。

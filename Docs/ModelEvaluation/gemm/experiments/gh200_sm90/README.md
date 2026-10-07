@@ -53,11 +53,17 @@ FP16 Tensor Core GEMM 的后续实验见 [access_rules](access_rules/README.md)�
 | [R06](access_rules/R06-issue-residency.md) 资源 | 128 线程 FFMA 单 CTA 241 FLOP/cycle、整卡 64–65 TFLOP/s，63–128 寄存器之间差别 <2%；窗口内 clock64/globaltimer 比值约 1.97–1.98 GHz |
 | [V01](access_rules/V01-validation.md) 规则预测 | 异步目标组合主循环 1026 cycle/Ktile（理想 1024）；单 CTA 预测误差 −0.4%~−1.7%；整卡 −7%~−10%（频率假设偏高）；完整 CUTLASS −23%~−28%（漏了固定开销） |
 | [R07](access_rules/R07-anchor-clock-fixedcost.md) 频率与固定开销 | 持续 GEMM 时 SM 频率 1.40–1.45（8192³）、约 1.75 GHz（2048³），几乎所有样本只报 SW Power Cap，模块功率上限 680 W；CUTLASS 需 `-DNDEBUG`（否则每条 MMA 后 wait0，慢 5.5–8%）；M=N=2048 单调用经验关系 T≈9.45+0.637·Ktile µs |
+| [R08](access_rules/R08-waves-l2-reuse.md) 波次与遍历 | 整卡时间按整轮计：K=4096 每轮约 47 µs × ⌈tile/132⌉；比整波多一个 cluster 对就多一整轮。8192² 时 swizzle 8 快 6–8%，cluster 2×1 快 1–5% |
+| [R09](access_rules/R09-inkernel-clock-stages.md) 调用内频率与阶段 | 调用内平均频率 1.40（8192³）–1.82 GHz，低于调用后探针；主循环 1024 cycle/Ktile，已达计算下界；M=N=2048 每次调用的固定段约 9.2 µs = 主机间隙 3.9 + 预填 2.2 + epilogue 2.9 + 尾部 0.8 |
+| [V02](access_rules/V02-kernel-prediction.md) 完整 kernel 预测 | 规则 = ⌈补齐后 tile/132⌉ 轮 × (1024 cycle/Ktile + 每 tile 固定段) + 每 CTA 预填，频率按调用时长取 R09 规律，再加主机间隙。11 个未测尺寸、先冻结后测量：误差中位数 6.0%、最大 10.3%；频率换成实测值后 ±2%。长调用频率被高估（1.27–1.45 GHz 实测） |
+| [V03](access_rules/V03-clock-rule.md) 频率规则 | 调用内频率取决于活跃 SM 比例×调用时长、估计 DRAM 流量、主循环占比；同卡 11 个新尺寸预测误差中位数 2.6%、最大 5.0%。常数随卡变化（另一张卡最大 7.7%） |
+| [V04](access_rules/V04-config-transfer.md) 配置迁移 | 256×128 cooperative 迁移成功（4.1%/5.4%）；128×128 cooperative 13.7%、pingpong 29.2% 最大误差。单 SM 实际能拿到约 64 B/cycle（高于 R05-D 的 55）；每 tile 有约 1500 cycle 不随 tile 缩小的固定段；pingpong 的 epilogue 只在长 K 被隐藏 |
 
 
 ## 尚未覆盖
 
-- 基于规则的完整 GEMM 预测：规则需要加入每 kernel 固定开销和负载频率，并解释完整 kernel 每 Ktile 比纯计算多出的约 20%（按约 1.95 GHz 换算的估计）后，再按先预测后测量重新验证。直接使用 R07 的经验关系时，这部分已包含在斜率中。
+- 跨卡：频率规则与主机间隙按卡校准，三张卡的差异 2–7%。
+- 小 tile 与 pingpong 的固定段、短 K 的交接成本，以及真实的单 SM 供给上限（≥64 B/cycle）。
 - TF32 WGMMA、FP16 累加形式；FP64 `mma` 的 sm_90 新形状。
 - 多 CTA 竞争下的片上服务。
 - 物理 HBM 流量、缓存命中、动态指令计数（需 NCU 权限）。

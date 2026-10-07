@@ -72,6 +72,8 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 |---|---|---|
 | 高 | 硬件参数未吸收 v2 结果：[GH200 L0](hardware/gh200_sm90/L0.md) 仍用 09-30 旧复测；[L1](hardware/gh200_sm90/L1.md) 的 SMEM 仍为 EXP-02 v1 的 115.6 B/cycle（CV 12%）；S05–S12、S18 未接入 | 按资源类别引用 S05–S18 的条件参数，替换旧值 |
 | 高 | 没有 Hopper Tensor Core 方案模型；现有方案只有教学参数的 FP32 示例和 Thor 的 tc5a | 新建 TMA producer + WGMMA consumer、多 stage、persistent 的方案文件，用实测参数实例化，缺项保留符号 |
+| 已完成 | 频率规则与配置迁移 | [V03](experiments/gh200_sm90/access_rules/V03-clock-rule.md)：同卡 2.6%/5.0%；[V04](experiments/gh200_sm90/access_rules/V04-config-transfer.md)：同字节配置迁移成功，小 tile/pingpong 未通过 |
+| 已完成 | 规则化完整 kernel 预测（固定 CUTLASS 配置） | [V02](experiments/gh200_sm90/access_rules/V02-kernel-prediction.md)：11 个未测尺寸先冻结后测量，误差中位数 6.0%、最大 10.3%；主要误差为调用内频率 |
 | 已完成 | 完整 GEMM 锚点 | [R00](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：cuBLASLt FP16 8192³ 715 TFLOP/s、2048³ 555；FP8 8192³ 1127；固定 CUTLASS 643 |
 | 高 | 问题实例未落到 GH200：[workloads.yaml](workloads.yaml) 的输入生成指向 Thor，误差函数与容差为空 | 增加 GH200 实例，确定误差要求，FP8 实例同时规定累加提升 |
 | 中 | 单 CTA clock64 与整卡 globaltimer 缺少负载下的频率换算 | 采样时同 CTA 同时记录两种计时，或记录负载下 SM 频率 |
