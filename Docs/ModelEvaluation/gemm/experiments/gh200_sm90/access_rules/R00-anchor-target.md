@@ -77,7 +77,7 @@ CUTLASS 的 2048³ 与 2048×2048×8192 留给 [V01](V01-validation.md) 作完�
 | cuBLASLt FP32（PEDANTIC） | 48.9 | 48.7 | 51.6 |
 | 固定 CUTLASS FP16 | — | — | 643（4096³：663） |
 
-cuBLASLt FP16 2000³ 为 517 TFLOP/s。8192³ 时 FP16 达数据表 990 TFLOP/s 的 72%，FP8 为 1979 的 57%，FP32 为 67 的 77%。
+cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`，ptxas 因断言代码（C7510）把每条 MMA 改成提交后 wait0，R07 在另一张卡上同次对比，加 `NDEBUG` 快 5.5–8%，所以 643/663 TFLOP/s 偏低；见 [R07](R07-anchor-clock-fixedcost.md)。8192³ 时 FP16 达数据表 990 TFLOP/s 的 72%，FP8 为 1979 的 57%，FP32 为 67 的 77%。
 
 **R00-B：目标 WGMMA 形状**
 
@@ -101,3 +101,12 @@ cuBLASLt FP16 2000³ 为 517 TFLOP/s。8192³ 时 FP16 达数据表 990 TFLOP/s 
 - R00-B：FP16 目标形状与 warpgroup 数的服务，BF16 与 FP16 的差别，FP8 代表点；据此选定 R01-C、R04、R05、V01 使用的形状。
 
 依据：[cuBLAS](https://docs.nvidia.com/cuda/archive/12.9.1/cublas/index.html)、[PTX ISA 8.8](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)。
+
+
+## K/MN布局成对补充（2026-10-06）
+
+[结果与复现报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-v01-followup/report.md)。补充4个条件、26个正式进程，不扩大默认矩阵：FP16 SS m64n256k16、2 warpgroup、128个累加寄存器/线程，分别用B Major::K和Major::MN，单CTA各3进程、整卡各10进程。每相邻一对只改变B布局，公共源入口为`r00_wgmma.cu --b-major K/MN`，配对采样入口为`run_layout_pair.py`。
+
+两版均154 registers/thread、动态SMEM49152 B、无local；正式循环为1024轮，每轮16条MMA、commit/wait1、最后wait0。K/MN的单CTA中位数分别4195097/4195107 cycle，整卡中位数均2311808 ns。MN机器码的16条HGMMA均带`.tnspB`；非均匀1/2轮短检查通过，26个正式输出已逐值独立复核。
+
+当前条件没有观测到足以解释完整CUTLASS约24%预测偏差的孤立MN服务差异。这个对照未包含完整kernel的TMA输入、cluster/多播、寄存器重分配和调度，不把结论迁移成这些机制无成本。

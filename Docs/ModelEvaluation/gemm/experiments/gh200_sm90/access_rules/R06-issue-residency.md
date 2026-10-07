@@ -61,8 +61,10 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r06.py \
 |95|5|17401|241.0|34224.0|64.71|
 |128|4|17401|241.0|34553.6|64.09|
 
-单 CTA 工作量 128×16384×2=4194304 FLOP；整卡 132 SM×4=528 CTA，2214592512 FLOP，TFLOP/s=FLOP/ns/1000。窗口内 SM 时钟按每个 CTA 的 clock64/globaltimer 计算，单 CTA 约 1980 MHz、整卡约 1970 MHz。
+单 CTA 工作量 128×16384×2=4194304 FLOP；整卡 132 SM×4=528 CTA，2214592512 FLOP，TFLOP/s=FLOP/ns/1000。clock64/globaltimer窗口比值折合单CTA约1980 MHz、整卡约1970 MHz；这是窗口估计，未采集频率遥测。
 
-单 CTA 每个 SMSP 只有 1 个 warp，8 条独立链足以每 cycle 发射一条 FFMA，达到 256 FLOP/cycle/SM 上限的 94%，剩余约为每 256 条 FFMA 一次的循环成本；三档寄存器差 <0.1%。整卡为 132×256 FLOP/cycle×窗口时钟的 96–98%，与 [EXP-05](../EXP-05-fma.md) 的 65.7 TFLOP/s 一致；寄存器从 63 增到 128，整卡速率降 1.5%（CV 0.06%，10 进程）。每 SM 的 4 个 CTA 计时窗口分两批：第 3 个窗口在前两个之一结束时开始（中位差 −0.4 至 +0.1 µs），所以观测重叠多为 2–3；探针只记录窗口起止，不能区分后两个 CTA 是未驻留还是已驻留但未获发射。FFMA 发射在每 SMSP 1 个 warp 时已接近饱和，这 6 点仍不能给出驻留减少造成的速率惩罚。
+单 CTA 每个 SMSP 只有 1 个 warp，8 条独立链足以每 cycle 发射一条 FFMA，达到 256 FLOP/cycle/SM 上限的 94%，余量与固定迭代工作等开销相容，本组未独立分离其来源；三档寄存器差 <0.1%。整卡为 132×256 FLOP/cycle×窗口时钟的 96–98%，与 [EXP-05](../EXP-05-fma.md) 的 65.7 TFLOP/s 一致；寄存器从 63 增到 128，整卡速率降 1.5%（CV 0.06%，10 进程）。每 SM 的 4 个 CTA 计时窗口分两批：第 3 个窗口在前两个之一结束时开始（中位差 −0.4 至 +0.1 µs），所以观测重叠多为 2–3；探针只记录窗口起止，不能区分后两个 CTA 是未驻留还是已驻留但未获发射。FFMA 发射在每 SMSP 1 个 warp 时已接近饱和，这 6 点仍不能给出驻留减少造成的速率惩罚。
 
 2026-10-06 早先的作业 735060 结果（[20261006-b-job735060](../../../../../../results/gh200_resource_campaign/access_rules/20261006-b-job735060/)）每次迭代只有 8 条 FFMA，被约 29 cycle/迭代的循环成本限制（单 CTA 约 70 FLOP/cycle、整卡约 42 TFLOP/s），已被本节取代。
+
+独立证据见[展开版审查](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r01r06-unrolled/independent-review-B.md)；驻留相关结论保持窗口观测口径。

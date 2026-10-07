@@ -60,6 +60,15 @@ __global__ void vfill(__half* data, int outer, int tiles, bool is_a) {
 // ---------------------------------------------------------------------------------------------
 // kind 0: LDS -> FFMA
 // ---------------------------------------------------------------------------------------------
+__device__ __forceinline__ void stamp_after_publication(const volatile float* word,
+                                                      uint64_t& cycle, uint64_t& nanos) {
+  unsigned bits = __float_as_uint(*word);
+  asm volatile("{\n.reg .pred p;\nsetp.ne.u32 p, %2, 0xffffffff;\n"
+               "@p mov.u64 %0, %%clock64;\n@p mov.u64 %1, %%globaltimer;\n"
+               "@!p mov.u64 %0, 0;\n@!p mov.u64 %1, 0;\n}"
+               : "=l"(cycle), "=l"(nanos) : "r"(bits) : "memory");
+}
+
 __global__ void lds_combo(int steps, VStamp* stamp, float* out) {
   extern __shared__ float input[];
   for (int q = threadIdx.x; q < 516 * steps; q += blockDim.x) {
@@ -67,12 +76,13 @@ __global__ void lds_combo(int steps, VStamp* stamp, float* out) {
     int k = q % steps;
     input[q] = input_value(row < 512 ? row : k, row < 512 ? k : row - 512, 17, row < 512);
   }
+  __shared__ volatile float published[128];
+  published[threadIdx.x] = input[threadIdx.x];
   __syncthreads();
   float d[16] = {};
   __shared__ uint64_t bc, bn;
   if (threadIdx.x == 0) {
-    bn = vns();
-    bc = clock64();
+    stamp_after_publication(&published[127], bc, bn);
   }
   __syncthreads();
   for (int k = 0; k < steps; ++k) {
@@ -94,9 +104,15 @@ __global__ void lds_combo(int steps, VStamp* stamp, float* out) {
   for (int i = 0; i < 16; ++i) {
     out[blockIdx.x * 2048 + threadIdx.x * 16 + i] = d[i];
   }
+  // Regular global stores are published before the shared completion word.
+  // This is not a completion fence for asynchronous TMA operations.
+  __threadfence();
+  published[threadIdx.x] = d[0];
   __syncthreads();
   if (threadIdx.x == 0) {
-    stamp[blockIdx.x] = {bc, uint64_t(clock64()), bn, vns(), vsm()};
+    uint64_t end, end_ns;
+    stamp_after_publication(&published[127], end, end_ns);
+    stamp[blockIdx.x] = {bc, end, bn, end_ns, vsm()};
   }
 }
 

@@ -23,6 +23,8 @@
 
 当前17个正式结果家族已发布754条条件观测，24个排除项保留。各实验的结果、图、真实手算和限制统一见[结果总览](../../experiments/gh200_sm90/README.md)，结构化数值与资格记录见[参数来源索引](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-seventeen-family-index-v1/index.json)。原参数文件的历史draft标签保留，当前资格由对应独立审查及来源封套确定。
 
+后续[访问与供给规则](../../experiments/gh200_sm90/access_rules/README.md)补充163个默认资源条件及20个组合观测，包含旧坐标重测，不与上述754条直接相加。展开版依赖序列、WGMMA major对照、异步完成与完整输出边界均保留具体条件；固定CUTLASS的[聚合阶段模型](../../../../../results/gh200_resource_campaign/access_rules/20261006-cutlass-wait-matching/published/parameters.json)属于特定实现/输入下的条件预测，未填成通用硬件端口或裸延迟参数。
+
 | 资源 | 已发布的代表实验 | 使用时必须保留的条件 |
 |---|---|---|
 | 计算 | FMA、mma.sync、WGMMA、FP8/INT8 | 精度、指令形状、依赖链、warp/warpgroup数、提交与等待 |
@@ -67,4 +69,3 @@ GPU 产品算力见 [L0](L0.md)，片上容量及驻留上限见 [L1](L1.md)，�
 [device-env]: ../../../../../microbench/gh200_l0/results/20260930-initial/environment.txt
 
 [audit]: ../../../../../microbench/gh200_l0/AUDIT.md
-

@@ -31,12 +31,18 @@ __device__ void call_rs(const unsigned* a, uint64_t b, float* d, std::index_sequ
   Mma::fma(a[0], a[1], a[2], a[3], b, d[I]..., G::ScaleOut::One);
 }
 
-template <class T, class Mma, int N, int K, int Chains, bool RS, int Batch>
+template <class T, class Mma, int N, int K, int Chains, bool RS, int Batch, bool BMajorMN = false,
+          bool Serialized = false>
 __global__ void probe(int iterations, bool coordinate, Stamp* stamps, float* output) {
   using namespace cute;
   constexpr int StorageK = 128 / sizeof(T), Registers = N / 2;
   auto la = tile_to_shape(G::Layout_K_SW128_Atom<T>{}, Shape<_64, Int<StorageK>>{});
-  auto lb = tile_to_shape(G::Layout_K_SW128_Atom<T>{}, Shape<Int<N>, Int<StorageK>>{});
+  auto lb = [&]() {
+    if constexpr (BMajorMN)
+      return tile_to_shape(G::Layout_MN_SW128_Atom<T>{}, Shape<Int<N>, Int<StorageK>>{});
+    else
+      return tile_to_shape(G::Layout_K_SW128_Atom<T>{}, Shape<Int<N>, Int<StorageK>>{});
+  }();
   extern __shared__ __align__(128) unsigned char bytes[];
   T* positive = reinterpret_cast<T*>(bytes);
   T* negative = positive + 64 * StorageK;
@@ -61,7 +67,7 @@ __global__ void probe(int iterations, bool coordinate, Stamp* stamps, float* out
   auto nv = local_tile(an, make_shape(_64{}, Int<K>{}), make_coord(_0{}, _0{}));
   auto bv = local_tile(b, make_shape(Int<N>{}, Int<K>{}), make_coord(_0{}, _0{}));
   uint64_t ad = G::make_gmma_desc<G::Major::K>(av), nd = G::make_gmma_desc<G::Major::K>(nv),
-           bd = G::make_gmma_desc<G::Major::K>(bv);
+           bd = G::make_gmma_desc<BMajorMN ? G::Major::MN : G::Major::K>(bv);
   unsigned ar[4] = {};
   unsigned local = threadIdx.x % 128, group = threadIdx.x / 128;
   if constexpr (RS) {
@@ -96,6 +102,8 @@ __global__ void probe(int iterations, bool coordinate, Stamp* stamps, float* out
   __syncthreads();
 #pragma unroll 1
   for (int i = 0; i < iterations; ++i) {
+    if constexpr (Serialized)
+      asm volatile("wgmma.fence.sync.aligned;" ::: "memory");
 #pragma unroll
     for (int q = 0; q < Batch; ++q) {
 #pragma unroll
@@ -107,7 +115,10 @@ __global__ void probe(int iterations, bool coordinate, Stamp* stamps, float* out
                        std::make_index_sequence<Registers>{});
       }
     }
-    asm volatile("wgmma.commit_group.sync.aligned; wgmma.wait_group.sync.aligned 1;" ::: "memory");
+    if constexpr (Serialized)
+      asm volatile("wgmma.commit_group.sync.aligned; wgmma.wait_group.sync.aligned 0;" ::: "memory");
+    else
+      asm volatile("wgmma.commit_group.sync.aligned; wgmma.wait_group.sync.aligned 1;" ::: "memory");
   }
   asm volatile("wgmma.wait_group.sync.aligned 0;" ::: "memory");
   float sum = 0;
@@ -134,7 +145,8 @@ __global__ void probe(int iterations, bool coordinate, Stamp* stamps, float* out
   }
 }
 struct WOptions {
-  std::string dtype = "fp16", source = "SS", scope = "one_cta";
+  std::string dtype = "fp16", source = "SS", scope = "one_cta", b_major = "K";
+  bool serialized = false;
   int n = 256, groups = 1, iterations = 4096;
   WOptions(int argc, char** argv) {
     for (int i = 1; i < argc; i += 2) {
@@ -153,20 +165,32 @@ struct WOptions {
         scope = value;
       else if (key == "--iterations")
         iterations = std::stoi(value);
+      else if (key == "--b-major")
+        b_major = value;
+      else if (key == "--mode") {
+        if (value != "batch16_wait1" && value != "single_wait0")
+          throw std::runtime_error("--mode must be batch16_wait1 or single_wait0");
+        serialized = value == "single_wait0";
+      }
       else
         throw std::runtime_error("unknown WGMMA option");
     }
     if ((groups != 1 && groups != 2) || iterations < 1 ||
         (scope != "one_cta" && scope != "all_gpu"))
       throw std::runtime_error("invalid WGMMA configuration");
+    if (b_major != "K" && b_major != "MN")
+      throw std::runtime_error("--b-major must be K or MN");
   }
 };
-template <class T, class Mma, int N, int K, int C, bool RS>
+template <class T, class Mma, int N, int K, int C, bool RS, bool BMajorMN = false,
+          bool Serialized = false>
 int run_wgmma(const WOptions& o) {
   constexpr int threads_per_group = 128, registers = N / 2;
   int threads = threads_per_group * o.groups;
   constexpr int bytes = (128 + N) * 128;  // Two padded A matrices and one B, 128B per row.
-  auto kernel = probe<T, Mma, N, K, C, RS, 16>, short_kernel = probe<T, Mma, N, K, C, RS, 1>;
+  constexpr int Batch = Serialized ? 1 : 16;
+  auto kernel = probe<T, Mma, N, K, C, RS, Batch, BMajorMN, Serialized>,
+       short_kernel = probe<T, Mma, N, K, C, RS, 1, BMajorMN, Serialized>;
   CUDA_CHECK(cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, bytes));
   CUDA_CHECK(
       cudaFuncSetAttribute(short_kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, bytes));
@@ -248,20 +272,22 @@ int run_wgmma(const WOptions& o) {
   }
   launch();
   uint64_t elapsed = window();
-  double error = check(o.iterations, 16, false);
+  double error = check(o.iterations, Batch, false);
   bool valid = error <= 1e-4;
   std::vector<float> values(output.count);
   CUDA_CHECK(cudaMemcpy(values.data(), output.pointer, values.size() * 4, cudaMemcpyDeviceToHost));
   std::ofstream file("output.f32", std::ios::binary);
   file.write(reinterpret_cast<const char*>(values.data()), values.size() * 4);
   file.close();
-  uint64_t work = uint64_t(2) * 64 * N * K * C * 16 * o.groups * o.iterations * blocks;
+  uint64_t work = uint64_t(2) * 64 * N * K * C * Batch * o.groups * o.iterations * blocks;
   std::cout << std::setprecision(17) << "{\"kind\":\"wgmma\",\"status\":\""
             << (valid ? "measured" : "numeric_error") << "\",\"dtype\":\"" << o.dtype
             << "\",\"source\":\"" << o.source << "\",\"scope\":\"" << o.scope << "\",\"n\":" << N
             << ",\"k\":" << K << ",\"chains\":" << C << ",\"groups\":" << o.groups
             << ",\"threads\":" << threads << ",\"blocks\":" << blocks
-            << ",\"iterations\":" << o.iterations << ",\"per_chain_batch\":16,\"wait\":1"
+            << ",\"iterations\":" << o.iterations << ",\"per_chain_batch\":" << Batch
+            << ",\"wait\":" << (Serialized ? 0 : 1)
+            << ",\"b_major\":\"" << o.b_major << "\""
             << ",\"work_flop\":" << work << ",\"elapsed\":" << elapsed << ",\"unit\":\""
             << (o.scope == "one_cta" ? "clock64_cycle/CTA" : "globaltimer_ns/GPU")
             << "\",\"registers_per_thread\":" << attributes.numRegs
@@ -288,6 +314,21 @@ int run_wgmma(const WOptions& o) {
 int main(int argc, char** argv) {
   try {
     WOptions o(argc, argv);
+    if (o.serialized) {
+      if (o.dtype != "fp16" || o.source != "SS" || o.n != 256)
+        throw std::runtime_error("single_wait0 comparison requires FP16 SS n256");
+      if (o.b_major == "MN")
+        return run_wgmma<__half, G::MMA_64x256x16_F32F16F16_SS<G::Major::K, G::Major::MN>,
+                           256, 16, 1, false, true, true>(o);
+      return run_wgmma<__half, G::MMA_64x256x16_F32F16F16_SS<G::Major::K, G::Major::K>,
+                         256, 16, 1, false, false, true>(o);
+    }
+    if (o.b_major == "MN") {
+      if (o.dtype != "fp16" || o.source != "SS" || o.n != 256)
+        throw std::runtime_error("MN comparison requires FP16 SS n256");
+      return run_wgmma<__half, G::MMA_64x256x16_F32F16F16_SS<G::Major::K, G::Major::MN>,
+                         256, 16, 1, false, true>(o);
+    }
     if (o.dtype == "fp16" && o.source == "SS") {
       if (o.n == 64)
         return run_wgmma<__half, G::MMA_64x64x16_F32F16F16_SS<G::Major::K, G::Major::K>, 64, 16, 4,

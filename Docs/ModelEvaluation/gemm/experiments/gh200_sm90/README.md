@@ -50,17 +50,17 @@ FP16 Tensor Core GEMM 的后续实验见 [access_rules](access_rules/README.md)�
 | [R05-E](access_rules/R05-async-lifecycle.md) TMA 写回 | 行距 144 B 慢 38%，160/256 B 正常：行起点 32 B 对齐即可 |
 | [R03](access_rules/R03-access-demand.md) 片上并发 | 8 warp 时 LDS.128/STS.128/`ldmatrix.x4` 达 124–127 B/cycle，`stmatrix.x4` 116 |
 | [R01](access_rules/R01-readiness.md) 依赖时间 | 每步：FFMA 4.0–4.3 cycle、add 5.0、LEA+LDS 29、global L2/HBM 288/630、`ldmatrix.x4` 34；WGMMA 发出到 wait0 返回约 36+0.62·N cycle（N=256 为 195） |
-| [R06](access_rules/R06-issue-residency.md) 资源 | 128 线程 FFMA 单 CTA 241 FLOP/cycle、整卡 64–65 TFLOP/s，63–128 寄存器之间差别 <2%；窗口内 SM 频率约 1.97–1.98 GHz |
+| [R06](access_rules/R06-issue-residency.md) 资源 | 128 线程 FFMA 单 CTA 241 FLOP/cycle、整卡 64–65 TFLOP/s，63–128 寄存器之间差别 <2%；窗口内 clock64/globaltimer 比值约 1.97–1.98 GHz |
+| [V01](access_rules/V01-validation.md) 规则预测 | 异步目标组合主循环 1026 cycle/Ktile（理想 1024）；单 CTA 预测误差 −0.4%~−1.7%；整卡 −7%~−10%（频率假设偏高）；完整 CUTLASS −23%~−28%（漏了固定开销） |
+| [R07](access_rules/R07-anchor-clock-fixedcost.md) 频率与固定开销 | 持续 GEMM 时 SM 频率 1.40–1.45（8192³）、约 1.75 GHz（2048³），几乎所有样本只报 SW Power Cap，模块功率上限 680 W；CUTLASS 需 `-DNDEBUG`（否则每条 MMA 后 wait0，慢 5.5–8%）；M=N=2048 单调用经验关系 T≈9.45+0.637·Ktile µs |
 
-V01 与 R04 跨 warpgroup 部分改用异步 WGMMA 重做中。
 
 ## 尚未覆盖
 
-- 基于规则的完整 GEMM 预测（V01 进行中）。
-- WGMMA 与 FFMA 跨 warpgroup 同时执行（R04 重做中）。
+- 基于规则的完整 GEMM 预测：规则需要加入每 kernel 固定开销和负载频率，并解释完整 kernel 每 Ktile 比纯计算多出的约 20%（按约 1.95 GHz 换算的估计）后，再按先预测后测量重新验证。直接使用 R07 的经验关系时，这部分已包含在斜率中。
 - TF32 WGMMA、FP16 累加形式；FP64 `mma` 的 sm_90 新形状。
 - 多 CTA 竞争下的片上服务。
-- 物理 HBM 流量、缓存命中、动态指令计数（需 NCU 权限）；GEMM 负载下的 SM 频率。
+- 物理 HBM 流量、缓存命中、动态指令计数（需 NCU 权限）。
 - 物理在途队列深度（软件 stage 扫描不能给出）。
 
 ## 后续实验约定

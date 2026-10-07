@@ -1,6 +1,6 @@
 # V01：留出组合验证
 
-[总计划](README.md)。状态：已实现并通过短检查；正式进度见[STATUS](STATUS.md)。代码：`run_v01.py`、`probes/v01.cu`。
+[总计划](README.md)。状态：异步目标组合单 CTA 预测通过；整卡与完整 kernel 的规则预测未通过，原因已定位（见“结论”）。代码：`run_v01.py`、`v01_predict.py`、`probes/v01.cu`。
 
 ## 问题
 
@@ -15,7 +15,7 @@ R00–R06 的规则能否预测未参与拟合的组合？只有组合检查能�
 | 目标 TC 组合 | 见下文 | Ktile 7/19/47 | 同上 |
 | 完整 kernel | R00-A 的 CUTLASS 固定配置 | 2048³、2048×2048×8192 | 整卡 |
 
-三组合 × 三长度 × 两范围 = 18 点，加 2 个完整 kernel 点。整卡 grid 为 4×SM 数，资源拒绝记录在案。7/19/47 与两个完整 kernel 尺寸都不参与任何拟合、长度选择或系数估计；完整 kernel 点在保存预测之后才运行。
+三组合 × 三长度 × 两范围 = 18 点，加 2 个完整 kernel 点。整卡 grid 为 4×SM 数，资源拒绝记录在案。首次采样前，7/19/47与两个完整kernel尺寸不参与拟合或系数估计。观测后可以转为校准点，后续验证须换未观测的新点；完整kernel点在保存预测之后才运行。
 
 ### 目标 TC 组合
 
@@ -28,7 +28,7 @@ R00–R06 的规则能否预测未参与拟合的组合？只有组合检查能�
 
 CUTLASS 完整 kernel 使用 cluster 2×1×1，其多播与 cluster 调度在整卡预测中单独计入。
 
-输入major也分别记录：本组受控TC组合的A/B均Major::K，而行主序完整CUTLASS为A Major::K、B Major::MN（`.tnspB`）；后者还有producer/consumer寄存器重分配。R00-B只提供相同形状的孤立服务，不能自动替代完整kernel的布局与资源条件。当前20项数值预测均为空，只接受测量观测，预测精度验收未完成；原已测长度和尺寸不再作为新预测的未知留出点。
+输入major也分别记录：本组受控TC组合的A/B均Major::K，而行主序完整CUTLASS为A Major::K、B Major::MN（`.tnspB`）；后者还有producer/consumer寄存器重分配。R00-B只提供相同形状的孤立服务，不能自动替代完整kernel的布局与资源条件。首版20项数值预测均为空，仅接受测量观测；后来已测长度和尺寸不再作为新预测的未知留出点。
 
 ## 预测
 
@@ -58,56 +58,39 @@ e=\frac{\widehat T-T_{\mathrm{measured}}}{T_{\mathrm{measured}}}
 
 完成标准：20 点都有正确结果或明确的资源终态；预测在采样前保存；误差可重算；未闭合的关系逐项列出。进入具体方案后，把方案的实际 kernel 加入留出点。
 
-## 当前实现与复核入口
+## 结论（2026-10-06）
 
-`probes/v01.cu`包含三个组合，短检查为K=2/3，目标组合另以K=5检查四stage槽的复用。输入是R00同公式的坐标dyadic FP16值，CPU按精确周期17重算完整输出；这项有限输入检查不替代未定义的任务误差容差。
+| 对象 | 预测方式 | 误差 | 判定 |
+|---|---|---|---|
+| 异步目标组合，单 CTA，Ktile 7/19/47 | 规则组合，采样前冻结 | −1.7% / −0.9% / −0.4% | 通过 |
+| 异步目标组合，整卡，Ktile 7/19/47 | 同上，按 1.83 GHz 换算 | −6.6% / −7.0% / −10.0% | 未达 ±5%；窗口比值频率 1.79/1.75/1.66 GHz，低于假设 |
+| 固定 CUTLASS，2048³、2048×2048×8192 | 规则组合 | −28.3% / −22.7% | 未通过 |
+| 固定 CUTLASS，新 K（4096、5120、6144） | 用同一 kernel 拟合后内插 | +0.5% / −0.7% / −0.6% | 拟合有效，但不是规则验证 |
 
-目标TC实际资源：154 registers/thread、无spill，动态SMEM196864 B（192KiB输入和256B barrier余量）+静态1024 B=197888 B，384线程，occupancy上限1 CTA/SM。每tile两个consumer分别发4条K16 WGMMA，commit/wait1使上一tile完成；CTA同步后producer仅覆盖上一tile的槽，填入上一tile+4。所有输入最后一次消费完成、两个consumer wait0并CTA同步后，输入区才复用为输出。每块64KiB的输出经过寄存器→SMEM、proxy fence、CTA发布、TMA写回和完整bulk wait0。
+1. **规则组合在单 CTA 层面成立。** 异步目标组合（2 个 consumer warpgroup、每 Ktile 4 条 `m64n256k16`、`wait_group 1`、4 stage）主循环约 1026 cycle/Ktile，理想值 1024，WGMMA 已满速。
+2. **整卡误差与频率假设一致。** K=47 时窗口比值频率比假设低 10.3%，误差 −9.95%；这是优先解释，尚未做固定频率对照。整卡预测需要负载下的频率，见 [R07](R07-anchor-clock-fixedcost.md)。
+3. **完整 kernel 的规则缺少固定开销与组合成本。** 同一 kernel 的经验关系（[R07](R07-anchor-clock-fixedcost.md)，`NDEBUG` 构建）为 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048）；截距在 2048³ 约占 1/3，与规则预测的 −28% 量级一致。斜率已包含组合执行成本，使用经验关系时不能再另加组合开销。
+4. **R00 的 CUTLASS 没开 `NDEBUG`**，编译器把每条 MMA 都改成提交后 wait0；加 `NDEBUG` 后快 5–6%。重测见 R07。
 
-整卡组合grid为4×SM，所有CTA读取同一组输入，repeat-cache条件记录在案；计时是各CTA的globaltimer包络。LDS输入在计时前初始化，窗口包括输出store与消费者同步。完整CUTLASS复用R00归档固定二进制并核对SHA256，使用CUDA event计时，单位单独保留。
+预测文件冻结后计时探针改过一次；单 CTA 各段误差互相抵消（预填预测 1481、实测 1148 cycle；输出预测 6044、实测 6629）。
 
-预测文件在采样前保存工作量、事件序列、资源条件、引用规则和具体缺项，绑定SHA256；没有完整参数时保存`predicted_time=null`。未取得匹配条件的服务与cluster任务分配前，本组只能交付留出观测，不能声称预测误差验收通过。
+## 实现要点
+
+- 目标组合：384 线程（线程 0–127 为 producer 区，warp 0 发 TMA；两个 consumer warpgroup），154 寄存器/线程、无 spill，SMEM 197888 B，1 CTA/SM。每 Ktile 每个 consumer 发 4 条 WGMMA 后 commit、`wait_group 1`；上一 tile 的 group 完成后释放其输入槽。最后 wait0，复用输入区分两块 64 KiB 经 TMA 写回并完整 wait0，窗口在第二块完成时结束。SASS 无 C7520/C7517/C7519，主循环 8 条 HGMMA、2 次 wait1。
+- 预测由 `v01_predict.py` 生成：WGMMA 服务（R00-B）、每 SM 供给（R05-D）、事件与等待（R05、R01）、TMA 写回（R05-E）。预测文件 SHA256 `17026427…`，冻结于测量前。
+- 整卡 grid 为 4×132，所有 CTA 读同一输入；完整 CUTLASS 复用 R00 二进制，CUDA event 计时。
+- 首版（作业 735062/735138）目标组合被编译器逐条串行（C7520），且没有基于规则的预测，已被本版取代；LDS→FFMA 辅助组合重测了完成边界，预测仍为空。
+
+## 数据
+
+- 异步版：[V01 报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-async-v01-r04/v01-offline-review/report.md)（作业 735203，GPU-7c184a2e…）。
+- 拟合与内插：[新长度报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-v01-followup/report.md)、[固定 CUTLASS 分阶段模型](../../../../../../results/gh200_resource_campaign/access_rules/20261006-cutlass-wait-matching/published/report.md)。
+- 辅助 LDS 完成边界：[报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-lds-completion/review/report.md)。
+- 旧版：`access_rules/20261006-A-job735062/`、`20261006-A-fix-job735138/`。
 
 ```bash
-python3 microbench/gh200_resource_campaign/access_rules/run_v01.py \
-  --prediction-template > /待保存预测.json
-python3 microbench/gh200_resource_campaign/access_rules/run_v01.py \
-  --cutlass-root /R00准确归档/source/cutlass \
-  --output /新运行目录/v01-smoke --smoke
-python3 microbench/gh200_resource_campaign/access_rules/run_v01.py \
-  --cutlass-root /R00准确归档/source/cutlass \
-  --r00-archive /R00准确归档 \
-  --predictions /待保存预测.json \
-  --output /新运行目录/v01-formal
-python3 /新运行目录/v01-formal/source/analyze_v01.py \
-  --input /新运行目录/v01-formal
+python3 microbench/gh200_resource_campaign/access_rules/v01_predict.py --output <预测.json>
+python3 microbench/gh200_resource_campaign/access_rules/run_v01.py --cutlass-root <R00 source>/cutlass \
+  --r00-archive <R00 归档> --predictions <预测.json> --prediction-sha256 <SHA> --output <新目录>
+python3 <新目录>/source/analyze_v01.py --input <新目录>
 ```
-
-三个组合18点和完整CUTLASS2点均只在预测文件保存后运行。7/19/47不作校准或拟合；没有新增长度校准。单CTA默认3进程，CV>1%补至10；整卡10进程。
-
-## 实测结果（2026-10-06）
-
-[V01留出观测](../../../../../../results/gh200_resource_campaign/access_rules/20261006-A-job735062/v01-offline-review/report.md)。设备romeo-a043，GPU-099dda56-d7af-f60e-c285-aa2dc7ddfcfe，CUDA12.9。
-
-20点/137个正式进程，CPU完整输出和CUTLASS保存的4096个坐标样本最大误差0；所有预热窗口收敛，正式窗口最大CV约4.07%。18个组合保存完整输出，2个CUTLASS点只对保存的有限坐标样本重算。
-
-完整CUTLASS留出2048³为31.248 µs、549.791 TFLOP/s，2048×2048×8192为97.952 µs、701.563 TFLOP/s，均为10进程中位数。预测文件在运行前保存且SHA256一致；20项预测均为空并有具体缺项，所以这是留出观测交付，预测误差验收尚未完成。
-
-目标核存在C7520逐条串行化和C7517等待，小TC存在C7517等待，源级wait1不能证明实际保留一个group。机器码条件、工作量、资源与时间边界写入离线validation.json；后续规则必须匹配这些条件，或修正探针后仅重测受影响点。
-
-## 串行生命周期修订与新留出
-
-受控TC保留真实串行消费：每条K16 WGMMA显式fence/commit/wait0，块退出没有在途group；目标154 registers/thread、小TC58 registers/thread，无spill，C7520/C7517均消除。预填、主循环最终排空、两块完整TMA输出用同CTA clock64连续分段，分段之和等于完整窗口。它不是恢复后的理想异步wait1实现。
-
-在GPU-7c184a2e-41ea-3d2b-df5b-1699c95fc1fe、CUDA12.9/sm90a上，以目标128×256×64、384线程、4输入stage、K/K、repeat-prepared输入，校准6/14/30，每点3独立进程。原7/19/47不参与系数估计。条件规则为：
-
-\[
-\widehat C(K)=979+9052+6270.5\frac{K-6}{4}+8959,
-\qquad K\equiv2\pmod4.
-\]
-
-979为预填段中位数，9052为K=6主循环段，6270.5为每额外4 tile主循环完成增量，8959为完整输出段。主循环增量已包含输入ready、WGMMA、槽与CTA控制，不能再叠加R00/R03/R05成本。校准残差最大约0.105%。本规则只检验该整段生命周期的新长度外推，不证明独立原子服务能任意组合。
-
-预测K=38为69154 cycle/CTA，在38测量前以只创建文件保存，后续核对GPU UUID、probe源码、目标kernel完整SASS与预测SHA256。3进程实测69119–69228，中位69122；预测误差+0.0463%，完整输出CPU误差0。38不是原已知检查点，未参与校准。
-
-原12个TC的7/19/47单CTA/整卡点仅按修订kernel作已知检查复测，不再称为留出。原LDS组合及完整CUTLASS未重跑。受控K/K、154统一寄存器资源不能迁移到固定CUTLASS的B Major::MN/tnspB、producer40/consumer232动态资源；完整kernel与整卡L3关系继续列为缺项。

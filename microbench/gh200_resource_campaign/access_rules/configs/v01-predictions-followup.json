@@ -1,0 +1,75 @@
+{
+  "created_utc": "2026-10-06T17:17:11.134815+00:00",
+  "status": "frozen before new lengths; primary resource model and separate empirical alternative",
+  "gpu_uuid": "GPU-7c184a2e-41ea-3d2b-df5b-1699c95fc1fe",
+  "binary_hashes": {
+    "v01": "2c62558dd513379669d517b60570e73eb2fd45c98dd158f0d1b37607e0fc1be5",
+    "r00_cutlass": "0f0df7356e25d949b523dfe43fa744ced90906555e795143661565bd785e0bf6"
+  },
+  "probe": {
+    "sha256": "05a9aa1cff31e41304d4f74b29819b197128b5723f1d035a1f0b9066eb557b41"
+  },
+  "generator_sha256": "a6f0426ba8e8f36a1e9124db302608a85c18c11d49f3ac7ad9b254058c94cdab",
+  "predictor_sha256": "9184da36d14483539504c24e67c9ab162f6775789097394ea237bf9eca0b4c2d",
+  "calibration": {
+    "archive": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-async-v01-r04/v01-formal",
+    "predictions_sha256": "1702642749f3b53c6743b139e55d4cdb91beca6b226ca0b78fd35e748051c9e6",
+    "layout_summary_sha256": "f174becadbabbeac9a11340eb869be901774e6b92865c3c40e45d0fe8543fc0a",
+    "known_medians": {
+      "cutlass_2048_2048_2048": 0.0313120000064373,
+      "cutlass_2048_2048_8192": 0.09860799834132195,
+      "target_tc_k19_all_gpu": 68096.0,
+      "target_tc_k19_one_cta": 27328,
+      "target_tc_k47_all_gpu": 139936.0,
+      "target_tc_k47_one_cta": 55986,
+      "target_tc_k7_all_gpu": 39040.0,
+      "target_tc_k7_one_cta": 15056
+    }
+  },
+  "limits": [
+    "Other resource parameters still transfer from older experiments.",
+    "Throughput ratio is a window estimate, not a frequency telemetry measurement.",
+    "Affine alternative is conditional on fixed kernel/GPU/cache/grid/M/N.",
+    "An affine fit does not identify layout, cluster, or scheduling causes."
+  ],
+  "cases": [
+    {
+      "case_id": "target_tc_k31_one_cta",
+      "kind": 2,
+      "scope": "one_cta",
+      "length": 31,
+      "predicted_time": 39377.70734889209,
+      "unit": "clock64_cycle/CTA",
+      "alternative": {
+        "predicted_time": 39610.0,
+        "model": "conditional affine fit to known lengths 19/47"
+      }
+    },
+    {
+      "case_id": "target_tc_k31_all_gpu",
+      "kind": 2,
+      "scope": "all_gpu",
+      "length": 31,
+      "predicted_time": 90820.24149233014,
+      "unit": "globaltimer_ns/GPU",
+      "alternative": {
+        "predicted_time": 98884.57142857142,
+        "model": "conditional affine fit to known lengths 19/47"
+      }
+    },
+    {
+      "case_id": "cutlass_2048_2048_4096",
+      "kind": "cutlass",
+      "scope": "all_gpu",
+      "m": 2048,
+      "n": 2048,
+      "k": 4096,
+      "unit": "cuda_event_ms/GPU",
+      "predicted_time": 0.04066147746527811,
+      "alternative": {
+        "predicted_time": 0.05374399945139885,
+        "model": "conditional affine Ktile fit, same complete kernel"
+      }
+    }
+  ]
+}

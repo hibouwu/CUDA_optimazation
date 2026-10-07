@@ -221,6 +221,7 @@ def summarize(groups, predictions):
             alternative=(
                 prediction.get("alternative", {}).get("predicted_time") if prediction else None
             ),
+            alternative_model=(prediction.get("alternative", {}).get("model") if prediction else None),
             cpu_max_error=max(x[3] for x in records),
             warmup_all_converged=all(r.get("warmup_converged", False) for r in rs),
             pipeline_mode=rs[0].get("wgmma_pipeline_mode", "cutlass"),
@@ -317,11 +318,11 @@ def report(destination, folder, environment, protocol, machine, rows, max_error)
         )
     alt = [r for r in rows if r.get("alternative") is not None]
     if alt:
-        text += ["", "CUTLASS的R00-A锚定备选模型：", ""]
+        text += ["", "单独保存的备选模型（与主预测分别评估）：", ""]
         for r in alt:
             text.append(
-                f"- {r['case_id']}：备选预测 {r['alternative']:.5f} ms，误差 "
-                f"{r['alternative_error'] * 100:+.1f}%。"
+                f"- {r['case_id']}：备选预测 {r['alternative']:.5f} {r['unit']}，误差 "
+                f"{r['alternative_error'] * 100:+.1f}%；{r['alternative_model'] or '模型名称见预测文件'}。"
             )
     target = [r for r in rows if "fill_cycles" in r]
     if target:

@@ -1,6 +1,6 @@
 # GH200 访问与供给规则：实验计划
 
-状态：R00、R01、R03、R05、R06 已完成；V01、R04 跨 warpgroup 部分改用异步 WGMMA 重做中（见下方“当前状态”）。设备 GH200 / `sm_90a`，CUDA 12.9。问题结构参考 Thor 的 [RF Write 分析](../../../../Thor_RF_Write_v6_Analysis_20260928.html)，数值与机器码不移植。
+状态：R00–R06 默认点完成；V01 单 CTA 规则预测通过，整卡与完整 kernel 未通过，缺项为负载下频率与每 kernel 固定开销，R07 已测得：持续负载频率 1.40–1.75 GHz（证据指向模块功率预算），M=N=2048 单调用经验关系 T≈9.45+0.637·Ktile µs。设备 GH200 / `sm_90a`，CUDA 12.9。问题结构参考 Thor 的 [RF Write 分析](../../../../Thor_RF_Write_v6_Analysis_20260928.html)，数值与机器码不移植。
 
 ## 目标
 
@@ -32,13 +32,14 @@
 | R00 | 完成，30 点 | WGMMA `m64n{64,128,256}k16`、1/2 个 warpgroup、SS/RS 均 4095 FLOP/cycle，整卡 FP16 989 TFLOP/s、FP8 1978；cuBLASLt FP16 8192³ 715 TFLOP/s、2048³ 555；固定 CUTLASS 8192³ 643 | [R00](R00-anchor-target.md) |
 | R03 | 完成，18 点 | 8 warp 时 LDS.128 124、STS.128 125、`ldmatrix.x4` 127、`stmatrix.x4` 116 B/cycle/CTA | [R03](R03-access-demand.md) |
 | R05 | 完成，40 点 | 目标在途量 1 CTA/SM：共享小源 55.5 B/cycle、独立大源 15.3（满速需 48）；TMA 写行距 144 B 慢 38%，160/256 B 正常 | [R05](R05-async-lifecycle.md) |
-| R01 | 完成，37 点（每迭代展开 64 步重测） | 依赖每步：FFMA 4.27（扣循环 4.00）、add 4.98、LEA+LDS 29.0、global L2/HBM 288/630、`ldmatrix.x4` 34、WGMMA+wait0 N=64/128/256 为 76/115/195（≈36+0.62N）；首版 29 cycle 为循环开销，已作废 | [R01](R01-readiness.md) |
-| R06 | 完成，6 点（重测） | 63/95/128 寄存器：单 CTA 241 FLOP/cycle，整卡 65.1/64.7/64.1 TFLOP/s；窗口内 SM 频率约 1.97–1.98 GHz。寄存器在此范围几乎不影响 FFMA 服务 | [R06](R06-issue-residency.md) |
-| R04 | 部分重做 | 同 warpgroup WGMMA+FFMA 16 点可用；LDS/CVT 修订版完成；跨 warpgroup 7 点因编译器逐条串行（C7520），改用异步 WGMMA 重做 | [R04](R04-joint-service.md) |
-| V01 | 重做 | 旧目标组合被逐条 wait0 串行，且没有基于规则的预测；改用异步流水，先保存预测再测 | [V01](V01-validation.md) |
+| R01 | 完成，37 点（每迭代展开 64 步重测） | 依赖每步：FFMA 4.27（扣循环约 4.00）、add 4.98、LEA+LDS 29.0、global 小/大工作集 288/630、`ldmatrix.x4` 34、WGMMA+wait0 N=64/128/256 为 76/115/195（≈36+0.62N）；首版 29 cycle 为循环开销，已作废 | [R01](R01-readiness.md) |
+| R06 | 完成，6 点（重测） | 63/95/128 寄存器：单 CTA 241 FLOP/cycle，整卡 65.1/64.7/64.1 TFLOP/s；窗口内 clock64/globaltimer 比值约 1.97–1.98 GHz。寄存器在此范围几乎不影响 FFMA 服务 | [R06](R06-issue-residency.md) |
+| R04 | WGMMA 部分完成；LDS 部分不可用 | WGMMA 与另一 warpgroup 的 FFMA 交错，只比较大一方多 0.3–3.8%；LDS+FFMA/CVT 修订版串行与交错代码组织不同，不作规则 | [R04](R04-joint-service.md) |
+| V01 | 部分通过 | 异步目标组合主循环 1026 cycle/Ktile（理想 1024），单 CTA 预测误差 −0.4%~−1.7%；整卡 −7%~−10%（频率 1.66–1.79 GHz，假设 1.83）；完整 CUTLASS −23%~−28%（规则未含每 kernel 固定开销与完整 kernel 的组合成本） | [V01](V01-validation.md) |
+| R07 | 完成（另一张卡 GPU-009a8880） | `NDEBUG` 使 CUTLASS 快 5.5–8%（8192³ 621→657 TFLOP/s，同次 cuBLASLt 695）；持续负载频率 2048³ 约 1.75、8192³ 1.40–1.45 GHz，98–99% 样本只有 SW Power Cap，模块功率上限 680 W（证据指向功率预算，未独立证明唯一原因）；短调用的调用后探针 1.93–1.98 GHz；M=N=2048 单调用 T≈9.45+0.637·Ktile µs（截距拆分只是协议/形状差值） | [R07](R07-anchor-clock-fixedcost.md) |
 | R02 | 未触发 | — | [R02](R02-register-service.md) |
 
-验收看四项：SASS 中目标指令序列正确、输出经 CPU 校验、样本稳定、数值与已知物理量级相符（例如 FFMA 依赖约 4 cycle、128 线程 FFMA 约 230 FLOP/cycle、WGMMA 峰值 4096）。2026-10-06 的协调记录（分工、STATUS、ACCEPTANCE）移到 [归档](../../gh200_sm90_archive/access_rules/)。
+验收看四项：SASS 中目标指令序列与动态次数正确、输出经 CPU 校验、样本稳定、数值与已知物理量级相符（如 FFMA 依赖约 4 cycle、WGMMA 峰值 4096 FLOP/cycle）。前三项保证测得对，第四项保证测的是想测的量：R01 首版正是三项都通过、只在第四项暴露循环开销问题。2026-10-06 的协调记录移到[归档](../../gh200_sm90_archive/access_rules/)。
 
 ## 文件结构
 

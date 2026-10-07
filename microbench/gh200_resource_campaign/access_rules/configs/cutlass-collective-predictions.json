@@ -1,0 +1,122 @@
+{
+  "created_utc": "2026-10-06T18:46:48.503042+00:00",
+  "model": "matched collective and completion-edge composition; no total-GEMM affine fit",
+  "gpu_uuid": "GPU-7c184a2e-41ea-3d2b-df5b-1699c95fc1fe",
+  "binary_sha256": "d89ca42abf62ca6f239660a1086d2ccf6b0e2130fb514968ce7e0705ee60806e",
+  "device_code_equivalence": {
+    "entire_device_kernel_identical": true,
+    "device_kernel_sass_sha256": "7c5792cd1c15549b30c0d7750b3b2228ad0945661df2e799c2fb9281e398615b",
+    "original_sass_sha256": "b07ba964a46263d450f2029b14783a4b82e67854f8c80550064de3b5fc2aecc2",
+    "capture_sass_sha256": "02c7dc31171d02593936a69df60bfdb937e0be7ee518d3d47999a525e31efaa9"
+  },
+  "generator_sha256": "e9fcd21ab8891bee6e6ff607c61e3e7d5162251994e09d2213ae26ce165a79bd",
+  "calibration_medians": {
+    "32": {
+      "main_cycles": 38049.5,
+      "main_ratio": 1.6838702407623027,
+      "output_source_ns": 3456.0,
+      "wave_slack_ns": 776.0,
+      "full_completion_edge_ns": 4640.000493764877
+    },
+    "128": {
+      "main_cycles": 146280.0,
+      "main_ratio": 1.6551137255978592,
+      "output_source_ns": 3320.0,
+      "wave_slack_ns": 1560.0,
+      "full_completion_edge_ns": 4832.001091957092
+    }
+  },
+  "calibration_evidence": {
+    "phase-pair/samples/phases_k2048/formal-00/result.json": "9b521c1953709b9ddd467db1d394b6d0feadbdd66c395a2077ae71017c20c9f3",
+    "phase-pair/samples/phases_k2048/formal-01/result.json": "dd2661aae7983e353af29f3a154395bf5da66a68bc3dedb43013a3515ccb2cfe",
+    "phase-pair/samples/phases_k2048/formal-02/result.json": "e82dc18604daa49fdf9c32415d54ec69e9e7e9bce0cfb2ac375983bd3b50d874",
+    "phase-pair/samples/phases_k2048/formal-03/result.json": "d7f25800af0b8a7b8c11715b94a1a1a530762bf5c366c34346573d2f5bc4e1dc",
+    "phase-pair/samples/phases_k2048/formal-04/result.json": "9dcc94a806a594b7572be0b95b59ca8c36735a2af7b31fd92fda4892ea64ebfd",
+    "phase-pair/samples/phases_k2048/formal-05/result.json": "c9242bac7bdebac21245c728b70c3f1ad72c39f0603dc677ee3fa2cc2ddc2f1b",
+    "phase-pair/samples/phases_k2048/formal-06/result.json": "539808df3c499c619150863c2eeb5fa9e9a99bcc01eb1274da5b57d0f9685cef",
+    "phase-pair/samples/phases_k2048/formal-07/result.json": "4a1fdf05a3ed05cff180f57e6e0388198c6e919cffd94213a883e68c25912840",
+    "phase-pair/samples/phases_k2048/formal-08/result.json": "9fbadcae5b580f089c1cd08f7553b8cb6216d49b9e25b735586044bbc2ed20a9",
+    "phase-pair/samples/phases_k2048/formal-09/result.json": "e354bec75ba3ef3879bf4e16735818234263b5843e62cb4d72d98ddb7f3fdebd",
+    "phase-pair/samples/phases_k8192/formal-00/result.json": "41101569511084242e4b4b2617ef4306c55f3ef24187e220338289d8c2c64bc1",
+    "phase-pair/samples/phases_k8192/formal-01/result.json": "c87c12c9cac4cd825f22a03daeca59133c8d3d79a2fe5b845def8b9ddffad1eb",
+    "phase-pair/samples/phases_k8192/formal-02/result.json": "795961604bd92f02eb0cb60784cc63c061e2fd182d12e5a52a5718aeee1ee9f9",
+    "phase-pair/samples/phases_k8192/formal-03/result.json": "ee7a3835426120068721f973257acb335983b223d2154e6ad5191ab7e19ee74b",
+    "phase-pair/samples/phases_k8192/formal-04/result.json": "fff8beede01761ed18f148e7fe18916b028c3942f9bf3dc254a94e30b7c8502d",
+    "phase-pair/samples/phases_k8192/formal-05/result.json": "6ac79c2cdde2d529d67ad51059eb85d4263f1c82aad0450796db144fdcbf92f4",
+    "phase-pair/samples/phases_k8192/formal-06/result.json": "2fe7922db1409cd964f5d68e950a4efc2c5fa6f8fe6e4cb2cb62e811284acbc2",
+    "phase-pair/samples/phases_k8192/formal-07/result.json": "28fe8792b1753eefe7de7b263b8e6dd264173e6e783f81c4f2098e74639a7e5c",
+    "phase-pair/samples/phases_k8192/formal-08/result.json": "13b5b1bf48eb023601487ff26b788f2ec8e133651508d83b20ec260847ec4f70",
+    "phase-pair/samples/phases_k8192/formal-09/result.json": "f0d617500393430139b0396cfebea0cafbe11e6f788872b72924ae3786af6216"
+  },
+  "layout_evidence_sha256": "f174becadbabbeac9a11340eb869be901774e6b92865c3c40e45d0fe8543fc0a",
+  "parameters": {
+    "core_floor_cycles_per_tile": 1024.196044921875,
+    "joint_increment_cycles_per_tile": 103.20499674479174,
+    "main_start_cycles": 1972.6666666666642,
+    "main_ratio_at32": 1.6838702407623027,
+    "main_ratio_at128": 1.6551137255978592,
+    "output_source_ns": 3388.0,
+    "wave_slack_ns": 1168.0,
+    "full_completion_edge_ns": 4736.000792860985
+  },
+  "conditions": {
+    "m": 2048,
+    "n": 2048,
+    "tile": [
+      128,
+      256,
+      64
+    ],
+    "cluster": [
+      2,
+      1,
+      1
+    ],
+    "stages": 4,
+    "input": "FP16 row-major coordinate dyadic seed17",
+    "accumulation": "FP32",
+    "output": "FP32",
+    "cache": "repeat",
+    "grid_ctas": 128,
+    "waves": 1,
+    "build": "original assertions enabled / C7510"
+  },
+  "limits": [
+    "Joint increment is an aggregate collective cost, not an identified bare-port latency.",
+    "Cycle/ns ratios are matched window conversions, not clock telemetry.",
+    "The final edge includes initialization/dispatch and the gap from source reuse to full completion.",
+    "Ktile0 mod4; no cross-shape, device, tile, stage, cluster or build transfer."
+  ],
+  "cases": [
+    {
+      "case_id": "cutlass_2048_2048_5120",
+      "m": 2048,
+      "n": 2048,
+      "k": 5120,
+      "predicted_ns": 64497.26738206783,
+      "pieces_ns": {
+        "mainloop_ns": 55205.26658920685,
+        "output_source_reuse_ns": 3388.0,
+        "wave_slack_ns": 1168.0,
+        "edge_to_full_completion_ns": 4736.000792860985
+      },
+      "mainloop_cycles": 92164.75,
+      "main_cycles_per_ns": 1.669491983180081
+    },
+    {
+      "case_id": "cutlass_2048_2048_6144",
+      "m": 2048,
+      "n": 2048,
+      "k": 6144,
+      "predicted_ns": 75492.04740636222,
+      "pieces_ns": {
+        "mainloop_ns": 66200.04661350124,
+        "output_source_reuse_ns": 3388.0,
+        "wave_slack_ns": 1168.0,
+        "edge_to_full_completion_ns": 4736.000792860985
+      },
+      "mainloop_cycles": 110203.16666666666,
+      "main_cycles_per_ns": 1.6646992306526738
+    }
+  ]
+}
