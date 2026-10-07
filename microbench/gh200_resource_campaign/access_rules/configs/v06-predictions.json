@@ -1,0 +1,967 @@
+{
+  "status": "frozen",
+  "frozen_unix_ns": 1791407253551822849,
+  "frozen_utc": "2026-10-07T21:07:33+00:00",
+  "gpu": "GPU-201f9d2a-b55f-2a3b-b355-3abf04c2bc88, NVIDIA GH200 120GB, 590.48.01",
+  "job": "736868",
+  "host": "romeo-a043",
+  "model": "V06: per-CTA event-recursion cycle model + V03 clock rule with a card correction.\n\nCycle model (all intervals in SM cycles of one CTA, clock64 on its own SM):\n  entry --P0--> producer first work --S--> first MMA of tile 0\n  per tile j: fm[j] (first MMA) --L(Kt)--> me[j] (mainloop end, after mma_tail)\n              ep[j] (epilogue permit) --E--> ed[j] (epilogue done)\n  cooperative (both consumer WGs work on every tile):\n      ep[j] = me[j] + w;  ed[j] = ep[j] + (E0 if j == 0 else E);  fm[j+1] = ed[j] + h\n  pingpong (WG j%2 owns tile j; MMA order chain and epilogue order chain):\n      fm[j] = max(me[j-1] + gm, ed[j-2] + h)      (j>=1; the ed term only for j>=2)\n      ep[j] = max(me[j] + w,    ed[j-1] + we)     (the ed term only for j>=1)\n      ed[j]: work E (alone) progressing at rate r while the other WG's mainloop of tile j+1\n             [fm[j+1], me[j+1]] runs, rate 1 otherwise\n  end = B + X, B = max(ed) + Etail; X = max-over-CTAs excess vs. the median-interval CTA,\n      one of {0, x0, xk*B, x0 + x1*T} chosen per config by calibration leave-one-out\n  L(Kt) = l0 + l1*Kt for tiles j>=1 (V05 linear-in-Kt form); tile 0 uses L(Kt) + dL0.\n  C_cta = end - entry; critical C = max over CTAs (tile lists from the CUTLASS static scheduler).\n\nTime:  T = F_cfg + C/f, f from the V03 rule form\n  f = (a0 + da) - b*phi*ln(W/us) - (c0 + dc)*D - d*mu   GHz,   W = C/f (fixed point)\n  a0=2.2287, b=0.03534, c0=0.0859, d=0.3872, L2 effective capacity 30 MiB (V03 frozen file).\n  Card correction: da (and dc only if it lowers the calibration LOO RMS by > 0.2 pp).\n  phi = sum_i C_i / (132 C), mu = T_crit*L / C, D = estimated DRAM bytes / W (V03 method\n  generalised to the tile shape: per wave every touched A row panel and B column panel).\nAll parameters are fitted on calibration sizes only (stamped + plain runs, same card).",
+  "code_sha256": {
+    "v06_model.py": "548134688afa7221c9bdf974e2e9453f50a3d83be661ecd2a2a7a20b506121f8",
+    "v06_fit.py": "d2973aebe2168436a094776e73bed253608a071ddde19b35c283c9306fb8794e"
+  },
+  "calibration_jsonl_sha256": "42319da0fbcb55371dc1c40f9d2a00d3755205df8109cc3c9c8f40df6ea7c14f",
+  "static_setup_sha256": "26ead911a87b1759acbf94d2cb762dc4bf78e94700d3cf29279e04ee4316beed",
+  "binary_hashes_sha256": "906141eb57c0d3799035178ba8392bc77a11616c6d7298f2ed80d5311287fd7c",
+  "novelty_prior_shapes_scanned": 62924,
+  "params": {
+    "cfg_a": {
+      "P0": 2760.0,
+      "S": 2306.5,
+      "w": 136.92424242424244,
+      "E": 2170.5373900293257,
+      "h": 641.8153409090909,
+      "Etail": 502.0,
+      "E0": 2401.5,
+      "l1": 511.514240325462,
+      "l0": 470.35628440673463,
+      "dL0": 20.41587038587386,
+      "x0": 0.0,
+      "x1": 0.0,
+      "xk": 0.01660077961927442,
+      "excess_form": "prop",
+      "excess_fits": {
+        "none": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 0,
+          "loo_rms": 0.021414658158810013,
+          "loo_max": 0.03478496640710971
+        },
+        "const": {
+          "coef": {
+            "x0": 1794.84758335464,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 1,
+          "loo_rms": 0.041212578715280765,
+          "loo_max": 0.11358336938666569
+        },
+        "prop": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.01660077961927442
+          },
+          "nparam": 1,
+          "loo_rms": 0.015376556170548923,
+          "loo_max": 0.03358306908302877
+        },
+        "linT": {
+          "coef": {
+            "x0": 1538.3778984344235,
+            "x1": 114.39378658092309,
+            "xk": 0.0
+          },
+          "nparam": 2,
+          "loo_rms": 0.04016137923691488,
+          "loo_max": 0.10188308899707121
+        }
+      }
+    },
+    "cfg_b": {
+      "P0": 2939.5,
+      "S": 2299.0,
+      "w": 242.43161978661493,
+      "E": 2518.219696969697,
+      "h": 761.4444444444445,
+      "Etail": 200.0,
+      "gm": -213.1818181818182,
+      "we": 176.25216450216448,
+      "r": 0.33414422066857996,
+      "l1": 510.6446599273998,
+      "l0": 1044.216831640235,
+      "dL0": -439.8459493170303,
+      "x0": 0.0,
+      "x1": 0.0,
+      "xk": 0.02168070739029715,
+      "excess_form": "prop",
+      "excess_fits": {
+        "none": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 0,
+          "loo_rms": 0.04688025120987691,
+          "loo_max": 0.09680315193442146
+        },
+        "const": {
+          "coef": {
+            "x0": 3151.199765297177,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 1,
+          "loo_rms": 0.08335562740326631,
+          "loo_max": 0.20746780801973475
+        },
+        "prop": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.02168070739029715
+          },
+          "nparam": 1,
+          "loo_rms": 0.04361673833970878,
+          "loo_max": 0.08264097901671186
+        },
+        "linT": {
+          "coef": {
+            "x0": -6652.199126309455,
+            "x1": 1550.6895602761297,
+            "xk": 0.0
+          },
+          "nparam": 2,
+          "loo_rms": 0.0837749550143379,
+          "loo_max": 0.20279990249078472
+        }
+      }
+    },
+    "cfg_c": {
+      "P0": 2635.0,
+      "S": 2893.5,
+      "w": 136.78271484375,
+      "E": 4667.92904040404,
+      "h": 729.2853535353536,
+      "Etail": 513.0,
+      "E0": 5921.5,
+      "l1": 1041.096750368403,
+      "l0": 242.83591257072476,
+      "dL0": -25.431924359625555,
+      "x0": -15.629746410533471,
+      "x1": 310.4738837840602,
+      "xk": 0.0,
+      "excess_form": "linT",
+      "excess_fits": {
+        "none": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 0,
+          "loo_rms": 0.037014538198403446,
+          "loo_max": 0.09658900864267761
+        },
+        "const": {
+          "coef": {
+            "x0": 1327.8842638023925,
+            "x1": 0.0,
+            "xk": 0.0
+          },
+          "nparam": 1,
+          "loo_rms": 0.04323633953017807,
+          "loo_max": 0.08470821851273846
+        },
+        "prop": {
+          "coef": {
+            "x0": 0.0,
+            "x1": 0.0,
+            "xk": 0.010754103143725713
+          },
+          "nparam": 1,
+          "loo_rms": 0.03827204353686791,
+          "loo_max": 0.09413711160699934
+        },
+        "linT": {
+          "coef": {
+            "x0": -15.629746410533471,
+            "x1": 310.4738837840602,
+            "xk": 0.0
+          },
+          "nparam": 2,
+          "loo_rms": 0.033834549896937995,
+          "loo_max": 0.08284562794485395
+        }
+      }
+    }
+  },
+  "clock_rule": {
+    "a": 2.150060694664656,
+    "b": 0.0353398014693725,
+    "c": 0.02684380329343762,
+    "d": 0.3871575920181052,
+    "refit": "offset+D",
+    "da": -0.07866860628445246,
+    "dc": -0.059057790646071806
+  },
+  "clock_fits": {
+    "offset": {
+      "da": 0.006736745179749381,
+      "dc": 0.0,
+      "rms": 0.03842063063310097,
+      "max_abs": 0.11961765983452155,
+      "loo_rms": 0.039898347195912516,
+      "loo_max_abs": 0.1242183390589261
+    },
+    "offset+D": {
+      "da": -0.07866860628445246,
+      "dc": -0.059057790646071806,
+      "rms": 0.024769711028886778,
+      "max_abs": 0.061201815424674955,
+      "loo_rms": 0.028180696185626235,
+      "loo_max_abs": 0.06703031267562021
+    }
+  },
+  "fixed_us": {
+    "cfg_a": 4.7360004400000015,
+    "cfg_b": 4.031992500000001,
+    "cfg_c": 4.991996600000007
+  },
+  "predictions": {
+    "cfg_a_partial_wave": {
+      "row": {
+        "id": "cfg_a_partial_wave",
+        "config": "cfg_a",
+        "label": "partial_wave",
+        "m": 1152,
+        "n": 1664,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 1664,
+        "ldd": 1664
+      },
+      "stages": 6,
+      "tiles": 130,
+      "grid": [
+        130,
+        1,
+        1
+      ],
+      "ctas": 130,
+      "rounds": 1,
+      "ctas_at_max": 130,
+      "ktiles": 40,
+      "critical_cycles": 29540.655880389502,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 20951.34176781109,
+        "last_epilogue": 2401.5,
+        "tail": 502.0,
+        "max_cta_excess": 482.38987015416933,
+        "handoff_exposed": 136.92424242424386
+      },
+      "phi": 0.9848484848484849,
+      "mu": 0.7092375285316393,
+      "dram_gb": 0.007667712,
+      "dram_tbs": 0.45816082675392816,
+      "window_us": 16.735852461079617,
+      "clock_ghz": 1.7651121118023922,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 21.471852901079618
+    },
+    "cfg_a_short_k": {
+      "row": {
+        "id": "cfg_a_short_k",
+        "config": "cfg_a",
+        "label": "short_k",
+        "m": 3328,
+        "n": 4608,
+        "k": 384,
+        "lda": 384,
+        "ldb": 4608,
+        "ldd": 4608
+      },
+      "stages": 6,
+      "tiles": 936,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 8,
+      "ctas_at_max": 12,
+      "ktiles": 6,
+      "critical_cycles": 58035.51493542186,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 28335.94968126193,
+        "last_epilogue": 2170.537390029327,
+        "tail": 502.0,
+        "max_cta_excess": 947.7021981970757,
+        "handoff_exposed": 21012.825665933527
+      },
+      "phi": 0.8966708497185215,
+      "mu": 0.48825188701767064,
+      "dram_gb": 0.061341696,
+      "dram_tbs": 1.9024353964052265,
+      "window_us": 32.24377348944887,
+      "clock_ghz": 1.7998983572568767,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 36.97977392944887
+    },
+    "cfg_a_mid_k": {
+      "row": {
+        "id": "cfg_a_mid_k",
+        "config": "cfg_a",
+        "label": "mid_k",
+        "m": 4608,
+        "n": 3840,
+        "k": 1536,
+        "lda": 1536,
+        "ldb": 3840,
+        "ldd": 3840
+      },
+      "stages": 6,
+      "tiles": 1080,
+      "grid": [
+        2,
+        66,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 9,
+      "ctas_at_max": 24,
+      "ktiles": 24,
+      "critical_cycles": 148872.88705548807,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 114740.69834034628,
+        "last_epilogue": 2170.53739002932,
+        "tail": 502.0,
+        "max_cta_excess": 2431.0486858163254,
+        "handoff_exposed": 23962.10263929615
+      },
+      "phi": 0.912305379886398,
+      "mu": 0.7707293155239208,
+      "dram_gb": 0.07077888,
+      "dram_tbs": 0.8014282760095597,
+      "window_us": 88.31592560274942,
+      "clock_ghz": 1.6856856341530937,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 93.05192604274941
+    },
+    "cfg_a_large_output": {
+      "row": {
+        "id": "cfg_a_large_output",
+        "config": "cfg_a",
+        "label": "large_output",
+        "m": 7680,
+        "n": 6656,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 6656,
+        "ldd": 6656
+      },
+      "stages": 6,
+      "tiles": 3120,
+      "grid": [
+        2,
+        66,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 24,
+      "ctas_at_max": 84,
+      "ktiles": 40,
+      "critical_cycles": 587903.211566306,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 502362.63740859105,
+        "last_epilogue": 2170.5373900292907,
+        "tail": 502.0,
+        "max_cta_excess": 9600.279527948995,
+        "handoff_exposed": 68201.25723973656
+      },
+      "phi": 0.9849841499087263,
+      "mu": 0.8544988826820394,
+      "dram_gb": 1.05775104,
+      "dram_tbs": 2.7671159077313185,
+      "window_us": 382.2575834444249,
+      "clock_ghz": 1.5379765818348483,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 386.9935838844249
+    },
+    "cfg_a_long_k": {
+      "row": {
+        "id": "cfg_a_long_k",
+        "config": "cfg_a",
+        "label": "long_k",
+        "m": 1408,
+        "n": 2304,
+        "k": 10240,
+        "lda": 10240,
+        "ldb": 2304,
+        "ldd": 2304
+      },
+      "stages": 6,
+      "tiles": 216,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 2,
+      "ctas_at_max": 84,
+      "ktiles": 160,
+      "critical_cycles": 178618.67485659302,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 164645.6853433472,
+        "last_epilogue": 2170.53739002932,
+        "tail": 502.0,
+        "max_cta_excess": 2916.7882974589393,
+        "handoff_exposed": 3317.1638257575687
+      },
+      "phi": 0.8235401330171983,
+      "mu": 0.9217719562388185,
+      "dram_gb": 0.117833728,
+      "dram_tbs": 1.0737404938314543,
+      "window_us": 109.7413468868358,
+      "clock_ghz": 1.6276333389709792,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 114.4773473268358
+    },
+    "cfg_a_tails_pitched": {
+      "row": {
+        "id": "cfg_a_tails_pitched",
+        "config": "cfg_a",
+        "label": "tails_pitched",
+        "m": 2984,
+        "n": 3432,
+        "k": 1704,
+        "lda": 1728,
+        "ldb": 3456,
+        "ldd": 3456
+      },
+      "stages": 6,
+      "tiles": 648,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 5,
+      "ctas_at_max": 120,
+      "ktiles": 27,
+      "critical_cycles": 92846.81189644737,
+      "stage_cycles": {
+        "supply": 5066.5,
+        "mainloop": 71426.61973635692,
+        "last_epilogue": 2170.53739002932,
+        "tail": 502.0,
+        "max_cta_excess": 1516.1600242155923,
+        "handoff_exposed": 12164.994745845528
+      },
+      "phi": 0.9828490142999987,
+      "mu": 0.7692953401137723,
+      "dram_gb": 0.040964352,
+      "dram_tbs": 0.746994133258573,
+      "window_us": 54.838920650291286,
+      "clock_ghz": 1.6930824092715655,
+      "fixed_us": 4.7360004400000015,
+      "predicted_us": 59.574921090291284
+    },
+    "cfg_b_partial_wave": {
+      "row": {
+        "id": "cfg_b_partial_wave",
+        "config": "cfg_b",
+        "label": "partial_wave",
+        "m": 1152,
+        "n": 1664,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 1664,
+        "ldd": 1664
+      },
+      "stages": 6,
+      "tiles": 117,
+      "grid": [
+        117,
+        1,
+        1
+      ],
+      "ctas": 117,
+      "rounds": 1,
+      "ctas_at_max": 117,
+      "ktiles": 40,
+      "critical_cycles": 29863.020683069884,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 21030.157279419196,
+        "last_epilogue": 2518.219696969696,
+        "tail": 200.0,
+        "max_cta_excess": 633.7120868943783,
+        "handoff_exposed": 242.43161978661374
+      },
+      "phi": 0.8863636363636365,
+      "mu": 0.7042206983214438,
+      "dram_gb": 0.007667712,
+      "dram_tbs": 0.4562108232358256,
+      "window_us": 16.807387307504513,
+      "clock_ghz": 1.776779468260128,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 20.839379807504514
+    },
+    "cfg_b_short_k": {
+      "row": {
+        "id": "cfg_b_short_k",
+        "config": "cfg_b",
+        "label": "short_k",
+        "m": 3328,
+        "n": 4608,
+        "k": 384,
+        "lda": 384,
+        "ldb": 4608,
+        "ldd": 4608
+      },
+      "stages": 6,
+      "tiles": 936,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 8,
+      "ctas_at_max": 12,
+      "ktiles": 6,
+      "critical_cycles": 50647.84345218812,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 32424.83238032004,
+        "last_epilogue": 2518.219696969696,
+        "tail": 200.0,
+        "max_cta_excess": 1074.779102603711,
+        "handoff_exposed": 9191.512272294676
+      },
+      "phi": 0.9004249598240742,
+      "mu": 0.6402016388107281,
+      "dram_gb": 0.061341696,
+      "dram_tbs": 2.105431168468486,
+      "window_us": 29.134980482226183,
+      "clock_ghz": 1.7383860436455718,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 33.166972982226184
+    },
+    "cfg_b_mid_k": {
+      "row": {
+        "id": "cfg_b_mid_k",
+        "config": "cfg_b",
+        "label": "mid_k",
+        "m": 4608,
+        "n": 3840,
+        "k": 1536,
+        "lda": 1536,
+        "ldb": 3840,
+        "ldd": 3840
+      },
+      "stages": 6,
+      "tiles": 1080,
+      "grid": [
+        1,
+        132,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 9,
+      "ctas_at_max": 24,
+      "ktiles": 24,
+      "critical_cycles": 128477.4205452281,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 119257.35207976344,
+        "last_epilogue": 2518.219696969696,
+        "tail": 200.0,
+        "max_cta_excess": 2726.371694162907,
+        "handoff_exposed": -1463.022925667945
+      },
+      "phi": 0.9148544519714744,
+      "mu": 0.928235884357447,
+      "dram_gb": 0.07077888,
+      "dram_tbs": 0.8954217293061618,
+      "window_us": 79.04530087162911,
+      "clock_ghz": 1.6253644318955478,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 83.07729337162911
+    },
+    "cfg_b_large_output": {
+      "row": {
+        "id": "cfg_b_large_output",
+        "config": "cfg_b",
+        "label": "large_output",
+        "m": 7680,
+        "n": 6656,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 6656,
+        "ldd": 6656
+      },
+      "stages": 6,
+      "tiles": 3120,
+      "grid": [
+        1,
+        132,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 24,
+      "ctas_at_max": 84,
+      "ktiles": 40,
+      "critical_cycles": 529369.760401972,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 514840.2315403524,
+        "last_epilogue": 2518.219696969725,
+        "tail": 200.0,
+        "max_cta_excess": 11233.559363045151,
+        "handoff_exposed": -4660.7501983952825
+      },
+      "phi": 0.9850816190324041,
+      "mu": 0.9725531566997958,
+      "dram_gb": 1.07610112,
+      "dram_tbs": 3.024474654283287,
+      "window_us": 355.79769811461847,
+      "clock_ghz": 1.4878391940339033,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 359.82969061461847
+    },
+    "cfg_b_long_k": {
+      "row": {
+        "id": "cfg_b_long_k",
+        "config": "cfg_b",
+        "label": "long_k",
+        "m": 1408,
+        "n": 2304,
+        "k": 10240,
+        "lda": 10240,
+        "ldb": 2304,
+        "ldd": 2304
+      },
+      "stages": 6,
+      "tiles": 198,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 2,
+      "ctas_at_max": 66,
+      "ktiles": 160,
+      "critical_cycles": 176792.4963898032,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 165054.87889073137,
+        "last_epilogue": 2518.219696969696,
+        "tail": 200.0,
+        "max_cta_excess": 3751.6480004973123,
+        "handoff_exposed": 29.249801604804816
+      },
+      "phi": 0.761518215582954,
+      "mu": 0.9336079429910193,
+      "dram_gb": 0.117833728,
+      "dram_tbs": 1.0886215390914764,
+      "window_us": 108.24122412490544,
+      "clock_ghz": 1.6333194475497868,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 112.27321662490544
+    },
+    "cfg_b_tails_pitched": {
+      "row": {
+        "id": "cfg_b_tails_pitched",
+        "config": "cfg_b",
+        "label": "tails_pitched",
+        "m": 2984,
+        "n": 3432,
+        "k": 1704,
+        "lda": 1728,
+        "ldb": 3456,
+        "ldd": 3456
+      },
+      "stages": 6,
+      "tiles": 648,
+      "grid": [
+        132,
+        1,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 5,
+      "ctas_at_max": 120,
+      "ktiles": 27,
+      "critical_cycles": 82822.23119580693,
+      "stage_cycles": {
+        "supply": 5238.5,
+        "mainloop": 73718.26729908312,
+        "last_epilogue": 2518.219696969696,
+        "tail": 200.0,
+        "max_cta_excess": 1757.5398526947693,
+        "handoff_exposed": -610.295652940651
+      },
+      "phi": 0.9836063131249713,
+      "mu": 0.8900782583941699,
+      "dram_gb": 0.040964352,
+      "dram_tbs": 0.8148202154644794,
+      "window_us": 50.27409877975195,
+      "clock_ghz": 1.647413543078048,
+      "fixed_us": 4.031992500000001,
+      "predicted_us": 54.30609127975195
+    },
+    "cfg_c_partial_wave": {
+      "row": {
+        "id": "cfg_c_partial_wave",
+        "config": "cfg_c",
+        "label": "partial_wave",
+        "m": 1152,
+        "n": 1664,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 1664,
+        "ldd": 1664
+      },
+      "stages": 4,
+      "tiles": 70,
+      "grid": [
+        35,
+        2,
+        1
+      ],
+      "ctas": 70,
+      "rounds": 1,
+      "ctas_at_max": 70,
+      "ktiles": 40,
+      "critical_cycles": 54255.900855164495,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 41861.27400294722,
+        "last_epilogue": 5921.5,
+        "tail": 513.0,
+        "max_cta_excess": 294.84413737352673,
+        "handoff_exposed": 136.78271484375
+      },
+      "phi": 0.5303030303030303,
+      "mu": 0.7715524642139001,
+      "dram_gb": 0.007667712,
+      "dram_tbs": 0.2516375539284045,
+      "window_us": 30.471254708594117,
+      "clock_ghz": 1.7805601171999708,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 35.463251308594124
+    },
+    "cfg_c_short_k": {
+      "row": {
+        "id": "cfg_c_short_k",
+        "config": "cfg_c",
+        "label": "short_k",
+        "m": 3328,
+        "n": 4608,
+        "k": 384,
+        "lda": 384,
+        "ldb": 4608,
+        "ldd": 4608
+      },
+      "stages": 4,
+      "tiles": 468,
+      "grid": [
+        66,
+        2,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 4,
+      "ctas_at_max": 72,
+      "ktiles": 6,
+      "critical_cycles": 55860.27356468384,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 25932.233734764945,
+        "last_epilogue": 4667.929040404037,
+        "tail": 513.0,
+        "max_cta_excess": 1226.2657887257074,
+        "handoff_exposed": 17992.34500078915
+      },
+      "phi": 0.8996368599700153,
+      "mu": 0.46423391938345077,
+      "dram_gb": 0.061341696,
+      "dram_tbs": 1.9853740339188097,
+      "window_us": 30.896795743279334,
+      "clock_ghz": 1.8079633250264977,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 35.88879234327934
+    },
+    "cfg_c_mid_k": {
+      "row": {
+        "id": "cfg_c_mid_k",
+        "config": "cfg_c",
+        "label": "mid_k",
+        "m": 4608,
+        "n": 3840,
+        "k": 1536,
+        "lda": 1536,
+        "ldb": 3840,
+        "ldd": 3840
+      },
+      "stages": 4,
+      "tiles": 540,
+      "grid": [
+        66,
+        2,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 5,
+      "ctas_at_max": 12,
+      "ktiles": 24,
+      "critical_cycles": 161892.86850518844,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 126120.35768270235,
+        "last_epilogue": 4667.929040404037,
+        "tail": 513.0,
+        "max_cta_excess": 1536.7396725097676,
+        "handoff_exposed": 23526.342109572273
+      },
+      "phi": 0.8255095865618197,
+      "mu": 0.7790359071848824,
+      "dram_gb": 0.07077888,
+      "dram_tbs": 0.741288586270976,
+      "window_us": 95.48087116253936,
+      "clock_ghz": 1.6955529053520508,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 100.47286776253937
+    },
+    "cfg_c_large_output": {
+      "row": {
+        "id": "cfg_c_large_output",
+        "config": "cfg_c",
+        "label": "large_output",
+        "m": 7680,
+        "n": 6656,
+        "k": 2560,
+        "lda": 2560,
+        "ldb": 6656,
+        "ldd": 6656
+      },
+      "stages": 4,
+      "tiles": 1560,
+      "grid": [
+        66,
+        2,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 12,
+      "ctas_at_max": 108,
+      "ktiles": 40,
+      "critical_cycles": 579298.846973779,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 502615.0392033225,
+        "last_epilogue": 4667.929040404037,
+        "tail": 513.0,
+        "max_cta_excess": 3710.0568589981885,
+        "handoff_exposed": 62264.32187105436
+      },
+      "phi": 0.9850191384827556,
+      "mu": 0.8676265140677425,
+      "dram_gb": 0.72220672,
+      "dram_tbs": 1.939866774185952,
+      "window_us": 372.2970719487,
+      "clock_ghz": 1.5560123638404613,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 377.2890685487
+    },
+    "cfg_c_long_k": {
+      "row": {
+        "id": "cfg_c_long_k",
+        "config": "cfg_c",
+        "label": "long_k",
+        "m": 1408,
+        "n": 2304,
+        "k": 10240,
+        "lda": 10240,
+        "ldb": 2304,
+        "ldd": 2304
+      },
+      "stages": 4,
+      "tiles": 108,
+      "grid": [
+        54,
+        2,
+        1
+      ],
+      "ctas": 108,
+      "rounds": 1,
+      "ctas_at_max": 108,
+      "ktiles": 160,
+      "critical_cycles": 179187.5108993729,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 166792.88404715562,
+        "last_epilogue": 5921.5,
+        "tail": 513.0,
+        "max_cta_excess": 294.84413737352673,
+        "handoff_exposed": 136.78271484375
+      },
+      "phi": 0.8181818181818181,
+      "mu": 0.9308287347147883,
+      "dram_gb": 0.088997888,
+      "dram_tbs": 0.8106061630791621,
+      "window_us": 109.791773186048,
+      "clock_ghz": 1.6320668270447742,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 114.78376978604801
+    },
+    "cfg_c_tails_pitched": {
+      "row": {
+        "id": "cfg_c_tails_pitched",
+        "config": "cfg_c",
+        "label": "tails_pitched",
+        "m": 2984,
+        "n": 3432,
+        "k": 1704,
+        "lda": 1728,
+        "ldb": 3456,
+        "ldd": 3456
+      },
+      "stages": 4,
+      "tiles": 336,
+      "grid": [
+        66,
+        2,
+        1
+      ],
+      "ctas": 132,
+      "rounds": 3,
+      "ctas_at_max": 72,
+      "ktiles": 27,
+      "critical_cycles": 109115.48143054488,
+      "stage_cycles": {
+        "supply": 5528.5,
+        "mainloop": 85031.9125931932,
+        "last_epilogue": 4667.929040404037,
+        "tail": 513.0,
+        "max_cta_excess": 915.7919049416471,
+        "handoff_exposed": 12458.347892005986
+      },
+      "phi": 0.8575449243117542,
+      "mu": 0.7792836678938033,
+      "dram_gb": 0.040964352,
+      "dram_tbs": 0.6401462976388149,
+      "window_us": 63.99217202551567,
+      "clock_ghz": 1.7051379563587428,
+      "fixed_us": 4.991996600000007,
+      "predicted_us": 68.98416862551568
+    }
+  }
+}

@@ -1,4 +1,6 @@
-# GH200 访问与供给规则：实验计划
+# GH200 访问与供给规则：实验与结果
+
+最新进展：[PLAN](PLAN.md) 的 R10/R13/R14/R15 与 V05 已完成（2026-10-07）。V05 的周期模型大体成立（关键 CTA 周期误差中位数 2.9%），但微秒预测误差中位数 10.7%、最大 31.9%，比 V04 差；事后诊断显示主要原因是换算用了固定校准频率而没用 V03 的频率规则（只换成实测频率后为 4.1%/12.0%）。初始供给和 pingpong 交接另有确定失配。[V06](V06-revised-transfer.md) 修正这三处后重新冻结预测：18 个新尺寸微秒误差中位数 5.25%、最大 19.0%（目标 5%/10%，未完全达标，但优于 V04 的 5.6%/29% 与 V05 的 10.7%/31.9%）；频率误差 ≤4.6%。剩余大误差来自 cfg_a 在 tile 行数为奇数时被 2×1 cluster 补齐的整行越界 tile，使该 cluster 主循环变慢到约 690–800 cycle/Ktile（校准尺寸未覆盖），去掉这两例为 4.5%/7.3%。
 
 状态：R00–R06 默认点完成；V01 单 CTA 规则预测通过，整卡与完整 kernel 未通过，缺项为负载下频率与每 kernel 固定开销，R07–R09 补齐输入后，V02 对 11 个未测尺寸预测通过（6.0%/10.3%）；V03 的频率规则把误差降到 2.6%/5.0%；V04 迁移到同输入/输出字节的配置成功，迁移到小 tile 与 pingpong 未通过。设备 GH200 / `sm_90a`，CUDA 12.9。问题结构参考 Thor 的 [RF Write 分析](../../../../Thor_RF_Write_v6_Analysis_20260928.html)，数值与机器码不移植。
 
@@ -8,7 +10,7 @@
 
 先用 R00 取得完整 GEMM 基线和目标 WGMMA 形状，再按选定形状测规则，最后用 V01 检查规则能否预测未参与拟合的组合和完整 kernel。
 
-## 范围与顺序
+## 首轮范围与顺序
 
 | 顺序 | 实验 | 回答的问题 | 默认配置数 |
 |---|---|---|---:|
@@ -42,7 +44,20 @@
 | V02 | 通过 | 按 R08/R09 规则预测 11 个未测尺寸的完整 CUTLASS 时间，先冻结（SHA f37a5255…）后测量：误差中位数 6.0%、最大 10.3%（目标 ≤10%/≤20%）。轮数、每 CTA tile 数全部预测正确；把频率换成实测值后误差在 ±2% 内，剩余误差几乎全来自调用内频率规则 | [V02](V02-kernel-prediction.md) |
 | V03 | 通过 | 新频率规则 f=2.229−0.0353·φ·ln(W/µs)−0.0859·D−0.387·μ GHz（φ 活跃 SM 比例、D 估计 DRAM 流量 TB/s、μ 主循环占比），26 个校准点拟合；11 个新尺寸先冻结后测量：误差中位数 2.6%、最大 5.0%（目标 ≤5%/≤10%）。常数只对校准用的卡有效，另一张卡上最大误差 7.7%；剩余误差主要是主机间隙（本卡 5.3–6.3 µs，模型 3.9） | [V03](V03-clock-rule.md) |
 | V04 | 部分通过 | 迁移到 3 个配置（先冻结后测量，22 点，轮数全部正确）：256×128 cooperative 误差中位数 4.1%/最大 5.4%；128×128 cooperative 5.9%/13.7%；128×128 pingpong 14.8%/29.2%。失效假设：R05-D 的 55 B/cycle 不是供给上限（实测约 64）；每 tile 固定段约 1500 cycle 不随输出缩小；pingpong 的 epilogue 只在长 K 被隐藏 | [V04](V04-config-transfer.md) |
-| R02 | 未触发 | — | [R02](R02-register-service.md) |
+| R02 | 条件扩展，未触发 | RF 供给与结果消费 | [R02](R02-register-service.md) |
+
+### PLAN 补测结果（2026-10-07）
+
+| 组 | 针对的 V04 失效 | 结论 |
+|---|---|---|
+| [R10](R10-layout-cache.md) | cfg_b 行距 6000 B 时主循环变慢 | 确认：cfg_b 行距改为 6016/6144 B 后完整时间 76.3 → 57.1–58.3 µs（快约 24%）；cfg_a 约 5%，cfg_c 基本不变。按配置使用，不能推广为统一规则 |
+| [R13](R13-async-retirement.md) | 单 SM 供给上限 55 vs 64 B/cycle | 未回答原问题：真实 WGMMA 消费下 32 KiB tile、4 stage 为 58 B/cycle，48 KiB tile 为 45，只在本探针条件下成立。V05 的主循环误差中位数 0.9%，说明 cfg_a/b 主循环不受供给限制，这个问题对预测已不关键 |
+| [R15](R15-output-service.md) | 小 tile 每 tile 约 1500 cycle 固定段 | 未解释：探针用标量 STS，CUTLASS epilogue 用 STSM、向量化与寄存器重分配，结果不能直接作为 CUTLASS 输出常数 |
+| [R14](R14-stage-handoff.md) | pingpong 短 K 交接 | 提供 4 CTA 条件下逐 tile 的供给、主循环、交接、输出事件，供 V05 校准；4 CTA 的初始供给不能迁移到整卡（见 V05） |
+| [V05](V05-rule-transfer.md) | 迁移验证 | 周期：主循环 0.9%/5.5%、关键 CTA 2.9%/12.7%；初始供给 14 例全部偏差 49–61%；pingpong 交接把重叠预测成间隙。微秒：10.7%/31.9%（固定频率换算所致，见上） |
+| [V06](V06-revised-transfer.md) | V05 的三处失配 | 频率用 V03 规则（本卡只重拟合常数项与 D 系数）、初始供给与输出段在整卡 CUTLASS 上校准、逐 CTA 事件递推：微秒 5.25%/19.0%，周期 3.8%/22.5%，频率 2.3%/4.6%；pingpong 交接符号正确。未解决：cfg_a 奇数 tile 行的越界补齐使主循环变慢，最慢 CTA 的偏移尚无规则 |
+
+R02、R11、R12、R16 为条件扩展，启用条件见 [PLAN](PLAN.md#5-条件扩展默认不做)。
 
 验收看四项：SASS 中目标指令序列与动态次数正确、输出经 CPU 校验、样本稳定、数值与已知物理量级相符（如 FFMA 依赖约 4 cycle、WGMMA 峰值 4096 FLOP/cycle）。前三项保证测得对，第四项保证测的是想测的量：R01 首版正是三项都通过、只在第四项暴露循环开销问题。2026-10-06 的协调记录移到[归档](../../gh200_sm90_archive/access_rules/)。
 
@@ -50,17 +65,23 @@
 
 ```text
 Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/
-  README.md、R00–R06、V01            # 各组一页：问题、矩阵、工作量与边界、正确性、输出
+  README.md、PLAN.md                 # 导航/状态与本轮唯一实施计划
+  R00–R09、V01–V04                  # 已有实验说明（R02 为条件扩展）
+  R10、R13、R14、R15、V05            # 本轮结果与复现
 
 microbench/gh200_resource_campaign/access_rules/
   run_r00.py ... run_r06.py、run_v01.py              # 每组一个入口：配置、短检查、校准、预热、采样
   analyze.py（R00）、analyze_r01.py ... analyze_v01.py  # CPU 重算、报告、图
   probes/r00_*.cu/.hpp、r01.cu ... r06.cu、v01.cu      # r00_common.hpp 为公共头文件
+  run_r10.py、run_r13.py、run_r14.py、run_r15.py       # 本轮有限矩阵
+  run_v05.py、v05_calibrate.py、v05_predict.py、analyze_v05.py
+  probes/gaps_common.hpp、r10/r13/r14/r15/v05 探针
   configs/、.clang-format
 
-results/gh200_resource_campaign/access_rules/<run-id>/<组>/
+results/gh200_resource_campaign/access_rules/<本轮run-id>/
   source/、build/（编译命令、SASS、二进制）、environment.json
-  samples.jsonl、cases.csv、rules.json、report.md、plots/
+  samples/、cases.csv、summary.json、analysis-*/、reviews/
+  source/保留编译时版本，旧归档路径继续保留
 ```
 
 每组结果取得后，在对应计划文件末尾补“实测结果”或链接 `report.md`。
@@ -103,7 +124,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze.py \
 
 | 项目 | 启用条件 |
 |---|---|
-| R02 源供给 / 结果流 | mainloop、epilogue、RS 取数或 FP8 提升出现现有规则解释不了的稳定差别；两部分可分别启用 |
+| R02 物理寄存器布局与控制字段诊断 | 合法序列的源供给/结果消费已纳入本轮；机器码诊断在出现未解释的稳定差异时另行启动 |
 | R03 普通 global 地址需求 | 方案在 mainloop 或 epilogue 使用普通 global 访问，且 V01 相应路径失配 |
 | R04 背景位置、LDG+FFMA、真实 FP8 分段累加 | 默认配对出现可重复差异；或 FP8 方案需要分段提升 |
 | R06-A 循环展开与代码组织 | kernel 出现与展开、代码大小相关的未解释差别 |

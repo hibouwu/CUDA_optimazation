@@ -1,8 +1,12 @@
-# R00：完整 GEMM 与目标 WGMMA
+# GH200 访问规则微基准入口
+
+[V04失效项补测计划](../../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/PLAN.md)规定本轮R10/R13/R15/R14与V05的范围。各组使用自己的`run_rXX.py`、`analyze_rXX.py`和`probes/rXX.cu`；唯一新增公共头`probes/gaps_common.hpp`提供显式stride、padding与数值见证。本轮采样与独立验收已交付，V05迁移未整体通过；可用规则与观测限制见对应实验页。下面保留已有R00的使用说明。
+
+## R00：完整 GEMM 与目标 WGMMA
 
 [实验计划](../../../Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/README.md)。本文件说明 R00 的用法；其他组的入口、参数和结果见各组计划文件。代码格式按本目录 `.clang-format`（C++）与 `black --line-length 100`（Python）。
 
-## 一次运行
+### 一次运行
 
 在有效单GPU GH200 Slurm分配中加载CUDA 12.9，准备官方CUTLASS v3.9.2源码路径：
 
@@ -37,7 +41,7 @@ python3 -m unittest discover -s microbench/gh200_resource_campaign/access_rules 
 
 `analyze.py`重算工作量和时间，核对WGMMA全部原始输出及哈希，生成`cases.csv`、`summary.json`、`report.md`和图。绘图需要matplotlib；可以把完整结果目录复制到有该依赖的CPU环境重算。
 
-## 实现与计时
+### 实现与计时
 
 - `probes/r00_gemm.cu`：cuBLASLt固定首个合法启发式候选，64MiB workspace；纯FP32使用PEDANTIC。FP8使用TN列主序布局适配、scale=1、fast accumulation关闭，B/D适配不在窗口内。
 - `probes/r00_cutlass.cu`：FP16→FP32，128×256×64、cluster2×1×1、384线程、cooperative、4 stage，显式128×32 epilogue tile，ElementC=void。不读取C，也不为C分配epilogue输入缓冲。
@@ -48,7 +52,7 @@ WGMMA采用128B swizzle及128B padded行，描述符只覆盖指令K=16/32。短
 
 GEMM用CUDA event包围单次调用；源分配、适配、启发式与驱逐准备在窗口外。WGMMA单CTA用clock64，整卡用globaltimer包络。没有负载内频率遥测，频率记录为未知；不由其他kernel换算。
 
-## 结果目录
+### 结果目录
 
 `source/`保存实际探针、运行/重算脚本及CUTLASS依赖头文件；`build/`保存命令、日志、SASS和二进制身份。`samples/<case-id>/<trial>/`保存命令、进程、原始时间、数值检查及输出；WGMMA全输出压缩为`output.f32.gz`，保留未压缩内容哈希。
 
