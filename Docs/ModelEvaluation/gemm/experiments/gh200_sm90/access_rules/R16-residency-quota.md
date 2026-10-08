@@ -50,7 +50,7 @@ consumer           start → inc_enter → [重试分配] → inc_return
 
 每CTA consumer共`256×192=49,152`次FP32加法、49,152个保留值，输入为196,608 B。producer共`128×delay`次依赖IMAD，其中delay=256对应32,768次；不能把consumer的单warp中位窗口当整CTA同步包络，进而用总工作量除它推整卡吞吐。
 
-例如`quota_delay64_before_dec/formal-00`的consumer首warp：原始`4473079253278769−4473079253276678=2091 cycle`可在[进程记录](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/samples/quota_delay64_before_dec/formal-00/result.json)手算；八warp中位数与每进程重算值保存在[processes.json](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/reanalysis/local-ten-processes/processes.json)。相对于先释放，64动作条件中位窗口多`2106.5−144.5=1962 cycle`，与释放前延迟同一量级。192次加法窗口约788 cycle，数量级接近`192×4=768`再加边界开销；本实验没有单独隔离裸FADD延迟，不据此授予4 cycle硬件常数。
+例如`quota_delay64_before_dec/formal-00`的consumer首warp：原始`4473079253278769−4473079253276678=2091 cycle`可在[进程记录](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/samples/quota_delay64_before_dec/formal-00/result.json)手算；八warp中位数与每进程重算值保存在[processes.json](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/reanalysis/local-ten-processes/processes.json)。相对于先释放，64动作条件中位窗口多`2106.5−144.5=1962 cycle`，与释放前延迟同一量级。192次加法窗口约788 cycle，数量级接近`192×4=768`再加边界开销；本实验没有单独隔离裸FADD延迟，不能据此把4 cycle作为已测得的硬件常数。
 
 本轮6个短检查、60个正式进程共66进程，3,269,376个值精确重算通过，包括所有consumer活跃值、逐步FP32归约与producer整数结果。预热8–30次，监测consumer inc窗口，末5次CV≤2%。job737122、romeo-a043、GPU-099dda56-d7af-f60e-c285-aa2dc7ddfcfe、功率上限900 W、CUDA12.9.41；NCU单次检查仍为`ERR_NVGPUCTRPERM`。
 
@@ -58,7 +58,7 @@ consumer           start → inc_enter → [重试分配] → inc_return
 
 误差条为独立进程标准差。左图整卡globaltimer微秒与右侧同SM周期分属不同分配、不同计量边界，不互相换算。
 
-[正式配额归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/)、[本地独立资格与条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/reanalysis/local-ten-processes/rules.json)。原3进程分析留在`analysis/`，10进程补样说明和脚本在`reanalysis/`；旧18进程代表记录及其独立重算仍保留在[旧归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-dev-job736989/reanalysis/20261008-offline-quota-v1/)。旧版加载与归约交错，未记录归约末端/末SM，预热监测producer延迟，也未按相邻配对采样，因此不混入新版正式数据。
+[正式配额归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/)、[本地独立检查与条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/reanalysis/local-ten-processes/rules.json)。原3进程分析留在`analysis/`，10进程补样说明和脚本在`reanalysis/`；旧18进程代表记录及其独立重算仍保留在[旧归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R16-quota-dev-job736989/reanalysis/20261008-offline-quota-v1/)。旧版加载与归约交错，未记录归约末端/末SM，预热监测producer延迟，也未按相邻配对采样，因此不混入新版正式数据。
 
 ## 模型适用范围
 

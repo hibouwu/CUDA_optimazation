@@ -1,6 +1,6 @@
 # R10：B 行距
 
-9点完整GEMM时间已测得；cfg_a/c使用v2全网格trace，cfg_b使用v4局部trace。主对话已验收本轮条件观测，预测迁移仍待V05检验。范围为[PLAN](PLAN.md)的固定行距对照。
+9点完整GEMM时间已测得；cfg_a/c使用v2全网格trace，cfg_b使用v4局部trace。本轮条件观测已完成核对；当时计划的预测迁移检验已记录在[V05](V05-rule-transfer.md)。本页只讨论固定行距对照。
 
 ## 结果
 
@@ -14,7 +14,7 @@
 
 下表完整时间均来自[v2全9点plain](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json)，每点10个独立进程；三个行距分别为6000/6016/6144B。
 
-| 配置 | ldb | 完整时间中位µs | CV | 同档全网格trace周期/Ktile | trace资格 |
+| 配置 | ldb | 完整时间中位µs | CV | 同档全网格trace周期/Ktile | trace判定 |
 |---|---:|---:|---:|---:|---|
 | cfg_a | 3000 | 66.400 | 0.588% | 630.234 | 通过 |
 | cfg_a | 3008 | 62.944 | 0.559% | 606.500 | 通过 |
@@ -54,22 +54,22 @@ v2 plain没有trace scratch准备；v3/v4的plain/trace都分配65536B scratch�
 
 初始化与CUTLASS descriptor均使用真实stride，B视图为(N,K,L)，StrideB=(1,ldb,0)。所有B padding填65504（FP16位模式0x7bff），计时外检查完整padding；本矩阵A/D无padding。每进程保存4096个period17 dyadic见证的数值坐标与实际FP32值，覆盖首尾和64/128/256边界。v2/v3/v4共300进程、1228800个保存值通过独立逐K整数点积重算，误差0；每个GEMM工作量31200000000 FLOP，预热、padding和统计也已复核。该见证不声明任意输入误差标准。
 
-## 来源与资格索引
+## 来源与检查索引
 
-测量源码、二进制和原始数值均保留。v3/v4 CUTLASS依赖按各自冻结SHA256匹配后由v2副本补齐，各838份；不是替换测量源码。资源与SASS保存在各build中。C为本组实现者，以下独立公式复算是作者的不同参考核对，不替代未实施者验收；作者复算和受审hash见[v4 reviews](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/independent-C.md)与[hash清单](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/independent-C-hashes.json)。
+测量源码、二进制和原始数值均保留。v3/v4 CUTLASS依赖按各自冻结SHA256匹配后由v2副本补齐，各838份；不是替换测量源码。资源与SASS保存在各build中。C为本组实现者，以下公式复算使用作者的另一种参考实现，不等同于由未参与实现者完成的复核；作者复算及对应hash见[v4 reviews](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/independent-C.md)与[hash清单](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/independent-C-hashes.json)。
 
-未实施R10的ROOT已另行完成[真正独立验收](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.md)与[受审证据清单](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.json)：300个正式进程、1228800个保存值直接逐K参考通过，FLOP、padding、预热、HGMMA计数及零spill核对通过。本文“已验收”以这份未实施者审查为依据。
+未实施R10的ROOT已另行完成[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.md)与[核对证据清单](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.json)：300个正式进程、1228800个保存值直接逐K参考通过，FLOP、padding、预热、HGMMA计数及零spill核对通过。本文的结果判定依据这份未参与实现者的复核。
 
-| 来源 | 范围与资格 | 保留原因 |
+| 来源 | 范围与检查结果 | 保留原因 |
 |---|---|---|
 | [v1代表](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v1/analysis-representatives/summary.json) | cfg_b的ldb3000/3072，40进程 | 行距差可辨，决定扩大9点；cfg_b整段16个静态HGMMA为prologue8+steady8，与V04一致 |
-| [v2正式](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json) | 9点180进程，plain全部保留；7点trace合格 | cfg_b3008的两对−5.927%/−6.108%、3072的一对−5.341%超门槛，不采用这两点trace |
+| [v2正式](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json) | 9点180进程，plain全部保留；7点trace满足扰动要求 | cfg_b3008的两对−5.927%/−6.108%、3072的一对−5.341%超门槛，不采用这两点trace |
 | [v3对称准备](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v3/analysis-formal/summary.json) | cfg_b三行距60进程 | plain中位76.256/57.840/57.584µs；最大trace扰动1.607%/4.538%/6.202%，3072仍失败 |
 | [v4局部trace](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/analysis-formal/summary.json) | cfg_b三行距60进程，三组通过 | 对称准备，原事件位置不变，仅限制CTA/WG；最终周期只在此抽样域使用 |
-| 本地编译诊断`/tmp/gh200-gaps-local/R10/` | 无GPU资格 | GCC16超出CUDA13支持范围，override标准库语法失败，GCC15缺cc1plus；正式测量由CUDA12.9完成 |
+| 本地编译诊断`/tmp/gh200-gaps-local/R10/` | 未运行GPU | GCC16超出CUDA13支持范围，override标准库语法失败，GCC15缺cc1plus；正式测量由CUDA12.9完成 |
 | 首tile/不同起点候选 | 未进入GPU构建，不作为规则 | 后续恢复原事件边界并先修正准备对称性；最终采用v4局部last-tile方案 |
 
-对齐结论限于本页配置、2600×3000×2000和三种实际行距。未扩做缓存准备、其他补齐矩阵；v4不提供全卡周期分布。将这些条件观测迁移到V05时仍需检验，不能从完整时间调整分项误差。
+对齐结论限于本页配置、2600×3000×2000和三种实际行距。未扩做缓存准备、其他补齐矩阵；v4不提供全卡周期分布。这些条件观测在[V05](V05-rule-transfer.md)中接受了迁移检验；分项误差独立评分，不能从完整时间调整。
 
 ## 复现
 

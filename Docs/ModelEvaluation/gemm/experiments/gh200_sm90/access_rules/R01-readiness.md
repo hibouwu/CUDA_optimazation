@@ -81,10 +81,10 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r01.py \
 
 R01-B（4 warp、2048 步）4 流相对 1 流的请求工作率提升：FFMA 4.07×、add 4.66×、SMEM 2.43×、global 小 2.74×、大 3.48×。
 
-b 是 T(N)=a+bN 的对应序列增量；三点残差除global外为0，global在预设阈值max(64 cycle, 3σ, 窗口1%)内。b包含每64步一次的固定迭代工作。FFMA单流除64条目标FFMA外，每迭代还有一条HFMA2.MMA准备乘数。辅助[U32对照](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r01r06-unrolled/r01/unroll32_reference/)的FFMA斜率为4.53125，U64为4.265625；在b(U)=b∞+o/U假设下得到o=17 cycle/迭代、b∞=4.00 cycle。o同时含准备与控制，4.00是条件外推，不是独立测得的裸延迟；U32未保存二进制/SHA和原始数值见证，不能作为同等强度的合格参数来源。模型引用优先使用正式U64的4.265625及其完整条件。
+b 是 T(N)=a+bN 的对应序列增量；三点残差除global外为0，global在预设阈值max(64 cycle, 3σ, 窗口1%)内。b包含每64步一次的固定迭代工作。FFMA单流除64条目标FFMA外，每迭代还有一条HFMA2.MMA准备乘数。辅助[U32对照](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r01r06-unrolled/r01/unroll32_reference/)的FFMA斜率为4.53125，U64为4.265625；在b(U)=b∞+o/U假设下得到o=17 cycle/迭代、b∞=4.00 cycle。o同时含准备与控制，4.00是条件外推，不是独立测得的裸延迟；U32未保存二进制/SHA和原始数值见证，不能作为同等证据强度的参数来源。模型引用优先使用正式U64的4.265625及其完整条件。
 
 整数U32为13条IADD3+19条IMAD.IADD，U64为29+35，混合比例不同；不能用二者扣出纯循环开销或裸add延迟。正式U64增量4.984375 cycle/步描述该二源混合链。SMEM与ldmatrix每步还含整数地址指令；global长依赖序列的结果与旧版接近。WGMMA每步约36+0.62N cycle，N=256约2690 FLOP/cycle，是逐条wait0单链的条件结果。R01-B的FFMA单流与4流窗口约9015/8855 cycle；4流没有同样的HFMA2.MMA准备指令，所以4.07倍工作率差不能只归因于独立链隐藏延迟。
 
-[独立展开版审查](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r01r06-unrolled/independent-review-B.md)核对了真实回边、依赖、全部保存输出与统计；这些检查构成验收依据，接近已知物理量级只作解释线索。
+[独立展开版审查](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r01r06-unrolled/independent-review-B.md)核对了真实回边、依赖、全部保存输出与统计；结果依据这些检查判定，接近已知物理量级只作解释线索。
 
 2026-10-06 早先的作业 735060 结果（[20261006-b-job735060](../../../../../../results/gh200_resource_campaign/access_rules/20261006-b-job735060/)）每次迭代只有 1 步，被约 29 cycle/迭代的循环成本限制（FFMA/add 均为 29，`ldmatrix` 58，WGMMA 105/137/201），已被本节取代。

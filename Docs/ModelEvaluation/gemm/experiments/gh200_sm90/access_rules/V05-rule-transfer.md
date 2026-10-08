@@ -52,18 +52,18 @@ R14的主循环点为L(8)=4392、L(64)=33065，因此：
 
 合格留出观测的C为120259.5 cycle，误差4.05%；但S实测3112.5 cycle，误差59.82%。总区间接近不能替代供给阶段正确。冻结的微秒预测为70.240 µs，独立plain观测中位数77.264 µs；微秒单列评分。
 
-## 独立验收结果
+## 独立检查与预测结果
 
-72个“案例×观测组”中51个观察器合格。50对trace/plain扰动超过5%，使21个观察器未判定；全部进程的预热、CV、原始身份、数值和schema检查通过。百分比阶段要求误差中位数≤10%、最大≤20%；小于512 cycle的阶段按事件顺序及重叠符号判读。
+72个“案例×观测组”中51个观测满足打点扰动与稳定性要求，可用于定量比较。50对trace/plain扰动超过5%，对应的21个观测不作定量判定；全部进程的预热、CV、原始身份、数值和schema检查通过。百分比阶段要求误差中位数≤10%、最大≤20%；小于512 cycle的阶段按事件顺序及重叠符号判读。
 
-| 阶段 | 合格适用案例 | 合格数据中位误差 | 最大误差 | 未判定 | 结论 |
+| 阶段 | 可定量比较案例 | 可用数据中位误差 | 最大误差 | 未判定 | 结论 |
 |---|---:|---:|---:|---:|---|
-| 主循环L | 13 | 0.86% | 5.51% | 5 | 合格子集符合，完整阶段未判定 |
+| 主循环L | 13 | 0.86% | 5.51% | 5 | 可用数据子集符合，完整阶段未判定 |
 | 交接G | 11 | 2.76%¹ | 27.83%¹ | 3 | 已证实失配；另4例无交接，N/A |
 | 末尾输出E | 12 | 5.04% | 21.07% | 6 | 已证实失配 |
-| 末尾许可W | 12 | 小阶段关系判读 | — | 6 | 合格子集事件关系符合 |
+| 末尾许可W | 12 | 小阶段关系判读 | — | 6 | 可用数据子集事件关系符合 |
 | 初始供给S | 14 | 48.62% | 61.38% | 4 | 14例均超20%，系统性失配 |
-| 关键CTA区间C | 12 | 2.94% | 12.72% | 6 | 合格子集符合，完整阶段未判定 |
+| 关键CTA区间C | 12 | 2.94% | 12.72% | 6 | 可用数据子集符合，完整阶段未判定 |
 
 ¹交接百分比只统计7个绝对值≥512 cycle的案例；其余4个小阶段检查重叠符号。
 
@@ -72,7 +72,7 @@ R14的主循环点为L(8)=4392、L(64)=33065，因此：
 - 输出：cfg_a长K误差21.07%，cfg_c中等K误差20.20%；常量输出或基准代理不能视为已证明的通用规则。
 - 时钟：较大输出案例的有效SM时钟低于校准值。全18例微秒误差中位10.73%、最大31.86%；测后时钟只用于诊断，没有回填预测。本轮未采powercap遥测，不能断言降频原因。
 
-![各阶段误差与观测资格](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/analysis-C-v1/cycle-errors.png)
+![各阶段误差与可用观测范围](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/analysis-C-v1/cycle-errors.png)
 
 完整逐例判定、时钟图和CSV见[独立报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/analysis-C-v1/report.md)。
 
@@ -84,9 +84,9 @@ R14的主循环点为L(8)=4392、L(64)=33065，因此：
 
 ## 冻结与复现
 
-[只读预测](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/predictions.json)的SHA256为`e1ff0d15b91a7ce7deb74d6d40b81014a3355c0673ec5403026e890cc73d0f6d`。冻结时间早于首次采样，来源、源码、二进制、实际工作分配和参数条件都绑定哈希；独立准入记录在[reviews](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/reviews/C-prediction-admission.md)。所有预测保持原值。
+[只读预测](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/predictions.json)的SHA256为`e1ff0d15b91a7ce7deb74d6d40b81014a3355c0673ec5403026e890cc73d0f6d`。冻结时间早于首次采样，来源、源码、二进制、实际工作分配和参数条件都绑定哈希；当时由独立复核者完成的冻结前检查记录在[reviews](../../../../../../results/gh200_resource_campaign/access_rules/20261007-V05-job735985-v3/reviews/C-prediction-admission.md)。所有预测保持原值。
 
-入口为`microbench/gh200_resource_campaign/access_rules/`中的`run_v05.py`、`v05_calibrate.py`、`v05_predict.py`、`analyze_v05.py`。prepare/build/setup完成资源与工作分配查询；calibrate只提候选，审查释放参数后freeze生成只读预测。sample对main/output/supply/critical四组分别运行，每组每例10个独立plain/trace配对。输入预测放在单独的只读文件路径，运行目录保存其相同SHA的副本。
+入口为`microbench/gh200_resource_campaign/access_rules/`中的`run_v05.py`、`v05_calibrate.py`、`v05_predict.py`、`analyze_v05.py`。prepare/build/setup完成资源与工作分配查询；当时的calibrate只生成候选参数，经冻结前检查后由freeze生成只读预测。sample对main/output/supply/critical四组分别运行，每组每例10个独立plain/trace配对。输入预测放在单独的只读文件路径，运行目录保存其相同SHA的副本。
 
 在项目根目录执行，历史重算直接使用本地归档，不需要GPU：
 
@@ -98,6 +98,6 @@ python "$V05_RUN/reviews/C-analysis-source-v1/analyze_observer.py" --run "$V05_R
   --output "$V05_RUN/new-independent-review"
 ```
 
-输出目录必须是新目录。独立分析保留原冻结评分，再按各观测组资格报告合格误差和未判定案例。
+输出目录必须是新目录。独立分析保留原冻结评分，再按各观测组的打点检查结果，分别报告可用数据的误差与未判定案例。
 
-下一步优先把初始供给改为按整卡并发条件建模，交接改为显式事件递推。若再次校准，需要新的留出验证；本批V05不再用于回拟合后宣布通过。
+当时提出的整卡初始供给模型与显式交接递推，后续已在[V06](V06-revised-transfer.md)实现并重新验证。若再次校准，需要新的留出验证；本批V05不再用于回拟合后宣布通过。

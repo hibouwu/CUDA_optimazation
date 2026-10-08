@@ -19,13 +19,13 @@
 
 [微基准实验与后续计划](../../experiments/gh200_sm90/README.md) · [旧数据独立复审](../../experiments/gh200_sm90_archive/EXP-01-compute-audit.md)
 
-## 已审条件服务与覆盖
+## 已测条件服务与覆盖
 
-当前17个正式结果家族已发布754条条件观测，24个排除项保留。各实验的结果、图、真实手算和限制统一见[结果总览](../../experiments/gh200_sm90/README.md)，结构化数值与资格记录见[参数来源索引](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-seventeen-family-index-v1/index.json)。原参数文件的历史draft标签保留，当前资格由对应独立审查及来源封套确定。
+17 组资源实验共有 754 条条件观测，另有 24 条排除记录保留。各实验的结果、图、真实手算和限制统一见[结果总览](../../experiments/gh200_sm90/README.md)，结构化数值与来源见[参数来源索引](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s21-seventeen-family-index-v1/index.json)。原参数文件中的历史 draft 标签保留，不影响数值使用。
 
 后续[访问与供给规则](../../experiments/gh200_sm90/access_rules/README.md)补充163个默认资源条件及20个组合观测，包含旧坐标重测，不与上述754条直接相加。展开版依赖序列、WGMMA major对照、异步完成与完整输出边界均保留具体条件；固定CUTLASS的[聚合阶段模型](../../../../../results/gh200_resource_campaign/access_rules/20261006-cutlass-wait-matching/published/parameters.json)属于特定实现/输入下的条件预测，未填成通用硬件端口或裸延迟参数。
 
-| 资源 | 已发布的代表实验 | 使用时必须保留的条件 |
+| 资源 | 代表实验 | 使用时必须保留的条件 |
 |---|---|---|
 | 计算 | FMA、mma.sync、WGMMA、FP8/INT8 | 精度、指令形状、依赖链、warp/warpgroup数、提交与等待 |
 | 片上访问与同步 | SMEM、矩阵搬运、shuffle、barrier/fence | 地址和访问宽度、参与范围、校验与同步、完整循环及排空 |
@@ -34,7 +34,7 @@
 
 这些结果是固定实验条件下的服务观测。单CTA的clock64周期与全GPU的globaltimer完成时间分开；逻辑运输字节不自动等于物理HBM流量。访问、校验、同步或drain在主窗口内的实验不能当作裸指令延迟。occupancy API是上限，不单独证明实际驻留；SMEM预留量也不等于搬运带宽。
 
-TMA并发、DSM/多播和两套受控组合的GPU采样及原环境重算均已完成。S17、S19、S20的252个条件已通过实际C与发布桥接并纳入754条。S16的32个条件已通过最终C r2及发布桥接，17家族共754条。原候选和bridge_pending标签保留，当前资格由独立复核及最终发布状态确定，不能由raw summary的stable标记自行授予。
+TMA 并发、DSM/多播和两套受控组合的 GPU 采样及 CPU 重算均已完成，已计入 754 条（S16 32 条，S17、S19、S20 共 252 条）。原始 summary 中的 stable 标记只表示样本稳定，不代表结果可用于其他条件。
 
 本轮采用单GPU问题范围，Batched/Grouped及Distributed暂不实施。cluster/DSM是单GPU内部路径。GH200不继承Thor的TMEM/TCGen05、tc5a缓冲配置或调度假设。
 

@@ -79,11 +79,11 @@ cfg_a影响扩展到同列其他CTA，和共享B运输/服务竞争的解释相�
 | cfg_c普通，K1024 / K8192 | 31.136 / 171.664 | 1.34% / 0.69% |
 | cfg_c奇数部分边界，K1024 / K8192 | 30.512 / 170.224 | 2.78% / 0.63% |
 
-全部8条件各10组plain/trace通过，完整版本的两条超限记录仍不参与拟合。需要这两类的K插值时，使用轻量组自己的短/长K配对增量，不混搭完整组基线。[轻量归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/)、[独立资格](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/reanalysis/local-independent/rules.json)、[配对增量](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/reanalysis/local-independent/paired-tile-increments.json)。复现入口为`run_r18_lite.py`，prepare/build/setup/sample参数与完整组一致。
+全部8条件各10组plain/trace通过，完整版本的两条超限记录仍不参与拟合。需要这两类的K插值时，使用轻量组自己的短/长K配对增量，不混搭完整组基线。[轻量归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/)、[独立检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/reanalysis/local-independent/rules.json)、[配对增量](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-lite-job737122-v1/reanalysis/local-independent/paired-tile-increments.json)。复现入口为`run_r18_lite.py`，prepare/build/setup/sample参数与完整组一致。
 
 ## 证据与复现
 
-[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/)、[条件资格](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/rules.json)、[逐组窗口增量](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/paired-tile-increments.json)、[关键CTA和分布](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/tails.json)。所有原始坐标、时间戳和4096个检查位置保存在每进程压缩stdout中。
+[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/)、[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/rules.json)、[逐组窗口增量](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/paired-tile-increments.json)、[关键CTA和分布](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/tails.json)。所有原始坐标、时间戳和4096个检查位置保存在每进程压缩stdout中。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r18.py prepare --output <新目录> --cutlass-root <CUTLASS3.9.2>

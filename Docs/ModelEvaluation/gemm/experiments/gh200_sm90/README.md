@@ -1,6 +1,6 @@
 # GH200 资源微基准：结果与结论
 
-设备：ROMEO GH200（CC 9.0，132 SM，L2 60 MiB，CUDA 可见 95 GiB HBM3），CUDA 12.9，`sm_90a`。采样时间 2026-10-01 至 10-05，suite `20261001-resource-suite-v2`。本轮只测单 GPU 资源与两套固定 tile 组合，不含完整 GEMM。
+设备：ROMEO GH200（CC 9.0，132 SM，L2 60 MiB，CUDA 可见 95 GiB HBM3），CUDA 12.9，`sm_90a`。下文资源基准采样于 2026-10-01 至 10-05，suite `20261001-resource-suite-v2`，包含单 GPU 资源与两套固定 tile 组合。后续完整 GEMM 预测验证见下方 access_rules 入口。
 
 ## 测量口径
 
@@ -40,38 +40,20 @@
 
 ## 锚点与访问规则实验（access_rules，2026-10-06 起）
 
-FP16 Tensor Core GEMM 的后续实验见 [access_rules](access_rules/README.md)。已完成部分的主要结论：
+FP16 Tensor Core GEMM 的当前结论、适用范围和完整实验索引统一见 [access_rules](access_rules/README.md)。
 
-| 实验 | 结论 |
-|---|---|
-| [R00](access_rules/R00-anchor-target.md) 完整 GEMM | cuBLASLt FP16 8192³ 715 TFLOP/s（数据表的 72%）、2048³ 555（56%）；FP8 8192³ 1127（57%）；固定 CUTLASS 128×256×64 为 643 |
-| [R00](access_rules/R00-anchor-target.md) 目标 WGMMA | `m64n{64,128,256}k16`、1/2 个 warpgroup、SS/RS、FP16/BF16 都达 4095 FLOP/cycle；整卡 FP16 989、FP8 1978 TFLOP/s。完整 GEMM 的差距不在 WGMMA 指令本身 |
-| [R05-D](access_rules/R05-async-lifecycle.md) 每 SM 供给 | 目标在途量（48 KiB/stage，1 CTA/SM）下，所有 CTA 共享 L2 中的小源时每 SM 55.5 B/cycle，高于满速 WGMMA 需要的 48；独立大源只有 15.3。满速需要依靠跨 CTA 的 L2 复用 |
-| [R05-E](access_rules/R05-async-lifecycle.md) TMA 写回 | 行距 144 B 慢 38%，160/256 B 正常：行起点 32 B 对齐即可 |
-| [R03](access_rules/R03-access-demand.md) 片上并发 | 8 warp 时 LDS.128/STS.128/`ldmatrix.x4` 达 124–127 B/cycle，`stmatrix.x4` 116 |
-| [R01](access_rules/R01-readiness.md) 依赖时间 | 每步：FFMA 4.0–4.3 cycle、add 5.0、LEA+LDS 29、global L2/HBM 288/630、`ldmatrix.x4` 34；WGMMA 发出到 wait0 返回约 36+0.62·N cycle（N=256 为 195） |
-| [R06](access_rules/R06-issue-residency.md) 资源 | 128 线程 FFMA 单 CTA 241 FLOP/cycle、整卡 64–65 TFLOP/s，63–128 寄存器之间差别 <2%；窗口内 clock64/globaltimer 比值约 1.97–1.98 GHz |
-| [V01](access_rules/V01-validation.md) 规则预测 | 异步目标组合主循环 1026 cycle/Ktile（理想 1024）；单 CTA 预测误差 −0.4%~−1.7%；整卡 −7%~−10%（频率假设偏高）；完整 CUTLASS −23%~−28%（漏了固定开销） |
-| [R07](access_rules/R07-anchor-clock-fixedcost.md) 频率与固定开销 | 持续 GEMM 时 SM 频率 1.40–1.45（8192³）、约 1.75 GHz（2048³），几乎所有样本只报 SW Power Cap，模块功率上限 680 W；CUTLASS 需 `-DNDEBUG`（否则每条 MMA 后 wait0，慢 5.5–8%）；M=N=2048 单调用经验关系 T≈9.45+0.637·Ktile µs |
-| [R08](access_rules/R08-waves-l2-reuse.md) 波次与遍历 | 整卡时间按整轮计：K=4096 每轮约 47 µs × ⌈tile/132⌉；比整波多一个 cluster 对就多一整轮。8192² 时 swizzle 8 快 6–8%，cluster 2×1 快 1–5% |
-| [R09](access_rules/R09-inkernel-clock-stages.md) 调用内频率与阶段 | 调用内平均频率 1.40（8192³）–1.82 GHz，低于调用后探针；主循环 1024 cycle/Ktile，已达计算下界；M=N=2048 每次调用的固定段约 9.2 µs = 主机间隙 3.9 + 预填 2.2 + epilogue 2.9 + 尾部 0.8 |
-| [V02](access_rules/V02-kernel-prediction.md) 完整 kernel 预测 | 规则 = ⌈补齐后 tile/132⌉ 轮 × (1024 cycle/Ktile + 每 tile 固定段) + 每 CTA 预填，频率按调用时长取 R09 规律，再加主机间隙。11 个未测尺寸、先冻结后测量：误差中位数 6.0%、最大 10.3%；频率换成实测值后 ±2%。长调用频率被高估（1.27–1.45 GHz 实测） |
-| [V03](access_rules/V03-clock-rule.md) 频率规则 | 调用内频率取决于活跃 SM 比例×调用时长、估计 DRAM 流量、主循环占比；同卡 11 个新尺寸预测误差中位数 2.6%、最大 5.0%。常数随卡变化（另一张卡最大 7.7%） |
-| [V04](access_rules/V04-config-transfer.md) 配置迁移 | 256×128 cooperative 迁移成功（4.1%/5.4%）；128×128 cooperative 13.7%、pingpong 29.2% 最大误差。单 SM 实际能拿到约 64 B/cycle（高于 R05-D 的 55）；每 tile 有约 1500 cycle 不随 tile 缩小的固定段；pingpong 的 epilogue 只在长 K 被隐藏 |
+计算与访问规则、计量约定及事件组合见 [RULES](access_rules/RULES.md)。
 
+## 资源基准未覆盖的量与路径
 
-## 尚未覆盖
-
-- 跨卡：频率规则与主机间隙按卡校准，三张卡的差异 2–7%。
-- 小 tile 与 pingpong 的固定段、短 K 的交接成本，以及真实的单 SM 供给上限（≥64 B/cycle）。
 - TF32 WGMMA、FP16 累加形式；FP64 `mma` 的 sm_90 新形状。
 - 多 CTA 竞争下的片上服务。
 - 物理 HBM 流量、缓存命中、动态指令计数（需 NCU 权限）。
 - 物理在途队列深度（软件 stage 扫描不能给出）。
 
-## 后续实验约定
+## 实验记录约定
 
-每个新实验交付一个脚本、一份原始数据目录和一页本目录下的结论文档。正文须让读者答出：具体配置、分子怎么算、计时窗口到哪里结束、结论适用的条件、数据与脚本在哪；由数据推出的解释写明是推断。上线前检查四项：SASS 含目标指令、输出数值正确、样本稳定（CV 超过 5% 时保留全部样本并注明）、结果与已知物理量级相符。原 A/B/C 审查、发布桥接和 S21/S22 换目录验收冻结在现状，不再推进。
+各实验页说明配置、工作量、计时起止事件、样本波动、适用条件以及数据与脚本位置。输出校验与 SASS 检查说明测到了什么；物理机制的解释单独标明推断。历史审查与过程记录保存在归档中。
 
 ## 数据与代码
 

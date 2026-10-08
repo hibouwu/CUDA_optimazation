@@ -1,6 +1,6 @@
 # R00：完整 GEMM 基线与目标 WGMMA 形状
 
-[总计划](README.md)。状态：30 点完成（2026-10-06）。代码与完整命令见[运行入口](../../../../../../microbench/gh200_resource_campaign/access_rules/README.md)。
+[实验索引](README.md)。状态：30 点完成（2026-10-06）。代码与完整命令见[运行入口](../../../../../../microbench/gh200_resource_campaign/access_rules/README.md)。
 
 ## 问题
 

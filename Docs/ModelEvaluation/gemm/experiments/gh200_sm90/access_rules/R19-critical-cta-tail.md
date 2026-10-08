@@ -1,6 +1,6 @@
 # R19：cfg_b实际工作分配与关键CTA尾部
 
-8个条件、160个合格进程已采样并独立复算，655,360个输出值正确；另保留4个30次预热后仍未收敛的尝试，不计入正式参数。每条件10组plain/trace，所有plain CV≤2.8%，trace扰动≤4.9%。同R18的job737122、GPU-099dda56，CUDA12.9.41、CUTLASS3.9.2、sm_90a、NDEBUG。
+8个条件、160个通过数值与稳定性检查的进程已采样并独立复算，655,360个输出值正确；另保留4个30次预热后仍未收敛的尝试，不计入正式参数。每条件10组plain/trace，所有plain CV≤2.8%，trace扰动≤4.9%。同R18的job737122、GPU-099dda56，CUDA12.9.41、CUTLASS3.9.2、sm_90a、NDEBUG。
 
 ## 配置与计时
 
@@ -37,11 +37,11 @@ cfg_b固定128×128×64 pingpong、cluster1×1、6 stage，FP16输入、FP32累�
 
 实际阶段序列为：consumer交替的FIRST_MMA→MAIN_END、EPI_PERMIT→EPI_DONE；后一tile主循环可与前一tile输出重叠。`tails.json`逐进程列关键CTA工作列表、每tile主循环/输出/许可窗口、交接、SM分布和入口偏斜。相邻主循环间隔可能含重叠，不能把负的差分改成零后再声称测得物理交接延迟。
 
-当前可交付的是绑定规模、swizzle和真实tile分布的尾部条件。V07使用新形状验证事件递推和关键CTA预测；本组本身不授任意尺寸的统一尾部系数，也不把不同卡或调用后频率拼成周期规则。
+当前可交付的是绑定规模、swizzle和真实tile分布的尾部条件。V07使用新形状验证事件递推和关键CTA预测；本组没有验证适用于任意尺寸的统一尾部系数，也不把不同卡或调用后频率拼成周期规则。
 
 ## 证据与复现
 
-[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/)、[条件与资格](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/rules.json)、[逐进程关键CTA](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/tails.json)。四个预热失败的原始stdout和记录全部保留，分析中的`rejected_processes`说明为何没有数值检查资格；有效慢样本未删除。
+[归档](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/)、[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/rules.json)、[逐进程关键CTA](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/tails.json)。四个预热失败的原始stdout和记录全部保留，分析中的`rejected_processes`说明预热未收敛的尝试为何未完成数值检查；有效慢样本未删除。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r19.py prepare --output <新目录> --cutlass-root <CUTLASS3.9.2>

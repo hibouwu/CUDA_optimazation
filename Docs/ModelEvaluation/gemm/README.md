@@ -1,6 +1,6 @@
 # GEMM 设计与性能建模
 
-当前阶段：问题定义与通用数学建模。已有 L0–L4 接口与一个限定执行组织的 FP32 时间模型，通用预测关系和实际硬件服务参数仍待完善，具体优化方案尚未选定。
+已有 L0–L4 接口和限定执行组织的 FP32 时间模型；GH200 的固定 CUTLASS 配置已完成 FP16 GEMM 时间预测与 V01–V08 留出验证。最新 V08 扩大范围后未达到整体误差目标，后续计划已暂停；当前结论与适用范围见 [GH200 预测实验入口](experiments/gh200_sm90/access_rules/README.md)。通用预测关系与配置选择仍待完善。
 
 当前基础问题范围：**单 GPU 的 Single GEMM**。Batched / Grouped 暂不考虑，Distributed GEMM 暂不实现；具体标记见[审查范围](modeling_review.md#当前范围与暂缓项)。`problem.md` 保留完整候选域。
 
@@ -10,6 +10,7 @@
 2. [统一接口](model/interfaces.md)与下方 L0–L4：确定操作、资源、事件及层间组合。
 3. [Thor/SM110](hardware/thor_sm110/README.md)或 [GH200/SM90](hardware/gh200_sm90/README.md)：查阅目标硬件的参数、支持条件与来源。
 4. [FP32 分块模型](schemes/fp32_simt_tiled.md)：查看配置如何转为需求、事件和周期预测；[tc5a](schemes/tc5a.md)单独保留为后续阶段的历史候选。
+5. [GH200 实验](experiments/gh200_sm90/README.md)与[时间预测验证](experiments/gh200_sm90/access_rules/README.md)：查阅实测依据、预测误差和适用范围。
 
 ## 模型层级
 
@@ -35,8 +36,8 @@ CTA 是工作单元，SM 是承载工作单元的硬件资源。L1 分别描述�
 | `hardware/<设备>/README.md`、`L0.md`–`L3.md` | 设备条件、分类资源参数、架构约束与证据；按实际新增内容分层 |
 | `schemes/<方案>.md` | 适用范围、配置、工作量、资源使用、事件关系与方案推导；教学参数和硬件事实分开 |
 | `experiments/<设备>/` | 实验条件、接受条件、实测分析与 run 归档入口 |
-| [建模审查](modeling_review.md) | 当前缺口、处理状态与下一步推导事项 |
+| [建模审查](modeling_review.md) | 历史审查与阶段性缺口记录；当前 GH200 状态以实验入口为准 |
 
 同一硬件资源只定义一次，上层引用其参数；L4 当前没有独立新增的硬件参数。具体 tile、缓冲数和任务映射由方案给定，通用模型不固定 tc5a 等候选的选择。
 
-[GH200 实验入口](experiments/gh200_sm90/README.md)已保存旧计算测量复审、资源微基准和后续测量顺序。预测保留问题、方案、硬件和运行条件；实验记录实际条件与观测，原始 run 由实验文档链接，不把实测写成通用规则。
+[GH200 实验入口](experiments/gh200_sm90/README.md)保存资源微基准与完整 GEMM 预测验证入口。预测保留问题、方案、硬件和运行条件；实验记录实际条件与观测，原始 run 由实验文档链接，不把实测写成通用规则。

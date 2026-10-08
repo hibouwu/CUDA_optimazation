@@ -13,15 +13,15 @@ SMEM中的A为K-major、B为MN-major，FP16输入/FP32累加；输入32/48KiB（
 
 GMEM中的A按tile-major连续存放32个128×64块，half元素地址为`tile×128×64+r×64+k_local`，不是普通A[M,2048]的row-major/lda=2048布局。B为真正的全局B[K,N]行主序，ldb=N；3d TMA视图[64,2048,N/64]、strides[N×2,128]B、box[64,64,N/64]。两个consumer WG各自等待full、消费后组会合并向计数2的empty arrive；producer等两组退休才覆盖。c2每组每tile四条K16 MMA：stage1 wait0退当前，stage2/4首tile剥离、steady wait1退前一、consumer分支内尾wait0退最后。发布独立序号，途中不读异步累加器；完整输出计时后保存。c1读取当前A值后执行64依赖FFMA，发布真实结果。
 
-## 计量与资格
+## 计量与适用范围
 
 plain窗口覆盖供给、消费、退休和最终CTA发布。每个进程在各SM内计算max(end_cycle)−min(begin_cycle)，再求和；B/SM-covered-cycle跨10plain进程给均值/范围/CV，pooled另列。跨度包含间隙，不跨SM减时钟；不是HBM/L2物理带宽或无限长流水上限。
 
-ready事件为issue→wait_return；retire为consume→retire_arrive_start（empty.arrive前）。返回/发起时间均不是硬件内部完成瞬间。v8 ready观察全部CTA选定tile，v9只观察CTA0选定tile，其余CTA仍执行全部计算搬运且trace为0。两个事件对分run，不拼接绝对时间线。5%门槛保持冻结的trace/plain均值定义，逐pair范围及超限对数另列；均值合格不等于每pair无扰动，近plain波动的小差异不判因果。
+ready事件为issue→wait_return；retire为consume→retire_arrive_start（empty.arrive前）。返回/发起时间均不是硬件内部完成瞬间。v8 ready观察全部CTA选定tile，v9只观察CTA0选定tile，其余CTA仍执行全部计算搬运且trace为0。两个事件对分run，不拼接绝对时间线。5%门槛保持冻结的trace/plain均值定义，逐pair范围及超限对数另列；均值满足扰动要求不等于每pair无扰动，近plain波动的小差异不判因果。
 
 ## 正式结果（2026-10-07）
 
-job735876、735985的精确environment均为romeo-a053、GPU-54896349-d69d-9358-b526-433454c04733、CUDA12.9/sm90a/NDEBUG。v8与v9 plain的18个完整GPU函数SASS逐字一致；各18specialization，无C75xx/非零spill，c2异步wait1及尾wait0经独立门禁。各run单独统计，不拼接样本。
+job735876、735985的精确environment均为romeo-a053、GPU-54896349-d69d-9358-b526-433454c04733、CUDA12.9/sm90a/NDEBUG。v8与v9 plain的18个完整GPU函数SASS逐字一致；各18specialization，无C75xx/非零spill，c2异步wait1及尾wait0经独立核对。各run单独统计，不拼接样本。
 
 v8 ready18×10对=360进程、397393920累加器元素；v9 ready补查5×10对=100进程、131788800元素；v9 retire18×10对=360进程、397393920元素，三个归档均在本地完整重算通过。每个正式plain进程实际132SM/132CTA，最后完整输入槽也核对。ready正式与retire正式预热均收敛；ready补查n128_s1_c0的plain trial1/8未收敛，原样保留。原v8所有18plain继续有效。
 
@@ -38,7 +38,7 @@ v8 ready18×10对=360进程、397393920累加器元素；v9 ready补查5×10对=
 
 32KiB/WGMMA/stage4实测58.046，48KiB为45.337，不能据此把旧55、当前64或需求48替换成无条件上限。工作与退休组织影响窗口；这里只交付共享小源、GMEM A tile-major/B row-major、固定4槽及每SM一个CTA的条件序列率，不能作为普通row-major GEMM的普适供给上限。v8 plain最大时间CV3.669%；v9 retire最大2.752%，不能用小差异证明物理因果。
 
-ready原5个均值超限条件经CTA0有界补查后，仅n128_s2_c1均值4.703%通过（5/10单pair仍超5）。n128_s1_c0、n128_s2_c2、n128_s4_c1、n256_s1_c2仍超限，只保留定性顺序，禁导出阶段时长；n128_s1_c0还有上述预热限制。retire均值超限6项：n128_s2_c2、n128_s4_c0、n128_s4_c1、n128_s4_c2、n256_s1_c2、n256_s2_c2，同样仅定性。其余事件条件只在各自观察范围内取得均值扰动资格，不升级为所有pair/所有SM或内部完成时间资格。全部plain不因observer失效删除。
+ready原5个均值超限条件经CTA0有界补查后，仅n128_s2_c1均值4.703%通过（5/10单pair仍超5）。n128_s1_c0、n128_s2_c2、n128_s4_c1、n256_s1_c2仍超限，只保留定性顺序，不作阶段时长的定量判定；n128_s1_c0还有上述预热限制。retire均值超限6项：n128_s2_c2、n128_s4_c0、n128_s4_c1、n128_s4_c2、n256_s1_c2、n256_s2_c2，同样仅定性。其余事件条件仅在各自观察范围内通过均值扰动检查，不能推到所有pair/所有SM，也不能据此解释硬件内部完成时间。打点失效的条件仍保留全部plain样本。
 
 ## 证据与复现
 
@@ -54,7 +54,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13.py \
   --input /冻结样本归档 --output /新分析目录
 ```
 
-复现使用准确CUTLASS3.9.2、CUDA12.9及冻结source/build；新GPU运行由主对话调度。v1错配K/K、v2额外全fragment归约、v3/v4逐tilewait0和早期高扰动、v5–7实际串行化门禁失败均保留历史诊断，不覆盖。v8流水与v9 CTA0 observer分别冻结。R13的18条件已取得数值与plain服务观测；原ready/retire尚不直接观察槽可复用与下次补发，不能据此宣称PLAN事件链完整。事件时长按失败项保留未取得能力，5%门槛不放宽。
+复现使用准确CUTLASS3.9.2、CUDA12.9及冻结source/build；新GPU运行由主对话调度。v1错配K/K、v2额外全fragment归约、v3/v4逐tilewait0和早期高扰动、v5–7实际串行化等检查失败记录均作为历史诊断保留，不覆盖。v8流水与v9 CTA0 observer分别冻结。R13的18条件已取得数值与plain服务观测；原ready/retire尚不直接观察槽可复用与下次补发，不能据此宣称PLAN事件链完整。上述超限项不作事件时长的定量判定，5%门槛不放宽。
 
 ## 槽可复用与补发直接观测
 
@@ -67,13 +67,13 @@ producer确认可复用后的观测边界，不是物理barrier完成瞬间。�
 
 packed数据只在选定tile的第一个记录word3/4保存这对producer事件；第二个记录、
 其他tile、其他CTA均0。它不伪造consumer时间戳，原ready/retire仍沿原语义解释。
-plain数学、32tile、4槽和资源不改；v11原生SASS、完整数值和字段检查已通过，资格范围如下。
+plain数学、32tile、4槽和资源不改；v11原生SASS、完整数值和字段检查已通过，可用于定量比较的范围如下。
 
-reuse沿用原18条件。超限只保存定性顺序，不导出事件时长；各冻结版本和原始档案分别保留。
+reuse沿用原18条件。扰动超限的条件只保存定性顺序，不作事件时长的定量判定；各冻结版本和原始档案分别保留。
 
-v10代表检查共40进程，保存数值核对通过，但N128的10个reuse记录word3均为0，事件资格失败。实际SASS的fast-success路径用P0分支，取时后却以只在retry路径定义的P2执行SEL，导致取时结果被清零；N256此次没有零字段，不能据此证明该路径可靠。v10归档原样保留，不采用该事件对。
+v10代表检查共40进程，保存数值核对通过，但N128的10个reuse记录word3均为0，该事件打点检查未通过。实际SASS的fast-success路径用P0分支，取时后却以只在retry路径定义的P2执行SEL，导致取时结果被清零；N256此次没有零字段，不能据此证明该路径可靠。v10归档原样保留，不采用该事件对。
 
-v11只修复`reuse_wait_stamp`：输出初始化为0、约束改为`+l`，acquire循环成功退出后无条件读取clock64。冻结probe SHA256为`fc125fae9ebc15b6013488dac00394132f245c15240774cbe611b92c8b153660`。源级及B原生SASS门禁通过：18个plain完整Function与v10逐字一致，四份编译日志无C75xx或非零spill。N128/stage4/c2的fast/retry成功路径都到1300的无谓词CS2R R12，word3在1570直接保存；N256对应14d0的CS2R R10及1780保存。两次TMA均先于trace stores，旧P2清零路径已消失。代表与完整18条件reuse均已完成采样及数值/字段复核；扰动资格按正式矩阵逐条件判定。
+v11只修复`reuse_wait_stamp`：输出初始化为0、约束改为`+l`，acquire循环成功退出后无条件读取clock64。冻结probe SHA256为`fc125fae9ebc15b6013488dac00394132f245c15240774cbe611b92c8b153660`。源码及B对原生SASS的检查通过：18个plain完整Function与v10逐字一致，四份编译日志无C75xx或非零spill。N128/stage4/c2的fast/retry成功路径都到1300的无谓词CS2R R12，word3在1570直接保存；N256对应14d0的CS2R R10及1780保存。两次TMA均先于trace stores，旧P2清零路径已消失。代表与完整18条件reuse均已完成采样及数值/字段复核；是否满足扰动要求按正式矩阵逐条件判定。
 
 ### v11 reuse代表结果
 
@@ -94,17 +94,17 @@ job735985到期后的原部分归档326个result组成163个完整配对，无�
 
 完整397393920个FP32输出及最后TMA输入槽本地参考复算通过；全部预热收敛，180个plain均132SM/132CTA。每SM覆盖分母核对，plain elapsed最大CV3.048%，B/SM-covered-cycle最大CV2.282%。180条reuse trace均只有CTA0、退休tile16的第一个记录word3/4非零；补发tile16+Stages/slot16%Stages，全部在同CTA窗口内非零且正序，其他packed记录均0。
 
-冻结均值扰动门槛16/18通过，以下两项仅保留定性顺序，禁导出事件时长：
+冻结均值扰动门槛16/18通过，以下两项仅保留定性顺序，不作事件时长的定量判定：
 
 |条件|正式均值扰动|逐pair范围|单pair超5%数|
 |---|---:|---:|---:|
 |n128_s1_c0|5.750%|3.017%–11.349%|4/10|
 |n128_s4_c2|5.903%|2.841%–8.357%|8/10|
 
-n128_s4_c2代表批4.781%通过与正式批5.903%失败分别保留，正式资格以完整批为准，不挑样替换。其余16项通过的是均值门槛，单pair超限及负扰动仍按原值保留，不推断打点改善硬件服务；所有正确plain不因observer失败删除。
+n128_s4_c2代表批4.781%通过与正式批5.903%失败分别保留，正式判定以完整批为准，不挑样替换。其余16项通过的是均值门槛，单pair超限及负扰动仍按原值保留，不推断打点改善硬件服务；打点失败的条件仍保留所有数值正确的plain样本。
 
-[完整复核报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse-review-B/report.md)及其`analysis/report.md`给出18点服务/扰动统计；`continuation_review.json`保存来源、复制哈希和分段；`reuse_event_boundaries.json`保存180条边界及资格，`qualified_reuse_intervals.json`只含16个合格条件。[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse/reviews/independent-C.md)绑定完整冻结工件。
+[完整复核报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse-review-B/report.md)及其`analysis/report.md`给出18点服务/扰动统计；`continuation_review.json`保存来源、复制哈希和分段；`reuse_event_boundaries.json`保存180条事件边界及检查结果，`qualified_reuse_intervals.json`只含16个满足扰动要求的条件。[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R13-job736169-v11-formal-reuse/reviews/independent-C.md)绑定完整冻结工件。
 
-R13的18条件已完成plain及ready/retire/reuse三个事件对的采样终态；原缺少的槽可复用/补发字段已直接补齐。事件对来自独立调用，不能拼接同一次完整绝对时间线。字段完整、数值正确和扰动合格分别判定：历史ready/retire失败及本reuse两项失败均保留，不能宣称18条件所有阶段时长全部取得。
+R13的18条件已完成plain及ready/retire/reuse三个事件对的采样与检查；原缺少的槽可复用/补发字段已直接补齐。事件对来自独立调用，不能拼接同一次完整绝对时间线。字段完整、数值正确和扰动是否满足要求分别判定：历史ready/retire失败及本reuse两项失败均保留，不能宣称18条件所有阶段时长全部取得。
 
 2026-10-08：被取代的 R13 运行（v8-rep-ready、v8-rep-retire、v9-ready-recheck、v10-rep-reuse 与 job735985 的旧 v11-formal-reuse）已压缩归档到仓库外的 `CUDA_optimazation_archive/gh200_access_rules/`。最终目录 `20261007-R13-job736169-v11-formal-reuse` 已包含续采所需的全部原始样本（326 个结果文件哈希一致），可独立重算；`v8-formal-ready` 仍保留在 results。

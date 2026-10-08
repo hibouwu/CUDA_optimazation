@@ -57,7 +57,7 @@
 
 真实手算：128 lane×8192 FFMA/lane×2=2,097,152 FLOP；`2,097,152/9837=213.19 FLOP/cycle/CTA`。八条链已经包含在每 lane 的 8192 次中，不能再乘八。
 
-SASS 逐循环确认 64 FFMA；复用为一个源对，轮换为八对。两种源模式的实际寄存器分配为 56/40，不是完全只改源字段的物理实验。按候选控制字段布局解析，两者循环显式 stall 坐标之和同为 72，不能仅凭这个和解释全部差异。该解码仅是诊断坐标，尚未独立确认 SM90 的所有控制语义，未作为合格硬件参数导出。公开解码约定可参见 [CuAssembler 控制代码](https://github.com/cloudcores/CuAssembler/blob/master/CuAsm/CuControlCode.py)。
+SASS 逐循环确认 64 FFMA；复用为一个源对，轮换为八对。两种源模式的实际寄存器分配为 56/40，不是完全只改源字段的物理实验。按候选控制字段布局解析，两者循环显式 stall 坐标之和同为 72，不能仅凭这个和解释全部差异。该解码仅是诊断坐标，尚未独立确认 SM90 的所有控制语义，未作为经验证的硬件参数导出。公开解码约定可参见 [CuAssembler 控制代码](https://github.com/cloudcores/CuAssembler/blob/master/CuAsm/CuControlCode.py)。
 
 ## 固定帧诊断：差异缩小，但没有消失
 
@@ -125,7 +125,7 @@ FADD+LDS.128 使用同一份机器码改变地址参数：每次 16 B/lane，32 
 
 ## 数据与复现
 
-[正式归档 v8](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/)：冻结 `source/`、`build/`、`samples/`；[条件与资格](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/cases.csv)、[SASS及独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/checks.json)、图及其数据入口。[消费公式及使用条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/conditional-formulas.json)。本环境独立NCU能力检查返回 `ERR_NVGPUCTRPERM`，之后不逐点重试；无物理流量/端口计数证据。CUDA12.9正式编译28个测量 specialization，plain/trace采用相同 kernel 标识和资源。生产者打点扰动最大约0.009%，plain 最大CV约2.26%（包含短消费者控制）。
+[正式归档 v8](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/)：冻结 `source/`、`build/`、`samples/`；[条件与检查结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/rules.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/cases.csv)、[SASS及独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/checks.json)、图及其数据入口。[消费公式及使用条件](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/conditional-formulas.json)。本环境独立NCU能力检查返回 `ERR_NVGPUCTRPERM`，之后不逐点重试；无物理流量/端口计数证据。CUDA12.9正式编译28个测量 specialization，plain/trace采用相同 kernel 标识和资源。生产者打点扰动最大约0.009%，plain 最大CV约2.26%（包含短消费者控制）。
 
 一次运行（有效单GPU Slurm分配内）：
 

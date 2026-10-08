@@ -2,13 +2,14 @@
 
 对象为单GPU、FP16输入、FP32累加与输出、α=1、β=0的CUTLASS3.9.2 GEMM。cfg_a为128×128×64 cooperative、cluster2×1、6 stage；cfg_b为同tile的pingpong、cluster1×1、6 stage；cfg_c为256×128×64 cooperative、cluster1×2、4 stage。所有阶段数以构建查询为准。
 
-有效数学工作为`2MNK FLOP`；补齐tile、消费者归约、地址和同步另记实际工作量，其时间仍在完整调用内。单CTA使用同SM的clock64；多SM包络使用globaltimer；完整GEMM使用CUDA event包围一次调用。分配、输入填充、驱逐准备与结果检查不在本轮完整调用时间内。不同分母的服务率不能直接相加。
+本文说明计算与访问规则、事件组合和适用条件。当前预测结论与完整实验索引统一见 [README](README.md)；V07、V08 的逐例结果保存在各自验证记录中。
 
-本文是规则正文的唯一维护版本。
+## 计量约定
 
-[V07](V07-rule-validation.md) 在同一张 GH200、固定的 cfg_a/b/c 配置、swizzle=1、K 位于校准覆盖范围内的 24 个留出条件上，总时间绝对相对误差中位数为 3.06%，最大为 8.71%，达到 5% / 10% 目标。这些条件包含 12 个不同的 M×N，覆盖所列边界类型；尚未验证更广泛的形状或跨卡适用性。供给、末次输出和关键 CTA 定位仍存在明显误差；24 例中 20 例预测偏长。
-
-[V08](V08-wider-validation.md) 扩大校准后对 36 个新形状冻结预测：2.61% / 35.34%，未达标；swizzle=1、A/B 行距为 128 B 倍数、K ≤ 16384 的 21 个为 1.90% / 6.04%。失败条件见第 10 节。
+- 工作量分别记录 FLOP、整数 OP、逻辑读写字节与实际执行需求；有效 GEMM 数学工作为 `2MNK FLOP`。补齐 tile、消费者归约、地址和同步另记实际工作，其时间仍计入完整调用。
+- 单 CTA 用同一 SM 的 `clock64` 差，记录实际 SM ID；多 SM 包络用 `globaltimer`，不跨 SM 相减 `clock64`。完整 GEMM 用 CUDA event 包围一次调用。
+- 每个窗口写明起止事件，以及循环、等待、同步和排空是否包含在内。完整调用时间不含分配、输入填充、驱逐准备和结果检查；具体采样与预热条件见各实验页。
+- 不同工作量或计时窗口的服务率不能直接相加；接入模型时沿用[整段或分段计账](../../../model/interfaces.md#5-计时与层间边界)，已含成本不再叠加。物理 bank、端口、缓存层级、HBM 流量等归因须有额外证据，否则明确写为推断。
 
 进入 V07 预测的只有 V06 事件递推、当前卡重新校准的参数和 R18 边界修正。R02、R11、R12、R16、B01 已测，未用于 V07 预测；R19 只用于诊断，V07 的尾差项选为“无”。下文这些实验的规则作为已测条件服务记录，不是 V07 的输入。
 
@@ -24,7 +25,7 @@
 
 - L0输出：具体源形式、链数和SASS下的操作服务。
 - L1输出：保留结果、寄存器资源和消费者依赖。
-- 未取得：RF bank/端口容量、任意kernel的源池倍率、覆盖过的中间结果的物理写回时刻。
+- 尚未确定：RF bank/端口容量、任意kernel的源池倍率、覆盖过的中间结果的物理写回时刻。
 
 ![RF条件服务](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/plots/r02-service.png)
 
@@ -120,7 +121,7 @@ L2携带首/后tile及边界类别的候选窗口差；L3保持真实物理工�
 
 层级沿用[模型接口](../../../model/interfaces.md)：L0定义操作原语；L1处理线程、片上数据、发射和驻留；L2组织供给、缓冲及阶段流水；L3安排全体工作tile并求完整GEMM完成时间。层级不是新增的四份硬件资源。
 
-cooperative中的后tile受前tile输出/交接约束；pingpong同时有MMA顺序和epilogue顺序，必须保留max依赖与重叠。边界增量只加到对应物理tile的主循环窗口一次。完整时间由关键CTA周期、当前卡负载内频率规则和固定调用项得到；这些是方案参数，不进入硬件规格表。
+V07 的 cooperative 后tile受前tile输出/交接约束；pingpong同时有MMA顺序和epilogue顺序，必须保留max依赖与重叠。V07 将边界增量加到对应物理tile的主循环窗口一次；其定位与迁移限制见 V07、V08 验证记录。完整时间由关键CTA周期、当前卡负载内频率规则和固定调用项得到；这些是方案参数，不进入硬件规格表。
 
 可手算的完整例子：cfg_a的1792×1920×1536含210个tile，78个CTA做2个、54个做1个；冻结递推给出关键CTA 36,916.7305 cycle、形状对应频率解1.7690302 GHz、固定项4.6800005 μs，因此`T=4.6800005+36916.7305/(1000×1.7690302)=25.5483441 μs`。各阶段加数、pingpong的max依赖与边界增量算式见[V07模型手算](V07-rule-validation.md#冻结递推怎样手算)。
 
@@ -142,8 +143,16 @@ V07中，初始供给误差12.03%/45.92%，末次输出窗口12.44%/46.82%；主
 
 同一作业还确认：供给 S 在调用前驱逐 L2 时增加 450–1300 cycle；cfg_a 最后一个 tile 的 epilogue 约 1922 cycle，与中间 tile 不同；cfg_c 单 tile 的 epilogue 在全部 CTA 同时写出时约 5800 cycle，部分 CTA 时约 4040。
 
-## 11. 离线复现记录
+## 11. 2026-10-08 离线复现记录
 
-[验收快照](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/)保存本轮离线入口及其依赖。`replay_delivery.py --archive-root <归档父目录> --output <新目录>`会复制8份新增/变更归档到新位置，再核对保存值、时间/工作量、资格和V07误差；随后仅用校准数据重建冻结参数、边界增量与全部24个预测。该流程不运行GPU、不修改冻结预测；它是 2026-10-08 这一轮的记录，不要求每轮重跑。
+[当次检查快照](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/)保存离线入口及其依赖：
 
-本轮换目录复算已通过，10项边界/损坏记录/递推测试通过。原R02/R11/R12和R16驻留的有效数据按身份复用，未为了重建过程日志重复采样。验收由主对话负责，CPU参照独立于CUDA校验实现；历史已有独立C结论按身份复用。数字与代码身份、完整时间预测资格、分项机制资格分别保留。
+```bash
+python3 results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/source/replay_delivery.py \
+  --archive-root results/gh200_resource_campaign/access_rules \
+  --output <新目录>
+```
+
+该入口复制 8 份新增或变更归档到新位置，重算数值、SASS/计量、测量有效性与 V07 误差，再仅用校准数据重建参数、边界增量和全部 24 个冻结预测。该次换目录复算与 10 项测试已通过，[复算回执](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/offline-replay.json)和[预测重建记录](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/prediction-reproduction.json)保存执行结果。
+
+这是 2026-10-08 的一次性记录，不要求每轮重跑。复算不运行 GPU、不修改冻结预测，也不改变分项未通过的判定。原 R02/R11/R12 和 R16 驻留数据按来源复用；当时由主对话完成检查，CPU 参照独立于 CUDA 校验实现，历史独立检查按归档身份复用。
