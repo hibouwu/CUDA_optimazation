@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cfg_c_g3", "config": "cfg_c", "set": "ctrl", "kind": "ordinary",
+    "m": 1024, "n": 1536, "k": 4096,
+    "lda": 4096, "ldb": 1536, "ldd": 1536,
+    "storage_m": 1024, "storage_n": 1536,
+    "zero_m": -1, "zero_n": -1, "swizzle": 1, "evict": 0,
+    "sm_count": 0, "input_mode": "dyadic", "seed": 17
+  },
+  {
+    "id": "cfg_c_c2_k4096", "config": "cfg_c", "set": "ctrl", "kind": "ordinary",
+    "m": 1536, "n": 2816, "k": 4096,
+    "lda": 4096, "ldb": 2816, "ldd": 2816,
+    "storage_m": 1536, "storage_n": 2816,
+    "zero_m": -1, "zero_n": -1, "swizzle": 1, "evict": 0,
+    "sm_count": 0, "input_mode": "dyadic", "seed": 17
+  },
+  {
+    "id": "cfg_c_c6_longk", "config": "cfg_c", "set": "ctrl", "kind": "ordinary",
+    "m": 1536, "n": 2816, "k": 16384,
+    "lda": 16384, "ldb": 2816, "ldd": 2816,
+    "storage_m": 1536, "storage_n": 2816,
+    "zero_m": -1, "zero_n": -1, "swizzle": 1, "evict": 0,
+    "sm_count": 0, "input_mode": "dyadic", "seed": 17
+  }
+]

@@ -189,10 +189,54 @@ Nbar_i = integral_[start_i,end_i] N(t) dt / (end_i − start_i)
 
 对已经看过的 h08 做事后代入：静态 CTA 候选误差 +20.14%，仿射重叠候选 −3.29%，入口锚点候选 +20.95%。历史 E 口径也保存在 JSON 中，对应 +25.65%、−4.04%、+26.51%。短窗口的高低两档在三种换算下方向一致；长 K 的结论明显依赖端点换算。此外 Nbar 用已测输出窗口计算，包含待解释的 E 本身，不能作为独立的测前预测输入。由此不能宣布输出公式已经确定。
 
-最小补测是给同次调用的 role2 `EPI_PERMIT/EPI_DONE` 增加 globaltimer，保留 clock64 和最终 store_tail 端点，先在 g1/c1 检查打点扰动，再覆盖长 K 的 c6。若要归因于并发而非规模、K 或前序供给，固定一个整卡单 tile 条件及全部有效输出字节，仅改变主循环后输出启动的错峰，并直接量出重叠。现有证据不需要计数器就能完成这一步；全局写完成另需对应完成端点。
+最小补测是给同次调用的 role2 `EPI_PERMIT/EPI_DONE` 增加 globaltimer，保留 clock64 和最终 store_tail 端点；本次实际准备的三条件见下节。若要归因于并发而非规模、K 或前序供给，固定一个整卡单 tile 条件及全部有效输出字节，仅改变主循环后输出启动的错峰，并直接量出重叠。现有证据不需要计数器就能完成这一步；全局写完成另需对应完成端点。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-output \
   --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
   --output <该run下新的reanalysis目录>
 ```
+
+## 直接输出 globaltimer 的最小补测准备（2026-10-09）
+
+本节只完成专用配置与 CPU 分析入口，未编译或采样新增打点。基于公共框架 `6338653`，沿用 cfg_c 的 tile256×128×64、cluster1×2、四 stage、dyadic/seed17、swizzle1、无驱逐、默认全部 SM；三条全部改列为 `ctrl`，不是新留出。
+
+| 条件 | M×N×K | 预期 CTA 数 / 每 CTA tile 数 | 对照用途 |
+|---|---:|---:|---|
+| cfg_c_g3 | 1024×1536×4096 | 48 / 1 | 与 c2 同 K，比较规模相关的输出重叠 |
+| cfg_c_c2_k4096 | 1536×2816×4096 | 132 / 1 | 两组对照共用基准 |
+| cfg_c_c6_longk | 1536×2816×16384 | 132 / 1 | 与 c2 同 M/N、grid 和输出字节，改变 K |
+
+配置为 [configs/r15-output-ns.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r15-output-ns.json)，`lda=K, ldb=ldd=N`。实际 grid、坐标、SMID 和 tile_count 仍由新调用确认。c6 的旧平均重叠估计为仿射94.61、入口锚点120.51，已足以检验换算歧义；h08 同时改变几何和 K，本轮不需要加它。g3/c2 仍改变总字节、足迹和前序供给，c2/c6 仍改变输入量、执行时长与频率状态，三点都不是纯并发因果干预。
+
+### 给公共框架维护者的两字段修改
+
+复用每 CTA 16-word 头部的空闲槽位，不改变784-word布局或每tile六字记录；只由 thread256、tile0 写入：
+
+| 事件 | 原记录及位置 | 本批新增记录 |
+|---|---|---|
+| FIRST_MMA | 原 clock64，在首次 MMA 前；位置不动 | 无 |
+| MAIN_END | 原 clock64，在 mma_tail 后；包含等待的主循环窗口终点 | 无 |
+| EPI_PERMIT | 原 role2 clock64，在 cooperative `store()` 前；不是首条 TMA issue | header[13]：`issuer_store_enter_ns` |
+| EPI_DONE | 原 role2 clock64，在 cooperative `store()` 返回后 | header[14]：`issuer_store_return_ns` |
+| 最终 final | 原 header[7]/[8]：role2 的 clock64/globaltimer，在 post-loop `store_tail()` 返回后 | 原样保留 |
+
+具体公共建议：`r18_trace.hpp::v06_stamp()` 在 `-DR15_OUTPUT_NS` 下，只对 `threadIdx.x==256 && tile==0` 的上述两个输出事件采样；globaltimer 紧随原 clock64 读取，两个时钟都先读取，再保存 trace。`r18.cu` 对这个模式写 `trace_version="r15-first-output-ns"`，header[15] 保留。既有 cooperative overlay 已有正确的两处 `v06_stamp()`，无需再插新调用，也不增加等待。源中的 FIRST_MMA/MAIN_END/EPI_PERMIT/EPI_DONE 和 final 原语义均不变。
+
+新二进制命名 `cfg_c_global`，编译在原 cfg_c stamped 参数上增加 `-DR15_OUTPUT_NS`；plain/stamped/ends 使用原参数。同卡、同批交错执行四个变体，报告 global 相对三者的时间扰动与各自离散程度。公共 runner 若复用 `run_v08.run_one()`，global 必须走完整坐标 trace 的 `analyze_r18.replay()`；当前 `v08_model.observe()` 会把未知 variant 当 ends，不能直接将 global 传给它。无需为此改模型公共接口。构建、SASS/寄存器和新打点扰动仍待该版本的实际 GPU 检查，旧版本的编译结果不覆盖新增 profile。
+
+`store_tail()` 使用的 `tma_store_wait<0>()` 在该 CUTLASS 版本实际发出 `cp.async.bulk.wait_group.read 0`，只保证源 SMEM 已被读完、可复用；`store()` 返回和最终 final 都不叫全局目标写完成。这次不增加全写排空等待，也不把已有端点重新命名为 write_complete。
+
+### 专用分析入口
+
+[analyze_r15_output_ns.py](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py) 读取每个 global 原始调用自己的 setup、header[13]/[14] 和 role2 clock64，要求每 CTA 两个 consumer 都恰好一个完整有效 tile；不会把旧 trace 的零槽位或多 tile trace 当作直接测量。`static_setup.json` 来自 plain，其版本字段不能用于识别 global profile。
+
+分析输出 `output-ns.json`：逐 CTA 的直接输出 ns/cycle、输出启动分散、到 final 的剩余窗口、直接平均/峰值重叠，以及同次调用仿射/入口/退出锚点估计用于比较。所有绝对 globaltimer 先用整数减去本次最早入口，再做积分，不拼接其他调用或进程中位时间线。三个条件分别保留进程中位数、进程范围及 plain/stamped/ends/global 的时间与 CV；不在三点上重新拟合或宣布带宽规律。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/test_r15_output_ns.py
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py \
+  --input <本地接收的新R15运行目录> --output <该run下新的reanalysis目录>
+```
+
+CPU 测试使用临时合成记录，检查直接重叠与错误的周期换算分离、并列端点、整数时间精度、旧profile/多tile拒绝，以及从 raw setup 识别 global；这些测试不是 GPU 数据。后续准备与运行目录使用节点本地 `/tmp/gh200-r15-output-ns-<run-id>`，完整批次回传本地 results 后分析；不向已超配额的共享存储追加。本轮只交回上述配置、分析器和公共修改需求，不提交作业。
