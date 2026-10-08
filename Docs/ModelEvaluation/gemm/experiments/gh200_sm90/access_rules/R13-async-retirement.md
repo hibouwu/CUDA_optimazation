@@ -257,3 +257,63 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
   --calibration-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
   --output /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-supply-recheck
 ```
+
+<a id="requested-sm-pitch"></a>
+
+## 请求 SM 数与行距的最小对照（2026-10-09，待采样）
+
+本批回答：**固定 GEMM 形状时，A/B 行距惩罚如何随持久 grid 规模变化？** 四档会改变每 CTA 的工作轮次、缓存访问历史和调用内频率，不能从一条扫描曲线唯一定位 SM 本地或共享供给瓶颈。主比较是同一档内的行距配对；跨档另取严格匹配当前输出工作的子集，不增加矩阵条件。
+
+旧数据确认采用 cfg_a、**M×N×K=2304×3072×4096**，swizzle=1、重复同一 A/B、dyadic 输入、seed=17。共有 432 个完整输出 tile，无补齐，沿用 6 stages。三个布局为 aligned（lda/ldb/ldd=4096/3072/3072）、A+16 B（仅 lda=4104）、B+16 B（仅 ldb=3080）；请求 SM 数为 32/64/96/132，共 **12 条件**。不展开其他行距或 stage。输入逻辑容量均为 42 MiB，另有 27 MiB 输出；padding 分配变化在实际 stride 中保留，不将逻辑容量称为 L2 驻留。
+
+由已核对的调度计算得到以下预期，运行时仍用 `setup.grid` 和实际 trace 重建：
+
+| 请求 SM 数 | 预期 grid | 每 CTA 总输出 tile 数 T | 末轮 CTA 数 |
+|---:|---|---|---:|
+| 32 | [32,1,1] | 16 CTA×13；16 CTA×14 | 16 |
+| 64 | [64,1,1] | 16 CTA×6；48 CTA×7 | 48 |
+| 96 | [96,1,1] | 48 CTA×4；48 CTA×5 | 48 |
+| 132 | [132,1,1] | 96 CTA×3；36 CTA×4 | 36 |
+
+**三个比较口径。** 同一请求档内，按 CTA ID、输出序号 j、CTA 总 tile 数 T 和实际 M/N 坐标逐一匹配 A/B 与 aligned，先求进程内平均差，再跨进程汇总；每 Ktile 周期除以 64。first/middle/last 由 j 与 T 决定，不混成一个均值。跨档的所有 j/T 分组分别保留，不把不同 T 合并成稳态。
+
+96 与 132 档还有一个更直接的现有子配对：T=4、j=1 和 j=2 各有 **24 个相同 M/N 输出坐标**。按 `(j,T,M_idx,N_idx)` 合并后比较 `(A−aligned)_132−(A−aligned)_96`，B 同理。j=0/3 没有这种同坐标交集。它固定当前工作和总轮次，但此前 tile 坐标与其他 CTA 的访问历史仍不同，因此结果仍称 grid 规模响应，不称物理共享带宽。
+
+**实际并发的可观察范围。** 保存每个 CTA 的 SMID、入口/最终端点的 globaltimer 和 clock64；先对同 SM 的 CTA 观测窗口求并集，再扫不同 SM 的窗口重叠数，报告峰值、时间加权值和原窗口。该数衡量 CTA 观测生命周期的重叠，不表示它们同时执行 TMA 或 MMA。调用内频率只从同 CTA 的两种时钟跨度计算，按周期比较 L，同时保留频率。每输出 tile 当前只有 clock64，不跨 SM 相减，也不用插值假造逐 tile 并发。
+
+公共端点的最小需求是给 `FIRST_MMA` 和 `MAIN_END` 各补 globaltimer；cfg_a 两个 consumer 分别保存，共每 CTA 每输出 tile **4 个 uint64 字段**，保留原周期字段及坐标。这样才可直接排列主循环窗口，并须与旧 stamped 核对扰动。本批现有二进制能先完成 CTA 窗口与配对分析，不声称已经提供逐 tile 的全局时间。
+
+### 运行包与 CPU 检查
+
+[专用入口](../../../../../../microbench/gh200_resource_campaign/access_rules/run_r13_sm.py)复用原 `run_r18.py` 的 setup/sample、配对顺序、锁和检查；[专用分析器](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_r13_sm.py)复用原 trace/数值读取器。公共源码未改。
+
+二进制来源为主数据目录下 `20261009-R09-R13-shared-smoke-job738097`，运行源码固定为归档 **6338653b5a4127a7cb947b6355c38642310f3dcc**，分析器为本次提交。prepare 核对归档自身的源码/二进制清单及 SASS 哈希，保留归档 source，只取 cfg_a 的 plain/stamped 二进制和对应构建证据，并加入本批专用 Python 入口；不要求当前 checkout 的公共头与归档相同。不复制 smoke 样本，不重新编译。新 setup 的实际 CUDA GPU UUID 写入记录并用于样本核对，旧卡数据不替代新批次的 aligned 参照。
+
+正式为每条件 10 对 plain/stamped，共 **240 进程**。每个请求档内三种 pitch 相邻，顺序随 trial 随机；plain/stamped 也相邻并随机换序。可先用 `R13_PROCS=1` 做 24 进程 pilot，在同一分配、同一源码下扩到 10 时复用 trial0；单进程结果只作诊断。沿用原预热和 5% CV/打点扰动口径，逐 trial 差分与失败记录保留，不由完整时间接近证明各主循环窗口没有扰动。
+
+CPU 检查已确认 12 条件的参数传递、432 个完整坐标、每 CTA 总 tile 数以及 96/132 的 24+24 坐标交集；[四项测试](../../../../../../microbench/gh200_resource_campaign/access_rules/test_r13_sm.py)覆盖同 SM 窗口并集、重试去重、UUID 边界和跨档差分。另只回放旧三布局 K=4096 的 60 个 plain/stamped 进程，245760 个已保存数值通过原参考检查，21 个 `(case,j,T)` 组从 CSV 独立复算一致；30 个 ends 样本明确未分析。
+
+[旧数据的分组复核](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-sm-legacy-v2/summary.json)中，同为 T=4 的 A−aligned 在 j=1/2/3 分别为 **53.248/26.523/0.014 cycle/Ktile**，B 为 **50.616/32.220/0.002**。旧三条件峰值 CTA 窗口重叠都是 132 个 SM，时间加权平均分别为 **105.22/105.61/106.28**；峰值、平均与请求数并非同一个量。旧样本缺少 setup GPU UUID，分析保留 `unknown`，没有从其他记录补填。
+
+[本批 cases](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/A-20261009-sm-preparation-v2/cases.json)及同目录 `run.sh`、`source/`、`build/` 已在本地准备，约 32.1 MB，源码/二进制清单和 shell 语法检查通过。这个目录尚无新 GPU 样本。
+
+以下准备只在本地执行；RUN 必须新建。复制完整运行包到获配计算节点的本地 `/tmp` 后，由管理对话选择已分配的 GPU UUID 并运行包内 `run.sh`，结束后回传整个包到本地主数据目录。不向超配额的 home/scratch/项目共享目录写入结果。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/run_r13_sm.py cpu-check
+python3 microbench/gh200_resource_campaign/access_rules/run_r13_sm.py prepare \
+  --harness-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097 \
+  --output RUN
+```
+
+节点上的入口如下；`V08_GPU` 沿用共享身份函数的变量名，只能填写本作业已分配的 UUID。目标目录 `reanalysis/sm-1procs` 或 `sm-10procs` 不覆盖已有分析。
+
+```bash
+cd /tmp/本批新运行目录
+export V08_GPU=本作业已分配的完整GPU_UUID
+export CUDA_VISIBLE_DEVICES="$V08_GPU"
+R13_PROCS=1 bash run.sh
+R13_PROCS=10 bash run.sh
+```
+
+本次交回的是已准备的矩阵、源码、二进制复用包和 CPU 检查；没有申请 GPU 名额或启动本批测量。
