@@ -306,3 +306,63 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py
   --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
   --output <该run下新的reanalysis目录>
 ```
+
+## V08 单 tile 输出候选：常数与静态 q（2026-10-09）
+
+**现有 cooperative 单 tile 输出没有接入 q 依赖；但把它改成 q 线性式也不足以支持跨几何预测。** 本次只拟合旧 V08 的 GPU-099dda56 同卡校准数据，保留原 merged 端点 `E=max(EPI_DONE)−max(EPI_PERMIT)`。job738100 只提供另一张卡的直接端点约束，不参加拟合；原 V08 heldout 样本、实测输出重叠也不作为拟合或预测输入。
+
+### 实际接线
+
+`v08_model.cta_cycles()` 的 cooperative 分支先判断 `j==0`，此时使用 `E0`；只有后续最后tile才使用 `Elast`。`case_params()` 的 q 形式只修改 `Elast`，`v08_fit.fit_params()` 也只用 `T>=2` 条件拟合这个 q 形式。因此对 case 的 `T=1`，即便选择 q，输出仍是同一 `E0`。这条结论针对 cfg_a/c 的 cooperative 路径；cfg_b 的 pingpong 输出使用另一个 E 分支。
+
+cfg_c 原冻结选择的是 const，`E0=5784.25 cycle`。在内存中将原校准的 E 形式改选 q 并重新计算参数，q从48/132→70/132→1时，`Elast` 为4077.16→4154.71→4373.26，而单tile的 `last_epilogue` 始终为5784.25。这只检验输出组件的接线，不表示完整GEMM预测对规模不敏感。原冻结E0相对五个单tile校准点的误差为−1.39%、+2.80%、+18.40%、+43.07%、+43.09%；它已经用过这些校准数据，不能作为留出成绩。
+
+### 数据与两种形式
+
+六个 cfg_c 单tile校准条件中，g2 的 stamped 扰动为5.0167%，沿用原阈值排除；剩下五点、三种几何、四个K。每点重读十次成功 stamped 调用，merged E0与原 summary 精确一致。c1原有一次预热失败及后续成功重试均保留，失败记录不含完整check，不当成有效慢样本。ctrl和heldout不进入本表。
+
+| 条件 | M×N | K | q=静态CTA数/132 | merged E，cycle | E/f_CTA 归一化，ns |
+|---|---:|---:|---:|---:|---:|
+| c1 | 1536×2816 | 512 | 1 | 5865.75 | 3236.81 |
+| c2 | 1536×2816 | 4096 | 1 | 5626.50 | 3330.07 |
+| c6 | 1536×2816 | 16384 | 1 | 4885.50 | 3077.65 |
+| g1 | 1280×1792 | 1024 | 70/132 | 4043.00 | 2236.63 |
+| g3 | 1024×1536 | 4096 | 48/132 | 4042.50 | 2226.17 |
+
+归一化先在同一次调用、同一CTA计算 `f_CTA=(final_cycle−entry_cycle)/(final_ns−entry_ns)`，再算 `E/f_CTA`，最后取CTA中位及十进程中位。这里使用了**实测全程f，包括被留出条件的实测f**；没有输出端点globaltimer，归一化值不是直接测得的输出ns，也不是自主时间预测。job738100已说明全程比例与输出阶段比例不同，不能把这种归一化自动提升为真实局部时间。
+
+仅比较两种函数：常数 `E=a`，按原E0拟合方式取训练条件中位；线性 `E=a+bq`，按原q拟合方式取训练条件等权最小二乘。为公平比较单tile函数，两者都只使用相同的五个合格单tile条件；原冻结5784.25另列作参考，不混入交叉检验。全五点描述性拟合为：
+
+| 目标量 | 重拟合常数 | q线性式 |
+|---|---:|---|
+| merged cycle | 4885.50 | `2970.56 + 2468.06 q` |
+| 归一化ns，仅诊断 | 3077.65 | `1485.28 + 1715.73 q` |
+
+### 整组留出与外推失败
+
+每轮完整移除同K的所有点，或同M/N的所有点，再从剩余条件重估参数。不能把同几何的另一个K随机留在“几何留出”的训练集里。下表每条件等权，报告E分项绝对相对误差的中位/最大；这些是旧校准数据的事后分组检验，不是完整GEMM误差或新冻结留出成绩。
+
+| 目标与形式 | 按K整组留出，中位 / 最大 | 按几何整组留出，中位 / 最大 |
+|---|---:|---:|
+| cycle常数 | 20.85% / 30.00% | 30.00% / 31.08% |
+| cycle q线性 | 10.84% / 16.86% | 17.22% / 31.05% |
+| 归一化ns常数 | 17.91% / 41.16% | 32.99% / 41.82% |
+| 归一化ns q线性 | 5.97% / 14.20% | 26.37% / 31.95% |
+
+具体失败是可解释的。留出长K=16384时，cycle q式对c6高估16.86%；归一化后仍高估5.97%。留出K=4096时，q式对小几何g3低估11.69%（cycle）/14.20%（归一化ns）。更关键的是整组移除1536×2816后，训练仅剩两个低q平台点；cycle斜率退化到3 cycle/q，对未见过的q=1三点低估17.22%–31.05%，归一化式也低估26.37%–31.95%。这说明当前样本无法稳健识别满卡端的q斜率，不能以全数据拟合较好宣称已经解决外推。
+
+### 接入建议与当前结论
+
+当前可交回的是上述两个最小函数的参数与失败证据，**没有通过这次分组检验、可直接启用的单tile参数**。静态q可以描述部分规模差，但q=1本身已有明显K依赖；实测f归一化减轻其中一部分变化，仍不能补足跨几何证据。没有在本轮继续添加K项、折点或新拟合族。
+
+若后续加入单tile参数，应在 `case_params()` 对 cooperative 且 **case的 `feat['T']==1`** 时单独设置 `p['E0']`，例如独立的 `E0_form/e0_single/e1_single`；`T>=2`继续保留原E0、E与Elast关系。不要把该规则无条件用于多tile case中恰好只做一个tile的CTA：那里的 `q` 是持有最大tile数的CTA比例，语义不同。
+
+接入仍使用merged端点，且替换E0只收费一次。原 `w=max(permit)−max(main_end)` 已计入到merged permit的等待；若直接换成更长的issuer `done2−permit2` 而保留w，会重复包含两个permit之间的一段。job738100的issuer/merged差只约束端点解释，不能直接移植成旧卡的新E0或实测重叠自变量。本次未修改 `v08_model.py`、`v08_fit.py` 或冻结文件。
+
+[单tile参数、完整折叠与接线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/B-20261009-single-tile-static-q/single-tile-model.json)保存每点进程数据、每折训练ID、q/K训练范围及预测误差，复核入口扩展在原 `analyze_r15.py`：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-single-model \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
+  --output <该run下新的reanalysis目录>
+```

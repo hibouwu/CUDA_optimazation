@@ -444,10 +444,116 @@ def analyze_v08_output(root, destination):
     print(f'{len(cases)} cases, {len(tails)} stamped/ends calls -> {destination}')
 
 
+def analyze_v08_single_model(root, destination):
+    """Two static-q candidates on qualified cfg_c single-tile calibration cases only."""
+    import v08_model as model
+    import v08_fit as fit
+    med = statistics.median
+    summary = json.loads((root / 'derived/summary.json').read_text())
+    frozen = json.loads((root / 'frozen/v08-predictions.json').read_text())
+    if sha(root / 'derived/summary.json') != frozen['summary_sha256']:
+        raise ValueError('calibration summary differs from the frozen source')
+    rows = {r['id']: r for r in json.loads((root / 'cases.json').read_text())}
+    setups = {r['case']: r['setup'] for r in json.loads((root / 'static_setup.json').read_text())}
+    points, excluded, failed = [], [], []
+    for case in summary.values():
+        if case['config'] != 'cfg_c' or case['set'] != 'calib' or case['T'] != 1:
+            continue
+        if abs(case['perturbation']) > .05 or max(case['plain_cv'], case['stamped_cv']) > .05:
+            excluded.append(dict(case=case['id'], perturbation=case['perturbation'],
+                                 reason='existing interval qualification'))
+            continue
+        row = rows[case['id']]
+        processes = []
+        for path in sorted((root / 'samples' / row['id']).glob('stamped-*.json')):
+            record = json.loads(path.read_text())
+            if record['returncode']:
+                failed.append(str(path.relative_to(root)))
+                continue
+            observed = model.observe(root, record, row, setups[row['id']])
+            ctas = observed['ctas']
+            if any(len(c['tiles']) != 1 for c in ctas):
+                raise ValueError('single-tile calibration case changed')
+            cycles = [c['tiles'][0][3] - c['tiles'][0][2] for c in ctas]
+            rates = [(c['end_c'] - c['entry_c']) / (c['end_ns'] - c['entry_ns']) for c in ctas]
+            # Same CTA/call endpoint ratios; this is NOT a directly measured output ns window.
+            normalized = [e / f for e, f in zip(cycles, rates)]
+            processes.append(dict(trial=record['trial'], cycle=med(cycles),
+                normalized_ns=med(normalized), measured_cta_cycles_per_ns=med(rates)))
+        cycle = med(p['cycle'] for p in processes)
+        if cycle != case['intervals']['E0']:
+            raise ValueError('merged single-tile E0 replay differs from original summary')
+        points.append(dict(id=row['id'], m=row['m'], n=row['n'], k=row['k'], q=case['q'],
+            geometry=f"{row['m']}x{row['n']}", cycle=cycle,
+            normalized_ns=med(p['normalized_ns'] for p in processes), processes=processes))
+
+    def parameters(train, target, form):
+        if form == 'constant':
+            return med(p[target] for p in train), 0.0
+        return fit.lsq([p['q'] for p in train], [p[target] for p in train])
+
+    def errors(records):
+        values = [r['relative'] for r in records]
+        return dict(n=len(values), median_absolute=med(abs(e) for e in values),
+                    maximum_absolute=max(abs(e) for e in values), rms=math.sqrt(statistics.mean(e * e for e in values)))
+
+    fits, validation = [], []
+    for target in ('cycle', 'normalized_ns'):
+        for form in ('constant', 'q_linear'):
+            intercept, slope = parameters(points, target, form)
+            fits.append(dict(target=target, form=form, intercept=intercept, slope=slope,
+                comparisons=[dict(case=p['id'], observed=p[target], fitted=intercept + slope * p['q'],
+                                  relative=(intercept + slope * p['q']) / p[target] - 1) for p in points]))
+            for group_by in ('k', 'geometry'):
+                predictions = []
+                for group in sorted({p[group_by] for p in points}):
+                    train = [p for p in points if p[group_by] != group]
+                    intercept, slope = parameters(train, target, form)
+                    for p in points:
+                        if p[group_by] != group:
+                            continue
+                        value = intercept + slope * p['q']
+                        predictions.append(dict(case=p['id'], withheld_group=group,
+                            train_cases=[t['id'] for t in train], intercept=intercept, slope=slope,
+                            train_q_range=[min(t['q'] for t in train), max(t['q'] for t in train)],
+                            train_k_range=[min(t['k'] for t in train), max(t['k'] for t in train)],
+                            observed=p[target], predicted=value, relative=value / p[target] - 1))
+                validation.append(dict(target=target, form=form, group_by=group_by,
+                                       metrics=errors(predictions), predictions=predictions))
+
+    # Re-evaluate the existing q candidate without editing the model/fit or any frozen file.
+    selection = frozen['calibration']['selection']['cfg_c']
+    fit.ROWS = rows
+    q_params = fit.fit_params([summary[name] for name in selection['cases']], 'cfg_c',
+                             dict(selection['choice'], E='q'))
+    wiring = []
+    for q in (48 / 132, 70 / 132, 1.0):
+        p = model.case_params({'cfg_c': q_params}, 'cfg_c', dict(q=q, fp=30.0))
+        wiring.append(dict(q=q, E0=p['E0'], Elast=p['Elast'],
+            single_last_epilogue=model.cta_cycles(p, 'cooperative', 1, 64, True)[1]['last_epilogue'],
+            multi_last_epilogue=model.cta_cycles(p, 'cooperative', 2, 64, True)[1]['last_epilogue']))
+    old_e0 = frozen['calibration']['params']['cfg_c']['E0']
+    result = dict(input=str(root), gpu=frozen['gpu'], points=points, excluded=excluded,
+        failed_processes=failed, full_data_fits=fits, grouped_validation=validation,
+        frozen_E0_reference=dict(cycle=old_e0, scope='Already used these calibration cases; not heldout scoring',
+            comparisons=[dict(case=p['id'], relative=old_e0 / p['cycle'] - 1) for p in points]),
+        q_wiring_check=wiring, analyzer_sha256=sha(__file__),
+        model_sha256=sha(Path(model.__file__)), fit_sha256=sha(Path(fit.__file__)),
+        summary_sha256=sha(root / 'derived/summary.json'),
+        scope='Posthoc grouped calibration diagnostics, equal weight per case. Merged max(done)-max(permit). '
+              'normalized_ns uses measured same-CTA full-window cycle/ns, including withheld targets; '
+              'not direct output timestamps or an autonomous timing prediction. No observed overlap input, '
+              'V08 heldout samples or job738100 samples enter these fits.')
+    destination.mkdir(parents=True, exist_ok=False)
+    (destination / 'single-tile-model.json').write_text(json.dumps(result, indent=2) + '\n')
+    print(f'{len(points)} qualified single-tile cases, grouped by K and geometry -> {destination}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cpu-check', action='store_true')
     parser.add_argument('--v08-output', action='store_true', help='V08 cfg_a/c output overlap and critical-CTA posthoc analysis')
+    parser.add_argument('--v08-single-model', action='store_true', help='Grouped calibration check of constant/static-q merged output')
     parser.add_argument('--input', type=Path)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -456,7 +562,9 @@ def main():
     else:
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
-        if args.v08_output:
+        if args.v08_single_model:
+            analyze_v08_single_model(args.input, args.output)
+        elif args.v08_output:
             analyze_v08_output(args.input, args.output)
         else:
             analyze(args.input, args.output)
