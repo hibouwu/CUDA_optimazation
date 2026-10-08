@@ -255,6 +255,13 @@ int main(int argc, char** argv) {
                                        {{1.f, 0.f}, nullptr, sd, d.pointer, sd}};
     cudaDeviceProp properties{};
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
+    char gpu_uuid[41] = "GPU-";
+    int uuid_pos = 4;
+    for (int i = 0; i < 16; ++i) {
+      if (i == 4 || i == 6 || i == 8 || i == 10) gpu_uuid[uuid_pos++] = '-';
+      std::snprintf(gpu_uuid + uuid_pos, 3, "%02x", unsigned(uint8_t(properties.uuid.bytes[i])));
+      uuid_pos += 2;
+    }
     if (o.sm_count < 0 || o.sm_count > properties.multiProcessorCount)
       throw std::runtime_error("sm-count must be zero (all SMs) or within the device SM count");
     int scheduler_sms = o.sm_count ? o.sm_count : properties.multiProcessorCount;
@@ -342,6 +349,7 @@ int main(int argc, char** argv) {
     };
 
     std::cout << "{\"event\":\"setup\",\"config\":\"" << kConfigName
+              << "\",\"gpu_uuid\":\"" << gpu_uuid
               << "\",\"traced\":" << (traced ? "true" : "false") << ",\"mode\":\"" << o.mode
               << "\",\"m\":" << o.m << ",\"n\":" << o.n << ",\"k\":" << o.k << ",\"grid\":["
               << grid.x << ',' << grid.y << ',' << grid.z << "],\"tile\":["
