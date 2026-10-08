@@ -107,7 +107,7 @@ def analyze(run, output):
         scope='Offline output diagnosis; original pass/fail and tolerances are unchanged.',
         limitations=[
             'The public CPU reference regenerates quantized FP16 values; device input buffers were not archived.',
-            'K=1024 and K=65536 records also differ in M/N and seed, so this is not a controlled K comparison.',
+            'Comparisons across records with different M/N or seeds do not isolate the effect of K.',
             'The minimum coefficient describes only these outputs and is not a proposed replacement tolerance.',
             'Output agreement across configurations does not identify an arithmetic mechanism.'],
         identical_output_groups=list(output_groups.values()), processes=results)

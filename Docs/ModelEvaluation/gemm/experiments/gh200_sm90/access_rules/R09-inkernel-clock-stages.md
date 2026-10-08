@@ -317,7 +317,7 @@ __half stored = __float2half_rn(value);
 
 整数运算按 uint32 模 2³²，seed 首轮固定为 17；逻辑坐标不依赖 pitch、grid 或线程遍历次序。可核对的 FP16 位模式：坐标 (0,0)/(0,1)/(1,0)/(127,255)，A 为 `ba2a/a8c9/b3f3/3be4`，B 为 `38b8/3812/3974/bb92`。位模式已用 CPU 独立整数计算及 FP16 RN 转换复核；这里只固定一份伪随机样本，不声称代表所有随机分布。
 
-随机参考从计时外读回的**实际存储 FP16 A/B**转为 double，计算 `ref=ΣA·B`、`s=Σ|A·B|`；不要调用同一个 GPU hash 重生参考。最初提出的工程判据为每个抽检点 `|D−ref|≤2^-20+2^-21·s`，且非有限值和 padding 错误均为 0；以绝对乘积和处理相消，不单靠相对误差。**下文同日公共 GPU 检查已发现 K=65536 不满足，撤回最初 K≤65536 的适用范围建议；K=20480 仍须先实测检查。** 本次保留阈值和失败，不为通过而放宽。继续报告原绝对误差、非有限值、padding 错误，并记录最大 error/tolerance。沿用现有 4096 点抽检；小矩阵可全检，抽检不能写成全矩阵正确性证明。输入生成还须核对上述位模式；用实际输入作 GEMM 参考本身不验证生成器。
+随机参考从计时外读回的**实际存储 FP16 A/B**转为 double，计算 `ref=ΣA·B`、`s=Σ|A·B|`；不要调用同一个 GPU hash 重生参考。最初提出的工程判据为每个抽检点 `|D−ref|≤2^-20+2^-21·s`，且非有限值和 padding 错误均为 0；以绝对乘积和处理相消，不单靠相对误差。**下文公共 GPU 检查发现 K=65536 不满足，撤回最初 K≤65536 的适用范围建议；随后 job738110 的 K=20480 random 预检也失败。** 本次保留阈值和失败，不为通过而放宽。继续报告原绝对误差、非有限值、padding 错误，并记录最大 error/tolerance。沿用现有 4096 点抽检；小矩阵可全检，抽检不能写成全矩阵正确性证明。输入生成还须核对上述位模式；用实际输入作 GEMM 参考本身不验证生成器。
 
 共同基点的 `r18.cu` 以 `Options check(1, argv)` 固定 seed=17；返回码及 `gaps_common.hpp::print_check` 均使用零误差判据，公共补丁须让实际 seed 与两处模式判断一致。初始化、输入读回和检查均在目标计时外。原 dyadic 的精确性来自小整数格点：每个乘积为整数/1024、整数绝对值≤64；K≤262144 时绝对部分和的整数界≤2²⁴，不能将这种性质推广到任意 FP16 输入。本组没有修改公共头或 kernel。
 
@@ -387,4 +387,70 @@ export CUDA_VISIBLE_DEVICES="$V08_GPU"
 bash /tmp/<新的R09目录>/run.sh
 ```
 
-`run.sh` 依次调用公共 setup、R09 shared-sample（含逐条件预检查）、R09 shared 分析。实际依赖为共享包的 9 个 cfg_a/b/c×plain/stamped/ends 二进制、对应完整 source/build 清单、Python 3 与 NumPy、CUDA 12.9 运行环境。构建已经复用，运行时不需要下载 CUTLASS 或向共享目录安装依赖。此处完成的是批次准备；15 条正式条件尚未测量。
+`run.sh` 依次调用公共 setup、R09 shared-sample（含逐条件预检查）、R09 shared 分析。实际依赖为共享包的 9 个 cfg_a/b/c×plain/stamped/ends 二进制、对应完整 source/build 清单、Python 3 与 NumPy、CUDA 12.9 运行环境。构建已经复用，运行时不需要下载 CUTLASS 或向共享目录安装依赖。本节保留采样前的准备记录，实际结果见[下一节](#r09-clock-input-job738110)。
+
+<a id="r09-clock-input-job738110"></a>
+
+### job738110：长窗口与 zero 输入实测
+
+2026-10-09，romeo-a043，**GPU-201f9d2a-b55f-2a3b-b355-3abf04c2bc88**，公共源码 6338653；不是 V08 的 GPU-099dda56，即使节点名相同也不是同卡。本批 15 条计划保留完整：12 条通过、360 个正式进程成功，三个 random 预检查均 numeric_error，无该三条件的正式性能结果。`run.sh` 的采样和分析 exit_code=0；Slurm 外层在完整归档转存并验 SHA 后，由管理者取消传输确认等待以释放资源。外层 CANCELLED 不等于样本丢失，也不能将该 Slurm 作业写成正常 COMPLETED；见 [transfer-note.txt](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-clock-input-job738110/transfer-note.txt)。
+
+本次离线重放 360 个成功进程及三个失败预检查，检查 source/bin/SASS 与原始记录身份；汇总复现原结果。ARM/x86 的两个 CV 值仅差约 2×10⁻¹⁸，比较使用 10⁻¹² 浮点容差。[比较结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-clock-input-job738110/reanalysis/C-20261009-clock-input-v2/comparison.json)同时保存逐进程 gap、频率、周期和同 trial 对照；[processes.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-clock-input-job738110/reanalysis/C-20261009-clock-input-v2/processes.csv)保留 360 个进程。没有重新采样或修改旧冻结判定。
+
+**dyadic 长窗口的旧偏差方向重现，但这里只作跨卡诊断。** K=20480 的实测 ends 包络为 638.928/743.072/619.424 µs，均超过 600 µs。直接沿用旧 V08 h06 冻结值，不重拟合：
+
+| 配置 | 本批 plain µs / ends GHz | 旧预测时间误差 | 旧频率误差 | 旧周期预测对 stamped 的误差 | 只换本批实测 f 后的时间误差 |
+|---|---:|---:|---:|---:|---:|
+| cfg_a | 641.328 / 1.585969 | +5.959% | −6.314% | +0.200% | −0.698% |
+| cfg_b | 754.720 / 1.584560 | −10.875% | −6.585% | −16.009% | −16.713% |
+| cfg_c | 624.832 / 1.632489 | +5.867% | −7.871% | −0.772% | −2.419% |
+
+cfg_a/c 的周期接近旧预测而频率被低估，cfg_b 同时保留显著的周期低估；后者仍被偏低的频率部分掩盖。本批 long K 的后续主循环为 513.559/596.196/1025.306 cycle/Ktile，cfg_b 仍明显高于其约 512 cycle/Ktile 的计算基准。实际偏差数值不能当作旧参考卡的新验证成绩，也没有得到可直接替换的跨卡 F 或频率常数。
+
+从 K=1024→8192→20480，ends 频率分别为 cfg_a 1.67735→1.57099→1.58597、cfg_b 1.66923→1.55646→1.58456、cfg_c 1.72117→1.60852→1.63249 GHz；中窗口到长窗口没有继续单调下降。K 同时改变足迹、供给和主循环占比，三点不足以唯一识别长时频率机制。
+
+**zero 的频率提高，没有统一变成等比例的时间下降。** 以下是每项各自的跨进程中位数，比较同一 cfg、M=N=3584、K=20480、seed=17 的两种输入：
+
+| 配置 | plain dyadic→zero µs | plain 变化 | ends 最大 CTA 周期变化 | ends 频率变化 | ends 包络变化 |
+|---|---:|---:|---:|---:|---:|
+| cfg_a | 641.328→619.200 | −3.450% | +5.817% | +9.339% | −3.498% |
+| cfg_b | 754.720→770.912 | +2.145% | +11.539% | +9.641% | +0.818% |
+| cfg_c | 624.832→575.760 | −7.854% | +0.122% | +8.289% | −7.519% |
+
+cfg_b 的 SM 周期窗口增幅足以抵消频率升幅，不能假定同一几何的 C 不随输入变化。cycle 是 SM 时钟域的窗口长度，不是动态指令条数；更长的周期窗口本身不证明增加了指令或物理流量。本批没有功率或计数器测量，不据此归因于功率、压缩、缓存或某个供给上限。
+
+为定位周期增量，每个 stamped 进程选取本 CTA `end_c−entry_c` 最大者，直接分解 `C=P0+S+L0+Σ后续L+Σ(fm[j]−me[j−1])+(end−最后me)`。逐调用严格闭合，再对 10 个进程取算术均值，cfg_b 的 zero−dyadic 为：
+
+| 区间 | 平均差，cycle |
+|---|---:|
+| 总 C | +132758.3 |
+| P0 / S | −22.8 / −79.0 |
+| 首 tile 主循环 L0 | +17597.8 |
+| 后续主循环合计 | +113906.6 |
+| 主循环之间的交接间隔合计 | +1355.7 |
+| 最后主循环完成到端点 | 0.0 |
+
+主循环区间占该平均增量的 **99.06%**，但 L 含流水线等待，不是纯 Tensor Core 指令服务。每次最大周期 CTA 可以不同；这是 stamped CTA 窗口的分解，不是完整 event 时间分解。原汇总中 cfg_b 的 P0/S、最后 E、Etail 基本不变；L0 173848→189432.5 cycle、后续 L 190782.757→212098.946 cycle，是主要变化。cfg_b 为 pingpong，重叠 Efull 不能再与主循环直接相加；原区间汇总的均值/中位数也不能当作同一条精确关键路径。
+
+**固定项和聚合口径。** cfg_b 的 `median(C)/median(f)` 换算时间增长 1.731%；先在每进程计算 C/f 再取中位数，则为 745.403→749.566 µs，仅增长 0.559%。该代理仍混合最大周期 CTA 和最多 tile CTA 的中位频率；直接测得的 ends 包络为 743.072→749.152 µs（+0.818%）。因此不能把任意 C/f 聚合当作实测包络。
+
+同次 ends 调用内的 `median(event−包络)`，cfg_a 为 3.680→3.984 µs、cfg_b 为 **3.808→3.904 µs**、cfg_c 为 4.000→4.000 µs。cfg_b 只增加约 0.096 µs；另算 `median(plain)−median(ends包络)=11.648→21.760 µs` 不能据此声称固定项增加 10.112 µs。后者混合两个进程群，容易受状态和统计口径影响。
+
+**扰动与波动限制。** cfg_b dyadic/zero 的 plain CV 为 1.390%/2.119%，ends CV 为 1.321%/2.171%；ends/plain 差为 −1.054%/−2.356%，stamped/plain 差为 −0.789%/−0.137%。因此较小的总时间增幅不能精确解释为新增的某个固定代价。其 ends 周期 CV 为 1.689%→2.359%，频率 CV 反而为 0.708%→0.365%；波动没有仅表现为频率波动。
+
+按相同 trial 编号对照，cfg_a/c 在 plain、stamped、ends 中均为 10/10 次 zero 更快；cfg_b 的 zero 较慢次数分别为 8/10、8/10、7/10，plain 相对变化范围 −0.864%～+5.525%。trial 是打乱顺序的采样轮，两进程相隔约 0.7–22.5 s，不是同时或紧邻的调用。合适结论是“本批 cfg_b 未观察到随频率上升而下降的总时间”，不能把慢 2.145% 当作可迁移常数。
+
+**random 保持失败。** 三个 K=20480 预检的抽检索引与输出逐点一致，各 **158/4096（3.8574%）**超出原阈值，最大 error/tolerance=1.7895834006；非有限值和 padding 错误为零。对 FP64 参考的绝对误差中位/p95/最大为 0.000759928/0.002315922/0.004383186，原容差中位数为 0.002441932。`max_storage_reference_error=0.0043792724609375` 使用 float(ref)，两种口径均已复算。3434/4096 点误差朝零，与此前长 K 失败的趋势相似，仍不识别数值机制。结果见 [random-error-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-clock-input-job738110/reanalysis/C-20261009-random-error-v1/diagnostic.json)；不放宽容差，不使用失败预检的 event 时间形成性能结论。
+
+复核命令（输出目录使用新后缀）：
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_clock_input_compare.py \
+  --run "$ROOT/20261009-R09-clock-input-job738110" \
+  --v08 "$ROOT/20261008-V08-job737322-v1" \
+  --output "$ROOT/20261009-R09-clock-input-job738110/reanalysis/C-clock-replay-<新后缀>"
+python3 microbench/gh200_resource_campaign/access_rules/r09_input_error.py \
+  --run "$ROOT/20261009-R09-clock-input-job738110" \
+  --output "$ROOT/20261009-R09-clock-input-job738110/reanalysis/C-random-replay-<新后缀>"
+```
