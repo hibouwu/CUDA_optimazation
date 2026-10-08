@@ -1,6 +1,6 @@
 # GH200 既有实验的微架构扩展计划
 
-更新：2026-10-09（执行规范独立维护）。**先恢复 V08 失败项主线，再在原 EXP/R/B 实验上补充机制对照；已启动离线分析与公共框架准备；新增 GPU 补测尚未开始，实际进度见 EXECUTION。** 本计划只安排实验与模型输出，证据审阅、来源适用范围和现有模型缺口见 [MICROARCH-REVIEW](MICROARCH-REVIEW.md)，既有成绩见 [README](README.md)。
+更新：2026-10-09（执行规范独立维护）。**先恢复 V08 失败项主线，再在原 EXP/R/B 实验上补充机制对照；实施已启动，实际进度见 [EXECUTION](EXECUTION.md#status)。** 本计划只安排实验与模型输出，证据审阅、来源适用范围和现有模型缺口见 [MICROARCH-REVIEW](MICROARCH-REVIEW.md)，既有成绩见 [README](README.md)。
 
 ## 原实验如何继续
 
