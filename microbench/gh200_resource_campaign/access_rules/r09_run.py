@@ -6,6 +6,12 @@ Run inside one single-GPU Slurm allocation (CUDA 12.9 loaded):
   r09_run.py sample --output RUN --set {pilot,clock,stages}
 Each process is one independent sample. Raw stdout (with per-CTA traces) is kept gzipped per
 sample; a summary row without traces is appended to RUN/samples.jsonl.
+
+Public cfg_a/b/c clock/input batch (15 diagnostic cases; original modes unchanged):
+  r09_run.py shared-list
+  r09_run.py shared-prepare --shared-run SHARED_RUN --output NEW_RUN
+Then run NEW_RUN/run.sh inside the assigned GPU step, with V08_GPU and
+CUDA_VISIBLE_DEVICES set to the assigned UUID. Reuses the shared source/build only.
 """
 from __future__ import annotations
 
@@ -269,13 +275,180 @@ def sample(output: Path, name):
                 run_one(output, name, case_id, spec, trial)
 
 
+def shared_cases():
+    import run_v08
+
+    rows = []
+    for cfg in run_v08.CONFIGS:
+        for k in (1024, 8192, 20480):
+            modes = ("dyadic", "zero", "random") if k == 20480 else ("dyadic",)
+            for mode in modes:
+                row = run_v08.row(f"{cfg}_r09_k{k}_{mode}", cfg, "ctrl", 3584, 3584, k)
+                row.update(input_mode=mode, seed=17, sm_count=0)
+                rows.append(row)
+    return rows
+
+
+def prepare_shared(output: Path, shared: Path):
+    """Reuse a completed public build without copying its samples or changing its kernel."""
+    import v06_run as common
+    import run_v08
+
+    common.verify(shared)
+    binaries = json.loads((shared / "build/binary_hashes.json").read_text())
+    for cfg in run_v08.CONFIGS:
+        for variant in run_v08.VARIANTS:
+            if f"build/{cfg}_{variant}" not in binaries:
+                raise ValueError(f"shared build missing {cfg}_{variant}")
+    output.mkdir(parents=True, exist_ok=False)
+    shutil.copytree(shared / "source", output / "source")
+    shutil.copytree(shared / "build", output / "build")
+    for name in ("r09_run.py", "r09_analyze.py", "r09_input_error.py"):
+        shutil.copy2(ROOT / name, output / "source" / name)
+    write_json(output / "cases.json", shared_cases())
+    parent = json.loads((shared / "run_config.json").read_text())
+    write_json(output / "run_config.json", dict(
+        family="r09-shared-clock-input", cases_sha256=sha(output / "cases.json"),
+        shared_run=str(shared), shared_source_commit=parent.get("source_commit"),
+        shared_source_hashes_sha256=sha(shared / "source_hashes.json"),
+        r09_entry_analysis_sha256={name: sha(output / "source" / name)
+                                  for name in ("r09_run.py", "r09_analyze.py", "r09_input_error.py")},
+    ))
+    write_json(output / "build/origin.json", dict(
+        copied_from=str(shared / "build"),
+        binary_hashes_sha256=sha(shared / "build/binary_hashes.json"),
+    ))
+    write_json(output / "source_hashes.json", {
+        str(p.relative_to(output)): sha(p) for p in sorted((output / "source").rglob("*"))
+        if p.is_file() and "__pycache__" not in p.parts
+    })
+    script = output / "run.sh"
+    script.write_text('''#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+export TMPDIR="$PWD/tmp"
+mkdir -p "$TMPDIR"
+python3 source/run_v08.py setup --output "$PWD"
+python3 source/r09_run.py shared-sample --output "$PWD"
+python3 source/r09_analyze.py --shared --input "$PWD" --output "$PWD/analysis"
+''')
+    script.chmod(0o755)
+    print("prepared 15 R09 cases, 3 variants x 10 processes = 450 processes:", output)
+
+
+def shared_process(output: Path, row, variant, trial):
+    """Keep a numeric failure local to its case; other public runner errors still stop."""
+    import run_v08
+
+    try:
+        record = run_v08.run_one(output, row, variant, trial)
+    except ValueError:
+        paths = (output / "samples" / row["id"]).glob(f"{variant}-{trial:02}*.json")
+        records = [json.loads(p.read_text()) for p in paths]
+        if not records:
+            raise
+        record = max(records, key=lambda r: r.get("attempt", 0))
+        if sha(output / record["raw"]) != record["raw_sha256"]:
+            raise ValueError("numeric failure raw identity changed")
+        with gzip.open(output / record["raw"], "rt") as stream:
+            events = {e["event"]: e for line in stream if line.strip() for e in [json.loads(line)]}
+        if events.get("check", {}).get("status") != "numeric_error":
+            raise
+        return dict(case=row["id"], status="numeric_error", raw=record["raw"],
+                    variant=variant, trial=trial, tolerance=events.get("tolerance"),
+                    max_storage_reference_error=events["check"]["max_storage_reference_error"])
+    return dict(case=row["id"], status="ok", raw=record["raw"], variant=variant, trial=trial)
+
+
+def check_shared(output: Path):
+    """Check all three K=20480 random plain cases; none count as formal trial 0."""
+    import run_v08
+    import v06_run as common
+
+    if not os.environ.get("SLURM_JOB_ID"):
+        raise ValueError("Slurm allocation required")
+    common.verify(output)
+    if sha(output / "cases.json") != json.loads((output / "run_config.json").read_text())["cases_sha256"]:
+        raise ValueError("matrix changed")
+    env = run_v08.identity()
+    if env != json.loads((output / "environment.json").read_text()):
+        raise ValueError("device or allocation changed")
+    outcomes = []
+    with open('/tmp/gh200-measurement-' + env['gpu'].split(',')[0] + '.lock', 'a') as gpu_lock, \
+            (output / '.run.lock').open('a') as run_lock:
+        for lock in (gpu_lock, run_lock):
+            run_v08.fcntl.flock(lock, run_v08.fcntl.LOCK_EX | run_v08.fcntl.LOCK_NB)
+        for row in json.loads((output / "cases.json").read_text()):
+            if row["input_mode"] == "random":
+                # Same case, separate ID: these checks never count as formal trial 0.
+                check = dict(row, id="check_" + row["id"])
+                result = shared_process(output, check, "plain", 0)
+                result["case"] = row["id"]
+                outcomes.append(result)
+                print("R09 precheck", row["id"], result["status"], flush=True)
+    write_json(output / "random_checks.json", outcomes)
+    return outcomes
+
+
+def sample_shared(output: Path):
+    """Original V08 trial order and processes, excluding only cases with numeric failures."""
+    import run_v08
+
+    checks = check_shared(output)
+    failed = {r["case"]: r for r in checks if r["status"] == "numeric_error"}
+    rows = json.loads((output / "cases.json").read_text())
+    env = run_v08.identity()
+    with open('/tmp/gh200-measurement-' + env['gpu'].split(',')[0] + '.lock', 'a') as gpu_lock, \
+            (output / '.run.lock').open('a') as run_lock:
+        for lock in (gpu_lock, run_lock):
+            run_v08.fcntl.flock(lock, run_v08.fcntl.LOCK_EX | run_v08.fcntl.LOCK_NB)
+        for trial in range(10):
+            group = rows[:]
+            random.Random(20261009 + trial).shuffle(group)
+            for row in group:
+                if row["id"] in failed:
+                    continue
+                variants = run_v08.VARIANTS[:]
+                random.Random(f"{trial}-{row['id']}").shuffle(variants)
+                for variant in variants:
+                    result = shared_process(output, row, variant, trial)
+                    if result["status"] == "numeric_error":
+                        failed[row["id"]] = result
+                        break
+            print("R09 trial", trial, "complete; numeric failures:", list(failed), flush=True)
+    write_json(output / "sampling.json", dict(
+        planned_cases=[r["id"] for r in rows], numeric_failed=list(failed.values()),
+        sampled_cases=[r["id"] for r in rows if r["id"] not in failed],
+        processes_per_sampled_case=30,
+    ))
+    (output / 'nvidia-smi-after-ctrl.txt').write_text(subprocess.check_output(
+        ['nvidia-smi', '-q', '-i', os.environ['V08_GPU']], text=True))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", choices=("build", "sample"))
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("step", choices=("build", "sample", "shared-list", "shared-prepare", "shared-check", "shared-sample"))
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--cutlass-root", type=Path)
+    parser.add_argument("--shared-run", type=Path)
     parser.add_argument("--set", choices=tuple(case_sets()))
     args = parser.parse_args()
+    if args.step == "shared-list":
+        print(json.dumps(shared_cases(), indent=2))
+        return
+    if args.output is None:
+        parser.error("--output is required")
+    if args.step == "shared-prepare":
+        if args.shared_run is None:
+            parser.error("shared-prepare requires --shared-run")
+        prepare_shared(args.output.resolve(), args.shared_run.resolve())
+        return
+    if args.step == "shared-check":
+        check_shared(args.output.resolve())
+        return
+    if args.step == "shared-sample":
+        sample_shared(args.output.resolve())
+        return
     if args.step == "build":
         args.output.mkdir(parents=True, exist_ok=False)
         build(args.output.resolve(), args.cutlass_root.resolve())

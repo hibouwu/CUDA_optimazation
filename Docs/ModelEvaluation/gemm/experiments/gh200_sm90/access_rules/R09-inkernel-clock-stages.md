@@ -317,7 +317,7 @@ __half stored = __float2half_rn(value);
 
 整数运算按 uint32 模 2³²，seed 首轮固定为 17；逻辑坐标不依赖 pitch、grid 或线程遍历次序。可核对的 FP16 位模式：坐标 (0,0)/(0,1)/(1,0)/(127,255)，A 为 `ba2a/a8c9/b3f3/3be4`，B 为 `38b8/3812/3974/bb92`。位模式已用 CPU 独立整数计算及 FP16 RN 转换复核；这里只固定一份伪随机样本，不声称代表所有随机分布。
 
-随机参考从计时外读回的**实际存储 FP16 A/B**转为 double，计算 `ref=ΣA·B`、`s=Σ|A·B|`；不要调用同一个 GPU hash 重生参考。初始 K≤65536 的工程判据为每个抽检点 `|D−ref|≤2^-20+2^-21·s`，且非有限值和 padding 错误均为 0；以绝对乘积和处理相消，不单靠相对误差。它不是 WGMMA 误差定理，首次公共 GPU 数值检查前不能称为已验证容差；若不满足，先检查误差和参考，不能为了通过而事后放宽。继续报告原绝对误差、非有限值、padding 错误，并记录最大 error/tolerance。沿用现有 4096 点抽检；小矩阵可全检，抽检不能写成全矩阵正确性证明。输入生成还须核对上述位模式；用实际输入作 GEMM 参考本身不验证生成器。
+随机参考从计时外读回的**实际存储 FP16 A/B**转为 double，计算 `ref=ΣA·B`、`s=Σ|A·B|`；不要调用同一个 GPU hash 重生参考。最初提出的工程判据为每个抽检点 `|D−ref|≤2^-20+2^-21·s`，且非有限值和 padding 错误均为 0；以绝对乘积和处理相消，不单靠相对误差。**下文同日公共 GPU 检查已发现 K=65536 不满足，撤回最初 K≤65536 的适用范围建议；K=20480 仍须先实测检查。** 本次保留阈值和失败，不为通过而放宽。继续报告原绝对误差、非有限值、padding 错误，并记录最大 error/tolerance。沿用现有 4096 点抽检；小矩阵可全检，抽检不能写成全矩阵正确性证明。输入生成还须核对上述位模式；用实际输入作 GEMM 参考本身不验证生成器。
 
 共同基点的 `r18.cu` 以 `Options check(1, argv)` 固定 seed=17；返回码及 `gaps_common.hpp::print_check` 均使用零误差判据，公共补丁须让实际 seed 与两处模式判断一致。初始化、输入读回和检查均在目标计时外。原 dyadic 的精确性来自小整数格点：每个乘积为整数/1024、整数绝对值≤64；K≤262144 时绝对部分和的整数界≤2²⁴，不能将这种性质推广到任意 FP16 输入。本组没有修改公共头或 kernel。
 
@@ -346,3 +346,45 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_v03_residual.py \
   --run "$ROOT/20261007-v03-clock-rule" \
   --output "$ROOT/20261007-v03-clock-rule/reanalysis/C-20261009-v03-replay-<新后缀>"
 ```
+
+### 首批 15 条公共条件与长 K 数值失败
+
+2026-10-09，按管理者确认的首批范围，只准备下面 15 条；本批不加入空闲历史、持续功率扫描或新打点。`r09_run.py shared-list` 输出完整条件，均为 `ctrl`，M=N=3584、swizzle=1、evict=0、seed=17、sm_count=0（公共默认全部 SM），行距分别为 K/N/N。
+
+| 每配置的 K | input_mode | 三配置合计 |
+|---:|---|---:|
+| 1024 | dyadic | 3 |
+| 8192 | dyadic | 3 |
+| 20480 | dyadic、zero、random | 9 |
+
+公共运行源码固定为 **6338653b5a4127a7cb947b6355c38642310f3dcc**。复用管理者在 job738097、romeo-a057、GPU-43269fbc-449d-3e0f-908a-9c81229546d3 构建的 [source/build 包](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097/)，不重编、不复制 samples，也不以当前 checkout 的无关公共改动否定旧包。新 run 的 `run_config.json` 分别记录公共源码提交、来源源清单指纹，以及本次 R09 入口/分析器文件 SHA256；`build/origin.json` 记录来源二进制清单指纹。R09 只增加专用入口与分析，不复制随机生成或正确性实现。
+
+**公共包的数值范围有具体失败。** 39 个进程中，M=2304、N=3072、K=1024 的三配置、三输入及 SM32 检查共 36 个通过；另三个 64×64×65536、seed=17、random plain 均为 numeric_error。用 [r09_input_error.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_input_error.py) 导入公共 `analyze_r18.random_references`，从原始 4096 个输出复算：
+
+| 指标（每进程 4096 点） | K=1024，seed=20261009 | K=65536，seed=17 |
+|---|---:|---:|
+| 随机输入进程数 | 9，输出逐点相同 | 3，输出逐点相同 |
+| 超出原容差 | 0 | **958（23.3887%）** |
+| 绝对误差中位 / p95 / 最大，对 FP64 参考 | 0.000008655 / 0.000026561 / 0.000052521 | **0.004387 / 0.013477 / 0.023849** |
+| 原容差中位数 | 0.000122989 | 0.007810505 |
+| 最大 error/tolerance | 0.419902 | **3.068338** |
+| 误差方向朝零 | 83.4229% | 83.6670% |
+
+长 K 最坏点为 (47,18)：输出 247.32081604003906，FP64 参考 247.34466478994727，误差 −0.023848749908211175，sum_abs=16298.177030993618。原 `max_storage_reference_error=0.0238494873046875` 使用 float(ref)，两种口径均已复现。正/负误差分别 2010/2086 点，不是每个输出减去同一个常数。覆盖这批输出所需的最小 sum_abs 系数为 1.463218628e−6（原系数的 3.06859 倍），**仅是测后描述，不采用为新容差**。长短组同时改变几何和 seed；设备实际输入 buffer 未归档；这些数据不能唯一识别 K、舍入/截断或输入生成机制。结果与逐点表在 [C-20261009-random-error-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097/reanalysis/C-20261009-random-error-v1/diagnostic.json)。
+
+本批先逐一执行三个 K=20480 random plain 检查，记录在 `samples/check_<case>/`，不计入正式 trial 0。**数值失败只影响该条件**：继续其他已通过检查的 dyadic/zero/random，15 条原矩阵保持不变；`random_checks.json` 和 `sampling.json` 保存数值失败及已采样列表。正式过程仍调用公共 `run_v08.run_one`，沿用原暖机、10 trial 和条件/variant 随机顺序；正式采样中出现 numeric_error 的条件也停止其后续采样，不生成该条件的性能值。其他运行错误按公共 runner 原样报错。
+
+全通过时为 3 个预检查加 450 个正式进程；若三个 random 均失败，则 12 个条件、360 个正式进程，不能写成 15 条全部完成。`r09_analyze.py --shared` 使用公共 `v08_model.summarize_case`，输出 `summary.json`、`metrics.csv`，失败行保留 numeric_error 且不填性能数值。报告 plain/stamped/ends 时间、周期、调用内频率、包络、CV、P0/S、每 Ktile 主循环和相对本批 dyadic 的差；不做冻结评分或功率推断。
+
+最少命令（准备与传输由管理者安排；远端新目录仅用节点本地 /tmp，不写超配额的共享空间）：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/r09_run.py shared-prepare \
+  --shared-run <完整公共包路径> --output <新的R09目录>
+# 获得分配后，在已加载 CUDA 12.9、已绑定获配 UUID 的 step 内：
+export V08_GPU=<获配GPU-UUID>
+export CUDA_VISIBLE_DEVICES="$V08_GPU"
+bash /tmp/<新的R09目录>/run.sh
+```
+
+`run.sh` 依次调用公共 setup、R09 shared-sample（含逐条件预检查）、R09 shared 分析。实际依赖为共享包的 9 个 cfg_a/b/c×plain/stamped/ends 二进制、对应完整 source/build 清单、Python 3 与 NumPy、CUDA 12.9 运行环境。构建已经复用，运行时不需要下载 CUTLASS 或向共享目录安装依赖。此处完成的是批次准备；15 条正式条件尚未测量。

@@ -408,11 +408,72 @@ def plots(summary, out: Path):
     plt.close(fig)
 
 
+def summarize_shared(run: Path, out: Path):
+    """Public R09 batch: reuse the shared numeric replay and timing definitions."""
+    import v06_run as common
+    import v08_model
+
+    common.verify(run)
+    rows = json.loads((run / "cases.json").read_text())
+    setups = {s["case"]: s["setup"] for s in json.loads((run / "static_setup.json").read_text())}
+    sampling = json.loads((run / "sampling.json").read_text()) if (run / "sampling.json").exists() else {}
+    failed = {r["case"]: r for r in sampling.get("numeric_failed", [])}
+    summaries, metrics = {}, []
+    for row in rows:
+        metric = {key: row[key] for key in ("id", "config", "m", "n", "k", "input_mode", "seed", "sm_count")}
+        if row["id"] in failed:
+            summaries[row["id"]] = dict(status="numeric_error", condition=row, failure=failed[row["id"]])
+            metrics.append(dict(metric, status="numeric_error"))
+            continue
+        s = v08_model.summarize_case(run, row, setups[row["id"]])
+        summaries[row["id"]] = s
+        metric["status"] = "measured"
+        for key in ("plain_us", "stamped_us", "ends_us", "plain_cv", "stamped_cv", "ends_cv",
+                    "c_max_stamped", "c_max_ends", "ghz_stamped", "ghz_ends", "window_stamped",
+                    "window_ends", "perturbation", "ends_perturbation", "T", "kt"):
+            metric[key] = s[key]
+        metric.update(P0_cycles=s["intervals"]["P0"], S_cycles=s["intervals"]["S"],
+                      L0_per_kt=s["intervals"]["L0"] / s["kt"],
+                      L_per_kt=s["intervals"]["L"] / s["kt"],
+                      observed_kappa=s["c_max_ends"] / s["c_max_stamped"],
+                      plain_minus_ends_window_us=s["plain_us"] - s["window_ends"])
+        metrics.append(metric)
+    for metric in metrics:
+        if metric["status"] != "measured":
+            continue
+        base = next((x for x in metrics if x["config"] == metric["config"] and x["k"] == metric["k"]
+                     and x["input_mode"] == "dyadic" and x["status"] == "measured"), None)
+        for key in ("plain_us", "c_max_ends", "ghz_ends"):
+            metric[key + "_vs_dyadic"] = metric[key] / base[key] - 1 if base else None
+    out.mkdir(parents=True, exist_ok=False)
+    common.write_json(out / "summary.json", dict(
+        purpose="R09 same-batch clock/input diagnostic; no frozen validation score or power inference.",
+        environment=json.loads((run / "environment.json").read_text()), cases=summaries,
+        planned_cases=len(rows), measured_cases=len(rows) - len(failed), numeric_failed=list(failed),
+        notes=["plain_minus_ends_window_us subtracts medians from separate processes, not a physical host gap.",
+               "ghz is the shared maximum-tile CTA cycle/ns statistic; input changes do not measure power."],
+    ))
+    with (out / "metrics.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(k for m in metrics for k in m)))
+        writer.writeheader()
+        writer.writerows(metrics)
+    for m in metrics:
+        if m["status"] != "measured":
+            print(m['id'], 'numeric_error; no performance result')
+            continue
+        print(f"{m['id']:32s} plain {m['plain_us']:.3f} us, ends {m['window_ends']:.3f} us, "
+              f"{m['ghz_ends']:.6f} GHz, {m['c_max_ends']:.1f} cycle")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--input", type=Path, required=True)
     p.add_argument("--output", type=Path)
+    p.add_argument("--shared", action="store_true", help="analyze public cfg_a/b/c R09 batch")
     args = p.parse_args()
+    if args.shared:
+        summarize_shared(args.input.resolve(), (args.output or args.input / "analysis").resolve())
+        return
     s = summarize(args.input.resolve(), (args.output or args.input).resolve())
     print(json.dumps(dict(timer=s["timer"], perturbation=s["perturbation"],
                           sass={k: v for k, v in s["sass"].items()}), indent=1))
