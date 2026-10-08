@@ -38,3 +38,18 @@
 ## 数据
 
 [cases.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/global-duplex-formal-b3-v1-r2/cases.csv)、[trials.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/global-duplex-formal-b3-v1-r2/trials.csv)、[small 图](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/global-duplex-formal-b3-v1-r2/small.svg)、[手算](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/global-duplex-formal-b3-v1-r2/manual-example.md)。原始 run：`global_duplex/formal-b3-v1`。
+
+<a id="exp-04"></a>
+
+## 前序测量（原 EXP-04 的 global 部分）
+
+2026-10-08 由 EXP-04 迁入。528 CTA、256 线程、每线程 16 B，原始 run `memory_baseline/formal-v3-a`。数值与本页一致。
+
+| 配置 | GB/s | CV |
+|---|---:|---:|
+| 读 `.ca` / `.cg`，8 MiB | 13371 / 7834 | 0.2% / 1.0% |
+| 读 `.cg`，256 MiB | 3515 | 0.3% |
+| 写，256 MiB | 3838 | 0.7% |
+| 依赖复制，各 128 MiB（读+写） | 3411 | 0.2% |
+
+[samples.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/samples.csv)、[global 图](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/global.png)。SMEM 部分迁至 [EXP-09](EXP-09-smem.md#exp-04)，计时空窗口迁至 [R09](access_rules/R09-inkernel-clock-stages.md#empty-window)。

@@ -35,3 +35,20 @@
 ## 数据
 
 [samples.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s09-main-execution/device-revalidation-v2/analysis-v1/samples.csv)、[parameters.json](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s09-main-execution/device-revalidation-v2/analysis-v1/parameters.json)、[广播三批](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s09-main-execution/device-revalidation-v2/analysis-v1/broadcast.png)。原始 run：`implementation/s09-main-execution/device-revalidation-v2/`。
+
+<a id="exp-04"></a>
+
+## 前序测量（原 EXP-04 的 SMEM 部分）
+
+2026-10-08 由 EXP-04 迁入。EXP-04 是 v1 访存测量（EXP-02）的重测；1 CTA、256 线程、每线程每轮 8 次 4 B，原始 run `memory_baseline/formal-v3-a`。
+
+| 配置 | B/cycle/CTA | CV |
+|---|---:|---:|
+| 读 stride 1 / 2 / 4 / 8 / 16 / 32 | 95.2 / 64.0 / 32.0 / 16.0 / 8.0 / 4.0 | 9.9% / <0.001% |
+| 写 stride 1 | 127.9 | <0.001% |
+
+stride=1 读在约 95 与 127 B/cycle 两档之间跳动，三批后仍不稳定；本页改为两数组、独立读写后得到稳定的 87 B/cycle。stride 2–32 稳定为 128/stride 量级，与本页一致。
+
+![SMEM stride=1 三批样本](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/stride1.png)
+
+[samples.csv](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/samples.csv)、[SMEM 图](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/smem.png)。计时空窗口迁至 [R09](access_rules/R09-inkernel-clock-stages.md#empty-window)，global 部分迁至 [EXP-13](EXP-13-global-rw.md#exp-04)。

@@ -31,7 +31,7 @@
 | cp.async | 单 CTA 128 线程最多 7.5 B/cycle；整卡 16 B、4 stage 达 5.3 TB/s（源仅 8 MiB，小于 L2，速率高于 HBM 产品值） | [EXP-12](EXP-12-cp-async.md) |
 | global | 大工作集读 3.52 TB/s、写 3.79、1:1 读写 3.43（HBM3 产品值 4 TB/s）；小工作集 `.ca` 读 13.5 TB/s | [EXP-13](EXP-13-global-rw.md) |
 | TMA 1D bulk | 整卡读 ≥8 KiB 时 3.8 TB/s；**bulk 写只有 2.6–2.7 TB/s**；单 CTA 单请求受往返时间限制 | [EXP-14](EXP-14-tma-1d.md) |
-| TMA 2D tensor | 连续布局读写整卡均 3.8–3.9 TB/s，SW128 无代价；行距 144 B（只按 16 B 对齐）时写降到 1.33–1.45 TB/s；[R05-E](access_rules/R05-async-lifecycle.md) 证实行距 160 B（32 B 对齐）和 256 B 都正常，原因是行起点对齐 | [EXP-15](EXP-15-tma-2d.md) |
+| TMA 2D tensor | 连续布局读写整卡均 3.8–3.9 TB/s，SW128 无代价；行距 144 B（只按 16 B 对齐）时写降到 1.33–1.45 TB/s；[R05-E](EXP-15-tma-2d.md#r05-e) 证实行距 160 B（32 B 对齐）和 256 B 都正常，原因是行起点对齐 | [EXP-15](EXP-15-tma-2d.md) |
 | TMA 流水 | 单 CTA 读速率随缓冲容量增加：16 KiB 时 14.7 B/cycle，64 KiB 时 28.5–39.8；S1R1 时每个 16 KiB 请求的完整周期约 1110 cycle，是单请求往返时间的上界，不是实测延迟；整卡与 S、R 无关，约 3.7 TB/s | [EXP-16](EXP-16-tma-pipeline.md) |
 | cluster / DSM | 整卡 DSM 读约 2.2–2.5 TB/s，本地 SMEM 读 10–12 TB/s；TMA 多播在 C=2/4/8 时接收量均约 5 TB/s，逻辑源请求按 1/C 下降 | [EXP-17](EXP-17-cluster.md) |
 | 驻留与辅助 | local 访问每字约 59 cycle；同址原子约 73 cycle/轮，无争用 28；cvt、IMAD.WIDE 等依赖链 29–43 cycle/轮 | [EXP-18](EXP-18-occupancy-aux.md) |

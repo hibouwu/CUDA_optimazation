@@ -68,18 +68,18 @@ e=\frac{\widehat T-T_{\mathrm{measured}}}{T_{\mathrm{measured}}}
 | 固定 CUTLASS，新 K（4096、5120、6144） | 用同一 kernel 拟合后内插 | +0.5% / −0.7% / −0.6% | 拟合有效，但不是规则验证 |
 
 1. **规则组合在单 CTA 层面成立。** 异步目标组合（2 个 consumer warpgroup、每 Ktile 4 条 `m64n256k16`、`wait_group 1`、4 stage）主循环约 1026 cycle/Ktile，理想值 1024，WGMMA 已满速。
-2. **整卡误差与频率假设一致。** K=47 时窗口比值频率比假设低 10.3%，误差 −9.95%；这是优先解释，尚未做固定频率对照。整卡预测需要负载下的频率，见 [R07](R07-anchor-clock-fixedcost.md)。
-3. **完整 kernel 的规则缺少固定开销与组合成本。** 同一 kernel 的经验关系（[R07](R07-anchor-clock-fixedcost.md)，`NDEBUG` 构建）为 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048）；截距在 2048³ 约占 1/3，与规则预测的 −28% 量级一致。[R09](R09-inkernel-clock-stages.md) 拆分后，该关系可由各段重建：主循环 1024 cycle/Ktile（已达计算下界），时间斜率来自调用内频率约 1.64 GHz；截距约 9.2 µs = 主机间隙 3.7–3.9 + 预填约 2.2 + epilogue 约 2.9 + store 后与尾部约 0.8 µs。规则模型漏掉的是这些固定段与调用内频率。
+2. **整卡误差与频率假设一致。** K=47 时窗口比值频率比假设低 10.3%，误差 −9.95%；这是优先解释，尚未做固定频率对照。整卡预测需要负载下的频率，见 [R07](R09-inkernel-clock-stages.md#r07)。
+3. **完整 kernel 的规则缺少固定开销与组合成本。** 同一 kernel 的经验关系（[R07](R09-inkernel-clock-stages.md#r07)，`NDEBUG` 构建）为 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048）；截距在 2048³ 约占 1/3，与规则预测的 −28% 量级一致。[R09](R09-inkernel-clock-stages.md) 拆分后，该关系可由各段重建：主循环 1024 cycle/Ktile（已达计算下界），时间斜率来自调用内频率约 1.64 GHz；截距约 9.2 µs = 主机间隙 3.7–3.9 + 预填约 2.2 + epilogue 约 2.9 + store 后与尾部约 0.8 µs。规则模型漏掉的是这些固定段与调用内频率。
 后续：补入 R07–R09 的输入后，[V02](V02-kernel-prediction.md) 对 11 个未测尺寸的完整 kernel 预测误差中位数 6.0%、最大 10.3%。
 
-4. **R00 的 CUTLASS 没开 `NDEBUG`**，编译器把每条 MMA 都改成提交后 wait0；加 `NDEBUG` 后快 5–6%。重测见 R07。
+4. **R00 的 CUTLASS 没开 `NDEBUG`**，编译器把每条 MMA 都改成提交后 wait0；加 `NDEBUG` 后快 5–6%。重测见 [R07，现并入 R00](R00-anchor-target.md#ndebug)。
 
 预测文件冻结后计时探针改过一次；单 CTA 各段误差互相抵消（预填预测 1481、实测 1148 cycle；输出预测 6044、实测 6629）。
 
 ## 实现要点
 
 - 目标组合：384 线程（线程 0–127 为 producer 区，warp 0 发 TMA；两个 consumer warpgroup），154 寄存器/线程、无 spill，SMEM 197888 B，1 CTA/SM。每 Ktile 每个 consumer 发 4 条 WGMMA 后 commit、`wait_group 1`；上一 tile 的 group 完成后释放其输入槽。最后 wait0，复用输入区分两块 64 KiB 经 TMA 写回并完整 wait0，窗口在第二块完成时结束。SASS 无 C7520/C7517/C7519，主循环 8 条 HGMMA、2 次 wait1。
-- 预测由 `v01_predict.py` 生成：WGMMA 服务（R00-B）、每 SM 供给（R05-D）、事件与等待（R05、R01）、TMA 写回（R05-E）。预测文件 SHA256 `17026427…`，冻结于测量前。
+- 预测由 `v01_predict.py` 生成：WGMMA 服务（R00-B）、每 SM 供给（[R05-D](R13-async-retirement.md#r05-d)）、事件与等待（R05、R01）、TMA 写回（[R05-E](../EXP-15-tma-2d.md#r05-e)）。预测文件 SHA256 `17026427…`，冻结于测量前。
 - 整卡 grid 为 4×132，所有 CTA 读同一输入；完整 CUTLASS 复用 R00 二进制，CUDA event 计时。
 - 首版（作业 735062/735138）目标组合被编译器逐条串行（C7520），且没有基于规则的预测，已被本版取代；LDS→FFMA 辅助组合重测了完成边界，预测仍为空。
 

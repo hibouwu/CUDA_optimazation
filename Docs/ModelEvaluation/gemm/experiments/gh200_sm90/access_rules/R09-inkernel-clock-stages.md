@@ -4,13 +4,13 @@
 
 ## 问题
 
-1. 一次 GEMM 调用**内部**的平均 SM 频率是多少？R07 只有调用后的探针（1.93–1.98 GHz）。
+1. 一次 GEMM 调用**内部**的平均 SM 频率是多少？[R07](#r07) 只有调用后的探针（1.93–1.98 GHz）。
 2. M=N=2048 与 M=N=256（2 CTA）单调用时间怎样分成预填、主循环、epilogue、尾部与主机可见间隙？
-3. 各段相加能否重现 R07 单调用拟合 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)？
+3. 各段相加能否重现 [R07](#r07) 单调用拟合 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)？
 
 ## 配置
 
-- CUTLASS 与 [R07](R07-anchor-clock-fixedcost.md) 相同（FP16→FP32，128×256×64，cluster 2×1×1，cooperative，4 stage，`ElementC=void`，epilogue 128×32）。M=N=2048 为 128 CTA、1 波；M=N=256 为 2 CTA；8192³ 为 132 个持久 CTA，每个 15–16 个 tile。
+- CUTLASS 与 [R07](#r07) 相同（FP16→FP32，128×256×64，cluster 2×1×1，cooperative，4 stage，`ElementC=void`，epilogue 128×32）。M=N=2048 为 128 CTA、1 波；M=N=256 为 2 CTA；8192³ 为 132 个持久 CTA，每个 15–16 个 tile。
 - 打点构建：对 kernel 与 mainloop collective 两个头文件做覆盖副本，在 7 处由一个线程读 `clock64` 与 `globaltimer` 并写入全局记录；原头文件不改。无打点构建只差覆盖目录与 `-DR09_TRACE`。
 - 计时协议同 R00/R07 K 扫描：同步预热到末 5 次 CV≤2%，再用 event 包围一次调用；读出这次调用的记录。冷调用：加载调用后空闲 1.5 s 再计时一次。
 - 每点 10 个独立进程；打点与无打点每轮相邻运行、顺序随机。全部输出 4096 点 CPU FP64 抽检误差为 0。
@@ -127,3 +127,91 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_run.py build --cutla
 python3 microbench/gh200_resource_campaign/access_rules/r09_run.py sample --output <RUN> --set stages   # 另有 pilot、clock、timer、ablation
 python3 microbench/gh200_resource_campaign/access_rules/r09_analyze.py --input <RUN>
 ```
+
+<a id="r07"></a>
+
+## 前序：调用后频率、持续负载与单调用截距（原 R07，2026-10-07）
+
+2026-10-08 由 R07 迁入；R07 的 NDEBUG 锚点在 [R00](R00-anchor-target.md#ndebug)。Slurm 735634，romeo-a048，GPU-009a8880…，CUDA 12.9 / sm_90a，CUTLASS v3.9.2，与本页上文不是同一块卡。CUTLASS 与上文相同（FP16→FP32，128×256×64，cluster 2×1×1，cooperative，4 stage，`ElementC=void`，epilogue 128×32），NDEBUG 构建；cuBLASLt FP16→FP32 取首个合法启发式候选，64 MiB workspace。全部进程检查误差为 0。
+
+原问题：GEMM 持续运行时 SM 频率多少、受什么限制；M=N=2048、1 波时约 9 µs 的截距由哪些部分组成。上文的调用内频率与分段即为对这两个问题的修正。
+
+| 名称 | 窗口 | 包含 |
+|---|---|---|
+| R00计时 | 同步预热至CV≤2%后，event包围一次调用 | host发射与提交延迟 + 设备时间 |
+| graph | 一个graph内200次连续调用，总时间/200 | 设备时间 + kernel间切换，不含host发射 |
+| host_call | `gemm.run()` 返回的host墙钟时间 | 参数准备与发射API |
+| 频率 | NVML `clocks.sm` 50 ms采样；每批调用**之后**另跑 20 µs 的 clock64/globaltimer 探针 | 探针值是探针 block 的中位数（未记录 SM ID）；它是调用后的频率，不是 GEMM 内部平均频率 |
+
+R00计时与K扫描为每点10个独立进程，graph与发射对照5个，频率循环8 s×2进程。
+
+**负载频率**
+
+| 情形 | SM频率或调用后探针频率 | 首次进入后半段探针中位数 ±1% 的时间 |
+|---|---:|---:|
+| 单次2048³调用前、后探针 | 1.98；1.96 GHz | — |
+| 单次8192³调用（1.6 ms）后探针 | 1.72–1.76 GHz | — |
+| R00计时调用后探针：2048³ / 4096³ / 8192³ | 1.93 / 1.66 / 1.73–1.77 GHz | — |
+| 持续CUTLASS 2048³ | NVML：1.74–1.75 GHz，556 W | 约0.1–0.2 s |
+| 持续CUTLASS 8192³ | NVML：1.39–1.41 GHz，546 W | 约1 s |
+| 持续cuBLASLt 8192³ | NVML：1.45 GHz，548 W | 约0.4 s |
+
+负载期间 98.0%–99.4% 的 NVML 样本只有 SW Power Cap（0x4）；采样未出现 thermal、HW slowdown 或 power brake 标志，最高温度为69 °C。配置快照为 GPU 限值 900 W、**Module Power Limit 680 W**（默认 1000 W），GPU 约 550 W 时出现封顶。证据指向模块功率预算限制；没有负载期间的模块总功耗或改变上限的对照，尚未证明是唯一原因。持续段频率统计（后半段调用后探针，n≈75–79，CV 使用总体标准差）：CUTLASS 2048³ 中位 1.74–1.75 GHz（CV 0.4–0.6%），CUTLASS 8192³ 1.39–1.41（CV 0.7–0.8%），cuBLASLt 8192³ 1.45（CV 0.4–0.5%）。上表的首次进入时间不要求后续持续保持在该范围内；8 s 测量不代表长期热稳态。
+
+**固定成本**（CUTLASS NDEBUG，T=a+b·Ktile，Ktile=K/64，K=64–4096）
+
+| 形状 | a | b |
+|---|---:|---:|
+| M=N=2048，128 CTA | 9.45 µs | 0.637 µs/Ktile |
+| M=N=256，2 CTA | 7.63 µs | 0.571 µs/Ktile |
+
+不同 K 区间的拟合（M=N=2048，单调用计时）：K 64–4096：a=9.452、b=0.6366；K 64–2048：9.533、0.6268；K 256–2048：9.530、0.6268（最大绝对残差 0.064 µs）。斜率随区间略变；另测的长 K 调用后探针频率较低，但 K 扫描计时窗口内的频率未知，不能把变化全部归因于降频。拟合 9.452+0.6366×32 = 29.82 µs，独立 K 扫描实测 29.60 µs。
+
+截距 a 在不同协议、形状之间的差值（M=N=2048，K 64–2048）：
+
+| 差值 | 值 | 含义 |
+|---|---:|---|
+| 单调用截距 − CUDA graph 截距 | ≈3.3 µs | 两种协议的差；同时改变了主机提交、排队与负载持续方式，不等于纯主机提交成本 |
+| 同发射形状空 kernel（graph 内每次） | ≈0.6 µs | 直接测量 |
+| M=N=256（2 CTA）graph 截距 − 空 kernel | ≈4.33 µs | 小形状的截距差；空 kernel 未匹配实际寄存器与指令路径，尚未拆成预填、输出、尾部 |
+| 大、小形状各自扣除空 kernel 后的截距差 | ≈1.24 µs | (6.2167−0.6426)−(4.8565−0.5267)；输出量和驻留条件同时改变，原因未隔离 |
+
+graph 的拟合也依赖区间：M=N=2048、K 64–4096 时 a=5.713 µs、b=0.6963 µs/Ktile，K 64–2048 时为 6.217、0.6357。6.2 µs 是后一区间的 graph 截距，5.6 µs 是再扣除约 0.64 µs 空 kernel 基线的差值。
+
+**原结论及其修订**
+
+- 持续负载频率不是常数：持续大 GEMM 为 1.40–1.45 GHz，持续 2048³ 约 1.75 GHz，证据指向 680 W 模块功率预算下的 SW power cap。模型不能用单一的 1.83 GHz。
+- 单调用经验关系 \(T\approx9.45+0.637\,\text{Ktile}\ \mu s\)（M=N=2048，本构建与协议）可直接用于该配置。斜率已包含组合执行的全部成本，不能再另加“每 Ktile 约 20% 组合开销”；截距也不能与上表的差值重复叠加。
+- ~~按约 1.95 GHz 换算为约 1220 cycle、多 20%~~：上文在调用内直接测得主循环 1024 cycle/Ktile（加约 185 cycle 常数），调用内频率约 1.64–1.70 GHz；0.63 µs/Ktile 的斜率来自频率，不是组合开销。
+- “频率降 18%、时间增 9%”混合了短调用与持续调用两种协议，不能据此判断计算瓶颈占比。
+- 当时未解决：graph 截距扣除空 kernel 后约 5.6 µs 的差值未拆开（上文分段已部分回答）；负载期间模块总功耗未记录；其他节点的模块功率上限未确认。
+
+[初版归档报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/report.md) · [修正后的统计与拟合 analysis-r2](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/summary.json) · [修正后的 cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/cases.csv) · [K拟合图](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/kfit.png) · [频率图](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/clock.png)。原 `cases.csv` 的频率行混用了不同窗口的统计量、CV 固定为 0，已在 r2 修正；当前解释以本节为准，初版报告保留历史表述。代码：[r07_run.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r07_run.py)、[r07_analyze.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r07_analyze.py)、[probes/r07_probe.cu](../../../../../../microbench/gh200_resource_campaign/access_rules/probes/r07_probe.cu)。
+
+analysis-r2 保存了对应分析器，可用 `python3 <归档目录>/analysis-r2/r07_analyze.py --input <归档目录> --output <新目录>` 离线重放。构建归档记录了 CUTLASS 的两个外部头文件哈希；完整外部编译依赖的来源关系尚未核对，不据此承诺独立重编译。
+
+<a id="other-clock-evidence"></a>
+
+## 其他实验中的频率与功率证据
+
+频率机制在本页维护；下列验证页保留各自的冻结规则和判定，这里只汇总机制证据。
+
+- [V03](V03-clock-rule.md#功率nvml诊断)：job735778 在 GPU-572de9c0 上做持续负载诊断。132 个 SM 满载时模块功率最后 1 s 中位数 648–671 W，降频原因只有 SW Power Cap。32 个 SM 时模块功率 472 W、未封顶，NVML 报 1980 MHz，调用内 cycle/ns 仍只有约 1.82 GHz。这是未解释的观测平台，不是已识别的硬件时钟上限。
+- V03 同时记录：NVML 报告的 SM 时钟比 clock64/globaltimer 换算值高 0.1–0.2 GHz，原因未查；本页称为“主机可见间隙”的 event 与内核包络之差，在不同卡/节点上为 3.9–6 µs；同一频率规则在另一块卡的满载长调用上低 2.7%–6.5%。
+- [V08](V08-wider-validation.md#失败原因测后诊断不改判定)：窗口约 650 µs 的 h06 超过校准最长的约 410 µs，三个配置的频率解低 6%–7%。V08 的配置快照中模组功率限制为 680 W（同一文件中的 900 W 是 GPU 层字段）；这说明配置相同，不证明每次调用都触发了封顶。
+- 所有 GEMM 探针输入为同一个 17 级二进分数正确性见证（`probes/r00_common.hpp` 的 `input_value`）。功率与频率结论只适用于这种输入，随机数据下的情况尚未测量。
+
+主机可见间隙按上文定义包含发射到首个 CTA 入口、最后 CTA 退出到 event 完成，以及其间可能尚未完成的全局写入，不能全部归因于主机 launch 开销。
+
+<a id="empty-window"></a>
+
+## 计时空窗口（原 EXP-04 一部分）
+
+2026-10-08 由 EXP-04 迁入；EXP-04 的 SMEM 与 global 部分分别在 [EXP-09](../EXP-09-smem.md#exp-04) 与 [EXP-13](../EXP-13-global-rw.md#exp-04)。资源套件 `20261001-resource-suite-v2`，原始 run `memory_baseline/formal-v3-a`。
+
+| 窗口 | 单位 | 中位数 | CV |
+|---|---|---:|---:|
+| 单 CTA 空计时窗口 | clock64 cycle | 34 | 0 |
+| 整卡空窗口 | globaltimer ns | 128 | 12.7% |
+
+单 CTA 的 34 cycle 可作为 clock64 计时固定开销的参考；整卡空窗口跨进程不稳定。它们是该探针的空窗口，不是本页 CUTLASS 打点的扰动。数据：[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/samples.csv)。

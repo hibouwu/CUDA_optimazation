@@ -133,7 +133,7 @@ V07中，初始供给误差12.03%/45.92%，末次输出窗口12.44%/46.82%；主
 
 ## 10. 主循环受计算与操作数供给中较慢者限制
 
-每个 Ktile 的计算 cfg_a/b 为 512 cycle，cfg_c 为 1024。按 cluster 多播只读一次，每 SM 每 Ktile 从 L2 取 cfg_a 24 KB、cfg_b 32 KB、cfg_c 32 KB/1024 cycle，即需求 48、64、32 B/cycle。[V08 后续对照](V08-wider-validation.md#后续对照三种机制分开同一作业)：
+每个 Ktile 的计算 cfg_a/b 为 512 cycle，cfg_c 为 1024。按 cluster 多播只读一次，每 SM 每 Ktile 从 L2 取 cfg_a 24 KB、cfg_b 32 KB、cfg_c 32 KB/1024 cycle，即需求 48、64、32 B/cycle。[V08 后续对照](V08-wider-validation.md#后续对照三种机制分开同一作业)，逐项证据见 [R10](R10-layout-cache.md#v08-stride)、[R13](R13-async-retirement.md#v08-supply)、[R18](R18-cluster-boundary.md#v08-padding)：
 
 - A 或 B 的行距不是 128 B 倍数时，cfg_b 总时间多 15%–34%，cfg_a 多 5%–9%，cfg_c 不变；K、N 尾部和 D 行距本身几乎无影响。
 - 大足迹（105–260 MiB）长 K 时，cfg_b 交付 57–64 B/cycle，cfg_a 47–48，cfg_c 32。

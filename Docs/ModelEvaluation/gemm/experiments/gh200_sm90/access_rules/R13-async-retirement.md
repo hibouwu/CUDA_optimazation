@@ -5,7 +5,8 @@
 ## 结论
 
 - 原问题是单 SM 供给上限是 55 还是 64 B/cycle。本组在真实 WGMMA 消费、4 槽、每 SM 一个 CTA、共享小源条件下测得：32 KiB tile、4 stage 为 58 B/cycle，48 KiB tile 为 45 B/cycle。这是条件化的序列速率，不是通用上限。
-- 对预测而言这个问题已不关键：V05 中 cfg_a/b 的主循环误差中位数 0.9%，主循环按计算下界即可。
+- 2026-10-07 依据 V05 判断这个问题对预测已不关键：V05 中 cfg_a/b 的主循环误差中位数 0.9%，主循环按计算下界即可。这个判断只适用于 V05 的条件：6 个尺寸的 A/B 行距都是 128 B 倍数，没有 swizzle 补齐，K 最长 12288。
+- V08 超出了这个范围，上一条不再代表当前结论。A/B 行距未按 128 B 对齐时，cfg_b 只交付 46–57 B/cycle/SM，需求为 64；大足迹长 K 时为 57–64。cfg_b_h03 的总时间预测偏短 35%。每 SM 有效供给现为 [PLAN 主线](PLAN.md#mainline)的首要扩展，本页维护其证据：[立即释放消费者的整卡供给（原 R05-D）](#r05-d)、[V08 后续对照的供给解释](#v08-supply)。
 
 ## 问题、矩阵与协议
 
@@ -108,3 +109,43 @@ n128_s4_c2代表批4.781%通过与正式批5.903%失败分别保留，正式判�
 R13的18条件已完成plain及ready/retire/reuse三个事件对的采样与检查；原缺少的槽可复用/补发字段已直接补齐。事件对来自独立调用，不能拼接同一次完整绝对时间线。字段完整、数值正确和扰动是否满足要求分别判定：历史ready/retire失败及本reuse两项失败均保留，不能宣称18条件所有阶段时长全部取得。
 
 2026-10-08：被取代的 R13 运行（v8-rep-ready、v8-rep-retire、v9-ready-recheck、v10-rep-reuse 与 job735985 的旧 v11-formal-reuse）已压缩归档到仓库外的 `CUDA_optimazation_archive/gh200_access_rules/`。最终目录 `20261007-R13-job736169-v11-formal-reuse` 已包含续采所需的全部原始样本（326 个结果文件哈希一致），可独立重算；`v8-formal-ready` 仍保留在 results。
+
+<a id="r05-d"></a>
+
+## 立即释放消费者的每 SM 供给（原 R05-D，2026-10-06）
+
+2026-10-08 由 [R05](R05-async-lifecycle.md) 迁入，R05 的其余子集仍在原页。这里的消费者在 mbarrier 完成后立即释放槽、不做计算；上文正式表的消费者是直接退休、64 依赖 FFMA 和真实 WGMMA。几种消费者组织的数值分列，不合并成一个上限。
+
+问题：V01 目标组合（128×256×64 tile、4 stage）每个 SM 只驻留 1 个 CTA，在途输入最多 192 KiB。满速 WGMMA 每 Ktile 约 1024 cycle、需输入 48 KiB，即约 48 B/cycle/SM；这样的单 CTA 能否从 L2 拿到这个速率？
+
+- **配置**：grid = SM 数；动态 SMEM 预留不小于目标的 192 KiB 加 barrier，使每 SM 只能驻留 1 个 CTA（用 API 核对，并记录每个 CTA 的 SM ID）。每 stage 用 2D TMA 读一个 A tile（box (64,128) FP16，16 KiB）和一个 B tile（box (64,256) FP16，32 KiB），SW128，与目标组合相同。160 线程：warp 0 发 TMA，其余 128 线程为消费者；10 个进程都覆盖了全部 132 个 SM。
+- **流水**：producer warp 发 TMA；一个 consumer warpgroup 等对应 mbarrier 完成后立即释放槽，不做计算。这样测的是无计算消费者条件的供给观测，不表示所有组织策略的严格供给上限。
+- **源**：共享小源让所有 CTA 轮流读取同一个 L2/4 大小的 A/B 区域，模拟多个 CTA 复用同一 K 面板，实际访问 15 MiB，每个 Ktile 面板被复访 320 次。独立大源让各 CTA 读互不重叠的区域，合计 4×L2，实际 241 MiB，复访 39 次。
+- **指标**：运输量为 `CTA数×Ktile数×48 KiB`。每个 CTA 用自身 `clock64` 窗口算 B/cycle，即该 SM 的供给率，报告 132 个值的中位数；整卡另报 GB/s。
+
+| 源 | stage 2 | stage 4 |
+|---|---:|---:|
+| 共享小源 | 55.45 | 55.48 |
+| 独立大源 | 15.26 | 15.26 |
+
+单位 B/cycle/CTA，132 个 CTA 的中位数，job735059。有 L2 复用时单个目标 CTA 的供给高于 48 B/cycle 的满速需求，没有复用时只有约 1/3；stage 2 与 4 相同。
+
+[R05 B/C/D/E 报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md)，`cases.csv`、`rules.json`、图在同目录；入口 `run_r05.py`、`analyze_r05.py`。
+
+<a id="v08-supply"></a>
+
+## V08 后续对照中的每 SM 供给（2026-10-08 迁入）
+
+job737322，romeo-a043，GPU-099dda56，CUDA 12.9.41、CUTLASS 3.9.2、`sm_90a`、NDEBUG；cfg_a/b/c 与 V07/V08 相同。V08 留出评分后在同一张卡上加测 84 个条件，每个 plain/stamped/ends 各 10 进程，只用于解释，不回填 V08 判定。这些是完整 CUTLASS GEMM 主循环的条件观测，行距与尺寸逐项表见 [R10](R10-layout-cache.md#v08-stride)。它们与上文探针的序列率协议不同，不合成一个上限。
+
+**按每 SM 的操作数供给解释。** 每个 Ktile 的计算为 512 cycle（cfg_c 为 1024）。按 cluster 多播只读一次计算，每 SM 每 Ktile 从 L2 取的字节：cfg_a 24 KB（A 16 KB + B 16 KB/2），cfg_b 32 KB，cfg_c 32 KB/1024 cycle。对应需求 48、64、32 B/cycle/SM。实际交付的“对齐字节”：
+
+| 条件 | cfg_a | cfg_b | cfg_c |
+|---|---|---|---|
+| 对齐、L2 内 | 48（计算限） | 64（计算限） | 32 |
+| 大足迹（105–260 MiB）长 K | 47.0–47.9 | 57.3–63.7 | 31.8–32.0 |
+| 一个操作数行距未对齐 | 45.2–47.6 | 46.1–56.7 | 32.0 |
+
+cfg_c 需求最低，从不受限；cfg_b 需求最高，最先受限。推断：主循环受“计算”与“每 SM 操作数供给”两者中较慢者限制；未对齐行距让同样的有效字节需要更多传输，大足迹让 L2 命中下降，都降低可交付的供给。本组数据还不能把“未对齐的放大倍数”与“供给上限”分开定值（无 NCU 计数）。
+
+[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)。

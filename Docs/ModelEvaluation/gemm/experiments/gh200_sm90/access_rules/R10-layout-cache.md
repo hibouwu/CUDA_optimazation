@@ -1,6 +1,6 @@
-# R10：B 行距
+# R10：A/B 行距与尺寸尾部
 
-9点完整GEMM时间已测得；cfg_a/c使用v2全网格trace，cfg_b使用v4局部trace。本轮条件观测已完成核对；当时计划的预测迁移检验已记录在[V05](V05-rule-transfer.md)。本页只讨论固定行距对照。
+9点完整GEMM时间已测得；cfg_a/c使用v2全网格trace，cfg_b使用v4局部trace。本轮条件观测已完成核对；当时计划的预测迁移检验已记录在[V05](V05-rule-transfer.md)。本页上半部分是2600×3000×2000的B行距对照；V08后续对照的A/B/D行距与K/N尺寸尾部见[文末](#v08-stride)。
 
 ## 结果
 
@@ -84,3 +84,23 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r10.py sample --outp
 ```
 
 sample结束自动写新`analysis-formal/`；不要在同一已有分析目录重复写入。若只复现cfg_b三行距，build加`--config cfg_b`后仍用sample，不加仅含两个行距的`--representatives`。CPU准备检查不运行GPU；已保存测量的独立复核证据见上表reviews。
+
+<a id="v08-stride"></a>
+
+## V08 后续对照：A/B/D 行距与 K/N 尺寸尾部（2026-10-08 迁入）
+
+job737322，romeo-a043，GPU-099dda56，CUDA 12.9.41、CUTLASS 3.9.2、`sm_90a`、NDEBUG；cfg_a/b/c 与 V07/V08 相同。V08 留出评分后在同一张卡上加测 84 个条件，每个 plain/stamped/ends 各 10 进程，只用于解释，不回填 V08 判定。这里的“尾部”指 M、N、K 不整除 tile，不是 epilogue 尾部或最后完成的 CTA。与上文 2600×3000×2000 的对照不在同一张卡，不池化。
+
+M=2304、N=3072，以对齐形状为参照，每次只改一项。数值为总时间变化（括号为后续 tile 主循环变化）：
+
+| 改动 | cfg_a | cfg_b | cfg_c |
+|---|---|---|---|
+| K=1000（K 尾部，A 行距仍 2048 B） | +0.3% | −0.6% | −0.7% |
+| N=3000（N 尾部，B/D 行距仍对齐） | −0.1% | +4.7%（+2%） | −1.2% |
+| D 行距 12320 B | +0.1% | +0.2% | +1.9% |
+| A 行距 2064 B，K=1024 / 8208 B，K=4096 | +7.7% / +8.7% | +15.0% / +16.4% | +0.2% / +0.3% |
+| B 行距 6160 B，K=1024 / K=4096 | +4.7% / +6.2% | +28.2% / +33.7% | −0.4% / +0.8% |
+| A 行距 2000 B + K 尾部（同 h03 的 A） | +7.3% | +17.1% | +0.1% |
+| B/D 行距 6000/12000 B + N 尾部（同 h03 的 B、D） | +2.7% | +31.5%（+39%） | −0.2% |
+
+尺寸尾部本身和 D 行距几乎无影响；A、B 的行距不是 128 B 倍数时 cfg_b 明显变慢，cfg_a 次之，cfg_c 不变。按每 SM 供给的解释见 [R13](R13-async-retirement.md#v08-supply)。[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)。

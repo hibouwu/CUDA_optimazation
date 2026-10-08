@@ -5,11 +5,11 @@
 ## 问题
 
 1. K=4096 时，单调用时间怎样随输出 tile 数相对 132 个 SM（66 个 cluster 对）变化？离散波次 `a + ⌈U/132⌉·t` 与按分数负载 `a + (U/132)·t` 哪个更符合？
-2. M=N=8192、K=4096（约 15.5 波）时，持久调度器的 raster 方向、swizzle 与 cluster 2×1/1×1 改变多少吞吐？由此推出的每 SM 输入速率落在 R05-D 的 15–55 B/cycle 之间的什么位置？
+2. M=N=8192、K=4096（约 15.5 波）时，持久调度器的 raster 方向、swizzle 与 cluster 2×1/1×1 改变多少吞吐？由此推出的每 SM 输入速率落在 [R05-D](R13-async-retirement.md#r05-d) 的 15–55 B/cycle 之间的什么位置？
 
 ## 配置
 
-- CUTLASS 与 [R07](R07-anchor-clock-fixedcost.md) NDEBUG 版相同：FP16→FP32，tile 128×256×64，4 stage，TMA warp-specialized cooperative，`ElementC=void`，epilogue 128×32，持久 tile 调度器。cluster 2×1×1 为默认；1×1×1 用同一源码另编译一份（`-DR08_CLUSTER_M=1`）。
+- CUTLASS 与 [R07](R00-anchor-target.md#ndebug) NDEBUG 版相同：FP16→FP32，tile 128×256×64，4 stage，TMA warp-specialized cooperative，`ElementC=void`，epilogue 128×32，持久 tile 调度器。cluster 2×1×1 为默认；1×1×1 用同一源码另编译一份（`-DR08_CLUSTER_M=1`）。
 - 调度参数经 `Arguments::scheduler` 传入：`raster_order`（Heuristic / AlongM / AlongN）与 `max_swizzle_size`（1/2/4/8）。问题 1 用默认值（Heuristic、swizzle 1）。Heuristic 在 tiles_n > tiles_m 时取 AlongM，否则 AlongN。
 - 调度单位 U = `blocks_per_problem`：tiles_m 先向上取整到 cluster M 的倍数（2×1 时为偶数），swizzle>1 时再取整到 swizzle×cluster 的倍数。补出的 tile 照常被调度（越界部分由 TMA 填零、不写回）。
 - grid：2×1 时 [2,66,1]（AlongN）或 [132,1,1]（AlongM），U<132 时截到 U。`cudaOccupancyMaxActiveClusters` 报 66（2×1）/132（1×1），全部 CTA 同时驻留。

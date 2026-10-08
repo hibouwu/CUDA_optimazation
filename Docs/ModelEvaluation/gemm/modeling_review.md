@@ -89,7 +89,7 @@ L0–L4 的范围划分和分类资源表可以保留。现已扩展 L0 的基�
 | 优先级 | 测量内容 | 用途 |
 |---|---|---|
 | 已完成 | WGMMA N∈{64,128,256}、SS/RS、1/2 个 warpgroup | [R00-B](experiments/gh200_sm90/access_rules/R00-anchor-target.md)：全部 4095 FLOP/cycle；依赖时间随 N 的变化在 R01 重测中 |
-| 进行中 | WGMMA 与 FFMA、IMAD 同时执行 | 同一 warpgroup 的配对已测（[R04](experiments/gh200_sm90/access_rules/R04-joint-service.md)）；跨 warpgroup 改用异步 WGMMA 重做中 |
+| 进行中 | WGMMA 与 FFMA、IMAD 同时执行 | 同一 warpgroup 的配对已测（[R04](experiments/gh200_sm90/access_rules/R11-mixed-issue.md#r04)）；跨 warpgroup 改用异步 WGMMA 重做中 |
 | 高 | FP64 `mma` 的 sm_90 新形状（以 PTX ISA 核实 `m16n8k4/k8/k16`） | 解释 FP64 只达数据表一半 |
 | 已完成 | `ldmatrix` / LDS 在 4–8 warp 下的吞吐 | [R03](experiments/gh200_sm90/access_rules/R03-access-demand.md)：8 warp 时 124–127 B/cycle |
 | 中 | WGMMA TF32 与 FP16 累加形式 | 补齐精度覆盖 |

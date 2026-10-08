@@ -54,9 +54,17 @@
 
 ![整卡](../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/implementation/s15-main-execution/formal-sampling/node-sampling-v1/published-all68-v1/all_gpu.png)
 
-## 后续结果
+<a id="r05-e"></a>
 
-[R05-E](access_rules/R05-async-lifecycle.md) 用 16 KiB box 对比了写回行距：128 B 950714 ns、144 B 1314624 ns（慢 38%）、160 B 966899 ns、256 B 898909 ns。行距 160 B（行起点 32 B 对齐）和 256 B（128 B 倍数的 padding）都不慢，所以本页 padding 写回下降的原因是 144 B 行距只按 16 B 对齐，而不是行间有空隙。
+## 后续结果：输出行距（原 R05-E）
+
+2026-10-08 由 [R05](access_rules/R05-async-lifecycle.md) 迁入，job735059，2026-10-06。目的是区分本页写回下降的原因：128 B 连续；144 B 只按 16 B 对齐，即本页的 padding 条件；160 B 按 32 B 对齐；256 B 是 128 B 倍数的 padding。TMA 2D 输出，box (64,128) 16-bit 共 16 KiB，整卡；基地址 128 B 对齐，非均匀数据，只计有效 16 KiB；完成边界同本页，commit 后 `wait_group 0`，再 CTA 会合。
+
+| GMEM 行距 | 128 B | 144 B | 160 B | 256 B |
+|---|---:|---:|---:|---:|
+| 整卡完整窗口 ns | 950714 | 1314624 | 966899 | 898909 |
+
+144 B 比 128 B 慢 38%。行距 160 B（行起点 32 B 对齐）和 256 B 都不慢，所以本页 padding 写回下降的原因是 144 B 行距只按 16 B 对齐，而不是行间有空隙。[R05 B/C/D/E 报告](../../../../../results/gh200_resource_campaign/access_rules/20261006-c-job735059/r05-formal-v2/report.md)。
 
 ## 数据
 

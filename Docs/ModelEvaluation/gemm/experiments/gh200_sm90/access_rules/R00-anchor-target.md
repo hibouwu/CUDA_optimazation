@@ -77,7 +77,7 @@ CUTLASS 的 2048³ 与 2048×2048×8192 留给 [V01](V01-validation.md) 作完�
 | cuBLASLt FP32（PEDANTIC） | 48.9 | 48.7 | 51.6 |
 | 固定 CUTLASS FP16 | — | — | 643（4096³：663） |
 
-cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`，ptxas 因断言代码（C7510）把每条 MMA 改成提交后 wait0，R07 在另一张卡上同次对比，加 `NDEBUG` 快 5.5–8%，所以 643/663 TFLOP/s 偏低；见 [R07](R07-anchor-clock-fixedcost.md)。8192³ 时 FP16 达数据表 990 TFLOP/s 的 72%，FP8 为 1979 的 57%，FP32 为 67 的 77%。
+cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`，ptxas 因断言代码（C7510）把每条 MMA 改成提交后 wait0，原 R07 在另一张卡上同次对比，加 `NDEBUG` 快 5.5–8%，所以 643/663 TFLOP/s 偏低；见下文 [NDEBUG 锚点](#ndebug)。8192³ 时 FP16 达数据表 990 TFLOP/s 的 72%，FP8 为 1979 的 57%，FP32 为 67 的 77%。
 
 **R00-B：目标 WGMMA 形状**
 
@@ -94,6 +94,28 @@ cuBLASLt FP16 2000³ 为 517 TFLOP/s。固定 CUTLASS 编译时没有 `-DNDEBUG`
 手算：8192³ 工作量 1099511627776 FLOP，除以 1.538160 ms 得 714.8 TFLOP/s。
 
 [原始报告](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r00-job734996/formal-v1/report.md) · [CPU 重算与图](../../../../../../results/gh200_resource_campaign/access_rules/20261006-r00-job734996/offline-replay-v1/report.md)。频率遥测未取得，按未知处理。
+
+<a id="ndebug"></a>
+
+## NDEBUG 锚点（原 R07 第一部分，2026-10-07）
+
+2026-10-08 由 R07 迁入；R07 的频率与固定项部分在 [R09](R09-inkernel-clock-stages.md#r07)。Slurm 735634，romeo-a048，GPU-009a8880…，CUDA 12.9 / sm_90a，CUTLASS v3.9.2；与上文 R00-A 不是同一块卡。
+
+上文固定 CUTLASS 未加 `-DNDEBUG`，ptxas C7510 使每条 MMA 后 wait0。本组的 debug 与 NDEBUG 两版只差 `-DNDEBUG`：NDEBUG 版 C7510 消失，主循环 wait1，HGMMA 数不变。cuBLASLt FP16→FP32 取首个合法启发式候选、64 MiB workspace，同一分配内复测。输入、布局、抽样检查同 R00-A，全部进程误差为 0。计时同 R00-A：同步预热至 CV≤2% 后 event 包围一次调用，含 host 发射与提交延迟；每点 10 个独立进程，取中位数。
+
+| 尺寸 | CUTLASS debug | CUTLASS NDEBUG | 提升 | cuBLASLt FP16 |
+|---|---:|---:|---:|---:|
+| 2048³ | 544 TFLOP/s | 587 | +8.0% | 557 |
+| 4096³ | 652 | 688 | +5.5% | 697 |
+| 8192³ | 621 | 657 | +5.8% | 695 |
+
+本次的 debug 版与 cuBLASLt 比 R00-A 低约 2%–3%；GPU、节点和运行会话均有变化，差异来源未隔离，比较以同会话比例为准。
+
+手算：2×2048³ = 17179869184 FLOP，除以 NDEBUG 中位数 29.248 µs 得 587.4 TFLOP/s。
+
+**结论**：固定 CUTLASS 的锚点应使用 NDEBUG 构建：2048³ 587、4096³ 688、8192³ 657 TFLOP/s。以 debug 版标定的规则或预测需要按此修正。
+
+数据：[修正后的统计 analysis-r2](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/summary.json)、[cases.csv](../../../../../../results/gh200_resource_campaign/access_rules/20261007-ndebug-clock-fixedcost/analysis-r2/cases.csv)；完整归档、代码和离线重放见 [R09 中的原 R07 小节](R09-inkernel-clock-stages.md#r07)。
 
 ## 输出
 

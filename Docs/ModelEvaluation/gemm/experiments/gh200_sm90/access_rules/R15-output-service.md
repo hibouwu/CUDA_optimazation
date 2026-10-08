@@ -143,3 +143,17 @@ python3 /新运行目录/r15-v5/source/run_r15.py sample \
 ```
 
 原source/build/samples不替换；分析修订写新子目录，不同UUID不共同拟合。
+
+<a id="cutlass-epilogue"></a>
+
+## 实际 CUTLASS 输出窗口的已有观测
+
+本页探针不能直接给出 CUTLASS 输出常数。实际 epilogue 的观测分散在下列页面，在此汇总以便维护输出规则；数值以原页为准，不与本页探针合并拟合。
+
+| 来源 | 观测 | 窗口终点 |
+|---|---|---|
+| [R09](R09-inkernel-clock-stages.md) | 128×256 配置 M=N=2048、128 个 CTA 同时输出时 epilogue 5470–5850 cycle；M=N=256、2 个 CTA 时约 4130 | `store_tail` 返回，即 `.read` 等待返回 |
+| [V08 校准](V08-wider-validation.md#校准中得到的事实) | cfg_a 最后一个 tile 的 epilogue 几乎都是约 1922 cycle；V07 的 2161 是全部后续 tile 的均值 | cooperative 为 `store()` 返回，pingpong 为 `store_tail()` 返回 |
+| [V08 失败原因](V08-wider-validation.md#失败原因测后诊断不改判定) | cfg_c 单 tile epilogue 在全部 CTA 同时写出时约 5800 cycle，部分 CTA 写出时约 4040 | 同上 |
+
+这些观测都显示输出窗口随同时写出的 CTA 数变化。各终点只说明源缓冲已读完或 store 调用已返回，不证明全局写入已完成。

@@ -52,3 +52,11 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --input <
 ```
 
 历史v1的setup误用了R18同grid检查，修正运行器在`reanalysis/`；编译源码和二进制未改。新入口只给R18的普通/整块越界/有效零配对检查相同grid，R19允许swizzle改变补齐工作。预热失败最多重试两次，按独立文件保存，不覆盖旧尝试。
+
+<a id="other-critical-cta"></a>
+
+## 其他实验中的关键 CTA 与入口数据
+
+- [V07 事后诊断](V07-rule-validation.md#事后诊断总时间为何接近离线不改判定)：cfg_a 边界条件中，最慢 CTA 不是边界 tile 所在的 CTA。
+- [V08](V08-wider-validation.md#留出结果)：冻结所选关键 CTA 与实测最慢 CTA 的周期差，36 例绝对误差中位 1.11%、最大 20.11%。
+- V06、V07、V08 与 R18 的打点逐 CTA 记录入口 globaltimer 与 SMID（`probes/r18_trace.hpp`），包括 cluster 2×1 的 cfg_a 和 cluster 1×2 的 cfg_c。本页只测 cfg_b、cluster 1×1，其入口数据可用于排查 CTA 派发，不足以识别多 CTA cluster 的放置规律；SMID 的数值区间也不能直接当作 GPC 编号。
