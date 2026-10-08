@@ -60,6 +60,9 @@ def summarize_call(windows):
     common_rate = med(rates)
     estimates = dict(direct=direct, affine=[], entry_anchor=[], final_anchor=[])
     for w, rate in zip(windows, rates):
+        w['issuer_cycles_per_ns'] = w['issuer_store_cycles'] / w['issuer_store_ns']
+        w['cta_cycles_per_ns'] = rate
+        w['issuer_to_cta_rate_ratio'] = w['issuer_cycles_per_ns'] / rate
         estimates['affine'].append(tuple(w['entry_ns'] + (w[k] - w['entry_cycle']) / rate for k in ('permit_cycle', 'done_cycle')))
         estimates['entry_anchor'].append(tuple(w['entry_ns'] + (w[k] - w['entry_cycle']) / common_rate for k in ('permit_cycle', 'done_cycle')))
         estimates['final_anchor'].append(tuple(w['final_ns'] - (w['final_cycle'] - w[k]) / common_rate for k in ('permit_cycle', 'done_cycle')))
@@ -76,7 +79,9 @@ def summarize_call(windows):
         peak = max(peak, active)
     return dict(ctas=len(windows), unique_sms=len({w['sm'] for w in windows}), peak_overlap=peak,
         store_start_spread_ns=max(a for a, b in direct) - min(a for a, b in direct),
-        **{key: med(w[key] for w in windows) for key in ('issuer_store_ns', 'issuer_store_cycles', 'merged_store_cycles', 'tail_after_store_ns')},
+        **{key: med(w[key] for w in windows) for key in ('issuer_store_ns', 'issuer_store_cycles', 'merged_store_cycles', 'tail_after_store_ns', 'issuer_cycles_per_ns', 'cta_cycles_per_ns', 'issuer_to_cta_rate_ratio')},
+        rate_p05_p95={key: [statistics.quantiles([w[key] for w in windows], n=20, method='inclusive')[i] for i in (0, 18)]
+                     for key in ('issuer_cycles_per_ns', 'cta_cycles_per_ns', 'issuer_to_cta_rate_ratio')},
         **{'overlap_' + name: med(values) for name, values in overlap.items()}, windows=windows)
 
 
@@ -84,7 +89,7 @@ def analyze(root, output):
     cases, processes, failed = [], [], []
     for row in json.loads((root / 'cases.json').read_text()):
         times = {variant: [] for variant in ('plain', 'stamped', 'ends', 'global')}
-        observations = []
+        observations, stamped_cycles = [], []
         for path in sorted((root / 'samples' / row['id']).glob('*.json')):
             record = json.loads(path.read_text())
             if record['returncode']:
@@ -94,9 +99,13 @@ def analyze(root, output):
             variant = record['variant']
             replay(root, record if variant in ('stamped', 'global') else dict(record, variant='plain'), row)
             times[variant].append(record['elapsed_us'])
-            if variant == 'global':
+            if variant in ('stamped', 'global'):
                 with gzip.open(root / record['raw'], 'rt') as stream:
                     events = {e['event']: e for line in stream if line.strip() for e in [json.loads(line)]}
+            if variant == 'stamped':
+                words = events['call']['trace']
+                stamped_cycles.append(med(words[i + 403] - words[i + 402] for i in range(0, len(words), WIDTH)))
+            if variant == 'global':
                 observation = summarize_call(direct_windows(events['setup'], events['call']))
                 observation.update(case=row['id'], trial=record['trial'], raw=record['raw'])
                 processes.append(observation)
@@ -104,12 +113,17 @@ def analyze(root, output):
         if not all(times.values()):
             raise ValueError('plain/stamped/ends/global samples required: ' + row['id'])
         keys = ('issuer_store_ns', 'issuer_store_cycles', 'merged_store_cycles', 'tail_after_store_ns',
-                'store_start_spread_ns', 'peak_overlap', 'overlap_direct', 'overlap_affine', 'overlap_entry_anchor', 'overlap_final_anchor')
+                'store_start_spread_ns', 'peak_overlap', 'overlap_direct', 'overlap_affine', 'overlap_entry_anchor', 'overlap_final_anchor',
+                'issuer_cycles_per_ns', 'cta_cycles_per_ns', 'issuer_to_cta_rate_ratio')
         cases.append(dict(case=row['id'], m=row['m'], n=row['n'], k=row['k'], processes=len(observations),
             elapsed_us={variant: med(values) for variant, values in times.items()},
             global_relative={variant: med(times['global']) / med(times[variant]) - 1 for variant in ('plain', 'stamped', 'ends')},
+            stamped_issuer_cycles=med(stamped_cycles),
+            global_vs_stamped_issuer_cycles=med(o['issuer_store_cycles'] for o in observations) / med(stamped_cycles) - 1,
             cv={variant: statistics.pstdev(values) / statistics.mean(values) for variant, values in times.items()},
             median={key: med(o[key] for o in observations) for key in keys},
+            rate_p05_p95={key: [med(o['rate_p05_p95'][key][i] for o in observations) for i in (0, 1)]
+                         for key in observations[0]['rate_p05_p95']},
             process_range={key: [min(o[key] for o in observations), max(o[key] for o in observations)] for key in keys}))
     output.mkdir(parents=True, exist_ok=False)
     result = dict(profile=PROFILE, input=str(root), cases=cases, processes=processes, failed=failed,

@@ -199,7 +199,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 ## 直接输出 globaltimer 的最小补测准备（2026-10-09）
 
-本节完成专用准备入口、配置与 CPU 分析入口，未编译或采样新增打点。已合并公共框架 `6338653` 及管理者的打点补丁 `d8eb6a0`，沿用 cfg_c 的 tile256×128×64、cluster1×2、四 stage、dyadic/seed17、swizzle1、无驱逐、默认全部 SM；三条全部改列为 `ctrl`，不是新留出。
+本节记录采样前的专用准备入口、配置与 CPU 分析入口；新增打点的实际结果见下节。准备时已合并公共框架 `6338653` 及管理者的打点补丁 `d8eb6a0`，沿用 cfg_c 的 tile256×128×64、cluster1×2、四 stage、dyadic/seed17、swizzle1、无驱逐、默认全部 SM；三条全部改列为 `ctrl`，不是新留出。
 
 | 条件 | M×N×K | 预期 CTA 数 / 每 CTA tile 数 | 对照用途 |
 |---|---:|---:|---|
@@ -223,7 +223,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 管理者的 `d8eb6a0` 已实现并经源码核对：`r18_trace.hpp::v06_stamp()` 在 `-DR15_OUTPUT_NS` 下，只对 `threadIdx.x==256 && tile==0` 的上述两个输出事件采样；globaltimer 在原 clock64 之后、trace写入之前读取。`r18.cu` 对这个模式写 `trace_version="r15-first-output-ns"`，header[15] 保留。既有 cooperative overlay 已有正确的两处 `v06_stamp()`，无需再插新调用，也不增加等待。源中的 FIRST_MMA/MAIN_END/EPI_PERMIT/EPI_DONE 和 final 原语义均不变。
 
-新二进制命名 `cfg_c_global`，编译在原 cfg_c stamped 参数上增加 `-DR15_OUTPUT_NS`；plain/stamped/ends 使用原参数。同卡、同批交错执行四个变体，报告 global 相对三者的时间扰动与各自离散程度。[run_r15_output_ns.py](../../../../../../microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py) 复用 `run_r18.prepare()` 的源码与 overlay 准备，只保留这三个条件及四个 cfg_c 编译命令；四个都从同一份新源码构建，不复用旧卡或旧源码的时间。build/setup/sample 复用 `run_v08.main()`，仅将 global 分派给 `run_r18.run_one()` 的完整坐标 trace 检查；其余三变体沿用原分派，避免未知 variant 被 `v08_model.observe()` 当作 ends。没有复制探针、overlay 或模型接口。构建、SASS/寄存器和新打点扰动仍待该版本的实际 GPU 检查，旧版本的编译结果不覆盖新增 profile。
+新二进制命名 `cfg_c_global`，编译在原 cfg_c stamped 参数上增加 `-DR15_OUTPUT_NS`；plain/stamped/ends 使用原参数。同卡、同批交错执行四个变体，报告 global 相对三者的时间扰动与各自离散程度。[run_r15_output_ns.py](../../../../../../microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py) 复用 `run_r18.prepare()` 的源码与 overlay 准备，只保留这三个条件及四个 cfg_c 编译命令；四个都从同一份新源码构建，不复用旧卡或旧源码的时间。build/setup/sample 复用 `run_v08.main()`，仅将 global 分派给 `run_r18.run_one()` 的完整坐标 trace 检查；其余三变体沿用原分派，避免未知 variant 被 `v08_model.observe()` 当作 ends。没有复制探针、overlay 或模型接口。准备时尚待该版本的构建、SASS/寄存器和扰动检查；本批实际结果见下节，旧版本的编译结果不覆盖新增 profile。
 
 `store_tail()` 使用的 `tma_store_wait<0>()` 在该 CUTLASS 版本实际发出 `cp.async.bulk.wait_group.read 0`，只保证源 SMEM 已被读完、可复用；`store()` 返回和最终 final 都不叫全局目标写完成。这次不增加全写排空等待，也不把已有端点重新命名为 write_complete。
 
@@ -241,7 +241,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py
 
 CPU 的五个测试使用临时合成记录，检查直接重叠与错误的周期换算分离、并列端点、整数时间精度、旧profile/多tile拒绝，以及从 raw setup 识别 global；这些测试不是 GPU 数据。另用旧归档的只读 CUTLASS 头文件在本地临时目录实际执行 prepare，核对四条构建命令、全部源码哈希和 overlay header；三条矩阵与旧形状一致，静态工作分配分别为48/132/132个单tile CTA。临时检查目录随后释放，原归档未改动。
 
-后续准备与运行目录使用节点本地 `/tmp/gh200-r15-output-ns-<run-id>`，完整批次回传本地 results 后分析；不向已超配额的共享存储追加。以下是之后批次使用的入口，本轮未执行 build/setup/sample，也未提交作业。sample 继续使用原框架的同卡环境校验、锁、随机交错和十进程采样，不新增运行管理层。
+准备与运行目录使用节点本地 `/tmp/gh200-r15-output-ns-<run-id>`，完整批次回传本地 results 后分析；不向已超配额的共享存储追加。以下是采样入口，准备阶段未执行 build/setup/sample，也未提交作业。sample 继续使用原框架的同卡环境校验、锁、随机交错和十进程采样，不新增运行管理层。
 
 ```bash
 python3 microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py prepare \
@@ -249,4 +249,60 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py pre
 python3 <新run目录>/source/run_r15_output_ns.py build --output <新run目录>
 python3 <新run目录>/source/run_r15_output_ns.py setup --output <新run目录>
 python3 <新run目录>/source/run_r15_output_ns.py sample --output <新run目录> --set ctrl
+```
+
+## 三点直接窗口结果（2026-10-09，job738100）
+
+**长 K 条件的输出错峰是真实的；入口锚点的共同速率换算在本批 c6 上失败。但输出周期下降约22%，不等于输出服务在纳秒上加快22%。** 本批位于 romeo-a057、GPU-43269fbc-449d-3e0f-908a-9c81229546d3，独占节点、单计时流，CUDA12.9.41、驱动590.48.01。它与旧 V08 的 a043/GPU-099dda56 不同，不合并拟合，也不据此更改旧 V08 判定。
+
+三条件×四变体×十进程，共120个成功进程，复核491,520个抽样输出值；30次 global 调用中每 CTA 确为一个完整有效 tile，首末 SMID 一致。source/bin/SASS 和 cases 哈希均匹配。四变体均为168寄存器、16条静态HGMMA、无spill/C7510；cfg_c 为四stage、384线程、231424 B SMEM、资源上限1 CTA/SM。这些资源一致性不等于逐指令等价。
+
+### 直接窗口与重叠
+
+以下均先取每进程 CTA 中位，再取十进程中位；峰值则先取每次调用的最大重叠数。窗口为 issuer `store()` 的进入至返回，不是物理TMA队列占用或目标全局写完成。
+
+| 条件 | 输出 ns | issuer cycle | 直接平均重叠 | affine / 入口锚点 / 退出锚点 | 输出启动跨度 ns | 峰值重叠 |
+|---|---:|---:|---:|---:|---:|---:|
+| g3 | 2496 | 4720 | 42.55 | 42.97 / 45.33 / 42.78 | 1040 | 48 |
+| c2 | 3264 | 6259 | 114.16 | 116.61 / 121.68 / 116.31 | 1264 | 132 |
+| c6 | 3144 | 4892 | 87.80 | 92.08 / 123.98 / 91.96 | 3776 | 117.5 |
+
+逐调用先算“估计/直接−1”，再取十次中位，affine 的重叠误差为 +0.90%/+2.11%/+4.92%，入口锚点为 +6.49%/+6.59%/+40.51%，退出锚点为 +0.50%/+1.84%/+4.69%。c6 十次直接平均重叠为84.28–90.38，入口估计为121.88–124.67，范围完全分开；直接峰值只有106–121。c2→c6 的实际重叠下降23.09%，入口估计反而略升，因而它作为本批长K输出并发估计被否定。affine/退出锚点保留下降趋势，但并未精确恢复窗口；下述局部/全程比值也否定了“整CTA的同一换算率可精确用于输出窗口”的假设。
+
+### 每 CTA 配对端点的 cycle/ns
+
+对每个 CTA 分别计算 `r_out=(done_cycle−permit_cycle)/(return_ns−enter_ns)`、`r_CTA=(final_cycle−entry_cycle)/(final_ns−entry_ns)`，以及同 CTA 的 `r_out/r_CTA`，然后才汇总。括号为每进程 CTA 的p05/p95再对十进程各取中位；不是置信区间，也不是两个条件中位数之比。
+
+| 条件 | 输出窗口 r_out，cycle/ns | CTA全程 r_CTA，cycle/ns | 同CTA r_out/r_CTA |
+|---|---:|---:|---:|
+| g3 | 1.89183（1.86957–1.90913） | 1.81630（1.80027–1.82204） | 1.04219 |
+| c2 | 1.91343（1.88990–1.93067） | 1.64988（1.64220–1.66854） | 1.15871 |
+| c6 | 1.59063（1.53011–1.62583） | 1.46762（1.46329–1.48618） | 1.08346 |
+
+例如 c6 的逐CTA比值中位为1.59063，不能用 `4892/3144=1.55598` 代替；各自中位数不能保持乘除恒等式。这些是配对观测窗口的有效换算率，包含端点采样与打点影响，不等同精确瞬时SM频率或某个已识别的DVFS档位。用全程速率换算输出宽度会按同CTA的 `r_out/r_CTA` 放大，c2/c6 的中位放大分别为15.87%/8.35%；平均重叠仅偏差2%–5%，不能据此认为窗口宽度准确。
+
+同 K 的 g3→c2，输出ns增加30.77%、cycle增加32.61%，局部cycle/ns只增加约1.14%；更多重叠与更长的时间窗口相伴。但几何、总输出字节、输入足迹及前序供给均改变，尚未单独隔离并发的因果效应。
+
+同几何的 c2→c6，直接平均重叠下降23.09%，输出cycle下降21.84%，而输出ns只下降3.68%（3264→3144）；各进程ns中位范围3232–3296与3104–3200分开，存在较小、稳定的纳秒差，不能写成完全不变。逐CTA局部换算率的条件中位同时从1.91343降至1.59063（−16.87%）。因此周期下降伴随显著的窗口换算率变化，不能全归因于并发让服务变快，也不能用上述中位数变化率作精确乘法分解。K改变输入量、历史状态和执行时长，本批未确定这些变化各自的作用。
+
+### 扰动与适用范围
+
+| 条件 | plain μs | stamped μs | ends μs | global μs | global/plain−1 | global/stamped−1 |
+|---|---:|---:|---:|---:|---:|---:|
+| g3 | 45.264 | 45.792 | 45.264 | 45.728 | +1.025% | −0.140% |
+| c2 | 51.120 | 50.960 | 51.152 | 51.616 | +0.970% | +1.287% |
+| c6 | 190.368 | 190.816 | 190.128 | 190.928 | +0.294% | +0.059% |
+
+四变体的进程CV最大为1.141%，完整时间扰动在原5%范围内；小负差不构成打点加速证据。global 相对 stamped 的 issuer 周期中位仍增加约2.05%/0.77%/1.69%（stamped 为4625/6211/4810.75 cycle），所以完整时间扰动小不能证明内部输出窗口完全未受观察影响。直接结果只适用于本 observer；plain 没有这些内部端点。返回到 final 还分别有240/320/288 ns的独立尾部，仍不是全局目标写完成时间。
+
+跨卡只能保留定性关系。旧V08表中的c6 stamped issuer为5397.5 cycle，本批stamped为4810.75，约低10.9%；卡、运行历史及框架版本都不同，不能唯一归因于换卡，更不能用本卡直接端点补写旧卡的时间线。此次仅对本批同次调用内的估计与直接端点作证伪。
+
+本批确认的是“输出窗口何时重叠”及内部换算的局限。`Nbar`仍由已测窗口计算，包含待解释的持续时间，不能直接作为无需观察的预测自变量；本次没有重拟合服务公式。若后续要隔离并发因果，仍只需固定一个条件的K与有效输出总字节，干预输出启动错峰，并保留直接端点；本批不扩展GPU矩阵。
+
+[原分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100/analysis/output-ns.json)保持不变；[本地复核及逐CTA比值](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100/reanalysis/B-20261009-r15-rates-and-perturbation/output-ns.json)新增局部/全程比值分布和stamped阶段对照。直接重叠另以逐窗口两两交集独立复算，30次结果与分析器一致至1e−8；分析器测试新增“先逐CTA取比值再汇总”，共六项通过。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
+  --output <该run下新的reanalysis目录>
 ```

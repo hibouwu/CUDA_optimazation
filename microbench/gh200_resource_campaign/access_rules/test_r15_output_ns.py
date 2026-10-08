@@ -47,6 +47,15 @@ class OutputNsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'no affine fallback'):
             direct_windows(setup, call)
 
+    def test_rates_are_paired_before_aggregation(self):
+        _, setup, call = fixture()
+        call['trace'][WIDTH + 14] -= 100
+        result = summarize_call(direct_windows(setup, call))
+        self.assertEqual(result['issuer_cycles_per_ns'], (7.5 + 15) / 2)
+        self.assertNotEqual(result['issuer_cycles_per_ns'],
+                            result['issuer_store_cycles'] / result['issuer_store_ns'])
+        self.assertAlmostEqual(result['issuer_to_cta_rate_ratio'], (7.5 / 4 + 15 / 9) / 2)
+
     def test_second_tile_is_not_silently_omitted(self):
         _, setup, call = fixture()
         call['trace'][6] = call['trace'][9] = 2
