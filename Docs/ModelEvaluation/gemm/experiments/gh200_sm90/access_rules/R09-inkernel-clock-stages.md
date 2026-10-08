@@ -215,3 +215,134 @@ analysis-r2 保存了对应分析器，可用 `python3 <归档目录>/analysis-r
 | 整卡空窗口 | globaltimer ns | 128 | 12.7% |
 
 单 CTA 的 34 cycle 可作为 clock64 计时固定开销的参考；整卡空窗口跨进程不稳定。它们是该探针的空窗口，不是本页 CUTLASS 打点的扰动。数据：[samples.csv](../../../../../../results/gh200_resource_campaign/20261001-resource-suite-v2/analysis/memory-baseline-formal-v3-a/samples.csv)。
+
+<a id="v08-clock-reanalysis"></a>
+
+## 2026-10-09：V03/V08 时间换算离线复核
+
+本次只读取历史归档，没有 GPU 测量。V08 的 36 个留出点、V03 的 11 个留出点均从原始 trace 复算并与原汇总一致；冻结预测、原评分和判定不变。V08 结果在 [C-20261009-clock-diagnostic-v2](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/C-20261009-clock-diagnostic-v2/diagnostic.json)，V03 在 [C-20261009-v03-residual-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261007-v03-clock-rule/reanalysis/C-20261009-v03-residual-v1/diagnostic.json)。V08 的 v1 为首次计算，v2 补充逐调用 gap，原数值分解未改。
+
+### h06：替换实测频率后还剩什么
+
+保持冻结的周期 C、比例 κ 和固定项 F，仅把 `T=F+κC/(1000f)` 中的 f 换为 ends 的调用内实测 GHz。h06 均为 3584×3584×20480、swizzle=1、原 dyadic 输入。
+
+| 配置 | 实测 ends 包络 µs | f 冻结 / 实测 GHz | 原完整时间误差 | 换实测 f 后 µs / 误差 |
+|---|---:|---:|---:|---:|
+| cfg_a | 640.336 | 1.485835 / 1.584461 | +5.271% | 637.455 / −1.249% |
+| cfg_b | 781.088 | 1.480212 / 1.587056 | −13.570% | 627.598 / −19.358% |
+| cfg_c | 624.928 | 1.504003 / 1.620511 | +5.247% | 614.199 / −2.277% |
+
+cfg_a/c 的偏长主要来自频率偏低；cfg_b 的周期低估更大，频率偏低反而掩盖了一部分。对全部 36 点只做同样替换，绝对误差中位数 / 最大值为 1.526% / 37.951%；这是诊断，不能作为新验证成绩。
+
+下面按中位数做代数分解。令 Ĉ=κC，Cₛ、Cₑ 为 stamped/ends 的实测最大 CTA 周期，fₑ 为 ends 频率，Wₑ 为 ends 包络，Tₑ、Tₚ 为 ends/plain event 时间。各项单位为 µs：
+
+| 项 | 计算 | cfg_a | cfg_b | cfg_c |
+|---|---|---:|---:|---:|
+| 频率替换量 | Ĉ/(1000f)−Ĉ/(1000fₑ) | +42.087 | +45.046 | +47.293 |
+| 周期模型差 | κ(C−Cₛ)/(1000fₑ) | −0.641 | −139.661 | −5.036 |
+| κ 的迁移差 | (κCₛ−Cₑ)/(1000fₑ) | −4.218 | −18.220 | −6.400 |
+| 周期/频率代理与包络差 | Cₑ/(1000fₑ)−Wₑ | −1.414 | +0.862 | −2.989 |
+| 固定项差 | F−(Tₑ−Wₑ) | −0.448 | −0.776 | −1.072 |
+| ends/plain 进程差 | Tₑ−Tₚ | −1.344 | +7.136 | +1.184 |
+| 总差 | 冻结预测−plain | +34.023 | −105.612 | +32.980 |
+
+36 点最大闭合差为 8.53×10⁻¹⁴ µs。这是**分别取中位数后的恒等式，不是同次调用的因果分解**。κCₛ−Cₑ 同时包含打点、编译与不同进程状态差；不能只命名为打点成本。冻结 κ 为 0.991263/0.993114/0.988041，h06 实测周期比为 0.997850/1.016806/0.998314，短窗口的比例不能无条件延伸到长窗口。
+
+fₑ 是每进程中最多 tile 的 CTA 的 cycle/ns 比值中位数，再跨进程取中位数；Cₑ 则先取每进程最大 CTA 周期。`Cₑ/fₑ` 与跨 SM 的 `max(final_ns)−min(entry_ns)` 并非同一统计量，二者之差不能全解释为入口错开。
+
+### 长窗口误差不只是 log 项外推
+
+冻结规则为 `f=a−b·φ·ln(W/µs)−c·D−d·μ`，V08 只重拟合 a、c，b、d 沿用 V03。V08 时间校准的最长 ends 包络分别是 **409.728、401.504、398.176 µs**。h06 在当前卡与 cfg 上超出该范围；V03 虽有毫秒级调用，但使用另一张卡和旧 128×256 配置，不能替代这一缺口。
+
+保持冻结 φ、μ 和模型隐含流量，直接把 W 换成实测包络，得到 1.485008/1.481708/1.504257 GHz，仍低 6.277%/6.638%/7.174%。因此，先修 cfg_b 的周期、进而得到更准确的 W，并不会自动修好频率规则。
+
+进一步只把 `ln W` 限制在各配置校准最长窗口，频率仅提高 **15.62/23.28/15.77 MHz**，仍低 **5.291%/5.171%/6.201%**。它只是敏感性计算，不是新规则；超过校准时长的 log 惩罚不能单独解释全部偏差。
+
+这里的 D 是 LRU 模型估计字节/W，不是计数器实测流量。固定该字节数、φ、μ 后，公式的 f(W) 在 **943.75/921.85/550.15 µs** 达到极大值，此后才下降；h06 的 a/b 还在极大值之前。长期 log 形式没有稳态极限，既不能概括为“时间越长必然越低”，也不能从这条公式切片辨认功率控制机制。仍缺同卡公共配置的长窗口数据、前序暖机配对，以及调用内分段 cycle/ns；现有 trace 的逐 tile 记录只有 cycle。
+
+### 固定项、V03 余差与最终完成
+
+V08 的 F 实际拟合的是 `median_over_cases(median(plain event)−median(ends envelope))`。校准中各配置的 F 为 3.392/3.528/3.696 µs，而 `median_over_cases(median(ends event)−median(ends envelope))` 为 4.048/4.232/3.984 µs；F 已包含跨协议差，不是纯 launch 常数。
+
+h06 同次 ends 调用的 `median(event−envelope)` 为 **4.224/4.032/4.688 µs**；上表使用的两个中位数之差则为 3.840/4.304/4.768 µs。cfg_b 的 `median(plain)−median(ends envelope)=−2.832 µs`，进一步说明不能把跨进程差当作物理上必为正的间隙。
+
+V03 的 11 个留出点换实测频率后，有符号误差中位数 −1.252%，范围 −4.431%～+0.310%；逐调用 event−包络的中位数为 5.296–6.336 µs，比旧 R09 的 3.857 µs 高 1.439–2.479 µs。但 `h_huge_sw1` 实测 1365.728 µs，替换频率后仍少 **60.513 µs**：周期模型差按实测频率折合 −39.370 µs，traced/plain event 中位数相差 −7.712 µs，关键 CTA 周期/频率代理与包络还差 −11.798 µs。固定 gap 的增量只有 2.479 µs，不能解释全部余差。V03 的关键周期是最多 tile CTA 集合的**中位数**，又不同于 V08 的 Cmax。
+
+R09 的尾端取三个角色最后的记录；公共 cooperative final 取消费者中发 TMA 的线程 256 在 `store_tail` 返回后的记录，pingpong 取最后消费者。该 store 等待是 `.read`，其边界为源 SMEM 可复用，不能直接改称目标全局内存写入完成。完整 event 与该包络之差仍可能包含末端后的异步写入；若继续物理解剖 F，才需要匹配的目标写完成端点，当前先保留经验差值。
+
+V03 的三个未解问题仍未被离线数据解决：G=32 的持续诊断调用内频率 1.824308 GHz，而 NVML 为 1980 MHz，模块功率末 1 s 中位数 472.081 W、该段 SW Power Cap 占比 0；不能据此命名一个与功率无关的硬件上限。NVML 是持续段慢采样，cycle/ns 是最终调用窗口，二者相差 155.692 MHz 尚无同窗口对照。不同卡/节点的 gap 差也尚未归因。该记录整进程的 reasons 曾出现 SW Power Cap，应限定为“最后 1 s 未观测到封顶”。
+
+<a id="s-prefill-alignment"></a>
+
+### S 与预填只能在相同事件上对齐
+
+公共 [v06_fit.py](../../../../../../microbench/gh200_resource_campaign/access_rules/v06_fit.py) 定义 `P0=producer_first_work−entry`，`S=first_MMA(tile0)−producer_first_work`。R09 定义 `prefill=first_mma0−entry`，其 `producer_setup` 终点已在 collective load 内的首次 producer acquire 前，晚于公共 producer-first-work。因此只有同 CTA、同首 tile、同首 MMA 端点时，预填才等于 P0+S；R09 固定取消费者 0，公共 cooperative 取两消费者较早的首 MMA，现有汇总常数不能直接相加。R09 的多 tile 阶段槽还会被最后 tile 覆盖。
+
+V08 归档 cooperative overlay 的显式 descriptor prefetch 位于 entry 后、producer-first-work 前，其发射属于 P0；未完成的效果可以延续进 S，但旧端点分不开。不能事后把描述符准备的全部成本记入 S。
+
+既有 2×L2 写驱逐配对给出以下 cycle 差；每格为 **ΔP0 / ΔS**：
+
+| 配对 | cfg_a | cfg_b | cfg_c |
+|---|---:|---:|---:|
+| g1 | +353.75 / +897.25 | +410.75 / +1278.00 | +337.75 / +1220.25 |
+| g4 | +28.50 / +721.00 | +5.50 / +595.25 | +17.50 / +9.25 |
+| c4_k2048 | +43.00 / +803.50 | +62.00 / +454.25 | +34.00 / +8.25 |
+
+这支持首段等待与前序缓存准备有关，也显示变化不全在 S 内；它不单独识别描述符、数据缓存或指令前端。最小新增 cycle 端点是首 tile 首次 producer acquire/TMA 前，与已有 producer-first-work、首 MMA 分成两个区间。先复用已有驱逐配对；只有要区分剩余候选时，再分别配对 descriptor prefetch 与暖机历史，避免加一个混合“冷启动常数”。
+
+<a id="input-modes"></a>
+
+### 公共输入开关的数值定义
+
+管理者实现的接口为 `--input-mode dyadic|zero|random`、`--seed`、`--sm-count`。默认仍为 `dyadic`、`seed=17`；三档只改变逻辑 A/B 元素，padding 与 D 的哨兵、alpha=1/beta=0 不变。下面采用已只读核对的管理者 uint32 哈希实现，公共补丁及其最终源码 SHA 由管理者发布；本次没有编译或运行 GPU kernel。
+
+| 模式 | 分布 | 检查 |
+|---|---|---|
+| dyadic | 原 A=`((7r+13c+3seed)%17−8)/32`，B=`((5r+11c+5seed)%17−8)/32`，17 级值 | 保留原 17 周期参考与零误差判据 |
+| zero | 所有逻辑 A/B 元素为 FP16 +0 | 被检查 D 数值精确为零，非有限值与 padding 错误均为 0 |
+| random | 下面的逻辑坐标哈希产生 24 位离散均匀 `[-1,1)`，RN 量化到 FP16；量化后范围 `[-1,1]`，包含少量 subnormal | 计时外 CPU double 点积参考，使用下述逐点容差 |
+
+```cpp
+uint32_t x = uint32_t(seed) ^ (is_a ? 0xa511e9b3u : 0x63d83595u);
+x ^= uint32_t(row) * 0x9e3779b9u;
+x ^= uint32_t(column) * 0x85ebca6bu;
+x ^= x >> 16;
+x *= 0x7feb352du;
+x ^= x >> 15;
+x *= 0x846ca68bu;
+x ^= x >> 16;
+float value = float(x >> 8) * 0x1p-23f - 1.0f;
+__half stored = __float2half_rn(value);
+```
+
+整数运算按 uint32 模 2³²，seed 首轮固定为 17；逻辑坐标不依赖 pitch、grid 或线程遍历次序。可核对的 FP16 位模式：坐标 (0,0)/(0,1)/(1,0)/(127,255)，A 为 `ba2a/a8c9/b3f3/3be4`，B 为 `38b8/3812/3974/bb92`。位模式已用 CPU 独立整数计算及 FP16 RN 转换复核；这里只固定一份伪随机样本，不声称代表所有随机分布。
+
+随机参考从计时外读回的**实际存储 FP16 A/B**转为 double，计算 `ref=ΣA·B`、`s=Σ|A·B|`；不要调用同一个 GPU hash 重生参考。初始 K≤65536 的工程判据为每个抽检点 `|D−ref|≤2^-20+2^-21·s`，且非有限值和 padding 错误均为 0；以绝对乘积和处理相消，不单靠相对误差。它不是 WGMMA 误差定理，首次公共 GPU 数值检查前不能称为已验证容差；若不满足，先检查误差和参考，不能为了通过而事后放宽。继续报告原绝对误差、非有限值、padding 错误，并记录最大 error/tolerance。沿用现有 4096 点抽检；小矩阵可全检，抽检不能写成全矩阵正确性证明。输入生成还须核对上述位模式；用实际输入作 GEMM 参考本身不验证生成器。
+
+共同基点的 `r18.cu` 以 `Options check(1, argv)` 固定 seed=17；返回码及 `gaps_common.hpp::print_check` 均使用零误差判据，公共补丁须让实际 seed 与两处模式判断一致。初始化、输入读回和检查均在目标计时外。原 dyadic 的精确性来自小整数格点：每个乘积为整数/1024、整数绝对值≤64；K≤262144 时绝对部分和的整数界≤2²⁴，不能将这种性质推广到任意 FP16 输入。本组没有修改公共头或 kernel。
+
+### 真正缺少的最小配对
+
+旧 R09 的 **128×256×64、cluster 2×1、cooperative、4 stage** 常数不能移入公共配置。cfg_a 是 128×128×64、2×1、cooperative、6 stage；cfg_b 是 128×128×64、1×1、pingpong、6 stage；cfg_c 是 256×128×64、1×2、cooperative、4 stage。计算、供给、输出、stage、最终记录角色与 GPU 均有差别；即使 cfg_c 的名义 1024 cycle/Ktile 相同，也不使其预填和固定项相同。
+
+公共框架的首批需求如下，均为诊断/校准，不能充当 V09 新留出：
+
+- **时间换算：** 三配置各用 `M=N=3584, K∈{1024,8192,20480}`，swizzle=1、紧密对齐行距、dyadic/seed17、原重复暖机；共 9 个几何条件，plain/stamped/ends 成对。K=20480 复用 h06 几何，新卡/新协议下以实测 ends 包络>600 µs 为准；不足时才延长 K。短/中/长分组按实测窗口，不按 K 名称。三点足以检查本次残差能否重现，不足以唯一拟合时长、流量和功率机制。
+- **输入：** 只在上述每配置的长窗口补 zero/random，增加 6 个条件，不与全部短中窗口交叉。三档固定布局和暖机，先比周期、调用内频率和 event；功率另用同一持续负载段的 NVML，记录模组与 GPU 字段、时间戳和封顶占比，不用 680 W 配置值证明调用已封顶。
+- **前序历史：** 每配置只在长窗口 dyadic 增加一次“完成原暖机后同步空闲 1.5 s，再测首调用”的配对，增加 3 个条件；不把冷调用混入原暖机模型。与重复暖机条件交错，保留原始样本。
+- **少量 SM 与 NVML 差：** 先比较 32 个实际活动 SM 的公共 GEMM（WGMMA+TMA）、FFMA、仅 TMA 三种负载，每种各持续约 2 s、分别统计本段末 1 s。NVML 5 ms 轮询与多次同 SM cycle/ns 在各自同一持续段内重叠采样。GEMM 用公共 cfg 的 sm_count 开关；另两种复用原指令/供给探针。如需纯 WGMMA，另用寄存器/SMEM 常驻原探针，不能把公共 GEMM 当成纯计算负载。负载组成、实际 SMID 与窗口同时保留，频率差并不能单凭这组三点唯一归因。
+- **S 与最终完成：** 首段只需上文一个 acquire/TMA 前端点，并与既有驱逐配对共用。若只预测 event，可继续实测条件 F；只有继续分离写回与外部间隙时才增加目标写完成对照，不把它设为所有测量的前置条件。
+
+每条件先沿用 10 个独立进程；plain/ends 的事件差、每 CTA cycle/ns 和必要 stamped 区间同时保存，波动不足以区分时才扩大重复。不同输入的连续功率段与正式短调用计时分开；所有新时间常数来自公共 cfg_a/b/c 的同卡配对。
+
+复核入口（`--output` 必须指定不存在的新目录；不写旧 summary 或 frozen）：
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py \
+  --run "$ROOT/20261008-V08-job737322-v1" \
+  --output "$ROOT/20261008-V08-job737322-v1/reanalysis/C-20261009-clock-replay-<新后缀>"
+python3 microbench/gh200_resource_campaign/access_rules/r09_v03_residual.py \
+  --run "$ROOT/20261007-v03-clock-rule" \
+  --output "$ROOT/20261007-v03-clock-rule/reanalysis/C-20261009-v03-replay-<新后缀>"
+```
