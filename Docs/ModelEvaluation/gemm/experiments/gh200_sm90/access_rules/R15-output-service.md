@@ -199,7 +199,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 ## 直接输出 globaltimer 的最小补测准备（2026-10-09）
 
-本节只完成专用配置与 CPU 分析入口，未编译或采样新增打点。基于公共框架 `6338653`，沿用 cfg_c 的 tile256×128×64、cluster1×2、四 stage、dyadic/seed17、swizzle1、无驱逐、默认全部 SM；三条全部改列为 `ctrl`，不是新留出。
+本节完成专用准备入口、配置与 CPU 分析入口，未编译或采样新增打点。已合并公共框架 `6338653` 及管理者的打点补丁 `d8eb6a0`，沿用 cfg_c 的 tile256×128×64、cluster1×2、四 stage、dyadic/seed17、swizzle1、无驱逐、默认全部 SM；三条全部改列为 `ctrl`，不是新留出。
 
 | 条件 | M×N×K | 预期 CTA 数 / 每 CTA tile 数 | 对照用途 |
 |---|---:|---:|---|
@@ -209,7 +209,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 配置为 [configs/r15-output-ns.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r15-output-ns.json)，`lda=K, ldb=ldd=N`。实际 grid、坐标、SMID 和 tile_count 仍由新调用确认。c6 的旧平均重叠估计为仿射94.61、入口锚点120.51，已足以检验换算歧义；h08 同时改变几何和 K，本轮不需要加它。g3/c2 仍改变总字节、足迹和前序供给，c2/c6 仍改变输入量、执行时长与频率状态，三点都不是纯并发因果干预。
 
-### 给公共框架维护者的两字段修改
+### 公共框架的两字段修改
 
 复用每 CTA 16-word 头部的空闲槽位，不改变784-word布局或每tile六字记录；只由 thread256、tile0 写入：
 
@@ -221,9 +221,9 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 | EPI_DONE | 原 role2 clock64，在 cooperative `store()` 返回后 | header[14]：`issuer_store_return_ns` |
 | 最终 final | 原 header[7]/[8]：role2 的 clock64/globaltimer，在 post-loop `store_tail()` 返回后 | 原样保留 |
 
-具体公共建议：`r18_trace.hpp::v06_stamp()` 在 `-DR15_OUTPUT_NS` 下，只对 `threadIdx.x==256 && tile==0` 的上述两个输出事件采样；globaltimer 紧随原 clock64 读取，两个时钟都先读取，再保存 trace。`r18.cu` 对这个模式写 `trace_version="r15-first-output-ns"`，header[15] 保留。既有 cooperative overlay 已有正确的两处 `v06_stamp()`，无需再插新调用，也不增加等待。源中的 FIRST_MMA/MAIN_END/EPI_PERMIT/EPI_DONE 和 final 原语义均不变。
+管理者的 `d8eb6a0` 已实现并经源码核对：`r18_trace.hpp::v06_stamp()` 在 `-DR15_OUTPUT_NS` 下，只对 `threadIdx.x==256 && tile==0` 的上述两个输出事件采样；globaltimer 在原 clock64 之后、trace写入之前读取。`r18.cu` 对这个模式写 `trace_version="r15-first-output-ns"`，header[15] 保留。既有 cooperative overlay 已有正确的两处 `v06_stamp()`，无需再插新调用，也不增加等待。源中的 FIRST_MMA/MAIN_END/EPI_PERMIT/EPI_DONE 和 final 原语义均不变。
 
-新二进制命名 `cfg_c_global`，编译在原 cfg_c stamped 参数上增加 `-DR15_OUTPUT_NS`；plain/stamped/ends 使用原参数。同卡、同批交错执行四个变体，报告 global 相对三者的时间扰动与各自离散程度。公共 runner 若复用 `run_v08.run_one()`，global 必须走完整坐标 trace 的 `analyze_r18.replay()`；当前 `v08_model.observe()` 会把未知 variant 当 ends，不能直接将 global 传给它。无需为此改模型公共接口。构建、SASS/寄存器和新打点扰动仍待该版本的实际 GPU 检查，旧版本的编译结果不覆盖新增 profile。
+新二进制命名 `cfg_c_global`，编译在原 cfg_c stamped 参数上增加 `-DR15_OUTPUT_NS`；plain/stamped/ends 使用原参数。同卡、同批交错执行四个变体，报告 global 相对三者的时间扰动与各自离散程度。[run_r15_output_ns.py](../../../../../../microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py) 复用 `run_r18.prepare()` 的源码与 overlay 准备，只保留这三个条件及四个 cfg_c 编译命令；四个都从同一份新源码构建，不复用旧卡或旧源码的时间。build/setup/sample 复用 `run_v08.main()`，仅将 global 分派给 `run_r18.run_one()` 的完整坐标 trace 检查；其余三变体沿用原分派，避免未知 variant 被 `v08_model.observe()` 当作 ends。没有复制探针、overlay 或模型接口。构建、SASS/寄存器和新打点扰动仍待该版本的实际 GPU 检查，旧版本的编译结果不覆盖新增 profile。
 
 `store_tail()` 使用的 `tma_store_wait<0>()` 在该 CUTLASS 版本实际发出 `cp.async.bulk.wait_group.read 0`，只保证源 SMEM 已被读完、可复用；`store()` 返回和最终 final 都不叫全局目标写完成。这次不增加全写排空等待，也不把已有端点重新命名为 write_complete。
 
@@ -239,4 +239,14 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15_output_ns.py
   --input <本地接收的新R15运行目录> --output <该run下新的reanalysis目录>
 ```
 
-CPU 测试使用临时合成记录，检查直接重叠与错误的周期换算分离、并列端点、整数时间精度、旧profile/多tile拒绝，以及从 raw setup 识别 global；这些测试不是 GPU 数据。后续准备与运行目录使用节点本地 `/tmp/gh200-r15-output-ns-<run-id>`，完整批次回传本地 results 后分析；不向已超配额的共享存储追加。本轮只交回上述配置、分析器和公共修改需求，不提交作业。
+CPU 的五个测试使用临时合成记录，检查直接重叠与错误的周期换算分离、并列端点、整数时间精度、旧profile/多tile拒绝，以及从 raw setup 识别 global；这些测试不是 GPU 数据。另用旧归档的只读 CUTLASS 头文件在本地临时目录实际执行 prepare，核对四条构建命令、全部源码哈希和 overlay header；三条矩阵与旧形状一致，静态工作分配分别为48/132/132个单tile CTA。临时检查目录随后释放，原归档未改动。
+
+后续准备与运行目录使用节点本地 `/tmp/gh200-r15-output-ns-<run-id>`，完整批次回传本地 results 后分析；不向已超配额的共享存储追加。以下是之后批次使用的入口，本轮未执行 build/setup/sample，也未提交作业。sample 继续使用原框架的同卡环境校验、锁、随机交错和十进程采样，不新增运行管理层。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py prepare \
+  --output <新run目录> --cutlass-root <CUTLASS3.9.2>
+python3 <新run目录>/source/run_r15_output_ns.py build --output <新run目录>
+python3 <新run目录>/source/run_r15_output_ns.py setup --output <新run目录>
+python3 <新run目录>/source/run_r15_output_ns.py sample --output <新run目录> --set ctrl
+```
