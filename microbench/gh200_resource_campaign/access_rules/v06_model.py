@@ -157,7 +157,7 @@ def dram_bytes(config, m, n, k, work):
         for panels in waves:
             footprint = sum(size(p) for p in panels)
             total += sum(size(p) for p in panels if p not in cache)
-            for p in panels:
+            for p in sorted(panels):  # fixed order: set order follows the per-process hash seed
                 cache.pop(p, None)
                 cache[p] = size(p)
             if footprint > L2_CAP:

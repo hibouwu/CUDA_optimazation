@@ -37,6 +37,14 @@ __device__ __forceinline__ void v06_entry() {
   uint64_t* b = v06_base();
   b[0] = c; b[1] = t; b[2] = uint64_t(sm) + 1;
 }
+#ifdef V08_ENDS
+// V08 "ends": only CTA entry, producer first work and final release; no per-tile writes.
+template <class Work>
+__device__ __forceinline__ void v06_begin(Work const&, int tile) {
+  if (threadIdx.x == 0 && tile == 0) v06_base()[3] = v06_clock();
+}
+__device__ __forceinline__ void v06_stamp(int, int) {}
+#else
 // Called at the top of each work-loop iteration by producer and consumer roles.
 template <class Work>
 __device__ __forceinline__ void v06_begin(Work const& work, int tile) {
@@ -56,6 +64,7 @@ __device__ __forceinline__ void v06_stamp(int event, int tile) {
   if (tile < 0 || tile >= V06Tiles) { v06_base()[10] = 1; return; }
   v06_base()[V06Head + ((role - 1) * V06Tiles + tile) * 6 + event] = c;
 }
+#endif
 __device__ __forceinline__ void v06_final(int tiles) {
   if (threadIdx.x % 128 != 0 || threadIdx.x < 128) return;
   int role = threadIdx.x / 128;
