@@ -5,6 +5,8 @@
 //   [0] entry cycles      [1] entry ns       [2] smid+1     [3] producer first-work cycles
 //   [4] role1 final cyc   [5] role1 final ns [6] role1 tiles
 //   [7] role2 final cyc   [8] role2 final ns [9] role2 tiles [10] overflow flag
+//   R15_OUTPUT_NS only: [13]/[14] first-tile issuer EPI_PERMIT/EPI_DONE globaltimer.
+//   The R15 single-tile cases use thread 256; [8] remains the store_tail endpoint.
 //   [16 + ((role-1)*V06Tiles + tile)*4 + e], e = FIRST_MMA, MAIN_END, EPI_PERMIT, EPI_DONE
 // role = threadIdx.x / 128 (1, 2 = consumer warpgroups). Only thread %128 == 0 writes.
 // EPI_DONE: cooperative = epilogue store() returned; pingpong = store_tail() returned.
@@ -61,6 +63,11 @@ __device__ __forceinline__ void v06_stamp(int event, int tile) {
   if (threadIdx.x % 128 != 0 || threadIdx.x < 128) return;
   int role = threadIdx.x / 128;
   uint64_t c = v06_clock();
+#ifdef R15_OUTPUT_NS
+  if (threadIdx.x == 256 && tile == 0 &&
+      (event == V06_EPI_PERMIT || event == V06_EPI_DONE))
+    v06_base()[event == V06_EPI_PERMIT ? 13 : 14] = v06_ns();
+#endif
   if (tile < 0 || tile >= V06Tiles) { v06_base()[10] = 1; return; }
   v06_base()[V06Head + ((role - 1) * V06Tiles + tile) * 6 + event] = c;
 }

@@ -82,7 +82,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(V08_ENDS)
+#if defined(R15_OUTPUT_NS)
+constexpr const char* kTraceVersion="r15-first-output-ns";
+#elif defined(V08_ENDS)
 constexpr const char* kTraceVersion="v08-ends";
 #elif defined(R18_LIGHT)
 constexpr const char* kTraceVersion="r18-light-events";
