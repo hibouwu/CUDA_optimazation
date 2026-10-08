@@ -9,10 +9,35 @@ import v06_run as common
 
 
 @lru_cache(None)
-def reference(row,col,k):
-    total=sum(((row*7+t*13+51)%17-8)*((t*5+col*11+85)%17-8) for t in range(17))
-    remainder=sum(((row*7+t*13+51)%17-8)*((t*5+col*11+85)%17-8) for t in range(k%17))
+def reference(row,col,k,seed=17):
+    total=sum(((row*7+t*13+seed*3)%17-8)*((t*5+col*11+seed*5)%17-8) for t in range(17))
+    remainder=sum(((row*7+t*13+seed*3)%17-8)*((t*5+col*11+seed*5)%17-8) for t in range(k%17))
     return (total*(k//17)+remainder)/1024
+
+
+def random_references(indices,m,n,k,seed):
+    """Regenerate logical FP16 inputs independently of the device-side output checker."""
+    import numpy as np
+
+    def values(rows,cols,is_a):
+        x=np.uint32(seed)^np.uint32(0xa511e9b3 if is_a else 0x63d83595)
+        x=x^(rows*np.uint32(0x9e3779b9))^(cols*np.uint32(0x85ebca6b))
+        x=(x^(x>>16))*np.uint32(0x7feb352d)
+        x=(x^(x>>15))*np.uint32(0x846ca68b)
+        x=x^(x>>16)
+        return ((x>>8).astype(np.float32)*np.float32(2**-23)-np.float32(1)).astype(np.float16).astype(np.float64)
+
+    positions=np.asarray(indices,dtype=np.int64)
+    rows=(positions//n).astype(np.uint32);cols=(positions%n).astype(np.uint32)
+    inner=np.arange(k,dtype=np.uint32)[None,:]
+    expected=[];tolerances=[]
+    for start in range(0,len(indices),32):
+        a=values(rows[start:start+32,None],inner,True)
+        b=values(inner,cols[start:start+32,None],False)
+        products=a*b
+        expected.extend(products.sum(axis=1).tolist())
+        tolerances.extend((2**-20+2**-21*np.abs(products).sum(axis=1)).tolist())
+    return expected,tolerances
 
 
 def replay(root,record,row):
@@ -22,16 +47,29 @@ def replay(root,record,row):
     setup,call,check=(events[k] for k in ['setup','call','check'])
     for key in ['m','n','k','lda','ldb','ldd','zero_m','zero_n','storage_m','storage_n','swizzle']:
         if setup[key]!=row[key]:raise ValueError('setup coordinate changed: '+key)
+    mode=row.get('input_mode','dyadic');seed=row.get('seed',17)
+    if setup.get('input_mode','dyadic')!=mode or setup.get('seed',17)!=seed:
+        raise ValueError('input mode or seed changed')
+    if setup.get('requested_sm_count',0)!=row.get('sm_count',0):raise ValueError('requested SM count changed')
     if check['status']!='ok' or check['padding_errors'] or len(check['checked_values'])!=4096:
         raise ValueError('incorrect or incomplete GEMM check')
     if len(set(check['checked_indices']))!=4096:raise ValueError('duplicate sampled values')
+    if mode=='random':
+        if setup['check_atol']!=2**-20 or setup['check_sum_abs_rtol']!=2**-21:
+            raise ValueError('random input tolerance changed')
+        expected_values,tolerances=random_references(check['checked_indices'],row['m'],row['n'],row['k'],seed)
+    elif mode not in ['dyadic','zero']:
+        raise ValueError('unknown input mode')
     zero_count=0
-    for index,value in zip(check['checked_indices'],check['checked_values']):
+    for q,(index,value) in enumerate(zip(check['checked_indices'],check['checked_values'])):
         i,j=divmod(index,row['n'])
         if not 0<=i<row['m']:raise ValueError('invalid check position')
-        zero=(row['zero_m']>=0 and i>=row['zero_m']) or (row['zero_n']>=0 and j>=row['zero_n'])
-        zero_count+=zero;expected=0 if zero else reference(i%17,j%17,row['k'])
-        if value!=expected:raise ValueError('wrong GEMM output at '+str((i,j)))
+        zero=mode=='zero' or (row['zero_m']>=0 and i>=row['zero_m']) or (row['zero_n']>=0 and j>=row['zero_n'])
+        zero_count+=zero
+        expected=0 if zero else expected_values[q] if mode=='random' else reference(i%17,j%17,row['k'],seed)
+        tolerance=(2**-20 if zero else tolerances[q]) if mode=='random' else 0
+        if value is None or not math.isfinite(value) or abs(value-expected)>tolerance:
+            raise ValueError('wrong GEMM output at '+str((i,j)))
     if row['kind']=='explicit_zero' and zero_count<1:raise ValueError('zero panel unchecked')
     warm=call['warmup_us'];warm_cv=statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])
     if not 8<=len(warm)<=30 or warm_cv>.02:raise ValueError('warmup did not converge')

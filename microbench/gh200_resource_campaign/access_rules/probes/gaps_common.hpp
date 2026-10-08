@@ -8,6 +8,19 @@
 
 namespace gaps {
 
+// Random input depends on logical coordinates, not pitch or launch geometry.
+__host__ __device__ inline float random_input_value(int row, int column, int seed, bool is_a) {
+  uint32_t x = uint32_t(seed) ^ (is_a ? 0xa511e9b3u : 0x63d83595u);
+  x ^= uint32_t(row) * 0x9e3779b9u;
+  x ^= uint32_t(column) * 0x85ebca6bu;
+  x ^= x >> 16;
+  x *= 0x7feb352du;
+  x ^= x >> 15;
+  x *= 0x846ca68bu;
+  x ^= x >> 16;
+  return float(x >> 8) * 0x1p-23f - 1.0f;
+}
+
 inline void validate_layout(int rows, int columns, int64_t ld) {
   if (rows <= 0 || columns <= 0 || ld < columns)
     throw std::runtime_error("positive dimensions and ld >= logical columns required");
@@ -17,12 +30,14 @@ inline void validate_layout(int rows, int columns, int64_t ld) {
 
 template <class T>
 __global__ void fill_input_strided(T* data, int rows, int columns, int64_t ld,
-                                   int seed, bool is_a) {
+                                   int seed, bool is_a, int input_mode = 0) {
   size_t total = size_t(rows) * size_t(ld);
   for (size_t q = size_t(blockIdx.x) * blockDim.x + threadIdx.x; q < total;
        q += size_t(gridDim.x) * blockDim.x) {
     int row = int(q / ld), column = int(q % ld);
-    data[q] = T(column < columns ? input_value(row, column, seed, is_a) : 65504.0f);
+    float value = input_mode == 2 ? random_input_value(row, column, seed, is_a)
+                                : input_mode == 1 ? 0.0f : input_value(row, column, seed, is_a);
+    data[q] = T(column < columns ? value : 65504.0f);
   }
 }
 
@@ -144,8 +159,8 @@ inline Errors check_gemm_output(const float* data, int m, int n, int k, int64_t 
 }
 
 // Emit an individual JSON event. Keep the exact observed values for independent CPU replay.
-inline void print_check(const Errors& errors, size_t padding_bad = 0) {
-  bool ok = errors.nonfinite == 0 && errors.max_storage_error == 0 && padding_bad == 0;
+inline void print_check(const Errors& errors, size_t padding_bad, bool numerical_ok) {
+  bool ok = errors.nonfinite == 0 && numerical_ok && padding_bad == 0;
   std::cout << std::setprecision(17) << "{\"event\":\"check\",\"status\":\""
             << (ok ? "ok" : "numeric_error") << "\",\"samples\":" << errors.values.size()
             << ",\"nonfinite\":" << errors.nonfinite
@@ -164,6 +179,10 @@ inline void print_check(const Errors& errors, size_t padding_bad = 0) {
       std::cout << "null";
   }
   std::cout << "]}\n";
+}
+
+inline void print_check(const Errors& errors, size_t padding_bad = 0) {
+  print_check(errors, padding_bad, errors.max_storage_error == 0);
 }
 
 }  // namespace gaps

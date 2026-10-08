@@ -77,6 +77,8 @@ def prepare(root,cutlass,family):
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
+    for key in ['sm_count','input_mode','seed']:
+        if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 
 

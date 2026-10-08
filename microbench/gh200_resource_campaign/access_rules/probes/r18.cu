@@ -102,6 +102,9 @@ struct Args {
   std::string mode = "warm";
   int m = 1280, n = 1536, k = 1536;
   int zero_m=-1,zero_n=-1,storage_m=0,storage_n=0,swizzle=1,evict=0;
+  int sm_count = 0;
+  std::string input_mode = "dyadic";
+  int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
   Args(int argc, char** argv) {
     if (argc % 2 == 0)
@@ -121,8 +124,15 @@ struct Args {
       else if(key=="--storage-n")storage_n=std::stoi(v);
       else if(key=="--swizzle")swizzle=std::stoi(v);
       else if(key=="--evict")evict=std::stoi(v);
+      else if(key=="--sm-count")sm_count=std::stoi(v);
+      else if(key=="--input-mode")input_mode=v;
+      else if(key=="--seed")seed=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (input_mode != "dyadic" && input_mode != "zero" && input_mode != "random")
+      throw std::runtime_error("input-mode must be dyadic, zero or random");
+    if (seed < 0)
+      throw std::runtime_error("seed must be nonnegative");
   }
 };
 
@@ -146,7 +156,9 @@ __global__ void zero_panel(__half* data,int rows,int cols,int64_t stride,int zer
 }
 
 inline Errors check_boundary_output(const float* data, int m, int n, int k, int64_t ldd,
-                                int seed, int requested, int zero_m, int zero_n) {
+                                int seed, int requested, int zero_m, int zero_n,
+                                int input_mode, const __half* a, const __half* b,
+                                int64_t lda, int64_t ldb, double& max_error_ratio) {
   gaps::validate_layout(m, n, ldd);
   if (k <= 0 || seed < 0)
     throw std::runtime_error("positive K and nonnegative witness seed required");
@@ -162,17 +174,40 @@ inline Errors check_boundary_output(const float* data, int m, int n, int k, int6
   result.values.resize(indices.count);
   CUDA_CHECK(cudaMemcpy(result.values.data(), values.pointer, values.count * sizeof(float),
                         cudaMemcpyDeviceToHost));
+  std::vector<__half> host_a, host_b;
+  if (input_mode == 2) {
+    host_a.resize(size_t(m) * k);
+    host_b.resize(size_t(k) * n);
+    CUDA_CHECK(cudaMemcpy2D(host_a.data(), size_t(k) * 2, a, size_t(lda) * 2,
+                           size_t(k) * 2, m, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy2D(host_b.data(), size_t(n) * 2, b, size_t(ldb) * 2,
+                           size_t(n) * 2, k, cudaMemcpyDeviceToHost));
+  }
   double squared_error = 0, squared_reference = 0;
   for (size_t q = 0; q < result.indices.size(); ++q) {
     uint64_t index = result.indices[q];
-    double reference = gaps::dyadic_reference(int(index / n), int(index % n), k, seed);
-    if((zero_m>=0&&int(index/n)>=zero_m)||(zero_n>=0&&int(index%n)>=zero_n))reference=0;
+    int row = int(index / n), col = int(index % n);
+    bool zero = input_mode == 1 || (zero_m >= 0 && row >= zero_m) ||
+                (zero_n >= 0 && col >= zero_n);
+    double reference = 0, sum_abs_products = 0;
+    if (!zero && input_mode == 2) {
+      for (int t = 0; t < k; ++t) {
+        double product = double(float(host_a[size_t(row) * k + t])) *
+                         double(float(host_b[size_t(t) * n + col]));
+        reference += product;
+        sum_abs_products += std::abs(product);
+      }
+    } else if (!zero) {
+      reference = gaps::dyadic_reference(row, col, k, seed);
+    }
     float value = result.values[q];
     if (!std::isfinite(value)) {
       ++result.nonfinite;
       continue;
     }
     double error = std::abs(double(value) - reference);
+    if (input_mode == 2)
+      max_error_ratio = std::max(max_error_ratio, error / (0x1p-20 + 0x1p-21 * sum_abs_products));
     result.max_absolute = std::max(result.max_absolute, error);
     result.max_storage_error = std::max(result.max_storage_error,
                                        std::abs(double(value) - double(float(reference))));
@@ -195,8 +230,10 @@ int main(int argc, char** argv) {
     if (o.mode != "warm" && o.mode != "setup")
       throw std::runtime_error("unknown mode " + o.mode);
 
-    Options check(1, argv);  // Deterministic dyadic witness, seed 17.
+    Options check(1, argv);
     check.m = o.m, check.n = o.n, check.k = o.k;
+    check.seed = o.seed;
+    int input_mode = o.input_mode == "random" ? 2 : o.input_mode == "zero" ? 1 : 0;
     int64_t lda = o.lda ? o.lda : o.k;
     int64_t ldb = o.ldb ? o.ldb : o.n, ldd = o.ldd ? o.ldd : o.n;
     int tn = int(size<1>(KernelTile{}));
@@ -218,11 +255,16 @@ int main(int argc, char** argv) {
                                        {{1.f, 0.f}, nullptr, sd, d.pointer, sd}};
     cudaDeviceProp properties{};
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
+    if (o.sm_count < 0 || o.sm_count > properties.multiProcessorCount)
+      throw std::runtime_error("sm-count must be zero (all SMs) or within the device SM count");
+    int scheduler_sms = o.sm_count ? o.sm_count : properties.multiProcessorCount;
+    if (scheduler_sms < int(size(KernelCluster{})))
+      throw std::runtime_error("sm-count is smaller than one cluster");
     DeviceBuffer<unsigned> eviction(std::max<size_t>(1,size_t(properties.l2CacheSize)*2/4));
     unsigned eviction_seed=17;
     if(o.evict<0||o.evict>1)throw std::runtime_error("invalid eviction mode");
     arguments.hw_info.device_id = 0;
-    arguments.hw_info.sm_count = properties.multiProcessorCount;
+    arguments.hw_info.sm_count = scheduler_sms;
     arguments.scheduler.max_swizzle_size = o.swizzle;
     Gemm gemm;
     cutlass_check(gemm.can_implement(arguments), "can_implement");
@@ -234,8 +276,8 @@ int main(int argc, char** argv) {
       throw std::runtime_error("unexpected persistent grid");
 
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
-    gaps::fill_input_strided<<<256, 256>>>(a.pointer, o.m, o.k, lda, check.seed, true);
-    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, o.n, ldb, check.seed, false);
+    gaps::fill_input_strided<<<256, 256>>>(a.pointer, o.m, o.k, lda, check.seed, true, input_mode);
+    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, o.n, ldb, check.seed, false, input_mode);
     CUDA_CHECK(cudaGetLastError());
     if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,o.m,o.k,lda,o.zero_m,-1);
     if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,o.n,ldb,-1,o.zero_n);
@@ -313,6 +355,13 @@ int main(int argc, char** argv) {
               << ",\"smem_epilogue\":" << sizeof(typename Epilogue::SharedStorage)
               << ",\"max_active_ctas_per_sm\":" << Gemm::maximum_active_blocks()
               << ",\"sm_count\":" << properties.multiProcessorCount
+              << ",\"requested_sm_count\":" << o.sm_count
+              << ",\"scheduler_sm_count\":" << scheduler_sms
+              << ",\"input_mode\":\"" << o.input_mode << "\",\"seed\":" << o.seed
+              << std::setprecision(17)
+              << ",\"check_atol\":" << (input_mode == 2 ? 0x1p-20 : 0.0)
+              << ",\"check_sum_abs_rtol\":" << (input_mode == 2 ? 0x1p-21 : 0.0)
+              << std::setprecision(10)
               << ",\"lda\":" << lda << ",\"ldb\":" << ldb << ",\"ldd\":" << ldd
               << ",\"evict\":" << o.evict << ",\"eviction_bytes\":" << eviction.count*4
               << ",\"zero_m\":" << o.zero_m << ",\"zero_n\":" << o.zero_n
@@ -324,13 +373,18 @@ int main(int argc, char** argv) {
       return 0;
     warm_sequence();
 
+    double max_error_ratio = 0;
     Errors e = check_boundary_output(d.pointer, o.m, o.n, o.k, ldd, check.seed,
-                                       4096,o.zero_m,o.zero_n);
+                                       4096,o.zero_m,o.zero_n,input_mode,a.pointer,b.pointer,
+                                       lda,ldb,max_error_ratio);
     size_t padding_bad = gaps::padding_errors(a.pointer, o.m, o.k, lda, __half(65504.f))
         + gaps::padding_errors(b.pointer, o.k, o.n, ldb, __half(65504.f))
         + gaps::padding_errors(d.pointer, o.m, o.n, ldd, gaps::output_sentinel());
-    bool ok = e.nonfinite == 0 && e.max_storage_error == 0 && padding_bad == 0;
-    gaps::print_check(e, padding_bad);
+    bool numerical_ok = input_mode == 2 ? max_error_ratio <= 1 : e.max_storage_error == 0;
+    bool ok = e.nonfinite == 0 && numerical_ok && padding_bad == 0;
+    if (input_mode == 2)
+      std::cout << "{\"event\":\"tolerance\",\"max_error_ratio\":" << max_error_ratio << "}\n";
+    gaps::print_check(e, padding_bad, numerical_ok);
     CUDA_CHECK(cudaEventDestroy(begin));
     CUDA_CHECK(cudaEventDestroy(end));
     return ok ? 0 : 2;
