@@ -86,7 +86,7 @@
 Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/
   README.md                         # 导航、当前结论与各组状态
   PLAN.md                           # 围绕当前预测误差的短计划
-  RULES.md                          # 规则正文（唯一维护）；GH200-Rules-Analysis.html 为本地导出预览，不入 git
+  RULES.md                          # 规则正文（唯一维护）
   R00–R19、B01、V01–V07              # 各组实验说明
 
 microbench/gh200_resource_campaign/access_rules/

@@ -61,6 +61,3 @@ __pycache__/
 *.swp
 *.swo
 .DS_Store
-
-# Local preview exported from access_rules/RULES.md
-Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/GH200-Rules-Analysis.html
