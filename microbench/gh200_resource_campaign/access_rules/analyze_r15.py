@@ -11,6 +11,8 @@ from pathlib import Path
 import re
 import statistics
 import sys
+from bisect import bisect_right
+from collections import defaultdict
 
 MODES = ('reg_smem', 'tma_only', 'full_output', 'background', 'serial', 'concurrent')
 
@@ -300,9 +302,152 @@ def analyze(folder, destination):
     return summary
 
 
+def overlap_windows(windows):
+    """Time-average active output windows, including self; one call at a time."""
+    changes = defaultdict(int)
+    for start, end in windows:
+        changes[start] += 1
+        changes[end] -= 1
+    times = sorted(changes)
+    counts, areas = [], [0.0]
+    count = 0
+    for i, time in enumerate(times):
+        if i:
+            areas.append(areas[-1] + count * (time - times[i - 1]))
+        count += changes[time]
+        counts.append(count)
+    def integral(time):
+        i = bisect_right(times, time) - 1
+        return areas[i] + counts[i] * (time - times[i])
+    return [(integral(end) - integral(start)) / (end - start)
+            for start, end in windows]
+
+
+def analyze_v08_output(root, destination):
+    """Posthoc output overlap estimates and directly observed critical CTA endpoints."""
+    import v08_model
+    med = statistics.median
+    rows = json.loads((root / 'cases.json').read_text())
+    setups = {r['case']: r['setup'] for r in json.loads((root / 'static_setup.json').read_text())}
+    cases, processes, tails = [], [], []
+    for row in rows:
+        if row['config'] not in ('cfg_a', 'cfg_c'):
+            continue
+        records = [json.loads(p.read_text()) for p in sorted((root / 'samples' / row['id']).glob('*.json'))]
+        records = [r for r in records if not r['returncode']]
+        plain = [r['elapsed_us'] for r in records if r['variant'] == 'plain']
+        stamped = [r['elapsed_us'] for r in records if r['variant'] == 'stamped']
+        perturbation = med(stamped) / med(plain) - 1
+        qualified = (min(len(plain), len(stamped)) >= 10 and abs(perturbation) <= .05
+                     and max(statistics.pstdev(v) / statistics.mean(v) for v in (plain, stamped)) <= .05)
+        selected = []
+        for record in records:
+            if record['variant'] not in ('stamped', 'ends'):
+                continue
+            observed = v08_model.observe(root, record, row, setups[row['id']])
+            ctas = [c for c in observed['ctas'] if c['tiles']]
+            origin = min(c['entry_ns'] for c in observed['ctas'])
+            last_ns = max(c['end_ns'] for c in ctas)
+            longest_cycles = max(c['end_c'] - c['entry_c'] for c in ctas)
+            longest_ties = [c for c in ctas if c['end_c'] - c['entry_c'] == longest_cycles]
+            longest = max(longest_ties, key=lambda c: c['end_ns'])
+            last = max(ctas, key=lambda c: c['end_ns'])
+            # globaltimer ties are preserved; choosing a different tied CTA is not a miss.
+            tails.append(dict(case=row['id'], trial=record['trial'], variant=record['variant'],
+                ctas=len(ctas), unique_sms=len({c['sm'] for c in ctas}),
+                entry_spread_ns=max(c['entry_ns'] for c in observed['ctas']) - origin,
+                final_tied_ctas=[c['cta'] for c in ctas if c['end_ns'] == last_ns],
+                longest_tied_ctas=[c['cta'] for c in longest_ties],
+                final_cta=last['cta'], final_sm=last['sm'], longest_cta=longest['cta'],
+                final_entry_offset_ns=last['entry_ns'] - origin,
+                longest_exit_lag_ns=last_ns - longest['end_ns'],
+                envelope_ns=last_ns - origin,
+                longest_cycles=longest['end_c'] - longest['entry_c'],
+                final_cycles=last['end_c'] - last['entry_c'],
+                cta_endpoints=[dict(cta=c['cta'], sm=c['sm'], entry_ns=c['entry_ns'] - origin,
+                    end_ns=c['end_ns'] - origin, duration_cycles=c['end_c'] - c['entry_c']) for c in ctas]))
+            if record['variant'] == 'ends':
+                continue
+            with gzip.open(root / record['raw'], 'rt') as stream:
+                words = next(e['trace'] for line in stream for e in [json.loads(line)] if e['event'] == 'call')
+            tm = 256 if row['config'] == 'cfg_c' else 128
+            events = []
+            rates = [(c['end_c'] - c['entry_c']) / (c['end_ns'] - c['entry_ns']) for c in ctas]
+            common_rate = med(rates)
+            for c, rate in zip(ctas, rates):
+                for j, (tile, (mi, ni)) in enumerate(zip(c['tiles'], c['work'])):
+                    offset = c['cta'] * (16 + 2 * 64 * 6) + 16 + (64 + j) * 6
+                    issuer = words[offset:offset + 4]  # cooperative thread256, role2
+                    valid_bytes = max(0, min(tm, row['m'] - mi * tm)) * max(0, min(128, row['n'] - ni * 128)) * 4
+                    if not valid_bytes:
+                        continue  # OOB windows issue no valid logical output bytes.
+                    phase = 'single' if len(c['tiles']) == 1 else ('first' if j == 0 else 'last' if j == len(c['tiles']) - 1 else 'middle')
+                    events.append(dict(phase=phase, cycles=tile[3] - tile[2], issuer_cycles=issuer[3] - issuer[2],
+                        start=c['entry_ns'] - origin + (issuer[2] - c['entry_c']) / rate,
+                        end=c['entry_ns'] - origin + (issuer[3] - c['entry_c']) / rate,
+                        merged_start=c['entry_ns'] - origin + (tile[2] - c['entry_c']) / rate,
+                        merged_end=c['entry_ns'] - origin + (tile[3] - c['entry_c']) / rate,
+                        entry_start=c['entry_ns'] - origin + (issuer[2] - c['entry_c']) / common_rate,
+                        entry_end=c['entry_ns'] - origin + (issuer[3] - c['entry_c']) / common_rate,
+                        final_start=c['end_ns'] - origin - (c['end_c'] - issuer[2]) / common_rate,
+                        final_end=c['end_ns'] - origin - (c['end_c'] - issuer[3]) / common_rate))
+            # Each alternative uses this stamped call's own endpoints and rates, never an ends call.
+            overlaps = {}
+            for name, start, end in [('affine', 'start', 'end'), ('entry_anchor', 'entry_start', 'entry_end'), ('final_anchor', 'final_start', 'final_end'), ('merged_affine', 'merged_start', 'merged_end')]:
+                overlaps[name] = overlap_windows([(e[start], e[end]) for e in events])
+            for phase in ('single', 'first', 'middle', 'last'):
+                indices = [i for i, e in enumerate(events) if e['phase'] == phase]
+                if not indices:
+                    continue
+                item = dict(case=row['id'], trial=record['trial'], phase=phase, windows=len(indices),
+                    E_cycles=med(events[i]['cycles'] for i in indices),
+                    issuer_E_cycles=med(events[i]['issuer_cycles'] for i in indices),
+                    **{name: med(values[i] for i in indices) for name, values in overlaps.items()})
+                selected.append(item)
+                processes.append(item)
+        feat = v08_model.features(row, setups[row['id']]['grid'])
+        phases = {}
+        for phase in sorted({r['phase'] for r in selected}):
+            values = [r for r in selected if r['phase'] == phase]
+            phases[phase] = {k: med(r[k] for r in values) for k in ('windows', 'E_cycles', 'issuer_E_cycles', 'affine', 'entry_anchor', 'final_anchor', 'merged_affine')}
+            phases[phase]['E_process_minmax'] = [min(r['E_cycles'] for r in values), max(r['E_cycles'] for r in values)]
+        cases.append(dict(**row, T=feat['T'], static_max_tile_ctas=round(feat['q'] * 132),
+                          perturbation=perturbation, trace_qualified=qualified, phases=phases))
+    # A conditional diagnostic of max(floor, bytes * concurrency / service), not a frozen prediction.
+    candidates = [r for r in cases if r['config'] == 'cfg_c' and r['T'] == 1
+                  and r['swizzle'] == 1 and r['m'] % 256 == 0 and r['n'] % 128 == 0]
+    train = [r for r in candidates if r['set'] == 'calib' and r['trace_qualified']]
+    fits = {}
+    for response, key in ((response, key) for response in ('E_cycles', 'issuer_E_cycles')
+                          for key in ('static_max_tile_ctas', 'affine', 'entry_anchor', 'final_anchor')):
+        floor = med(r['phases']['single'][response] for r in candidates if r['id'] in ('cfg_c_g1', 'cfg_c_g3'))
+        def x(r):
+            return r[key] if key == 'static_max_tile_ctas' else r['phases']['single'][key]
+        def loss(slope):
+            return sum((max(floor, slope * x(r)) - r['phases']['single'][response]) ** 2 for r in train)
+        lo, hi = 0.0, max(r['phases']['single'][response] / x(r) for r in train) * 2
+        for _ in range(80):
+            a, b = (2 * lo + hi) / 3, (lo + 2 * hi) / 3
+            if loss(a) < loss(b): hi = b
+            else: lo = a
+        slope = (lo + hi) / 2
+        fits[response + '/' + key] = dict(floor_cycles=floor, cycles_per_concurrent_cta=slope,
+            effective_logical_bytes_per_cycle=131072 / slope, fitted_cases=[r['id'] for r in train],
+            comparisons=[dict(case=r['id'], set=r['set'], trace_qualified=r['trace_qualified'],
+                observed=r['phases']['single'][response], estimated=max(floor, slope * x(r)),
+                relative=max(floor, slope * x(r)) / r['phases']['single'][response] - 1) for r in candidates])
+    destination.mkdir(parents=True, exist_ok=False)
+    for name, value in [('output.json', dict(cases=cases, processes=processes, candidates=fits,
+                scope='Posthoc. Output globaltimer absent. Affine clock mapping and common-rate entry/final anchors are assumptions, not direct concurrency measurements; active windows are not physical write occupancy. Floor is the observed g1/g3 plateau, not a measured isolated CTA.',
+                script_sha256=sha(__file__))), ('critical.json', tails)]:
+        (destination / name).write_text(json.dumps(value, indent=2) + '\n')
+    print(f'{len(cases)} cases, {len(tails)} stamped/ends calls -> {destination}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cpu-check', action='store_true')
+    parser.add_argument('--v08-output', action='store_true', help='V08 cfg_a/c output overlap and critical-CTA posthoc analysis')
     parser.add_argument('--input', type=Path)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -311,7 +456,10 @@ def main():
     else:
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
-        analyze(args.input, args.output)
+        if args.v08_output:
+            analyze_v08_output(args.input, args.output)
+        else:
+            analyze(args.input, args.output)
 
 
 if __name__ == '__main__':

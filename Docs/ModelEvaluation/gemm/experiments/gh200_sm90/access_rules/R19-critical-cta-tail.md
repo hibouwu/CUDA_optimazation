@@ -60,3 +60,40 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --input <
 - [V07 事后诊断](V07-rule-validation.md#事后诊断总时间为何接近离线不改判定)：cfg_a 边界条件中，最慢 CTA 不是边界 tile 所在的 CTA。
 - [V08](V08-wider-validation.md#留出结果)：冻结所选关键 CTA 与实测最慢 CTA 的周期差，36 例绝对误差中位 1.11%、最大 20.11%。
 - V06、V07、V08 与 R18 的打点逐 CTA 记录入口 globaltimer 与 SMID（`probes/r18_trace.hpp`），包括 cluster 2×1 的 cfg_a 和 cluster 1×2 的 cfg_c。本页只测 cfg_b、cluster 1×1，其入口数据可用于排查 CTA 派发，不足以识别多 CTA cluster 的放置规律；SMID 的数值区间也不能直接当作 GPC 编号。
+
+## V08 cfg_a/c 入口与最后完成者的离线复核（2026-10-09）
+
+**最长本地周期 CTA 经常不属于最晚退出集合；入口偏斜不足以解释所有差异。** 对 V08 的 46 个 cfg_a 和 32 个 cfg_c 条件，各读取十次 stamped、十次 ends；原始记录通过现有数值检查。cooperative 的最终端点采用 role2/thread256 在 post-loop `store_tail()` 后记录的 `final_cycle/final_ns`，不把 `EPI_DONE` 当作最终退出，也不把最终退出称为所有 global 写完成。
+
+分别求 `argmax(final_cycle−entry_cycle)` 与 `argmax(final_ns)` 的**并列集合**，只有两个集合无交集才记为不一致。下表是所有成功调用的直接端点描述，包含原 trace 扰动超限条件，不用它们拟合周期参数。stamped 与 ends 独立统计，不能按 trial 编号拼成同次执行。
+
+| 配置 / 记录方式 | 调用数 | 两个集合无交集 | 入口分散中位数 / 最大值 | 最长周期集合中最晚者，距实际最晚退出的最大差 |
+|---|---:|---:|---:|---:|
+| cfg_a / stamped | 460 | 151 | 128 / 160 ns | 3744 ns |
+| cfg_c / stamped | 320 | 153 | 128 / 160 ns | 6816 ns |
+| cfg_a / ends | 460 | 153 | 128 / 160 ns | 5088 ns |
+| cfg_c / ends | 320 | 164 | 128 / 160 ns | 4064 ns |
+
+只看 V08 原 heldout 的 stamped 调用，cfg_a/c 分别为 48/120、68/120 次不一致。这是新定义下的事后 CTA 身份检查，不替换 V08 原“冻结所选 CTA 与最大本地周期 CTA”的评分。所有这些调用中，每个活动 CTA 都在不同 SM 上，入口与退出 SMID 一致；这不能推导 GPC 的编号或 cluster 放置规律。
+
+一个可直接手算的例子是 `cfg_c_h06/stamped-02`。globaltimer 均减去本次调用的最早入口：
+
+| CTA / SM | 入口偏移 ns | 本地周期长度 | 退出偏移 ns |
+|---|---:|---:|---:|
+| 6 / 4，最长本地周期 | 32 | 1,010,139 | 619,040 |
+| 12 / 16，最晚退出 | 32 | 1,009,845 | 625,856 |
+| 78 / 17，最晚退出并列 | 64 | 1,009,817 | 625,856 |
+
+前两者入口相同，而退出差 `625856−619040=6816 ns`。其完整窗口平均 cycles/ns 为 1.631867/1.613625；单一中位频率无法精确转换每个 CTA 的内部事件。cfg_a_c5_k1024/stamped-02 也有同入口 +96 ns 的反例：最长 CTA76 在 +119296 ns 退出，CTA112/113 在 +123040 ns 退出，差 3744 ns。记录能证明两种排序不同，不能分辨其硬件时钟、执行状态或计时行为的来源。
+
+因此调度归因至少保留每 CTA 的入口、SMID、本地周期长度和 globaltimer 退出，内核包络直接取 `max(final_ns)−min(entry_ns)`。已观测端点足够判定最后完成者，无需为这一结论补测；预测中的每 CTA 周期仍需适当的周期到时间关系才能确定最后完成者，不能仅给最大周期加统一入口修正。
+
+输出并发另见 [R15 的同调用估计及其限制](R15-output-service.md#v08-输出窗口离线复核2026-10-09)，补齐路径与工作量分开见 [R18](R18-cluster-boundary.md#按轮次与-cta-工作量重算2026-10-09)。这三项事后分析没有改变模型公共接口或 V08 预测。
+
+[逐进程端点及并列集合](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/B-20261009-output-issuer-v2/critical.json)还保存每 CTA 相对入口/退出与本地周期，复核时无需从进程间中位数反推一个不存在的调用：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-output \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
+  --output <该run下新的reanalysis目录>
+```

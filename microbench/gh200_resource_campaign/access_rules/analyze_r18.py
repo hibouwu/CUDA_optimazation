@@ -217,6 +217,67 @@ def analyze(root,output=None):
     for name,data in [('rules.json',result),('classes.json',classes),('tails.json',tails),('paired-tile-increments.json',increments)]:common.write_json(dest/name,data)
     print('conditions',len(results),'plain qualified',result['plain_qualified'],'trace qualified',result['trace_qualified'])
 
+def analyze_v08_padding(root, output):
+    """Separate V08F padding observations by round and total CTA work; no causal fit."""
+    import v08_model
+    med = statistics.median
+    rows = json.loads((root / 'cases.json').read_text())
+    cases = []
+    for row in rows:
+        if row['swizzle'] != 8 or not any(label in row['id'] for label in ('_padM_', '_padN_', '_padMN_')):
+            continue
+        pooled, groups, differences = defaultdict(list), defaultdict(list), defaultdict(list)
+        for path in sorted((root / 'samples' / row['id']).glob('stamped-*.json')):
+            record = json.loads(path.read_text())
+            if record['returncode']:
+                continue
+            observed = replay(root, record, row)
+            current = defaultdict(list)
+            for cta in observed['ctas']:
+                for j, (tile, coord) in enumerate(zip(cta['tiles'], cta['work'])):
+                    cls = v08_model.tile_class(row['config'], row, *coord)
+                    cycles = tile[1] - tile[0]
+                    current[j, len(cta['tiles']), cls].append(cycles)
+                    if j:
+                        pooled[cls].append(cycles)
+            for (j, count, cls), values in current.items():
+                groups[j, count, cls].append(dict(trial=record['trial'], windows=len(values), cycles=med(values)))
+                if cls != 'in' and (j, count, 'in') in current:
+                    differences[j, count, cls].append(dict(trial=record['trial'],
+                        cycles=med(values) - med(current[j, count, 'in'])))
+        kt = v08_model.cdiv(row['k'], 64)
+        strata = []
+        for (j, count, cls), values in sorted(groups.items()):
+            deltas = differences[j, count, cls]
+            strata.append(dict(round=j, cta_tiles=count, cls=cls, processes=values,
+                cycles_per_ktile=med(v['cycles'] for v in values) / kt,
+                delta_processes=deltas,
+                delta_per_ktile=med(v['cycles'] for v in deltas) / kt if deltas else None,
+                delta_stddev_per_ktile=statistics.pstdev(v['cycles'] / kt for v in deltas) if deltas else None))
+        timings = defaultdict(list)
+        for path in (root / 'samples' / row['id']).glob('*.json'):
+            record = json.loads(path.read_text())
+            if not record['returncode']:
+                timings[record['variant']].append(record['elapsed_us'])
+        perturbation = med(timings['stamped']) / med(timings['plain']) - 1
+        cases.append(dict(**row, kt=kt, perturbation=perturbation,
+            trace_qualified=(min(len(timings[v]) for v in ('plain', 'stamped')) >= 10
+                and abs(perturbation) <= .05
+                and max(statistics.pstdev(timings[v]) / statistics.mean(timings[v]) for v in ('plain', 'stamped')) <= .05),
+            pooled_later_tiles={cls: dict(windows=len(v), cycles=med(v),
+                delta_per_ktile=(med(v) - med(pooled['in'])) / kt) for cls, v in sorted(pooled.items())},
+            strata=strata))
+    output.mkdir(parents=True, exist_ok=False)
+    common.write_json(output / 'padding.json', dict(cases=cases, analyzer_sha256=common.sha(Path(__file__)),
+        scope='Posthoc V08F. Groups share round and CTA work count, not coordinates or absolute event time. No physical service attribution or frozen prediction.'))
+    print('padding cases', len(cases), '->', output)
+
+
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True,type=Path);p.add_argument('--output',type=Path)
-    a=p.parse_args();analyze(a.input.resolve(),a.output)
+    p.add_argument('--v08-padding',action='store_true')
+    a=p.parse_args()
+    if a.v08_padding:
+        if a.output is None:p.error('--v08-padding requires a new --output directory')
+        analyze_v08_padding(a.input.resolve(),a.output)
+    else:analyze(a.input.resolve(),a.output)

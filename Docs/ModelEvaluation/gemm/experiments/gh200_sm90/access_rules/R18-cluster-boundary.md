@@ -214,6 +214,39 @@ python3 microbench/gh200_resource_campaign/access_rules/r17_rule.py \
 
 job737322，romeo-a043，GPU-099dda56，CUDA 12.9.41、CUTLASS 3.9.2、`sm_90a`、NDEBUG；cfg_a/b/c 与 V07/V08 相同。V08 留出评分后在同一张卡上加测 84 个条件，每个 plain/stamped/ends 各 10 进程，只用于解释，不回填 V08 判定。上文固定物理 tile 列表比较越界与有效零；这里比较 swizzle=8 与 1，补齐同时改变工作量与轮数，两者分开解释。
 
-**swizzle=8 的补齐 tile。** 三个形状（只沿 M、只沿 N、两向补齐）× K 1024/4096。补齐使 T 增加 0–3，总时间比 swizzle=1 多 25%–80%（cfg_b 的 3072×3072 是 8 的整数倍 tile，不需要补齐，+0.6%/−2.4%）。补齐 tile 相对有效 tile 的额外 cycle/Ktile：cfg_a 47–384，cfg_b 399–443，cfg_c 78–631，且随 K 增大（cfg_a 沿 N：K=1024 时 190，K=4096 时 384）。沿 M 补齐的 tile 整块 A 在矩阵外，沿 N 补齐的整块 B 在矩阵外，但仍完整执行主循环（越界部分由 TMA 填零）；它的代价不是常数比值，V08 的 ρ 不能迁移。
+**swizzle=8 的补齐 tile。** 三个形状（条件标签 padM/padN/padMN）× K 1024/4096。补齐使 T 增加 0–3，总时间比 swizzle=1 多 25%–80%（cfg_b 的 3072×3072 是 8 的整数倍 tile，不需要补齐，+0.6%/−2.4%）。旧汇总中，补齐 tile 相对有效 tile 的额外 cycle/Ktile 为 cfg_a 47–384、cfg_b 399–443、cfg_c 78–631；这些值跨轮次池化，不能直接解释为补齐路径自己的 K 依赖，见下节修订。沿 M 补齐的 tile 整块 A 在矩阵外，沿 N 补齐的整块 B 在矩阵外，但仍完整执行主循环（越界部分由 TMA 填零）。V08 的固定 ρ 没有获得迁移支持。
 
 [结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)。
+
+### 按轮次与 CTA 工作量重算（2026-10-09）
+
+**旧“随 K 增大”的描述不适用于所有分组。** `v08_model.summarize_case()` 的 `tile_L` 把十个进程中全部 `round>0` 的 tile 按 in/pad 类别合池；其差值同时包含轮次、每 CTA 总 tile 数和同期服务变化。本次重读 18 个 swizzle=8 补齐条件、每条件十次 stamped 原始记录，均通过既有数值/坐标复核，条件级扰动和 CV 均在原 5% 范围内。按 `(round, 每CTA总tile数, 类别)` 分组，每进程先取 pad 与 in 的中位差，再对十个进程取中位；round 从 0 起。
+
+| 形状标签与分组 | K=1024，额外 cycle/Ktile | K=4096，额外 cycle/Ktile |
+|---|---:|---:|
+| cfg_a padN，旧池化 | 190.25 | 383.55 |
+| cfg_a padN，round 2、5 tiles/CTA | 138.00 ± 25.97 | 159.47 ± 14.49 |
+| cfg_a padN，round 2、6 tiles/CTA | 48.92 ± 20.61 | 31.98 ± 10.93 |
+| cfg_a padN，round 5、6 tiles/CTA | 3.38 ± 11.96 | −9.27 ± 16.08 |
+| cfg_c padM，旧池化 | 380.25 | 631.12 |
+| cfg_c padM，round 1、3 tiles/CTA | 516.27 ± 28.95 | 593.14 ± 11.62 |
+| cfg_c padM，round 1、4 tiles/CTA | 310.48 ± 29.58 | 312.52 ± 11.68 |
+| cfg_c padM，round 3、4 tiles/CTA | 35.00 ± 25.31 | 50.34 ± 8.63 |
+
+± 为十个进程差值的标准差，不是置信区间。原池化数字已从原始事件重现；cfg_b 的原池化 padM/padN 差也分别从 412.28/443.06 降到 398.51/436.08。形状标签 padMN 不等于实际同时存在 padM、padN：cfg_a 此标签下只有 padM，cfg_b 此标签没有补齐，分析以逐 tile 坐标分类。
+
+还有不能省略的有效 tile 变化。cfg_a padN、K=4096、每 CTA 六个 tile 时，有效 tile 在 round 0/1/3/4 为约 520–533 cycle/Ktile，round 2/5 则为 904.23/834.82；同期 padN 为 940.93/828.62。cfg_c padM、K=4096、每 CTA 四个 tile 时，有效 tile 在 round 0/2 为 1030.68/1029.66，round 1/3 升至 1623.85/1494.84。只对 pad tile 乘 ρ 会漏掉这些有效 tile 窗口。注意表中的“差的中位数”不必等于此处“两个中位数的差”。
+
+本次不能把这些差值直接接成 [R13](R13-async-retirement.md#v08-supply) 的统一有效供给函数：同一配置、K、pitch 和足迹下，不同轮次的有效 tile 已有明显差异；只依赖这些静态变量的服务率不能同时解释它们。额外引入执行相位或在途状态是候选，但现有窗口不能把供给等待、输出/邻居竞争和起始错位分开。`round` 相同也不等于实际时间重叠；新分组仍是不同物理坐标之间的观察比较，不是隔离路径的因果配对。两个 K 点也不足以确定固定项与斜率。
+
+R18 原同物理工作列表配对可独立约束边界路径：cfg_a 首轮 oob−ordinary 在 K=1024/8192 为 1954/21668 cycle，partner 为 1936/21776，同列其他 CTA 为 598.25/8091.5；次轮 oob 为 −4/−1.5，首轮 explicit_zero 为 +1/−90。cfg_c 首轮 oob 为 +3/+6.5；其长 K 次轮为 +434.5 cycle（进程标准差 145.81），不能写成所有轮次严格无差异。这些复用[原合格配对](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/paired-tile-increments.json)，属于含有效伙伴的边界 cluster；V08F 的整 cluster OOB 不能直接借用该系数。
+
+真正缺少的是同一物理 tile 列表上的整 cluster OOB/有效地址显式零配对。沿用已确认的 cfg_b、2304×4096、swizzle=8 条件，先在 K=1024/4096 比较两条输入路径；只扩大输入 tensor-map 的有效范围并填零，固定逻辑输出 mask、A/B/D stride、grid、分配容量及实际 CTA 工作序列。修改逻辑 GEMM 的 M/N 会连同输出一起改变，不能充当这一配对。若这四个条件已显示路径差，再决定是否增加 N 向或第三个 K；此处没有新增采样。
+
+[按轮次的结果](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/B-20261009-padding-rounds/padding.json)保存每进程分组值、差值、旧池化结果及扰动。重算命令：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --v08-padding \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1 \
+  --output <该run下新的reanalysis目录>
+```

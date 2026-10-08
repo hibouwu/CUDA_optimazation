@@ -154,6 +154,45 @@ python3 /新运行目录/r15-v5/source/run_r15.py sample \
 |---|---|---|
 | [R09](R09-inkernel-clock-stages.md) | 128×256 配置 M=N=2048、128 个 CTA 同时输出时 epilogue 5470–5850 cycle；M=N=256、2 个 CTA 时约 4130 | `store_tail` 返回，即 `.read` 等待返回 |
 | [V08 校准](V08-wider-validation.md#校准中得到的事实) | cfg_a 最后一个 tile 的 epilogue 几乎都是约 1922 cycle；V07 的 2161 是全部后续 tile 的均值 | cooperative 为 `store()` 返回，pingpong 为 `store_tail()` 返回 |
-| [V08 失败原因](V08-wider-validation.md#失败原因测后诊断不改判定) | cfg_c 单 tile epilogue 在全部 CTA 同时写出时约 5800 cycle，部分 CTA 写出时约 4040 | 同上 |
+| [V08 失败原因](V08-wider-validation.md#失败原因测后诊断不改判定) | cfg_c 单 tile epilogue 在整卡 CTA 条件约 5800 cycle，部分 CTA 条件约 4040；这是旧诊断的静态规模描述，实际重叠见下节 | 同上 |
 
-这些观测都显示输出窗口随同时写出的 CTA 数变化。各终点只说明源缓冲已读完或 store 调用已返回，不证明全局写入已完成。
+这些观测提示输出窗口与参与规模有关，但静态 CTA 数不等于实际同时输出者。各终点只说明源缓冲已读完或 store 调用已返回，不证明全局写入已完成。
+
+## V08 输出窗口离线复核（2026-10-09）
+
+**约 4040/5800 cycle 的差异与输出错峰相容，现有记录不能直接证明重叠是原因。** 本次读取 V08 的 cfg_a/c 共 78 个条件、780 次 stamped 和 780 次 ends 调用；两种调用分别分析，不拼接时间线。原始压缩记录 SHA、数值检查和工作坐标沿用原分析器复核；新结果为[输出与候选](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/B-20261009-output-issuer-v2/output.json)。这是事后诊断，不改 V08 冻结参数或成绩。
+
+先区分两个输出口径。历史模型合并 cooperative 两个 consumer 的事件，令 `E = max(EPI_DONE) − max(EPI_PERMIT)`。实际发出 TMA 的 warp 位于 role2；其入口线程 thread256 的 `store()` 窗口是 `E_issue = EPI_DONE_role2 − EPI_PERMIT_role2`。这里的 issue 下标只标识 issuer，不表示第一条 TMA 指令的发出时刻：窗口还包含准备、协作同步、SMEM 搬运与等待。旧源码的 cooperative kernel 在 `store()` 前后打点，epilogue 内由 `thread_idx / 32 == 0` 的 warp 发出 TMA。role1 的 permit 通常更晚，因此合并窗口比 issuer 窗口短约 500–600 cycle，不能静默互换。
+
+逐 tile 只有 `clock64`；`globaltimer` 只有 CTA 入口和最终 `store_tail()` 后的记录。对同一次 stamped 调用、同一 CTA，使用下面的**仿射估计**定位 role2 输出端点：
+
+```text
+t_hat(c) = entry_ns + (c − entry_cycle) × (final_ns − entry_ns) / (final_cycle − entry_cycle)
+Nbar_i = integral_[start_i,end_i] N(t) dt / (end_i − start_i)
+```
+
+`N(t)` 计数至少有一个有效输出元素、尚处于 role2 `store()` 窗口的 CTA，包含自身；它不是物理 store 队列占用。`Nbar` 是每个窗口的平均重叠数，再对 CTA 取中位、对十次进程取中位。假设是该 CTA 全窗口的 cycle/ns 可用于内部端点；没有内部 globaltimer，无法验证。另用本次调用各 CTA 完整窗口 cycle/ns 的中位值，分别从入口、最终退出反推端点，检验对换算方式的敏感性。这三种方式都只使用同次 stamped 调用。
+
+| cfg_c 条件 | K | 静态 CTA 数 | 历史 E / issuer E，cycle | 仿射 Nbar | 入口锚点 / 退出锚点 Nbar |
+|---|---:|---:|---:|---:|---:|
+| g1 | 1024 | 70 | 4043.0 / 4626.0 | 65.3 | 66.0 / 65.2 |
+| g3 | 4096 | 48 | 4042.5 / 4629.8 | 43.9 | 45.9 / 43.8 |
+| c1_r_k512 | 512 | 132 | 5865.8 / 6270.3 | 121.8 | 121.0 / 121.8 |
+| c2_k4096 | 4096 | 132 | 5626.5 / 6118.5 | 118.9 | 121.8 / 118.7 |
+| c6_longk | 16384 | 132 | 4885.5 / 5397.5 | 94.6 | 120.5 / 94.4 |
+| h08 | 24576 | 128 | 4213.0 / 4785.5 | 77.8 | 118.2 / 77.5 |
+| h09 | 768 | 60 | 4043.0 / 4625.0 | 56.2 | 56.7 / 56.1 |
+
+这些都是每 CTA 只做一个 tile 的条件。E 也先取进程内中位再取进程间中位，与旧 `E_last` 池化所有 CTA/进程的数值略有不同，未改写旧 summary。g2 的 trace 扰动为 5.0167%，驱逐版 g1 为 7.8624%，保留结果但不参与本次候选拟合。多 tile 数据在 JSON 中按每 CTA 的首、中、末和单 tile 分开，不能把单 tile 常数直接用于中间输出。
+
+候选形式为 `E_issue = max(E_floor, 131072 × Nbar / B_eff)`；131072 B 是 cfg_c 完整 FP32 输出 tile 的逻辑字节。用 g1/g3 的平台值固定 `E_floor=4627.875 cycle`，这不是已测得的孤立单 CTA 成本。仅对表中五个合格校准点 g1/g3/c1/c2/c6 最小化周期平方误差，仿射重叠给出 `B_eff=2482.81 B/cycle`，拟合残差为约 −7.46%～+2.59%；它只是条件比例参数，不能解释为物理 HBM 带宽。
+
+对已经看过的 h08 做事后代入：静态 CTA 候选误差 +20.14%，仿射重叠候选 −3.29%，入口锚点候选 +20.95%。历史 E 口径也保存在 JSON 中，对应 +25.65%、−4.04%、+26.51%。短窗口的高低两档在三种换算下方向一致；长 K 的结论明显依赖端点换算。此外 Nbar 用已测输出窗口计算，包含待解释的 E 本身，不能作为独立的测前预测输入。由此不能宣布输出公式已经确定。
+
+最小补测是给同次调用的 role2 `EPI_PERMIT/EPI_DONE` 增加 globaltimer，保留 clock64 和最终 store_tail 端点，先在 g1/c1 检查打点扰动，再覆盖长 K 的 c6。若要归因于并发而非规模、K 或前序供给，固定一个整卡单 tile 条件及全部有效输出字节，仅改变主循环后输出启动的错峰，并直接量出重叠。现有证据不需要计数器就能完成这一步；全局写完成另需对应完成端点。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-output \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
+  --output <该run下新的reanalysis目录>
+```
