@@ -1,0 +1,17 @@
+{
+  "markdown": "Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/RULES.md",
+  "markdown_sha256": "19a933d35867d74f50c4ca4b5b3d65bf377757c9b9f5808531ea7ca5ba6aa201",
+  "validation": "results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/validation-v2/validation.json",
+  "validation_sha256": "51c1994874bcd5d8dc76de2cbd1c2f6cdd33e49690083fa56544eb22d4596b11",
+  "assets": {
+    "results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/plots/r02-service.png": "1cb09f2ddcb1aeb854690ae3c2d0fe598e9dab55eccd86e80df8b7a541d75186",
+    "results/gh200_resource_campaign/access_rules/20261008-R11-job736989-v6/analysis/plots/r11-joint-service.png": "a25c7dbb9886c267d56c6cb5753b3e6effdb11688008897e983e3929a8ec05ce",
+    "results/gh200_resource_campaign/access_rules/20261008-R12-job736989-v3/analysis/plots/r12-paths.png": "a5b0c4cfceb139196f7ca6f0e232abf3aba064489a25afded29183c0887be077",
+    "results/gh200_resource_campaign/access_rules/20261008-R16-quota-job737122-v2/reanalysis/local-ten-processes/r16-services.png": "43fbd8961063962cef374f64e7bf225f2fffb5c71af15a58a173cd5de5cd82d4",
+    "results/gh200_resource_campaign/access_rules/20261008-R18-job737122-v1/reanalysis/formal-v1/r18-service.png": "c35b4f59eb6306a877f78c32441b2f8895e958fcc82dcff4f555800950edae89",
+    "results/gh200_resource_campaign/access_rules/20261008-R19-job737122-v1/reanalysis/local-independent/r19-service.png": "18ee5196f7715c8e0b6685ca385784ac5158b83aa443925d5c080461e7038723",
+    "results/gh200_resource_campaign/access_rules/20261008-B01-job737122-v4/reanalysis/local-independent/b01-services.png": "78d10a51aba3a75f34e0de0bb2ff354c091cfb66a3e7804d8d4d7e9fb680142c",
+    "results/gh200_resource_campaign/access_rules/20261008-V07-job737122-v1/reanalysis/validation-v2/v07-errors.png": "4142fb32f42a0357b791cc0073bfee8b950770aca0a11d5a1035ffd49e23353a"
+  },
+  "html_sha256": "77115211126f486c729a2053465f4a4696150bb52b4d0d7639dfa99d8dff5584"
+}

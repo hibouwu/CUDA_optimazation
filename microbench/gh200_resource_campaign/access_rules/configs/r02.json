@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "family": "r02",
+  "cases": [
+    {
+      "id": "source_constant_multiplier_c1_w1",
+      "subset": "source",
+      "source": "constant_multiplier",
+      "chains": 1,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_constant_multiplier_c1_w4",
+      "subset": "source",
+      "source": "constant_multiplier",
+      "chains": 1,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_constant_multiplier_c8_w1",
+      "subset": "source",
+      "source": "constant_multiplier",
+      "chains": 8,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_constant_multiplier_c8_w4",
+      "subset": "source",
+      "source": "constant_multiplier",
+      "chains": 8,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_reuse_pair_c1_w1",
+      "subset": "source",
+      "source": "reuse_pair",
+      "chains": 1,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_reuse_pair_c1_w4",
+      "subset": "source",
+      "source": "reuse_pair",
+      "chains": 1,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_reuse_pair_c8_w1",
+      "subset": "source",
+      "source": "reuse_pair",
+      "chains": 8,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_reuse_pair_c8_w4",
+      "subset": "source",
+      "source": "reuse_pair",
+      "chains": 8,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_rotate_eight_pairs_c1_w1",
+      "subset": "source",
+      "source": "rotate_eight_pairs",
+      "chains": 1,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_rotate_eight_pairs_c1_w4",
+      "subset": "source",
+      "source": "rotate_eight_pairs",
+      "chains": 1,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_rotate_eight_pairs_c8_w1",
+      "subset": "source",
+      "source": "rotate_eight_pairs",
+      "chains": 8,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "source_rotate_eight_pairs_c8_w4",
+      "subset": "source",
+      "source": "rotate_eight_pairs",
+      "chains": 8,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_fadd_f32_p8_w1",
+      "subset": "pool",
+      "operation": "fadd_f32",
+      "pool": 8,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_fadd_f32_p8_w4",
+      "subset": "pool",
+      "operation": "fadd_f32",
+      "pool": 8,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_fadd_f32_p32_w1",
+      "subset": "pool",
+      "operation": "fadd_f32",
+      "pool": 32,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_fadd_f32_p32_w4",
+      "subset": "pool",
+      "operation": "fadd_f32",
+      "pool": 32,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_integer_u64_p8_w1",
+      "subset": "pool",
+      "operation": "integer_u64",
+      "pool": 8,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_integer_u64_p8_w4",
+      "subset": "pool",
+      "operation": "integer_u64",
+      "pool": 8,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_integer_u64_p32_w1",
+      "subset": "pool",
+      "operation": "integer_u64",
+      "pool": 32,
+      "warps": 1,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "pool_integer_u64_p32_w4",
+      "subset": "pool",
+      "operation": "integer_u64",
+      "pool": 32,
+      "warps": 4,
+      "logical_operations_per_lane": 8192
+    },
+    {
+      "id": "mixed_fadd_imad_wide_same_warp_progress",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "same_warp",
+      "observation": "progress",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_imad_wide_same_warp_consume",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "same_warp",
+      "observation": "consume",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_imad_wide_same_warp_preloaded_consumer",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "same_warp",
+      "observation": "preloaded_consumer",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_imad_wide_split_warps_progress",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "split_warps",
+      "observation": "progress",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_imad_wide_split_warps_consume",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "split_warps",
+      "observation": "consume",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_imad_wide_split_warps_preloaded_consumer",
+      "subset": "mixed_return",
+      "pair": "fadd_imad_wide",
+      "organization": "split_warps",
+      "observation": "preloaded_consumer",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_same_warp_progress",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "same_warp",
+      "observation": "progress",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_same_warp_consume",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "same_warp",
+      "observation": "consume",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_same_warp_preloaded_consumer",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "same_warp",
+      "observation": "preloaded_consumer",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_split_warps_progress",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "split_warps",
+      "observation": "progress",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_split_warps_consume",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "split_warps",
+      "observation": "consume",
+      "logical_actions_per_path_per_lane": 4096
+    },
+    {
+      "id": "mixed_fadd_lds128_split_warps_preloaded_consumer",
+      "subset": "mixed_return",
+      "pair": "fadd_lds128",
+      "organization": "split_warps",
+      "observation": "preloaded_consumer",
+      "logical_actions_per_path_per_lane": 4096
+    }
+  ]
+}

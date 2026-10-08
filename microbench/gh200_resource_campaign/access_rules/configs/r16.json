@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "family": "r16",
+  "cases": [
+    {
+      "id": "tc_s1_shared_small_resident1",
+      "subset": "residency",
+      "stage": 1,
+      "source": "shared_small",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s1_shared_small_resident2",
+      "subset": "residency",
+      "stage": 1,
+      "source": "shared_small",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "tc_s1_independent_large_resident1",
+      "subset": "residency",
+      "stage": 1,
+      "source": "independent_large",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s1_independent_large_resident2",
+      "subset": "residency",
+      "stage": 1,
+      "source": "independent_large",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "tc_s2_shared_small_resident1",
+      "subset": "residency",
+      "stage": 2,
+      "source": "shared_small",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s2_shared_small_resident2",
+      "subset": "residency",
+      "stage": 2,
+      "source": "shared_small",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "tc_s2_independent_large_resident1",
+      "subset": "residency",
+      "stage": 2,
+      "source": "independent_large",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s2_independent_large_resident2",
+      "subset": "residency",
+      "stage": 2,
+      "source": "independent_large",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "tc_s4_shared_small_resident1",
+      "subset": "residency",
+      "stage": 4,
+      "source": "shared_small",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s4_shared_small_resident2",
+      "subset": "residency",
+      "stage": 4,
+      "source": "shared_small",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "tc_s4_independent_large_resident1",
+      "subset": "residency",
+      "stage": 4,
+      "source": "independent_large",
+      "target_occupancy": 1,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 131072
+    },
+    {
+      "id": "tc_s4_independent_large_resident2",
+      "subset": "residency",
+      "stage": 4,
+      "source": "independent_large",
+      "target_occupancy": 2,
+      "threads": 256,
+      "grid": "2*SM_count",
+      "tile": [
+        64,
+        64,
+        64
+      ],
+      "reserved_smem_bytes": 98304
+    },
+    {
+      "id": "quota_delay0_before_dec",
+      "subset": "quota",
+      "delay": 0,
+      "placement": "before_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    },
+    {
+      "id": "quota_delay0_after_dec",
+      "subset": "quota",
+      "delay": 0,
+      "placement": "after_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    },
+    {
+      "id": "quota_delay64_before_dec",
+      "subset": "quota",
+      "delay": 64,
+      "placement": "before_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    },
+    {
+      "id": "quota_delay64_after_dec",
+      "subset": "quota",
+      "delay": 64,
+      "placement": "after_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    },
+    {
+      "id": "quota_delay256_before_dec",
+      "subset": "quota",
+      "delay": 256,
+      "placement": "before_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    },
+    {
+      "id": "quota_delay256_after_dec",
+      "subset": "quota",
+      "delay": 256,
+      "placement": "after_dec",
+      "producer_limit": 40,
+      "consumer_limit": 232,
+      "threads": 384,
+      "boundary": "consumer inc enter to inc return; producer dec and delay endpoints recorded"
+    }
+  ],
+  "invariants": [
+    "queried occupancy equals target",
+    "no spill",
+    "register pool maximum checked",
+    "all roles align only before timed quota competition",
+    "SM id and execution intervals are observations"
+  ]
+}

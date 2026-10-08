@@ -1,6 +1,14 @@
 # GH200 访问与供给规则：实验与结果
 
-最新进展：[PLAN](PLAN.md) 的 R10/R13/R14/R15 与 V05 已完成（2026-10-07）。V05 的周期模型大体成立（关键 CTA 周期误差中位数 2.9%），但微秒预测误差中位数 10.7%、最大 31.9%，比 V04 差；事后诊断显示主要原因是换算用了固定校准频率而没用 V03 的频率规则（只换成实测频率后为 4.1%/12.0%）。初始供给和 pingpong 交接另有确定失配。[V06](V06-revised-transfer.md) 修正这三处后重新冻结预测：18 个新尺寸微秒误差中位数 5.25%、最大 19.0%（目标 5%/10%，未完全达标，但优于 V04 的 5.6%/29% 与 V05 的 10.7%/31.9%）；频率误差 ≤4.6%。剩余大误差来自 cfg_a 在 tile 行数为奇数时被 2×1 cluster 补齐的整行越界 tile，使该 cluster 主循环变慢到约 690–800 cycle/Ktile（校准尺寸未覆盖），去掉这两例为 4.5%/7.3%。[R17](R17-oob-tile.md) 定位：越界的 A TMA box 加 2×1 cluster 同时出现时，边界 cluster 两个 CTA 的第一轮主循环变慢到 600–745 cycle/Ktile（cluster 1×1 或去掉越界即消失）；加入该规则后两例误差降到 −4.7%、−6.7%（非留出检查，模型达标仍需新的留出验证）。
+## 当前结论（2026-10-08）
+
+[V07](V07-rule-validation.md) 在同一张 GH200、固定的 cfg_a/b/c 配置、swizzle=1、K 位于校准覆盖范围内的 24 个留出条件上，总时间绝对相对误差中位数为 3.06%，最大为 8.71%，达到 5% / 10% 目标。这些条件包含 12 个不同的 M×N，覆盖所列边界类型；尚未验证更广泛的形状或跨卡适用性。供给、末次输出和关键 CTA 定位仍存在明显误差：初始供给误差中位数/最大 12.0%/45.9%，末次输出 12.4%/46.8%，两例所选关键 CTA 比实际最慢 CTA 短约 17%。24 例中 20 例预测偏长（cfg_c 8 例全部偏长），存在共同偏差，来源未定。
+
+**进入 V07 预测的内容**：V06 的逐 CTA 事件递推；在当前卡上重新校准的供给、主循环、epilogue、交接与频率规则；[R18](R18-cluster-boundary.md) 的边界修正（修订后的 [R17](R17-oob-tile.md) 是其前身）。[R19](R19-critical-cta-tail.md) 用于诊断 cfg_b 最慢 CTA 的来源，但 V07 的尾差项按留一误差选为“无”，R19 没有提供进入预测的参数。
+
+**补充实验**：R02、R11、R12、R16、B01 已测，未用于 V07 预测，见下方[补充实验](#补充实验已测未用于-v07-预测)；它们不是当前预测任务的完成条件。正文说明以 [RULES](RULES.md) 为准，后续计划见 [PLAN](PLAN.md)。
+
+历史补测：R10/R13/R14/R15 与 V05 已完成（2026-10-07）。V05 的周期模型大体成立（关键 CTA 周期误差中位数 2.9%），但微秒预测误差中位数 10.7%、最大 31.9%，比 V04 差；事后诊断显示主要原因是换算用了固定校准频率而没用 V03 的频率规则（只换成实测频率后为 4.1%/12.0%）。初始供给和 pingpong 交接另有确定失配。[V06](V06-revised-transfer.md) 修正这三处后重新冻结预测：18 个新尺寸微秒误差中位数 5.25%、最大 19.0%（目标 5%/10%，未完全达标，但优于 V04 的 5.6%/29% 与 V05 的 10.7%/31.9%）；频率误差 ≤4.6%。剩余大误差来自 cfg_a 在 tile 行数为奇数时被 2×1 cluster 补齐的整行越界 tile，使该 cluster 主循环变慢到约 690–800 cycle/Ktile（校准尺寸未覆盖），去掉这两例为 4.5%/7.3%。[R17](R17-oob-tile.md) 定位：越界的 A TMA box 加 2×1 cluster 同时出现时，边界 cluster 两个 CTA 的第一轮主循环变慢到 600–745 cycle/Ktile（cluster 1×1 或去掉越界即消失）；加入该规则后两例误差降到 −4.7%、−6.7%（历史非留出检查；该平均值的资格及截距问题已修订，当前参数见 R17 离线修订，模型达标仍需新的留出验证）。
 
 状态：R00–R06 默认点完成；V01 单 CTA 规则预测通过，整卡与完整 kernel 未通过，缺项为负载下频率与每 kernel 固定开销，R07–R09 补齐输入后，V02 对 11 个未测尺寸预测通过（6.0%/10.3%）；V03 的频率规则把误差降到 2.6%/5.0%；V04 迁移到同输入/输出字节的配置成功，迁移到小 tile 与 pingpong 未通过。设备 GH200 / `sm_90a`，CUDA 12.9。问题结构参考 Thor 的 [RF Write 分析](../../../../Thor_RF_Write_v6_Analysis_20260928.html)，数值与机器码不移植。
 
@@ -44,7 +52,7 @@
 | V02 | 通过 | 按 R08/R09 规则预测 11 个未测尺寸的完整 CUTLASS 时间，先冻结（SHA f37a5255…）后测量：误差中位数 6.0%、最大 10.3%（目标 ≤10%/≤20%）。轮数、每 CTA tile 数全部预测正确；把频率换成实测值后误差在 ±2% 内，剩余误差几乎全来自调用内频率规则 | [V02](V02-kernel-prediction.md) |
 | V03 | 通过 | 新频率规则 f=2.229−0.0353·φ·ln(W/µs)−0.0859·D−0.387·μ GHz（φ 活跃 SM 比例、D 估计 DRAM 流量 TB/s、μ 主循环占比），26 个校准点拟合；11 个新尺寸先冻结后测量：误差中位数 2.6%、最大 5.0%（目标 ≤5%/≤10%）。常数只对校准用的卡有效，另一张卡上最大误差 7.7%；剩余误差主要是主机间隙（本卡 5.3–6.3 µs，模型 3.9） | [V03](V03-clock-rule.md) |
 | V04 | 部分通过 | 迁移到 3 个配置（先冻结后测量，22 点，轮数全部正确）：256×128 cooperative 误差中位数 4.1%/最大 5.4%；128×128 cooperative 5.9%/13.7%；128×128 pingpong 14.8%/29.2%。失效假设：R05-D 的 55 B/cycle 不是供给上限（实测约 64）；每 tile 固定段约 1500 cycle 不随输出缩小；pingpong 的 epilogue 只在长 K 被隐藏 | [V04](V04-config-transfer.md) |
-| R02 | 条件扩展，未触发 | RF 供给与结果消费 | [R02](R02-register-service.md) |
+| R02 | 32条件采样/重算完成，源供给机制待分离 | RF 供给与结果消费 | [R02](R02-register-service.md) |
 
 ### PLAN 补测结果（2026-10-07）
 
@@ -58,7 +66,17 @@
 | [V06](V06-revised-transfer.md) | V05 的三处失配 | 频率用 V03 规则（本卡只重拟合常数项与 D 系数）、初始供给与输出段在整卡 CUTLASS 上校准、逐 CTA 事件递推：微秒 5.25%/19.0%，周期 3.8%/22.5%，频率 2.3%/4.6%；pingpong 交接实测 −271～+137 cycle（跨零），递推能区分重叠与正间隙。未解决：cfg_a 奇数 tile 行的越界补齐使主循环变慢，cfg_b 最慢 CTA 的离散（独立问题）尚无规则 |
 | [R17](R17-oob-tile.md) | cfg_a 边界 tile 变慢 | 需同时满足：A 的 TMA box 越过 M 边界、cluster 2×1；只影响第一轮。边界 cluster 两个 CTA 同样变慢（671–707 cycle/Ktile，偶数行部分越界 596），同列其他 CTA 也慢 40–60。cluster 1×1 或改为偶数行无越界时消失。机制未分离（推断与同列共享 B 面板的步调有关） |
 
-R02、R11、R12、R16 为条件扩展，启用条件见 [PLAN](PLAN.md#5-条件扩展默认不做)。
+### 补充实验（已测，未用于 V07 预测）
+
+这些实验在 2026-10-08 按当时的扩展计划完成，原始证据保留；它们没有进入 V07 的模型，也不是当前预测任务的完成条件。
+
+| 实验 | 主要结果 |
+|---|---|
+| [R02](R02-register-service.md) 寄存器供给与结果消费，32 条件 | 8 链下轮换 8 对源寄存器约慢 22%，伴随 40/56 寄存器差异；固定为 40 寄存器后慢 5.26%，未归因于 RF 读端口 |
+| [R11](R11-mixed-issue.md) 混合发射，18 条件 | WGMMA+IMAD 接近完全重叠；标量配对不能直接取 max |
+| [R12](R12-smem-path-contention.md) SMEM 多路竞争，24 条件 | TMA+WGMMA 几乎完全重叠；WGMMA+STS 约多 10–11%，TMA+STS 约多 6–8% |
+| [R16](R16-residency-quota.md) 驻留与寄存器配额，18 条件 | 小源时提高驻留上限仍有收益；大源 stage 4 时 1/2 CTA 上限几乎同速；配额等待按点给出 |
+| [B01](B01-bandwidth-cache.md) 带宽与缓存覆盖，24 坐标 | 16 项复用已有证据，8 项新增 |
 
 验收看四项：SASS 中目标指令序列与动态次数正确、输出经 CPU 校验、样本稳定、数值与已知物理量级相符（如 FFMA 依赖约 4 cycle、WGMMA 峰值 4096 FLOP/cycle）。前三项保证测得对，第四项保证测的是想测的量：R01 首版正是三项都通过、只在第四项暴露循环开销问题。2026-10-06 的协调记录移到[归档](../../gh200_sm90_archive/access_rules/)。
 
@@ -66,9 +84,10 @@ R02、R11、R12、R16 为条件扩展，启用条件见 [PLAN](PLAN.md#5-条件�
 
 ```text
 Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/
-  README.md、PLAN.md                 # 导航/状态与本轮唯一实施计划
-  R00–R09、V01–V04                  # 已有实验说明（R02 为条件扩展）
-  R10、R13、R14、R15、V05            # 本轮结果与复现
+  README.md                         # 导航、当前结论与各组状态
+  PLAN.md                           # 围绕当前预测误差的短计划
+  RULES.md                          # 规则正文（唯一维护）；GH200-Rules-Analysis.html 为本地导出预览，不入 git
+  R00–R19、B01、V01–V07              # 各组实验说明
 
 microbench/gh200_resource_campaign/access_rules/
   run_r00.py ... run_r06.py、run_v01.py              # 每组一个入口：配置、短检查、校准、预热、采样
@@ -143,3 +162,13 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze.py \
 - [PTX ISA 8.8 / CUDA 12.9.1](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)：指令、等待、代理与复用合法性。
 - [Nsight Compute：Quantities](https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#quantities)：instruction、request、sector、wavefront 的区别。
 - [已测 GH200 结果](../README.md)：条件匹配时优先复用。
+
+## 2026-10-08 离线复现记录
+
+```bash
+python3 results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/source/replay_delivery.py \
+  --archive-root results/gh200_resource_campaign/access_rules \
+  --output /tmp/gh200-new-offline-replay
+```
+
+输出目录须为新目录。该入口复制8份新增/变更归档到新位置，重算数值、SASS/计量和V07误差，并只用校准数据重建冻结参数与24个预测。无需GPU；[回执](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/offline-replay.json)与[预测复现](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/prediction-reproduction.json)保存本轮已执行结果。分项失败不被该复现通过覆盖。这是一次性记录，后续不要求每轮重跑。

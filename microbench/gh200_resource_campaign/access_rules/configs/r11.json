@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "family": "r11",
+  "pairs": ["ffma_imad_wide", "lds128_cvt", "wgmma_imad"],
+  "organizations": ["a_only", "b_only", "a_then_b", "b_then_a", "same_group_interleaved", "cross_group_concurrent"],
+  "actions_per_path_per_unit": 128,
+  "units": 256,
+  "required_conditions": 18,
+  "controls": ["empty_unit_with_same_consumers_and_barriers", "matched_B_only_role", "odd_unit_numeric_witness"],
+  "boundary": "all_initial_operands_ready_to_all_retained_results_consumed_and_required_async_drain_complete",
+  "baseline_rule": "same_action_count_and_consumer; no proportional_scaling_of_an_unchecked_baseline"
+}

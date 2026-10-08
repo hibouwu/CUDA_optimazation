@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "family": "r12",
+  "pairs": [
+    "tma_wgmma",
+    "wgmma_sts128",
+    "tma_sts128"
+  ],
+  "layouts": [
+    "INTER",
+    "SW128"
+  ],
+  "organizations": [
+    "a_only",
+    "b_only",
+    "serial",
+    "concurrent"
+  ],
+  "resource_conditions": 24,
+  "threads": 384,
+  "units": 32,
+  "roles": {
+    "tma": "warpgroup0, one issuer",
+    "wgmma": "warpgroup1",
+    "sts": "warpgroup2"
+  },
+  "unit_work": {
+    "tma_requests": 4,
+    "tma_payload_bytes_per_request": 16384,
+    "wgmma_instructions": 64,
+    "wgmma_shape": "m64n128k16",
+    "sts_bytes": 65536
+  },
+  "storage": {
+    "matrix_inputs_bytes": 24576,
+    "tma_target_bytes": 65536,
+    "sts_target_bytes": 65536
+  },
+  "completion": {
+    "tma": "mbarrier transaction complete",
+    "wgmma": "wait_group0 before accumulator consumption",
+    "sts": "volatile vector stores and CTA visibility gate"
+  },
+  "checks": [
+    "full physical source/target snapshot",
+    "nonuniform transport and matrix data",
+    "shared-data-dependent clock",
+    "no spill"
+  ]
+}
