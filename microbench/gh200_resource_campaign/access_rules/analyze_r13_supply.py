@@ -678,6 +678,81 @@ def coverage_suite(run, output):
 FILL_FIELDS = ['valid_source_KiB', 'B_extra32_KiB', 'B_extra128_KiB',
                'A_fill_KiB', 'B_fill_KiB']
 
+TMA_SOURCE_FIELDS = ['A_valid_KiB', 'A_extra32_KiB', 'A_extra128_KiB',
+                     'B_valid_KiB', 'B_extra32_KiB', 'B_extra128_KiB']
+
+
+def static_tma_requests(row, setup):
+    """Static FP16 row-major R18 requests, per CTA/output and complete Ktile.
+
+    Source vectors sum valid address coverage of issued descriptor boxes, not
+    physical L2/HBM traffic; overlapping granules across boxes are counted twice.
+    A slices M by cluster-N; B slices K by cluster-M (the selected SW128 layouts).
+    Multicast delivers every slice to its mask, including logical-output OOB CTAs.
+    Destination valid/fill counts describe the whole operand in each CTA's SMEM.
+    Origins use Ktile 0; subsequent Ktiles add 64 to K with unchanged coverage.
+    Effective waves retain the old stage/Kt weighting, not measured concurrency.
+    No general timing coefficients are assigned; cfg_b's old interface is separate.
+    """
+    from v08_model import scheduled_work
+    if row['config'] not in CONFIGS: raise ValueError('static requests support cfg_a/b/c only')
+    tm,tn,cm,cn=CONFIGS[row['config']]
+    m,n,k=row['m'],row['n'],row['k']
+    map_m=row.get('input_map_m',m); map_n=row.get('input_map_n',n)
+    lda=row.get('lda',k); ldb=row.get('ldb',n)
+    if min(m,n,k)<=0 or k%64: raise ValueError('positive shapes and complete Ktiles required')
+    if map_m<m or map_n<n: raise ValueError('R18 input maps must cover the logical input')
+    if n%8 or map_n%8 or lda%8 or ldb%8 or lda<k or ldb<map_n:
+        raise ValueError('row-major FP16 TMA requires legal extents and 16-byte pitches')
+    if map_m>row.get('storage_m',map_m) or map_n>row.get('storage_n',map_n):
+        raise ValueError('input map exceeds source storage')
+    gx,gy,gz=setup['grid']
+    if gx%cm or gy%cn: raise ValueError('grid must contain complete clusters')
+    if tuple(setup.get('tile',(tm,tn,64)))!=(tm,tn,64) or tuple(setup.get('cluster',(cm,cn))) not in ((cm,cn),(cm,cn,1)):
+        raise ValueError('setup tile/cluster differs from the fixed R18 configuration')
+    if setup['stages']<=0: raise ValueError('positive stage count required')
+    work=scheduled_work(row['config'],m,n,[gx,gy,gz],row['swizzle'])
+    ctas=[]
+    for coords in work:
+        tiles=[]
+        for mi,ni in coords:
+            rm,rn=mi%cm,ni%cn
+            a_m=mi*tm+rn*(tm//cn); b_k=rm*(64//cm)
+            a_rows=max(0,min(tm//cn,map_m-a_m))
+            b_cols=max(0,min(tn,map_n-ni*tn))
+            a=address_box(a_rows,128,2*lda,2*a_m*lda%128) if a_rows else (0,0,0)
+            # B's MN-SW128 layout has a 64-column atom, repeated twice in N.
+            # Its descriptor's outer K dimension is truncated by multicast.
+            b_boxes=[]
+            for offset in (0,64):
+                b_n=ni*tn+offset; cols=max(0,min(64,map_n-b_n))
+                value=address_box(64//cm,2*cols,2*ldb,2*(b_k*ldb+b_n)%128) if cols else (0,0,0)
+                b_boxes.append(dict(origin=[b_n,b_k],shape=[64,64//cm],source_KiB=list(value)))
+            b=np.sum([box['source_KiB'] for box in b_boxes],axis=0).tolist()
+            av=max(0,min(tm,map_m-mi*tm))*64*2/1024
+            bv=b_cols*64*2/1024
+            tiles.append(dict(coord=[mi,ni],cluster=[mi//cm,ni//cn],cluster_rank=rm+rn*cm,
+                A=dict(source_origin=[a_m,0],source_shape=[tm//cn,64],
+                    source_KiB=list(a),source_box_KiB=tm//cn*64*2/1024,
+                    source_boxes=[dict(origin=[a_m,0],shape=[tm//cn,64],source_KiB=list(a))],
+                    multicast_mask=sum(1<<(rm+y*cm) for y in range(cn)),
+                    destination_valid_KiB=av,destination_fill_KiB=tm*64*2/1024-av),
+                B=dict(source_origin=[ni*tn,b_k],source_shape=[tn,64//cm],
+                    source_KiB=list(b),source_box_KiB=tn*(64//cm)*2/1024,
+                    source_boxes=b_boxes,
+                    multicast_mask=sum(1<<(x+rn*cm) for x in range(cm)),
+                    destination_valid_KiB=bv,destination_fill_KiB=tn*64*2/1024-bv)))
+        ctas.append(tiles)
+    waves=[sum((np.array(tiles[j]['A']['source_KiB']+tiles[j]['B']['source_KiB'])
+                for tiles in ctas if len(tiles)>j),np.zeros(6))
+           for j in range(max(map(len,ctas)))]
+    credit=min(setup['stages'],k//64)/(k//64)
+    effective=[(1-credit)*v+credit*(waves[j+1] if j+1<len(waves) else np.zeros(6))
+               for j,v in enumerate(waves)]
+    return dict(source_fields=TMA_SOURCE_FIELDS,source_coefficients=None,destination_coefficients=None,
+                ctas=ctas,source_waves=[v.tolist() for v in waves],
+                effective_source_waves=[v.tolist() for v in effective])
+
 
 def fill_cta_features(row, setup):
     """Return [CTA][output tile][FILL_FIELDS] using only row/setup.

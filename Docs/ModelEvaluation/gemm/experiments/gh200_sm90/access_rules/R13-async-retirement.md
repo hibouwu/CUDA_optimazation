@@ -609,3 +609,23 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
   --run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203 \
   --output <该run下新的reanalysis目录>
 ```
+
+### 三配置静态请求边界与最小同卡定值（2026-10-09，A）
+
+`static_tma_requests(row, setup)` 仅返回软件可计算的需求，不赋予三配置通用时间系数（`source_coefficients`、`destination_coefficients` 均为 `None`）。适用于共享 R18 的 FP16 row-major A/B、cfg_a/b/c、完整 Ktile、16 B 合法行距、合法 input map；源基址沿用 probe 的 CUDA allocation 对齐。支持部分或完整 OOB 的几何计算，不表示其耗时已验证。旧 cfg_b 五列接口及 13 条件、163 组的结果保持精确兼容。
+
+核对 R18 builder、CUTLASS `load` 的 `get_slice`/mask 和 `make_tma_copy_desc` 后，用 CPU CuTe 布局检查确认如下 ownership。A 坐标为 (M,K)，B 为 (N,K)；每 CTA、每 Ktile 均发起表内 box，逻辑输出 OOB 不取消请求。
+
+| 配置 | 每 CTA 的 A box / 多播 | 每 CTA 的 B box / 多播 | 每 CTA 完整目的 A/B |
+|---|---|---|---|
+| cfg_a，cluster 2×1 | 128×64 / 单 CTA | 两个 64×32，M rank 0/1 各取 K=0/32 / 沿 M | 16/16 KiB |
+| cfg_b，cluster 1×1 | 128×64 / 单 CTA | 两个 64×64 / 单 CTA | 16/16 KiB |
+| cfg_c，cluster 1×2 | 128×64，N rank 0/1 各取 M 偏移 0/128 / 沿 N | 两个 64×64 / 单 CTA | 32/16 KiB |
+
+接口逐 CTA/输出保留源 box、发起 rank、multicast mask、有效源地址及 32/128 B 额外覆盖，并分别返回整 CTA 目的 valid/fill。`source_waves` 的六列按实际发起 box 求和；`effective_source_waves` 只复用旧 stage/Kt 加权假设。每 box 的覆盖不跨 box 合并，相邻 box 可重复覆盖 granule，因此这些量不是 L2/HBM 物理流量，也不同于旧五列的整面板覆盖，不能直接套旧系数。例：cfg_c 的 M=192 时，两 N rank 分别发起有效 A=16/8 KiB，两个目的 CTA 均收到有效 A=24 KiB、fill=8 KiB；机械平分成各 12 KiB 会丢失 ownership。
+
+**最小同卡设计为已有 R10/R13 条件形式的 18 个 pitch 点，加 8 个单方向 map 点。** 前者是三配置×K1024/4096×aligned/A16/B16、M2304×N3072、同 K 固定容量；可检验两种 pitch 的条件增量和 K 转移，但单一余数下 extra32/extra128 共线，不分别定物理代价。后者固定 storage4096×4096、sw8：cfg_a logical2304×4096/mapM2304→4096，cfg_c logical4096×2304/mapN2304→4096，各两种 K。软件列表分别是 32×32=1024、16×32=512 输出；OOB 侧分别有 448 个 A whole-fill、224 个 B whole-fill 输出，扩 map 后全部归零。cfg_a mapM3072 仍有 8 行 OOB，不能替代完整对照。
+
+这 8 点足以检验 cfg_a 的 A whole-fill、cfg_c 的 B whole-fill 条款及两档 K 的条件规则；源有效量随 map 同时变化，服务率、填零路径和等待不唯一可辨。反方向、partial-fill、双方向同时 OOB 与其他 pitch 余数的耗时继续留作未验证范围。旧 R10 B 曲线和 R13 SM 扫描可复用几何与秩检查，不跨卡混合时间定值；如需分别定覆盖两列，再按秩缺口补 p32/p64，而非先扩完整矩阵。[静态检查报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-static-requests-v1/summary.json)覆盖 25 个旧条件、192 对 A/B 合法余数、18+8 个拟议条件，未启动 GPU 或新拟合。
+
+另记录主管未采用的[共享 fill 诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-shared-fill-v1/summary.json)：旧 13 条件增加一个软件波次 global-fill 系数后，ns 后续窗口 RMS 从 7.1266% 降到 6.7168%，最大误差从 25.41% 降到 21.48%，慢 in、j2/T5 仍未解释，因此不接入候选。只用 K1024 训练、留出 K4096（Kt=64）时秩为 7/7、最大误差 19.28%；其余秩亏的留方向/留 pitch 折不构成迁移判定。
