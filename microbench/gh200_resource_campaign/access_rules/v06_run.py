@@ -144,6 +144,11 @@ def prepare(output: Path, cutlass: Path):
                {str(p.relative_to(output)): sha(p) for p in sorted(source.rglob("*")) if p.is_file()})
 
 
+def binary_prefix(row):
+    """An explicit stage count selects a separately compiled binary."""
+    return row['config']+(f"_s{row['stages']}" if 'stages' in row else '')
+
+
 def compile_one(output, name, cmd):
     log = output / "build" / f"{name}.log"
     with log.open("w") as stream:
@@ -179,7 +184,7 @@ def build(output: Path):
     facts = {name: sass_facts(output, name) for name in commands}
     problems = []
     for name, f in facts.items():
-        config = name.rsplit("_", 1)[0]
+        config = re.sub(r"_s[0-9]+$", "", name.rsplit("_", 1)[0])
         if f["hgmma"] != EXPECTED_HGMMA[config] or f["c7510"] or f["spills"]:
             problems.append(name)
     write_json(output / "build/resources.json", dict(facts=facts, problems=problems))

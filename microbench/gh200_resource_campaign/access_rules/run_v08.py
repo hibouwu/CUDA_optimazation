@@ -107,9 +107,9 @@ def case_args(r):
 def setup(root):
     common.verify(root);records=[]
     for r in json.loads((root/'cases.json').read_text()):
-        raw=subprocess.check_output([str(root/'build'/f"{r['config']}_plain"),'--mode','setup',*case_args(r)],text=True)
+        raw=subprocess.check_output([str(root/'build'/f"{common.binary_prefix(r)}_plain"),'--mode','setup',*case_args(r)],text=True)
         event=next(json.loads(l) for l in raw.splitlines() if '"setup"' in l)
-        if event['stages']!=(4 if r['config']=='cfg_c' else 6):raise ValueError('stage count changed')
+        if event['stages']!=r.get('stages',4 if r['config']=='cfg_c' else 6):raise ValueError('stage count changed')
         records.append(dict(case=r['id'],setup=event))
     common.write_json(root/'static_setup.json',records);common.write_json(root/'environment.json',identity())
     (root/'nvidia-smi-before.txt').write_text(subprocess.check_output(['nvidia-smi','-q','-i',os.environ['V08_GPU']],text=True))
@@ -125,7 +125,7 @@ def run_one(root,r,variant,trial,attempt=0):
         if rec['returncode'] and 'last five warmups CV exceeds 2%' in rec['stderr'] and attempt<2:return run_one(root,r,variant,trial,attempt+1)
         if rec['returncode'] or common.sha(root/rec['raw'])!=rec['raw_sha256']:raise ValueError('invalid prior process '+str(path))
         return rec
-    cmd=[str(root/'build'/f"{r['config']}_{variant}"),*case_args(r)]
+    cmd=[str(root/'build'/f"{common.binary_prefix(r)}_{variant}"),*case_args(r)]
     start=time.time_ns();proc=subprocess.run(cmd,text=True,capture_output=True,timeout=300)
     raw=folder/(suffix+'.txt.gz')
     with gzip.open(raw,'wt') as stream:stream.write(proc.stdout)

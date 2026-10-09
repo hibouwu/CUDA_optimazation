@@ -66,7 +66,9 @@ using Epilogue = typename cutlass::epilogue::collective::CollectiveBuilder<
     cutlass::arch::Sm90, cutlass::arch::OpClassTensorOp, KernelTile, KernelCluster, EpilogueTile,
     float, float, void, cutlass::layout::RowMajor, 4, float, cutlass::layout::RowMajor, 4,
     EpilogueSchedule>::CollectiveOp;
-#if V06_STAGES_AUTO
+#if defined(R18_STAGE_COUNT)
+using StageCount = cutlass::gemm::collective::StageCount<R18_STAGE_COUNT>;
+#elif V06_STAGES_AUTO
 using StageCount = cutlass::gemm::collective::StageCountAutoCarveout<static_cast<int>(
     sizeof(typename Epilogue::SharedStorage))>;
 #else

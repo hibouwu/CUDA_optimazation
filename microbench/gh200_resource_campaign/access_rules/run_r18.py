@@ -63,15 +63,18 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False):
         path.write_text(text)
     commands={}
     variants=['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
-    for config in sorted({r['config'] for r in rows}):
+    configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
+    for prefix,(config,stages) in sorted(configurations.items()):
+        if stages is not None and stages<=0:raise ValueError('explicit stage count must be positive')
         for variant in variants:
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
+            if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if dual_clock and variant!='plain':cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
             if variant in ['stamped','dual']:
                 cmd+=['-DV06_TRACE','-Isource/overlay']
                 if family=='r18_lite':cmd+=['-DR18_LIGHT']
-            cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{config}_{variant}']
-            commands[f'{config}_{variant}']=cmd
+            cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
+            commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
     common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
@@ -88,9 +91,9 @@ def case_args(row):
 def setup(root):
     common.verify(root);records=[]
     for row in json.loads((root/'cases.json').read_text()):
-        raw=subprocess.check_output([str(root/'build'/f"{row['config']}_plain"),'--mode','setup',*case_args(row)],text=True)
+        raw=subprocess.check_output([str(root/'build'/f"{common.binary_prefix(row)}_plain"),'--mode','setup',*case_args(row)],text=True)
         event=next(json.loads(l) for l in raw.splitlines() if '"setup"' in l)
-        expected_stages=4 if row['config'].startswith('cfg_c') else 6
+        expected_stages=row.get('stages',4 if row['config'].startswith('cfg_c') else 6)
         if event['stages']!=expected_stages:raise ValueError('stage count changed')
         records.append(dict(case=row['id'],setup=event))
     for group in {r['group'] for r in json.loads((root/'cases.json').read_text())}:
@@ -112,7 +115,7 @@ def run_one(root,row,variant,trial,attempt=0):
             return run_one(root,row,variant,trial,attempt+1)
         if record['returncode'] or common.sha(root/record['raw'])!=record['raw_sha256']:raise ValueError('invalid prior process')
         return record
-    cmd=[str(root/'build'/f"{row['config']}_{variant}"),*case_args(row)]
+    cmd=[str(root/'build'/f"{common.binary_prefix(row)}_{variant}"),*case_args(row)]
     start=time.time_ns();proc=subprocess.run(cmd,text=True,capture_output=True,timeout=180)
     raw=folder/(suffix+'.txt.gz')
     with gzip.open(raw,'wt') as stream:stream.write(proc.stdout)
