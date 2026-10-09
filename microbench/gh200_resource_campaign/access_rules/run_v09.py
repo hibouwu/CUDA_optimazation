@@ -122,16 +122,42 @@ def fit_plain_transfer(observations):
     return result
 
 
+def supply_identification(root,model):
+    with gzip.open(root/'inputs/supply-training.json.gz','rt') as stream:training=json.load(stream)
+    return {key:{cfg:supply.supply_identification_bounds(training[phase][cfg],model[key][cfg])
+                 for cfg in ('cfg_a','cfg_b','cfg_c')}
+            for phase,key in [('first','first_supply'),('later','supply')]}
+
+
+def check_prediction_support(row,setup,model,prediction,identification):
+    """Check equivalent parameters within the fitted calibration active pattern."""
+    requests=supply.supply_request_rows(row,setup);unsupported=[]
+    for phase,key in [('first','first_supply'),('later','supply')]:
+        selected=[r for r in requests if (r['j']==0)==(phase=='first')]
+        bounds=supply.supply_predict_bounds(selected,model[key][row['config']],
+            prediction['frequency_ghz'],identification[key][row['config']])
+        for request,bound in zip(selected,bounds):
+            if bound['status']!='identified prediction':
+                unsupported.append(dict(cta=request['cta'],j=request['j'],reason=bound['status']))
+    return unsupported
+
+
 def freeze_predictions(root,model,metrics,policy):
     rows=read(root/'cases.json');held=[r for r in rows if r['set']=='heldout']
     if any((root/'samples'/r['id']).exists() for r in held):raise ValueError('heldout samples predate freeze')
     setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
     predictions={r['id']:v09_model.predict_components(r,setups[r['id']],model) for r in held}
+    identification=supply_identification(root,model)
+    for row in held:
+        p=predictions[row['id']]
+        unsupported=check_prediction_support(row,setups[row['id']],model,p,identification)
+        if unsupported:
+            p['all_supply_supported']=False;p['unsupported_windows']=unsupported
     for case,p in list(predictions.items()):
         if not p['all_supply_supported']:
             predictions[case]=dict(status='unsupported',plain_us=None,
                 unsupported_windows=p['unsupported_windows'],
-                reason='Supply request or active-Jacobian span is unsupported; no numerical prediction is frozen for this condition.')
+                reason='Supply request is unsupported or equivalent fitted parameters give different service predictions; no numerical prediction is frozen for this condition.')
         else:
             if p['plain_us'] is None or p['plain_us']<=0:raise ValueError('plain prediction missing')
             p['status']='predicted'
@@ -139,7 +165,7 @@ def freeze_predictions(root,model,metrics,policy):
     shutil.copy2(root/'environment.json',root/'freeze-environment.json')
     shutil.copy2(root/'static_setup.json',root/'freeze-setup.json')
     write(frozen/'calibration.json',model)
-    result=dict(status='frozen',frozen_unix_ns=time.time_ns(),gpu=read(root/'environment.json')['gpu'],
+    result=dict(status='frozen',frozen_unix_ns=time.time_ns(),freeze_host=os.uname().nodename,gpu=read(root/'environment.json')['gpu'],
         predictions=predictions,reference_metrics=metrics,policy=policy,
         protocol='Same GPU across two allocations. Heldout GEMMs require user approval of these exact prediction and manifest SHA256 values.')
     write(frozen/'predictions.json',result)
@@ -147,7 +173,8 @@ def freeze_predictions(root,model,metrics,policy):
            'freeze-environment.json','freeze-setup.json','freeze.sh','heldout.sh','frozen/calibration.json','frozen/predictions.json']
     paths += [str(p.relative_to(root)) for p in (root/'inputs').rglob('*') if p.is_file()]
     paths += [name for name in ('python-runtime.json','build/nvcc-version.txt',
-                               'build/commands.json','build/resources.json') if (root/name).exists()]
+                               'build/commands.json','build/resources.json','freeze-revision.json',
+                               'freeze-runtime.json') if (root/name).exists()]
     write(frozen/'manifest.json',dict(source_commit=read(root/'run_config.json')['source_commit'],
         files={name:common.sha(root/name) for name in sorted(paths)}))
     for path in frozen.iterdir():path.chmod(0o444)

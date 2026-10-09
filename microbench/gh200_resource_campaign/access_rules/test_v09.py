@@ -11,6 +11,9 @@ import v08_model
 class FreezeChecks(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
+        self.identification=patch.object(runner,'supply_identification',return_value={})
+        self.support=patch.object(runner,'check_prediction_support',return_value=[])
+        self.identification.start();self.support.start()
         self.root=Path(self.tmp.name)
         for folder in ('inputs','build','source'):(self.root/folder).mkdir()
         files={'cases.json':[dict(id='h',set='heldout')],
@@ -22,7 +25,8 @@ class FreezeChecks(unittest.TestCase):
         for name,value in files.items():runner.write(self.root/name,value)
         for name in ('freeze.sh','heldout.sh'):(self.root/name).write_text('fixture\n')
 
-    def tearDown(self):self.tmp.cleanup()
+    def tearDown(self):
+        self.identification.stop();self.support.stop();self.tmp.cleanup()
 
     def freeze(self):
         with patch.object(runner.v09_model,'predict_components',return_value=dict(all_supply_supported=True,plain_us=3)):
@@ -71,6 +75,22 @@ class FreezeChecks(unittest.TestCase):
 
 
 class ModelChecks(unittest.TestCase):
+    def test_compute_mask_does_not_prove_service_identified(self):
+        # Training limits service to <=10. A representative price gives service=1;
+        # at a faster clock compute falls to8, while another equivalent price gives10.
+        row=dict(config='cfg_a',gpu_uuid='fixture',j=0,cta=0,kt=2,
+                 X=[2,0,0,0,0,0,0],compute_cycles=10,calibration_floor_ns=10)
+        model=dict(config='cfg_a',gpu_uuid='fixture',phase='first',unit='ns',calibration_clock='observed',
+                   parameters=[100,.5],fields=['window_ns','valid'],projection=[[1],[0],[0],[0],[0],[0],[0]],
+                   request_scale=[2,1,1,1,1,1,1],request_basis=[[1,0,0,0,0,0,0]],
+                   jacobian_scale=[1,1],jacobian_basis=[[1,0]])
+        value,supported=runner.supply.supply_predict([row],model,frequency_ghz=1.25)
+        self.assertTrue(supported[0]);self.assertEqual(value[0],116)
+        constraints=runner.supply.supply_identification_bounds([row],model)
+        bound=runner.supply.supply_predict_bounds([row],model,1.25,constraints)[0]
+        self.assertEqual(bound['status'],'bounded nonunique prediction')
+        self.assertAlmostEqual(bound['minimum'],116);self.assertAlmostEqual(bound['maximum'],120)
+
     def test_trace_does_not_change_recurrence(self):
         p=dict(P0=200,S=500,l0=100,l1=50,dL0=60,w=20,h=10,E0=70,Elast=50,
                E=80,Etail=30,x0=0,x1=0,xk=0,gm=15,we=5,r=1.2)
