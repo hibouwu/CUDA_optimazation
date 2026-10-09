@@ -30,14 +30,14 @@ inline void validate_layout(int rows, int columns, int64_t ld) {
 
 template <class T>
 __global__ void fill_input_strided(T* data, int rows, int columns, int64_t ld,
-                                   int seed, bool is_a, int input_mode = 0) {
-  size_t total = size_t(rows) * size_t(ld);
+                                   int seed, bool is_a, int input_mode = 0, size_t capacity = 0) {
+  size_t total = capacity ? capacity : size_t(rows) * size_t(ld);
   for (size_t q = size_t(blockIdx.x) * blockDim.x + threadIdx.x; q < total;
        q += size_t(gridDim.x) * blockDim.x) {
     int row = int(q / ld), column = int(q % ld);
     float value = input_mode == 2 ? random_input_value(row, column, seed, is_a)
                                 : input_mode == 1 ? 0.0f : input_value(row, column, seed, is_a);
-    data[q] = T(column < columns ? value : 65504.0f);
+    data[q] = T(row < rows && column < columns ? value : 65504.0f);
   }
 }
 

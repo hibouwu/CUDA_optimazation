@@ -51,6 +51,8 @@ def replay(root,record,row):
     if setup.get('input_mode','dyadic')!=mode or setup.get('seed',17)!=seed:
         raise ValueError('input mode or seed changed')
     if setup.get('requested_sm_count',0)!=row.get('sm_count',0):raise ValueError('requested SM count changed')
+    for key in ['alloc_lda','alloc_ldb']:
+        if key in row and setup.get(key)!=row[key]:raise ValueError('input allocation changed: '+key)
     if check['status']!='ok' or check['padding_errors'] or len(check['checked_values'])!=4096:
         raise ValueError('incorrect or incomplete GEMM check')
     if len(set(check['checked_indices']))!=4096:raise ValueError('duplicate sampled values')

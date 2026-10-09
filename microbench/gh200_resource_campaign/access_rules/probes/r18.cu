@@ -117,6 +117,7 @@ struct Args {
   std::string input_mode = "dyadic";
   int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
+  int64_t alloc_lda = 0, alloc_ldb = 0;
   Args(int argc, char** argv) {
     if (argc % 2 == 0)
       throw std::runtime_error("options are --key value pairs");
@@ -129,6 +130,8 @@ struct Args {
       else if (key == "--lda") lda = std::stoll(v);
       else if (key == "--ldb") ldb = std::stoll(v);
       else if (key == "--ldd") ldd = std::stoll(v);
+      else if (key == "--alloc-lda") alloc_lda = std::stoll(v);
+      else if (key == "--alloc-ldb") alloc_ldb = std::stoll(v);
       else if(key=="--zero-m")zero_m=std::stoi(v);
       else if(key=="--zero-n")zero_n=std::stoi(v);
       else if(key=="--storage-m")storage_m=std::stoi(v);
@@ -254,7 +257,9 @@ int main(int argc, char** argv) {
     int storage_m=o.storage_m?o.storage_m:o.m,storage_n=o.storage_n?o.storage_n:o.n;
     if(storage_m<o.m||storage_n<o.n||ldb<storage_n||ldd<storage_n || (o.swizzle!=1&&o.swizzle!=8))
       throw std::runtime_error("invalid physical storage/swizzle");
-    DeviceBuffer<__half> a(size_t(storage_m)*lda), b(size_t(o.k)*ldb);
+    int64_t alloc_lda=o.alloc_lda?o.alloc_lda:lda,alloc_ldb=o.alloc_ldb?o.alloc_ldb:ldb;
+    if(alloc_lda<lda||alloc_ldb<ldb)throw std::runtime_error("allocation pitch is smaller than physical pitch");
+    DeviceBuffer<__half> a(size_t(storage_m)*alloc_lda), b(size_t(o.k)*alloc_ldb);
     DeviceBuffer<float> d(size_t(storage_m)*ldd);
     typename Kernel::StrideA sa = make_stride(lda, Int<1>{}, int64_t(o.m) * lda);
     typename Kernel::StrideB sb = make_stride(Int<1>{}, ldb, int64_t(o.k) * ldb);
@@ -294,8 +299,8 @@ int main(int argc, char** argv) {
       throw std::runtime_error("unexpected persistent grid");
 
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
-    gaps::fill_input_strided<<<256, 256>>>(a.pointer, o.m, o.k, lda, check.seed, true, input_mode);
-    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, o.n, ldb, check.seed, false, input_mode);
+    gaps::fill_input_strided<<<256, 256>>>(a.pointer, o.m, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
+    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, o.n, ldb, check.seed, false, input_mode,o.alloc_ldb?b.count:0);
     CUDA_CHECK(cudaGetLastError());
     if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,o.m,o.k,lda,o.zero_m,-1);
     if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,o.n,ldb,-1,o.zero_n);
@@ -382,6 +387,8 @@ int main(int argc, char** argv) {
               << ",\"check_sum_abs_rtol\":" << (input_mode == 2 ? 0x1p-21 : 0.0)
               << std::setprecision(10)
               << ",\"lda\":" << lda << ",\"ldb\":" << ldb << ",\"ldd\":" << ldd
+              << ",\"alloc_lda\":" << alloc_lda << ",\"alloc_ldb\":" << alloc_ldb
+              << ",\"allocated_a_elements\":" << a.count << ",\"allocated_b_elements\":" << b.count
               << ",\"evict\":" << o.evict << ",\"eviction_bytes\":" << eviction.count*4
               << ",\"zero_m\":" << o.zero_m << ",\"zero_n\":" << o.zero_n
               << ",\"storage_m\":" << storage_m << ",\"storage_n\":" << storage_n << ",\"swizzle\":" << o.swizzle

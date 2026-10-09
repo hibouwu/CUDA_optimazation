@@ -44,7 +44,8 @@ def validate_setup(row, static, sample):
     for key in ('config', 'm', 'n', 'k', 'lda', 'ldb', 'ldd', 'storage_m',
                 'storage_n', 'zero_m', 'zero_n', 'swizzle', 'evict', 'grid',
                 'tile', 'cluster', 'stages', 'smem', 'max_active_ctas_per_sm',
-                'sm_count', 'requested_sm_count', 'scheduler_sm_count', 'input_mode', 'seed'):
+                'sm_count', 'requested_sm_count', 'scheduler_sm_count', 'input_mode', 'seed',
+                'allocated_a_elements', 'allocated_b_elements', 'alloc_lda', 'alloc_ldb'):
         if sample.get(key) != static.get(key):
             raise ValueError(row['id'] + ': sample/static setup mismatch: ' + key)
     actual, expected = sample.get('gpu_uuid'), static.get('gpu_uuid')

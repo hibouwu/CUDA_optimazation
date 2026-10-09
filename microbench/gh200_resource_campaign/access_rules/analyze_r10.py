@@ -225,12 +225,19 @@ def joint_pitch(run, output):
                 trial=rec['trial'],variant=rec['variant'],elapsed_us=rec['elapsed_us'])
             if rec['variant']=='dual':
                 if setup['trace_version']!='r18-dual-clock-events':raise ValueError('direct dual-clock trace required')
+                cycle_last=max(obs['ctas'],key=lambda c:c['end_c']-c['entry_c'])
+                time_last=max(obs['ctas'],key=lambda c:c['end_ns'])
+                process.update(critical_cycle_cta=cycle_last['cta'],critical_time_cta=time_last['cta'],
+                    cycle_choice_lag_ns=time_last['end_ns']-cycle_last['end_ns'],
+                    envelope_ns=time_last['end_ns']-min(c['entry_ns'] for c in obs['ctas']),
+                    max_cta_cycles=cycle_last['end_c']-cycle_last['entry_c'])
                 later=[];first=[];supply=[];last_epi=[];windows=[]
                 for c in obs['ctas']:
                     supply.append(c['tiles_ns'][0][0]-c['entry_ns'])
                     last_epi.append(c['tiles_ns'][-1][3]-c['tiles_ns'][-1][2])
                     for j,(cycle,ns,coord) in enumerate(zip(c['tiles'],c['tiles_ns'],c['work'])):
                         value=dict(case=row['id'],trial=rec['trial'],cta=c['cta'],sm=c['sm'],j=j,T=len(c['tiles']),
+                            entry_ns=c['entry_ns'],final_ns=c['end_ns'],
                             mi=coord[0],ni=coord[1],L_cycles=cycle[1]-cycle[0],L_ns=ns[1]-ns[0],
                             E_cycles=cycle[3]-cycle[2],E_ns=ns[3]-ns[2],first_mma_ns=ns[0],main_end_ns=ns[1],
                             epi_permit_ns=ns[2],epi_done_ns=ns[3])
@@ -250,6 +257,8 @@ def joint_pitch(run, output):
         if any(len(times[v])!=10 for v in ('plain','wide','stamped','dual')):raise ValueError('ten successful processes per variant required')
         med={v:statistics.median(t) for v,t in times.items()}
         summaries.append(dict(case=row['id'],a_pitched=(row['lda']*2)%128!=0,b_pitched=(row['ldb']*2)%128!=0,
+            input_allocation_elements=dict(A=setups[row['id']].get('allocated_a_elements',row['storage_m']*row['lda']),
+                                           B=setups[row['id']].get('allocated_b_elements',row['k']*row['ldb'])),
             elapsed_us=med,cv={v:statistics.pstdev(t)/statistics.mean(t) for v,t in times.items()},
             disturbance={v:med[v]/med['wide']-1 for v in ('stamped','dual')},
             preparation_shift=med['wide']/med['plain']-1,scratch_bytes=scratch))
@@ -270,7 +279,9 @@ def joint_pitch(run, output):
         minimum=min(r[key] for r in members),maximum=max(r[key] for r in members))
         for key in ('aligned','A_only','B_only','both','A_delta','B_delta','both_delta','interaction')})
         for (v,m),members in grouped.items()]
+    allocations={(s['input_allocation_elements']['A'],s['input_allocation_elements']['B']) for s in summaries}
     report=dict(scope='Fixed M/N/K, D pitch, values and cache protocol; A/B physical pitch factorial. Direct ns is not reconstructed from whole-call frequency.',
+        input_allocation_equal=len(allocations)==1,
         environment=json.loads((run/'environment.json').read_text()),cases=summaries,processes=processes,
         contrasts=contrasts,trial_contrasts=interactions,failed_attempts=failed,
         caveats=['Mainloop windows include pipeline wait/drain; their SM overlap is not TMA occupancy.',

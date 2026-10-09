@@ -146,6 +146,8 @@ V08 最大时间误差来自 cfg_b h03（2400×3000×1000）。现有 V08F 分�
 | 仅 B 未对齐 | 1024 | 3000 |
 | A/B 均未对齐 | 1000 | 3000 |
 
+四条件按共同上限分配并初始化：A 为 2400×1024、B 为 1000×3072 个 FP16 元素，分别通过 `--alloc-lda 1024 --alloc-ldb 3072` 指定；tensor map 仍使用表中的实际 lda/ldb。未使用的容量写入同一哨兵，不改变逻辑 A/B 数值。默认未指定上限时保留原分配和初始化方式。
+
 矩阵在 [r10-h03-source-pitch.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r10-h03-source-pitch.json)。每条件保留十个独立进程，四变体为原布局 plain、扩大 trace 缓冲区但无打点的 wide、同缓冲区的 clock64 stamped，以及同缓冲区的 dual。plain/wide 区分缓冲区清零的准备差异，stamped/dual 与 wide 配对评估打点影响。
 
 公共 R18 探针的可选 dual 模式在原 FIRST_MMA、MAIN_END、EPI_PERMIT、EPI_DONE 四个位置同时保存 clock64 和 globaltimer，并记录 producer-first-work 的 ns；原事件含义不变。默认六字布局保持，dual 与其匹配基线采用十字布局，原周期和坐标字段位置保留。这样可以直接比较同次调用的主循环纳秒、周期及其比值，避免用整调用平均频率重建内部时间线。
@@ -162,3 +164,5 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r18.py prepare \
 ```
 
 CPU 检查已核对四条构建命令、同尺寸基线、直接 ns 解码和九份旧 V08 记录的兼容回放；新 dual 宏的 CUDA 编译、数值与扰动仍待本批确认。
+
+首批 job 738162 已在原参考卡 GPU-099dda56 完成，160 个进程数值和时间线检查通过；四个变体均为 168 个寄存器、16 条静态 HGMMA、无 spill。不过该版仍按实际行距分配 A/B，四组合容量不同，未满足上面的共同容量控制。其[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/cases.json)和[容量诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/reanalysis/allocation-diagnostic-v2/joint-pitch.json)保留，暂不将联合代价定为规则。修正后的批次只重测这四个条件。

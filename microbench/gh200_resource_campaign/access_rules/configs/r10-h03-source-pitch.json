@@ -20,7 +20,9 @@
     "evict": 0,
     "input_mode": "dyadic",
     "seed": 17,
-    "sm_count": 0
+    "sm_count": 0,
+    "alloc_lda": 1024,
+    "alloc_ldb": 3072
   },
   {
     "id": "cfg_b_h03_Aaligned_Bpitched",
@@ -43,7 +45,9 @@
     "evict": 0,
     "input_mode": "dyadic",
     "seed": 17,
-    "sm_count": 0
+    "sm_count": 0,
+    "alloc_lda": 1024,
+    "alloc_ldb": 3072
   },
   {
     "id": "cfg_b_h03_Apitched_Baligned",
@@ -66,7 +70,9 @@
     "evict": 0,
     "input_mode": "dyadic",
     "seed": 17,
-    "sm_count": 0
+    "sm_count": 0,
+    "alloc_lda": 1024,
+    "alloc_ldb": 3072
   },
   {
     "id": "cfg_b_h03_Apitched_Bpitched",
@@ -89,6 +95,8 @@
     "evict": 0,
     "input_mode": "dyadic",
     "seed": 17,
-    "sm_count": 0
+    "sm_count": 0,
+    "alloc_lda": 1024,
+    "alloc_ldb": 3072
   }
 ]
