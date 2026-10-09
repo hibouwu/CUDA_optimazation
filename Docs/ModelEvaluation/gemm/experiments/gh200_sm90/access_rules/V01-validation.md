@@ -96,3 +96,23 @@ python3 microbench/gh200_resource_campaign/access_rules/run_v01.py --cutlass-roo
   --r00-archive <R00 归档> --predictions <预测.json> --prediction-sha256 <SHA> --output <新目录>
 python3 <新目录>/source/analyze_v01.py --input <新目录>
 ```
+
+<a id="joint-supply-clock"></a>
+
+## 2026-10-09：供给、事件与频率的开发组合
+
+这次复用 GPU-43269fbc 上 R10 行距和 R18 两方向输入 map 的 13 个条件，检查新组件能否组合；**这些条件已经用于供给与事件参数开发，不是新的冻结验证**。原 V01 冻结记录不变。
+
+[v09_model.py](../../../../../../microbench/gh200_resource_campaign/access_rules/v09_model.py) 从软件调度计算逐 CTA 工作与请求，把 `max(512/f, 条件供给ns)` 接入原 pingpong 递推；P0/S/输出等使用同卡纳秒参数，F 使用同调用 CUDA event 减 CTA 包络后汇总的常数。R09 的计算/源请求频率规则与事件时间联立求解，不读取目标时间、实测频率或实测 CTA 列表。
+
+| 形式 | dual CUDA event 误差中位 / 最大 | 含义 |
+|---|---:|---|
+| 条件供给＋固定 1.6 GHz | 3.46% / 5.95% | 前次开发基线 |
+| 条件供给＋R09 频率联立 | 4.14% / 11.74% | 组合后退步，尚不能冻结为已验证规则 |
+| 改用目标实测频率 | 4.08% / 7.06% | 只作归因诊断，不是可用预测 |
+
+自由组合的 plain 时间误差为 3.97% / 12.31%；plain/dual 的观测换算尚未重新定值。最差的是 K=4096 的有效地址零填充：预测频率约 1.329 GHz，比观测低约 12%，使时间偏长约 10–12%。长 K 的 OOB 条件总时间虽接近，所选 CTA 仍比实际最后退出者早约 28.6–28.7 µs，关键 CTA 定位没有解决。不能以总时间接近替代分项验证。
+
+当前组件只定值到 cfg_b、132 SM、6 stage、完整 Ktile、A 行距对齐。R09 的 21 个训练条件全部 K=1024，计算工作与输出字节共线；这次迁移失败尚不能归因于某一个物理功耗来源。下一步先在 R09 做等名义计算/源请求量、不同 K 与输出次数的配对，分离这个缺口；不在这 13 个目标上追加自由修正项。
+
+[逐例结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json)与[CPU 检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/cpu-checks.json)保留全部条件、实测频率诊断和 CTA 定位差距。13 条件的目标观测污染检查、输入不变检查、频率网格上的回调单调性与联立闭合检查通过；网格检查不替代对所有未来组织的证明。
