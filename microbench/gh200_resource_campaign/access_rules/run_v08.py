@@ -137,7 +137,11 @@ def run_one(root,r,variant,trial,attempt=0):
     common.write_json(path,rec)
     if proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:return run_one(root,r,variant,trial,attempt+1)
     if proc.returncode:raise ValueError('failed GEMM process: '+str(path)+' '+proc.stderr[-300:])
-    v08_model.observe(root,rec,r)
+    if variant in ['wide','dual']:
+        from analyze_r18 import replay
+        replay(root,rec,r)
+    else:
+        v08_model.observe(root,rec,r)
     return rec
 
 
@@ -159,7 +163,8 @@ def main():
     if a.step=='setup':setup(root);return
     common.verify(root)
     if env!=json.loads((root/'environment.json').read_text()):raise ValueError('device or allocation changed')
-    if common.sha(root/'cases.json')!=json.loads((root/'run_config.json').read_text())['cases_sha256']:raise ValueError('matrix changed')
+    config=json.loads((root/'run_config.json').read_text())
+    if common.sha(root/'cases.json')!=config['cases_sha256']:raise ValueError('matrix changed')
     rows=[r for r in json.loads((root/'cases.json').read_text()) if r['set']==a.set]
     if a.set=='heldout':
         if not a.predictions:raise ValueError('frozen predictions required')
@@ -176,7 +181,7 @@ def main():
     for trial in range(10):
         group=rows[:];random.Random(20261009+trial).shuffle(group)
         for r in group:
-            variants=VARIANTS[:];random.Random(f"{trial}-{r['id']}").shuffle(variants)
+            variants=config.get('variants',VARIANTS)[:];random.Random(f"{trial}-{r['id']}").shuffle(variants)
             for variant in variants:run_one(root,r,variant,trial)
         print('V08',a.set,'trial',trial,'complete',time.strftime('%H:%M:%S'),flush=True)
     (root/f'nvidia-smi-after-{a.set}.txt').write_text(subprocess.check_output(['nvidia-smi','-q','-i',os.environ['V08_GPU']],text=True))
