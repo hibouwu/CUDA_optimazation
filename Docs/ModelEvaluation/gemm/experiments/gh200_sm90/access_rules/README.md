@@ -36,7 +36,7 @@
 | [R15](R15-output-service.md) 输出服务 | 已测，条件对照 | 标量探针不能直接作为 CUTLASS 输出常数 |
 | [R16](R16-residency-quota.md) 驻留与配额 | 已测，未用于 V07 | 驻留收益依供给变化；寄存器申请等待取决于释放时序 |
 | [R17](R18-cluster-boundary.md#r17) 越界 tile | 已并入 R18 | 改用匹配位置的窗口增量；旧两例修正只作诊断 |
-| [R18](R18-cluster-boundary.md) cluster 边界 | 已测，用于 V07 | cfg_a 有越界增量、有效零无同等效应；cfg_c 近零 |
+| [R18](R18-cluster-boundary.md) cluster 边界 | 已测，源路径配对已完成 | cfg_b 同逻辑输出下，有效地址零比 M/N 向 TMA 越界填零快约17%–20%；分项仍随位置变化 |
 | [R19](R19-critical-cta-tail.md) 关键 CTA 与尾部 | 已测，只作诊断 | swizzle 改变工作与尾部；V07 尾差项选择 none |
 | [B01](B01-bandwidth-cache.md) 带宽与缓存 | 已测，未用于 V07 | 条件请求速率；不等同物理 HBM 流量或缓存收益 |
 | [V01](V01-validation.md) 组合验证 | 部分通过 | 单 CTA 通过；整卡与完整 kernel 未通过 |
