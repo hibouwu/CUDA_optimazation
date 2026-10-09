@@ -251,3 +251,43 @@ freeze需要五个已知条件的 `cases.json`、`static_setup.json`、`environm
 评分只针对该dual观察协议下的后续主循环ns/Ktile。完整时间与逐trial dual/wide扰动作为诊断保留，不通过删去有效慢trial改变目标，也不据局部分数发布新的GEMM通过成绩。score核对冻结输入/代码身份，要求留出进程起始时间晚于冻结时间；生成新的评分目录，不改冻结文件和原测量。
 
 CPU检查已覆盖给定覆盖数、参数不唯一而留出预测唯一、校准失败保留；临时合成样例另检查了仅三校准目录读取、两留出ID、只读freeze、评分及采样后拒绝freeze。它们不是新的GPU结果。`python3 analyze_r10.py --cpu-check` 可重复运行几何和参数检查。
+
+### 局部冻结负结果：job738203
+
+**两候选均未通过预声明的局部目标，保留失败，不回调参数。** job738203在独占的romeo-a057、GPU-43269fbc-449d-3e0f-908a-9c81229546d3上完成，同卡先校准再冻结、再测留出；没有拼接a043的旧常数。五条件×四变体×十进程共200个成功进程，819,200个保存输出值通过重放；source/bin/SASS/raw身份匹配。四个cfg_b二进制沿用eb49b87，均为168寄存器、16条静态HGMMA、无spill/C7510。
+
+[冻结文件](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json)的SHA256为 `6fd226ef90f1a9d9224d1d6db769744eaece3befd69e98abf4352c4676d072c5`，与 `prediction_binding.json` 一致。冻结时刻为巴黎时间2026-10-09 04:04:50.203333（Unix ns `1791511490203333470`），晚于最后一个校准进程结束1.755716004秒；全部80个留出进程均在冻结后启动，最早晚0.243562114秒。回传解包后按tar原成员的0444恢复只读位，预测字节和SHA未变，没有重新生成冻结文件。
+
+三校准目标p0/p16/p32分别为329.9967、439.1767、385.9533 ns/Ktile，锚点 `C=329.9967`。32 B候选参数不唯一，q0范围0～329.9967、q1范围3.411875～13.724271；它对p32仍预测C，校准最大误差14.4983%，已失败。128 B候选有唯一参数 `q0=66.613333, q1=6.652917`，校准误差为零；但在p64的线性分支只有279.5067，仍被max截到C。两候选的两条留出预测均唯一，不存在测后选择有利参数的余地。
+
+| 候选 | 校准判定 | p64预测 / 实测，ns/Ktile | p64误差 | p128预测 / 实测，ns/Ktile | p128误差 | 局部判定 |
+|---|---|---:|---:|---:|---:|---|
+| 32 B覆盖 | 失败 | 329.9967 / 365.7233 | −9.7688% | 329.9967 / 331.7933 | −0.5415% | 失败 |
+| 128 B覆盖 | 通过 | 329.9967 / 365.7233 | −9.7688% | 329.9967 / 331.7933 | −0.5415% | 失败 |
+
+误差为预测/实测−1。p128单点接近锚点不改变整组失败；128 B校准拟合精确也没有保证p64迁移。被否定的是本组冻结的覆盖计数与max参数形式，不是对物理cache line或TMA流量作出的识别结论，也不是完整GEMM的通过或失败成绩。
+
+dual/wide完整时间中位扰动按p0/p16/p32/p64/p128分别为+4.860%、+2.381%、+1.885%、+3.006%、+4.997%，四变体各条件CV最大2.610%。单trial配对仍有超5%者，p0与p128最大为+8.037%/+8.945%；p64配对范围为−0.606%～+4.974%。所有有效trial都保留，冻结评分继续针对既定dual观察窗口，不能把这些结果改称无打点阶段服务。
+
+### p64的最小离线定位
+
+以下只定位失败，不改变评分。比较p0与p64的实际CTA工作列表，十个trial的CTA编号、坐标、j及每CTA总tile数T均匹配。每进程按(j,T)对窗口取均值并除以16，再求相同trial编号的p64−p0差，最后对十个差取中位。它们属于前后两个采样阶段的不同调用；trial编号相同不表示同时发生或相同的硬件驻留状态。j从0起，表中只列冻结目标包含的后续j>=1。
+
+| j / T | 每进程窗口数 | p64−p0，cycle/Ktile | p64−p0，ns/Ktile | ns增量的十trial范围 |
+|---|---:|---:|---:|---:|
+| 1 / 3 | 96 | +66.3281 | +37.2396 | +32.8333～+42.1458 |
+| 1 / 4 | 36 | +64.0026 | +35.8611 | +26.1111～+40.3333 |
+| 2 / 3 | 96 | +70.1533 | +37.7396 | +33.7708～+40.8333 |
+| 2 / 4 | 36 | +88.5694 | +47.2222 | +39.6667～+61.6667 |
+| 3 / 4 | 36 | +17.6771 | +9.4167 | +4.0556～+12.6111 |
+
+五个分组、每个trial的cycle与直接ns增量都为正，差异不局限于最后一个tile。T=4的j=2每窗口增量最大，而最后j=3最小；按窗口数加权的trial均值计算，j=1/2贡献约96.8%的后续总增量。此处的分组中位不与冻结目标的全窗口中位强行相加。p128在对应位置接近p0，作为同一留出阶段的参照保留；不能据j/T分布单独命名物理请求放大、带宽下降或某个流水等待机制。本轮止于负结果，不扩矩阵。
+
+[原评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/b-pitch-score-v1/b-pitch-score.json)与冻结文件保持原样。[本地独立重放评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/b-pitch-score.json)完整重现两个候选；[位置分组、扰动和时间顺序](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/localization.json)保存各trial分组值与全部样本哈希。另直接按原始dual数组的两个consumer交替次序解码，每调用恰有300个后续窗口，独立复现五个目标值及两候选误差；没有重拟合。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r10.py --score-b-pitch \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203 \
+  --predictions /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json \
+  --output <该run下新的reanalysis目录>
+```
