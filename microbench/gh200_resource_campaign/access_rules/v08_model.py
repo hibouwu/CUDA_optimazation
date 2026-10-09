@@ -160,11 +160,17 @@ def summarize_case(root,r,setup):
 def lmain(p,kt,first=False):return p['l0']+p['l1']*kt+(p['dL0'] if first else 0.0)
 
 
-def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None):
-    """V06 recursion with per-tile mainloop L*(1+rho[class]); cooperative last tile uses Elast."""
+def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None):
+    """CTA recursion; an explicit per-tile L list replaces the aggregate mainloop rule.
+
+    The optional list is for development composition of conditional supply rules.
+    Existing callers keep L*(1+rho[class]); cooperative last tile uses Elast.
+    """
     if ntiles==0:return (p['P0'],None) if detail else p['P0']
     rho=p.get('rho',{});cls=classes or ('in',)*ntiles
-    Ls=[lmain(p,kt,j==0)*(1+rho.get(cls[j],0.0)) for j in range(ntiles)]
+    Ls=([lmain(p,kt,j==0)*(1+rho.get(cls[j],0.0)) for j in range(ntiles)]
+        if mainloops is None else list(mainloops))
+    if len(Ls)!=ntiles:raise ValueError('one mainloop interval per output tile required')
     if schedule=='cooperative':
         fm=p['P0']+p['S'];ed=None
         for j in range(ntiles):
