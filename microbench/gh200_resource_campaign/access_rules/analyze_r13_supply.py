@@ -409,7 +409,7 @@ def address_box(rows, row_bytes, pitch_bytes, start_mod128):
 
 
 def source_request(row, mi, ni):
-    """Mean logical source KiB/Ktile, with actual M/N/K tails and multicast sharing."""
+    """Valid source KiB/Ktile with tails/multicast; OOB zero-fill service is absent."""
     tm, tn, cm, cn = CONFIGS[row['config']]
     kt = (row['k'] + 63)//64
     values = np.zeros(5)
@@ -579,7 +579,7 @@ def coverage_probe_range(row, model, parameters, configs, constraints):
 
 
 def monotone_conflicts(rows, model):
-    """A parameter-independent failure certificate for nonnegative service costs."""
+    """Certificate of insufficient features; source-only ordering omits OOB fill."""
     arrays=coverage_design(rows,model); conflicts=[]
     for i,a in enumerate(rows):
         for j,b in enumerate(rows):
@@ -657,6 +657,8 @@ def coverage_suite(run, output):
         cohorts=result, address_only_slice=dual_coverage_slice(run),
         limits=['Separate fit per card AND observer cohort; no coefficient transfer across cards or silent pooling of stamped and dual.',
                 'Q counts logical requests after multicast sharing and valid address spans, not physical L2/HBM transactions.',
+                'Q omits OOB zero-fill service. Smaller valid-address demand does not imply smaller total service demand.',
+                'Monotonicity conflicts identify insufficient current features, not uniquely missing pipeline state; separate A/B partial/whole OOB paths before attribution.',
                 'Software waves and configured prefill credit are assumptions, not measured active TMA occupancy.',
                 'All fitting targets are cycles/Ktile; direct-ns address-only slice is reported separately.',
                 'Compute branch restricts service from above (capacity from below); D/measured cycles is never used as a bandwidth label.',
