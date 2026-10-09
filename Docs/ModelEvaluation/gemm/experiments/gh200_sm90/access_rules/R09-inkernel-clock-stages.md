@@ -1085,3 +1085,8 @@ K4096中，混合使共同频率上移，却没有完整解释路径对比：M�
 ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
 python3 microbench/gh200_resource_campaign/access_rules/r09_zero_activity_clock.py --m-run "$ROOT/20261009-R18-input-map-job738296" --n-run "$ROOT/20261009-R18-input-map-n-job738307" --clock "$ROOT/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json" --composition "$ROOT/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json" --output "$ROOT/20261009-R18-input-map-job738296/reanalysis/C-zero-activity-replay-<新后缀>"
 ```
+
+
+### V09 的长 K 迁移（2026-10-09）
+
+[V09](V09-component-validation.md) 已按获批r2预测在同卡完成新留出。cfg_b的6144×8192×32768自由有效频率为0.9000 GHz，同调用观测约1.2000 GHz，低估25.00%；总时间高估35.46%。仅作测后诊断，把观测频率代入其余原参数后，误差降至1.71%。这定位到时钟候选的跨K迁移，不证明某个物理功耗来源，也不允许改写冻结成绩。全组预填误差仍大，下一步复用现有长窗口、等工作和V09事件记录，分别检查频率代理与首段端点；当前不新增GPU任务。

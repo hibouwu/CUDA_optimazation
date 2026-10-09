@@ -97,3 +97,8 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
   --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
   --output <该run下新的reanalysis目录>
 ```
+
+
+### V09 的关键 CTA（2026-10-09）
+
+[V09](V09-component-validation.md) 保留冻结时的精确并列集合，没有测后扩大。cfg_a G3 A+16B中，模型选出的代表CTA比真正最后完成者的CTA内耗时短约14.60%；真正最后完成者仍落在132个并列候选中，因此集合命中不等于唯一定位。cfg_c partial/swizzle8中，真正最后完成者在10/10进程里均不属于冻结的7个候选，而该例总时间误差只有−5.75%。后续先用本批entry/end与分项记录区分入口偏斜和CTA内部耗时，不能用总时间达标代替定位正确。
