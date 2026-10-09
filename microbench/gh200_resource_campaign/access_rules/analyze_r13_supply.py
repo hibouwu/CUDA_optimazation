@@ -5,6 +5,7 @@ No GPU work or modification of frozen predictions. Default V08F mode reuses
 summaries plus six cfg_a trace controls; --sm-summary uses the archived SM scan;
 --coverage-suite compares two address-coverage/prefill forms on separate cohorts.
 --fill-suite separates valid-address and OOB-fill demands on one card in cycle/ns forms.
+--compose-fill evaluates those windows in the existing CTA event recurrence.
 L is a finite mainloop window including drain, not an internal steady-state timer.
 Requires numpy/scipy; all input archives are read-only and output must be new.
 """
@@ -848,6 +849,148 @@ def fill_suite(run,output,assumed_ghz):
     print(json.dumps({u:{k:v for k,v in f.items() if k in ('later_fit','whole_fill','identification','leave_K')} for u,f in fits.items()},indent=2))
 
 
+def compose_fill(run, report_path, output, assumed_ghz):
+    """Use existing CTA recurrence; shared-card calibration and case-local diagnostics."""
+    import v06_fit
+    import v08_model
+    source=read_json(report_path); base=run.parent
+    folders=[run,base/'20261009-R18-input-map-job738296',base/'20261009-R18-input-map-n-job738307']
+    processes=[];paths=[report_path]; raw_intervals=defaultdict(list); case_rows={}; setup_by_case={}
+    for folder in folders:
+        env=read_json(folder/'environment.json')
+        if env['gpu']!=source['gpu']: raise ValueError('composition must use the fitted card')
+        cases={c['id']:c for c in read_json(folder/'cases.json')}
+        setups={s['case']:s['setup'] for s in read_json(folder/'static_setup.json')}
+        paths += [folder/'cases.json',folder/'static_setup.json',folder/'environment.json']
+        for name,row in cases.items():
+            case_rows[name]=row;setup_by_case[name]=setups[name]
+            plain_paths=sorted((folder/'samples'/name).glob('plain-*.json'));paths+=plain_paths
+            plain=[read_json(p) for p in plain_paths if read_json(p)['returncode']==0]
+            for path in sorted((folder/'samples'/name).glob('dual-*.json')):
+                record=read_json(path)
+                if record['returncode']: continue
+                observed=replay(folder,record,row); ctas=observed['ctas']
+                paths += [path,folder/record['raw']]
+                ns_ctas=[dict(c,entry_c=c['entry_ns'],prod_c=c['prod_ns'],end_c=c['end_ns'],tiles=c['tiles_ns']) for c in ctas]
+                interval={}
+                for unit,seq in [('cycle',ctas),('ns',ns_ctas)]:
+                    iv=v06_fit.intervals(dict(ctas=seq),'pingpong')[0]
+                    raw_intervals[name,unit].append(iv);interval[unit]=iv
+                envelope=max(c['end_ns'] for c in ctas)-min(c['entry_ns'] for c in ctas)
+                max_local_ns=max(c['end_ns']-c['entry_ns'] for c in ctas)
+                processes.append(dict(case=name,trial=record['trial'],ctas=ctas,intervals=interval,
+                    dual_event_ns=observed['elapsed_us']*1000,envelope_ns=envelope,
+                    event_extra_ns=observed['elapsed_us']*1000-envelope,
+                    entry_skew_excess_ns=envelope-max_local_ns,
+                    plain_event_ns=next(p['elapsed_us']*1000 for p in plain if p['trial']==record['trial'])))
+    case_intervals={}
+    for key,records_ in raw_intervals.items():
+        names=set().union(*records_)
+        case_intervals[key]={name:statistics.median(r[name] for r in records_ if name in r) for name in names}
+
+    def parameters(values,unit):
+        keys=['P0','S','w','we','E','h','gm','Etail','Efull']
+        p={key:statistics.median(v[key] for v in values if key in v) if any(key in v for v in values) else 0. for key in keys}
+        p['r']=p['E']/p['Efull'] if p['Efull']>0 else 1.
+        # The aggregate baseline is calibrated on these same-card case medians.
+        pairs=[(case_rows[name]['k']//64,iv['L']) for (name,u),iv in case_intervals.items() if u==unit]
+        x=np.array([k for k,y in pairs]);y=np.array([y for k,y in pairs]);slope=float(np.sum((x-x.mean())*(y-y.mean()))/np.sum((x-x.mean())**2))
+        p.update(l0=float(y.mean()-slope*x.mean()),l1=slope,
+            dL0=statistics.median(iv['L0']-(float(y.mean()-slope*x.mean())+slope*(case_rows[name]['k']//64))
+                                 for (name,u),iv in case_intervals.items() if u==unit),
+            x0=0.,x1=0.,xk=0.,rho={})
+        return p
+
+    shared={}
+    for unit in ('cycle','ns'):
+        shared[unit]=parameters([iv for (name,u),iv in case_intervals.items() if u==unit],unit)
+    shared_F=statistics.median(p['event_extra_ns'] for p in processes)
+    case_F={name:statistics.median(p['event_extra_ns'] for p in processes if p['case']==name) for name in case_rows}
+    features={name:fill_geometry(row,setup_by_case[name]) for name,row in case_rows.items()}
+    predictions=[]
+    for proc in processes:
+        row=case_rows[proc['case']];kt=row['k']//64
+        for parameter_scope in ('shared','case_diagnostic'):
+            for unit in ('cycle','ns'):
+                p=dict(shared[unit])
+                if parameter_scope=='case_diagnostic':
+                    iv=case_intervals[proc['case'],unit]
+                    for key in ('P0','S','w','we','E','h','gm','Etail'):
+                        if key in iv:p[key]=iv[key]
+                    if iv.get('Efull',0)>0:p['r']=p['E']/iv['Efull']
+                fit=source['fits'][unit]['parameters'];q=np.array(list(fit.values()))
+                for mode in ('aggregate_baseline','valid_fill','valid_fill_measured_first','measured_L_diagnostic'):
+                    ends=[];cta_errors=[];first_errors=[]
+                    for cta in proc['ctas']:
+                        seq=cta['tiles'] if unit=='cycle' else cta['tiles_ns'];T=len(seq)
+                        actual=[t[1]-t[0] for t in seq]
+                        if mode=='aggregate_baseline':ls=None
+                        elif mode=='measured_L_diagnostic':ls=actual
+                        else:
+                            ls=[]
+                            for j,(mi,ni) in enumerate(cta['work']):
+                                cls='padM' if mi*128>=row['m'] else 'padN' if ni*128>=row['n'] else 'in'
+                                x=features[proc['case']][j,T,cls]['X']
+                                ls.append(q[0]+kt*max(512 if unit=='cycle' else 512/assumed_ghz,np.dot(x,q[1:])))
+                            first_errors.append(ls[0]/actual[0]-1)
+                            if mode=='valid_fill_measured_first':ls[0]=actual[0]
+                        end=v08_model.cta_cycles(p,'pingpong',T,kt,mainloops=ls)
+                        observed_end=(cta['end_c']-cta['entry_c']) if unit=='cycle' else (cta['end_ns']-cta['entry_ns'])
+                        cta_errors.append(end/observed_end-1);ends.append(end)
+                    # All predicted CTAs start together; no measured entry skew is an input.
+                    env=max(ends)/(assumed_ghz if unit=='cycle' else 1.)
+                    fixed=shared_F if parameter_scope=='shared' else case_F[proc['case']]
+                    predictions.append(dict(case=proc['case'],trial=proc['trial'],parameter_scope=parameter_scope,
+                        unit=unit,mode=mode,predicted_envelope_ns=env,observed_envelope_ns=proc['envelope_ns'],
+                        envelope_error=env/proc['envelope_ns']-1,predicted_event_ns=env+fixed,
+                        observed_dual_event_ns=proc['dual_event_ns'],dual_event_error=(env+fixed)/proc['dual_event_ns']-1,
+                        plain_diagnostic_error=(env+fixed)/proc['plain_event_ns']-1,
+                        cta_duration_median_abs_error=float(np.median(np.abs(cta_errors))),
+                        first_transfer_median_abs_error=float(np.median(np.abs(first_errors))) if first_errors else None))
+    scores={}
+    for scope in ('shared','case_diagnostic'):
+        scores[scope]={}
+        for unit in ('cycle','ns'):
+            scores[scope][unit]={}
+            for mode in ('aggregate_baseline','valid_fill','valid_fill_measured_first','measured_L_diagnostic'):
+                selected=[p for p in predictions if p['parameter_scope']==scope and p['unit']==unit and p['mode']==mode]
+                by_case={}
+                for name in case_rows:
+                    records_=[p for p in selected if p['case']==name]
+                    by_case[name]={field:statistics.median(p[field] for p in records_) for field in
+                        ('predicted_envelope_ns','observed_envelope_ns','envelope_error','dual_event_error','plain_diagnostic_error','cta_duration_median_abs_error')}
+                scores[scope][unit][mode]=dict(case_scores=by_case,
+                    envelope=metrics([v['envelope_error'] for v in by_case.values()]),
+                    dual_event=metrics([v['dual_event_error'] for v in by_case.values()]),
+                    plain_diagnostic=metrics([v['plain_diagnostic_error'] for v in by_case.values()]))
+    report=dict(protocol='All-data same-card development composition; no new heldout. Case-local parameters and measured L are diagnostics only.',
+        gpu=source['gpu'],assumed_ghz=assumed_ghz,shared_parameters=shared,
+        case_parameters={name:{u:iv for (c,u),iv in case_intervals.items() if c==name} for name in case_rows},
+        fixed_event_extra_ns=shared_F,
+        observed_event_extra_ns_range=[min(p['event_extra_ns'] for p in processes),max(p['event_extra_ns'] for p in processes)],
+        entry_skew_excess_ns=dict(median=statistics.median(p['entry_skew_excess_ns'] for p in processes),
+                                  maximum=max(p['entry_skew_excess_ns'] for p in processes)),
+        scores=scores,process_predictions=predictions,
+        limits=['P0/S/E/gm/w/we/h/Etail follow v06_fit.intervals; r=E_alone/E_full; x0/x1/xk are zero.',
+                'Shared constants are medians of the 13 case medians. Baseline L0/L use the same-card linear-K rule.',
+                'NS recurrence evaluates the same homogeneous event equations in ns, with explicit 512/f compute floor.',
+                'Cycle-domain envelope conversion uses one assumed f; no per-case or per-window measured frequency is supplied.',
+                'F is calibrated from each dual event minus that same call envelope, then pooled; it is not copied per prediction.',
+                'Predicted entry skew is zero. Observed entry skew is diagnostic only.',
+                'First-output valid-fill L is an unfitted transfer. Measured-first/measured-L controls isolate effects, not mathematical error bounds; errors can cancel.',
+                'Case-local non-L calibration is a diagnostic, not prediction of those parameters for unseen cases.',
+                'Missing case-local branch parameters retain the same-card shared value; no old-card constants are borrowed.',
+                'Plain uses a different observer/preparation path and is scored separately, not used to fit F.'],
+        input_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
+        recurrence_sha256=hashlib.sha256(Path(v08_model.__file__).read_bytes()).hexdigest(),
+        event_definitions_sha256=hashlib.sha256(Path(v06_fit.__file__).read_bytes()).hexdigest(),
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=False);(output/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'process-predictions.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(predictions[0]));writer.writeheader();writer.writerows(predictions)
+    print(json.dumps({s:{u:{m:v['dual_event'] for m,v in modes.items()} for u,modes in units.items()} for s,units in scores.items()},indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)
@@ -855,10 +998,14 @@ if __name__ == "__main__":
     parser.add_argument("--sm-summary", type=Path, help="fit local/grid/wave caps to an existing R13 SM-scan summary")
     parser.add_argument("--coverage-suite", action='store_true', help="two post-reveal coverage/prefill forms; --run is R10 job738203")
     parser.add_argument("--fill-suite", action='store_true',help='same-card valid-address/OOB cycle versus direct-ns development; --run is R10 job738203')
+    parser.add_argument("--compose-fill",type=Path,help='compose an existing fill-suite report with same-card dual event calibration')
     parser.add_argument("--assumed-ghz",type=float,default=1.6,help='explicit compute-frequency assumption for --fill-suite NS form')
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.fill_suite:
+    if args.compose_fill:
+        if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
+        compose_fill(args.run.resolve(),args.compose_fill.resolve(),args.output.resolve(),args.assumed_ghz)
+    elif args.fill_suite:
         if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
         fill_suite(args.run.resolve(),args.output.resolve(),args.assumed_ghz)
     elif args.coverage_suite:

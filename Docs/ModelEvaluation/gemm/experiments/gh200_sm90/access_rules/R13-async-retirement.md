@@ -561,3 +561,51 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
   --run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203 \
   --output <该run下新的reanalysis目录>
 ```
+
+<a id="fill-cta-composition"></a>
+
+### 同卡 CTA 递推组合试算（2026-10-09，A）
+
+**替换 L 已改善这批完整事件路径，可以继续用于开发组合；分项误差和时间换算仍需保留。** 使用主管 `0cc536f` 增加的 `v08_model.cta_cycles(..., mainloops=...)`，不另建递推，也不修改公共 model。在同卡聚合线性 L 基线上，周期/ns 候选分别将 13 条件的 dual event 中位误差从 **9.56%/6.87%** 降至 **3.76%/3.46%**，最大误差从 **13.76%/15.50%** 降至 **7.14%/5.95%**。这是同一批数据的开发组合结果，没有新留出判定。
+
+[组合报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/summary.json)及[逐进程预测](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-cta-composition-v3/process-predictions.csv)读取原 13 条件的 **130 份 dual**，复用已交付的供给系数。P0、S、w/we、gm/h、E、Efull、Etail 全部按 `v06_fit.intervals` 的原事件定义从这些同卡记录计算：先求每进程统计，再取各 case 中位，最后对 13 个 case 中位取中位，得到共用参数。pingpong 的 `r=E/Efull`，不借用旧卡常数；`x0/x1/xk` 均为零，没有另拟合总时间修正项。
+
+周期递推和 ns 递推使用同一套齐次事件方程，各自的参数单位保持一致。周期端点统一除以显式假定 **1.6 GHz** 得到预测包络；ns 端直接使用 ns 事件参数，主循环计算项为 `512/1.6` ns/Ktile。没有用各例或各窗口的实测 cycle/ns 比值换算预测。所有预测 CTA 同时进入，入口错峰为零假设；实际错峰仅作为诊断。
+
+对每次 dual 调用，先直接计算 `F_i=CUDA_event_i−(max final_ns−min entry_ns)`；预测只用这 130 个同调用差值的中位 **F=3936.001 ns**，不逐例回填 F_i。原差值范围为 **3200.0～5184.0 ns**。实际包络相对“最长 CTA 自身 ns 跨度”的额外差，中位 **32 ns**、最大 **96 ns**，本批入口错峰不是当前几微秒误差的主要来源。
+
+聚合基线也是本卡开发拟合：对 case 的后续 L 窗口中位拟合 `l0+l1*Kt`，首 tile 单列 dL0；其他参数与候选共用。供给候选的首 tile 没有追加拟合修正，保留前节所述转移限制。
+
+| 共用其他参数的形式 | dual 包络：中位 / 最大 / RMS | 同调用 dual event：中位 / 最大 / RMS |
+|---|---|---|
+| 周期聚合线性 L | 10.73% / 14.00% / 10.45% | 9.56% / 13.76% / 9.60% |
+| 周期有效地址＋填零 L | 4.00% / 8.49% / 4.62% | 3.76% / 7.14% / 4.19% |
+| ns 聚合线性 L | 7.98% / 17.06% / 10.16% | 6.87% / 15.50% / 9.36% |
+| ns 有效地址＋填零 L | 3.55% / 6.89% / 4.10% | 3.46% / 5.95% / 3.72% |
+
+误差先按同一进程求相对差，再取各 case 的十进程中位，最后对 13 个 case 评分。以上改善说明部分供给变化已通过 mainloop、pingpong 交接和 epilogue 重叠传播到完整事件路径，而不要求每个 L 窗口先达到很小误差。
+
+**首 tile 与剩余误差的诊断。** 下面两种对照明确使用实测 L，仅用于定位，不作为预测成绩：
+
+| 仍共用其他参数 | 周期 dual event：中位 / 最大 | ns dual event：中位 / 最大 |
+|---|---|---|
+| 只将候选的首 L 换成实测 | 3.84% / 6.41% | 2.34% / 6.39% |
+| 所有 L 换成同调用实测 | 5.28% / 8.26% | 0.39% / 1.60% |
+
+首段转移确实影响 ns 组合，但不能单独消除最大残差。所有实测 L 接入 ns 递推后，现有共用其他参数已能把该批 event 误差收敛到约 1.6% 内；下一项主要工作仍是首/后续 L 对位置、请求历史及填零状态的条件关系，而不是先加总时间偏置或另建输出递推。
+
+周期端的实测 L 对照反而比候选总时间误差更大，说明当前候选与统一周期→ns换算存在误差抵消。进一步改用各 case 的其他事件参数作诊断时，实测 L 的 CTA 自身周期跨度中位误差约 **0.75%**，但 dual event 中位误差仍为 **5.30%**；ns 对应约 **0.74%** 和 **0.30%**。因此不能因周期组合的 event 更接近就认定内部时间路径已正确；更具体的可预测频率规则仍需由时间模型提供，禁止用目标例实测 f 补上。
+
+各 case 非 L 参数诊断没有明显解决 ns 候选的剩余误差：dual event 中位/最大为 **3.11%/5.51%**，与共用参数的 3.46%/5.95% 接近。缺少 case 内某个分支观测时保留同卡共用项。这仍是诊断，不表示这些参数对新条件已可预测。
+
+**慢分项与 plain 保持单列。** ns 候选在 padM OOB 的 K=1024/4096 dual event 上分别偏短约 **5.95%/5.52%**，B 曲线 p32 偏短约 **5.18%**。原 j=2/T=5 有效地址慢窗口及 20 个 whole-fill 分组的残差没有删除；L 的均值误差与关键 CTA 完成时间不是同一指标。plain 仅用同一预测作诊断，周期/ns 中位/最大为 **4.26%/13.90%**、**3.30%/7.53%**，不用于估计 F，也不以其与预测接近替代 dual 阶段验证。
+
+本次组合可继续交主管试算：仅 L 使用工作列表、descriptor/stride、stage 和显式频率假设；其他量暂为本卡开发校准常数。后续优先解决已定位的首段转移与同需求、不同位置的 L 差异，同时让时间模型提供可预测频率；物理填零路径、服务率和队列状态仍不作唯一归因。原 R10 留出、各 run 及其旧分析全部保持原样。
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
+  --compose-fill /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json \
+  --assumed-ghz 1.6 \
+  --run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203 \
+  --output <该run下新的reanalysis目录>
+```
