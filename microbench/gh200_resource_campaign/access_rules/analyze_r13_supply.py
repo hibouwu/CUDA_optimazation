@@ -679,8 +679,12 @@ FILL_FIELDS = ['valid_source_KiB', 'B_extra32_KiB', 'B_extra128_KiB',
                'A_fill_KiB', 'B_fill_KiB']
 
 
-def fill_geometry(row, setup):
-    """Descriptor-address demand and local zero-fill demand for this cfg_b cohort."""
+def fill_cta_features(row, setup):
+    """Return [CTA][output tile][FILL_FIELDS] using only row/setup.
+
+    CTA/tile order follows scheduled_work. The first three fields are effective
+    software-wave demands; the last two retain each tile's local zero-fill demand.
+    """
     from v08_model import scheduled_work
     if row['config']!='cfg_b': raise ValueError('this fill component is calibrated for cfg_b only')
     work=scheduled_work('cfg_b',row['m'],row['n'],setup['grid'],row['swizzle'])
@@ -702,11 +706,20 @@ def fill_geometry(row, setup):
     credit=min(setup['stages'],kt)/kt
     effective=[(1-credit)*v+credit*(waves[j+1] if j+1<len(waves) else np.zeros(3))
                for j,v in enumerate(waves)]
+    return [[np.r_[effective[j],v[3:]] for j,v in enumerate(values)]
+            for values in requests]
+
+
+def fill_geometry(row, setup):
+    """Compatibility grouping of per-CTA descriptor and local zero-fill demands."""
+    from v08_model import scheduled_work
+    requests=fill_cta_features(row,setup)
+    work=scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'])
     grouped=defaultdict(list)
     for coords,values in zip(work,requests):
         for j,((mi,ni),v) in enumerate(zip(coords,values)):
             cls='padM' if mi*128>=row['m'] else 'padN' if ni*128>=row['n'] else 'in'
-            grouped[j,len(coords),cls].append(np.r_[effective[j],v[3:]])
+            grouped[j,len(coords),cls].append(v)
     return {key:dict(X=np.mean(values,axis=0).tolist(),windows=len(values)) for key,values in grouped.items()}
 
 
