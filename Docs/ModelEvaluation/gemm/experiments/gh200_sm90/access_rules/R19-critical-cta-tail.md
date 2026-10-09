@@ -1,5 +1,7 @@
 # R19：cfg_b实际工作分配与关键CTA尾部
 
+**当前V09诊断：P2的漏选主要来自CTA内部服务排序，入口偏斜不能解释；A16的132个并列候选虽命中，不能定位。** P1同输出map配对进一步确认输入边界cluster会使完整伙伴成为最后者。直接替换与干预检验见[当前分析](#v09-critical-failure)。以下首批cfg_b实验说明调度与计时边界。
+
 8个条件、160个通过数值与稳定性检查的进程已采样并独立复算，655,360个输出值正确；另保留4个30次预热后仍未收敛的尝试，不计入正式参数。每条件10组plain/trace，所有plain CV≤2.8%，trace扰动≤4.9%。同R18的job737122、GPU-099dda56，CUDA12.9.41、CUTLASS3.9.2、sm_90a、NDEBUG。
 
 ## 配置与计时
@@ -102,3 +104,25 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 ### V09 的关键 CTA（2026-10-09）
 
 [V09](V09-component-validation.md) 保留冻结时的精确并列集合，没有测后扩大。cfg_a G3 A+16B中，模型选出的代表CTA比真正最后完成者的CTA内耗时短约14.60%；真正最后完成者仍落在132个并列候选中，因此集合命中不等于唯一定位。cfg_c partial/swizzle8中，真正最后完成者在10/10进程里均不属于冻结的7个候选，而该例总时间误差只有−5.75%。后续先用本批entry/end与分项记录区分入口偏斜和CTA内部耗时，不能用总时间达标代替定位正确。
+
+
+<a id="v09-critical-failure"></a>
+
+## V09：入口替换不能修复关键 CTA
+
+分别把实际入口偏移加到冻结 CTA 内部时长上、或用实际内部时长并把所有入口设为零。两项只作诊断，不进入预测，也不扩充冻结候选。最后完成者按 `argmax(end_ns)` 的并列集合定义，最长本地窗口另按 `argmax(end_ns−entry_ns)` 和 `argmax(end_c−entry_c)` 保存。
+
+| 条件 | 冻结候选数 | 冻结集合命中 / 10 | 只换入口命中 / 10 | 只换内部时长命中 / 10 | 入口分散 ns | 冻结集合最好者距最晚退出 ns |
+|---|---:|---:|---:|---:|---:|---:|
+| cfg_a G3 base | 132 | 10 | 1 | 9 | 160 | 0 |
+| cfg_a G3 A16 | 132 | 10 | 0 | 10 | 160 | 0 |
+| cfg_a P1 | 38 | 10 | 0 | 10 | 128 | 0 |
+| cfg_c P2 | 7 | 0 | 0 | 10 | 128 | 4640 |
+
+后三行中，消去入口偏移仍能定位真正最后完成者，而修正入口不能恢复冻结内部时长的排序。P2 入口分散128 ns，最佳冻结候选的退出缺口中位4.640 μs；因此入口偏斜不是这次漏选的主要来源。表中全是每进程独立判定后汇总，不能由跨进程中位 CTA 构造虚拟调用。
+
+A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。冻结代表 CTA 的本地时长比真正最后者短14.60%；同次执行中，代表的 sum L 中位41.008 μs，实际最后者49.200 μs，差异集中在主循环。P1 同样出现 real tile 最后完成：实际最后者的 sum L 为43.312 μs，冻结代表为38.672 μs。P2 的最后者 sum L 约182.048 μs，模型对该 CTA 低估12.712 μs；输出只低估0.496 μs。应修正局部与共享服务的条件响应，不能通过扩大并列集合或加统一入口修正掩盖问题。
+
+同形状P1 map补测在新a058卡上提供了直接干预：map960的十次最后完成者全部处理real tile，集中在CTA22/38，首tile为M坐标6，与partial的M坐标7同cluster。输入map扩到1024后，这些完整伙伴的first L配对中位缩短约4.144 μs，最后完成者不再集中在22/38；观测包络中位48.704→44.624 μs，入口分散160→128 ns。map960最后者的sum L中位42.832 μs，map1024为38.560 μs。这支持输入边界cluster影响内部排序，不能把“最后者是real”解释为边界无关，也不需要新增入口补偿。该新卡配对没有重评旧V09候选命中率。[新配对逐进程最后者](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
+
+[C-processes](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-processes.json)保存逐进程并列集合、逐CTA坐标、SMID、入口与退出及同CTA分解；[C-summary](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)覆盖29个有数值预测条件的290个dual进程。被拒绝的cfg_c G2没有冻结CTA预测，不计算替换评分。这些是V09开发诊断，不改其留出成绩。

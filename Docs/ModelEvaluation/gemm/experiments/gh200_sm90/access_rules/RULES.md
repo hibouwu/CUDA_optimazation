@@ -89,6 +89,8 @@ DONE_j = epilogue_end(ep_j, 下一轮主循环窗口)
 
 [测后消融](V01-validation.md#v09-ablation)暂不支持整体退回V08聚合形式：共享时钟下完整候选4.11%/35.46%，同卡重拟合V08形式5.56%/48.68%。局部收益并不一致，保留现行候选而不增加分支；这不是新的留出成绩。
 
+后续对照给下一版增加了三项结构约束，尚未产生可迁移的新系数：[R13](R13-async-retirement.md#v09-stage-failure)的stage响应不能仅用固定启动项或恒定每Ktile罚项描述；[R18](R18-cluster-boundary.md#v09-boundary-failure)的输入边界代价必须区分首轮、后续轮次及同cluster的完整伙伴；[R09](R09-inkernel-clock-stages.md#v09-three-layer-diagnostic)的长K条件时钟失配不能仅归结于服务误差，也没有依据设置硬频率下限。新卡局部配对只约束候选形式，不替换旧卡参数或V09成绩。
+
 ## 计量与组合约定
 
 - 有效数学工作为 `2MNK FLOP`；补齐 tile、消费者归约、地址、同步与排空按实际窗口计入时间，不能混入同一有效 FLOP 分子。

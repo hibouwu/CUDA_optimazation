@@ -40,7 +40,7 @@ def random_references(indices,m,n,k,seed):
     return expected,tolerances
 
 
-def replay(root,record,row):
+def replay(root,record,row,retain_roles=False):
     raw=root/record['raw']
     if common.sha(raw)!=record['raw_sha256']:raise ValueError('raw process identity changed')
     with gzip.open(raw,'rt') as stream:events={ev['event']:ev for line in stream if line.strip() for ev in [json.loads(line)]}
@@ -130,6 +130,9 @@ def replay(root,record,row):
             ns_roles=[dict(tiles=r['tiles_ns'],final_c=r['final_ns'],final_ns=r['final_ns']) for r in roles]
             cta['tiles_ns']=model.cta_timeline(dict(roles=ns_roles),schedule)[0]
             cta['prod_ns']=head[13]
+        if retain_roles:
+            cta['roles']=roles
+            cta['role_work']=coords
         result['ctas'].append(cta)
         seen+=work
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
@@ -373,6 +376,288 @@ def analyze_input_map_pairs(root, output):
               'Stage windows are dual-observer measurements; logical pad classes do not change when the input map expands. '
               'These are paired process comparisons, not physical traffic counts or a frozen prediction.'))
     print('input-map pairs',len(pairs),'successful processes',len(all_hashes),'->',output)
+
+
+def boundary_geometry(row,coord):
+    """Logical output footprint, independent of input descriptor padding."""
+    tm,tn,_=model.CONFIGS[row['config']]['tile']
+    mi,ni=coord
+    mr=max(0,min(tm,row['m']-mi*tm));nr=max(0,min(tn,row['n']-ni*tn))
+    return 'oob' if not mr or not nr else 'partial' if mr<tm or nr<tn else 'real'
+
+
+def maximum_set(values):
+    top=max(values)
+    return [i for i,v in enumerate(values) if abs(v-top)<1e-7]
+
+
+def critical_replacements(ctas,prediction):
+    """Diagnostic counterfactuals, never model input or a revised candidate set."""
+    entry0=min(c['entry_ns'] for c in ctas)
+    entries=[c['entry_ns']-entry0 for c in ctas]
+    durations=[c['end_ns']-c['entry_ns'] for c in ctas]
+    cycles=[c['end_c']-c['entry_c'] for c in ctas]
+    ends=[e+d for e,d in zip(entries,durations)]
+    pred=prediction['cta_duration_ns'];frozen=prediction['critical_candidates']
+    if len(pred)!=len(ctas):raise ValueError('prediction and observed CTA counts differ')
+    with_entry=[e+d for e,d in zip(entries,pred)]
+    last=maximum_set(ends);local=maximum_set(durations)
+    representative=prediction['critical_cta']
+    return dict(observed_last=last,observed_longest_ns=local,observed_longest_cycles=maximum_set(cycles),
+        frozen_candidates=frozen,frozen_representative=representative,
+        frozen_hit=bool(set(last)&set(frozen)),candidate_count=len(frozen),
+        entry_only_candidates=maximum_set(with_entry),
+        entry_only_hit=bool(set(last)&set(maximum_set(with_entry))),
+        internal_only_candidates=local,internal_only_hit=bool(set(last)&set(local)),
+        entry_spread_ns=max(entries),observed_envelope_ns=max(ends),
+        frozen_envelope_ns=max(pred),entry_only_envelope_ns=max(with_entry),
+        internal_only_envelope_ns=max(durations),
+        representative_duration_deficit=1-durations[representative]/max(durations[i] for i in last),
+        representative_finish_deficit_ns=max(ends)-ends[representative],
+        best_frozen_finish_deficit_ns=max(ends)-max(ends[i] for i in frozen),
+        ctas=[dict(cta=c['cta'],sm=c['sm'],entry_offset_ns=e,duration_ns=d,duration_cycles=cy,
+                   end_offset_ns=en,prediction_ns=p,work=c['work'])
+              for c,e,d,cy,en,p in zip(ctas,entries,durations,cycles,ends,pred)])
+
+
+def boundary_stage_rows(row,observed,prediction=None,source=''):
+    """Same-role paired endpoints; merged CTA residuals are labeled separately."""
+    rows=[]
+    for c in observed['ctas']:
+        for role,(r,work) in enumerate(zip(c['roles'],c['role_work'])):
+            for j,(cy,ns,coord) in enumerate(zip(r['tiles'],r['tiles_ns'],work)):
+                for stage,i,k in [('L',0,1),('E',2,3)]:
+                    rows.append(dict(case=row['id'],trial=observed['trial'],source=source,cta=c['cta'],role=role,
+                        j=j,T=len(work),phase='first' if j==0 else 'later',geometry=boundary_geometry(row,coord),
+                        mi=coord[0],ni=coord[1],stage=stage,cycles=cy[k]-cy[i],ns=ns[k]-ns[i],
+                        prediction_ns=None,measurement='same_role'))
+            if work:
+                rows.append(dict(case=row['id'],trial=observed['trial'],source=source,cta=c['cta'],role=role,
+                    j=len(work)-1,T=len(work),phase='tail',geometry=boundary_geometry(row,work[-1]),
+                    mi=work[-1][0],ni=work[-1][1],stage='tail',cycles=r['final_c']-r['tiles'][-1][3],
+                    ns=r['final_ns']-r['tiles_ns'][-1][3],prediction_ns=None,measurement='same_role'))
+        if prediction is not None:
+            pe=prediction['cta_events'][c['cta']]['events']
+            for j,(ns,coord,p) in enumerate(zip(c['tiles_ns'],c['work'],pe)):
+                for stage,i,k in [('L',0,1),('E',2,3)]:
+                    rows.append(dict(case=row['id'],trial=observed['trial'],source=source,cta=c['cta'],role=-1,
+                        j=j,T=len(c['work']),phase='first' if j==0 else 'later',geometry=boundary_geometry(row,coord),
+                        mi=coord[0],ni=coord[1],stage=stage,cycles=None,ns=ns[k]-ns[i],
+                        prediction_ns=p[k]-p[i],measurement='merged_cta'))
+            if c['work']:
+                coord=c['work'][-1]
+                rows.append(dict(case=row['id'],trial=observed['trial'],source=source,cta=c['cta'],role=-1,
+                    j=len(c['work'])-1,T=len(c['work']),phase='tail',geometry=boundary_geometry(row,coord),
+                    mi=coord[0],ni=coord[1],stage='tail',cycles=None,
+                    ns=c['end_ns']-max(t[3] for t in c['tiles_ns']),
+                    prediction_ns=prediction['cta_events'][c['cta']]['tail'],measurement='merged_cta'))
+    return rows
+
+
+def stage_process_summary(rows):
+    """Reduce correlated CTA windows inside each process before case statistics."""
+    grouped=defaultdict(list)
+    keys=('case','trial','measurement','role','phase','geometry','stage')
+    for r in rows:grouped[tuple(r[k] for k in keys)].append(r)
+    processes=[]
+    for key,group in sorted(grouped.items()):
+        value=dict(zip(keys,key),windows=len(group),ns=statistics.median(r['ns'] for r in group))
+        cycles=[r['cycles'] for r in group if r['cycles'] is not None]
+        if cycles:value['cycles']=statistics.median(cycles)
+        predicted=[r for r in group if r['prediction_ns'] is not None]
+        if predicted:
+            value['prediction_ns']=statistics.median(r['prediction_ns'] for r in predicted)
+            value['error_ns']=statistics.median(r['prediction_ns']-r['ns'] for r in predicted)
+            rel=[r['prediction_ns']/r['ns']-1 for r in predicted if r['ns']>0]
+            if rel:value['relative_error']=statistics.median(rel)
+        processes.append(value)
+    return processes
+
+
+def old_boundary_pairs(base):
+    """Reuse existing fixed-output input-map interventions, with role endpoints."""
+    from analyze_r13_sm import select_attempts
+    summaries=[];provenance={}
+    fixed=('config','m','n','k','lda','ldb','ldd','storage_m','storage_n','alloc_lda','alloc_ldb',
+           'zero_m','zero_n','swizzle','sm_count','input_mode','seed')
+    for name in ('20261009-R18-first-fill-job738707','20261009-R18-first-fill-job738865'):
+        root=base/name;rows=json.loads((root/'cases.json').read_text());cache={}
+        for row in rows:
+            selected,_,_=select_attempts(root,row['id'],('dual','plain'))
+            calls={};times=defaultdict(list)
+            for item in selected:
+                rec=item['record'];obs=replay(root,rec,row,retain_roles=rec['variant']=='dual')
+                times[rec['variant']].append(obs['elapsed_us'])
+                provenance[str(root/rec['raw'])]=rec['raw_sha256']
+                if rec['variant']=='dual':
+                    calls[rec['trial']]=(obs,stage_process_summary(boundary_stage_rows(row,obs,source=str(root/rec['raw']))))
+            cache[row['id']]=(calls,{v:statistics.median(t) for v,t in times.items()})
+        for group in sorted({r['group'] for r in rows}):
+            a=next(r for r in rows if r['group']==group and r['input_path']=='oob')
+            b=next(r for r in rows if r['group']==group and r['input_path']=='address_zero')
+            if any(a[k]!=b[k] for k in fixed):raise ValueError('input-map pair changed another factor')
+            ca,ta=cache[a['id']];cb,tb=cache[b['id']];deltas=[]
+            for trial in sorted(ca):
+                oa,sa=ca[trial];ob,sb=cb[trial]
+                if [c['work'] for c in oa['ctas']]!=[c['work'] for c in ob['ctas']]:raise ValueError('work changed')
+                lookup={(r['role'],r['phase'],r['geometry'],r['stage']):r for r in sb}
+                for r in sa:
+                    key=r['role'],r['phase'],r['geometry'],r['stage'];s=lookup[key]
+                    deltas.append(dict(trial=trial,role=key[0],phase=key[1],geometry=key[2],stage=key[3],
+                        oob_ns=r['ns'],address_zero_ns=s['ns'],delta_ns=s['ns']-r['ns'],
+                        oob_cycles=r['cycles'],address_zero_cycles=s['cycles'],delta_cycles=s['cycles']-r['cycles']))
+            summaries.append(dict(root=str(root),group=group,oob=a,address_zero=b,
+                plain_relative=tb['plain']/ta['plain']-1,dual_relative=tb['dual']/ta['dual']-1,
+                oob_plain_us=ta['plain'],address_zero_plain_us=tb['plain'],processes=deltas))
+    return dict(pairs=summaries,provenance=provenance,
+        scope='Same output and allocation, changed input descriptor; independent processes grouped by trial, not one shared invocation. Positive delta means address-zero slower. No physical write-completion claim.')
+
+
+def failure_diagnostics(base,output,calls_factory):
+    """V09 post-hoc endpoint/geometry analysis. Does not modify predictions."""
+    import csv
+    output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    processes=[];stages=[];provenance={}
+    selected=('v09d_cfg_a_P1_partial_first_and_later','v09d_cfg_c_P2_partial_later_sw8',
+              'v09d_cfg_a_G3_A16','v09d_cfg_a_G3_base')
+    for call in calls_factory(base):
+        row=call['row'];obs=call['observed'];pred=call['prediction'];rec=call['record']
+        if not pred.get('cta_duration_ns'):continue
+        source=call.get('source',str(Path(base)/'20261009-V09-heldout-job739011'/rec['raw']))
+        value=critical_replacements(obs['ctas'],pred)
+        value.update(case=row['id'],trial=call['trial'],source=source,raw_sha256=rec['raw_sha256'])
+        if row['id'] not in selected:value.pop('ctas')
+        elif row['config']!='cfg_b':
+            for c,detail,pp in zip(obs['ctas'],value['ctas'],pred['cta_events']):
+                ns=c['tiles_ns'];pe=pp['events']
+                actual=dict(prefix=ns[0][0]-c['entry_ns'],L=sum(t[1]-t[0] for t in ns),
+                    E=sum(t[3]-t[2] for t in ns),tail=c['end_ns']-ns[-1][3])
+                actual['gaps']=detail['duration_ns']-sum(actual.values())
+                predicted=dict(prefix=pe[0][0],L=sum(t[1]-t[0] for t in pe),
+                    E=sum(t[3]-t[2] for t in pe),tail=pp['tail'])
+                predicted['gaps']=detail['prediction_ns']-sum(predicted.values())
+                detail['observed_components_ns']=actual;detail['predicted_components_ns']=predicted
+        processes.append(value);provenance[source]=rec['raw_sha256']
+        if row['id'] in selected:stages.extend(boundary_stage_rows(row,obs,pred,source))
+    stage_summary=stage_process_summary(stages)
+    grouped=defaultdict(list)
+    for p in processes:grouped[p['case']].append(p)
+    cases=[]
+    for case,group in sorted(grouped.items()):
+        value=dict(case=case,processes=len(group),candidate_count=group[0]['candidate_count'])
+        for k in ('frozen_hit','entry_only_hit','internal_only_hit'):value[k]=sum(p[k] for p in group)
+        for k in ('entry_spread_ns','observed_envelope_ns','frozen_envelope_ns','entry_only_envelope_ns',
+                  'internal_only_envelope_ns','representative_duration_deficit','representative_finish_deficit_ns','best_frozen_finish_deficit_ns'):
+            value[k]=statistics.median(p[k] for p in group)
+        cases.append(value)
+    common.write_json(output/'C-processes.json',dict(processes=processes,provenance=provenance))
+    common.write_json(output/'C-summary.json',dict(cases=cases,stages=stage_summary,
+        scope='Development diagnostics: fixed frozen candidates; entry-only replacement adds measured entry offsets to predicted duration; internal-only removes entry offsets from measured duration. These are observed counterfactuals, not forecasts. Same-role stage endpoints; merged CTA model residuals kept separate.'))
+    with gzip.open(output/'C-stages.csv.gz','wt',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=list(stages[0]));writer.writeheader();writer.writerows(stages)
+    common.write_json(output/'C-old-input-pairs.json',old_boundary_pairs(Path(base)))
+    return dict(cases=len(cases),processes=len(processes),stage_rows=len(stages))
+
+
+def paired_boundary_windows(row,control,mapped,control_source='',mapped_source=''):
+    """Match CTA/role/work within two independent processes of one trial."""
+    if control['trial']!=mapped['trial']:raise ValueError('unmatched trial')
+    if [[c['work'],c['role_work']] for c in control['ctas']]!=[[c['work'],c['role_work']] for c in mapped['ctas']]:
+        raise ValueError('descriptor pair changed work coordinates')
+    left=boundary_stage_rows(row,control,source=control_source)
+    right=boundary_stage_rows(row,mapped,source=mapped_source)
+    keys=('cta','role','j','stage')
+    lookup={tuple(r[k] for k in keys):r for r in right}
+    if len(lookup)!=len(left):raise ValueError('descriptor pair has different role windows')
+    paired=[]
+    for a in left:
+        b=lookup[tuple(a[k] for k in keys)]
+        cm,cn=model.CONFIGS[row['config']]['cluster']
+        m0,n0=(a['mi']//cm)*cm,(a['ni']//cn)*cn
+        cluster_classes={boundary_geometry(row,(mi,ni)) for mi in range(m0,m0+cm) for ni in range(n0,n0+cn)}
+        cluster_boundary='partial' if 'partial' in cluster_classes else 'oob' if 'oob' in cluster_classes else 'interior'
+        paired.append(dict(trial=a['trial'],cta=a['cta'],role=a['role'],j=a['j'],T=a['T'],cluster_boundary=cluster_boundary,
+            mi=a['mi'],ni=a['ni'],phase=a['phase'],geometry=a['geometry'],stage=a['stage'],
+            oob_ns=a['ns'],address_zero_ns=b['ns'],delta_ns=b['ns']-a['ns'],
+            oob_cycles=a['cycles'],address_zero_cycles=b['cycles'],delta_cycles=b['cycles']-a['cycles'],
+            oob_source=control_source,address_zero_source=mapped_source))
+    return paired
+
+
+def control_diagnostics(root,output):
+    """Same-card P1 input-map intervention; no old-card frozen parameters."""
+    import csv
+    from analyze_r13_sm import select_attempts
+    root=Path(root);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    common.verify(root)
+    rows=[r for r in json.loads((root/'cases.json').read_text()) if r['group']=='r18_partial_map']
+    a=next(r for r in rows if r['input_map_m']==960);b=next(r for r in rows if r['input_map_m']==1024)
+    if {k:v for k,v in a.items() if k not in ('id','input_map_m')}!={k:v for k,v in b.items() if k not in ('id','input_map_m')}:
+        raise ValueError('P1 descriptor intervention changed another field')
+    setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+    fixed=('grid','allocated_a_elements','allocated_b_elements','storage_m','storage_n',
+           'initialized_input_rows','initialized_input_columns','gpu_uuid','stages','smem')
+    if any(setups[a['id']][k]!=setups[b['id']][k] for k in fixed):raise ValueError('P1 setup mismatch')
+    cache={};cases=[];provenance={};last_ctas=[]
+    for row in rows:
+        selected,failed,_=select_attempts(root,row['id'],('plain','dual'))
+        variants={v:{} for v in ('plain','dual')};records={}
+        for item in selected:
+            rec=item['record'];obs=replay(root,rec,row,retain_roles=rec['variant']=='dual')
+            variants[rec['variant']][rec['trial']]=obs
+            source=str(root/rec['raw']);provenance[source]=rec['raw_sha256'];records[rec['variant'],rec['trial']]=source
+            if rec['variant']=='dual':
+                ctas=obs['ctas'];earliest=min(c['entry_ns'] for c in ctas);last=maximum_set([c['end_ns'] for c in ctas])
+                details=[]
+                for i in last:
+                    c=ctas[i];ns=c['tiles_ns']
+                    details.append(dict(cta=i,sm=c['sm'],work=c['work'],geometry=[boundary_geometry(row,w) for w in c['work']],
+                        entry_offset_ns=c['entry_ns']-earliest,duration_ns=c['end_ns']-c['entry_ns'],
+                        prefix_ns=ns[0][0]-c['entry_ns'],L_ns=[t[1]-t[0] for t in ns],E_ns=[t[3]-t[2] for t in ns],
+                        tail_ns=c['end_ns']-ns[-1][3]))
+                last_ctas.append(dict(case=row['id'],trial=rec['trial'],source=source,
+                    envelope_ns=max(c['end_ns'] for c in ctas)-earliest,
+                    entry_spread_ns=max(c['entry_ns'] for c in ctas)-earliest,last=details))
+        if any(set(variants[v])!=set(range(10)) for v in variants):raise ValueError('P1 needs ten successful processes per variant')
+        times={v:[variants[v][t]['elapsed_us'] for t in range(10)] for v in variants}
+        med={v:statistics.median(t) for v,t in times.items()}
+        cases.append(dict(case=row['id'],condition=row,median_us=med,
+            cv={v:statistics.pstdev(t)/statistics.mean(t) for v,t in times.items()},
+            dual_over_plain=med['dual']/med['plain']-1,times_us=times,failed_attempts=failed))
+        cache[row['id']]=(variants,records)
+    ac,ar=cache[a['id']];bc,br=cache[b['id']];windows=[]
+    for trial in range(10):
+        windows.extend(paired_boundary_windows(a,ac['dual'][trial],bc['dual'][trial],ar['dual',trial],br['dual',trial]))
+    groupkeys=('trial','role','phase','geometry','cluster_boundary','stage','j','T')
+    grouped=defaultdict(list)
+    for w in windows:grouped[tuple(w[k] for k in groupkeys)].append(w)
+    processes=[]
+    for key,group in sorted(grouped.items()):
+        value=dict(zip(groupkeys,key),windows=len(group))
+        for metric in ('oob_ns','address_zero_ns','delta_ns','oob_cycles','address_zero_cycles','delta_cycles'):
+            value[metric]=statistics.median(r[metric] for r in group)
+        processes.append(value)
+    groups=defaultdict(list)
+    for p in processes:groups[tuple(p[k] for k in groupkeys[1:])].append(p)
+    summary=[]
+    for key,group in sorted(groups.items()):
+        value=dict(zip(groupkeys[1:],key),processes=len(group))
+        for metric in ('oob_ns','address_zero_ns','delta_ns','oob_cycles','address_zero_cycles','delta_cycles'):
+            value[metric]=statistics.median(r[metric] for r in group)
+        value['delta_ns_min']=min(r['delta_ns'] for r in group);value['delta_ns_max']=max(r['delta_ns'] for r in group)
+        summary.append(value)
+    contrasts={v:dict(oob_us=statistics.median(ac[v][t]['elapsed_us'] for t in range(10)),
+        address_zero_us=statistics.median(bc[v][t]['elapsed_us'] for t in range(10)),
+        paired_relative=[bc[v][t]['elapsed_us']/ac[v][t]['elapsed_us']-1 for t in range(10)]) for v in ('plain','dual')}
+    for v in contrasts:contrasts[v]['relative']=contrasts[v]['address_zero_us']/contrasts[v]['oob_us']-1
+    result=dict(root=str(root),environment=json.loads((root/'environment.json').read_text()),cases=cases,
+        contrasts=contrasts,stage_summary=summary,stage_processes=processes,critical_ctas=last_ctas,
+        raw_sha256=provenance,analyzer_sha256=common.sha(Path(__file__)),
+        scope='Same-card, same-output P1 descriptor intervention. Positive delta means valid-address zero slower than descriptor OOB. Independent processes paired by trial and coordinate; statistics reduce correlated CTA windows within each process first. Same-role cycles/ns and merged last-CTA durations are separate. No old-card model parameter or physical write completion inferred.')
+    common.write_json(output/'C-controls.json',result)
+    with gzip.open(output/'C-controls-windows.csv.gz','wt',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=list(windows[0]));writer.writeheader();writer.writerows(windows)
+    return dict(cases=2,processes=40,paired_windows=len(windows),contrasts=contrasts,stage_summary=summary)
 
 
 if __name__=='__main__':

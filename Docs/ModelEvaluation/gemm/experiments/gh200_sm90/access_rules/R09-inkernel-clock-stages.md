@@ -1,7 +1,7 @@
 # R09：调用内时钟、输入与时间换算
 
 当前时钟候选以名义 Tensor/源请求工作和输入模式预测有效 cycle/ns，参数及组合见 [V09 r2](RULES.md#v09-model)。**V09 整体未通过**：cfg_b K32768 的频率低估 25.00%，完整时间高估 35.46%；训练窗口内的拟合不能代替跨 K 验证。
-同卡输入对照还表明，zero/random 会同时改变周期窗口与频率；不能只换一个 GHz 常数。以下保留能区分这些解释的实验与负结果，完整旧推导见 [cee978a 固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。
+逐进程分解进一步定位：cfg_b 长K在**观测包络下**的频率误差为−53.39%，自由联立缓和到−25.00%；代入同次观测频率后，包络误差仅−0.47%。直接删除源请求项使原训练频率RMS从2.39%恶化到30.76%，因此保留现行候选。新卡观察协议对照没有出现同量级的系统频率差，但长窗口plain仍比两种记录版本慢，后续须分开检查源工作代理与完整时间映射。同卡zero/random也会同时改变周期窗口与频率，不能只换一个GHz常数。完整旧推导见 [cee978a 固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。
 
 ## 用哪个窗口换算周期与时间？
 
@@ -178,6 +178,39 @@ cfg_b 6144×8192×32768的自由f为0.9000 GHz、观测约1.2000 GHz；时间误
 
 V09的换算周期误差与频率误差相关，但换算量本身包含f，不能据此认定“训练时吸收了周期误差”。当前clock已直接拟合观测f；要分别比较局部cycle/ns、观测W条件频率和自由组合残差。[误差抵消复核](V09-component-validation.md#cycle-frequency-cancellation)。
 
+<a id="v09-three-layer-diagnostic"></a>
+
+### 观测包络能否消除时钟误差？
+
+固定r2参数，对30条件的300个成功dual进程分别计算：原自由频率、代入该次观测包络W的条件频率、代入该次观测频率的事件递推。下表先逐进程算相对误差，再取10次中位，和先汇总中位数再相除不完全相同。拒绝的cfg_c G2保留诊断，但不补入V09成绩。
+
+| G6配置 | 自由f误差 | 观测W下f误差 | 代入观测f后的包络误差 |
+|---|---:|---:|---:|
+| cfg_a | −4.63% | −0.17% | −8.19% |
+| cfg_b | −25.00% | −53.39% | −0.47% |
+| cfg_c | −8.05% | −12.93% | −0.73% |
+
+cfg_b/c的条件频率10/10次偏低，不能把失败只归于周期预测通过联立污染频率；cfg_b的联立实际上缩小了频率误差。cfg_a则不同：条件频率中位接近观测，换入观测f仍少8.19%的包络，服务和事件组织仍有缺口。短G1三个配置的条件频率误差分别为+6.85%、+6.68%、+5.97%，也是公式在观测W下的偏差，不能只调整F掩盖。
+
+**一个调用平均f何时够用？** 按消费者原始角色分别取相同端点的cycle/ns，first/later按全CTA的tile顺序区分，避免cooperative合并时cycle与ns各选不同角色。300个调用中，301440个合并端点有54处选择不同角色，局部频率统计不使用这些合并比值。所有tile时间戳落在32 ns格点；频率只汇总≥3.2 µs窗口，短窗口仍保留周期和纳秒。cfg_b G6的later主循环频率中位与同次CTA平均f相差最多0.47%；代入观测f后，later主循环误差由+33.12%降至−0.21%。单一f足以解释该条件的后续长循环，首轮却有一次相差26.80%，不能把同一结论推广到首段。cfg_b G6末输出仍低估24.26%，说明修时钟不等于所有组件准确。
+
+**删掉源请求项是否更好？** 仅用原21个K1024条件，保留共享a与每输入Tensor项，重新拟合观测GHz；没有用V09时间、周期或频率拟合。训练频率RMS由2.39%升至30.76%，既有等Q/S的9个K4096条件由4.27%升至19.80%。虽然部分G6残差缩小，整体证据不支持删除源项。需要检查的是源工作代理的条件范围，不能把它称为已识别的物理功率分解。
+
+上述[逐调用诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json)核对了旧作业，没有同时匹配卡、几何、行距、grid/stage、输入和分配容量的成功ends/dual配对。因此补了下面两档，不重跑输入全矩阵。
+
+### 观察协议是否造成长窗口频率偏差？
+
+job739095，a058/GPU-ef8692f3，cfg_b、6144×8192、K4096/32768、dyadic/seed17、swizzle8、132个CTA、stage6；两档都用lda=32768、ldb=8192，同样分配384 MiB A和512 MiB B，但活动输入足迹不同。每档plain/ends/dual各10个进程，60次全部通过原数值检查。ends每tile预留6个word、dual为10，以下比较包含完整观察协议差异，不能把变化唯一归因于时间戳指令。
+
+| K | ends / dual频率中位，GHz | dual/ends频率变化 | dual/ends包络变化 | ends/plain完整时间变化 | dual/plain完整时间变化 |
+|---|---:|---:|---:|---:|---:|
+| 4096 | 1.39393 / 1.39982 | +0.24% | +0.17% | −0.01% | +0.09% |
+| 32768 | 1.26526 / 1.28042 | +0.42% | −0.44% | −3.79% | −3.84% |
+
+变化列先算同trial先后进程的比值，再取中位，不能由前一列的两个频率中位直接相除。dual/ends完整时间变化分别为+0.12%和−0.43%；最大CTA周期则10/10次增加，中位为+0.47%和+0.06%。本卡没有观察到能解释旧25%频率低估的系统协议偏移，但长K的频率配对范围为−9.62%至+4.54%，ends/dual频率CV为1.03%/3.34%，不能声称每对都相差不到1%。
+
+长K的plain/ends/dual完整时间中位为5191.70/5008.10/4954.74 µs，ends在10/10对中更快、dual在7/10对中更快。它说明当前状态下带记录包络到plain的映射仍有独立差异；跨进程比较不能证明记录本身加速，也不能用一个固定项消去。此结果来自新卡，不回溯认定a057无观察扰动，不把旧时钟公式在这里的绝对数值当验证成绩。下一步优先解释源工作代理的跨K残差与长窗口plain映射，暂不增加阶段时钟分支。[全部进程、配对分散及条件](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json)。
+
 ## 作业与复核索引
 
 | 实验问题 / 作业 | 一句结果 | 证据入口 |
@@ -191,5 +224,7 @@ V09的换算周期误差与频率误差相关，但换算量本身包含f，不�
 | 等Q/S跨K，738459 | cfg_a非零输入响应失败，zero不支持统一D项 | [完整配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json) |
 | R18部分零活动，738296/738307 | 固定z只能解释部分频率低估 | [八条件](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-job738296/reanalysis/C-20261009-zero-activity-clock-v1/zero-activity-clock.json) |
 | V09迁移，739011 | cfg_b长K失败，拒绝项与分项独立保留 | [逐例诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/summary.json) |
+| V09三层分解，复用739011 | cfg_b条件时钟失配，删源项无益，缺同条件ends/dual对照 | [300调用与删项结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json) |
+| 观察协议，739095 | 新卡长K无同量级系统频率差，plain映射仍有偏差 | [两档K、60进程](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json) |
 
 离线复核使用各结果中的原分析器或现有 `r09_analyze.py --shared`、`r09_input_source_clock.py`、`r09_equal_work_clock.py`、`r09_zero_activity_clock.py`；参数和命令见对应归档及[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。新输出写新目录，旧summary/frozen只读；本页不复制准备包启动步骤。

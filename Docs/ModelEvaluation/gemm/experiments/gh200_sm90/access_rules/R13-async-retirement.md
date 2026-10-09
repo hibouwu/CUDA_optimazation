@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
+当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
 
 ## 作业与分析索引
 
@@ -14,6 +14,7 @@
 | 三配置，738496 | 29 条件的 first/later 定值；cfg_b 后与旧 B13 有条件联合 | [phase 模型](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)、[cfg_b 联合报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/summary.json) |
 | 首轮填零，738707/738865 | 只补 A/C first；六组训练行与拒绝范围 | [模型](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/models.json)、[验证](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json)、[支持定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json) |
 | V09，739011 | 冻结后的新几何、行距和 stage 迁移 | [完整留出与判定](V09-component-validation.md) |
+| stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
 
 ## 序列供给：消费者与在途组织会改变结果
 
@@ -139,9 +140,48 @@ V08F 在 a043/GPU-099 上的 84 条件中，51 条普通后续窗口用于拟合
 
 V09 冻结前 30 条件为 29 数值＋1 unsupported。cfg_c G2 的 CTA62/63 特征虽在请求张成空间内，在约 1.86 GHz 下却激活未识别方向；最终 r2 条件 LP 给首窗约 **9.066～9.409 µs**。它们可能决定包络，不能忽略或用中点替代；这是固定预测频率下的范围，未重新联立时钟。原诊断与 r2 数值口径分别见[支持定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)、[r2 复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/support-check/report.json)。
 
+<a id="v09-stage-failure"></a>
+
 ## V09 后当前缺口
 
-cfg_b G3 stage4 相对同形状 stage6 实测慢 **10.47%**，冻结模型响应为零。单点总时间误差 −6.88% 不能掩盖这一响应缺失：stage 已出现在有限预填近似中，却还没有解释实际可重叠工作或槽释放约束。先从现有 first/later、当前/下一输出窗口找约束，不能将 stage4 差直接命名为物理队列深度。
+cfg_b G3 stage4 相对同形状 stage6 实测慢 **10.47%**，冻结模型响应为零。单点总时间误差 −6.88% 不能掩盖这一响应缺失。对原dual记录按同trial、CTA与工作坐标配对，先取窗口变化率中位，再取十trial中位：
+
+| stage4相对stage6 | first L | later L | 首段入口→主循环 | 预填 | 末次输出 |
+|---|---:|---:|---:|---:|---:|
+| 直接ns变化 | +5.48% | +15.91% | −6.01% | −2.25% | −7.47% |
+| 主循环cycle变化 | +8.49% | +17.89% | — | — | — |
+
+first/later的ns变化在十trial中分别为+3.29%～+8.52%、+13.92%～+19.25%。差异集中在主循环，later更强；仅修频率、首段或输出都不能解释。L仍包含等待、循环和排空，这些端点没有分别测出TMA等待和槽释放。
+
+### stage参数为什么没有改变预测？
+
+该几何是132个CTA各做两个输出。现行近似以`stages/Ktile`将当前软件波次替换为下一波次需求；没有producer/consumer槽状态。在冻结频率1.54235 GHz下，计算下界为331.96 ns/Ktile：
+
+| 输出位置 | stage6 / stage4有效源需求KiB | stage6 / stage4拟合供给ns/Ktile | max选中项 |
+|---|---:|---:|---|
+| 首轮j0 | 4224 / 4224 | 177.57 / 177.57 | 两者均为计算下界 |
+| 末轮j1 | 3828 / 3960 | 227.04 / 234.87 | 两者均为计算下界 |
+
+首轮的当前/下一波次都包含132个CTA，特征不变；末轮虽然变了，仍被计算下界截住。于是264个L窗口、整条事件递推、频率联立和plain预测完全相同。问题是模型缺少实际流水重叠的响应，不是stage开关没有传入。
+
+静态资源排除了驻留CTA数和spill解释：stage6/4的SMEM为215040/149504 B，均1 CTA/SM、168寄存器、16条静态HGMMA、无spill。但SASS并不等价：plain的GEMM非NOP静态指令数1266/1254，dual为1525/1535，整数与uniform指令的组织也改变。静态条数不是动态工作量，不能把总差直接解释成物理队列容量。
+
+[原卡成对分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-analysis.md)、[max分支、资源与SASS差别](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json)保留上述开发诊断，未改变V09评分。
+
+### 同卡K对照：固定启动差和恒定每Ktile罚项均不充分
+
+job739095在a058/GPU-ef8692f3上测cfg_b、2816×1536、`K1024/4096 × stage4/6`四条件，每条件plain/dual各十进程。固定132 CTA、sw1、dyadic seed17、实际lda=4096与ldb=1536；A/B分配量固定为11556864/6291456个FP16元素，有效源量仍从8.5增至34 MiB。本节只作这张卡内部对照，不迁入a057的绝对参数。下表的Δ均为stage4−stage6：先在同trial、同CTA/j/T/坐标作差，取CTA中位，再取十trial中位。
+
+| K | first ΔL，ns | later ΔL，ns | first ΔL，cycle | later ΔL，cycle |
+|---:|---:|---:|---:|---:|
+| 1024 | −80 | +608 | −116.50 | +1106.00 |
+| 4096 | +968 | +3384 | +2368.75 | +6457.25 |
+
+**只给L加一个固定启动/排空项无法解释。** later的差从608增至3384 ns，十trial范围分别480～672、2976～3968 ns；first甚至由所有trial为负转为全部为正。cycle与直接ns的符号和缩放一致，不能靠频率换算解释。
+
+**跨K共用一个恒定每Ktile罚项也不够。** later的ΔL/Ktile从38.00增至52.875 ns，十trial范围30～42与46.5～62不重叠；cycle/Ktile从69.125增至100.895，范围61.97～78与85.71～120.35也不重叠。这是重复范围而非置信区间。持续供给或指令组织限制仍与结果相容，但尚未从有效源足迹和工作历史中分离；没有识别物理槽容量，也不据此新增经验罚项。
+
+plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11.92%；dual为+5.48%/+11.20%，完整时间同样显示持续差。观察协议的影响单列：K1024的dual/plain中位约+4.15%，单对最大+8.74%；K4096的stage4/6分别为+1.91%/+3.29%，单对最大+4.84%。局部定量结论因此只属于dual窗口，不能用完整时间方向一致证明局部无扰动。首输出窗口也随stage改变（K1024 +14.81%、K4096 −20.92%），不能把总差全部归给L，或把不同中位直接相加。[四点对照与逐trial残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/)。
 
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 
@@ -149,6 +189,6 @@ cfg_b G3 stage4 相对同形状 stage6 实测慢 **10.47%**，冻结模型响应
 
 ## 复核入口
 
-原 18 条件用 `analyze_r13.py --cpu-check` 和 `--input 冻结样本 --output 新目录`；供给开发用 `analyze_r13_supply.py` 的 `--sm-summary`、`--coverage-suite`、`--fill-suite`、`--compose-fill`。各选项的输入和旧命令见上表对应 reanalysis；历史实现细节见[固定 cee978a 正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R13-async-retirement.md)。本次整理不重跑 GPU、不改旧 results，不重新评分。
+原 18 条件用 `analyze_r13.py --cpu-check` 和 `--input 冻结样本 --output 新目录`；供给开发用 `analyze_r13_supply.py` 的 `--sm-summary`、`--coverage-suite`、`--fill-suite`、`--compose-fill`。各选项的输入和旧命令见上表对应 reanalysis；历史实现细节见[固定 cee978a 正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R13-async-retirement.md)。离线重放不修改原始样本和冻结评分。
 
 [组件消融](V01-validation.md#v09-ablation)中，仅退回聚合周期主循环使总误差从4.11%/35.46%变为4.36%/45.26%，first/later窗口中位误差也更大；但A+16B与部分边界反而改善。因此保留条件供给的同时，优先解释这些反例，不据整体均值给所有分支背书。

@@ -1151,6 +1151,372 @@ def compose_fill(run, report_path, output, assumed_ghz):
     print(json.dumps({s:{u:{m:v['dual_event'] for m,v in modes.items()} for u,modes in units.items()} for s,units in scores.items()},indent=2))
 
 
+def _failure_pair_windows(control, variant):
+    """Pair identical software work, never CTA order or physical SM identity."""
+    def windows(ctas):
+        result = {}
+        for c in ctas:
+            total = len(c['work'])
+            for j, (coord, cycles, ns) in enumerate(zip(c['work'], c['tiles'], c['tiles_ns'])):
+                key = (c['cta'], j, total, *coord)
+                if key in result:
+                    raise ValueError('duplicate CTA/work window')
+                result[key] = dict(L_ns=ns[1]-ns[0], L_cycles=cycles[1]-cycles[0],
+                    E_ns=ns[3]-ns[2], prefix_ns=ns[0]-c['entry_ns'] if j == 0 else None,
+                    prefill_ns=ns[0]-c['prod_ns'] if j == 0 else None,
+                    tail_ns=c['end_ns']-max(t[3] for t in c['tiles_ns']) if j == total-1 else None)
+        return result
+    a, b = windows(control), windows(variant)
+    if a.keys() != b.keys():
+        raise ValueError('paired cases have different CTA/j/T/work coordinates')
+    result = []
+    for key in sorted(a):
+        item = dict(zip(('cta', 'j', 'T', 'mi', 'ni'), key))
+        for field in a[key]:
+            av, bv = a[key][field], b[key][field]
+            if av is None:
+                continue
+            item[field+'_base'] = av
+            item[field+'_variant'] = bv
+            item[field+'_delta'] = bv-av
+            if av > 0:
+                item[field+'_ratio'] = bv/av-1
+        fa = a[key]['L_cycles']/a[key]['L_ns']
+        fb = b[key]['L_cycles']/b[key]['L_ns']
+        item['L_rate_ratio'] = fb/fa-1
+        result.append(item)
+    return result
+
+
+def _failure_pair_summary(cohort, control, variant):
+    """Within-trial paired-window medians, then the median over ten trials."""
+    left = {c['trial']: c for c in control}
+    right = {c['trial']: c for c in variant}
+    if left.keys() != right.keys() or len(left) != 10:
+        raise ValueError('failure comparison requires the same ten successful trials')
+    positions, phases = [], defaultdict(list)
+    for trial in sorted(left):
+        rows = _failure_pair_windows(left[trial]['observed']['ctas'], right[trial]['observed']['ctas'])
+        for phase in ('first', 'later'):
+            subset = [r for r in rows if (r['j'] == 0) == (phase == 'first')]
+            if not subset:
+                continue
+            fields = sorted(set().union(*(r.keys() for r in subset)) - {'cta', 'j', 'T', 'mi', 'ni'})
+            phases[phase].append({f: statistics.median(r[f] for r in subset if f in r) for f in fields})
+        for j, total in sorted({(r['j'], r['T']) for r in rows}):
+            subset = [r for r in rows if (r['j'], r['T']) == (j, total)]
+            entry = dict(cohort=cohort, control=left[trial]['row']['id'], variant=right[trial]['row']['id'],
+                trial=trial, j=j, T=total, windows=len(subset))
+            for field in ('L_ns', 'L_cycles', 'E_ns', 'prefix_ns', 'prefill_ns', 'tail_ns'):
+                for suffix in ('base', 'variant', 'delta', 'ratio'):
+                    key = field+'_'+suffix
+                    values = [r[key] for r in subset if key in r]
+                    entry[key] = statistics.median(values) if values else None
+            for key in ('L_ns_delta', 'L_cycles_delta', 'L_rate_ratio'):
+                entry[key+'_p10'], entry[key+'_p90'] = map(float, np.quantile([r[key] for r in subset], [.1, .9]))
+            entry['L_rate_ratio'] = statistics.median(r['L_rate_ratio'] for r in subset)
+            positions.append(entry)
+    phase_summary = {}
+    for phase, trials in phases.items():
+        fields = sorted(set().union(*(t.keys() for t in trials)))
+        phase_summary[phase] = {f: dict(median=statistics.median(t[f] for t in trials if f in t),
+            trial_min=min(t[f] for t in trials if f in t), trial_max=max(t[f] for t in trials if f in t)) for f in fields}
+    position_summary = []
+    for j, total in sorted({(r['j'], r['T']) for r in positions}):
+        group = [r for r in positions if (r['j'], r['T']) == (j, total)]
+        position_summary.append(dict(j=j, T=total, windows=group[0]['windows'],
+            **{f: statistics.median(r[f] for r in group) for f in ('L_ns_base', 'L_ns_variant',
+                'L_ns_delta', 'L_ns_ratio', 'L_cycles_ratio', 'L_rate_ratio')}))
+    return dict(cohort=cohort, control=control[0]['row']['id'], variant=variant[0]['row']['id'],
+        trials=len(left), phases=phase_summary, positions=position_summary), positions
+
+
+def _failure_case_context(call, calibration):
+    row, setup = call['row'], call['setup']
+    requests = static_tma_requests(row, setup)
+    groups = defaultdict(list)
+    for cta, tiles in enumerate(requests['ctas']):
+        for j, tile in enumerate(tiles):
+            groups[j, len(tiles)].append(dict(cta=cta, coord=tile['coord'],
+                preceding_coords=[t['coord'] for t in tiles[:j]],
+                source=tile['A']['source_KiB']+tile['B']['source_KiB']))
+    prices = defaultdict(list)
+    for r in supply_request_rows(row, setup):
+        model = calibration['first_supply' if r['j'] == 0 else 'supply'][row['config']]
+        service = float(np.array(r['X']) @ np.array(model['projection']) @ np.array(model['parameters'][1:]))
+        prices[r['j'],r['T']].append((r['X'],service))
+    return dict(config=row['config'], m=row['m'], n=row['n'], k=row['k'], stages=setup['stages'],
+        gpu=setup['gpu_uuid'], grid=setup['grid'],
+        pitch_bytes=dict(A=2*row.get('lda', row['k']), B=2*row.get('ldb', row['n'])),
+        allocated_elements={k: setup.get(k) for k in ('allocated_a_elements', 'allocated_b_elements')},
+        logical_input_bytes=2*row['k']*(row['m']+row['n']),
+        source_waves=requests['source_waves'], effective_source_waves=requests['effective_source_waves'],
+        frozen_service_prices=[dict(j=j,T=t,windows=len(v),
+            X_range=[dict(min=min(x[0][i] for x in v),max=max(x[0][i] for x in v)) for i in range(7)],
+            service_ns_per_ktile=dict(min=min(x[1] for x in v),max=max(x[1] for x in v)))
+            for (j,t),v in sorted(prices.items())],
+        positions=[dict(j=j, T=t, windows=len(v), distinct_current_coords=len({tuple(x['coord']) for x in v}))
+            for (j,t),v in sorted(groups.items())],
+        work_sha256=hashlib.sha256(json.dumps([[t['coord'] for t in tiles] for tiles in requests['ctas']],
+            separators=(',', ':')).encode()).hexdigest())
+
+
+def _failure_stage_response(control, variant):
+    """Show the exact max branches that erase the only implemented stage effect."""
+    calibration = control['calibration']
+    frequency = control['prediction']['frequency_ghz']
+    records = {}
+    for name, call in (('stage6', control), ('stage4', variant)):
+        groups = defaultdict(list)
+        for r in supply_request_rows(call['row'], call['setup']):
+            model = calibration['first_supply' if r['j'] == 0 else 'supply'][r['config']]
+            service = float(np.array(r['X']) @ np.array(model['projection']) @ np.array(model['parameters'][1:]))
+            floor = r['compute_cycles']/frequency
+            groups[r['j'], r['T']].append(dict(source_KiB=r['X'][0], service_ns=service,
+                floor_ns=floor, supply_active=service > floor,
+                L_ns=model['parameters'][0]+r['kt']*max(service, floor)))
+        records[name] = dict(stages=call['setup']['stages'],
+            smem=call['setup']['smem'], max_active_ctas_per_sm=call['setup']['max_active_ctas_per_sm'],
+            positions=[dict(j=j,T=t,windows=len(v),supply_active_windows=sum(x['supply_active'] for x in v),
+                **{k:dict(min=min(x[k] for x in v),max=max(x[k] for x in v))
+                   for k in ('source_KiB','service_ns','floor_ns','L_ns')}) for (j,t),v in sorted(groups.items())])
+    records['common_frequency_ghz'] = frequency
+    records['frozen_outputs_equal'] = {key: control['prediction'][key] == variant['prediction'][key]
+        for key in ('frequency_ghz','window_us','plain_us','cta_duration_ns','cta_events')}
+    records['interpretation'] = ('Both 132-CTA software waves are equal, so first demand is stage-independent. '
+        'Only last demand changes; both fitted supply prices remain below the compute floor. '
+        'All L predictions, event timelines, clock closure and plain predictions are therefore equal. '
+        'This model has no producer/consumer slot state or stage-dependent compute overlap.')
+    return records
+
+
+def failure_diagnostics(base, output, calls_factory):
+    """V09 paired failure analysis; old cohorts stay separate and no fitting occurs."""
+    from analyze_r13_sm import select_attempts
+    import re
+
+    base, output = Path(base), Path(output)
+    root = base/'20261009-V09-heldout-job739011'
+    new = defaultdict(list)
+    needed = {f'v09d_cfg_{c}_G3_{v}' for c in 'abc' for v in ('base', 'A16')}
+    needed |= {f'v09d_cfg_b_G5_{v}' for v in ('base', 'B32', 'B80', 'B112')}
+    needed.add('v09d_cfg_b_G3_stage4')
+    for call in calls_factory(base):
+        if call['row']['id'] in needed:
+            new[call['row']['id']].append(call)
+    pairs = [('V09', new[f'v09d_cfg_{c}_G3_base'], new[f'v09d_cfg_{c}_G3_A16']) for c in 'abc']
+    pairs += [('V09', new['v09d_cfg_b_G5_base'], new[f'v09d_cfg_b_G5_{v}']) for v in ('B32','B80','B112')]
+    pairs += [('V09', new['v09d_cfg_b_G3_base'], new['v09d_cfg_b_G3_stage4'])]
+    hashes, old = {}, {}
+    for name in ('20261009-R10-b-coverage-job738203', '20261009-R13-R15-R18-composition-job738496'):
+        run = base/name
+        setups = {r['case']:r['setup'] for r in read_json(run/'static_setup.json')}
+        for filename in ('cases.json', 'static_setup.json', 'environment.json'):
+            p = run/filename; hashes[str(p)] = hashlib.sha256(p.read_bytes()).hexdigest()
+        cohort = 'R10-Bcurve' if '738203' in name else 'R13-calibration'
+        old[cohort] = defaultdict(list)
+        for row in read_json(run/'cases.json'):
+            if cohort == 'R13-calibration' and ('r13_comp' not in row['id'] or row['k'] != 4096):
+                continue
+            selected, _, _ = select_attempts(run, row['id'], ('dual',))
+            for item in selected:
+                record = item['record']
+                metadata = run/item['path']
+                hashes[str(metadata)] = hashlib.sha256(metadata.read_bytes()).hexdigest()
+                raw = run/record['raw']; digest = hashlib.sha256(raw.read_bytes()).hexdigest()
+                if digest != record['raw_sha256']:
+                    raise ValueError('raw sample hash changed: '+str(raw))
+                hashes[str(raw)] = digest
+                old[cohort][row['id']].append(dict(row=row, setup=setups[row['id']], trial=record['trial'],
+                    record=record, observed=replay(run, record, row)))
+        if cohort == 'R10-Bcurve':
+            pairs += [(cohort, old[cohort]['cfg_b_bcurve_p0'], old[cohort][f'cfg_b_bcurve_p{v}']) for v in (16,32,64,128)]
+        else:
+            pairs += [(cohort, old[cohort][f'cfg_{c}_r13_comp_k4096_aligned'],
+                       old[cohort][f'cfg_{c}_r13_comp_k4096_{v}']) for c in 'abc' for v in ('a16','b16')]
+    comparisons, positions, contexts = [], [], {}
+    for cohort, control, variant in pairs:
+        summary, rows = _failure_pair_summary(cohort, control, variant)
+        comparisons.append(summary); positions.extend(rows)
+        for calls in (control, variant):
+            call = calls[0]
+            contexts[call['row']['id']] = _failure_case_context(call, new['v09d_cfg_b_G3_base'][0]['calibration'])
+    stage = _failure_stage_response(new['v09d_cfg_b_G3_base'][0], new['v09d_cfg_b_G3_stage4'][0])
+    resources = read_json(root/'build/resources.json')['facts']
+    hashes[str(root/'build/resources.json')] = hashlib.sha256((root/'build/resources.json').read_bytes()).hexdigest()
+    stage['resources'] = {}
+    opcodes = {}
+    for name in ('cfg_b_plain','cfg_b_s4_plain','cfg_b_dual','cfg_b_s4_dual'):
+        path = root/'build'/f'{name}.sass'
+        text = path.read_text()
+        hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+        functions = text.split('Function : ')
+        gemm = [f for f in functions[1:] if f.startswith('_ZN7cutlass13device_kernel')]
+        if len(gemm) != 1:
+            raise ValueError('expected one GEMM SASS entry')
+        instructions = re.findall(r'/\*[0-9a-f]+\*/\s+(?:@!?U?P\d+\s+)?([A-Z][A-Za-z0-9_.]*)(?=\s|;)', gemm[0])
+        opcodes[name] = Counter(x.split('.')[0] for x in instructions)
+        if opcodes[name]['HGMMA'] != resources[name]['hgmma']:
+            raise ValueError('GEMM SASS instruction extraction missed HGMMA')
+        stage['resources'][name] = dict(**resources[name], instruction_count=len(instructions),
+            non_nop_instruction_count=len(instructions)-opcodes[name]['NOP'],
+            opcode_counts=dict(sorted(opcodes[name].items())), sass_sha256=hashes[str(path)])
+    stage['opcode_changes'] = {variant:{op:dict(stage6=opcodes[f'cfg_b_{variant}'][op],stage4=opcodes[f'cfg_b_s4_{variant}'][op])
+        for op in sorted(opcodes[f'cfg_b_{variant}'].keys() | opcodes[f'cfg_b_s4_{variant}'].keys())
+        if opcodes[f'cfg_b_{variant}'][op] != opcodes[f'cfg_b_s4_{variant}'][op]} for variant in ('plain','dual')}
+    report = dict(protocol='Post-V09 development diagnosis only; same trial and CTA/j/T/coordinate within each cohort. '
+        'Window ratios/differences are formed before within-trial medians; ten trial medians are then summarized. '
+        'Trial indices pair repetitions, not simultaneous calls. Old and new geometry cohorts are not pooled.',
+        comparisons=comparisons, case_context=contexts, stage_response=stage,
+        next_measurement=dict(stage='Measure only cfg_b 2816x1536, K1024/4096 x stages4/6 in one allocation. '
+            'A fixed per-output startup/drain difference predicts nearly constant delta-L; a sustained overlap limit predicts '
+            'delta-L increasing with K. Their per-Ktile differences consequently decay or persist. '
+            'This distinguishes window models, not physical queue depth.',
+            pitch='Do not add B64/B96 by default: old B32/B64 already reject universal 32-byte no-penalty. '
+            'Geometry, footprint and prior source reuse still co-vary; a new pair needs a specific competing prediction.'),
+        limits=['No fitting, input-condition changes or new heldout score.',
+            'Dual local windows can be perturbed even when full-call timing changes little.',
+            'Software source waves are not observed concurrent TMA requests or physical memory traffic.',
+            'Same registers/occupancy/HGMMA count do not prove identical instruction scheduling.',
+            'A whole L window cannot separate TMA wait, WGMMA execution and slot release.'],
+        additional_input_sha256=hashes,
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True, exist_ok=True)
+    (output/'B-summary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'B-paired-windows.csv').open('w') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(positions[0]))
+        writer.writeheader(); writer.writerows(positions)
+    lines = ['# 行距与 stage：成对主循环分析', '',
+        '这是一轮V09测后开发分析，没有重拟合或重评旧冻结。每批内部按同trial、CTA/j/T/坐标配对，'
+        '先算窗口差及比值，再取进程内中位和十进程中位；trial只是重复编号，不是同时调用。旧新几何不合并。', '',
+        '| 批次 | 变化条件 | first L ns | later L ns | first L cycle | later L cycle |',
+        '|---|---|---:|---:|---:|---:|']
+    for pair in comparisons:
+        vals = [pair['phases'][phase][field]['median']*100 if phase in pair['phases'] else None
+            for field in ('L_ns_ratio','L_cycles_ratio') for phase in ('first','later')]
+        lines.append('| '+pair['cohort']+' | '+pair['variant']+' | '+' | '.join(f'{v:+.2f}%' if v is not None else '—' for v in vals)+' |')
+    lines += ['', '同 trial 的逐 CTA 比值先取中位，再跨十 trial 汇总；完整位置结果见 B-paired-windows.csv。', '',
+        'G3 stage4/6 首轮软件需求相同，末轮供给变化仍落在计算下界之下，故全部预测窗口与完整时间相同。'
+        '实测主循环 cycle/ns 都变慢，尤其 later；只修频率、首段或输出不能解释。两个版本驻留均为1 CTA/SM，'
+        '寄存器及HGMMA条数相同，但SASS不是同一程序，不把差异直接命名为硬件队列容量。', '',
+        '旧B32/B64与新B32的响应相反在主循环直接ns中仍成立；新A16的主循环惩罚更大。'
+        '当前/下一软件波次、几何、K与源重访条件均保存在 B-summary.json；旧新批次不合并拟合。', '',
+        '下一项最小补测为同一几何 K1024/4096 × stage4/6 四点。固定每输出tile成本预期ΔL近常数、ΔL/K下降；'
+        '持续流水限制预期ΔL随K增长、ΔL/K保留。保持输入、容量、grid与观察协议一致，复测已有K4096对。'
+        'B64/B96暂不追加，等行距候选具有不同可检验预期后再选。', '']
+    (output/'B-analysis.md').write_text('\n'.join(lines))
+    return report
+
+
+def _failure_k_scaling(low_positions, high_positions, low_kt, high_kt):
+    """Compare fixed-per-output and constant-per-Ktile stage penalties."""
+    low = {(r['trial'],r['j'],r['T']):r for r in low_positions}
+    high = {(r['trial'],r['j'],r['T']):r for r in high_positions}
+    if low.keys() != high.keys():
+        raise ValueError('K controls must preserve trial/j/T groups')
+    trials = []
+    for (trial,j,total), a in sorted(low.items()):
+        b = high[trial,j,total]
+        row = dict(trial=trial,j=j,T=total)
+        for unit in ('ns','cycles'):
+            lo, hi = a[f'L_{unit}_delta'], b[f'L_{unit}_delta']
+            row.update({f'delta_low_{unit}':lo, f'delta_high_{unit}':hi,
+                f'delta_low_{unit}_per_ktile':lo/low_kt,
+                f'delta_high_{unit}_per_ktile':hi/high_kt,
+                f'fixed_only_residual_{unit}':hi-lo,
+                f'per_ktile_only_residual_{unit}':hi/high_kt-lo/low_kt})
+        trials.append(row)
+    groups = []
+    for j,total in sorted({(r['j'],r['T']) for r in trials}):
+        selected = [r for r in trials if (r['j'],r['T']) == (j,total)]
+        fields = [k for k in selected[0] if k not in ('trial','j','T')]
+        summary = {f:dict(median=statistics.median(r[f] for r in selected),
+            trial_min=min(r[f] for r in selected),trial_max=max(r[f] for r in selected)) for f in fields}
+        groups.append(dict(j=j,T=total,windows=low_positions[0]['windows'],statistics=summary))
+    return dict(low_kt=low_kt,high_kt=high_kt,positions=groups,trials=trials,
+        interpretation='A fixed per-output difference has zero high-minus-low residual; a constant per-Ktile '
+        'difference has zero normalized residual. Trial ranges describe these ten repetitions, not confidence '
+        'intervals. K also changes active source footprint; neither pattern uniquely identifies a hardware queue.')
+
+
+def control_diagnostics(root, output):
+    """Analyze the new-card four-condition stage control without old-card constants."""
+    from analyze_r13_sm import select_attempts
+
+    root, output = Path(root), Path(output)
+    rows = {r['id']:r for r in read_json(root/'cases.json')}
+    setups = {r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    calls, times, hashes, failures = {}, {}, {}, {}
+    identities = []
+    for k in (1024,4096):
+        for stages in (4,6):
+            name = f'r13_stage_k{k}_s{stages}'
+            row, setup = rows[name], setups[name]
+            selected, failed, _ = select_attempts(root,name,('plain','dual'))
+            failures[name] = [dict(path=f['path'],trial=f['record']['trial'],
+                variant=f['record']['variant'],returncode=f['record']['returncode']) for f in failed]
+            calls[name], times[name] = [], defaultdict(dict)
+            for item in selected:
+                record = item['record'];raw = root/record['raw'];metadata = root/item['path']
+                digest = hashlib.sha256(raw.read_bytes()).hexdigest()
+                if digest != record['raw_sha256']:
+                    raise ValueError('control raw sample hash changed: '+str(raw))
+                hashes[str(raw)] = digest
+                hashes[str(metadata)] = hashlib.sha256(metadata.read_bytes()).hexdigest()
+                observed = replay(root,record,row)
+                times[name][record['variant']][record['trial']] = observed['elapsed_us']
+                if record['variant'] == 'dual':
+                    calls[name].append(dict(row=row,setup=setup,trial=record['trial'],record=record,observed=observed))
+            for variant in ('plain','dual'):
+                if len(times[name][variant]) != 10:
+                    raise ValueError(name+' requires ten successful '+variant+' processes')
+            identities.append(dict(case=name,config=row['config'],m=row['m'],n=row['n'],k=k,stages=stages,
+                **{key:setup[key] for key in ('gpu_uuid','grid','lda','ldb','alloc_lda','alloc_ldb',
+                    'allocated_a_elements','allocated_b_elements','smem','max_active_ctas_per_sm')},
+                active_source_bytes=2*k*(row['m']+row['n'])))
+    gpu_ids = {i['gpu_uuid'] for i in identities}
+    if len(gpu_ids) != 1:
+        raise ValueError('four-condition stage comparison must use one GPU')
+    def span(values):
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    comparisons, positions, timing = [], {}, []
+    for k in (1024,4096):
+        control, variant = f'r13_stage_k{k}_s6', f'r13_stage_k{k}_s4'
+        summary, positions[k] = _failure_pair_summary('same-job-stage-controls',calls[control],calls[variant])
+        summary['k'] = k
+        comparisons.append(summary)
+        record = dict(k=k)
+        for protocol in ('plain','dual'):
+            a,b = times[control][protocol],times[variant][protocol]
+            if a.keys() != b.keys():
+                raise ValueError('stage timing trials differ')
+            record[protocol] = dict(stage6_us=span(list(a.values())),stage4_us=span(list(b.values())),
+                stage4_minus_stage6_us=span([b[t]-a[t] for t in sorted(a)]),
+                stage4_relative_change=span([b[t]/a[t]-1 for t in sorted(a)]))
+        for stages in (4,6):
+            t = times[f'r13_stage_k{k}_s{stages}'];a,b=t['plain'],t['dual']
+            if a.keys() != b.keys():
+                raise ValueError('plain/dual timing trials differ')
+            record[f'stage{stages}_dual_relative_to_plain'] = span([b[i]/a[i]-1 for i in sorted(a)])
+        timing.append(record)
+    scaling = _failure_k_scaling(positions[1024],positions[4096],16,64)
+    for filename in ('cases.json','static_setup.json','environment.json'):
+        path = root/filename;hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+    report = dict(protocol='New-card same-job stage4/stage6 controls only. No old-card model parameter is used. '
+        'Local windows use matched trial/CTA/j/T/coordinates and paired-window medians; complete plain and dual '
+        'times remain separate. Same trial indices do not imply simultaneous invocation.',
+        gpu=next(iter(gpu_ids)),conditions=identities,comparisons=comparisons,
+        timing=timing,scaling=scaling,failed_attempts=failures,
+        limits=['Full-call observer changes do not bound every local window perturbation.',
+            'Allocations are fixed by design, but K changes the active source footprint.',
+            'Static stage4/stage6 instruction organization differs; a persistent per-Ktile penalty is not uniquely a slot limit.',
+            'This measures a stage response on the new card; it does not transfer old absolute calibration.'],
+        input_sha256=hashes,analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-controls.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)

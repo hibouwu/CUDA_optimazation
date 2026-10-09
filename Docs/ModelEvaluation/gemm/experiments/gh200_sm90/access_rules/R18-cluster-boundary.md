@@ -1,6 +1,6 @@
 # R18：OOB、有效地址零值与填零服务
 
-**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。当前公式见 [RULES](RULES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
+**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。V09 的 partial 失败主要落在主循环，且影响传播到完整 tile；不能增加一个只收 partial tile 的常数。当前公式见 [RULES](RULES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
 
 ## 作业与证据索引
 
@@ -12,6 +12,7 @@
 | 738296 / 738307 | cfg_b 固定逻辑输出与工作，只扩大 M/N 输入 map | [M 向配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-job738296/reanalysis/input-map-pairs-v1/input-map-pairs.json)、[N 向配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-n-job738307/reanalysis/input-map-pairs-v1/input-map-pairs.json) |
 | 738203＋上两批 | 同卡有效地址＋whole-fill候选，保留有效tile慢窗口 | [填零候选与分项误差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json) |
 | 738707 / 738865 | cfg_a/c partial/whole首轮填零与有效地址零配对 | [合并报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json) |
+| 739095 | P1同输出map配对：首轮partial及其完整cluster伙伴同步缩短，later近零响应 | [当前分析](#v09-boundary-failure)、[配对结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json) |
 
 ## 同物理工作列表：边界路径与数值零分开
 
@@ -169,3 +170,41 @@ A first满秩5/5，但有效源价格落在非负边界不能解释为物理读�
 已隔离的是本批descriptor输入路径，未分别定值物理填零速率、L2/HBM服务和内部队列。边界cluster、整cluster OOB、partial-fill、first/later和有效tile受邻近OOB影响须分开；只有静态有效源量与填零量还不足以解释全部窗口。
 
 复核入口为 `analyze_r18.py --input RUN --output 新目录`；V08F重分组加 `--v08-padding`，source-map配对加 `--input-map-pairs`。原轻量组使用 `run_r18_lite.py` 冻结协议。历史完整设计与命令见[固定 cee978a 旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R18-cluster-boundary.md)。本次仅整理论证归属，旧results、预测与评分保持原样。
+
+
+<a id="v09-boundary-failure"></a>
+
+## V09 partial：先区分输入路径与输出窗口
+
+V09 的 P1（cfg_a，960×2816×4096）和 P2（cfg_c，4096×2240×4096、swizzle8）各复核十个 dual 进程。下表先在每进程内按逻辑输出几何分组，再取进程中位；模型误差是配对窗口差的中位，不能用表中两个独立中位数相减替代。L 为 FIRST_MMA→MAIN_END，E 为 merged PERMIT→DONE，不代表物理写完成。
+
+| 条件 / 轮次 / 几何 | 实测 L ns | 模型 L 残差 ns | 实测 E ns | 模型 E 残差 ns |
+|---|---:|---:|---:|---:|
+| P1 / first / partial | 23712 | −4233 | 880 | +639 |
+| P1 / first / real | 20648 | −1169 | 1120 | +399 |
+| P1 / later / partial | 18304 | +1045 | 864 | +171 |
+| P2 / later / OOB | 46168 | −3562 | 2000 | −86 |
+| P2 / later / partial | 43248 | −1330 | 2352 | −36 |
+
+P1 首轮 partial 的长窗口出现在主循环，输出项反而高估；later 的 L 残差方向相反。实际最后完成者还可能完全处理 real tile：trial0 的工作坐标为 `(6,4),(2,21)`。因此边界影响不能只贴在边界 CTA 上。P2 的 OOB 主循环也比模型慢，最大时长与最后完成者的关系见 [R19](R19-critical-cta-tail.md#v09-critical-failure)。
+
+原 738707/738865 的配对保持逻辑输出、分配、初始化和工作列表不变，只扩大输入 descriptor。本次复用同角色 cycle/ns 端点：cfg_a K4096 的 first partial、role2 窗口从 OOB 的约25.040 μs降到有效地址零的约21.280 μs，完整 plain 时间下降12.78%；cfg_c 对应完整时间只变化+0.32%。这支持**输入路径有条件代价**，不支持统一填零系数。旧 cfg_a 的 M832 同时有 partial 与 whole OOB，不能把它的幅度移植到只有 partial 的 P1。
+
+P1 的固定输出 map 配对已在 job739095、a058/GPU-ef8692f3 完成：logical M960、storage M1024、zero M960，只改变 input_map_m=960/1024。两点各十个 plain 与 dual 进程，plain 中位 **51.824→47.744 μs（−7.87%）**，dual **53.072→48.752 μs（−8.14%）**；dual 相对 plain 扰动2.41%/2.11%，plain CV0.81%/1.28%。新卡同期比较，不把这些绝对值代入旧卡 V09。
+
+逐 CTA、同角色、同坐标配对说明差异集中在首轮边界 cluster。下表为 role2 的直接 L ns，差值先在匹配窗口相减、再按进程取中位；两个条件的独立中位数之差不必等于配对差。
+
+| 轮次 / 几何 / CTA工作量 | OOB输入 L ns | 有效地址零 L ns | 配对差 ns |
+|---|---:|---:|---:|
+| first / partial / T2 | 24160 | 20080 | −4128 |
+| first / real，与partial同cluster / T2 | 24128 | 20080 | −4144 |
+| first / real，内部cluster / T2 | 20168 | 20112 | −80 |
+| later / partial / T2 | 18240 | 18256 | 0 |
+| later / real，与partial同cluster / T2 | 18240 | 18280 | +16 |
+| later / real，内部cluster / T2 | 18232 | 18272 | +32 |
+
+T1 的 first partial 与完整伙伴也分别缩短2.768/2.800 μs；role1 同方向。T2 first partial/伙伴的配对差在十个进程中均小于−3.58/−3.64 μs，内部real的差则跨过零。各组 E 的配对中位变化最多几十ns，不能解释约4 μs的总收益；later L接近globaltimer量化尺度。**这支持首轮 descriptor 输入边界 cluster 的条件代价，也排除了“只因输出面积较少而变慢”的解释。** 同cluster完整伙伴受到同量级影响，不能只按partial自身字节收费；静态工作坐标单独也不能解释map改变后的缩短。
+
+观察仍未区分填零硬件、cluster同步和共享供给的具体物理成本，也不能把首轮差值复制到later。以cluster边界状态作为下一候选的辨识变量有依据，但这一对开发数据不足以确定可迁移系数；本轮不追加P1专属常数。[同卡配对、关键CTA与原样本绑定](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
+
+[逐窗口与逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)、[原同输出配对复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-old-input-pairs.json)。同角色窗口与 merged 模型残差分开保存，前者用于周期/时间关系，后者用于比较递推模型。

@@ -47,7 +47,7 @@ def cases(family='r18'):
 def prepare(root,cutlass,family,rows=None,dual_clock=False):
     rows=cases(family) if rows is None else rows
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
-    for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py']:
+    for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py','v08_model.py']:
         shutil.copy2(ROOT/name,source/name)
     for name in ['r18.cu','r18_trace.hpp','gaps_common.hpp','r00_common.hpp']:
         shutil.copy2(ROOT/'probes'/name,source/'probes'/name)
@@ -66,12 +66,16 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False):
     configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
     for prefix,(config,stages) in sorted(configurations.items()):
         if stages is not None and stages<=0:raise ValueError('explicit stage count must be positive')
-        for variant in variants:
+        selected_variants=sorted({v for r in rows if common.binary_prefix(r)==prefix for v in r.get('variants',variants)})
+        for variant in selected_variants:
+            if variant not in ['plain','wide','stamped','dual','ends']:raise ValueError('unknown observation variant')
+            if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
-            if dual_clock and variant!='plain':cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
-            if variant in ['stamped','dual']:
+            if dual_clock and variant not in ['plain','ends']:cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
+            if variant in ['stamped','dual','ends']:
                 cmd+=['-DV06_TRACE','-Isource/overlay']
+                if variant=='ends':cmd+=['-DV08_ENDS']
                 if family=='r18_lite':cmd+=['-DR18_LIGHT']
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
@@ -128,8 +132,12 @@ def run_one(root,row,variant,trial,attempt=0):
     if proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:
         return run_one(root,row,variant,trial,attempt+1)
     if proc.returncode:raise ValueError('failed GEMM process: '+str(path))
-    from analyze_r18 import replay
-    replay(root,record,row)
+    if variant=='ends':
+        from v08_model import observe
+        observe(root,record,row)
+    else:
+        from analyze_r18 import replay
+        replay(root,record,row)
     return record
 
 
@@ -137,7 +145,8 @@ def main(family='r18'):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('step',choices=['prepare','build','setup','sample','list'])
     p.add_argument('--output',type=Path);p.add_argument('--cutlass-root',type=Path);p.add_argument('--procs',type=int,choices=[1,10],default=10)
     p.add_argument('--cases-file',type=Path,help='prepare: use a listed extension of an existing experiment')
-    p.add_argument('--dual-clock',action='store_true',help='prepare: add same-call globaltimer events; all variants use matched scratch sizes')
+    p.add_argument('--dual-clock',action='store_true',help='prepare: add same-call globaltimer events; wide/stamped/dual share scratch layout, ends keeps its original layout')
+    p.add_argument('--set',help='sample: select the named case set, e.g. reference before ctrl')
     a=p.parse_args()
     if a.step=='list':print(json.dumps(cases(family),indent=2));return
     root=a.output.resolve()
@@ -159,13 +168,16 @@ def main(family='r18'):
     config=json.loads((root/'run_config.json').read_text())
     if config['family']!=family or common.sha(root/'cases.json')!=config['cases_sha256']:raise ValueError('matrix changed')
     rows=json.loads((root/'cases.json').read_text())
+    if a.set is not None:
+        rows=[r for r in rows if r.get('set')==a.set]
+        if not rows:raise ValueError('empty requested case set')
     # Matching physical-grid controls stay adjacent; group and variant order randomized.
     for trial in range(a.procs):
         groups=sorted({r['group'] for r in rows});random.Random(20261008+trial).shuffle(groups)
         for group in groups:
             subset=[r for r in rows if r['group']==group];random.Random(20261008+trial).shuffle(subset)
             for row in subset:
-                variants=config.get('variants',['plain'] if family=='b01_cache' else ['plain','stamped'])[:]
+                variants=row.get('variants',config.get('variants',['plain'] if family=='b01_cache' else ['plain','stamped']))[:]
                 random.Random(20261008+trial).shuffle(variants)
                 for variant in variants:run_one(root,row,variant,trial)
         print(family,'trial',trial,'complete',flush=True)

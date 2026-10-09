@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CPU development ablation: same-card V08 forms + V09 clock versus V09 r2.
+"""CPU development ablation and failure diagnostics against frozen V09 r2.
 
 Fits only pre-V09 calibration records. V09 heldout observations are used only for
 scoring after parameters are fixed. Nothing is a new heldout validation.
@@ -150,9 +150,89 @@ def component_scores(root,row,versions):
         versions[name]['critical_candidates_hit_rate']=st.fmean(x['candidate_hit'] for x in values) if values else None
 
 
+def failure_calls(base):
+    """Yield the original 300 dual calls; keep rejected predictions as rejected.
+
+    Roles are retained by the existing decoder so local cycle/ns comparisons can
+    use the same consumer endpoints. Observations are for diagnosis only.
+    """
+    frozen=base/'20261009-V09-freeze-job738972-r2'
+    target=base/'20261009-V09-heldout-job739011'
+    from run_v09 import verify_approved
+    approved=verify_approved(frozen,
+        'f4df39e00cf1d2ab61947c911e699bd5bea4e533609d93f726de43077515d81e',
+        '09da85d124eb697a95c4695bd05281b07c37877890d0eca18afbdd2cf213f2ab')
+    calibration=read(frozen/'frozen/calibration.json')
+    setups={s['case']:s['setup'] for s in read(frozen/'static_setup.json')}
+    rows=[row for row in read(frozen/'cases.json') if row['set']=='heldout']
+    for row in rows:
+        selected,failed,_=select_attempts(target,row['id'],('dual',))
+        if len(selected)!=10:raise ValueError('incomplete dual processes: '+row['id'])
+        for item in selected:
+            record=item['record']
+            yield dict(row=row,setup=setups[row['id']],trial=record['trial'],
+                record=record,record_path=item['path'],failed_attempts=failed,
+                observed=replay(target,record,row,retain_roles=True),
+                prediction=approved['predictions'][row['id']],calibration=calibration)
+
+
+def reference_comparison(base,controls,out):
+    """Compare relevant call/supply references; a new card is not old calibration."""
+    old=base/'20261009-V09-heldout-job739011'
+    rows=[r for r in read(controls/'cases.json') if r['set']=='reference']
+    previous={r['id']:r for r in read(old/'cases.json')}
+    comparisons=[]
+    for row in rows:
+        summaries={}
+        for name,root,item in [('V09_reference',old,previous[row['id']]),('current',controls,row)]:
+            selected,failed,_=select_attempts(root,row['id'],('plain','dual'))
+            calls=[];plain=[]
+            for chosen in selected:
+                rec=chosen['record'];obs=replay(root,rec,item)
+                if rec['variant']=='plain':
+                    plain.append(obs['elapsed_us']);continue
+                ctas=obs['ctas'];longest=max(len(c['tiles']) for c in ctas)
+                window=(max(c['end_ns'] for c in ctas)-min(c['entry_ns'] for c in ctas))/1000
+                calls.append(dict(trial=rec['trial'],raw=rec['raw'],raw_sha256=rec['raw_sha256'],
+                    window_us=window,frequency_ghz=st.median((c['end_c']-c['entry_c'])/(c['end_ns']-c['entry_ns'])
+                        for c in ctas if len(c['tiles'])==longest),
+                    mainloop_ns_per_ktile=st.median((t[1]-t[0])/(row['k']//64) for c in ctas for t in c['tiles_ns']),
+                    dual_event_minus_window_us=obs['elapsed_us']-window))
+            if len(plain)!=10 or len(calls)!=10:raise ValueError('incomplete common reference')
+            summaries[name]=dict(plain_us=st.median(plain),
+                **{k:st.median(c[k] for c in calls) for k in ('window_us','frequency_ghz','mainloop_ns_per_ktile','dual_event_minus_window_us')},
+                calls=calls,failed_attempts=failed)
+        comparisons.append(dict(case=row['id'],summaries=summaries,
+            relative_change={k:summaries['current'][k]/summaries['V09_reference'][k]-1
+                for k in ('plain_us','window_us','frequency_ghz','mainloop_ns_per_ktile')},
+            dual_event_minus_window_change_us=summaries['current']['dual_event_minus_window_us']-summaries['V09_reference']['dual_event_minus_window_us']))
+    write(out/'reference-comparison.json',dict(previous_environment=read(old/'environment.json'),
+        current_environment=read(controls/'environment.json'),cases=comparisons,
+        scope='Paired-window clock, aligned mainloop and same-call event/envelope references. No physical HBM rate is inferred. Different-card ratios do not calibrate or validate the old predictor.'))
+
+
+def failure_decomposition(base,out,controls=None):
+    """One entry point; family analyzers share the original raw decoder."""
+    import r09_input_source_clock
+    import analyze_r13_supply
+    import analyze_r18
+    out.mkdir(parents=True,exist_ok=True)
+    for analyzer in (r09_input_source_clock,analyze_r13_supply,analyze_r18):
+        analyzer.failure_diagnostics(base,out,failure_calls)
+        if controls is not None:analyzer.control_diagnostics(controls,out)
+    if controls is not None:reference_comparison(base,controls,out)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--base',type=Path,required=True)
+    parser.add_argument('--analysis',choices=('ablation','failure-decomposition'),default='ablation')
+    parser.add_argument('--controls',type=Path,help='failure-decomposition: newly measured local controls')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
+    if args.controls is not None and args.analysis!='failure-decomposition':
+        parser.error('--controls is only used by failure-decomposition')
+    if args.analysis=='failure-decomposition':
+        failure_decomposition(base,out,args.controls.resolve() if args.controls else None)
+        return
     out.mkdir(parents=True,exist_ok=False)
     frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'
     cal=read(frozen/'frozen/calibration.json');old=read(base/'20261008-V08-job737322-v1/derived/calibration.json')

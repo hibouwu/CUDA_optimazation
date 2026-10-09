@@ -1,6 +1,6 @@
 # R15：输出服务与完成边界
 
-当前输出候选按 **single/multi、real/OOB、首/中/末 tile** 分类，以直接 merged ns 接入 [V09 r2](RULES.md#v09-model)。V09整体未通过，末次输出分项误差中位/最大为 **3.73%/35.60%**；参数与范围不能称为通用输出带宽。
+当前输出候选按 **single/multi、real/OOB、首/中/末 tile** 分类，以直接 merged ns 接入 [V09 r2](RULES.md#v09-model)。V09整体未通过，末次输出分项误差中位/最大为 **3.73%/35.60%**；参数与范围不能称为通用输出带宽。V09 partial 的主要漏算在主循环；输出残差在 P1 还部分抵消了它，不能靠增大输出费用补总时间。
 最强的已测结论是：长K输出周期下降主要伴随局部cycle/ns变化；OOB仍有输出准备/同步成本；单tile规则不能直接用于多tile首轮。旧标量STS探针不提供CUTLASS epilogue常数。完整旧推导与准备记录见 [cee978a固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R15-output-service.md)。
 
 <a id="cutlass-epilogue"></a>
@@ -154,3 +154,21 @@ v4核对4,866,048个保存FP32位置，v5核对540,672个，数值与padding通�
 当前离线复核入口是 `analyze_r15_output_ns.py` 与 `analyze_r15.py` 的 `--dual-roles`/`--composition-output`；各归档报告保存完整命令与来源。分析写新目录，旧source/build/samples/frozen保持只读；无需为了复核重复GPU采样。
 
 [输出消融](V01-validation.md#v09-ablation)显示分类对总中位误差的收益较小（4.33%→4.11%），但末次输出中位误差6.19%→3.73%，小规模single改善；保留现有分类，不为总误差追加新分支。
+
+
+<a id="v09-output-failure"></a>
+
+## V09 partial 的输出不是主要漏算项
+
+针对每个 dual 进程真正最后完成的 CTA，直接把其窗口拆成 prefix、各 tile 的 L 总和、E 总和、间隔和最终 tail，再与**同一 CTA**的冻结时间线比较。P1/P2 十进程中位残差如下；每项先在单进程内相减，中位数之间不要求可加。
+
+| 对象 | sum L 残差 ns | sum E 残差 ns | prefix 残差 ns | 最终 tail 残差 ns |
+|---|---:|---:|---:|---:|
+| cfg_a P1 | −4484 | +445 | −240 | +32 |
+| cfg_c P2 | −12712 | −496 | +320 | +16 |
+
+P1 中输出项偏高、主循环偏低，构成局部误差抵消。P2 输出偏低约0.50 μs，远小于 L 漏算的12.71 μs。这里排除的是“调整最后输出或 tail 就能修复这两个反例”的解释；不能据此认定所有输出规则都正确。E 仍是 merged PERMIT→DONE，tail 是观测到的 post-loop 端点，均不命名为物理写完成。
+
+固定输出的 P1 map 补测进一步分离了两项：新 a058 卡上，将输入 map960 扩到1024，plain缩短4.080 μs，dual相对plain扰动仍仅2.41%/2.11%。同角色配对中 first partial 及其完整cluster伙伴的 L各缩短约4.13/4.14 μs，而各类E配对中位变化介于−32与+80 ns，末尾tail也没有同量级改善。最后完成CTA的sum E反而由约2.256变为2.528 μs。收益由输入边界相关的主循环变化主导；这些是新卡同期差值，不是旧V09输出系数的跨卡校准。配对明细见[R18](R18-cluster-boundary.md#v09-boundary-failure)。
+
+逐 CTA 分解保存在 [C-processes](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-processes.json)；输入路径的干预证据集中在 [R18](R18-cluster-boundary.md#v09-boundary-failure)，身份错位集中在 [R19](R19-critical-cta-tail.md#v09-critical-failure)。无需为上述输出归因另加一组 epilogue 测量。
