@@ -121,7 +121,7 @@ L2携带首/后tile及边界类别的候选窗口差；L3保持真实物理工�
 
 层级沿用[模型接口](../../../model/interfaces.md)：L0定义操作原语；L1处理线程、片上数据、发射和驻留；L2组织供给、缓冲及阶段流水；L3安排全体工作tile并求完整GEMM完成时间。层级不是新增的四份硬件资源。
 
-V07 的 cooperative 后tile受前tile输出/交接约束；pingpong同时有MMA顺序和epilogue顺序，必须保留max依赖与重叠。V07 将边界增量加到对应物理tile的主循环窗口一次；其定位与迁移限制见 V07、V08 验证记录。完整时间由关键CTA周期、当前卡负载内频率规则和固定调用项得到；这些是方案参数，不进入硬件规格表。
+V07 的 cooperative 后tile受前tile输出/交接约束；pingpong同时有MMA顺序和epilogue顺序，必须保留max依赖与重叠。V07 将边界增量加到对应物理tile的主循环窗口一次；其定位与迁移限制见 V07、V08 验证记录。完整时间由关键CTA周期、当前卡负载内频率规则和固定调用项得到；这些是方案参数，不进入硬件规格表。输入数值也是时间换算的条件：[R09](R09-inkernel-clock-stages.md) 的同卡同形状对照已显示，dyadic、zero、random 的有效 cycle/ns 和完整时间显著不同，不能把低熵输入的频率规则直接推广到任意有限值。
 
 可手算的完整例子：cfg_a的1792×1920×1536含210个tile，78个CTA做2个、54个做1个；冻结递推给出关键CTA 36,916.7305 cycle、形状对应频率解1.7690302 GHz、固定项4.6800005 μs，因此`T=4.6800005+36916.7305/(1000×1.7690302)=25.5483441 μs`。各阶段加数、pingpong的max依赖与边界增量算式见[V07模型手算](V07-rule-validation.md#冻结递推怎样手算)。
 
@@ -133,13 +133,13 @@ V07中，初始供给误差12.03%/45.92%，末次输出窗口12.44%/46.82%；主
 
 ## 10. 主循环受计算与操作数供给中较慢者限制
 
-每个 Ktile 的计算 cfg_a/b 为 512 cycle，cfg_c 为 1024。按 cluster 多播只读一次，每 SM 每 Ktile 从 L2 取 cfg_a 24 KB、cfg_b 32 KB、cfg_c 32 KB/1024 cycle，即需求 48、64、32 B/cycle。[V08 后续对照](V08-wider-validation.md#后续对照三种机制分开同一作业)，逐项证据见 [R10](R10-layout-cache.md#v08-stride)、[R13](R13-async-retirement.md#v08-supply)、[R18](R18-cluster-boundary.md#v08-padding)：
+每个 Ktile 的计算下界为 cfg_a/b 512 cycle、cfg_c 1024 cycle。按理想 cluster 多播复用折算，每 SM 每 Ktile 的逻辑源需求为 cfg_a 24 KiB、cfg_b/c 32 KiB，对应 48、64、32 B/cycle；这不是实测 L2 物理流量。[V08 后续对照](V08-wider-validation.md#后续对照三种机制分开同一作业)，逐项证据见 [R10](R10-layout-cache.md#v08-stride)、[R13](R13-async-retirement.md#v08-supply)、[R18](R18-cluster-boundary.md#v08-padding)：
 
 - A 或 B 的行距不是 128 B 倍数时，cfg_b 总时间多 15%–34%，cfg_a 多 5%–9%，cfg_c 不变；K、N 尾部和 D 行距本身几乎无影响。
 - 大足迹（105–260 MiB）长 K 时，cfg_b 交付 57–64 B/cycle，cfg_a 47–48，cfg_c 32。
 - swizzle=8 补齐出的整 cluster 越界 tile 仍完整执行主循环，额外 47–631 cycle/Ktile，随 K、补齐方向和配置变化，不是常数比值；补齐使总时间比 swizzle=1 多 25%–80%。
 
-需求越高的配置越先受限，这与“计算和操作数供给取较慢者”的解释相符；放大倍数和供给上限还不能分开定值。预测时先检查行距对齐和补齐 tile 数，不满足 V08 适用范围的条件不能直接套用递推参数。
+需求越高的配置越先受限，这与“计算和操作数供给取较慢者”的解释相符；放大倍数和供给上限还不能分开定值。[R13](R13-async-retirement.md) 的活动 SM 扫描进一步表明，行距代价还随执行规模和输出位置改变；共享服务和有限预填目前只是条件候选。预测时先检查行距对齐和补齐 tile 数，不满足 V08 适用范围的条件不能直接套用递推参数。
 
 同一作业还确认：供给 S 在调用前驱逐 L2 时增加 450–1300 cycle；cfg_a 最后一个 tile 的 epilogue 约 1922 cycle，与中间 tile 不同；cfg_c 单 tile 的 epilogue 在全部 CTA 同时写出时约 5800 cycle，部分 CTA 时约 4040。
 
