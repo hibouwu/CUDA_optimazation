@@ -297,10 +297,14 @@ def sm_candidates(run, summary_path, output):
         work = scheduled_work(r["config"], r["m"], r["n"], setups[r["id"]]["grid"], r["swizzle"])
         rows.append(dict(case=r["id"], sm=r["sm_count"], pitch=r["pitch"],
             j=group["j"], T=group["T"], active=sum(len(w) > group["j"] for w in work),
+            next_active=sum(len(w) > group["j"] + 1 for w in work),
             y=group["median_process_mean_L_per_kt"]))
 
     def inputs(observations, kind):
         n = np.array([1 if kind == "local" else r["sm"] if kind == "grid" else r["active"] for r in observations])
+        if kind in ("prefill5", "prefill6"):
+            credit = 5 if kind == "prefill5" else 6
+            n = n - credit / 64 * (n - np.array([r["next_active"] for r in observations]))
         a = np.array([r["pitch"] == "a16" for r in observations])
         b = np.array([r["pitch"] == "b16" for r in observations])
         return 24 * n[:, None] * np.column_stack([np.ones(len(n)), a, b])
@@ -336,7 +340,7 @@ def sm_candidates(run, summary_path, output):
     train = [r for r in rows if r["j"] > 0]
     first = [r for r in rows if r["j"] == 0]
     fits, residuals = {}, []
-    for kind in ("local", "grid", "wave"):
+    for kind in ("local", "grid", "wave", "prefill5", "prefill6"):
         p, identification = fit_cap(train, kind)
         folds = []
         for sm in sorted({r["sm"] for r in train}):
@@ -365,12 +369,16 @@ def sm_candidates(run, summary_path, output):
 
     report = dict(protocol="Offline model development on one card and one M/N/K; not new frozen validation.",
         formula="L/Kt = b + max(512, 24*N*(q0+qA*A16+qB*B16)); b and q are nonnegative.",
-        modes=dict(local="N=1, per-SM cap", grid="N=requested persistent grid", wave="N=count of software CTA work lists containing output index j"),
+        modes=dict(local="N=1, per-SM cap", grid="N=requested persistent grid", wave="N=count of software CTA work lists containing output index j",
+            prefill5="N=Nj-5/64*(Nj-Nj+1), assumed five-stage source credit",
+            prefill6="N=Nj-6/64*(Nj-Nj+1), assumed six-stage source credit"),
         weighting="Each case has equal total fit weight; its later (j,T) groups share that weight equally.",
         scope="cfg_a, M=2304, N=3072, K=4096, swizzle1, dyadic17; frame b is not transferable in K from this fit.",
         gpu=next(iter(setups.values()))["gpu_uuid"], fits=fits, collision_bounds=collision_bounds,
         limits=["24 KiB is logical multicast-adjusted source demand, not measured physical traffic.",
                 "Software wave count is predictable but is not measured simultaneous mainloop activity.",
+                "Prefill candidates assume five or six Ktiles already available and replacement demand for the next output; this is not a measurement of pipeline credits.",
+                "Six is the configured StageCount; five is a fixed sensitivity check, not a fitted extra parameter.",
                 "No measured frequency, time, output overlap or target L is used as a prediction feature.",
                 "First-output windows are transfer diagnostics; only later windows train these parameters.",
                 "The leave-132 test extrapolates beyond training pressure and may not identify the base service cap.",

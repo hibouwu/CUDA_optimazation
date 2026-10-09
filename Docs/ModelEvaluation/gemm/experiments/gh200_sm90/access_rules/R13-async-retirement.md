@@ -387,3 +387,9 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
   --sm-summary results/gh200_resource_campaign/access_rules/20261009-R13-sm-job738101/reanalysis/manager-formal-replay/summary.json \
   --output <新的分析目录>
 ```
+
+
+为区分上面的同 n、不同 j 窗口，又离线加入一个**有限预填候选**：令
+`n_eff = n_j − (s/64)·(n_j−n_{j+1})`，仍代入同一个四参数 max 式。它假设当前输出开始前已有 s 个 Ktile 的源数据，当前窗口还可能为下一输出补充数据；s=6 取配置的 stage 数，s=5 只作固定敏感性对照，不额外拟合 s。这只是从软件流水出发的近似，没有测得实际可用 stage 数。
+
+[预填候选重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-sm-job738101/reanalysis/prefill-cap-candidates-v1/summary.json)中，s=5/6 的后续窗口最大拟合误差为 **4.41%/3.78%**，首 tile 转移最大误差为 **6.52%/5.90%**；s=6 的整档 32/64/96 SM 留出最大误差为 **0.88%/2.96%/3.31%**。移除 132 SM 时仍秩亏，向该档外推最大误差仍有 **24.02%**。这个结果支持在候选关系中表达“下一输出是否仍有需求”，尚不证明具体预填量、其他 K 的可迁移性或完整时间预测已经改善。原软件波次的信息下界仍成立；新候选改变的是输入信息，而非给原形式增加拟合阶数。
