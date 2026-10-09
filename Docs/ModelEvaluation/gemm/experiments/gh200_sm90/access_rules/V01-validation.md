@@ -116,3 +116,21 @@ python3 <新目录>/source/analyze_v01.py --input <新目录>
 当前组件只定值到 cfg_b、132 SM、6 stage、完整 Ktile、A 行距对齐。R09 的 21 个训练条件全部 K=1024，计算工作与输出字节共线；这次迁移失败尚不能归因于某一个物理功耗来源。下一步先在 R09 做等名义计算/源请求量、不同 K 与输出次数的配对，分离这个缺口；不在这 13 个目标上追加自由修正项。
 
 [逐例结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json)与[CPU 检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/cpu-checks.json)保留全部条件、实测频率诊断和 CTA 定位差距。13 条件的目标观测污染检查、输入不变检查、频率网格上的回调单调性与联立闭合检查通过；网格检查不替代对所有未来组织的证明。
+
+
+### 三配置与输出分类接入（2026-10-09）
+
+job738496 在同一 GPU-43269fbc 上完成 29 个数值预检查和 1160 个正式进程；三配置共用这些数据定值。供给按软件可判定的 first/later 两个阶段使用同一 max 形式，避免把后续 B 行距代价直接搬到首段。cfg_b 经实际 SASS、端点与桥接核对后联合旧 13 条件，分配容量差异仍保留说明。以下 **42 条件均已用于开发，不是新留出**：
+
+| 组合版本 | plain 时间误差中位 / 最大 |
+|---|---:|
+| phase 供给＋零工作比例混合时钟＋常量输出 | 4.35% / 8.21% |
+| 再按 single/multi、real/whole-OOB 使用 R15 输出规则 | 4.57% / 7.88% |
+
+后一版保留了分项更明确的输出关系，未因前一版中位误差略小就忽略输出类别。E0 只计 J+R；middle/last 已是 merged 窗口，不再加 R；整 case 的 T_max=1 才选 single 规则。whole-OOB 的输出和尾段非零；partial 按有效输出比例插值只是下一批待验证的假设。cfg_c 普通 T≥3 的 middle 仍借用 padding 中 real 输出的代理。零工作混合也只是固定端点参数的插值，不是物理功耗定律。
+
+[完整组合与参数](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v3/composition.json)保留全部条件及支持标记。plain/dual 协议换算只用实测 dual 包络与 plain event 拟合，不用不准确的组件预测吸收误差；三配置的校准最大换算残差为 2.13%/1.84%/1.22%。
+
+[CTA 定位诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-critical-cta-v1/summary.json)检查的是此前 29 条件 phase/mix 版本：不少 CTA 在模型中完全并列，不能把第一个索引称作唯一最慢者；两例 cfg_a 长 K 行距条件的这个代表 CTA 仍比真正最后完成者短约 10%，虽然后者都在并列集合内。两个 cfg_a OOB 条件的真正最后完成者还会落在该集合外。关键 CTA 唯一定位尚未解决，局部慢窗口残差也不因总时间接近而消失。
+
+新 stage 组织的准备沿用公共框架：`stages=4` 选独立 cfg_b_s4 二进制，默认构建命令不变。job738599 在另一张 GH200 上完成默认/4-stage 的八个正确性检查；均 168 registers、16 HGMMA、无 spill，4-stage SMEM 为149504 B，仍1 CTA/SM。默认四变体 SASS 与 job738496 完全相同。这只证明合法构建与数值正确，检查中的时间不进入拟合；新组织的性能迁移留给 V09。

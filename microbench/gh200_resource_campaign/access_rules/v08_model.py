@@ -160,22 +160,27 @@ def summarize_case(root,r,setup):
 def lmain(p,kt,first=False):return p['l0']+p['l1']*kt+(p['dL0'] if first else 0.0)
 
 
-def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None):
+def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epilogues=None):
     """CTA recursion; an explicit per-tile L list replaces the aggregate mainloop rule.
 
     The optional list is for development composition of conditional supply rules.
     Existing callers keep L*(1+rho[class]); cooperative last tile uses Elast.
+    Optional cooperative epilogues supply the merged E interval per output tile.
     """
     if ntiles==0:return (p['P0'],None) if detail else p['P0']
     rho=p.get('rho',{});cls=classes or ('in',)*ntiles
     Ls=([lmain(p,kt,j==0)*(1+rho.get(cls[j],0.0)) for j in range(ntiles)]
         if mainloops is None else list(mainloops))
     if len(Ls)!=ntiles:raise ValueError('one mainloop interval per output tile required')
+    if epilogues is not None and (schedule!='cooperative' or len(epilogues)!=ntiles):
+        raise ValueError('one merged epilogue per cooperative output tile required')
     if schedule=='cooperative':
         fm=p['P0']+p['S'];ed=None
         for j in range(ntiles):
             if j:fm=ed+p['h']
-            ep=fm+Ls[j]+p['w'];E=p['E0'] if j==0 else (p['Elast'] if j==ntiles-1 else p['E']);ed=ep+E
+            ep=fm+Ls[j]+p['w']
+            E=(p['E0'] if j==0 else (p['Elast'] if j==ntiles-1 else p['E'])) if epilogues is None else epilogues[j]
+            ed=ep+E
         last=ed;eds=[ed]
     else:
         fm,me,ep,ed=[],[],[],[]

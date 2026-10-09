@@ -61,6 +61,41 @@ def event_observations(run):
         scope='Calibration observations. Missing interval keys are unobserved, not zero. F uses a same-call dual envelope; plain remains a separate observation.')
 
 
+def constant_event_calibration(observations):
+    """Same-card case medians; no component-error compensation in time transfer."""
+    import numpy as np
+    result=dict(events_ns={},dual_event_extra_ns={},plain_transfer={})
+    for cfg in sorted({c['row']['config'] for c in observations['cases']}):
+        cases=[c for c in observations['cases'] if c['row']['config']==cfg]
+        def median(key):
+            values=[c['intervals_ns'][key] for c in cases if key in c['intervals_ns']]
+            if not values:raise ValueError(cfg+': unobserved event '+key)
+            return st.median(values)
+        keys=['P0','S','w','h','Etail']
+        p={k:median(k) for k in keys}
+        if cfg=='cfg_b':
+            p.update(E=median('E'),gm=median('gm'),we=median('we'))
+            p['r']=p['E']/median('Efull')
+        else:
+            p.update(E0=median('E0_mean'),E=median('E_middle'),Elast=median('Elast'))
+        p.update(x0=0.,x1=0.,xk=0.,rho={})
+        result['events_ns'][cfg]=p
+        result['dual_event_extra_ns'][cfg]=st.median(c['event_extra_ns'] for c in cases)
+        # Regress plain event against observed dual envelope, not an imperfect
+        # component prediction: this transfer cannot absorb supply-model errors.
+        x=np.array([st.median(p['envelope_ns'] for p in c['processes'])/1000 for c in cases])
+        y=np.array([st.median(p['plain_event_ns'] for p in c['processes'])/1000 for c in cases])
+        design=np.column_stack([np.ones(len(x)),x])
+        coefficients,_,rank,_=np.linalg.lstsq(design,y,rcond=None)
+        if rank!=2 or min(coefficients)<0:raise ValueError(cfg+': no positive affine observer transfer')
+        residual=(design@coefficients)/y-1
+        result['plain_transfer'][cfg]=dict(F_us=float(coefficients[0]),kappa=float(coefficients[1]),
+            calibration_median_abs_pct=float(np.median(abs(residual))*100),
+            calibration_max_abs_pct=float(max(abs(residual))*100),
+            scope='Empirical plain-event / dual-envelope transfer on these calibration cases.')
+    return result
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run',type=Path,required=True)
