@@ -4,6 +4,7 @@
 No GPU work or modification of frozen predictions. Default V08F mode reuses
 summaries plus six cfg_a trace controls; --sm-summary uses the archived SM scan;
 --coverage-suite compares two address-coverage/prefill forms on separate cohorts.
+--fill-suite separates valid-address and OOB-fill demands on one card in cycle/ns forms.
 L is a finite mainloop window including drain, not an internal steady-state timer.
 Requires numpy/scipy; all input archives are read-only and output must be new.
 """
@@ -673,15 +674,194 @@ def coverage_suite(run, output):
     print(json.dumps({c:{m:dict(rank=f['active_jacobian_rank'],nparam=f['parameter_count'],fit=f['fit']) for m,f in v['models'].items()} for c,v in result.items()},indent=2))
 
 
+FILL_FIELDS = ['valid_source_KiB', 'B_extra32_KiB', 'B_extra128_KiB',
+               'A_fill_KiB', 'B_fill_KiB']
+
+
+def fill_geometry(row, setup):
+    """Descriptor-address demand and local zero-fill demand for this cfg_b cohort."""
+    from v08_model import scheduled_work
+    if row['config']!='cfg_b': raise ValueError('this fill component is calibrated for cfg_b only')
+    work=scheduled_work('cfg_b',row['m'],row['n'],setup['grid'],row['swizzle'])
+    kt=(row['k']+63)//64
+    if row['k']%64: raise ValueError('this fill comparison uses complete Ktiles')
+    map_m=row.get('input_map_m',row['m']); map_n=row.get('input_map_n',row['n'])
+    requests=[]
+    for coords in work:
+        values=[]
+        for mi,ni in coords:
+            am=max(0,min(128,map_m-mi*128)); bn=max(0,min(128,map_n-ni*128))
+            a=address_box(am,128,2*row['lda'],mi*256*row['lda']%128) if am else (0,0,0)
+            b=address_box(64,2*bn,2*row['ldb'],ni*256%128) if bn else (0,0,0)
+            if a[1] or a[2]: raise ValueError('A pitch is aligned in this same-card batch')
+            values.append(np.array([a[0]+b[0],b[1],b[2],16-a[0],16-b[0]]))
+        requests.append(values)
+    waves=[sum((v[j][:3] for v in requests if len(v)>j),np.zeros(3))
+           for j in range(max(map(len,requests)))]
+    credit=min(setup['stages'],kt)/kt
+    effective=[(1-credit)*v+credit*(waves[j+1] if j+1<len(waves) else np.zeros(3))
+               for j,v in enumerate(waves)]
+    grouped=defaultdict(list)
+    for coords,values in zip(work,requests):
+        for j,((mi,ni),v) in enumerate(zip(coords,values)):
+            cls='padM' if mi*128>=row['m'] else 'padN' if ni*128>=row['n'] else 'in'
+            grouped[j,len(coords),cls].append(np.r_[effective[j],v[3:]])
+    return {key:dict(X=np.mean(values,axis=0).tolist(),windows=len(values)) for key,values in grouped.items()}
+
+
+def fill_observations(run):
+    base=run.parent; rows=[]; inputs=[]; reports=[]; gpu=None
+    for folder in (base/'20261009-R18-input-map-job738296',base/'20261009-R18-input-map-n-job738307'):
+        path=folder/'reanalysis/input-map-pairs-v1/input-map-pairs.json'; data=read_json(path); reports.append(data)
+        current=data['environment']['gpu']; gpu=current if gpu is None else gpu
+        if current!=gpu: raise ValueError('fill fits must remain on one card')
+        setups={s['case']:s['setup'] for s in read_json(folder/'static_setup.json')}
+        cases={c['id']:c for c in read_json(folder/'cases.json')}
+        inputs += [path,folder/'static_setup.json',folder/'cases.json']
+        for pair in data['pairs']:
+            for side,key in (('oob','control'),('address_zero','address_zero')):
+                name=pair[key]; row=cases[name]; features=fill_geometry(row,setups[name])
+                for g in pair['groups']:
+                    feature=features[g['j'],g['T'],g['logical_class']]
+                    if any(t['windows']!=feature['windows'] for t in g['processes']): raise ValueError('work-list/group mismatch')
+                    rows.append(dict(case=name,kt=row['k']//64,j=g['j'],T=g['T'],cls=g['logical_class'],
+                        X=feature['X'],windows=feature['windows'],
+                        cycle=statistics.median(t[side+'_cycle_per_kt'] for t in g['processes']),
+                        ns=statistics.median(t[side+'_ns_per_kt'] for t in g['processes'])))
+    env=read_json(run/'environment.json')
+    if env['gpu']!=gpu: raise ValueError('B curve and fill pairs use different cards')
+    cases={c['id']:c for c in read_json(run/'cases.json')}; setups={s['case']:s['setup'] for s in read_json(run/'static_setup.json')}
+    inputs += [run/'environment.json',run/'cases.json',run/'static_setup.json']
+    for name,row in cases.items():
+        geometry=fill_geometry(row,setups[name]); groups=defaultdict(list)
+        for path in sorted((run/'samples'/name).glob('dual-*.json')):
+            rec=read_json(path)
+            if rec['returncode']: continue
+            inputs += [path,run/rec['raw']]; process=defaultdict(list)
+            for cta in replay(run,rec,row)['ctas']:
+                for j,(c,t) in enumerate(zip(cta['tiles'],cta['tiles_ns'])):
+                    process[j,len(cta['tiles'])].append([(c[1]-c[0])/16,(t[1]-t[0])/16])
+            for key,values in process.items(): groups[key].append(np.mean(values,axis=0))
+        for (j,total),values in groups.items():
+            if len(values)!=10: raise ValueError('missing B-curve dual process')
+            feature=geometry[j,total,'in']; target=np.median(values,axis=0)
+            rows.append(dict(case=name,kt=16,j=j,T=total,cls='in',X=feature['X'],windows=feature['windows'],
+                             cycle=float(target[0]),ns=float(target[1])))
+    # Same dual group/process, compared across positions; these ratios are diagnostics only.
+    phase=[]
+    for data in reports:
+        for pair in data['pairs']:
+            pad='padM' if 'padM' in pair['group'] else 'padN'
+            a=next(g for g in pair['groups'] if (g['j'],g['T'],g['logical_class'])==(1,6,pad))
+            b=next(g for g in pair['groups'] if (g['j'],g['T'],g['logical_class'])==(4,6,pad))
+            x={t['trial']:t for t in a['processes']}; y={t['trial']:t for t in b['processes']}
+            samples=[dict(trial=t,cycle_ratio_j4_j1=y[t]['oob_cycle_per_kt']/x[t]['oob_cycle_per_kt'],
+                ns_ratio_j4_j1=y[t]['oob_ns_per_kt']/x[t]['oob_ns_per_kt'],
+                effective_cycle_per_ns_j1=x[t]['oob_cycle_per_kt']/x[t]['oob_ns_per_kt'],
+                effective_cycle_per_ns_j4=y[t]['oob_cycle_per_kt']/y[t]['oob_ns_per_kt']) for t in sorted(x)]
+            phase.append(dict(group=pair['group'],samples=samples,
+                medians={k:statistics.median(s[k] for s in samples) for k in samples[0] if k!='trial'}))
+    return rows,inputs,gpu,phase
+
+
+def fill_predict(rows, parameters, unit, assumed_ghz):
+    floor=512 if unit=='cycle' else 512/assumed_ghz
+    return np.array([parameters[0]/r['kt']+max(floor,np.dot(r['X'],parameters[1:])) for r in rows])
+
+
+def fill_window_cycles(request_features, kt, parameters, unit='cycle', frequency_ghz=None):
+    """Development CTA L replacement; NS service requires an explicit predicted f."""
+    service=float(np.dot(request_features,parameters[1:]))
+    if unit=='cycle': return parameters[0]+kt*max(512,service)
+    if frequency_ghz is None or frequency_ghz<=0: raise ValueError('NS form requires an explicit positive frequency assumption')
+    return frequency_ghz*parameters[0]+kt*max(512,frequency_ghz*service)
+
+
+def fit_fill(rows, unit, assumed_ghz):
+    counts=Counter(r['case'] for r in rows); weights=np.sqrt([1/counts[r['case']] for r in rows])
+    target=np.array([r[unit] for r in rows]); scale=1 if unit=='cycle' else assumed_ghz
+    candidates=[]
+    for q,zero in ((.08,30),(.17,60),(.3,90)):
+        initial=np.array([600,q,.8,.2,zero,zero])/scale
+        candidates.append(least_squares(lambda p:weights*(fill_predict(rows,p,unit,assumed_ghz)/target-1),
+            initial,bounds=(0,np.inf),max_nfev=3000,ftol=1e-11,xtol=1e-11,gtol=1e-11))
+    p=min(candidates,key=lambda c:c.cost).x
+    x=np.array([r['X'] for r in rows]); floor=512/scale; active=x@p[1:]>floor
+    jac=np.column_stack([[1/r['kt'] for r in rows],x*active[:,None]])
+    norms=np.linalg.norm(jac,axis=0); singular=np.linalg.svd(jac/np.where(norms>0,norms,1),compute_uv=False)
+    unused=[i for i in range(x.shape[1]) if np.all(x[:,i]==0)]
+    return p,dict(active_jacobian_rank=int(sum(singular>1e-9)),parameters=6,
+                  scaled_singular_values=singular.tolist(),unused_features=[FILL_FIELDS[i] for i in unused])
+
+
+def fill_suite(run,output,assumed_ghz):
+    rows,paths,gpu,phase=fill_observations(run)
+    train=[r for r in rows if r['j']>0]; first=[r for r in rows if r['j']==0]
+    fits={}; residuals=[]
+    for unit in ('cycle','ns'):
+        p,ident=fit_fill(train,unit,assumed_ghz); values=fill_predict(train,p,unit,assumed_ghz)
+        errors=values/np.array([r[unit] for r in train])-1
+        fit=dict(parameters=dict(zip(['window_'+unit]+FILL_FIELDS,p.tolist())),identification=ident,
+                 later_fit=metrics(errors),first_transfer=metrics(fill_predict(first,p,unit,assumed_ghz)/np.array([r[unit] for r in first])-1))
+        for subset,selected in {'R10_Bcurve':[i for i,r in enumerate(train) if 'bcurve' in r['case']],
+             'whole_fill':[i for i,r in enumerate(train) if r['X'][3]+r['X'][4]>0],
+             'valid_address':[i for i,r in enumerate(train) if r['X'][3]+r['X'][4]==0]}.items():
+            fit[subset]=metrics(errors[selected])
+        folds=[]
+        for kt in (16,64):
+            training=[r for r in train if r['kt']!=kt]; testing=[r for r in train if r['kt']==kt]
+            q,info=fit_fill(training,unit,assumed_ghz)
+            missing=[FILL_FIELDS.index(k) for k in info['unused_features']]
+            supported=[r for r in testing if all(r['X'][i]==0 for i in missing)]
+            fold=dict(removed_K=kt*64,identification=info,test_rows=len(testing),scored_rows=len(supported),
+                      unsupported_cases=sorted({r['case'] for r in testing if r not in supported}))
+            if supported: fold['score']=metrics(fill_predict(supported,q,unit,assumed_ghz)/np.array([r[unit] for r in supported])-1)
+            folds.append(fold)
+        fit['leave_K']=folds;fits[unit]=fit
+        for r,v,e in zip(train,values,errors):residuals.append(dict(case=r['case'],j=r['j'],T=r['T'],cls=r['cls'],unit=unit,
+            observed=r[unit],predicted=float(v),relative_error=float(e),fill_KiB=r['X'][3]+r['X'][4]))
+    sensitivity={}
+    for f in (1.6,1.8):
+        if f==assumed_ghz: sensitivity[str(f)]=fits['ns']['later_fit']
+        else:
+            p,_=fit_fill(train,'ns',f)
+            sensitivity[str(f)]=metrics(fill_predict(train,p,'ns',f)/np.array([r['ns'] for r in train])-1)
+    frozen=run/'frozen/r10-b-pitch.json';paths.append(frozen)
+    report=dict(protocol='Post-reveal development on GPU-43269fbc; no new heldout or physical zero-fill bandwidth claim.',
+        gpu=gpu,features=FILL_FIELDS,
+        formula='L=b+Kt*max(C, q_valid*Veff+q32*B32eff+q128*B128eff+qA*ZA+qB*ZB)',
+        time_basis=dict(cycle='C=512 cycle/Ktile; coefficients in cycles',ns='C=512/assumed_ghz ns/Ktile; coefficients in ns'),
+        assumed_ghz=assumed_ghz,ns_frequency_sensitivity=sensitivity,fits=fits,phase_diagnostics=phase,observations=rows,
+        scope='cfg_b, stage6, recorded grids/strides and complete Ktiles; A pitch aligned; zero demand observed only at 0 or whole 16 KiB per operand.',
+        limits=['Veff uses descriptor bounds, including valid reads of explicit zeros; ZA/ZB are separate destination fill demands.',
+                'Software prefill credit is a finite-window approximation, not measured TMA occupancy.',
+                'All measured cycle/ns ratios are diagnostics; predictions and leave-K tests use the explicit scalar frequency assumption only.',
+                'Unused coverage coordinates are not scored in leave-K tests. Rank is conditional on the fitted piecewise model.',
+                'Whole-fill calibration does not establish proportional costs for partial OOB; A stride effects are uncalibrated.',
+                'The caller may supply a predicted frequency: NS-form cycles=f*(b_ns+Kt*max(512/f,service_ns)); first output remains diagnostic.',
+                'Only L is replaced in CTA recursion; startup supply and epilogue remain separate. Remaining group failures are retained.'],
+        input_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},
+        frozen_sha256=hashlib.sha256(frozen.read_bytes()).hexdigest(),analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=False);(output/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'residuals.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(residuals[0]));writer.writeheader();writer.writerows(residuals)
+    print(json.dumps({u:{k:v for k,v in f.items() if k in ('later_fit','whole_fill','identification','leave_K')} for u,f in fits.items()},indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)
     parser.add_argument("--calibration-run", type=Path)
     parser.add_argument("--sm-summary", type=Path, help="fit local/grid/wave caps to an existing R13 SM-scan summary")
     parser.add_argument("--coverage-suite", action='store_true', help="two post-reveal coverage/prefill forms; --run is R10 job738203")
+    parser.add_argument("--fill-suite", action='store_true',help='same-card valid-address/OOB cycle versus direct-ns development; --run is R10 job738203')
+    parser.add_argument("--assumed-ghz",type=float,default=1.6,help='explicit compute-frequency assumption for --fill-suite NS form')
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.coverage_suite:
+    if args.fill_suite:
+        if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
+        fill_suite(args.run.resolve(),args.output.resolve(),args.assumed_ghz)
+    elif args.coverage_suite:
         coverage_suite(args.run.resolve(), args.output.resolve())
     elif args.sm_summary:
         sm_candidates(args.run.resolve(), args.sm_summary.resolve(), args.output.resolve())
