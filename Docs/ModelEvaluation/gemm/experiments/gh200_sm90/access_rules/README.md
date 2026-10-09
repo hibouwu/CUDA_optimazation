@@ -8,7 +8,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-规则推导与计量约定见 [RULES](RULES.md)。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；V09 尚未冻结。
+规则推导与计量约定见 [RULES](RULES.md)。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；[V09](V09-component-validation.md) 已完成校准与修订冻结，等待确认，尚未采样。
 
 <a id="当前状态2026-10-07"></a>
 
@@ -36,7 +36,7 @@
 | [R15](R15-output-service.md) 输出服务 | 已测，条件对照 | 标量探针不能直接作为 CUTLASS 输出常数 |
 | [R16](R16-residency-quota.md) 驻留与配额 | 已测，未用于 V07 | 驻留收益依供给变化；寄存器申请等待取决于释放时序 |
 | [R17](R18-cluster-boundary.md#r17) 越界 tile | 已并入 R18 | 改用匹配位置的窗口增量；旧两例修正只作诊断 |
-| [R18](R18-cluster-boundary.md) cluster 边界 | 旧规则用于V07；新配对未接入 | cfg_b 同逻辑输出下，有效地址零比 M/N 向 TMA 越界填零快约17%–20%；分项仍随位置变化 |
+| [R18](R18-cluster-boundary.md) cluster 边界 | 旧规则用于V07；新配对已接开发模型 | cfg_b 同逻辑输出下，有效地址零比 M/N 向 TMA 越界填零快约17%–20%；分项仍随位置变化 |
 | [R19](R19-critical-cta-tail.md) 关键 CTA 与尾部 | 已测，只作诊断 | swizzle 改变工作与尾部；V07 尾差项选择 none |
 | [B01](B01-bandwidth-cache.md) 带宽与缓存 | 已测，未用于 V07 | 条件请求速率；不等同物理 HBM 流量或缓存收益 |
 | [V01](V01-validation.md) 组合验证 | 部分通过 | 单 CTA 通过；整卡与完整 kernel 未通过 |
@@ -47,6 +47,7 @@
 | [V06](V06-revised-transfer.md) 递推修正 | 未通过 | 18 个留出条件为 5.25% / 19.0%；边界与尾部未解决 |
 | [V07](V07-rule-validation.md) 边界迁移 | 总时间通过，分项受限 | 24 条件为 3.06% / 8.71%；范围与分项限制见上 |
 | [V08](V08-wider-validation.md) 更宽留出 | 整体未通过 | 36 条件为 2.61% / 35.34%；21 条件子集见上 |
+| [V09](V09-component-validation.md) 组件组合 | 冻结待确认 | 30条件保留，29数值预测＋1不支持；未采样 |
 
 ## 数据与代码
 
