@@ -198,13 +198,104 @@ def analyze(run, set_name):
     print(destination / 'summary.json')
 
 
+def joint_pitch(run, output):
+    """Same-shape A/B factorial, with same-call cycle/ns endpoints in dual traces."""
+    from collections import defaultdict
+    import gzip
+    from analyze_r18 import replay
+    from analyze_r13_sm import select_attempts, validate_setup, overlap_windows
+    import v06_run as common
+
+    common.verify(run)
+    rows=json.loads((run/'cases.json').read_text())
+    setups={r['case']:r['setup'] for r in json.loads((run/'static_setup.json').read_text())}
+    processes=[];tiles=[];failed=[];summaries=[]
+    for row in rows:
+        selected, failures, ignored=select_attempts(run,row['id'],('plain','wide','stamped','dual'))
+        failed.extend(failures)
+        if ignored:raise ValueError('unexpected variants in factorial run')
+        times=defaultdict(list);scratch={}
+        for item in selected:
+            rec=item['record'];obs=replay(run,rec,row)
+            with gzip.open(run/rec['raw'],'rt') as stream:
+                events={v['event']:v for line in stream if line.strip() for v in [json.loads(line)]}
+            setup=events['setup'];validate_setup(row,setups[row['id']],setup)
+            scratch[rec['variant']]=setup['scratch_bytes'];times[rec['variant']].append(rec['elapsed_us'])
+            process=dict(case=row['id'],a_pitched=(row['lda']*2)%128!=0,b_pitched=(row['ldb']*2)%128!=0,
+                trial=rec['trial'],variant=rec['variant'],elapsed_us=rec['elapsed_us'])
+            if rec['variant']=='dual':
+                if setup['trace_version']!='r18-dual-clock-events':raise ValueError('direct dual-clock trace required')
+                later=[];first=[];supply=[];last_epi=[];windows=[]
+                for c in obs['ctas']:
+                    supply.append(c['tiles_ns'][0][0]-c['entry_ns'])
+                    last_epi.append(c['tiles_ns'][-1][3]-c['tiles_ns'][-1][2])
+                    for j,(cycle,ns,coord) in enumerate(zip(c['tiles'],c['tiles_ns'],c['work'])):
+                        value=dict(case=row['id'],trial=rec['trial'],cta=c['cta'],sm=c['sm'],j=j,T=len(c['tiles']),
+                            mi=coord[0],ni=coord[1],L_cycles=cycle[1]-cycle[0],L_ns=ns[1]-ns[0],
+                            E_cycles=cycle[3]-cycle[2],E_ns=ns[3]-ns[2],first_mma_ns=ns[0],main_end_ns=ns[1],
+                            epi_permit_ns=ns[2],epi_done_ns=ns[3])
+                        tiles.append(value);(later if j else first).append(value)
+                        windows.append(dict(sm=c['sm'],entry_ns=ns[0],end_ns=ns[1],entry_c=cycle[0],end_c=cycle[1]))
+                kt=(row['k']+63)//64
+                overlap=overlap_windows(windows)
+                process.update(L_later_cycle_per_kt=statistics.fmean(t['L_cycles'] for t in later)/kt,
+                    L_later_ns_per_kt=statistics.fmean(t['L_ns'] for t in later)/kt,
+                    L_first_cycle_per_kt=statistics.median(t['L_cycles'] for t in first)/kt,
+                    L_first_ns_per_kt=statistics.median(t['L_ns'] for t in first)/kt,
+                    mainloop_cycle_per_ns=statistics.median(t['L_cycles']/t['L_ns'] for t in later),
+                    supply_ns=statistics.median(supply),last_epilogue_ns=statistics.median(last_epi),
+                    mainloop_mean_sm_windows=overlap['mean_observed_sms'],mainloop_peak_sm_windows=overlap['peak_observed_sms'])
+            processes.append(process)
+        if len({scratch[v] for v in ('wide','stamped','dual')})!=1:raise ValueError('scratch clearing differs across matched variants')
+        if any(len(times[v])!=10 for v in ('plain','wide','stamped','dual')):raise ValueError('ten successful processes per variant required')
+        med={v:statistics.median(t) for v,t in times.items()}
+        summaries.append(dict(case=row['id'],a_pitched=(row['lda']*2)%128!=0,b_pitched=(row['ldb']*2)%128!=0,
+            elapsed_us=med,cv={v:statistics.pstdev(t)/statistics.mean(t) for v,t in times.items()},
+            disturbance={v:med[v]/med['wide']-1 for v in ('stamped','dual')},
+            preparation_shift=med['wide']/med['plain']-1,scratch_bytes=scratch))
+    interactions=[]
+    for variant in ('plain','wide','stamped','dual'):
+        metric_names=['elapsed_us']+(['L_later_cycle_per_kt','L_later_ns_per_kt','L_first_cycle_per_kt','L_first_ns_per_kt'] if variant=='dual' else [])
+        for trial in range(10):
+            members={(p['a_pitched'],p['b_pitched']):p for p in processes if p['variant']==variant and p['trial']==trial}
+            if set(members)!={(False,False),(True,False),(False,True),(True,True)}:
+                raise ValueError('incomplete factorial trial')
+            for metric in metric_names:
+                z,a,b,ab=[members[key][metric] for key in [(False,False),(True,False),(False,True),(True,True)]]
+                interactions.append(dict(variant=variant,trial=trial,metric=metric,aligned=z,A_only=a,B_only=b,both=ab,
+                    A_delta=a-z,B_delta=b-z,both_delta=ab-z,interaction=ab-a-b+z))
+    grouped=defaultdict(list)
+    for r in interactions:grouped[r['variant'],r['metric']].append(r)
+    contrasts=[dict(variant=v,metric=m,**{key:dict(median=statistics.median(r[key] for r in members),
+        minimum=min(r[key] for r in members),maximum=max(r[key] for r in members))
+        for key in ('aligned','A_only','B_only','both','A_delta','B_delta','both_delta','interaction')})
+        for (v,m),members in grouped.items()]
+    report=dict(scope='Fixed M/N/K, D pitch, values and cache protocol; A/B physical pitch factorial. Direct ns is not reconstructed from whole-call frequency.',
+        environment=json.loads((run/'environment.json').read_text()),cases=summaries,processes=processes,
+        contrasts=contrasts,trial_contrasts=interactions,failed_attempts=failed,
+        caveats=['Mainloop windows include pipeline wait/drain; their SM overlap is not TMA occupancy.',
+                 'Same trial refers to adjacent randomized processes, not simultaneous calls.',
+                 'Observer qualification and interval perturbation must be assessed before adopting parameters.'],
+        analyzer_sha256=common.sha(Path(__file__)),cases_sha256=common.sha(run/'cases.json'))
+    output.mkdir(parents=True,exist_ok=False)
+    (output/'joint-pitch.json').write_text(json.dumps(report,indent=2)+'\n')
+    with (output/'tiles.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(tiles[0]));writer.writeheader();writer.writerows(tiles)
+    print(json.dumps(dict(cases=summaries,contrasts=contrasts),indent=2))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path)
     parser.add_argument('--set', choices=('representatives', 'formal'), default='formal')
     parser.add_argument('--cpu-check', action='store_true')
+    parser.add_argument('--joint-pitch', action='store_true')
+    parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.cpu_check:
         cpu_check()
+    elif args.joint_pitch:
+        if args.output is None:parser.error('--joint-pitch requires --output')
+        joint_pitch(args.input.resolve(),args.output.resolve())
     else:
         analyze(args.input, args.set)

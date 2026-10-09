@@ -74,9 +74,12 @@ def replay(root,record,row):
     warm=call['warmup_us'];warm_cv=statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])
     if not 8<=len(warm)<=30 or warm_cv>.02:raise ValueError('warmup did not converge')
     result=dict(case=row['id'],variant=record['variant'],trial=record['trial'],elapsed_us=call['elapsed_us'],checked_values=4096,zero_values=zero_count,ctas=[])
-    if record['variant']=='plain':return result
-    words=call['trace'];ctas=math.prod(setup['grid']);width=16+2*64*6
+    if record['variant'] in ['plain','wide']:return result
+    tile_words=setup.get('trace_tile_words',6)
+    words=call['trace'];ctas=math.prod(setup['grid']);width=16+2*64*tile_words
     if len(words)!=ctas*width:raise ValueError('wrong trace size')
+    dual=setup['trace_version']=='r18-dual-clock-events'
+    if tile_words not in [6,10] or (dual and tile_words!=10):raise ValueError('wrong tile layout')
     schedule='pingpong' if row['config']=='cfg_b' else 'cooperative'
     seen=[]
     light=setup['trace_version']=='r18-light-events'
@@ -88,16 +91,21 @@ def replay(root,record,row):
         for role in range(2):
             end,ns,count=head[4+3*role:7+3*role]
             if count>64 or head[11+role]!=head[2]:raise ValueError('invalid count/SM-local clock boundary')
-            tiles=[];work=[]
+            tiles=[];tiles_ns=[];work=[]
             for j in range(count):
-                x=16+(role*64+j)*6;tile=head[x:x+4];mi,ni=head[x+4:x+6]
+                x=16+(role*64+j)*tile_words;tile=head[x:x+4];mi,ni=head[x+4:x+6]
                 if light:
                     if schedule!='cooperative' or count!=len(inferred_work[c]):raise ValueError('light work-count mismatch')
                     mi,ni=(q+1 for q in inferred_work[c][j])
                 if not all(tile) or min(mi,ni)<=0 or not tile[0]<=tile[1]<=tile[2]<=tile[3]<=end:
                     raise ValueError('invalid tile events/coordinates')
                 tiles.append(tile);work.append((mi-1,ni-1))
-            roles.append(dict(final_c=end,final_ns=ns,tiles=tiles));coords.append(work)
+                if dual:
+                    times=head[x+6:x+10]
+                    if not head[1]<=head[13]<=times[0]<=times[1]<=times[2]<=times[3]<=ns:
+                        raise ValueError('invalid direct globaltimer tile events')
+                    tiles_ns.append(times)
+            roles.append(dict(final_c=end,final_ns=ns,tiles=tiles,tiles_ns=tiles_ns));coords.append(work)
         if schedule=='cooperative':
             if coords[0]!=coords[1]:raise ValueError('consumer work mismatch')
             work=coords[0]
@@ -105,8 +113,14 @@ def replay(root,record,row):
             work=[coords[j%2][j//2] for j in range(len(coords[0])+len(coords[1]))]
         entry=dict(entry_c=head[0],entry_ns=head[1],smid=head[2]-1,prod_c=head[3],roles=roles)
         tiles,end_c,end_ns=model.cta_timeline(entry,schedule)
-        result['ctas'].append(dict(cta=c,entry_c=head[0],entry_ns=head[1],sm=head[2]-1,prod_c=head[3],
-                                  end_c=end_c,end_ns=end_ns,tiles=tiles,work=work))
+        cta=dict(cta=c,entry_c=head[0],entry_ns=head[1],sm=head[2]-1,prod_c=head[3],
+                 end_c=end_c,end_ns=end_ns,tiles=tiles,work=work)
+        if dual:
+            # Reuse the same role merge with ns-valued endpoints; no clock interpolation.
+            ns_roles=[dict(tiles=r['tiles_ns'],final_c=r['final_ns'],final_ns=r['final_ns']) for r in roles]
+            cta['tiles_ns']=model.cta_timeline(dict(roles=ns_roles),schedule)[0]
+            cta['prod_ns']=head[13]
+        result['ctas'].append(cta)
         seen+=work
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
     tm=256 if row['config'].startswith('cfg_c') else 128;tn=128

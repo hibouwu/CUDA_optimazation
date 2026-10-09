@@ -17,7 +17,7 @@ from v08_model import scheduled_work
 from v06_run import sha
 
 
-def select_attempts(root, case):
+def select_attempts(root, case, variants=('plain', 'stamped')):
     """Retain every failure; never count retries as independent processes."""
     successes = defaultdict(list)
     failed, ignored = [], []
@@ -28,7 +28,7 @@ def select_attempts(root, case):
         item = dict(path=str(path.relative_to(root)), record=record)
         if record['returncode']:
             failed.append(item)
-        elif record['variant'] in ('plain', 'stamped'):
+        elif record['variant'] in variants:
             successes[record['variant'], record['trial']].append(item)
         else:
             ignored.append(item['path'])

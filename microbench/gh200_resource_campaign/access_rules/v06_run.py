@@ -202,7 +202,13 @@ def case_args(row):
 
 
 def identity():
-    gpu = subprocess.check_output(["nvidia-smi", "--query-gpu=uuid,name,driver_version",
+    command = ["nvidia-smi"]
+    uuid = os.environ.get("V08_GPU")
+    if uuid:
+        if os.environ.get("CUDA_VISIBLE_DEVICES") != uuid:
+            raise ValueError("V08_GPU must match the allocated CUDA_VISIBLE_DEVICES UUID")
+        command += ["-i", uuid]
+    gpu = subprocess.check_output(command + ["--query-gpu=uuid,name,driver_version",
                                    "--format=csv,noheader"], text=True).strip()
     if "\n" in gpu or "GH200" not in gpu:
         raise ValueError("exactly one GH200 expected: " + gpu)

@@ -82,7 +82,11 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R15_OUTPUT_NS)
+#if defined(R18_DUAL_CLOCK)
+constexpr const char* kTraceVersion="r18-dual-clock-events";
+#elif defined(R18_MATCH_DUAL_LAYOUT)
+constexpr const char* kTraceVersion="r18-wide-clock-events";
+#elif defined(R15_OUTPUT_NS)
 constexpr const char* kTraceVersion="r15-first-output-ns";
 #elif defined(V08_ENDS)
 constexpr const char* kTraceVersion="v08-ends";
@@ -91,7 +95,12 @@ constexpr const char* kTraceVersion="r18-light-events";
 #else
 constexpr const char* kTraceVersion="r18-work-coordinates";
 #endif
-constexpr int kTraceWords = 16 + 2 * 64 * 6;  // = V06CtaWords
+#if defined(R18_DUAL_CLOCK) || defined(R18_MATCH_DUAL_LAYOUT)
+constexpr int kTraceTileWords = 10;
+#else
+constexpr int kTraceTileWords = 6;
+#endif
+constexpr int kTraceWords = 16 + 2 * 64 * kTraceTileWords;  // = V06CtaWords
 
 
 static void cutlass_check(cutlass::Status status, const char* what) {
@@ -377,6 +386,7 @@ int main(int argc, char** argv) {
               << ",\"zero_m\":" << o.zero_m << ",\"zero_n\":" << o.zero_n
               << ",\"storage_m\":" << storage_m << ",\"storage_n\":" << storage_n << ",\"swizzle\":" << o.swizzle
               << ",\"trace_tile_capacity\":64,\"trace_version\":\"" << kTraceVersion << "\""
+              << ",\"trace_tile_words\":" << kTraceTileWords
               << ",\"scratch_bytes\":" << trace.count * sizeof(uint64_t)
               << ",\"trace_words\":" << kTraceWords << "}\n";
     if (o.mode == "setup")

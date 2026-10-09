@@ -1,19 +1,27 @@
 #pragma once
-// V06 light per-CTA stamps (clock64; globaltimer only at CTA entry and final release).
-// R18/R19: six words per tile; fields 4,5 record M_idx+1,N_idx+1.
+// Default: clock64 events, globaltimer at CTA entry/final. R18_DUAL_CLOCK adds
+// globaltimer to the same four per-tile sites and to producer first work.
+// R18_MATCH_DUAL_LAYOUT reserves the same space without adding those reads.
+// Fields 4,5 record M_idx+1,N_idx+1; wide fields 6..9 hold the four globaltimer events.
 // Per CTA (uint64 words):
 //   [0] entry cycles      [1] entry ns       [2] smid+1     [3] producer first-work cycles
 //   [4] role1 final cyc   [5] role1 final ns [6] role1 tiles
 //   [7] role2 final cyc   [8] role2 final ns [9] role2 tiles [10] overflow flag
 //   R15_OUTPUT_NS only: [13]/[14] first-tile issuer EPI_PERMIT/EPI_DONE globaltimer.
 //   The R15 single-tile cases use thread 256; [8] remains the store_tail endpoint.
-//   [16 + ((role-1)*V06Tiles + tile)*4 + e], e = FIRST_MMA, MAIN_END, EPI_PERMIT, EPI_DONE
+//   R18_DUAL_CLOCK: [13] producer first-work ns.
+//   [16 + ((role-1)*V06Tiles + tile)*V06TileWords + e], e = FIRST_MMA, MAIN_END, EPI_PERMIT, EPI_DONE
 // role = threadIdx.x / 128 (1, 2 = consumer warpgroups). Only thread %128 == 0 writes.
 // EPI_DONE: cooperative = epilogue store() returned; pingpong = store_tail() returned.
 // Final: cooperative = after the post-loop store_tail of the TMA-issuing thread 256;
 //        pingpong = each consumer warpgroup leaving its work loop (after its last store_tail).
 #include <cstdint>
-constexpr int V06Tiles = 64, V06Head = 16, V06CtaWords = V06Head + 2 * V06Tiles * 6;
+#if defined(R18_DUAL_CLOCK) || defined(R18_MATCH_DUAL_LAYOUT)
+constexpr int V06TileWords = 10;
+#else
+constexpr int V06TileWords = 6;
+#endif
+constexpr int V06Tiles = 64, V06Head = 16, V06CtaWords = V06Head + 2 * V06Tiles * V06TileWords;
 __constant__ uint64_t* v06_trace_ptr;
 enum V06Event { V06_FIRST_MMA, V06_MAIN_END, V06_EPI_PERMIT, V06_EPI_DONE };
 
@@ -50,11 +58,16 @@ __device__ __forceinline__ void v06_stamp(int, int) {}
 // Called at the top of each work-loop iteration by producer and consumer roles.
 template <class Work>
 __device__ __forceinline__ void v06_begin(Work const& work, int tile) {
-  if (threadIdx.x == 0 && tile == 0) v06_base()[3] = v06_clock();
+  if (threadIdx.x == 0 && tile == 0) {
+    v06_base()[3] = v06_clock();
+#ifdef R18_DUAL_CLOCK
+    v06_base()[13] = v06_ns();
+#endif
+  }
   #ifndef R18_LIGHT
   if(threadIdx.x>=128 && threadIdx.x%128==0){
     if(tile<0||tile>=V06Tiles){v06_base()[10]=1;return;}
-    auto out=v06_base()+V06Head+((threadIdx.x/128-1)*V06Tiles+tile)*6;
+    auto out=v06_base()+V06Head+((threadIdx.x/128-1)*V06Tiles+tile)*V06TileWords;
     out[4]=uint64_t(work.M_idx)+1;out[5]=uint64_t(work.N_idx)+1;
   }
   #endif
@@ -63,13 +76,20 @@ __device__ __forceinline__ void v06_stamp(int event, int tile) {
   if (threadIdx.x % 128 != 0 || threadIdx.x < 128) return;
   int role = threadIdx.x / 128;
   uint64_t c = v06_clock();
+#ifdef R18_DUAL_CLOCK
+  uint64_t ns = v06_ns();
+#endif
 #ifdef R15_OUTPUT_NS
   if (threadIdx.x == 256 && tile == 0 &&
       (event == V06_EPI_PERMIT || event == V06_EPI_DONE))
     v06_base()[event == V06_EPI_PERMIT ? 13 : 14] = v06_ns();
 #endif
   if (tile < 0 || tile >= V06Tiles) { v06_base()[10] = 1; return; }
-  v06_base()[V06Head + ((role - 1) * V06Tiles + tile) * 6 + event] = c;
+  auto out = v06_base() + V06Head + ((role - 1) * V06Tiles + tile) * V06TileWords;
+  out[event] = c;
+#ifdef R18_DUAL_CLOCK
+  out[6 + event] = ns;
+#endif
 }
 #endif
 __device__ __forceinline__ void v06_final(int tiles) {

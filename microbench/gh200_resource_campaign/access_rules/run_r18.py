@@ -44,7 +44,8 @@ def cases(family='r18'):
     return rows
 
 
-def prepare(root,cutlass,family):
+def prepare(root,cutlass,family,rows=None,dual_clock=False):
+    rows=cases(family) if rows is None else rows
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
     for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py']:
         shutil.copy2(ROOT/name,source/name)
@@ -61,16 +62,18 @@ def prepare(root,cutlass,family):
         text=text.replace(site,site+'        v06_begin(work_tile_info, v06_tile_seq);\n')
         path.write_text(text)
     commands={}
-    for config in sorted({r['config'] for r in cases(family)}):
-        for variant in (['plain'] if family=='b01_cache' else ['plain','stamped']):
+    variants=['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
+    for config in sorted({r['config'] for r in rows}):
+        for variant in variants:
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
-            if variant=='stamped':
+            if dual_clock and variant!='plain':cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
+            if variant in ['stamped','dual']:
                 cmd+=['-DV06_TRACE','-Isource/overlay']
                 if family=='r18_lite':cmd+=['-DR18_LIGHT']
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{config}_{variant}']
             commands[f'{config}_{variant}']=cmd
-    common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',cases(family))
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json')))
+    common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
@@ -130,10 +133,14 @@ def run_one(root,row,variant,trial,attempt=0):
 def main(family='r18'):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('step',choices=['prepare','build','setup','sample','list'])
     p.add_argument('--output',type=Path);p.add_argument('--cutlass-root',type=Path);p.add_argument('--procs',type=int,choices=[1,10],default=10)
+    p.add_argument('--cases-file',type=Path,help='prepare: use a listed extension of an existing experiment')
+    p.add_argument('--dual-clock',action='store_true',help='prepare: add same-call globaltimer events; all variants use matched scratch sizes')
     a=p.parse_args()
     if a.step=='list':print(json.dumps(cases(family),indent=2));return
     root=a.output.resolve()
-    if a.step=='prepare':prepare(root,a.cutlass_root.resolve(),family);return
+    if a.step=='prepare':
+        rows=json.loads(a.cases_file.read_text()) if a.cases_file else None
+        prepare(root,a.cutlass_root.resolve(),family,rows,a.dual_clock);return
     if not os.environ.get('SLURM_JOB_ID'):raise ValueError('Slurm allocation required')
     if a.step=='build':
         version=subprocess.check_output(['nvcc','--version'],text=True)
@@ -155,7 +162,8 @@ def main(family='r18'):
         for group in groups:
             subset=[r for r in rows if r['group']==group];random.Random(20261008+trial).shuffle(subset)
             for row in subset:
-                variants=['plain'] if family=='b01_cache' else ['plain','stamped'];random.Random(20261008+trial).shuffle(variants)
+                variants=config.get('variants',['plain'] if family=='b01_cache' else ['plain','stamped'])[:]
+                random.Random(20261008+trial).shuffle(variants)
                 for variant in variants:run_one(root,row,variant,trial)
         print(family,'trial',trial,'complete',flush=True)
     (root/'nvidia-smi-after.txt').write_text(subprocess.check_output(['nvidia-smi','-q'],text=True))
