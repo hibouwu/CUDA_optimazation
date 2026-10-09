@@ -10,7 +10,7 @@ from pathlib import Path
 from analyze_r15_output_ns import PROFILE, WIDTH, analyze, direct_windows, summarize_call
 from analyze_r18 import reference
 from analyze_r15 import sha
-from analyze_r15 import analyze_dual_roles, output_parts, paired_J_decomposition, role_windows
+from analyze_r15 import analyze_dual_roles, output_parts, paired_J_decomposition, role_windows, fit_first_bytes
 from run_v08 import row as make_row
 
 
@@ -34,6 +34,16 @@ def fixture():
 
 
 class OutputNsTests(unittest.TestCase):
+    def test_max_identifiability_depends_on_distinct_loads_and_active_branches(self):
+        fit=fit_first_bytes([dict(x=3,post_permit=10),dict(x=8,post_permit=16)])
+        self.assertTrue(fit['unique'])
+        self.assertEqual(fit['vertices'][0]['floor_cycles'],10)
+        self.assertEqual(fit['vertices'][0]['ns_per_nominal_cta'],2)
+        same_load=fit_first_bytes([dict(x=8,post_permit=14),dict(x=8,post_permit=18)])
+        self.assertFalse(same_load['unique'])
+        self.assertEqual({max(v['floor_cycles'],8*v['ns_per_nominal_cta']) for v in same_load['vertices']},{16})
+        self.assertEqual({max(v['floor_cycles'],3*v['ns_per_nominal_cta']) for v in same_load['vertices']},{6,16})
+
     def test_two_role_event_algebra(self):
         parts = output_parts([50,100,160,500], [40,80,120,496])
         self.assertEqual([parts[k] for k in ('w','arrival_gap','issuer','post_permit','done_join','E','after_main')],

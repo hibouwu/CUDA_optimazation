@@ -934,6 +934,146 @@ def analyze_role_output(root, direct_root, destination, assumed_f):
     print(f'{len(cases)} calibration role cases; {len(points)} supported first-output cases -> {destination}')
 
 
+def analyze_composition_output(root, previous, destination):
+    """R15 output-only calibration; existing max form and phase constants, no model mutation."""
+    import v06_run as common
+    import v08_model
+    destination.mkdir(parents=True,exist_ok=False)
+    manager=json.loads((root/'reanalysis/manager-event-extraction-v1/events.json').read_text())
+    manager_cases={c['row']['id']:c for c in manager['cases']}
+    gpu=json.loads((root/'environment.json').read_text())['gpu']
+    # Both configs pass mma_thread_idx to this exact cooperative epilogue.
+    kernel=root/'source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp'
+    epilogue=root/'source/cutlass/include/cutlass/epilogue/collective/sm90_epilogue_tma_warpspecialized.hpp'
+    probe=root/'source/probes/r18.cu'
+    assert 'int mma_thread_idx = thread_idx % NumMMAThreads;' in kernel.read_text()
+    assert 'bool issue_tma_store = (thread_idx / NumThreadsPerWarp) == 0;' in epilogue.read_text()
+    assert 'static_assert(Kernel::NumMMAThreads == 256' in probe.read_text()
+    sources={str(p.relative_to(root)):sha(p) for p in (kernel,epilogue,probe)}
+    cases=[];resources={};failures=[]
+    for run in (root,previous):
+        common.verify(run)
+        assert json.loads((run/'environment.json').read_text())['gpu']==gpu
+        resources[run.name]={name:common.sass_facts(run,name)
+                            for name in json.loads((run/'build/commands.json').read_text())}
+        for name,h in json.loads((run/'build/sass_hashes.json').read_text()).items():
+            assert sha(run/'build'/name)==h
+        setups={s['case']:s['setup'] for s in json.loads((run/'static_setup.json').read_text())}
+        for row in json.loads((run/'cases.json').read_text()):
+            if row['config'] not in ('cfg_a','cfg_c'):continue
+            work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setups[row['id']]['grid'],row['swizzle'])
+            tm,tn,_=v08_model.base.CONFIGS[row['config']]['tile']
+            b0=sum(4*max(0,min(tm,row['m']-c[0][0]*tm))*max(0,min(tn,row['n']-c[0][1]*tn)) for c in work if c)
+            times={v:{} for v in ('plain','wide','stamped','dual')}
+            for path in sorted((run/'samples'/row['id']).glob('*.json')):
+                r=json.loads(path.read_text())
+                if r['returncode']:
+                    failures.append(dict(run=run.name,path=str(path.relative_to(run))));continue
+                assert r['trial'] not in times[r['variant']]
+                times[r['variant']][r['trial']]=r['elapsed_us']
+                if r['variant']=='plain':
+                    from analyze_r18 import replay
+                    replay(run,r,row)
+            assert all(set(v)==set(range(10)) for v in times.values())
+            processes=role_windows(run,row,'dual');summaries=[]
+            for process in processes:
+                assert process['work_sha256']==hashlib.sha256(json.dumps(work).encode()).hexdigest()
+                grouped=defaultdict(list)
+                for tile in process['tiles']:
+                    j,T=tile['j'],tile['T'];mi,ni=tile['mi'],tile['ni']
+                    kind='oob' if mi*tm>=row['m'] or ni*tn>=row['n'] else 'partial' if (mi+1)*tm>row['m'] or (ni+1)*tn>row['n'] else 'zero' if (row['zero_m']>=0 and mi*tm>=row['zero_m']) or (row['zero_n']>=0 and ni*tn>=row['zero_n']) else 'real'
+                    phase='single' if T==1 else 'first_multi' if j==0 else 'last' if j==T-1 else 'middle'
+                    for name in (phase,phase+'_'+kind):grouped[name].append(tile)
+                    if j==0:grouped['first_all'].append(tile)
+                    if j==T-1:grouped['tail'].append(tile)
+                phases={}
+                for name,tiles in grouped.items():
+                    phases[name]=dict(count=len(tiles))
+                    for unit in ('cycles','ns'):
+                        keys=set.intersection(*(set(t[unit]) for t in tiles))
+                        phases[name][unit]={agg:{k:fn([t[unit][k] for t in tiles]) for k in sorted(keys)}
+                                           for agg,fn in (('mean',statistics.fmean),('median',statistics.median))}
+                summaries.append(dict(trial=process['trial'],raw=process['raw'],phases=phases,
+                    other_final_later=process['other_final_later'],final_ranges=process['final_ranges']))
+            aggregate={}
+            for phase in sorted(set().union(*(p['phases'] for p in summaries))):
+                pp=[p['phases'][phase] for p in summaries if phase in p['phases']]
+                aggregate[phase]=dict(counts=[p['count'] for p in pp])
+                for unit in ('cycles','ns'):
+                    keys=pp[0][unit]['mean']
+                    aggregate[phase][unit]=dict(
+                        whole_mean={k:sum(p[unit]['mean'][k]*p['count'] for p in pp)/sum(p['count'] for p in pp) for k in keys},
+                        median_process_mean={k:statistics.median(p[unit]['mean'][k] for p in pp) for k in keys},
+                        median_process_median={k:statistics.median(p[unit]['median'][k] for p in pp) for k in keys},
+                        process_mean_range={k:[min(p[unit]['mean'][k] for p in pp),max(p[unit]['mean'][k] for p in pp)] for k in keys})
+            checks={}
+            if row['id'] in manager_cases:
+                expected=manager_cases[row['id']]['intervals_ns']
+                for phase,field,key,agg in (('first_all','E','E0_mean','median_process_mean'),('middle','E','E_middle','median_process_mean'),('last','E','Elast','median_process_mean'),('tail','tail_after_merged_done','Etail','median_process_median')):
+                    if phase in aggregate:
+                        error=aggregate[phase]['ns'][agg][field]-expected[key]
+                        assert abs(error)<1e-9
+                        checks[key]=error
+            cases.append(dict(case=row['id'],run=run.name,row=row,B0_bytes=b0,max_tiles=max(map(len,work)),
+                phases=aggregate,processes=summaries,manager_aggregate_differences=checks,
+                elapsed_us={v:statistics.median(t.values()) for v,t in times.items()},
+                dual_over_wide=statistics.median(times['dual'].values())/statistics.median(times['wide'].values())-1,
+                cv={v:statistics.pstdev(t.values())/statistics.mean(t.values()) for v,t in times.items()}))
+    fits={};candidates={};diagnostics=[]
+    for cfg in ('cfg_a','cfg_c'):
+        single=[c for c in cases if c['row']['config']==cfg and c['max_tiles']==1 and c['row']['k']==4096]
+        multi=[c for c in cases if c['row']['config']==cfg and c['row'].get('original_experiment')=='R13']
+        fit_groups={}
+        for label,selected in (('single',single),('multi_first',multi)):
+            points=[dict(id=c['case'],x=c['B0_bytes']/2**20,post_permit=c['phases']['first_all']['ns']['whole_mean']['post_permit']) for c in selected]
+            fit=fit_first_bytes(points)
+            vertices=[dict(floor_ns=v['floor_cycles'],beta_ns_per_MiB=v['ns_per_nominal_cta'],exact_floor=v['exact_floor'],exact_beta=v['exact_rate']) for v in fit['vertices']]
+            join=statistics.fmean(c['phases']['first_all']['ns']['whole_mean']['done_join'] for c in selected)
+            fit_groups[label]=dict(points=points,unique=fit['unique'],squared_loss_ns2=fit['loss'],vertices=vertices,R_ns=join,
+                E0_at_calibrated_bytes_ns=statistics.fmean(c['phases']['first_all']['ns']['whole_mean']['E'] for c in selected))
+            for c in [c for c in cases if c['row']['config']==cfg]:
+                observed=c['phases']['first_all']['ns']['whole_mean']['E']
+                estimates=[max(v['floor_ns'],v['beta_ns_per_MiB']*c['B0_bytes']/2**20)+join for v in vertices]
+                diagnostics.append(dict(config=cfg,fit=label,case=c['case'],calibration=c in selected,
+                    observed_E0_ns=observed,predicted_interval_ns=[min(estimates),max(estimates)],
+                    worst_absolute_relative=max(abs(v/observed-1) for v in estimates)))
+        fits[cfg]=fit_groups
+        stages={}
+        for label,phase,field in (('E_middle','middle','E'),('Elast','last','E'),('Etail_multi','tail','tail_after_merged_done')):
+            observed=[dict(case=c['case'],ns=c['phases'][phase]['ns']['whole_mean'][field]) for c in multi if phase in c['phases']]
+            if observed:
+                constant=statistics.fmean(p['ns'] for p in observed)
+                stages[label]=dict(ns=constant,source='six ordinary R13 composition cases',cases=observed,
+                    case_range_ns=[min(p['ns'] for p in observed),max(p['ns'] for p in observed)],
+                    max_calibration_relative=max(abs(constant/p['ns']-1) for p in observed))
+            else:stages[label]=dict(ns=None,reason='No ordinary middle tile observed; T<=2')
+        padding=[c for c in cases if c['row']['config']==cfg and c['row'].get('original_experiment')=='R18']
+        full_middle=[dict(case=c['case'],ns=c['phases']['middle_real']['ns']['whole_mean']['E']) for c in padding if 'middle_real' in c['phases']]
+        stages['padding_full_middle_observations']=full_middle
+        if stages['E_middle']['ns'] is None and full_middle:
+            stages['E_middle_padding_proxy']=dict(ns=statistics.fmean(p['ns'] for p in full_middle),
+                source='real-output middle tiles within padded/swizzle8 cases; unpadded T>=3 unqualified')
+        stages['Etail_single_by_scale']=[dict(case=c['case'],B0_bytes=c['B0_bytes'],
+            ns=c['phases']['tail']['ns']['whole_mean']['tail_after_merged_done']) for c in single]
+        tails=stages['Etail_single_by_scale']
+        tail_constant=statistics.fmean(t['ns'] for t in tails)
+        stages['Etail_single']=dict(ns=tail_constant,case_range_ns=[min(t['ns'] for t in tails),max(t['ns'] for t in tails)],
+            max_calibration_relative=max(abs(tail_constant/t['ns']-1) for t in tails),
+            source='two single-tile scales; cfg_c high scale reused from job738397')
+        candidates[cfg]=stages
+    result=dict(input=str(root),previous=str(previous),gpu=gpu,cases=cases,failed_attempts=failures,
+        issuer_source_evidence=dict(issuer_role=2,issuer_thread=256,other_role=1,other_thread=128,hashes=sources,
+            derivation='NumMMAThreads=256; store receives threadIdx.x %256; local warp0 issues TMA for both cfg_a/c'),
+        resource_facts=resources,fits=fits,phase_candidates=candidates,first_output_diagnostics=diagnostics,
+        manager_events_sha256=sha(root/'reanalysis/manager-event-extraction-v1/events.json'),analyzer_sha256=sha(__file__),
+        scope='Only original max(floor,beta*first_output_bytes) and existing phase constants. Fits use equal case weights of whole-sample CTA means in direct ns. '
+              'Median-process-mean and median-process-median also reported and independently match manager V09 extraction. '
+              'Single and multi-first are separated; padded/zero outputs remain labelled diagnostics. No freeze, GPU run or public model modification. '
+              'Missing middle intervals are unobserved; measured local cycle/ns is not a prediction input.')
+    (destination/'composition-output.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(f'{len(cases)} cooperative cases; original max fits and phase observations -> {destination}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cpu-check', action='store_true')
@@ -941,6 +1081,7 @@ def main():
     parser.add_argument('--v08-single-model', action='store_true', help='Grouped calibration check of constant/static-q merged output')
     parser.add_argument('--role-output', action='store_true', help='Cooperative role decomposition and one static first-cohort candidate')
     parser.add_argument('--dual-roles', action='store_true', help='R15 c2/c6 direct two-role cycle/ns observations')
+    parser.add_argument('--composition-output', action='store_true', help='R15 single/multi first output and existing E/Elast/tail calibration')
     parser.add_argument('--direct-run', type=Path)
     parser.add_argument('--assumed-output-ghz', type=float, default=1.8)
     parser.add_argument('--input', type=Path)
@@ -951,7 +1092,11 @@ def main():
     else:
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
-        if args.dual_roles:
+        if args.composition_output:
+            if args.direct_run is None:
+                parser.error('--composition-output requires --direct-run for the prior cfg_c132 run')
+            analyze_composition_output(args.input,args.direct_run,args.output)
+        elif args.dual_roles:
             analyze_dual_roles(args.input,args.output,args.direct_run)
         elif args.role_output:
             if args.direct_run is None or args.assumed_output_ghz<=0:
