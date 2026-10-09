@@ -205,9 +205,10 @@ def clock_point(row, observed, setup, calibration, prediction=None):
     """Fixed V08 cycle prediction and workload features; no measured cycles as inputs."""
     cfg = row['config']
     timing = calibration['time'][cfg]
+    feat = v08_model.features(row, setup['grid'])
     if prediction is None:
-        feat = v08_model.features(row, setup['grid'])
         cycles, ctas, stages, _ = v08_model.critical_cycles(calibration['params'], cfg, feat)
+        critical = max(range(len(ctas)), key=ctas.__getitem__)
         phi = sum(ctas) / (132 * cycles)
         mu = stages['mainloop'] / cycles
         traffic = v08_model.base.dram_bytes(cfg, row['m'], row['n'], row['k'], feat['work'])
@@ -215,10 +216,19 @@ def clock_point(row, observed, setup, calibration, prediction=None):
     else:
         # Exact frozen held-out features, including the old LRU traversal outcome.
         cycles, converted = prediction['critical_cycles'], prediction['converted_cycles']
+        critical = prediction['critical_cta']
         phi, mu = prediction['phi'], prediction['mu']
         _, traffic = clock_at_window(prediction, timing['clock_rule'], prediction['window_us'])
+    tm, tn, tk = v08_model.base.CONFIGS[cfg]['tile']
+    lower_bound = 2 * tm * tn * tk / 4096  # FP16 Tensor compute cycles/Ktile/SM
+    compute_per_tile = lower_bound * feat['kt']
+    critical_tiles = len(feat['work'][critical])
+    all_tiles = sum(map(len, feat['work']))  # includes scheduled OOB/padded work
     return dict(case=row['id'], config=cfg, m=row['m'], n=row['n'], k=row['k'],
                 group=row.get('group', row['kind']), phi=phi, mu=mu, traffic_bytes=traffic,
+                mu_tensor_critical=critical_tiles * compute_per_tile / cycles,
+                mu_tensor_device=all_tiles * compute_per_tile / (132 * cycles),
+                compute_cycles_per_kt=lower_bound, critical_tiles=critical_tiles, scheduled_tiles=all_tiles,
                 cycles=cycles, converted_cycles=converted, fixed_us=timing['F'],
                 observed_window_us=observed['window_ends'], observed_ghz=observed['ghz_ends'],
                 plain_us=observed['plain_us'], cycle_error=cycles / observed['c_max_stamped'] - 1)
@@ -237,20 +247,20 @@ def duration_term(window, form, tau):
 def candidate_frequency(point, window, model):
     a, b, c, d = model['coefficients']
     return (a - b * point['phi'] * duration_term(window, model['form'], model.get('tau_us'))
-            - c * point['traffic_bytes'] / (window * 1e6) - d * point['mu'])
+            - c * point['traffic_bytes'] / (window * 1e6) - d * point[model.get('activity', 'mu')])
 
 
-def fit_clock_candidate(points, form, frozen_rule):
+def fit_clock_candidate(points, form, frozen_rule, activity='mu'):
     import numpy as np
 
     if form == 'frozen':
-        return dict(form=form, coefficients=[frozen_rule[k] for k in ('a', 'b', 'c', 'd')])
+        return dict(form=form, activity=activity, coefficients=[frozen_rule[k] for k in ('a', 'b', 'c', 'd')])
     y = np.array([p['observed_ghz'] for p in points])
     profile = []
     taus = np.logspace(-1, 5, 121) if form == 'relaxation' else [None]
     for tau in taus:
         X = np.array([[1, -p['phi'] * duration_term(p['observed_window_us'], form, tau),
-                       -p['traffic_bytes'] / (p['observed_window_us'] * 1e6), -p['mu']] for p in points])
+                       -p['traffic_bytes'] / (p['observed_window_us'] * 1e6), -p[activity]] for p in points])
         columns = [0, 2] if form == 'refit_ac' else [0, 2, 3] if form == 'no_duration' else [0, 1, 2, 3]
         offset = X[:, 1] * frozen_rule['b'] + X[:, 3] * frozen_rule['d'] if form == 'refit_ac' else np.zeros(len(y))
         design = X[:, columns]
@@ -268,7 +278,7 @@ def fit_clock_candidate(points, form, frozen_rule):
                             normalized_condition=float(np.linalg.cond(design / np.linalg.norm(design, axis=0)))))
     # Tau is selected on training GHz residuals only, separately inside every fold.
     best = min(profile, key=lambda p: p['mse_ghz'])
-    return dict(form=form, **best, tau_profile=profile if form == 'relaxation' else [])
+    return dict(form=form, activity=activity, **best, tau_profile=profile if form == 'relaxation' else [])
 
 
 def evaluate_clock(point, model):
@@ -309,7 +319,7 @@ def error_stats(rows):
     return result
 
 
-def clock_candidates(run, followup, trend_run, output):
+def clock_candidates(run, followup, trend_run, output, activity=False):
     frozen_path = run / 'frozen/v08-predictions.json'
     frozen = read_json(frozen_path)
     calibration = frozen['calibration']
@@ -323,8 +333,13 @@ def clock_candidates(run, followup, trend_run, output):
     summary = read_json(run / 'derived/summary.json')
     train_ids = [cid for selection in calibration['selection'].values() for cid in selection['time_cases']]
     points = [clock_point(rows[cid], summary[cid], setups[cid], calibration) for cid in train_ids]
-    forms = ('refit_ac', 'full_log', 'no_duration', 'relaxation')
-    fits = {form: fit_clock_candidate(points, form, rule) for form in ('frozen', *forms)}
+    specs = ({'aggregate': ('relaxation', 'mu'),
+              'tensor_critical': ('relaxation', 'mu_tensor_critical'),
+              'tensor_device': ('relaxation', 'mu_tensor_device')} if activity else
+             {form: (form, 'mu') for form in ('refit_ac', 'full_log', 'no_duration', 'relaxation')})
+    forms = tuple(specs)
+    fits = dict(frozen=fit_clock_candidate(points, 'frozen', rule))
+    fits.update({name: fit_clock_candidate(points, form, rule, key) for name, (form, key) in specs.items()})
     scores, folds, grouped = [], [], {}
     for scheme in ('geometry', 'K_band'):
         labels = {p['case']: f"{p['m']}x{p['n']}" if scheme == 'geometry' else
@@ -332,11 +347,11 @@ def clock_candidates(run, followup, trend_run, output):
         for label in sorted(set(labels.values())):
             training = [p for p in points if labels[p['case']] != label]
             held = [p for p in points if labels[p['case']] == label]
-            for form in forms:
-                model = fit_clock_candidate(training, form, rule)
-                evaluated = [dict(evaluate_clock(p, model), phase=scheme, fold=label, form=form) for p in held]
+            for name, (form, key) in specs.items():
+                model = fit_clock_candidate(training, form, rule, key)
+                evaluated = [dict(evaluate_clock(p, model), phase=scheme, fold=label, form=name) for p in held]
                 scores.extend(evaluated)
-                folds.append(dict(scheme=scheme, held_group=label, form=form, train_n=len(training),
+                folds.append(dict(scheme=scheme, held_group=label, form=name, activity=key, train_n=len(training),
                                   coefficients=model['coefficients'], tau_us=model.get('tau_us'),
                                   normalized_condition=model.get('normalized_condition'), errors=error_stats(evaluated)))
         grouped[scheme] = {form: error_stats([r for r in scores if r['phase'] == scheme and r['form'] == form]) for form in forms}
@@ -360,14 +375,18 @@ def clock_candidates(run, followup, trend_run, output):
     trend_cases = [{key: row[key] for key in ('id', 'config', 'plain_us', 'ghz_ends', 'c_max_ends', 'window_ends')}
                    for row in trend['cases'].values() if row.get('status') != 'numeric_error']
     result = dict(frozen_sha256=sha256(frozen_path), diagnostic_source_sha256=sha256(Path(__file__)),
+        activity_comparison=activity,
         training_cases=train_ids, train_n=len(points), forms=fits, conditional_grouped_cv=grouped,
         folds=folds, diagnostics=diagnostics, input_points={'calibration': points, 'heldout': heldout, 'followup': followup_points},
         other_card_trend=dict(environment=trend['environment'], cases=trend_cases, predictions_not_evaluated=True),
         notes=[
             'Only the original 64 V08 time-calibration cases train clock coefficients and tau; all original exclusions remain.',
-            'Cycle predictions, phi/mu construction, F and kappa stay frozen from V08 for every form and fold.',
+            'Cycle predictions, phi, F and kappa stay frozen; activity mode changes only the specified mu proxy.',
+            'Tensor critical uses the software work count of the predicted critical CTA; tensor device sums all scheduled tiles over 132*Cmax.',
+            'The 512/512/1024 cycle/Ktile lower bounds exclude supply waits; proxies are ideal demand fractions, not measured Tensor active counters.',
             'This is conditional clock cross-validation, not a full-cycle-model cross-validation; frozen C/F/kappa used the original calibration.',
-            'Grouped CV baseline refits a/c on each training fold with old V03 b/d; the all-data frozen baseline is reported separately.',
+            ('Activity mode refits only the existing bounded family inside every fold; frozen original coefficients are a separate diagnostic.' if activity else
+             'Grouped CV baseline refits a/c on each training fold with old V03 b/d; the all-data frozen baseline is reported separately.'),
             'Fits minimize absolute GHz residuals using observed W; free prediction solves W=kappa*C/(1000*f(W)) without observed W or measured cycles.',
             'Relaxation g(W)=1-(tau/W)*(1-exp(-W/tau)) has a steady limit; it is a candidate mean-frequency shape, not a measured physical relaxation.',
             'The tau profile spans 0.1 to 100000 us; training residual alone selects tau separately inside each fold.',
@@ -388,15 +407,80 @@ def clock_candidates(run, followup, trend_run, output):
     print('output:', output)
 
 
+def input_clock_evidence(run, r10, r15, output):
+    """Same GPU, distinct protocols: whole-CTA and local-stage rates stay separate."""
+    from analyze_r18 import replay
+    from analyze_r15_output_ns import direct_windows
+    import gzip
+
+    gpu = read_json(run / 'environment.json')['gpu'].split(',')[0]
+    observations = []
+    for experiment, root, variants in [('R09', run, ('ends',)), ('R10', r10, ('stamped', 'dual')),
+                                        ('R15', r15, ('ends', 'global'))]:
+        environment = read_json(root / 'environment.json')
+        if environment['gpu'].split(',')[0] != gpu:
+            raise ValueError('input evidence must remain on one GPU')
+        setups = {s['case']: s['setup'] for s in read_json(root / 'static_setup.json')}
+        for row in read_json(root / 'cases.json'):
+            records = [read_json(p) for p in sorted((root / 'samples' / row['id']).glob('*.json'))]
+            plain = [r['elapsed_us'] for r in records if not r['returncode'] and r['variant'] == 'plain']
+            for variant in variants:
+                per = []
+                for rec in records:
+                    if rec['returncode'] or rec['variant'] != variant:
+                        continue
+                    obs = (v08_model.observe(root, rec, row, setups[row['id']]) if variant == 'ends'
+                           else replay(root, rec, row))
+                    ctas = obs['ctas']
+                    count = lambda c: c['tiles'] if isinstance(c['tiles'], int) else len(c['tiles'])
+                    active = [c for c in ctas if count(c)]
+                    T = max(map(count, active))
+                    f = statistics.median((c['end_c'] - c['entry_c']) / (c['end_ns'] - c['entry_ns'])
+                                          for c in active if count(c) == T)
+                    item = dict(event_us=rec['elapsed_us'], cta_ghz=f, max_tiles=T,
+                                window_us=(max(c['end_ns'] for c in active) - min(c['entry_ns'] for c in ctas)) / 1000)
+                    if variant == 'dual':
+                        item['later_mainloop_ghz'] = statistics.median(
+                            (c[1] - c[0]) / (n[1] - n[0]) for t in active
+                            for c, n in zip(t['tiles'][1:], t['tiles_ns'][1:]))
+                    if variant == 'global':
+                        with gzip.open(root / rec['raw'], 'rt') as stream:
+                            events = {e['event']: e for line in stream if line.strip() for e in [json.loads(line)]}
+                        ws = direct_windows(events['setup'], events['call'])
+                        item['issuer_store_ghz'] = statistics.median(w['issuer_store_cycles'] / w['issuer_store_ns'] for w in ws)
+                    per.append(item)
+                observations.append(dict(experiment=experiment, source=str(root), case=row['id'],
+                    config=row['config'], input_mode=row.get('input_mode', 'dyadic'), seed=row.get('seed', 17),
+                    m=row['m'], n=row['n'], k=row['k'], variant=variant, processes=len(per),
+                    **{key: statistics.median(p[key] for p in per) for key in per[0]},
+                    plain_us=statistics.median(plain),
+                    variant_over_plain=statistics.median(p['event_us'] for p in per) / statistics.median(plain) - 1,
+                    cta_ghz_cv=statistics.pstdev(p['cta_ghz'] for p in per) / statistics.mean(p['cta_ghz'] for p in per)))
+    result = dict(gpu=gpu, observations=observations, coefficients_fitted=False,
+        notes=['Whole-CTA rates use entry to the consumer final endpoint; local rates use different endpoints and are never pooled with them.',
+               'R10 stamped/dual are per-tile-instrumented protocols, not the R09/R15 ends protocol; wide is a scratch-matched plain control without clock records.',
+               'Only R09 has three input modes, at one long-window geometry per config; R10/R15 add dyadic evidence only.',
+               'Same GPU across different jobs does not establish identical preceding state or instrumentation costs.'])
+    output.mkdir(parents=True, exist_ok=False)
+    (output / 'input-clock-evidence.json').write_text(json.dumps(result, indent=2) + '\n')
+    print('same-card evidence:', len(observations), 'separate protocol rows; no coefficient fit')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--candidates', action='store_true')
+    parser.add_argument('--activity', action='store_true', help='compare activity proxies within the existing bounded duration family')
+    parser.add_argument('--input-evidence', action='store_true')
+    parser.add_argument('--r10-run', type=Path)
+    parser.add_argument('--r15-run', type=Path)
     parser.add_argument('--followup', type=Path)
     parser.add_argument('--trend-run', type=Path)
     args = parser.parse_args()
-    if args.candidates:
-        clock_candidates(args.run.resolve(), args.followup.resolve(), args.trend_run.resolve(), args.output.resolve())
+    if args.input_evidence:
+        input_clock_evidence(args.run.resolve(), args.r10_run.resolve(), args.r15_run.resolve(), args.output.resolve())
+    elif args.candidates or args.activity:
+        clock_candidates(args.run.resolve(), args.followup.resolve(), args.trend_run.resolve(), args.output.resolve(), args.activity)
     else:
         analyze(args.run.resolve(), args.output.resolve())

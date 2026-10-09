@@ -638,3 +638,54 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_analyze.py --shared 
   --input "$ROOT/20261009-R09-wide-input-job738197" \
   --output "$ROOT/20261009-R09-wide-input-job738197/reanalysis/C-wide-replay-<新后缀>"
 ```
+
+### Tensor 计算活动代理与 V09 输入校准边界
+
+2026-10-09，离线。原 μ 使用拟合的聚合主循环周期/Cmax，会把已包含的供给等待、补齐 tile 额外时间计入“计算活动”。本次只在已有有界时长式 `f=a−bφg(W/τ)−cD−dμ` 中比较 μ 定义，不扩函数族；仍用原 V08/099dda56 的 64 点训练，21 个 geometry 组、三个 K 段留出。C、φ、F、κ 固定；自由预测自洽求 W/D，不使用观测时间或实测 C 作预测输入。
+
+令 `q_cfg=2·tile_M·tile_N·64/4096`，cfg_a/b/c 分别为 **512/512/1024 cycle/Ktile**；Kt=ceil(K/64)。两种软件代理为：
+
+- **同作用域替换**：`μ_TC,crit=N_crit·Kt·q_cfg/Cmax`，N_crit 是周期模型所选关键 CTA 的软件 tile 数。它用名义 Tensor 计算需求替代聚合主循环时长，避免把已建模的供给等待直接算成计算。
+- **全卡作用域对照**：`μ_TC,device=(ΣN_i)·Kt·q_cfg/(132·Cmax)`。它额外改变作用域，不能将与原 μ 的全部差异解释成去掉等待。
+
+tile 数包含软件实际调度的补齐/OOB tile，不按有效输出面积打折。二者都是理想计算需求占预测窗口的代理，不是实测 Tensor 活跃计数器，也不包含输入位模式的直接影响。原聚合主循环来自经验拟合，局部可以略低于该计算参考，因此替换不等于从观测中精确扣除一段等待。
+
+| 有界函数的 μ | geometry：自由频率 / 完整时间 RMS | K分组：自由频率 / 完整时间 RMS |
+|---|---:|---:|
+| 原聚合 μ | 2.187% / 4.185% | 2.733% / 4.615% |
+| μ_TC,crit | **2.007% / 4.099%** | **2.679% / 4.529%** |
+| μ_TC,device | 2.134% / 4.116% | 3.237% / 4.942% |
+
+同作用域的计算代理有小幅一致改善，暂不采用 K 分组退化的全卡版本。全部校准拟合得到 `a=1.928433, b=0.178588, c=0.028976, d=0.182815, τ=31.62 µs`；这是 **099dda56、dyadic、固定旧 C 下的候选定值**，不是 a057 的参数。τ 在 geometry 折中为28.18–44.67 µs、K折中为15.85–63.10 µs；尚无精确物理时间常数的识别依据。
+
+已知 V08 heldout 的自由频率/时间 RMS 从原有界模型 1.810%/8.478% 变为 1.777%/8.409%；V08F 为 1.926%/8.062%→1.530%/7.955%。这些仅是开发诊断。尤其 cfg_b h06，μ 仅从 **0.987539→0.985701**，冻结 C 仍低估 **18.287%**，时间误差仍为 −16.400%。原周期预测已经漏掉其真实供给等待，换 μ 无法恢复这部分信息；自由频率还会受到错误 C 经 W/D 的传播。原 F/κ 与 C 使用过全部校准，故分组结果仍是条件式频率比较，不是全管线交叉验证。
+
+**可交给完整模型的定义**是 μ_TC,crit，而非现成的跨卡系数。在完整预测中，分母应来自该输入、该条件的周期模型；若供给/输出改为自然纳秒单位并参与自洽换算，应同步更新 C、关键 CTA 和 μ，不能把本次固定 C 下的 μ 永久缓存。软件工作量相同而输入改变时，若 C 模型不感知输入/有效 f，μ 也完全相同，仍无法区分 R09 的三档输入。
+
+#### a057/43269fbc 现有证据能约束什么
+
+三批 GPU UUID 已核对相同，但不同作业、不同打点的频率不混入一个拟合；本次没有对它们拟合系数。
+
+| 数据 | 可用窗口与输入 | 全 CTA 有效 cycle/ns | 不能混入全程拟合的量 |
+|---|---|---|---|
+| R09 job738197 | 三配置、三输入；每配置只有一个长窗口几何，ends中位1.365–2.568 ms | dyadic 0.966–1.301；zero 1.740–1.779；random 0.682–1.010 GHz | 只有这一长窗口的输入差，不能外推成短/中窗口固定偏移 |
+| R10 job738203 | cfg_b、dyadic、五种B pitch；stamped/dual包络25.856–33.808 µs | stamped/dual全CTA约1.698–1.723 GHz | dual后续主循环约1.659–1.739 GHz是另一端点；wide是无时钟记录的scratch匹配plain对照 |
+| R15 job738100 | cfg_c、dyadic；ends包络41.408/47.200/185.936 µs | ends全CTA 1.81527/1.65029/1.47135 GHz | global输出阶段1.89183/1.91343/1.59063 GHz，不能替代全CTA值 |
+
+R10 的逐 tile 打点 event 比 plain 高约1.7%–6.3%，不直接充当 ends 频率校准；其局部主循环率只约束局部换算。R15 的 global 全CTA率与输出局部率也分别保存，不能取一个局部值填入整调用模型。现有数据只能定九个长条件的观测输入差，**不足以分别确定每种输入的时长响应/稳态幅值/τ**；三个配置的重复进程不等于新增时长条件。也不把旧 099dda56 或 201f9d2a 的系数搬到43269fbc。
+
+已接受的最小缺口为 **M=N=2048、8192，K=1024，cfg_a/b/c×三输入，共18条**，仍用plain/ends、seed17及原阈值。分别覆盖短、中窗口；几何也改变流量、工作分配，不能称纯时长干预。新分配另加cfg_b的20480²×1024三输入作为旧长窗口桥接，共21条；桥接只判断旧长数据是否可复用，不静默校正不一致，不预先重复其余六个长条件。填补这些条件也不保证所有参数唯一可辨或V09通过。
+
+结果：[Tensor活动比较](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/C-20261009-tensor-activity-v2/candidates.json)与逐点`scores.csv`；[同卡窗口证据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-job738197/reanalysis/C-20261009-input-clock-coverage-v1/input-clock-evidence.json)。后者保留25个独立协议条目，没有合并阶段频率。
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py --activity \
+  --run "$ROOT/20261008-V08-job737322-v1" --followup "$ROOT/20261008-V08F-job737322-v1" \
+  --trend-run "$ROOT/20261009-R09-wide-input-job738197" \
+  --output "$ROOT/20261008-V08-job737322-v1/reanalysis/C-activity-replay-<新后缀>"
+python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py --input-evidence \
+  --run "$ROOT/20261009-R09-wide-input-job738197" \
+  --r10-run "$ROOT/20261009-R10-b-coverage-job738203" --r15-run "$ROOT/20261009-R15-output-ns-job738100" \
+  --output "$ROOT/20261009-R09-wide-input-job738197/reanalysis/C-input-coverage-replay-<新后缀>"
+```
