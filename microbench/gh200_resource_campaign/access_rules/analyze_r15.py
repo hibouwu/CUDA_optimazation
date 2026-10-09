@@ -550,6 +550,19 @@ def analyze_v08_single_model(root, destination):
     print(f'{len(points)} qualified single-tile cases, grouped by K and geometry -> {destination}')
 
 
+def output_parts(a, b):
+    """Same-unit event algebra; a/b are other/issuer FIRST_MMA, MAIN_END, PERMIT, DONE."""
+    m, p, d = max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])
+    parts = dict(w=p-m, other_permit_wait=a[2]-a[1], issuer_permit_wait=b[2]-b[1],
+        issuer_start_vs_last_main=b[2]-m, main_end_skew=a[1]-b[1],
+        arrival_gap=p-b[2], issuer=b[3]-b[2], post_permit=b[3]-p,
+        done_join=d-b[3], other_done_minus_issuer=a[3]-b[3], E=d-p, after_main=d-m)
+    assert parts['issuer'] == parts['arrival_gap'] + parts['post_permit']
+    assert parts['E'] == parts['post_permit'] + parts['done_join']
+    assert parts['after_main'] == parts['w'] + parts['E']
+    return parts
+
+
 def role_windows(root, row, variant):
     """Two cooperative consumer leaders; store entry/return is not TMA issue/complete."""
     from analyze_r18 import replay
@@ -562,29 +575,43 @@ def role_windows(root, row, variant):
         with gzip.open(root / record['raw'], 'rt') as stream:
             events = {e['event']: e for line in stream if line.strip() for e in [json.loads(line)]}
         setup, words = events['setup'], events['call']['trace']
-        if setup.get('trace_tile_words', 6) != 6:
-            raise ValueError('this role comparison uses the archived six-word profiles')
+        tile_words = setup.get('trace_tile_words', 6)
+        dual = setup['trace_version'] == 'r18-dual-clock-events'
+        if tile_words not in (6, 10) or (variant == 'dual' and not dual):
+            raise ValueError('unexpected role trace profile')
         grouped = defaultdict(lambda: defaultdict(list))
         finals = defaultdict(list)
-        for base in range(0, len(words), 784):
+        tiles = []
+        for base in range(0, len(words), 16 + 128 * tile_words):
             h = words[base:base + 16]
             if h[6] != h[9] or not h[6]:
                 raise ValueError('expected cooperative consumers with the same nonempty work')
             finals['other_minus_issuer_final_cycles'].append(h[4] - h[7])
             finals['other_minus_issuer_final_ns'].append(h[5] - h[8])
             for j in range(h[6]):
-                a, b = words[base + 16 + j * 6:base + 22 + j * 6], words[base + 400 + j * 6:base + 406 + j * 6]
-                m, p, d = max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])
-                metrics = dict(w=p-m, other_permit_wait=a[2]-a[1], issuer_permit_wait=b[2]-b[1],
-                    issuer_start_vs_last_main=b[2]-m, main_end_skew=a[1]-b[1],
-                    arrival_gap=p-b[2], issuer=b[3]-b[2], post_permit=b[3]-p,
-                    done_join=d-b[3], other_done_minus_issuer=a[3]-b[3], E=d-p, after_main=d-m)
-                assert metrics['issuer'] == metrics['arrival_gap'] + metrics['post_permit']
-                assert metrics['E'] == metrics['post_permit'] + metrics['done_join']
-                assert metrics['after_main'] == metrics['w'] + metrics['E']
+                x, y = base + 16 + j * tile_words, base + 16 + (64+j) * tile_words
+                a, b = words[x:x+tile_words], words[y:y+tile_words]
+                metrics = output_parts(a[:4], b[:4])
+                if j == h[6]-1:
+                    metrics['tail_after_merged_done'] = h[7]-max(a[3],b[3])
                 phase = 'first' if j == 0 else 'last' if j == h[6]-1 else 'middle'
                 for key, value in metrics.items():
                     grouped[phase][key].append(value)
+                if dual:
+                    ns = output_parts(a[6:10], b[6:10])
+                    if j == h[6]-1:
+                        ns['tail_after_merged_done'] = h[8]-max(a[9],b[9])
+                        assert h[8]-max(a[7],b[7]) == ns['after_main']+ns['tail_after_merged_done']
+                        assert h[7]-max(a[1],b[1]) == metrics['after_main']+metrics['tail_after_merged_done']
+                    for key, value in ns.items():
+                        grouped[phase][key+'_ns'].append(value)
+                    ratios = {key:metrics[key]/ns[key] if ns[key]>0 else None
+                              for key in ('post_permit','issuer','E','after_main')}
+                    for key, value in ratios.items():
+                        if value is not None:
+                            grouped[phase][key+'_cycles_per_ns'].append(value)
+                    tiles.append(dict(cta=base//(16+128*tile_words), sm=h[2]-1,j=j,T=h[6],
+                        mi=b[4]-1,ni=b[5]-1,cycles=metrics,ns=ns,cycles_per_ns=ratios))
                 if variant == 'global':
                     if setup['trace_version'] != 'r15-first-output-ns' or h[6] != 1:
                         raise ValueError('single-tile direct issuer profile required')
@@ -598,7 +625,108 @@ def role_windows(root, row, variant):
             final_median={k:statistics.median(v) for k,v in finals.items()},
             final_ranges={k:[min(v),max(v)] for k,v in finals.items()},
             other_final_later=sum(v>0 for v in finals['other_minus_issuer_final_ns']), ctas=len(finals['other_minus_issuer_final_ns'])))
+        if dual:
+            processes[-1]['tiles'] = tiles
     return processes
+
+
+def analyze_dual_roles(root, destination):
+    """Direct two-consumer output decomposition; observations for recursion development."""
+    from analyze_r18 import replay
+    import v06_run as common
+    common.verify(root)
+    rows = json.loads((root/'cases.json').read_text())
+    expected = {'cfg_c_c2_k4096':4096, 'cfg_c_c6_longk':16384}
+    if {r['id']:r['k'] for r in rows} != expected:
+        raise ValueError('R15 dual roles uses the declared c2/c6 pair')
+    gpu = json.loads((root/'environment.json').read_text())['gpu']
+    summaries, duals, failures = [], {}, []
+    variants = ('plain','wide','stamped','dual')
+    for row in rows:
+        if (row['config'],row['m'],row['n'],row['input_mode'],row['seed'],row['swizzle']) != ('cfg_c',1536,2816,'dyadic',17,1):
+            raise ValueError('R15 geometry/input protocol changed')
+        if row.get('sm_count',0) or row.get('evict',0):
+            raise ValueError('this pair uses all SMs and evict=0')
+        if 'input_map_m' in row or 'input_map_n' in row:
+            raise ValueError('this pair uses logical M/N input initialization')
+        times = {v:{} for v in variants}
+        scratch = {v:set() for v in variants}
+        for path in sorted((root/'samples'/row['id']).glob('*.json')):
+            record = json.loads(path.read_text())
+            if record['returncode']:
+                failures.append(dict(path=str(path.relative_to(root)),variant=record['variant'],trial=record['trial']))
+                continue
+            replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                setup = next(e for line in stream if line.strip() for e in [json.loads(line)] if e['event']=='setup')
+            if setup['gpu_uuid'] != gpu.split(',')[0]:
+                raise ValueError('the paired run changed GPU')
+            if (setup['input_map_m'],setup['input_map_n'],setup['initialized_input_rows'],setup['initialized_input_columns']) != (row['m'],row['n'],row['m'],row['n']):
+                raise ValueError('input_map override or storage initialization entered this pair')
+            variant, trial = record['variant'], record['trial']
+            if trial in times[variant]:
+                raise ValueError('duplicate successful trial')
+            times[variant][trial] = record['elapsed_us']
+            scratch[variant].add(setup['scratch_bytes'])
+        if any(set(t)!=set(range(10)) for t in times.values()):
+            raise ValueError('ten successful processes per variant required')
+        if any(len(s)!=1 for s in scratch.values()) or len(set.union(*(scratch[v] for v in ('wide','stamped','dual'))))!=1:
+            raise ValueError('wide/stamped/dual scratch layout changed')
+        proc = role_windows(root,row,'dual')
+        if any(p['ctas']!=132 or len(p['tiles'])!=132 or any(t['T']!=1 for t in p['tiles']) for p in proc):
+            raise ValueError('expected 132 full single-tile CTAs')
+        duals[row['id']] = proc
+        medians = {k:statistics.median(p['phases']['first']['median'][k] for p in proc)
+                   for k in proc[0]['phases']['first']['median']}
+        means = {unit:{key:statistics.fmean(t[unit][key] for p in proc for t in p['tiles'])
+                       for key in proc[0]['tiles'][0][unit]} for unit in ('cycles','ns')}
+        recursion = {unit:dict(endpoint='role2 final after store_tail',w=v['w'], J=v['post_permit'], R=v['done_join'],
+                      E0_from_J_R=v['post_permit']+v['done_join'], Etail=v['tail_after_merged_done'],
+                      M_to_final_from_parts=v['w']+v['post_permit']+v['done_join']+v['tail_after_merged_done'])
+                     for unit,v in means.items()}
+        summaries.append(dict(case=row['id'],k=row['k'],processes_per_variant=10,
+            elapsed_us={v:statistics.median(t.values()) for v,t in times.items()},
+            cv={v:statistics.pstdev(t.values())/statistics.mean(t.values()) for v,t in times.items()},
+            paired_over_wide={v:[times[v][t]/times['wide'][t]-1 for t in range(10)] for v in ('stamped','dual')},
+            median_over_wide={v:statistics.median(times[v].values())/statistics.median(times['wide'].values())-1 for v in ('stamped','dual')},
+            scratch_bytes={v:next(iter(s)) for v,s in scratch.items()},median=medians,
+            observed_component_means=means,development_recursion=recursion,
+            stamped_cycles=role_windows(root,row,'stamped')))
+    short = {p['trial']:p for p in duals['cfg_c_c2_k4096']}
+    long = {p['trial']:p for p in duals['cfg_c_c6_longk']}
+    contrasts = []
+    for trial in range(10):
+        a, b = short[trial], long[trial]
+        if a['work_sha256'] != b['work_sha256']:
+            raise ValueError('paired logical work list changed')
+        first = {(t['cta'],t['j']):t for t in a['tiles']}
+        second = {(t['cta'],t['j']):t for t in b['tiles']}
+        values = defaultdict(list)
+        for key,t0 in first.items():
+            t1 = second[key]
+            for unit in ('cycles','ns'):
+                for name in t0[unit]:
+                    values[name+'_'+unit].append(t1[unit][name]-t0[unit][name])
+            for label,denominator,numerator in (
+                ('J_ratio_ns',t0['ns']['post_permit'],t1['ns']['post_permit']),
+                ('J_ratio_cycles',t0['cycles']['post_permit'],t1['cycles']['post_permit']),
+                ('J_ratio_local_rate',t0['cycles_per_ns']['post_permit'],t1['cycles_per_ns']['post_permit'])):
+                if denominator is not None and numerator is not None and denominator>0:
+                    values[label].append(numerator/denominator)
+        contrasts.append(dict(trial=trial,matched_ctas=len(first),
+            median={k:statistics.median(v) for k,v in values.items()},
+            ranges={k:[min(v),max(v)] for k,v in values.items()}))
+    result = dict(environment=json.loads((root/'environment.json').read_text()),cases=summaries,
+        dual_processes=duals,failed_attempts=failures,paired_long_minus_short=contrasts,
+        contrast_median={k:statistics.median(p['median'][k] for p in contrasts) for k in contrasts[0]['median']},
+        analyzer_sha256=sha(__file__),cases_sha256=sha(root/'cases.json'),
+        scope='Direct cycle/ns from the same two-role tile. All per-CTA identities checked before aggregation. '
+              'Component means are observations for development recursion, not fitted universal parameters or predictions. '
+              'Matched trial/CTA work compares separate calls, not simultaneous execution or matched physical SM residency. '
+              'Trace perturbation and prior component failures are reported without blocking combination trials.')
+    destination.mkdir(parents=True,exist_ok=False)
+    (destination/'dual-roles.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(f'2 cases, 80 successful processes, direct role observations -> {destination}')
 
 
 def fit_first_bytes(points):
@@ -719,6 +847,7 @@ def main():
     parser.add_argument('--v08-output', action='store_true', help='V08 cfg_a/c output overlap and critical-CTA posthoc analysis')
     parser.add_argument('--v08-single-model', action='store_true', help='Grouped calibration check of constant/static-q merged output')
     parser.add_argument('--role-output', action='store_true', help='Cooperative role decomposition and one static first-cohort candidate')
+    parser.add_argument('--dual-roles', action='store_true', help='R15 c2/c6 direct two-role cycle/ns observations')
     parser.add_argument('--direct-run', type=Path)
     parser.add_argument('--assumed-output-ghz', type=float, default=1.8)
     parser.add_argument('--input', type=Path)
@@ -729,7 +858,9 @@ def main():
     else:
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
-        if args.role_output:
+        if args.dual_roles:
+            analyze_dual_roles(args.input,args.output)
+        elif args.role_output:
             if args.direct_run is None or args.assumed_output_ghz<=0:
                 parser.error('--role-output requires --direct-run and positive --assumed-output-ghz')
             analyze_role_output(args.input,args.direct_run,args.output,args.assumed_output_ghz)

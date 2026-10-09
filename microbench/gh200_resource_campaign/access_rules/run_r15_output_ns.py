@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""R15's three cfg_c single-tile controls, using the shared R18/V08 harness.
+"""R15 cfg_c single-tile controls, using the shared R18/V08 harness.
 
 prepare --output NEW_RUN --cutlass-root CUTLASS_3_9_2 is CPU-only.
-build/setup/sample reuse run_v08; sample --set ctrl runs plain/stamped/ends/global.
+build/setup/sample reuse run_v08. --dual-roles prepares c2/c6 with
+plain/wide/stamped/dual; the original issuer-only mode remains available.
 """
 import argparse
 import json
@@ -18,30 +19,44 @@ ROOT = Path(__file__).resolve().parent
 VARIANTS = ['plain', 'stamped', 'ends', 'global']
 
 
-def prepare(root, cutlass):
+def prepare(root, cutlass, dual_roles=False):
     # Reuse source copying and overlay generation; no private probe or overlay.
-    run_r18.prepare(root, cutlass, 'r18')
+    if dual_roles:
+        rows = [dict(run_v08.row(f'cfg_c_{label}', 'cfg_c', 'ctrl', 1536, 2816, k),
+                     group='r15_dual_roles', input_mode='dyadic', seed=17, sm_count=0)
+                for label, k in (('c2_k4096', 4096), ('c6_longk', 16384))]
+        run_r18.prepare(root, cutlass, 'r15-dual-roles', rows, dual_clock=True)
+    else:
+        run_r18.prepare(root, cutlass, 'r18')
     source = root / 'source'
     for name in ('run_r15_output_ns.py', 'run_v08.py', 'v08_model.py',
-                 'analyze_r15.py', 'analyze_r15_output_ns.py'):
+                 'analyze_r15.py', 'analyze_r15_output_ns.py', 'test_r15_output_ns.py'):
         shutil.copy2(ROOT / name, source / name)
     (source / 'configs').mkdir()
-    shutil.copy2(ROOT / 'configs/r15-output-ns.json', source / 'configs/r15-output-ns.json')
-    rows = json.loads((source / 'configs/r15-output-ns.json').read_text())
+    if dual_roles:
+        common.write_json(source / 'configs/r15-dual-roles.json', rows)
+    else:
+        shutil.copy2(ROOT / 'configs/r15-output-ns.json', source / 'configs/r15-output-ns.json')
+        rows = json.loads((source / 'configs/r15-output-ns.json').read_text())
     commands = json.loads((root / 'build/commands.json').read_text())
-    selected = {name: commands[name] for name in ('cfg_c_plain', 'cfg_c_stamped')}
-    for variant, macro in (('ends', '-DV08_ENDS'), ('global', '-DR15_OUTPUT_NS')):
-        command = commands['cfg_c_stamped'][:]
-        command.insert(1, macro)
-        command[-1] = f'build/cfg_c_{variant}'
-        selected[f'cfg_c_{variant}'] = command
+    if dual_roles:
+        variants = ['plain', 'wide', 'stamped', 'dual']
+        selected = commands
+    else:
+        variants = VARIANTS
+        selected = {name: commands[name] for name in ('cfg_c_plain', 'cfg_c_stamped')}
+        for variant, macro in (('ends', '-DV08_ENDS'), ('global', '-DR15_OUTPUT_NS')):
+            command = commands['cfg_c_stamped'][:]
+            command.insert(1, macro)
+            command[-1] = f'build/cfg_c_{variant}'
+            selected[f'cfg_c_{variant}'] = command
     common.write_json(root / 'build/commands.json', selected)
     common.write_json(root / 'cases.json', rows)
-    common.write_json(root / 'run_config.json', dict(family='r15-output-ns',
-        cases_sha256=common.sha(root / 'cases.json'), variants=VARIANTS))
+    common.write_json(root / 'run_config.json', dict(family='r15-dual-roles' if dual_roles else 'r15-output-ns',
+        cases_sha256=common.sha(root / 'cases.json'), variants=variants))
     common.write_json(root / 'source_hashes.json',
         {str(p.relative_to(root)): common.sha(p) for p in source.rglob('*') if p.is_file()})
-    print('prepared 3 single-tile controls and 4 same-source cfg_c build commands; no GPU work')
+    print(f'prepared {len(rows)} controls and 4 same-source cfg_c build commands; no GPU work')
 
 
 if __name__ == '__main__':
@@ -50,8 +65,9 @@ if __name__ == '__main__':
         parser.add_argument('step', choices=['prepare'])
         parser.add_argument('--output', required=True, type=Path)
         parser.add_argument('--cutlass-root', required=True, type=Path)
+        parser.add_argument('--dual-roles', action='store_true')
         args = parser.parse_args()
-        prepare(args.output.resolve(), args.cutlass_root.resolve())
+        prepare(args.output.resolve(), args.cutlass_root.resolve(), args.dual_roles)
     else:
         # The only dispatch extension: global is a full-coordinate trace, not an ends trace.
         shared_run_one = run_v08.run_one

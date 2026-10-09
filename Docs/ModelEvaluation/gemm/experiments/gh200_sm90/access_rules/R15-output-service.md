@@ -428,7 +428,7 @@ max候选以首tile J的条件等权平方误差拟合，枚举所有平台/服�
 
 均为绝对相对误差；参数集合给出不同预测时按最坏端点评分，不挑有利解。新候选减轻了低参与规模被常数高估的问题，但没有改善所有点：短K训练后对c6/g5/g6的E0仍高估19.48%/22.10%/21.68%。仅用三个长K点训练时，名义首轮CTA全为132，低规模分支不可辨识；g1/g3的E0预测区间分别为2558.6–4821.2、1755.7–4821.2 cycle，而非可任意选取的定值。其余同132个参与者的预测仍唯一，所以14条短长K检验中只有这两条预测不唯一。
 
-**当前不能把该候选作为已支持的完整递推组件。** 角色恒等式和首轮工作量定义可以接入，数值服务规则仍缺少频率与到达状态的分离证据；本次未修改公共模型或原冻结参数，也不把分项开发检验写成GEMM验证。
+**当前候选尚未获得正式递推参数资格。** 角色恒等式、首轮工作量定义和带有残差的候选均可进入完整递推的开发试跑，分项误差不构成禁止所有组合的结论。数值服务规则仍缺少频率与到达状态的分离证据；本次未修改公共模型或原冻结参数，也不把分项开发检验写成GEMM验证。
 
 ### 直接ns约束与最小缺口
 
@@ -444,3 +444,47 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --role-ou
   --direct-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
   --assumed-output-ghz 1.8 --output <V08下新的reanalysis目录>
 ```
+
+## c2/c6 双角色直接纳秒准备包（2026-10-09）
+
+本包只补上述同卡缺口，尚无编译或GPU实测结果。公共源同步至 `1f175c2`，沿用 `run_r18.prepare(..., rows, dual_clock=True)` 与现成双角色 FIRST_MMA/MAIN_END/PERMIT/DONE 打点，没有新增探针或时间戳。两条件均为 cfg_c、M=1536、N=2816、swizzle=1、dyadic seed=17、默认全部SM、evict=0，仅K为4096/16384。case中不写入 input_map 参数，输入初始化和tensor-map边界均使用逻辑M/N。
+
+只准备 `cfg_c_plain`、`cfg_c_wide`、`cfg_c_stamped`、`cfg_c_dual` 四条构建命令，每条件每变体十进程，共80个成功进程。plain保留六字tile scratch；wide/stamped/dual匹配十字布局，其中wide不打点、stamped只有cycle事件、dual同时记录cycle和globaltimer。与wide的扰动按同trial及各变体中位分别报告，plain保留原布局作额外基线。重试失败记录保留。
+
+新分析入口为原 `analyze_r15.py --dual-roles`。每个CTA独立计算cycle和直接ns的W/A/I/J/R/E，并检查：
+
+```text
+I=A+J
+E=J+R
+max(DONE)−M=W+J+R
+role2 final−M=W+J+R+tail_after_merged_done
+```
+
+R_ns允许为零，不拿4 cycle补出一个纳秒join常数。J_ns直接取 `d2_ns−max(p1_ns,p2_ns)`，不从issuer窗口或CTA全窗口换算。c2/c6按trial及CTA工作坐标配对，先形成每CTA的J_ns、J_cycle及局部cycle/ns比值，再汇总跨K差值与比值。物理SM驻留不要求配对，也不把两个独立调用当作同时执行的因果对照。
+
+输出 `dual-roles.json` 同时保留逐CTA数值、进程内及跨进程中位、范围、扰动、CV和失败进程。`development_recursion` 使用相同逐CTA样本的分项均值组合W/J/R/Etail，以保持线性恒等式；它是开发递推用的观测分解，不是拟合参数或完整GEMM预测。已有带残差的候选仍可进行完整递推开发试跑；这两个点只检验固定几何的跨K变化，不能支持通用输出服务率。
+
+准备目录：
+
+```text
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-dual-roles-prepared-v1
+```
+
+CPU准备命令：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/run_r15_output_ns.py prepare --dual-roles \
+  --output /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-dual-roles-prepared-v1 \
+  --cutlass-root /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/source/cutlass
+```
+
+负责人在R09完成后，将该目录带入 a057/GPU-43269fbc 的同一新allocation。在分配内设置完整GPU UUID为 `V08_GPU` 和相同的 `CUDA_VISIBLE_DEVICES`，并按顺序执行以下命令；RUN指向该准备包在节点上的绝对路径：
+
+```bash
+python3 "$RUN/source/run_r15_output_ns.py" build --output "$RUN"
+python3 "$RUN/source/run_r15_output_ns.py" setup --output "$RUN"
+python3 "$RUN/source/run_r15_output_ns.py" sample --output "$RUN" --set ctrl
+python3 "$RUN/source/analyze_r15.py" --dual-roles --input "$RUN" --output "$RUN/reanalysis/dual-roles-v1"
+```
+
+运行入口沿用公共源码/二进制哈希、Slurm环境、GPU UUID、allocation及测量锁检查；build需要CUDA 12.9和sm_90a，setup需要132个可用SM对应上述完整单tile工作。CPU分析仅需Python标准库，CUTLASS 3.9.2头文件已随包复制。CPU合成检查覆盖双角色十字解码、零R_ns、大整数时间锚点、80进程完整入口及“cycle翻倍但ns不变”的局部换算分离；合成数据仅存在于临时目录，不进入实验结果。
