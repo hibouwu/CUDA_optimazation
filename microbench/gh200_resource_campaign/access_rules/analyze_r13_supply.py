@@ -866,13 +866,15 @@ def supply_predict(rows, model, frequency_ghz=None):
     jb=np.array(model['jacobian_basis']).reshape(-1,len(p))
     supported=(np.linalg.norm(raw-(raw@basis.T)@basis,axis=1)<=1e-7*np.maximum(1,np.linalg.norm(raw,axis=1)))
     supported &= np.linalg.norm(jac-(jac@jb.T)@jb,axis=1)<=1e-7*np.maximum(1,np.linalg.norm(jac,axis=1))
+    if 'phase' in model:supported &= np.array([(r['j']==0)==(model['phase']=='first') for r in rows])
     return value,supported
 
 
-def fit_supply(rows, unit='ns', calibration_clock='observed', assumed_ghz=1.6):
-    """One configuration/card, j>=1; observed f is legal only in calibration."""
-    rows=[r for r in rows if r['j']>=1]
-    if not rows: raise ValueError('no later-output calibration windows')
+def fit_supply(rows, unit='ns', calibration_clock='observed', assumed_ghz=1.6, phase='later'):
+    """One configuration/card/phase; observed f is legal only in calibration."""
+    if phase not in ('later','first'):raise ValueError('phase must be later or first')
+    rows=[r for r in rows if (r['j']==0)==(phase=='first')]
+    if not rows: raise ValueError('no '+phase+' calibration windows')
     if len({r['config'] for r in rows})!=1 or len({r['gpu_uuid'] for r in rows})!=1:
         raise ValueError('fit one configuration and one card at a time')
     if unit not in ('cycle','ns') or calibration_clock not in ('observed','assumed') or assumed_ghz<=0:
@@ -892,10 +894,11 @@ def fit_supply(rows, unit='ns', calibration_clock='observed', assumed_ghz=1.6):
         max_nfev=3000,ftol=1e-11,xtol=1e-11,gtol=1e-11) for factor in (1,2,4)]
     best=min(fits,key=lambda f:f.cost);p=best.x
     jac=np.column_stack([np.ones(len(rows)),kt[:,None]*z*(z@p[1:]>floor)[:,None]])
-    js=np.maximum(np.linalg.norm(jac,axis=0),1e-30);_,singular,jb=np.linalg.svd(jac/js,full_matrices=False)
-    rank=int(sum(singular>1e-9));xs=np.maximum(np.linalg.norm(x,axis=0),1e-30)
+    norms=np.linalg.norm(jac,axis=0);js=np.where(norms>0,norms,1);_,singular,jb=np.linalg.svd(jac/js,full_matrices=False)
+    rank=int(sum(singular>1e-9));norms=np.linalg.norm(x,axis=0);xs=np.where(norms>0,norms,1)
     _,s,xb=np.linalg.svd(x/xs,full_matrices=False)
     model=dict(config=rows[0]['config'],gpu_uuid=rows[0]['gpu_uuid'],unit=unit,
+        phase=phase,
         calibration_clock=calibration_clock if unit=='ns' else 'cycle',assumed_ghz=assumed_ghz,
         fields=['window_'+unit]+fields,parameters=p.tolist(),projection=projection.tolist(),
         coverage_combinations=combinations,request_scale=xs.tolist(),request_basis=xb[s>1e-9].tolist(),
@@ -915,6 +918,87 @@ def supply_score(rows, model, frequency_ghz):
         result['windows']=metrics(errors);by_case=defaultdict(list)
         for r,e in zip([r for r,s in zip(rows,supported) if s],errors):by_case[r.get('run',''),r['case']].append(e)
         result['case_medians']=metrics([statistics.median(v) for v in by_case.values()])
+    return result
+
+
+def supply_identification_bounds(rows, model):
+    """Nonnegative parameter set preserving fitted training predictions/branches.
+
+    These conditional LP bounds are not confidence intervals or physical prices.
+    Calibration clocks are used only here; exported constraints contain no targets.
+    """
+    rows=[r for r in rows if (r['j']==0)==(model.get('phase','later')=='first')]
+    if any(r['config']!=model['config'] or r['gpu_uuid']!=model['gpu_uuid'] for r in rows):
+        raise ValueError('constraint calibration/configuration mismatch')
+    z=np.array([r['X'] for r in rows])@np.array(model['projection']);p=np.array(model['parameters'])
+    floor=np.array([r['compute_cycles'] for r in rows])
+    if model['unit']=='ns':
+        floor=(np.array([r['calibration_floor_ns'] for r in rows]) if model['calibration_clock']=='observed'
+               else floor/model['assumed_ghz'])
+    constraints={}
+    for x,c in zip(z,floor):
+        sign=-1 if x@p[1:]>c else 1
+        key=tuple(np.r_[0,sign*x]);constraints[key]=min(constraints.get(key,np.inf),sign*c)
+    basis=np.array(model['jacobian_basis']).reshape(-1,len(p));scale=np.array(model['jacobian_scale'])
+    # Convert the scaled Jacobian's right basis back to parameter coordinates.
+    # Zero inactive-column SVD noise in older entry models explicitly.
+    basis[:,scale<1e-20]=0;scale=np.where(scale<1e-20,1,scale)
+    eq=basis*scale
+    eq=eq/np.maximum(np.max(abs(eq),axis=1,keepdims=True),1e-30)
+    result=dict(A_ub=[list(k) for k in constraints],b_ub=list(constraints.values()),
+                A_eq=eq.tolist(),b_eq=(eq@p).tolist())
+    intervals=[]
+    for i,field in enumerate(model['fields']):
+        bounds=[]
+        for sign in (1,-1):
+            objective=np.zeros(len(p));objective[i]=sign
+            fit=linprog(objective,**result,bounds=(0,None),method='highs',
+                        options=dict(primal_feasibility_tolerance=1e-9,dual_feasibility_tolerance=1e-9))
+            if fit.status not in (0,3):raise ValueError('conditional parameter set infeasible: '+fit.message)
+            bounds.append(None if fit.status==3 else float(sign*fit.fun))
+        intervals.append(dict(field=field,minimum=min(bounds[0],float(p[i])),
+                              maximum=max(bounds[1],float(p[i])) if bounds[1] is not None else None))
+    return dict(interpretation='Fixed fitted active pattern/predictions; nonnegative prices; null means unbounded, not a confidence interval.',
+                parameters=intervals,constraints=result)
+
+
+def supply_predict_bounds(rows, model, frequency_ghz, identification):
+    """Pure conditional L bounds, with explicit f and calibrated coverage fractions."""
+    if not rows:return []
+    supply_predict(rows,model,frequency_ghz)  # Check card/configuration and explicit f.
+    p=np.array(model['parameters']);projection=np.array(model['projection'])
+    basis=np.array(model['request_basis']).reshape(-1,7);cache={};result=[]
+    frequencies=np.broadcast_to(np.asarray(frequency_ghz,dtype=float),(len(rows),)) if model['unit']=='ns' else np.ones(len(rows))
+    constraints=identification['constraints']
+    for r,f in zip(rows,frequencies):
+        if 'phase' in model and (r['j']==0)!=(model['phase']=='first'):
+            result.append(dict(status='unsupported phase',minimum=None,maximum=None));continue
+        raw=np.array(r['X'])/np.array(model['request_scale'])
+        if np.linalg.norm(raw-(raw@basis.T)@basis)>1e-7*max(1,np.linalg.norm(raw)):
+            result.append(dict(status='unsupported feature span',minimum=None,maximum=None));continue
+        z=np.array(r['X'])@projection;floor=r['compute_cycles']/f;kt=r['kt']
+        key=(*z,kt,floor)
+        if key not in cache:
+            # Minimise the epigraph of max; its maximum is the larger of two
+            # linear maxima. No nearly-infeasible branch-boundary LP is needed.
+            args=dict(A_eq=[row+[0] for row in constraints['A_eq']],b_eq=constraints['b_eq'],
+                A_ub=[row+[0] for row in constraints['A_ub']]+[np.r_[np.zeros(len(p)),-1].tolist(),np.r_[0,z,-1].tolist()],
+                b_ub=constraints['b_ub']+[-floor,0])
+            fit=linprog(np.r_[1,np.zeros(len(p)-1),kt],**args,bounds=(0,None),method='highs',
+                        options=dict(primal_feasibility_tolerance=1e-9,dual_feasibility_tolerance=1e-9))
+            if fit.status!=0:raise ValueError('prediction lower bound failed: '+fit.message)
+            low=float(fit.fun);highs=[]
+            for service_branch in (False,True):
+                objective=np.r_[1,kt*z if service_branch else np.zeros(len(p)-1)]
+                fit=linprog(-objective,**constraints,bounds=(0,None),method='highs',
+                            options=dict(primal_feasibility_tolerance=1e-9,dual_feasibility_tolerance=1e-9))
+                if fit.status not in (0,3):raise ValueError('prediction upper bound failed: '+fit.message)
+                highs.append(np.inf if fit.status==3 else float(-fit.fun+(0 if service_branch else kt*floor)))
+            representative=p[0]+kt*max(floor,z@p[1:])
+            low=min(low,float(representative));high=max(*highs,float(representative))
+            cache[key]=dict(status='identified prediction' if np.isfinite(high) and high-low<=1e-7*max(1,abs(high)) else 'bounded nonunique prediction',
+                minimum=float(low) if np.isfinite(low) else None,maximum=float(high) if np.isfinite(high) else None)
+        result.append(cache[key])
     return result
 
 

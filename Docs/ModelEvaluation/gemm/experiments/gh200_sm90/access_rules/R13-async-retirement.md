@@ -629,3 +629,23 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py \
 这 8 点足以检验 cfg_a 的 A whole-fill、cfg_c 的 B whole-fill 条款及两档 K 的条件规则；源有效量随 map 同时变化，服务率、填零路径和等待不唯一可辨。反方向、partial-fill、双方向同时 OOB 与其他 pitch 余数的耗时继续留作未验证范围。旧 R10 B 曲线和 R13 SM 扫描可复用几何与秩检查，不跨卡混合时间定值；如需分别定覆盖两列，再按秩缺口补 p32/p64，而非先扩完整矩阵。[静态检查报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-static-requests-v1/summary.json)覆盖 25 个旧条件、192 对 A/B 合法余数、18+8 个拟议条件，未启动 GPU 或新拟合。
 
 另记录主管未采用的[共享 fill 诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/manager-shared-fill-v1/summary.json)：旧 13 条件增加一个软件波次 global-fill 系数后，ns 后续窗口 RMS 从 7.1266% 降到 6.7168%，最大误差从 25.41% 降到 21.48%，慢 in、j2/T5 仍未解释，因此不接入候选。只用 K1024 训练、留出 K4096（Kt=64）时秩为 7/7、最大误差 19.28%；其余秩亏的留方向/留 pitch 折不构成迁移判定。
+
+### 新 29 点同卡定值与 first/later 条件（2026-10-09，A）
+
+job738496 在 a057/GPU432 上提供 29 条件、每条件十份 dual，共 **128520 个 L 窗口**；按同一 CTA/j 跨进程取中位后为 12852 个。只用本 run 定值。源有效 A+B 共用一项；A/B 的 p16 覆盖各只识别 extra32+extra128 的组合，固定比例为 1:7，不硬拆两列。`fit_supply(..., phase='later')` 默认使用 j>=1，`phase='first'` 单独使用 j0；两者保持相同静态字段与 max 形式，不按 case ID 查表。ns 训练下界可使用校准窗口 cycle/ns，预测必须显式给 f。
+
+下表为 ns 观测下界训练模型在**显式 1.6 GHz** 下的窗口中位/最大/RMS误差，均为同批开发诊断：
+
+| 配置 | later 中位 / 最大 / RMS | first 中位 / 最大 / RMS | later / first 条件秩 |
+|---|---|---|---|
+| cfg_a | 6.62% / 44.01% / 9.57% | 2.80% / 16.16% / 4.81% | 5/5、3/4 |
+| cfg_b | 5.83% / 35.05% / 9.58% | 3.57% / 31.32% / 7.11% | 3/4、3/4 |
+| cfg_c | 6.64% / 32.05% / 8.37% | 4.97% / 13.33% / 5.49% | 4/5、3/4 |
+
+原未拟合首段转移失败保留在[初始报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-supply-calibration-v1/summary.json)：cfg_c B16、K4096 首 tile 的 case 中位高估 75.20%。单独 first 定值后，K1024/K4096 B16 的窗口平均有符号误差约为 +0.26%/+5.61%；这是训练状态条件的改善，不是新留出成功。single48 首段仍约 +12.61%。固定 1.6 GHz 下界直接训练的 later 对照，中位/RMS为 A 4.84%/8.98%、B 5.21%/9.14%、C 5.62%/7.36%，没有用目标 f 回填预测。
+
+参数非唯一不阻断本范围试算：在保持训练预测与分支、价格非负的条件 LP 中，显式 1.6 下 A/B 的 first/later 和 C 的 first 预测都唯一；C later 的 84 个 K4096/A16 窗口仍有至多 **388.70 ns** 范围，其余 1940 个唯一。C later 的 A 覆盖组合价格为 0～0.36099 ns/KiB，其计算分支只给上界。范围不是置信区间，也不证明物理价格唯一。first 未观察到目的 fill，未来该组合明确不支持；p32/p64/p96 改变覆盖比例也不支持，不从另一 phase 补参数。
+
+29 个 case 的配对扰动中位：wide/plain **+0.12%**，dual/wide **+2.32%**，dual/plain **+1.98%**；dual/plain 的 case 范围为 +0.54%～+6.22%，不能忽略 observer 差异。旧 B13 仅作桥接诊断：同几何 aligned/B16 的 later ns 中位绝对差为 0.31%/1.26%，但 alloc_lda 从 1024 变为 1032、alloc_ldb 从 3136 变为 3080，未自动联合。
+
+交根继续组合：[可读 phase 模型及条件范围](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)、[窗口与分项残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/residuals.csv)、[纯预测调用例子](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/example.py)、[observer/旧批桥接诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-supply-diagnostics-v1/summary.json)。只替换 L，完整事件效果由根的 non-L 与预测时钟组合验证；局部最大残差继续保留。
