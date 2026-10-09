@@ -7,6 +7,8 @@ All times are us, frequencies GHz, and cycles are local SM clock64 cycles.
 
 --candidates --followup V08F --trend-run R09RUN compares clock forms using only
 the original V08 time-calibration cases for fitting. C, F and kappa stay frozen.
+--input-candidates --calibration-run V08 --trend-run OLD_R09 uses only the 18
+new short/middle conditions to compare mode-dependent activity terms.
 """
 import argparse
 import csv
@@ -466,6 +468,309 @@ def input_clock_evidence(run, r10, r15, output):
     print('same-card evidence:', len(observations), 'separate protocol rows; no coefficient fit')
 
 
+INPUT_MODES = ('dyadic', 'zero', 'random')
+INPUT_COEFFICIENTS = ('a', 'b', 'c', 'd_dyadic', 'd_zero', 'd_random')
+
+
+def input_clock_points(run, calibration):
+    """R09 ends observations with old predicted C/phi/F/kappa, never observed C inputs."""
+    summary = read_json(run / 'analysis/summary.json')['cases']
+    setups = {s['case']: s['setup'] for s in read_json(run / 'static_setup.json')}
+    points = []
+    for row in read_json(run / 'cases.json'):
+        observed = summary[row['id']]
+        if observed.get('status') == 'numeric_error':
+            raise ValueError('input-clock calibration requires explicit handling of failed conditions')
+        cfg = row['config']
+        feat = v08_model.features(row, setups[row['id']]['grid'])
+        cycles, ctas, _, _ = v08_model.critical_cycles(calibration['params'], cfg, feat)
+        critical = max(range(len(ctas)), key=ctas.__getitem__)
+        tm, tn, tk = v08_model.base.CONFIGS[cfg]['tile']
+        tensor_cycles = len(feat['work'][critical]) * feat['kt'] * 2 * tm * tn * tk / 4096
+        timing = calibration['time'][cfg]
+        points.append(dict(case=row['id'], config=cfg, m=row['m'], n=row['n'], k=row['k'],
+            input_mode=row['input_mode'], purpose=row.get('purpose', 'old_long_development'),
+            phi=sum(ctas) / (132 * cycles), mu_tensor_critical=tensor_cycles / cycles,
+            tensor_cycles=tensor_cycles, critical_tiles=len(feat['work'][critical]),
+            traffic_bytes=v08_model.base.dram_bytes(cfg, row['m'], row['n'], row['k'], feat['work']),
+            cycles=cycles, converted_cycles=timing['kappa'] * cycles, fixed_us=timing['F'],
+            observed_window_us=observed['window_ends'], observed_ghz=observed['ghz_ends'],
+            plain_us=observed['plain_us'], observed_ends_cycles=observed['c_max_ends'],
+            converted_cycle_error=timing['kappa'] * cycles / observed['c_max_ends'] - 1))
+    return points
+
+
+def input_clock_design(points, activity, tau):
+    import numpy as np
+
+    rows = []
+    for p in points:
+        window = p['observed_window_us']
+        demand = p['mu_tensor_critical'] if activity == 'tensor_critical' else p['tensor_cycles'] / (1000 * window)
+        rows.append([1, -p['phi'] * duration_term(window, 'relaxation', tau),
+                     -p['traffic_bytes'] / (1e6 * window),
+                     *[-demand * (p['input_mode'] == mode) for mode in INPUT_MODES]])
+    return np.array(rows)
+
+
+def input_design_rank(design):
+    import numpy as np
+
+    norms = np.linalg.norm(design, axis=0)
+    normalized = design / norms
+    _, singular, vh = np.linalg.svd(normalized, full_matrices=False)
+    rank = int(np.linalg.matrix_rank(normalized))
+    result = dict(rank=rank, columns=design.shape[1], normalized_singular_values=singular.tolist(),
+                  normalized_condition=float(np.linalg.cond(normalized)))
+    if rank < design.shape[1]:
+        null = vh[-1] / norms
+        result['coefficient_null_direction'] = (null / max(abs(null))).tolist()
+    return result
+
+
+def fit_input_clock(points, activity):
+    """One bounded family; input mode changes only its activity coefficient."""
+    import numpy as np
+
+    y = np.array([p['observed_ghz'] for p in points])
+    profile = []
+    for tau in np.logspace(-1, 5, 121):
+        design = input_clock_design(points, activity, tau)
+        coefficients, _, _, _ = np.linalg.lstsq(design, y, rcond=None)
+        rank = input_design_rank(design)
+        profile.append(dict(tau_us=float(tau), coefficients=coefficients.tolist(),
+            mse_ghz=float(np.mean((design @ coefficients - y) ** 2)), **rank))
+    valid = [p for p in profile if p['rank'] == 6]
+    if not valid:
+        return dict(activity=activity, status='rank_deficient', tau_profile=profile,
+                    design=profile[0], coefficients=None, tau_us=None)
+    best = min(valid, key=lambda p: p['mse_ghz'])
+    tau, coefficients = best['tau_us'], best['coefficients']
+    # This Jacobian adds log(tau) to the six linear coefficients.
+    derivative = []
+    for p in points:
+        x = p['observed_window_us'] / tau
+        derivative.append(coefficients[1] * p['phi'] * (-math.expm1(-x) - x * math.exp(-x)) / x)
+    jacobian = np.column_stack((input_clock_design(points, activity, tau), derivative))
+    near = [p for p in valid if p['mse_ghz'] <= 1.1 * best['mse_ghz']]
+    intervals = []
+    for i, p in enumerate(profile):
+        if p not in near:
+            continue
+        if not intervals or i != intervals[-1]['last_index'] + 1:
+            intervals.append(dict(minimum=p['tau_us'], maximum=p['tau_us'], last_index=i))
+        else:
+            intervals[-1].update(maximum=p['tau_us'], last_index=i)
+    for interval in intervals:
+        del interval['last_index']
+    return dict(activity=activity, status='conditional_fit_only', **best,
+        tau_profile=profile, jacobian_with_log_tau=input_design_rank(jacobian),
+        calibration_window_domain_us=[min(p['observed_window_us'] for p in points),
+                                      max(p['observed_window_us'] for p in points)],
+        tau_at_grid_boundary=tau in (profile[0]['tau_us'], profile[-1]['tau_us']),
+        near_minimum=dict(criterion='Grid MSE <= 1.10 * minimum; sensitivity range, not a confidence interval.',
+            tau_intervals_us=intervals,
+            coefficients={name: [min(p['coefficients'][i] for p in near), max(p['coefficients'][i] for p in near)]
+                          for i, name in enumerate(INPUT_COEFFICIENTS)},
+            input_contrasts={mode: [min(p['coefficients'][i] - p['coefficients'][3] for p in near),
+                                    max(p['coefficients'][i] - p['coefficients'][3] for p in near)]
+                             for i, mode in ((4, 'zero_minus_dyadic'), (5, 'random_minus_dyadic'))}))
+
+
+def input_clock_frequency(point, window, model):
+    a, b, c, *ds = model['coefficients']
+    d = ds[INPUT_MODES.index(point['input_mode'])]
+    demand = (point['mu_tensor_critical'] if model['activity'] == 'tensor_critical'
+              else point['tensor_cycles'] / (1000 * window))
+    return (a - b * point['phi'] * duration_term(window, 'relaxation', model['tau_us'])
+            - c * point['traffic_bytes'] / (1e6 * window) - d * demand)
+
+
+def input_clock_roots(point, model):
+    """All positive self-consistent roots; an iteration's initial value cannot choose a branch."""
+    a, b, c, *ds = model['coefficients']
+    d = ds[INPUT_MODES.index(point['input_mode'])]
+    tau, v = model['tau_us'], b * point['phi']
+    level = a - d * point['mu_tensor_critical'] if model['activity'] == 'tensor_critical' else a
+    target = point['converted_cycles'] / 1000 + c * point['traffic_bytes'] / 1e6
+    if model['activity'] == 'tensor_rate':
+        target += d * point['tensor_cycles'] / 1000
+
+    def residual(window):
+        return (level - v) * window - v * tau * math.expm1(-window / tau) - target
+
+    # h'(W)=level-v+v*exp(-W/tau) has at most one stationary point.
+    stationary = -tau * math.log1p(-level / v) if v and 0 < level / v < 1 else None
+    upper = max(1, tau, 2 * stationary if stationary else 0)
+    asymptote = level - v
+    for _ in range(100):
+        if (asymptote and residual(upper) * asymptote > 0) or (not asymptote and upper / tau > 50):
+            break
+        upper *= 2
+    else:
+        raise ValueError('positive-root search could not establish the asymptotic interval')
+    cuts = [0] + ([stationary] if stationary else []) + [upper]
+    windows = []
+    for lo, hi in zip(cuts, cuts[1:]):
+        left, right = residual(lo), residual(hi)
+        for endpoint, value in ((lo, left), (hi, right)):
+            if endpoint > 0 and abs(value) <= 1e-11 * max(1, abs(target)):
+                windows.append(endpoint)
+        if left * right >= 0:
+            continue
+        for _ in range(100):
+            mid = (lo + hi) / 2
+            value = residual(mid)
+            if (value > 0) == (left > 0):
+                lo, left = mid, value
+            else:
+                hi = mid
+        windows.append((lo + hi) / 2)
+    roots = []
+    for window in sorted(windows):
+        if roots and abs(window / roots[-1]['window_us'] - 1) < 1e-9:
+            continue
+        frequency = point['converted_cycles'] / (1000 * window)
+        closure = input_clock_frequency(point, window, model) / frequency - 1
+        if abs(closure) > 1e-8:
+            raise ValueError('input clock root does not close')
+        roots.append(dict(window_us=window, frequency_ghz=frequency,
+                          predicted_us=point['fixed_us'] + window, closure=closure))
+    return roots
+
+
+def evaluate_input_clock(point, model):
+    roots = input_clock_roots(point, model)
+    frequency = input_clock_frequency(point, point['observed_window_us'], model)
+    lo, hi = model['calibration_window_domain_us']
+    in_domain = [r for r in roots if lo <= r['window_us'] <= hi]
+    return dict(case=point['case'], config=point['config'], m=point['m'], input_mode=point['input_mode'],
+        observed_fit_frequency_ghz=frequency, observed_fit_frequency_error=frequency / point['observed_ghz'] - 1,
+        positive_roots=roots, root_count=len(roots),
+        free_status='no_positive_root' if not roots else 'unique_positive_root' if len(roots) == 1 else 'multiple_positive_roots',
+        unique_free_frequency_error=roots[0]['frequency_ghz'] / point['observed_ghz'] - 1 if len(roots) == 1 else None,
+        unique_free_time_error=roots[0]['predicted_us'] / point['plain_us'] - 1 if len(roots) == 1 else None,
+        roots_in_training_window=len(in_domain),
+        in_domain_free_frequency_error=in_domain[0]['frequency_ghz'] / point['observed_ghz'] - 1 if len(in_domain) == 1 else None,
+        in_domain_free_time_error=in_domain[0]['predicted_us'] / point['plain_us'] - 1 if len(in_domain) == 1 else None,
+        converted_cycle_error=point['converted_cycle_error'])
+
+
+def input_clock_stats(rows):
+    def rms(key):
+        values = [r[key] for r in rows if r[key] is not None]
+        return dict(n=len(values), rms=math.sqrt(statistics.fmean(x*x for x in values))) if values else None
+
+    return dict(n=len(rows), no_positive_root=sum(r['root_count'] == 0 for r in rows),
+        multiple_positive_roots=sum(r['root_count'] > 1 for r in rows),
+        unique_positive_root=sum(r['root_count'] == 1 for r in rows),
+        no_root_in_training_window=sum(r['roots_in_training_window'] == 0 for r in rows),
+        unique_root_in_training_window=sum(r['roots_in_training_window'] == 1 for r in rows),
+        multiple_roots_in_training_window=sum(r['roots_in_training_window'] > 1 for r in rows),
+        observed_fit_frequency=rms('observed_fit_frequency_error'),
+        unique_free_frequency=rms('unique_free_frequency_error'), unique_free_time=rms('unique_free_time_error'),
+        in_domain_free_frequency=rms('in_domain_free_frequency_error'), in_domain_free_time=rms('in_domain_free_time_error'),
+        converted_cycle_error=rms('converted_cycle_error'))
+
+
+def input_clock_candidates(run, calibration_run, old_long, output):
+    """18 new calibration conditions; all bridges and old long cases remain diagnostics."""
+    import v06_run as common
+
+    common.verify(run)
+    common.verify(old_long)
+    environment = read_json(run / 'environment.json')
+    if environment['gpu'].split(',')[0] != read_json(old_long / 'environment.json')['gpu'].split(',')[0]:
+        raise ValueError('input-clock diagnostics require the same GPU')
+    config = read_json(run / 'run_config.json')
+    if config['cases_sha256'] != sha256(run / 'cases.json'):
+        raise ValueError('input-clock case matrix changed')
+    calibration = read_json(calibration_run / 'frozen/v08-predictions.json')['calibration']
+    points = input_clock_points(run, calibration)
+    training = [p for p in points if p['purpose'] == 'calibration']
+    bridge = [p for p in points if p['purpose'] == 'bridge']
+    if len(training) != 18 or len(bridge) != 3 or any(p['k'] != 1024 for p in points):
+        raise ValueError('unexpected input-clock calibration matrix')
+    models = {activity: fit_input_clock(training, activity) for activity in ('tensor_critical', 'tensor_rate')}
+    scores, diagnostics, folds = [], {}, []
+    # Read development sets only after the all-calibration fits have been fixed.
+    old_points = [p for p in input_clock_points(old_long, calibration) if p['config'] != 'cfg_b']
+    for activity, model in models.items():
+        diagnostics[activity] = {}
+        for phase, dataset in [('calibration', training), ('new_cfg_b_long_bridge', bridge),
+                               ('old_cfg_ac_long_cross_job_development', old_points)]:
+            evaluated = [dict(evaluate_input_clock(p, model), activity=activity, phase=phase, fold='') for p in dataset]
+            scores.extend(evaluated)
+            diagnostics[activity][phase] = input_clock_stats(evaluated)
+        for scheme in ('geometry', 'config'):
+            key = 'm' if scheme == 'geometry' else 'config'
+            for label in sorted({p[key] for p in training}):
+                train = [p for p in training if p[key] != label]
+                held = [p for p in training if p[key] == label]
+                fitted = fit_input_clock(train, activity)
+                evaluated = ([dict(evaluate_input_clock(p, fitted), activity=activity, phase=scheme, fold=str(label))
+                              for p in held] if fitted['coefficients'] is not None else [])
+                scores.extend(evaluated)
+                folds.append(dict(activity=activity, scheme=scheme, held_group=label, train_n=len(train), held_n=len(held),
+                    model=fitted, errors=input_clock_stats(evaluated) if evaluated else None))
+        coefficients = model['coefficients']
+        steady = [coefficients[0] - coefficients[1] * p['phi']
+                  - (coefficients[3 + INPUT_MODES.index(p['input_mode'])] * p['mu_tensor_critical']
+                     if activity == 'tensor_critical' else 0) for p in training]
+        model['steady_frequency_range_ghz'] = [min(steady), max(steady)]
+        model['accepted_for_composition'] = False
+    result = dict(environment=environment, run=str(run), diagnostic_source_sha256=sha256(Path(__file__)),
+        input_hashes={name: sha256(run / name) for name in ('cases.json', 'run_config.json', 'static_setup.json',
+            'analysis/summary.json', 'analysis/input_pairs.csv', 'analysis/bridge_comparison.json')},
+        calibration_source=str(calibration_run), calibration_sha256=sha256(calibration_run / 'frozen/v08-predictions.json'),
+        old_long_source=str(old_long), old_long_summary_sha256=sha256(old_long / 'analysis/summary.json'),
+        coefficient_order=INPUT_COEFFICIENTS,
+        formula='f_GHz=a-b*phi*g(W_us/tau_us)-c*B_bytes/(1e6*W_us)-d_mode*A(W); g(x)=1-(1-exp(-x))/x',
+        activity_units=dict(tensor_critical='Q_crit/C_model, dimensionless; d_mode in GHz',
+                            tensor_rate='Q_crit/(1000*W_us), nominal SM compute cycles/ns (GHz); d_mode dimensionless'),
+        training_cases=[p['case'] for p in training], train_n=len(training), models=models,
+        domain=dict(gpu=environment['gpu'].split(',')[0], input_modes=INPUT_MODES, seed=17, k=1024,
+            geometry=[2048, 8192], observed_window_us=spread([p['observed_window_us'] for p in training]),
+            mu_tensor_critical=spread([p['mu_tensor_critical'] for p in training]),
+            tensor_rate_ghz=spread([p['tensor_cycles'] / (1000 * p['observed_window_us']) for p in training]),
+            tensor_rate_over_traffic=[min(p['tensor_cycles'] * 1000 / p['traffic_bytes'] for p in training),
+                                      max(p['tensor_cycles'] * 1000 / p['traffic_bytes'] for p in training)]),
+        diagnostics=diagnostics, folds=folds, points=dict(calibration=training, new_bridge=bridge, old_long=old_points),
+        bridge_comparison=read_json(run / 'analysis/bridge_comparison.json'),
+        notes=[
+            'Only the 18 short/middle conditions train coefficients or tau. Three new cfg_b long bridges and six old cfg_a/c long cases are development diagnostics only.',
+            'Input mode changes only d_mode in the existing bounded duration family; no extra family, mode intercept, config offset or per-mode tau is fitted.',
+            'Observed W is allowed in training; every positive free root solves W=old_kappa*C_model/(1000*f(W)) using predicted C only.',
+            'C/phi/F/kappa are old 099dda56 V08 features, not calibrated a057 cycle parameters. Observed ends C appears only in diagnostic errors.',
+            'Q_crit counts all scheduled tiles on the predicted critical CTA at 4096 FLOP/SM-cycle; the rate proxy uses no target measured cycles.',
+            'Demand proxies and inferred traffic are not physical Tensor activity, measured DRAM bandwidth, or power. Rate units describe nominal compute demand per time.',
+            'Frequency uses maximum-work CTA cycle/ns aggregation; observed W is the cross-CTA ends envelope. These scopes are related proxies, not identical timestamps.',
+            'One row per condition median is fitted, not 180 independent design conditions; the 10 processes per condition do not add design rank.',
+            'No sign constraint or clamp is added; negative c and negative steady frequency remain visible and invalidate physical reuse.',
+            'Tau scans the same 0.1..100000 us grid. The 10 percent MSE parameter ranges are sensitivity ranges, not confidence intervals.',
+            'All positive roots are retained. Multiple roots are ambiguous; root absence is not hidden by reporting errors only on solvable points.',
+            'Roots within the training-window min/max are counted separately using training bounds only; this broad envelope does not validate its unsampled interior gap.',
+            'Geometry CV with tensor_rate has a rank-deficient design; no arbitrary minimum-norm coefficients are used for predictions.',
+            'All new conditions have K=1024, so this batch cannot identify or cross-validate K dependence. No full time-prediction pass is claimed.',
+        ])
+    output.mkdir(parents=True, exist_ok=False)
+    (output / 'input-clock-candidates.json').write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+    with (output / 'input-clock-scores.csv').open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(scores[0]))
+        writer.writeheader()
+        writer.writerows({**r, 'positive_roots': json.dumps(r['positive_roots'])} for r in scores)
+    profile_rows = [dict(activity=activity, **{k: v for k, v in p.items() if k not in ('coefficients', 'normalized_singular_values')},
+                         **dict(zip(INPUT_COEFFICIENTS, p['coefficients'])))
+                    for activity, model in models.items() for p in model['tau_profile']]
+    with (output / 'input-clock-profile.csv').open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(profile_rows[0]))
+        writer.writeheader()
+        writer.writerows(profile_rows)
+    for activity in models:
+        print(activity, 'tau', models[activity]['tau_us'], 'rank', models[activity]['rank'], diagnostics[activity]['calibration'])
+    print('output:', output)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', required=True, type=Path)
@@ -473,12 +778,18 @@ if __name__ == '__main__':
     parser.add_argument('--candidates', action='store_true')
     parser.add_argument('--activity', action='store_true', help='compare activity proxies within the existing bounded duration family')
     parser.add_argument('--input-evidence', action='store_true')
+    parser.add_argument('--input-candidates', action='store_true', help='fit input activity coefficients on the 18 new short/middle R09 conditions')
+    parser.add_argument('--calibration-run', type=Path)
     parser.add_argument('--r10-run', type=Path)
     parser.add_argument('--r15-run', type=Path)
     parser.add_argument('--followup', type=Path)
     parser.add_argument('--trend-run', type=Path)
     args = parser.parse_args()
-    if args.input_evidence:
+    if args.input_candidates:
+        if args.calibration_run is None or args.trend_run is None:
+            parser.error('--input-candidates requires --calibration-run and --trend-run')
+        input_clock_candidates(args.run.resolve(), args.calibration_run.resolve(), args.trend_run.resolve(), args.output.resolve())
+    elif args.input_evidence:
         input_clock_evidence(args.run.resolve(), args.r10_run.resolve(), args.r15_run.resolve(), args.output.resolve())
     elif args.candidates or args.activity:
         clock_candidates(args.run.resolve(), args.followup.resolve(), args.trend_run.resolve(), args.output.resolve(), args.activity)
