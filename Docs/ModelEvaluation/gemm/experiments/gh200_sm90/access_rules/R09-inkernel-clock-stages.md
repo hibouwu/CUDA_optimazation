@@ -1090,3 +1090,14 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_zero_activity_clock.
 ### V09 的长 K 迁移（2026-10-09）
 
 [V09](V09-component-validation.md) 已按获批r2预测在同卡完成新留出。cfg_b的6144×8192×32768自由有效频率为0.9000 GHz，同调用观测约1.2000 GHz，低估25.00%；总时间高估35.46%。仅作测后诊断，把观测频率代入其余原参数后，误差降至1.71%。这定位到时钟候选的跨K迁移，不证明某个物理功耗来源，也不允许改写冻结成绩。全组预填误差仍大，下一步复用现有长窗口、等工作和V09事件记录，分别检查频率代理与首段端点；当前不新增GPU任务。
+
+
+<a id="v09-frequency-domain"></a>
+
+### V09复核后的拟合口径与外推范围
+
+[误差抵消复核](V09-component-validation.md#cycle-frequency-cancellation)提示应分别报告局部cycle/ns、有效频率和完整时间误差；换算周期与频率共享数学项，其相关性不能证明误差在训练时被吸收。当前source-clock已经拟合观测f，Q/S不依赖旧周期模型；下一步对照观测窗口下的频率拟合与自由组合结果，再检查局部服务模型，首段仍按原事件端点单独分析。
+
+冻结前同卡[21点训练数据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json)包含cfg_b 20480²×1024：dyadic为0.968796 GHz、1843.840 µs；random为0.688303 GHz、2546.928 µs。0.90 GHz低于dyadic训练范围，却不低于所有历史实测；5–7 ms超过训练窗口，但相对完整时钟训练集不是长十几倍。
+
+后续按配置、输入模式、窗口和工作量说明内插/外推，范围只由测前可用证据确定。超范围不等于物理不可能，不把观测最小值当硬件下限，也不夹取频率改善分数。参数非唯一时可研究有条件区间，但须传播到频率联立与全时间；不改变V09的冻结拒绝项和评分。

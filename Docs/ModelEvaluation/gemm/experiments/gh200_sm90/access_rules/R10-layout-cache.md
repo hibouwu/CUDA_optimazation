@@ -252,6 +252,8 @@ freeze需要五个已知条件的 `cases.json`、`static_setup.json`、`environm
 
 CPU检查已覆盖给定覆盖数、参数不唯一而留出预测唯一、校准失败保留；临时合成样例另检查了仅三校准目录读取、两留出ID、只读freeze、评分及采样后拒绝freeze。它们不是新的GPU结果。`python3 analyze_r10.py --cpu-check` 可重复运行几何和参数检查。
 
+<a id="bcurve-negative"></a>
+
 ### 局部冻结负结果：job738203
 
 **两候选均未通过预声明的局部目标，保留失败，不回调参数。** job738203在独占的romeo-a057、GPU-43269fbc-449d-3e0f-908a-9c81229546d3上完成，同卡先校准再冻结、再测留出；没有拼接a043的旧常数。五条件×四变体×十进程共200个成功进程，819,200个保存输出值通过重放；source/bin/SASS/raw身份匹配。四个cfg_b二进制沿用eb49b87，均为168寄存器、16条静态HGMMA、无spill/C7510。
@@ -291,3 +293,12 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r10.py --score-b
   --predictions /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json \
   --output <该run下新的reanalysis目录>
 ```
+
+
+<a id="v09-pitch-comparison"></a>
+
+### 与 V09 的32 B对齐对照
+
+本页job738203的B行距6144/6176/6208 B对应plain中位数28.704/33.008/31.440 µs：后两者都是32 B对齐、非128 B对齐，却分别慢14.99%、9.53%；后续dual窗口分别慢16.96%、10.83%。它们是“输入只要32 B对齐就不慢”的反例。[V09](V09-component-validation.md) G5的B+32B中位差−0.78%不构成显著提速结论，也不能抵消这些旧记录。[EXP-15/R05-E](../EXP-15-tma-2d.md#r05-e)的32 B结果属于TMA输出协议，仅作输入假设的线索。
+
+先用已采记录比较两批几何、源请求组织和逐CTA/轮次差异，不拟合新余数函数。若仍需分辨32/128 B假设，才在V09对应几何内选择B+64/B+96中的最少配对，或针对A侧选择A+32；逻辑尺寸、输入值、D行距、容量和执行组织保持配对一致，补点前写清两种假设各自预期。不会把A/B、所有余数与所有配置展开成笛卡尔积。
