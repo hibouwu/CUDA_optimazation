@@ -279,3 +279,17 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --v08-pad
 这份对照把逻辑工作量、输出mask及输入数值固定，证明**输入描述符越界路径本身会增加本批补齐成本**。它没有把零填充内部服务、供给/计算重叠和全卡竞争分别定值。有效tile也有位置相关变化，且首轮可能周期接近、纳秒不同，不能把一条全局频率或统一rho当作所有位置的解释。按原计划，下一步可复用同一二进制做 N 向四条件配对，检验 A/B 输入路径能否共用该规则；当前结果不外推给 cfg_a/c。
 
 [原始归档](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-job738296/)、[逐进程和位置配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-job738296/reanalysis/input-map-pairs-v1/input-map-pairs.json)。复核沿用 `analyze_r18.py --input-map-pairs --input RUN --output 新目录`，不修改历史归档或冻结预测。
+
+
+### N 向配对结果：job738307
+
+同日仍在 a057/GPU-43269fbc，完整复用上批四个二进制，逻辑形状改为4096×2304、swizzle8，B/D 行距与预留 N 均为3072。两个路径的 B 第2304列起均为零，只把输入 map N 从2304扩大到3072；输出descriptor、mask和CTA坐标列表仍相同。四条件160个进程全部成功，另检查314572800个扩展FP16值为零以及逻辑输出外哨兵。
+
+| K | map N=2304：plain µs | map N=3072：plain µs | 同 trial 变体/对照−1：中位［范围］ |
+|---:|---:|---:|---:|
+| 1024 | 49.200 | 39.952 | **−18.87%［−20.26%, −16.57%］** |
+| 4096 | 170.400 | 140.352 | **−17.62%［−19.21%, −16.25%］** |
+
+因此 A 与 B 的整 tile 越界路径在这组 cfg_b 条件下都具有额外代价；不能把有效地址覆盖减少理解为需求必然减少。K=4096 的 padN 越界窗口约793～1005 cycle/Ktile，而有效地址零为约521～529；与 M 向一样，位置差异和纳秒/周期差异仍需保留。两方向的形状、复用历史不同，不能由接近的百分比宣称它们具有同一个物理填零速率。
+
+[条件与原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-n-job738307/)、[逐位置配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-n-job738307/reanalysis/input-map-pairs-v1/input-map-pairs.json)。这八个 M/N 向条件用于下一版模型区分有效地址与越界填零的需求；已有冻结分数保持原判定。
