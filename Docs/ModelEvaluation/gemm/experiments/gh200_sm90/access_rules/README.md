@@ -8,7 +8,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-规则推导与计量约定见 [RULES](RULES.md)。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。方案已更新，GPU 采样仍暂停。
+规则推导与计量约定见 [RULES](RULES.md)。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；V09 尚未冻结。
 
 <a id="当前状态2026-10-07"></a>
 
@@ -27,11 +27,11 @@
 | [R06](R06-issue-residency.md) 发射与驻留 | 已测 | FFMA 接近发射上限；未得到统一驻留惩罚 |
 | R07 频率与固定项 | 已并入 [R00](R00-anchor-target.md#ndebug)、[R09](R09-inkernel-clock-stages.md#r07) | NDEBUG 锚点；调用后探针不能代替调用内频率 |
 | [R08](R08-waves-l2-reuse.md) 波次与遍历 | 已测 | 所列形状按离散波次计费；遍历收益依条件变化 |
-| [R09](R09-inkernel-clock-stages.md) 调用内分段 | 已测 | 主循环达到计算下界；重建固定项和调用内频率 |
+| [R09](R09-inkernel-clock-stages.md) 调用内分段 | 已测，输入扩展已采样 | 周期与时间须分开；三档输入已完成长窗口同卡对照，频率依赖输入数值 |
 | [R10](R10-layout-cache.md) 行距与尺寸尾部 | 已测 | cfg_b 对行距最敏感；对齐影响不能作统一惩罚；含 V08 后续的 A/B/D 行距与尺寸尾部 |
 | [R11](R11-mixed-issue.md) 混合发射 | 已测，未用于 V07 | 消费者匹配后，各配对的重叠程度不同 |
 | [R12](R12-smem-path-contention.md) SMEM 多路竞争 | 已测，未用于 V07 | TMA/WGMMA 接近重叠；与 STS 并发有额外代价 |
-| [R13](R13-async-retirement.md) 供给与退役 | 已测，部分事件可用 | 所测供给约 58/45 B/cycle；两项 reuse 只保留顺序；V08 后为 PLAN 主线的首要扩展 |
+| [R13](R13-async-retirement.md) 供给与退役 | 已测，条件候选待转移 | 行距代价随活动规模和输出位置变化；共享/预填候选尚未进入完整预测 |
 | [R14](R14-stage-handoff.md) 阶段交接 | 已测，迁移受限 | 四 CTA 校准未能直接迁移供给与交接到整卡 |
 | [R15](R15-output-service.md) 输出服务 | 已测，条件对照 | 标量探针不能直接作为 CUTLASS 输出常数 |
 | [R16](R16-residency-quota.md) 驻留与配额 | 已测，未用于 V07 | 驻留收益依供给变化；寄存器申请等待取决于释放时序 |
