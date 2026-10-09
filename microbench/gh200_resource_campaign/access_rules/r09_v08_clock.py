@@ -517,34 +517,95 @@ def input_design_rank(design):
     import numpy as np
 
     norms = np.linalg.norm(design, axis=0)
+    norms = np.where(norms > 0, norms, 1)
     normalized = design / norms
     _, singular, vh = np.linalg.svd(normalized, full_matrices=False)
     rank = int(np.linalg.matrix_rank(normalized))
     result = dict(rank=rank, columns=design.shape[1], normalized_singular_values=singular.tolist(),
-                  normalized_condition=float(np.linalg.cond(normalized)))
+                  normalized_condition=float(np.linalg.cond(normalized)) if rank == design.shape[1] else None)
     if rank < design.shape[1]:
         null = vh[-1] / norms
         result['coefficient_null_direction'] = (null / max(abs(null))).tolist()
     return result
 
 
-def fit_input_clock(points, activity):
+def constrained_input_coefficients(design, y, activity, cap, initial):
+    """Convex least squares at fixed tau, with explicit coefficient inequalities."""
+    import numpy as np
+    from scipy.optimize import Bounds, LinearConstraint, minimize, nnls
+
+    epsilon = 1e-6  # GHz, strictly positive asymptotic margin; not a frequency clamp
+    coupled = ([[1, -1, 0, 0, 0, 0]] if activity == 'tensor_rate' else
+               [[1, -1, 0, -1, 0, 0], [1, -1, 0, 0, -1, 0], [1, -1, 0, 0, 0, -1]])
+    matrix = np.array(coupled, dtype=float)
+
+    def objective(coefficients):
+        residual = design @ coefficients - y
+        return .5 * float(residual @ residual)
+
+    def gradient(coefficients):
+        return design.T @ (design @ coefficients - y)
+
+    solved = minimize(objective, initial, jac=gradient, method='SLSQP',
+        bounds=Bounds([epsilon, 0, 0, 0, 0, 0], [cap, np.inf, np.inf, np.inf, np.inf, np.inf]),
+        constraints=[LinearConstraint(matrix, epsilon, np.inf)], options=dict(ftol=1e-12, maxiter=2000))
+    if not solved.success:
+        raise ValueError('constrained input fit failed: ' + solved.message)
+    coefficients = solved.x
+    # All inequalities below use G*coefficients >= h, including optimizer bounds.
+    G = np.vstack((np.eye(6)[1:], [-1, 0, 0, 0, 0, 0], matrix))
+    h = np.array([0] * 5 + [-cap] + [epsilon] * len(matrix))
+    labels = ['b=0', 'c=0', 'd_dyadic=0', 'd_zero=0', 'd_random=0', 'a=max_clock']
+    labels += (['a-b=epsilon'] if activity == 'tensor_rate' else
+               ['a-b-d_' + mode + '=epsilon' for mode in INPUT_MODES])
+    slack = G @ coefficients - h
+    if min(slack) < -1e-9:
+        raise ValueError('coefficient constraints violated')
+    active = slack < 1e-7
+    multipliers, _ = nnls(G[active].T, gradient(coefficients)) if any(active) else (np.array([]), None)
+    kkt = gradient(coefficients) - G[active].T @ multipliers
+    if max(abs(kkt)) > 1e-5:
+        raise ValueError('constrained fit KKT residual is too large')
+    # A rank-five geometry design may still have a continuum of feasible optima.
+    _, _, vh = np.linalg.svd(design, full_matrices=False)
+    rank = np.linalg.matrix_rank(design)
+    unique = rank == 6
+    if rank == 5:
+        direction = vh[-1]
+        projected = G[active] @ direction
+        unique = not (all(projected >= -1e-8) or all(projected <= 1e-8))
+    return coefficients, dict(optimizer='SLSQP convex quadratic at fixed tau',
+        iterations=int(solved.nit), minimum_slack=float(min(slack)), kkt_max_abs=float(max(abs(kkt))),
+        active_constraints=[label for label, enabled in zip(labels, active) if enabled],
+        linear_solution_unique=bool(unique), strict_margin_ghz=epsilon)
+
+
+def fit_input_clock(points, activity, cap=None):
     """One bounded family; input mode changes only its activity coefficient."""
     import numpy as np
 
     y = np.array([p['observed_ghz'] for p in points])
     profile = []
+    initial = np.array([min(1.9, cap), .1, 0, .1, .01, .2]) if cap is not None else None
     for tau in np.logspace(-1, 5, 121):
         design = input_clock_design(points, activity, tau)
-        coefficients, _, _, _ = np.linalg.lstsq(design, y, rcond=None)
+        if cap is None:
+            coefficients, _, _, _ = np.linalg.lstsq(design, y, rcond=None)
+            optimization = {}
+        else:
+            coefficients, optimization = constrained_input_coefficients(design, y, activity, cap, initial)
+            initial = coefficients
         rank = input_design_rank(design)
         profile.append(dict(tau_us=float(tau), coefficients=coefficients.tolist(),
-            mse_ghz=float(np.mean((design @ coefficients - y) ** 2)), **rank))
-    valid = [p for p in profile if p['rank'] == 6]
+            mse_ghz=float(np.mean((design @ coefficients - y) ** 2)), **rank, **optimization))
+    valid = profile if cap is not None else [p for p in profile if p['rank'] == 6]
     if not valid:
         return dict(activity=activity, status='rank_deficient', tau_profile=profile,
                     design=profile[0], coefficients=None, tau_us=None)
     best = min(valid, key=lambda p: p['mse_ghz'])
+    if cap is not None and not best['linear_solution_unique']:
+        return dict(activity=activity, status='nonunique_constrained_solution', tau_profile=profile,
+                    design=best, coefficients=None, tau_us=best['tau_us'])
     tau, coefficients = best['tau_us'], best['coefficients']
     # This Jacobian adds log(tau) to the six linear coefficients.
     derivative = []
@@ -564,6 +625,7 @@ def fit_input_clock(points, activity):
     for interval in intervals:
         del interval['last_index']
     return dict(activity=activity, status='conditional_fit_only', **best,
+        constrained=cap is not None, a_max_ghz=cap,
         tau_profile=profile, jacobian_with_log_tau=input_design_rank(jacobian),
         calibration_window_domain_us=[min(p['observed_window_us'] for p in points),
                                       max(p['observed_window_us'] for p in points)],
@@ -589,6 +651,11 @@ def input_clock_frequency(point, window, model):
 def input_clock_roots(point, model):
     """All positive self-consistent roots; an iteration's initial value cannot choose a branch."""
     a, b, c, *ds = model['coefficients']
+    if model.get('constrained'):
+        if not 0 <= point['phi'] <= 1:
+            raise ValueError('phi outside constrained unit domain')
+        if model['activity'] == 'tensor_critical' and not 0 <= point['mu_tensor_critical'] <= 1:
+            raise ValueError('Tensor activity proxy outside constrained unit domain')
     d = ds[INPUT_MODES.index(point['input_mode'])]
     tau, v = model['tau_us'], b * point['phi']
     level = a - d * point['mu_tensor_critical'] if model['activity'] == 'tensor_critical' else a
@@ -673,7 +740,7 @@ def input_clock_stats(rows):
         converted_cycle_error=rms('converted_cycle_error'))
 
 
-def input_clock_candidates(run, calibration_run, old_long, output):
+def input_clock_candidates(run, calibration_run, old_long, output, constrained=False):
     """18 new calibration conditions; all bridges and old long cases remain diagnostics."""
     import v06_run as common
 
@@ -691,10 +758,25 @@ def input_clock_candidates(run, calibration_run, old_long, output):
     bridge = [p for p in points if p['purpose'] == 'bridge']
     if len(training) != 18 or len(bridge) != 3 or any(p['k'] != 1024 for p in points):
         raise ValueError('unexpected input-clock calibration matrix')
-    models = {activity: fit_input_clock(training, activity) for activity in ('tensor_critical', 'tensor_rate')}
+    clock_evidence, cap = {}, None
+    if constrained:
+        import re
+
+        for name in ('nvidia-smi-before.txt', 'nvidia-smi-after-ctrl.txt'):
+            section = (run / name).read_text().split('\n    Max Clocks\n', 1)[1].split('\n    Max Customer', 1)[0]
+            values = {key: int(re.search(r'^\s+' + key + r'\s+:\s+(\d+) MHz$', section, re.M)[1])
+                      for key in ('Graphics', 'SM')}
+            clock_evidence[name] = dict(sha256=sha256(run / name), max_clocks_mhz=values)
+        cap = min(v for e in clock_evidence.values() for v in e['max_clocks_mhz'].values()) / 1000
+        for point in points:
+            if not (0 <= point['phi'] <= 1 and 0 <= point['mu_tensor_critical'] <= 1):
+                raise ValueError('activity proxy outside constrained unit domain: ' + point['case'])
+    models = {activity: fit_input_clock(training, activity, cap) for activity in ('tensor_critical', 'tensor_rate')}
     scores, diagnostics, folds = [], {}, []
     # Read development sets only after the all-calibration fits have been fixed.
     old_points = [p for p in input_clock_points(old_long, calibration) if p['config'] != 'cfg_b']
+    if constrained and any(not (0 <= p['phi'] <= 1 and 0 <= p['mu_tensor_critical'] <= 1) for p in old_points):
+        raise ValueError('old diagnostic proxy outside constrained unit domain')
     for activity, model in models.items():
         diagnostics[activity] = {}
         for phase, dataset in [('calibration', training), ('new_cfg_b_long_bridge', bridge),
@@ -707,7 +789,7 @@ def input_clock_candidates(run, calibration_run, old_long, output):
             for label in sorted({p[key] for p in training}):
                 train = [p for p in training if p[key] != label]
                 held = [p for p in training if p[key] == label]
-                fitted = fit_input_clock(train, activity)
+                fitted = fit_input_clock(train, activity, cap)
                 evaluated = ([dict(evaluate_input_clock(p, fitted), activity=activity, phase=scheme, fold=str(label))
                               for p in held] if fitted['coefficients'] is not None else [])
                 scores.extend(evaluated)
@@ -718,8 +800,21 @@ def input_clock_candidates(run, calibration_run, old_long, output):
                   - (coefficients[3 + INPUT_MODES.index(p['input_mode'])] * p['mu_tensor_critical']
                      if activity == 'tensor_critical' else 0) for p in training]
         model['steady_frequency_range_ghz'] = [min(steady), max(steady)]
+        if constrained:
+            model['uniform_steady_floor_ghz'] = (coefficients[0] - coefficients[1]
+                - (max(coefficients[3:]) if activity == 'tensor_critical' else 0))
+            model['positive_root_certificate'] = dict(
+                derivative=('a-d_mode*mu-b*phi+b*phi*exp(-W/tau) >= a-b-d_mode > 0' if activity == 'tensor_critical' else
+                            'a-b*phi+b*phi*exp(-W/tau) >= a-b > 0'),
+                h_at_zero='-(converted_cycles/1000+c*B/1e6+d_mode*Q/1000)<0' if activity == 'tensor_rate' else
+                          '-(converted_cycles/1000+c*B/1e6)<0',
+                conclusion='One positive root for positive C, nonnegative B/Q, and the declared phi/mu unit domain.')
         model['accepted_for_composition'] = False
     result = dict(environment=environment, run=str(run), diagnostic_source_sha256=sha256(Path(__file__)),
+        constrained=constrained, max_clock_evidence=clock_evidence,
+        coefficient_constraints=(dict(a_max_ghz=cap, nonnegative=['b', 'c', 'd_dyadic', 'd_zero', 'd_random'],
+            strict_margin_ghz=1e-6, phi_domain=[0, 1], mu_domain=[0, 1],
+            tensor_rate='a-b >= 1e-6 GHz', tensor_critical='a-b-d_mode >= 1e-6 GHz for every mode') if constrained else None),
         input_hashes={name: sha256(run / name) for name in ('cases.json', 'run_config.json', 'static_setup.json',
             'analysis/summary.json', 'analysis/input_pairs.csv', 'analysis/bridge_comparison.json')},
         calibration_source=str(calibration_run), calibration_sha256=sha256(calibration_run / 'frozen/v08-predictions.json'),
@@ -746,11 +841,12 @@ def input_clock_candidates(run, calibration_run, old_long, output):
             'Demand proxies and inferred traffic are not physical Tensor activity, measured DRAM bandwidth, or power. Rate units describe nominal compute demand per time.',
             'Frequency uses maximum-work CTA cycle/ns aggregation; observed W is the cross-CTA ends envelope. These scopes are related proxies, not identical timestamps.',
             'One row per condition median is fitted, not 180 independent design conditions; the 10 processes per condition do not add design rank.',
-            'No sign constraint or clamp is added; negative c and negative steady frequency remain visible and invalidate physical reuse.',
+            ('Coefficients are constrained during fitting, never by post-prediction frequency clipping; cap comes from archived Max Clocks, not instantaneous clock64 conversion.' if constrained else
+             'No sign constraint or clamp is added; negative c and negative steady frequency remain visible and invalidate physical reuse.'),
             'Tau scans the same 0.1..100000 us grid. The 10 percent MSE parameter ranges are sensitivity ranges, not confidence intervals.',
             'All positive roots are retained. Multiple roots are ambiguous; root absence is not hidden by reporting errors only on solvable points.',
             'Roots within the training-window min/max are counted separately using training bounds only; this broad envelope does not validate its unsampled interior gap.',
-            'Geometry CV with tensor_rate has a rank-deficient design; no arbitrary minimum-norm coefficients are used for predictions.',
+            'Geometry CV with tensor_rate has a rank-deficient raw design; rank-deficient unconstrained or nonunique constrained solutions produce no predictions.',
             'All new conditions have K=1024, so this batch cannot identify or cross-validate K dependence. No full time-prediction pass is claimed.',
         ])
     output.mkdir(parents=True, exist_ok=False)
@@ -779,16 +875,17 @@ if __name__ == '__main__':
     parser.add_argument('--activity', action='store_true', help='compare activity proxies within the existing bounded duration family')
     parser.add_argument('--input-evidence', action='store_true')
     parser.add_argument('--input-candidates', action='store_true', help='fit input activity coefficients on the 18 new short/middle R09 conditions')
+    parser.add_argument('--input-constrained', action='store_true', help='same input family with physical coefficient and positive-steady constraints')
     parser.add_argument('--calibration-run', type=Path)
     parser.add_argument('--r10-run', type=Path)
     parser.add_argument('--r15-run', type=Path)
     parser.add_argument('--followup', type=Path)
     parser.add_argument('--trend-run', type=Path)
     args = parser.parse_args()
-    if args.input_candidates:
+    if args.input_candidates or args.input_constrained:
         if args.calibration_run is None or args.trend_run is None:
             parser.error('--input-candidates requires --calibration-run and --trend-run')
-        input_clock_candidates(args.run.resolve(), args.calibration_run.resolve(), args.trend_run.resolve(), args.output.resolve())
+        input_clock_candidates(args.run.resolve(), args.calibration_run.resolve(), args.trend_run.resolve(), args.output.resolve(), args.input_constrained)
     elif args.input_evidence:
         input_clock_evidence(args.run.resolve(), args.r10_run.resolve(), args.r15_run.resolve(), args.output.resolve())
     elif args.candidates or args.activity:
