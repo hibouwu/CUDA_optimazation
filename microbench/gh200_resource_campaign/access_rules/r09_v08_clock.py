@@ -4,6 +4,9 @@
 Read V08 samples and its frozen predictions. Write a new reanalysis directory with
 frequency substitution, an additive time-error split, and the existing L2 controls.
 All times are us, frequencies GHz, and cycles are local SM clock64 cycles.
+
+--candidates --followup V08F --trend-run R09RUN compares clock forms using only
+the original V08 time-calibration cases for fitting. C, F and kappa stay frozen.
 """
 import argparse
 import csv
@@ -198,9 +201,202 @@ def analyze(run, output):
     print('output:', output)
 
 
+def clock_point(row, observed, setup, calibration, prediction=None):
+    """Fixed V08 cycle prediction and workload features; no measured cycles as inputs."""
+    cfg = row['config']
+    timing = calibration['time'][cfg]
+    if prediction is None:
+        feat = v08_model.features(row, setup['grid'])
+        cycles, ctas, stages, _ = v08_model.critical_cycles(calibration['params'], cfg, feat)
+        phi = sum(ctas) / (132 * cycles)
+        mu = stages['mainloop'] / cycles
+        traffic = v08_model.base.dram_bytes(cfg, row['m'], row['n'], row['k'], feat['work'])
+        converted = timing['kappa'] * cycles
+    else:
+        # Exact frozen held-out features, including the old LRU traversal outcome.
+        cycles, converted = prediction['critical_cycles'], prediction['converted_cycles']
+        phi, mu = prediction['phi'], prediction['mu']
+        _, traffic = clock_at_window(prediction, timing['clock_rule'], prediction['window_us'])
+    return dict(case=row['id'], config=cfg, m=row['m'], n=row['n'], k=row['k'],
+                group=row.get('group', row['kind']), phi=phi, mu=mu, traffic_bytes=traffic,
+                cycles=cycles, converted_cycles=converted, fixed_us=timing['F'],
+                observed_window_us=observed['window_ends'], observed_ghz=observed['ghz_ends'],
+                plain_us=observed['plain_us'], cycle_error=cycles / observed['c_max_stamped'] - 1)
+
+
+def duration_term(window, form, tau):
+    if form in ('frozen', 'refit_ac', 'full_log'):
+        return math.log(window)
+    if form == 'no_duration':
+        return 0.0
+    # Mean of an exponential relaxation over a window, not its instantaneous endpoint.
+    x = window / tau
+    return 1 + math.expm1(-x) / x
+
+
+def candidate_frequency(point, window, model):
+    a, b, c, d = model['coefficients']
+    return (a - b * point['phi'] * duration_term(window, model['form'], model.get('tau_us'))
+            - c * point['traffic_bytes'] / (window * 1e6) - d * point['mu'])
+
+
+def fit_clock_candidate(points, form, frozen_rule):
+    import numpy as np
+
+    if form == 'frozen':
+        return dict(form=form, coefficients=[frozen_rule[k] for k in ('a', 'b', 'c', 'd')])
+    y = np.array([p['observed_ghz'] for p in points])
+    profile = []
+    taus = np.logspace(-1, 5, 121) if form == 'relaxation' else [None]
+    for tau in taus:
+        X = np.array([[1, -p['phi'] * duration_term(p['observed_window_us'], form, tau),
+                       -p['traffic_bytes'] / (p['observed_window_us'] * 1e6), -p['mu']] for p in points])
+        columns = [0, 2] if form == 'refit_ac' else [0, 2, 3] if form == 'no_duration' else [0, 1, 2, 3]
+        offset = X[:, 1] * frozen_rule['b'] + X[:, 3] * frozen_rule['d'] if form == 'refit_ac' else np.zeros(len(y))
+        design = X[:, columns]
+        fitted, _, rank, _ = np.linalg.lstsq(design, y - offset, rcond=None)
+        if rank != len(columns):
+            raise ValueError('clock design is rank deficient')
+        coefficients = np.zeros(4)
+        if form == 'refit_ac':
+            coefficients[1], coefficients[3] = frozen_rule['b'], frozen_rule['d']
+        coefficients[columns] = fitted
+        residual = X @ coefficients - y
+        profile.append(dict(tau_us=float(tau) if tau is not None else None,
+                            coefficients=coefficients.tolist(), mse_ghz=float(np.mean(residual ** 2)),
+                            observed_frequency_rms=float(np.sqrt(np.mean((residual / y) ** 2))),
+                            normalized_condition=float(np.linalg.cond(design / np.linalg.norm(design, axis=0)))))
+    # Tau is selected on training GHz residuals only, separately inside every fold.
+    best = min(profile, key=lambda p: p['mse_ghz'])
+    return dict(form=form, **best, tau_profile=profile if form == 'relaxation' else [])
+
+
+def evaluate_clock(point, model):
+    observed_fit = candidate_frequency(point, point['observed_window_us'], model)
+    window = point['converted_cycles'] / 1600  # same initial value as the frozen predictor
+    failure = None
+    for _ in range(200):
+        frequency = candidate_frequency(point, window, model)
+        if not math.isfinite(frequency) or frequency <= 0:
+            failure = 'nonpositive_frequency'
+            break
+        next_window = .5 * window + .5 * point['converted_cycles'] / (1000 * frequency)
+        if abs(next_window / window - 1) < 1e-12:
+            window = next_window
+            break
+        window = next_window
+    if failure is None:
+        frequency = candidate_frequency(point, window, model)
+        closure = window * frequency * 1000 / point['converted_cycles'] - 1
+        if abs(closure) > 1e-8:
+            failure = 'fixed_point_not_converged'
+    return dict(case=point['case'], config=point['config'], k=point['k'], group=point['group'],
+                observed_fit_frequency_error=observed_fit / point['observed_ghz'] - 1,
+                free_frequency_error=frequency / point['observed_ghz'] - 1 if failure is None else None,
+                free_time_error=(point['fixed_us'] + window) / point['plain_us'] - 1 if failure is None else None,
+                free_window_us=window if failure is None else None,
+                free_frequency_ghz=frequency if failure is None else None,
+                cycle_error=point['cycle_error'], solver_failure=failure)
+
+
+def error_stats(rows):
+    result = dict(n=len(rows), solver_failures=sum(r['solver_failure'] is not None for r in rows))
+    for key in ('observed_fit_frequency_error', 'free_frequency_error', 'free_time_error', 'cycle_error'):
+        values = [r[key] for r in rows if r[key] is not None]
+        result[key] = dict(rms=math.sqrt(statistics.fmean(x*x for x in values)),
+                           median_abs=statistics.median(abs(x) for x in values), maximum_abs=max(map(abs, values)),
+                           mean_signed=statistics.fmean(values), n=len(values)) if values else None
+    return result
+
+
+def clock_candidates(run, followup, trend_run, output):
+    frozen_path = run / 'frozen/v08-predictions.json'
+    frozen = read_json(frozen_path)
+    calibration = frozen['calibration']
+    rule = calibration['time']['cfg_a']['clock_rule']
+    for relative, key in [('cases.json', 'cases_sha256'), ('static_setup.json', 'static_setup_sha256'),
+                          ('derived/summary.json', 'summary_sha256')]:
+        if sha256(run / relative) != frozen[key]:
+            raise ValueError('frozen calibration input changed: ' + relative)
+    rows = {r['id']: r for r in read_json(run / 'cases.json')}
+    setups = {r['case']: r['setup'] for r in read_json(run / 'static_setup.json')}
+    summary = read_json(run / 'derived/summary.json')
+    train_ids = [cid for selection in calibration['selection'].values() for cid in selection['time_cases']]
+    points = [clock_point(rows[cid], summary[cid], setups[cid], calibration) for cid in train_ids]
+    forms = ('refit_ac', 'full_log', 'no_duration', 'relaxation')
+    fits = {form: fit_clock_candidate(points, form, rule) for form in ('frozen', *forms)}
+    scores, folds, grouped = [], [], {}
+    for scheme in ('geometry', 'K_band'):
+        labels = {p['case']: f"{p['m']}x{p['n']}" if scheme == 'geometry' else
+                  'K<=2048' if p['k'] <= 2048 else '2048<K<=8192' if p['k'] <= 8192 else 'K>8192' for p in points}
+        for label in sorted(set(labels.values())):
+            training = [p for p in points if labels[p['case']] != label]
+            held = [p for p in points if labels[p['case']] == label]
+            for form in forms:
+                model = fit_clock_candidate(training, form, rule)
+                evaluated = [dict(evaluate_clock(p, model), phase=scheme, fold=label, form=form) for p in held]
+                scores.extend(evaluated)
+                folds.append(dict(scheme=scheme, held_group=label, form=form, train_n=len(training),
+                                  coefficients=model['coefficients'], tau_us=model.get('tau_us'),
+                                  normalized_condition=model.get('normalized_condition'), errors=error_stats(evaluated)))
+        grouped[scheme] = {form: error_stats([r for r in scores if r['phase'] == scheme and r['form'] == form]) for form in forms}
+
+    # Development extrapolation is read only after all calibration fits and folds.
+    heldout = [clock_point(rows[cid], v08_model.summarize_case(run, rows[cid], setups[cid]),
+                           setups[cid], calibration, prediction=p) for cid, p in frozen['predictions'].items()]
+    frows = {r['id']: r for r in read_json(followup / 'cases.json')}
+    fsetups = {r['case']: r['setup'] for r in read_json(followup / 'static_setup.json')}
+    fsummary = read_json(followup / 'reanalysis/followup-v1/summary.json')
+    followup_points = [clock_point(r, fsummary[cid], fsetups[cid], calibration) for cid, r in frows.items()]
+    diagnostics = {}
+    for phase, dataset in [('calibration', points), ('V08_heldout_development', heldout), ('V08F_development', followup_points)]:
+        diagnostics[phase] = {}
+        for form, model in fits.items():
+            evaluated = [dict(evaluate_clock(p, model), phase=phase, fold='', form=form) for p in dataset]
+            scores.extend(evaluated)
+            diagnostics[phase][form] = dict(all=error_stats(evaluated),
+                per_config={cfg: error_stats([r for r in evaluated if r['config'] == cfg]) for cfg in ('cfg_a', 'cfg_b', 'cfg_c')})
+    trend = read_json(trend_run / 'analysis/summary.json')
+    trend_cases = [{key: row[key] for key in ('id', 'config', 'plain_us', 'ghz_ends', 'c_max_ends', 'window_ends')}
+                   for row in trend['cases'].values() if row.get('status') != 'numeric_error']
+    result = dict(frozen_sha256=sha256(frozen_path), diagnostic_source_sha256=sha256(Path(__file__)),
+        training_cases=train_ids, train_n=len(points), forms=fits, conditional_grouped_cv=grouped,
+        folds=folds, diagnostics=diagnostics, input_points={'calibration': points, 'heldout': heldout, 'followup': followup_points},
+        other_card_trend=dict(environment=trend['environment'], cases=trend_cases, predictions_not_evaluated=True),
+        notes=[
+            'Only the original 64 V08 time-calibration cases train clock coefficients and tau; all original exclusions remain.',
+            'Cycle predictions, phi/mu construction, F and kappa stay frozen from V08 for every form and fold.',
+            'This is conditional clock cross-validation, not a full-cycle-model cross-validation; frozen C/F/kappa used the original calibration.',
+            'Grouped CV baseline refits a/c on each training fold with old V03 b/d; the all-data frozen baseline is reported separately.',
+            'Fits minimize absolute GHz residuals using observed W; free prediction solves W=kappa*C/(1000*f(W)) without observed W or measured cycles.',
+            'Relaxation g(W)=1-(tau/W)*(1-exp(-W/tau)) has a steady limit; it is a candidate mean-frequency shape, not a measured physical relaxation.',
+            'The tau profile spans 0.1 to 100000 us; training residual alone selects tau separately inside each fold.',
+            'No coefficient sign constraints or frequency clamps; failed free solutions remain counted.',
+            'Calibration/followup traffic uses deterministic sorted LRU; frozen heldout traffic is recovered from the exact frozen predictions.',
+            'V08 heldout and same-card V08F are development diagnostics, not new validation; the different-card R09 run is not fitted or pooled.',
+        ])
+    output.mkdir(parents=True, exist_ok=False)
+    (output / 'candidates.json').write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+    with (output / 'scores.csv').open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(scores[0]))
+        writer.writeheader()
+        writer.writerows(scores)
+    for scheme, values in grouped.items():
+        for form, stats in values.items():
+            print(scheme, form, 'free f RMS', stats['free_frequency_error']['rms'],
+                  'free time RMS', stats['free_time_error']['rms'], 'solver failures', stats['solver_failures'])
+    print('output:', output)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--candidates', action='store_true')
+    parser.add_argument('--followup', type=Path)
+    parser.add_argument('--trend-run', type=Path)
     args = parser.parse_args()
-    analyze(args.run.resolve(), args.output.resolve())
+    if args.candidates:
+        clock_candidates(args.run.resolve(), args.followup.resolve(), args.trend_run.resolve(), args.output.resolve())
+    else:
+        analyze(args.run.resolve(), args.output.resolve())
