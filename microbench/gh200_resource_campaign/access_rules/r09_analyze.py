@@ -447,6 +447,40 @@ def summarize_ends_case(run: Path, row, setup):
                 ends_processes_gt_600us=sum(e['window_us'] > 600 for e in ends), per_process_ends=ends)
 
 
+def wide_input_pairs(run: Path, rows, summaries, failed):
+    """Same randomized trial, same variant; these are separate calls, not simultaneous A/B."""
+    records = {}
+    for row in rows:
+        if row['id'] in failed:
+            continue
+        for path in (run / 'samples' / row['id']).glob('*.json'):
+            record = json.loads(path.read_text())
+            if record['returncode'] == 0:
+                records[row['id'], record['variant'], record['trial']] = record
+    pairs = []
+    for row in rows:
+        if row['id'] in failed or row['input_mode'] == 'dyadic':
+            continue
+        base = next((r for r in rows if r['config'] == row['config'] and r['input_mode'] == 'dyadic'
+                     and (r['m'], r['n'], r['k']) == (row['m'], row['n'], row['k']) and r['id'] not in failed), None)
+        if base is None:
+            continue
+        current = {p['trial']: p for p in summaries[row['id']]['per_process_ends']}
+        reference = {p['trial']: p for p in summaries[base['id']]['per_process_ends']}
+        for trial in sorted(reference):
+            pair = dict(case=row['id'], baseline=base['id'], config=row['config'],
+                        input_mode=row['input_mode'], trial=trial)
+            for variant in ('plain', 'ends'):
+                a = records[base['id'], variant, trial]
+                b = records[row['id'], variant, trial]
+                pair[variant + '_time_change'] = b['elapsed_us'] / a['elapsed_us'] - 1
+                pair[variant + '_process_distance_s'] = abs(b['host_start_ns'] - a['host_start_ns']) / 1e9
+            for key in ('cycles', 'ghz', 'window_us'):
+                pair['ends_' + key + '_change'] = current[trial][key] / reference[trial][key] - 1
+            pairs.append(pair)
+    return pairs
+
+
 def summarize_shared(run: Path, out: Path):
     """Public R09 batch: reuse the shared numeric replay and timing definitions."""
     import v06_run as common
@@ -458,6 +492,14 @@ def summarize_shared(run: Path, out: Path):
     setups = {s["case"]: s["setup"] for s in json.loads((run / "static_setup.json").read_text())}
     sampling = json.loads((run / "sampling.json").read_text()) if (run / "sampling.json").exists() else {}
     failed = {r["case"]: r for r in sampling.get("numeric_failed", [])}
+    prechecks_replayed = 0
+    if wide:
+        for check in json.loads((run / 'numeric_checks.json').read_text()):
+            if check['status'] == 'ok':
+                record = json.loads((run / check['raw'].replace('.txt.gz', '.json')).read_text())
+                row = next(r for r in rows if r['id'] == check['case'])
+                v08_model.observe(run, record, dict(row, id=record['case']))
+                prechecks_replayed += 1
     summaries, metrics = {}, []
     for row in rows:
         metric = {key: row[key] for key in ("id", "config", "m", "n", "k", "input_mode", "seed", "sm_count")}
@@ -494,6 +536,7 @@ def summarize_shared(run: Path, out: Path):
         purpose="R09 same-batch clock/input diagnostic; no frozen validation score or power inference.",
         environment=json.loads((run / "environment.json").read_text()), cases=summaries,
         planned_cases=len(rows), measured_cases=len(rows) - len(failed), numeric_failed=list(failed),
+        prechecks_replayed=prechecks_replayed,
         notes=["plain_minus_ends_window_us subtracts medians from separate processes, not a physical host gap.",
                "ghz is the shared maximum-tile CTA cycle/ns statistic; input changes do not measure power."],
     ))
@@ -501,11 +544,18 @@ def summarize_shared(run: Path, out: Path):
         writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(k for m in metrics for k in m)))
         writer.writeheader()
         writer.writerows(metrics)
+    if wide:
+        pairs = wide_input_pairs(run, rows, summaries, failed)
+        if pairs:
+            with (out / 'input_pairs.csv').open('w', newline='') as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(pairs[0]))
+                writer.writeheader()
+                writer.writerows(pairs)
     for m in metrics:
         if m["status"] != "measured":
             print(m['id'], 'numeric_error; no performance result')
             continue
-        print(f"{m['id']:32s} plain {m['plain_us']:.3f} us, ends {m['window_ends']:.3f} us, "
+        print(f"{m['id']:32s} plain {m['plain_us']:.3f} us, ends_window {m['window_ends']:.3f} us, "
               f"{m['ghz_ends']:.6f} GHz, {m['c_max_ends']:.1f} cycle")
 
 

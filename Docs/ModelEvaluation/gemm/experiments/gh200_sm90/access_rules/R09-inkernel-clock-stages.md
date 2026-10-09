@@ -543,7 +543,7 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py --candi
 
 ### 20480²×1024 三档输入：plain/ends 准备
 
-2026-10-09，仅准备，未提交或执行 GPU 作业。最终几何为 **M=N=20480、K=1024**，取代最初拟用的 16384²；cfg_a/b/c×dyadic/zero/random、seed=17，共 9 条。sm_count=0、swizzle=1、evict=0、紧密行距，沿用原暖机和原数值阈值，不增加持续 NVML 或新打点。K=1024 的旧检查通过不保证新几何也通过，新条件逐例检查；旧 K=20480/K=65536 random 失败保留原判定。
+本节保留 2026-10-09 的采样前准备，实际结果见 [job738197](#wide-input-job738197)。最终几何为 **M=N=20480、K=1024**，取代最初拟用的 16384²；cfg_a/b/c×dyadic/zero/random、seed=17，共 9 条。sm_count=0、swizzle=1、evict=0、紧密行距，沿用原暖机和原数值阈值，不增加持续 NVML 或新打点。K=1024 的旧检查通过不保证新几何也通过，新条件逐例检查；旧 K=20480/K=65536 random 失败保留原判定。
 
 **内存与软件调度。** A/B 各 40 MiB，FP32 D 为 1600 MiB；合计 **1,761,607,680 B（1.762 GB / 1.640625 GiB）**。按已知 60 MiB L2，探针即使 evict=0 仍分配 120 MiB eviction buffer；再计入 132 CTA 的 827,904 B trace 和 49,152 B 输出抽检数组，显式申请小计 **1,888,313,856 B（约 1.888 GB）**，另加 workspace、分配粒度和 CUDA 运行时占用。三个配置按进程串行运行，不将九份矩阵同时驻留。random 的主机输入参考另需 A/B 约 80 MiB。
 
@@ -585,3 +585,56 @@ bash /tmp/<准备包>/run.sh
 ```
 
 运行依赖仍为公共 CUDA 12.9 二进制、Python 3/NumPy 和同一包中的原始回放函数；不改公共文件、不向超配额共享空间追加运行数据。使用 `bash run.sh`，不要 `source run.sh`；不调用默认会包含 stamped 的公共 `run_v08.py sample`。
+
+<a id="wide-input-job738197"></a>
+
+### job738197：20480²×1024 三档输入实测
+
+2026-10-09，独占 romeo-a057，**GPU-43269fbc-449d-3e0f-908a-9c81229546d3**，公共 CUDA 源码/二进制 6338653，运行 Python 3.11.9、NumPy 1.26.4（[python-runtime.json](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-job738197/python-runtime.json)）。9 个预检查与 180 个正式进程全部通过原检查和独立 4096 点回放，作业退出 0；本次离线分析复现归档汇总。实际 grid 与上一节的 132 CTA 软件调度一致，ends 头部成功记录 cfg_a/b 的 193/194 tile 和 cfg_c 的 96/97 tile；没有 stamped 数据。
+
+M=N=20480、K=1024、seed=17，其余沿用上一节。表中时间为跨 10 个进程的中位数；C 为 ends 最大 CTA 周期中位数，f 为最多 tile CTA 的 cycle/ns 比值中位数再跨进程聚合。**ends window 是 CTA 包络，不是 ends 的完整 CUDA event 时间**；stdout 标签已改为 `ends_window`，原汇总字段数值未改。
+
+| 配置 / 输入 | plain event µs | ends window µs | C，百万 cycle | 有效 f，GHz | plain / ends event CV | ends event / plain 变化 |
+|---|---:|---:|---:|---:|---:|---:|
+| a / dyadic | 1816.784 | 1821.392 | 2.259151 | 1.248908 | 0.736% / 0.491% | +0.472% |
+| a / zero | 1381.856 | 1377.936 | 2.439592 | 1.778852 | 0.634% / 0.603% | +0.028% |
+| a / random | 2322.208 | 2319.232 | 2.244204 | 0.977298 | 0.544% / 0.708% | +0.054% |
+| b / dyadic | 1855.328 | 1855.920 | 1.794688 | 0.965850 | 0.698% / 0.513% | +0.257% |
+| b / zero | 1402.416 | 1401.040 | 2.433126 | 1.739571 | 0.952% / 0.784% | +0.230% |
+| b / random | 2597.776 | 2567.632 | 1.750070 | 0.681815 | 0.796% / 1.054% | −1.001% |
+| c / dyadic | 1673.152 | 1670.256 | 2.158347 | 1.300832 | 0.285% / 0.532% | +0.077% |
+| c / zero | 1372.272 | 1364.704 | 2.412724 | 1.766605 | 0.527% / 0.620% | −0.178% |
+| c / random | 2133.568 | 2121.872 | 2.131740 | 1.010465 | 0.591% / 0.444% | −0.337% |
+
+**九条件的所有 90 个 ends 窗口都超过 600 µs**，其中最短单次为 1347.424 µs；这次由实测确认，而非使用纯计算估算。完整 event CV 最大 1.054%，ends/plain 中位数变化绝对值最大 1.001%。两 variant 来自不同进程，这个差不能全部认作打点固定成本。
+
+按相同 trial 编号、相同 variant 逐次配对，先算 `当前/dyadic−1`，再取 10 对中位数：
+
+| 配置 / 输入 | plain 时间变化，中位数［范围］ | ends event 时间变化 | ends C 变化 | ends 有效 f 变化 |
+|---|---:|---:|---:|---:|
+| a / zero | −24.200%［−24.744, −22.342］ | −24.056% | +7.992% | +42.140% |
+| a / random | +28.269%［+26.388, +30.055］ | +27.397% | −0.681% | −21.772% |
+| b / zero | −24.240%［−26.036, −22.936］ | −24.393% | +35.655% | +80.199% |
+| b / random | +39.315%［+38.297, +41.015］ | +39.060% | −2.559% | −29.391% |
+| c / zero | −18.144%［−18.584, −17.001］ | −18.083% | +11.892% | +35.681% |
+| c / random | +27.464%［+25.344, +28.613］ | +27.043% | −1.241% | −22.442% |
+
+三配置的 random 在 plain/ends 中均为 10/10 对更慢，zero 均为 10/10 对更快。配对进程相隔 0.696–12.296 s；同 trial 是随机化采样轮，不是同时调用。上述逐次比值中位数不同于第一表两个中位数之比，例如 cfg_b random 的 plain 为 +39.315%，而中位数之比为 +40.017%，两者不能混用。
+
+本批 random 较慢与有效 f 下降约 22%–29% 同时出现，C 略降约 0.7%–2.6%；zero 虽然更快，C 却上升约 8%–36%，因此不能假定输入模式只改变 f 而保持周期模型不变。C 是 SM 周期窗口，不是指令数；f 也由 cycle/ns 计算，不能把它当作独立功率证据。仅凭计时不能识别功率封顶、调频策略或其他机制；本批没有持续功率实验，也没有逐 tile 分项。C 与 f 的统计对象还不同，不能简单相除并强求完全重构 plain 时间。
+
+固定项同样要区分口径：cfg_b random 的 `median(plain)−median(ends window)=30.144 µs`，而同次 ends 调用的 `median(event−window)=4.176 µs`。跨进程相减的 30.144 µs 不能命名为新增 launch 或固定开销。本批不与 GPU-099dda56、GPU-201f9d2a 的旧常数混合定值。
+
+**数值与前序失败。** 全部 63 个 random 进程（3 个预检查、60 个正式进程）的原最大 error/tolerance 不超过 0.6214159601，均通过原阈值；这是本形状、seed17 和固定 4096 点抽检的结果，不改变旧 K=20480、K=65536 random 失败，也不推广为任意 FP16 输入的精度保证。
+
+- [738195 失败包](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-job738195-failed/)只产生 cfg_a 三个预检查；GPU 均返回成功，随后 random 独立回放在 `import numpy` 处停止。三个记录已补做本地 CPU 回放并通过，没有正式性能采样。
+- [738196 失败包](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-job738196-failed/)在 Spack 加载 NumPy 时遇到 `Errno 122: Disk quota exceeded`，进入 setup 前退出，没有测量。738197 将 Spack 用户缓存放到计算节点 `/tmp`，在 ARM 分配内加载已安装 NumPy；没有改 HOME、CUDA 源码或容差。
+
+复核结果在 [C-20261009-wide-input-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-job738197/reanalysis/C-20261009-wide-input-v1/)：`summary.json` 保留逐进程 ends 值与预检查回放数量，`metrics.csv` 保留九条件汇总，`input_pairs.csv` 保存 60 对逐次比较与进程间隔。原分析器只增加该配对表与已成功预检查的回放，不新增测量入口或验证框架。
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_analyze.py --shared \
+  --input "$ROOT/20261009-R09-wide-input-job738197" \
+  --output "$ROOT/20261009-R09-wide-input-job738197/reanalysis/C-wide-replay-<新后缀>"
+```
