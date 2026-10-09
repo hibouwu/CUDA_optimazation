@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""R13: small max(compute, logical-source service) fits to existing V08 summaries.
+"""R13 offline max(compute, logical-source service) development diagnostics.
 
-Development diagnostics only. No GPU work or V08 refitting. Fits reuse summaries;
-six cfg_a pitch cases receive a bounded trace replay to locate position effects.
+No GPU work or modification of frozen predictions. Default V08F mode reuses
+summaries plus six cfg_a trace controls; --sm-summary uses the archived SM scan;
+--coverage-suite compares two address-coverage/prefill forms on separate cohorts.
 L is a finite mainloop window including drain, not an internal steady-state timer.
 Requires numpy/scipy; all input archives are read-only and output must be new.
 """
@@ -12,9 +13,12 @@ import hashlib
 import json
 from pathlib import Path
 import statistics
+from collections import Counter, defaultdict
+from functools import lru_cache
 
 import numpy as np
 from scipy.optimize import least_squares
+from scipy.optimize import linprog
 from analyze_r18 import replay
 
 # tm, tn, cluster_m, cluster_n; fixed from V08/CUTLASS configurations.
@@ -392,14 +396,292 @@ def sm_candidates(run, summary_path, output):
     print(json.dumps({k:dict(fit=v["later_fit"], first=v["first_transfer"], rank=v["identification"]["active_jacobian_rank"]) for k,v in fits.items()}, indent=2))
 
 
+@lru_cache(None)
+def address_box(rows, row_bytes, pitch_bytes, start_mod128):
+    """Valid address spans, counted per row; extra coverage is not physical traffic."""
+    extra = []
+    for width in (32, 128):
+        minimum = (row_bytes + width - 1) // width
+        count = sum(((start_mod128 + i*pitch_bytes) % width + row_bytes + width-1)//width - minimum
+                    for i in range(rows))
+        extra.append(count * width / 1024)
+    return rows * row_bytes / 1024, *extra
+
+
+def source_request(row, mi, ni):
+    """Mean logical source KiB/Ktile, with actual M/N/K tails and multicast sharing."""
+    tm, tn, cm, cn = CONFIGS[row['config']]
+    kt = (row['k'] + 63)//64
+    values = np.zeros(5)
+    for start in range(0, row['k'], 64):
+        kk = min(64, row['k']-start)
+        a = address_box(min(tm, row['m']-mi*tm), 2*kk, 2*row['lda'],
+                        2*(mi*tm*row['lda']+start) % 128)
+        b = address_box(kk, 2*min(tn, row['n']-ni*tn), 2*row['ldb'],
+                        2*(start*row['ldb']+ni*tn) % 128)
+        values += [a[0]/cn+b[0]/cm, a[1]/cn, a[2]/cn, b[1]/cm, b[2]/cm]
+    return values/kt
+
+
+def wave_requests(row, setup):
+    from v08_model import scheduled_work
+    work = scheduled_work(row['config'], row['m'], row['n'], setup['grid'], row['swizzle'])
+    counts = Counter((j, len(w)) for w in work for j in range(len(w)))
+    wave = [sum((source_request(row, *w[j]) for w in work if len(w) > j), np.zeros(5))
+            for j in range(max(map(len, work)))]
+    # Configured capacity is an assumption about prefill credit, not observed occupancy.
+    fraction = min(setup['stages'], (row['k']+63)//64) / ((row['k']+63)//64)
+    effective = [(1-fraction)*v + fraction*(wave[j+1] if j+1 < len(wave) else np.zeros(5))
+                 for j, v in enumerate(wave)]
+    return counts, effective
+
+
+def coverage_rows(run, kind):
+    """One card and one observer cohort per fit; never pool coefficients across runs."""
+    cases = {r['id']: r for r in read_json(run/'cases.json')}
+    setups = {r['case']: r['setup'] for r in read_json(run/'static_setup.json')}
+    features_by_case = {k: wave_requests(r, setups[k]) for k, r in cases.items()
+                        if kind != 'v08' or (r['swizzle']==1 and r['m']%256==0 and r['n']%256==0 and r['k']%64==0)}
+    observations, paths = [], [run/'cases.json', run/'static_setup.json', run/'environment.json']
+
+    def add(name, j, total, value, parts=None):
+        r = cases[name]; tm, tn, _, _ = CONFIGS[r['config']]
+        observations.append(dict(case=name, config=r['config'], kt=(r['k']+63)//64,
+            C=2*tm*tn*64/4096, j=j, T=total, y=value,
+            parts=parts or [(1., features_by_case[name][1][j].tolist())]))
+
+    if kind == 'sm':
+        path = run/'reanalysis/manager-formal-replay/summary.json'; paths.append(path)
+        for g in read_json(path)['mainloop_groups']:
+            if not g['qualified']: raise ValueError('unqualified SM interval')
+            add(g['case'], g['j'], g['T'], g['median_process_mean_L_per_kt'])
+    elif kind == 'v08':
+        path = run/'reanalysis/followup-v1/summary.json'; paths.append(path)
+        for r in records(run, path):
+            if exclusions(r): continue
+            counts, effective = features_by_case[r['case']]
+            count = sum(n for (j, _), n in counts.items() if j)
+            weights = Counter()
+            for (j, _), n in counts.items():
+                if j: weights[j] += n/count
+            add(r['case'], -1, None, r['L']/r['kt'], [(w, effective[j].tolist()) for j,w in weights.items()])
+            add(r['case'], 0, None, r['L0']/r['kt'])
+    else:
+        groups = defaultdict(list)
+        if kind == 'joint':
+            path = run/'reanalysis/B-20261009-matched-joint-final/tiles.csv'; paths.append(path)
+            with path.open() as stream:
+                for t in csv.DictReader(stream):
+                    groups[t['case'], int(t['trial']), int(t['j']), int(t['T'])].append(float(t['L_cycles']))
+        else:
+            # Only the 50 dual records: existing summaries lack p16/p32 position cycles.
+            for name, row in cases.items():
+                for path in sorted((run/'samples'/name).glob('dual-*.json')):
+                    rec = read_json(path)
+                    if rec['returncode']: continue
+                    paths += [path, run/rec['raw']]
+                    for cta in replay(run, rec, row)['ctas']:
+                        for j,t in enumerate(cta['tiles']):
+                            groups[name, rec['trial'], j, len(cta['tiles'])].append(t[1]-t[0])
+        across = defaultdict(list)
+        for (name, trial, j, total), values in groups.items():
+            across[name,j,total].append(statistics.fmean(values)/((cases[name]['k']+63)//64))
+        for (name,j,total), values in across.items():
+            if len(values)!=10: raise ValueError('missing dual process')
+            add(name,j,total,statistics.median(values))
+    return observations, paths, cases, setups
+
+
+def coverage_design(rows, model):
+    arrays = []
+    for r in rows:
+        x = np.array([p[1] for p in r['parts']])
+        if model == 'pooled': x = np.column_stack([x[:,0], x[:,1]+x[:,3], x[:,2]+x[:,4]])
+        arrays.append(x)
+    return arrays
+
+
+def coverage_fit(rows, model):
+    configs = sorted({r['config'] for r in rows}); nb = len(configs)
+    names = ['window_cycles_'+c for c in configs] + (['q0','q32','q128'] if model=='pooled' else ['q0','qA32','qA128','qB32','qB128'])
+    arrays = coverage_design(rows, model)
+    counts = Counter(r['case'] for r in rows)
+    weights = np.sqrt([1/counts[r['case']] for r in rows]); y = np.array([r['y'] for r in rows])
+
+    def predict(p):
+        return np.array([p[configs.index(r['config'])]/r['kt'] +
+            np.dot([v[0] for v in r['parts']], np.maximum(r['C'], x@p[nb:])) for r,x in zip(rows,arrays)])
+
+    solutions = [least_squares(lambda p: weights*(predict(p)/y-1),
+                  [300.]*nb+[start]+[.05]*(len(names)-nb-1), bounds=(0,np.inf), max_nfev=3000,
+                  ftol=1e-11, xtol=1e-11, gtol=1e-11) for start in (.08,.17,.3)]
+    solution = min(solutions, key=lambda z:z.cost); p = solution.x
+    jacobian, rhs, ub, bounds = [], [], [], []
+    for r,x in zip(rows,arrays):
+        active = x@p[nb:] > r['C']
+        derivative = np.zeros(len(p)); derivative[configs.index(r['config'])] = 1/r['kt']
+        derivative[nb:] = np.array([v[0] for v in r['parts']]) @ (x*active[:,None])
+        jacobian.append(derivative); rhs.append(float(derivative@p))
+        for a,on in zip(x,active):
+            constraint=np.r_[np.zeros(nb), -a if on else a]
+            ub.append(constraint); bounds.append(-r['C'] if on else r['C'])
+    jacobian=np.array(jacobian); norms=np.linalg.norm(jacobian,axis=0)
+    scaled=jacobian/np.where(norms>0,norms,1)
+    singular=np.linalg.svd(scaled,compute_uv=False)
+    rank=int(np.linalg.matrix_rank(scaled, tol=1e-9))
+    constraints=dict(A_eq=jacobian,b_eq=rhs,A_ub=np.array(ub),b_ub=bounds,bounds=(0,None),method='highs')
+
+    def linear_range(vector):
+        low=linprog(vector,**constraints); high=linprog(-vector,**constraints)
+        if low.status not in (0,3) or high.status not in (0,3): raise ValueError('equivalent-fit LP failed')
+        return [float(low.fun) if low.success else None, float(-high.fun) if high.success else None]
+
+    ranges={name:linear_range(np.eye(len(p))[i]) for i,name in enumerate(names)}
+    combinations={}
+    for label,left,right in ([('shared','q32','q128')] if model=='pooled' else
+                             [('A','qA32','qA128'),('B','qB32','qB128')]):
+        vector=np.zeros(len(p)); vector[names.index(left)]=1; vector[names.index(right)]=7
+        combinations[label+'_32_plus_7x128']=linear_range(vector)
+    unique={name:(lo is not None and hi is not None and abs(hi-lo)<1e-7*max(1,abs(lo)))
+            for name,(lo,hi) in ranges.items()}
+    fitted=predict(p)
+    return dict(parameters={name:float(v) if unique[name] else None for name,v in zip(names,p)},
+        optimizer_representative=dict(zip(names,p.tolist())), parameter_ranges=ranges,
+        full_box_16B_combinations=combinations,
+        active_jacobian_rank=rank, parameter_count=len(p), scaled_singular_values=singular.tolist(),
+        fit=metrics(fitted/y-1), residuals=[dict(case=r['case'],j=r['j'],T=r['T'],observed=r['y'],
+            predicted=float(v), relative_error=float(v/r['y']-1)) for r,v in zip(rows,fitted)],
+        range_scope='All nonnegative parameters retaining this fitted active-region prediction; null upper endpoint means unbounded. Not a noise confidence interval.'), p, configs, constraints
+
+
+def coverage_predict(row, model, parameters, configs):
+    x=coverage_design([row],model)[0]
+    return parameters[configs.index(row['config'])]/row['kt'] + np.dot(
+        [p[0] for p in row['parts']],np.maximum(row['C'],x@parameters[len(configs):]))
+
+
+def coverage_probe_range(row, model, parameters, configs, constraints):
+    """Exact equivalent-fit range for one proposed output window, not an aggregate."""
+    x=coverage_design([row],model)[0]
+    if len(x)!=1: raise ValueError('probe must describe one output window')
+    nb=len(configs); floor=np.zeros(len(parameters)); floor[configs.index(row['config'])]=1/row['kt']
+    service=floor.copy(); service[nb:]=x[0]
+    # min max(floor+C, service) via one epigraph variable; max via two linear programs.
+    n=len(parameters)
+    minimum=linprog(np.r_[np.zeros(n),1.], A_eq=np.c_[constraints['A_eq'],np.zeros(len(constraints['b_eq']))],
+        b_eq=constraints['b_eq'], A_ub=np.vstack([np.c_[constraints['A_ub'],np.zeros(len(constraints['b_ub']))],
+                                               np.r_[floor,-1.],np.r_[service,-1.]]),
+        b_ub=np.r_[constraints['b_ub'],-row['C'],0.],bounds=(0,None),method='highs')
+    maxima=[linprog(-v,**constraints) for v in (floor,service)]
+    if not minimum.success or any(z.status not in (0,3) for z in maxima): raise ValueError('probe LP failed')
+    upper=None if any(z.status==3 for z in maxima) else max(-maxima[0].fun+row['C'],-maxima[1].fun)
+    return [float(minimum.fun),float(upper) if upper is not None else None]
+
+
+def monotone_conflicts(rows, model):
+    """A parameter-independent failure certificate for nonnegative service costs."""
+    arrays=coverage_design(rows,model); conflicts=[]
+    for i,a in enumerate(rows):
+        for j,b in enumerate(rows):
+            if a['config']!=b['config'] or a['kt']!=b['kt'] or a['y']<=b['y']: continue
+            wa=[p[0] for p in a['parts']]; wb=[p[0] for p in b['parts']]
+            if len(wa)!=len(wb) or not np.allclose(wa,wb,rtol=0,atol=1e-12): continue
+            if np.all(arrays[i]<=arrays[j]+1e-10):
+                conflicts.append(dict(smaller_request_case=a['case'],smaller_request_j=a['j'],smaller_request_T=a['T'],
+                    larger_request_case=b['case'],larger_request_j=b['j'],larger_request_T=b['T'],
+                    observed_smaller_request=a['y'],observed_larger_request=b['y'],
+                    unavoidable_max_relative_error=(a['y']-b['y'])/(a['y']+b['y'])))
+    return sorted(conflicts,key=lambda r:-r['unavoidable_max_relative_error'])[:3]
+
+
+def dual_coverage_slice(run):
+    """Address-only fixed-pressure slice; all five targets have already been revealed."""
+    path=run/'reanalysis/B-20261009-frozen-negative/localization.json'
+    values={int(k.rsplit('p',1)[1]):v['target_ns_per_kt'] for k,v in read_json(path)['observations'].items()}
+    C=values[0]; lower=max(0,7*values[32]-6*values[16]); upper=C
+    def coefficients(q0):
+        q128=(values[32]-q0)/48
+        return [q0,(values[16]-q0-56*q128)/32,q128]
+    q0=3*values[64]-2*values[32]; q=coefficients(q0)
+    return dict(unit='ns/Ktile, q32/q128 per extra covering line; fixed-pressure slice only',
+        targets=values, calibration_rank=2, parameters=3,
+        calibration_q0_interval=[lower,upper],
+        calibration_p64_interval=[max(C,(2*values[32]+lower)/3),max(C,(2*values[32]+upper)/3)],
+        revealed_p64_identified_parameters=dict(zip(['q0','q32','q128'],q)),
+        p128_prediction=C,p128_error=C/values[128]-1,
+        conclusion='p64 selects a previously unidentifiable coefficient split; this is post-reveal explanation, not a repaired frozen prediction.')
+
+
+def coverage_suite(run, output):
+    """Only two new forms: pooled or operand-specific 32B/128B costs, fixed prefill."""
+    base=run.parent
+    cohort_paths={
+        '43269fbc_B_dual':(run,'coverage'),
+        'ef8692f3_SM_stamped':(base/'20261009-R13-sm-job738101','sm'),
+        '099dda56_joint_dual':(base/'20261009-R10-joint-pitch-job738169','joint'),
+        '099dda56_V08F_stamped':(base/'20261008-V08F-job737322-v1','v08')}
+    result={}; hashes={}; residuals=[]
+    for label,(folder,kind) in cohort_paths.items():
+        rows,paths,cases,setups=coverage_rows(folder,kind)
+        train=[r for r in rows if r['j']!=0]; first=[r for r in rows if r['j']==0]
+        result[label]=dict(gpu=read_json(folder/'environment.json').get('gpu'),kind=kind,
+                          later_rows=len(train), first_rows=len(first),observations=rows,models={})
+        for model in ('pooled','operand'):
+            fit,p,configs,constraints=coverage_fit(train,model)
+            fit['first_transfer']=metrics([coverage_predict(r,model,p,configs)/r['y']-1 for r in first])
+            fit['monotonicity_failure_certificates']=monotone_conflicts(train,model)
+            fit['probe_ranges']={}
+            # Two analytic rank probes, not new GPU cases or an expanded experiment matrix.
+            name=next(k for k,r in cases.items() if r['config']==configs[0] and r['lda']*2%128==r['ldb']*2%128==0 and r['swizzle']==1)
+            if kind=='sm': name='cfg_a_sm132_aligned'
+            if kind=='v08': name='cfg_a_p_ref_k4096'
+            row=cases[name]
+            for operand in ('A','B'):
+                probe=dict(row);probe['lda' if operand=='A' else 'ldb']+=16
+                _,vectors=wave_requests(probe,setups[name])
+                tm,tn,_,_=CONFIGS[probe['config']]
+                target=dict(config=probe['config'],kt=(probe['k']+63)//64,C=2*tm*tn*64/4096,parts=[(1.,vectors[1].tolist())])
+                fit['probe_ranges'][operand+'_plus32B_j1']=dict(base_case=name,
+                    cycle_per_Ktile_interval=coverage_probe_range(target,model,p,configs,constraints))
+            for r in fit.pop('residuals'):
+                residuals.append(dict(cohort=label,model=model,**r))
+            result[label]['models'][model]=fit
+        for path in paths: hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    frozen=run/'frozen/r10-b-pitch.json'
+    for path in (frozen,run/'reanalysis/B-20261009-frozen-negative/localization.json'):
+        hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    report=dict(protocol='Post-reveal development diagnostics; no change to the R10 frozen failure.',
+        formula='L_j=b_cfg+Kt*max(C_cfg, Qeff_j @ q); Qeff_j=(1-s/Kt)*Q_j+(s/Kt)*Q_{j+1}, s=min(stages,Kt).',
+        request_fields=['logical_source_KiB','extra_A_32B_coverage_KiB','extra_A_128B_coverage_KiB','extra_B_32B_coverage_KiB','extra_B_128B_coverage_KiB'],
+        models=dict(pooled='q0*D+q32*(A32+B32)+q128*(A128+B128)', operand='q0*D+qA32*A32+qA128*A128+qB32*B32+qB128*B128'),
+        cohorts=result, address_only_slice=dual_coverage_slice(run),
+        limits=['Separate fit per card AND observer cohort; no coefficient transfer across cards or silent pooling of stamped and dual.',
+                'Q counts logical requests after multicast sharing and valid address spans, not physical L2/HBM transactions.',
+                'Software waves and configured prefill credit are assumptions, not measured active TMA occupancy.',
+                'All fitting targets are cycles/Ktile; direct-ns address-only slice is reported separately.',
+                'Compute branch restricts service from above (capacity from below); D/measured cycles is never used as a bandwidth label.',
+                'Ranges preserve fitted predictions in the selected piecewise region; they are not confidence intervals or proof of physical identifiability.',
+                'First tile is diagnostic; b is outside max and does not replace startup supply S or epilogue E.'],
+        frozen_sha256=hashlib.sha256(frozen.read_bytes()).hexdigest(),input_sha256=hashes,
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=False)
+    (output/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'residuals.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(residuals[0]));writer.writeheader();writer.writerows(residuals)
+    print(json.dumps({c:{m:dict(rank=f['active_jacobian_rank'],nparam=f['parameter_count'],fit=f['fit']) for m,f in v['models'].items()} for c,v in result.items()},indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)
     parser.add_argument("--calibration-run", type=Path)
     parser.add_argument("--sm-summary", type=Path, help="fit local/grid/wave caps to an existing R13 SM-scan summary")
+    parser.add_argument("--coverage-suite", action='store_true', help="two post-reveal coverage/prefill forms; --run is R10 job738203")
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.sm_summary:
+    if args.coverage_suite:
+        coverage_suite(args.run.resolve(), args.output.resolve())
+    elif args.sm_summary:
         sm_candidates(args.run.resolve(), args.sm_summary.resolve(), args.output.resolve())
     else:
         if args.calibration_run is None:parser.error("--calibration-run is required without --sm-summary")
