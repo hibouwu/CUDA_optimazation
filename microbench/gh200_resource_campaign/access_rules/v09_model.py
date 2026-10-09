@@ -195,7 +195,7 @@ def predict_components(row, setup, calibration):
     later = calibration['supply'][cfg]
     first = calibration.get('first_supply',{}).get(cfg,later)
 
-    def evaluate(frequency):
+    def evaluate(frequency,details=False):
         loops = [[] for _ in work]
         supported = []
         for model, selected in ((first,[r for r in requests if r['j']==0]),
@@ -204,7 +204,7 @@ def predict_components(row, setup, calibration):
             for request,value,valid in zip(selected,values,ok):
                 loops[request['cta']].append((request['j'],float(value)))
                 supported.append((request['cta'],request['j'],bool(valid)))
-        durations=[]
+        durations=[];timelines=[]
         for cta,valid in zip(loops,fractions):
             p=dict(params);epilogues=None
             if output_rule and cta:
@@ -224,9 +224,11 @@ def predict_components(row, setup, calibration):
                     key='Elast' if j==len(valid)-1 else 'E_middle'
                     full=output_rule['Elast_ns'] if key=='Elast' else middle
                     epilogues.append((1-fraction)*output_rule[key+'_oob_ns']+fraction*full)
-            durations.append(events.cta_cycles(p,spec['schedule'],len(cta),kt,
-                mainloops=[v for _,v in sorted(cta)],epilogues=epilogues))
-        return durations, supported
+            value=events.cta_cycles(p,spec['schedule'],len(cta),kt,detail=details,
+                mainloops=[v for _,v in sorted(cta)],epilogues=epilogues,trace_events=details)
+            durations.append(value[0] if details else value)
+            if details:timelines.append(value[1])
+        return durations, supported, timelines
 
     model=calibration['clock']
     z=zero_product_fraction(row,work)
@@ -238,7 +240,7 @@ def predict_components(row, setup, calibration):
         for offset in (1,1+len(clock.MODES)):
             model['coefficients'][offset+mode]=(1-z)*model['coefficients'][offset+mode]+z*model['coefficients'][offset+zero]
     solved = clock.solve_source_envelope(point,model,lambda f:max(evaluate(f)[0])/1000)
-    durations,supported = evaluate(solved['frequency_ghz'])
+    durations,supported,timelines = evaluate(solved['frequency_ghz'],True)
     critical = max(range(len(durations)),key=durations.__getitem__)
     transfer = calibration.get('plain_transfer',{}).get(cfg)
     return dict(**solved,
@@ -249,7 +251,7 @@ def predict_components(row, setup, calibration):
         unsupported_windows=[dict(cta=c,j=j) for c,j,ok in supported if not ok],
         critical_cta=critical,critical_candidates=[i for i,v in enumerate(durations) if abs(v-max(durations))<1e-7],
         critical_work=work[critical],cta_duration_ns=durations,first_output_bytes=first_bytes,
-        static_clock_work=point)
+        static_clock_work=point,cta_events=timelines)
 
 
 if __name__ == '__main__':

@@ -51,7 +51,8 @@ def event_observations(run):
             processes.append(dict(trial=record['trial'],raw=record['raw'],raw_sha256=record['raw_sha256'],intervals_ns=intervals,counts=counts,
                 envelope_ns=envelope,dual_event_ns=record['elapsed_us']*1000,
                 plain_event_ns=plain[record['trial']]['elapsed_us']*1000,
-                same_call_event_extra_ns=record['elapsed_us']*1000-envelope))
+                same_call_event_extra_ns=record['elapsed_us']*1000-envelope,
+                effective_ghz=st.median((c['end_c']-c['entry_c'])/(c['end_ns']-c['entry_ns']) for c in ctas if len(c['tiles'])==max(map(len,work)))))
         keys=set().union(*(p['intervals_ns'] for p in processes))
         cases.append(dict(row=row,setup=setup,max_tiles=max(map(len,work)),active_ctas=sum(bool(c) for c in work),
             first_output_bytes=first_bytes,processes=processes,

@@ -160,7 +160,7 @@ def summarize_case(root,r,setup):
 def lmain(p,kt,first=False):return p['l0']+p['l1']*kt+(p['dL0'] if first else 0.0)
 
 
-def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epilogues=None):
+def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epilogues=None,trace_events=False):
     """CTA recursion; an explicit per-tile L list replaces the aggregate mainloop rule.
 
     The optional list is for development composition of conditional supply rules.
@@ -174,6 +174,7 @@ def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epi
     if len(Ls)!=ntiles:raise ValueError('one mainloop interval per output tile required')
     if epilogues is not None and (schedule!='cooperative' or len(epilogues)!=ntiles):
         raise ValueError('one merged epilogue per cooperative output tile required')
+    timeline=[]
     if schedule=='cooperative':
         fm=p['P0']+p['S'];ed=None
         for j in range(ntiles):
@@ -181,6 +182,7 @@ def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epi
             ep=fm+Ls[j]+p['w']
             E=(p['E0'] if j==0 else (p['Elast'] if j==ntiles-1 else p['E'])) if epilogues is None else epilogues[j]
             ed=ep+E
+            if trace_events:timeline.append([fm,fm+Ls[j],ep,ed])
         last=ed;eds=[ed]
     else:
         fm,me,ep,ed=[],[],[],[]
@@ -200,9 +202,12 @@ def cta_cycles(p,schedule,ntiles,kt,detail=False,classes=None,mainloops=None,epi
             else:ov=None
             ed.append(base.epilogue_end(p,e,ov))
         eds=ed;E=ed[-1]-ep[-1]
+        if trace_events:timeline=[list(t) for t in zip(fm,me,ep,ed)]
     b=max(eds)+p['Etail'];x=p['x0']+p['x1']*ntiles+p['xk']*b;end=b+x
     if not detail:return end
-    return end,dict(supply=p['P0']+p['S'],mainloop=sum(Ls),last_epilogue=E,tail=p['Etail'],max_cta_excess=x)
+    parts=dict(supply=p['P0']+p['S'],mainloop=sum(Ls),last_epilogue=E,tail=p['Etail'],max_cta_excess=x)
+    if trace_events:parts.update(events=timeline,producer=p['P0'],prefill=p['S'])
+    return end,parts
 
 
 def case_params(P,cfg,feat):
