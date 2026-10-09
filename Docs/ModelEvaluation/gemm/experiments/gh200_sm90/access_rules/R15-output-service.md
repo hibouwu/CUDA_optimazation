@@ -532,3 +532,22 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --dual-ro
   --direct-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
   --output <新的B-reanalysis目录>
 ```
+
+## 共同事件校准的最小补点（2026-10-09）
+
+根负责的18条件固定M×N=2304×3072，三配置、K1024/4096、aligned/A+16B/B+16B。sw1下cfg_a/b有432个完整tile，由132个CTA各做3或4个；cfg_c有216个完整tile，各做1或2个。其dual已覆盖首/后/末输出与最终尾段，本轮不再为K、pitch或多tile重复补点。
+
+[configs/r15-composition-calibration.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r15-composition-calibration.json)只列三个新增条件，均K4096、aligned、dyadic17、sw1、sm_count=0、evict=0、逻辑M/N初始化。使用公共dual以及wide/stamped基线，由根统一准备和冻结。
+
+| 配置 | M×N | 完整单tile CTA | 首轮有效输出B0 | 用途 |
+|---|---:|---:|---:|---|
+| cfg_a | 1024×768 | 48 | 3 MiB | 低规模floor候选 |
+| cfg_a | 1536×1408 | 132 | 8.25 MiB | 干净T=1高规模，与18条件的多tile首轮区分上下文 |
+| cfg_c | 1024×1536 | 48 | 6 MiB | 复用g3几何，补直接双角色ns |
+| cfg_c，已有 | 1536×2816 | 132 | 16.5 MiB | 复用job738397的K4096；K16384仅作已有跨K约束 |
+
+cfg_a单tile为65536 B，cfg_c为131072 B，规模项统一用静态首轮有效**字节**，不能把相同CTA数当作跨配置相同输出量。三补点均完整且无cluster/swizzle补齐；不复制runner或source/build包。旧job738100的g3仅有issuer直接ns，不能替代本次merged J_ns补点。cfg_c高规模复用以相同GPU、tile/stage/资源、输入/缓存及事件边界相容为前提；保留job身份，不伪称与新批次同期。
+
+仍只使用既有形式 `J=max(J_floor,beta*B0)`（beta为原tau/频率因子的单位改写），各配置的floor不预先相等，字节系数能否共享由根定值。每配置有两个干净T=1规模，是尝试同时辨识floor与规模项的最低规模数：若删除任一新增条件，对应配置只剩一个这样的规模；单一B0只能确定一次max的结果，不能同时确定两分支。18条件的cfg_a首轮虽也有132个输出者，仍带T3/4的后续流水上下文，不能代替单tile高规模控制。
+
+两个规模仅在低点激活floor、高点激活字节分支且残差支持该解释时能分开两参数。若都在floor，只冻结floor与beta上界；若都在字节分支，只冻结beta与floor上界。没有分支证据就保留不可辨识，不自动增加96规模或K笛卡尔积。K1024及多tile事件由根的18条件约束，旧K16384保留诊断作用；冻结和完整递推验证由根负责。本清单没有提交GPU。
