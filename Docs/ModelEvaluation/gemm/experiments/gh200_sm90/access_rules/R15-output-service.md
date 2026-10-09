@@ -366,3 +366,81 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-sin
   --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
   --output <该run下新的reanalysis目录>
 ```
+
+## 两consumer的输出分解与首轮字节候选（2026-10-09）
+
+**角色分解能消除重复计账，但不能把原E0的变化解释成一个额外join常数。** 本次只分析cfg_c：V08的17个校准条件保留角色诊断；其中c3/g2沿用原扰动限制，g7存在整cluster补齐，三者不进入候选拟合。其余14条件、140次stamped调用用于首tile拟合，含单tile与多tile的首tile，不把后续tile混入目标。job738100的stamped/global只作另一张卡的端点约束，没有合并参数。所有首tile merged E0均与原summary一致，静态工作列表也逐进程与实际坐标匹配。
+
+### 顺序与可组合的边界
+
+cooperative kernel的顺序是 `mma_tail → MAIN_END → pipeline state advance / scheduler fixup → EPI_PERMIT → store() → EPI_DONE → fetch_next_work`，最后再执行 `store_tail → final`。`store()`内部仍有寄存器/SMEM准备、fence、consumer NamedBarrier、issuer的TMA store/commit/acquire及再次同步。因而MAIN_END到PERMIT是代码与调度间隔，不能单独命名为硬件许可等待；PERMIT也不是第一条TMA issue。
+
+令两consumer的MAIN_END、PERMIT、DONE为m1/m2、p1/p2、d1/d2，role2/thread256是TMA issuer。对每个CTA、每个tile的同SM周期，有以下精确恒等式：
+
+```text
+M=max(m1,m2), P=max(p1,p2)
+W=P−M                           merged许可间隔
+A=P−p2                          issuer早于较晚permit的部分
+I=d2−p2                         issuer整个store()窗口
+J=d2−P                          较晚permit到issuer返回
+R=max(d1,d2)−d2                 另一consumer的DONE端点补差
+I=A+J;  E0=J+R;  max(d1,d2)−M=W+J+R
+```
+
+A包含可与另一consumer尾段重叠的准备与等待，不是已隔离的纯barrier等待。J也包含store内部同步与准备，不是纯TMA服务。若保留W后再直接加入I，就重复计入A；未来递推可以保持merged MAIN_END，使用 `done=M+W+J+R`，但不能把各自中位数的和当成逐CTA恒等式。
+
+| V08条件 | W，cycle | A，cycle | issuer I，cycle | J，cycle | R，cycle | merged E0，cycle |
+|---|---:|---:|---:|---:|---:|---:|
+| g3 | 107.25 | 585.75 | 4629.75 | 4038.50 | 4 | 4042.50 |
+| c2 | 108.00 | 542.00 | 6118.50 | 5622.50 | 4 | 5626.50 |
+| c6 | 107.00 | 590.75 | 5397.50 | 4881.50 | 4 | 4885.50 |
+| g4 | 109.00 | 530.25 | 6323.00 | 5884.25 | 4 | 5888.25 |
+
+每列先取进程内CTA中位再取十进程中位，因此列之间不要求可加。全部17,020个纳入拟合的首tile记录中，`d1−d2`都为4 cycle；这是当前编译/打点协议下两个领头线程的结束偏斜，不是辨识出的通用join指令成本。角色自己的permit间隔通常约108/165 cycle，issuer在上述单tile例中还会早于较晚MAIN_END约425–484 cycle进入store，说明早到部分已和另一角色的前段重叠。
+
+DONE与最终结束也不能混淆。V08的g3/c2/c6中，另一consumer的final分别比issuer早约96/224/192 ns，虽然它的DONE晚4 cycle；其自身没有issuer相同的未完成TMA组。最终 `.read` 等待只支持源SMEM读完/复用，不表示目标全局写完。g7的补齐情形另保留在结果中，不从这些无补齐条件推广其结束顺序。
+
+### 原E0还混合了哪些条件
+
+原E0拟合池同时包含少量CTA的单tile输出和多tile内核的首轮输出。g3与g4的旧 `q_max_tiles` 都是48/132，但首轮有有效输出的CTA分别为48和132，E0分别4042.50和5888.25；c9的q约0.515，首轮也有132个有效输出CTA。对单tile两种计数相同，对多tile第一轮则不同，所以“持有最大tile数的CTA比例”不能表示首轮输出需求。这里的首轮参与者仍只是静态工作量，不是同时写出的CTA数。
+
+在事件边界上，merged E0已经扣除了A、没有包含W，而R很小。分开角色后，主要变化仍然留在J：同样132个首轮输出CTA的c1/c2/c6，J为5861.75/5622.50/4881.50 cycle。仅修正许可或join常数不能消除这部分变化。g7虽然首轮也有132个完整有效输出tile，第一轮E0仍达9607.50；其后续工作含补齐，属于保留的范围外诊断，不能只看首轮字节就忽略其流水上下文。
+
+### 仅一个新候选，与原常数形式比较
+
+新候选只用于无补齐、完整有效输出tile的**首tile**。B0从静态调度工作列表累加每个CTA第一个tile的有效输出字节；cfg_c完整tile为131072 B：
+
+```text
+J_hat = max(J_floor, f_assumed * tau * B0/131072)
+E0_hat = J_hat + R_hat
+done_hat − M_hat = W_hat + E0_hat
+```
+
+本次对所有目标预设 `f_assumed=1.8 cycle/ns`，不读目标实测频率或输出重叠。固定f仅规定tau的单位，不能据此独立识别带宽与频率；tau也不称物理HBM服务率。全14点描述性拟合得到 `J_floor=4038.75 cycle, tau=23.48108 ns/名义首轮CTA, R_hat=4 cycle, W_hat=108.5 cycle`；原常数形式在相同14点重拟合的E0为5763.0 cycle，旧冻结5784.25保持不动。这一数据集与上节五个单tile点不同，只在下表内作同训练集比较。
+
+max候选以首tile J的条件等权平方误差拟合，枚举所有平台/服务激活分区并保留全部最优参数集合；W/R分别取训练条件中位。常数基线沿用E0取训练中位的规则。按M/N整组、K整组，以及短K≤4096/长K≥8192整组剔除后重新拟合；没有使用旧heldout，也没有新模型选择族。
+
+| 分组检验 | 常数E0误差中位 / 最大 | 新候选E0误差中位 / 最大 | 新候选M到DONE误差中位 / 最大 |
+|---|---:|---:|---:|
+| M/N整组 | 3.03% / 43.09% | 5.21% / 18.31% | 5.81% / 17.69% |
+| K整组 | 3.81% / 43.94% | 5.87% / 18.31% | 6.33% / 17.69% |
+| 短/长K整组 | 18.59% / 22.43% | 18.44% / 56.57% | 18.59% / 55.11% |
+
+均为绝对相对误差；参数集合给出不同预测时按最坏端点评分，不挑有利解。新候选减轻了低参与规模被常数高估的问题，但没有改善所有点：短K训练后对c6/g5/g6的E0仍高估19.48%/22.10%/21.68%。仅用三个长K点训练时，名义首轮CTA全为132，低规模分支不可辨识；g1/g3的E0预测区间分别为2558.6–4821.2、1755.7–4821.2 cycle，而非可任意选取的定值。其余同132个参与者的预测仍唯一，所以14条短长K检验中只有这两条预测不唯一。
+
+**当前不能把该候选作为已支持的完整递推组件。** 角色恒等式和首轮工作量定义可以接入，数值服务规则仍缺少频率与到达状态的分离证据；本次未修改公共模型或原冻结参数，也不把分项开发检验写成GEMM验证。
+
+### 直接ns约束与最小缺口
+
+job738100的global观察中，g3/c2/c6的issuer窗口为2496/3264/3144 ns，逐CTA局部cycle/ns中位为1.89183/1.91343/1.59063；这些值仅作另一张卡的诊断，没有作为候选输入。现有直接端点只覆盖p2/d2，缺少另一consumer的p1/d1以及两个MAIN_END的ns。即使I的ns已知，也不能用I的平均频率把A换成ns，再声称获得了直接J；同样不能把final的ns冒充DONE的ns。
+
+最小缺少的是**同卡c2/c6这一对既有几何，改用现成的公共dual-clock协议**，同时保留两角色MAIN_END/PERMIT/DONE的cycle/ns，并用匹配wide/stamped判断观察扰动。M/N、输出字节及首轮参与者保持相同，仅K为4096/16384。它直接给出 `J_ns=d2_ns−max(p1_ns,p2_ns)`，可区分“周期变化主要伴随局部换算变化”与“共同进入后的纳秒窗口也改变”。这仍不是纯并发因果对照，但它是当前可组合端点与单位缺口所需的最小同卡配对；本轮只列缺口，没有新增GPU、探针或测点。
+
+[角色事件、最优参数集合与全部分组误差](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1/reanalysis/B-20261009-role-output-final/role-output.json)可从原分析入口重算：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --role-output \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08-job737322-v1 \
+  --direct-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
+  --assumed-output-ghz 1.8 --output <V08下新的reanalysis目录>
+```

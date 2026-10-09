@@ -13,6 +13,7 @@ import statistics
 import sys
 from bisect import bisect_right
 from collections import defaultdict
+from fractions import Fraction
 
 MODES = ('reg_smem', 'tma_only', 'full_output', 'background', 'serial', 'concurrent')
 
@@ -549,11 +550,177 @@ def analyze_v08_single_model(root, destination):
     print(f'{len(points)} qualified single-tile cases, grouped by K and geometry -> {destination}')
 
 
+def role_windows(root, row, variant):
+    """Two cooperative consumer leaders; store entry/return is not TMA issue/complete."""
+    from analyze_r18 import replay
+    processes = []
+    for path in sorted((root / 'samples' / row['id']).glob(variant + '-*.json')):
+        record = json.loads(path.read_text())
+        if record['returncode']:
+            continue
+        observed = replay(root, record, row)
+        with gzip.open(root / record['raw'], 'rt') as stream:
+            events = {e['event']: e for line in stream if line.strip() for e in [json.loads(line)]}
+        setup, words = events['setup'], events['call']['trace']
+        if setup.get('trace_tile_words', 6) != 6:
+            raise ValueError('this role comparison uses the archived six-word profiles')
+        grouped = defaultdict(lambda: defaultdict(list))
+        finals = defaultdict(list)
+        for base in range(0, len(words), 784):
+            h = words[base:base + 16]
+            if h[6] != h[9] or not h[6]:
+                raise ValueError('expected cooperative consumers with the same nonempty work')
+            finals['other_minus_issuer_final_cycles'].append(h[4] - h[7])
+            finals['other_minus_issuer_final_ns'].append(h[5] - h[8])
+            for j in range(h[6]):
+                a, b = words[base + 16 + j * 6:base + 22 + j * 6], words[base + 400 + j * 6:base + 406 + j * 6]
+                m, p, d = max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])
+                metrics = dict(w=p-m, other_permit_wait=a[2]-a[1], issuer_permit_wait=b[2]-b[1],
+                    issuer_start_vs_last_main=b[2]-m, main_end_skew=a[1]-b[1],
+                    arrival_gap=p-b[2], issuer=b[3]-b[2], post_permit=b[3]-p,
+                    done_join=d-b[3], other_done_minus_issuer=a[3]-b[3], E=d-p, after_main=d-m)
+                assert metrics['issuer'] == metrics['arrival_gap'] + metrics['post_permit']
+                assert metrics['E'] == metrics['post_permit'] + metrics['done_join']
+                assert metrics['after_main'] == metrics['w'] + metrics['E']
+                phase = 'first' if j == 0 else 'last' if j == h[6]-1 else 'middle'
+                for key, value in metrics.items():
+                    grouped[phase][key].append(value)
+                if variant == 'global':
+                    if setup['trace_version'] != 'r15-first-output-ns' or h[6] != 1:
+                        raise ValueError('single-tile direct issuer profile required')
+                    grouped[phase]['issuer_ns'].append(h[14]-h[13])
+                    grouped[phase]['issuer_cycles_per_ns'].append(metrics['issuer']/(h[14]-h[13]))
+        processes.append(dict(trial=record['trial'], raw=record['raw'],
+            work_sha256=hashlib.sha256(json.dumps([c['work'] for c in observed['ctas']]).encode()).hexdigest(),
+            phases={phase:dict(count=len(values['E']),
+                median={k:statistics.median(v) for k,v in values.items()},
+                ranges={k:[min(v),max(v)] for k,v in values.items()}) for phase,values in grouped.items()},
+            final_median={k:statistics.median(v) for k,v in finals.items()},
+            final_ranges={k:[min(v),max(v)] for k,v in finals.items()},
+            other_final_later=sum(v>0 for v in finals['other_minus_issuer_final_ns']), ctas=len(finals['other_minus_issuer_final_ns'])))
+    return processes
+
+
+def fit_first_bytes(points):
+    """All minimizers of J=max(a,b*x), a,b>=0, with exact active-region enumeration."""
+    xy = [(Fraction(str(p['x'])), Fraction(str(p['post_permit']))) for p in points]
+    levels = sorted({x for x,y in xy})
+    sets = []
+    a = sum(y for x,y in xy)/len(xy)
+    sets.append([(a, Fraction(0)), (a, a/max(levels))])
+    b = sum(x*y for x,y in xy)/sum(x*x for x,y in xy)
+    sets.append([(Fraction(0), b), (b*min(levels), b)])
+    for low, high in zip(levels, levels[1:]):
+        floor = [(x,y) for x,y in xy if x<=low]
+        rate = [(x,y) for x,y in xy if x>=high]
+        a = sum(y for x,y in floor)/len(floor)
+        b = sum(x*y for x,y in rate)/sum(x*x for x,y in rate)
+        if b*low <= a <= b*high:
+            sets.append([(a,b)])
+        for boundary in (low, high):
+            gx = [(boundary,y) for x,y in floor] + rate
+            b = sum(g*y for g,y in gx)/sum(g*g for g,y in gx)
+            sets.append([(b*boundary,b)])
+    def loss(q):
+        return sum((max(q[0],q[1]*x)-y)**2 for x,y in xy)
+    best = min(loss(group[0]) for group in sets)
+    vertices = sorted({q for group in sets if loss(group[0])==best for q in group})
+    return dict(loss=float(best), unique=len(vertices)==1,
+                vertices=[dict(floor_cycles=float(a), ns_per_nominal_cta=float(b),
+                               exact_floor=str(a), exact_rate=str(b)) for a,b in vertices])
+
+
+def analyze_role_output(root, direct_root, destination, assumed_f):
+    """One first-cohort byte candidate, with no target overlap/frequency features."""
+    import v08_model as model
+    med = statistics.median
+    rows = json.loads((root/'cases.json').read_text())
+    summary = json.loads((root/'derived/summary.json').read_text())
+    setups = {s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+    cases, points = [], []
+    for row in rows:
+        if row['config']!='cfg_c' or row['set']!='calib':
+            continue
+        proc = role_windows(root,row,'stamped')
+        phases = {phase:{k:med(p['phases'][phase]['median'][k] for p in proc if phase in p['phases'])
+                         for k in next(p['phases'][phase]['median'] for p in proc if phase in p['phases'])}
+                  for phase in sorted({phase for p in proc for phase in p['phases']})}
+        work = model.scheduled_work('cfg_c',row['m'],row['n'],setups[row['id']]['grid'],row['swizzle'])
+        work_hash = hashlib.sha256(json.dumps(work).encode()).hexdigest()
+        if any(p['work_sha256'] != work_hash for p in proc) or phases['first']['E'] != summary[row['id']]['intervals']['E0']:
+            raise ValueError('role replay differs from static work or the original merged E0')
+        def full(coord):
+            mi,ni=coord
+            return mi*256+256<=row['m'] and ni*128+128<=row['n']
+        unpadded = all(full(w) for c in work for w in c)
+        first_bytes = sum(max(0,min(256,row['m']-c[0][0]*256))*max(0,min(128,row['n']-c[0][1]*128))*4 for c in work if c)
+        old = summary[row['id']]
+        qualified = abs(old['perturbation'])<=.05 and max(old['plain_cv'],old['stamped_cv'])<=.05
+        included = qualified and unpadded
+        cases.append(dict(case=row['id'],phases=phases,processes=proc,trace_qualified=qualified,
+            unpadded=unpadded,included=included,first_valid_bytes=first_bytes,
+            q_max_tiles=old['q'],T=old['T'],assumed_output_cycles_per_ns=assumed_f))
+        if included:
+            points.append(dict(id=row['id'],geometry=f"{row['m']}x{row['n']}",k=row['k'],
+                k_band='short_le4096' if row['k']<=4096 else 'long_ge8192',
+                nominal_first_ctas=first_bytes/131072,x=first_bytes/131072*assumed_f,
+                **phases['first']))
+    fitted = fit_first_bytes(points)
+    validation = []
+    for grouping in ('geometry','k','k_band'):
+        predictions = {'constant':[], 'first_bytes_max':[]}
+        for group in sorted({p[grouping] for p in points}):
+            train = [p for p in points if p[grouping]!=group]
+            fit = fit_first_bytes(train)
+            w, join, constant = (med(p[k] for p in train) for k in ('w','done_join','E'))
+            for p in points:
+                if p[grouping]!=group:
+                    continue
+                estimates = [max(Fraction(q['exact_floor']),Fraction(q['exact_rate'])*Fraction(str(p['x'])))+Fraction(str(join)) for q in fit['vertices']]
+                for name, interval in [('constant',[constant,constant]),('first_bytes_max',[float(min(estimates)),float(max(estimates))])]:
+                    predictions[name].append(dict(case=p['id'],withheld_group=group,train_cases=[t['id'] for t in train],
+                        interval_cycles=interval,prediction_unique=True if name=='constant' else min(estimates)==max(estimates),
+                        observed_E=p['E'],observed_after_main=p['after_main'],
+                        worst_E_relative=max(abs(v/p['E']-1) for v in interval),
+                        worst_after_main_relative=max(abs((v+w)/p['after_main']-1) for v in interval),
+                        parameter_unique=fit['unique'] if name=='first_bytes_max' else True))
+        for name, pred in predictions.items():
+            validation.append(dict(grouping=grouping,model=name,predictions=pred,
+                unique_predictions=sum(p['prediction_unique'] for p in pred),n=len(pred),
+                median_E=med(p['worst_E_relative'] for p in pred),max_E=max(p['worst_E_relative'] for p in pred),
+                median_after_main=med(p['worst_after_main_relative'] for p in pred),
+                max_after_main=max(p['worst_after_main_relative'] for p in pred)))
+    direct = []
+    for row in json.loads((direct_root/'cases.json').read_text()):
+        for variant in ('stamped','global'):
+            proc = role_windows(direct_root,row,variant)
+            keys=proc[0]['phases']['first']['median']
+            direct.append(dict(case=row['id'],variant=variant,processes=proc,
+                median={k:med(p['phases']['first']['median'][k] for p in proc) for k in keys},
+                final_median={k:med(p['final_median'][k] for p in proc) for k in proc[0]['final_median']}))
+    result = dict(v08_gpu=json.loads((root/'environment.json').read_text())['gpu'],
+        direct_gpu=json.loads((direct_root/'environment.json').read_text())['gpu'],cases=cases,points=points,
+        candidate=dict(form='E0 = max(J_floor, assumed_f * tau * first_valid_bytes/131072) + done_join',
+            assumed_f=assumed_f,fit=fitted,join_cycles=med(p['done_join'] for p in points),
+            w_cycles=med(p['w'] for p in points)),
+        constant_cycles=med(p['E'] for p in points),validation=validation,direct_constraints=direct,
+        scope='Posthoc cfg_c first-output development only. Nominal first-cohort bytes are static work, not observed concurrency. '
+              'One fixed assumed frequency for every target, not a frequency model. No target measured overlap/frequency enters prediction. '
+              'Direct job738100 is a separate-card endpoint constraint, never fit data. Nonunique predictions scored by worst endpoint.',
+        analyzer_sha256=sha(__file__))
+    destination.mkdir(parents=True,exist_ok=False)
+    (destination/'role-output.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(f'{len(cases)} calibration role cases; {len(points)} supported first-output cases -> {destination}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cpu-check', action='store_true')
     parser.add_argument('--v08-output', action='store_true', help='V08 cfg_a/c output overlap and critical-CTA posthoc analysis')
     parser.add_argument('--v08-single-model', action='store_true', help='Grouped calibration check of constant/static-q merged output')
+    parser.add_argument('--role-output', action='store_true', help='Cooperative role decomposition and one static first-cohort candidate')
+    parser.add_argument('--direct-run', type=Path)
+    parser.add_argument('--assumed-output-ghz', type=float, default=1.8)
     parser.add_argument('--input', type=Path)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -562,7 +729,11 @@ def main():
     else:
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
-        if args.v08_single_model:
+        if args.role_output:
+            if args.direct_run is None or args.assumed_output_ghz<=0:
+                parser.error('--role-output requires --direct-run and positive --assumed-output-ghz')
+            analyze_role_output(args.input,args.direct_run,args.output,args.assumed_output_ghz)
+        elif args.v08_single_model:
             analyze_v08_single_model(args.input, args.output)
         elif args.v08_output:
             analyze_v08_output(args.input, args.output)
