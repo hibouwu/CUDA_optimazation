@@ -666,3 +666,23 @@ job738496 在 a057/GPU432 上提供 29 条件、每条件十份 dual，共 **128
 新六点联合前的 first 中位/RMS为 3.57%/7.11%，later 为 5.83%/9.58%，没有因扩大范围而明显牺牲该批 RMS。参考几何下，两 phase 的 B pitch 余数 0/16/32/48/64/80/96/112 均恢复代数支持，B32/B64 的 later 中位误差为 5.23%/3.88%，first 为 3.48%/9.32%。已有 whole A/B-fill 与 map 条件进入 later 定值；A32/A64/A96、未见的 first 目的 fill 仍明确不支持。新余数或条件的代数支持不替代后续留出实测。
 
 失败继续保留：padN OOB、K4096、j2/T5 有效地址组中位仍低估 **23.32%**；单 CTA whole B-fill 窗口最大高估 **76.07%**；B64 first、T4 组中位低估 9.56%。本次没有消除或改写原 R10 冻结失败。交根的[最小 cfg_b 片段](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/models.json)保持 `supply/first_supply` 键；[完整三配置片段](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/composition-supply.json)、[分 run/联合前后报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/summary.json)及[纯 B64 调用例子](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/example.py)均已保存；没有新增 GPU 或候选族。
+
+### A/C 首轮填零合并、精确训练行与拒绝范围（2026-10-09，A）
+
+738707/738865 均在 a057/GPU432 完成各四条件、四变体、十进程。两批直接复用 738496 的 12 个 binary/SASS，逐文件 SHA 相同；probe、trace 与相关 overlay 也相同。A 为 logical832×4096、storage1024×4096、mapM832/1024，C 为 logical1536×2624、storage1536×2816、mapN2624/2816；均 sw1、K1024/4096，各 map 对照保持数值、工作、容量与输出相同。每个 OOB 条件的首轮，A 有 16 个 partial A-fill 8 KiB 和 16 个 whole A-fill 16 KiB；C 有 6 个 partial B-fill 和 6 个 whole B-fill。扩 map 后目的 fill 归零。
+
+只将对应新四点加入 A/C first，同一个 max 形式不变；B19 与所有 later payload 原样保留。A first 为 5/5 秩，A_fill 价格 23.5223 ns/KiB，源 valid 价格停在非负边界，不能解释为物理供给免费。C first 为 4/5 秩，B_fill 代表价 32.2988、条件范围 6.3092～33.4899 ns/KiB。显式 1.6 GHz 下，新四点 first 中位/最大/RMS：A **3.89%/29.15%/8.56%**，C **3.36%/5.76%/3.50%**；A partial-fill 组中位绝对误差在 K1024/K4096 仍为 20.34%/16.49%。新 A later 只诊断，逐 case 中位绝对误差的中位/最大为 8.01%/9.64%，单窗口最大 40.30%；新 C 全为单 tile，没有 later 窗口。
+
+交付[训练行 gzip](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/training-rows.json.gz)的结构严格为 `first/later -> cfg_a/cfg_b/cfg_c -> 有序行列表`，保留 run/case/CTA/j、完整 L_cycle/L_ns 及训练专用 calibration_floor_ns。六组行数如下，解压后重新调用同一 fit_supply，参数逐值相同、预测差为零：
+
+| 配置 | first 行数 | later 行数 |
+|---|---:|---:|
+| cfg_a | 2028 | 5368 |
+| cfg_b | 2508 | 8388 |
+| cfg_c | 1896 | 2024 |
+
+[来源清单](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/provenance.json)逐一列出 50 个 run/case 输入的十份 dual record/raw 文件及 SHA、run metadata/source inventory SHA、源聚合行 artifact SHA、运行库版本及压缩/解压内容 SHA。[模型](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/models.json)与[独立复核/分项残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json)不修改旧档。
+
+**1.6 GHz 支持不等于自由频率支持。** 根的自由组合在 50 个已见条件中有 49 个支持；`cfg_c_first_fill_oob_k1024` 的六个 whole B-fill 首窗仍拒绝。该组 Xvalid=3060 KiB，训练 f 约 1.6625～1.6795 GHz，计算下界 609.69～615.95 ns/Ktile，高于代表供给 605.88，属于计算分支；自由 f=1.75195 后下界降至 584.49，激活尚未唯一识别的供给方向。C 新四点没有把这个方向在所有频率下定死，不能称整组已通过。
+
+冻结前静态留出检查为 **29 个数值＋1 个 unsupported**，全部 30 条件保留。`v09d_cfg_c_G2_base`（512×3968×1024）的 CTA62/63 首窗 X=[1512,0,0,0,0,0,16] 在 request span 内（相对距离 6.47e-17），但自由 f=1.85990 使计算下界 550.57 低于供给 560.81，active-Jacobian 距离 0.01283 超过 1e-7，故拒绝。现有条件 LP 给两窗 L=9060.38～9408.60 ns；固定该已求 f、沿根现有单 tile 递推传播，总包络为 14417.83～14766.05 ns，其他 CTA 最高 14417.83 ns。这对窗口可能共同决定包络，不能忽略；该范围没有重新联立时钟，也不是可冻结数值。[有限原因定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json)只读取软件条件与校准模型，未读留出实测时间，未修改根的冻结包或追加模型/实验。
