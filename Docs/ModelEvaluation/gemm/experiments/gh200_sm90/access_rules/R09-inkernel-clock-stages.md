@@ -1003,3 +1003,45 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_input_source_clock.p
   --old-long-run "$ROOT/20261009-R09-wide-input-job738197" \
   --output "$ROOT/20261009-R09-input-clock-calibration-job738376/reanalysis/C-source-clock-replay-<新后缀>"
 ```
+
+
+<a id="equal-work-job738459"></a>
+
+### job738459：等Tensor/源请求工作量的跨K检验
+
+2026-10-09，独占a057/GPU-43269fbc，Slurm COMPLETED/0。归档SHA为 `b5514903da686bbd6bb49545219db8bec5172a7b536610d121e1a9da92cb8d3c`，复用6338653 plain/ends。18个预检查和360个正式进程全部成功；本次独立CPU回放全部条件与原汇总一致，378个原始记录SHA和数值检查均通过。126个random进程中，K1024最大error/tolerance为0.5359343039，K4096为 **0.8684002002**；三配置K4096 random均通过原阈值，仍限seed17与4096点抽检。
+
+**先核对九条跨作业桥接。** 本批8192² K1024的三配置×三输入，对照job738376相同九条件：plain中位数漂移−0.688%至+0.725%，ends event为−0.679%至+0.835%，有效f为 **−1.096%至+0.595%**，C为−0.301%至+0.181%，ends包络为−0.641%至+1.201%。逐条件和两批CV保存在 `bridge.csv`。原包 `bridge_comparison.json` 的“Only cfg_b bridges”是旧包装文案；其实际reference及数值比较包含cfg_a/b/c全部九条。本次注明有效范围，不追改原包或作漂移校正。
+
+**全部九组等工作配对。** 每组比较4096² K4096 / 8192² K1024：名义Q/S完全相同，均摊Q=254200.242 cycle/SM，cfg_a/b/c的S为11915.636/15887.515/7943.758 KiB/SM。输出从256降至64 MiB，唯一输入足迹从32增至64 MiB，同时K、CTA输出tile数和重访改变，因此不是纯输出流量干预。
+
+表中plain/C/f变化为十个同trial比值减一的中位数；**频率响应误差**先逐trial计算 `(fhat4096/fhat1024)/(f4096/f1024)−1` 再取中位数。最后一列另为条件汇总口径的K4096 `fhat/f−1`，不能与逐次比值中位数混用。所有九组、90对保留；同trial是随机化轮次，plain/ends配对进程相隔约0.676–22.531 s，不是同时调用。
+
+| 配置 / 输入 | 配对plain变化 | 配对C变化 | 配对f变化 | 冻结clock的频率响应误差 | K4096条件频率残差 |
+|---|---:|---:|---:|---:|---:|
+| a / dyadic | -9.834% | -18.998% | -10.144% | +8.634% | +4.488% |
+| a / zero | -15.002% | -17.000% | -1.113% | -1.367% | +0.495% |
+| a / random | -4.997% | -18.936% | -13.540% | +12.775% | +9.694% |
+| b / dyadic | -1.853% | -2.737% | +0.532% | -1.355% | -0.047% |
+| b / zero | +1.557% | +1.397% | -0.235% | +0.397% | +0.965% |
+| b / random | -0.873% | -2.497% | +0.238% | -1.342% | +0.261% |
+| c / dyadic | -16.820% | -19.305% | -2.156% | -1.834% | -0.666% |
+| c / zero | -20.313% | -20.573% | +0.230% | -3.453% | -1.657% |
+| c / random | -14.892% | -18.795% | -4.682% | -0.536% | +6.727% |
+
+冻结模型为原21点source-clock参数，文件SHA **`470bd395129abeec0f32aea62c87c8c1d78af2ea4a613b77fe67ca26a78101db`**，与采样前 `paired-work.json` 指纹一致。仅在各条件/进程的观测ends W下计算fhat，未重拟合任何系数/τ，未使用目标C作预测输入，也没有自由时间预测。九个K1024条件的频率RMS为 **3.099%**，九个新K4096条件为 **4.266%**；完整18条件残差及180个逐进程残差分别保存在 `clock-cases.csv`、`clock-processes.csv`。
+
+**证据判断。** 三个全零K4096条件的频率残差只有+0.495%/+0.965%/−1.657%，没有重现R18长零区约−12%的低估；其逐trial频率响应误差为−1.367%/+0.397%/−3.453%。本批削弱了“K4096本身或统一缺少输出字节项导致长零区偏差”的解释，暂不支持据此添加统一D项；R18特有的部分零值/边界活动更值得优先核对，但本批没有直接识别其机制，也不能排除输出请求的贡献。
+
+原式也没有解释全部配对：cfg_a dyadic/random在10/10对中均有正频率响应误差，中位 **+8.634%/+12.775%**，范围分别+6.369%至+10.430%、+9.041%至+18.291%。其余七组中位误差为−3.453%至+0.397%；cfg_c random的K4096绝对残差+6.727%主要延续K1024的+7.222%配置偏差，配对响应误差仅−0.536%。因此保留cfg_a非零输入的跨K/几何/输入足迹迁移缺口，不将它归成单一D功耗。C和f统计作用域不同，也不强求二者比值重构完整event时间。
+
+结果见 [C-20261009-equal-work-clock-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/)：`replay/`保留独立回放，`equal-work-clock.json`保存九条桥接、九组完整分布/方向计数、Q/S核对和冻结参数身份，`paired-trials.csv`保存全部90对的时间/C/f及进程间隔。仅新增离线分析与本节记录，没有新函数族、自由参数或补测。
+
+```bash
+# 在仓库根目录运行；OUT必须是新的C目录。
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+RUN="$ROOT/20261009-R09-equal-work-job738459"
+OUT="$RUN/reanalysis/C-equal-work-replay-<新后缀>"
+python3 microbench/gh200_resource_campaign/access_rules/r09_analyze.py --shared --input "$RUN" --output "$OUT/replay"
+python3 microbench/gh200_resource_campaign/access_rules/r09_equal_work_clock.py --run "$RUN" --reference-run "$ROOT/20261009-R09-input-clock-calibration-job738376" --clock "$ROOT/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json" --output "$OUT"
+```
