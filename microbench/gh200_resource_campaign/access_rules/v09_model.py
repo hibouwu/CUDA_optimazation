@@ -8,8 +8,9 @@ The earlier cfg_b-only development API remains for reproducible old diagnostics.
 """
 import math
 
-import analyze_r13_supply as supply
-import r09_input_source_clock as clock
+import supply_model as supply
+import clock_model as clock
+import output_model
 import v08_model as events
 
 
@@ -62,6 +63,7 @@ def development(base, output):
     import json
     import statistics
     from pathlib import Path
+    from analyze_r13_supply import metrics
 
     def load(path):
         return json.loads(path.read_text())
@@ -136,14 +138,14 @@ def development(base, output):
                 envelope_error=predicted['window_us']/observed['envelope_us']-1,
                 constant_1p6ghz_dual_error=previous['dual_event_error'])
             reports.append(report)
-    scores = {key: supply.metrics([row[key] for row in reports]) for key in
+    scores = {key: metrics([row[key] for row in reports]) for key in
               ('dual_error', 'plain_error', 'envelope_error', 'frequency_error', 'constant_1p6ghz_dual_error', 'measured_frequency_diagnostic_dual_error')}
     output.mkdir(parents=True, exist_ok=False)
     result = dict(protocol='Same-card all-data development composition, not a heldout validation.',
         calibration=calibration, gpu=fitted_events['gpu'], cases=reports, scores=scores,
         input_sha256=hashes,
         implementation_sha256={Path(module.__file__).name: hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
-            for module in (supply, clock, events, events.base)},
+            for module in (supply, clock, output_model, events, events.base)},
         model_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         limits=['Supply/event parameters were developed on these same 13 conditions.',
             'Only cfg_b, full 132-SM grid, stage 6, complete K tiles and aligned A pitch are calibrated.',
@@ -207,24 +209,8 @@ def predict_components(row, setup, calibration):
                 supported.append((request['cta'],request['j'],bool(valid)))
         durations=[];timelines=[]
         for cta,valid in zip(loops,fractions):
-            p=dict(params);epilogues=None
-            if output_rule and cta:
-                if spec['schedule']!='cooperative':
-                    raise ValueError('these output rules were calibrated for cooperative kernels')
-                if single:
-                    rule=output_rule['E0_single']
-                    e0=max(rule['floor_ns'],rule['beta_ns_per_MiB']*first_bytes/2**20)+rule['R_ns']
-                    p['Etail']=output_rule['Etail_single_mean_ns']
-                else:
-                    e0=output_rule['E0_multi']['effective_ns']
-                    p['Etail']=(1-valid[-1])*output_rule['Etail_oob_median_ns']+valid[-1]*output_rule['v09_Etail_multi_median_ns']
-                middle=output_rule['E_middle_ns']
-                if middle is None:middle=output_rule['middle_padding_proxy']['ns']
-                epilogues=[e0]
-                for j,fraction in enumerate(valid[1:],1):
-                    key='Elast' if j==len(valid)-1 else 'E_middle'
-                    full=output_rule['Elast_ns'] if key=='Elast' else middle
-                    epilogues.append((1-fraction)*output_rule[key+'_oob_ns']+fraction*full)
+            p,epilogues=output_model.output_intervals(
+                params,spec['schedule'],valid,first_bytes,single,output_rule)
             value=events.cta_cycles(p,spec['schedule'],len(cta),kt,detail=details,
                 mainloops=[v for _,v in sorted(cta)],epilogues=epilogues,trace_events=details)
             durations.append(value[0] if details else value)

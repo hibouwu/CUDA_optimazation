@@ -14,10 +14,15 @@ Time: T = F + kappa*C/f; kappa = ends/stamped critical-cycle ratio (or 1), f the
 import gzip,json,math,statistics
 from pathlib import Path
 import v06_model as base
-from analyze_r18 import replay
 
 med=statistics.median
 SMS=132
+
+
+def replay(root, record, row):
+    """Keep trace analysis available without importing it on the prediction path."""
+    from analyze_r18 import replay as replay_trace
+    return replay_trace(root, record, row)
 
 
 def cdiv(a,b):return -(-a//b)

@@ -19,6 +19,7 @@ import statistics
 from pathlib import Path
 
 import v08_model
+from clock_model import duration_term
 
 
 def read_json(path):
@@ -172,6 +173,7 @@ def analyze(run, output):
         purpose='Post-measurement diagnostic only; frozen V08 score and decision unchanged.',
         run=str(run), frozen_sha256=sha256(frozen_path),
         diagnostic_source_sha256=sha256(Path(__file__)),
+        clock_model_sha256=sha256(Path(__file__).with_name('clock_model.py')),
         official_complete_time=official['complete_time'], official_passed=official['passed'],
         calibration=cal_ranges, h06=h06, cases=cases, l2_controls=controls,
         actual_frequency_error=spread([c['actual_frequency_error'] for c in cases]),
@@ -234,16 +236,6 @@ def clock_point(row, observed, setup, calibration, prediction=None):
                 cycles=cycles, converted_cycles=converted, fixed_us=timing['F'],
                 observed_window_us=observed['window_ends'], observed_ghz=observed['ghz_ends'],
                 plain_us=observed['plain_us'], cycle_error=cycles / observed['c_max_stamped'] - 1)
-
-
-def duration_term(window, form, tau):
-    if form in ('frozen', 'refit_ac', 'full_log'):
-        return math.log(window)
-    if form == 'no_duration':
-        return 0.0
-    # Mean of an exponential relaxation over a window, not its instantaneous endpoint.
-    x = window / tau
-    return 1 + math.expm1(-x) / x
 
 
 def candidate_frequency(point, window, model):
@@ -377,6 +369,7 @@ def clock_candidates(run, followup, trend_run, output, activity=False):
     trend_cases = [{key: row[key] for key in ('id', 'config', 'plain_us', 'ghz_ends', 'c_max_ends', 'window_ends')}
                    for row in trend['cases'].values() if row.get('status') != 'numeric_error']
     result = dict(frozen_sha256=sha256(frozen_path), diagnostic_source_sha256=sha256(Path(__file__)),
+        clock_model_sha256=sha256(Path(__file__).with_name('clock_model.py')),
         activity_comparison=activity,
         training_cases=train_ids, train_n=len(points), forms=fits, conditional_grouped_cv=grouped,
         folds=folds, diagnostics=diagnostics, input_points={'calibration': points, 'heldout': heldout, 'followup': followup_points},
@@ -811,6 +804,7 @@ def input_clock_candidates(run, calibration_run, old_long, output, constrained=F
                 conclusion='One positive root for positive C, nonnegative B/Q, and the declared phi/mu unit domain.')
         model['accepted_for_composition'] = False
     result = dict(environment=environment, run=str(run), diagnostic_source_sha256=sha256(Path(__file__)),
+        clock_model_sha256=sha256(Path(__file__).with_name('clock_model.py')),
         constrained=constrained, max_clock_evidence=clock_evidence,
         coefficient_constraints=(dict(a_max_ghz=cap, nonnegative=['b', 'c', 'd_dyadic', 'd_zero', 'd_random'],
             strict_margin_ghz=1e-6, phi_domain=[0, 1], mu_domain=[0, 1],

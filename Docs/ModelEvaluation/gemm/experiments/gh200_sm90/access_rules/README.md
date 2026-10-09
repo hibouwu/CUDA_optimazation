@@ -10,7 +10,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-规则推导与计量约定见 [RULES](RULES.md)。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；[V09](V09-component-validation.md) 的采样和评分已完成，后续先做离线误差定位。
+现行V09候选的公式、输入与限制只维护在 [RULES](RULES.md#v09-model)。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但保留行距/边界反例；实验页以当前结论和证据索引为主。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；[V09](V09-component-validation.md) 的采样和评分已完成，后续先做离线误差定位。
 
 <a id="当前状态2026-10-07"></a>
 
@@ -53,7 +53,8 @@
 
 ## 数据与代码
 
-- [运行、拟合与分析代码](../../../../../../microbench/gh200_resource_campaign/access_rules/)；各实验页给出具体脚本、参数与复现命令。
+- [运行、拟合与分析代码](../../../../../../microbench/gh200_resource_campaign/access_rules/)：预测入口为v09_model，供给/输出/时钟是独立纯模块；原分析CLI保留复现用途。
+- 两组R18方向配对统一由[r18_cases.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r18_cases.py)生成（`--family first-fill|input-map --axis m|n`）；四份已有JSON作为历史展开快照保留，`--check`核对全部字段。
 - [原始结果归档](../../../../../../results/gh200_resource_campaign/access_rules/)按 run-id 保存源码、构建、环境、样本与分析；冻结预测及绑定记录见各 V 页。
 - [规则说明](RULES.md)保留计量约定、手算例子与 2026-10-08 一次性离线复现记录。
 - [历史过程文件](../../gh200_sm90_archive/access_rules/)保留原样；不作为当前执行要求。

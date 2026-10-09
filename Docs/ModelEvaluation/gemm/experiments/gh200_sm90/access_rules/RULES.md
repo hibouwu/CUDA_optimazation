@@ -1,19 +1,104 @@
-# GH200 条件规则：从操作到完整 GEMM
+# GH200：现行候选与已测条件规则
 
-对象为单GPU、FP16输入、FP32累加与输出、α=1、β=0的CUTLASS3.9.2 GEMM。cfg_a为128×128×64 cooperative、cluster2×1、6 stage；cfg_b为同tile的pingpong、cluster1×1、6 stage；cfg_c为256×128×64 cooperative、cluster1×2、4 stage。所有阶段数以构建查询为准。
+<a id="v09-model"></a>
 
-本文说明计算与访问规则、事件组合和适用条件。当前预测结论与完整实验索引统一见 [README](README.md)；V07、V08 的逐例结果保存在各自验证记录中。
+## 现行候选：V09 job738972-r2（整体未通过）
 
-## 计量约定
+唯一现行组合候选是 **V09 r2**：同卡 first/later 供给、single/multi 与 real/OOB 输出、输入相关时钟接入同一 CTA 事件递推。它已完成新留出，**不是通过规则**：30 条件中 29 个受支持预测的完整时间绝对误差中位/最大为 **4.11%/35.46%**，另一个保持冻结前拒绝；分项与关键 CTA 仍有显著失配。[完整判定与逐例表](V09-component-validation.md)。
 
-- 工作量分别记录 FLOP、整数 OP、逻辑读写字节与实际执行需求；有效 GEMM 数学工作为 `2MNK FLOP`。补齐 tile、消费者归约、地址和同步另记实际工作，其时间仍计入完整调用。
-- 单 CTA 用同一 SM 的 `clock64` 差，记录实际 SM ID；多 SM 包络用 `globaltimer`，不跨 SM 相减 `clock64`。完整 GEMM 用 CUDA event 包围一次调用。
-- 每个窗口写明起止事件，以及循环、等待、同步和排空是否包含在内。完整调用时间不含分配、输入填充、驱逐准备和结果检查；具体采样与预热条件见各实验页。
-- 不同工作量或计时窗口的服务率不能直接相加；接入模型时沿用[整段或分段计账](../../../model/interfaces.md#5-计时与层间边界)，已含成本不再叠加。物理 bank、端口、缓存层级、HBM 流量等归因须有额外证据，否则明确写为推断。
+参数唯一来源为 [r2 frozen/calibration.json](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/frozen/calibration.json)，冻结身份为 [manifest.json](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/frozen/manifest.json)。下列公式说明接线与单位，不在正文复制另一套可修改参数表。
 
-进入 V07 预测的只有 V06 事件递推、当前卡重新校准的参数和 R18 边界修正。R02、R11、R12、R16、B01 已测，未用于 V07 预测；R19 只用于诊断，V07 的尾差项选为“无”。下文这些实验的规则作为已测条件服务记录，不是 V07 的输入。
+### 对象、静态输入与预测入口
 
-## 1. 源供给、推进和结果消费必须分开
+FP16 输入、FP32 累加与输出，α=1、β=0，CUTLASS 3.9.2，GPU-43269fbc-449d-3e0f-908a-9c81229546d3。cfg_a 为 128×128×64 cooperative、cluster 2×1、6 stage；cfg_b 同 tile、pingpong、cluster 1×1、6 stage；cfg_c 为 256×128×64 cooperative、cluster 1×2、4 stage。实际 stage/grid/资源由构建查询提供。
+
+[v09_model.predict_components(row, setup, calibration)](../../../../../../microbench/gh200_resource_campaign/access_rules/v09_model.py) 只从形状、行距、输入模式、输入 map 边界、swizzle、静态资源和冻结参数构造候选数值。软件调度必须保留补齐/OOB tile；有效输出面积不能替代执行工作量。供给、输出和时钟分别由 [supply_model](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)、[output_model](../../../../../../microbench/gh200_resource_campaign/access_rules/output_model.py)、[clock_model](../../../../../../microbench/gh200_resource_campaign/access_rules/clock_model.py) 提供，CTA 依赖仍沿用 `v08_model.cta_cycles`。
+
+### first/later 条件供给
+
+对 CTA i 的第 j 个输出 tile，令 p 为 first（j=0）或 later（j>0），K_t=K/64，q_cfg 为 512/512/1024 cycle/Ktile。完整主循环候选为
+
+\[
+L_{i,j}(f)=b_{cfg,p}+K_t\max\!\left(q_{cfg}/f,\;\theta_{cfg,p}^{\mathsf T}x_{i,j}\right),
+\]
+
+其中 f 用 GHz（cycle/ns），L 与 b 用 ns；x 按配置投影到可辨识的请求组合。原始特征分别记录有效源 KiB、A/B 额外 32 B/128 B 地址覆盖与目标 SMEM 填零 KiB。覆盖量是逻辑请求代理，不是实测 L2/HBM 流量；各配置、first/later 参数不共用。
+
+供给请求按真实软件轮次构造，并用 `min(stage,K_t)/K_t` 在本轮与下一轮请求之间计入有限预填。该权重是候选假设，未从 stage 扫描确认为通用定律。[R13](R13-async-retirement.md)维护构造、校准与局部负结果，[R10](R10-layout-cache.md)维护行距对照，[R18](R18-cluster-boundary.md)维护填零路径。
+
+r2 在请求特征支持之外，还用等价校准参数集合检查目标窗口是否唯一；正式冻结的支持检查位于 `run_v09.check_prediction_support`，不能仅用数值入口的局部 Jacobian 标志或某个优化器给出的解接受预测。cfg_c G2 的两个首轮 CTA 在目标频率下可转入供给受限，同样校准拟合可给不同价格，因此保持“不支持”。固定 f 下的范围不等于联立时钟后的完整时间区间，也不是置信区间。
+
+### single/multi 与 real/OOB 输出
+
+cooperative 的输出使用 merged 边界：`M=max(MAIN_END)`、`P=max(PERMIT)`、`D=max(DONE)`；`w=P−M` 已单独收费，E=D−P。issuer 的整个 `store()` 窗口从更早的 permit 开始，不能在 w 后整段加入。
+
+令 B0 为每个 CTA 首个 tile 的有效 FP32 输出字节总和，T_max 为整个 case 中最大的每 CTA tile 数：
+
+| 条件 | 当前候选 | 计账与限制 |
+|---|---|---|
+| T_max=1 | `E0=max(floor_ns, beta_ns_per_MiB × B0/MiB)+R_ns` | 每配置仅两个 K4096 校准规模；只收 E0，不再收 Elast |
+| T_max≥2 的首轮 | `E0_multi.effective_ns` | 普通校准只有一个 B0，不能分别辨识 floor 与 beta；case 内仅做一个 tile 的 CTA 仍走 multi 规则 |
+| 后续完整输出 | 中间 E_middle、最后 Elast | 已是 merged 窗口，不再加 R；cfg_c middle 来自 padding 中的 real 子集 |
+| 后续部分/OOB 输出 | `(1−u)E_oob+uE_real` | u 为该 tile 有效输出面积比；partial 线性插值尚未通过迁移验证，OOB 不设为零 |
+| 最终尾段 | single 常数；multi 按最后 tile 的 u 混合 real/OOB 尾段 | V09 multi 使用冻结中位口径，不与归档均值表混用 |
+
+这套覆盖只接入 cfg_a/c；cfg_b 保留 pingpong 的 E 与重叠递推。输出/最终 `.read` 边界只支持源 SMEM 可复用，完整 CUDA event 才覆盖目标写完成。[R15](R15-output-service.md)保留候选为何这样分组及其负结果。
+
+### 输入相关时钟与时间换算
+
+从软件调度的全部名义 tile 计算每 SM 平均工作：
+
+\[
+Q=K_t\sum_iN_iq_{cfg}/132,\qquad
+S_{src}=K_t\sum_iN_is_{cfg}/132,
+\]
+
+其中 s_cfg 为 24/32/32 KiB/Ktile，按理想 cluster 多播折算；Q/S_src 包括补齐工作。对输入模式 m∈{dyadic,zero,random}：
+
+\[
+f_m(W)=a-d_m\frac{Q}{1000W}-e_m\frac{S_{src}}{W}g(W/\tau),\qquad
+g(x)=1-\frac{1-e^{-x}}x.
+\]
+
+W、τ 用 µs，f/a 用 GHz；Q/S_src 是名义活动代理，不能命名为物理功率项。时钟拟合目标是观测有效频率，训练使用观测窗口；自由预测只使用候选递推得到的 W，不读目标时间或频率。[R09](R09-inkernel-clock-stages.md#source-clock-dev-v1)保留训练域和跨 K 失败。
+
+r2 还按静态必零乘积比例 z 混合该输入模式与全零端点的 d/e，不缩减 Q/S_src。这是零新参数的活动假设；一侧面板为零与两输入全零不同，尚无物理功率证据。
+
+所有事件常数与 L/E 以 ns 进入递推。cooperative：首个 `fm=P0+S`，后续 `fm=前一DONE+h`，`DONE=fm+L+w+E`，最终加 Etail。这里事件 S 是首段等待，与时钟源工作 S_src 不同。
+
+pingpong 使用 `fm_0=P0+S`、`me_j=fm_j+L_j`，随后保留三条依赖：
+
+```text
+fm_j = max(me_{j−1}+gm, DONE_{j−2}+h)   第二项从j=2起
+ep_j = max(me_j+w, DONE_{j−1}+we)       第二项从j=1起
+DONE_j = epilogue_end(ep_j, 下一轮主循环窗口)
+```
+
+`epilogue_end` 将E作为输出工作量，与下一轮主循环重叠时按冻结比例r推进，其他时间按1推进；最后取 `max(DONE)+Etail`。不能把全部L/E直接求和。
+
+给定 f，递推得到每 CTA 完成时间 D_i(f)，令 `W(f)=max_i D_i(f)/1000`，联立 `f=f_m(W(f))`。求根域为 `0<f≤a`；正、连续、随 f 非增的包络是求解器的前提，不能把固定周期模型的唯一根证明自动推广到任意重叠递推。模型忽略 CTA 入口分散，并列最大者全部保留。
+
+最终 `T_plain=F_us+κW`；另报 `T_dual=W+dual_event_extra_ns/1000`。F/κ 来自参照条件的观测 dual 包络与 plain event 映射，没有用供给模型残差拟合。它们包含观察协议差，不是纯 launch 常数；不能再把 W 当 cycle 除一次 f。
+
+### 适用范围与已知失败
+
+- 参数限上述参考卡、编译/观察协议和校准输入分布；clock 的 21 条训练全部 K1024、seed17，窗口 13.600–2546.928 µs。小 grid、stage4、partial、新 random seed 与 K32768 都是 V09 检验的迁移，代数支持不等于经验验证。
+- cfg_b K32768 的频率低估 25.00%，总时间高估 35.46%；代入观测频率后仍是测后诊断，不替换冻结分数。cfg_b A+16B 实测慢 28.94%，模型只给 1.40%；stage4 实测慢 10.47%，模型响应为零。
+- 首段、预填、later 主循环与尾段仍有较大分项误差；cfg_c partial/sw8 真正最后完成 CTA 在 10/10 次均不属于预测并列集合。总时间中位 4.11% 不能覆盖这些失败。
+- 未覆盖跨卡、A+32/64/96B、基址偏移、rotation、K 尾部、cfg_b partial、A16+B 非零组合。时钟不按历史最小频率夹紧；r2 拒绝项不因测后数值接近而追认为受支持。
+
+[测后消融](V01-validation.md#v09-ablation)暂不支持整体退回V08聚合形式：共享时钟下完整候选4.11%/35.46%，同卡重拟合V08形式5.56%/48.68%。局部收益并不一致，保留现行候选而不增加分支；这不是新的留出成绩。
+
+## 计量与组合约定
+
+- 有效数学工作为 `2MNK FLOP`；补齐 tile、消费者归约、地址、同步与排空按实际窗口计入时间，不能混入同一有效 FLOP 分子。
+- 同一 SM 的周期差用 `clock64`；跨 SM 包络用 `globaltimer`；完整 GEMM 用 CUDA event。先在同次调用、同对象内相减/求比，再明确汇总层级，不跨 SM 相减 `clock64`。
+- 完整调用不含分配、初始化、驱逐准备或结果检查。不同端点、工作量、输入模式与观察协议的服务率不能直接相加；沿用[模型接口](../../../model/interfaces.md#5-计时与层间边界)，已含成本不再收费。
+- bank/端口、缓存命中、物理 HBM 流量与异步队列深度尚未知；下列已测条件关系只在各自范围内使用，不自动成为 V09 参数。
+
+## 已测条件关系
+
+### 源供给、推进和结果消费必须分开
 
 8192次FFMA/lane、8条累加链、4 warp时，同一kernel、40 reg/thread的复用一对源为9880 cycle，轮换八对为10400 cycle，慢5.26%。旧独立编译帧为56/40 reg/thread，差约22%。固定帧后仍有差异，但数值明显依赖编译帧。
 
@@ -29,7 +114,7 @@
 
 ![RF条件服务](../../../../../../results/gh200_resource_campaign/access_rules/20261008-R02-job736989-v8/analysis/plots/r02-service.png)
 
-## 2. 独立操作流不自动满足 max(A,B)
+### 独立操作流不自动满足 max(A,B)
 
 [R11](R11-mixed-issue.md)每路固定128动作/单元、256单元，分别测A-only、B-only、两种串行、同组交错和跨组并发。
 
@@ -43,7 +128,7 @@ WGMMA工作为`32768×(2×64×128×16)=8,589,934,592 FLOP`；除以交错窗口�
 
 组合接口需要同时携带组织、共同消费者、阶段位置和空控制。`T_A+T_B`包含两份公共成本，不能把它无条件当串行下界；空单元也不是任意操作图的可加常数。L1按具体操作流查询联合服务，L2决定哪些流确实可同时推进。
 
-## 3. SMEM逻辑区域独立，仍可能有联合服务代价
+### SMEM逻辑区域独立，仍可能有联合服务代价
 
 [R12](R12-smem-path-contention.md)用三个warpgroup分别发TMA、执行WGMMA、发STS；区域互不重叠，所有组织保留相同SMEM容量和两个阶段的消费者。
 
@@ -61,7 +146,7 @@ WGMMA工作为`32768×(2×64×128×16)=8,589,934,592 FLOP`；除以交错窗口�
 
 L1提供独立路径/联合窗口，L2在实际角色和缓冲组织下组合；物理共享端口和队列深度仍未知。
 
-## 4. 输入就绪、消费完成和槽可复用是不同事件
+### 输入就绪、消费完成和槽可复用是不同事件
 
 ```text
 producer: 等empty → 发TMA → full就绪 ──────────────────────┐
@@ -75,7 +160,7 @@ TMA请求发出不等于输入可读；WGMMA提交不等于输入槽可覆盖；
 
 L0定义具体搬运/完成原语，L2负责每代缓冲的占用与复用依赖。[R15](R15-output-service.md)的标量STS输出探针与实际CUTLASS的STSM、向量化和寄存器重分配不同，其数值不能直接替代完整epilogue；完整输出和交接使用实际kernel中的[R14](R14-stage-handoff.md)、R18/R19与V07校准。
 
-## 5. 容量上限、执行窗口重叠和动态配额分别建模
+### 容量上限、执行窗口重叠和动态配额分别建模
 
 [R16](R16-residency-quota.md)的驻留探针固定64×64×64 TC、每CTA32个Ktile、264个CTA，stage=1/2/4，总SMEM预留128/96 KiB，查询得到1/2 CTA/SM上限。
 
@@ -89,7 +174,7 @@ L0定义具体搬运/完成原语，L2负责每代缓冲的占用与复用依赖
 
 L1使用容量、编译资源和配额合法性；L2使用释放/申请依赖；L3用实际CTA工作与完整包络。
 
-## 6. cluster边界必须区分零值、越界和补齐工作
+### cluster边界必须区分零值、越界和补齐工作
 
 [R18](R18-cluster-boundary.md)把普通数据、整块越界和有效地址内显式零置于相同物理tile列表、grid、stride和资源下。
 
@@ -101,7 +186,7 @@ cfg_c同样的边界对照没有cfg_a的正惩罚，不能共享系数。cfg_c�
 
 L2携带首/后tile及边界类别的候选窗口差；L3保持真实物理工作列表。共享B导致扩散仍是推断，没有唯一物理机制证据。
 
-## 7. 最慢CTA与中位CTA不能互换
+### 最慢CTA与中位CTA不能互换
 
 [R19](R19-critical-cta-tail.md)直接记录cfg_b的实际调度坐标。1408²逻辑工作11×11=121个tile；swizzle8补到256个，分配为`124×2+8×1=256`。近单波长K的47.456→115.520 μs变化先要解释工作量，不能先叫缓存惩罚。
 
@@ -109,7 +194,7 @@ L2携带首/后tile及边界类别的候选窗口差；L3保持真实物理工�
 
 完整包络为`max(end_ns)−min(entry_ns)`。最长clock64窗口与最晚退出的CTA分别保存；入口分散96–128 ns不能自动解释所有数万周期尾差。L3需要实际调度列表、关键CTA和负载内频率，不能删除慢CTA来满足误差目标。
 
-## 8. 带宽坐标按方向、工作集和完成语义使用
+### 带宽坐标按方向、工作集和完成语义使用
 
 [B01](B01-bandwidth-cache.md)分别列global读/写/独立读写、TMA tensor输入/输出、SMEM独立读/写/联合读写和GEMM缓存准备。有效请求字节、不同地址量、payload与padding分开。
 
@@ -117,44 +202,8 @@ L2携带首/后tile及边界类别的候选窗口差；L3保持真实物理工�
 
 驱逐准备只是先写独立缓冲并完成同步的协议，没有计数器时不称保证冷HBM。global整卡GB/s与单CTA B/clock64-cycle不能直接取最大值或相加；新卡校准不拼接旧卡时间拟合。旧资源索引覆盖计算、矩阵交换、cp.async、同步、DSM/多播和辅助操作，来源和范围保留在覆盖清单。
 
-## 9. 完整GEMM的递推与验证
+## 旧组合与复现来源
 
-层级沿用[模型接口](../../../model/interfaces.md)：L0定义操作原语；L1处理线程、片上数据、发射和驻留；L2组织供给、缓冲及阶段流水；L3安排全体工作tile并求完整GEMM完成时间。层级不是新增的四份硬件资源。
+V07 的事件递推、手算和分项未通过记录见 [V07](V07-rule-validation.md)；V08 的后续行距、供给和补齐对照分别见 [R10](R10-layout-cache.md#v08-stride)、[R13](R13-async-retirement.md#v08-supply)、[R18](R18-cluster-boundary.md#v08-padding)。它们是现行候选的来源与反例，不是另一份当前参数。
 
-V07 的 cooperative 后tile受前tile输出/交接约束；pingpong同时有MMA顺序和epilogue顺序，必须保留max依赖与重叠。V07 将边界增量加到对应物理tile的主循环窗口一次；其定位与迁移限制见 V07、V08 验证记录。完整时间由关键CTA周期、当前卡负载内频率规则和固定调用项得到；这些是方案参数，不进入硬件规格表。输入数值也是时间换算的条件：[R09](R09-inkernel-clock-stages.md) 的同卡同形状对照已显示，dyadic、zero、random 的有效 cycle/ns 和完整时间显著不同，不能把低熵输入的频率规则直接推广到任意有限值。
-
-可手算的完整例子：cfg_a的1792×1920×1536含210个tile，78个CTA做2个、54个做1个；冻结递推给出关键CTA 36,916.7305 cycle、形状对应频率解1.7690302 GHz、固定项4.6800005 μs，因此`T=4.6800005+36916.7305/(1000×1.7690302)=25.5483441 μs`。各阶段加数、pingpong的max依赖与边界增量算式见[V07模型手算](V07-rule-validation.md#冻结递推怎样手算)。
-
-V07的新矩阵固定在计时之前；同卡校准、参数、代码/二进制身份、预测及冻结时间分别绑定。全部24点保留，完整微秒与分项周期分别评分；事后换入实测频率或周期只作诊断，不修改冻结判定。目标是完整时间绝对误差中位≤5%、最大≤10%，大于等于512 cycle的分项中位≤10%、最大≤20%；短段同时给原始周期误差与边界证据。
-
-RF物理端口、bank、物理HBM流量、缓存命中率和异步队列深度仍没有足够证据。它们以未知量保留，也不被猜测常数填满。
-
-V07中，初始供给误差12.03%/45.92%，末次输出窗口12.44%/46.82%；主循环1.47%/16.57%通过。两个长K边界案例中，冻结所选CTA实测时长比真正最长CTA短约17.28%。完整时间达标不消除这些局部失配；本次不在同一留出集上重新拟合。
-
-## 10. 主循环受计算与操作数供给中较慢者限制
-
-每个 Ktile 的计算下界为 cfg_a/b 512 cycle、cfg_c 1024 cycle。按理想 cluster 多播复用折算，每 SM 每 Ktile 的逻辑源需求为 cfg_a 24 KiB、cfg_b/c 32 KiB，对应 48、64、32 B/cycle；这不是实测 L2 物理流量。[V08 后续对照](V08-wider-validation.md#后续对照三种机制分开同一作业)，逐项证据见 [R10](R10-layout-cache.md#v08-stride)、[R13](R13-async-retirement.md#v08-supply)、[R18](R18-cluster-boundary.md#v08-padding)：
-
-- A 或 B 的行距不是 128 B 倍数时，cfg_b 总时间多 15%–34%，cfg_a 多 5%–9%，cfg_c 不变；K、N 尾部和 D 行距本身几乎无影响。
-- 大足迹（105–260 MiB）长 K 时，cfg_b 交付 57–64 B/cycle，cfg_a 47–48，cfg_c 32。
-- swizzle=8 补齐出的整 cluster 越界 tile 仍完整执行主循环，额外 47–631 cycle/Ktile，随 K、补齐方向和配置变化，不是常数比值；补齐使总时间比 swizzle=1 多 25%–80%。
-
-[R18](R18-cluster-boundary.md) 的同逻辑输出配对已区分有效地址零与descriptor越界填零：cfg_b 的 M/N 向各两个K条件，改走有效地址零后完整时间缩短约17%–20%。因此供给需求须包含填零路径，不能只按有效地址覆盖计算。
-
-需求越高的配置越先受限，这与“计算和操作数供给取较慢者”的解释相符；放大倍数和供给上限还不能分开定值。[R13](R13-async-retirement.md) 的活动 SM 扫描进一步表明，行距代价还随执行规模和输出位置改变；共享服务和有限预填目前只是条件候选。预测时先检查行距对齐和补齐 tile 数，不满足 V08 适用范围的条件不能直接套用递推参数。
-
-同一作业还确认：供给 S 在调用前驱逐 L2 时增加 450–1300 cycle；cfg_a 最后一个 tile 的 epilogue 约 1922 cycle，与中间 tile 不同；cfg_c 单 tile 的 epilogue 在全部 CTA 同时写出时约 5800 cycle，部分 CTA 时约 4040。
-
-## 11. 2026-10-08 离线复现记录
-
-[当次检查快照](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/)保存离线入口及其依赖：
-
-```bash
-python3 results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/source/replay_delivery.py \
-  --archive-root results/gh200_resource_campaign/access_rules \
-  --output <新目录>
-```
-
-该入口复制 8 份新增或变更归档到新位置，重算数值、SASS/计量、测量有效性与 V07 误差，再仅用校准数据重建参数、边界增量和全部 24 个冻结预测。该次换目录复算与 10 项测试已通过，[复算回执](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/offline-replay.json)和[预测重建记录](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/prediction-reproduction.json)保存执行结果。
-
-这是 2026-10-08 的一次性记录，不要求每轮重跑。复算不运行 GPU、不修改冻结预测，也不改变分项未通过的判定。原 R02/R11/R12 和 R16 驻留数据按来源复用；当时由主对话完成检查，CPU 参照独立于 CUDA 校验实现，历史独立检查按归档身份复用。
+2026-10-08 的一次性离线复算保存于 [delivery-acceptance-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261008-delivery-acceptance-v1/)；复算通过不改变分项未通过的判定，也不要求每轮重跑。旧完整规则正文保留在 [cee978a 固定版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/RULES.md)。

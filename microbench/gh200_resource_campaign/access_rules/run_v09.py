@@ -45,7 +45,8 @@ def prepare(root,heldout_path,inputs,cutlass):
     run_r18.prepare(root,cutlass,'v09',refs+held,dual_clock=True)
     for name in ('run_v08.py','v08_model.py','v09_model.py','v09_fit.py','run_v09.py',
                  'v06_fit.py','analyze_r13_supply.py','analyze_r13_sm.py',
-                 'r09_input_source_clock.py','r09_v08_clock.py'):
+                 'r09_input_source_clock.py','r09_v08_clock.py',
+                 'supply_model.py','output_model.py','clock_model.py'):
         shutil.copy2(ROOT/name,root/'source'/name)
     shutil.copytree(inputs,root/'inputs')
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p)
