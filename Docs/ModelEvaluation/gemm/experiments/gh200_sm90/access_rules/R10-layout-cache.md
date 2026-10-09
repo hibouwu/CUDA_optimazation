@@ -133,7 +133,7 @@ A/B +16 B 和对齐旧观测已存在，继续离线复用。新批次要得到�
 
 本次仅增加专用 CPU 分析器并修订 R10/R13 文档，尚未修改或构建公共 cfg_a/b/c 框架，也未采样上述新条件。原 R10 独立探针的不同卡、不同布局观测继续单列。
 
-## h03 的 A/B 联合行距对照（2026-10-09，待采样）
+## h03 的 A/B 联合行距对照（2026-10-09）
 
 V08 最大时间误差来自 cfg_b h03（2400×3000×1000）。现有 V08F 分别改变 A 或 B 时，也使用了不同于 h03 的尺寸；不能将这些单轴增量直接相加，便认为已经识别了 h03 的联合代价。`max(计算,供给)` 还可能把对齐时较小的供给需求隐藏在计算分支下，单轴观测未必足以确定联合供给。
 
@@ -163,6 +163,91 @@ python3 microbench/gh200_resource_campaign/access_rules/run_r18.py prepare \
   --dual-clock
 ```
 
-CPU 检查已核对四条构建命令、同尺寸基线、直接 ns 解码和九份旧 V08 记录的兼容回放；新 dual 宏的 CUDA 编译、数值与扰动仍待本批确认。
+准备阶段的 CPU 检查已核对四条构建命令、同尺寸基线、直接 ns 解码和九份旧 V08 记录的兼容回放；新 dual 宏的实际结果见下文。
 
-首批 job 738162 已在原参考卡 GPU-099dda56 完成，160 个进程数值和时间线检查通过；四个变体均为 168 个寄存器、16 条静态 HGMMA、无 spill。不过该版仍按实际行距分配 A/B，四组合容量不同，未满足上面的共同容量控制。其[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/cases.json)和[容量诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/reanalysis/allocation-diagnostic-v2/joint-pitch.json)保留，暂不将联合代价定为规则。修正后的批次只重测这四个条件。
+首批 job 738162 已在原参考卡 GPU-099dda56 完成，160 个进程数值和时间线检查通过；四个变体均为 168 个寄存器、16 条静态 HGMMA、无 spill。不过该版仍按实际行距分配 A/B，四组合容量不同，未满足上面的共同容量控制。其[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/cases.json)和[容量诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738162/reanalysis/allocation-diagnostic-v2/joint-pitch.json)只保留作诊断，不替换或混入下面的匹配容量结果。
+
+### 匹配容量结果：job738169
+
+job738169，romeo-a043，GPU-099dda56-d7af-f60e-c285-aa2dc7ddfcfe。四角均分配 A=2,457,600、B=3,072,000 个 FP16 元素，初始化按相同容量上限执行，逻辑值、M/N/K、D行距、grid及dyadic/seed17不变。四条件×四变体×十进程共160个成功进程，655,360个保存输出值通过回放，无失败尝试。四变体均为168寄存器、16条静态HGMMA、无spill/C7510。
+
+plain trace缓冲为827904 B，wide/stamped/dual均为1368576 B；打点扰动以同缓冲区的wide为基线。下表完整时间取进程中位；后续主循环先对每进程所有 `j>=1` tile 窗口取均值、除以 `ceil(1000/64)=16`，再取十进程中位。窗口仍包含等待和排空，不减预填常数。
+
+| A/B行距条件 | plain μs | wide μs | dual μs | dual后续cycle/Ktile | dual后续ns/Ktile | dual/wide−1 |
+|---|---:|---:|---:|---:|---:|---:|
+| 对齐/对齐 | 29.888 | 29.840 | 30.960 | 566.379 | 334.935 | +3.753% |
+| 未对齐/对齐 | 36.160 | 36.128 | 36.496 | 717.251 | 415.515 | +1.019% |
+| 对齐/未对齐 | 37.920 | 38.048 | 38.736 | 779.464 | 447.485 | +1.808% |
+| 未对齐/未对齐 | 46.672 | 46.832 | 47.216 | 998.478 | 561.861 | +0.820% |
+
+四变体各条件CV最大1.583%，wide/plain的中位变化范围−0.161%～+0.343%。中位打点扰动小不表示每一对都合格：对齐条件dual/wide逐trial为+1.257%～+8.073%，仅B未对齐为−0.742%～+5.378%；stamped在对齐及仅A未对齐条件也出现超过5%的配对。因此本批满足容量控制与数值检查，但不能写成“所有单对trace扰动均通过5%”。所有有效trial保留，下面的局部量明确属于dual观察窗口，未证明等于未打点内核的阶段服务。
+
+每trial先计算 `I=both−A_only−B_only+aligned`，不能对四个条件各取中位后再把差称为“联合项中位”。同trial是相邻随机化进程，不是同时执行的四次调用：
+
+| trial | plain完整时间 I，μs | dual后续 I，cycle/Ktile | dual后续 I，ns/Ktile |
+|---:|---:|---:|---:|
+| 0 | 2.9440 | 86.6755 | 35.9321 |
+| 1 | 2.0800 | 69.9936 | 32.4877 |
+| 2 | 2.8160 | 85.9115 | 36.2593 |
+| 3 | 2.5600 | 59.8418 | 32.6296 |
+| 4 | 2.5280 | 68.2402 | 39.7407 |
+| 5 | 1.3440 | 64.4850 | 28.5000 |
+| 6 | 2.5280 | 71.4593 | 30.0062 |
+| 7 | 1.5040 | 61.2602 | 30.3333 |
+| 8 | 1.8560 | 76.5241 | 36.9383 |
+| 9 | 3.0080 | 63.6582 | 32.3889 |
+| 中位 | 2.5280 | 69.1169 | 32.5586 |
+
+正联合项存在于全部十个trial，但**不等于物理请求互相放大**。例如trial0的四个直接ns/Ktile为335.0556、414.7531、445.9012、561.5309；令
+
+```text
+L(xA,xB) = max(C, S + a*xA + b*xB)
+C=335.0556, S=299.1235, a=115.6296, b=146.7778  （ns/Ktile）
+```
+
+即可重现四点，正联合项为 `C−S=35.9321`，模型中并没有 `xA*xB` 请求交互项。C只是对齐窗口锚点，S/a/b也不是独立测得的物理供给时间。这是四点确定四参数的一个可行解释，不能称预测验证；主循环等待、地址覆盖、内部服务及观察扰动仍未分开。
+
+[原joint-v1结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738169/reanalysis/joint-v1/joint-pitch.json)不改动；[逐trial复核与配对扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738169/reanalysis/B-20261009-matched-joint-final/joint-pitch.json)保存全部原联合项，并新增逐trial stamped/dual相对wide的扰动。复核入口为 `analyze_r10.py --joint-pitch --input <run> --output <新reanalysis目录>`。
+
+## B行距地址覆盖的局部预测入口（采样前固定）
+
+固定 cfg_b、2304×3072×1024，A/D行距对齐，`lda=1024, ldd=3072`；仅令 B 行距为6144+{0,16,32,64,128} B。五点均为 `alloc_lda=1024, alloc_ldb=3136, storage_m=2304, storage_n=3072`，dyadic/seed17、swizzle1、sm_count0、evict0；公共dual-clock协议不变。配置及采样由管理对话维护，分析器不创建第二套准备或调度框架。
+
+| ID | 用途 | ldb，FP16元素 | 额外32 B覆盖行数 | 额外128 B覆盖行数 |
+|---|---|---:|---:|---:|
+| cfg_b_bcurve_p0 | 校准 | 3072 | 0 | 0 |
+| cfg_b_bcurve_p16 | 校准 | 3080 | 32 | 56 |
+| cfg_b_bcurve_p32 | 校准 | 3088 | 0 | 48 |
+| cfg_b_bcurve_p64 | 局部留出 | 3104 | 0 | 32 |
+| cfg_b_bcurve_p128 | 局部留出 | 3136 | 0 | 0 |
+
+覆盖量按每次TMA的64行×256 B B-box计算。对覆盖行宽W=32或128 B，逐行起点余数为 `r_i=(i*B_pitch_bytes)%W`，额外覆盖为 `sum_i(ceil((r_i+256)/W)−256/W)`。box的N起点是256 B倍数，K起点按64行移动，不改变本表余数。这只是地址覆盖计数，不命名为物理请求数、L2流量或HBM流量。
+
+冻结目标只取 **dual后续主循环ns/Ktile**：每trial对全部CTA的 `j>=1` 窗口 `(MAIN_END_ns−FIRST_MMA_ns)` 取均值，除以16，再对十个成功trial取中位。首tile、完整GEMM时间、周期与实测频率不进入目标或预测特征，观察到的重叠也不作为输入。
+
+两候选均为 `max(C, q0+q1*x)`，x为各自额外覆盖数，C固定为+0校准目标，`0≤q0≤C, q1≥0`。只使用p0/p16/p32，按三个条件等权最小化平方误差；代码分区枚举平坦段、一个激活点和两个激活点及边界，以有理数计算最优解集合，不靠优化器初值挑选参数。
+
+参数唯一与留出预测唯一分别记录。例如32 B候选只有p16的x非零，p16>C时可有 `q0+32q1=y16` 的整条最优线段，参数并不唯一；但p64/p128的x均为0，预测都唯一等于C。128 B候选也可能存在被max平台隐藏的参数集合；冻结文件保存每个最优集合的顶点、参数范围以及留出预测区间，而不是任意选一个点后宣称参数已定。没有新增校准数据时，本节不填写真实q0/q1或留出预测值。
+
+### freeze接口与最小依赖
+
+入口沿用 [analyze_r10.py](../../../../../../microbench/gh200_resource_campaign/access_rules/analyze_r10.py)，仅依赖Python标准库和同目录的 `analyze_r18.py`、`analyze_r13_sm.py`、`v06_model.py`、`v06_run.py`、`v08_model.py`；本批dyadic路径不需要NumPy或SciPy。打包时这些依赖和本分析器一起纳入source哈希清单。
+
+```bash
+python3 analyze_r10.py --freeze-b-pitch --input RUN --output RUN/frozen/r10-b-pitch.json
+# 管理者随后用原runner采样两个heldout；本命令不提交GPU。
+python3 analyze_r10.py --score-b-pitch --input RUN \
+  --predictions RUN/frozen/r10-b-pitch.json --output RUN/reanalysis/b-pitch-score-v1
+```
+
+freeze需要五个已知条件的 `cases.json`、`static_setup.json`、`environment.json`、`run_config.json`，源码/二进制清单与其文件，以及SASS哈希清单；样本**只读取p0/p16/p32三个目录**的plain/wide/stamped/dual记录，各十次成功trial，复用原数值、坐标、设备与容量检查。留出目录在freeze前不得存在，不读取留出测量。aligned C是校准参数，不是采样后的预测特征。
+
+输出含 `status=frozen`、`frozen_unix_ns`、原environment的完整`gpu`字符串，以及以两个留出ID为键的`predictions`，兼容现有 `run_v08` 的heldout检查。两候选、校准误差/失败、全部最优参数集合、预测区间、目标和评分规则均保留；绑定模型、输入清单、校准样本、实际分析代码/依赖及二进制清单哈希，文件设为0444。已有冻结文件不覆盖。R10这是局部组件验证，不增加用户确认步骤，也不改变V09的人工作业边界。
+
+### 预声明评分
+
+同一目标、同一聚合顺序分别计算两个留出值。**每个候选独立要求三个校准点及两个留出点的最大绝对相对误差均≤5%**；两留出逐点报告有符号误差，不用它们重拟合。若最优参数不唯一而预测区间也不唯一，按区间两个端点中较大的绝对误差评分，不能看到留出后再选有利参数。校准失败候选仍输出预测和留出分数，但其局部判定保持失败；始终并列报告两候选，不事后挑一个改称整组通过。
+
+评分只针对该dual观察协议下的后续主循环ns/Ktile。完整时间与逐trial dual/wide扰动作为诊断保留，不通过删去有效慢trial改变目标，也不据局部分数发布新的GEMM通过成绩。score核对冻结输入/代码身份，要求留出进程起始时间晚于冻结时间；生成新的评分目录，不改冻结文件和原测量。
+
+CPU检查已覆盖给定覆盖数、参数不唯一而留出预测唯一、校准失败保留；临时合成样例另检查了仅三校准目录读取、两留出ID、只读freeze、评分及采样后拒绝freeze。它们不是新的GPU结果。`python3 analyze_r10.py --cpu-check` 可重复运行几何和参数检查。
