@@ -134,3 +134,6 @@ job738496 在同一 GPU-43269fbc 上完成 29 个数值预检查和 1160 个正�
 [CTA 定位诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-critical-cta-v1/summary.json)检查的是此前 29 条件 phase/mix 版本：不少 CTA 在模型中完全并列，不能把第一个索引称作唯一最慢者；两例 cfg_a 长 K 行距条件的这个代表 CTA 仍比真正最后完成者短约 10%，虽然后者都在并列集合内。两个 cfg_a OOB 条件的真正最后完成者还会落在该集合外。关键 CTA 唯一定位尚未解决，局部慢窗口残差也不因总时间接近而消失。
 
 新 stage 组织的准备沿用公共框架：`stages=4` 选独立 cfg_b_s4 二进制，默认构建命令不变。job738599 在另一张 GH200 上完成默认/4-stage 的八个正确性检查；均 168 registers、16 HGMMA、无 spill，4-stage SMEM 为149504 B，仍1 CTA/SM。默认四变体 SASS 与 job738496 完全相同。这只证明合法构建与数值正确，检查中的时间不进入拟合；新组织的性能迁移留给 V09。
+
+
+首轮填零补测后，A/C first 各合并4个新条件，原 later 与 B19 保持不变；全部50个已见开发条件的[组合重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/manager-three-config-composition-v4/report.json)中有49个支持，支持子集 plain 误差为3.35%/7.98%。剩余 cfg_c_first_fill_oob_k1024 在自由预测频率下离开已识别供给分支；其数值只作诊断，不能把49个子集成绩称为50个全部通过。新 cfg_a 的后续窗口也仍有局部最大约40%的误差。下一步冻结现有模型并保留拒绝项，不为了凑齐支持继续增加模型项或补测。
