@@ -2,6 +2,7 @@
 """CPU fixtures for the proposed R15 profile; no measured GPU data is generated."""
 import gzip
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 from analyze_r15_output_ns import PROFILE, WIDTH, analyze, direct_windows, summarize_call
 from analyze_r18 import reference
 from analyze_r15 import sha
-from analyze_r15 import analyze_dual_roles, output_parts, role_windows
+from analyze_r15 import analyze_dual_roles, output_parts, paired_J_decomposition, role_windows
 from run_v08 import row as make_row
 
 
@@ -118,6 +119,12 @@ class OutputNsTests(unittest.TestCase):
                             raw_sha256=sha(raw),elapsed_us=2.0)))
             analyze_dual_roles(root,root/'analysis')
             result=json.loads((root/'analysis/dual-roles.json').read_text())
+            decomposition=paired_J_decomposition(result['dual_processes'][rows[0]['id']][0],
+                                                 result['dual_processes'][rows[1]['id']][0])
+            self.assertAlmostEqual(decomposition['mean_log_ratio']['cycles'],math.log(2))
+            self.assertEqual(decomposition['mean_log_ratio']['ns'],0)
+            self.assertAlmostEqual(decomposition['mean_log_ratio']['local_rate'],math.log(2))
+            self.assertLess(decomposition['max_identity_residual'],1e-12)
             contrast=result['contrast_median']
             self.assertEqual(contrast['post_permit_ns'],0)
             self.assertEqual(contrast['post_permit_cycles'],400)

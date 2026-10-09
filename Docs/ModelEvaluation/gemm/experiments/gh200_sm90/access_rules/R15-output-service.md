@@ -488,3 +488,47 @@ python3 "$RUN/source/analyze_r15.py" --dual-roles --input "$RUN" --output "$RUN/
 ```
 
 运行入口沿用公共源码/二进制哈希、Slurm环境、GPU UUID、allocation及测量锁检查；build需要CUDA 12.9和sm_90a，setup需要132个可用SM对应上述完整单tile工作。CPU分析仅需Python标准库，CUTLASS 3.9.2头文件已随包复制。CPU合成检查覆盖双角色十字解码、零R_ns、大整数时间锚点、80进程完整入口及“cycle翻倍但ns不变”的局部换算分离；合成数据仅存在于临时目录，不进入实验结果。
+
+## 双角色实测复核：job738397（2026-10-09）
+
+**c2/c6的周期变化主要伴随局部cycle/ns变化，同时保留较小的直接纳秒差；两点足以给固定几何的开发初值，尚不足以校准通用cfg_c输出规则。** 本轮只做CPU重放。a057/GPU-43269fbc、job738397已完成80个成功进程、无失败，source/binary/SASS哈希通过；四bin均168 registers、16 HGMMA、无spill或C7510。与wide相比，stamped/dual的中位整调用扰动分别为c2的1.233%/1.075%、c6的0.135%/0.397%；全部变体CV低于1%，单trial扰动绝对值最大3.175%。dual的J_cycle相对stamped仅变化0.279%/0.041%，未看到整调用之外明显的J分项扰动。
+
+下表先取每进程132个CTA的中位，再取十进程中位；各列不能相加来代替逐CTA恒等式。
+
+| 条件 | W，cycle / ns | A，cycle / ns | I，cycle / ns | J，cycle / ns | R，cycle / ns | merged E，cycle / ns | 最终尾段，cycle / ns |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| c2 K4096 | 114 / 64 | 554.75 / 320 | 6224.50 / 3248 | 5755.25 / 3008 | 6 / 0 | 5761.25 / 3008 | 656.25 / 320 |
+| c6 K16384 | 113 / 88 | 602.75 / 384 | 4847.00 / 3136 | 4254.50 / 2752 | 6 / 0 | 4260.50 / 2752 | 528.00 / 320 |
+
+全部2640个dual tile在cycle/ns下通过 `I=A+J`、`E=J+R`、`maxDONE−M=W+J+R` 及最终尾段恒等式。两条件的R_cycle均恒为6；R_ns分别有1175/1168个0和145/152个32 ns。原stamped的2640个tile中R_cycle仍全部为4，说明不能把6 cycle或0 ns当成硬件join常数。两条件的另一consumer final均早于issuer final；最终 `.read0` 仍只表示源SMEM读完/可复用。
+
+### 周期差与直接纳秒差
+
+按相同trial/CTA逻辑工作先计算比值，再汇总，c6/c2的J_cycle、J_ns和局部cycle/ns比值中位分别为 **0.79775、0.96883、0.82698**，即约−20.2%、−3.1%、−17.3%。十个trial的配对J_ns差中位均为负，范围−64至−192 ns。对同一批配对取平均对数，精确满足 `log(Jc6/Jc2)=log(Jns6/Jns2)+log(fJ6/fJ2)`，对应几何均值比0.80409=0.97613×0.82376；局部换算项占对数周期差的88.9%。这是观测分解，符合长K下SM局部有效时钟降低，尚非锁频因果实验。
+
+按条件单独取中位时，J_ns为3008→2752 ns（−8.51%），不同于配对比值的−3.1%；两者都保留，不能混用。逐CTA J_ns的5%/50%/95%分位为c2的2208/3008/3200、c6的2560/2752/3072 ns，分布形状随K变化。merged permit在SM间的展开宽度中位也从1216增至3488 ns。J包含准备、同步及TMA相关等待，纳秒差不能进一步归因为纯输出带宽变化；静态132个首轮输出者不等于132个同时写出者。
+
+旧job738100在同一GPU上只直接测得issuer I_ns：c2/c6为3264/3144 ns；本轮为3248/3136 ns，相差−0.49%/−0.25%。这支持旧issuer观测的复现，但旧记录缺p1/d1的ns，仍不能倒推旧J_ns。旧I_ns跨K差−120 ns与本轮−112 ns接近；本轮直接A_ns为320→384、J_ns为3008→2752 ns。由于这些是分别取的中位，不能用其相加解释数值差额。
+
+### 可交回的递推初值与校准缺口
+
+若新事件递推全用ns，以下是同一批逐CTA样本的均值，能保持 `done=M+W+J+R`、`final=done+Etail` 的线性恒等式：
+
+| 条件 | W_ns | J_ns | R_ns | E0_ns=J+R | Etail_ns | final−M，ns |
+|---|---:|---:|---:|---:|---:|---:|
+| c2 | 74.691 | 2886.618 | 3.515 | 2890.133 | 334.812 | 3299.636 |
+| c6 | 88.970 | 2804.412 | 3.685 | 2808.097 | 324.509 | 3221.576 |
+| 两条件等权开发初值 | 81.830 | 2845.515 | 3.600 | 2849.115 | 329.661 | 3260.606 |
+
+最后一行可直接用于**相同M/N、132个完整单tile CTA、相同输入/缓存/编译与打点协议**的完整递推开发试跑；这是本次校准样本上的观测初值，尚非留出验证。若保持cycle递推，不把该ns组统一乘目标实测J_cycle/J_ns：J与W/尾段的时钟作用不同，目标局部换算只能诊断，不能作为自主预测输入。原stamped可给W约113–114 cycle、R=4 cycle的协议观测；dual的R=6须留在其自身协议下。上述分项残差不禁止完整递推组合试跑。
+
+两个条件的B0均为132个完整tile，已有 `J=max(J_floor,f_assumed*tau*B0/131072)` 的平台与规模系数不能独立辨识。若要校准这一既有形式，最小有判别力的矩阵可保留本轮132规模，并补48/96个完整单tile输出者各自K4096/16384：48沿用g3的1024×1536，96可用1536×2048，均sw1、同卡同协议，共四个缺失条件。必须实际观察到平台与随规模变化的分支，否则只报告可辨识的组合/界限；不得从同B0的两点硬解两参数。cycle/ns混合递推所需的频率必须由预先规定的clock规则或独立控制提供，不能读取目标J的实测换算。跨K、跨规模按完整条件留出；若模型覆盖T>=2，还须至少一个既有多tile条件的首/末tile与Etail直接dual证据。本轮不提交这些GPU条件，也不新增候选族。
+
+[本轮逐CTA重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R15-dual-roles-job738397/reanalysis/B-20261009-dual-roles-final/dual-roles.json)与[旧issuer重放、配对对数分解及参数凭据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R15-dual-roles-job738397/reanalysis/B-20261009-dual-roles-final/review.json)保存在新的B目录；原source、原报告及准备包保持不变。复核命令：
+
+```bash
+python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --dual-roles \
+  --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-dual-roles-job738397 \
+  --direct-run /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R15-output-ns-job738100 \
+  --output <新的B-reanalysis目录>
+```

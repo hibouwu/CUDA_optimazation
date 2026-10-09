@@ -630,7 +630,98 @@ def role_windows(root, row, variant):
     return processes
 
 
-def analyze_dual_roles(root, destination):
+def paired_J_decomposition(first, second):
+    """Exact log-ratio decomposition on matched logical CTA work, not a causal fit."""
+    a = {(t['cta'], t['j']): t for t in first['tiles']}
+    b = {(t['cta'], t['j']): t for t in second['tiles']}
+    if a.keys() != b.keys() or first['work_sha256'] != second['work_sha256']:
+        raise ValueError('paired logical work changed')
+    logs = defaultdict(list)
+    residuals = []
+    for key, x in a.items():
+        y = b[key]
+        c = math.log(y['cycles']['post_permit'] / x['cycles']['post_permit'])
+        n = math.log(y['ns']['post_permit'] / x['ns']['post_permit'])
+        f = math.log(y['cycles_per_ns']['post_permit'] / x['cycles_per_ns']['post_permit'])
+        logs['cycles'].append(c); logs['ns'].append(n); logs['local_rate'].append(f)
+        residuals.append(abs(c-n-f))
+    means = {k: statistics.fmean(v) for k, v in logs.items()}
+    return dict(trial=first['trial'], matched_ctas=len(a), mean_log_ratio=means,
+                geometric_ratio={k: math.exp(v) for k, v in means.items()},
+                max_identity_residual=max(residuals))
+
+
+def review_dual_roles(root, legacy_root, destination, result):
+    """Recheck build evidence and compare direct two-role data with the issuer-only run."""
+    import v06_run as common
+    from collections import Counter
+    from analyze_r15_output_ns import analyze as analyze_issuer
+    common.verify(legacy_root)
+    if json.loads((legacy_root/'environment.json').read_text())['gpu'] != result['environment']['gpu']:
+        raise ValueError('issuer comparison changed GPU')
+    for name, digest in json.loads((root/'build/sass_hashes.json').read_text()).items():
+        if sha(root/'build'/name) != digest:
+            raise ValueError('SASS identity changed')
+    resources = {name: common.sass_facts(root, name)
+                 for name in json.loads((root/'build/commands.json').read_text())}
+    if any(v['hgmma'] != 16 or v['gemm_registers'] != [168] or v['spills'] or v['c7510']
+           for v in resources.values()):
+        raise ValueError('unexpected R15 resource evidence')
+    analyze_issuer(legacy_root, destination/'issuer-738100')
+    old = {c['case']: c for c in json.loads((destination/'issuer-738100/output-ns.json').read_text())['cases']}
+    cases = []
+    for c in result['cases']:
+        processes = result['dual_processes'][c['case']]
+        tiles = [t for p in processes for t in p['tiles']]
+        spreads = []
+        for process in processes:
+            with gzip.open(root/process['raw'], 'rt') as stream:
+                events = {e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+            words = events['call']['trace']
+            permits = [max(words[i+24], words[i+664]) for i in range(0,len(words),1296)]
+            spreads.append(max(permits)-min(permits))
+        process_values = {k:[p['phases']['first']['median'][k] for p in processes]
+                          for k in ('post_permit','post_permit_ns','issuer_ns','arrival_gap_ns')}
+        stamped_j = statistics.median(p['phases']['first']['median']['post_permit'] for p in c['stamped_cycles'])
+        cases.append(dict(case=c['case'], process_medians=process_values,
+            process_ranges={k:[min(v),max(v)] for k,v in process_values.items()},
+            J_ns_p05_p50_p95=[statistics.quantiles([t['ns']['post_permit'] for t in tiles],n=20,method='inclusive')[i] for i in (0,9,18)],
+            R_ns_counts=dict(Counter(t['ns']['done_join'] for t in tiles)),
+            R_cycles_counts=dict(Counter(t['cycles']['done_join'] for t in tiles)),
+            stamped_R_cycles_ranges=[p['phases']['first']['ranges']['done_join'] for p in c['stamped_cycles']],
+            dual_J_cycles_relative_to_stamped=c['median']['post_permit']/stamped_j-1,
+            merged_permit_spread_ns=spreads, other_final_later=sum(p['other_final_later'] for p in processes),
+            issuer_only_job738100=old[c['case']]['median'],
+            issuer_ns_change_vs_job738100=c['median']['issuer_ns']/old[c['case']]['median']['issuer_store_ns']-1))
+    short = {p['trial']:p for p in result['dual_processes']['cfg_c_c2_k4096']}
+    long = {p['trial']:p for p in result['dual_processes']['cfg_c_c6_longk']}
+    logs = [paired_J_decomposition(short[t],long[t]) for t in sorted(short)]
+    log_mean = {k:statistics.fmean(p['mean_log_ratio'][k] for p in logs) for k in logs[0]['mean_log_ratio']}
+    assert abs(log_mean['cycles']-log_mean['ns']-log_mean['local_rate']) < 1e-12
+    pooled = {unit:{name:statistics.fmean(c['observed_component_means'][unit][field] for c in result['cases'])
+                    for name,field in (('W','w'),('J','post_permit'),('R','done_join'),('Etail','tail_after_merged_done'))}
+              for unit in ('cycles','ns')}
+    for v in pooled.values():
+        v['E0'] = v['J']+v['R']
+        v['M_to_role2_final'] = v['W']+v['E0']+v['Etail']
+    review = dict(input=str(root), legacy_input=str(legacy_root), cases=cases, resources=resources,
+        paired_log_decomposition=logs, pooled_mean_log_ratio=log_mean,
+        pooled_geometric_ratio={k:math.exp(v) for k,v in log_mean.items()},
+        local_rate_share_of_log_cycle_change=log_mean['local_rate']/log_mean['cycles'],
+        pooled_component_means=pooled,
+        replay_comparison_note='Compare all original fields except analyzer identity, which changes with this review.',
+        analyzer_sha256=sha(__file__), source_manifest_sha256=sha(root/'source_hashes.json'),
+        transfer_receipt=json.loads((root/'transfer-receipt.json').read_text()),
+        scope='Descriptive paired CTA log identities, not controlled frequency causality. '
+              'Pooled means are fixed-geometry single-tile development observations; no heldout qualification. '
+              'J includes preparation and synchronization; R is timestamp endpoint skew. '
+              'Neither DONE nor role2 final establishes global destination write completion.')
+    original = json.loads((root/'reanalysis/dual-roles-v1/dual-roles.json').read_text())
+    review['replay_agrees_with_original_report'] = all(result[k]==v for k,v in original.items() if k!='analyzer_sha256')
+    (destination/'review.json').write_text(json.dumps(review,indent=2)+'\n')
+
+
+def analyze_dual_roles(root, destination, legacy_root=None):
     """Direct two-consumer output decomposition; observations for recursion development."""
     from analyze_r18 import replay
     import v06_run as common
@@ -726,6 +817,8 @@ def analyze_dual_roles(root, destination):
               'Trace perturbation and prior component failures are reported without blocking combination trials.')
     destination.mkdir(parents=True,exist_ok=False)
     (destination/'dual-roles.json').write_text(json.dumps(result,indent=2)+'\n')
+    if legacy_root is not None:
+        review_dual_roles(root,legacy_root,destination,result)
     print(f'2 cases, 80 successful processes, direct role observations -> {destination}')
 
 
@@ -859,7 +952,7 @@ def main():
         if args.input is None or args.output is None:
             parser.error('--input and a NEW --output directory required')
         if args.dual_roles:
-            analyze_dual_roles(args.input,args.output)
+            analyze_dual_roles(args.input,args.output,args.direct_run)
         elif args.role_output:
             if args.direct_run is None or args.assumed_output_ghz<=0:
                 parser.error('--role-output requires --direct-run and positive --assumed-output-ghz')
