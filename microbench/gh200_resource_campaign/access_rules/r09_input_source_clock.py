@@ -123,6 +123,54 @@ def source_frequency(point, window, model):
     return dict(frequency_ghz=a - tensor - source, tensor_penalty_ghz=tensor, source_penalty_ghz=source)
 
 
+def solve_source_envelope(point, model, envelope_us, *, rtol=1e-10, max_iter=200):
+    """Couple the static Q/S clock to a caller's NS-recursion envelope, in us.
+
+    Requires continuous, positive, nonincreasing E(f) for 0<f<=a, with
+    E(f)->infinity as f->0 (positive work with a compute floor suffices).
+    Since g is concave and g(0)=0, g(W)/W decreases: F(W) is nondecreasing.
+    Thus h(f)=F(E(f))-f strictly decreases, h(0+)=a>0, h(a)<=0.
+    Bisect the finite frequency bracket (0,a]; never evaluate E at zero or
+    a negative clock mapping. Callback monotonicity is the caller's contract,
+    not a claim that every overlapping event recursion has been proved so.
+
+    Reads only input_mode/tensor_mean_cycles/source_mean_kib from point.
+    Closure is F(returned W)/returned f - 1; returned W equals E(returned f).
+    """
+    a, *costs = model['coefficients']
+    values = [a, *costs, model['tau_us'], point['tensor_mean_cycles'], point['source_mean_kib']]
+    if (not all(math.isfinite(v) for v in values) or a <= 0 or min(costs) < 0
+            or model['tau_us'] <= 0 or min(point['tensor_mean_cycles'], point['source_mean_kib']) < 0
+            or not math.isfinite(rtol) or rtol <= 0 or max_iter < 1):
+        raise ValueError('invalid source-envelope coefficient/work/solver domain')
+
+    def evaluate(frequency):
+        window = float(envelope_us(frequency))
+        if not math.isfinite(window) or window <= 0:
+            raise ValueError('envelope callback must return finite positive us')
+        mapped = source_frequency(point, window, model)['frequency_ghz']
+        if not math.isfinite(mapped):
+            raise ValueError('nonfinite source-clock mapping')
+        return window, mapped / frequency - 1
+
+    lo, hi = 0.0, a  # zero is a symbolic limiting endpoint, never a callback input
+    window, closure = evaluate(hi)
+    if abs(closure) <= rtol:
+        return dict(window_us=window, frequency_ghz=hi, closure=closure)
+    for _ in range(max_iter):
+        frequency = (lo + hi) / 2
+        if frequency <= 0 or frequency in (lo, hi):
+            break
+        window, closure = evaluate(frequency)
+        if abs(closure) <= rtol:
+            return dict(window_us=window, frequency_ghz=frequency, closure=closure)
+        if closure > 0:
+            lo = frequency
+        else:
+            hi = frequency
+    raise RuntimeError('source-envelope root did not converge; check callback contract')
+
+
 def solve_source_clock(point, model):
     """The unique positive root lies in [target/a, (target+e*S)/a]."""
     a, *costs = model['coefficients']
