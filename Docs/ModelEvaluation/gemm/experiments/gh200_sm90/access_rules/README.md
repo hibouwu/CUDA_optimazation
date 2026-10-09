@@ -27,8 +27,8 @@
 | [R06](R06-issue-residency.md) 发射与驻留 | 已测 | FFMA 接近发射上限；未得到统一驻留惩罚 |
 | R07 频率与固定项 | 已并入 [R00](R00-anchor-target.md#ndebug)、[R09](R09-inkernel-clock-stages.md#r07) | NDEBUG 锚点；调用后探针不能代替调用内频率 |
 | [R08](R08-waves-l2-reuse.md) 波次与遍历 | 已测 | 所列形状按离散波次计费；遍历收益依条件变化 |
-| [R09](R09-inkernel-clock-stages.md) 调用内分段 | 已测，输入扩展已采样 | 周期与时间须分开；三档输入已完成长窗口同卡对照，频率依赖输入数值 |
-| [R10](R10-layout-cache.md) 行距与尺寸尾部 | 已测 | cfg_b 对行距最敏感；对齐影响不能作统一惩罚；含 V08 后续的 A/B/D 行距与尺寸尾部 |
+| [R09](R09-inkernel-clock-stages.md) 调用内分段 | 已测，输入扩展已完成 | 周期与时间须分开；三档输入已完成长窗口同卡对照，频率依赖输入数值 |
+| [R10](R10-layout-cache.md) 行距与尺寸尾部 | 已测，局部覆盖候选未通过 | 匹配容量后 A/B 联合行距代价仍存在；五档 B 行距的冻结留出否定了本批两个简单覆盖候选 |
 | [R11](R11-mixed-issue.md) 混合发射 | 已测，未用于 V07 | 消费者匹配后，各配对的重叠程度不同 |
 | [R12](R12-smem-path-contention.md) SMEM 多路竞争 | 已测，未用于 V07 | TMA/WGMMA 接近重叠；与 STS 并发有额外代价 |
 | [R13](R13-async-retirement.md) 供给与退役 | 已测，条件候选待转移 | 行距代价随活动规模和输出位置变化；共享/预填候选尚未进入完整预测 |
