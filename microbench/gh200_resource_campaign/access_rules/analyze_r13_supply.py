@@ -6,6 +6,7 @@ summaries plus six cfg_a trace controls; --sm-summary uses the archived SM scan;
 --coverage-suite compares two address-coverage/prefill forms on separate cohorts.
 --fill-suite separates valid-address and OOB-fill demands on one card in cycle/ns forms.
 --compose-fill evaluates those windows in the existing CTA event recurrence.
+--supply-calibration prepares per-CTA three-configuration dual-clock calibration.
 L is a finite mainloop window including drain, not an internal steady-state timer.
 Requires numpy/scipy; all input archives are read-only and output must be new.
 """
@@ -680,6 +681,8 @@ FILL_FIELDS = ['valid_source_KiB', 'B_extra32_KiB', 'B_extra128_KiB',
 
 TMA_SOURCE_FIELDS = ['A_valid_KiB', 'A_extra32_KiB', 'A_extra128_KiB',
                      'B_valid_KiB', 'B_extra32_KiB', 'B_extra128_KiB']
+SUPPLY_FIELDS = ['valid_source_KiB', 'A_extra32_KiB', 'A_extra128_KiB',
+                 'B_extra32_KiB', 'B_extra128_KiB', 'A_fill_KiB', 'B_fill_KiB']
 
 
 def static_tma_requests(row, setup):
@@ -752,6 +755,213 @@ def static_tma_requests(row, setup):
     return dict(source_fields=TMA_SOURCE_FIELDS,source_coefficients=None,destination_coefficients=None,
                 ctas=ctas,source_waves=[v.tolist() for v in waves],
                 effective_source_waves=[v.tolist() for v in effective])
+
+
+def supply_request_rows(row, setup):
+    """Pure per-CTA/output prediction rows, without timing observations."""
+    request=static_tma_requests(row,setup); result=[]
+    tm,tn,_,_=CONFIGS[row['config']]
+    for c,tiles in enumerate(request['ctas']):
+        for j,tile in enumerate(tiles):
+            source=request['effective_source_waves'][j]
+            X=[source[0]+source[3],source[1],source[2],source[4],source[5],
+               tile['A']['destination_fill_KiB'],tile['B']['destination_fill_KiB']]
+            result.append(dict(case=row.get('id','prediction'),config=row['config'],
+                cta=c,coord=tile['coord'],j=j,T=len(tiles),kt=row['k']//64,
+                compute_cycles=2*tm*tn*64/4096,X=X))
+            if 'gpu_uuid' in setup:result[-1]['gpu_uuid']=setup['gpu_uuid']
+    return result
+
+
+def supply_dual_rows(row, setup, observation):
+    """Calibration observations per CTA/output; measured clocks are not features."""
+    result=supply_request_rows(row,setup)
+    if len(observation['ctas'])!=int(np.prod(setup['grid'])): raise ValueError('CTA count mismatch')
+    counts=Counter(r['cta'] for r in result)
+    for c,cta in enumerate(observation['ctas']):
+        if 'tiles_ns' not in cta or any(len(cta[k])!=counts[c] for k in ('work','tiles','tiles_ns')):
+            raise ValueError('complete dual tile intervals required')
+    for r in result:
+        cta=observation['ctas'][r['cta']];j=r['j']
+        if tuple(cta['work'][j])!=tuple(r['coord']): raise ValueError('software work differs from recorded work')
+        cycles,ns=cta['tiles'][j],cta['tiles_ns'][j];lc,ln=cycles[1]-cycles[0],ns[1]-ns[0]
+        if lc<=0 or ln<=0: raise ValueError('positive dual L required')
+        r.update(trial=observation['trial'],L_cycle=lc,L_ns=ln,calibration_floor_ns=r['compute_cycles']*ln/lc)
+    return result
+
+
+def read_supply_run(run):
+    """Replay successful dual calls only; retain per-window data and provenance."""
+    paths=[run/name for name in ('cases.json','static_setup.json','environment.json')]
+    cases=read_json(paths[0]); setups={s['case']:s['setup'] for s in read_json(paths[1])}
+    gpu=read_json(paths[2])['gpu'].split(',')[0]; rows=[]
+    for row in cases:
+        setup=setups[row['id']]
+        if setup['gpu_uuid']!=gpu: raise ValueError('setup/environment card mismatch')
+        records_=[]
+        for path in sorted((run/'samples'/row['id']).glob('dual-*.json')):
+            rec=read_json(path)
+            if rec['returncode']: continue
+            if rec['variant']!='dual': raise ValueError('not a dual record')
+            records_.append(rec['trial']);paths += [path,run/rec['raw']]
+            rows += [dict(r,run=str(run)) for r in supply_dual_rows(row,setup,replay(run,rec,row))]
+        if not records_ or len(records_)!=len(set(records_)): raise ValueError('missing/duplicate dual trials: '+row['id'])
+    return rows,dict(gpu_uuid=gpu,cases={r['id']:dict(row=r,setup=setups[r['id']]) for r in cases},
+                     input_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths})
+
+
+def supply_calibration_rows(rows):
+    """Median across processes at the same CTA/j; never average boundary demands."""
+    groups=defaultdict(list)
+    for r in rows:groups[r['gpu_uuid'],r.get('run',''),r['case'],r['cta'],r['j']].append(r)
+    result=[]
+    for values in groups.values():
+        first=values[0]
+        if any(any(v[k]!=first[k] for k in ('config','coord','T','kt','compute_cycles','X')) for v in values):
+            raise ValueError('static request changed across trials')
+        result.append(dict({k:v for k,v in first.items() if k not in ('trial','L_cycle','L_ns','calibration_floor_ns')},
+            trials=len(values),L_cycle=statistics.median(v['L_cycle'] for v in values),
+            L_ns=statistics.median(v['L_ns'] for v in values),
+            calibration_floor_ns=statistics.median(v['calibration_floor_ns'] for v in values)))
+    return result
+
+
+def supply_basis(rows):
+    """Collapse only collinear coverage pairs; keep their combination explicit."""
+    x=np.array([r['X'] for r in rows]); columns=[]; fields=[]; combinations=[]
+    for indices in ((0,),(1,2),(3,4),(5,),(6,)):
+        block=x[:,indices]
+        if not np.any(block): continue
+        if len(indices)==2 and np.linalg.matrix_rank(block)==1:
+            col=np.zeros(7);col[list(indices)]=1;columns.append(col)
+            fields.append(SUPPLY_FIELDS[indices[0]].split('_extra')[0]+'_coverage_combination_KiB')
+            example=block[np.argmax(np.linalg.norm(block,axis=1))]
+            combinations.append(dict(field=fields[-1],original_fields=[SUPPLY_FIELDS[i] for i in indices],
+                fixed_fractions=(example/sum(example)).tolist(),meaning='coefficient prices the sum only at these fractions'))
+        else:
+            for i in indices:
+                if np.any(x[:,i]):columns.append(np.eye(7)[i]);fields.append(SUPPLY_FIELDS[i])
+    return np.array(columns).reshape(-1,7).T,fields,combinations
+
+
+def supply_predict(rows, model, frequency_ghz=None):
+    """Pure full-L prediction; NS requires caller's f, never reads L observations.
+
+    Return (values, supported). Unsupported requests leave the calibrated feature
+    or active-Jacobian span; their numeric values must not be scored or frozen.
+    """
+    if not rows:return np.array([]),np.array([],dtype=bool)
+    x=np.array([r['X'] for r in rows]);kt=np.array([r['kt'] for r in rows])
+    if any(r['config']!=model['config'] for r in rows): raise ValueError('configuration mismatch')
+    if any(r.get('gpu_uuid',model['gpu_uuid'])!=model['gpu_uuid'] for r in rows): raise ValueError('card mismatch')
+    floor=np.array([r['compute_cycles'] for r in rows])
+    if model['unit']=='ns':
+        f=np.broadcast_to(np.asarray(frequency_ghz,dtype=float),(len(rows),))
+        if not np.all(np.isfinite(f)&(f>0)): raise ValueError('explicit positive predicted frequency required')
+        floor=floor/f
+    z=x@np.array(model['projection']);p=np.array(model['parameters']);service=z@p[1:]
+    value=p[0]+kt*np.maximum(floor,service)
+    raw=x/np.array(model['request_scale']);basis=np.array(model['request_basis']).reshape(-1,7)
+    jac=np.column_stack([np.ones(len(rows)),kt[:,None]*z*(service>floor)[:,None]])/np.array(model['jacobian_scale'])
+    jb=np.array(model['jacobian_basis']).reshape(-1,len(p))
+    supported=(np.linalg.norm(raw-(raw@basis.T)@basis,axis=1)<=1e-7*np.maximum(1,np.linalg.norm(raw,axis=1)))
+    supported &= np.linalg.norm(jac-(jac@jb.T)@jb,axis=1)<=1e-7*np.maximum(1,np.linalg.norm(jac,axis=1))
+    return value,supported
+
+
+def fit_supply(rows, unit='ns', calibration_clock='observed', assumed_ghz=1.6):
+    """One configuration/card, j>=1; observed f is legal only in calibration."""
+    rows=[r for r in rows if r['j']>=1]
+    if not rows: raise ValueError('no later-output calibration windows')
+    if len({r['config'] for r in rows})!=1 or len({r['gpu_uuid'] for r in rows})!=1:
+        raise ValueError('fit one configuration and one card at a time')
+    if unit not in ('cycle','ns') or calibration_clock not in ('observed','assumed') or assumed_ghz<=0:
+        raise ValueError('invalid time basis')
+    projection,fields,combinations=supply_basis(rows)
+    x=np.array([r['X'] for r in rows]);z=x@projection;kt=np.array([r['kt'] for r in rows])
+    target=np.array([r['L_'+unit] for r in rows]);floor=np.array([r['compute_cycles'] for r in rows])
+    if unit=='ns':
+        floor=(np.array([r.get('calibration_floor_ns',r['compute_cycles']*r['L_ns']/r['L_cycle']) for r in rows])
+               if calibration_clock=='observed' else floor/assumed_ghz)
+    counts=Counter((r.get('run',''),r['case']) for r in rows)
+    weights=np.sqrt([1/counts[r.get('run',''),r['case']] for r in rows])
+    def predict(p):return p[0]+kt*np.maximum(floor,z@p[1:])
+    scale=1 if unit=='cycle' else assumed_ghz
+    initial=np.r_[600,[30 if 'fill' in field else .1 if field=='valid_source_KiB' else .8 for field in fields]]/scale
+    fits=[least_squares(lambda p:weights*(predict(p)/target-1),initial*factor,bounds=(0,np.inf),
+        max_nfev=3000,ftol=1e-11,xtol=1e-11,gtol=1e-11) for factor in (1,2,4)]
+    best=min(fits,key=lambda f:f.cost);p=best.x
+    jac=np.column_stack([np.ones(len(rows)),kt[:,None]*z*(z@p[1:]>floor)[:,None]])
+    js=np.maximum(np.linalg.norm(jac,axis=0),1e-30);_,singular,jb=np.linalg.svd(jac/js,full_matrices=False)
+    rank=int(sum(singular>1e-9));xs=np.maximum(np.linalg.norm(x,axis=0),1e-30)
+    _,s,xb=np.linalg.svd(x/xs,full_matrices=False)
+    model=dict(config=rows[0]['config'],gpu_uuid=rows[0]['gpu_uuid'],unit=unit,
+        calibration_clock=calibration_clock if unit=='ns' else 'cycle',assumed_ghz=assumed_ghz,
+        fields=['window_'+unit]+fields,parameters=p.tolist(),projection=projection.tolist(),
+        coverage_combinations=combinations,request_scale=xs.tolist(),request_basis=xb[s>1e-9].tolist(),
+        jacobian_scale=js.tolist(),jacobian_basis=jb[:rank].tolist(),active_jacobian_rank=rank,
+        parameter_count=len(p),conditionally_identified=bool(best.success and rank==len(p)),optimizer_success=bool(best.success),
+        calibration_score=metrics(predict(p)/target-1))
+    return model
+
+
+def supply_score(rows, model, frequency_ghz):
+    """Score with an explicit predicted/assumed clock; never replace it with targets."""
+    predicted,supported=supply_predict(rows,model,frequency_ghz)
+    result=dict(requested=len(rows),scored=int(sum(supported)),
+                unsupported_cases=sorted({r['case'] for r,s in zip(rows,supported) if not s}))
+    if np.any(supported):
+        errors=predicted[supported]/np.array([r['L_'+model['unit']] for r,s in zip(rows,supported) if s])-1
+        result['windows']=metrics(errors);by_case=defaultdict(list)
+        for r,e in zip([r for r,s in zip(rows,supported) if s],errors):by_case[r.get('run',''),r['case']].append(e)
+        result['case_medians']=metrics([statistics.median(v) for v in by_case.values()])
+    return result
+
+
+def supply_pitch_support(row, setup, model, frequency_ghz):
+    """Static span support by pitch residue; not measured timing qualification."""
+    result=[]
+    for operand in ('A','B'):
+        for residue in range(0,128,16):
+            case=dict(row)
+            case['lda']=row['k'];case['ldb']=((row.get('input_map_n',row['n'])+63)//64)*64
+            case['lda' if operand=='A' else 'ldb']+=residue//2
+            requests=[r for r in supply_request_rows(case,setup) if r['j']>=1]
+            _,support=supply_predict(requests,model,frequency_ghz)
+            result.append(dict(operand=operand,pitch_mod128=residue,windows=len(requests),
+                supported=int(sum(support)),status='supported by feature span' if len(requests) and all(support) else 'unsupported or no later windows'))
+    return result
+
+
+def supply_calibration(run, output, assumed_ghz):
+    """Single-run development entry; no automatic pooling with older B batches."""
+    raw,manifest=read_supply_run(run);rows=supply_calibration_rows(raw);fits={}
+    for config in sorted({r['config'] for r in rows}):
+        selected=[r for r in rows if r['config']==config];fits[config]={}
+        if not any(r['j']>=1 for r in selected):
+            fits[config]['status']='no later windows: first-output data only';continue
+        for unit,clock in (('cycle','assumed'),('ns','observed'),('ns','assumed')):
+            model=fit_supply(selected,unit,clock,assumed_ghz)
+            fits[config][unit+'_'+clock]=dict(model=model,
+                fixed_frequency_later=supply_score([r for r in selected if r['j']>=1],model,assumed_ghz),
+                fixed_frequency_first=supply_score([r for r in selected if r['j']==0],model,assumed_ghz))
+        reference=next(c for c in manifest['cases'].values() if c['row']['config']==config)
+        fits[config]['pitch_support_at_reference_geometry']=dict(case=reference['row']['id'],
+            interpretation='Static feature/active-branch span only; no timing qualification of unseen residues.',
+            rows=supply_pitch_support(reference['row'],reference['setup'],fits[config]['ns_observed']['model'],assumed_ghz))
+    report=dict(protocol='Single-run development calibration; observed clocks allowed in training only, not prediction/heldout scoring.',
+        raw_windows=len(raw),calibration_windows=len(rows),fields=SUPPLY_FIELDS,assumed_ghz=assumed_ghz,
+        manifest=manifest,fits=fits,
+        limits=['Same max(compute, source + local-fill) form; b outside max; j0 transfer only.',
+                'One shared valid A+B price per configuration/card; no cross-card parameter pooling.',
+                'Coverage combinations are valid only at their recorded fractions; unsupported features are not scored.',
+                'Conditional rank does not establish physical uniqueness or qualify a frozen predictor.',
+                'Old B13 requires a separate bridge with allocation/preparation differences before any joint fit.'],
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=False)
+    (output/'summary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    (output/'calibration-rows.json').write_text(json.dumps(rows,indent=2,allow_nan=False)+'\n')
+    print(json.dumps({c:{k:v.get('fixed_frequency_later') if isinstance(v,dict) else v for k,v in f.items() if k!='pitch_support_at_reference_geometry'} for c,f in fits.items()},indent=2))
 
 
 def fill_cta_features(row, setup):
@@ -1087,10 +1297,14 @@ if __name__ == "__main__":
     parser.add_argument("--coverage-suite", action='store_true', help="two post-reveal coverage/prefill forms; --run is R10 job738203")
     parser.add_argument("--fill-suite", action='store_true',help='same-card valid-address/OOB cycle versus direct-ns development; --run is R10 job738203')
     parser.add_argument("--compose-fill",type=Path,help='compose an existing fill-suite report with same-card dual event calibration')
-    parser.add_argument("--assumed-ghz",type=float,default=1.6,help='explicit compute-frequency assumption for --fill-suite NS form')
+    parser.add_argument("--supply-calibration",action='store_true',help='single-run three-config per-CTA supply calibration; j0 remains diagnostic')
+    parser.add_argument("--assumed-ghz",type=float,default=1.6,help='explicit frequency assumption for supply NS predictions and comparisons')
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.compose_fill:
+    if args.supply_calibration:
+        if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
+        supply_calibration(args.run.resolve(),args.output.resolve(),args.assumed_ghz)
+    elif args.compose_fill:
         if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
         compose_fill(args.run.resolve(),args.compose_fill.resolve(),args.output.resolve(),args.assumed_ghz)
     elif args.fill_suite:
