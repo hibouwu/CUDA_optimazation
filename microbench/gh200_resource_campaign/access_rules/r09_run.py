@@ -495,7 +495,7 @@ def report_bridge(output: Path):
     write_json(output / 'analysis/bridge_comparison.json', dict(
         reference_run=reference['source_run'], environment=current['environment'], comparisons=comparisons,
         reuse_decision='Requires explicit assessment; no automatic correction or pooling.',
-        scope='Only cfg_b bridges; agreement does not independently establish cfg_a/c cross-job stability.'))
+        scope='Only the bridge conditions listed in this file; agreement does not independently establish stability of other conditions.'))
 
 
 def main():
