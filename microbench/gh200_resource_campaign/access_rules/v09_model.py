@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""V09 development composition. Currently calibrated only for cfg_b on GPU432.
+"""V09 development composition for cfg_a/b/c on GPU432.
 
 Natural-ns event constants and conditional supply enter the existing CTA recurrence;
 the R09 work/source clock closes the compute floor self-consistently. This module
 does not read target timings, choose training cases, or freeze a validation.
+The earlier cfg_b-only development API remains for reproducible old diagnostics.
 """
 import math
 

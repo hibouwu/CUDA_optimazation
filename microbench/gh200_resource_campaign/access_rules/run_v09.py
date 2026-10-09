@@ -144,7 +144,8 @@ def freeze_predictions(root,model,metrics,policy):
     paths=['cases.json','run_config.json','source_hashes.json','build/binary_hashes.json','build/sass_hashes.json',
            'freeze-environment.json','freeze-setup.json','freeze.sh','heldout.sh','frozen/calibration.json','frozen/predictions.json']
     paths += [str(p.relative_to(root)) for p in (root/'inputs').rglob('*') if p.is_file()]
-    paths += [name for name in ('python-runtime.json','build/nvcc-version.txt') if (root/name).exists()]
+    paths += [name for name in ('python-runtime.json','build/nvcc-version.txt',
+                               'build/commands.json','build/resources.json') if (root/name).exists()]
     write(frozen/'manifest.json',dict(source_commit=read(root/'run_config.json')['source_commit'],
         files={name:common.sha(root/name) for name in sorted(paths)}))
     for path in frozen.iterdir():path.chmod(0o444)
