@@ -1045,3 +1045,43 @@ OUT="$RUN/reanalysis/C-equal-work-replay-<新后缀>"
 python3 microbench/gh200_resource_campaign/access_rules/r09_analyze.py --shared --input "$RUN" --output "$OUT/replay"
 python3 microbench/gh200_resource_campaign/access_rules/r09_equal_work_clock.py --run "$RUN" --reference-run "$ROOT/20261009-R09-input-clock-calibration-job738376" --clock "$ROOT/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json" --output "$OUT"
 ```
+
+
+<a id="r18-zero-activity-mixture"></a>
+
+### R18八条件：固定零乘积比例的活动混合诊断
+
+2026-10-09，仅离线，复用a057/GPU-43269fbc的M/N输入图批次job738296/738307。软件swizzle=8调度的八例均为 **768个名义输出tile，其中192个乘积必零，z=0.25**。按每tile×Kt×512 cycle加权，K1024/K4096的名义总周期分别为6291456/25165824，必零周期为1572864/6291456；z来自 `zero_m/zero_n` 整tile边界的OR判定，不由时间或频率拟合。这里计入调度的OOB补齐工作，不是只统计有效输出面积。双路径实际dual work与软件逐CTA序列一致，OOB/address_zero的z、Q、S严格相同。
+
+冻结原source-clock的a=1.98、τ=200.678及Q/S定义，仅在dyadic评价槽使用 `d_mix=(1−z)d_dyadic+z d_zero`、`e_mix=(1−z)e_dyadic+z e_zero`。所得 **d_mix=0.1968177802、e_mix=0.01305147281 GHz·µs/KiB**，原模型和端点系数不改。K1024的Q/S为47662.545 cycle/SM、2978.909 KiB/SM，K4096为190650.182、11915.636；没有随z缩减名义Q/S。所有预测只在观测dual W下计算，未做自由组合或时间预测。基线也是观测W下重算，不能与根侧联合自由预测约12%的频率误差直接混用。
+
+| 方向 / K / 输入路径 | 观测W µs | 观测f GHz | 原dyadic残差 | 固定z混合残差 |
+|---|---:|---:|---:|---:|
+| M / 1024 / oob | 46.720 | 1.703707 | -2.831% | -0.837% |
+| M / 1024 / address_zero | 37.888 | 1.671817 | -3.962% | -1.822% |
+| M / 4096 / oob | 168.544 | 1.616803 | -15.909% | -9.764% |
+| M / 4096 / address_zero | 138.704 | 1.506955 | -14.210% | -7.247% |
+| N / 1024 / oob | 46.624 | 1.715002 | -3.496% | -1.515% |
+| N / 1024 / address_zero | 37.776 | 1.672525 | -4.050% | -1.908% |
+| N / 4096 / oob | 168.720 | 1.618168 | -15.959% | -9.821% |
+| N / 4096 / address_zero | 137.328 | 1.525064 | -15.466% | -8.568% |
+
+八例全体保留，条件频率RMS从 **11.187%降至6.400%**；K1024四例为3.617%→1.578%，K4096四例为 **15.402%→8.912%**。八例绝对残差均缩小，但K4096仍低估7.247%–9.821%，故这一零新参数假设**只能解释部分偏差，尚不足以解决K4096低估**。
+
+同z双路径仍有不同W：address_zero相对OOB，M/N的K1024窗口分别缩短18.904%/18.977%，K4096缩短17.705%/18.606%。混合式没有路径参数，频率差仅来自W；其address_zero/OOB频率变化与实测并列如下。
+
+| 方向 / K | 实测频率变化 | 原dyadic预测变化 | 固定z混合预测变化 |
+|---|---:|---:|---:|
+| M / 1024 | -1.872% | -3.015% | -2.846% |
+| M / 4096 | -6.794% | -4.911% | -4.194% |
+| N / 1024 | -2.477% | -3.036% | -2.866% |
+| N / 4096 | -5.754% | -5.201% | -4.444% |
+
+K4096中，混合使共同频率上移，却没有完整解释路径对比：M方向实测下降6.794%，混合只下降4.194%；N方向为5.754%与4.444%。R18必零乘积区只保证一个操作数面板为零，而R09 zero端点将两输入全部置零；把e也按乘积零比例混合是未验证的活动假设，不能解释成物理源功耗。全卡平均z还没有表示逐CTA零工作分布。当前保留剩余误差，不拟合z、不增加系数/候选或补测，也不将这次改善写成新的完整模型通过。
+
+[C-20261009-zero-activity-clock-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R18-input-map-job738296/reanalysis/C-20261009-zero-activity-clock-v1/)保存全部八例、80个逐dual进程和四组路径响应。320个plain/wide/stamped/dual进程共1310720个抽检值独立回放通过，原始SHA及软件work核对通过；观测W/f与根侧 `manager-joint-clock-supply-v4/composition.json` 一致。`zero-activity-clock.json`记录原模型指纹、完整逐CTA零工作数和未验证假设，`cases.csv/processes.csv/paths.csv`并列保留原dyadic与混合结果，原数据和模型文件不改。
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_zero_activity_clock.py --m-run "$ROOT/20261009-R18-input-map-job738296" --n-run "$ROOT/20261009-R18-input-map-n-job738307" --clock "$ROOT/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json" --composition "$ROOT/20261009-R10-b-coverage-job738203/reanalysis/manager-joint-clock-supply-v4/composition.json" --output "$ROOT/20261009-R18-input-map-job738296/reanalysis/C-zero-activity-replay-<新后缀>"
+```
