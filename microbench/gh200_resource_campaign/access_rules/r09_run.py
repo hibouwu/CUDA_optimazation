@@ -11,6 +11,7 @@ Public cfg_a/b/c clock/input batch (15 diagnostic cases; original modes unchange
   r09_run.py shared-list
   r09_run.py shared-prepare --shared-run SHARED_RUN --output NEW_RUN
 Add --batch wide-input for M=N=20480, K=1024, nine input cases, plain/ends only.
+Add --batch clock-calibration for 18 short/middle input cases plus three cfg_b long bridges.
 Then run NEW_RUN/run.sh inside the assigned GPU step, with V08_GPU and
 CUDA_VISIBLE_DEVICES set to the assigned UUID. Reuses the shared source/build only.
 """
@@ -280,11 +281,20 @@ def shared_cases(batch="clock-input"):
     import run_v08
 
     rows = []
-    if batch == "wide-input":
+    if batch in ("wide-input", "clock-calibration"):
+        extents = (20480,) if batch == 'wide-input' else (2048, 8192)
         for cfg in run_v08.CONFIGS:
-            for mode in ("dyadic", "zero", "random"):
-                row = run_v08.row(f"{cfg}_r09_m20480_k1024_{mode}", cfg, "ctrl", 20480, 20480, 1024)
-                row.update(input_mode=mode, seed=17, sm_count=0)
+            for extent in extents:
+                for mode in ("dyadic", "zero", "random"):
+                    row = run_v08.row(f"{cfg}_r09_m{extent}_k1024_{mode}", cfg, "ctrl", extent, extent, 1024)
+                    row.update(input_mode=mode, seed=17, sm_count=0)
+                    if batch == 'clock-calibration':
+                        row['purpose'] = 'calibration'
+                    rows.append(row)
+        if batch == 'clock-calibration':
+            for mode in ('dyadic', 'zero', 'random'):
+                row = run_v08.row(f'cfg_b_r09_m20480_k1024_{mode}', 'cfg_b', 'ctrl', 20480, 20480, 1024)
+                row.update(input_mode=mode, seed=17, sm_count=0, purpose='bridge')
                 rows.append(row)
         return rows
     for cfg in run_v08.CONFIGS:
@@ -297,14 +307,18 @@ def shared_cases(batch="clock-input"):
     return rows
 
 
-def prepare_shared(output: Path, shared: Path, batch="clock-input"):
+def prepare_shared(output: Path, shared: Path, batch="clock-input", bridge_run=None):
     """Reuse a completed public build without copying its samples or changing its kernel."""
     import v06_run as common
     import run_v08
 
     common.verify(shared)
+    if batch == 'clock-calibration':
+        if bridge_run is None:
+            raise ValueError('clock-calibration requires --bridge-run')
+        common.verify(bridge_run)
     binaries = json.loads((shared / "build/binary_hashes.json").read_text())
-    variants = ['plain', 'ends'] if batch == 'wide-input' else run_v08.VARIANTS
+    variants = ['plain', 'ends'] if batch in ('wide-input', 'clock-calibration') else run_v08.VARIANTS
     for cfg in run_v08.CONFIGS:
         for variant in variants:
             if f"build/{cfg}_{variant}" not in binaries:
@@ -317,8 +331,23 @@ def prepare_shared(output: Path, shared: Path, batch="clock-input"):
     rows = shared_cases(batch)
     write_json(output / "cases.json", rows)
     parent = json.loads((shared / "run_config.json").read_text())
+    reference_gpu = None
+    if batch == 'clock-calibration':
+        previous = json.loads((bridge_run / 'analysis/summary.json').read_text())
+        reference_gpu = previous['environment']['gpu'].split(',')[0]
+        previous_binaries = json.loads((bridge_run / 'build/binary_hashes.json').read_text())
+        for variant in ('plain', 'ends'):
+            key = f'build/cfg_b_{variant}'
+            if binaries[key] != previous_binaries[key]:
+                raise ValueError('bridge binary differs: ' + key)
+        write_json(output / 'bridge_reference.json', dict(
+            source_run=str(bridge_run), environment=previous['environment'],
+            summary_sha256=sha(bridge_run / 'analysis/summary.json'),
+            cases={r['id']: previous['cases'][r['id']] for r in rows if r.get('purpose') == 'bridge'},
+            scope='Same-card, cross-job reference only; no automatic offset or refit.'))
     write_json(output / "run_config.json", dict(
         family="r09-shared-clock-input", batch=batch, variants=variants,
+        reference_gpu_uuid=reference_gpu,
         cases_sha256=sha(output / "cases.json"),
         shared_run=str(shared), shared_source_commit=parent.get("source_commit"),
         shared_source_hashes_sha256=sha(shared / "source_hashes.json"),
@@ -343,6 +372,9 @@ python3 source/run_v08.py setup --output "$PWD"
 python3 source/r09_run.py shared-sample --output "$PWD"
 python3 source/r09_analyze.py --shared --input "$PWD" --output "$PWD/analysis"
 ''')
+    if batch == 'clock-calibration':
+        with script.open('a') as stream:
+            stream.write('python3 source/r09_run.py shared-bridge --output "$PWD"\n')
     script.chmod(0o755)
     print("prepared", len(rows), "R09 cases;", variants, "x 10 processes:", output)
 
@@ -380,12 +412,14 @@ def check_shared(output: Path):
         raise ValueError("Slurm allocation required")
     common.verify(output)
     config = json.loads((output / "run_config.json").read_text())
-    wide = config.get('batch') == 'wide-input'
+    wide = config.get('batch') in ('wide-input', 'clock-calibration')
     if sha(output / "cases.json") != config["cases_sha256"]:
         raise ValueError("matrix changed")
     env = run_v08.identity()
     if env != json.loads((output / "environment.json").read_text()):
         raise ValueError("device or allocation changed")
+    if config.get('reference_gpu_uuid') and env['gpu'].split(',')[0] != config['reference_gpu_uuid']:
+        raise ValueError('clock calibration requires the bridge reference GPU')
     outcomes = []
     with open('/tmp/gh200-measurement-' + env['gpu'].split(',')[0] + '.lock', 'a') as gpu_lock, \
             (output / '.run.lock').open('a') as run_lock:
@@ -412,7 +446,7 @@ def sample_shared(output: Path):
     rows = json.loads((output / "cases.json").read_text())
     config = json.loads((output / "run_config.json").read_text())
     # Wide cooperative CTAs exceed 64 per-tile slots: never schedule stamped here.
-    selected = ['plain', 'ends'] if config.get('batch') == 'wide-input' else run_v08.VARIANTS
+    selected = ['plain', 'ends'] if config.get('batch') in ('wide-input', 'clock-calibration') else run_v08.VARIANTS
     env = run_v08.identity()
     with open('/tmp/gh200-measurement-' + env['gpu'].split(',')[0] + '.lock', 'a') as gpu_lock, \
             (output / '.run.lock').open('a') as run_lock:
@@ -441,13 +475,37 @@ def sample_shared(output: Path):
         ['nvidia-smi', '-q', '-i', os.environ['V08_GPU']], text=True))
 
 
+def report_bridge(output: Path):
+    """Report cross-job changes only; do not modify measurements or model parameters."""
+    reference = json.loads((output / 'bridge_reference.json').read_text())
+    current = json.loads((output / 'analysis/summary.json').read_text())
+    if current['environment']['gpu'].split(',')[0] != reference['environment']['gpu'].split(',')[0]:
+        raise ValueError('bridge comparison is not same GPU')
+    comparisons = []
+    keys = ('plain_us', 'ends_us', 'c_max_ends', 'ghz_ends', 'window_ends')
+    for cid, old in reference['cases'].items():
+        new = current['cases'][cid]
+        if new.get('status') == 'numeric_error':
+            comparisons.append(dict(case=cid, status='numeric_error'))
+            continue
+        comparisons.append(dict(case=cid, status='measured',
+            relative_change={k: new[k] / old[k] - 1 for k in keys},
+            old={k: old[k] for k in (*keys, 'plain_cv', 'ends_cv')},
+            new={k: new[k] for k in (*keys, 'plain_cv', 'ends_cv')}))
+    write_json(output / 'analysis/bridge_comparison.json', dict(
+        reference_run=reference['source_run'], environment=current['environment'], comparisons=comparisons,
+        reuse_decision='Requires explicit assessment; no automatic correction or pooling.',
+        scope='Only cfg_b bridges; agreement does not independently establish cfg_a/c cross-job stability.'))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", choices=("build", "sample", "shared-list", "shared-prepare", "shared-check", "shared-sample"))
+    parser.add_argument("step", choices=("build", "sample", "shared-list", "shared-prepare", "shared-check", "shared-sample", "shared-bridge"))
     parser.add_argument("--output", type=Path)
     parser.add_argument("--cutlass-root", type=Path)
     parser.add_argument("--shared-run", type=Path)
-    parser.add_argument("--batch", choices=("clock-input", "wide-input"), default="clock-input")
+    parser.add_argument("--bridge-run", type=Path)
+    parser.add_argument("--batch", choices=("clock-input", "wide-input", "clock-calibration"), default="clock-input")
     parser.add_argument("--set", choices=tuple(case_sets()))
     args = parser.parse_args()
     if args.step == "shared-list":
@@ -458,13 +516,17 @@ def main():
     if args.step == "shared-prepare":
         if args.shared_run is None:
             parser.error("shared-prepare requires --shared-run")
-        prepare_shared(args.output.resolve(), args.shared_run.resolve(), args.batch)
+        prepare_shared(args.output.resolve(), args.shared_run.resolve(), args.batch,
+                       args.bridge_run.resolve() if args.bridge_run else None)
         return
     if args.step == "shared-check":
         check_shared(args.output.resolve())
         return
     if args.step == "shared-sample":
         sample_shared(args.output.resolve())
+        return
+    if args.step == "shared-bridge":
+        report_bridge(args.output.resolve())
         return
     if args.step == "build":
         args.output.mkdir(parents=True, exist_ok=False)

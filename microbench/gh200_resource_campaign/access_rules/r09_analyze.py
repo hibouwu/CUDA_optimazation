@@ -487,7 +487,7 @@ def summarize_shared(run: Path, out: Path):
     import v08_model
 
     common.verify(run)
-    wide = json.loads((run / 'run_config.json').read_text()).get('batch') == 'wide-input'
+    wide = json.loads((run / 'run_config.json').read_text()).get('batch') in ('wide-input', 'clock-calibration')
     rows = json.loads((run / "cases.json").read_text())
     setups = {s["case"]: s["setup"] for s in json.loads((run / "static_setup.json").read_text())}
     sampling = json.loads((run / "sampling.json").read_text()) if (run / "sampling.json").exists() else {}
@@ -527,7 +527,8 @@ def summarize_shared(run: Path, out: Path):
     for metric in metrics:
         if metric["status"] != "measured":
             continue
-        base = next((x for x in metrics if x["config"] == metric["config"] and x["k"] == metric["k"]
+        base = next((x for x in metrics if x["config"] == metric["config"]
+                     and (x['m'], x['n'], x['k']) == (metric['m'], metric['n'], metric['k'])
                      and x["input_mode"] == "dyadic" and x["status"] == "measured"), None)
         for key in ("plain_us", "c_max_ends", "ghz_ends"):
             metric[key + "_vs_dyadic"] = metric[key] / base[key] - 1 if base else None

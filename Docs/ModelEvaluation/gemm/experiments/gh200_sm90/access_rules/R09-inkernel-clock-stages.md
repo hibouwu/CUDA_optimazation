@@ -689,3 +689,35 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py --input
   --r10-run "$ROOT/20261009-R10-b-coverage-job738203" --r15-run "$ROOT/20261009-R15-output-ns-job738100" \
   --output "$ROOT/20261009-R09-wide-input-job738197/reanalysis/C-input-coverage-replay-<新后缀>"
 ```
+
+#### 21 条件同卡准备包
+
+[20261009-R09-input-clock-calibration-prepared-v1](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-input-clock-calibration-prepared-v1/) 已离线准备，**未提交 GPU**。`cases.json` 明确区分以下用途：
+
+| 用途 | M=N | K | 配置和输入 | 条件数 |
+|---|---:|---:|---|---:|
+| calibration | 2048、8192 | 1024 | cfg_a/b/c × dyadic/zero/random | 18 |
+| bridge | 20480 | 1024 | cfg_b × dyadic/zero/random | 3 |
+
+全部 seed=17、sm_count=0、swizzle=1、evict=0，沿用原暖机、数值阈值和随机化顺序；只用 plain/ends。2048²、8192² 是预期短/中窗口的取样几何，窗口分类以实际 ends 包络为准。K=1024 避开已有长 K random 失败条件，但仍逐例检查，不据旧结果预先认定成功。每条先独立检查，全部通过时为 **21 个预检查 + 420 个正式进程**。数值失败只停止对应条件的后续性能采样，原矩阵和失败记录保留，其余条件继续。
+
+包完整复用 **6338653** 的公共 source/build，不需要 R18 后续 `input_map_m/n` 改动或重编。运行仅选择六个 plain/ends 程序；cfg_b 长桥接单 role 可达 97 tile，仍不得调用 stamped。`run_config.json` 分别保存公共来源与 R09 包装入口/分析器哈希，并要求 **GPU-43269fbc-449d-3e0f-908a-9c81229546d3**。与 job738197 是同卡新分配，不是同一次采样。
+
+`bridge_reference.json` 保存 job738197 的原汇总哈希、环境和 cfg_b 三条结果，且准备时核对两种 cfg_b 二进制一致。结束后 `analysis/bridge_comparison.json` 单独给出 plain/ends 时间、ends C/f/包络的新旧变化和两批 CV；**不自动作偏移校正、合并或拟合**。是否复用旧长数据仍须结合变化幅度、离散程度和运行状态判断。cfg_b 一致也不能独立证明 cfg_a/c 的跨作业稳定；若后续仍需重测其他配置，应另行指出具体缺口，不在本包预先重复九条长条件。
+
+CPU 核对已验证 21 个预检查与最多 420 个正式调用、预检查/正式调用失败的条件隔离、按 config/M/N/K 匹配 dyadic 基线、140 对同 trial 输入比较，以及桥接报告不改原始数据且拒绝异卡。另复用原 `test_r09_ends.py` 核对超过 64 tile 的 ends 头部解析。合成数据仅验证控制流和汇总口径，没有形成新的 GPU 性能证据；验证脚本和结果保存在包的 `validation/`。
+
+```bash
+ROOT=/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules
+python3 microbench/gh200_resource_campaign/access_rules/r09_run.py shared-prepare \
+  --batch clock-calibration \
+  --shared-run "$ROOT/20261009-R09-R13-shared-smoke-job738097" \
+  --bridge-run "$ROOT/20261009-R09-wide-input-job738197" \
+  --output "$ROOT/<新目录>"
+
+# 由管理者另行分配上述 GPU，将完整包放到计算节点 /tmp。
+# 在 ARM 分配内加载 CUDA 12.9、Python/NumPy，并绑定获配 UUID 后执行：
+bash /tmp/<准备包>/run.sh
+```
+
+`run.sh` 不负责加载 Spack。运行包装应在 setup 前确认 NumPy 可导入并记录 `python-runtime.json`；可沿用 job738197 的 NumPy 1.26.4 安装 `/c5oek34`。将 `SPACK_USER_CACHE_PATH` 放在计算节点 `/tmp`，保留 HOME，避免再次触发共享目录配额失败。
