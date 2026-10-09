@@ -277,10 +277,122 @@ def analyze(run, calibration_run, output):
                          scores={k: v["later"] for k, v in results.items()}), indent=2))
 
 
+def sm_candidates(run, summary_path, output):
+    """Compare per-SM and shared caps on one fixed-K card; no observed time input."""
+    from collections import Counter, defaultdict
+    from v08_model import scheduled_work
+
+    source = read_json(summary_path)
+    cases = {r["id"]: r for r in read_json(run / "cases.json")}
+    setups = {r["case"]: r["setup"] for r in read_json(run / "static_setup.json")}
+    if len({r["gpu_uuid"] for r in setups.values()}) != 1:
+        raise ValueError("SM-scan fits require one GPU")
+    rows = []
+    for group in source["mainloop_groups"]:
+        if not group["qualified"]:
+            raise ValueError("this cap comparison requires qualified interval groups")
+        r = cases[group["case"]]
+        if r["config"] != "cfg_a" or r["k"] != 4096:
+            raise ValueError("this comparison is the fixed-K cfg_a SM scan")
+        work = scheduled_work(r["config"], r["m"], r["n"], setups[r["id"]]["grid"], r["swizzle"])
+        rows.append(dict(case=r["id"], sm=r["sm_count"], pitch=r["pitch"],
+            j=group["j"], T=group["T"], active=sum(len(w) > group["j"] for w in work),
+            y=group["median_process_mean_L_per_kt"]))
+
+    def inputs(observations, kind):
+        n = np.array([1 if kind == "local" else r["sm"] if kind == "grid" else r["active"] for r in observations])
+        a = np.array([r["pitch"] == "a16" for r in observations])
+        b = np.array([r["pitch"] == "b16" for r in observations])
+        return 24 * n[:, None] * np.column_stack([np.ones(len(n)), a, b])
+
+    def prediction(observations, kind, p):
+        service = inputs(observations, kind) @ p[1:]
+        return p[0] + np.maximum(512, service), service
+
+    def fit_cap(observations, kind):
+        counts = Counter(r["case"] for r in observations)
+        weights = np.array([1 / counts[r["case"]] for r in observations])
+        y = np.array([r["y"] for r in observations])
+        scale = 132 if kind == "local" else 1
+        solutions = []
+        for start in (0.12, 0.17, 0.23):
+            result = least_squares(lambda p: np.sqrt(weights) * (prediction(observations, kind, p)[0] / y - 1),
+                [5, start * scale, .02 * scale, .02 * scale], bounds=(0, np.inf), max_nfev=2000)
+            solutions.append(result)
+        result = min(solutions, key=lambda r: r.cost)
+        _, service = prediction(observations, kind, result.x)
+        active = service > 512
+        # Analytic derivatives avoid treating finite-difference noise as identified rank.
+        jacobian = np.column_stack([np.ones(len(y)), inputs(observations, kind) * active[:, None]])
+        rank = int(np.linalg.matrix_rank(jacobian))
+        return result.x, dict(active_jacobian_rank=rank, parameters=4,
+            aligned_service_groups=int(sum(on and r["pitch"] == "aligned" for on, r in zip(active, observations))),
+            note="Rank describes this assumed piecewise model, not physical bandwidth identifiability.")
+
+    def cap_score(observations, kind, p):
+        values, _ = prediction(observations, kind, p)
+        return metrics(values / np.array([r["y"] for r in observations]) - 1)
+
+    train = [r for r in rows if r["j"] > 0]
+    first = [r for r in rows if r["j"] == 0]
+    fits, residuals = {}, []
+    for kind in ("local", "grid", "wave"):
+        p, identification = fit_cap(train, kind)
+        folds = []
+        for sm in sorted({r["sm"] for r in train}):
+            fit_rows = [r for r in train if r["sm"] != sm]
+            test_rows = [r for r in train if r["sm"] == sm]
+            q, ident = fit_cap(fit_rows, kind)
+            folds.append(dict(removed_sm=sm, parameters=q.tolist(), identification=ident,
+                score=cap_score(test_rows, kind, q),
+                limitation="Without an aligned service-limited training point, the base service coefficient can be only bounded; extrapolated aligned predictions may be nonunique." if not ident["aligned_service_groups"] else None))
+        fits[kind] = dict(parameters=dict(zip(("window_floor_extra_cycle_per_Ktile", "q0", "qA", "qB"), p.tolist())),
+            identification=identification, later_fit=cap_score(train, kind, p),
+            first_transfer=cap_score(first, kind, p), leave_SM=folds)
+        predictions, services = prediction(rows, kind, p)
+        for r, value, service in zip(rows, predictions, services):
+            residuals.append(dict(**r, model=kind, predicted=float(value),
+                relative_error=float(value / r["y"] - 1), service_branch=bool(service > 512)))
+
+    collision_groups = defaultdict(list)
+    for r in train:
+        collision_groups[r["active"], r["pitch"], r["T"]].append(r)
+    collision_bounds = []
+    for (active, pitch, total), group in collision_groups.items():
+        lo, hi = min(group, key=lambda r: r["y"]), max(group, key=lambda r: r["y"])
+        collision_bounds.append(dict(active=active, pitch=pitch, T=total, lower=lo, upper=hi,
+            unavoidable_max_relative_error=(hi["y"] - lo["y"]) / (hi["y"] + lo["y"])))
+
+    report = dict(protocol="Offline model development on one card and one M/N/K; not new frozen validation.",
+        formula="L/Kt = b + max(512, 24*N*(q0+qA*A16+qB*B16)); b and q are nonnegative.",
+        modes=dict(local="N=1, per-SM cap", grid="N=requested persistent grid", wave="N=count of software CTA work lists containing output index j"),
+        weighting="Each case has equal total fit weight; its later (j,T) groups share that weight equally.",
+        scope="cfg_a, M=2304, N=3072, K=4096, swizzle1, dyadic17; frame b is not transferable in K from this fit.",
+        gpu=next(iter(setups.values()))["gpu_uuid"], fits=fits, collision_bounds=collision_bounds,
+        limits=["24 KiB is logical multicast-adjusted source demand, not measured physical traffic.",
+                "Software wave count is predictable but is not measured simultaneous mainloop activity.",
+                "No measured frequency, time, output overlap or target L is used as a prediction feature.",
+                "First-output windows are transfer diagnostics; only later windows train these parameters.",
+                "The leave-132 test extrapolates beyond training pressure and may not identify the base service cap.",
+                "A good in-range fit does not identify shared-resource location or separate cache history from concurrency."],
+        input_sha256={str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in [summary_path, run / "cases.json", run / "static_setup.json"]},
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True, exist_ok=False)
+    (output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
+    with (output / "residuals.csv").open("w") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(residuals[0])); writer.writeheader(); writer.writerows(residuals)
+    print(json.dumps({k:dict(fit=v["later_fit"], first=v["first_transfer"], rank=v["identification"]["active_jacobian_rank"]) for k,v in fits.items()}, indent=2))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)
-    parser.add_argument("--calibration-run", required=True, type=Path)
+    parser.add_argument("--calibration-run", type=Path)
+    parser.add_argument("--sm-summary", type=Path, help="fit local/grid/wave caps to an existing R13 SM-scan summary")
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    analyze(args.run.resolve(), args.calibration_run.resolve(), args.output.resolve())
+    if args.sm_summary:
+        sm_candidates(args.run.resolve(), args.sm_summary.resolve(), args.output.resolve())
+    else:
+        if args.calibration_run is None:parser.error("--calibration-run is required without --sm-summary")
+        analyze(args.run.resolve(), args.calibration_run.resolve(), args.output.resolve())
