@@ -538,3 +538,50 @@ python3 microbench/gh200_resource_campaign/access_rules/r09_v08_clock.py --candi
   --trend-run "$ROOT/20261009-R09-clock-input-job738110" \
   --output "$ROOT/20261008-V08-job737322-v1/reanalysis/C-clock-candidates-replay-<新后缀>"
 ```
+
+<a id="wide-input-preparation"></a>
+
+### 20480²×1024 三档输入：plain/ends 准备
+
+2026-10-09，仅准备，未提交或执行 GPU 作业。最终几何为 **M=N=20480、K=1024**，取代最初拟用的 16384²；cfg_a/b/c×dyadic/zero/random、seed=17，共 9 条。sm_count=0、swizzle=1、evict=0、紧密行距，沿用原暖机和原数值阈值，不增加持续 NVML 或新打点。K=1024 的旧检查通过不保证新几何也通过，新条件逐例检查；旧 K=20480/K=65536 random 失败保留原判定。
+
+**内存与软件调度。** A/B 各 40 MiB，FP32 D 为 1600 MiB；合计 **1,761,607,680 B（1.762 GB / 1.640625 GiB）**。按已知 60 MiB L2，探针即使 evict=0 仍分配 120 MiB eviction buffer；再计入 132 CTA 的 827,904 B trace 和 49,152 B 输出抽检数组，显式申请小计 **1,888,313,856 B（约 1.888 GB）**，另加 workspace、分配粒度和 CUDA 运行时占用。三个配置按进程串行运行，不将九份矩阵同时驻留。random 的主机输入参考另需 A/B 约 80 MiB。
+
+按 132 SM、原 tile/cluster 和 swizzle=1 的软件调度：
+
+| 配置 | 预计 grid | 总输出 tile | CTA 的 tile 数分布 | 最大单个 consumer role 计数 |
+|---|---|---:|---|---:|
+| cfg_a | 2×66×1 | 25600 | 124 个 CTA×194，8 个×193 | 194 |
+| cfg_b | 1×132×1 | 25600 | 124 个 CTA×194，8 个×193 | 97（两 role 交替） |
+| cfg_c | 66×2×1 | 12800 | 128 个 CTA×97，4 个×96 | 97 |
+
+尺寸与行距均满足当前 tile/cluster 整除和 128 B 对齐，无尺寸尾部或 swizzle 补齐。上表来自软件调度器，实际 grid、SMID 和计数仍由运行记录确认。总工作为 **858.9934592 GFLOP**；按题设 4096 FLOP/SM-cycle、132 SM、1.98 GHz 的理想满载假设，纯计算约 802.4 µs。它只说明选取更大几何的理由，**不作为任何条件超过 600 µs 的实测证明**。
+
+**64 槽不是 ends 头部计数上限。** 已读取 6338653 归档的 [r18_trace.hpp](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097/source/probes/r18_trace.hpp)、[r18.cu](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-R13-shared-smoke-job738097/source/probes/r18.cu) 和 `v08_model._ends`：
+
+- `V08_ENDS` 分支的 `v06_begin` 只写 producer 首次工作，`v06_stamp` 为空；不会用 tile 下标访问逐 tile 数组或设置其溢出位。`v06_final` 将 role 总 tile 数作为 uint64 写入头部第 6/9 项。
+- 探针仍分配 `16+2×64×6=784` 个 uint64/CTA，host 只检查头部溢出标志；`trace_tile_capacity=64` 描述预留逐 tile 数组容量，不限制 ends 的头部计数。
+- `_ends` 读取头部：cooperative 核对两个 role 计数相等，pingpong 将两个 role 计数相加；随后 `observe` 与软件调度的 tile 数逐 CTA 对照，没有截断到 64。
+- 这批三个配置的单 role 计数均可超过 64，**不得使用 stamped**。新模式的采样列表明确为 plain/ends，分析也走专门的头部汇总，不调用要求三种 variant 和逐 tile 记录的 `summarize_case`。
+
+[test_r09_ends.py](../../../../../../microbench/gh200_resource_campaign/access_rules/test_r09_ends.py) 对真实 20480² 调度生成 CPU 合成头部，逐 tile 区域全为零，直接调用归档的 `observe/_ends` 并检查新汇总：194/97 计数均通过，故意错误的计数被拒绝，stamped 记录被新入口拒绝。合成时间只测试解析和大于 600 µs 的标记分支，不是 GPU 性能结果。另用 CPU 调用替身核对新模式为 9 个独立预检查和最多 180 个正式调用，不含 stamped；原 15 条模式与 job738110 的 12 成功/3 失败汇总保持兼容。
+
+**准备包与运行。** 使用 [20261009-R09-wide-input-prepared-v2](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-wide-input-prepared-v2/)；v1 是被替代的 16384² 草案，不用于提交。完整复用 6338653 的 source/build 和原清单，不重编；包里保留原二进制归档，但本批只选择 6 个 plain/ends 程序。新增入口与分析器指纹和公共源码版本分别记录。
+
+每条条件先跑 plain 数值检查，9 条均检查；numeric_error 仅排除该条件的后续性能采样，其余继续，原矩阵保留。全部通过时为 9 个预检查加 9×2×10=180 个正式进程。`numeric_checks.json`、`sampling.json` 保存结果；分析输出 plain/ends 时间及 CV、ends 最大周期和有效 GHz、包络、同调用 event−包络，以及相对 dyadic 的变化。`window_ends_gt_600us` 和 `ends_processes_gt_600us` 分别按实测中位数和逐次窗口判断，不预先将全部配置标成“长窗口通过”。不输出本批没有记录的 L/S/E 分解或 stamped/ends κ；输入效应只解释为这些条件下的周期、有效频率和时间关系，不作功率因果判断。
+
+```bash
+# 本地 CPU 核对；不会运行 GPU。
+python3 microbench/gh200_resource_campaign/access_rules/test_r09_ends.py \
+  --shared-run <6338653完整公共包>
+
+# 如需重新生成准备包，目标目录必须不存在。
+python3 microbench/gh200_resource_campaign/access_rules/r09_run.py shared-prepare \
+  --batch wide-input --shared-run <6338653完整公共包> --output <新目录>
+
+# 管理者安排参考卡后，将准备包放到节点本地 /tmp；在已绑定获配 UUID、
+# 设置 V08_GPU/CUDA_VISIBLE_DEVICES 且加载 CUDA 12.9 的 step 中执行：
+bash /tmp/<准备包>/run.sh
+```
+
+运行依赖仍为公共 CUDA 12.9 二进制、Python 3/NumPy 和同一包中的原始回放函数；不改公共文件、不向超配额共享空间追加运行数据。使用 `bash run.sh`，不要 `source run.sh`；不调用默认会包含 stamped 的公共 `run_v08.py sample`。

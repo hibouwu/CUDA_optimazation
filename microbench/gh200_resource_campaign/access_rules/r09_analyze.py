@@ -408,12 +408,52 @@ def plots(summary, out: Path):
     plt.close(fig)
 
 
+def summarize_ends_case(run: Path, row, setup):
+    """Plain/ends only: no per-tile array access, so head counts may exceed 64."""
+    import v08_model
+
+    times = dict(plain=[], ends=[])
+    ends = []
+    for path in sorted((run / 'samples' / row['id']).glob('*.json')):
+        record = json.loads(path.read_text())
+        variant = record['variant']
+        if variant not in times:
+            raise ValueError('wide-input must not contain stamped processes')
+        if record['returncode']:
+            continue
+        observed = v08_model.observe(run, record, row, setup)
+        times[variant].append(observed['elapsed_us'])
+        if variant == 'ends':
+            ctas = observed['ctas']
+            active = [c for c in ctas if c['tiles']]
+            T = max(c['tiles'] for c in active)
+            cycles = max(c['end_c'] - c['entry_c'] for c in active)
+            ghz = med([(c['end_c'] - c['entry_c']) / (c['end_ns'] - c['entry_ns'])
+                       for c in active if c['tiles'] == T])
+            window = (max(c['end_ns'] for c in active) - min(c['entry_ns'] for c in ctas)) / 1000
+            ends.append(dict(trial=record['trial'], cycles=cycles, ghz=ghz, window_us=window,
+                             event_minus_window_us=observed['elapsed_us'] - window, tiles_max=T))
+    if any(len(values) != 10 for values in times.values()):
+        raise ValueError('ten successful plain and ends processes required: ' + row['id'])
+    return dict(id=row['id'], config=row['config'], input_mode=row['input_mode'],
+                plain_us=med(times['plain']), ends_us=med(times['ends']),
+                plain_cv=cv(times['plain']), ends_cv=cv(times['ends']),
+                c_max_ends=med([e['cycles'] for e in ends]), ghz_ends=med([e['ghz'] for e in ends]),
+                window_ends=med([e['window_us'] for e in ends]),
+                ends_perturbation=med(times['ends']) / med(times['plain']) - 1,
+                T=max(e['tiles_max'] for e in ends), kt=(row['k'] + 63) // 64,
+                ends_gap_us=med([e['event_minus_window_us'] for e in ends]),
+                window_ends_gt_600us=med([e['window_us'] for e in ends]) > 600,
+                ends_processes_gt_600us=sum(e['window_us'] > 600 for e in ends), per_process_ends=ends)
+
+
 def summarize_shared(run: Path, out: Path):
     """Public R09 batch: reuse the shared numeric replay and timing definitions."""
     import v06_run as common
     import v08_model
 
     common.verify(run)
+    wide = json.loads((run / 'run_config.json').read_text()).get('batch') == 'wide-input'
     rows = json.loads((run / "cases.json").read_text())
     setups = {s["case"]: s["setup"] for s in json.loads((run / "static_setup.json").read_text())}
     sampling = json.loads((run / "sampling.json").read_text()) if (run / "sampling.json").exists() else {}
@@ -425,18 +465,22 @@ def summarize_shared(run: Path, out: Path):
             summaries[row["id"]] = dict(status="numeric_error", condition=row, failure=failed[row["id"]])
             metrics.append(dict(metric, status="numeric_error"))
             continue
-        s = v08_model.summarize_case(run, row, setups[row["id"]])
+        s = (summarize_ends_case(run, row, setups[row['id']]) if wide
+             else v08_model.summarize_case(run, row, setups[row["id"]]))
         summaries[row["id"]] = s
         metric["status"] = "measured"
-        for key in ("plain_us", "stamped_us", "ends_us", "plain_cv", "stamped_cv", "ends_cv",
-                    "c_max_stamped", "c_max_ends", "ghz_stamped", "ghz_ends", "window_stamped",
-                    "window_ends", "perturbation", "ends_perturbation", "T", "kt"):
+        keys = ["plain_us", "ends_us", "plain_cv", "ends_cv", "c_max_ends", "ghz_ends",
+                "window_ends", "ends_perturbation", "T", "kt"]
+        keys += (["ends_gap_us", "window_ends_gt_600us", "ends_processes_gt_600us"] if wide else
+                 ["stamped_us", "stamped_cv", "c_max_stamped", "ghz_stamped", "window_stamped", "perturbation"])
+        for key in keys:
             metric[key] = s[key]
-        metric.update(P0_cycles=s["intervals"]["P0"], S_cycles=s["intervals"]["S"],
-                      L0_per_kt=s["intervals"]["L0"] / s["kt"],
-                      L_per_kt=s["intervals"]["L"] / s["kt"],
-                      observed_kappa=s["c_max_ends"] / s["c_max_stamped"],
-                      plain_minus_ends_window_us=s["plain_us"] - s["window_ends"])
+        metric['plain_minus_ends_window_us'] = s['plain_us'] - s['window_ends']
+        if not wide:
+            metric.update(P0_cycles=s["intervals"]["P0"], S_cycles=s["intervals"]["S"],
+                          L0_per_kt=s["intervals"]["L0"] / s["kt"],
+                          L_per_kt=s["intervals"]["L"] / s["kt"],
+                          observed_kappa=s["c_max_ends"] / s["c_max_stamped"])
         metrics.append(metric)
     for metric in metrics:
         if metric["status"] != "measured":

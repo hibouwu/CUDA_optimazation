@@ -10,6 +10,7 @@ sample; a summary row without traces is appended to RUN/samples.jsonl.
 Public cfg_a/b/c clock/input batch (15 diagnostic cases; original modes unchanged):
   r09_run.py shared-list
   r09_run.py shared-prepare --shared-run SHARED_RUN --output NEW_RUN
+Add --batch wide-input for M=N=20480, K=1024, nine input cases, plain/ends only.
 Then run NEW_RUN/run.sh inside the assigned GPU step, with V08_GPU and
 CUDA_VISIBLE_DEVICES set to the assigned UUID. Reuses the shared source/build only.
 """
@@ -275,10 +276,17 @@ def sample(output: Path, name):
                 run_one(output, name, case_id, spec, trial)
 
 
-def shared_cases():
+def shared_cases(batch="clock-input"):
     import run_v08
 
     rows = []
+    if batch == "wide-input":
+        for cfg in run_v08.CONFIGS:
+            for mode in ("dyadic", "zero", "random"):
+                row = run_v08.row(f"{cfg}_r09_m20480_k1024_{mode}", cfg, "ctrl", 20480, 20480, 1024)
+                row.update(input_mode=mode, seed=17, sm_count=0)
+                rows.append(row)
+        return rows
     for cfg in run_v08.CONFIGS:
         for k in (1024, 8192, 20480):
             modes = ("dyadic", "zero", "random") if k == 20480 else ("dyadic",)
@@ -289,15 +297,16 @@ def shared_cases():
     return rows
 
 
-def prepare_shared(output: Path, shared: Path):
+def prepare_shared(output: Path, shared: Path, batch="clock-input"):
     """Reuse a completed public build without copying its samples or changing its kernel."""
     import v06_run as common
     import run_v08
 
     common.verify(shared)
     binaries = json.loads((shared / "build/binary_hashes.json").read_text())
+    variants = ['plain', 'ends'] if batch == 'wide-input' else run_v08.VARIANTS
     for cfg in run_v08.CONFIGS:
-        for variant in run_v08.VARIANTS:
+        for variant in variants:
             if f"build/{cfg}_{variant}" not in binaries:
                 raise ValueError(f"shared build missing {cfg}_{variant}")
     output.mkdir(parents=True, exist_ok=False)
@@ -305,10 +314,12 @@ def prepare_shared(output: Path, shared: Path):
     shutil.copytree(shared / "build", output / "build")
     for name in ("r09_run.py", "r09_analyze.py", "r09_input_error.py"):
         shutil.copy2(ROOT / name, output / "source" / name)
-    write_json(output / "cases.json", shared_cases())
+    rows = shared_cases(batch)
+    write_json(output / "cases.json", rows)
     parent = json.loads((shared / "run_config.json").read_text())
     write_json(output / "run_config.json", dict(
-        family="r09-shared-clock-input", cases_sha256=sha(output / "cases.json"),
+        family="r09-shared-clock-input", batch=batch, variants=variants,
+        cases_sha256=sha(output / "cases.json"),
         shared_run=str(shared), shared_source_commit=parent.get("source_commit"),
         shared_source_hashes_sha256=sha(shared / "source_hashes.json"),
         r09_entry_analysis_sha256={name: sha(output / "source" / name)
@@ -333,7 +344,7 @@ python3 source/r09_run.py shared-sample --output "$PWD"
 python3 source/r09_analyze.py --shared --input "$PWD" --output "$PWD/analysis"
 ''')
     script.chmod(0o755)
-    print("prepared 15 R09 cases, 3 variants x 10 processes = 450 processes:", output)
+    print("prepared", len(rows), "R09 cases;", variants, "x 10 processes:", output)
 
 
 def shared_process(output: Path, row, variant, trial):
@@ -361,14 +372,16 @@ def shared_process(output: Path, row, variant, trial):
 
 
 def check_shared(output: Path):
-    """Check all three K=20480 random plain cases; none count as formal trial 0."""
+    """Check random cases, or every wide-input case; none count as formal trial 0."""
     import run_v08
     import v06_run as common
 
     if not os.environ.get("SLURM_JOB_ID"):
         raise ValueError("Slurm allocation required")
     common.verify(output)
-    if sha(output / "cases.json") != json.loads((output / "run_config.json").read_text())["cases_sha256"]:
+    config = json.loads((output / "run_config.json").read_text())
+    wide = config.get('batch') == 'wide-input'
+    if sha(output / "cases.json") != config["cases_sha256"]:
         raise ValueError("matrix changed")
     env = run_v08.identity()
     if env != json.loads((output / "environment.json").read_text()):
@@ -379,14 +392,14 @@ def check_shared(output: Path):
         for lock in (gpu_lock, run_lock):
             run_v08.fcntl.flock(lock, run_v08.fcntl.LOCK_EX | run_v08.fcntl.LOCK_NB)
         for row in json.loads((output / "cases.json").read_text()):
-            if row["input_mode"] == "random":
+            if wide or row["input_mode"] == "random":
                 # Same case, separate ID: these checks never count as formal trial 0.
                 check = dict(row, id="check_" + row["id"])
                 result = shared_process(output, check, "plain", 0)
                 result["case"] = row["id"]
                 outcomes.append(result)
                 print("R09 precheck", row["id"], result["status"], flush=True)
-    write_json(output / "random_checks.json", outcomes)
+    write_json(output / ("numeric_checks.json" if wide else "random_checks.json"), outcomes)
     return outcomes
 
 
@@ -397,6 +410,9 @@ def sample_shared(output: Path):
     checks = check_shared(output)
     failed = {r["case"]: r for r in checks if r["status"] == "numeric_error"}
     rows = json.loads((output / "cases.json").read_text())
+    config = json.loads((output / "run_config.json").read_text())
+    # Wide cooperative CTAs exceed 64 per-tile slots: never schedule stamped here.
+    selected = ['plain', 'ends'] if config.get('batch') == 'wide-input' else run_v08.VARIANTS
     env = run_v08.identity()
     with open('/tmp/gh200-measurement-' + env['gpu'].split(',')[0] + '.lock', 'a') as gpu_lock, \
             (output / '.run.lock').open('a') as run_lock:
@@ -408,7 +424,7 @@ def sample_shared(output: Path):
             for row in group:
                 if row["id"] in failed:
                     continue
-                variants = run_v08.VARIANTS[:]
+                variants = selected[:]
                 random.Random(f"{trial}-{row['id']}").shuffle(variants)
                 for variant in variants:
                     result = shared_process(output, row, variant, trial)
@@ -419,7 +435,7 @@ def sample_shared(output: Path):
     write_json(output / "sampling.json", dict(
         planned_cases=[r["id"] for r in rows], numeric_failed=list(failed.values()),
         sampled_cases=[r["id"] for r in rows if r["id"] not in failed],
-        processes_per_sampled_case=30,
+        processes_per_sampled_case=10 * len(selected), variants=selected,
     ))
     (output / 'nvidia-smi-after-ctrl.txt').write_text(subprocess.check_output(
         ['nvidia-smi', '-q', '-i', os.environ['V08_GPU']], text=True))
@@ -431,17 +447,18 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--cutlass-root", type=Path)
     parser.add_argument("--shared-run", type=Path)
+    parser.add_argument("--batch", choices=("clock-input", "wide-input"), default="clock-input")
     parser.add_argument("--set", choices=tuple(case_sets()))
     args = parser.parse_args()
     if args.step == "shared-list":
-        print(json.dumps(shared_cases(), indent=2))
+        print(json.dumps(shared_cases(args.batch), indent=2))
         return
     if args.output is None:
         parser.error("--output is required")
     if args.step == "shared-prepare":
         if args.shared_run is None:
             parser.error("shared-prepare requires --shared-run")
-        prepare_shared(args.output.resolve(), args.shared_run.resolve())
+        prepare_shared(args.output.resolve(), args.shared_run.resolve(), args.batch)
         return
     if args.step == "shared-check":
         check_shared(args.output.resolve())
