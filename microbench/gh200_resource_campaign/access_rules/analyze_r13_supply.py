@@ -1010,10 +1010,11 @@ def supply_pitch_support(row, setup, model, frequency_ghz):
             case=dict(row)
             case['lda']=row['k'];case['ldb']=((row.get('input_map_n',row['n'])+63)//64)*64
             case['lda' if operand=='A' else 'ldb']+=residue//2
-            requests=[r for r in supply_request_rows(case,setup) if r['j']>=1]
+            requests=[r for r in supply_request_rows(case,setup)
+                      if (r['j']==0)==(model.get('phase','later')=='first')]
             _,support=supply_predict(requests,model,frequency_ghz)
             result.append(dict(operand=operand,pitch_mod128=residue,windows=len(requests),
-                supported=int(sum(support)),status='supported by feature span' if len(requests) and all(support) else 'unsupported or no later windows'))
+                supported=int(sum(support)),status='supported by feature span' if len(requests) and all(support) else 'unsupported or no matching-phase windows'))
     return result
 
 

@@ -649,3 +649,20 @@ job738496 在 a057/GPU432 上提供 29 条件、每条件十份 dual，共 **128
 29 个 case 的配对扰动中位：wide/plain **+0.12%**，dual/wide **+2.32%**，dual/plain **+1.98%**；dual/plain 的 case 范围为 +0.54%～+6.22%，不能忽略 observer 差异。旧 B13 仅作桥接诊断：同几何 aligned/B16 的 later ns 中位绝对差为 0.31%/1.26%，但 alloc_lda 从 1024 变为 1032、alloc_ldb 从 3136 变为 3080，未自动联合。
 
 交根继续组合：[可读 phase 模型及条件范围](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/models.json)、[窗口与分项残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/residuals.csv)、[纯预测调用例子](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-phase-supply-v1/example.py)、[observer/旧批桥接诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-supply-diagnostics-v1/summary.json)。只替换 L，完整事件效果由根的 non-L 与预测时钟组合验证；局部最大残差继续保留。
+
+### cfg_b 旧 13＋新 6 条件联合开发（2026-10-09，A）
+
+主管明确授权后，仅 cfg_b 联合 738203、738296、738307 与新 738496 的六点；19 个 case 等权，first/later 分别定值，不加 run 偏置。A/C 的新 29 点模型 payload 保持完全相同。四 run 的 cfg_b dual SASS SHA256 相同，trace header、pingpong/mainloop overlay 也相同；均为六 stage、168 reg、16 HGMMA，无 spill/C7510。R10 旧 host probe 尚无 input_map 接口，二进制哈希和容量准备并不相同：桥接 alloc_lda 为 1024→1032，alloc_ldb 为 3136→3080。aligned/B16 的 first ns 中位绝对差为 0.286%/0.597%，最大 0.867%/3.659%，足以支持本次有条件联合，不宣称所有边界条件跨批等价。
+
+联合 later 为 7/7 秩、8388 窗口；first 为 4/5 秩、2508 窗口，均有特征支持。显式 1.6 GHz 下，later 的条件预测均唯一；first 有 2376 个唯一、132 个范围不超过 24.59 ns。各 run 的逐窗口中位/RMS如下，均为开发数据评分：
+
+| run | first 中位 / RMS | later 中位 / RMS |
+|---|---|---|
+| 新 738496 六点 | 3.77% / 7.08% | 5.45% / 9.40% |
+| 旧 738203 B 曲线 | 2.11% / 6.65% | 6.47% / 9.59% |
+| 旧 738296 M-map | 6.11% / 6.72% | 6.99% / 11.36% |
+| 旧 738307 N-map | 5.98% / 6.32% | 6.24% / 11.24% |
+
+新六点联合前的 first 中位/RMS为 3.57%/7.11%，later 为 5.83%/9.58%，没有因扩大范围而明显牺牲该批 RMS。参考几何下，两 phase 的 B pitch 余数 0/16/32/48/64/80/96/112 均恢复代数支持，B32/B64 的 later 中位误差为 5.23%/3.88%，first 为 3.48%/9.32%。已有 whole A/B-fill 与 map 条件进入 later 定值；A32/A64/A96、未见的 first 目的 fill 仍明确不支持。新余数或条件的代数支持不替代后续留出实测。
+
+失败继续保留：padN OOB、K4096、j2/T5 有效地址组中位仍低估 **23.32%**；单 CTA whole B-fill 窗口最大高估 **76.07%**；B64 first、T4 组中位低估 9.56%。本次没有消除或改写原 R10 冻结失败。交根的[最小 cfg_b 片段](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/models.json)保持 `supply/first_supply` 键；[完整三配置片段](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/composition-supply.json)、[分 run/联合前后报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/summary.json)及[纯 B64 调用例子](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-b-joint-supply-v1/example.py)均已保存；没有新增 GPU 或候选族。
