@@ -48,13 +48,26 @@ class FreezeChecks(unittest.TestCase):
 
     def test_failed_condition_is_scored(self):
         runner.write(self.root/'prediction_binding.json',dict(first_sample_unix_ns=1))
-        runner.score(self.root,{'h':{'plain_us':3}},dict(median_percent=5,maximum_percent=10),
+        runner.score(self.root,{'h':{'plain_us':3,'status':'predicted'}},dict(median_percent=5,maximum_percent=10),
                      [dict(case='h',variant='plain',error='numeric failure')])
         result=runner.read(self.root/'score.json')
         self.assertEqual(result['total_conditions'],1)
         self.assertEqual(result['valid_plain_conditions'],0)
         self.assertFalse(result['complete_time_passed'])
         self.assertEqual(len(result['cases'][0]['errors']),1)
+
+    def test_unsupported_kept_without_numeric_prediction(self):
+        with patch.object(runner.v09_model,'predict_components',return_value=dict(
+                all_supply_supported=False,plain_us=999,unsupported_windows=[dict(cta=2,j=0)])):
+            runner.freeze_predictions(self.root,{}, {}, {})
+        p=runner.read(self.root/'frozen/predictions.json')['predictions']['h']
+        self.assertEqual(p['status'],'unsupported')
+        self.assertIsNone(p['plain_us'])
+        runner.write(self.root/'prediction_binding.json',dict(first_sample_unix_ns=1))
+        runner.score(self.root,{'h':p},dict(median_percent=5,maximum_percent=10),[])
+        result=runner.read(self.root/'score.json')
+        self.assertEqual(result['total_conditions'],1)
+        self.assertFalse(result['complete_time_passed'])
 
 
 class ModelChecks(unittest.TestCase):

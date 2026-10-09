@@ -127,12 +127,14 @@ def freeze_predictions(root,model,metrics,policy):
     if any((root/'samples'/r['id']).exists() for r in held):raise ValueError('heldout samples predate freeze')
     setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
     predictions={r['id']:v09_model.predict_components(r,setups[r['id']],model) for r in held}
-    unsupported=[case for case,p in predictions.items() if not p['all_supply_supported']]
-    if unsupported:
-        write(root/'unsupported-before-freeze.json',unsupported)
-        raise ValueError('no complete numerical prediction for heldout conditions: '+', '.join(unsupported))
-    for p in predictions.values():
-        if p['plain_us'] is None or p['plain_us']<=0:raise ValueError('plain prediction missing')
+    for case,p in list(predictions.items()):
+        if not p['all_supply_supported']:
+            predictions[case]=dict(status='unsupported',plain_us=None,
+                unsupported_windows=p['unsupported_windows'],
+                reason='Supply request or active-Jacobian span is unsupported; no numerical prediction is frozen for this condition.')
+        else:
+            if p['plain_us'] is None or p['plain_us']<=0:raise ValueError('plain prediction missing')
+            p['status']='predicted'
     frozen=root/'frozen';frozen.mkdir(exist_ok=False)
     shutil.copy2(root/'environment.json',root/'freeze-environment.json')
     shutil.copy2(root/'static_setup.json',root/'freeze-setup.json')
@@ -185,7 +187,7 @@ def score(root,predictions,policy,failures):
             except ValueError as error:
                 errors.append(dict(variant=rec['variant'],trial=rec['trial'],error=str(error)));continue
             times[rec['variant']].append(observed['elapsed_us'])
-            if rec['variant']=='dual':
+            if rec['variant']=='dual' and predictions[row['id']]['status']=='predicted':
                 p=predictions[row['id']];ctas=observed['ctas'];last=max(range(len(ctas)),key=lambda i:ctas[i]['end_ns'])
                 chosen=p['critical_cta'];relative={key:[] for key in ('prefix','prefill','first_L','later_L','last_E','tail')}
                 for c,predicted in zip(ctas,p['cta_events']):
@@ -203,15 +205,17 @@ def score(root,predictions,policy,failures):
                     last_in_exact_predicted_ties=last in p['critical_candidates'],predicted_tie_count=len(p['critical_candidates'])))
         plain_ok=len(times['plain'])==10 and not any(e.get('variant')=='plain' for e in errors)
         target=st.median(times['plain']) if plain_ok else None
-        cases.append(dict(case=row['id'],plain_valid=plain_ok,observed_plain_us=target,
+        predicted=predictions[row['id']]['status']=='predicted'
+        cases.append(dict(case=row['id'],plain_valid=plain_ok,prediction_supported=predicted,observed_plain_us=target,
             plain_process_cv=st.pstdev(times['plain'])/st.fmean(times['plain']) if times['plain'] else None,
             predicted_plain_us=predictions[row['id']]['plain_us'],
-            relative_error=predictions[row['id']]['plain_us']/target-1 if plain_ok else None,
+            relative_error=predictions[row['id']]['plain_us']/target-1 if plain_ok and predicted else None,
             processes={k:len(v) for k,v in times.items()},failed_attempts=bad,errors=errors,components=details))
-    valid=[c for c in cases if c['plain_valid']]
+    valid=[c for c in cases if c['plain_valid'] and c['prediction_supported']]
     metrics=supply.metrics([c['relative_error'] for c in valid]) if valid else None
     passed=bool(len(valid)==len(cases) and metrics['median_abs_pct']<=policy['median_percent'] and metrics['max_abs_pct']<=policy['maximum_percent'])
-    write(root/'score.json',dict(cases=cases,total_conditions=len(cases),valid_plain_conditions=len(valid),
+    write(root/'score.json',dict(cases=cases,total_conditions=len(cases),
+        valid_plain_conditions=sum(c['plain_valid'] for c in cases),scored_predictions=len(valid),
         plain_metrics=metrics,complete_time_passed=passed,
         scope='No failed condition is removed from the declared set. Component errors, exact ties and representative-CTA shortfall remain separate from total time.'))
 
