@@ -51,8 +51,16 @@ def replay(root,record,row):
     if setup.get('input_mode','dyadic')!=mode or setup.get('seed',17)!=seed:
         raise ValueError('input mode or seed changed')
     if setup.get('requested_sm_count',0)!=row.get('sm_count',0):raise ValueError('requested SM count changed')
-    for key in ['alloc_lda','alloc_ldb']:
+    for key in ['alloc_lda','alloc_ldb','input_map_m','input_map_n']:
         if key in row and setup.get(key)!=row[key]:raise ValueError('input allocation changed: '+key)
+    if 'input_map_m' in row or 'input_map_n' in row:
+        if (setup['initialized_input_rows'],setup['initialized_input_columns'])!=(row['storage_m'],row['storage_n']):
+            raise ValueError('matched input initialization extent changed')
+        expected_zero=(max(0,row['storage_m']-row['m'])*row['k'] if row['zero_m']==row['m'] else 0)
+        expected_zero+=(row['k']*max(0,row['storage_n']-row['n']) if row['zero_n']==row['n'] else 0)
+        witness=events['input_zero_storage']
+        if witness['checked']!=expected_zero or witness['nonzero']:
+            raise ValueError('explicit zero storage witness failed')
     if check['status']!='ok' or check['padding_errors'] or len(check['checked_values'])!=4096:
         raise ValueError('incorrect or incomplete GEMM check')
     if len(set(check['checked_indices']))!=4096:raise ValueError('duplicate sampled values')
@@ -289,11 +297,93 @@ def analyze_v08_padding(root, output):
     print('padding cases', len(cases), '->', output)
 
 
+def analyze_input_map_pairs(root, output):
+    """Matched logical output/work lists; only the input descriptor bounds differ."""
+    from analyze_r13_sm import select_attempts
+    from v08_model import tile_class as logical_tile_class
+    med = statistics.median
+    common.verify(root)
+    rows = json.loads((root / 'cases.json').read_text())
+    setups = {s['case']: s['setup'] for s in json.loads((root / 'static_setup.json').read_text())}
+    env = json.loads((root / 'environment.json').read_text())
+    observations, summaries, all_hashes = {}, [], {}
+    variants = ('plain', 'wide', 'stamped', 'dual')
+    for row in rows:
+        selected, failed, ignored = select_attempts(root, row['id'], variants)
+        if ignored or any(sum(x['record']['variant'] == v for x in selected) != 10 for v in variants):
+            raise ValueError('ten successful processes per variant required')
+        if setups[row['id']]['gpu_uuid'] != env['gpu'].split(',')[0]:
+            raise ValueError('input-map cases are not on the recorded GPU')
+        by_variant = {v: {} for v in variants}
+        for item in selected:
+            rec = item['record']; obs = replay(root, rec, row)
+            by_variant[rec['variant']][rec['trial']] = obs
+            all_hashes[rec['raw']] = rec['raw_sha256']
+        observations[row['id']] = by_variant
+        times = {v: [by_variant[v][t]['elapsed_us'] for t in range(10)] for v in variants}
+        summaries.append(dict(condition=row, median_us={v: med(t) for v,t in times.items()},
+            cv={v: statistics.pstdev(t)/statistics.mean(t) for v,t in times.items()},
+            wide_over_plain=med(times['wide'])/med(times['plain'])-1,
+            dual_over_wide=med(times['dual'])/med(times['wide'])-1,
+            dual_over_wide_pairs=[b/a-1 for a,b in zip(times['wide'],times['dual'])],
+            failed_attempts=failed))
+    pairs = []
+    fixed = ('config','m','n','k','lda','ldb','ldd','storage_m','storage_n','alloc_lda','alloc_ldb',
+             'zero_m','zero_n','swizzle','sm_count','input_mode','seed')
+    for group in sorted({r['group'] for r in rows}):
+        control = next(r for r in rows if r['group']==group and r['input_path']=='oob')
+        mapped = next(r for r in rows if r['group']==group and r['input_path']=='address_zero')
+        if any(control[k] != mapped[k] for k in fixed):
+            raise ValueError('paired source-path conditions changed another variable')
+        if setups[control['id']]['grid'] != setups[mapped['id']]['grid']:
+            raise ValueError('input descriptor changed the output grid')
+        a,b = observations[control['id']], observations[mapped['id']]
+        time_pairs = {v: [b[v][t]['elapsed_us']/a[v][t]['elapsed_us']-1 for t in range(10)] for v in variants}
+        strata = defaultdict(list)
+        kt = (control['k']+63)//64
+        for trial in range(10):
+            ac,bc = a['dual'][trial]['ctas'], b['dual'][trial]['ctas']
+            if [c['work'] for c in ac] != [c['work'] for c in bc]:
+                raise ValueError('paired descriptor path changed CTA work lists')
+            groups = defaultdict(list)
+            for x,y in zip(ac,bc):
+                for j,coord in enumerate(x['work']):
+                    cls = logical_tile_class(control['config'],control,*coord)
+                    xc,yc = x['tiles'][j],y['tiles'][j]
+                    xn,yn = x['tiles_ns'][j],y['tiles_ns'][j]
+                    groups[j,len(x['work']),cls].append(((xc[1]-xc[0])/kt,(yc[1]-yc[0])/kt,
+                                                        (xn[1]-xn[0])/kt,(yn[1]-yn[0])/kt))
+            for key,values in groups.items():
+                means = [statistics.fmean(v[i] for v in values) for i in range(4)]
+                strata[key].append(dict(trial=trial,windows=len(values),oob_cycle_per_kt=means[0],
+                    address_zero_cycle_per_kt=means[1],oob_ns_per_kt=means[2],address_zero_ns_per_kt=means[3],
+                    delta_cycle_per_kt=means[1]-means[0],delta_ns_per_kt=means[3]-means[2]))
+        groups = []
+        for (j,T,cls),values in sorted(strata.items()):
+            groups.append(dict(j=j,T=T,logical_class=cls,processes=values,
+                median_delta_cycle_per_kt=med(x['delta_cycle_per_kt'] for x in values),
+                median_delta_ns_per_kt=med(x['delta_ns_per_kt'] for x in values)))
+        pairs.append(dict(group=group,control=control['id'],address_zero=mapped['id'],
+            complete_time_relative_pairs=time_pairs,
+            complete_time_relative_median={v:med(x) for v,x in time_pairs.items()},groups=groups))
+    output.mkdir(parents=True,exist_ok=False)
+    common.write_json(output/'input-map-pairs.json',dict(environment=env,cases=summaries,pairs=pairs,
+        raw_sha256=all_hashes,analyzer_sha256=common.sha(Path(__file__)),
+        scope='Address-zero minus TMA OOB with the same logical output, storage, grid and CTA coordinates. '
+              'Stage windows are dual-observer measurements; logical pad classes do not change when the input map expands. '
+              'These are paired process comparisons, not physical traffic counts or a frozen prediction.'))
+    print('input-map pairs',len(pairs),'successful processes',len(all_hashes),'->',output)
+
+
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True,type=Path);p.add_argument('--output',type=Path)
     p.add_argument('--v08-padding',action='store_true')
+    p.add_argument('--input-map-pairs',action='store_true')
     a=p.parse_args()
-    if a.v08_padding:
+    if a.input_map_pairs:
+        if a.output is None:p.error('--input-map-pairs requires a new --output directory')
+        analyze_input_map_pairs(a.input.resolve(),a.output)
+    elif a.v08_padding:
         if a.output is None:p.error('--v08-padding requires a new --output directory')
         analyze_v08_padding(a.input.resolve(),a.output)
     else:analyze(a.input.resolve(),a.output)

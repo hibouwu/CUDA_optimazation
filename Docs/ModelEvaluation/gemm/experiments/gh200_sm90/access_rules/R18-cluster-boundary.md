@@ -250,3 +250,14 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r18.py --v08-pad
   --input /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1 \
   --output <该run下新的reanalysis目录>
 ```
+
+
+### 整 cluster 补齐：只改变输入 tensor map 的准备
+
+按上节缺口，在公共 r18.cu 增加 `--input-map-m/n`：先按逻辑 GEMM 构造完整 CUTLASS Params，再只替换 mainloop 的源描述符。输出 descriptor、问题形状、scheduler、grid 和输出检查范围保持逻辑 M/N。默认不传时沿用原输入初始化范围；显式使用该开关的配对均初始化完整预留输入区，再把逻辑范围外的对应输入置零。每次测量后检查扩展输入区确为零，并检查逻辑输出范围外仍为原哨兵。
+
+本批仅用 cfg_b、逻辑 2304×4096、swizzle=8、K=1024/4096。软件补齐至 3072×4096，四条件均按该容量预留 A/D，A 的第 2304 行起显式填零；对照的输入 map M=2304，变体为 M=3072。B/D 行距、输入 seed、逻辑输出 mask 和实际工作列表必须相同。源 map N 均为4096。本批不通过扩大逻辑 GEMM 来代替输入路径对照，也不同时改变 cluster 或 stage。
+
+条件见 [r18-input-map-padding.json](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r18-input-map-padding.json)。沿用 plain/wide/stamped/dual 四变体，每条件十进程；wide 与 dual 共用相同记录容量，以直接纳秒窗口辅助周期比较。配对比较先核对完整工作坐标列表，再按 `(输出序号, CTA总tile数, 逻辑in/padM)` 分组。取每进程组内均值、再比较进程对和跨进程中位数；逻辑 padM 标签不会随源 map 扩大而消失。这是补齐路径的机制对照，不是新的完整预测留出。
+
+代码与条件已准备；尚未将本节记为GPU通过。实际源码、SASS、数值与结果随新run保存，不改旧V08或R18归档。

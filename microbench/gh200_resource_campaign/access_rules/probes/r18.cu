@@ -113,6 +113,7 @@ struct Args {
   std::string mode = "warm";
   int m = 1280, n = 1536, k = 1536;
   int zero_m=-1,zero_n=-1,storage_m=0,storage_n=0,swizzle=1,evict=0;
+  int input_map_m=0,input_map_n=0;
   int sm_count = 0;
   std::string input_mode = "dyadic";
   int seed = 17;
@@ -136,6 +137,8 @@ struct Args {
       else if(key=="--zero-n")zero_n=std::stoi(v);
       else if(key=="--storage-m")storage_m=std::stoi(v);
       else if(key=="--storage-n")storage_n=std::stoi(v);
+      else if(key=="--input-map-m")input_map_m=std::stoi(v);
+      else if(key=="--input-map-n")input_map_n=std::stoi(v);
       else if(key=="--swizzle")swizzle=std::stoi(v);
       else if(key=="--evict")evict=std::stoi(v);
       else if(key=="--sm-count")sm_count=std::stoi(v);
@@ -167,6 +170,13 @@ __global__ void zero_panel(__half* data,int rows,int cols,int64_t stride,int zer
     int row=i/cols,col=i%cols;
     if((zero_row>=0&&row>=zero_row)||(zero_col>=0&&col>=zero_col))data[size_t(row)*stride+col]=__half(0.f);
   }
+}
+
+static size_t nonzero_input_rectangle(const __half* data,int rows,int columns,int64_t stride){
+  std::vector<uint16_t> bits(size_t(rows)*columns);
+  CUDA_CHECK(cudaMemcpy2D(bits.data(),size_t(columns)*2,data,size_t(stride)*2,
+                         size_t(columns)*2,rows,cudaMemcpyDeviceToHost));
+  return std::count_if(bits.begin(),bits.end(),[](uint16_t x){return x!=0;});
 }
 
 inline Errors check_boundary_output(const float* data, int m, int n, int k, int64_t ldd,
@@ -257,6 +267,11 @@ int main(int argc, char** argv) {
     int storage_m=o.storage_m?o.storage_m:o.m,storage_n=o.storage_n?o.storage_n:o.n;
     if(storage_m<o.m||storage_n<o.n||ldb<storage_n||ldd<storage_n || (o.swizzle!=1&&o.swizzle!=8))
       throw std::runtime_error("invalid physical storage/swizzle");
+    const bool separate_input_map=o.input_map_m||o.input_map_n;
+    int input_map_m=o.input_map_m?o.input_map_m:o.m;
+    int input_map_n=o.input_map_n?o.input_map_n:o.n;
+    if(input_map_m<o.m||input_map_m>storage_m||input_map_n<o.n||input_map_n>storage_n)
+      throw std::runtime_error("input tensor map must cover logical input and fit allocated storage");
     int64_t alloc_lda=o.alloc_lda?o.alloc_lda:lda,alloc_ldb=o.alloc_ldb?o.alloc_ldb:ldb;
     if(alloc_lda<lda||alloc_ldb<ldb)throw std::runtime_error("allocation pitch is smaller than physical pitch");
     DeviceBuffer<__half> a(size_t(storage_m)*alloc_lda), b(size_t(o.k)*alloc_ldb);
@@ -293,17 +308,27 @@ int main(int argc, char** argv) {
     cutlass_check(gemm.can_implement(arguments), "can_implement");
     DeviceBuffer<unsigned char> workspace(std::max<size_t>(1, Gemm::get_workspace_size(arguments)));
     cutlass_check(gemm.initialize(arguments, workspace.pointer), "initialize");
-    dim3 grid = Gemm::get_grid_shape(gemm.params());
+    auto launch_params=gemm.params();
+    if(separate_input_map){
+      auto input_shape=make_shape(input_map_m,input_map_n,o.k,1);
+      if(!Mainloop::can_implement(input_shape,arguments.mainloop))
+        throw std::runtime_error("input tensor-map shape is not implementable");
+      // Only source descriptors change. Kernel problem_shape, output descriptor,
+      // scheduler and work count remain those constructed for the logical GEMM.
+      launch_params.mainloop=Mainloop::to_underlying_arguments(input_shape,arguments.mainloop,nullptr);
+    }
+    dim3 grid = Gemm::get_grid_shape(launch_params);
     int ctas = int(grid.x * grid.y * grid.z);
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
 
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
-    gaps::fill_input_strided<<<256, 256>>>(a.pointer, o.m, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
-    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, o.n, ldb, check.seed, false, input_mode,o.alloc_ldb?b.count:0);
+    int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
+    gaps::fill_input_strided<<<256, 256>>>(a.pointer, input_rows, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
+    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, input_columns, ldb, check.seed, false, input_mode,o.alloc_ldb?b.count:0);
     CUDA_CHECK(cudaGetLastError());
-    if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,o.m,o.k,lda,o.zero_m,-1);
-    if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,o.n,ldb,-1,o.zero_n);
+    if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,input_rows,o.k,lda,o.zero_m,-1);
+    if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,input_columns,ldb,-1,o.zero_n);
     CUDA_CHECK(cudaGetLastError());
     gaps::fill_output_sentinel<<<256, 256>>>(d.pointer, d.count);
     DeviceBuffer<uint64_t> trace(size_t(ctas) * kTraceWords);
@@ -325,7 +350,7 @@ int main(int argc, char** argv) {
       CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
       CUDA_CHECK(cudaDeviceSynchronize());
       CUDA_CHECK(cudaEventRecord(begin));
-      cutlass_check(gemm.run(), "run");
+      cutlass_check(Gemm::run(launch_params), "run");
       CUDA_CHECK(cudaEventRecord(end));
       CUDA_CHECK(cudaEventSynchronize(end));
       float ms = 0;
@@ -392,6 +417,8 @@ int main(int argc, char** argv) {
               << ",\"evict\":" << o.evict << ",\"eviction_bytes\":" << eviction.count*4
               << ",\"zero_m\":" << o.zero_m << ",\"zero_n\":" << o.zero_n
               << ",\"storage_m\":" << storage_m << ",\"storage_n\":" << storage_n << ",\"swizzle\":" << o.swizzle
+              << ",\"input_map_m\":" << input_map_m << ",\"input_map_n\":" << input_map_n
+              << ",\"initialized_input_rows\":" << input_rows << ",\"initialized_input_columns\":" << input_columns
               << ",\"trace_tile_capacity\":64,\"trace_version\":\"" << kTraceVersion << "\""
               << ",\"trace_tile_words\":" << kTraceTileWords
               << ",\"scratch_bytes\":" << trace.count * sizeof(uint64_t)
@@ -404,9 +431,29 @@ int main(int argc, char** argv) {
     Errors e = check_boundary_output(d.pointer, o.m, o.n, o.k, ldd, check.seed,
                                        4096,o.zero_m,o.zero_n,input_mode,a.pointer,b.pointer,
                                        lda,ldb,max_error_ratio);
-    size_t padding_bad = gaps::padding_errors(a.pointer, o.m, o.k, lda, __half(65504.f))
-        + gaps::padding_errors(b.pointer, o.k, o.n, ldb, __half(65504.f))
+    size_t padding_bad = gaps::padding_errors(a.pointer, input_rows, o.k, lda, __half(65504.f))
+        + gaps::padding_errors(b.pointer, o.k, input_columns, ldb, __half(65504.f))
         + gaps::padding_errors(d.pointer, o.m, o.n, ldd, gaps::output_sentinel());
+    size_t zero_storage_bad=0,zero_storage_checked=0;
+    if(separate_input_map&&o.zero_m==o.m&&storage_m>o.m){
+      zero_storage_checked+=size_t(storage_m-o.m)*o.k;
+      zero_storage_bad+=nonzero_input_rectangle(a.pointer+size_t(o.m)*lda,storage_m-o.m,o.k,lda);
+    }
+    if(separate_input_map&&o.zero_n==o.n&&storage_n>o.n){
+      zero_storage_checked+=size_t(o.k)*(storage_n-o.n);
+      zero_storage_bad+=nonzero_input_rectangle(b.pointer+o.n,o.k,storage_n-o.n,ldb);
+    }
+    if(separate_input_map)
+      std::cout << "{\"event\":\"input_zero_storage\",\"checked\":" << zero_storage_checked
+                << ",\"nonzero\":" << zero_storage_bad << "}\n";
+    padding_bad+=zero_storage_bad;
+    // The input map may cover extra rows; the output must still leave them untouched.
+    if(separate_input_map&&storage_m>o.m){
+      std::vector<uint32_t> extra_rows(size_t(storage_m-o.m)*ldd);
+      CUDA_CHECK(cudaMemcpy(extra_rows.data(),d.pointer+size_t(o.m)*ldd,
+                           extra_rows.size()*sizeof(uint32_t),cudaMemcpyDeviceToHost));
+      for(uint32_t bits:extra_rows)padding_bad+=bits!=0x7fc12345u;
+    }
     bool numerical_ok = input_mode == 2 ? max_error_ratio <= 1 : e.max_storage_error == 0;
     bool ok = e.nonfinite == 0 && numerical_ok && padding_bad == 0;
     if (input_mode == 2)
