@@ -108,6 +108,10 @@ struct R13SparseConsumer {
   uint64_t first_mma=0, mma_return=0, main_end=0;
 #ifdef R13_EPILOGUE_ORDER
   uint64_t sender_epi_begin=0, sender_epi_end=0;
+#ifdef R13_OUTPUT_BACKGROUND
+  uint64_t sender_epi_begin_ns=0, sender_epi_end_ns=0, receiver_return_ns=0;
+  uint64_t commit1_ns=0, commit16_ns=0;
+#endif
 #endif
 #ifdef R13_STAGE_HANDOFF
   uint64_t sender_mma_return=0, math_wait_begin=0, math_wait_end=0, first_wait_begin=0;
@@ -140,6 +144,9 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
   b[24]=s.commit63; b[32]=s.mma_return; b[31]=0x52313302;
 #ifdef R13_EPILOGUE_ORDER
   b[31]=0x52313304;
+#ifdef R13_OUTPUT_BACKGROUND
+  b[31]=0x52313305; b[49]=s.commit1_ns; b[50]=s.commit16_ns;
+#endif
 #endif
 #ifdef R13_STAGE_HANDOFF
   b[35]=s.math_wait_begin; b[36]=s.math_wait_end; b[37]=s.first_wait_begin;

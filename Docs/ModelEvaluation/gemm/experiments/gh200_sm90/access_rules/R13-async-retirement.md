@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。原固定服务子类的早段缺口不能靠一次性producer间隙修复；更宽分支只得到局部必要约束，完整代表轨迹仍未确定。逐调用联合端点在c≥512、各窗口允许±20cycle时排除w<23的分支，这不等于整个预测模型失败。整卡旧记录显示stage6输出重叠更多却更快，关键还包括入口相位与输入槽余量，不能按重叠面积或early单独加价。
+当前条件供给尚未通过V09的行距与stage迁移。新背景配对固定CTA0本地处理，延后其它CTA输出使stage4早段10/10缩短，但后段变长、plain未改善。原固定复用子类在同批的early中位缺口由1503降至179 cycle；后者落在逐进程波动内，未严格排除，也未证明全部分项可由一组参数解释。局部服务要考虑全卡组织；处理同时改变其它CTA输入进度，不能按输出面积或early单独加价。既有边界间隙及宽分支结论仍限定于各自假设，详见下文。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -25,6 +25,7 @@
 | 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
 | 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
 | 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
+| 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |

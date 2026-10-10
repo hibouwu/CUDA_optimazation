@@ -104,7 +104,13 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
             '      if (r13_target && r13_k==17) r13_s->next_wait_begin=v06_clock();\n')
         mma=common.insert_once(mma,'      warpgroup_commit_batch();\n',
             '      if (r13_target && r13_k==1) r13_s->commit1=v06_clock();\n'
+            '#ifdef R13_OUTPUT_BACKGROUND\n'
+            '      if (r13_target && r13_k==1) r13_s->commit1_ns=v06_ns();\n'
+            '#endif\n'
             '      if (r13_target && r13_k==16) r13_s->commit16=v06_clock();\n'
+            '#ifdef R13_OUTPUT_BACKGROUND\n'
+            '      if (r13_target && r13_k==16) r13_s->commit16_ns=v06_ns();\n'
+            '#endif\n'
             '      if (r13_target && r13_k==17) r13_s->commit17=v06_clock();\n'
             '      if (r13_target && r13_k==63) r13_s->commit63=v06_clock();\n',after=True)
         mma=common.insert_once(mma,'      warpgroup_wait<K_PIPE_MMAS>();\n',
@@ -159,7 +165,10 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
             '        v06_base()[34]=r13_s.sender_mma_return; v06_base()[38]=uint64_t(sm)+1;\n'
             '      }\n#endif\n')
     consumer=common.insert_once(consumer,'        // Cue for next Math WG\'s MMA to start',
-        '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.mma_return=v06_clock();\n')
+        '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.mma_return=v06_clock();\n'
+        '#ifdef R13_OUTPUT_BACKGROUND\n'
+        '        if (threadIdx.x==256 && v06_tile_seq==0) r13_s.receiver_return_ns=v06_ns();\n'
+        '#endif\n')
     if not progress:
         consumer=common.insert_once(consumer,'        collective_mainloop.mma_tail(\n',
             '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.tail_begin=v06_clock();\n')
@@ -171,10 +180,16 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
     consumer=consumer.replace('        v06_stamp(V06_EPI_PERMIT, v06_tile_seq);\n',
         '#ifdef R13_EPILOGUE_ORDER\n'
         '        if (r13_sparse_cta() && threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_begin=v06_clock();\n'
+        '#endif\n'
+        '#ifdef R13_OUTPUT_BACKGROUND\n'
+        '        if (threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_begin_ns=v06_ns();\n'
         '#endif\n        v06_stamp(V06_EPI_PERMIT, v06_tile_seq);\n',1)
     consumer=consumer.replace('        v06_stamp(V06_EPI_DONE, v06_tile_seq);\n',
         '#ifdef R13_EPILOGUE_ORDER\n'
         '        if (r13_sparse_cta() && threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_end=v06_clock();\n'
+        '#endif\n'
+        '#ifdef R13_OUTPUT_BACKGROUND\n'
+        '        if (threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_end_ns=v06_ns();\n'
         '#endif\n        v06_stamp(V06_EPI_DONE, v06_tile_seq);\n',1)
     consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
         '#ifdef R13_EPILOGUE_ORDER\n'
@@ -182,6 +197,11 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
         '        unsigned sm; asm volatile("mov.u32 %0, %%smid;":"=r"(sm));\n'
         '        auto b=v06_base(); b[41]=r13_s.sender_epi_begin; b[42]=r13_s.sender_epi_end; b[43]=uint64_t(sm)+1;\n'
         '      }\n#endif\n')
+    consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
+        '#ifdef R13_OUTPUT_BACKGROUND\n'
+        '      if (threadIdx.x==128) { v06_base()[46]=r13_s.sender_epi_begin_ns; v06_base()[47]=r13_s.sender_epi_end_ns; }\n'
+        '      if (threadIdx.x==256) v06_base()[48]=r13_s.receiver_return_ns;\n'
+        '#endif\n')
     path.write_text(text[:begin]+consumer)
 
 
@@ -253,6 +273,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '#endif\n')
         path.write_text(text[:start]+producer+text[end:])
     epilogue_order = any('epilogue_defer' in row for row in rows)
+    output_background = any(row.get('epilogue_defer')==2 for row in rows)
     if epilogue_order:
         if not stage_progress or stage_handoff or stage_sparse:
             raise ValueError('epilogue order uses the original progress observer')
@@ -262,9 +283,10 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '#ifdef R13_EPILOGUE_ORDER\n'
             '        // The first WG has already released its last input slot.\n'
             '        // Read the next WG math completion without advancing its barrier.\n'
-            '        if (blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0 &&\n'
-            '            warp_group_role==WarpGroupRole::Consumer0 &&\n'
-            '            mainloop_pipe_consumer_state.count()==0 && ::r13_epilogue_defer)\n'
+            '        if (warp_group_role==WarpGroupRole::Consumer0 &&\n'
+            '            mainloop_pipe_consumer_state.count()==0 &&\n'
+            '            (::r13_epilogue_defer==2 || (::r13_epilogue_defer==1 &&\n'
+            '             blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0)))\n'
             '          shared_storage.pipelines.math_wg_order.barrier_[0][0].wait(0);\n'
             '#endif\n')
         path.write_text(text)
@@ -316,6 +338,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if epilogue_order:cmd.append('-DR13_EPILOGUE_ORDER')
+            if output_background:cmd.append('-DR13_OUTPUT_BACKGROUND')
             if work_swap:cmd.append('-DR10_WORK_SWAP')
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
@@ -333,7 +356,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 

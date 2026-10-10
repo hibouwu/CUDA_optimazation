@@ -3761,6 +3761,290 @@ def stage_output_context_diagnostics(base, output):
     return report
 
 
+def stage_output_background_diagnostics(base, output):
+    """CTA0-only versus all-CTA E0 deferral, using each call's direct early ns."""
+    import gzip
+    from analyze_r13_sm import select_attempts, validate_setup
+    import v06_run as common
+
+    root=Path(base);output=Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    controls=[r for r in rows.values() if r.get('set')!='reference']
+    keys={(setups[r['id']]['stages'],r['epilogue_defer']):r['id'] for r in controls}
+    if len(controls)!=4 or set(keys)!={(s,d) for s in (4,6) for d in (1,2)}:
+        raise ValueError('background run requires stage4/6 crossed with flags1/2')
+    shared_fields=('m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n',
+        'alloc_lda','alloc_ldb','allocated_a_elements','allocated_b_elements','grid','tile','cluster',
+        'sm_count','requested_sm_count','scheduler_sm_count','input_mode','seed','swizzle',
+        'input_map_m','input_map_n','initialized_input_rows','initialized_input_columns')
+    first=setups[controls[0]['id']]
+    for row in controls:
+        setup=setups[row['id']]
+        if (setup['config'],setup['m'],setup['n'],setup['k'])!=('cfg_b',2816,1536,4096):
+            raise ValueError('background static GEMM geometry changed')
+        if setup['tile']!=[128,128,64] or setup['cluster']!=[1,1] or np.prod(setup['grid'])!=132:
+            raise ValueError('background persistent grid/tile changed')
+        if any(setup.get(key)!=first.get(key) for key in shared_fields):
+            raise ValueError('background controls changed input geometry or allocation capacity')
+    for stage in (4,6):
+        a,b=(setups[keys[stage,flag]] for flag in (1,2))
+        if any(a[key]!=b[key] for key in ('smem','smem_epilogue','max_active_ctas_per_sm')):
+            raise ValueError('background same-stage resources changed')
+    binaries=read_json(root/'build/binary_hashes.json')
+    calls={};processes=[];failures=[];hashes={}
+
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+
+    def overlap(records, begin, end):
+        if end<=begin:raise ValueError('nonpositive direct early ns window')
+        clipped=sorted((max(x['epi_begin_ns'],begin),min(x['epi_end_ns'],end)) for x in records
+            if x['epi_begin_ns']<end and x['epi_end_ns']>begin)
+        events=defaultdict(int);union=[]
+        for a,b in clipped:
+            events[a]+=1;events[b]-=1
+            if union and a<=union[-1][1]:union[-1][1]=max(union[-1][1],b)
+            else:union.append([a,b])
+        active=peak=0
+        for t in sorted(events):active+=events[t];peak=max(peak,active)
+        total=sum(b-a for a,b in clipped);covered=sum(b-a for a,b in union)
+        return dict(active_at_start=sum(x['epi_begin_ns']<=begin<x['epi_end_ns'] for x in records),
+            overlapping_ctas=len(clipped),peak_active=peak,sum_overlap_ns=total,
+            union_ns=covered,union_fraction=covered/(end-begin),mean_active=total/(end-begin))
+
+    for row in rows.values():
+        name=row['id'];reference=row.get('set')=='reference'
+        variants=('plain',) if reference else ('plain','progress')
+        selected,failed,_=select_attempts(root,name,variants)
+        failures.extend(dict(case=name,**item) for item in failed)
+        for item in selected+failed:
+            raw=root/item['record']['raw']
+            if common.sha(raw)!=item['record']['raw_sha256']:raise ValueError('background raw identity changed')
+            for path in (root/item['path'],raw):hashes[str(path)]=common.sha(path)
+        grouped={v:{} for v in variants}
+        for item in selected:
+            record=item['record'];variant=record['variant'];obs=replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+            setup,call=events['setup'],events['call'];validate_setup(row,setups[name],setup)
+            binary='build/'+common.binary_prefix(row)+'_'+variant
+            if Path(record['command'][0]).name!=Path(binary).name or binary not in binaries:
+                raise ValueError('background sample binary identity changed')
+            addresses={key:setup[key] for key in ('target_a_ptr','target_b_ptr')}
+            if any(not v or call.get(k)!=v for k,v in addresses.items()):
+                raise ValueError('background target address changed within process')
+            warm=call['warmup_us']
+            if call['warmup_calls']!=len(warm) or not warm:raise ValueError('background warmup count changed')
+            entry=dict(case=name,set=row.get('set'),stages=setup['stages'],epilogue_defer=row.get('epilogue_defer',0),
+                variant=variant,trial=record['trial'],elapsed_us=obs['elapsed_us'],source=record['raw'],
+                source_sha256=record['raw_sha256'],record_path=item['path'],binary=binary,binary_sha256=binaries[binary],
+                gpu_uuid=setup['gpu_uuid'],host_start_ns=record['host_start_ns'],host_stop_ns=record['host_stop_ns'],
+                target_addresses=addresses,warmup_calls=len(warm),warmup_us=warm,warmup_last5_cv=call['warmup_last5_cv'])
+            if variant=='progress':
+                if setup['trace_version']!='r13-output-background-v1':raise ValueError('background trace protocol changed')
+                p=obs['progress'];direct=p['direct_ns_background'];begin,end=p['early_ns']
+                if len(direct)!=132 or p['work']!=[11,0] or p['sender_work']!=[0,0]:
+                    raise ValueError('background CTA/work geometry changed')
+                intervals=_stage_progress_intervals(dict(clocks=p['clocks']))
+                intervals.update({k:p['intervals'][k] for k in
+                    ('sender_epilogue','epilogue_overlap_L','epilogue_overlap_early')})
+                ordered=sum(x['epi_begin_ns']>=x['mma_return_ns'] for x in direct)
+                if row['epilogue_defer']==2 and ordered!=132:raise ValueError('all-CTA E0 order was not established')
+                entry.update(cta=0,sm=p['sm'],work=p['work'],sender_work=p['sender_work'],
+                    clocks=p['clocks'],intervals=intervals,early_ns=[begin,end],early_duration_ns=end-begin,
+                    early_frequency_ghz=intervals['commit1_to16']/(end-begin),
+                    direct_ns_background=direct,ordered_ctas=ordered,
+                    other_E0_early=overlap(direct[1:],begin,end),own_E0_early=overlap(direct[:1],begin,end))
+            grouped[variant][record['trial']]=entry;processes.append(entry)
+        if any(set(v)!=set(range(10)) for v in grouped.values()):
+            raise ValueError(name+': ten independent processes per variant required')
+        calls[name]=grouped
+    if len({p['gpu_uuid'] for p in processes})!=1:raise ValueError('background run spans GPUs')
+    timing=[];treatment=[];observer=[]
+    for stage in (4,6):
+        for flag in (1,2):
+            group=calls[keys[stage,flag]];progress=list(group['progress'].values())
+            timing.append(dict(stages=stage,epilogue_defer=flag,
+                elapsed_us={v:span(p['elapsed_us'] for p in group[v].values()) for v in ('plain','progress')},
+                early_duration_ns=span(p['early_duration_ns'] for p in progress),
+                early_frequency_ghz=span(p['early_frequency_ghz'] for p in progress),
+                intervals={k:span(p['intervals'][k] for p in progress) for k in progress[0]['intervals']},
+                ordered_ctas=span(p['ordered_ctas'] for p in progress),
+                other_E0_early={k:span(p['other_E0_early'][k] for p in progress) for k in progress[0]['other_E0_early']}))
+            pairs=[dict(trial=t,whole_delta_us=group['progress'][t]['elapsed_us']-group['plain'][t]['elapsed_us'],
+                whole_relative=group['progress'][t]['elapsed_us']/group['plain'][t]['elapsed_us']-1,
+                source_plain=group['plain'][t]['source'],source_progress=group['progress'][t]['source']) for t in range(10)]
+            observer.append(dict(stages=stage,epilogue_defer=flag,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),whole_relative=span(p['whole_relative'] for p in pairs)))
+        for variant in ('plain','progress'):
+            a,b=(calls[keys[stage,flag]][variant] for flag in (1,2));pairs=[]
+            for trial in range(10):
+                x,y=a[trial],b[trial]
+                if x['binary_sha256']!=y['binary_sha256']:raise ValueError('background pair does not share a binary')
+                pair=dict(trial=trial,source_flag1=x['source'],source_flag2=y['source'],
+                    whole_delta_us=y['elapsed_us']-x['elapsed_us'],whole_relative=y['elapsed_us']/x['elapsed_us']-1,
+                    same_target_addresses=x['target_addresses']==y['target_addresses'],
+                    warmup_calls_flag1=x['warmup_calls'],warmup_calls_flag2=y['warmup_calls'])
+                if variant=='progress':
+                    pair.update(flag1_sm=x['sm'],flag2_sm=y['sm'],early_delta_ns=y['early_duration_ns']-x['early_duration_ns'],
+                        early_frequency_relative=y['early_frequency_ghz']/x['early_frequency_ghz']-1,
+                        delta_cycles={k:y['intervals'][k]-x['intervals'][k] for k in x['intervals']},
+                        delta_background={k:y['other_E0_early'][k]-x['other_E0_early'][k] for k in x['other_E0_early']})
+                pairs.append(pair)
+            summary=dict(stages=stage,variant=variant,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),whole_relative=span(p['whole_relative'] for p in pairs))
+            if variant=='progress':
+                summary.update(early_delta_ns=span(p['early_delta_ns'] for p in pairs),
+                    early_frequency_relative=span(p['early_frequency_relative'] for p in pairs),
+                    delta_cycles={k:span(p['delta_cycles'][k] for p in pairs) for k in pairs[0]['delta_cycles']},
+                    delta_background={k:span(p['delta_background'][k] for p in pairs) for k in pairs[0]['delta_background']})
+            treatment.append(summary)
+    paired_subsets=[]
+    for item in treatment:
+        if item['variant']!='progress':continue
+        for label in ('all','same_target_VA','warmup8_both','same_target_VA_and_warmup8'):
+            subset=[p for p in item['processes'] if
+                ('same_target_VA' not in label or p['same_target_addresses']) and
+                ('warmup8' not in label or p['warmup_calls_flag1']==p['warmup_calls_flag2']==8)]
+            paired_subsets.append(dict(stages=item['stages'],subset=label,count=len(subset),
+                trials=[p['trial'] for p in subset],
+                early_negative_count=sum(p['delta_cycles']['commit1_to16']<0 for p in subset),
+                early_delta_cycles=span(p['delta_cycles']['commit1_to16'] for p in subset) if subset else None,
+                early_delta_ns=span(p['early_delta_ns'] for p in subset) if subset else None,
+                early_frequency_relative=span(p['early_frequency_relative'] for p in subset) if subset else None))
+    early_bounds=[]
+    for flag in (1,2):
+        t4=next(t for t in timing if (t['stages'],t['epilogue_defer'])==(4,flag))
+        t6=next(t for t in timing if (t['stages'],t['epilogue_defer'])==(6,flag))
+        c=t6['intervals']['commit17_to63']['median']/46
+        upper=max(15*c,(t4['intervals']['commit17_to63']['median']-c)/3)
+        individual=[]
+        for p in calls[keys[4,flag]]['progress'].values():
+            early,late=(p['intervals'][k] for k in ('commit1_to16','commit17_to63'))
+            local_upper=max(15*c,(late-c)/3)
+            individual.append(dict(trial=p['trial'],source=p['source'],source_sha256=p['source_sha256'],
+                early_cycles=early,late_cycles=late,own_late_conditional_upper=local_upper,
+                own_late_residual=early-local_upper,residual_to_median_upper=early-upper))
+        early_bounds.append(dict(epilogue_defer=flag,effective_c=c,stage4_early_upper=upper,
+            stage4_early_observed=t4['intervals']['commit1_to16']['median'],
+            stage4_early_shortfall=t4['intervals']['commit1_to16']['median']-upper,
+            processes=individual,own_late_residual=span(p['own_late_residual'] for p in individual),
+            positive_own_late_residual_count=sum(p['own_late_residual']>0 for p in individual),
+            scope='Same reduced/default-inheritance subclass and median late diagnostic as epilogue_order; not an all-model exclusion.'))
+    refs=[p for p in processes if p['set']=='reference'];ctrls=[p for p in processes if p['set']!='reference']
+    correctness=[]
+    for row in controls:
+        for variant in ('plain','progress'):
+            path=root/'correctness'/f'{row["id"]}_{variant}.jsonl'
+            events={e['event']:e for line in path.read_text().splitlines() if line.strip() for e in [json.loads(line)]}
+            check=events['epilogue_order_check'];validate_setup(row,setups[row['id']],events['setup'])
+            if check.get('comparison_flag')!=row['epilogue_defer'] or check['elements']!=4325376 or check['different'] or check['nonfinite']:
+                raise ValueError('background full-output comparison failed or used a different flag')
+            correctness.append(dict(case=row['id'],variant=variant,source=str(path),**check));hashes[str(path)]=common.sha(path)
+    old=root.parent/'20261010-R13-epilogue-order';common.verify(old)
+    old_rows={r['id']:r for r in read_json(old/'cases.json')}
+    old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
+    reference_results=[]
+    for name in sorted({p['case'] for p in refs}):
+        selected,failed,_=select_attempts(old,name,('plain',));prior=[]
+        if {item['record']['trial'] for item in selected}!=set(range(10)):
+            raise ValueError('739717 plain reference is incomplete')
+        for item in selected+failed:
+            raw=old/item['record']['raw']
+            if common.sha(raw)!=item['record']['raw_sha256']:raise ValueError('739717 raw reference changed')
+            for path in (old/item['path'],raw):hashes[str(path)]=common.sha(path)
+        for item in selected:
+            record=item['record'];obs=replay(old,record,old_rows[name])
+            prior.append(dict(trial=record['trial'],elapsed_us=obs['elapsed_us'],source=record['raw'],
+                source_sha256=record['raw_sha256']))
+        current=span(p['elapsed_us'] for p in refs if p['case']==name)
+        previous=span(p['elapsed_us'] for p in prior)
+        reference_results.append(dict(case=name,current_us=current,previous_us=previous,previous_root=str(old),
+            previous_processes=prior,previous_failed_attempts=failed,
+            same_gpu=setups[name]['gpu_uuid']==old_setups[name]['gpu_uuid'],
+            median_relative=current['median']/previous['median']-1))
+    for path in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',root/'build/binary_hashes.json',
+            root/'build/resources.json',root/'build/sass_hashes.json',old/'cases.json',old/'static_setup.json',
+            old/'source_hashes.json',old/'build/binary_hashes.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
+        hashes[str(path)]=common.sha(path)
+    report=dict(root=str(root),scope='Same-call direct cycle/ns early windows; flag2 minus flag1, no fitted prices.',
+        contexts={name:dict(row=row,setup=setups[name]) for name,row in rows.items()},processes=processes,timing=timing,
+        all_minus_cta0=treatment,progress_minus_plain=observer,failed_attempts=failures,input_sha256=hashes,
+        paired_diagnostic_subsets=paired_subsets,full_inheritance_early_bounds=early_bounds,
+        full_output_checks=correctness,references=reference_results,
+        references_completed_first=max(p['host_stop_ns'] for p in refs)<=min(p['host_start_ns'] for p in ctrls),
+        reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in {p['case'] for p in refs}},
+        resources=read_json(root/'build/resources.json'),
+        limitations=['Flag2 also changes other CTAs input-request organization and execution overlap; it does not isolate an output physical resource.',
+            'Early cycle and ns endpoints belong to the same invocation. Old dual/progress records are not spliced in.',
+            'E0 DONE denotes the source-reuse/store-tail boundary, not proof of global D visibility.',
+            'Trial pairs are separate processes; virtual address equality is not proof of equal physical mappings.',
+            'Same-VA/warmup8 subsets diagnose sensitivity only; all samples are retained and no formal score is selected.',
+            'Early cycle/ns ratio is from matching local endpoints, not a fitted whole-call frequency rule.',
+            'Median late bounds retain every reduced/default-inheritance assumption; small residuals and process scatter do not prove strict exclusion.',
+            'The two plain references versus 739717 measure cross-job drift only, not a cross-job intervention effect.',
+            'Whole-call observer perturbation cannot exclude local timestamp or flush effects. No fitting or validation score is performed.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-background.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(value):return f'{value["median"]:.2f} [{value["trial_min"]:.2f}, {value["trial_max"]:.2f}]'
+    lines=['# 其它CTA首输出顺序对照','',
+        'CTA0自身始终延后首输出。flag1只改变CTA0，flag2让全部132个CTA在自身第二WG mma返回后才做E0。'
+        '同stage两条件使用同一二进制。表中为独立进程中位[最小,最大]，差值按trial配对；不是置信区间。','',
+        '| stage / flag | early cycle | early ns | late cycle | L cycle | 其它E0早段平均并发 | union比例 | 峰值 | 已满足E0次序CTA数 |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|']
+    for t in timing:
+        v=t['intervals'];bg=t['other_E0_early']
+        cells=[cell(v['commit1_to16']),cell(t['early_duration_ns']),cell(v['commit17_to63']),cell(v['L']),
+            cell(bg['mean_active']),cell(bg['union_fraction']),cell(bg['peak_active']),cell(t['ordered_ctas'])]
+        lines.append(f'| {t["stages"]} / {t["epilogue_defer"]} | '+' | '.join(cells)+' |')
+    lines+=['','| flag2−flag1 | early cycle | early ns | late cycle | L cycle | FIRST→C1 cycle | M→MAIN cycle | 整调用µs |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|']
+    for t in treatment:
+        v=t.get('delta_cycles')
+        values=([cell(v['commit1_to16']),cell(t['early_delta_ns']),cell(v['commit17_to63']),cell(v['L']),
+            cell(v['first_to_commit1']),cell(v['mma_return_to_main_end'])] if v else ['—']*6)
+        lines.append(f'| stage{t["stages"]} {t["variant"]} | '+' | '.join(values+[cell(t['whole_delta_us'])])+' |')
+    lines+=['','| progress/plain 观察扰动 | 整调用相对变化 |','|---|---:|']
+    for t in observer:
+        lines.append(f'| stage{t["stages"]} flag{t["epilogue_defer"]} | {cell({k:100*v for k,v in t["whole_relative"].items()})}% |')
+    lines+=['','| progress配对诊断子集 | 配对数 | early cycle差 | early ns差 | cycle/ns比率相对变化 |',
+        '|---|---:|---:|---:|---:|']
+    labels={'all':'全部','same_target_VA':'同A/B虚拟地址','warmup8_both':'两边都预热8次',
+        'same_target_VA_and_warmup8':'同虚拟地址且都预热8次'}
+    for t in paired_subsets:
+        if t['count']:
+            lines.append(f'| stage{t["stages"]} {labels[t["subset"]]} | {t["count"]} | '
+                f'{cell(t["early_delta_cycles"])} | {cell(t["early_delta_ns"])} | '
+                f'{cell({k:100*v for k,v in t["early_frequency_relative"].items()})}% |')
+    lines+=['','子集只检查地址或预热历史差是否主导结果，全部原样本保留，不按子集选择正式分数。'
+        'cycle/ns比率使用每个进程匹配的C1与C16端点，再比较两条件；它不是用整调用时间反推的频率。'
+        '同虚拟地址不保证同物理映射，小子集也不提供独立的因果保证。','',
+        '| 原reduced/default-inheritance子类诊断 | 条件c | stage4早段中位 | 中位late给出的上界 | 中位残差 | 各进程自身late残差 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for t in early_bounds:
+        lines.append(f'| flag{t["epilogue_defer"]} | {t["effective_c"]:.3f} | {t["stage4_early_observed"]:.2f} | '
+            f'{t["stage4_early_upper"]:.2f} | {t["stage4_early_shortfall"]:+.2f} | {cell(t["own_late_residual"])} |')
+    lines+=['','这里与此前epilogue-order采用同一定义：每个flag以stage6后46间隔中位数除以46作条件c，'
+        'stage4上界为max(15c,(后46间隔中位数−c)/3)。逐进程另用自身late，保持该flag的条件c，'
+        '并保留正负残差；没有拟合新的常数，也没有给后台处理提供正式预测价格。'
+        '这个界继承固定复用/default-inheritance子类的全部前提，小的中位残差不能脱离进程范围和观察误差称为严格排除。']
+    lines+=['','| plain参照 | 本批µs | 739717 µs | 中位变化 | 同GPU |','|---|---:|---:|---:|---|']
+    for t in reference_results:
+        lines.append(f'| {t["case"]} | {t["current_us"]["median"]:.3f} | {t["previous_us"]["median"]:.3f} | {100*t["median_relative"]:+.2f}% | {t["same_gpu"]} |')
+    lines+=['','8项独立完整输出检查覆盖两stage、两处理flag和plain/progress；每项比较4325376个有效元素，'
+        '差异与非有限数均为0，comparison_flag与对应文件条件一致。静态几何和分配容量在四条件间相同，'
+        '同stage的资源配置也相同。两条跨批参照只描述漂移，不参与本批处理差。']
+    lines+=['','JSON保留全部132CTA的直接ns次序、实际C1→C16窗口及其重叠积分、逐进程cycle/whole差值、'
+        '地址、SM、工作坐标、预热CV和源码/原始样本身份。没有把旧测量拼进本次窗口。','',
+        'flag2不仅移动其它CTA的输出，也改变它们的输入请求组织和执行重叠。即使CTA0 early变化，'
+        '也不能唯一归因于输出端口或某个共享物理资源；这里不拟合E0/early价格，也不更新冻结验证成绩。','']
+    (output/'B-stage-background.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_conditioned_diagnostics(output):
     """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
     from supply_model import admission_stage_events

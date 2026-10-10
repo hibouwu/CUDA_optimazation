@@ -1,6 +1,6 @@
 import copy
 import unittest
-from analyze_r18 import decode_stage_sparse
+from analyze_r18 import decode_stage_sparse, validate_warmup
 
 class StageSparseTests(unittest.TestCase):
     def trace(self,stages):
@@ -135,6 +135,66 @@ class StageSparseTests(unittest.TestCase):
         del setup['epilogue_defer']
         with self.assertRaisesRegex(ValueError,'defer identity'):
             decode_stage_sparse(setup,call)
+
+    def background_trace(self,deferred):
+        setup,call=self.epilogue_trace(deferred)
+        setup.update(trace_version='r13-output-background-v1',epilogue_defer=deferred)
+        b=call['trace'];width=setup['trace_words'];b[31]=0x52313305
+        origin=1_700_000_000_000_000_001
+        for cta in range(132):
+            offset=cta*width;mma=origin+5000+cta*64
+            begin=mma+100 if deferred==2 or (cta==0 and deferred>0) else mma-3000
+            b[offset+46:offset+49]=[begin,begin+1000,mma]
+        b[49:51]=[origin+1000,origin+4000]
+        return setup,call
+
+    def test_background_preserves_direct_ns_and_checks_treatment_scope(self):
+        for flag in (0,1,2):
+            with self.subTest(flag=flag):
+                setup,call=self.background_trace(flag)
+                r=decode_stage_sparse(setup,call)
+                self.assertEqual(len(r['direct_ns_background']),132)
+                self.assertEqual(r['early_ns'][1]-r['early_ns'][0],3000)
+                self.assertEqual(r['early_ns'][0],1_700_000_000_000_001_001)
+                self.assertEqual(r['clocks']['commit16'],8300)
+                for cta in r['direct_ns_background']:
+                    self.assertEqual(cta['epi_end_ns']-cta['epi_begin_ns'],1000)
+                if flag==1:
+                    cta=r['direct_ns_background'][1]
+                    self.assertLess(cta['epi_begin_ns'],cta['mma_return_ns'])
+        setup,call=self.background_trace(1)
+        setup['epilogue_defer']=2
+        with self.assertRaisesRegex(ValueError,'background epilogue precedes'):
+            decode_stage_sparse(setup,call)
+
+    def test_background_rejects_missing_or_wrong_fields_and_early_order(self):
+        for index,value,reason in [(784+46,0,'background endpoints'),
+                (784+1,3,'non-target CTA background'),(784+49,123,'non-target CTA background'),
+                (49,0,'early-window endpoints'),(50,1_700_000_000_000_006_001,'early-window endpoints'),
+                (31,0x52313304,'progress event order')]:
+            with self.subTest(index=index):
+                setup,call=self.background_trace(2)
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):
+                    decode_stage_sparse(setup,call)
+        setup,call=self.background_trace(1)
+        call['trace'][46]=call['trace'][48]-1
+        with self.assertRaisesRegex(ValueError,'background epilogue precedes'):
+            decode_stage_sparse(setup,call)
+        setup,call=self.epilogue_trace(1)
+        setup['epilogue_defer']=2
+        with self.assertRaisesRegex(ValueError,'defer identity'):
+            decode_stage_sparse(setup,call)
+
+    def test_background_treatment_keeps_warmup_untreated(self):
+        row=dict(swizzle=1,epilogue_defer=2)
+        setup=dict(epilogue_defer=2,epilogue_warmup_defer=0)
+        call=dict(setup,warmup_us=[100.]*8)
+        self.assertEqual(validate_warmup(setup,call,row),0)
+        for bad_setup,bad_call in ((dict(setup,epilogue_warmup_defer=2),call),
+                (setup,dict(call,epilogue_warmup_defer=1))):
+            with self.assertRaisesRegex(ValueError,'warmup prefix'):
+                validate_warmup(bad_setup,bad_call,row)
 
 
 if __name__=='__main__':unittest.main()

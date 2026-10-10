@@ -1,7 +1,7 @@
 # R15：输出服务与完成边界
 
 当前输出候选按 **single/multi、real/OOB、首/中/末 tile** 分类，以直接 merged ns 接入 [V09 r2](RULES.md#v09-model)。V09整体未通过，末次输出分项误差中位/最大为 **3.73%/35.60%**；参数与范围不能称为通用输出带宽。V09 partial 的主要漏算在主循环；输出残差在 P1 还部分抵消了它，不能靠增大输出费用补总时间。
-最强的已测结论是：长K输出周期下降主要伴随局部cycle/ns变化；OOB仍有输出准备/同步成本；单tile规则不能直接用于多tile首轮。旧标量STS探针不提供CUTLASS epilogue常数。完整旧推导与准备记录见 [cee978a固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R15-output-service.md)。
+固定CTA0本地处理后，只延后其它CTA输出仍使stage4早段10/10缩短，说明局部服务依赖全卡执行组织；完整调用没有因此变快，见[背景配对](#stage-output-background)。长K输出周期下降主要伴随局部cycle/ns变化；OOB仍有输出准备/同步成本；单tile规则不能直接用于多tile首轮。旧标量STS探针不提供CUTLASS epilogue常数。完整旧推导与准备记录见 [cee978a固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R15-output-service.md)。
 
 <a id="cutlass-epilogue"></a>
 
@@ -65,7 +65,32 @@ I=A+J; E=J+R; max(DONE)−M=W+J+R
 
 源码的输入复用依赖也给出不同预取机会：第二输出首输入group64依赖前输出group(64−S)的槽，由commit(65−S)之后的wait1释放；到前输出末次commit63，stage4/6分别相隔2/4个group。这个结构关系不能直接换成2c/4c的就绪时间，全部线程release、重新发出请求和服务完成仍未定值。
 
-下一候选应同时表达到达相位、有限输入槽和并发背景。这里仅确认时间上下文，未证明某种资源争用；E0记录结束也不表示全局D写已经完成，不据此新增一个early或并发价格。
+<a id="stage-output-background"></a>
+
+### 固定本CTA处理后，其它CTA的输出背景仍会改变早段
+
+[739740同卡配对](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-output-background)保持上述几何和stage不变。两组均让CTA0首输出等待其第二WG mma返回；flag1只有CTA0延后，flag2对全部132 CTA执行相同规则。同stage两处理用同一binary，全部预热均为flag0。新增直接globaltimer同时记录每CTA的E0及CTA0的C1→C16，避免把旧dual与progress拼成一个窗口。
+
+| 同调用中位或同trial配对差 | stage4 | stage6 |
+|---|---:|---:|
+| 仅CTA0→全部延后，early cycle | 10511→9373.5 | 7873.5→7684 |
+| early配对差cycle [范围] | −1008.5 [−1991,−399]，10/10缩短 | −189.5 [−478,0]，7/10缩短、3/10相同 |
+| early配对差ns [范围] | −544 [−1312,−192] | −128 [−256,0] |
+| 其它E0在early中的平均并发数 | 73.54→0 | 117.50→0 |
+| 后段C17→C63配对差cycle | +438.5 | −5 |
+| 整个L配对差cycle | −599.5 | −231 |
+| FIRST→C1、M→MAIN配对差cycle | 0、0 | +6、+1 |
+| plain完整时间配对差µs | +0.272 | +0.560 |
+
+flag1每次只有CTA0满足延后顺序；flag2全部132 CTA满足，20个progress进程的其它E0均完全移出CTA0早段。目标CTA0的SM始终124、工作序列不变。stage4四个同VA配对也全部缩短；相同VA仍不保证相同物理映射。cycle与ns同时缩短，不能仅用时间换算解释。stage4后段变长、完整plain未改善，局部收益不能直接加到总时间上。
+
+暖机次数相同的stage4九对仍9/9缩短，中位−930 cycle/−512 ns；同VA四对为−869 cycle/−480 ns。每调用先用early cycle除以对应直接ns，再做处理配对，比率中位仅−0.31%，不足以将early变化归为提频。两个读时钟指令仍有先后，不能把该比率当作精确硬件频率。
+
+原[R13共同复用子类](R13-async-retirement.md#stage-reuse)用每种处理自身的两stage后段约束early：flag1中位上界9007.95、实测10511，缺1503.05 cycle；flag2上界9194.08、实测9373.5，缺179.42。逐进程分别代入自身late时，flag2差值范围−225～709，8正2负；中央179不是严格排除，也没有证明全部分项已被同一组参数解释。它只把下一步离线检验范围收紧到无E0背景的有限slot基线及其背景迁移。
+
+**支持的范围是全卡组织参与局部服务。** 仅依赖CTA0固定几何、本地处理和stage的独立服务规则不充分。flag2也会改变其它CTA的输入请求进度，新增等待影响其调度，因而尚不能唯一定位输出物理资源，更不能按E0重叠面积加价。E0截止仍是store-tail源复用边界。
+
+[逐进程数据与对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md)保留100个有效进程，无失败；八次完整D比较均4325376元素逐位相同。四binary均168寄存器、16条静态HGMMA、无spill。progress/plain整调用配对中位扰动为0.60%～2.15%，不能约束局部扰动。两个先行plain参照相对739717为−2.13%/−0.34%，跨批漂移不算本批处理效果。少数进程暖机次数不同，全样本保留并单列共同暖机配对。
 
 ## 周期变短是否等于输出服务变快？
 

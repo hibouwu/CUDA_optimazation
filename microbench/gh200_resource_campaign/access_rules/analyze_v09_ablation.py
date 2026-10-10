@@ -306,6 +306,7 @@ def main():
     parser.add_argument('--stage-admission',action='store_true',help='offline stage6 local calibration and constrained stage4 transfer')
     parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
     parser.add_argument('--stage-handoff',type=Path,help='R13 handoff replay, conditional bounds and shared reuse development')
+    parser.add_argument('--output-background',type=Path,help='R13/R15 fixed target treatment with other-CTA epilogue background pair')
     parser.add_argument('--epilogue-order',type=Path,help='R13/R15 same-CTA output-order intervention replay')
     parser.add_argument('--history-series',type=Path,help='R09 prefix/target trajectory run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
@@ -313,8 +314,17 @@ def main():
         parser.error('--controls is not used by ablation')
     if args.stage_admission and args.analysis!='candidate-development':
         parser.error('--stage-admission requires candidate-development')
-    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.stage_handoff,args.epilogue_order,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
+    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.stage_handoff,args.epilogue_order,args.output_background,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
         parser.error('candidate control runs require candidate-development')
+    if args.output_background is not None:
+        if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,
+                args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.stage_handoff,
+                args.epilogue_order,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,
+                args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)):
+            parser.error('--output-background is an independent replay; run other diagnostics separately')
+        from analyze_r13_supply import stage_output_background_diagnostics
+        stage_output_background_diagnostics(args.output_background.resolve(),out)
+        return
     if args.epilogue_order is not None:
         if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,
                 args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.stage_handoff,

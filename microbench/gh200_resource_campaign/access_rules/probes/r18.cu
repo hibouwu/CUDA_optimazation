@@ -123,7 +123,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_EPILOGUE_ORDER) && defined(R13_STAGE_PROGRESS)
+#if defined(R13_OUTPUT_BACKGROUND) && defined(R13_STAGE_PROGRESS)
+constexpr const char* kTraceVersion="r13-output-background-v1";
+#elif defined(R13_EPILOGUE_ORDER) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-epilogue-order-v1";
 #elif defined(R13_STAGE_HANDOFF)
 constexpr const char* kTraceVersion="r13-stage-handoff-v1";
@@ -218,7 +220,10 @@ struct Args {
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
-    if (epilogue_defer > 1) throw std::runtime_error("epilogue-defer must be 0 or 1");
+    if (epilogue_defer > 2) throw std::runtime_error("epilogue-defer must be 0, 1 or 2");
+#ifndef R13_OUTPUT_BACKGROUND
+    if (epilogue_defer == 2) throw std::runtime_error("all-CTA deferral requires the background experiment build");
+#endif
 #ifndef R13_EPILOGUE_ORDER
     if (epilogue_defer || mode == "check-epilogue-order") throw std::runtime_error("epilogue order requires experiment build");
 #endif
@@ -875,7 +880,7 @@ int main(int argc, char** argv) {
       cutlass_check(Gemm::run(launch_params), "baseline check run");
       CUDA_CHECK(cudaMemcpy(baseline.data(), d.pointer, baseline.size()*sizeof(float), cudaMemcpyDeviceToHost));
       gaps::fill_output_sentinel<<<256,256>>>(d.pointer, d.count);
-      flag=o.mode == "check-producer-delay" ? 512 : 1;
+      flag=o.mode == "check-producer-delay" ? 512 : o.mode == "check-epilogue-order" ? o.epilogue_defer : 1;
       set_check_flag(flag);
       cutlass_check(Gemm::run(launch_params), "swap check run");
       CUDA_CHECK(cudaMemcpy(swapped.data(), d.pointer, swapped.size()*sizeof(float), cudaMemcpyDeviceToHost));
@@ -886,7 +891,7 @@ int main(int argc, char** argv) {
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
       std::cout << "{\"event\":\"" << (o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
-                << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
+                << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }
 #endif
