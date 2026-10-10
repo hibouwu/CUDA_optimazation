@@ -27,6 +27,57 @@ def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
     return kt * (max(512, pitched) - max(512, aligned))
 
 
+def admission_stage_events(kt, stages, producer_interval, ready_latency,
+                           commit_lead, completion_lag, *, service_cycles=512.,
+                           issue_floor=0., wait_overhead=0., loop_advance=0.,
+                           return_overhead=0., reuse_delay=0.):
+    """Development recurrence for two pingpong outputs; not a fitted hardware rule.
+
+    I is the end-of-copy-pair marker. E is cumulative TC service progress,
+    C group commit, D retire eligibility.
+    Commit can overlap service: C=max(B+g,E-q), D=E+lambda. Restricting g<=c
+    and q>=0 ensures B<=C<=E<=D. q is effective service lead in cycles,
+    not a hardware queue capacity. All times and overheads are caller inputs.
+    Ordinary release is optimistic at wait1 return; reuse_delay separately
+    represents the release-to-next-pair-issue path, not a physical latency.
+    """
+    values=(producer_interval,ready_latency,commit_lead,completion_lag,
+            service_cycles,issue_floor,wait_overhead,loop_advance,
+            return_overhead,reuse_delay)
+    if kt<2 or stages<2 or min(values)<0 or service_cycles<=0:
+        raise ValueError('admission diagnostic requires Ktile/stages>=2 and nonnegative times')
+    if issue_floor>service_cycles:
+        raise ValueError('issue floor must not exceed per-tile service')
+    issued=[];ready=[];available=[];starts=[];frontier=[];commits=[];done=[];wait=[]
+    released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.
+    for i in range(2*kt):
+        issue=issued[-1]+producer_interval if issued else 0.
+        if i>=stages:issue=max(issue,released[i-stages]+reuse_delay)
+        issued.append(issue);ready.append(issue+ready_latency);available.append(next_consumer)
+        start=max(ready[-1],next_consumer);starts.append(start)
+        service_end=max(start,frontier[-1] if frontier else start)+service_cycles
+        frontier.append(service_end)
+        commit=max(start+issue_floor,service_end-commit_lead);commits.append(commit)
+        done.append(service_end+completion_lag)
+        if i%kt==0:
+            returned=commit  # Prologue does not wait1 or release a preceding WG's group.
+        else:
+            returned=max(commit,done[i-1])+wait_overhead
+            released[i-1]=returned
+        wait.append(returned)
+        if i%kt==kt-1:
+            mma_return=returned+return_overhead
+            end=max(mma_return,done[i]);released[i]=end
+            returns.append(mma_return);ends.append(end)
+            next_consumer=mma_return  # Handoff precedes wait0; do not reset TC or slots.
+        else:next_consumer=returned+loop_advance
+    return dict(windows=[ends[j]-starts[j*kt] for j in range(2)],
+        issued=issued,ready=ready,consumer_available=available,
+        first_mma_or_commit=starts,service_frontier=frontier,commits=commits,
+        completed=done,wait1_return=wait,released=released,
+        mma_returns=returns,main_ends=ends,slot=[i%stages for i in range(2*kt)])
+
+
 @lru_cache(None)
 def address_box(rows, row_bytes, pitch_bytes, start_mod128):
     """Valid address spans, counted per row; extra coverage is not physical traffic."""

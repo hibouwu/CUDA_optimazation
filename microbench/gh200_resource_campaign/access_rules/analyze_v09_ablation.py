@@ -223,12 +223,17 @@ def failure_decomposition(base,out,controls=None):
     if controls is not None:reference_comparison(base,controls,out)
 
 
-def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None,raster_pitch=None,stage_progress=None,history_series=None,source_pressure=None,mirror_history=None,base_shift=None,work_swap=None,producer_delay=None,first_supply=None,ready_observer=None,ready_release=None):
+def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None,raster_pitch=None,stage_progress=None,history_series=None,source_pressure=None,mirror_history=None,base_shift=None,work_swap=None,producer_delay=None,first_supply=None,ready_observer=None,ready_release=None,stage_admission=False):
     """Compare explicit candidate mechanisms without changing frozen predictions."""
     import r09_input_source_clock
     import analyze_r13_supply
     import analyze_r18
     out.mkdir(parents=True,exist_ok=True)
+    if stage_admission and not any((controls,swizzle_controls,stage_events,common_history,
+            raster_pitch,stage_progress,history_series,source_pressure,mirror_history,
+            base_shift,work_swap,producer_delay,first_supply,ready_observer,ready_release)):
+        analyze_r13_supply.admission_stage_diagnostics(out)
+        return
     r09_input_source_clock.response_development(base,out)
     analyze_r13_supply.finite_stage_diagnostics(base,out)
     analyze_r18.boundary_candidate_analysis(base,out)
@@ -276,6 +281,8 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
     if history_series is not None:
         r09_input_source_clock.history_series_diagnostics(history_series,out)
         r09_input_source_clock.history_localization_diagnostics(history_series,out)
+    if stage_admission:
+        analyze_r13_supply.admission_stage_diagnostics(out)
 
 
 def main():
@@ -294,11 +301,14 @@ def main():
     parser.add_argument('--ready-release',type=Path,help='R13 first-release-bound ready observer pair')
     parser.add_argument('--ready-observer',type=Path,help='R13 phase-0 read-only barrier observer pair')
     parser.add_argument('--first-supply',type=Path,help='R13 first TMA issue and consumer wait markers, matched observation switch')
+    parser.add_argument('--stage-admission',action='store_true',help='offline stage6 local calibration and constrained stage4 transfer')
     parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
     parser.add_argument('--history-series',type=Path,help='R09 prefix/target trajectory run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
+    if args.stage_admission and args.analysis!='candidate-development':
+        parser.error('--stage-admission requires candidate-development')
     if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
         parser.error('candidate control runs require candidate-development')
     if args.analysis!='ablation':
@@ -320,7 +330,7 @@ def main():
                 args.producer_delay.resolve() if args.producer_delay else None,
                 args.first_supply.resolve() if args.first_supply else None,
                 args.ready_observer.resolve() if args.ready_observer else None,
-                args.ready_release.resolve() if args.ready_release else None)
+                args.ready_release.resolve() if args.ready_release else None,args.stage_admission)
         return
     out.mkdir(parents=True,exist_ok=False)
     frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'

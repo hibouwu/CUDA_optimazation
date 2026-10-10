@@ -171,5 +171,60 @@ class PairedFailureTests(unittest.TestCase):
             self.assertEqual(trace['consumer_available'][i]-trace['wait1_return'][i-1],expected)
 
 
+
+class AdmissionStageTests(unittest.TestCase):
+    def test_group_service_overlaps_commit_and_keeps_slot_lifetimes(self):
+        from supply_model import admission_stage_events
+        t=admission_stage_events(16,6,50,700,430,70,issue_floor=64,
+            wait_overhead=27,loop_advance=90,return_overhead=13,reuse_delay=200)
+        for i in range(32):
+            self.assertLessEqual(t['first_mma_or_commit'][i],t['commits'][i])
+            self.assertLessEqual(t['commits'][i],t['service_frontier'][i])
+            self.assertLessEqual(t['service_frontier'][i],t['completed'][i])
+            if i>=6:self.assertGreaterEqual(t['issued'][i],t['released'][i-6]+200)
+            if i%16:self.assertGreaterEqual(t['released'][i-1],t['completed'][i-1])
+        self.assertEqual(t['slot'][16],4)
+        self.assertEqual(t['wait1_return'][16],t['commits'][16])
+        self.assertGreaterEqual(t['main_ends'][0],t['mma_returns'][0])
+        self.assertGreaterEqual(t['main_ends'][1],t['completed'][-1])
+
+    def test_handoff_does_not_reset_service_or_wait_for_tail(self):
+        from supply_model import admission_stage_events
+        t=admission_stage_events(16,6,0,0,200,100,wait_overhead=20,
+            loop_advance=80,return_overhead=20)
+        self.assertLess(t['first_mma_or_commit'][16],t['main_ends'][0])
+        self.assertGreaterEqual(t['service_frontier'][16],t['service_frontier'][15]+512)
+        self.assertEqual(t['consumer_available'][16],t['mma_returns'][0])
+
+    def test_total_time_does_not_uniquely_identify_commit_tail(self):
+        from supply_model import admission_stage_events
+        a=admission_stage_events(16,6,0,0,100,100,wait_overhead=20,loop_advance=80)
+        b=admission_stage_events(16,6,0,0,200,100,wait_overhead=20,loop_advance=80)
+        self.assertEqual(a['windows'][0],b['windows'][0])
+        self.assertNotEqual(a['completed'][15]-a['commits'][15],b['completed'][15]-b['commits'][15])
+
+    def test_completion_and_return_are_both_respected(self):
+        from supply_model import admission_stage_events
+        t=admission_stage_events(8,4,0,0,700,0,issue_floor=100,
+            wait_overhead=600,loop_advance=90,return_overhead=300)
+        for j in range(2):
+            self.assertEqual(t['main_ends'][j],max(t['mma_returns'][j],t['completed'][(j+1)*8-1]))
+        with self.assertRaises(ValueError):admission_stage_events(8,1,0,0,0,0)
+        with self.assertRaises(ValueError):admission_stage_events(8,4,0,0,0,0,issue_floor=513)
+
+    def test_reuse_cycle_necessary_bound_holds_in_each_output(self):
+        from supply_model import admission_stage_events
+        for stage in (4,6):
+            for g,q in ((0,430),(105,500),(105,700)):
+                t=admission_stage_events(64,stage,100,2200,q,50,issue_floor=g,
+                    wait_overhead=27,loop_advance=90,return_overhead=13,reuse_delay=200)
+                c=t['commits'];jump=2200+512-q+27+200
+                for j in (0,1):
+                    for k in range(stage,64):
+                        i=j*64+k
+                        self.assertGreaterEqual(c[i]-c[i-stage+1]+1e-9,jump)
+                self.assertGreaterEqual((c[127]-c[81])/46, (46//(stage-1))*max(0,jump)/46)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -2940,6 +2940,152 @@ def ready_observer_diagnostics(root, output):
     return report
 
 
+def admission_stage_diagnostics(output):
+    """Local phase calibration and constrained transfer; never refit whole L."""
+    from supply_model import admission_stage_events
+    import v06_run as common
+    output=Path(output)
+    progress_path=output/'B-stage-progress.json';sparse_path=output/'B-stage-events.json'
+    progress,sparse=read_json(progress_path),read_json(sparse_path)
+    if progress['gpu']!=sparse['gpu']:raise ValueError('admission local cohorts changed GPU')
+    observed={t['stages']:t['intervals'] for t in progress['timing']}
+    cal=observed[6]
+    protocol=dict(service_cycles=512.,wait_overhead=cal['commit_to_wait1_16']['median'],
+        loop_advance=cal['loop_advance_16_to17']['median'],
+        return_overhead=cal['last_commit_to_mma_return']['median']-cal['commit_to_wait1_16']['median'])
+    tail=cal['last_commit_to_main_end']['median']
+    fields=('first_to_commit1','average_commit1_to16','average_commit17_to63')
+    targets=np.array([cal[k]['median'] for k in fields])
+    def evaluate(parameters,stages,issue_floor=0.):
+        p,latency,q=parameters
+        trace=admission_stage_events(64,stages,p,latency,q,tail-q,
+            issue_floor=issue_floor,**protocol)
+        C,H,W,B=(trace[k] for k in ('commits','consumer_available','wait1_return','first_mma_or_commit'))
+        clocks=dict(first_mma=B[64],commit1=C[65],full_wait_begin16=H[80],commit16=C[80],
+            wait1_end16=W[80],full_wait_begin17=H[81],commit17=C[81],commit63=C[127],
+            mma_return=trace['mma_returns'][1],main_end=trace['main_ends'][1])
+        intervals=_stage_progress_intervals(dict(clocks=clocks))
+        return dict(intervals=intervals,second_output_service_carry=max(0.,trace['service_frontier'][63]-B[64]),
+            last_commit_uses_lead_branch=abs(C[127]-(trace['service_frontier'][127]-q))<1e-7,
+            last_MAIN_uses_completion_branch=abs(trace['main_ends'][1]-trace['completed'][127])<1e-7,
+            full_return_to_commit16=C[80]-B[80])
+    def residual(z,g=0.):return np.array([evaluate(z,6,g)['intervals'][k] for k in fields])/targets-1
+    fits=[]
+    for p in (50.,400.):
+        for latency in (1000.,2000.,3000.):
+            for q in (280.,407.,490.):
+                f=least_squares(residual,[p,latency,q],bounds=([0.,0.,0.],[1024.,8000.,tail]),
+                    diff_step=1e-4,max_nfev=400,ftol=1e-10,xtol=1e-10,gtol=1e-10)
+                fits.append(dict(loss=float(f.fun@f.fun),parameters=f.x.tolist()))
+    fits.sort(key=lambda x:x['loss']);best=fits[0]
+    necessary=[]
+    for stage in (4,6):
+        values=[p['first_to_commit1'] for p in progress['processes'] if p['stages']==stage]
+        necessary.append(dict(source='739578 progress',stages=stage,endpoint='FIRST to commit1',
+            minimum_cycles=min(values),q_min=1024-min(values)))
+        values=[p['consumer_issue_to_commit'] for p in sparse['processes'] if p['stages']==stage]
+        necessary.append(dict(source='739556 sparse',stages=stage,endpoint='full return to commit',
+            minimum_cycles=min(values),q_min=512-min(values),issue_floor_max=min(values)))
+    q_min=max(r['q_min'] for r in necessary)
+    g_max=min(r['issue_floor_max'] for r in necessary if 'issue_floor_max' in r)
+    profiles=[]
+    for g in (0.,float(g_max)):
+        for q in np.linspace(q_min,tail,5):
+            candidates=[]
+            for p in (30.,400.,600.):
+                for latency in (1000.,2200.,3000.):
+                    f=least_squares(lambda z:residual([*z,q],g),[p,latency],
+                        bounds=([0.,0.],[1024.,8000.]),diff_step=1e-4,max_nfev=400,
+                        ftol=1e-10,xtol=1e-10,gtol=1e-10)
+                    candidates.append(dict(loss=float(f.fun@f.fun),parameters=[*f.x.tolist(),float(q)]))
+            candidates.sort(key=lambda x:x['loss']);fit=candidates[0];z=fit['parameters']
+            # I_i >= U_(i-S)+a; U_(i-S)>=C_(i-S+1)+w;
+            # C_i >= I_i+latency+c-q. This bounds a finite 46-interval window.
+            jump=z[1]+512-q+protocol['wait_overhead']
+            lower=(46//3)*max(0.,jump)/46
+            profiles.append(dict(issue_floor=g,**fit,
+                same_loss_examples=[r for r in candidates if r['loss']<=fit['loss']+1e-9],
+                stage6=evaluate(z,6,g),stage4=evaluate(z,4,g),
+                stage4_late_average_lower_bound=lower,
+                stage4_late_observed_range=[observed[4]['average_commit17_to63']['trial_min'],
+                                           observed[4]['average_commit17_to63']['trial_max']]))
+    ready_path=output/'R13-ready-release.json';ready=read_json(ready_path)
+    queue_pairs=[]
+    for r in ready['paired_processes']:
+        if r['kind']!='delay' or r['observer']!=1:continue
+        queue_pairs.append(dict(trial=r['trial'],pitch_bytes=r['pitch_bytes'],
+            issue_relative_to_entry_change_ns=r['delta']['P0_ns']+r['delta']['prod_to_issue_ns'],
+            ready_response_lower_ns=r['bounds']['issue_to_ready_ns']['lower']))
+    queue_scope=dict(first_request_formula='A0-I0=s+ell+max(Qinitial-I0,0)',
+        implication='For a fixed initial state relative to CTA entry and fixed s/ell, later own issue cannot increase first response.',
+        paired_processes=queue_pairs,
+        later_issue_with_strictly_larger_response=sum(r['issue_relative_to_entry_change_ns']>0 and
+            r['ready_response_lower_ns']>0 for r in queue_pairs),
+        scope='Rejects only an isolated per-CTA fixed-initial-state server as a complete first-supply model. '
+            'Shared external request predecessors or another explicit state remain possible; do not fit an initial state per condition.')
+    sparse_source_bounds={}
+    for stage in (4,6):
+        values=[r['issue_to_observed_full'] for r in sparse['processes'] if r['stages']==stage]
+        sparse_source_bounds[stage]=dict(minimum=min(values),maximum=max(values),
+            meaning='Same-call issue_end to consumer full return is an upper bound on issue_end to readiness, not a measured bare latency.')
+    hashes={str(p):common.sha(p) for p in (progress_path,sparse_path,ready_path,Path(__file__),Path(__file__).with_name('supply_model.py'))}
+    report=dict(scope='Development diagnosis, not frozen validation. Only three stage6 progress medians fit p/latency/q; '
+        'stage4 progress and all whole-L windows are comparisons. Independent sparse endpoints constrain the q profile, '
+        'so that profile is conditional evidence, not an untouched stage4 validation.',gpu=progress['gpu'],
+        equations='I_i=max(I_(i-1)+p,U_(i-S)); A_i=I_i+l; B_i=max(A_i,H_i); E_i=max(B_i,E_(i-1))+512; '
+            'C_i=max(B_i+g,E_i-q); D_i=E_i+lambda; W_i=max(C_i,D_(i-1))+w except prologue; '
+            'U_(i-1)=W_i; H_(i+1)=W_i+h; M_last=W_last+r; MAIN=max(M_last,D_last).',
+        protocol_parameters=protocol,tail_constraint=tail,calibration_fields=list(fields),
+        calibration_medians=dict(zip(fields,targets.tolist())),necessary_local_bounds=necessary,
+        initial_fit=best,initial_fit_multistart=fits,
+        initial_comparison={str(s):evaluate(best['parameters'],s) for s in (4,6)},
+        observed_progress=observed,constrained_profiles=profiles,input_sha256=hashes,
+        next_queue_scope_check=queue_scope,sparse_source_response_upper_bounds=sparse_source_bounds,
+        limitations=['E is aggregate service progress. This does not model eight instruction arrival times or identify a physical queue.',
+            'The initial g=0,q<=500 subclass still gives C_i>=C_(i-1)+512. It is not evidence that every real commit spacing obeys that floor.',
+            'w,h,r and the 500-cycle tail come from the same stage6 progress observer and are effective software/measurement intervals.',
+            'lambda=500-q is an active-last-commit/completion-branch restriction; both branches and the resulting tail are reported, not assumed universal.',
+            'Ordinary release at W and zero reuse_delay are optimistic. The observed nonzero release/acquire path is not silently identified with zero hardware delay.',
+            'g=105 is a sensitivity endpoint from another observer, not a fitted hardware instruction cost.',
+            'Each profile fits only p/latency to the same stage6 targets. No profile is selected using stage4 error.',
+            'Five q values and local multistart solutions are not exhaustive bounds on all continuous parameter space.',
+            'The finite-window lower bound applies to each profiled parameter tuple and optimistic lifecycle, not every possible constant-latency architecture.',
+            'No ready observation, measured frequency or per-case correction enters the formal V09 predictor.'])
+    (output/'B-stage-admission.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 组内发射与TC服务重叠的递推检验','',
+        '本次只用739578 stage6的三个局部中位量拟合：FIRST→commit1、commit1→16平均间隔、commit17→63平均间隔。'
+        'whole-L和stage4进度不参与拟合；条件q剖面另受739556局部端点约束，属于开发诊断。','',
+        'E表示累计服务进度，C=max(B+g,E−q)，D=E+λ；保留wait1释放前一slot、末slot的tail释放，以及跨输出的E和slot。'
+        '512是此候选的服务假设。q不命名为物理队列容量。','',
+        '| 局部必要界 | stage | 最短周期 | q下界 |','|---|---:|---:|---:|']
+    for r in necessary:lines.append(f'| {r["source"]}，{r["endpoint"]} | {r["stages"]} | {r["minimum_cycles"]} | {r["q_min"]} |')
+    lines+=['',f'初始最优p/ℓ/q={best["parameters"]}；p存在相同损失解。该q不满足独立局部下界，不能作为参数交付。',
+        '条件剖面固定q于407～500的五个位置，只重解p/ℓ；g=0为乐观边界、g=105为敏感性端点。软件w/h/r固定为27/89.5/13，λ=500−q，逐解检查末端分支。','',
+        '| g | q | ℓ | stage6 三局部量 | stage4 L | stage4 后46间隔均值 | 该均值的必要下界 |',
+        '|---:|---:|---:|---|---:|---:|---:|']
+    for r in profiles:
+        v=r['stage4']['intervals'];a=r['stage6']['intervals']
+        lines.append(f'| {r["issue_floor"]:.0f} | {r["parameters"][2]:.2f} | {r["parameters"][1]:.2f} | '
+            +'/'.join(f'{a[k]:.2f}' for k in fields)+f' | {v["L"]:.2f} | {v["average_commit17_to63"]:.2f} | {r["stage4_late_average_lower_bound"]:.2f} |')
+    actual=observed[4]
+    lines+=['',f'stage4实测L中位{actual["L"]["median"]:.2f}，后46间隔均值中位{actual["average_commit17_to63"]["median"]:.2f}、'
+        f'十进程范围[{actual["average_commit17_to63"]["trial_min"]:.2f},{actual["average_commit17_to63"]["trial_max"]:.2f}] cycle。',
+        '必要界由 C_i≥C_(i−S+1)+ℓ+512−q+w 得到：46间隔至少包含floor(46/3)次这样的跳跃，其余间隔仅取非负。'
+        '它证明表列参数即使乐观地立即释放slot也太慢；不把有限剖面冒充整个连续参数域的穷尽证明。','',
+        '这版候选不进入预测。允许组内重叠修正了事件位置，但本轮所列共享ready延迟参数未能同时解释stage响应；未穷尽所有常量延迟模型。'
+        '下一步应检验ready如何随在途请求变化；可先增加逻辑服务事件而不是stage专属价格。'
+        '新候选须预先写清校准/诊断分工，保留本次失败，不能继续用stage4反选本次参数。','']
+    lines+=['','新Q候选拟合前也有现成约束：若只排列本CTA请求且初态固定，'
+        '首请求响应为s+ℓ+max(Qinitial−I0,0)，延后I0只能不增。739653的'
+        f'{queue_scope["later_issue_with_strictly_larger_response"]}/{len(queue_pairs)}个配对却同时表现为更晚issue与严格更长响应。'
+        '因此孤立、固定初态的版本不能覆盖首次供给；必须限定为输出内子模型，或明确外部请求/共享状态的可预测前驱。',
+        f'739556 stage6的同调用issue_end→full返回范围为[{sparse_source_bounds[6]["minimum"]},'
+        f'{sparse_source_bounds[6]["maximum"]}] cycle，对新s+ℓ只给上界。'
+        '不能将2257.5原样作为无排队底值后再加排队；也不能把不同观察批次拼成绝对事件线。','']
+    (output/'B-stage-admission.md').write_text('\n'.join(lines))
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)

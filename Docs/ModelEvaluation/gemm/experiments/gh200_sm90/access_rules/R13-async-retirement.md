@@ -1,6 +1,8 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。[R10起步干预](R10-layout-cache.md#producer-delay)还显示，固定工作与SM后只推迟producer，会改变S+L并放大起点时移，固定局部时间线不充分。首次供给分解把S的增长定位在copy发出标记之后；释放前端点使新批40/40次ready观察能绑定首代事务，排除了“只是consumer晚返回”的解释；请求排队、数据服务与就绪可见性仍未分开。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
+当前条件供给尚未通过V09的行距与stage迁移。stage4的额外时间出现在主循环早段与后段，最终drain没有贡献；加入组内发射/计算重叠后，本轮局部标定参数仍把stage4的L高估21%～26%。有限缓冲的事件位置与ready服务条件都需要检验，不能靠whole-L的小残差授予参数物理含义。
+
+首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
 ## 作业与分析索引
 
@@ -17,6 +19,7 @@
 | stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
 | 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
 | consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
+| 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -264,6 +267,27 @@ progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 
 当前可继续复用条件关系作开发组合，但需要分别验证：有限 stage 响应、first/later 转移，以及改变频率后计算分支是否暴露未识别服务。不能用代数支持、同批拟合或完整时间误差抵消替代这些检验。[V09 原评分](V09-component-validation.md)保持整体未通过。
+
+<a id="stage-admission"></a>
+
+### 组内发射重叠与共享ready延迟的迁移
+
+cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不能把它当作整组计算才开始的时刻，参见[PTX8.8的commit语义](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group)。新增纯诊断递推将累计服务进度E、commit C、退休完成D分开：E_i=max(B_i,E_(i−1))+512，C_i=max(B_i+g,E_i−q)，D_i=E_i+λ；保留wait1释放前一slot、末slot在tail释放，以及跨输出的E和slot。q是有效提交领先周期，不是物理队列容量，512也是本候选的服务假设。
+
+只用739578 stage6的三个局部中位量标定：FIRST→commit1、commit1→16平均间隔、commit17→63平均间隔；**whole-L不参与拟合**。同协议w/h/返回收尾分别取27/89.5/13 cycle，普通release与producer复用先取乐观下界。初始解q≈236.5虽使stage6总L接近，但不满足其他局部端点：FIRST→commit1的最短值要求progress stage6 q≥264、stage4 q≥389；739556的full返回→commit要求stage6 q≥368、stage4 q≥407、g≤105。各界独立由本调用导出，不拼批次时间线。
+
+据这些端点检查q=407～500的五个位置、g=0/105两个边界；每个位置仅重解相同stage6目标的producer间隔与ready延迟。此条件剖面受stage4的另一观察批次约束，**不是未使用过stage4证据的独立验证**。十组均得到ℓ=2257.5 cycle，p存在相同损失参数族；末commit/完成分支允许λ=500−q，不能将这个拆分写成唯一物理延迟。
+
+| 周期量 | stage6实测 | 条件剖面stage6 | stage4实测 | 条件剖面stage4 |
+|---|---:|---:|---:|---:|
+| FIRST→commit1 | 787.5 | 787.5 | 649.5 | 524～617 |
+| commit1→16平均间隔 | 522.27 | 512 | 718.13 | 765.5～796.5 |
+| commit17→63平均间隔 | 512.80 | 512 | 589.70 | 759.99～790.32 |
+| L | 33231.5 | 33031.5 | 39612.5 | 47978～49931 |
+
+对表列参数还有不依赖优化器的下界：slot复用给C_i≥C_(i−S+1)+ℓ+512−q+w；stage4的后46间隔包含15次跨3间隔的跳跃，其余只用非负界。因此平均间隔至少748.86～779.18 cycle，高于实测十进程范围573.37～607.09。即使立即释放slot，表列参数也太慢。这否定本轮参数与生命周期组合，未穷尽所有常量延迟模型；模型不进入正式预测。
+
+下一候选须先明确ready状态的作用域。若只给本CTA添加固定初态的串行服务Q_i=max(I_i,Q_(i−1))+s，首请求响应s+ℓ+max(Q_initial−I_0,0)随I_0延后只能不增；739653却有20/20次更晚issue与严格更长响应。因此孤立版本不能解释完整首次供给，必须明确共享请求前驱或另一可预测状态，不能按delay条件另拟初态。739556 stage6的issue_end→full返回为1858～2091 cycle，只给未排队底值的上界；不能把2257.5原样作为底值再叠排队。
 
 <a id="first-supply"></a>
 
