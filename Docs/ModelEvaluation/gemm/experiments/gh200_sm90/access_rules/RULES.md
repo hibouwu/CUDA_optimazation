@@ -26,6 +26,8 @@ L_{i,j}(f)=b_{cfg,p}+K_t\max\!\left(q_{cfg}/f,\;\theta_{cfg,p}^{\mathsf T}x_{i,j
 
 供给请求按真实软件轮次构造，并用 `min(stage,K_t)/K_t` 在本轮与下一轮请求之间计入有限预填。该权重是候选假设，未从 stage 扫描确认为通用定律。[R13](R13-async-retirement.md)维护构造、校准与局部负结果，[R10](R10-layout-cache.md)维护行距对照，[R18](R18-cluster-boundary.md)维护填零路径。
 
+候选静态接口 `supply_model.boundary_fill_features(row, setup)` 另给出每CTA/tile的自身fill、同操作数multicast mask内max/sum、完整cluster的max/sum/any；输入只来自形状、descriptor与软件调度，不读取trace。它能表达首轮完整伙伴所处的边界类别，但尚未给出可靠的时间价格，未接入r2的X或计时。[四点辨识及条件近似](R18-cluster-boundary.md#boundary-candidate-features)保留其价值和失败范围。
+
 r2 在请求特征支持之外，还用等价校准参数集合检查目标窗口是否唯一；正式冻结的支持检查位于 `run_v09.check_prediction_support`，不能仅用数值入口的局部 Jacobian 标志或某个优化器给出的解接受预测。cfg_c G2 的两个首轮 CTA 在目标频率下可转入供给受限，同样校准拟合可给不同价格，因此保持“不支持”。固定 f 下的范围不等于联立时钟后的完整时间区间，也不是置信区间。
 
 ### single/multi 与 real/OOB 输出

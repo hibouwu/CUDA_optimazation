@@ -660,6 +660,624 @@ def control_diagnostics(root,output):
     return dict(cases=2,processes=40,paired_windows=len(windows),contrasts=contrasts,stage_summary=summary)
 
 
+def static_boundary_features(row,setup):
+    """Compatibility entry; static construction lives with prediction inputs."""
+    from supply_model import boundary_fill_features
+    return boundary_fill_features(row,setup)
+
+
+def boundary_candidate_analysis(base,output):
+    """Identify which fill coupling features old fixed-map pairs can determine."""
+    import supply_model as feature_model
+    import csv
+    import numpy as np
+    from analyze_r13_sm import select_attempts
+    base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    names=['20261009-R18-first-fill-job738707','20261009-R18-first-fill-job738865',
+           '20261009-R18-input-map-job738296','20261009-R18-input-map-n-job738307',
+           '20261010-R09-R13-R18-failure-controls']
+    kinds=('own','mask_max','mask_sum','cluster_max','cluster_sum','cluster_any')
+    windows=[];static_cases={};provenance={};call_cache={}
+    def read(path):return json.loads(path.read_text())
+    for name in names:
+        root=base/name;setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
+        rows=read(root/'cases.json')
+        if '739095' in name or 'failure-controls' in name:rows=[r for r in rows if r['group']=='r18_partial_map']
+        for row in rows:
+            fs=static_boundary_features(row,setups[row['id']]);static_cases[row['id']]=dict(row=row,setup=setups[row['id']],features=fs)
+            selected,_,_=select_attempts(root,row['id'],('dual',))
+            if len(selected)!=10:raise ValueError('boundary pair requires ten processes')
+            calls={}
+            for item in selected:
+                rec=item['record'];obs=replay(root,rec,row,retain_roles=True)
+                source=str(root/rec['raw']);provenance[source]=rec['raw_sha256']
+                calls[rec['trial']]=obs
+            call_cache[row['id']]=calls
+        for group in sorted({r['group'] for r in rows}):
+            pair=[r for r in rows if r['group']==group]
+            op='A' if pair[0]['input_map_m']!=pair[1]['input_map_m'] else 'B'
+            axis='input_map_m' if op=='A' else 'input_map_n';a,b=sorted(pair,key=lambda r:r[axis])
+            features={(f['cta'],f['j']):f for f in static_cases[a['id']]['features']}
+            mapped={(f['cta'],f['j']):f for f in static_cases[b['id']]['features']}
+            for trial in range(10):
+                ac=call_cache[a['id']][trial]['ctas'];bc=call_cache[b['id']][trial]['ctas'];local=[]
+                if [c['work'] for c in ac]!=[c['work'] for c in bc]:raise ValueError('measured map work changed')
+                for ca,cb in zip(ac,bc):
+                    # Cooperative roles kept separate; role2 matches the issuing-role convention.
+                    aa,bb=(ca['roles'][1],cb['roles'][1]) if a['config']!='cfg_b' else (ca,cb)
+                    for j,(t,u,tn,un,coord) in enumerate(zip(aa['tiles'],bb['tiles'],aa['tiles_ns'],bb['tiles_ns'],ca['work'])):
+                        f=features[ca['cta'],j];fm=mapped[ca['cta'],j]
+                        if tuple(f['coord'])!=tuple(coord):raise ValueError('static scheduler and observation differ')
+                        row=dict(case=a['id'],root=name,split='diagnostic' if 'failure-controls' in name else 'calibration',
+                            config=a['config'],operand=op,k=a['k'],kt=a['k']//64,trial=trial,cta=ca['cta'],j=j,T=len(ca['work']),
+                            phase=f['phase'],mi=coord[0],ni=coord[1],geometry=boundary_geometry(a,coord),
+                            cycle_delta_per_kt=((t[1]-t[0])-(u[1]-u[0]))/(a['k']//64),
+                            ns_delta_per_kt=((tn[1]-tn[0])-(un[1]-un[0]))/(a['k']//64),
+                            mapped_L_ns_per_kt=(un[1]-un[0])/(a['k']//64))
+                        for kind in kinds:row[kind]=f['operands'][op][kind]-fm['operands'][op][kind]
+                        local.append(row)
+                for r in local:
+                    baseline=[v for v in local if v['j']==r['j'] and v['T']==r['T'] and v['cluster_max']==0 and v['geometry']=='real']
+                    r['baseline_windows']=len(baseline)
+                    for unit in ('ns','cycle'):
+                        offset=statistics.median(v[unit+'_delta_per_kt'] for v in baseline) if baseline else None
+                        r[unit+'_baseline_per_kt']=offset
+                        r[unit+'_excess_per_kt']=r[unit+'_delta_per_kt']-offset if offset is not None else None
+                    r['ns_excess']=r['ns_excess_per_kt']*r['kt'] if r['ns_excess_per_kt'] is not None else None
+                    r['cycle_excess']=r['cycle_excess_per_kt']*r['kt'] if r['cycle_excess_per_kt'] is not None else None
+                    r['relative_excess']=(r['ns_excess_per_kt']/statistics.median(v['mapped_L_ns_per_kt'] for v in baseline)) if baseline else None
+                    windows.append(r)
+    # Each trial contributes one median for a static stratum; CTA rows are not independent observations.
+    keynames=('case','root','split','config','operand','k','kt','phase','j','T','geometry',*kinds)
+    grouped=defaultdict(list)
+    for w in windows:grouped[tuple(w[k] for k in (*keynames,'trial'))].append(w)
+    processes=[]
+    metrics=('cycle_delta_per_kt','ns_delta_per_kt','cycle_excess_per_kt','ns_excess_per_kt','cycle_excess','ns_excess','relative_excess')
+    for key,rows in sorted(grouped.items()):
+        r=dict(zip((*keynames,'trial'),key),windows=len(rows),baseline_windows=rows[0]['baseline_windows'])
+        for metric in metrics:
+            values=[x[metric] for x in rows if x[metric] is not None]
+            r[metric]=statistics.median(values) if values else None
+        processes.append(r)
+    grouped=defaultdict(list)
+    for r in processes:grouped[tuple(r[k] for k in keynames)].append(r)
+    strata=[]
+    for key,rows in sorted(grouped.items()):
+        r=dict(zip(keynames,key),processes=len(rows))
+        for metric in metrics:
+            values=[x[metric] for x in rows if x[metric] is not None]
+            r[metric]=statistics.median(values) if values else None
+        strata.append(r)
+    fits=[]
+    for cfg,op,phase in sorted({(r['config'],r['operand'],r['phase']) for r in strata}):
+        rows=[r for r in strata if r['config']==cfg and r['operand']==op and r['phase']==phase and r['split']=='calibration' and r['ns_excess_per_kt'] is not None]
+        if not rows:continue
+        design=np.array([[r[k] for k in kinds] for r in rows]);nonzero=design[:,3]>0
+        counts=Counter(r['case'] for r in rows);weights=np.array([1/counts[r['case']] for r in rows])
+        group=dict(config=cfg,operand=op,phase=phase,features=list(kinds),rank=int(np.linalg.matrix_rank(design)),
+            feature_patterns=sorted({tuple(r[k] for k in kinds) for r in rows}),calibration_cases=sorted(counts),
+            cluster_max_sum_rank=int(np.linalg.matrix_rank(design[:,3:5])),cluster_coupling_rank=int(np.linalg.matrix_rank(design[:,3:])),fits=[])
+        for target in ('cycle_excess_per_kt','ns_excess_per_kt','cycle_excess','ns_excess','relative_excess'):
+            y=np.array([r[target] for r in rows])
+            for i,kind in enumerate(kinds):
+                x=design[:,i];den=float(np.sum(weights*x*x));coef=float(np.sum(weights*x*y)/den) if den else None
+                if coef is None:continue
+                errors=x*coef-y
+                by_k={}
+                for k in sorted({r['k'] for r in rows}):
+                    selected=np.array([r['k']==k for r in rows]);xk=x[selected];yk=y[selected];wk=weights[selected]
+                    if np.any(xk):by_k[str(k)]=float(np.sum(wk*xk*yk)/np.sum(wk*xk*xk))
+                group['fits'].append(dict(target=target,feature=kind,coefficient=coef,
+                    weighted_rms=float(np.sqrt(np.sum(weights*errors**2)/np.sum(weights))),
+                    affected_median_abs_residual=float(np.median(np.abs(errors[nonzero]))) if np.any(nonzero) else None,
+                    coefficients_by_k=by_k))
+        fits.append(group)
+    # Static feature ranges of V09 are diagnostics only; no timing response enters the fit.
+    root=base/'20261009-V09-freeze-job738972-r2';setups={s['case']:s['setup'] for s in read(root/'static_setup.json')}
+    for row in read(root/'cases.json'):
+        if row['id'] in ('v09d_cfg_a_P1_partial_first_and_later','v09d_cfg_c_P2_partial_later_sw8'):
+            static_cases[row['id']]=dict(row=row,setup=setups[row['id']],features=static_boundary_features(row,setups[row['id']]))
+    diagnostics=[]
+    for case,value in static_cases.items():
+        if not (case.startswith('v09d_') or case.startswith('r18_partial_')):continue
+        for op in ('A','B'):
+            for phase in ('first','later'):
+                vals=[f['operands'][op] for f in value['features'] if f['phase']==phase]
+                patterns=sorted({tuple(v[k] for k in kinds) for v in vals})
+                if not any(any(p) for p in patterns):continue
+                fit=next((f for f in fits if f['config']==value['row']['config'] and f['operand']==op and f['phase']==phase),None)
+                span=[]
+                for p in patterns:
+                    train=np.array(fit['feature_patterns'],dtype=float) if fit else np.empty((0,len(kinds)))
+                    rank=int(np.linalg.matrix_rank(train)) if len(train) else 0
+                    rank_after=int(np.linalg.matrix_rank(np.vstack([train,np.array(p)])))
+                    span.append(dict(pattern=p,in_joint_calibration_span=rank_after==rank))
+                diagnostics.append(dict(case=case,operand=op,phase=phase,patterns=span))
+    structural_ranking=[]
+    for case,value in static_cases.items():
+        if not (case.startswith('v09d_') or case=='r18_partial_map960'):continue
+        row=value['row'];features=value['features'];maximum_work=max(f['T'] for f in features)
+        op='A' if row['config']=='cfg_a' else 'B'
+        first=[f for f in features if f['j']==0 and f['T']==maximum_work and f['operands'][op]['cluster_any']]
+        complete=[f['cta'] for f in first if f['operands'][op]['own']==0]
+        signature=[f['cta'] for f in first]
+        if case in call_cache:calls=call_cache[case]
+        else:
+            data=base/'20261009-V09-heldout-job739011'
+            selected,_,_=select_attempts(data,case,('dual',))
+            calls={}
+            for item in selected:
+                rec=item['record'];calls[rec['trial']]=replay(data,rec,row)
+                provenance[str(data/rec['raw'])]=rec['raw_sha256']
+        hits=[]
+        for trial,obs in sorted(calls.items()):
+            last=maximum_set([c['end_ns'] for c in obs['ctas']])
+            hits.append(dict(trial=trial,last=last,first_cluster_signature_hit=bool(set(last)&set(signature)),
+                complete_partner_signature_hit=bool(set(last)&set(complete))))
+        structural_ranking.append(dict(case=case,first_cluster_max_work_signature=signature,
+            complete_partner_signature=complete,processes=hits,
+            scope='Static class membership only; not a new timing prediction or expanded frozen candidate set.'))
+    common.write_json(output/'C-candidate.json',dict(fits=fits,strata=strata,processes=processes,
+        analyzer_sha256=common.sha(Path(__file__)),feature_model_sha256=common.sha(Path(feature_model.__file__)),
+        structural_ranking=structural_ranking,
+        feature_units={k:('indicator' if k=='cluster_any' else 'KiB/Ktile') for k in kinds},
+        target_units=dict(cycle_excess_per_kt='cycles/Ktile',ns_excess_per_kt='ns/Ktile',cycle_excess='cycles/window',ns_excess='ns/window',relative_excess='dimensionless'),
+        diagnostic_patterns=diagnostics,raw_sha256=provenance,
+        scope='Candidate static features only. Fit descriptive old-card paired excess over interior-real j/T controls, separately by configuration/operand/phase. Scalar through-origin slopes are diagnostic, not production timing prices. New-card controls and V09 do not enter fitting. Joint feature span identifies ambiguities between candidates.'))
+    common.write_json(output/'C-static-features.json',static_cases)
+    with gzip.open(output/'C-candidate-windows.csv.gz','wt',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=list(windows[0]));writer.writeheader();writer.writerows(windows)
+    return dict(calibration_conditions=16,diagnostic_conditions=2,windows=len(windows),fits=fits,diagnostic_patterns=diagnostics)
+
+
+def fit_fill_hypotheses(rows):
+    """Fit descriptive map contrasts; rows are process-stratum medians, not CTAs."""
+    import numpy as np
+    fields=('cluster_max','cluster_sum','cluster_any')
+    x=np.array([[r[k] for k in fields] for r in rows],dtype=float)
+    y=np.array([r['ns_excess'] for r in rows],dtype=float)
+    result=[]
+    for i,name in enumerate(fields):
+        d=float(x[:,i]@x[:,i]);coef=float(x[:,i]@y/d) if d else 0.
+        predictions=x[:,i]*coef
+        result.append(dict(hypothesis=name,coefficients={name:coef},rms_ns=float(np.sqrt(np.mean((predictions-y)**2))),
+            predictions_ns=predictions.tolist(),residuals_ns=(predictions-y).tolist()))
+    coef=np.linalg.lstsq(x,y,rcond=None)[0];predictions=x@coef
+    result.append(dict(hypothesis='mixed',coefficients=dict(zip(fields,coef.tolist())),rank=int(np.linalg.matrix_rank(x)),
+        rms_ns=float(np.sqrt(np.mean((predictions-y)**2))),predictions_ns=predictions.tolist(),residuals_ns=(predictions-y).tolist(),
+        scope='Three nonzero map patterns can interpolate three map means. Replication residual is not new-shape validation; signed coefficients are descriptive, not physical prices.'))
+    return result
+
+
+def fill_price_diagnostics(fit_report,root):
+    """Conditional use of four-map prices; observed baselines are not forecasts."""
+    from analyze_r13_sm import select_attempts
+    root=Path(root)
+    environment=json.loads((root/'environment.json').read_text())
+    if environment['gpu'].split(',')[0]!=fit_report['environment']['gpu'].split(',')[0]:
+        raise ValueError('conditional price transfer requires the same GPU')
+    rows=[r for r in json.loads((root/'cases.json').read_text()) if r['id'].startswith(('r18_cluster_fill_map','r18_partial_map'))]
+    rows.sort(key=lambda r:r['input_map_m']);baseline=rows[-1]
+    setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+    coeff={(f['role'],f['T'],h['hypothesis']):h['coefficients'][h['hypothesis']]
+           for f in fit_report['hypotheses'] if f['phase']=='first' for h in f['hypotheses'] if h['hypothesis']!='mixed'}
+    names=('cluster_max','cluster_sum','cluster_any');cache={};sources={};provenance={}
+    static={r['input_map_m']:{(f['cta'],f['j']):f for f in static_boundary_features(r,setups[r['id']])} for r in rows}
+    for row in rows:
+        extent=row['input_map_m'];cache[extent]={}
+        selected,_,_=select_attempts(root,row['id'],('dual',))
+        for item in selected:
+            rec=item['record'];cache[extent][rec['trial']]=replay(root,rec,row,retain_roles=True)
+            source=str(root/rec['raw']);sources[extent,rec['trial']]=source;provenance[source]=rec['raw_sha256']
+    stage=[];ranking=[]
+    for row in rows[:-1]:
+        extent=row['input_map_m']
+        for trial in range(10):
+            target=cache[extent][trial]['ctas'];base=cache[1024][trial]['ctas']
+            if [c['work'] for c in target]!=[c['work'] for c in base]:raise ValueError('diagnostic baseline changed work')
+            offsets=defaultdict(list)
+            for a,b in zip(target,base):
+                f=static[extent][a['cta'],0]
+                if f['operands']['A']['cluster_any'] or boundary_geometry(row,f['coord'])!='real':continue
+                for role in range(2):
+                    at=a['roles'][role]['tiles_ns'][0];bt=b['roles'][role]['tiles_ns'][0]
+                    offsets[role,len(a['work'])].append((at[1]-at[0])-(bt[1]-bt[0]))
+            offset={k:statistics.median(v) for k,v in offsets.items()}
+            earliest=min(c['entry_ns'] for c in target);last=maximum_set([c['end_ns'] for c in target])
+            for name in names:
+                for adjust in (False,True):
+                    groups=defaultdict(list);predicted_end=[]
+                    for a,b in zip(target,base):
+                        f=static[extent][a['cta'],0];fill=f['operands']['A'];T=len(a['work'])
+                        context='input_fill' if fill['own'] else 'clear_partner' if fill['cluster_any'] else 'interior'
+                        for role in range(2):
+                            at=a['roles'][role]['tiles_ns'][0];bt=b['roles'][role]['tiles_ns'][0]
+                            actual=at[1]-at[0];base_L=bt[1]-bt[0];price=coeff[role,T,name]*fill[name]
+                            predicted=base_L+price+(offset[role,T] if adjust else 0)
+                            groups[role,T,context].append(dict(actual_ns=actual,predicted_ns=predicted,
+                                signed_relative=predicted/actual-1,absolute_relative=abs(predicted/actual-1),
+                                observed_excess_ns=actual-base_L-offset[role,T],price_ns=price))
+                        delta=coeff[1,T,name]*fill[name]+(offset[1,T] if adjust else 0)
+                        predicted_end.append(a['entry_ns']-earliest+(b['end_ns']-b['entry_ns'])+delta)
+                    for (role,T,context),values in groups.items():
+                        r=dict(input_map_m=extent,trial=trial,hypothesis=name,observed_interior_adjustment=adjust,role=role,T=T,context=context,
+                            windows=len(values),source=sources[extent,trial],baseline_source=sources[1024,trial])
+                        for key in values[0]:r[key]=statistics.median(v[key] for v in values)
+                        r['maximum_absolute_relative']=max(v['absolute_relative'] for v in values);stage.append(r)
+                    predicted=maximum_set(predicted_end)
+                    ranking.append(dict(input_map_m=extent,trial=trial,hypothesis=name,observed_interior_adjustment=adjust,
+                        predicted_candidates=predicted,observed_last=last,hit=bool(set(predicted)&set(last)),
+                        candidate_count=len(predicted),best_candidate_finish_gap_ns=max(c['end_ns'] for c in target)-max(target[i]['end_ns'] for i in predicted)))
+    summary=[]
+    keys=('input_map_m','hypothesis','observed_interior_adjustment','role','T','context')
+    groups=defaultdict(list)
+    for r in stage:groups[tuple(r[k] for k in keys)].append(r)
+    for key,group in sorted(groups.items()):
+        value=dict(zip(keys,key),processes=len(group))
+        for metric in ('actual_ns','predicted_ns','signed_relative','absolute_relative','maximum_absolute_relative','observed_excess_ns','price_ns'):
+            value[metric]=statistics.median(r[metric] for r in group)
+        value['largest_window_absolute_relative']=max(r['maximum_absolute_relative'] for r in group)
+        summary.append(value)
+    rank_summary=[];groups=defaultdict(list)
+    for r in ranking:groups[r['input_map_m'],r['hypothesis'],r['observed_interior_adjustment']].append(r)
+    for key,group in sorted(groups.items()):
+        rank_summary.append(dict(input_map_m=key[0],hypothesis=key[1],observed_interior_adjustment=key[2],
+            hits=sum(r['hit'] for r in group),processes=len(group),
+            median_candidate_count=statistics.median(r['candidate_count'] for r in group),
+            median_finish_gap_ns=statistics.median(r['best_candidate_finish_gap_ns'] for r in group),
+            maximum_finish_gap_ns=max(r['best_candidate_finish_gap_ns'] for r in group)))
+    return dict(root=str(root),stage_summary=summary,stage_processes=stage,ranking=ranking,ranking_summary=rank_summary,raw_sha256=provenance,
+        scope='Prices fitted only on job739529. Full first L = same-trial map1024 observed L + price, optionally plus target observed interior shift. CTA ordering uses target observed entry + map1024 observed internal duration + role2 first increment; other components remain baseline. All uses are conditional diagnostics with observed inputs, not deployable or heldout predictions.')
+
+
+def fill_discrimination(root,output):
+    """Four-map fixed-output contrast of fill aggregation, using static cohorts."""
+    import supply_model as feature_model
+    import csv
+    from analyze_r13_sm import select_attempts
+    root=Path(root);output=Path(output);output.mkdir(parents=True,exist_ok=True);common.verify(root)
+    rows=sorted([r for r in json.loads((root/'cases.json').read_text()) if r['id'].startswith('r18_cluster_fill_map')],key=lambda r:r['input_map_m'])
+    if [r['input_map_m'] for r in rows]!=[832,896,960,1024]:raise ValueError('four map extents required')
+    reference=rows[0];baseline=rows[-1]
+    fixed={k:v for k,v in reference.items() if k not in ('id','input_map_m')}
+    if any({k:v for k,v in r.items() if k not in ('id','input_map_m')}!=fixed for r in rows):raise ValueError('map discrimination changed another field')
+    setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+    setup_keys=('grid','allocated_a_elements','allocated_b_elements','storage_m','storage_n',
+                'initialized_input_rows','initialized_input_columns','gpu_uuid','stages','smem')
+    if any(any(setups[r['id']][k]!=setups[reference['id']][k] for k in setup_keys) for r in rows):raise ValueError('different paired setup')
+    static={r['input_map_m']:{(f['cta'],f['j']):f for f in static_boundary_features(r,setups[r['id']])} for r in rows}
+    calls={};sources={};provenance={};cases=[]
+    for row in rows:
+        extent=row['input_map_m'];calls[extent]={v:{} for v in ('plain','dual')}
+        selected,failed,_=select_attempts(root,row['id'],('plain','dual'))
+        for item in selected:
+            rec=item['record'];obs=replay(root,rec,row,retain_roles=rec['variant']=='dual')
+            calls[extent][rec['variant']][rec['trial']]=obs
+            source=str(root/rec['raw']);sources[extent,rec['variant'],rec['trial']]=source;provenance[source]=rec['raw_sha256']
+        if any(set(calls[extent][v])!=set(range(10)) for v in ('plain','dual')):raise ValueError('incomplete map processes')
+        times={v:[calls[extent][v][t]['elapsed_us'] for t in range(10)] for v in ('plain','dual')}
+        med={v:statistics.median(t) for v,t in times.items()}
+        cases.append(dict(case=row['id'],input_map_m=extent,median_us=med,times_us=times,
+            cv={v:statistics.pstdev(t)/statistics.mean(t) for v,t in times.items()},
+            dual_over_plain=med['dual']/med['plain']-1,failed_attempts=failed))
+    windows=[];critical=[]
+    for row in rows:
+        extent=row['input_map_m']
+        for trial in range(10):
+            observed=calls[extent]['dual'][trial];base=calls[1024]['dual'][trial]
+            if [c['role_work'] for c in observed['ctas']]!=[c['role_work'] for c in base['ctas']]:raise ValueError('map changed work coordinates')
+            observed_rows=boundary_stage_rows(row,observed);base_rows=boundary_stage_rows(baseline,base)
+            by_key={(r['cta'],r['role'],r['j'],r['stage']):r for r in base_rows}
+            local=[]
+            for r in observed_rows:
+                if r['stage'] not in ('L','E'):continue
+                b=by_key[r['cta'],r['role'],r['j'],r['stage']]
+                sf=static[extent][r['cta'],r['j']];ref=static[832][r['cta'],r['j']]
+                if sf['coord']!=[r['mi'],r['ni']]:raise ValueError('static scheduler differs from observed coordinates')
+                own=sf['operands']['A'];fixed_fill=ref['operands']['A']['own'];affected=bool(ref['operands']['A']['cluster_any'])
+                state='input_fill' if own['own'] else 'clear_partner' if own['cluster_any'] else 'cleared_reference_cluster' if affected else 'interior'
+                local.append(dict(input_map_m=extent,trial=trial,cta=r['cta'],role=r['role'],j=r['j'],T=r['T'],
+                    phase=r['phase'],stage=r['stage'],mi=r['mi'],ni=r['ni'],logical_geometry=r['geometry'],
+                    reference_cluster_affected=affected,reference_own_fill_kib=fixed_fill,input_state=state,
+                    own_fill_kib=own['own'],cluster_max=own['cluster_max'],cluster_sum=own['cluster_sum'],cluster_any=own['cluster_any'],
+                    ns=r['ns'],baseline_ns=b['ns'],ns_delta=r['ns']-b['ns'],cycles=r['cycles'],baseline_cycles=b['cycles'],cycle_delta=r['cycles']-b['cycles'],
+                    source=sources[extent,'dual',trial],baseline_source=sources[1024,'dual',trial]))
+            for r in local:
+                interior=[a for a in local if not a['reference_cluster_affected'] and a['logical_geometry']=='real' and
+                          (a['role'],a['j'],a['T'],a['stage'])==(r['role'],r['j'],r['T'],r['stage'])]
+                for unit in ('ns','cycle'):
+                    offset=statistics.median(a[unit+'_delta'] for a in interior) if interior else None
+                    r[unit+'_interior_offset']=offset;r[unit+'_excess']=r[unit+'_delta']-offset if offset is not None else None
+                windows.append(r)
+            ctas=observed['ctas'];earliest=min(c['entry_ns'] for c in ctas);last=maximum_set([c['end_ns'] for c in ctas])
+            critical.append(dict(input_map_m=extent,trial=trial,last=last,envelope_ns=max(c['end_ns'] for c in ctas)-earliest,
+                work=[ctas[i]['work'] for i in last],first_reference_affected=[bool(static[832][i,0]['operands']['A']['cluster_any']) for i in last]))
+    keynames=('input_map_m','role','phase','j','T','stage','logical_geometry','reference_cluster_affected','reference_own_fill_kib',
+              'input_state','own_fill_kib','cluster_max','cluster_sum','cluster_any')
+    metrics=('ns','baseline_ns','ns_delta','cycles','baseline_cycles','cycle_delta','ns_excess','cycle_excess','ns_interior_offset')
+    grouped=defaultdict(list)
+    for r in windows:grouped[tuple(r[k] for k in (*keynames,'trial'))].append(r)
+    processes=[]
+    for key,group in sorted(grouped.items()):
+        value=dict(zip((*keynames,'trial'),key),windows=len(group))
+        for metric in metrics:
+            vals=[r[metric] for r in group if r[metric] is not None];value[metric]=statistics.median(vals) if vals else None
+        processes.append(value)
+    grouped=defaultdict(list)
+    for r in processes:grouped[tuple(r[k] for k in keynames)].append(r)
+    strata=[]
+    for key,group in sorted(grouped.items()):
+        value=dict(zip(keynames,key),processes=len(group))
+        for metric in metrics:
+            vals=[r[metric] for r in group if r[metric] is not None];value[metric]=statistics.median(vals) if vals else None
+        value['ns_excess_range']=[min(r['ns_excess'] for r in group),max(r['ns_excess'] for r in group)] if value['ns_excess'] is not None else None
+        strata.append(value)
+    fits=[]
+    for role,phase,j,T in sorted({(r['role'],r['phase'],r['j'],r['T']) for r in processes if r['stage']=='L'}):
+        selected=[r for r in processes if r['stage']=='L' and r['reference_cluster_affected'] and
+                  (r['role'],r['phase'],r['j'],r['T'])==(role,phase,j,T) and r['ns_excess'] is not None]
+        if selected:fits.append(dict(role=role,phase=phase,j=j,T=T,rows=selected,hypotheses=fit_fill_hypotheses(selected)))
+    # Adjacent direct interventions, not differences between independent median tables.
+    direct=[]
+    for lo,hi in ((832,896),(896,960),(960,1024)):
+        lookup={(r['trial'],r['cta'],r['role'],r['j'],r['stage']):r for r in windows if r['input_map_m']==hi}
+        interior=defaultdict(list)
+        for r in windows:
+            if r['input_map_m']!=lo or r['reference_cluster_affected'] or r['logical_geometry']!='real':continue
+            v=lookup[r['trial'],r['cta'],r['role'],r['j'],r['stage']]
+            interior[r['trial'],r['role'],r['j'],r['T'],r['stage']].append(v['ns']-r['ns'])
+        pairs=defaultdict(list)
+        for r in windows:
+            if r['input_map_m']!=lo:continue
+            v=lookup[r['trial'],r['cta'],r['role'],r['j'],r['stage']]
+            control=interior[r['trial'],r['role'],r['j'],r['T'],r['stage']]
+            offset=statistics.median(control) if control else None
+            key=tuple(r[k] for k in ('trial','role','phase','j','T','stage','logical_geometry','reference_own_fill_kib'))
+            pairs[key].append(dict(ns=v['ns']-r['ns'],cycle=v['cycles']-r['cycles'],
+                excess_ns=v['ns']-r['ns']-offset if offset is not None else None,interior_ns=offset))
+        direct.append(dict(from_map=lo,to_map=hi,processes=[dict(zip(('trial','role','phase','j','T','stage','logical_geometry','reference_own_fill_kib'),key),
+            delta_ns=statistics.median(v['ns'] for v in group),delta_cycles=statistics.median(v['cycle'] for v in group),
+            excess_delta_ns=statistics.median(v['excess_ns'] for v in group) if group[0]['excess_ns'] is not None else None,
+            interior_delta_ns=group[0]['interior_ns']) for key,group in sorted(pairs.items())]))
+    role_agreement=[]
+    by_role={(r['input_map_m'],r['trial'],r['cta'],r['j'],r['stage'],r['role']):r for r in windows}
+    grouped=defaultdict(list)
+    for r in windows:
+        if r['role']!=0 or r['stage']!='L' or not r['reference_cluster_affected']:continue
+        other=by_role[r['input_map_m'],r['trial'],r['cta'],r['j'],r['stage'],1]
+        grouped[r['input_map_m'],r['trial'],r['phase'],r['j'],r['T']].append(abs(r['ns_delta']-other['ns_delta']))
+    for key,values in sorted(grouped.items()):
+        role_agreement.append(dict(zip(('input_map_m','trial','phase','j','T'),key),
+            median_abs_delta_difference_ns=statistics.median(values),max_abs_delta_difference_ns=max(values)))
+    result=dict(root=str(root),environment=json.loads((root/'environment.json').read_text()),cases=cases,stage_strata=strata,
+        role_agreement=role_agreement,
+        stage_processes=processes,hypotheses=fits,direct=direct,critical=critical,raw_sha256=provenance,
+        analyzer_sha256=common.sha(Path(__file__)),feature_model_sha256=common.sha(Path(feature_model.__file__)),
+        scope='Fixed map832 static affected cohort across all maps, map1024 paired baseline. Logical output geometry is separate from input fill. Per-process strata precede fitting. Interior subtraction is a diagnostic baseline assumption; raw deltas retained. Four map points identify conditional contrasts, not a universal price. No old-card coefficient used.')
+    result['conditional_approximations']=[fill_price_diagnostics(result,root),
+        fill_price_diagnostics(result,root.parent/'20261010-R09-R13-R18-failure-controls')]
+    common.write_json(output/'C-fill-discrimination.json',result)
+    with gzip.open(output/'C-fill-discrimination-windows.csv.gz','wt',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=list(windows[0]));writer.writeheader();writer.writerows(windows)
+    return dict(cases=cases,fits=[{k:v for k,v in f.items() if k!='rows'} for f in fits],windows=len(windows))
+
+
+def first_cluster_development(base,output):
+    """Refit only frozen cfg_a first rows; compare deployable-input compositions."""
+    import copy
+    from contextlib import ExitStack
+    from unittest.mock import patch
+    import analyze_r13_supply as fitting
+    import supply_model as supply
+    import v09_model as predictor
+    from analyze_r13_sm import select_attempts
+    base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'
+    read=lambda path:json.loads(path.read_text())
+    calibration=read(frozen/'frozen/calibration.json')
+    with gzip.open(frozen/'inputs/supply-training.json.gz','rt') as stream:training=json.load(stream)
+    own=training['first']['cfg_a'];cluster=copy.deepcopy(own);source_cases={};source_hashes={}
+    if len(own)!=2028:raise ValueError('unexpected frozen cfg_a first training set')
+    for record in cluster:
+        run=Path(record['run']);key=str(run),record['case']
+        if key not in source_cases:
+            rows={r['id']:r for r in read(run/'cases.json')};setups={r['case']:r['setup'] for r in read(run/'static_setup.json')}
+            source_cases[key]={(f['cta'],f['j']):f for f in static_boundary_features(rows[record['case']],setups[record['case']])}
+            for name in ('cases.json','static_setup.json'):source_hashes[str(run/name)]=common.sha(run/name)
+        f=source_cases[key][record['cta'],record['j']]
+        if f['coord']!=record['coord']:raise ValueError('calibration static coordinate mismatch')
+        record['X'][5:7]=[f['operands'][op]['cluster_max'] for op in ('A','B')]
+    if any({k:v for k,v in a.items() if k!='X'}!={k:v for k,v in b.items() if k!='X'} or a['X'][:5]!=b['X'][:5] for a,b in zip(own,cluster)):
+        raise ValueError('cluster transform changed a calibration target or another request field')
+    models={'frozen_r2':copy.deepcopy(calibration['first_supply']['cfg_a'])}
+    models['refit_own']=fitting.fit_supply(own,unit='ns',calibration_clock='observed',assumed_ghz=1.6,phase='first')
+    models['cluster_max']=fitting.fit_supply(cluster,unit='ns',calibration_clock='observed',assumed_ghz=1.6,phase='first')
+    for name,m in models.items():m['request_scope']='cluster_max' if name=='cluster_max' else 'own_destination_fill'
+    identification={name:fitting.supply_identification_bounds(cluster if name=='cluster_max' else own,m) for name,m in models.items()}
+    later_id=fitting.supply_identification_bounds(training['later']['cfg_a'],calibration['supply']['cfg_a'])
+    original_requests=supply.supply_request_rows
+    def cluster_requests(row,setup):
+        requests=original_requests(row,setup)
+        if row['config']=='cfg_a':
+            features={(f['cta'],f['j']):f for f in static_boundary_features(row,setup)}
+            for r in requests:
+                if r['j']==0:r['X'][5:7]=[features[r['cta'],0]['operands'][op]['cluster_max'] for op in ('A','B')]
+        return requests
+    def predict(row,setup,cal,transform,f=None):
+        with ExitStack() as stack:
+            if transform:stack.enter_context(patch.object(supply,'supply_request_rows',side_effect=cluster_requests))
+            if f is not None:
+                stack.enter_context(patch.object(predictor.clock,'solve_source_envelope',side_effect=lambda point,clock,envelope:dict(frequency_ghz=f,window_us=envelope(f))))
+            return predictor.predict_components(row,setup,cal)
+    def support(requests,first,first_id,pred):
+        groups={};identified=True
+        for phase,model,identity in [('first',first,first_id),('later',calibration['supply']['cfg_a'],later_id)]:
+            selected=[r for r in requests if (r['j']==0)==(phase=='first')]
+            bounds=supply.supply_predict_bounds(selected,model,pred['frequency_ghz'],identity)
+            for r,b in zip(selected,bounds):
+                if b['status']!='identified prediction':identified=False
+                key=(phase,b['status'],b.get('minimum'),b.get('maximum'))
+                if key not in groups:groups[key]=dict(phase=phase,**b,window_count=0,example=dict(cta=r['cta'],j=r['j'],X=r['X'],kt=r['kt']))
+                groups[key]['window_count']+=1
+                if b['status']!='identified prediction':groups[key].setdefault('windows',[]).append([r['cta'],r['j']])
+        return dict(status='identified' if identified else 'unsupported_or_nonunique',bounds=list(groups.values()))
+    def score(row,obs,pred):
+        components=defaultdict(list);ctas=obs['ctas']
+        for c,p in zip(ctas,pred['cta_events']):
+            actual=c['tiles_ns'];events=p['events']
+            for key,a,b in [('prefix',actual[0][0]-c['entry_ns'],p['supply']),
+                            ('prefill',actual[0][0]-c['prod_ns'],p['prefill']),
+                            ('first_L',actual[0][1]-actual[0][0],events[0][1]-events[0][0]),
+                            ('first_E',actual[0][3]-actual[0][2],events[0][3]-events[0][2]),
+                            ('last_E',actual[-1][3]-actual[-1][2],events[-1][3]-events[-1][2]),
+                            ('tail',c['end_ns']-max(t[3] for t in actual),p['tail'])]:
+                if a>0:components[key].append(b/a-1)
+            components['later_L'] += [(p[1]-p[0])/(a[1]-a[0])-1 for a,p in zip(actual[1:],events[1:]) if a[1]>a[0]]
+        last=maximum_set([c['end_ns'] for c in ctas]);candidates=pred['critical_candidates']
+        return dict(component_signed={k:statistics.median(v) for k,v in components.items() if v},
+            component_absolute={k:statistics.median(abs(x) for x in v) for k,v in components.items() if v},
+            critical_hit=bool(set(last)&set(candidates)),actual_last=last,
+            best_candidate_finish_gap_ns=max(c['end_ns'] for c in ctas)-max(ctas[i]['end_ns'] for i in candidates),
+            envelope_error=pred['window_us']/((max(c['end_ns'] for c in ctas)-min(c['entry_ns'] for c in ctas))/1000)-1)
+    setups={s['case']:s['setup'] for s in read(frozen/'static_setup.json')}
+    rows=[r for r in read(frozen/'cases.json') if r['set']=='heldout' and r['config']=='cfg_a']
+    frozen_predictions=read(frozen/'frozen/predictions.json')['predictions'];cases=[];provenance={}
+    for row in rows:
+        setup=setups[row['id']];selected,failed,_=select_attempts(target,row['id'],('plain','dual'))
+        plain={};observed={}
+        for item in selected:
+            rec=item['record'];provenance[str(target/rec['raw'])]=rec['raw_sha256']
+            if rec['variant']=='plain':plain[rec['trial']]=rec['elapsed_us']
+            else:observed[rec['trial']]=replay(target,rec,row)
+        if len(plain)!=10 or len(observed)!=10:raise ValueError('incomplete cfg_a heldout calls')
+        current=dict(case=row['id'],condition=row,plain_us=statistics.median(plain.values()),failed_attempts=failed,versions={})
+        features={(f['cta'],f['j']):f for f in static_boundary_features(row,setup)}
+        for name,m in models.items():
+            cal=copy.deepcopy(calibration);cal['first_supply']['cfg_a']=m
+            free=predict(row,setup,cal,name=='cluster_max')
+            requests=(cluster_requests if name=='cluster_max' else original_requests)(row,setup)
+            bounds=support(requests,m,identification[name],free)
+            candidates=[]
+            for cta in free['critical_candidates']:
+                f=features[cta,0];candidates.append(dict(cta=cta,coord=f['coord'],T=f['T'],logical_geometry=boundary_geometry(row,f['coord']),
+                    own_fill=[f['operands'][op]['own'] for op in ('A','B')],cluster_fill=[f['operands'][op]['cluster_max'] for op in ('A','B')]))
+            import numpy as np
+            branches={}
+            for r in requests:
+                if r['j']!=0:continue
+                service=float(np.asarray(r['X'])@np.asarray(m['projection'])@np.asarray(m['parameters'][1:]))
+                floor=r['compute_cycles']/free['frequency_ghz'];key=tuple(r['X'])
+                if key not in branches:branches[key]=dict(X=r['X'],service_ns_per_ktile=service,floor_ns_per_ktile=floor,
+                    branch='supply' if service>floor else 'compute_floor',window_count=0,example_cta=r['cta'])
+                branches[key]['window_count']+=1
+            version=dict(request_scope=m['request_scope'],free_prediction=free,free_support=bounds,first_branch_witness=list(branches.values()),
+                free_plain_error=free['plain_us']/current['plain_us']-1,critical_categories=candidates,processes=[])
+            for trial,obs in sorted(observed.items()):
+                ctas=obs['ctas'];max_tiles=max(len(c['tiles']) for c in ctas)
+                f=statistics.median((c['end_c']-c['entry_c'])/(c['end_ns']-c['entry_ns']) for c in ctas if len(c['tiles'])==max_tiles)
+                conditional=predict(row,setup,cal,name=='cluster_max',f)
+                conditional_support=support(requests,m,identification[name],conditional)
+                version['processes'].append(dict(trial=trial,observed_f_ghz=f,free=score(row,obs,free),
+                    observed_f=score(row,obs,conditional),observed_f_plain_us=conditional['plain_us'],
+                    observed_f_plain_error=conditional['plain_us']/plain[trial]-1,
+                    observed_f_support=conditional_support,observed_f_critical_candidates=conditional['critical_candidates']))
+            def aggregate(mode):
+                group=[p[mode] for p in version['processes']]
+                return dict(components={k:statistics.median(p['component_absolute'][k] for p in group if k in p['component_absolute'])
+                    for k in set().union(*(p['component_absolute'] for p in group))},
+                    critical_hits=sum(p['critical_hit'] for p in group),
+                    median_candidate_finish_gap_ns=statistics.median(p['best_candidate_finish_gap_ns'] for p in group),
+                    median_envelope_error=statistics.median(p['envelope_error'] for p in group))
+            version['free_summary']=aggregate('free');version['observed_f_summary']=aggregate('observed_f')
+            version['observed_f_summary']['median_plain_error']=statistics.median(p['observed_f_plain_error'] for p in version['processes'])
+            if name=='frozen_r2':
+                version['frozen_plain_us']=frozen_predictions[row['id']]['plain_us']
+                version['free_replay_plain_delta_us']=free['plain_us']-frozen_predictions[row['id']]['plain_us']
+            # Timelines are regenerated by the pure predictor; do not duplicate every tile in the report.
+            version['free_prediction']={k:v for k,v in free.items() if k not in ('cta_events','cta_duration_ns')}
+            current['versions'][name]=version
+        cases.append(current)
+    metrics={name:dict(all_numeric_plain=fitting.metrics([c['versions'][name]['free_plain_error'] for c in cases]),
+        lp_identified_cases=sum(c['versions'][name]['free_support']['status']=='identified' for c in cases)) for name in models}
+    result=dict(models=models,identification=identification,training_rows=2028,
+        transformed_columns=[5,6],unchanged_fields='All other X entries, L_ns, L_cycle, calibration_floor_ns and record metadata retained',
+        calibration_hash=common.sha(frozen/'frozen/calibration.json'),training_hash=common.sha(frozen/'inputs/supply-training.json.gz'),
+        static_source_hashes=source_hashes,cases=cases,metrics=metrics,raw_sha256=provenance,
+        analyzer_sha256=common.sha(Path(__file__)),feature_model_sha256=common.sha(Path(supply.__file__)),
+        scope='Only frozen cfg_a first 2028 rows refit on this CPU. Other phases/configurations, clock, output and plain transfer unchanged. Free predictions use static inputs; target data only scores them. Observed-frequency diagnostics are separate. LP equivalent-parameter bounds use each corresponding transformed calibration set. All V09 data is development, not new heldout validation; unsupported numbers are diagnostics.')
+    common.write_json(output/'C-first-cluster-model.json',result)
+    return dict(metrics=metrics,cases=len(cases))
+
+
+def boundary_endpoint_distribution(base,output):
+    """Locate map-pair excess using saved endpoints; mma-tail start was not stamped."""
+    from analyze_r13_sm import select_attempts
+    base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    summaries=[];process_rows=[];provenance={};sources={}
+    for name in ('20261010-R18-cluster-fill-discrimination','20261010-R09-R13-R18-failure-controls'):
+        root=base/name;rows=[r for r in json.loads((root/'cases.json').read_text()) if r['id'].startswith(('r18_cluster_fill_map','r18_partial_map'))]
+        rows.sort(key=lambda r:r['input_map_m']);baseline=rows[-1];reference=rows[0]
+        setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+        features={r['input_map_m']:{f['cta']:f for f in static_boundary_features(r,setups[r['id']]) if f['j']==0} for r in rows}
+        calls={}
+        for row in rows:
+            selected,_,_=select_attempts(root,row['id'],('dual',));calls[row['input_map_m']]={}
+            for item in selected:
+                rec=item['record'];calls[row['input_map_m']][rec['trial']]=replay(root,rec,row,retain_roles=True)
+                provenance[str(root/rec['raw'])]=rec['raw_sha256']
+        for row in rows[:-1]:
+            extent=row['input_map_m']
+            for trial in range(10):
+                target=calls[extent][trial]['ctas'];control=calls[1024][trial]['ctas'];windows=[]
+                for a,b in zip(target,control):
+                    if a['role_work']!=b['role_work']:raise ValueError('endpoint comparison changed work')
+                    first=features[extent][a['cta']];ref=features[reference['input_map_m']][a['cta']]
+                    for role in range(2):
+                        at=a['roles'][role];bt=b['roles'][role]
+                        def intervals(cta,r):
+                            t=r['tiles_ns'][0];q=r['tiles'][0]
+                            return dict(producer_prefix_ns=cta['prod_ns']-cta['entry_ns'],S_ns=t[0]-cta['prod_ns'],
+                                first_prefix_ns=t[0]-cta['entry_ns'],L_ns=t[1]-t[0],main_to_permit_ns=t[2]-t[1],E_ns=t[3]-t[2],
+                                first_tile_span_ns=t[3]-cta['entry_ns'],exit_tail_ns=r['final_ns']-r['tiles_ns'][-1][3],
+                                S_cycles=q[0]-cta['prod_c'],L_cycles=q[1]-q[0],E_cycles=q[3]-q[2])
+                        actual=intervals(a,at);old=intervals(b,bt)
+                        if actual['first_tile_span_ns']!=actual['first_prefix_ns']+actual['L_ns']+actual['main_to_permit_ns']+actual['E_ns']:
+                            raise ValueError('same-role first-tile accounting failed')
+                        windows.append(dict(cta=a['cta'],role=role,T=len(a['work']),geometry=boundary_geometry(row,first['coord']),
+                            reference_affected=bool(ref['operands']['A']['cluster_any']),reference_own_fill=ref['operands']['A']['own'],
+                            own_fill=first['operands']['A']['own'],actual=actual,baseline=old,delta={k:actual[k]-old[k] for k in actual}))
+                groups=defaultdict(list)
+                for w in windows:groups[w['role'],w['T'],w['geometry'],w['reference_affected'],w['reference_own_fill'],w['own_fill']].append(w)
+                for key,group in groups.items():
+                    interior=[w for w in windows if w['role']==key[0] and w['T']==key[1] and not w['reference_affected'] and w['geometry']=='real']
+                    if not interior:raise ValueError('no matched interior endpoint reference')
+                    p=dict(run=name,input_map_m=extent,trial=trial,role=key[0],T=key[1],geometry=key[2],reference_affected=key[3],reference_own_fill=key[4],own_fill=key[5],windows=len(group))
+                    p['actual']={k:statistics.median(w['actual'][k] for w in group) for k in group[0]['actual']}
+                    p['delta']={k:statistics.median(w['delta'][k] for w in group) for k in group[0]['delta']}
+                    p['interior_delta']={k:statistics.median(w['delta'][k] for w in interior) for k in group[0]['delta']}
+                    p['excess']={k:statistics.median(w['delta'][k]-p['interior_delta'][k] for w in group) for k in group[0]['delta']}
+                    process_rows.append(p)
+        for rel in ('cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp','cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp'):
+            path=root/'source/overlay'/rel;lines=path.read_text().splitlines()
+            sources[str(path)]=dict(sha256=common.sha(path),sites={site:[i+1 for i,line in enumerate(lines) if site in line] for site in
+                ('V06_FIRST_MMA','V06_MAIN_END','consumer_wait(smem_pipe_read','warpgroup_commit_batch','warpgroup_wait<','collective_mainloop.mma_tail')})
+    keys=('run','input_map_m','role','T','geometry','reference_affected','reference_own_fill','own_fill');groups=defaultdict(list)
+    for p in process_rows:groups[tuple(p[k] for k in keys)].append(p)
+    for key,group in sorted(groups.items()):
+        row=dict(zip(keys,key),processes=len(group))
+        for metric in ('actual','delta','interior_delta','excess'):row[metric]={k:statistics.median(p[metric][k] for p in group) for k in group[0][metric]}
+        summaries.append(row)
+    result=dict(summary=summaries,processes=process_rows,raw_sha256=provenance,source_sites=sources,analyzer_sha256=common.sha(Path(__file__)),
+        limits=['S uses producer-first-work to consumer-FIRST_MMA in one CTA: cross-role preparation interval, not a pure consumer-wait measurement.',
+            'FIRST_MMA is after the initial consumer full wait, before warpgroup_arrive and first GMMA issuance.',
+            'MAIN_END is after mma_tail, which contains warpgroup_wait<0> and final consumer releases. No mma-return stamp separates drain from K loop.',
+            'exit_tail is final role stamp minus last EPI_DONE; it is not GMMA drain or physical global-write completion.',
+            'Current two jobs both use K4096: first versus later output tile is not first versus later K iteration.',
+            'Per-window accounting is exact; medians of separately grouped terms are not additive.'])
+    common.write_json(output/'C-endpoint-localization.json',result)
+    return result
+
+
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True,type=Path);p.add_argument('--output',type=Path)
     p.add_argument('--v08-padding',action='store_true')

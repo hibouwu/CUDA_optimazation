@@ -3,6 +3,7 @@
 All coefficients and conditional LP constraints are explicit caller inputs.
 The request spans are descriptor coverage, not physical memory traffic.
 """
+from collections import defaultdict
 from functools import lru_cache
 
 import numpy as np
@@ -107,6 +108,34 @@ def static_tma_requests(row, setup):
     return dict(source_fields=TMA_SOURCE_FIELDS,source_coefficients=None,destination_coefficients=None,
                 ctas=ctas,source_waves=[v.tolist() for v in waves],
                 effective_source_waves=[v.tolist() for v in effective])
+
+
+def boundary_fill_features(row,setup):
+    """Candidate coupling features from static requests, never from observed work.
+
+    Mask sums count destination amounts (including replication), not traffic.
+    Full-cluster coupling is a hypothesis, not proof of a hardware barrier.
+    """
+    request=static_tma_requests(row,setup);_,_,cm,cn=CONFIGS[row['config']]
+    clusters=defaultdict(list)
+    for tiles in request['ctas']:
+        for tile in tiles:clusters[tuple(tile['cluster'])].append(tile)
+    result=[]
+    for cta,tiles in enumerate(request['ctas']):
+        for j,tile in enumerate(tiles):
+            peers=clusters[tuple(tile['cluster'])]
+            if len(peers)!=cm*cn:raise ValueError('static logical work cluster is incomplete')
+            feature=dict(cta=cta,j=j,T=len(tiles),coord=tile['coord'],phase='first' if j==0 else 'later',
+                cluster=tile['cluster'],rank=tile['cluster_rank'],operands={})
+            for op in ('A','B'):
+                mask=tile[op]['multicast_mask']
+                group=[p[op]['destination_fill_KiB'] for p in peers if mask&(1<<p['cluster_rank'])]
+                whole=[p[op]['destination_fill_KiB'] for p in peers]
+                feature['operands'][op]=dict(own=tile[op]['destination_fill_KiB'],mask=mask,
+                    mask_max=max(group),mask_sum=sum(group),cluster_max=max(whole),cluster_sum=sum(whole),cluster_any=float(any(v>0 for v in whole)))
+            result.append(feature)
+    return result
+
 
 
 def supply_request_rows(row, setup):

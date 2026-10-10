@@ -1,6 +1,6 @@
 # R18：OOB、有效地址零值与填零服务
 
-**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。V09 的 partial 失败主要落在主循环，且影响传播到完整 tile；不能增加一个只收 partial tile 的常数。当前公式见 [RULES](RULES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
+**输入数值为零与 descriptor 越界填零具有不同的条件代价。** 同物理工作列表配对已在 cfg_a 的边界 cluster、cfg_b 的整 tile A/B 越界中观察到差异；cfg_c 早期首轮边界对照没有同类正惩罚。差异还依赖输出轮次，不能只给补齐 tile 乘一个常数。A/C 首轮补测改善了条件范围，但 cfg_c first-fill 在部分预测频率下仍不唯一。V09 的 partial 失败主要落在主循环，且影响传播到完整 tile；不能增加一个只收 partial tile 的常数。固定输出四点不支持单一精确增量规律；cluster-max在观测baseline上有受限近似价值，但只替换fill输入的完整供给重拟合未改善V09，关键CTA定位尚未解决。当前公式见 [RULES](RULES.md#v09-model)，可辨识性与阶段关系见 [R13](R13-async-retirement.md)。
 
 ## 作业与证据索引
 
@@ -13,6 +13,7 @@
 | 738203＋上两批 | 同卡有效地址＋whole-fill候选，保留有效tile慢窗口 | [填零候选与分项误差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/A-20261009-valid-fill-v4/summary.json) |
 | 738707 / 738865 | cfg_a/c partial/whole首轮填零与有效地址零配对 | [合并报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json) |
 | 739095 | P1同输出map配对：首轮partial及其完整cluster伙伴同步缩短，later近零响应 | [当前分析](#v09-boundary-failure)、[配对结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json) |
+| 739529 | 同输出四map：单一增量不精确，max保留近似候选，later近零 | [当前辨识](#哪个静态特征能够表达这个作用)、[四点结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-fill-discrimination.json) |
 
 ## 同物理工作列表：边界路径与数值零分开
 
@@ -205,6 +206,97 @@ P1 的固定输出 map 配对已在 job739095、a058/GPU-ef8692f3 完成：logic
 
 T1 的 first partial 与完整伙伴也分别缩短2.768/2.800 μs；role1 同方向。T2 first partial/伙伴的配对差在十个进程中均小于−3.58/−3.64 μs，内部real的差则跨过零。各组 E 的配对中位变化最多几十ns，不能解释约4 μs的总收益；later L接近globaltimer量化尺度。**这支持首轮 descriptor 输入边界 cluster 的条件代价，也排除了“只因输出面积较少而变慢”的解释。** 同cluster完整伙伴受到同量级影响，不能只按partial自身字节收费；静态工作坐标单独也不能解释map改变后的缩短。
 
-观察仍未区分填零硬件、cluster同步和共享供给的具体物理成本，也不能把首轮差值复制到later。以cluster边界状态作为下一候选的辨识变量有依据，但这一对开发数据不足以确定可迁移系数；本轮不追加P1专属常数。[同卡配对、关键CTA与原样本绑定](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
+观察仍未区分填零硬件、cluster同步和共享供给的具体物理成本，也不能把首轮差值复制到later。[同卡配对、关键CTA与原样本绑定](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-controls.json)。
+
+<a id="boundary-candidate-features"></a>
+
+### 哪个静态特征能够表达这个作用？
+
+特征只从输入形状、descriptor范围、静态scheduler和multicast mask构造。cfg_a的A mask仅含本CTA，cfg_c的B mask也仅含本CTA；对应的mask最大值/总和退化为自身fill，不能表达完整伙伴的额外代价。完整cluster聚合能覆盖伙伴，但它只是一项待检验的作用范围，不等于已经证明某个同步或填零硬件机制。
+
+| 每Ktile的cluster fill模式 | cluster最大 KiB | cluster总和 KiB | any_fill指示 |
+|---|---:|---:|---:|
+| 旧A/C首轮校准：partial 8、whole 16 | 16 | 24 | 1 |
+| V09 P1 / 新P1：完整伙伴0、partial 8 | 8 | 8 | 1 |
+| V09 P2的整cluster越界：16、16 | 16 | 32 | 1 |
+| map全部覆盖 | 0 | 0 | 0 |
+
+原卡738707/738865的三个cluster列只有秩1。把十进程内的配对L差减去同j/T内部real参照，再分别拟合三种单变量形式，三者的拟合值完全相同，不能从较好的残差选出max、sum或any。cfg_a first自身/mask的加权RMS为35.70 ns/Ktile，cluster三种形式均为29.41 ns/Ktile；这支持扩大作用范围，却没有确定聚合方式。
+
+量纲也不能跳过：若采用any_fill，原卡K1024/4096的描述性价分别为98.875/60.938 ns/Ktile，换成每窗口为1582/3900 ns；两者都不是稳定常数。cfg_c first的差很小且随K变号，later则没有这类固定输出的A/C校准。V09及新卡只作开发诊断，不参与这些系数拟合。因此目前交付静态作用范围和可辨识限制，不给出新的通用填零价格。
+
+四点辨识已在job739529完成，与P1配对同a058/GPU-ef8692f3。固定logical M832/N2816/K4096、storage M1024/zero M832，只改变map M；两项参照先采，四个目标各十次plain/dual，总计120个成功进程。受影响集合始终由静态map832确定，按相同CTA/角色/j/T与map1024配对，再扣除同期内部real的变化。下表选role2、first/T2中原本自身填零8KiB的成员；其逻辑输出始终partial，map896以后只是**输入不再填零**，不能改称完整输出tile。
+
+| map M | cluster A fill KiB | 本成员输入状态 | plain μs | first L额外量 ns | later L额外量 ns |
+|---|---|---|---:|---:|---:|
+| 832 | (8,16) | 自身填零 | 57.968 | 8752 | 16 |
+| 896 | (0,16) | 无填零伙伴 | 54.880 | 6664 | 64 |
+| 960 | (0,8) | 无填零伙伴 | 51.840 | 4064 | 16 |
+| 1024 | (0,0) | 已清除原边界 | 47.680 | 0 | 0 |
+
+**max、sum和any三个单一价格都不是这里的精确增量规律；这不等于它们不能作为有误差的条件近似。** 832→896的max和any均不变，first/T2主循环却缩短约2.50μs；同期内部real也缩短0.624μs，扣除后原8KiB成员仍缩短1.944μs。896→960与960→1024对应扣除后的配对缩短为2.784/4.064μs。三次总fill都少8KiB，变化却不相等；第一步的十进程范围为1.504–3.056μs，最后一步为3.392–4.432μs，不支持统一线性sum价格。内部real随map变化，不能把原始总差全部收费给边界。
+
+两个合作角色同方向：对同CTA与同端点计算相对map1024的L差，两角色差的进程中位绝对值为48–88ns，远小于数微秒响应；E额外量只有−32至+128ns。dual相对plain扰动1.49%–2.44%，各类进程CV最大1.85%。later主循环只剩几十ns差，first额外量又随T1/T2分组显著不同；这些分组同时改变工作位置与并发条件，尚不能把T单独命名为原因。
+
+role2 first/T2的max/sum/any描述性增量拟合RMS分别为0.844/0.593/1.764μs，三项混合降至0.289μs。但四点仅提供三个非零特征模式，混合模型能插值三个均值；秩3与更小训练残差均不证明通用规则，也没有理由立即增加混合参数。
+
+为了判断单一特征是否仍有近似价值，将739529拟合的价加到**同trial、同CTA的map1024观测first L**上，再加该条件观测到的内部real偏移，比较完整L；739095的P1只作同卡、不同logical M的开发迁移，不重拟合。下表是role2/T2逐进程中位绝对相对误差再取十进程中位，不是最坏误差。
+
+| 诊断条件 / 受影响成员 | cluster-max | cluster-sum | any_fill |
+|---|---:|---:|---:|
+| 四点map832 / 自身fill | 5.65% | 2.09% | 9.86% |
+| 四点map896 / 自身fill | 3.70% | 3.44% | 2.63% |
+| 四点map960 / 自身fill | 2.05% | 4.49% | 10.12% |
+| 739095 P1 / 自身fill | 2.56% | 5.65% | 10.21% |
+| 739095 P1 / 无fill完整伙伴 | 2.37% | 5.45% | 10.19% |
+
+max对P1典型窗口保有近似价值；若不加入目标条件的观测内部real偏移，两类P1误差为3.37%/2.92%，sum为6.23%/5.98%。不过P1单窗口最大误差仍达20.96%（max）和17.18%（sum），不能用典型值代替误差界。
+
+条件排序再保留目标观测entry，以map1024的实际CTA内部时长加候选first增量，其余阶段沿用baseline。三个候选对四点map832/896/960各命中4/2/3次，对P1均只命中2/10；P1所选者距实际最晚退出的中位缺口3.664μs。它们都能指出受影响cluster，单一价格仍不能区分cluster类别内部的时长排序。
+
+这些步骤明确使用观测baseline及部分目标观测量，只回答条件近似的价值，**不是可部署预测或新留出成绩**。下面将cluster-max放回完整供给模型，检验不依赖这些观测baseline时是否仍有收益。
+
+### 只改静态fill输入的完整first重拟合
+
+严格复用冻结r2的cfg_a first **2028行**，仅把X的A/B自身fill两列换为完整cluster最大fill；其余X、L_ns、校准计算下界与数据集合保持不变。冻结基线、同CPU重拟合自身fill基线、cluster-max候选并列；cfg_b/c、later、时钟、输出和plain转换参数全部保持原样。V09、739095与739529目标均未加入拟合。
+
+| 比较项 | 冻结r2 / 自身fill重拟合 | cluster-max重拟合 |
+|---|---:|---:|
+| first校准窗口RMS | 5.620% | 5.134% |
+| cfg_a全部9条件总时间中位 / 最大 | 3.006% / 10.285% | 3.167% / 10.236% |
+| cfg_a全部9条件总时间RMS | 5.562% | 5.565% |
+| P1自由总时间有符号误差 | −9.375% | −9.412% |
+| P1 first L中位绝对误差 | 6.168% | 6.268% |
+| P1冻结精确候选数 | 38 | 38 |
+
+自身fill重拟合重现冻结结果，排除了不同CPU重拟合导致的主要变化。所有9条件的自由预测，以及逐进程代入观测频率后的预测，都通过基于**相应变换后校准行**构造的非负等价参数LP支持检查；通过支持检查没有带来预测改善。代入观测频率后，P1总时间误差仍由−10.207%变为−10.247%，first L误差由7.319%变为7.423%，不是简单换频率就能挽回。
+
+原因在组合形式里可以直接计算：P1的cluster最大fill为8KiB，候选给出的服务项约`8×23.547=188.4 ns/Ktile`，低于`512/f≈299.7 ns/Ktile`的计算下界。当前`max(计算,供给)`把完整伙伴新增的fill输入完全屏蔽，32个受影响CTA与内部CTA仍取同一计算分支。重拟合主要把共同window项从298.816改为277.086ns，不能表达实测数微秒的边界差。因此**仅替换静态聚合特征、保持原max递推结构，并不能修复P1**；不能把前一节观测baseline上的近似收益当成完整模型已改进。
+
+现行时间模型不启用这个候选。保留静态cluster作用范围与完整重拟合反例；模型选择计算下界分支不证明硬件没有等待，不能通过调大fill系数强行越过下界。[完整组合、逐进程分项、关键CTA类别与LP区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-first-cluster-model.json)；这些均为V09开发诊断，不是新留出成绩。
+
+### 已能定位到哪个事件区间？
+
+继续使用739529/739095原始端点，不重新拟合。下表均为role2/T2、相对同trial map1024并扣除同期内部real的进程中位差。S是producer首工作→该consumer的FIRST_MMA，属于同CTA跨角色准备窗口；L和E则分别由同一consumer的两个端点相减。
+
+| 对象 | S额外 ns | L额外 ns | E额外 ns |
+|---|---:|---:|---:|
+| 739095 P1 / partial自身 | 16 | 4000 | 24 |
+| 739095 P1 / 完整伙伴 | 16 | 4000 | −8 |
+| 739529 map832 / 原8KiB成员 | 96 | 8752 | 48 |
+| 739529 map896 / 同成员，输入已无fill | 16 | 6664 | 64 |
+| 739529 map960 / 同成员，输入已无fill | 8 | 4064 | 32 |
+
+MAIN_END→PERMIT的配对中位变化为0，最终consumer退出相对末次EPI_DONE的变化为0–16ns。两个伙伴共有的数微秒增量落在L，不能移到首段S或输出E。以上中位数来自分别分组，不要求相加等于首tile完整跨度；每个原始角色窗口的加法恒等式已核对。
+
+归档CUTLASS源码给出了L的真实含义：`FIRST_MMA`在**初始consumer_wait返回后**、`warpgroup_arrive`和首批GMMA之前；`MAIN_END`在`mma()`及`mma_tail()`都返回后。L包含后续Ktile的full等待、GMMA发射/commit、`warpgroup_wait<K_PIPE_MMAS>`、buffer release以及末尾`warpgroup_wait<0>`和剩余release。现有最终exit_tail是输出之后的退出窗口，**不是GMMA尾排空**。缺少mma返回端点，所以现有数据还不能把K循环等待与尾排空分开。共同增量支持cluster相关的延迟暴露，不证明某一条硬件等待是原因。
+
+这正是当前max形式的缺口：它把整个L视为稳定供给与计算中较慢者的K倍，而FIRST_MMA之后可能仍有启动过渡、阶段依赖或尾段暴露。观察到later输出tile代价近零，并不证明first输出tile内部只有一次固定延迟；这两批都为K4096，没有提供K内持续性的直接分解。
+
+若后续把稀疏观测推广到cfg_a边界，按其合作角色语义最少需要五个新端点：一处放在`mma()`返回、进入`mma_tail()`之前，以现有MAIN_END分出尾段；另四处只围住一个选定稳态K迭代的`consumer_try_wait`之前、`consumer_wait`之后、`warpgroup_commit_batch`之后和`warpgroup_wait`之后。这样分别得到full等待、发射加commit、组等待，以及最终tail段，不把发射窗口命名为纯commit指令成本。可用同样的五点布局分别取稳态首迭代和中点，保留两consumer及受影响/内部cluster对照；不逐K打点。这只是所缺端点建议，当前先由cfg_b stage稀疏观测验证观测方法，本页不启动新的cfg_a采样。若额外时间集中在早段而中点无差，支持启动过渡；若中点等待也持续增加，再用同几何的K变化检查累积；若集中在mma返回→MAIN_END，则优先检查尾段。单个中点样本仍不能证明全K循环都遵循同一服务率。
+
+[匹配端点分布、源码SHA与插入位置](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-endpoint-localization.json)。本次只用已有事件定位，没有新加时间项或GPU任务。
+
+[四点配对、直接变化、两角色一致性与拟合残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-fill-discrimination.json)、[旧校准候选与静态范围](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-candidate.json)、[逐CTA静态特征](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-static-features.json)。
 
 [逐窗口与逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)、[原同输出配对复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-old-input-pairs.json)。同角色窗口与 merged 模型残差分开保存，前者用于周期/时间关系，后者用于比较递推模型。

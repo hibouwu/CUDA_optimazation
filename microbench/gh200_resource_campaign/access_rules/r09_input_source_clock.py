@@ -575,6 +575,368 @@ def control_diagnostics(root, output):
     return result
 
 
+def reciprocal_frequency(point, window, model):
+    """Conditional hypothesis: reciprocal response to the existing Q/S proxies."""
+    mode = MODES.index(point['input_mode'])
+    a, *costs = model['coefficients']
+    denominator = (a + costs[mode]*point['tensor_mean_cycles']/(1000*window)
+                   + costs[mode+3]*point['source_mean_kib']/window
+                   * clock.duration_term(window, 'relaxation', model['tau_us']))
+    return 1/denominator
+
+
+def fit_reciprocal_clock(points, cap):
+    """Same eight parameters; minimize measured GHz residuals, not 1/GHz."""
+    import numpy as np
+    from scipy.optimize import lsq_linear, least_squares
+
+    y = np.asarray([p['observed_ghz'] for p in points])
+    def fit_tau(tau):
+        design = source_design(points, tau)
+        design[:,1:] *= -1
+        scales = np.maximum(np.max(np.abs(design),axis=0),1e-12)
+        scaled = design/scales
+        lower, upper = [1/cap,0,0,0,0,0,0], [np.inf]*7
+        # Reciprocal targets initialize the solve only. The optimized residual
+        # and every model comparison below are in GHz.
+        initial = np.maximum(lower,lsq_linear(scaled,1/y,bounds=(lower,upper),method='bvls',tol=1e-12).x)
+        solved = least_squares(lambda x:1/(scaled@x)-y,initial,
+            jac=lambda x:-scaled/(scaled@x)[:,None]**2,
+            bounds=(lower,upper),ftol=1e-13,xtol=1e-13,gtol=1e-11,max_nfev=1000)
+        if not solved.success or solved.optimality > 1e-6:
+            raise ValueError(f'reciprocal observed-frequency fit failed at tau={tau}: {solved.message}')
+        return dict(tau_us=float(tau), coefficients=(solved.x/scales).tolist(),
+                    mse_ghz=float(np.mean(solved.fun**2)), optimality=float(solved.optimality),
+                    rank=int(np.linalg.matrix_rank(design)))
+    coarse = np.logspace(-1,5,121)
+    profile = [fit_tau(tau) for tau in coarse]
+    best_index = min(range(len(profile)),key=lambda i:profile[i]['mse_ghz'])
+    fine = np.geomspace(coarse[max(0,best_index-1)],coarse[min(120,best_index+1)],81)
+    known = {p['tau_us'] for p in profile}
+    profile += [fit_tau(t) for t in fine if float(t) not in known]
+    best = min(profile,key=lambda p:p['mse_ghz'])
+    return dict(**best, response='reciprocal', tau_profile=sorted(profile,key=lambda p:p['tau_us']),
+                frequency_cap_ghz=cap, target='unweighted observed GHz residuals',
+                parameter_units=['1/GHz','1/GHz^2','1/GHz^2','1/GHz^2',
+                                 'us/(GHz KiB)','us/(GHz KiB)','us/(GHz KiB)'])
+
+
+def static_output_kib(row):
+    """Effective FP32 D bytes per SM; no observed epilogue or timing input."""
+    return 4*row['m']*row['n']/(132*1024)
+
+
+def static_revisit_features(row, setup):
+    """Distinct source panels per software output ordinal, not physical traffic."""
+    cfg = v08_model.base.CONFIGS[row['config']]
+    tm,tn,tk = cfg['tile']
+    cm,cn = cfg['cluster']
+    work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'])
+    if row['m']%tm or row['n']%tn or row['k']%tk or any(
+            mi*tm>=row['m'] or ni*tn>=row['n'] for c in work for mi,ni in c):
+        raise ValueError('revisit definition here requires full in-bounds tiles without cluster padding')
+    waves = []
+    for j in range(max(map(len,work))):
+        coords = [c[j] for c in work if len(c)>j]
+        a,b = len({mi for mi,ni in coords}),len({ni for mi,ni in coords})
+        # The actual R18 descriptor boxes: A splits M by cluster-N; B splits
+        # K by cluster-M and its 128 columns comprise two 64-column boxes.
+        a_boxes = {(mi*tm+(ni%cn)*(tm//cn),tm//cn) for mi,ni in coords}
+        b_boxes = {(ni*tn+offset,(mi%cm)*(tk//cm),tk//cm)
+                   for mi,ni in coords for offset in (0,64)}
+        union_kib = 2*(len(a_boxes)*(tm//cn)*tk+len(b_boxes)*64*(tk//cm))/1024
+        if union_kib != 2*tk*(tm*a+tn*b)/1024:
+            raise ValueError('software wave does not contain complete multicast source-panel slices')
+        waves.append(dict(j=j,cta_count=len(coords),unique_A=a,unique_B=b,
+                          unique_A_boxes=len(a_boxes),unique_B_boxes=len(b_boxes),
+                          unique_source_KiB_per_Ktile=union_kib))
+    tiles = sum(map(len,work))
+    kt = row['k']//tk
+    return dict(output_tiles=tiles,cta_tile_min=min(map(len,work)),cta_tile_max=max(map(len,work)),
+        tensor_mean_cycles=tiles*kt*2*tm*tn*tk/4096/132,
+        nominal_source_mean_KiB=tiles*kt*2*tk*(tm/cn+tn/cm)/1024/132,
+        output_mean_KiB=static_output_kib(row),
+        unique_source_mean_KiB=kt*sum(w['unique_source_KiB_per_Ktile'] for w in waves)/132,
+        panel_slots=sum(w['unique_A']+w['unique_B'] for w in waves),waves=waves,
+        multicast_source_slices_verified=True,
+        scope='Union distinct issued A/B source boxes within a common software output ordinal, then sum ordinals and Ktiles; multicast delivery is not counted again. No observed timing, cache residency, physical transfer count, or simultaneous issue is assumed.')
+
+
+def swizzle_diagnostics(root, output):
+    """A fixed-work sw1/sw8 contrast, without any old-card fitted parameters."""
+    from analyze_r13_sm import select_attempts
+    root,output = Path(root),Path(output)
+    rows = {r['swizzle']:r for r in clock.read_json(root/'cases.json') if r['id'] in ('r09_g6_sw1','r09_g6_sw8')}
+    if set(rows)!={1,8}:
+        raise ValueError('both declared swizzle conditions required')
+    setups = {s['case']:s['setup'] for s in clock.read_json(root/'static_setup.json')}
+    fixed = ('gpu_uuid','m','n','k','lda','ldb','ldd','alloc_lda','alloc_ldb','allocated_a_elements',
+             'allocated_b_elements','input_mode','seed','grid','stages','zero_m','zero_n','evict')
+    if any(setups[rows[1]['id']].get(k)!=setups[rows[8]['id']].get(k) for k in fixed):
+        raise ValueError('swizzle contrast changed another declared condition')
+    features = {str(sw):static_revisit_features(row,setups[row['id']]) for sw,row in rows.items()}
+    for key in ('output_tiles','cta_tile_min','cta_tile_max','tensor_mean_cycles','nominal_source_mean_KiB','output_mean_KiB'):
+        if features['1'][key]!=features['8'][key]:
+            raise ValueError('swizzle changed software work: '+key)
+    processes,failures,records = [],[],{}
+    hashes = {name:clock.sha256(root/name) for name in ('cases.json','static_setup.json','environment.json')}
+    for sw,row in rows.items():
+        selected,failed,_ = select_attempts(root,row['id'],('plain','ends'))
+        failures.extend(failed)
+        for item in selected:
+            rec = item['record']
+            obs = v08_model.observe(root,rec,row,setups[row['id']])
+            point = dict(case=row['id'],swizzle=sw,variant=rec['variant'],trial=rec['trial'],
+                         event_us=obs['elapsed_us'],host_start_ns=rec['host_start_ns'],raw_sha256=rec['raw_sha256'],
+                         warmup_calls=len(rec['warmup']),warmup_total_us=sum(rec['warmup']))
+            if rec['variant']=='ends':
+                point.update(control_window(obs))
+            records[sw,rec['variant'],rec['trial']] = point
+            processes.append(point)
+            hashes[item['path']] = clock.sha256(root/item['path'])
+    if set(records)!={(sw,variant,trial) for sw in (1,8) for variant in ('plain','ends') for trial in range(10)}:
+        raise ValueError('ten successful plain and ends trials for both swizzles required')
+    pairs = []
+    for trial in range(10):
+        a,b = records[1,'ends',trial],records[8,'ends',trial]
+        pairs.append(dict(trial=trial,frequency_change=b['frequency_ghz']/a['frequency_ghz']-1,
+            window_change=b['window_us']/a['window_us']-1,
+            max_cta_cycles_change=b['max_cta_cycles']/a['max_cta_cycles']-1,
+            ends_event_change=b['event_us']/a['event_us']-1,
+            plain_event_change=records[8,'plain',trial]['event_us']/records[1,'plain',trial]['event_us']-1,
+            ends_pair_separation_s=abs(b['host_start_ns']-a['host_start_ns'])/1e9))
+    summary = {key:failure_stats(p[key] for p in pairs) for key in pairs[0] if key!='trial'}
+    variants = {}
+    for sw in (1,8):
+        variants[str(sw)] = {}
+        for variant in ('plain','ends'):
+            group = [p for p in processes if p['swizzle']==sw and p['variant']==variant]
+            fields = (('event_us',) if variant=='plain' else ('event_us','frequency_ghz','window_us','max_cta_cycles')) + ('warmup_calls','warmup_total_us')
+            variants[str(sw)][variant] = {key:dict(failure_stats(p[key] for p in group),
+                process_cv=statistics.pstdev(p[key] for p in group)/statistics.fmean(p[key] for p in group)) for key in fields}
+    result = dict(scope='Same-job sw1/sw8 order contrast; no old-card absolute clock or time validation.',
+        run=str(root),environment=clock.read_json(root/'environment.json'),source_sha256=clock.sha256(Path(__file__)),
+        input_sha256=hashes,static_features=features,variants=variants,paired_summary=summary,
+        paired_trials=pairs,processes=processes,failed_attempts=failures,
+        notes=['All numeric checks and raw SHA are replayed; only successful declared trials enter pairs.',
+               'Software output ordinals do not prove simultaneous requests or cache hits; unique-source KiB is an opportunity proxy.',
+               'Swizzle also changes per-CTA operand order; a frequency response would not by itself identify traffic or power.',
+               'Trial pairs are sequential processes, so their dispersion includes intervening state changes.',
+               'Adaptive warmup counts and cumulative durations are measured history diagnostics, not prediction inputs or controlled power doses.',
+               'Q and nominal S remain exactly collinear within each configuration; this experiment changes order while holding both and D fixed.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-swizzle.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    return result
+
+
+def response_development(base, output):
+    """Declared response/activity contrasts on one training card; development only."""
+    from collections import defaultdict
+    from r09_equal_work_clock import work_point
+    import v09_model
+
+    base, output = Path(base), Path(output)
+    paths = dict(training=base/'20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json',
+        equal_work=base/'20261009-R09-equal-work-job738459/reanalysis/C-20261009-equal-work-clock-v1/equal-work-clock.json',
+        v09_calls=base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json',
+        new_controls=base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json')
+    data = {k:clock.read_json(p) for k,p in paths.items()}
+    training = [dict(p,output_mean_kib=static_output_kib(p)) for p in data['training']['points']['all21_training']]
+    equal_root = base/'20261009-R09-equal-work-job738459'
+    equal_rows = {r['id']:r for r in clock.read_json(equal_root/'cases.json')}
+    cross_k = [dict(p,output_mean_kib=static_output_kib(equal_rows[p['case']]))
+               for p in data['equal_work']['clock_cases'] if p['k']==4096]
+    revisit_support = {}
+    def attach_revisit(points,run):
+        row_map = {r['id']:r for r in clock.read_json(run/'cases.json')}
+        setup_map = {s['case']:s['setup'] for s in clock.read_json(run/'static_setup.json')}
+        features = {}
+        for cid in {p['case'] for p in points}:
+            try:
+                features[cid] = static_revisit_features(row_map[cid],setup_map[cid])
+                revisit_support[cid] = dict(status='full-tile source union defined',
+                    unique_source_mean_KiB=features[cid]['unique_source_mean_KiB'],
+                    multicast_source_slices_verified=features[cid]['multicast_source_slices_verified'])
+            except ValueError as error:
+                features[cid] = None
+                revisit_support[cid] = dict(status='unsupported',reason=str(error))
+        for name in ('cases.json','static_setup.json','environment.json'):
+            paths[str(run/name)] = run/name
+        return [dict(p,revisit_mean_kib=(features[p['case']]['unique_source_mean_KiB'] if features[p['case']] else None)) for p in points]
+    training = attach_revisit(training,base/'20261009-R09-input-clock-calibration-job738376')
+    cross_k = attach_revisit(cross_k,equal_root)
+    if any(p['revisit_mean_kib'] is None for p in training+cross_k):
+        raise ValueError('U must support every original21 and added9 training point; no training rows may be silently omitted')
+    gpu = data['training']['environment']['gpu'].split(',')[0]
+    if data['equal_work']['environment']['gpu'].split(',')[0] != gpu:
+        raise ValueError('cross-K training must use the same GPU')
+    cap = data['training']['model']['constraints']['a_max_ghz']
+    models = dict(linear21=dict(data['training']['model'],response='linear'),
+                  reciprocal21=fit_reciprocal_clock(training,cap))
+    def frequency(point, window, model):
+        mixed = mixed_failure_clock(model,point['input_mode'],point.get('zero_fraction',0))
+        if model['response']=='linear_output':
+            point = dict(point,source_mean_kib=point['output_mean_kib'])
+        if model['response']=='linear_revisit':
+            if point['revisit_mean_kib'] is None:
+                return None
+            point = dict(point,source_mean_kib=point['revisit_mean_kib'])
+        return (reciprocal_frequency(point,window,mixed) if model['response']=='reciprocal'
+                else source_frequency(point,window,mixed)['frequency_ghz'])
+    def evaluate(points):
+        result = {}
+        for name,model in models.items():
+            groups = defaultdict(list)
+            unsupported = set()
+            for point in points:
+                predicted = frequency(point,point['observed_window_us'],model)
+                if predicted is None:
+                    unsupported.add(point['case'])
+                    continue
+                groups[point['case']].append(predicted/point['observed_ghz']-1)
+            by_case = {case:failure_stats(errors) for case,errors in groups.items()}
+            result[name] = dict(summary=failure_stats(v['median'] for v in by_case.values()),cases=by_case,
+                                unsupported_cases=sorted(unsupported),declared_cases=len({p['case'] for p in points}))
+        return result
+    preliminary = evaluate(cross_k)
+    datasets = dict(training21=training,crossK4096=cross_k,
+                    same_card_wideK1024=[dict(p,output_mean_kib=static_output_kib(p))
+                                        for p in data['training']['points']['old_cfg_ac_long']])
+    datasets['same_card_wideK1024'] = attach_revisit(datasets['same_card_wideK1024'],base/'20261009-R09-wide-input-job738197')
+    target = base/'20261009-V09-heldout-job739011'
+    rows = {r['id']:r for r in clock.read_json(target/'cases.json')}
+    setups = {s['case']:s['setup'] for s in clock.read_json(target/'static_setup.json')}
+    v09points = []
+    for item in data['v09_calls']['processes']:
+        row = rows[item['case']]
+        point = work_point(row,setups[row['id']])
+        work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setups[row['id']]['grid'],row['swizzle'])
+        v09points.append(dict(point,case=row['id'],config=row['config'],group=row['group'],
+            output_mean_kib=static_output_kib(row),
+            zero_fraction=v09_model.zero_product_fraction(row,work),trial=item['trial'],
+            observed_window_us=item['observed_window_us'],observed_ghz=item['observed_frequency_ghz']))
+    v09points = attach_revisit(v09points,target)
+    datasets['V09_all'] = v09points
+    for group in sorted({p['group'] for p in v09points}):
+        datasets['V09_'+group] = [p for p in v09points if p['group']==group]
+    # More data is a separate development version, never a replacement for the
+    # original-21 failure. Refit both laws to distinguish form from new evidence.
+    original21_migration = {name:evaluate(datasets[name]) for name in
+                            ('crossK4096','same_card_wideK1024','V09_G6_base')}
+    add_cross_k = any(abs(case['median']) > .10 for group in original21_migration.values()
+                      for case in group['reciprocal21']['cases'].values())
+    if add_cross_k:
+        models['linear30'] = dict(fit_source_clock(training+cross_k,cap),response='linear')
+        models['reciprocal30'] = fit_reciprocal_clock(training+cross_k,cap)
+    output_training = [dict(p,source_mean_kib=p['output_mean_kib']) for p in training+cross_k]
+    models['linear_output30'] = dict(fit_source_clock(output_training,cap),response='linear_output',
+                                     activity_input='static effective D KiB per SM, replacing source KiB')
+    if 'linear30' not in models:
+        models['linear30'] = dict(fit_source_clock(training+cross_k,cap),response='linear')
+    for name,points in [('linear_revisit21',training),('linear_revisit30',training+cross_k)]:
+        models[name] = dict(fit_source_clock([dict(p,source_mean_kib=p['revisit_mean_kib']) for p in points],cap),
+                            response='linear_revisit',activity_input='static source-box union per software output ordinal')
+    import numpy as np
+    identification = {}
+    revisit_identification = {}
+    for name,points in [('original21',training),('expanded30',training+cross_k)]:
+        work_design = np.asarray([[1,
+            *[-p['tensor_mean_cycles']/(1000*p['observed_window_us'])*(p['input_mode']==mode) for mode in MODES],
+            *[-p['output_mean_kib']/p['observed_window_us']*(p['input_mode']==mode) for mode in MODES]] for p in points])
+        with_duration = source_design([dict(p,source_mean_kib=p['output_mean_kib']) for p in points],
+                                      models['linear_output30']['tau_us'])
+        identification[name] = dict(work_only=clock.input_design_rank(work_design),
+            with_duration=clock.input_design_rank(with_duration),
+            output_bytes_per_nominal_cycle=sorted({round(p['output_mean_kib']*1024/p['tensor_mean_cycles'],12) for p in points}))
+        union_design = work_design.copy()
+        union_design[:,4:] = np.asarray([[-p['revisit_mean_kib']/p['observed_window_us']*(p['input_mode']==mode)
+                                          for mode in MODES] for p in points])
+        union_model = models['linear_revisit21' if name=='original21' else 'linear_revisit30']
+        revisit_identification[name] = dict(work_only=clock.input_design_rank(union_design),
+            with_duration=clock.input_design_rank(source_design([dict(p,source_mean_kib=p['revisit_mean_kib']) for p in points],union_model['tau_us'])),
+            training_count=len(points),unsupported_training_count=0)
+    scores = {name:evaluate(points) for name,points in datasets.items()}
+    common_scores = {name:evaluate([p for p in points if p['revisit_mean_kib'] is not None]) for name,points in datasets.items()}
+    # Other cards are never pooled into fits or absolute-error scoreboards.
+    controls = data['new_controls']
+    control_root = Path(controls['run'])
+    control_rows = {r['id']:r for r in clock.read_json(control_root/'cases.json')}
+    control_setups = {s['case']:s['setup'] for s in clock.read_json(control_root/'static_setup.json')}
+    trends = []
+    for variant in ('ends','dual'):
+        for trial in range(10):
+            pair = [next(p for p in controls['processes'] if p['k']==k and p['variant']==variant and p['trial']==trial)
+                    for k in (4096,32768)]
+            observed = pair[1]['frequency_ghz']/pair[0]['frequency_ghz']
+            points = [dict(work_point(control_rows[p['case']],control_setups[p['case']]),
+                           output_mean_kib=static_output_kib(control_rows[p['case']]),
+                           revisit_mean_kib=static_revisit_features(control_rows[p['case']],control_setups[p['case']])['unique_source_mean_KiB']) for p in pair]
+            trends.append(dict(card=controls['environment']['gpu'],variant=variant,trial=trial,
+                observed_high_over_low=observed,
+                predicted_high_over_low={name:frequency(points[1],pair[1]['window_us'],model)/frequency(points[0],pair[0]['window_us'],model)
+                    for name,model in models.items()}))
+    older_root = base/'20261009-R09-clock-input-job738110'
+    older_summary = clock.read_json(older_root/'analysis/summary.json')
+    older_rows = {r['id']:r for r in clock.read_json(older_root/'cases.json')}
+    older_setups = {s['case']:s['setup'] for s in clock.read_json(older_root/'static_setup.json')}
+    other_card_input_trends = []
+    for cfg in ('cfg_a','cfg_b','cfg_c'):
+        cases = [f'{cfg}_r09_k20480_{mode}' for mode in ('dyadic','zero')]
+        summary = [older_summary['cases'][cid] for cid in cases]
+        points = [dict(work_point(older_rows[cid],older_setups[cid]),output_mean_kib=static_output_kib(older_rows[cid]),
+                       revisit_mean_kib=static_revisit_features(older_rows[cid],older_setups[cid])['unique_source_mean_KiB']) for cid in cases]
+        other_card_input_trends.append(dict(config=cfg,observed_zero_over_dyadic=summary[1]['ghz_ends']/summary[0]['ghz_ends'],
+            predicted_zero_over_dyadic={name:frequency(points[1],summary[1]['window_ends'],model)/frequency(points[0],summary[0]['window_ends'],model)
+                for name,model in models.items()}))
+    for label,root,names in [('v09',target,('cases.json','static_setup.json','environment.json')),
+                            ('equal',equal_root,('cases.json',)),
+                            ('new_card',control_root,('cases.json','static_setup.json','environment.json')),
+                            ('old_long',older_root,('cases.json','static_setup.json','environment.json','analysis/summary.json'))]:
+        for name in names:
+            paths[label+'/'+name] = root/name
+    swizzle_path = base/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
+    swizzle = clock.read_json(swizzle_path)
+    paths['swizzle_diagnostic'] = swizzle_path
+    sw_root = Path(swizzle['run'])
+    sw_rows = {r['id']:r for r in clock.read_json(sw_root/'cases.json')}
+    sw_setups = {s['case']:s['setup'] for s in clock.read_json(sw_root/'static_setup.json')}
+    swizzle_trends = []
+    for trial in range(10):
+        pair = [next(p for p in swizzle['processes'] if p['swizzle']==sw and p['variant']=='ends' and p['trial']==trial) for sw in (1,8)]
+        points = [dict(work_point(sw_rows[p['case']],sw_setups[p['case']]),
+            output_mean_kib=static_output_kib(sw_rows[p['case']]),
+            revisit_mean_kib=static_revisit_features(sw_rows[p['case']],sw_setups[p['case']])['unique_source_mean_KiB']) for p in pair]
+        swizzle_trends.append(dict(trial=trial,observed_sw8_over_sw1=pair[1]['frequency_ghz']/pair[0]['frequency_ghz'],
+            predicted_sw8_over_sw1={name:frequency(points[1],pair[1]['window_us'],model)/frequency(points[0],pair[0]['window_us'],model)
+                for name,model in models.items()}))
+    result = dict(scope='Conditional-frequency development, not a new validation or total-time fit.',
+        source_sha256=clock.sha256(Path(__file__)),input_sha256={str(p):clock.sha256(p) for p in paths.values()},
+        training_gpu=gpu,training_cases=[p['case'] for p in training],added_training_cases=[p['case'] for p in cross_k] if add_cross_k else [],
+        additional_split_trigger='Original21 reciprocal maximum absolute error on known same-card K4096/wide-K1024/G6 groups >10%; a development choice, not a pass criterion.',
+        original21_crossK_result=preliminary,original21_migration=original21_migration,
+        models=models,scores=scores,common_revisit_supported_scores=common_scores,revisit_support=revisit_support,
+        swizzle_trends=swizzle_trends,new_card_trends=trends,output_activity_identification=identification,
+        revisit_identification=revisit_identification,
+        old_long_card=older_summary['environment'],old_long_input_trends=other_card_input_trends,
+        root_conditions=dict(
+            positivity='a>=1/1.98 and d/e>=0 give 0<f<=1/a<=1.98 without any lower clamp.',
+            monotonicity='For Q/S>=0, g(W/tau)/W and Q/W are nonincreasing, so reciprocal F(W) is nondecreasing.',
+            closure='If E(f)>0 is continuous and nonincreasing for f>0 and E(f)->infinity as f->0, h(f)=F(E(f))-f strictly decreases; h(0+)=1/a>0 and h(1/a)<=0. Exactly one root in (0,1/a].',
+            limitation='No proof of the event-envelope premise or full-time improvement is implied by a conditional fit.'),
+        notes=['The reciprocal form keeps seven coefficients plus one shared tau; only one alternative response is tested.',
+               'All fits minimize observed GHz residuals. Reciprocal-target linear least squares initializes the nonlinear solver only.',
+               'Original21 and expanded30 use one GPU; V09 observations are never fitted. Expanded30 K4096 training scores are not migration tests.',
+               'V09 dual and original ends frequency targets use related but different observation protocols.',
+               'Job738110 is GPU-201f9d2a on a043, not the GPU-43269fbc training card; it is used only for input-response trends.',
+               'New-card trends use observed windows as conditional diagnostics; they establish neither transferred absolute clocks nor predictive timing.',
+               'Coefficient zero-fraction mixing is retained only as the same unverified boundary hypothesis; it is not a physical power law.'])
+    result['notes'].append('linear_output30 replaces S with static effective FP32 D/132 in the original linear response; Q and D have input-specific nonnegative prices, no S+D added parameter. Original21 static D/Q is fixed, but the duration factor can supply algebraic rank without independent output-work intervention.')
+    result['notes'].append('linear_revisit21/30 replace S by U without adding coefficients; all 21/30 training points must have a full-tile multicast-box union. Partial/padded V09 cases remain declared unsupported, and common-support baseline scores are separate. New-card swizzle observations never fit U coefficients; adaptive warmup remains confounded.')
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-response-candidates.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    return result
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', type=Path, required=True)

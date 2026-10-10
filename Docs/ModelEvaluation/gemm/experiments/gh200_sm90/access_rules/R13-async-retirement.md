@@ -183,6 +183,23 @@ job739095在a058/GPU-ef8692f3上测cfg_b、2816×1536、`K1024/4096 × stage4/6`
 
 plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11.92%；dual为+5.48%/+11.20%，完整时间同样显示持续差。观察协议的影响单列：K1024的dual/plain中位约+4.15%，单对最大+8.74%；K4096的stage4/6分别为+1.91%/+3.29%，单对最大+4.84%。局部定量结论因此只属于dual窗口，不能用完整时间方向一致证明局部无扰动。首输出窗口也随stage改变（K1024 +14.81%、K4096 −20.92%），不能把总差全部归给L，或把不同中位直接相加。[四点对照与逐trial残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/)。
 
+### 有限缓冲递推：拟合略好，仍不能迁移
+
+实际CUTLASS程序的slot从producer成功acquire到consumer release期间不可覆盖。full等待返回后才提交当前WGMMA；`wait_group<1>`后释放前一组slot，尾部`wait_group<0>`释放最后slot。pingpong在`mma`返回后、`mma_tail`完成前向下一math WG交棒，producer与缓冲状态跨输出继续。旧`stages/K`折扣没有这些状态；把每个输出重新当成空流水也不符合程序。
+
+据此试算一个三参数stationary递推：发起时刻`I_i=max(I_(i−1)+p,U_(i−S))`，ready时刻`A_i=I_i+ℓ`；consumer等待ready与上一轮wait1后提交，Tensor完成后按上述顺序释放slot。p/ℓ/c分别是有效发起间隔、ready时延和消费间隔，c≥512 cycle；观察量仍为首个full等待返回到最后WGMMA完成，不把初次ready时延再加进L。它们没有被解释为独立物理服务常数。
+
+只用739095同卡的八个first/later周期目标，重拟合旧需求折扣形式与该递推；不用a057参数，不设stage4常数或自由K插值：
+
+| 形式 | 参数数 | 同批中位/最大误差 | 留K1024 / K4096最大误差 | 留stage4 / stage6最大误差 |
+|---|---:|---:|---:|---:|
+| `stages/K`需求折扣 | 4 | 4.55% / 8.10% | 16.80% / 36.31% | 14.04% / 16.44% |
+| 有限buffer递推 | 3 | 4.34% / 6.98% | 7.09% / 12.39% | 37.77% / 10.79% |
+
+这是多起点最小二乘与测后留组开发预测，不是新的冻结验证。有限递推略降同批残差，却不能解释短K的first略变快、later明显变慢，并在只见stage6时严重误判stage4。完整八点的局部参数秩为3，留组后为1～3；数值局部可解不等于机制已识别。旧R13的ready/retire/reuse来自另一卡、不同源布局及独立调用，reuse又从acquire成功后开始，没有empty等待，不能补成当前程序的同次生命周期。
+
+因此不将该递推接入现行预测，也不增加参数修补。最小缺失观测是同一对stage4/6、K4096条件内，选同CTA第二输出的一个Ktile，同时记录producer acquire前后/发出、consumer full-wait前后/commit/wait1/release及同slot补发。输入饥饿预期差异主要在full等待；若full已ready，差异落在commit或退役侧，则支持消费/指令组织限制。producer单独等待empty不能区分两者。详细公式、八点残差、参数解与事件选择见[有限stage分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.md)、[可重放数据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.json)。
+
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 
 当前可继续复用条件关系作开发组合，但需要分别验证：有限 stage 响应、first/later 转移，以及改变频率后计算分支是否暴露未识别服务。不能用代数支持、同批拟合或完整时间误差抵消替代这些检验。[V09 原评分](V09-component-validation.md)保持整体未通过。

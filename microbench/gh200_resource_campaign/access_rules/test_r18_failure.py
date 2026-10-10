@@ -1,7 +1,7 @@
 """Boundary diagnostics keep prediction ties and same-role time endpoints."""
 import unittest
 import copy
-from analyze_r18 import boundary_geometry, critical_replacements, boundary_stage_rows, stage_process_summary, paired_boundary_windows
+from analyze_r18 import boundary_geometry, critical_replacements, boundary_stage_rows, stage_process_summary, paired_boundary_windows, static_boundary_features, fit_fill_hypotheses
 
 class FailureDiagnosticsTests(unittest.TestCase):
     def test_geometry_uses_both_logical_axes(self):
@@ -52,5 +52,66 @@ class FailureDiagnosticsTests(unittest.TestCase):
         right['ctas'][0]['role_work'][0][0]=(6,0)
         with self.assertRaisesRegex(ValueError,'work coordinates'):
             paired_boundary_windows(row,left,right)
+
+    def test_static_cluster_features_reach_complete_partner_not_operand_mask(self):
+        row=dict(id='p1',config='cfg_a',m=960,n=2816,k=4096,lda=4096,ldb=2816,
+                 input_map_m=960,input_map_n=2816,storage_m=1024,storage_n=2816,swizzle=1)
+        setup=dict(grid=[132,1,1],tile=[128,128,64],cluster=[2,1],stages=6)
+        fs={tuple(f['coord']):f for f in static_boundary_features(row,setup)}
+        real=fs[6,0]['operands']['A'];partial=fs[7,0]['operands']['A']
+        self.assertEqual((real['own'],real['mask_max'],real['mask_sum']),(0,0,0))
+        self.assertEqual((real['cluster_max'],real['cluster_sum'],real['cluster_any']),(8,8,1))
+        self.assertEqual((partial['own'],partial['cluster_max'],partial['cluster_sum']),(8,8,8))
+        cleared=static_boundary_features(dict(row,input_map_m=1024),setup)
+        self.assertTrue(all(f['operands']['A']['cluster_any']==0 for f in cleared))
+
+    def test_static_middle_map_separates_sum_from_max_and_state(self):
+        row=dict(id='old',config='cfg_a',m=832,n=4096,k=4096,lda=4096,ldb=4096,
+                 input_map_m=832,input_map_n=4096,storage_m=1024,storage_n=4096,swizzle=1)
+        setup=dict(grid=[132,1,1],tile=[128,128,64],cluster=[2,1],stages=6)
+        def full_oob(mapped):
+            return next(f['operands']['A'] for f in static_boundary_features(dict(row,input_map_m=mapped),setup) if f['coord']==[7,0])
+        a,b=full_oob(832),full_oob(896)
+        self.assertEqual((a['own'],b['own']),(16,16))
+        self.assertEqual((a['cluster_max'],b['cluster_max']),(16,16))
+        self.assertEqual((a['cluster_sum'],b['cluster_sum']),(24,16))
+        self.assertEqual((a['cluster_any'],b['cluster_any']),(1,1))
+
+    def test_four_map_controls_keep_work_and_separate_cluster_hypotheses(self):
+        import json
+        from pathlib import Path
+        import numpy as np
+        from supply_model import boundary_fill_features
+        rows=json.loads((Path(__file__).parent/'configs/r18-cluster-fill-discrimination.json').read_text())
+        controls=[r for r in rows if r['set']=='ctrl']
+        baseline={k:v for k,v in controls[0].items() if k not in ('id','input_map_m')}
+        setup=dict(grid=[132,1,1],tile=[128,128,64],cluster=[2,1],stages=6)
+        expected=[(16,24,1),(16,16,1),(8,8,1),(0,0,0)]
+        work=[];design=[]
+        for row,values in zip(controls,expected):
+            self.assertEqual({k:v for k,v in row.items() if k not in ('id','input_map_m')},baseline)
+            fs=boundary_fill_features(row,setup)
+            work.append([(f['cta'],f['j'],tuple(f['coord'])) for f in fs])
+            feature=next(f['operands']['A'] for f in fs if f['coord']==[6,0])
+            vector=tuple(feature[k] for k in ('cluster_max','cluster_sum','cluster_any'))
+            self.assertEqual(vector,values);design.append(vector)
+        self.assertTrue(all(w==work[0] for w in work))
+        self.assertEqual(np.linalg.matrix_rank(design),3)
+        self.assertEqual(len(controls),4)
+
+    def test_four_maps_separate_competing_fill_prices(self):
+        patterns=[(16,24,1),(16,16,1),(8,8,1),(0,0,0)]
+        for truth in ('cluster_max','cluster_sum','cluster_any'):
+            rows=[]
+            for a,b,c in patterns:
+                row=dict(cluster_max=a,cluster_sum=b,cluster_any=c)
+                row['ns_excess']=100*row[truth];rows.append(row)
+            fitted={r['hypothesis']:r for r in fit_fill_hypotheses(rows)}
+            self.assertAlmostEqual(fitted[truth]['rms_ns'],0)
+            self.assertAlmostEqual(fitted[truth]['coefficients'][truth],100)
+            for alternative in ('cluster_max','cluster_sum','cluster_any'):
+                if alternative!=truth:self.assertGreater(fitted[alternative]['rms_ns'],0)
+            self.assertEqual(fitted['mixed']['rank'],3)
+            self.assertLess(fitted['mixed']['rms_ns'],1e-9)
 
 if __name__=='__main__':unittest.main()

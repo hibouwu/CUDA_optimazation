@@ -1517,6 +1517,191 @@ def control_diagnostics(root, output):
     return report
 
 
+def _finite_stage_cycles(kt, stages, issue_interval, ready_latency, consumer_interval, detail=False):
+    """Two pingpong outputs, one producer, wait1 releases and persistent SMEM slots.
+
+    These are stationary effective times, not a claim about physical TMA queues.
+    A batch models one complete Ktile; consumer_interval includes issue/compute
+    organization. FIRST_MMA follows the first full wait, so initial ready latency
+    is outside L. The next math WG starts at mma return, before mma_tail completes.
+    """
+    if kt < 2 or stages < 2 or min(issue_interval, ready_latency, consumer_interval) < 0:
+        raise ValueError('finite-stage diagnostic requires Ktile>=2, stages>=2 and nonnegative times')
+    issued, ready, starts, done = [], [], [], []
+    released = [0.]*(2*kt)
+    next_consumer = 0.
+    for i in range(2*kt):
+        issue = max(issued[-1]+issue_interval if issued else 0., released[i-stages] if i >= stages else 0.)
+        issued.append(issue)
+        ready.append(issue+ready_latency)
+        commit = max(ready[-1],next_consumer)
+        starts.append(commit)
+        done.append(max(commit,done[-1] if done else 0.)+consumer_interval)
+        if i % kt == 0:
+            next_consumer = commit  # prologue commit has no wait1/release
+        else:
+            next_consumer = max(commit,done[i-1])
+            released[i-1] = next_consumer  # wait1 has completed the previous group
+        if i % kt == kt-1:
+            released[i] = done[i]  # mma_tail wait0 releases the last stage
+    windows = [done[kt-1]-starts[0],done[-1]-starts[kt]]
+    if detail:
+        return dict(windows=windows,issued=issued,ready=ready,first_mma_or_commit=starts,
+            completed=done,released=released,slot=[i % stages for i in range(2*kt)])
+    return windows
+
+
+def _discount_stage_cycles(kt, stages, first_offset, first_price, later_offset, later_price):
+    """Refit only the old stage/K demand-discount form on this card."""
+    return [first_offset+kt*max(512.,first_price),
+            later_offset+kt*max(512.,(1-stages/kt)*later_price)]
+
+
+def _fit_stage_candidate(rows, kind):
+    """Small deterministic multistart fit; equal optima expose missing information."""
+    if kind == 'finite_buffer':
+        evaluate = _finite_stage_cycles
+        starts = [[p,latency,c] for p in (10.,300.,600.) for latency in (500.,1500.,2500.,4000.) for c in (512.,600.)]
+        lower,upper = [0.,0.,512.],[2000.,20000.,1500.]
+    else:
+        evaluate = _discount_stage_cycles
+        starts = [[b,c,b,c] for b in (0.,500.,2000.) for c in (512.,600.,900.)]
+        lower,upper = [0.,0.,0.,0.],[20000.,5000.,20000.,5000.]
+    def residual(parameters):
+        return np.array([evaluate(r['kt'],r['stages'],*parameters)[r['j']]/r['cycles']-1 for r in rows])
+    fitted = [least_squares(residual,start,bounds=(lower,upper),diff_step=1e-4,
+        ftol=1e-10,xtol=1e-10,gtol=1e-10,max_nfev=400) for start in starts]
+    best = min(fitted,key=lambda r:float(r.fun @ r.fun))
+    loss = float(best.fun @ best.fun)
+    equivalent = [r.x.tolist() for r in fitted if float(r.fun @ r.fun) <= loss+max(1e-10,loss*1e-7)]
+    # Column scaling avoids interpreting the units of p/latency/c as rank loss.
+    scaled_jacobian = best.jac*np.maximum(1.,np.abs(best.x))
+    singular = np.linalg.svd(scaled_jacobian,compute_uv=False)
+    rank = int(sum(singular > max(singular[0],1e-12)*1e-6))
+    return dict(kind=kind,parameters=best.x.tolist(),sum_squared_relative_error=loss,
+        calibration_metrics=metrics(best.fun),calibration_cases=[r['case']+':'+str(r['j']) for r in rows],
+        local_jacobian_rank=rank,parameter_count=len(best.x),singular_values=singular.tolist(),
+        equal_loss_multistart_parameters=equivalent,
+        numerical_search_bounds=dict(lower=lower,upper=upper),
+        limits='Equal-loss multistart solutions are examples, not exhaustive parameter bounds or confidence intervals.')
+
+
+def finite_stage_diagnostics(base, output):
+    """Test finite slots against old demand discount, without changing prediction code."""
+    base,output = Path(base),Path(output)
+    run = base/'20261010-R09-R13-R18-failure-controls'
+    source = base/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json'
+    controls = read_json(source)
+    targets = []
+    for pair in controls['comparisons']:
+        for stages,suffix in ((6,'base'),(4,'variant')):
+            for j,phase in enumerate(('first','later')):
+                d = pair['phases'][phase]
+                targets.append(dict(case=f'r13_stage_k{pair["k"]}_s{stages}',kt=pair['k']//64,
+                    stages=stages,j=j,cycles=d['L_cycles_'+suffix]['median'],
+                    trial_min=d['L_cycles_'+suffix]['trial_min'],trial_max=d['L_cycles_'+suffix]['trial_max']))
+    results = {}
+    for kind,evaluate in (('demand_discount',_discount_stage_cycles),('finite_buffer',_finite_stage_cycles)):
+        fitted = _fit_stage_candidate(targets,kind)
+        fitted['rows'] = [dict(**r,predicted_cycles=evaluate(r['kt'],r['stages'],*fitted['parameters'])[r['j']],
+            relative_error=evaluate(r['kt'],r['stages'],*fitted['parameters'])[r['j']]/r['cycles']-1) for r in targets]
+        folds = []
+        for axis,values in (('kt',(16,64)),('stages',(4,6))):
+            for held in values:
+                train = [r for r in targets if r[axis] != held]
+                test = [r for r in targets if r[axis] == held]
+                fit = _fit_stage_candidate(train,kind)
+                scored = []
+                for row in test:
+                    values_ = [evaluate(row['kt'],row['stages'],*p)[row['j']]
+                        for p in fit['equal_loss_multistart_parameters']]
+                    value = evaluate(row['kt'],row['stages'],*fit['parameters'])[row['j']]
+                    scored.append(dict(**row,predicted_cycles=value,relative_error=value/row['cycles']-1,
+                        equal_loss_observed_prediction_range=[min(values_),max(values_)]))
+                folds.append(dict(held_axis=axis,held_value=held,fit=fit,rows=scored,
+                    development_metrics=metrics([r['relative_error'] for r in scored])))
+        fitted['leave_group_development'] = folds
+        results[kind] = fitted
+    headers = [run/'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
+        run/'source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
+        run/'source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp']
+    report = dict(scope='Post-measurement development on GPU-ef8692f3 only. Eight whole-L cycle targets; '
+        'no stage-specific constants, free K interpolation, old-card parameters or new validation score.',
+        gpu=controls['gpu'],targets=targets,models=results,
+        formulas=dict(issue='I_i=max(I_(i-1)+p,U_(i-S))',ready='A_i=I_i+latency',
+            commit='Q_i=max(A_i,H_i)',complete='D_i=max(Q_i,D_(i-1))+c',
+            release='After commit i, wait1 gives U_(i-1)=H_(i+1)=max(Q_i,D_(i-1)); prologue has no release. '
+            'At each output tail, U_i=D_i after wait0. Next math WG starts at mma return, before the previous tail completes.',
+            observable='L_j=D_(last j)-Q_(first j), excluding initial full-barrier wait.'),
+        fitted_parameter_meanings=dict(p='effective producer issue interval, cycle',latency='effective issue-to-ready latency, cycle',
+            c='effective consumer/Tensor interval including instruction organization, constrained >=512 cycles'),
+        source_semantics=['The slot is owned from successful producer_acquire until its consumer_release.',
+            'producer_acquire waits for empty and arms full transaction bytes; full becomes ready after TMA A/B complete_tx.',
+            'consumer_wait observes full completion; wait_group<1> precedes release of the previous group slot.',
+            'mma_tail uses wait_group<0>; producer and pipeline state continue over output boundaries.',
+            'Software stages are SMEM buffers; they are not physical TMA queue depth.'],
+        old_R13_limits='Old ready, retire and reuse pairs were measured in separate calls on GPU-54896349 with '
+            'different consumers/source layout. Reuse begins after acquire succeeds and excludes empty wait. '
+            'They constrain event semantics but cannot calibrate same-call latency/issue/release parameters on this card.',
+        minimal_event_pair=dict(cases='cfg_b 2816x1536x4096, stages4/6, unchanged input and capacity protocol',
+            selection='CTA0, second output, Ktile16; release of this slot occurs after committing Ktile17; refill is Ktile16+S.',
+            producer_events=['before empty acquire','after acquire succeeds','after both A/B TMA issues',
+                'same-slot refill acquire/issue'],
+            consumer_events=['before full wait','after full wait','after commit','after wait1',
+                'consumer_release for the selected slot'],
+            clock='same-call same-SM clock64, plus selected-CTA FIRST_MMA/MAIN_END',
+            contrasting_expectations=['Input starvation: additional stage4 mainloop time appears in consumer full-barrier waits.',
+                'Consumer instruction/retirement limit: full is already ready; extra time lies in commit/wait1/release-side intervals.'],
+            interpretation='Producer empty wait alone cannot separate the two, because a slow consumer also blocks producer reuse. '
+                'Full-wait return is an observed availability bound, not an exact hardware completion timestamp.',
+            protocol='Two conditions, ten processes each of plain and sparse events. Existing plain already '
+                'allocates and clears the same scratch, so a separate matched-scratch variant is redundant. '
+                'Record only selected events and defer trace stores; static resources and perturbation remain separate.'),
+        limits=['This minimal stationary queue omits explicit producer instruction scheduling, data-dependent service and cache state.',
+            'FIRST_MMA hides initial ready latency; active-branch fits may identify only combinations of p and latency.',
+            'The two K values change effective source footprint; a fitted c is not an isolated WGMMA instruction service.',
+            'Whole-L cycle targets do not distinguish memory waits, math issue organization and slot-release stalls.',
+            'Leave-group numbers are development extrapolation after all four conditions are known, not a new heldout pass.'],
+        input_sha256={str(path):hashlib.sha256(path.read_bytes()).hexdigest() for path in [source,*headers]},
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-finite-stage.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines = ['# 有限stage递推能否解释四点对照？', '',
+        '结论：三参数有限缓冲递推略改善同批拟合，但留K/留stage迁移不稳定，不能替换现行模型。'
+        '本分析只使用GPU-ef8692f3上的八个first/later周期目标；没有stage4常数、自由K插值或跨卡参数。', '',
+        '## 生命周期与最小模型', '',
+        'slot从producer_acquire成功到consumer_release期间不可覆盖。acquire等待empty并设置full事务字节，'
+        'A/B TMA的complete_tx使full可用；consumer_wait返回后发当前WGMMA，wait_group<1>后释放前一组slot，'
+        '尾部wait_group<0>释放最后slot。pingpong的下一math WG在mma返回后、mma_tail前取得执行次序；'
+        'producer和SMEM状态跨输出继续，不能每个输出重新预填。软件stage是SMEM缓冲数量，不是物理队列深度。', '',
+        '`I_i=max(I_(i-1)+p,U_(i-S)); A_i=I_i+ℓ; Q_i=max(A_i,H_i); D_i=max(Q_i,D_(i-1))+c`。'
+        '提交i后，wait1给出`U_(i-1)=H_(i+1)=max(Q_i,D_(i-1))`；prologue不释放，tail取`U_i=D_i`。'
+        '观察量`L_j=D_last−Q_first`排除首次full等待。p/ℓ/c是stationary有效间隔；c≥512包含消费侧指令组织，'
+        '不是对物理发起率、TMA延迟和Tensor服务分别完成了识别。', '',
+        '## 同批拟合与留组开发预测', '',
+        '| 形式 | 参数数 | 拟合中位/最大误差 | 局部Jacobian秩 |', '|---|---:|---:|---:|']
+    for kind,fit in results.items():
+        met=fit['calibration_metrics']
+        lines.append(f'| {kind} | {fit["parameter_count"]} | {met["median_abs_pct"]:.2f}% / {met["max_abs_pct"]:.2f}% | {fit["local_jacobian_rank"]} |')
+    lines += ['', '| 留出组（开发用） | 需求折扣最大误差 | 有限缓冲最大误差 |', '|---|---:|---:|']
+    for a,b in zip(results['demand_discount']['leave_group_development'],results['finite_buffer']['leave_group_development']):
+        label=f'K={a["held_value"]*64}' if a['held_axis']=='kt' else f'stage={a["held_value"]}'
+        lines.append(f'| {label} | {a["development_metrics"]["max_abs_pct"]:.2f}% | {b["development_metrics"]["max_abs_pct"]:.2f}% |')
+    lines += ['', '以上是多起点最小二乘得到的开发结果，不是新的留出通过或全局最优证明。参数局部满秩不等于机制识别；'
+        '留组会丢失活跃约束，等损失解和预测示例范围在JSON中保留，不把多起点范围称为完整可辨识区间。'
+        '第一输出的初始ready延迟不在L内，消费/访存与编译指令组织又共同作用，单靠八个整窗不能分别定值。', '',
+        '## 还缺什么观测', '',
+        '旧R13的ready、retire、reuse来自不同调用、另一张卡和不同源布局。reuse起点在acquire成功之后，'
+        '没有记录empty等待，不能拼成当前程序的同次槽生命周期。这里只采用其语义证据。', '',
+        '最小事件对照保持cfg_b的2816×1536×4096与stage4/6，仅记录CTA0第二输出的Ktile16：producer的acquire前/后及A/B发出后；'
+        'consumer的full-wait前/后、commit后、wait1后、下一Ktile释放该slot的时刻；再记录i+S的同slot补发。'
+        '全部采用同调用clock64，保留该CTA的FIRST_MMA/MAIN_END。输入饥饿预期差异主要落在full等待；'
+        '若full已ready而差在commit/wait1/release侧，则支持消费/指令组织限制。单独测producer empty等待不能区分两者。'
+        '两条件各用plain、匹配scratch无事件、稀疏事件十进程；是否执行由管理者决定，本分析没有启动GPU。', '']
+    (output/'B-finite-stage.md').write_text('\n'.join(lines))
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)

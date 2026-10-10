@@ -3,7 +3,9 @@ import copy
 import unittest
 
 from r09_input_source_clock import (fit_tensor_only, mixed_failure_clock,
-                                    role_window_diagnostics, source_frequency, control_window)
+                                    role_window_diagnostics, source_frequency, control_window,
+                                    reciprocal_frequency, fit_reciprocal_clock, source_design, static_output_kib,
+                                    static_revisit_features)
 
 
 class R09FailureDiagnostics(unittest.TestCase):
@@ -67,6 +69,71 @@ class R09FailureDiagnostics(unittest.TestCase):
         self.assertEqual(result['event_minus_window_us'], 4.)
         dual_ctas = [dict(c, tiles=[[0,1,2,3],[4,5,6,7]]) for c in ctas]
         self.assertEqual(result, control_window(dict(ctas=dual_ctas,elapsed_us=4.3)))
+
+    def test_reciprocal_response_is_positive_bounded_and_monotone_in_window(self):
+        point = dict(input_mode='dyadic',tensor_mean_cycles=100000,source_mean_kib=10000)
+        model = dict(coefficients=[1/1.98,.2,.1,.3,.04,.01,.05],tau_us=100)
+        values = [reciprocal_frequency(point,w,model) for w in (.001,1,10,100,1000,1e6)]
+        self.assertTrue(all(0 < f <= 1.98 for f in values))
+        self.assertEqual(values, sorted(values))
+        # A monotone positive envelope produces a decreasing closure residual.
+        frequencies = [.01,.1,.5,1,1.5,1.98]
+        residuals = [reciprocal_frequency(point,100/f+10,model)-f for f in frequencies]
+        self.assertEqual(residuals, sorted(residuals,reverse=True))
+        self.assertGreater(residuals[0],0)
+        self.assertLessEqual(residuals[-1],0)
+
+    def test_reciprocal_fit_optimizes_ghz_not_reciprocal_targets(self):
+        import numpy as np
+        from scipy.optimize import lsq_linear
+        true = dict(coefficients=[.52,.04,.02,.08,.02,.003,.04],tau_us=100)
+        points = []
+        for mode in ('dyadic','zero','random'):
+            for i,window in enumerate((10,100,1000)):
+                for j,rate in enumerate((.2,1.1)):
+                    p = dict(input_mode=mode,observed_window_us=window,
+                             tensor_mean_cycles=1000*window*rate,source_mean_kib=window*(1+3*j))
+                    p['observed_ghz'] = reciprocal_frequency(p,window,true) + (.02 if (i+j)%2 else -.02)
+                    points.append(p)
+        fitted = fit_reciprocal_clock(points,1.98)
+        design = source_design(points,fitted['tau_us'])
+        design[:,1:] *= -1
+        y = np.asarray([p['observed_ghz'] for p in points])
+        inverse_fit = lsq_linear(design,1/y,bounds=([1/1.98,0,0,0,0,0,0],[np.inf]*7),method='bvls')
+        inverse_target_ghz_mse = float(np.mean((1/(design@inverse_fit.x)-y)**2))
+        direct = np.asarray([reciprocal_frequency(p,p['observed_window_us'],fitted) for p in points])
+        self.assertAlmostEqual(fitted['mse_ghz'],float(np.mean((direct-y)**2)),places=12)
+        self.assertLess(fitted['mse_ghz'],inverse_target_ghz_mse-1e-9)
+        self.assertTrue(all(0 < f <= 1.98 for f in direct))
+
+    def test_output_proxy_uses_valid_extent_and_not_timing_or_k(self):
+        row = dict(m=129,n=128,k=1024,observed_E_ns=100,observed_window_us=10)
+        value = static_output_kib(row)
+        self.assertEqual(value,4*129*128/(132*1024))
+        self.assertEqual(value,static_output_kib(dict(row,k=32768,observed_E_ns=999999,observed_window_us=5000)))
+        self.assertLess(value,4*256*128/(132*1024))
+
+    def test_swizzle_changes_revisit_opportunity_without_changing_work(self):
+        row = dict(config='cfg_b',m=6144,n=8192,k=32768,swizzle=1)
+        a = static_revisit_features(row,dict(grid=[132,1,1]))
+        b = static_revisit_features(dict(row,swizzle=8),dict(grid=[132,1,1]))
+        for key in ('tensor_mean_cycles','nominal_source_mean_KiB','output_mean_KiB','output_tiles'):
+            self.assertEqual(a[key],b[key])
+        self.assertEqual((a['panel_slots'],b['panel_slots']),(1222,644))
+        self.assertLess(b['unique_source_mean_KiB'],a['unique_source_mean_KiB'])
+        with self.assertRaisesRegex(ValueError,'full in-bounds'):
+            static_revisit_features(dict(row,n=8191),dict(grid=[132,1,1]))
+
+    def test_revisit_union_counts_multicast_source_slices_once(self):
+        a = static_revisit_features(dict(config='cfg_a',m=256,n=256,k=64,swizzle=1),dict(grid=[2,2,1]))
+        c = static_revisit_features(dict(config='cfg_c',m=256,n=256,k=64,swizzle=1),dict(grid=[1,2,1]))
+        self.assertEqual(a['waves'][0]['unique_source_KiB_per_Ktile'],64)
+        self.assertEqual(c['waves'][0]['unique_source_KiB_per_Ktile'],64)
+        self.assertEqual((a['waves'][0]['unique_A_boxes'],a['waves'][0]['unique_B_boxes']),(2,8))
+        self.assertEqual((c['waves'][0]['unique_A_boxes'],c['waves'][0]['unique_B_boxes']),(2,4))
+        # Individually full tiles may still require a padded cluster member.
+        with self.assertRaisesRegex(ValueError,'cluster padding'):
+            static_revisit_features(dict(config='cfg_c',m=512,n=3968,k=1024,swizzle=1),dict(grid=[66,2,1]))
 
 
 if __name__ == '__main__':

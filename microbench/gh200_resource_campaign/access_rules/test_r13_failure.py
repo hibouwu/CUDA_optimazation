@@ -5,6 +5,7 @@ import unittest
 from analyze_r13_supply import (
     _failure_pair_summary, _failure_pair_windows, _failure_stage_response,
     _failure_k_scaling,
+    _finite_stage_cycles,
 )
 
 
@@ -71,6 +72,27 @@ class PairedFailureTests(unittest.TestCase):
         self.assertNotEqual(fixed['per_ktile_only_residual_ns']['median'],0)
         self.assertNotEqual(sustained['fixed_only_residual_ns']['median'],0)
         self.assertEqual(sustained['per_ktile_only_residual_ns']['median'],0)
+
+    def test_finite_slots_release_previous_group_after_wait1(self):
+        result = _finite_stage_cycles(16,4,100,2200,512,detail=True)
+        for i,issue in enumerate(result['issued']):
+            self.assertEqual(result['ready'][i],issue+2200)
+            if i>=4:
+                self.assertGreaterEqual(issue,result['released'][i-4])
+            self.assertGreaterEqual(result['released'][i],result['completed'][i])
+            if i%16!=15:
+                self.assertEqual(result['released'][i],max(result['first_mma_or_commit'][i+1],result['completed'][i]))
+        self.assertEqual(result['released'][15],result['completed'][15])
+
+    def test_pingpong_handoff_precedes_previous_tail_completion(self):
+        result = _finite_stage_cycles(16,6,0,0,512,detail=True)
+        self.assertLess(result['first_mma_or_commit'][16],result['completed'][15])
+        self.assertEqual(result['windows'][0],16*512)
+        # The second FIRST_MMA is before the previous last group completes.
+        self.assertEqual(result['windows'][1],17*512)
+        delayed = _finite_stage_cycles(16,6,0,200,512,detail=True)
+        self.assertEqual(delayed['windows'][0],result['windows'][0])
+        self.assertEqual(delayed['first_mma_or_commit'][0],200)
 
 
 if __name__ == '__main__':
