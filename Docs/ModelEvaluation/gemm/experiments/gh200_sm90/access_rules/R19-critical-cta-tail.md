@@ -138,4 +138,4 @@ A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。�
 
 因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
 
-[R10工作序列交换](R10-layout-cache.md#work-swap)中，cfg_b的CTA55/91仍在SM55/87，交换完整工作后强弱行距响应仍留原物理位置。此前基址平移也未让响应整体移动。现在已排除只靠这两条逻辑工作序列定价，但物理CTA、SM位置及其形成的到达状态尚未解耦，不能命名源地址bank或GPC服务规则；该绑定也不外推到其它grid、卡或驱动。本批同源组端点显示早/晚软件位置也保留；下一步固定位置只干预producer起步，不为定位最后完成者增加测后候选。
+[R10工作序列交换](R10-layout-cache.md#work-swap)中，cfg_b的CTA55/91仍在SM55/87，交换完整工作后强弱行距响应仍留原物理位置。此前基址平移也未让响应整体移动。现在已排除只靠这两条逻辑工作序列定价，但物理CTA、SM位置及其形成的到达状态尚未解耦，不能命名源地址bank或GPC服务规则；该绑定也不外推到其它grid、卡或驱动。本批同源组端点显示早/晚软件位置也保留；739619随后固定位置干预producer起步，行距响应仍变化，位置常数也不足。时间状态约束见[R10](R10-layout-cache.md#producer-delay)，不为定位最后完成者增加测后候选。

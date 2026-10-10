@@ -116,6 +116,10 @@ def validate_warmup(setup, call, row):
     """Legacy adaptive convergence, or an explicitly fixed common history."""
     if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
         raise ValueError('work permutation identity changed')
+    if 'producer_delay_ns' in row:
+        for event in (setup,call):
+            if event.get('producer_delay_ns')!=row['producer_delay_ns'] or event.get('producer_delay_protocol')!='cta55-pre-first-load-v1':
+                raise ValueError('producer delay identity changed')
     policy = row.get('warmup_policy','adaptive')
     if policy not in ('adaptive','common-sw1-16'):
         raise ValueError('unknown warmup policy')
@@ -370,6 +374,15 @@ def replay(root,record,row,retain_roles=False):
             cta['role_work']=coords
         result['ctas'].append(cta)
         seen+=work
+    if 'producer_delay_ns' in row:
+        values=call.get('producer_delay_trace',[])
+        if len(values)!=4 or not all(values):raise ValueError('missing producer delay endpoints')
+        bc,bn,ec,en=values;c=result['ctas'][55]
+        if not (c['entry_c']<=bc<=ec<=c['prod_c'] and c['entry_ns']<=bn<=en<=c['prod_ns']):
+            raise ValueError('producer delay endpoints do not precede first work')
+        if en-bn<row['producer_delay_ns']:raise ValueError('requested producer delay not observed')
+        result['producer_delay']=dict(cta=55,requested_ns=row['producer_delay_ns'],begin_c=bc,begin_ns=bn,
+            end_c=ec,end_ns=en,duration_cycles=ec-bc,duration_ns=en-bn)
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
     tm=256 if row['config'].startswith('cfg_c') else 128;tn=128
     required={(i,j) for i in range(model.cdiv(row['m'],tm)) for j in range(model.cdiv(row['n'],tn))}

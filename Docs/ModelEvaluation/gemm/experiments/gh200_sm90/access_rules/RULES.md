@@ -109,7 +109,9 @@ DONE_j = epilogue_end(ep_j, 下一轮主循环窗口)
 
 max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `supply_model.source_sharing_delta_cycles(a,b,C,E_B*p_B,K_t)`；源覆盖和软件轮次仍不等于物理流量或同时发起的请求。仅用739585两个单输出条件约束参数，并以非负启动项所需的 `K_t*a*C≤aligned L` 排除共同基线大错被相减隐藏的解。保留相关分片参数域，不把a、b范围当独立矩形；目前没有物理上优先的一对参数。
 
-迁移评估只对B32响应作开发检查，实测对齐L仍作为锚，不能称完整L或总时间预测。所有迁移组必须共用同一对参数；看过迁移后发现的好顶点仅是存在例，不能追认为事前选中的预测器。分组中位数的小误差不能替代逐CTA检验：完整训练参数域对稳定位置仍有18%～20%的必要误差下界，放宽训练到5%整L后仍超过15%；该形式尚不能满足局部服务目标。+256 B相对基址平移未将响应整体移到相邻面板；随后交换两条完整工作序列，强弱响应仍留原物理CTA/SM，逻辑工作身份不足以解释，执行位置与其形成的时序仍未分开，不能校准SM专属价格。证据和逐CTA限制见[R10](R10-layout-cache.md#shared-service-candidate)，完整域见[候选参数与迁移](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)。
+迁移评估只对B32响应作开发检查，实测对齐L仍作为锚，不能称完整L或总时间预测。所有迁移组必须共用同一对参数；看过迁移后发现的好顶点仅是存在例，不能追认为事前选中的预测器。完整训练参数域对稳定位置仍有18%～20%的必要误差下界，放宽训练到5%整L后仍超过15%；分组中位数的小误差不能替代逐CTA检验，当前形式不满足局部服务目标。证据见[R10](R10-layout-cache.md#shared-service-candidate)，完整域见[候选参数与迁移](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)。
+
+后续候选必须保留时间状态。[同位置起步干预](R10-layout-cache.md#producer-delay)在工作/SM不变时改变了行距响应，而且B0在扣除实际producer后移量后，首输出仍多耗816 ns、1156.5 cycle。固定事件前驱、固定同域边成本且其它根时刻不变的max-plus图，不能把单根延迟放大；仅平移旧时间线或增加固定位置罚项不充分。该约束不排除带可变仲裁、等待返回与初态的有限stage模型。producer/FIRST软件名次也不是物理请求到达，不直接拟合为服务价格。
 
 ## 计量与组合约定
 

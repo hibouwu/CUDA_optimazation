@@ -10,7 +10,7 @@ from analyze_r10 import (mainloop_overlap_features, source_panel_features,
     _source_service_clip, _source_service_interval, _source_polygon_vertices, _source_service_value,
     _source_service_window_errors, _source_interval_error_floor,
     _base_shift_response_pairs, _base_shift_pattern_metrics,
-    _work_swap_expected, _work_swap_pitch_windows, _work_swap_correspondence)
+    _work_swap_expected, _work_swap_pitch_windows, _work_swap_correspondence, _producer_group_rank)
 
 
 class RasterOrderTests(unittest.TestCase):
@@ -260,6 +260,40 @@ class RasterOrderTests(unittest.TestCase):
         self.assertEqual([w['entry_to_MAIN_END_ns_delta'] for w in windows],[40,20])
         one=_work_swap_pitch_windows(base,variant,exclude_ctas=(0,))[0]
         self.assertEqual(one['entry_relative_ns_base'],20)
+
+    def test_producer_delay_config_changes_only_gate_and_pitch(self):
+        rows=json.loads((Path(__file__).parent/'configs/r10-producer-delay.json').read_text())
+        controls=[r for r in rows if r['set']=='ctrl']
+        self.assertEqual(len(rows),6);self.assertTrue(all(r['variants']==['plain'] for r in rows[:2]))
+        self.assertEqual({(r['producer_delay_ns'],r['ldb']) for r in controls},
+            {(d,p) for d in (0,512) for p in (3072,3088)})
+        ignored={'id','group','producer_delay_ns','ldb'}
+        fixed=[{k:v for k,v in r.items() if k not in ignored} for r in controls]
+        self.assertTrue(all(v==fixed[0] for v in fixed))
+        self.assertTrue(all(r['work_swap55_91']==0 and r['b_offset_bytes']==0 and r['b_allocation_extra_bytes']==256 for r in controls))
+
+    def test_producer_rank_keeps_timer_ties_and_same_B_membership(self):
+        def row(cta,ni,prod,first):
+            return dict(cta=cta,entry_ns=0,prod_ns=prod,work=[[cta%18,ni]],tiles_ns=[[first,first+100,first+110,first+120]])
+        ctas=[row(54,3,100,180),row(55,3,100,200),row(56,3,140,220),row(91,5,80,160)]
+        rank=_producer_group_rank(ctas)
+        self.assertEqual(rank['ctas'],[54,55,56])
+        self.assertEqual((rank['producer']['rank_min'],rank['producer']['rank_max']),(1,2))
+        self.assertEqual(rank['producer']['target_minus_peer_median_ns'],-20)
+        self.assertEqual((rank['FIRST']['rank_min'],rank['FIRST']['rank_max']),(2,2))
+        ctas[1]['prod_ns']+=512
+        delayed=_producer_group_rank(ctas)
+        self.assertEqual((delayed['producer']['rank_min'],delayed['producer']['rank_max']),(3,3))
+
+    def test_public_producer_delay_identity_is_explicit(self):
+        from test_r09_history_series import synthetic
+        from analyze_r18 import validate_warmup
+        for delay in (0,512):
+            row,setup,call,_=synthetic();row['producer_delay_ns']=delay
+            for event in (setup,call):event.update(producer_delay_ns=delay,producer_delay_protocol='cta55-pre-first-load-v1')
+            validate_warmup(setup,call,row)
+            with self.assertRaisesRegex(ValueError,'producer delay'):
+                validate_warmup(setup,dict(call,producer_delay_ns=1),row)
 
 
 if __name__=='__main__':unittest.main()

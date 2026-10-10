@@ -2009,6 +2009,244 @@ def work_swap_diagnostics(root, output):
     (output/'R10-work-swap.md').write_text('\n'.join(lines))
     return report
 
+def _producer_group_rank(ctas, target=55):
+    """Software producer/FIRST markers in the same first-output B group; ties stay ties."""
+    current=next(c for c in ctas if c['cta']==target);ni=current['work'][0][1]
+    peers=[c for c in ctas if c['work'][0][1]==ni]
+    result=dict(ni=ni,ctas=sorted(c['cta'] for c in peers))
+    for name,get in [('entry',lambda c:c['entry_ns']),('producer',lambda c:c['prod_ns']),
+                     ('FIRST',lambda c:c['tiles_ns'][0][0])]:
+        value=get(current);others=[get(c) for c in peers if c['cta']!=target]
+        result[name]=dict(rank_min=1+sum(get(c)<value for c in peers),rank_max=sum(get(c)<=value for c in peers),
+            target_minus_peer_median_ns=value-statistics.median(others))
+    return result
+
+
+def producer_delay_diagnostics(root, output):
+    """One CTA55 producer delay, with pitch interactions and same-call boundaries."""
+    from collections import defaultdict
+    from analyze_r13_sm import select_attempts
+    from analyze_r18 import replay
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output);common.verify(root)
+    rows={r['id']:r for r in json.loads((root/'cases.json').read_text())}
+    setups={r['case']:r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
+    controls=[r for r in rows.values() if r['set']=='ctrl'];ignored={'id','group','ldb','producer_delay_ns'}
+    if len(controls)!=4 or any({k:v for k,v in r.items() if k not in ignored}!=
+        {k:v for k,v in controls[0].items() if k not in ignored} for r in controls):
+        raise ValueError('producer delay changed another factorial condition')
+    if {(r['producer_delay_ns'],r['ldb']) for r in controls}!={(d,p) for d in (0,512) for p in (3072,3088)}:
+        raise ValueError('producer-delay factors incomplete')
+    def span(v):
+        v=list(v);return dict(median=statistics.median(v),process_min=min(v),process_max=max(v))
+    calls={};plain={};processes=[];hashes={};contexts={};failures={};work=None
+    for row in rows.values():
+        name=row['id'];calls[name]={};plain[name]={}
+        if row['set']=='ctrl':
+            setup=setups[name]
+            if setup.get('producer_delay_ns')!=row['producer_delay_ns']:raise ValueError('producer delay request changed')
+            current=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+            if work is None:work=current
+            if current!=work:raise ValueError('delay changed software work')
+            contexts[name]=dict(row=row,setup=setup,work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest())
+        selected,failed,_=select_attempts(root,name,tuple(row['variants']));failures[name]=[r['path'] for r in failed]
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if record['variant']=='plain':plain[name][record['trial']]=obs['elapsed_us'];continue
+            if [c['work'] for c in obs['ctas']]!=work:raise ValueError('producer delay changed actual work mapping')
+            calls[name][record['trial']]=obs;delay=obs['producer_delay']
+            c=next(c for c in obs['ctas'] if c['cta']==55)
+            if delay['cta']!=55 or delay['requested_ns']!=row['producer_delay_ns']:
+                raise ValueError('delay trace identifies another CTA or request')
+            ns=c['tiles_ns'][0];cycles=c['tiles'][0]
+            post_gate_to_prod=c['prod_ns']-delay['end_ns'];S=ns[0]-c['prod_ns'];L=ns[1]-ns[0]
+            if post_gate_to_prod<0 or post_gate_to_prod+S+L!=ns[1]-delay['end_ns']:
+                raise ValueError('producer delay / prod / FIRST / MAIN_END do not close')
+            processes.append(dict(case=name,trial=record['trial'],requested_ns=row['producer_delay_ns'],
+                pitch_bytes=row['ldb']*2-6144,actual_delay=delay,elapsed_us=obs['elapsed_us'],
+                target_sm=c['sm'],target_work=c['work'],delay_begin_from_entry_ns=delay['begin_ns']-c['entry_ns'],
+                end_to_prod_ns=post_gate_to_prod,P0_ns=c['prod_ns']-c['entry_ns'],S_ns=S,L_ns=L,
+                P0_cycles=c['prod_c']-c['entry_c'],S_cycles=cycles[0]-c['prod_c'],
+                S_plus_L_cycles=cycles[1]-c['prod_c'],entry_to_MAIN_END_cycles=cycles[1]-c['entry_c'],
+                S_plus_L_ns=S+L,entry_to_MAIN_END_ns=ns[1]-c['entry_ns'],end_to_FIRST_ns=ns[0]-delay['end_ns'],
+                L_cycles=cycles[1]-cycles[0],source_group=_producer_group_rank(obs['ctas']),
+                cta_sm=[dict(cta=z['cta'],sm=z['sm']) for z in obs['ctas']],address_metadata=obs.get('b_address')))
+        if len(plain[name])!=10 or (row['set']=='ctrl' and calls[name].keys()!=plain[name].keys()):
+            raise ValueError('ten complete producer-delay processes required')
+    if len({setups[r['id']]['gpu_uuid'] for r in controls})!=1:raise ValueError('producer-delay conditions span cards')
+    responses={};timing={};position_values=defaultdict(list);selected=[]
+    fields=('L_cycles_delta','L_ns_delta','L_rate_ratio','entry_relative_ns_delta','producer_relative_ns_delta',
+        'FIRST_relative_ns_delta','entry_to_producer_ns_delta','entry_to_FIRST_ns_delta','entry_to_MAIN_END_ns_delta',
+        'prefill_ns_delta','prefill_plus_L_ns_delta')
+    for delay in (0,512):
+        a,b=(f'r10_proddelay_d{delay}_p{pitch}' for pitch in (0,32));responses[delay]={}
+        for trial in range(10):
+            windows=_work_swap_pitch_windows(calls[a][trial],calls[b][trial])
+            for w in windows:
+                if w['j']==0:w['prefill_plus_L_ns_delta']=w['prefill_ns_delta']+w['L_ns_delta']
+                position_values[delay,w['cta'],w['j']].append(dict(trial=trial,**w))
+                if w['cta'] in (55,91):selected.append(dict(delay=delay,trial=trial,**w))
+            responses[delay][trial]=windows
+        timing[str(delay)]=dict(plain_pitch_ratio=span(plain[b][t]/plain[a][t]-1 for t in range(10)),
+            plain_pitch_delta_us=span(plain[b][t]-plain[a][t] for t in range(10)),
+            dual_disturbance={name:span(calls[name][t]['elapsed_us']/plain[name][t]-1 for t in range(10)) for name in (a,b)})
+    timing['plain_delay_effect']={str(p):dict(relative=span(plain[f'r10_proddelay_d512_p{p}'][t]/plain[f'r10_proddelay_d0_p{p}'][t]-1 for t in range(10)),
+        delta_us=span(plain[f'r10_proddelay_d512_p{p}'][t]-plain[f'r10_proddelay_d0_p{p}'][t] for t in range(10))) for p in (0,32)}
+    interactions=defaultdict(list);direct=[];background=[]
+    first_B=work[55][0][1]
+    for trial in range(10):
+        reference={(w['cta'],w['j']):w for w in responses[0][trial]}
+        for w in responses[512][trial]:
+            a=reference[w['cta'],w['j']]
+            interactions[w['cta'],w['j']].append(dict(trial=trial,**{k:w[k]-a[k] for k in fields if k in w}))
+        for pitch in (0,32):
+            a,b=(calls[f'r10_proddelay_d{d}_p{pitch}'][trial] for d in (0,512))
+            windows=_work_swap_pitch_windows(a,b)
+            for w in windows:
+                if w['j']==0:w['prefill_plus_L_ns_delta']=w['prefill_ns_delta']+w['L_ns_delta']
+                if w['cta'] in (55,91):direct.append(dict(pitch_bytes=pitch,trial=trial,**w))
+            first=[w for w in windows if w['j']==0]
+            for label,subset in [('same_B_partners',[w for w in first if w['ni']==first_B and w['cta']!=55]),
+                                 ('other130',[w for w in first if w['cta'] not in (55,91)])]:
+                background.append(dict(pitch_bytes=pitch,trial=trial,group=label,CTAs=len(subset),
+                    **{field:statistics.median(w[field] for w in subset) for field in fields}))
+    position_summaries=[]
+    for (delay,cta,j),values in sorted(position_values.items()):
+        w=values[0]
+        position_summaries.append(dict(delay=delay,cta=cta,j=j,T=w['T'],coord=[w['mi'],w['ni']],
+            base_sms=sorted({r['base_sm'] for r in values}),variant_sms=sorted({r['variant_sm'] for r in values}),
+            **{k:span(r[k] for r in values) for k in fields if k in w}))
+    interaction_summaries=[dict(cta=cta,j=j,**{k:span(r[k] for r in values) for k in values[0] if k!='trial'})
+        for (cta,j),values in sorted(interactions.items())]
+    direct_summaries=[]
+    for pitch,cta,j in sorted({(r['pitch_bytes'],r['cta'],r['j']) for r in direct}):
+        values=[r for r in direct if (r['pitch_bytes'],r['cta'],r['j'])==(pitch,cta,j)]
+        direct_summaries.append(dict(pitch_bytes=pitch,cta=cta,j=j,
+            **{k:span(r[k] for r in values) for k in fields if k in values[0]}))
+    background_summaries=[]
+    for pitch,group in sorted({(r['pitch_bytes'],r['group']) for r in background}):
+        values=[r for r in background if (r['pitch_bytes'],r['group'])==(pitch,group)]
+        background_summaries.append(dict(pitch_bytes=pitch,group=group,CTAs=values[0]['CTAs'],
+            **{k:span(r[k] for r in values) for k in fields}))
+    case_summaries=[]
+    for name in contexts:
+        values=[p for p in processes if p['case']==name]
+        case_summaries.append(dict(case=name,requested_ns=values[0]['requested_ns'],pitch_bytes=values[0]['pitch_bytes'],
+            actual_delay_ns=span(p['actual_delay']['duration_ns'] for p in values),
+            actual_delay_cycles=span(p['actual_delay']['duration_cycles'] for p in values),
+            target_sms=sorted({p['target_sm'] for p in values}),
+            boundaries={k:span(p[k] for p in values) for k in
+                ('delay_begin_from_entry_ns','end_to_prod_ns','P0_ns','S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns','end_to_FIRST_ns','L_cycles','P0_cycles','S_cycles','S_plus_L_cycles','entry_to_MAIN_END_cycles')},
+            ranks={event:{k:span(p['source_group'][event][k] for p in values) for k in
+                ('rank_min','rank_max','target_minus_peer_median_ns')} for event in ('entry','producer','FIRST')}))
+    gate_processes=[];gate_summaries=[]
+    for pitch in (0,32):
+        for trial in range(10):
+            a=next(p for p in processes if p['requested_ns']==0 and p['pitch_bytes']==pitch and p['trial']==trial)
+            b=next(p for p in processes if p['requested_ns']==512 and p['pitch_bytes']==pitch and p['trial']==trial)
+            gate_processes.append(dict(pitch_bytes=pitch,trial=trial,
+                duration_ns_delta=b['actual_delay']['duration_ns']-a['actual_delay']['duration_ns'],
+                duration_cycles_delta=b['actual_delay']['duration_cycles']-a['actual_delay']['duration_cycles'],
+                **{k+'_delta':b[k]-a[k] for k in ('P0_ns','end_to_prod_ns','S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns','P0_cycles','S_cycles','S_plus_L_cycles','entry_to_MAIN_END_cycles')}))
+        values=[p for p in gate_processes if p['pitch_bytes']==pitch]
+        gate_summaries.append(dict(pitch_bytes=pitch,**{k:span(p[k] for p in values) for k in values[0] if k not in ('trial','pitch_bytes')}))
+    references={};previous=root.parent/'20261010-R10-work-swap'
+    if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
+        raise ValueError('producer-delay reference changed card')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        name=row['id'];old=[]
+        for item in select_attempts(previous,name,('plain',))[0]:
+            old.append(replay(previous,item['record'],row)['elapsed_us'])
+            for path in (previous/item['path'],previous/item['record']['raw']):hashes[str(path)]=common.sha(path)
+        references[name]=dict(current=span(plain[name].values()),previous=span(old),median_change=statistics.median(plain[name].values())/statistics.median(old)-1)
+    for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json','build/sass_hashes.json'):
+        path=root/filename;hashes[str(path)]=common.sha(path)
+    for path in sorted(root.glob('correctness-*.jsonl')):
+        hashes[str(path)]=common.sha(path)
+    origins=[dict(trial=t,by_case={p['case']:p['address_metadata']['b_buffer_ptr'] for p in processes if p['trial']==t}) for t in range(10)]
+    report=dict(scope='CTA55 producer pre-first-load delay, no work or service-coefficient changes. '
+        'Within-delay pitch pairs precede the delay-by-pitch interaction; processes remain the repetition units.',
+        environment=json.loads((root/'environment.json').read_text()),contexts=contexts,case_summaries=case_summaries,
+        processes=processes,timing=timing,measured_gate_effect_processes=gate_processes,measured_gate_effects=gate_summaries,
+        position_pitch_responses=position_summaries,
+        delay_by_pitch_interaction=interaction_summaries,selected_pitch_processes=selected,
+        direct_delay_selected=direct,direct_delay_summaries=direct_summaries,
+        background_processes=background,background_summaries=background_summaries,
+        address_and_placement=dict(virtual_origins=sorted({p['address_metadata']['b_buffer_ptr'] for p in processes}),
+            per_trial=origins,same_origin_trials=[r['trial'] for r in origins if len(set(r['by_case'].values()))==1],
+            distinct_CTA_to_SM_maps=len({tuple((r['cta'],r['sm']) for r in p['cta_sm']) for p in processes})),
+        references=references,failed_attempts=failures,
+        source_boundary='The one-time gate is in the mainloop ProducerWarp after wait_on_dependent_grids and before the first while. '
+            'Lane0 polls globaltimer, the warp synchronizes, and the original producer v06_begin follows. '
+            'Tensor-map prefetch was issued before the gate, so the delay also grants prefetch completion opportunity.',
+        interpretation=['P0=prod-entry includes the explicit wait; S=FIRST-prod and S+L exclude it. '
+            'end-to-prod and end-to-FIRST isolate the post-gate software interval without calling it a bare TMA latency.',
+            'Producer/FIRST group ranks use same-call globaltimer and retain tie intervals. '
+            'They are software progress markers, not measured TMA request arrival order.',
+            'The zero setting still executes the timer/do-while observer path. Report duration512-duration0 and P0 separately; '
+            'end is before the stores/syncwarp, so end-to-prod remains part of the observation.',
+            'begin/end cycle and ns reads are adjacent, not simultaneous; the short delay interval is not used to estimate frequency.',
+            'A fixed max-plus dependency graph with unchanged edge costs and other root times cannot amplify a single-root delay. '
+            'Positive (MAIN_END-prod) changes challenge a pure shift only under those assumptions; they do not reject all finite-stage models.',
+            'The intervention tests participation of temporal state, including descriptor readiness, not a unique same-source queuing mechanism.',
+            'Other130 excludes CTA55/91; same-B partners exclude only CTA55. Neither population is treated as independent process replicas.',
+            'Pitch/delay pairs use independent processes; virtual-address metadata does not establish common physical pages.'],
+        input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)))
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-producer-delay.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# CTA55 producer起步延迟','',
+        '同调用记录门前/门后、旧prod、FIRST与MAIN_END；P0含显式等待，S及S+L不含。'
+        'descriptor prefetch位于门前，因此该干预检验时间状态参与，不唯一隔离同B请求到达顺序。',
+        '每列独立取十个进程的中位数；时间闭合在逐进程检查，中位数各列不要求相加闭合。','',
+        '| 条件 | 实际delay ns / cycles中位 | end→prod ns | P0 ns | S ns | L ns | S+L ns | entry→MAIN_END ns |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|']
+    for r in case_summaries:
+        b=r['boundaries'];lines.append(f'| {r["case"]} | {r["actual_delay_ns"]["median"]:.1f} / {r["actual_delay_cycles"]["median"]:.1f} | '
+            +' | '.join(f'{b[k]["median"]:.1f}' for k in ('end_to_prod_ns','P0_ns','S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'))+' |')
+    lines+=['','| B行距 | 实测duration512−duration0 ns | ΔP0 ns | Δend→prod ns |','|---:|---:|---:|---:|']
+    for r in gate_summaries:
+        cells=[]
+        for field in ('duration_ns_delta','P0_ns_delta','end_to_prod_ns_delta'):
+            v=r[field];cells.append(f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]')
+        lines.append(f'| +{r["pitch_bytes"]} B | '+' | '.join(cells)+' |')
+    lines+=['','| CTA55首输出直接延迟效应（512−0） | ΔS ns | ΔL ns | Δ(S+L) ns | Δ(entry→MAIN_END) ns |',
+        '|---|---:|---:|---:|---:|']
+    for r in gate_summaries:
+        cells=[]
+        for field in ('S_ns_delta','L_ns_delta','S_plus_L_ns_delta','entry_to_MAIN_END_ns_delta'):
+            v=r[field];cells.append(f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]')
+        lines.append(f'| B+{r["pitch_bytes"]} B | '+' | '.join(cells)+' |')
+    lines+=['','直接延迟使两种行距的完整首输出窗口都增长。B+32 B的L缩短同时伴随S增长；'
+        '即使排除显式等待，S+L仍增长。因此交互减小不是延迟带来加速，也不能把干预解释为仅增加固定启动项。']
+    lines+=['','0档也有读表/do-while成本。end打点在stores与syncwarp之前，end→prod不能省略。',
+        '','| 条件 | producer名次区间中位 | producer相对伙伴中位 ns | FIRST名次区间中位 | FIRST相对伙伴中位 ns |','|---|---:|---:|---:|---:|']
+    for r in case_summaries:
+        p,f=r['ranks']['producer'],r['ranks']['FIRST']
+        lines.append(f'| {r["case"]} | {p["rank_min"]["median"]:.1f}～{p["rank_max"]["median"]:.1f} | '
+            f'{p["target_minus_peer_median_ns"]["median"]:.1f} | {f["rank_min"]["median"]:.1f}～{f["rank_max"]["median"]:.1f} | '
+            f'{f["target_minus_peer_median_ns"]["median"]:.1f} |')
+    lines+=['','| CTA55首输出delay×pitch交互 | 中位 | 十进程范围 |','|---|---:|---:|']
+    target=next(r for r in interaction_summaries if r['cta']==55 and r['j']==0)
+    for k in ('L_cycles_delta','L_ns_delta','prefill_ns_delta','prefill_plus_L_ns_delta','entry_to_MAIN_END_ns_delta'):
+        v=target[k];lines.append(f'| {k} | {v["median"]:.1f} | {v["process_min"]:.1f}～{v["process_max"]:.1f} |')
+    lines+=['','在固定事件前驱、同一时钟域的固定边成本和其余根时刻不变时，max-plus递推满足单根延迟的增量不大于该延迟。'
+        'B0除去实际producer起点变化后，MAIN_END仍多出以下区间，不能只将旧时间线平移；共享仲裁、事件顺序、局部成本和初态仍可能变化。'
+        '这不排除所有有限stage模型，也不由跨进程配对宣称其余隐藏状态完全相同。','',
+        '| 行距 | ΔP0 cycle | ΔS cycle | Δ(S+L) cycle | Δ入口→MAIN_END cycle |','|---|---:|---:|---:|---:|']
+    for r in gate_summaries:
+        cells=[]
+        for field in ('P0_cycles_delta','S_cycles_delta','S_plus_L_cycles_delta','entry_to_MAIN_END_cycles_delta'):
+            v=r[field];cells.append(f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]')
+        lines.append(f'| +{r["pitch_bytes"]} B | '+' | '.join(cells)+' |')
+    lines+=['','JSON保留全部位置行距响应、CTA55/91直接延迟对照、17个同B伙伴及其余130CTA的逐进程背景。'
+        '不将短delay的cycle/ns比值作为频率，不用新数据拟合服务常数。','']
+    (output/'R10-producer-delay.md').write_text('\n'.join(lines))
+    return report
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

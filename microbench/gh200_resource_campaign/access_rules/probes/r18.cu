@@ -7,6 +7,30 @@
 // Experimental initial-work permutation; every later advance keeps the same stride.
 __device__ __constant__ int r10_work_swap55_91;
 #endif
+#ifdef R10_PRODUCER_DELAY
+__device__ __constant__ unsigned r10_producer_delay_ns;
+__device__ __constant__ uint64_t* r10_producer_delay_trace;
+__device__ __forceinline__ void r10_delay_first_producer() {
+  if (blockIdx.x!=55 || blockIdx.y!=0 || blockIdx.z!=0) return;
+  if (threadIdx.x==0) {
+    uint64_t begin_ns, now;
+#ifdef R18_DUAL_CLOCK
+    uint64_t begin_c, end_c, end_ns;
+    asm volatile("mov.u64 %0, %%clock64;" : "=l"(begin_c) :: "memory");
+#endif
+    asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(begin_ns) :: "memory");
+    do { asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(now) :: "memory"); }
+    while (now-begin_ns < r10_producer_delay_ns);
+#ifdef R18_DUAL_CLOCK
+    asm volatile("mov.u64 %0, %%clock64;" : "=l"(end_c) :: "memory");
+    asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(end_ns) :: "memory");
+    r10_producer_delay_trace[0]=begin_c; r10_producer_delay_trace[1]=begin_ns;
+    r10_producer_delay_trace[2]=end_c; r10_producer_delay_trace[3]=end_ns;
+#endif
+  }
+  __syncwarp();
+}
+#endif
 #include <cute/tensor.hpp>
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/collective/collective_builder.hpp>
@@ -135,6 +159,7 @@ struct Args {
   std::string raster_order = "heuristic";
   int seed = 17;
   int work_swap55_91 = 0;
+  unsigned producer_delay_ns = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -171,8 +196,14 @@ struct Args {
       else if(key=="--raster-order")raster_order=v;
       else if(key=="--seed")seed=std::stoi(v);
       else if(key=="--work-swap55-91")work_swap55_91=std::stoi(v);
+      else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (producer_delay_ns != 0 && producer_delay_ns != 512)
+      throw std::runtime_error("producer-delay-ns is the declared 0/512 ns pair");
+#ifndef R10_PRODUCER_DELAY
+    if (producer_delay_ns) throw std::runtime_error("producer delay requires the experiment build");
+#endif
     if (work_swap55_91 != 0 && work_swap55_91 != 1)
       throw std::runtime_error("work-swap55-91 must be 0 or 1");
 #ifndef R10_WORK_SWAP
@@ -301,7 +332,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -400,6 +431,16 @@ int main(int argc, char** argv) {
     if (o.mode == "check-work-swap") throw std::runtime_error("work swap check requires experiment build");
 #endif
 
+#ifdef R10_PRODUCER_DELAY
+    if ((o.producer_delay_ns || o.mode == "check-producer-delay") &&
+        (V06_CFG != 1 || o.m != 2304 || o.n != 3072 || o.k != 1024 ||
+         ctas != 132 || o.swizzle != 1 || o.work_swap55_91 || std::string(resolved_raster) != "along_m"))
+      throw std::runtime_error("producer delay is only the declared cfg_b no-swap pair");
+    CUDA_CHECK(cudaMemcpyToSymbol(r10_producer_delay_ns, &o.producer_delay_ns, sizeof(unsigned)));
+#else
+    if (o.mode == "check-producer-delay") throw std::runtime_error("producer delay check requires experiment build");
+#endif
+
     // Both parameter sets exist before input/cache preparation. The common
     // history uses the same kernel; its source identity is an explicit condition.
     const bool common_history = o.warmup_policy == "common-sw1-16";
@@ -467,6 +508,11 @@ int main(int argc, char** argv) {
 #else
     const bool traced = false;
 #endif
+#ifdef R10_PRODUCER_DELAY
+    DeviceBuffer<uint64_t> delay_trace(4);
+    CUDA_CHECK(cudaMemset(delay_trace.pointer,0,delay_trace.count*8));
+    CUDA_CHECK(cudaMemcpyToSymbol(r10_producer_delay_trace, &delay_trace.pointer, sizeof(delay_trace.pointer)));
+#endif
     CUDA_CHECK(cudaDeviceSynchronize());
 
     cudaEvent_t begin, end;
@@ -518,6 +564,10 @@ int main(int argc, char** argv) {
         if (host[size_t(cta) * kTraceWords + 10])
           throw std::runtime_error("V06 trace tile capacity exceeded");
 #endif
+#if defined(R10_PRODUCER_DELAY) && defined(R18_DUAL_CLOCK)
+      std::vector<uint64_t> delay_events(4);
+      CUDA_CHECK(cudaMemcpy(delay_events.data(),delay_trace.pointer,32,cudaMemcpyDeviceToHost));
+#endif
       std::vector<double> warm_us;
       for (float w : warm) warm_us.push_back(w * 1e3);
       std::cout << "{\"event\":\"call\",\"label\":\"" << label << "\",\"elapsed_us\":" << ms * 1e3
@@ -533,6 +583,10 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"producer_delay_ns\":" << o.producer_delay_ns
+#ifdef R10_PRODUCER_DELAY
+                << ",\"producer_delay_protocol\":\"cta55-pre-first-load-v1\""
+#endif
                 << ",\"work_swap55_91\":" << o.work_swap55_91
                 << ",\"b_offset_bytes\":" << o.b_offset_bytes
                 << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
@@ -542,6 +596,9 @@ int main(int argc, char** argv) {
                 << ",\"target_calls\":" << (history_series ? history_target_calls : 1)
                 << ",\"preceding_target_calls\":" << (history_series ? history_target_calls-1 : 0)
                 << ",\"warmup_last5_cv\":" << coefficient_of_variation({warm.end()-5,warm.end()});
+#if defined(R10_PRODUCER_DELAY) && defined(R18_DUAL_CLOCK)
+      print_u64("producer_delay_trace",delay_events);
+#endif
       if (history_enabled) {
         float prefix_ms=0,observed_ms=0;
         CUDA_CHECK(cudaEventElapsedTime(&prefix_ms,history_begin[0],history_end[history_prefix_calls-1]));
@@ -634,6 +691,10 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"producer_delay_ns\":" << o.producer_delay_ns
+#ifdef R10_PRODUCER_DELAY
+                << ",\"producer_delay_protocol\":\"cta55-pre-first-load-v1\""
+#endif
                 << ",\"work_swap55_91\":" << o.work_swap55_91
                 << ",\"b_offset_bytes\":" << o.b_offset_bytes
                 << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
@@ -661,17 +722,28 @@ int main(int argc, char** argv) {
               << ",\"trace_words\":" << kTraceWords << "}\n";
     if (o.mode == "setup")
       return 0;
-#ifdef R10_WORK_SWAP
-    if (o.mode == "check-work-swap") {
+#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY)
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
-      int flag=0;
-      CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &flag, sizeof(flag)));
+      unsigned flag=0;
+      auto set_check_flag = [&](unsigned value) {
+#ifdef R10_PRODUCER_DELAY
+        if (o.mode == "check-producer-delay") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r10_producer_delay_ns, &value, sizeof(value)));
+          return;
+        }
+#endif
+#ifdef R10_WORK_SWAP
+        CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &value, sizeof(value)));
+#endif
+      };
+      set_check_flag(flag);
       cutlass_check(Gemm::run(launch_params), "baseline check run");
       CUDA_CHECK(cudaMemcpy(baseline.data(), d.pointer, baseline.size()*sizeof(float), cudaMemcpyDeviceToHost));
       gaps::fill_output_sentinel<<<256,256>>>(d.pointer, d.count);
-      flag=1;
-      CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &flag, sizeof(flag)));
+      flag=o.mode == "check-producer-delay" ? 512 : 1;
+      set_check_flag(flag);
       cutlass_check(Gemm::run(launch_params), "swap check run");
       CUDA_CHECK(cudaMemcpy(swapped.data(), d.pointer, swapped.size()*sizeof(float), cudaMemcpyDeviceToHost));
       size_t different=0, nonfinite=0;
@@ -680,7 +752,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"work_swap_check\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

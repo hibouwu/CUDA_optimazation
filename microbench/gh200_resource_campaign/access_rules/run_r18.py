@@ -167,6 +167,17 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '    }\n'
             '#endif\n')
         path.write_text(text)
+    producer_delay = any('producer_delay_ns' in row for row in rows)
+    if producer_delay:
+        path = source/'cutlass/include'/common.PING
+        text = path.read_text()
+        start = text.index('      // Mainloop Producer Warp')
+        end = text.index('else if (producer_warp_role == ProducerWarpRole::MainloopAux)',start)
+        producer = common.insert_once(text[start:end], '        while (work_tile_info.is_valid()) {\n',
+            '#ifdef R10_PRODUCER_DELAY\n'
+            '        ::r10_delay_first_producer();\n'
+            '#endif\n')
+        path.write_text(text[:start]+producer+text[end:])
     common.make_overlay(source/'cutlass',source/'overlay')
     shutil.copy2(ROOT/'probes/r18_trace.hpp',source/'overlay/v06_trace.hpp')
     for header in [common.COOP,common.PING]:
@@ -194,6 +205,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if work_swap:cmd.append('-DR10_WORK_SWAP')
+            if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
             if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
@@ -212,7 +224,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 
