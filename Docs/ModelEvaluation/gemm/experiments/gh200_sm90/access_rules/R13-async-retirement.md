@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。stage4的额外时间出现在主循环早段与后段，最终drain没有贡献；加入组内发射/计算重叠后，本轮局部标定参数仍把stage4的L高估21%～26%。有限缓冲的事件位置与ready服务条件都需要检验，不能靠whole-L的小残差授予参数物理含义。
+当前条件供给尚未通过V09的行距与stage迁移。stage4的额外时间出现在主循环早段与后段，最终drain没有贡献；旧局部标定参数仍把stage4的L高估21%～26%。新反例表明，stage6的现有校准量不能分开ready延迟与计算组交接：省略交接会使供给参数吸收缺失时间。先补齐这段事件边界，不据旧参数失败直接引入供给队列。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -20,6 +20,7 @@
 | 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
 | consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
 | 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
+| 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -287,7 +288,25 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 对表列参数还有不依赖优化器的下界：slot复用给C_i≥C_(i−S+1)+ℓ+512−q+w；stage4的后46间隔包含15次跨3间隔的跳跃，其余只用非负界。因此平均间隔至少748.86～779.18 cycle，高于实测十进程范围573.37～607.09。即使立即释放slot，表列参数也太慢。这否定本轮参数与生命周期组合，未穷尽所有常量延迟模型；模型不进入正式预测。
 
-下一候选须先明确ready状态的作用域。若只给本CTA添加固定初态的串行服务Q_i=max(I_i,Q_(i−1))+s，首请求响应s+ℓ+max(Q_initial−I_0,0)随I_0延后只能不增；739653却有20/20次更晚issue与严格更长响应。因此孤立版本不能解释完整首次供给，必须明确共享请求前驱或另一可预测状态，不能按delay条件另拟初态。739556 stage6的issue_end→full返回为1858～2091 cycle，只给未排队底值的上界；不能把2257.5原样作为底值再叠排队。
+供给状态的作用域仍有独立限制。若只给本CTA添加固定初态的串行服务Q_i=max(I_i,Q_(i−1))+s，首请求响应s+ℓ+max(Q_initial−I_0,0)随I_0延后只能不增；739653却有20/20次更晚issue与严格更长响应。因此孤立版本不能解释完整首次供给，必须明确共享请求前驱或另一可预测状态，不能按delay条件另拟初态。739556 stage6的issue_end→full返回为1858～2091 cycle，只给未排队底值的上界；不能把2257.5原样作为底值再叠排队。
+
+<a id="stage-handoff"></a>
+
+### ready与计算组交接不能由现有校准分开
+
+当前递推令后一输出H=M_prev。实际路径是前WG的mma返回、128线程到达math-order barrier、后WG从等待恢复、首full等待返回。739578 SASS中前WG取mma_return在0x20e0、arrival在0x2110；后WG的math等待在0x1800，首full等待在0x1850/0x1870，FIRST在0x1890。大部分初始化已排在math等待之前，不能用源码行数估算交接价格。该`OrderedSequenceBarrier<2,2>`用独立depth顺序化math与epilogue，EPI_PERMIT也不能证明后一输出的math已经返回。
+
+在连续TC、commit领先分支和首数据已齐的条件下，若前输出也满足M=C_last+40，则后一输出FIRST→commit1=1024−40−δ，δ为省略的交接段。δ=196.5可解释实测787.5，但40来自第二输出、196.5是条件解释量，二者不能当作前输出的直接测量。
+
+| ready延迟ℓ / 交接δ，cycle | stage6 FIRST→C1 / C1→16均值 / C17→63均值 / L | stage4 L |
+|---|---|---:|
+| 2257.5 / 0 | 787.5 / 512 / 512 / 33031.5 | 49931 |
+| 700 / 196.5 | 同上 | 33031.5 |
+| 1858 / 196.5 | 同上 | 41941 |
+
+这里固定p=50、q=407、λ=93及原w/h/r；700只作反例，1858来自独立供给上界。**三组没有按stage4挑选，也没有通过新的验证。** 相同stage6观测对应不同stage4响应，足以说明旧ℓ不是已辨识的ready价格。早段512仍低于实测522.27，旧参数的有限窗口反证也仍成立。
+
+739095同次CTA0记录只能给FIRST1−MAIN0：K4096时stage6为−319 cycle、stage4为+535 cycle（十进程中位）。MAIN0晚于MMA0，所以它只是FIRST1−MMA0的下界；负值表示两输出重叠。现有739556/739578没有前输出MMA0，不能分离交接和full等待。下一次仅沿用两stage条件，增加同调用的前输出mma返回、后输出math等待前后与首full等待前后，并保留commit进度及plain/原progress扰动对照。先定位交接与首full等待各占多少，再决定是否引入状态相关ready服务。[逐进程来源、范围与重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.json)。
 
 <a id="first-supply"></a>
 

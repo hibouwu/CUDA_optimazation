@@ -11,6 +11,7 @@ from analyze_r13_supply import (
     _stage_event_intervals,
     _stage_progress_intervals,
     _stage_candidate_progress,
+    _stage_handoff_windows,
 )
 
 
@@ -173,6 +174,31 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_handoff_bounds_preserve_signed_overlap_and_clock_domains(self):
+        c=dict(tiles=[[100,1000,1020,1200],[920,1800,1810,1900]],
+               tiles_ns=[[10,100,102,120],[110,190,191,195]])
+        r=_stage_handoff_windows(c)
+        self.assertEqual(r['cycles']['first1_minus_main0'],-80)
+        self.assertEqual(r['cycles']['mma0_to_first1_lower_bound'],0)
+        self.assertEqual(r['ns']['mma0_to_first1_lower_bound'],10)
+
+    def test_ready_and_handoff_are_not_identified_by_stage6_progress(self):
+        from supply_model import admission_stage_events
+        def observation(stage,latency,delay):
+            t=admission_stage_events(64,stage,50,latency,407,93,
+                wait_overhead=27,loop_advance=89.5,return_overhead=13,handoff_delay=delay)
+            c=t['commits'];b=t['first_mma_or_commit']
+            return (c[65]-b[64],(c[80]-c[65])/15,(c[127]-c[81])/46,t['windows'][1])
+        self.assertEqual(observation(6,2257.5,0),observation(6,700,196.5))
+        self.assertEqual(observation(6,700,196.5),observation(6,1858,196.5))
+        self.assertNotEqual(observation(4,700,196.5),observation(4,1858,196.5))
+        # Consumer recovery is not tail completion, and cannot run backwards.
+        t=admission_stage_events(16,6,0,0,407,93,handoff_delay=196.5)
+        self.assertEqual(t['consumer_available'][16]-t['mma_returns'][0],196.5)
+        self.assertLess(t['consumer_available'][16],t['main_ends'][0])
+        with self.assertRaises(ValueError):
+            admission_stage_events(16,6,0,0,407,93,handoff_delay=-1)
+
     def test_group_service_overlaps_commit_and_keeps_slot_lifetimes(self):
         from supply_model import admission_stage_events
         t=admission_stage_events(16,6,50,700,430,70,issue_floor=64,

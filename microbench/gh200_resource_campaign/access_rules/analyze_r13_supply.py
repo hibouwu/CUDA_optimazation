@@ -2940,6 +2940,115 @@ def ready_observer_diagnostics(root, output):
     return report
 
 
+def _stage_handoff_windows(cta):
+    """Same-CTA endpoints give bounds, not the unrecorded sender MMA return."""
+    result={}
+    for unit,key in (('cycles','tiles'),('ns','tiles_ns')):
+        before,after=cta[key][:2]
+        offset=after[0]-before[1]
+        result[unit]=dict(first1_minus_main0=offset,
+            mma0_to_first1_lower_bound=max(0,offset))
+    return result
+
+
+def stage_handoff_diagnostics(base,output):
+    """Expose ready/handoff ambiguity without choosing parameters on stage4."""
+    from analyze_r13_sm import select_attempts
+    from supply_model import admission_stage_events
+    import v06_run as common
+    output=Path(output);root=Path(base)/'20261010-R09-R13-R18-failure-controls'
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    progress=read_json(output/'B-stage-progress.json')
+    cal=next(r['intervals'] for r in progress['timing'] if r['stages']==6)
+    # Conditional algebra: continuous TC, lead branch, ready inputs, and the
+    # measured second-output return interval also holding for the first output.
+    delta=1024-cal['last_commit_to_mma_return']['median']-cal['first_to_commit1']['median']
+    cases=[];hashes={};processes=[];failed_records=[]
+    def span(v):return dict(median=statistics.median(v),trial_min=min(v),trial_max=max(v))
+    for k in (1024,4096):
+        for stage in (4,6):
+            name=f'r13_stage_k{k}_s{stage}';row=rows[name];values=[]
+            selected,failed,_=select_attempts(root,name,('dual',))
+            failed_records.extend(dict(case=name,path=r['path']) for r in failed)
+            for item in selected:
+                record=item['record'];obs=replay(root,record,row)
+                cta=next(c for c in obs['ctas'] if c['cta']==0)
+                v=dict(case=name,trial=record['trial'],cta=0,sm=cta['sm'],work=cta['work'],
+                    source=record['raw'],tiles=cta['tiles'],tiles_ns=cta['tiles_ns'],
+                    **_stage_handoff_windows(cta))
+                values.append(v);processes.append(v)
+                for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if len(values)!=10:raise ValueError('handoff diagnosis requires ten valid independent processes')
+            cases.append(dict(case=name,processes=len(values),**{unit:{field:span([v[unit][field] for v in values])
+                for field in values[0][unit]} for unit in ('cycles','ns')}))
+    protocol=dict(wait_overhead=cal['commit_to_wait1_16']['median'],
+        loop_advance=cal['loop_advance_16_to17']['median'],
+        return_overhead=cal['last_commit_to_mma_return']['median']-cal['commit_to_wait1_16']['median'])
+    examples=[]
+    # These are counterexamples to identification, not a fit or a selection
+    # among candidates. 1858 is the independent source-response upper bound;
+    # 700 is an illustrative feasible smaller value, not an estimated latency.
+    for latency,handoff in ((2257.5,0.),(700.,delta),(1858.,delta)):
+        comparisons={}
+        for stage in (6,4):
+            t=admission_stage_events(64,stage,50.,latency,407.,93.,handoff_delay=handoff,**protocol)
+            c=t['commits'];b=t['first_mma_or_commit']
+            comparisons[stage]=dict(first_to_commit1=c[65]-b[64],
+                average_commit1_to16=(c[80]-c[65])/15,
+                average_commit17_to63=(c[127]-c[81])/46,L=t['windows'][1],
+                ready_minus_consumer_available=t['ready'][64]-t['consumer_available'][64],
+                mma0_to_first1=b[64]-t['mma_returns'][0])
+        examples.append(dict(ready_latency=latency,handoff_delay=handoff,comparisons=comparisons))
+    for path in (output/'B-stage-progress.json',output/'B-stage-events.json',root/'cases.json',
+            Path(__file__),Path(__file__).with_name('supply_model.py')):hashes[str(path)]=common.sha(path)
+    source_root=Path(base)/'20261010-R13-stage-progress'
+    for relative in ('source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
+            'source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp','build/cfg_b_stamped.sass'):
+        path=source_root/relative;hashes[str(path)]=common.sha(path)
+    report=dict(scope='CTA0, first-to-second output, same invocation and SM. Development diagnosis only.',
+        processes=processes,cases=cases,failed_records=failed_records,input_sha256=hashes,
+        conditional_handoff_delta=delta,examples=examples,
+        conclusion='Stage6 local observables do not distinguish source readiness from consumer availability. '
+            'The old zero-handoff fit does not identify ready latency. No example is adopted or selected on stage4.',
+        missing_endpoints=['sender first-output mma return', 'receiver second-output math-order wait return',
+            'receiver second-output first full-wait entry'],
+        limitations=['FIRST1-MAIN0 is a lower bound on FIRST1-MMA0, not a measured handoff interval.',
+            'The two order-barrier depths independently order math and epilogue; EPI_PERMIT0 does not imply MMA1 has returned.',
+            'The conditional delta also assumes the second-output 40-cycle return interval transfers to the first output.',
+            'The sensitivity input includes sender arrivals and receiver progress; it is not a bare barrier latency.',
+            'Examples retain the stage6 early-interval residual; identical model observables are not a successful calibration.',
+            'Finite-window rejection of the old tuples remains valid, but it cannot identify a queued-ready mechanism.'])
+    (output/'B-stage-handoff.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 交接与ready延迟的不可辨识性','',
+        '前一WG的mma返回、128线程完成order-barrier到达、后一WG恢复、首full等待返回是不同事件。'
+        '现有H_next=M把后几段设为零，可能让ready延迟吸收缺失时间。math和epilogue使用两个独立depth；'
+        'EPI_PERMIT不证明后一输出的math已完成，不能据此拼出非阻塞入口。','',
+        '| cfg_b条件 | FIRST1−MAIN0 cycle，中位 [范围] | 同端点ns，中位 [范围] |',
+        '|---|---:|---:|']
+    for r in cases:
+        a=r['cycles']['first1_minus_main0'];b=r['ns']['first1_minus_main0']
+        lines.append(f'| {r["case"]} | {a["median"]} [{a["trial_min"]}, {a["trial_max"]}] | '
+            f'{b["median"]} [{b["trial_min"]}, {b["trial_max"]}] |')
+    lines+=['','每行先保留十个独立进程；这是CTA0同调用跨WG、同SM的时间差。'
+        'MAIN0晚于MMA0，因此这些差只给FIRST1−MMA0下界，负值说明重叠，不能当作负交接价格。','',
+        f'条件代数：若连续TC和commit领先分支有效、首数据已齐，且前一输出也满足M=C_last+40，'
+        f'则FIRST→commit1=1024−40−δ。δ={delta}能解释787.5，但这是解释量而非实测；还要求δ≤q−40。','',
+        '| ℓ / δ cycle | stage6 FIRST→C1 / C1→16均值 / C17→63均值 / L | stage4 L |',
+        '|---|---|---:|']
+    for r in examples:
+        a=r['comparisons'][6];fields=('first_to_commit1','average_commit1_to16','average_commit17_to63','L')
+        lines.append(f'| {r["ready_latency"]} / {r["handoff_delay"]} | '+
+            ' / '.join(f'{a[k]:.2f}' for k in fields)+f' | {r["comparisons"][4]["L"]:.2f} |')
+    lines+=['','三组均固定p=50、q=407、λ=93、g=0及原w/h/r。700是演示值，1858来自独立供给上界；'
+        '不以stage4选择ℓ。它们给出相同stage6四个观测量，却给出不同stage4响应，证明当前校准不能分开ready与交接。'
+        '三组对stage6早段的512预测仍低于522.27实测，不能称为已通过。','',
+        '下一次最小补测应在同一次调用记录前输出mma返回、后输出math等待前后、首full等待前后，'
+        '并保留局部commit进度。若增长主要在math恢复前，先解释交接段，不能直接计作ready等待；若math恢复后仍等首full，'
+        '才继续检验ready服务。全部区间仍含软件与观察开销；需与原progress和平常计时比较扰动。','']
+    (output/'B-stage-handoff.md').write_text('\n'.join(lines))
+    return report
+
+
 def admission_stage_diagnostics(output):
     """Local phase calibration and constrained transfer; never refit whole L."""
     from supply_model import admission_stage_events
@@ -3073,7 +3182,7 @@ def admission_stage_diagnostics(output):
         '必要界由 C_i≥C_(i−S+1)+ℓ+512−q+w 得到：46间隔至少包含floor(46/3)次这样的跳跃，其余间隔仅取非负。'
         '它证明表列参数即使乐观地立即释放slot也太慢；不把有限剖面冒充整个连续参数域的穷尽证明。','',
         '这版候选不进入预测。允许组内重叠修正了事件位置，但本轮所列共享ready延迟参数未能同时解释stage响应；未穷尽所有常量延迟模型。'
-        '下一步应检验ready如何随在途请求变化；可先增加逻辑服务事件而不是stage专属价格。'
+        '下一步先用[B-stage-handoff](B-stage-handoff.md)核查被省略的计算组交接，不能直接把本轮失败归因于ready队列。'
         '新候选须预先写清校准/诊断分工，保留本次失败，不能继续用stage4反选本次参数。','']
     lines+=['','新Q候选拟合前也有现成约束：若只排列本CTA请求且初态固定，'
         '首请求响应为s+ℓ+max(Qinitial−I0,0)，延后I0只能不增。739653的'

@@ -233,6 +233,7 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
             raster_pitch,stage_progress,history_series,source_pressure,mirror_history,
             base_shift,work_swap,producer_delay,first_supply,ready_observer,ready_release)):
         analyze_r13_supply.admission_stage_diagnostics(out)
+        analyze_r13_supply.stage_handoff_diagnostics(base,out)
         return
     r09_input_source_clock.response_development(base,out)
     analyze_r13_supply.finite_stage_diagnostics(base,out)
@@ -283,6 +284,7 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
         r09_input_source_clock.history_localization_diagnostics(history_series,out)
     if stage_admission:
         analyze_r13_supply.admission_stage_diagnostics(out)
+        analyze_r13_supply.stage_handoff_diagnostics(base,out)
 
 
 def main():

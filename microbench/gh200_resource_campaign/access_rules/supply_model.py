@@ -30,7 +30,7 @@ def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
 def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            commit_lead, completion_lag, *, service_cycles=512.,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
-                           return_overhead=0., reuse_delay=0.):
+                           return_overhead=0., reuse_delay=0., handoff_delay=0.):
     """Development recurrence for two pingpong outputs; not a fitted hardware rule.
 
     I is the end-of-copy-pair marker. E is cumulative TC service progress,
@@ -40,10 +40,12 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     not a hardware queue capacity. All times and overheads are caller inputs.
     Ordinary release is optimistic at wait1 return; reuse_delay separately
     represents the release-to-next-pair-issue path, not a physical latency.
+    handoff_delay is a sensitivity input from a sender's mma return to the
+    next consumer becoming available. It is not a measured barrier price.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,
-            return_overhead,reuse_delay)
+            return_overhead,reuse_delay,handoff_delay)
     if kt<2 or stages<2 or min(values)<0 or service_cycles<=0:
         raise ValueError('admission diagnostic requires Ktile/stages>=2 and nonnegative times')
     if issue_floor>service_cycles:
@@ -69,7 +71,7 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
             mma_return=returned+return_overhead
             end=max(mma_return,done[i]);released[i]=end
             returns.append(mma_return);ends.append(end)
-            next_consumer=mma_return  # Handoff precedes wait0; do not reset TC or slots.
+            next_consumer=mma_return+handoff_delay  # Do not reset TC or slots, or wait for tail.
         else:next_consumer=returned+loop_advance
     return dict(windows=[ends[j]-starts[j*kt] for j in range(2)],
         issued=issued,ready=ready,consumer_available=available,
