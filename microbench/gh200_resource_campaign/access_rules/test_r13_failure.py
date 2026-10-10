@@ -174,6 +174,101 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_ready_latency_reuse_delay_translation_leaves_internal_windows_invariant(self):
+        from supply_model import admission_stage_events
+        import random
+        rng=random.Random(739793)
+        # This is a parameter symmetry, not evidence of zero physical reuse cost.
+        # The first consumer root stays zero; its initial ready wait absorbs the shift.
+        shifted_fields=('ready','first_mma_or_commit','service_frontier','commits',
+            'completed','wait1_return','released','mma_returns','main_ends')
+        for case in range(64):
+            c=rng.uniform(1.,700.)
+            latency=rng.uniform(0.,8*c)
+            reuse=rng.uniform(0.,4*c)
+            params=dict(producer_interval=rng.uniform(0.,6*c),ready_latency=latency,
+                commit_lead=rng.uniform(0.,5*c),completion_lag=rng.uniform(0.,4*c),
+                service_cycles=c,issue_floor=rng.uniform(0.,c),
+                wait_overhead=rng.uniform(0.,3*c),loop_advance=rng.uniform(0.,3*c),
+                return_overhead=rng.uniform(0.,3*c),reuse_delay=reuse,
+                handoff_delay=rng.uniform(0.,6*c),producer_boundary_delay=rng.uniform(0.,6*c))
+            translated=dict(params,ready_latency=latency+reuse,reuse_delay=0.)
+            for stage in (4,6):
+                for prefill in (False,True):
+                    with self.subTest(case=case,stage=stage,prefill=prefill):
+                        original=admission_stage_events(64,stage,**params,second_prefill=prefill)
+                        shifted=admission_stage_events(64,stage,**translated,second_prefill=prefill)
+                        for field in ('issued','windows'):
+                            for a,b in zip(original[field],shifted[field]):
+                                self.assertAlmostEqual(a,b,delta=1e-7,msg=field)
+                        self.assertEqual(original['slot'],shifted['slot'])
+                        self.assertEqual(original['consumer_available'][0],0.)
+                        self.assertEqual(shifted['consumer_available'][0],0.)
+                        for a,b in zip(original['consumer_available'][1:],shifted['consumer_available'][1:]):
+                            self.assertAlmostEqual(b,a+reuse,delta=1e-7,msg='consumer_available')
+                        for field in shifted_fields:
+                            for a,b in zip(original[field],shifted[field]):
+                                self.assertAlmostEqual(b,a+reuse,delta=1e-7,msg=field)
+                        if prefill:
+                            first=original['second_prefill'];second=shifted['second_prefill']
+                            for key in ('begin','end'):
+                                self.assertAlmostEqual(second[key],first[key]+reuse,delta=1e-7,msg=key)
+                            self.assertEqual(first['waited_stages'],second['waited_stages'])
+                            self.assertAlmostEqual(second['end']-second['begin'],
+                                first['end']-first['begin'],delta=1e-7)
+
+    def test_wide_second_prefill_first_to_commit1_relation(self):
+        from supply_model import admission_stage_events
+        import random
+        rng=random.Random(739791)
+        # Independent endpoint equation; finite regression samples are not a proof.
+        for case in range(64):
+            c=rng.uniform(1.,700.)
+            q=rng.uniform(0.,5*c)
+            g=rng.uniform(0.,c)
+            h=rng.uniform(0.,3*c)
+            params=dict(producer_interval=rng.uniform(0.,6*c),ready_latency=rng.uniform(0.,8*c),
+                commit_lead=q,completion_lag=rng.uniform(0.,4*c),service_cycles=c,
+                issue_floor=g,wait_overhead=rng.uniform(0.,3*c),loop_advance=h,
+                return_overhead=rng.uniform(0.,3*c),reuse_delay=rng.uniform(0.,4*c),
+                handoff_delay=rng.uniform(0.,6*c),producer_boundary_delay=rng.uniform(0.,6*c))
+            G=max(g,c-q)
+            expected=max(G+h+g,max(G+h,c)+c-q)
+            for stage in (4,6):
+                with self.subTest(case=case,stage=stage):
+                    trace=admission_stage_events(64,stage,**params,second_prefill=True)
+                    actual=trace['commits'][65]-trace['first_mma_or_commit'][64]
+                    self.assertAlmostEqual(actual,expected,delta=1e-7)
+
+    def test_wide_late_window_obeys_two_step_retirement_bound(self):
+        from supply_model import admission_stage_events
+        import random
+        rng=random.Random(739792)
+        # C_i>=H_i+G, E_i-C_i>=c-G and H_i>=E_(i-2)+lag+w+h
+        # give C_i-C_(i-2)>=lag+w+h+c. The 46-interval window has 23 such steps.
+        # Sampling only protects this necessary relation against code regressions.
+        for case in range(64):
+            c=rng.uniform(1.,700.)
+            lag=rng.uniform(0.,4*c)
+            w=rng.uniform(0.,3*c)
+            h=rng.uniform(0.,3*c)
+            params=dict(producer_interval=rng.uniform(0.,6*c),ready_latency=rng.uniform(0.,8*c),
+                commit_lead=rng.uniform(0.,5*c),completion_lag=lag,service_cycles=c,
+                issue_floor=rng.uniform(0.,c),wait_overhead=w,loop_advance=h,
+                return_overhead=rng.uniform(0.,3*c),reuse_delay=rng.uniform(0.,4*c),
+                handoff_delay=rng.uniform(0.,6*c),producer_boundary_delay=rng.uniform(0.,6*c))
+            for stage in (4,6):
+                for prefill in (False,True):
+                    with self.subTest(case=case,stage=stage,prefill=prefill):
+                        trace=admission_stage_events(64,stage,**params,second_prefill=prefill)
+                        for output in (0,1):
+                            start=output*64
+                            late=trace['commits'][start+63]-trace['commits'][start+17]
+                            self.assertGreaterEqual(late+1e-7,23*(lag+w+h+c))
+                            G=max(params['issue_floor'],c-params['commit_lead'])
+                            slot_cost=params['ready_latency']+params['reuse_delay']+w+G
+                            self.assertGreaterEqual(late+1e-7,(46//(stage-1))*slot_cost)
+
     def test_second_prefill_reduced_closed_form_and_window_bound(self):
         from supply_model import admission_stage_events
         import random

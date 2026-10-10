@@ -4067,6 +4067,102 @@ def stage_output_background_diagnostics(base, output):
     return report
 
 
+def _second_prefill_wide_candidates(processes):
+    """Fit off only, then change the dependency; on observations never select parameters."""
+    from scipy.optimize import differential_evolution
+    from supply_model import admission_stage_events
+    fields=('commit1_to16','commit17_to63','first_to_commit1','full_wait_to_commit16',
+        'commit_to_wait1_16','full_wait_to_commit17','last_commit_to_mma_return')
+    observed={};initial_wait_observed=[]
+    for stage in (4,6):
+        for flag in (0,1):
+            group=[r for r in processes if r['variant']=='progress' and
+                   r['stages']==stage and r['second_prefill_flag']==flag]
+            observed[stage,flag]={f:dict(median=statistics.median(r['intervals'][f] for r in group),
+                minimum=min(r['intervals'][f] for r in group),maximum=max(r['intervals'][f] for r in group))
+                for f in fields}
+            spans=[dict(trial=r['trial'],source=r['source'],
+                cycles=r['clocks']['first_mma']-r['second_prefill']['end_c']) for r in group]
+            initial_wait_observed.append(dict(stages=stage,second_prefill=flag,processes=spans,
+                median=statistics.median(r['cycles'] for r in spans),minimum=min(r['cycles'] for r in spans),
+                maximum=max(r['cycles'] for r in spans)))
+    target=np.array([observed[stage,0][f]['median'] for stage in (4,6) for f in fields])
+    names=('producer_interval','ready_latency','commit_lead','completion_lag','issue_floor',
+        'wait_overhead','return_overhead','handoff_delay')
+    upper=np.array([2048.,12288.,4096.,4096.,512.,49.,53.,4096.])
+    # c is a declared nominal condition. h is this protocol's observed loop path,
+    # not an assumed physical instruction latency transferable to plain.
+    def parameters(x):return dict(zip(names,map(float,x)),reuse_delay=0.,service_cycles=512.,loop_advance=89.)
+    def evaluate(x,stage,flag):
+        t=admission_stage_events(64,stage,**parameters(x),second_prefill=bool(flag))
+        C=t['commits'];W=t['wait1_return'];B=t['first_mma_or_commit'];H=t['consumer_available']
+        M=t['mma_returns'][1]
+        values=[C[80]-C[65],C[127]-C[81],C[65]-B[64],C[80]-H[80],
+                W[80]-C[80],C[81]-H[81],M-C[127]]
+        prefill=t.get('second_prefill',{})
+        return np.array(values),dict(prefill_wait_cycles=prefill.get('end',0)-prefill.get('begin',0),
+            initial_ready_wait_cycles=B[64]-H[64],
+            post_cycles=M-C[80],second_mma_return_cycles=M,
+            previous_tail_minus_consumer_entry_cycles=t['main_ends'][0]-H[64])
+    fits=[]
+    for name,indices in [('omit_local_waits',[0,1,2,4,6,7,8,9,11,13]),('all_local_windows',list(range(14)))]:
+        indices=np.array(indices)
+        def residual(y):
+            pred=np.concatenate([evaluate(y*upper,stage,0)[0] for stage in (4,6)])
+            return ((pred-target)/target)[indices]
+        global_fit=differential_evolution(lambda y:float(residual(y)@residual(y)),
+            [(0.,1.)]*len(names),popsize=10,maxiter=80,tol=1e-8,polish=False,seed=739790)
+        # Retain a rounded off-only broad-branch starting point as well as the
+        # global search result; removing the ell/a null direction must not lose it.
+        starts=[global_fit.x,np.array([584.,1445.,384.,99.,283.,48.,5.,3858.])/upper]
+        local_fits=[least_squares(residual,initial,bounds=(np.zeros(len(names)),np.ones(len(names))),
+            max_nfev=500,ftol=1e-10,xtol=1e-10,gtol=1e-10,diff_step=1e-5) for initial in starts]
+        fit=min(local_fits,key=lambda f:float(f.fun@f.fun))
+        x=fit.x*upper;rows=[]
+        for stage in (4,6):
+            for flag in (0,1):
+                values,extra=evaluate(x,stage,flag)
+                rows.append(dict(stages=stage,second_prefill=flag,**extra,
+                    windows={f:dict(predicted_cycles=float(v),observed_cycles=observed[stage,flag][f],
+                        relative_error=float(v/observed[stage,flag][f]['median']-1)) for f,v in zip(fields,values)}))
+        fits.append(dict(objective=name,parameters=parameters(x),calibration_indices=indices.tolist(),
+            calibration_relative_rms=float(np.sqrt(np.mean(fit.fun**2))),
+            calibration_max_absolute_relative=float(np.max(np.abs(fit.fun))),
+            calibration_relative_residual=fit.fun.tolist(),global_nfev=global_fit.nfev,
+            off_only_starts=[(v*upper).tolist() for v in starts],
+            off_only_local_losses=[float(v.fun@v.fun) for v in local_fits],
+            global_status=global_fit.message,local_nfev=fit.nfev,local_status=fit.message,rows=rows))
+    # Profile the first off fit without selecting delta on the on observations.
+    original=np.array([fits[0]['parameters'][name] for name in names])
+    selected=np.array(fits[0]['calibration_indices'])
+    baseline=np.concatenate([evaluate(original,stage,0)[0] for stage in (4,6)])
+    handoff_profile=[]
+    for delta in (0.,128.,256.,512.,1024.,2048.,4096.):
+        x=original.copy();x[-1]=delta;pred=[];rows=[]
+        for stage in (4,6):
+            off,off_extra=evaluate(x,stage,0);on,on_extra=evaluate(x,stage,1);pred.extend(off)
+            rows.append(dict(stages=stage,prefill_wait_cycles=on_extra['prefill_wait_cycles'],
+                early_change_cycles=float(on[0]-off[0]),post_change_cycles=on_extra['post_cycles']-off_extra['post_cycles']))
+        pred=np.array(pred)
+        handoff_profile.append(dict(handoff_delay=delta,rows=rows,
+            calibration_rms=float(np.sqrt(np.mean(((pred-target)/target)[selected]**2))),
+            max_calibration_change_cycles=float(np.max(np.abs(pred-baseline)[selected]))))
+    return dict(fields=list(fields),calibration_target_cycles=target.tolist(),fits=fits,handoff_profile=handoff_profile,
+        initial_wait_observed=initial_wait_observed,
+        parameterization="u=ell+a is represented by ready_latency=u, reuse_delay=0; this is a coordinate choice, not a physical zero reuse cost.",
+        search_upper=dict(zip(names,upper.tolist())),seed=739790,
+        necessary_median_conditions=dict(q_lower=371.5,g_upper=281.75,w_upper=49.,
+            w_plus_r_upper=53.,lambda_plus_w_upper=23587/23-89-512,u_plus_w_plus_G_upper=28423.5/15),
+        scope='Finite-box off-only development fits; on is a mechanism comparison, not an independent validation.',
+        limitations=['No on observations, readiness, entry or E0 times enter either fitting objective or select its result.',
+            'Eight coordinates are shared across stages and treatments after removing the exact ell/a translation freedom. c=512 and h=89 are explicit conditional mapping choices.',
+            'w<=49 and r<=53 follow the off local windows in the exact mapping; other finite search bounds are numerical choices, not measured hardware limits.',
+            'Individual medians need not form one real invocation. Ranges are retained; neither they nor the relative objective define a confidence interval.',
+            'Failure of a numerical search is not proof that the wide family is infeasible. Flat or weakly identified parameters are not physical prices.',
+            'The modeled prefill begin is consumer availability, not exactly the software prefill timestamp; gate instruction and marker costs are not modeled.',
+            'Second mma return and post windows are local endpoints, not complete kernel time. Frequency is not fitted.'])
+
+
 def stage_second_prefill_diagnostics(root, output):
     """Same-stage joint initial-state intervention; no fitting or cross-stage residual."""
     import gzip
@@ -4264,6 +4360,7 @@ def stage_second_prefill_diagnostics(root, output):
             'Background is the simple sum of clipped other-131-CTA E0 intervals and the number overlapping; it is not a union, queue size, physical bandwidth or causal attribution.',
             'Primary effects are same-stage on/off paired by trial, which are separate processes. No address/warmup subset or sample is selected for a better result.',
             'Whole progress/plain perturbation does not bound local observer cost. Raw stage4-stage6 differences are not model failure excess; no fitting or validation score is performed.'])
+    report['wide_constant_candidates']=_second_prefill_wide_candidates(processes)
     output.mkdir(parents=True,exist_ok=True)
     (output/'B-second-prefill.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     def cell(v,digits=1):return f'{v["median"]:.{digits}f} [{v["trial_min"]:.{digits}f},{v["trial_max"]:.{digits}f}]'
@@ -4321,6 +4418,59 @@ def stage_second_prefill_diagnostics(root, output):
         '此结果排除“全预填后沿恒定reduced复用关系推进”的完整解释，不能扩大到任意恒定成本模型。'
         '放开p≤c等限制可给出违反该界的模型轨迹，但仍须同时解释stage6及各局部端点。'
         '下一步需区分更宽的指令推进关系、后续ready变化和共享背景响应；不从此表直接拟合分段价格。','']
+    lines+=['## 更宽的共同参数：仅用关闭处理拟合','',
+        '保留宽提交/退休分支，名义c=512、观察路径h=89。内部窗口只能辨识u=ℓ+a：将(ℓ,a)改成(ℓ+a,0)后，issue时刻不变，其余阶段整体平移a，内部时差与预等成本不变。故只拟合八个共同坐标；a=0是参数化选择，不是物理结论。'
+        '第一目标省略H16→C16和H17→C17，其余十个窗口等相对权重；第二目标同时纳入这四项，共十四个窗口。'
+        '只读取off中位量定值，再原样开启预等。M→MAIN与本CTA输出重叠，未作为局部退休训练量。'
+        '两次均采用固定seed的有限box搜索和局部修正，不把未找到更好解当全族反证。','',
+        '| off拟合目标 | off相对RMS / 最大误差 | stage4 on early预测 / 观测cycle | stage4 on late46预测 / 观测cycle | stage6 on late46预测 / 观测cycle |',
+        '|---|---:|---:|---:|---:|']
+    for fit in report['wide_constant_candidates']['fits']:
+        by={(r['stages'],r['second_prefill']):r for r in fit['rows']}
+        columns=[]
+        for stage,field in ((4,'commit1_to16'),(4,'commit17_to63'),(6,'commit17_to63')):
+            v=by[stage,1]['windows'][field]
+            columns.append(f'{v["predicted_cycles"]:.1f} / {v["observed_cycles"]["median"]:.1f}')
+        lines.append(f'| {fit["objective"]} | {100*fit["calibration_relative_rms"]:.2f}% / '
+            f'{100*fit["calibration_max_absolute_relative"]:.2f}% | '+' | '.join(columns)+' |')
+    lines+=['','| 候选 | stage4 off两处遗漏窗口误差 | stage4/6模型预等cycle | stage4/6 early开关变化cycle |',
+        '|---|---:|---:|---:|']
+    for fit in report['wide_constant_candidates']['fits']:
+        by={(r['stages'],r['second_prefill']):r for r in fit['rows']}
+        missing=[100*by[4,0]['windows'][f]['relative_error'] for f in ('full_wait_to_commit16','full_wait_to_commit17')]
+        waits=[by[stage,1]['prefill_wait_cycles'] for stage in (4,6)]
+        effects=[by[stage,1]['windows']['commit1_to16']['predicted_cycles']-
+                 by[stage,0]['windows']['commit1_to16']['predicted_cycles'] for stage in (4,6)]
+        lines.append(f'| {fit["objective"]} | {missing[0]:+.2f}% / {missing[1]:+.2f}% | '
+            f'{waits[0]:.1f} / {waits[1]:.1f} | {effects[0]:+.1f} / {effects[1]:+.1f} |')
+    lines+=['','实际两stage新增预等中位约1764/1863.5cycle，stage4 early配对中位−1317cycle。'
+        '模型入口与软件预等标记有位置差，相减也未消除S次检查的成本；等待精确残差不能独自判资源模型失败。'
+        '但窗口拟合接近并不能替代局部端点和处理响应。','',
+        '| 仅改变第一组解的交接δ cycle | off训练RMS | 相对原解的最大训练窗口变化cycle | stage4/6预等cycle | stage4/6 early开关变化cycle |',
+        '|---|---:|---:|---:|---:|']
+    for r in report['wide_constant_candidates']['handoff_profile']:
+        a,b=r['rows']
+        lines.append(f'| {r["handoff_delay"]:.0f} | {100*r["calibration_rms"]:.3f}% | '
+            f'{r["max_calibration_change_cycles"]:.3f} | {a["prefill_wait_cycles"]:.1f} / {b["prefill_wait_cycles"]:.1f} | '
+            f'{a["early_change_cycles"]:+.1f} / {b["early_change_cycles"]:+.1f} |')
+    lines+=['','同一消费者还有未参与以上拟合的预等结束→FIRST端点：','',
+        '| stage | off cycle，中位[范围] | on cycle，中位[范围] |', '|---|---:|---:|']
+    initial={(r['stages'],r['second_prefill']):r for r in report['wide_constant_candidates']['initial_wait_observed']}
+    for stage in (4,6):
+        a,b=(initial[stage,flag] for flag in (0,1))
+        lines.append(f'| {stage} | {a["median"]:.1f} [{a["minimum"]},{a["maximum"]}] | '
+            f'{b["median"]:.1f} [{b["minimum"]},{b["maximum"]}] |')
+    lines+=['','它包含prologue检查、full等待返回与标记成本，尚未单独识别ready延迟；'
+        '不能把on约110cycle直接用作off拟合常数。现有两组解的理想初始ready等待均为0，'
+        '下一轮应先明确这段的观察映射，再用off端点约束入口；无需为获取这段另加探针。']
+    lines+=['','七个δ全部保留，不按on残差挑选。若off训练窗口保持不变而模型预等改变，'
+        '该坐标方向便没有被这些训练量唯一确定；它不是物理交接延迟的测量。','',
+        'off中位量还给出必要条件q≥371.5、g≤281.75、w≤49、w+r≤53及λ+w≤424.522、u+w+G≤1894.9，'
+        '均以恒定路径映射与c=512为条件。退休界来自C_i≥C_(i−2)+λ+w+h+c，'
+        '将17→63的23个两步相加；slot界则来自C_j≥C_(j−S+1)+u+w+G。这两项不要求lead分支。中位拟合有非零残差时，不要求数值解精确落入这些等式目标的必要域。'
+        '全预填后的FIRST→C1另应等于max(G+h+g,max(G+h,c)+c−q)，G=max(g,c−q)，供给参数不能修补这个窗口。','',
+        '因此本轮不采用宽参数拟合，也不新增stage专属常数。下一步应先约束交接初态与非均匀观察路径，'
+        '再检验后续ready是否需要共享状态；参数不可辨识、观察路径失配和模型结构矛盾仍分列。','']
     (output/'B-second-prefill.md').write_text('\n'.join(lines))
     return report
 
