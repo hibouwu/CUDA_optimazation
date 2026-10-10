@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。新背景配对固定CTA0本地处理，延后其它CTA输出使stage4早段10/10缩短，但后段变长、plain未改善。原固定复用子类在同批的early中位缺口由1503降至179 cycle；后者落在逐进程波动内，未严格排除，也未证明全部分项可由一组参数解释。局部服务要考虑全卡组织；处理同时改变其它CTA输入进度，不能按输出面积或early单独加价。既有边界间隙及宽分支结论仍限定于各自假设，详见下文。
+当前条件供给尚未通过V09的行距与stage迁移。新背景配对固定CTA0本地处理，延后其它CTA输出使stage4早段10/10缩短，但后段变长、plain未改善。延后的E0进入C16→M，不能把整个flag2主循环当作无输出背景。固定两个无E0覆盖窗口定条件c/T后，stage4 flag2 early/late仍在包络之外365/293 cycle；这是局部子类的开发迁移诊断，不是完整模型评分或严格排除。局部服务要考虑全卡组织；处理同时改变其它CTA输入进度，不能按输出面积或early单独加价。既有边界间隙及宽分支结论仍限定于各自假设，详见下文。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -26,9 +26,31 @@
 | 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
 | 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
 | 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
+| 背景基线，离线 | 区分早/后段输出相位；仅两个无E0覆盖窗口约束c/T，固定后迁移 | [条件范围与未定项](#stage-background-baseline)、[逐进程包络](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
+
+<a id="stage-background-baseline"></a>
+
+## 没有E0覆盖的窗口能约束什么？
+
+739740的stage6 flag2 early直接ns窗口没有其它E0；stage4 flag1整个C16→M也无其它E0，所以其中的C17→C63可作另一校准窗口。这里只排除了已记录输出覆盖，没有排除共享输入、此前状态或观察路径。
+
+以stage6 early15中位7684定条件`c=512.2667`，用stage4 late46中位27537及原有限窗口关系`c+15T ≤ D46 ≤ 16T−2c`，得到 **T∈[1785.10,1801.65] cycle**。T是`ℓ+a+c−q+w`的有效组合，不分别识别请求服务、释放路径或提交领先量。以下保持同一c/T，不再按处理重校准：
+
+| 开发迁移窗口 | 条件包络 cycle | 实测中位 | 超出上限 |
+|---|---:|---:|---:|
+| stage4 flag1 early15 | 7684～9008.24 | 10511 | 1502.76 |
+| stage4 flag2 early15 | 7684～9008.24 | 9373.5 | 365.26 |
+| stage4 flag2 late46 | 27288.70～27801.85 | 28095 | 293.15 |
+| stage6 flag2 late46 | 23564.27 | 23587 | 22.73 |
+
+条件包络沿用原reduced/default-inheritance的全部假设，早段上界还要求默认继承状态；不是置信区间或任意模型的极限。每进程散布保留在[分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md)。改用nominal c=512时，两个stage4上限仅变化0.09/0.82cycle，不解释上述中位残差。
+
+局部打点不适合直接反解所有参数：stage6 flag2的C16→C17为534/535，约比其early平均间隔多22cycle；W16−C16约49、C63→M为57，不能沿用旧协议43/10，也不能把被选中的单步开销应用于每次迭代。M→MAIN还与本CTA E0重叠约339cycle，不能拟成单一退休延迟λ。FIRST→C1混有继承的服务状态，q与ready时间仍不可分。
+
+下一候选须保留有限slot和共享请求的前驱关系，并自己生成输出相位；实测E0时刻只能用于诊断。这里不拼入观测FIRST/尾段构造完整L，不加入early专属常数。
 
 ## 序列供给：消费者与在途组织会改变结果
 

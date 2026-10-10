@@ -3849,15 +3849,19 @@ def stage_output_background_diagnostics(base, output):
                 if len(direct)!=132 or p['work']!=[11,0] or p['sender_work']!=[0,0]:
                     raise ValueError('background CTA/work geometry changed')
                 intervals=_stage_progress_intervals(dict(clocks=p['clocks']))
+                intervals['commit16_to_mma_return']=p['clocks']['mma_return']-p['clocks']['commit16']
                 intervals.update({k:p['intervals'][k] for k in
                     ('sender_epilogue','epilogue_overlap_L','epilogue_overlap_early')})
                 ordered=sum(x['epi_begin_ns']>=x['mma_return_ns'] for x in direct)
                 if row['epilogue_defer']==2 and ordered!=132:raise ValueError('all-CTA E0 order was not established')
+                mma_ns=direct[0]['mma_return_ns']
                 entry.update(cta=0,sm=p['sm'],work=p['work'],sender_work=p['sender_work'],
-                    clocks=p['clocks'],intervals=intervals,early_ns=[begin,end],early_duration_ns=end-begin,
+                    clocks=p['clocks'],intervals=intervals,early_ns=[begin,end],early_duration_ns=end-begin,post_early_ns=[end,mma_ns],post_early_duration_ns=mma_ns-end,
                     early_frequency_ghz=intervals['commit1_to16']/(end-begin),
                     direct_ns_background=direct,ordered_ctas=ordered,
-                    other_E0_early=overlap(direct[1:],begin,end),own_E0_early=overlap(direct[:1],begin,end))
+                    other_E0_early=overlap(direct[1:],begin,end),own_E0_early=overlap(direct[:1],begin,end),
+                    other_E0_post_early=overlap(direct[1:],end,mma_ns),
+                    own_E0_post_early=overlap(direct[:1],end,mma_ns))
             grouped[variant][record['trial']]=entry;processes.append(entry)
         if any(set(v)!=set(range(10)) for v in grouped.values()):
             raise ValueError(name+': ten independent processes per variant required')
@@ -3871,6 +3875,8 @@ def stage_output_background_diagnostics(base, output):
                 elapsed_us={v:span(p['elapsed_us'] for p in group[v].values()) for v in ('plain','progress')},
                 early_duration_ns=span(p['early_duration_ns'] for p in progress),
                 early_frequency_ghz=span(p['early_frequency_ghz'] for p in progress),
+                post_early_duration_ns=span(p['post_early_duration_ns'] for p in progress),
+                other_E0_post_early={k:span(p['other_E0_post_early'][k] for p in progress) for k in progress[0]['other_E0_post_early']},
                 intervals={k:span(p['intervals'][k] for p in progress) for k in progress[0]['intervals']},
                 ordered_ctas=span(p['ordered_ctas'] for p in progress),
                 other_E0_early={k:span(p['other_E0_early'][k] for p in progress) for k in progress[0]['other_E0_early']}))
@@ -3891,6 +3897,7 @@ def stage_output_background_diagnostics(base, output):
                 if variant=='progress':
                     pair.update(flag1_sm=x['sm'],flag2_sm=y['sm'],early_delta_ns=y['early_duration_ns']-x['early_duration_ns'],
                         early_frequency_relative=y['early_frequency_ghz']/x['early_frequency_ghz']-1,
+                        post_early_delta_ns=y['post_early_duration_ns']-x['post_early_duration_ns'],
                         delta_cycles={k:y['intervals'][k]-x['intervals'][k] for k in x['intervals']},
                         delta_background={k:y['other_E0_early'][k]-x['other_E0_early'][k] for k in x['other_E0_early']})
                 pairs.append(pair)
@@ -3899,6 +3906,7 @@ def stage_output_background_diagnostics(base, output):
             if variant=='progress':
                 summary.update(early_delta_ns=span(p['early_delta_ns'] for p in pairs),
                     early_frequency_relative=span(p['early_frequency_relative'] for p in pairs),
+                    post_early_delta_ns=span(p['post_early_delta_ns'] for p in pairs),
                     delta_cycles={k:span(p['delta_cycles'][k] for p in pairs) for k in pairs[0]['delta_cycles']},
                     delta_background={k:span(p['delta_background'][k] for p in pairs) for k in pairs[0]['delta_background']})
             treatment.append(summary)
@@ -3970,7 +3978,7 @@ def stage_output_background_diagnostics(base, output):
             root/'build/resources.json',root/'build/sass_hashes.json',old/'cases.json',old/'static_setup.json',
             old/'source_hashes.json',old/'build/binary_hashes.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
         hashes[str(path)]=common.sha(path)
-    report=dict(root=str(root),scope='Same-call direct cycle/ns early windows; flag2 minus flag1, no fitted prices.',
+    report=dict(root=str(root),scope='Same-call direct cycle/ns early and C16-to-M windows; flag2 minus flag1, no fitted prices.',
         contexts={name:dict(row=row,setup=setups[name]) for name,row in rows.items()},processes=processes,timing=timing,
         all_minus_cta0=treatment,progress_minus_plain=observer,failed_attempts=failures,input_sha256=hashes,
         paired_diagnostic_subsets=paired_subsets,full_inheritance_early_bounds=early_bounds,
@@ -3979,6 +3987,7 @@ def stage_output_background_diagnostics(base, output):
         reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in {p['case'] for p in refs}},
         resources=read_json(root/'build/resources.json'),
         limitations=['Flag2 also changes other CTAs input-request organization and execution overlap; it does not isolate an output physical resource.',
+            'Flag2 removes other E0 from early only; its C16-to-mma-return window can contain delayed other-CTA E0 and is not a clean steady-state baseline.',
             'Early cycle and ns endpoints belong to the same invocation. Old dual/progress records are not spliced in.',
             'E0 DONE denotes the source-reuse/store-tail boundary, not proof of global D visibility.',
             'Trial pairs are separate processes; virtual address equality is not proof of equal physical mappings.',
@@ -4000,6 +4009,19 @@ def stage_output_background_diagnostics(base, output):
         cells=[cell(v['commit1_to16']),cell(t['early_duration_ns']),cell(v['commit17_to63']),cell(v['L']),
             cell(bg['mean_active']),cell(bg['union_fraction']),cell(bg['peak_active']),cell(t['ordered_ctas'])]
         lines.append(f'| {t["stages"]} / {t["epilogue_defer"]} | '+' | '.join(cells)+' |')
+    lines+=['','| stage / flag | C16→M cycle | C16→M ns | 其它E0重叠CTA数 | 平均并发 | 无其它E0重叠进程数 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for t in timing:
+        background=t['other_E0_post_early']
+        group=calls[keys[t['stages'],t['epilogue_defer']]]['progress']
+        clean=sum(p['other_E0_post_early']['overlapping_ctas']==0 for p in group.values())
+        lines.append(f'| {t["stages"]} / {t["epilogue_defer"]} | '
+            f'{cell(t["intervals"]["commit16_to_mma_return"])} | {cell(t["post_early_duration_ns"])} | '
+            f'{cell(background["overlapping_ctas"])} | {cell(background["mean_active"])} | {clean}/10 |')
+    lines+=['','M为CTA0第二WG的mma返回；C16和M的cycle与ns都来自本调用。'
+        '该窗口包含C16→C17、C17→C63、C63→M，不能冒充纯late C17→C63。'
+        'flag2的early没有其它E0，不代表其后段也没有：延后的E0会进入C16→M，'
+        '所以不能用flag2后段直接标定无输出背景服务率。重叠是执行上下文，不证明增长全部来自物理输出竞争。']
     lines+=['','| flag2−flag1 | early cycle | early ns | late cycle | L cycle | FIRST→C1 cycle | M→MAIN cycle | 整调用µs |',
         '|---|---:|---:|---:|---:|---:|---:|---:|']
     for t in treatment:
@@ -4042,6 +4064,104 @@ def stage_output_background_diagnostics(base, output):
         'flag2不仅移动其它CTA的输出，也改变它们的输入请求组织和执行重叠。即使CTA0 early变化，'
         '也不能唯一归因于输出端口或某个共享物理资源；这里不拟合E0/early价格，也不更新冻结验证成绩。','']
     (output/'B-stage-background.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_background_baseline_diagnostics(output):
+    """Conditional commit-window baseline; never fit tail timestamps as retire latency."""
+    from supply_model import stage_reuse_window
+    import v06_run as common
+    output=Path(output);source=output/'B-stage-background.json';data=read_json(source)
+    rows=[p for p in data['processes'] if p['variant']=='progress']
+    def group(stage,flag):return [p for p in rows if (p['stages'],p['epilogue_defer'])==(stage,flag)]
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+    def distance(value,limits):return max(limits[0]-value,value-limits[1],0.)
+    early6=group(6,2);late4=group(4,1)
+    if any(p['other_E0_early']['overlapping_ctas'] for p in early6):
+        raise ValueError('selected stage6 early calibration has other E0 overlap')
+    if any(p['other_E0_post_early']['overlapping_ctas'] for p in late4):
+        raise ValueError('selected stage4 late calibration has other E0 overlap')
+    observed_early=statistics.median(p['intervals']['commit1_to16'] for p in early6)
+    observed_late=statistics.median(p['intervals']['commit17_to63'] for p in late4)
+    calibrations=[]
+    for label,c in [('early_compute_branch',observed_early/15),('nominal_512_sensitivity',512.)]:
+        # T=Z+w is identifiable only through the finite-window envelope.
+        # D46=46c+k*(T-3c), k in [15,16], in the stage4 reuse-limited branch.
+        excess=observed_late-46*c
+        if excess<=0:raise ValueError('selected stage4 late is not reuse limited in this subclass')
+        T=[3*c+excess/16,3*c+excess/15]
+        comparisons=[]
+        for stage in (4,6):
+            for flag in (1,2):
+                processes=group(stage,flag)
+                for field,n in [('commit1_to16',15),('commit17_to63',46),('commit16_to17',1)]:
+                    lower,upper=(stage_reuse_window(n,stage,c,t)[i] for i,t in enumerate(T))
+                    # At early C1 the ordinary internal recurrence is invalid.
+                    # The declared complete/default inheritance gives only this
+                    # upper bound plus the per-commit compute lower bound.
+                    if field=='commit1_to16':lower=n*c
+                    actual=span(p['intervals'][field] for p in processes)
+                    comparisons.append(dict(stages=stage,epilogue_defer=flag,field=field,
+                        calibration=(stage,flag,field) in ((6,2,'commit1_to16'),(4,1,'commit17_to63')),
+                        envelope=[lower,upper],observed=actual,
+                        median_distance=distance(actual['median'],[lower,upper]),
+                        processes=[dict(trial=p['trial'],source=p['source'],source_sha256=p['source_sha256'],
+                            cycles=p['intervals'][field],distance=distance(p['intervals'][field],[lower,upper])) for p in processes]))
+        calibrations.append(dict(name=label,service_cycles=c,T_interval=T,comparisons=comparisons))
+    local=[]
+    for stage in (4,6):
+        for flag in (1,2):
+            processes=group(stage,flag)
+            local.append(dict(stages=stage,epilogue_defer=flag,
+                sampled_wait16=span(p['intervals']['commit_to_wait1_16'] for p in processes),
+                sampled_advance16=span(p['intervals']['loop_advance_16_to17'] for p in processes),
+                commit63_to_M=span(p['intervals']['last_commit_to_mma_return'] for p in processes),
+                adjacent_minus_c=span(p['intervals']['commit16_to17']-observed_early/15 for p in processes),
+                own_E0_overlap_tail=span(p['intervals']['epilogue_overlap_L'] for p in processes)))
+    report=dict(scope='Development envelope of selected commit windows, not a complete mainloop predictor or a new heldout score.',
+        calibration_fields=['stage6 flag2 C1-to-C16 median / 15 fixes c conditionally on compute limitation',
+            'stage4 flag1 C17-to-C63 median constrains T=ell+a+c-q+w through the 46-interval envelope'],
+        calibrations=calibrations,local_protocol=local,
+        assumptions=['The reduced recurrence requires p<=c, g<=c-q, q+lambda<=c and q>=w+h.',
+            'The early upper bound also assumes default inherited first-output state and q>=w+r+handoff_delay.',
+            'Calibration windows have no observed other-E0 overlap. Shared input demand, preceding state and observation overhead still exist.',
+            'Condition medians are representatives, not endpoints spliced into a real invocation or a joint parameter confidence set.',
+            'T is a composite effective reuse cost; ell/a/q/w are not individually inferred.',
+            'The c=512 alternative is a stated sensitivity, not selected by transfer error.'],
+        limitations=['Flag2 post-early includes delayed other-CTA E0; its late median cannot be called a no-output baseline.',
+            'The sampled C16-to-C17 path differs from most iterations. Its extra cycles are not a new hardware q/w price.',
+            'M-to-MAIN contains own E0 overlap and software return/release paths; do not equate it with completion_lag.',
+            'The baseline does not predict FIRST, inherited input readiness or output. No whole-L prediction is assembled from observed pieces.',
+            'No parameters from this diagnostic enter the frozen V09 predictor.'],
+        input_sha256={str(p):common.sha(p) for p in (source,Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-stage-baseline.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    main=calibrations[0]
+    lines=['# 有限槽基线：限定校准窗口后的迁移检验','',
+        '只用stage6 flag2早段的15个间隔定条件c，用stage4 flag1后段46个间隔约束T=Z+w。'
+        '这两个窗口没有观测到其它E0重叠，但不是无共享输入请求、无历史状态或无观察扰动的硬件基准。'
+        'flag2的后段包含延后输出，不能作为清洁校准。','',
+        f'条件c={main["service_cycles"]:.6f}，T∈[{main["T_interval"][0]:.6f},{main["T_interval"][1]:.6f}] cycle。'
+        'T仅是有效复用组合，没有分开识别ready服务、release路径或提交领先量。',
+        '后段按nc+floor(n/(S−1))R到nc+ceil(n/(S−1))R，R=max(0,T−(S−1)c)；'
+        '早段另沿完整默认继承状态的上界，不能用普通位置递推越过输出边界。','',
+        '| stage / flag | 窗口 | 观测中位 | 条件包络 | 包络外距离 | 用途 |','|---|---|---:|---:|---:|---|']
+    for row in main['comparisons']:
+        if row['field']=='commit16_to17':continue
+        lo,hi=row['envelope']
+        lines.append(f'| {row["stages"]} / {row["epilogue_defer"]} | {row["field"]} | {row["observed"]["median"]:.2f} | '
+            f'[{lo:.2f},{hi:.2f}] | {row["median_distance"]:.2f} | {"校准" if row["calibration"] else "开发迁移"} |')
+    lines+=['','不是完整模型通过/未通过的判定：默认继承、固定内部成本等前提仍需满足；'
+        '原始进程范围和每进程偏差保留在JSON，不能把中央包络当成置信区间。'
+        '另列c=512的敏感性结果，不按迁移误差反选c。','',
+        'stage6 flag2的局部C16→C17是534/535cycle，而早段15个间隔中位为7684cycle；'
+        '新协议的W16−C16约49cycle、C63→M为57cycle。局部打点路径不是每轮相同开销，'
+        '不能由这里精确反解q或把49作为全部迭代的w。MAIN尾还与本CTA E0重叠约339cycle，'
+        '不能将其约580cycle末窗直接拟成退休延迟λ。','',
+        '该基线只保留为commit窗口的条件约束。完整预测仍缺可由静态执行组织推导的输入前驱状态、'
+        '背景相位及输出/返回路径；不补stage专属常数，也不以拼入观测FIRST或尾段构造一个看似准确的L。','']
+    (output/'B-stage-baseline.md').write_text('\n'.join(lines))
     return report
 
 

@@ -7,6 +7,8 @@
 
 ## 要预测哪个输出窗口？
 
+当前cfg_b的实际epilogue tile是`64×32`，完整`128×128` float输出分8个8KiB子tile；源码选择`StagesD=2`、`DelayTmaStore=true`、`ReuseSmemC=false`。准备当前子tile时延迟提交前一个，逐次fence/sync、TMA commit和源buffer acquire，最后再排空。组合模型必须保留这条双缓冲链；总E0不是一笔64KiB传输，除以8也不能得到独立子tile服务价。静态配置见[本批setup](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-output-background/static_setup.json)。
+
 cooperative在两consumer的`mma_tail → MAIN_END → PERMIT → store() → DONE`之后，最终还执行`store_tail → final`。role2/thread256为TMA issuer，`store()`内部包括寄存器/SMEM准备、fence、同步、TMA提交与等待；PERMIT不是首条TMA发出时刻。
 
 同CTA、同tile的两角色事件记为m1/m2、p1/p2、d1/d2：
@@ -87,6 +89,19 @@ flag1每次只有CTA0满足延后顺序；flag2全部132 CTA满足，20个progre
 暖机次数相同的stage4九对仍9/9缩短，中位−930 cycle/−512 ns；同VA四对为−869 cycle/−480 ns。每调用先用early cycle除以对应直接ns，再做处理配对，比率中位仅−0.31%，不足以将early变化归为提频。两个读时钟指令仍有先后，不能把该比率当作精确硬件频率。
 
 原[R13共同复用子类](R13-async-retirement.md#stage-reuse)用每种处理自身的两stage后段约束early：flag1中位上界9007.95、实测10511，缺1503.05 cycle；flag2上界9194.08、实测9373.5，缺179.42。逐进程分别代入自身late时，flag2差值范围−225～709，8正2负；中央179不是严格排除，也没有证明全部分项已被同一组参数解释。它只把下一步离线检验范围收紧到无E0背景的有限slot基线及其背景迁移。
+
+延后的输出并没有消失，而是进入了后段。使用同调用C16和M的直接ns，不插值C17/C63，得到：
+
+| C16→M窗口，进程中位 | stage4 flag1→2 | stage6 flag1→2 |
+|---|---:|---:|
+| 其它E0参与CTA数 | 0→60 | 8.5→60 |
+| 其它E0平均并发数 | 0→1.94 | 0.058→1.30 |
+| 完全没有其它E0的进程数 | 10/10→0/10 | 2/10→0/10 |
+| 配对周期变化 | +268 [76,1614] | −18.5 [−325,468] |
+
+C16→M包含相邻间隔、后46间隔及最终返回，不等于单独C17→C63。stage4在这个完整窗口10/10变长；它与早段10/10缩短同时发生。不能把flag2的两stage后段都当作无输出背景，用其重新拟合后再将179cycle称为固定基线的迁移成绩。重叠转移解释了需要检查的执行上下文，仍不证明所有变化都是物理输出竞争。
+
+[固定校准窗口检验](R13-async-retirement.md#stage-background-baseline)改用stage6 flag2 early及stage4 flag1 late，这两个实际窗口均无已记录E0覆盖。条件c/T固定后，stage4 flag2 early距包络上限365.26cycle，late距上限293.15cycle。它约束后续共享服务候选，没有形成完整L预测。
 
 **支持的范围是全卡组织参与局部服务。** 仅依赖CTA0固定几何、本地处理和stage的独立服务规则不充分。flag2也会改变其它CTA的输入请求进度，新增等待影响其调度，因而尚不能唯一定位输出物理资源，更不能按E0重叠面积加价。E0截止仍是store-tail源复用边界。
 

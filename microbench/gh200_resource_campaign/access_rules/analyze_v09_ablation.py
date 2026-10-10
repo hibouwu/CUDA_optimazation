@@ -322,8 +322,9 @@ def main():
                 args.epilogue_order,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,
                 args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)):
             parser.error('--output-background is an independent replay; run other diagnostics separately')
-        from analyze_r13_supply import stage_output_background_diagnostics
+        from analyze_r13_supply import stage_output_background_diagnostics, stage_background_baseline_diagnostics
         stage_output_background_diagnostics(args.output_background.resolve(),out)
+        stage_background_baseline_diagnostics(out)
         return
     if args.epilogue_order is not None:
         if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,
