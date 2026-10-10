@@ -4448,6 +4448,42 @@ def shared_stage_service_diagnostics(output):
             'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
             'build/cfg_b_stamped.sass','build/cfg_b_s4_stamped.sass'):
         path=issue_root/relative;issue_hashes[str(path)]=common.sha(path)
+    # An order invariant rules out parameter-only repair of the homogeneous graph.
+    # Pair counts describe each call; they are not independent statistical samples.
+    reversals=[];flag2_order=[];order_summary=[]
+    for process in formation['processes']:
+        ctas=process['ctas'];count=0;witness=None
+        for a in ctas:
+            for b in ctas:
+                first_delta=b['tiles_ns'][0][0]-a['tiles_ns'][0][0]
+                final_delta=a['tiles_ns'][1][1]-b['tiles_ns'][1][1]
+                if first_delta<=32 or final_delta<=32:continue
+                count+=1
+                if witness is None or min(first_delta,final_delta)>min(witness['first_lead_ns'],witness['final_lag_ns']):
+                    witness=dict(a={k:a[k] for k in ('cta','sm','work','tiles_ns')},
+                        b={k:b[k] for k in ('cta','sm','work','tiles_ns')},
+                        first_lead_ns=first_delta,final_lag_ns=final_delta,
+                        required_uniform_endpoint_error_ns=min(first_delta,final_delta)/2)
+        reversals.append(dict(stage=process['stage'],trial=process['trial'],source=process['source'],
+            source_sha256=process['source_sha256'],pairs_beyond_one_grid=count,witness=witness))
+    for process in (p for p in rows if p['epilogue_defer']==2):
+        ctas=process['direct_ns_background'];target=next(c for c in ctas if c['cta']==0)
+        M=target['mma_return_ns'];C16=process['early_ns'][1]
+        flag2_order.append(dict(stage=process['stages'],trial=process['trial'],source=process['source'],
+            earlier_ctas=sum(c['mma_return_ns']<M for c in ctas),
+            earlier_beyond_one_grid=sum(M-c['mma_return_ns']>32 for c in ctas),
+            earliest_lead_ns=M-min(c['mma_return_ns'] for c in ctas),
+            own_E0_after_M1_ns=[c['epi_begin_ns']-c['mma_return_ns'] for c in ctas],
+            other_E0_post_overlap=sum(c['cta']!=0 and max(C16,c['epi_begin_ns'])<min(M,c['epi_end_ns']) for c in ctas)))
+    def order_stats(values):
+        values=list(values)
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+    for stage in (4,6):
+        old=[r for r in reversals if r['stage']==stage];new=[r for r in flag2_order if r['stage']==stage]
+        order_summary.append(dict(stage=stage,reversal_processes=sum(r['pairs_beyond_one_grid']>0 for r in old),
+            reversal_pairs=order_stats(r['pairs_beyond_one_grid'] for r in old),
+            flag2={key:order_stats(r[key] for r in new) for key in ('earlier_ctas','earlier_beyond_one_grid','earliest_lead_ns','other_E0_post_overlap')},
+            witness=max(old,key=lambda r:min(r['witness']['first_lead_ns'],r['witness']['final_lag_ns']))))
     old_source=output/'B-epilogue-order.json';old=read_json(old_source);local=[]
     for stage in (4,6):
         a={p['trial']:p for p in old['processes'] if (p['stages'],p['variant'],p['epilogue_defer'])==(stage,'progress',0)}
@@ -4493,6 +4529,10 @@ def shared_stage_service_diagnostics(output):
         calibration_rule='Two local starts fit flag2 early/post/E0 on both stages; c comes from its stage6 early. Joint fit then explicitly uses both arms.',
         solver_scope='Finite local least-squares searches, not exhaustive feasible-set bounds. No fit selected by flag1 transfer score.',
         fits=fits,observed_current=observed,observed_old_local=local,old_entry_evidence=entry_evidence,
+        order_invariant=dict(scope='Identical per-CTA local DAG and corresponding costs, FIFO, flags 0 or 2, arbitrary nonnegative producer root offsets; not a hardware arbitration claim.',
+            conclusion='Every corresponding event preserves root order. Strict FIRST0-before with MAIN1-after cannot be repaired by common gap prices or unknown root offsets.',
+            observed_reversals=reversals,observed_flag2=flag2_order,summaries=order_summary,
+            timing_limit='32 ns is only a count filter. Necessary endpoint-error repair bounds are not measured skew or an upper error bound.'),
         issue_organization=dict(finite_gap_diagnostics=finite_issue,observed_group_windows=issue_windows,observed_summaries=issue_summary,
             atom_instruction_steps=atom_steps,
             scope='Positive gaps tau and 16*tau are uncalibrated numerical sensitivities, no fitting or model selection. Group clocks remain cycles of their original sparse observer.'),
@@ -4605,6 +4645,34 @@ def shared_stage_service_diagnostics(output):
         '同slot间隔跨S组，含empty等待，也不能除S当净producer间隔。本批只有这些端点的clock64，不能借另一调用GHz换成ns。'
         '已有739629的192ns是首次工作准备，不是稳态间隔；旧R13 reuse的终点还在A之前。'
         '当前证据不足以给gap点值；继续从测得的组外合并窗口约束同一观察协议的完整候选，不给未知段按stage或CTA分配常数。','']
+    lines+=['## 保序性质：统一gap和未知入口都不能修复排序反例','',
+        '范围：所有CTA具有相同两输出局部依赖图、对应成本相同、同类型请求共用FIFO及后延迟；flag0或flag2。'
+        '允许任意非负producer起步偏移，按(offset,初始化index)排列CTA。此序会在每个对应事件保持：','',
+        '1. 相同加法、max和固定索引的slot释放保序。多前驱事件等最后一个前驱可知后入队；各前驱处理rank保序，其max也保序，因此同时间的push serial不会反转。',
+        '2. 对应请求按序到达FIFO，服务完成及相同后延迟的ready也保序。夹入任意其他输入或输出请求只增加frontier，不能让这对对应请求后到先完成。',
+        '3. 输入组i的slot前驱来自i−S的release；普通release在i−S+1，S≥2使它属于更早组，tail也由更早末组释放。沿局部DAG依次归纳A/B、ready、mma、wait/release及输出双缓冲即可。','',
+        '所以FIRST0_a<FIRST0_b必有MAIN1_a≤MAIN1_b，未知入口偏移也不能产生严格逆序。'
+        '默认全0入口时CTA0先M1；flag2又要求E0_j≥M1_j，因此CTA0的C16→M1中其它E0正长度重叠恒0。'
+        '该证明不覆盖CTA间异质服务、不同局部图（如flag1），也不声称真实硬件FIFO。','',
+        '| stage | 739740 flag2早于CTA0 M1数量 | 最早→CTA0 ns | 其它E0后段重叠CTA数 | 739095严格逆序对/进程 | 有逆序进程 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for r in order_summary:
+        q=r['flag2'];v=r['reversal_pairs']
+        lines.append(f'| {r["stage"]} | {q["earlier_ctas"]["median"]:.1f} | {q["earliest_lead_ns"]["median"]:.0f} | '
+            f'{q["other_E0_post_overlap"]["median"]:.0f} | {v["median"]:.1f} [{v["minimum"]},{v["maximum"]}] | {r["reversal_processes"]}/10 |')
+    lines+=['','两批分别比较，不拼时间轴：739740使用M1=mma_return；739095用FIRST0=首consumer等待返回、MAIN1=第二输出mma_tail结束，分别映射starts[0]/main_ends[1]。'
+        '逆序要求两个方向的裕量都>32ns，排除并列和一个格点；每调用的CTA对相关，统计单位仍是20个独立进程。','',
+        '| stage / trial | 较早FIRST0的CTA / 另一CTA | FIRST0领先ns | MAIN1落后ns | 仅用独立端点误差修复所需ε至少ns |',
+        '|---|---|---:|---:|---:|']
+    for r in order_summary:
+        row=r['witness'];w=row['witness']
+        lines.append(f'| {r["stage"]} / {row["trial"]} | {w["a"]["cta"]} / {w["b"]["cta"]} | '
+            f'{w["first_lead_ns"]} | {w["final_lag_ns"]} | {w["required_uniform_endpoint_error_ns"]:g} |')
+    lines+=['','ε假设每个ns端点都可独立移动±ε；消除任一严格方向至少需2ε达到较小裕量。'
+        '这是修复读数的必要下界，不是实测误差/偏差；当前没有给globaltimer跨SM误差设上界。'
+        '因此结论是同质FIFO图不能解释这些名义观测排序，尚不能唯一归因物理仲裁、缓存、SM时钟或局部竞争。','',
+        '停止为修复这条反例而标定统一gap，也不把初始发射包络测量当成必需下一步。'
+        '下一候选至少要允许对应工作在CTA间发生非同质推进；优先复用R10位置/起步对照和R09分阶段计时约束其来源，不按CTA标签直接加价。','']
     (output/'B-stage-shared-service.md').write_text('\n'.join(lines))
     return report
 

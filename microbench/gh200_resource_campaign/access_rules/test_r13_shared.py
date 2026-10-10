@@ -1,5 +1,6 @@
 """Dependency and accounting checks for the development-only shared server."""
 from collections import Counter
+import random
 import unittest
 
 from supply_model import admission_stage_events, shared_stage_events
@@ -187,6 +188,45 @@ class SharedStageTests(unittest.TestCase):
             self.assertGreaterEqual(result['ctas'][i]['issued_a'][0],offset)
             self.assertEqual(first_requests[i]['arrival_ns'],result['ctas'][i]['issued_a'][0])
             self.assertGreaterEqual(first_requests[i]['start_ns'],offset)
+
+    def test_homogeneous_fifo_preserves_root_order(self):
+        # Regression samples protect the proved class; they are not an exhaustive proof.
+        # Flag 1 deliberately has a different CTA0 graph and is outside this property.
+        rng=random.Random(739095)
+        for case in range(64):
+            kt,stages,count=8,rng.choice((2,4,6)),rng.randrange(2,7)
+            params={key:float(rng.choice((0,0,1,3,17,63,150)))
+                for key in self.parameters()}
+            params['compute_ns']=float(rng.randrange(1,129))
+            params['issue_floor_ns']=float(rng.randrange(int(params['compute_ns'])+1))
+            params['output_weight']=rng.choice((0.,.5,1.,4.))
+            offsets=[float(rng.choice((0,0,7,91,1000))) for _ in range(count)]
+            offsets[-1]=1000.  # Every sample has a nonzero root; ties remain common.
+            order=sorted(range(count),key=lambda i:(offsets[i],i))
+            for flag in (0,2):
+                with self.subTest(case=case,stages=stages,flag=flag):
+                    actors=shared_stage_events(kt,stages,count,epilogue_defer=flag,
+                        diagnostic_producer_offsets_ns=offsets,**params)['ctas']
+                    for first,second in zip(order,order[1:]):
+                        for key in ('ready','starts','commits','mma_returns','main_ends'):
+                            for i,(a,b) in enumerate(zip(actors[first][key],actors[second][key])):
+                                self.assertLessEqual(a,b,(key,i,first,second,offsets))
+            with self.subTest(case=case,stages=stages,flag=2,roots='all zero'):
+                actors=shared_stage_events(kt,stages,count,epilogue_defer=2,**params)['ctas']
+                first=actors[0]
+                begin,end=first['starts'][kt],first['mma_returns'][1]
+                for other in actors[1:]:
+                    self.assertLessEqual(end,other['mma_returns'][1])
+                    e=other['outputs'][0]
+                    overlap=max(0.,min(end,e['end'])-max(begin,e['begin']))
+                    self.assertEqual(overlap,0.)
+
+    def test_earliest_root_need_not_be_cta_zero(self):
+        actors=shared_stage_events(8,4,3,epilogue_defer=2,
+            diagnostic_producer_offsets_ns=[10000.,0.,100.],**self.parameters())['ctas']
+        self.assertLess(actors[1]['starts'][0],actors[0]['starts'][0])
+        self.assertLess(actors[1]['mma_returns'][1],actors[0]['mma_returns'][1])
+        self.assertEqual(min(range(3),key=lambda i:actors[i]['mma_returns'][1]),1)
 
     def test_full_declared_geometry_request_counts_and_work_budget(self):
         params=self.parameters(service_ns=.25,output_weight=2.)
