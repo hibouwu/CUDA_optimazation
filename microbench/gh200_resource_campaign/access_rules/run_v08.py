@@ -99,7 +99,7 @@ def identity():
 
 def case_args(r):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle','evict']
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy']:
         if key in r:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),r[key])]
 
@@ -122,7 +122,7 @@ def run_one(root,r,variant,trial,attempt=0):
     suffix=f'{variant}-{trial:02}'+(f'-retry{attempt}' if attempt else '');path=folder/(suffix+'.json')
     if path.exists():
         rec=json.loads(path.read_text())
-        if rec['returncode'] and 'last five warmups CV exceeds 2%' in rec['stderr'] and attempt<2:return run_one(root,r,variant,trial,attempt+1)
+        if r.get('warmup_policy','adaptive')=='adaptive' and rec['returncode'] and 'last five warmups CV exceeds 2%' in rec['stderr'] and attempt<2:return run_one(root,r,variant,trial,attempt+1)
         if rec['returncode'] or common.sha(root/rec['raw'])!=rec['raw_sha256']:raise ValueError('invalid prior process '+str(path))
         return rec
     cmd=[str(root/'build'/f"{common.binary_prefix(r)}_{variant}"),*case_args(r)]
@@ -135,7 +135,7 @@ def run_one(root,r,variant,trial,attempt=0):
         ev=json.loads(line)
         if ev.get('event')=='call':rec.update(elapsed_us=ev['elapsed_us'],warmup=ev['warmup_us'])
     common.write_json(path,rec)
-    if proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:return run_one(root,r,variant,trial,attempt+1)
+    if r.get('warmup_policy','adaptive')=='adaptive' and proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:return run_one(root,r,variant,trial,attempt+1)
     if proc.returncode:raise ValueError('failed GEMM process: '+str(path)+' '+proc.stderr[-300:])
     if variant in ['wide','dual']:
         from analyze_r18 import replay

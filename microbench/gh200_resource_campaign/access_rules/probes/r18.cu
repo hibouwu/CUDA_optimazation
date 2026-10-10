@@ -84,7 +84,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R18_DUAL_CLOCK)
+#if defined(R13_STAGE_SPARSE)
+constexpr const char* kTraceVersion="r13-stage-sparse-v1";
+#elif defined(R18_DUAL_CLOCK)
 constexpr const char* kTraceVersion="r18-dual-clock-events";
 #elif defined(R18_MATCH_DUAL_LAYOUT)
 constexpr const char* kTraceVersion="r18-wide-clock-events";
@@ -118,6 +120,7 @@ struct Args {
   int input_map_m=0,input_map_n=0;
   int sm_count = 0;
   std::string input_mode = "dyadic";
+  std::string warmup_policy = "adaptive";
   int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
@@ -145,6 +148,7 @@ struct Args {
       else if(key=="--evict")evict=std::stoi(v);
       else if(key=="--sm-count")sm_count=std::stoi(v);
       else if(key=="--input-mode")input_mode=v;
+      else if(key=="--warmup-policy")warmup_policy=v;
       else if(key=="--seed")seed=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
     }
@@ -152,6 +156,8 @@ struct Args {
       throw std::runtime_error("input-mode must be dyadic, zero or random");
     if (seed < 0)
       throw std::runtime_error("seed must be nonnegative");
+    if (warmup_policy != "adaptive" && warmup_policy != "common-sw1-16")
+      throw std::runtime_error("warmup-policy must be adaptive or common-sw1-16");
   }
 };
 
@@ -324,6 +330,26 @@ int main(int argc, char** argv) {
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
 
+    // Both parameter sets exist before input/cache preparation. The common
+    // history uses this same kernel and buffers, changing only scheduler swizzle.
+    const bool common_history = o.warmup_policy == "common-sw1-16";
+    const int warmup_swizzle = common_history ? 1 : o.swizzle;
+    auto warmup_launch_params = launch_params;
+    if (common_history) {
+      auto warmup_arguments = arguments;
+      warmup_arguments.scheduler.max_swizzle_size = 1;
+      Gemm warmup_gemm;
+      cutlass_check(warmup_gemm.can_implement(warmup_arguments), "warmup can_implement");
+      if (Gemm::get_workspace_size(warmup_arguments) > workspace.count)
+        throw std::runtime_error("common history needs a different workspace");
+      cutlass_check(warmup_gemm.initialize(warmup_arguments, workspace.pointer), "warmup initialize");
+      warmup_launch_params = warmup_gemm.params();
+      warmup_launch_params.mainloop = launch_params.mainloop;
+      dim3 warmup_grid = Gemm::get_grid_shape(warmup_launch_params);
+      if (warmup_grid.x != grid.x || warmup_grid.y != grid.y || warmup_grid.z != grid.z)
+        throw std::runtime_error("common history changes persistent grid");
+    }
+
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
     int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
     gaps::fill_input_strided<<<256, 256>>>(a.pointer, input_rows, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
@@ -346,13 +372,13 @@ int main(int argc, char** argv) {
     cudaEvent_t begin, end;
     CUDA_CHECK(cudaEventCreate(&begin));
     CUDA_CHECK(cudaEventCreate(&end));
-    auto timed = [&]() {
+    auto timed = [&](typename Gemm::Params& params) {
       if(o.evict)evict_buffer<<<256,256>>>(eviction.pointer,eviction.count,++eviction_seed);
       CUDA_CHECK(cudaGetLastError());
       CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
       CUDA_CHECK(cudaDeviceSynchronize());
       CUDA_CHECK(cudaEventRecord(begin));
-      cutlass_check(Gemm::run(launch_params), "run");
+      cutlass_check(Gemm::run(params), "run");
       CUDA_CHECK(cudaEventRecord(end));
       CUDA_CHECK(cudaEventSynchronize(end));
       float ms = 0;
@@ -373,19 +399,30 @@ int main(int argc, char** argv) {
       std::vector<double> warm_us;
       for (float w : warm) warm_us.push_back(w * 1e3);
       std::cout << "{\"event\":\"call\",\"label\":\"" << label << "\",\"elapsed_us\":" << ms * 1e3
-                << ",\"warmup_calls\":" << warm.size();
+                << ",\"warmup_calls\":" << warm.size()
+                << ",\"warmup_policy\":\"" << o.warmup_policy << "\""
+                << ",\"warmup_swizzle\":" << warmup_swizzle
+                << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
+                << ",\"target_swizzle\":" << o.swizzle
+                << ",\"warmup_last5_cv\":" << coefficient_of_variation({warm.end()-5,warm.end()});
       print_f("warmup_us", warm_us);
       print_u64("trace", host);
       std::cout << "}\n";
     };
     auto warm_sequence = [&]() {
       std::vector<float> warm;
+      if (common_history) {
+        for (int i = 0; i < 16; ++i) warm.push_back(timed(warmup_launch_params));
+        float ms = timed(launch_params);
+        report("warm", ms, warm);
+        return;  // Fixed history: CV is a diagnostic, never a retry condition.
+      }
       for (int i = 0; i < 30; ++i) {
-        warm.push_back(timed());
+        warm.push_back(timed(launch_params));
         if (i >= 7 && coefficient_of_variation({warm.end() - 5, warm.end()}) <= 0.02)
           break;
       }
-      float ms = timed();
+      float ms = timed(launch_params);
       report("warm", ms, warm);
       if (warm.size() < 8 || coefficient_of_variation({warm.end() - 5, warm.end()}) > 0.02)
         throw std::runtime_error("last five warmups CV exceeds 2% after 30 calls");
@@ -409,6 +446,9 @@ int main(int argc, char** argv) {
               << ",\"requested_sm_count\":" << o.sm_count
               << ",\"scheduler_sm_count\":" << scheduler_sms
               << ",\"input_mode\":\"" << o.input_mode << "\",\"seed\":" << o.seed
+              << ",\"warmup_policy\":\"" << o.warmup_policy << "\""
+              << ",\"warmup_swizzle\":" << warmup_swizzle
+              << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
               << std::setprecision(17)
               << ",\"check_atol\":" << (input_mode == 2 ? 0x1p-20 : 0.0)
               << ",\"check_sum_abs_rtol\":" << (input_mode == 2 ? 0x1p-21 : 0.0)

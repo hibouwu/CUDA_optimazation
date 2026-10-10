@@ -729,6 +729,108 @@ def swizzle_diagnostics(root, output):
     return result
 
 
+def common_history_diagnostics(root, output):
+    """Compare the two target orders after a declared common or adaptive prefix."""
+    from analyze_r13_sm import select_attempts
+    import v06_run as common
+    root,output = Path(root),Path(output)
+    common.verify(root)
+    rows = clock.read_json(root/'cases.json')
+    policies = ('common-sw1-16','adaptive')
+    if len(rows)!=4 or {(r['warmup_policy'],r['swizzle']) for r in rows}!={(p,s) for p in policies for s in (1,8)}:
+        raise ValueError('four declared common/adaptive sw1/sw8 conditions required')
+    setups = {s['case']:s['setup'] for s in clock.read_json(root/'static_setup.json')}
+    fixed = ('gpu_uuid','config','m','n','k','lda','ldb','ldd','alloc_lda','alloc_ldb',
+             'allocated_a_elements','allocated_b_elements','input_mode','seed','grid','stages',
+             'zero_m','zero_n','evict')
+    anchor = setups[rows[0]['id']]
+    if any(any(setups[row['id']].get(k)!=anchor.get(k) for k in fixed) for row in rows):
+        raise ValueError('common-history contrast changed geometry/device/input conditions')
+    inputs = {name:clock.sha256(root/name) for name in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/binary_hashes.json')}
+    processes,failures,records = [],[],{}
+    for row in rows:
+        selected,failed,_ = select_attempts(root,row['id'],('ends',))
+        failures.extend(failed)
+        for item in selected:
+            rec = item['record']
+            observed = v08_model.observe(root,rec,row,setups[row['id']])
+            # observe replays the explicit prefix identity. Fixed history does
+            # not apply the adaptive convergence filter, here or in the reader.
+            warm = rec['warmup']
+            largest = max(c['tiles'] for c in observed['ctas'])
+            observer_windows = [(c['end_ns']-c['entry_ns'])/1000 for c in observed['ctas'] if c['tiles']==largest]
+            p = dict(case=row['id'],policy=row['warmup_policy'],swizzle=row['swizzle'],trial=rec['trial'],
+                event_us=observed['elapsed_us'],host_start_ns=rec['host_start_ns'],raw_sha256=rec['raw_sha256'],
+                warmup_calls=len(warm),warmup_total_us=sum(warm),
+                warmup_last5_cv=statistics.pstdev(warm[-5:])/statistics.fmean(warm[-5:]),
+                frequency_observer_window_us=statistics.median(observer_windows),
+                **control_window(observed))
+            processes.append(p)
+            records[p['policy'],p['swizzle'],p['trial']] = p
+            inputs[item['path']] = clock.sha256(root/item['path'])
+    if set(records)!={(p,s,t) for p in policies for s in (1,8) for t in range(10)}:
+        raise ValueError('all forty successful ends processes are required, including high-CV fixed prefixes')
+    fields = ('frequency_ghz','max_cta_cycles','window_us','event_us')
+    by_policy,pairs = {},[]
+    for policy in policies:
+        group = []
+        for trial in range(10):
+            a,b = records[policy,1,trial],records[policy,8,trial]
+            p = dict(policy=policy,trial=trial,first_swizzle=1 if a['host_start_ns']<b['host_start_ns'] else 8,
+                     separation_s=abs(a['host_start_ns']-b['host_start_ns'])/1e9,
+                     prefix_kernel_sum_change=b['warmup_total_us']/a['warmup_total_us']-1,
+                     prefix_kernel_sum_difference_us=b['warmup_total_us']-a['warmup_total_us'],
+                     **{key+'_change':b[key]/a[key]-1 for key in fields})
+            group.append(p)
+        pairs.extend(group)
+        by_policy[policy] = dict(paired={key+'_change':failure_stats(p[key+'_change'] for p in group) for key in fields},
+            prefix_kernel_sum_change=failure_stats(p['prefix_kernel_sum_change'] for p in group),
+            prefix_kernel_sum_difference_us=failure_stats(p['prefix_kernel_sum_difference_us'] for p in group),
+            order_counts={str(sw):sum(p['first_swizzle']==sw for p in group) for sw in (1,8)},conditions={})
+        for sw in (1,8):
+            conditions = [records[policy,sw,t] for t in range(10)]
+            by_policy[policy]['conditions'][str(sw)] = dict(
+                metrics={key:dict(failure_stats(p[key] for p in conditions),
+                    process_cv=statistics.pstdev(p[key] for p in conditions)/statistics.fmean(p[key] for p in conditions))
+                    for key in (*fields,'warmup_calls','warmup_total_us','warmup_last5_cv','frequency_observer_window_us')},
+                warmup_last5_cv_gt_2pct=sum(p['warmup_last5_cv']>.02 for p in conditions))
+    policy_pairs = []
+    for sw in (1,8):
+        for trial in range(10):
+            a,b = records['adaptive',sw,trial],records['common-sw1-16',sw,trial]
+            policy_pairs.append(dict(swizzle=sw,trial=trial,
+                **{key+'_common_over_adaptive':b[key]/a[key]-1 for key in fields}))
+    reference_path = root.parent/'20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json'
+    reference = clock.read_json(reference_path)
+    inputs[str(reference_path)] = clock.sha256(reference_path)
+    reference_keys = dict(frequency_ghz='frequency_change',max_cta_cycles='max_cta_cycles_change',
+                          window_us='window_change',event_us='ends_event_change')
+    reference_comparison = dict(run=reference['run'],environment=reference['environment'],
+        same_gpu=clock.read_json(root/'environment.json')['gpu']==reference['environment']['gpu'],
+        scope='Cross-batch adaptive replication reference only, not a same-trial control or prediction score.',
+        old_paired_medians={key:reference['paired_summary'][value]['median'] for key,value in reference_keys.items()},
+        current_adaptive_medians={key:by_policy['adaptive']['paired'][key+'_change']['median'] for key in fields})
+    result = dict(scope='New declared prehistory protocol; measured contrasts only, not new prediction accuracy.',
+        run=str(root),environment=clock.read_json(root/'environment.json'),source_sha256=clock.sha256(Path(__file__)),
+        input_sha256=inputs,conditions={k:anchor.get(k) for k in fixed},processes=processes,
+        paired_trials=pairs,by_policy=by_policy,common_over_adaptive_trials=policy_pairs,
+        common_over_adaptive={str(sw):{key+'_common_over_adaptive':failure_stats(p[key+'_common_over_adaptive'] for p in policy_pairs if p['swizzle']==sw)
+                                      for key in fields} for sw in (1,8)},
+        cross_batch_reference=reference_comparison,failed_attempts=failures,
+        verification=dict(source_and_binary_hashes=True,successful_raw_replays=len(processes),fixed_prefix_cv_exclusions=0),
+        timing_scopes=dict(frequency='Same-CTA clock64/globaltimer entry-to-final interval; process median over maximum-work CTAs, not a continuous frequency trace.',
+            window='Target-call globaltimer envelope across all CTA entries/final records.',
+            prefix='Sum of sixteen or adaptive measured warmup CUDA-event kernel intervals. Trace clears, synchronization and host gaps between them are excluded; no full-prefix wall-clock envelope was recorded.'),
+        notes=['Common history executes exactly sixteen sw1 calls on the same initialized buffers before one target; its warmup CV is recorded, never filtered.',
+               'Adaptive controls retain the existing 8..30 call convergence protocol. Common/adaptive contrasts are reported separately.',
+               'Equal declared initialization and prefix work do not prove identical physical cache contents, temperatures, power states, or elapsed histories.',
+               'All pairs are sequential processes; prior target effects and device-state variation are not eliminated by a shared trial label.',
+               'No old-card frequency coefficients, timing fits, or V09 score changes enter this analysis.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-common-history.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    return result
+
+
 def response_development(base, output):
     """Declared response/activity contrasts on one training card; development only."""
     from collections import defaultdict

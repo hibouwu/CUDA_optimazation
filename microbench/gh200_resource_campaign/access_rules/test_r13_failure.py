@@ -6,6 +6,7 @@ from analyze_r13_supply import (
     _failure_pair_summary, _failure_pair_windows, _failure_stage_response,
     _failure_k_scaling,
     _finite_stage_cycles,
+    _stage_event_intervals,
 )
 
 
@@ -93,6 +94,23 @@ class PairedFailureTests(unittest.TestCase):
         delayed = _finite_stage_cycles(16,6,0,200,512,detail=True)
         self.assertEqual(delayed['windows'][0],result['windows'][0])
         self.assertEqual(delayed['first_mma_or_commit'][0],200)
+
+    def test_sparse_mainloop_closure_uses_mma_tail_not_exit(self):
+        sparse=dict(intervals=dict(mainloop_before_tail=1000,handoff_before_tail=20,mma_tail=60,L=1080),
+            clocks=dict(first_mma=0,mma_return=1000,release_end=305,
+                full_wait_begin=150,full_wait_end=200,commit_end=250,wait1_end=270,
+                issue_end=100,release_begin=300,acquire_end=80,refill_end=310))
+        result=_stage_event_intervals(sparse)
+        self.assertEqual(result['closure_cycles'],0)
+        self.assertEqual(result['issue_to_observed_full'],100)
+        self.assertEqual(result['slot_live_until_release_begin'],220)
+        self.assertEqual(result['consumer_wait_to_commit'],100)
+        self.assertEqual(result['consumer_wait_to_wait1'],120)
+        self.assertEqual(result['before_selected_wait'],150)
+        self.assertEqual(result['after_selected_wait1_to_mma_return'],730)
+        sparse['intervals']['mma_tail']=61
+        with self.assertRaisesRegex(ValueError,'does not close'):
+            _stage_event_intervals(sparse)
 
 
 if __name__ == '__main__':

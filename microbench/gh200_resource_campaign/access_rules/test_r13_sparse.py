@@ -1,0 +1,56 @@
+import copy
+import unittest
+from analyze_r18 import decode_stage_sparse
+
+class StageSparseTests(unittest.TestCase):
+    def trace(self,stages):
+        width=16+2*64*6
+        b=[0]*(132*width)
+        # Global Ktile = 1 output * 64 Ktiles + local Ktile16.
+        global_k=80
+        slot=global_k%stages
+        cphase=(global_k//stages)%2
+        b[1]=b[23]=7
+        b[2]=b[13]=12
+        b[3]=b[14]=1
+        b[4]=b[24]=b[25]=b[27]=slot+1
+        b[26]=cphase+1
+        b[5]=(1-cphase)+1
+        b[28]=cphase+1
+        b[29]=1;b[30]=16;b[31]=0x52313301
+        for i,value in {0:1,6:20,7:30,8:40,9:125,11:171,12:180,
+                        21:10,15:50,16:80,17:100,18:120,19:170,20:172,
+                        32:200,33:205,22:250}.items():
+            b[i]=value
+        return dict(k=4096,stages=stages,grid=[1,132,1],trace_words=width),dict(trace=b)
+
+    def test_real_stage4_and_stage6_slot_phase_sequences(self):
+        for stages,slot,consumer_phase in [(4,0,0),(6,2,1)]:
+            setup,call=self.trace(stages)
+            result=decode_stage_sparse(setup,call)
+            self.assertEqual(result['slot'],slot)
+            self.assertEqual(result['phase'],1-consumer_phase)
+            self.assertEqual(result['intervals']['consumer_full_wait'],30)
+            self.assertEqual(result['intervals']['L'],240)
+            self.assertEqual(result['intervals']['mainloop_before_tail'],190)
+            self.assertEqual(result['intervals']['mma_tail'],45)
+            # Acquire can return between release's before/after stamps.
+            self.assertLess(result['clocks']['refill_end'],result['clocks']['release_end'])
+
+    def test_same_producer_and_consumer_phase_is_rejected(self):
+        setup,call=self.trace(6)
+        call['trace'][5]=call['trace'][26]
+        with self.assertRaisesRegex(ValueError,'phase mismatch'):
+            decode_stage_sparse(setup,call)
+
+    def test_wrong_slot_or_other_CTA_write_is_rejected(self):
+        setup,call=self.trace(4)
+        wrong=copy.deepcopy(call)
+        for idx in (4,24,25,27):wrong['trace'][idx]=2
+        with self.assertRaisesRegex(ValueError,'sequence mismatch'):
+            decode_stage_sparse(setup,wrong)
+        call['trace'][setup['trace_words']]=1
+        with self.assertRaisesRegex(ValueError,'non-target CTA'):
+            decode_stage_sparse(setup,call)
+
+if __name__=='__main__':unittest.main()

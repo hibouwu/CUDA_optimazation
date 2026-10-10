@@ -15,6 +15,7 @@
 | 首轮填零，738707/738865 | 只补 A/C first；六组训练行与拒绝范围 | [模型](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/models.json)、[验证](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/verification.json)、[支持定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-20261009-first-fill-merged-v1/support-diagnosis.json) |
 | V09，739011 | 冻结后的新几何、行距和 stage 迁移 | [完整留出与判定](V09-component-validation.md) |
 | stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
+| 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
 
 ## 序列供给：消费者与在途组织会改变结果
 
@@ -198,7 +199,30 @@ plain中同trial的stage4相对stage6变化中位为K1024的+6.79%、K4096的+11
 
 这是多起点最小二乘与测后留组开发预测，不是新的冻结验证。有限递推略降同批残差，却不能解释短K的first略变快、later明显变慢，并在只见stage6时严重误判stage4。完整八点的局部参数秩为3，留组后为1～3；数值局部可解不等于机制已识别。旧R13的ready/retire/reuse来自另一卡、不同源布局及独立调用，reuse又从acquire成功后开始，没有empty等待，不能补成当前程序的同次生命周期。
 
-因此不将该递推接入现行预测，也不增加参数修补。最小缺失观测是同一对stage4/6、K4096条件内，选同CTA第二输出的一个Ktile，同时记录producer acquire前后/发出、consumer full-wait前后/commit/wait1/release及同slot补发。输入饥饿预期差异主要在full等待；若full已ready，差异落在commit或退役侧，则支持消费/指令组织限制。producer单独等待empty不能区分两者。详细公式、八点残差、参数解与事件选择见[有限stage分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.md)、[可重放数据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.json)。
+因此不将该递推接入现行预测，也不增加参数修补。随后用同一对stage4/6、K4096条件的稀疏事件区分输入等待与消费侧进度，结果见下节。详细公式、八点残差和参数解见[有限stage分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.md)、[可重放数据](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-finite-stage.json)。
+
+### 同次稀疏事件：差异不在最终drain，单点等待也不能代表整L
+
+job739556在同一a058卡复测cfg_b 2816×1536×4096的stage4/6，只记录CTA0第二输出Ktile16及同slot补发；两角色的SM、工作坐标、slot和phase全部匹配。四个plain/sparse二进制均168寄存器、16 HGMMA、无spill。下表为十进程周期中位；差列先按trial配对，不能直接用前两列相减。`mma_tail`是wait0与最终slot释放，不是输出完成后的退出段。
+
+| 同调用窗口 | stage4 | stage6 | stage4−stage6 |
+|---|---:|---:|---:|
+| Ktile16：consumer full等待 | 234.5 | 65.5 | +168.0 |
+| full返回→commit | 161.0 | 331.0 | −172.0 |
+| commit→wait1返回 | 6.0 | 6.0 | 0.0 |
+| **full等待前→wait1返回（直接合并）** | **404.0** | **404.0** | **0.0** |
+| FIRST_MMA→Ktile16 full等待前 | 11024.5 | 8111.0 | +2869.5 |
+| Ktile16 wait1返回→mma返回 | 28427.5 | 24169.0 | +4259.5 |
+| FIRST_MMA→mma返回 | 40038.0 | 32712.5 | +7183.0 |
+| mma返回→mma_tail开始 | 10.0 | 13.0 | −0.5 |
+| mma_tail | 412.0 | 418.0 | −5.5 |
+| 完整L | 40461.0 | 33141.0 | +7177.0 |
+
+额外L在mma返回前积累，最终drain没有变长。Ktile16之前已有+2600～3577 cycle差，之后到mma返回又增加+3718～4883；不是只有首段或最后排空变慢。但所选Ktile的full等待增加，被随后到commit的区间缩短抵消；同调用合并窗口的成对差中位为0，范围−5～153 cycle。因此不能拿full等待的+168乘64，也不能将wait1的6 cycle当作WGMMA完整延迟。producer在所选Ktile上的empty等待416.5/410、同slot补发empty等待422.5/360.5 cycle也不能单独区分输入饥饿与消费者较慢。
+
+每次调用的`mma返回前 + handoff + mma_tail = L`精确闭合；各列中位数不要求加和闭合。稀疏/plain完整时间扰动stage4/6中位+3.49%/+1.69%，单对最大+4.77%/+4.44%；plain的stage差+10.28%，稀疏为+12.16%。与739095旧dual按同CTA第二输出整L分批比较，新值分别+2.84%/−0.93%，没有明显整L失真，但不证明每个局部窗口无扰动，更不能拼接两批时间线或直接采用事件价格。
+
+现有端点已把差异定位到Ktile16前后两个主循环区间；尚不能区分其中的周期性补发、发射组织和源工作集效应。若需进一步定位，最小下一步仍是同一对条件，只保留consumer在Ktile1/7/31/63提交后的累计进度与FIRST_MMA/mma_tail端点，删除已完成语义核对的producer字段；无需重测形状或添加stage罚项。本节没有用一个位置外推全部K。[逐进程窗口与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.csv)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/)。
 
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 

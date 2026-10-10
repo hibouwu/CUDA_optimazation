@@ -40,6 +40,81 @@ def random_references(indices,m,n,k,seed):
     return expected,tolerances
 
 
+
+def decode_stage_sparse(setup, call):
+    """Selected CTA0 only; cycles are comparable across its producer/consumer WGs."""
+    words=call['trace'];width=setup['trace_words']
+    if len(words)!=math.prod(setup['grid'])*width or any(words[width:]):
+        raise ValueError('sparse trace size or non-target CTA writes')
+    b=words[:width]
+    clocks={name:b[index] for name,index in {
+        'entry':0,'acquire_begin':6,'acquire_end':7,'issue_end':8,
+        'refill_begin':9,'refill_end':11,'refill_issue_end':12,
+        'full_wait_begin':15,'full_wait_end':16,'commit_end':17,'wait1_end':18,
+        'release_begin':19,'release_end':20,'first_mma':21,'main_end':22,
+        'mma_return':32,'tail_begin':33}.items()}
+    if not all(clocks.values()) or b[31]!=0x52313301 or b[10]:
+        raise ValueError('incomplete sparse events')
+    if not b[1] or b[1]!=b[23] or (b[2],b[3])!=(b[13],b[14]) or not min(b[2],b[3]):
+        raise ValueError('sparse role SM/work mismatch')
+    global_k=setup['k']//64+16
+    slot=global_k%setup['stages']
+    consumer_phase=(global_k//setup['stages'])%2
+    if (b[29],b[30],b[4],b[26])!=(1,16,slot+1,consumer_phase+1):
+        raise ValueError('sparse output/Ktile/slot sequence mismatch')
+    if not (b[4]==b[24]==b[25]==b[27] and b[5]==3-b[26] and b[28]==b[26]):
+        raise ValueError('sparse producer/consumer slot or wrap phase mismatch')
+    for seq in [('acquire_begin','acquire_end','issue_end'),('refill_begin','refill_end','refill_issue_end'),
+                ('first_mma','full_wait_begin','full_wait_end','commit_end','wait1_end','release_begin','release_end','mma_return','tail_begin','main_end')]:
+        if any(clocks[a]>clocks[z] for a,z in zip(seq,seq[1:])):
+            raise ValueError('sparse within-role event order')
+    # Release may become visible to producer before the releasing lane's post-arrive clock.
+    if clocks['refill_end']<clocks['release_begin']:
+        raise ValueError('same slot reacquired before consumer release')
+    return dict(cta=0,sm=b[1]-1,work=[b[2]-1,b[3]-1],output=1,ktile=16,
+        slot=b[4]-1,phase=b[5]-1,clocks=clocks,
+        intervals={name:clocks[end]-clocks[start] for name,start,end in [
+            ('producer_empty_wait','acquire_begin','acquire_end'),
+            ('producer_issue','acquire_end','issue_end'),
+            ('refill_empty_wait','refill_begin','refill_end'),
+            ('consumer_full_wait','full_wait_begin','full_wait_end'),
+            ('consumer_issue_to_commit','full_wait_end','commit_end'),
+            ('consumer_wait1','commit_end','wait1_end'),
+            ('consumer_release','release_begin','release_end'),
+            ('mainloop_before_tail','first_mma','mma_return'),
+            ('handoff_before_tail','mma_return','tail_begin'),
+            ('mma_tail','tail_begin','main_end'),('L','first_mma','main_end')]})
+
+
+
+def validate_warmup(setup, call, row):
+    """Legacy adaptive convergence, or an explicitly fixed common history."""
+    policy = row.get('warmup_policy','adaptive')
+    if policy not in ('adaptive','common-sw1-16'):
+        raise ValueError('unknown warmup policy')
+    expected_swizzle = 1 if policy=='common-sw1-16' else row['swizzle']
+    fixed_calls = 16 if policy=='common-sw1-16' else 0
+    for event in (setup,call):
+        if event.get('warmup_policy','adaptive') != policy:
+            raise ValueError('warmup policy identity changed')
+        if policy=='common-sw1-16' or 'warmup_swizzle' in event:
+            if event.get('warmup_swizzle') != expected_swizzle or event.get('warmup_fixed_calls') != fixed_calls:
+                raise ValueError('warmup prefix identity changed')
+    if call.get('target_swizzle',row['swizzle']) != row['swizzle']:
+        raise ValueError('target swizzle identity changed')
+    warm = call['warmup_us']
+    if not warm or any(not math.isfinite(x) or x<=0 for x in warm):
+        raise ValueError('invalid warmup durations')
+    if call.get('warmup_calls',len(warm)) != len(warm):
+        raise ValueError('warmup call count changed')
+    if policy=='common-sw1-16':
+        if len(warm)!=16:
+            raise ValueError('common-sw1-16 must execute exactly sixteen prefix calls')
+    elif not 8<=len(warm)<=30 or statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])>.02:
+        raise ValueError('warmup did not converge')
+    return statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])
+
+
 def replay(root,record,row,retain_roles=False):
     raw=root/record['raw']
     if common.sha(raw)!=record['raw_sha256']:raise ValueError('raw process identity changed')
@@ -81,10 +156,12 @@ def replay(root,record,row,retain_roles=False):
         if value is None or not math.isfinite(value) or abs(value-expected)>tolerance:
             raise ValueError('wrong GEMM output at '+str((i,j)))
     if row['kind']=='explicit_zero' and zero_count<1:raise ValueError('zero panel unchecked')
-    warm=call['warmup_us'];warm_cv=statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])
-    if not 8<=len(warm)<=30 or warm_cv>.02:raise ValueError('warmup did not converge')
+    validate_warmup(setup,call,row)
     result=dict(case=row['id'],variant=record['variant'],trial=record['trial'],elapsed_us=call['elapsed_us'],checked_values=4096,zero_values=zero_count,ctas=[])
     if record['variant'] in ['plain','wide']:return result
+    if setup.get('trace_version')=='r13-stage-sparse-v1':
+        result['sparse']=decode_stage_sparse(setup,call)
+        return result
     tile_words=setup.get('trace_tile_words',6)
     words=call['trace'];ctas=math.prod(setup['grid']);width=16+2*64*tile_words
     if len(words)!=ctas*width:raise ValueError('wrong trace size')

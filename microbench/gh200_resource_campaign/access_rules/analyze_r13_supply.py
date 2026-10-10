@@ -1702,6 +1702,166 @@ def finite_stage_diagnostics(base, output):
     return report
 
 
+def _stage_event_intervals(sparse):
+    """One selected position; drain is mma_tail, never post-output kernel exit."""
+    intervals = dict(sparse['intervals'])
+    closure = (intervals['mainloop_before_tail']+intervals['handoff_before_tail']+
+               intervals['mma_tail']-intervals['L'])
+    if closure:
+        raise ValueError('FIRST_MMA -> mma return -> tail begin -> MAIN_END does not close')
+    clocks = sparse['clocks']
+    intervals['issue_to_observed_full'] = clocks['full_wait_end']-clocks['issue_end']
+    intervals['slot_live_until_release_begin'] = clocks['release_begin']-clocks['acquire_end']
+    intervals['refill_after_release_begin'] = clocks['refill_end']-clocks['release_begin']
+    intervals['consumer_wait_to_commit'] = clocks['commit_end']-clocks['full_wait_begin']
+    intervals['consumer_wait_to_wait1'] = clocks['wait1_end']-clocks['full_wait_begin']
+    intervals['before_selected_wait'] = clocks['full_wait_begin']-clocks['first_mma']
+    intervals['through_selected_commit'] = clocks['commit_end']-clocks['first_mma']
+    intervals['through_selected_wait1'] = clocks['wait1_end']-clocks['first_mma']
+    intervals['through_selected_release'] = clocks['release_end']-clocks['first_mma']
+    intervals['after_selected_wait1_to_mma_return'] = clocks['mma_return']-clocks['wait1_end']
+    if (intervals['before_selected_wait']+intervals['consumer_wait_to_wait1']+
+            intervals['after_selected_wait1_to_mma_return'] != intervals['mainloop_before_tail']):
+        raise ValueError('selected-position cumulative intervals do not close')
+    intervals['closure_cycles'] = closure
+    return intervals
+
+
+def stage_event_diagnostics(root, output):
+    """Same-call sparse stage pair, with separate whole-L dual cohort context."""
+    from analyze_r13_sm import select_attempts
+
+    root,output = Path(root),Path(output)
+    rows = {r['id']:r for r in read_json(root/'cases.json')}
+    setups = {r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    processes,by_stage,timing,hashes,failures = [],{},[],{},{}
+    def span(values):
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    for stages in (4,6):
+        name = f'r13_stage_k4096_s{stages}';row = rows[name]
+        selected,failed,_ = select_attempts(root,name,('plain','stamped'))
+        failures[name] = [dict(path=f['path'],variant=f['record']['variant'],trial=f['record']['trial'],
+            returncode=f['record']['returncode']) for f in failed]
+        times = defaultdict(dict);by_stage[stages] = {}
+        for item in selected:
+            record = item['record'];observed = replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):
+                hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+            times[record['variant']][record['trial']] = observed['elapsed_us']
+            if record['variant']=='stamped':
+                sparse = observed['sparse']
+                intervals = _stage_event_intervals(sparse)
+                entry = dict(case=name,stages=stages,trial=record['trial'],elapsed_us=observed['elapsed_us'],
+                    cta=sparse['cta'],sm=sparse['sm'],mi=sparse['work'][0],ni=sparse['work'][1],
+                    output=sparse['output'],ktile=sparse['ktile'],slot=sparse['slot'],phase=sparse['phase'],**intervals)
+                processes.append(entry);by_stage[stages][record['trial']] = entry
+        if len(times['plain'])!=10 or times['plain'].keys()!=times['stamped'].keys():
+            raise ValueError('sparse comparison requires ten matched plain/stamped trials')
+        fields = [k for k in processes[-1] if k not in
+            ('case','stages','trial','elapsed_us','cta','sm','mi','ni','output','ktile','slot','phase')]
+        timing.append(dict(stages=stages,plain_us=span(list(times['plain'].values())),
+            stamped_us=span(list(times['stamped'].values())),
+            stamped_relative_to_plain=span([times['stamped'][t]/times['plain'][t]-1 for t in sorted(times['plain'])]),
+            intervals={f:span([r[f] for r in by_stage[stages].values()]) for f in fields},
+            plain_trials=times['plain'],stamped_trials=times['stamped']))
+    if by_stage[4].keys()!=by_stage[6].keys():raise ValueError('stage repetition sets differ')
+    paired = []
+    for trial in sorted(by_stage[4]):
+        a,b = by_stage[6][trial],by_stage[4][trial]
+        if tuple(a[k] for k in ('cta','mi','ni','output','ktile')) != tuple(b[k] for k in ('cta','mi','ni','output','ktile')):
+            raise ValueError('stage pair does not refer to the same logical CTA/Ktile')
+        paired.append(dict(trial=trial,**{f:b[f]-a[f] for f in fields}))
+    paired_summary = {f:span([r[f] for r in paired]) for f in fields}
+    whole_time = {}
+    for protocol in ('plain','stamped'):
+        a,b=timing[1][protocol+'_trials'],timing[0][protocol+'_trials']
+        whole_time[protocol] = dict(stage4_minus_stage6_us=span([b[t]-a[t] for t in sorted(a)]),
+            stage4_relative_change=span([b[t]/a[t]-1 for t in sorted(a)]))
+    old = root.parent/'20261010-R09-R13-R18-failure-controls'
+    old_rows = {r['id']:r for r in read_json(old/'cases.json')}
+    old_setups = {r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
+    cohort_comparison = []
+    for stages in (4,6):
+        name=f'r13_stage_k4096_s{stages}'
+        if old_setups[name]['gpu_uuid']!=setups[name]['gpu_uuid']:
+            raise ValueError('declared same-card whole-L context is on a different GPU')
+        selected,_,_=select_attempts(old,name,('dual',));values=[]
+        for item in selected:
+            record=item['record'];observed=replay(old,record,old_rows[name])
+            cta=next(c for c in observed['ctas'] if c['cta']==0)
+            expected=by_stage[stages][record['trial']]
+            if tuple(cta['work'][1])!=(expected['mi'],expected['ni']):
+                raise ValueError('old dual and sparse software work differ')
+            tile=cta['tiles'][1]
+            values.append(dict(trial=record['trial'],L_cycles=tile[1]-tile[0],event_us=observed['elapsed_us']))
+            for path in (old/item['path'],old/record['raw']):hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+        current=next(t for t in timing if t['stages']==stages)['intervals']['L']
+        old_span=span([x['L_cycles'] for x in values])
+        cohort_comparison.append(dict(stages=stages,old_dual_CTA0_second_L=old_span,
+            sparse_CTA0_second_L=current,ratio_of_cohort_medians=current['median']/old_span['median']-1,
+            old_processes=values,
+            interpretation='Different jobs and observer programs; compare whole L only, never splice their event windows.'))
+    source_files = ['environment.json','static_setup.json','cases.json','source_hashes.json',
+        'build/resources.json','build/sass_hashes.json','source/probes/r18_trace.hpp','source/probes/r18.cu',
+        'source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
+        'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp']
+    for relative in source_files:
+        path=root/relative;hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in (root/'build').glob('*.sass'):
+        hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    report = dict(scope='CTA0 second output Ktile16 only, same-call SM clock64 endpoints. '
+        'No per-K extrapolation or physical queue-depth attribution. Pair differences precede trial summary.',
+        gpu=setups['r13_stage_k4096_s4']['gpu_uuid'],processes=processes,timing=timing,
+        paired_stage4_minus_stage6=paired,paired_summary=paired_summary,
+        whole_time_response=whole_time,old_dual_cohort=cohort_comparison,
+        resources=read_json(root/'build/resources.json'),sass_hashes=read_json(root/'build/sass_hashes.json'),
+        failed_attempts=failures,input_sha256=hashes,
+        interval_limits=['consumer_full_wait includes try_wait plus consumer_wait and timestamp cost.',
+            'consumer_issue_to_commit includes fences, WGMMA issue/commit and timestamp cost.',
+            'consumer_wait1 is after commit through wait1 return; release for Ktile16 is measured in Ktile17.',
+            'issue_to_observed_full is an observed availability interval, not bare TMA latency.',
+            'mma_tail is wait0/final release; it is distinct from post-epilogue kernel exit.',
+            'mainloop_before_tail + handoff_before_tail + mma_tail equals L for each call, before aggregation.',
+            'Plain already allocates and clears identical scratch; it does not match sparse instructions or registers.',
+            'Full-call perturbation does not bound every selected local interval; never multiply Ktile16 by all Ktiles.'],
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-events.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'B-stage-events.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(processes[0]));writer.writeheader();writer.writerows(processes)
+    lines=['# stage稀疏事件：额外时间在主循环，单点还不能解释全部差异','',
+        '仅统计CTA0第二输出的Ktile16；绝对值为十个进程中位，差值先按trial配对再取中位。'
+        '每个调用的mainloop_before_tail + handoff_before_tail + mma_tail严格等于L，各列中位不必相加闭合。','',
+        '| 周期窗口 | stage4中位 | stage6中位 | stage4−stage6中位 | 差值十次范围 |',
+        '|---|---:|---:|---:|---:|']
+    labels={'producer_empty_wait':'producer empty等待','producer_issue':'A/B TMA发出',
+        'refill_empty_wait':'同slot补发前empty等待','consumer_full_wait':'consumer full等待',
+        'consumer_issue_to_commit':'full返回→commit','consumer_wait1':'commit→wait1返回',
+        'consumer_wait_to_commit':'full等待前→commit','consumer_wait_to_wait1':'full等待前→wait1返回',
+        'before_selected_wait':'FIRST_MMA→Ktile16 full等待前',
+        'through_selected_commit':'FIRST_MMA→Ktile16 commit',
+        'after_selected_wait1_to_mma_return':'Ktile16 wait1返回→mma返回',
+        'consumer_release':'目标slot release','mainloop_before_tail':'FIRST_MMA→mma返回',
+        'handoff_before_tail':'mma返回→tail开始','mma_tail':'mma_tail','L':'完整L'}
+    for field,label in labels.items():
+        a,b=timing[0]['intervals'][field],timing[1]['intervals'][field];d=paired_summary[field]
+        lines.append(f'| {label} | {a["median"]:.1f} | {b["median"]:.1f} | {d["median"]:+.1f} | {d["trial_min"]:+.1f}～{d["trial_max"]:+.1f} |')
+    lines+=['','最终drain没有解释stage4增加的L。所选Ktile的full等待变长，但full返回到commit变短，'
+        '应先检查同调用的合并窗口，不能把某个中位等待差乘64解释全部L。wait1返回间隔也不等于完整WGMMA延迟。',
+        '','| 协议比较 | 中位变化 | 十次范围 |','|---|---:|---:|']
+    for t in timing:
+        d=t['stamped_relative_to_plain']
+        lines.append(f'| stage{t["stages"]} sparse/plain | {100*d["median"]:+.2f}% | {100*d["trial_min"]:+.2f}%～{100*d["trial_max"]:+.2f}% |')
+    for protocol,d in whole_time.items():
+        x=d['stage4_relative_change']
+        lines.append(f'| {protocol} stage4/stage6 | {100*x["median"]:+.2f}% | {100*x["trial_min"]:+.2f}%～{100*x["trial_max"]:+.2f}% |')
+    lines+=['','plain分配与清零相同scratch，但不匹配sparse指令和寄存器生存期。完整时间扰动小不证明局部窗口无扰动。'
+        '与739095旧dual只按相同CTA、相同输出比较整L；两批窗口不拼接，事件价格不直接接入模型。',
+        '','JSON保存逐进程值、静态资源/SASS及归档源码身份；CSV保留全部选中窗口，失败编译记录仍在原run的attempts目录。','']
+    (output/'B-stage-events.md').write_text('\n'.join(lines))
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)

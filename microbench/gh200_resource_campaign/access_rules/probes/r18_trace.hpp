@@ -39,6 +39,61 @@ __device__ __forceinline__ uint64_t* v06_base() {
   unsigned block = blockIdx.x + gridDim.x * (blockIdx.y + gridDim.y * blockIdx.z);
   return v06_trace_ptr + size_t(block) * V06CtaWords;
 }
+
+#ifdef R13_STAGE_SPARSE
+// Same 784-word allocation as ordinary plain. Only CTA0 writes selected fields.
+// Word 10 remains the existing overflow sentinel. Event values are same-SM clocks.
+struct R13SparseProducer {
+  uint64_t acquire_begin=0, acquire_end=0, issue_end=0;
+  uint64_t refill_begin=0, refill_end=0, refill_issue_end=0;
+  // Actual sampled slot/phase pairs: [2:0]/[3] and [6:4]/[7].
+  // Keep one metadata register live beside six clocks in the 40-register producer.
+  uint32_t state=0;
+};
+struct R13SparseConsumer {
+  uint64_t wait_begin=0, wait_end=0, commit_end=0, retire_end=0;
+  uint64_t release_begin=0, release_end=0, first_mma=0, main_end=0;
+  uint64_t mma_return=0, tail_begin=0;
+  int read_slot=0, release_slot=0, release_phase=0;
+};
+__device__ __forceinline__ bool r13_sparse_cta() {
+  return blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0;
+}
+__device__ __forceinline__ void r13_sparse_producer_flush(R13SparseProducer const& s) {
+  auto b=v06_base();
+  b[4]=uint64_t(s.state&7)+1; b[5]=uint64_t((s.state>>3)&1)+1;
+  b[6]=s.acquire_begin; b[7]=s.acquire_end; b[8]=s.issue_end;
+  b[9]=s.refill_begin; b[11]=s.refill_end; b[12]=s.refill_issue_end;
+  b[27]=uint64_t((s.state>>4)&7)+1; b[28]=uint64_t((s.state>>7)&1)+1;
+  b[29]=1; b[30]=16; b[31]=0x52313301;
+}
+__device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer const& s) {
+  auto b=v06_base();
+  b[15]=s.wait_begin; b[16]=s.wait_end; b[17]=s.commit_end; b[18]=s.retire_end;
+  b[19]=s.release_begin; b[20]=s.release_end; b[21]=s.first_mma; b[22]=s.main_end;
+  b[24]=uint64_t(s.read_slot)+1; b[25]=uint64_t(s.release_slot)+1;
+  b[26]=uint64_t(s.release_phase)+1; b[32]=s.mma_return; b[33]=s.tail_begin;
+}
+__device__ __forceinline__ void v06_entry() {
+  if (!r13_sparse_cta() || threadIdx.x!=0) return;
+  unsigned sm;asm volatile("mov.u32 %0, %%smid;":"=r"(sm));
+  auto b=v06_base();b[0]=v06_clock();b[1]=uint64_t(sm)+1;
+}
+template<class Work>
+__device__ __forceinline__ void v06_begin(Work const& work,int tile) {
+  if (!r13_sparse_cta()) return;
+  if (threadIdx.x==0 && tile==1) {v06_base()[2]=uint64_t(work.M_idx)+1;v06_base()[3]=uint64_t(work.N_idx)+1;}
+  // Consumer1's first local work item is the CTA's second global output.
+  if (threadIdx.x==256 && tile==0) {v06_base()[13]=uint64_t(work.M_idx)+1;v06_base()[14]=uint64_t(work.N_idx)+1;}
+}
+__device__ __forceinline__ void v06_stamp(int,int) {}
+__device__ __forceinline__ void v06_final(int) {
+  if (!r13_sparse_cta() || threadIdx.x!=256) return;
+  unsigned sm;asm volatile("mov.u32 %0, %%smid;":"=r"(sm));
+  v06_base()[23]=uint64_t(sm)+1;
+}
+#else
+
 __device__ __forceinline__ void v06_entry() {
   if (threadIdx.x != 0) return;
   uint64_t c = v06_clock(), t = v06_ns();
@@ -101,3 +156,5 @@ __device__ __forceinline__ void v06_final(int tiles) {
   unsigned sm;asm volatile("mov.u32 %0, %%smid;":"=r"(sm));
   v06_base()[11+role-1]=uint64_t(sm)+1;
 }
+
+#endif // R13_STAGE_SPARSE

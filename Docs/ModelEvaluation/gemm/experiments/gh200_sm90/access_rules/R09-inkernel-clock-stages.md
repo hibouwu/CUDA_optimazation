@@ -1,7 +1,7 @@
 # R09：调用内时钟、输入与时间换算
 
 当前时钟候选以名义 Tensor/源请求工作和输入模式预测有效 cycle/ns，参数及组合见 [V09 r2](RULES.md#v09-model)。**V09 整体未通过**：cfg_b K32768 的频率低估 25.00%，完整时间高估 35.46%；训练窗口内的拟合不能代替跨 K 验证。
-固定Q/S/D的sw1→sw8新配对中，频率提高9.86%、最大CTA周期减少18.50%，十对方向一致；请求次序是现行静态代理缺少的条件。源面板重访机会与暖机历史仍未分离，不先命名为缓存功耗规则。
+固定Q/S/D后，sw1→sw8的服务收益仍存在；把两组前序改成共同16次sw1后，周期减少24.60%，频率差却从同期adaptive的14.12%降到0.33%。前序协议参与了频率响应，不能把先前全部升频直接归为请求次序或缓存功耗。
 同参数量的正值倒数响应已做离线比较：它缓解G6低估，却使独立于训练的旧wide六点频率RMS从6.56%升至10.74%；加入既有跨K数据仍未修复，因此没有替换现行组件。
 逐进程分解进一步定位：cfg_b 长K在**观测包络下**的频率误差为−53.39%，自由联立缓和到−25.00%；代入同次观测频率后，包络误差仅−0.47%。直接删除源请求项使原训练频率RMS从2.39%恶化到30.76%，因此保留现行候选。新卡观察协议对照没有出现同量级的系统频率差，但长窗口plain仍比两种记录版本慢，后续须分开检查源工作代理与完整时间映射。同卡zero/random也会同时改变周期窗口与频率，不能只换一个GHz常数。完整旧推导见 [cee978a 固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。
 
@@ -266,6 +266,30 @@ job739539仍在a058/GPU-ef8692f3，固定cfg_b、6144×8192×32768、dyadic/seed
 
 U30虽改善wide组，却让V09 G6频率高估18.17%～45.91%。a058的sw8/sw1频率比实测1.099，U21/U30条件预测为1.026/1.014：方向正确，幅度不足。当前U只定义完整in-bounds tile；V09的cfg_c G2和两个partial条件明确列为不支持。在共同支持的27条件上，S30/U30频率RMS为11.34%/11.41%，不能借少算三例宣称提升。Q+U尚不能替换现行时钟，软件轮的完全去重与真实重访、以及自适应暖机历史仍需区别；此处停止增加混合价格。[各版本、支持边界与次序趋势](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-response-candidates.json)。
 
+### 共同前序以后，次序收益还在吗？
+
+job739552在同a058/GPU-ef8692f3保留两条adaptive同期参照，再比较共同16次sw1后的一次sw1/sw8目标；仍是同一G6、输入与分配条件，四条件各10个ends进程。两套launch参数均在输入准备前构造，共同前序使用相同kernel、指针、输入和trace清零/同步操作。两种policy均实测确认sw1/sw8各先运行五次。
+
+| sw1→sw8，同trial变化中位 | 有效频率 | 最大CTA周期 | 目标包络 | event完整时间 |
+|---|---:|---:|---:|---:|
+| adaptive同期参照 | +14.12% | −19.29% | −25.63% | −25.62% |
+| 共同16次sw1前序 | +0.33% | −24.60% | −24.55% | −24.54% |
+
+adaptive四项方向均10/10复现；与739539的+9.86%频率响应只能作分批参考。共同前序下，周期和包络仍10/10减少，但频率配对范围为−2.70%～+4.00%，只有7/10上升。结果支持**前序协议参与升频、次序服务收益仍在**，不将协议差单归因于暖机次数、功耗或缓存。
+
+频率观察窗口是目标调用内、同CTA入口到最终记录的cycle/ns，先取最大工作量CTA的中位；不是连续时钟轨迹，也不同于跨CTA包络。下表观察窗口先取每进程这些CTA的窗口中位，再列10个进程的分布。前序时间是CUDA event记录的暖机kernel时间之和，不包含其间trace清零、同步和主机间隙；本探针没有记录完整前序的墙钟包络。
+
+| policy / 目标 | 前序次数范围 | 前序kernel总和中位〔范围〕，ms | 目标频率观察窗口中位〔范围〕，ms |
+|---|---:|---:|---:|
+| adaptive / sw1 | 8–22 | 89.02〔48.22–147.94〕 | 6.620〔6.069–7.057〕 |
+| adaptive / sw8 | 8–11 | 39.21〔39.02–55.28〕 | 5.021〔4.804–5.281〕 |
+| common / sw1 | 16 | 105.75〔101.58–107.96〕 | 6.839〔6.644–7.101〕 |
+| common / sw8 | 16 | 105.17〔100.88–107.69〕 | 5.465〔5.110–5.787〕 |
+
+共同组的前序kernel总和也非数值相等：sw8/sw1配对变化中位−0.43%，范围−2.78%～+1.74%。相同声明前序没有消除随机卡状态，更不证明物理缓存内容相同。共同sw1/sw8分别有4/7个进程的前序末五次CV超过2%，全部保留；固定前序不能事后再套adaptive过滤。40进程的原始数据、源码及二进制SHA均复核通过。[完整四条件与协议间配对](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-common-history.json)。
+
+后续频率规则的最小输入契约应包含前序协议：例如原8–30次收敛算法，或固定16次sw1后首个目标；前序kernel、次数/停止规则、输入初始化与驱逐准备需有定义。当前调用的W不能隐式代替这些历史。未知前序时应明确不支持无条件的频率与完整时间点预测，可保留静态工作量和指定f下的服务诊断；没有相应校准时也不能凭本批两种协议构造通用误差区间。这是后续模型契约建议，V09冻结公式和成绩保持不变，本节未增加拟合。
+
 ## 作业与复核索引
 
 | 实验问题 / 作业 | 一句结果 | 证据入口 |
@@ -282,5 +306,6 @@ U30虽改善wide组，却让V09 G6频率高估18.17%～45.91%。a058的sw8/sw1�
 | V09三层分解，复用739011 | cfg_b条件时钟失配，删源项无益，缺同条件ends/dual对照 | [300调用与删项结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-clock-failure.json) |
 | 观察协议，739095 | 新卡长K无同量级系统频率差，plain映射仍有偏差 | [两档K、60进程](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/A-controls.json) |
 | 次序配对，739539 | 固定Q/S/D后sw8仍升频并减少周期，时长项不充分 | [sw1/sw8](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json) |
+| 共同前序，739552 | 共同前序下频率差缩小，周期收益保留 | [四条件、40进程](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-common-history.json) |
 
 离线复核使用各结果中的原分析器或现有 `r09_analyze.py --shared`、`r09_input_source_clock.py`、`r09_equal_work_clock.py`、`r09_zero_activity_clock.py`；参数和命令见对应归档及[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。新输出写新目录，旧summary/frozen只读；本页不复制准备包启动步骤。

@@ -223,7 +223,7 @@ def failure_decomposition(base,out,controls=None):
     if controls is not None:reference_comparison(base,controls,out)
 
 
-def candidate_development(base,out,controls=None,swizzle_controls=None):
+def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None):
     """Compare explicit candidate mechanisms without changing frozen predictions."""
     import r09_input_source_clock
     import analyze_r13_supply
@@ -239,6 +239,10 @@ def candidate_development(base,out,controls=None,swizzle_controls=None):
         reference_comparison(base,controls,out)
     if swizzle_controls is not None:
         r09_input_source_clock.swizzle_diagnostics(swizzle_controls,out)
+    if stage_events is not None:
+        analyze_r13_supply.stage_event_diagnostics(stage_events,out)
+    if common_history is not None:
+        r09_input_source_clock.common_history_diagnostics(common_history,out)
 
 
 def main():
@@ -246,18 +250,22 @@ def main():
     parser.add_argument('--analysis',choices=('ablation','failure-decomposition','candidate-development'),default='ablation')
     parser.add_argument('--controls',type=Path,help='local control run for the selected diagnostic analysis')
     parser.add_argument('--swizzle-controls',type=Path,help='R09 sw1/sw8 paired run for candidate development')
+    parser.add_argument('--stage-events',type=Path,help='R13 stage4/6 sparse event run')
+    parser.add_argument('--common-history',type=Path,help='R09 common/adaptive history paired run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
-    if args.swizzle_controls is not None and args.analysis!='candidate-development':
-        parser.error('--swizzle-controls requires candidate-development')
+    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history)) and args.analysis!='candidate-development':
+        parser.error('--swizzle-controls, --stage-events and --common-history require candidate-development')
     if args.analysis!='ablation':
         controls=args.controls.resolve() if args.controls else None
         if args.analysis=='failure-decomposition':
             failure_decomposition(base,out,controls)
         else:
             candidate_development(base,out,controls,
-                args.swizzle_controls.resolve() if args.swizzle_controls else None)
+                args.swizzle_controls.resolve() if args.swizzle_controls else None,
+                args.stage_events.resolve() if args.stage_events else None,
+                args.common_history.resolve() if args.common_history else None)
         return
     out.mkdir(parents=True,exist_ok=False)
     frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'
