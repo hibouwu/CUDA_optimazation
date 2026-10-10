@@ -4392,6 +4392,62 @@ def shared_stage_service_diagnostics(output):
             scaled=[dict(scale=scale,MAIN1_span_ns_median=statistics.median(
                 next(x for x in r['scaled'] if x['scale']==scale)['spatial']['MAIN1']['span_ns']
                 for r in selected)) for scale in (1e-6,.1,1.)]))
+    # Keep the fitted service prices fixed. These positive gaps are numerical
+    # counterexamples to a zero-gap conclusion, not calibrated issue latencies.
+    finite_issue=[]
+    for multiplier in (1.,16.):
+        gap=fits[-1]['parameters']['service_ns']*multiplier
+        for stage in (4,6):
+            kwargs=dict(**fits[-1]['parameters'],operand_gap_ns=gap,producer_gap_ns=gap)
+            free_model=shared_stage_events(64,stage,132,**kwargs)
+            free=spatial(free_model)
+            free_order=np.sort([a['main_ends'][1] for a in free_model['ctas']])
+            trials=[]
+            for process in (r for r in producer_cuts if r['stage']==stage):
+                variants=[]
+                for scale in (1e-6,1.):
+                    model=shared_stage_events(64,stage,132,**kwargs,
+                        diagnostic_producer_offsets_ns=[v*scale for v in process['producer_offsets_ns']])
+                    order=np.sort([a['main_ends'][1] for a in model['ctas']])
+                    variants.append(dict(offset_scale=scale,spatial=spatial(model),
+                        sorted_MAIN1_centered_max_change_ns=float(np.max(np.abs((order-order[0])-(free_order-free_order[0]))))))
+                trials.append(dict(trial=process['trial'],source=process['source'],variants=variants))
+            finite_issue.append(dict(stage=stage,multiplier=multiplier,gap_ns=gap,free=free,processes=trials,
+                summaries=[dict(offset_scale=scale,
+                    MAIN1_span_ns_median=statistics.median(next(x for x in r['variants'] if x['offset_scale']==scale)['spatial']['MAIN1']['span_ns'] for r in trials),
+                    sorted_MAIN1_centered_max_change_ns=max(next(x for x in r['variants'] if x['offset_scale']==scale)['sorted_MAIN1_centered_max_change_ns'] for r in trials))
+                    for scale in (1e-6,1.)]))
+    # Reuse the existing raw parser and selection rule for same-producer bounds.
+    from analyze_r13_sm import select_attempts
+    issue_root=Path(data['root']).parent/'20261010-R13-stage-events';common.verify(issue_root)
+    issue_windows=[];issue_hashes={}
+    for row in read_json(issue_root/'cases.json'):
+        if row.get('set')=='reference':continue
+        chosen,_,_=select_attempts(issue_root,row['id'],('stamped',))
+        for item in chosen:
+            record=item['record'];obs=replay(issue_root,record,row)['sparse'];clocks=obs['clocks']
+            windows=dict(acquire_end_to_issue_end=clocks['issue_end']-clocks['acquire_end'],
+                refill_end_to_issue_end=clocks['refill_issue_end']-clocks['refill_end'],
+                same_slot_issue_group_separation=clocks['refill_issue_end']-clocks['issue_end'])
+            issue_windows.append(dict(stage=row.get('stages',6),trial=record['trial'],source=str(issue_root/record['raw']),
+                cta=obs['cta'],sm=obs['sm'],work=obs['work'],clocks=clocks,cycles=windows))
+            for path in (issue_root/record['raw'],issue_root/item['path']):issue_hashes[str(path)]=common.sha(path)
+    issue_summary=[]
+    for stage in (4,6):
+        selected=[r for r in issue_windows if r['stage']==stage]
+        if len(selected)!=10:raise ValueError('issue diagnostic expects ten sparse processes per stage')
+        issue_summary.append(dict(stage=stage,cycles={key:dict(median=statistics.median(r['cycles'][key] for r in selected),
+            minimum=min(r['cycles'][key] for r in selected),maximum=max(r['cycles'][key] for r in selected))
+            for key in selected[0]['cycles']}))
+    atom_steps=[]
+    for assembly in formation['sass']:
+        sites=[int(address,16) for address in assembly['load_sites']]
+        atom_steps.append(dict(binary=assembly['binary'],path=assembly['path'],load_sites=assembly['load_sites'],
+            A_to_B0_instruction_steps=(sites[1]-sites[0])//16,B0_to_B1_instruction_steps=(sites[2]-sites[1])//16))
+    for relative in ('cases.json','source_hashes.json',
+            'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
+            'build/cfg_b_stamped.sass','build/cfg_b_s4_stamped.sass'):
+        path=issue_root/relative;issue_hashes[str(path)]=common.sha(path)
     old_source=output/'B-epilogue-order.json';old=read_json(old_source);local=[]
     for stage in (4,6):
         a={p['trial']:p for p in old['processes'] if (p['stages'],p['variant'],p['epilogue_defer'])==(stage,'progress',0)}
@@ -4437,9 +4493,12 @@ def shared_stage_service_diagnostics(output):
         calibration_rule='Two local starts fit flag2 early/post/E0 on both stages; c comes from its stage6 early. Joint fit then explicitly uses both arms.',
         solver_scope='Finite local least-squares searches, not exhaustive feasible-set bounds. No fit selected by flag1 transfer score.',
         fits=fits,observed_current=observed,observed_old_local=local,old_entry_evidence=entry_evidence,
+        issue_organization=dict(finite_gap_diagnostics=finite_issue,observed_group_windows=issue_windows,observed_summaries=issue_summary,
+            atom_instruction_steps=atom_steps,
+            scope='Positive gaps tau and 16*tau are uncalibrated numerical sensitivities, no fitting or model selection. Group clocks remain cycles of their original sparse observer.'),
         producer_cut=dict(processes=producer_cuts,summaries=cut_summaries,
             scope='Conditional graph sensitivity only: old measured producer-loop offsets with newer fixed joint parameters; no fitting or cross-batch absolute score.'),
-        input_sha256={**entry_hashes,**{str(p):common.sha(p) for p in (source,old_source,formation_source,entry_root/'source_hashes.json',entry_root/'cases.json',Path(__file__),Path(__file__).with_name('supply_model.py'))}},
+        input_sha256={**entry_hashes,**issue_hashes,**{str(p):common.sha(p) for p in (source,old_source,formation_source,entry_root/'source_hashes.json',entry_root/'cases.json',Path(__file__),Path(__file__).with_name('supply_model.py'))}},
         limitations=['The stage6 early calibration is fixed by c, and its computed post is nearly 47c; six windows are not six independent identifications.',
             'Abstract logical service and per-byte read/write weighting are not physical bandwidth or traffic measurements.',
             'The predicted endpoint is final epilogue source-read completion. Global D visibility and kernel launch/exit costs are absent.',
@@ -4518,6 +4577,34 @@ def shared_stage_service_diagnostics(output):
         '这要求先约束真实请求发射组织，再讨论额外资源或按源身份收费；本诊断没有选择新的时间常数。']
     lines+=['','这些观测起步量不是正式预测输入。当前图的敏感性不能排除未建模的请求身份、仲裁或局部资源；'
         'FIRST0和MAIN1也不等同于前表的新协议C1或M端点。','']
+    lines+=['## 有限发射顺序与已有组外端点','',
+        '四个二进制的A→B0和B0→B1并非相同指令路径，下表只数静态指令步，不换算cycle：','',
+        '| 构建 | A→B0指令步 | B0→B1指令步 |','|---|---:|---:|']
+    for r in atom_steps:lines.append(f'| {r["binary"]} | {r["A_to_B0_instruction_steps"]} | {r["B0_to_B1_instruction_steps"]} |')
+    lines+=['','普通迭代是B1之后先做部分控制工作、等待empty，再做expect_tx/地址准备后发下一A；'
+        '可聚合为nextA=max(prevB1+pre,slot_ready)+post。跨输出还会退出load、推进pipeline state与persistent scheduler并重建坐标，不能默认等同普通迭代。'
+        '这些源码事实没有给出pre/post或两段operand间隔的数值价格。','',
+        '保持原joint服务价格不变，以下仅让两个operand gap和B1→nextA gap均取δ=τ或16τ，release后附加项仍为0。'
+        'τ是当前拟合的16KiB逻辑服务时间；δ只是数值敏感性尺度，不是实测发射延迟，不按误差挑选它。','',
+        '| stage / δ倍数 | δ ns | 全0起步MAIN1跨度ns | 微小偏移跨度ns中位 | 原PROD偏移跨度ns中位 | 微小偏移后排序曲线最大变化ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    for r in finite_issue:
+        tiny,full=r['summaries']
+        lines.append(f'| {r["stage"]} / {r["multiplier"]:g} | {r["gap_ns"]:.4f} | '
+            f'{r["free"]["MAIN1"]["span_ns"]:.2f} | {tiny["MAIN1_span_ns_median"]:.2f} | '
+            f'{full["MAIN1_span_ns_median"]:.2f} | {tiny["sorted_MAIN1_centered_max_change_ns"]:.6g} |')
+    lines+=['','排序曲线逐调用以自身最早MAIN1归零后比较，避免把CTA标签变化当成全卡分散变化。'
+        '有限gap的两个示例消除了大部分微小偏移的跨度跳变；原幅度偏移仍可改变相位。'
+        '这区分了零间隔并列假设与真正的有限起步分散，没有证明哪一δ对应硬件，也没有检验完整候选的泛化。','',
+        '| stage | acquire返回→完整请求组结束 cycles | 补发acquire返回→组结束 cycles | 同slot两次组结束间隔 cycles |',
+        '|---|---:|---:|---:|']
+    for r in issue_summary:
+        values=[r['cycles'][key] for key in ('acquire_end_to_issue_end','refill_end_to_issue_end','same_slot_issue_group_separation')]
+        lines.append(f'| {r["stage"]} | '+' | '.join(f'{x["median"]:.1f} [{x["minimum"]}, {x["maximum"]}]' for x in values)+' |')
+    lines+=['','739556两端都在完整请求组之外，61cycle包含地址/UR准备、三条UTMALDG和观察路径，不能除2分给两个operand gap。'
+        '同slot间隔跨S组，含empty等待，也不能除S当净producer间隔。本批只有这些端点的clock64，不能借另一调用GHz换成ns。'
+        '已有739629的192ns是首次工作准备，不是稳态间隔；旧R13 reuse的终点还在A之前。'
+        '当前证据不足以给gap点值；继续从测得的组外合并窗口约束同一观察协议的完整候选，不给未知段按stage或CTA分配常数。','']
     (output/'B-stage-shared-service.md').write_text('\n'.join(lines))
     return report
 

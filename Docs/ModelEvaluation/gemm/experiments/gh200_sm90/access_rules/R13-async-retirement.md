@@ -90,7 +90,16 @@
 
 完成分散在首输入后继续累积，不能只补入口延迟。各段逐CTA相加闭合，跨度不相加；FIRST0→FIRST1跨consumer角色，也不是纯计算服务。每轮11组A源各供12个CTA、B0/B1各12组各供11个CTA；第二输出换A组、复用B地址。这些身份在等权服务中被折叠，但与物理CTA/SM绑定，尚不能分离缓存、路由和到达组织。[逐CTA来源与静态请求](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-request-formation.md)。
 
-起步差条件诊断固定新批joint参数，把旧PROD偏移仅作模型输入切口；不重拟合、不报跨批绝对成绩。进一步保持次序、将偏移缩至百万分之一时，全卡分散仍明显增加。当前producer/operand发射间隔取0，单CTA可同时发完初始槽，极小非零偏移就改变FIFO并列处理。因此不能把全部变化解释为实测240ns起步差的物理放大，下一步先约束真实发射组织，而不是增加位置或硬件端口常数。逐进程和幅度对照见[共享服务报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+起步差条件诊断固定新批joint参数，把旧PROD偏移仅作输入切口，不报跨批绝对成绩。零发射间隔下，将偏移缩至百万分之一仍显著改变分散；改用两个未标定的有限间隔示例δ∈{τ,16τ}（τ是拟合的逻辑服务时间，约0.64ns）后，微小偏移下的全卡MAIN1排序曲线与全0起步完全相同。原幅度偏移仍能改变分散。因此零间隔的并列处理与有限起步差是两个影响，不能把前者当成实测240ns起步差的物理放大，也不能按后者挑一个δ进入预测。逐进程对照见[共享服务报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+
+源码还限制了参数含义：A→B0/B0→B1在stage6 plain分别跨4/1条指令步，stage4 plain为5/1，progress均为3/2；指令步不是cycle。普通迭代可写为`nextA=max(prevB1+acquire前工作,slot_ready)+acquire后工作`，跨两次load还含调度与坐标重建，不能把所有producer工作放在等待前。已有端点只给出下列同producer合并窗口（十进程中位[最小,最大]，cycle）：
+
+| stage | acquire返回→整组发出后 | 补发acquire返回→整组发出后 | 同slot两组末端相隔S组 |
+|---|---:|---:|---:|
+| 4 | 61[61,63] | 61[60,69] | 2413.5[2216,2835] |
+| 6 | 61[60,68] | 62[60,63] | 3096.5[3037,3259] |
+
+61不能除2分配给A/B间隔；最后一列包含empty等待，除S也不是净发射间隔。此协议没有这些端点的ns，不能借另一调用频率换算。首组的192ns准备与旧probe的pre-A reuse同样不能填入稳态参数。当前先保留这些合并窗口约束；若要补测初始发射包络，必须先明确其哪个范围能否定当前解释，不能仅为给未知参数填值而增加实验。
 
 [R09分阶段换算](R09-inkernel-clock-stages.md#stage-phase-clock)同时表明首/次输出周期率不同：stage4第二L的cycle/ns空间相关中位为0.952，stage6仅0.413。不能把所有ns分散归入供给，也不能把次输出的291.2ns计算间隔直接当成首输出已验证的服务价。
 
