@@ -174,6 +174,32 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_reuse_reduction_and_full_inheritance_early_bound(self):
+        from supply_model import admission_stage_events,stage_reuse_window
+        import random
+        rng=random.Random(738686)
+        for stage in (4,6):
+            for _ in range(40):
+                c=rng.uniform(500,525);q=rng.uniform(200,480)
+                w=rng.uniform(0,40);h=rng.uniform(10,100)
+                r=rng.uniform(0,80);delta=rng.uniform(0,40)
+                latency=rng.uniform(100,2500);reuse=rng.uniform(0,300)
+                t=admission_stage_events(64,stage,rng.uniform(0,c),latency,q,
+                    rng.uniform(0,c-q),service_cycles=c,issue_floor=rng.uniform(0,c-q),
+                    wait_overhead=w,loop_advance=h,return_overhead=r,reuse_delay=reuse,
+                    handoff_delay=delta)
+                C=t['commits'];Z=latency+reuse+c-q
+                for j in range(stage,64):
+                    i=64+j
+                    self.assertAlmostEqual(C[i],max(C[i-1]+c,C[i-stage+1]+Z+w),places=8)
+                lo,hi=stage_reuse_window(46,stage,c,Z,w)
+                self.assertGreaterEqual(C[127]-C[81]+1e-8,lo)
+                self.assertLessEqual(C[127]-C[81]-1e-8,hi)
+                # Here q >= w+r+delta. The previous final-slot release is
+                # earlier than a continued ordinary release and cannot delay C1.
+                early=stage_reuse_window(15,stage,c,Z,w)[1]
+                self.assertLessEqual(C[80]-C[65]-1e-8,early)
+
     def test_internal_stall_bounds_do_not_need_first_output_or_q_cap(self):
         from supply_model import admission_stage_events
         for stage in (4,6):

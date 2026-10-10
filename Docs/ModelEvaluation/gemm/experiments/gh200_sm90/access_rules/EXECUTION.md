@@ -81,8 +81,8 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 
 | 对象 | 已有结果 | 当前工作/边界 |
 |---|---|---|
-| 管理 | 对话`01a11cfc-87f0-76e3-b53e-dc2b5e241844`；完成739686的条件入口重放及后段参数无关必要界；本轮纯离线，无活动GPU作业 | `gh200-v09-failure-analysis`持续开发；[候选分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/README.md)统一重放，未进入V10 |
-| 供给 | [R13条件检验](R13-async-retirement.md#stage-conditioned)排除旧延迟用于本批的可能，证明后段需内部停顿；stage6供给不可独立辨识 | 下一候选将两stage同列开发校准，约束共同复用代价，保留旧迁移失败；不加stage专属常数或新GPU矩阵；未采用新定值 |
+| 管理 | 对话`01a11cfc-87f0-76e3-b53e-dc2b5e241844`；完成共同复用组合的中位开发与早段上界；本轮纯离线，无活动GPU作业 | `gh200-v09-failure-analysis`持续开发；[候选分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/README.md)统一重放，未进入V10 |
+| 供给 | [R13共同组合](R13-async-retirement.md#stage-reuse)约束了后段，但完整子类仍少算早段；旧D-only证据不能区分当前两个解释 | 准备R13/R15原两stage的本SM epilogue顺序干预，先验证依赖与正确性；不加early专属项，未采用新定值 |
 | 输出/边界 | [R18](R18-cluster-boundary.md)同cluster轨迹相关；源码证明full/empty跨rank依赖 | 将依赖作为候选约束，不直接收费；P2最后cluster仍在冻结候选外 |
 | 时间/输入 | [R09](R09-inkernel-clock-stages.md)700次连续调用显示服务与频率均有历史响应；single也复现变慢 | 单极状态留段劣于末值基线，不采用；镜像前序后目标仍呈晚段成本，重复目标地址不是必要条件；批次封顶计数不能定位调用；本组暂无独立GPU任务 |
 | V09 | 739011完成30条件；29受支持预测4.11%/35.46%，1冻结前拒绝 | **整体未通过**，冻结/判定不改；新候选须另用新留出检验 |

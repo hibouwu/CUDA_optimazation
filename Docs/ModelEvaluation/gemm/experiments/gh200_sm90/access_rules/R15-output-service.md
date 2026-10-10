@@ -25,6 +25,18 @@ I=A+J; E=J+R; max(DONE)−M=W+J+R
 
 最终`store_tail()`在本CUTLASS版本使用`.read0`，只保证源SMEM被读完、可复用，不证明全局写完成。完整CUDA event才覆盖最终写完成。不同CTA/进程分别取的中位数不保持上述加法恒等式；精确分解先在同一记录内计算。
 
+<a id="next-mainloop-overlap"></a>
+
+## 前一输出是否拖慢下一主循环？
+
+[R13共同复用候选](R13-async-retirement.md#stage-reuse)仍缺少cfg_b stage4早段约2k cycle。pingpong允许前WG epilogue与后WG mainloop重叠，但时间重叠本身不是竞争的因果证据。
+
+已有最接近的输出干预是[V08F job737322](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/cases.json)的`cfg_b_p_ref_k1024`与`cfg_b_p_dpitch_k1024`：2304×3072×1024、stage6、swizzle1、grid132，case只改ldd 3072→3080。每case有10个plain/stamped/ends成功进程；同CTA逐输出FIRST/MAIN/PERMIT/DONE可重放。旧[汇总](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)中后续L只变+0.423%、完整时间+0.226%，末E为2512→2513 cycle，尚不足以证明有效改变了输出竞争。
+
+它只覆盖旧099卡、stage6、K1024，没有当前stage4/K4096的早段commit端点。逻辑A/B及分配尺寸相同，旧记录却未保存输入VA；D分配与初始化量也随行距改变。故不能借此排除当前输入初态解释。EPI_DONE也不是全局D写完成的证明。
+
+当前尚不能区分本SM前WG输出竞争与输入/全卡继承状态。需要改变输出时间顺序的对照，不能仅从重叠区间定价；具体最小干预见[PLAN](PLAN.md)。等待本身可能改变调度，阴性结果也不能直接排除全部竞争。
+
 ## 周期变短是否等于输出服务变快？
 
 <a id="v08-输出窗口离线复核2026-10-09"></a>

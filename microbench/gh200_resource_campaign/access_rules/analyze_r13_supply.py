@@ -3267,6 +3267,119 @@ def stage_conditioned_diagnostics(output):
     return report
 
 
+def stage_reuse_diagnostics(output):
+    """Joint median development of the identifiable internal reuse combination."""
+    from supply_model import stage_reuse_window
+    import v06_run as common
+    output=Path(output);source=output/'B-stage-handoff-samples.json';data=read_json(source)
+    summaries={}
+    fields=('commit1_to16','commit16_to17','commit17_to63','commit_to_wait1_16','L')
+    for variant in ('stamped','progress'):
+        summaries[variant]={}
+        for stage in (4,6):
+            rows=[r for r in data['processes'] if r['variant']==variant and r['stages']==stage]
+            summaries[variant][stage]={f:statistics.median(r['intervals'][f] for r in rows) for f in fields}
+    calibration=summaries['stamped'];c=calibration[6]['commit17_to63']/46
+    constraints=[]
+    for stage in (4,6):
+        r=calibration[stage];m=stage-1;w=r['commit_to_wait1_16']
+        excess=r['commit17_to63']-46*c
+        if abs(excess)<1e-8:
+            lower,upper=0.,m*c-w
+        elif excess>0:
+            lower=m*c-w+excess/((46+m-1)//m)
+            upper=m*c-w+excess/(46//m)
+        else:raise ValueError('median late window is below the proposed compute floor')
+        early_upper=r['commit1_to16']/(15//m)-w
+        constraints.append(dict(stages=stage,late_Z_interval=[max(0.,lower),upper],
+            early_Z_upper=early_upper,late_excess=excess))
+    interval=[max(r['late_Z_interval'][0] for r in constraints),
+        min(min(r['late_Z_interval'][1],r['early_Z_upper']) for r in constraints)]
+    if interval[0]>interval[1]:raise ValueError('joint median reuse interval is empty')
+    comparisons=[]
+    def distance(value,limits):return max(limits[0]-value,value-limits[1],0.)
+    for variant in ('stamped','progress'):
+        for stage in (4,6):
+            r=summaries[variant][stage];w=r['commit_to_wait1_16'];m=stage-1
+            late=[stage_reuse_window(46,stage,c,interval[0],w)[0],
+                  stage_reuse_window(46,stage,c,interval[1],w)[1]]
+            adjacent=[c,c+max(0.,interval[1]+w-m*c)]
+            # This bound uses the complete default initial/return state and
+            # q>=w+r+handoff_delay; it is not valid for an arbitrary entry cut.
+            early=stage_reuse_window(15,stage,c,interval[1],w)[1]
+            comparisons.append(dict(variant=variant,stages=stage,late_envelope=late,
+                late_observed=r['commit17_to63'],late_distance=distance(r['commit17_to63'],late),
+                adjacent_envelope=adjacent,adjacent_observed=r['commit16_to17'],
+                adjacent_distance=distance(r['commit16_to17'],adjacent),
+                full_inheritance_early_upper=early,early_observed=r['commit1_to16'],
+                early_shortfall=max(0.,r['commit1_to16']-early),L_observed=r['L']))
+    # Recalibrate the older observer independently as a diagnostic. This is
+    # not a cross-protocol price and is not used to select the primary interval.
+    old=summaries['progress'];old_c=old[6]['commit17_to63']/46
+    old_T_upper=(old[4]['commit17_to63']-old_c)/15
+    old_check=dict(service_cycles=old_c,stage4_T_upper=old_T_upper,
+        stage4_early_upper=5*old_T_upper,
+        stage4_early_observed=old[4]['commit1_to16'],
+        stage4_early_shortfall=old[4]['commit1_to16']-5*old_T_upper)
+    report=dict(scope='Both stamped stages are development calibration medians; progress is an observer comparison. No validation score.',
+        calibration_fields=['stage6 median C17-to-C63 / 46 sets an effective compute-limited c',
+            'both-stage median C17-to-C63 finite windows constrain Z',
+            'both-stage C1-to-C16 supply a one-sided path bound, not a steady-state equality'],
+        service_cycles=c,Z_interval=interval,constraints=constraints,condition_medians=summaries,
+        comparisons=comparisons,independent_progress_check=old_check,
+        equations=dict(internal='C_j=max(C_(j-1)+c,C_(j-S+1)+Z+w), j>=S; Z=ell+a+c-q',
+            period='m=S-1; R=max(0,Z+w-m*c); C_(j+m)-C_j=m*c+R for j>=S-1',
+            finite_window='n*c+floor(n/m)*R <= C_(j+n)-C_j <= n*c+ceil(n/m)*R',
+            full_inheritance_early='C16-C1 <= (15/m)*max(m*c,Z+w), stage4/6 only'),
+        assumptions=['p<=c, 0<=g<=c-q, q+lambda<=c, q>=w+h, and nonnegative times.',
+            'w/h and the reuse combination are constant in the internal window; sampled marker paths can violate this.',
+            'The full-inheritance early bound additionally needs q>=w+r+handoff_delay, the default first output and no observed entry cut.',
+            'The final previous-output slot is released by tail; the internal recurrence cannot be applied at local j=S-1.',
+            'The c/Z interval describes representative condition medians, not bare hardware constants or a statistical confidence interval.',
+            'Satisfying the internal late window does not reconstruct the first S steps or prove a complete-L predictor.'],
+        decision='Do not adopt the complete constant-reuse subclass: its stage4 early upper bound is below the observed median. '
+            'Keep the late-window combination as a bounded development constraint; do not fit separate early/stage prices.',
+        input_sha256={str(p):common.sha(p) for p in (source,Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-stage-reuse.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 共同复用组合：中位开发区间与启动缺口','',
+        '本轮明确把739686新stamped的两stage同列开发校准；原stage6单独标定的失败不改。'
+        '使用各条件独立进程的窗口中位量，不将不同进程或不同窗口拼成一次实际调用。','',
+        '在p≤c、g≤c−q、q+λ≤c、q≥w+h的子类中，普通位置C恒取E−q、W=C+w，'
+        '递推化为C_j=max(C_(j−1)+c,C_(j−S+1)+Z+w)，Z=ℓ+a+c−q。'
+        '只从输出内j≥S使用；j=S−1复用的是前输出末slot，不能按普通释放代换。','',
+        '令m=S−1、R=max(0,Z+w−mc)，内部每m个间隔合计mc+R；未知初态只改变周期相位。'
+        'n个间隔的有限界为nc+floor(n/m)R到nc+ceil(n/m)R，保留了余段，不用渐近平均替代。','',
+        f'把stage6后段视为计算受限，名义c={c:.6f}。两个后段窗口及早段单侧路径界允许'
+        f'共同Z∈[{interval[0]:.6f},{interval[1]:.6f}] cycle。'
+        '这个区间不是逐调用置信域，也没有分别识别ℓ、a、q。','',
+        '| 协议 / stage | 后段观测 / 候选包络 | 后段包络外距离 | 相邻C16→17观测 / 候选包络 |',
+        '|---|---:|---:|---:|']
+    for r in comparisons:
+        lo,hi=r['late_envelope'];a,b=r['adjacent_envelope']
+        lines.append(f'| {r["variant"]} / {r["stages"]} | {r["late_observed"]:.2f} / [{lo:.2f},{hi:.2f}] | '
+            f'{r["late_distance"]:.2f} | {r["adjacent_observed"]:.2f} / [{a:.2f},{b:.2f}] |')
+    lines+=['','stage6新观察器相邻窗口仍比c多约19cycle，原progress约1cycle；'
+        '固定内部软件项不能精确代表被选中打点的每次迭代。旧progress只作协议比较，没有用于选择c/Z。','',
+        '## 完整继承状态仍不足','',
+        '再限制q≥w+r+δ且沿默认首输出初始化，首H不会阻塞继承E。前输出末slot的tail释放早于普通释放，'
+        '只能提前后续提交；它最早影响第二输出local S−1，不影响stage4/6的local C1。'
+        '所以C1与虚拟持续序列的锚点相同，C16不会更晚：C16−C1≤(15/m)max(mc,Z+w)。'
+        '这不是给任意未知初态或observed_second_entry切割的上界。','',
+        '| 新stamped | C1→16观测 | 完整子类上界 | 至少缺少 |','|---|---:|---:|---:|']
+    for r in comparisons:
+        if r['variant']=='stamped':lines.append(f'| stage{r["stages"]} | {r["early_observed"]:.2f} | '
+            f'{r["full_inheritance_early_upper"]:.2f} | {r["early_shortfall"]:.2f} |')
+    lines+=['',f'原progress另用自身两stage后段作独立诊断，stage4早段上界为{old_check["stage4_early_upper"]:.2f}，'
+        f'对观测{old_check["stage4_early_observed"]:.2f}仍缺{old_check["stage4_early_shortfall"]:.2f} cycle。'
+        '缺口不要求新增handoff打点存在；但原progress本身的非均匀观察路径仍未被排除，'
+        '不能只因2079比19大就把所有观察扰动排除。',
+        '完整子类不进入预测，也不为early另加常数；后段共同代价仅保留为受限的开发结果。'
+        '下一步区分未建模的输入/继承状态与前一输出并发路径，先复用现有同调用输出对照；'
+        '本轮没有新的GPU条件、完整L成绩或冻结验证。','']
+    (output/'B-stage-reuse.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_handoff_diagnostics(base,output):
     """Expose ready/handoff ambiguity without choosing parameters on stage4."""
     from analyze_r13_sm import select_attempts

@@ -95,6 +95,23 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         mma_returns=returns,main_ends=ends,slot=[i%stages for i in range(2*kt)])
 
 
+def stage_reuse_window(intervals, stages, service_cycles, reuse_cycles, wait_overhead=0.):
+    """Finite internal-window envelope for the constant reuse subclass.
+
+    For C_j=max(C_(j-1)+c,C_(j-S+1)+Z+w), after the boundary segment,
+    each S-1 interval period costs max((S-1)c,Z+w). A regular window starts
+    at local j>=S-1. Unknown phase is retained;
+    this is not an asymptotic average or a complete mainloop prediction.
+    The reduction requires p<=c, g<=c-q, q+lambda<=c and q>=w+h.
+    """
+    if intervals<1 or stages<2 or service_cycles<=0 or min(reuse_cycles,wait_overhead)<0:
+        raise ValueError('positive window/service and nonnegative reuse cost required')
+    period=stages-1
+    extra=max(0.,reuse_cycles+wait_overhead-period*service_cycles)
+    return (intervals*service_cycles+(intervals//period)*extra,
+            intervals*service_cycles+((intervals+period-1)//period)*extra)
+
+
 @lru_cache(None)
 def address_box(rows, row_bytes, pitch_bytes, start_mod128):
     """Valid address spans, counted per row; extra coverage is not physical traffic."""

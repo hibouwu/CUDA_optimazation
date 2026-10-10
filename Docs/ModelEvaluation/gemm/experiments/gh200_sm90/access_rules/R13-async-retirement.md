@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。入口条件重放后，旧ready延迟2257.5仍违反stage4后段的缓冲复用必要界；这次反证不依赖交接或第一输出初态。stage6接近计算饱和，不能独自辨识供给价格。下一候选用已公开的两stage开发数据约束共同复用代价，保留有限窗口与协议差异，不加stage专属常数，也不将观察值作为正式预测输入。
+当前条件供给尚未通过V09的行距与stage迁移。两stage的后段中位窗口允许共同复用组合Z约1755～1773 cycle，但当前完整继承状态子类仍少算stage4早段至少约2079 cycle；不交付为完整模型。下一步区分输入/继承状态与前一WG输出并发的影响，同时保留非均匀观察路径的限制，不给early加专属常数。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -23,6 +23,7 @@
 | 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
 | 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
 | 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
+| 共同复用组合，离线 | 两stage后段联合开发；有限窗口保留相位，完整子类仍缺早段推进 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -341,7 +342,27 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 逐调用波动不另立机制任务：stage6 trial1/9相同(w,h,r)、入口B只差1 cycle，但C1→16差637，共同常量递推至少留下约318 cycle的单调用最大残差，仅约L中位的0.96%。它不能单独证明中位预测失败，不据此扩大打点。
 
-原“stage6定值→stage4诊断”在这里结束，失败与不可辨识结论保留。下一候选将已公开的两stage同列**开发校准**，优先约束共同的复用组合代价及其区间，而非逐个裸延迟；保留有限窗口递推，不把平均间隔直接当稳态等式。新候选另看未参与拟合的K/几何作开发检查，最终仍需新冻结验证，不能把训练数据上的吻合称为迁移通过。[逐调用结果与推导](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.json)。
+原“stage6定值→stage4诊断”在这里结束，失败与不可辨识结论保留。两stage共同开发见下一节，不把训练吻合称为迁移通过。[逐调用结果与推导](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.json)。
+
+<a id="stage-reuse"></a>
+
+### 共同复用组合能约束后段，尚不能解释启动
+
+在p≤c、0≤g≤c−q、q+λ≤c、q≥w+h的子类内，普通提交恒取C=E−q、W=C+w，递推可化为C_j=max(C_(j−1)+c,C_(j−S+1)+Z+w)，Z=ℓ+a+c−q。S−1来自wait1后释放前一slot的依赖，不是硬件队列深度。只从输出内j≥S使用；更早的位置仍可能引用前输出末slot的tail释放。
+
+令m=S−1、R=max(0,Z+w−mc)，每m个内部间隔合计mc+R，n步的有限界为nc+floor(n/m)R至nc+ceil(n/m)R。把新stamped的stage6后段中位视为计算受限，得到名义c=512.76087；两stage后段及早段单侧路径界允许共同Z∈[1755.38,1772.78] cycle。这个区间只是条件中位的开发约束，不是裸硬件定值或置信区间。
+
+| 检查 | stage4 | stage6 |
+|---|---:|---:|
+| 新stamped后46间隔，中位cycle | 27764.5，落在候选包络内 | 23587，与名义计算项相同 |
+| 原progress后段距候选包络，cycle | 7.41 | 2.50 |
+| 新stamped相邻C16→17 | 539.5，可由周期相位容纳 | 532，比c多19.24 |
+| 完整继承子类对C1→16的上界 | 9083.91 | 7691.41 |
+| 实测C1→16中位 | 11163 | 7875.5 |
+
+最后两行使用额外条件q≥w+r+δ、默认首输出初始化且没有观测入口切割：首H不阻塞E，前输出末slot释放只会早于普通释放；它最早影响第二输出local S−1，尚未影响local C1，所以C16−C1≤(15/m)max(mc,Z+w)。因此这个完整子类不能解释stage4早段约2079 cycle的缺口。该反证不覆盖未知的真实第一输出状态或放宽分支后的其他模型。
+
+原progress另用自身两stage后段校准，仍有约1767 cycle早段缺口；它不要求新增handoff打点存在，但原progress的非均匀观察路径尚未排除，不能只因2079大于19就排除观察扰动。共同后段组合保留为受限约束，完整候选不进入预测；不加early专属项、不把观察值传入正式接口。[计算与完整前提](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.json)。已有输出路径对照及其不足集中在[R15](R15-output-service.md#next-mainloop-overlap)。
 
 <a id="first-supply"></a>
 
