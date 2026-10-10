@@ -3,6 +3,10 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#ifdef R10_WORK_SWAP
+// Experimental initial-work permutation; every later advance keeps the same stride.
+__device__ __constant__ int r10_work_swap55_91;
+#endif
 #include <cute/tensor.hpp>
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/collective/collective_builder.hpp>
@@ -130,6 +134,7 @@ struct Args {
   int mirror_target_slot = 0;
   std::string raster_order = "heuristic";
   int seed = 17;
+  int work_swap55_91 = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -165,8 +170,14 @@ struct Args {
       else if(key=="--mirror-target-slot")mirror_target_slot=std::stoi(v);
       else if(key=="--raster-order")raster_order=v;
       else if(key=="--seed")seed=std::stoi(v);
+      else if(key=="--work-swap55-91")work_swap55_91=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (work_swap55_91 != 0 && work_swap55_91 != 1)
+      throw std::runtime_error("work-swap55-91 must be 0 or 1");
+#ifndef R10_WORK_SWAP
+    if (work_swap55_91) throw std::runtime_error("work swap requires the experiment build");
+#endif
     if (b_offset_bytes < 0 || b_allocation_extra_bytes < b_offset_bytes ||
         b_offset_bytes % 16 || b_allocation_extra_bytes % 16)
       throw std::runtime_error("B base offset must be 16-byte aligned and fit extra allocation");
@@ -290,7 +301,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -378,6 +389,16 @@ int main(int argc, char** argv) {
     int ctas = int(grid.x * grid.y * grid.z);
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
+
+#ifdef R10_WORK_SWAP
+    if ((o.work_swap55_91 || o.mode == "check-work-swap") &&
+        (V06_CFG != 1 || o.m != 2304 || o.n != 3072 || o.k != 1024 ||
+         ctas != 132 || o.swizzle != 1 || std::string(resolved_raster) != "along_m"))
+      throw std::runtime_error("work swap is only the declared cfg_b persistent pair");
+    CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &o.work_swap55_91, sizeof(int)));
+#else
+    if (o.mode == "check-work-swap") throw std::runtime_error("work swap check requires experiment build");
+#endif
 
     // Both parameter sets exist before input/cache preparation. The common
     // history uses the same kernel; its source identity is an explicit condition.
@@ -512,6 +533,7 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"work_swap55_91\":" << o.work_swap55_91
                 << ",\"b_offset_bytes\":" << o.b_offset_bytes
                 << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
                 << ",\"b_payload_elements\":" << b_payload_elements
@@ -612,6 +634,7 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"work_swap55_91\":" << o.work_swap55_91
                 << ",\"b_offset_bytes\":" << o.b_offset_bytes
                 << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
                 << ",\"b_payload_elements\":" << b_payload_elements
@@ -638,6 +661,30 @@ int main(int argc, char** argv) {
               << ",\"trace_words\":" << kTraceWords << "}\n";
     if (o.mode == "setup")
       return 0;
+#ifdef R10_WORK_SWAP
+    if (o.mode == "check-work-swap") {
+      // Outside timing: compare all output bits in one allocation, not a sampled hash.
+      std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
+      int flag=0;
+      CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &flag, sizeof(flag)));
+      cutlass_check(Gemm::run(launch_params), "baseline check run");
+      CUDA_CHECK(cudaMemcpy(baseline.data(), d.pointer, baseline.size()*sizeof(float), cudaMemcpyDeviceToHost));
+      gaps::fill_output_sentinel<<<256,256>>>(d.pointer, d.count);
+      flag=1;
+      CUDA_CHECK(cudaMemcpyToSymbol(r10_work_swap55_91, &flag, sizeof(flag)));
+      cutlass_check(Gemm::run(launch_params), "swap check run");
+      CUDA_CHECK(cudaMemcpy(swapped.data(), d.pointer, swapped.size()*sizeof(float), cudaMemcpyDeviceToHost));
+      size_t different=0, nonfinite=0;
+      for (int i=0; i<o.m; ++i) for (int j=0; j<o.n; ++j) {
+        size_t pos=size_t(i)*ldd+j;
+        different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
+        nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
+      }
+      std::cout << "{\"event\":\"work_swap_check\",\"elements\":" << size_t(o.m)*o.n
+                << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
+      return different == 0 && nonfinite == 0 ? 0 : 2;
+    }
+#endif
     warm_sequence();
 
     double max_error_ratio = 0;

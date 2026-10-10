@@ -114,6 +114,8 @@ def decode_stage_sparse(setup, call):
 
 def validate_warmup(setup, call, row):
     """Legacy adaptive convergence, or an explicitly fixed common history."""
+    if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
+        raise ValueError('work permutation identity changed')
     policy = row.get('warmup_policy','adaptive')
     if policy not in ('adaptive','common-sw1-16'):
         raise ValueError('unknown warmup policy')

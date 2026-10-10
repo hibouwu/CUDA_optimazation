@@ -1754,6 +1754,261 @@ def base_shift_diagnostics(root, output):
     (output/'R10-base-shift.md').write_text('\n'.join(lines))
     return report
 
+def _work_swap_expected(work, enabled):
+    """Swap the complete persistent sequences, leaving physical grid indices intact."""
+    result=[list(c) for c in work]
+    if enabled:
+        result[55],result[91]=result[91],result[55]
+    return result
+
+
+def _work_swap_pitch_windows(base, variant, exclude_ctas=()):
+    """Same physical CTA pitch pair, with normalized globaltimer endpoints."""
+    from analyze_r13_supply import _failure_pair_windows
+    windows=_failure_pair_windows([c for c in base['ctas'] if c['cta'] not in exclude_ctas],
+        [c for c in variant['ctas'] if c['cta'] not in exclude_ctas])
+    maps={label:{c['cta']:c for c in obs['ctas']} for label,obs in (('base',base),('variant',variant))}
+    origins={label:min(c['entry_ns'] for c in obs['ctas']) for label,obs in (('base',base),('variant',variant))}
+    for w in windows:
+        endpoints={}
+        for label in ('base','variant'):
+            c=maps[label][w['cta']];j=w['j'];cycles,ns=c['tiles'][j],c['tiles_ns'][j]
+            values=dict(entry_relative_ns=c['entry_ns']-origins[label],
+                producer_relative_ns=c['prod_ns']-origins[label],entry_to_producer_ns=c['prod_ns']-c['entry_ns'],
+                FIRST_relative_ns=ns[0]-origins[label],MAIN_END_relative_ns=ns[1]-origins[label],
+                entry_to_FIRST_ns=ns[0]-c['entry_ns'],entry_to_MAIN_END_ns=ns[1]-c['entry_ns'],
+                entry_to_FIRST_cycles=cycles[0]-c['entry_c'],entry_to_MAIN_END_cycles=cycles[1]-c['entry_c'])
+            if values['entry_to_FIRST_ns']+w['L_ns_'+label]!=values['entry_to_MAIN_END_ns']:
+                raise ValueError('work-swap entry/FIRST/L endpoints do not close')
+            if values['entry_to_FIRST_cycles']+w['L_cycles_'+label]!=values['entry_to_MAIN_END_cycles']:
+                raise ValueError('work-swap local cycle endpoints do not close')
+            endpoints[label]=values;w[label+'_sm']=c['sm']
+        for field in endpoints['base']:
+            w[field+'_base']=endpoints['base'][field];w[field+'_variant']=endpoints['variant'][field]
+            w[field+'_delta']=endpoints['variant'][field]-endpoints['base'][field]
+    return windows
+
+
+def _work_swap_correspondence(reference, swapped):
+    physical={(r['cta'],r['j'],r['T']):r for r in reference}
+    logical={(r['mi'],r['ni']):r for r in reference}
+    return dict(physical_CTA=[(physical[r['cta'],r['j'],r['T']],r) for r in swapped],
+        logical_work=[(logical[r['mi'],r['ni']],r) for r in swapped])
+
+
+def work_swap_diagnostics(root, output):
+    """Whole-sequence 55/91 intervention: physical position versus logical work."""
+    from collections import defaultdict
+    from analyze_r13_sm import select_attempts
+    from analyze_r18 import replay
+    from analyze_r13_supply import _failure_pair_windows
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output);common.verify(root)
+    rows={r['id']:r for r in json.loads((root/'cases.json').read_text())}
+    setups={r['case']:r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
+    controls=[r for r in rows.values() if r['set']=='ctrl'];ignored={'id','group','ldb','work_swap55_91'}
+    if len(controls)!=4 or any({k:v for k,v in r.items() if k not in ignored}!=
+        {k:v for k,v in controls[0].items() if k not in ignored} for r in controls):
+        raise ValueError('work-swap factorial changed another control condition')
+    if {(r['work_swap55_91'],r['ldb']) for r in controls}!={(s,p) for s in (0,1) for p in (3072,3088)}:
+        raise ValueError('work-swap factors incomplete')
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),process_min=min(values),process_max=max(values))
+    calls={};plain={};contexts={};processes=[];hashes={};failures={};original_work=None
+    for row in rows.values():
+        name=row['id'];calls[name]={};plain[name]={}
+        if row['set']=='ctrl':
+            setup=setups[name]
+            if setup.get('work_swap55_91')!=row['work_swap55_91']:raise ValueError('actual work-swap flag changed')
+            ordinary=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+            if original_work is None:original_work=ordinary
+            if ordinary!=original_work:raise ValueError('work-swap base scheduling changed')
+            work=_work_swap_expected(ordinary,row['work_swap55_91'])
+            flattened=[tuple(p) for c in work for p in c]
+            if len(flattened)!=len(set(flattened)) or set(flattened)!=set(tuple(p) for c in ordinary for p in c):
+                raise ValueError('work-swap omitted or repeated output coordinates')
+            for j in range(max(map(len,work))):
+                if sorted(tuple(c[j]) for c in work if len(c)>j)!=sorted(tuple(c[j]) for c in ordinary if len(c)>j):
+                    raise ValueError('work-swap changed a per-wave source workset')
+            contexts[name]=dict(row=row,setup=setup,selected_sequences={str(c):work[c] for c in (55,91)},
+                complete_work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest(),
+                wave_worksets_unchanged=True,unmodified_CTA_count=sum(a==b for a,b in zip(work,ordinary)))
+        selected,failed,_=select_attempts(root,name,tuple(row['variants']));failures[name]=[i['path'] for i in failed]
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if record['variant']=='plain':plain[name][record['trial']]=obs['elapsed_us']
+            else:
+                if [c['work'] for c in obs['ctas']]!=work:raise ValueError('actual CTA coordinates do not match whole-sequence swap')
+                calls[name][record['trial']]=obs
+                processes.append(dict(case=name,trial=record['trial'],elapsed_us=obs['elapsed_us'],
+                    cta_sm=[dict(cta=c['cta'],sm=c['sm']) for c in obs['ctas']],
+                    selected_work_and_SM=[dict(cta=c['cta'],sm=c['sm'],work=c['work']) for c in obs['ctas'] if c['cta'] in (55,91)],
+                    address_metadata=obs.get('b_address')))
+        if len(plain[name])!=10 or (row['set']=='ctrl' and calls[name].keys()!=plain[name].keys()):
+            raise ValueError('ten complete work-swap processes required per variant')
+    if len({setups[r['id']]['gpu_uuid'] for r in controls})!=1:raise ValueError('work-swap conditions span different cards')
+    responses={};timing={};position_values=defaultdict(list);selected_windows=[]
+    fields=('L_cycles_delta','L_ns_delta','L_rate_ratio','entry_relative_ns_delta','producer_relative_ns_delta',
+        'entry_to_producer_ns_delta','FIRST_relative_ns_delta',
+        'MAIN_END_relative_ns_delta','entry_to_FIRST_ns_delta','entry_to_MAIN_END_ns_delta',
+        'entry_to_FIRST_cycles_delta','entry_to_MAIN_END_cycles_delta','prefill_ns_delta')
+    for swap in (0,1):
+        a,b=(f'r10_workswap_s{swap}_p{pitch}' for pitch in (0,32));responses[swap]={}
+        for trial in sorted(calls[a]):
+            windows=_work_swap_pitch_windows(calls[a][trial],calls[b][trial]);responses[swap][trial]=windows
+            for w in windows:
+                position_values[swap,w['cta'],w['j']].append(dict(trial=trial,**w))
+                if w['cta'] in (55,91):selected_windows.append(dict(swap=swap,trial=trial,**w))
+        timing[str(swap)]=dict(plain_pitch_ratio=span(plain[b][t]/plain[a][t]-1 for t in plain[a]),
+            plain_pitch_delta_us=span(plain[b][t]-plain[a][t] for t in plain[a]),
+            dual_disturbance={name:span(calls[name][t]['elapsed_us']/plain[name][t]-1 for t in plain[name]) for name in (a,b)})
+    timing['plain_swap_effect']={str(p):dict(relative=span(plain[f'r10_workswap_s1_p{p}'][t]/plain[f'r10_workswap_s0_p{p}'][t]-1 for t in range(10)),
+        delta_us=span(plain[f'r10_workswap_s1_p{p}'][t]-plain[f'r10_workswap_s0_p{p}'][t] for t in range(10))) for p in (0,32)}
+
+    correspondence_processes=[];correspondence_position_values=defaultdict(list);unmodified_processes=[]
+    metrics=('L_cycles_delta','L_ns_delta','entry_to_MAIN_END_ns_delta','entry_to_FIRST_ns_delta')
+    for trial in range(10):
+        paired=_work_swap_correspondence(responses[0][trial],responses[1][trial])
+        for mapping,pairs in paired.items():
+            changed=[(a,b) for a,b in pairs if b['cta'] in (55,91)]
+            for field in metrics:
+                for selection,subset in [('first',[p for p in changed if p[1]['j']==0]),('all_three',changed)]:
+                    correspondence_processes.append(dict(trial=trial,mapping=mapping,selection=selection,metric=field,
+                        **_base_shift_pattern_metrics(subset,field)))
+            for a,b in changed:
+                record=dict(trial=trial,reference_cta=a['cta'],swapped_cta=b['cta'],j=b['j'],T=b['T'],
+                    reference_coord=[a['mi'],a['ni']],swapped_coord=[b['mi'],b['ni']],
+                    reference_base_sm=a['base_sm'],reference_variant_sm=a['variant_sm'],
+                    swapped_base_sm=b['base_sm'],swapped_variant_sm=b['variant_sm'])
+                for field in fields:
+                    if field in a:
+                        record[field+'_reference']=a[field];record[field+'_swapped']=b[field];record[field+'_residual']=b[field]-a[field]
+                correspondence_position_values[mapping,b['cta'],b['j']].append(record)
+        unchanged=[(a,b) for a,b in paired['physical_CTA'] if b['cta'] not in (55,91)]
+        unmodified_processes.append(dict(trial=trial,kind='pitch_response_interaction',windows=len(unchanged),
+            **{field:_base_shift_pattern_metrics(unchanged,field) for field in metrics}))
+        for pitch in (0,32):
+            a,b=(calls[f'r10_workswap_s{s}_p{pitch}'][trial] for s in (0,1))
+            changed=_work_swap_pitch_windows(a,b,exclude_ctas=(55,91))
+            first=[w for w in changed if w['j']==0]
+            unmodified_processes.append(dict(trial=trial,kind=f'direct_swap_pitch{pitch}',windows=len(changed),
+                first_output={field:dict(median=statistics.median(w[field] for w in first),
+                    maximum_absolute=max(abs(w[field]) for w in first)) for field in
+                    ('entry_relative_ns_delta','producer_relative_ns_delta','FIRST_relative_ns_delta',
+                     'L_cycles_delta','L_ns_delta','entry_to_MAIN_END_ns_delta','entry_to_FIRST_ns_delta','prefill_ns_delta')},
+                **{field:dict(median=statistics.median(w[field] for w in changed),maximum_absolute=max(abs(w[field]) for w in changed))
+                    for field in ('L_cycles_delta','L_ns_delta','L_cycles_ratio','L_ns_ratio')}))
+    position_summaries=[]
+    for (swap,cta,j),values in sorted(position_values.items()):
+        w=values[0]
+        position_summaries.append(dict(swap=swap,cta=cta,j=j,T=w['T'],mi=w['mi'],ni=w['ni'],
+            base_sms=sorted({r['base_sm'] for r in values}),variant_sms=sorted({r['variant_sm'] for r in values}),
+            **{field:span(r[field] for r in values) for field in fields if field in w}))
+    correspondence_positions=[]
+    for (mapping,cta,j),values in sorted(correspondence_position_values.items()):
+        w=values[0]
+        correspondence_positions.append(dict(mapping=mapping,swapped_cta=cta,j=j,reference_cta=w['reference_cta'],
+            reference_coord=w['reference_coord'],swapped_coord=w['swapped_coord'],processes=values,
+            **{field:span(r[field] for r in values) for field in w if field.endswith(('_reference','_swapped','_residual'))}))
+    correspondence_summaries=[]
+    for mapping,selection,metric in sorted({(r['mapping'],r['selection'],r['metric']) for r in correspondence_processes}):
+        values=[r for r in correspondence_processes if (r['mapping'],r['selection'],r['metric'])==(mapping,selection,metric)]
+        correspondence_summaries.append(dict(mapping=mapping,selection=selection,metric=metric,
+            **{field:span(r[field] for r in values) for field in
+                ('median_signed_residual','median_absolute_residual','root_mean_square_residual','maximum_absolute_residual')}))
+    unmodified_summary={}
+    for pitch in (0,32):
+        values=[r for r in unmodified_processes if r['kind']==f'direct_swap_pitch{pitch}']
+        unmodified_summary[str(pitch)]=dict(first_output={field:dict(
+            process_medians=span(r['first_output'][field]['median'] for r in values),
+            process_maximum_absolute=span(r['first_output'][field]['maximum_absolute'] for r in values))
+            for field in values[0]['first_output']},
+            all_outputs={field:span(r[field]['median'] for r in values)
+                for field in ('L_cycles_delta','L_ns_delta','L_cycles_ratio','L_ns_ratio')})
+    address_origins=[dict(trial=t,origins={r['case']:r['address_metadata']['b_buffer_ptr'] for r in processes if r['trial']==t}) for t in range(10)]
+    address_summary=dict(virtual_origins=sorted({p['address_metadata']['b_buffer_ptr'] for p in processes}),
+        per_trial=address_origins,same_origin_trials=[r['trial'] for r in address_origins if len(set(r['origins'].values()))==1],
+        distinct_CTA_to_SM_maps=len({tuple((r['cta'],r['sm']) for r in p['cta_sm']) for p in processes}))
+    references={};previous=root.parent/'20261010-R10-base-shift'
+    if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
+        raise ValueError('work-swap references are on another card')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        name=row['id'];old=[]
+        for item in select_attempts(previous,name,('plain',))[0]:
+            old.append(replay(previous,item['record'],row)['elapsed_us'])
+            for path in (previous/item['path'],previous/item['record']['raw']):hashes[str(path)]=common.sha(path)
+        references[name]=dict(current=span(plain[name].values()),previous=span(old),
+            median_change=statistics.median(plain[name].values())/statistics.median(old)-1)
+    for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json','build/sass_hashes.json'):
+        path=root/filename;hashes[str(path)]=common.sha(path)
+    for path in root.glob('correctness-*.jsonl'):hashes[str(path)]=common.sha(path)
+    report=dict(scope='Physical CTA55/91 exchange complete logical work sequences. Within-mode pitch responses precede '
+        'cross-mode comparisons; no new service price or hardware assignment is inferred from correlation.',
+        environment=json.loads((root/'environment.json').read_text()),contexts=contexts,timing=timing,
+        source_boundary=dict(same_binary_different_dynamic_path=True,
+            plain_GEMM_swap_gate='0xa80 @!P0 BRA 0xb40 skips 0xa90..0xb30 in swap0; swap1 executes the 55/91 comparisons for all CTAs.',
+            resources='Same grid [132,1,1] and 215040 B SMEM; resource and SASS files are hashed below.',
+            remaining_confounders='Physical CTA, fixed SM, dispatch/arrival organization and the dual observer remain coupled.'),
+        position_responses=position_summaries,selected_CTA_processes=selected_windows,
+        correspondence_processes=correspondence_processes,correspondence_positions=correspondence_positions,
+        correspondence_summaries=correspondence_summaries,unmodified_CTA_context=unmodified_processes,
+        unmodified_CTA_summary=unmodified_summary,address_and_placement_summary=address_summary,
+        process_placement_and_addresses=processes,references=references,failed_attempts=failures,
+        interpretation=['Every observed CTA sequence must match the declared whole-sequence exchange. No missing/repeated outputs; '
+            'each software-wave workset is unchanged.',
+            'Only the six affected CTA/output windows judge physical-versus-logical correspondence. '
+            'The unchanged 130 CTAs are context, not pooled to inflate the match.',
+            'entry/FIRST/MAIN_END globaltimer endpoints are relative to each call\'s first CTA entry. '
+            'entry-to-FIRST plus L closes to entry-to-MAIN_END within each call; local cycle differences never cross SMs.',
+            'prefill is FIRST_MMA minus producer first-work only for first output; entry-to-FIRST is not model S.',
+            'Following logical work exchanges B panels and D destinations together; it does not isolate B-address banking. '
+            'Following physical CTA cannot identify an SM resource unless placement, temporal and observer alternatives are separately ruled out.',
+            'Swap1 executes extra dynamic comparisons for all CTAs even in the same binary. The other 130 CTAs supply an internal '
+            'control for entry/producer/FIRST/L/end movement and do not justify assuming zero observer or front-end effect.',
+            'Pitch and swap comparisons span independent processes. VA metadata does not establish shared physical pages.'],
+        input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)))
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-work-swap.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 持久工作序列55/91交换','',
+        '先在每个swap模式内按物理CTA/j/T/坐标配对B32−B0，再分别与原物理位置、原逻辑工作序列对照。'
+        '只有两个受干预CTA参与主要对应比较，另130个CTA单列为上下文。','',
+        '| swap | 物理CTA/j | 逻辑坐标 | B0/B32 SM | ΔL cycles | ΔL ns | Δentry→FIRST ns | Δentry→MAIN_END ns |',
+        '|---:|---|---|---|---:|---:|---:|---:|']
+    for r in position_summaries:
+        if r['cta'] not in (55,91):continue
+        values=[]
+        for field in ('L_cycles_delta','L_ns_delta','entry_to_FIRST_ns_delta','entry_to_MAIN_END_ns_delta'):
+            v=r[field];values.append(f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]')
+        lines.append(f'| {r["swap"]} | {r["cta"]}/{r["j"]} | ({r["mi"]},{r["ni"]}) | {r["base_sms"]}/{r["variant_sms"]} | '+' | '.join(values)+' |')
+    lines+=['','括号是十进程观测范围，不是置信区间。entry与FIRST绝对位置按各自调用的最早CTA入口归一化；'
+        '同CTA时长直接相减，不把不同SM的clock64拼成一条时轴。','',
+        '| 对应方式 | 选择窗口 | 指标 | 响应差绝对中位 | 响应差RMS |','|---|---|---|---:|---:|']
+    for r in correspondence_summaries:
+        if r['metric'] not in ('L_cycles_delta','L_ns_delta','entry_to_MAIN_END_ns_delta'):continue
+        lines.append(f'| {r["mapping"]} | {r["selection"]} | {r["metric"]} | '
+            f'{r["median_absolute_residual"]["median"]:.1f} | {r["root_mean_square_residual"]["median"]:.1f} |')
+    lines+=['','| 未交换130CTA首轮，swap1−swap0 | Δentry相对调用入口 ns | Δproducer ns | ΔFIRST ns | ΔL ns | Δentry→MAIN_END ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    for pitch,summary in unmodified_summary.items():
+        cells=[]
+        for field in ('entry_relative_ns_delta','producer_relative_ns_delta','FIRST_relative_ns_delta','L_ns_delta','entry_to_MAIN_END_ns_delta'):
+            v=summary['first_output'][field]['process_medians'];cells.append(f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]')
+        lines.append(f'| B+{pitch} B | '+' | '.join(cells)+' |')
+    lines+=['','swap1虽使用同binary，动态路径不同：plain GEMM的0xa80分支在swap0跳过0xa90～0xb30，swap1执行其中55/91比较，130个未交换CTA也经过。'
+        '这些内部对照保留共同前端/入口变化，不能默认干预只影响两CTA。',
+        '',f'四十dual进程有{len(address_summary["virtual_origins"])}种VA原点、'
+        f'{address_summary["distinct_CTA_to_SM_maps"]}种CTA→SM映射；四条件同trial原点相同的序号为'
+        f'{address_summary["same_origin_trials"]}。跨进程同VA也不证明同PA。',
+        '','实际每CTA坐标、SM、无重复/遗漏与逐轮工作集合均检查；逐进程端点、130CTA上下文和完整plain/dual扰动保存在JSON。'
+        '逻辑工作同时包含B源与D目的位置；即使响应随工作移动，也不能单独归因为B地址bank。','']
+    (output/'R10-work-swap.md').write_text('\n'.join(lines))
+    return report
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

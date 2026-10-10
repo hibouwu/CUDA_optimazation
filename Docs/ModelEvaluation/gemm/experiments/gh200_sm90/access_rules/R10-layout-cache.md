@@ -1,6 +1,6 @@
 # R10：A/B 行距、地址覆盖与执行规模
 
-**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。单输出对照进一步确认，同一B源组在不同全局执行组织下的行距代价不同，跨输出预取不是大幅惩罚的必要条件。+256 B基址平移没有让响应整体跟随相邻B面板，工作位置与SM位置仍未隔离。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
+**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。单输出对照进一步确认，同一B源组在不同全局执行组织下的行距代价不同，跨输出预取不是大幅惩罚的必要条件。+256 B基址平移没有让响应整体跟随相邻B面板；交换CTA55/91的完整工作序列后，强弱响应仍留在原物理CTA/SM。逻辑工作身份不足以定价，执行位置与到达状态仍需分开。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
 
 ## 作业与证据索引
 
@@ -15,6 +15,7 @@
 | 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
 | 739585 | 同输入map，36/126单输出CTA与132持久CTA，各配B0/B32 | [同源组压力对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json) |
 | 739598 | B基址+0/+256 B × 行距+0/+32 B，分配容量相同 | [位置与相邻面板对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift.json) |
+| 739608 | CTA55/91整条工作序列交换 × B0/B32，逐轮工作集合不变 | [工作与物理位置对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-work-swap.json) |
 
 ## 原 B 行距对照：配置之间不能共用一个罚项
 
@@ -301,8 +302,33 @@ CTA55/j0与CTA91/j0的M坐标、T3工作量、同B使用者数相同。部分代
 
 此前的到达定位也未提供替代规则：CTA91−55的行距入口响应变化中位为0 ns，producer first-work只有−32/−16 ns；FIRST_MMA与L的负相关部分来自共用端点，入口→MAIN_END的净差仍保留。first-work不能当请求到达，尚缺其它stage是否ready和已发Ktile数。[60个dual进程的到达分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-arrival-localization.md)。
 
-下一对照直接交换CTA55/91承担的整条持久工作序列。两者均T3、M序列相同；交换保持每轮工作集合、A/B源组和地址集合不变，再核对实际SM映射与响应跟随对象。这比继续扫描基址更直接，仍不向模型加入CTA或SM专属常数。
+后续[工作序列交换](#work-swap)直接解除逻辑工作与原物理CTA的绑定，不继续扫描基址。
 
 ## 历史推导与复核
 
 行距入口为 `run_r10.py`，joint/coverage重算为 `analyze_r10.py --joint-pitch`、`--score-b-pitch`，grid扫描为 `run_r13_sm.py` / `analyze_r13_sm.py`。已有reanalysis优先使用上表链接；采样前冻结算法、完整命令与准备过程见[固定 cee978a 旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R10-layout-cache.md)。历史参数只用于复核旧判定，现行规则不在本页复制。
+
+<a id="work-swap"></a>
+
+## 交换工作序列后，响应仍留在原物理位置
+
+739608沿用739598的卡、几何、容量、数据和B0/B32配对，B相对基址固定0。仅在持久调度器初始索引交换55/91，之后仍每次加132：`(1,3)→(7,10)→(13,17)`与`(1,5)→(7,12)→(13,19)`互换。每轮工作集合、A/B分组人数、T3和M序列不变。40个dual进程逐CTA坐标完全符合置换，CTA55/91仍在SM55/87；这两条数学工作序列与原物理执行位置因此不再绑定。
+
+下表先在每个模式、每个trial内求B32−B0，再取十进程中位；不是跨SM相减clock64。
+
+| 工作分配 | 物理CTA | 首轮逻辑坐标 | ΔL，cycle〔进程范围〕 | ΔL，ns | Δ入口→MAIN_END，ns |
+|---|---:|---|---:|---:|---:|
+| 原分配 | 55 | (1,3) | 2312.5〔1876,2624〕 | 1312 | 1360 |
+| 原分配 | 91 | (1,5) | 360〔291,579〕 | 80 | 496 |
+| 交换 | 55 | (1,5) | 2144.5〔1708,2676〕 | 1264 | 1312 |
+| 交换 | 91 | (1,3) | 485〔323,736〕 | 160 | 464 |
+
+仅用受干预的两个CTA作主要对应：首轮响应按原物理CTA匹配的RMS为276.5 cycle，按原逻辑工作匹配为1828.7；三个输出共六窗口为385.5与1616.6。首轮入口→MAIN_END纳秒响应的RMS也分别为152.1/891.5，所以不只是FIRST_MMA边界移动。此结果反对仅按这条B/D工作序列收费；支持执行位置或其形成的时序是缺失条件，**尚不能命名为SM硬件差异**。
+
+未交换工作的130个CTA另作内部对照，不混入上述对应分数。按进程先取首轮中位，swap1−swap0的L变化在B0/B32为−32/+8 ns，入口→MAIN_END为+32/+48 ns；各自十进程范围都跨零。它们没有出现足以解释两代表位置反差的共同平移。但两模式虽同binary，SASS的swap0会跳过初始55/91比较，不能声称动态指令路径完全相同。
+
+100个采样进程全部成功、无失败；四次独立正确性比较覆盖全部7077888个输出，交换前后逐位相同且无非有限值，每次交换前重新填充输出哨兵。plain/dual均168寄存器、215040 B SMEM、16 HGMMA、零spill。plain行距惩罚原分配19.07%、交换18.42%；dual/plain中位0.63%～3.73%，单次最大7.57%，局部价仍只属于本观察协议。参照相对739598变化+0.46%/+0.31%。各独立进程出现三个B分配VA原点，无一trial四条件原点全同，不假定相同物理页。
+
+[本批同源组分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-work-swap-arrival.md)仍无法区分SM与先后状态。B32下，CTA55的producer在18个同B伙伴内的零起平均秩从1.75变0，较组内中位早128→224 ns；CTA91的秩从11变15，较中位晚8→80 ns。也就是说，换了B面板以后，早/晚的软件位置仍跟着物理CTA保留。B3/B5未换work的各17个伙伴，行距响应交互的组内mean L再取十进程中位只有+6.6/+45.2 ns；减去其余96CTA共同背景后为−45.9/+12.4 ns，十进程范围均跨零，没有稳定的约1 µs整组外溢。
+
+下一最小干预保持工作、SM与源组不变，仅延迟CTA55的producer起步，B0/B32使用同一档延迟，核对实际时移、S+L和入口→MAIN_END。如果响应随起步改变，只能说明时序参与；若不变，也需先确认干预确实跨过了所比较的起步位置。producer first-work不是TMA请求到达，不能用这次排序拟合队列或SM专属价格。

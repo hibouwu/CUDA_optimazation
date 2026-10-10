@@ -9,7 +9,8 @@ import v08_model
 from analyze_r10 import (mainloop_overlap_features, source_panel_features,
     _source_service_clip, _source_service_interval, _source_polygon_vertices, _source_service_value,
     _source_service_window_errors, _source_interval_error_floor,
-    _base_shift_response_pairs, _base_shift_pattern_metrics)
+    _base_shift_response_pairs, _base_shift_pattern_metrics,
+    _work_swap_expected, _work_swap_pitch_windows, _work_swap_correspondence)
 
 
 class RasterOrderTests(unittest.TestCase):
@@ -205,6 +206,60 @@ class RasterOrderTests(unittest.TestCase):
         for r in reference+shifted:r['base_sm']=r['variant_sm']=0
         self.assertEqual(_base_shift_response_pairs(reference,shifted)['same_SM_and_ordinal'],[(reference[3],shifted[3])])
         self.assertIsNone(_base_shift_pattern_metrics([],'L_cycles_delta')['correlation'])
+
+    def test_work_swap_preserves_wave_sets_and_only_changes_two_sequences(self):
+        work=v08_model.scheduled_work('cfg_b',2304,3072,[132,1,1],1,'along_m')
+        swapped=_work_swap_expected(work,True)
+        self.assertEqual(swapped[55],work[91]);self.assertEqual(swapped[91],work[55])
+        self.assertEqual([p[0] for p in work[55]],[p[0] for p in work[91]])
+        self.assertEqual(len(work[55]),3);self.assertEqual(len(work[91]),3)
+        self.assertEqual(sum(a==b for a,b in zip(work,swapped)),130)
+        self.assertEqual(_work_swap_expected(swapped,True),work)
+        for j in range(4):
+            self.assertEqual(sorted(c[j] for c in work if len(c)>j),sorted(c[j] for c in swapped if len(c)>j))
+
+    def test_work_swap_config_and_public_flag_validation(self):
+        from test_r09_history_series import synthetic
+        from analyze_r18 import validate_warmup
+        rows=json.loads((Path(__file__).parent/'configs/r10-work-swap.json').read_text())
+        controls=[r for r in rows if r['set']=='ctrl']
+        self.assertEqual(len(rows),6);self.assertTrue(all(r['variants']==['plain'] for r in rows[:2]))
+        self.assertEqual({(r['work_swap55_91'],r['ldb']) for r in controls},
+            {(s,p) for s in (0,1) for p in (3072,3088)})
+        ignored={'id','group','work_swap55_91','ldb'}
+        fixed=[{k:v for k,v in r.items() if k not in ignored} for r in controls]
+        self.assertTrue(all(v==fixed[0] for v in fixed))
+        self.assertTrue(all(r['b_offset_bytes']==0 and r['b_allocation_extra_bytes']==256 for r in controls))
+        for flag in (0,1):
+            row,setup,call,_=synthetic();row['work_swap55_91']=setup['work_swap55_91']=call['work_swap55_91']=flag
+            validate_warmup(setup,call,row)
+            with self.assertRaisesRegex(ValueError,'permutation identity'):
+                validate_warmup(setup,dict(call,work_swap55_91=1-flag),row)
+
+    def test_work_swap_physical_and_logical_correspondence_are_distinct(self):
+        original=[dict(cta=55,j=0,T=3,mi=1,ni=3,L_cycles_delta=100),
+            dict(cta=91,j=0,T=3,mi=1,ni=5,L_cycles_delta=10)]
+        swapped=[dict(original[1],cta=55),dict(original[0],cta=91)]
+        pairs=_work_swap_correspondence(original,swapped)
+        self.assertEqual([(a['cta'],b['cta']) for a,b in pairs['physical_CTA']],[(55,55),(91,91)])
+        self.assertEqual([(a['cta'],b['cta']) for a,b in pairs['logical_work']],[(91,55),(55,91)])
+        self.assertEqual(_base_shift_pattern_metrics(pairs['logical_work'],'L_cycles_delta')['maximum_absolute_residual'],0)
+        self.assertEqual(_base_shift_pattern_metrics(pairs['physical_CTA'],'L_cycles_delta')['maximum_absolute_residual'],90)
+
+    def test_work_swap_endpoints_use_call_origins_and_close_with_L(self):
+        def cta(index,shift=0,prefix=0,extra_L=0):
+            entry=100+20*index+shift;first=entry+50+prefix;end=first+100+extra_L
+            return dict(cta=index,sm=index,entry_ns=entry,entry_c=2*entry,prod_ns=entry+10,end_ns=end+30,
+                work=[[index,0]],tiles_ns=[[first,end,end+5,end+20]],tiles=[[2*first,2*end,2*end+10,2*end+40]])
+        base=dict(ctas=[cta(0),cta(1)])
+        variant=dict(ctas=[cta(0,shift=1000,extra_L=40),cta(1,shift=1000,prefix=20)])
+        windows=_work_swap_pitch_windows(base,variant)
+        self.assertEqual([w['entry_relative_ns_delta'] for w in windows],[0,0])
+        self.assertEqual([w['FIRST_relative_ns_delta'] for w in windows],[0,20])
+        self.assertEqual([w['L_cycles_delta'] for w in windows],[80,0])
+        self.assertEqual([w['entry_to_MAIN_END_ns_delta'] for w in windows],[40,20])
+        one=_work_swap_pitch_windows(base,variant,exclude_ctas=(0,))[0]
+        self.assertEqual(one['entry_relative_ns_base'],20)
 
 
 if __name__=='__main__':unittest.main()

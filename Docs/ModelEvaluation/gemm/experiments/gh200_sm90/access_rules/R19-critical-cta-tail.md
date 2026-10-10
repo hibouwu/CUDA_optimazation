@@ -138,4 +138,4 @@ A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。�
 
 因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
 
-[R10派发与基址对照](R10-layout-cache.md#base-shift)显示，同a058/GPU-ef的739571、739585及739598中，cfg_b的CTA55始终映射SM55、CTA91始终映射SM87；+256 B基址配对仍只有一种CTA→SM映射。同CTA与同SM对应因此尚等价，稳定逻辑位置误差不能据此识别源地址或GPC服务规则。下一步交换这两条等长持久工作序列，保持完整工作集合及源分组，再检查响应跟随对象；该局部绑定不外推到其它grid、卡或驱动。
+[R10工作序列交换](R10-layout-cache.md#work-swap)中，cfg_b的CTA55/91仍在SM55/87，交换完整工作后强弱行距响应仍留原物理位置。此前基址平移也未让响应整体移动。现在已排除只靠这两条逻辑工作序列定价，但物理CTA、SM位置及其形成的到达状态尚未解耦，不能命名源地址bank或GPC服务规则；该绑定也不外推到其它grid、卡或驱动。本批同源组端点显示早/晚软件位置也保留；下一步固定位置只干预producer起步，不为定位最后完成者增加测后候选。

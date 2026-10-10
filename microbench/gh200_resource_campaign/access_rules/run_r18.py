@@ -153,6 +153,20 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         shutil.copy2(ROOT/'probes'/name,source/'probes'/name)
     shutil.copy2(ROOT/'probes/r18_trace.hpp',source/'probes/v06_trace.hpp')
     for part in ['include','tools/util/include']:shutil.copytree(cutlass/part,source/'cutlass'/part)
+    work_swap = any('work_swap55_91' in row for row in rows)
+    if work_swap:
+        # Patch the shared scheduler source, so plain and dual use the same map.
+        path = source/'cutlass/include/cutlass/gemm/kernel/static_tile_scheduler.hpp'
+        text = path.read_text()
+        site = '    total_grid_size_ = uint64_t(gridDim.x) * uint64_t(gridDim.y) * uint64_t(gridDim.z);\n'
+        text = common.insert_once(text, site,
+            '#ifdef R10_WORK_SWAP\n'
+            '    if (::r10_work_swap55_91) {\n'
+            '      if (current_work_linear_idx_ == 55) current_work_linear_idx_ = 91;\n'
+            '      else if (current_work_linear_idx_ == 91) current_work_linear_idx_ = 55;\n'
+            '    }\n'
+            '#endif\n')
+        path.write_text(text)
     common.make_overlay(source/'cutlass',source/'overlay')
     shutil.copy2(ROOT/'probes/r18_trace.hpp',source/'overlay/v06_trace.hpp')
     for header in [common.COOP,common.PING]:
@@ -179,6 +193,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if variant not in ['plain','wide','stamped','dual','ends']:raise ValueError('unknown observation variant')
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
+            if work_swap:cmd.append('-DR10_WORK_SWAP')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
             if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
@@ -197,7 +212,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 
