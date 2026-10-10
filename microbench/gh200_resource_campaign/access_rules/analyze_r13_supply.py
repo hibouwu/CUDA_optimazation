@@ -3984,7 +3984,7 @@ def stage_output_background_diagnostics(base, output):
         paired_diagnostic_subsets=paired_subsets,full_inheritance_early_bounds=early_bounds,
         full_output_checks=correctness,references=reference_results,
         references_completed_first=max(p['host_stop_ns'] for p in refs)<=min(p['host_start_ns'] for p in ctrls),
-        reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in {p['case'] for p in refs}},
+        reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in sorted({p['case'] for p in refs})},
         resources=read_json(root/'build/resources.json'),
         limitations=['Flag2 also changes other CTAs input-request organization and execution overlap; it does not isolate an output physical resource.',
             'Flag2 removes other E0 from early only; its C16-to-mma-return window can contain delayed other-CTA E0 and is not a clean steady-state baseline.',

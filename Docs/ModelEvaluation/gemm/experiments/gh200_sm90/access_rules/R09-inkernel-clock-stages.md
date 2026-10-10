@@ -35,6 +35,19 @@ job739095，a058/GPU-ef8692f3，cfg_b 2816×1536×4096、stage4/6 各10个 dual 
 
 归档 SASS 确认两端都是相邻、同序的 CLOCK→GLOBALTIMER，未发现角色错配；相邻并不等于同时读取或固定延迟。原始端点还有“较短包含区间反而累计更多 cycle”的见证，说明精确共同非负 `f(t)` 不能复现全部读数，但不唯一指向物理时钟差。[官方 PTX 文档](https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-globaltimer-globaltimer-lo-globaltimer-hi) 定义了全局纳秒计时器，同时说明行为依赖目标架构，未给这些端点或跨 SM 偏差的误差上界。这里保留周期率与计时残差，不据此拟合新频率项。[逐进程统计、空间跨度与包含裕量](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-stage-clock.md)。
 
+<a id="stage-order-decomposition"></a>
+
+### 阶段逆序保留在哪些观测分量中？
+
+同一CTA有`MAIN1−FIRST0=L0+G+L1`，其中`G=FIRST1−MAIN0`可为负，只表示跨consumer的相位关系。对739095每个进程的全部原逆序对，固定实际FIRST0，用每输出的进程中位周期率f或周期数C替换另一部分；下表再将G固定为进程中位。比例先逐进程计算，再取十进程中位[范围]：
+
+| stage | 实际C、共同f/G后仍逆序 | 实际f、共同C/G后仍逆序 |
+|---|---:|---:|
+| 4 | 71.0% [55.6%,80.6%] | 49.3% [32.7%,60.1%] |
+| 6 | 12.5% [1.6%,45.0%] | 77.9% [55.1%,89.8%] |
+
+stage4的局部周期差在统一换算后仍保留多数逆序；stage6的名义ns排序更依赖观测周期率。但C与`f=C/L`共用端点，替换没有重算请求、屏障、消费和输出，因此比例不是因果贡献或预测成绩。此前stage6的CTA84/36见证也不能由其中一项独立解释：实际末端逆序768ns，两种单项替换分别只剩+18.84ns和−50.59ns，都不满足>32ns逆序。总体比例不能代替单个反例的联合约束。[逐进程比例与对称闭合分解](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-stage-clock.md)。
+
 <a id="s-prefill-alignment"></a>
 
 ### 首段 S 与预填如何对齐？

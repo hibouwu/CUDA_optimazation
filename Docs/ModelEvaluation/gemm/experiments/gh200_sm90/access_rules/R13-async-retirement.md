@@ -85,7 +85,7 @@
 
 独立的739740 flag2观测也与默认同起步图不同：其它CTA最早M1领先CTA0的stage4/6中位分别1184/640ns，且其它E0与CTA0后段重叠CTA数均为60。模型同起步时CTA0必先M1，flag2又要求每个E0等自身M1，故此重叠恒为0，任意统一gap都不改变它。
 
-32ns只是逆序计数筛选，未给跨SM计时误差设上界。若每端点允许独立±ε修正，上述两个见证至少需ε≥304/384ns才能消除一个严格方向；这是必要修复量，不是实测skew。结论限定为当前同质FIFO图不能解释名义观测，不据此命名物理仲裁或局部资源。[推导、逐进程逆序与源端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+32ns只是逆序计数筛选，未给跨SM计时误差设上界。若每端点允许独立±ε修正，上述两个见证至少需ε≥304/384ns才能消除一个严格方向；这是必要修复量，不是实测skew。结论限定为当前同质FIFO图不能解释名义观测，不据此命名物理仲裁或局部资源。[周期/周期率分解](R09-inkernel-clock-stages.md#stage-order-decomposition)表明，固定每阶段周期率和交接项后stage4仍保留71.0%的原逆序，stage6只有12.5%；不能把两者的ns逆序都当成同一种供给瓶颈。[推导、逐进程逆序与源端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
 
 <a id="stage-request-formation"></a>
 

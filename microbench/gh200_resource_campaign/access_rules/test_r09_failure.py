@@ -6,10 +6,54 @@ import unittest
 from r09_input_source_clock import (fit_tensor_only, mixed_failure_clock,
                                     role_window_diagnostics, source_frequency, control_window,
                                     reciprocal_frequency, fit_reciprocal_clock, source_design, static_output_kib,
-                                    static_revisit_features, history_state_weights, history_series_design, fit_history_series, history_localization_diagnostics)
+                                    static_revisit_features, history_state_weights, history_series_design, fit_history_series, history_localization_diagnostics,
+                                    stage_order_decomposition)
 
 
 class R09FailureDiagnostics(unittest.TestCase):
+    def test_stage_order_replacements_preserve_phase_algebra_and_integer_time_shifts(self):
+        def cta(cid, start, L, C, G):
+            second = start+L[0]+G
+            return dict(cta=cid, sm=cid, work=[[cid,0],[cid,1]],
+                tiles_ns=[[start,start+L[0],start+L[0]+32,start+L[0]+64],
+                          [second,second+L[1],second+L[1]+32,second+L[1]+64]],
+                tiles_c=[[0,C[0],C[0]+32,C[0]+64],
+                         [1000,1000+C[1],1032+C[1],1064+C[1]]])
+
+        fixtures = [
+            ('cycle', [cta(0,0,[200,200],[200,200],-20),cta(1,64,[100,100],[100,100],-20)], (1,0,1,0)),
+            ('rate', [cta(0,0,[200,200],[100,100],-20),cta(1,64,[100,100],[100,100],-20)], (0,1,0,1)),
+            ('G', [cta(0,0,[100,100],[100,100],200),cta(1,64,[100,100],[100,100],0)], (1,1,0,0)),
+            # Both symmetric terms must be nonzero; one-sided weights would fail closure.
+            ('mixed', [cta(0,0,[240,240],[200,200],-20),cta(1,64,[100,100],[100,100],-20)], (1,0,1,0)),
+        ]
+        names = ('common_rate','common_cycles','cycle_only','rate_only')
+        for name, rows, expected in fixtures:
+            with self.subTest(case=name):
+                result = stage_order_decomposition(rows, (0,1))
+                self.assertEqual(result['actual_reversed_pairs'], 1)
+                self.assertEqual(tuple(result['retained'][key]['pairs'] for key in names), expected)
+                self.assertEqual(result['negative_G'], 0 if name=='G' else 2)
+                witness = result['witness']
+                self.assertEqual(witness['first_delta_ns'], -64)
+                self.assertEqual(witness['integer_closure_ns'], 0)
+                for term in witness['L_terms']:
+                    self.assertAlmostEqual(term['delta_L_ns'], term['symmetric_cycle_term_ns']+
+                                           term['symmetric_inverse_rate_term_ns'], places=10)
+                    if name=='mixed':
+                        self.assertAlmostEqual(term['symmetric_cycle_term_ns'], 110.)
+                        self.assertAlmostEqual(term['symmetric_inverse_rate_term_ns'], 30.)
+                shifted = copy.deepcopy(rows)
+                offset = 1791584371459461248  # Above float's exact-integer range.
+                for row in shifted:
+                    row['tiles_ns'] = [[t+offset for t in tile] for tile in row['tiles_ns']]
+                shifted_result = stage_order_decomposition(shifted, (0,1))
+                # Only the absolute witness coordinates may change after a common shift.
+                for role in ('a','b'):
+                    for endpoint in ('FIRST0_ns','MAIN1_ns'):
+                        shifted_result['witness'][role][endpoint] -= offset
+                self.assertEqual(shifted_result, result)
+
     def test_reduced_fit_ignores_time_error_and_recovers_frequency_targets(self):
         points = []
         for mode, d in [('dyadic', .2), ('zero', .1), ('random', .3)]:

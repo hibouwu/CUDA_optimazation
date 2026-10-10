@@ -312,6 +312,65 @@ def role_window_diagnostics(ctas):
                 frequency_min_window_ns=3200)
 
 
+def stage_order_decomposition(ctas, witness_pair=None):
+    """Hold FIRST0 fixed; algebraic replacements on all observed reversed pairs."""
+    rows = []
+    for cta in ctas:
+        ns, cyc = cta['tiles_ns'], cta['tiles_c']
+        L = [x[1]-x[0] for x in ns]
+        C = [x[1]-x[0] for x in cyc]
+        G = ns[1][0]-ns[0][1]  # Cross-role phase relation, allowed to be negative.
+        if L[0]+G+L[1] != ns[1][1]-ns[0][0]:
+            raise ValueError('same-call phase decomposition did not close')
+        rows.append(dict(cta=cta['cta'], sm=cta['sm'], work=cta['work'],
+            FIRST0_ns=ns[0][0], MAIN1_ns=ns[1][1], L_ns=L, L_cycles=C,
+            rate_ghz=[c/n for c,n in zip(C,L)], G_ns=G))
+    common_f = [statistics.median(r['rate_ghz'][j] for r in rows) for j in (0,1)]
+    common_C = [statistics.median(r['L_cycles'][j] for r in rows) for j in (0,1)]
+    common_G = statistics.median(r['G_ns'] for r in rows)
+    origin = min(r['FIRST0_ns'] for r in rows)
+    for r in rows:
+        start = r['FIRST0_ns']-origin  # Integer subtraction before any float arithmetic.
+        cycle_L = sum(r['L_cycles'][j]/common_f[j] for j in (0,1))
+        rate_L = sum(common_C[j]/r['rate_ghz'][j] for j in (0,1))
+        r['replacement_MAIN1_relative_ns'] = dict(common_rate=start+cycle_L+r['G_ns'],
+            common_cycles=start+rate_L+r['G_ns'], cycle_only=start+cycle_L+common_G,
+            rate_only=start+rate_L+common_G)
+    retained = dict.fromkeys(('common_rate','common_cycles','cycle_only','rate_only'), 0)
+    pairs = 0
+    for a in rows:
+        for b in rows:
+            if b['FIRST0_ns']-a['FIRST0_ns']>32 and a['MAIN1_ns']-b['MAIN1_ns']>32:
+                pairs += 1
+                for name in retained:
+                    retained[name] += a['replacement_MAIN1_relative_ns'][name]-b['replacement_MAIN1_relative_ns'][name]>32
+    result = dict(actual_reversed_pairs=pairs,
+        retained={name:dict(pairs=count, fraction=count/pairs if pairs else None) for name,count in retained.items()},
+        common_rate_ghz=common_f, common_cycles=common_C, common_G_ns=common_G,
+        G_ns=failure_stats(r['G_ns'] for r in rows), negative_G=sum(r['G_ns']<0 for r in rows))
+    if witness_pair is not None:
+        a,b = [next(r for r in rows if r['cta']==cid) for cid in witness_pair]
+        phase_terms = []
+        for j in (0,1):
+            Ca,Cb = a['L_cycles'][j],b['L_cycles'][j]
+            ia,ib = 1/a['rate_ghz'][j],1/b['rate_ghz'][j]
+            cycle_term = (Ca-Cb)*(ia+ib)/2
+            rate_term = (Ca+Cb)*(ia-ib)/2
+            delta = a['L_ns'][j]-b['L_ns'][j]
+            if not math.isclose(delta,cycle_term+rate_term,abs_tol=1e-8):
+                raise ValueError('symmetric cycle/rate decomposition did not close')
+            phase_terms.append(dict(output=j, delta_L_ns=delta,
+                symmetric_cycle_term_ns=cycle_term,symmetric_inverse_rate_term_ns=rate_term))
+        first_delta = a['FIRST0_ns']-b['FIRST0_ns']
+        gap_delta = a['G_ns']-b['G_ns']
+        main_delta = a['MAIN1_ns']-b['MAIN1_ns']
+        result['witness'] = dict(a=a,b=b,first_delta_ns=first_delta,G_delta_ns=gap_delta,
+            MAIN1_delta_ns=main_delta,L_terms=phase_terms,
+            integer_closure_ns=main_delta-first_delta-gap_delta-sum(p['delta_L_ns'] for p in phase_terms),
+            replacement_MAIN1_delta_ns={name:a['replacement_MAIN1_relative_ns'][name]-b['replacement_MAIN1_relative_ns'][name] for name in retained})
+    return result
+
+
 def stage_phase_clock_diagnostics(output):
     """Same-role stage windows from the shared 739095 replay; no clock fitting."""
     output = Path(output)
@@ -321,6 +380,7 @@ def stage_phase_clock_diagnostics(output):
     timestamp_gcd = 0
     # These two previously inspected pairs illustrate nonzero containment margins.
     witness_pairs = {(4, 3): (32, 0), (6, 0): (48, 84)}
+    order_witness_pairs = {(4, 3): (80, 70), (6, 9): (84, 36)}
     for source in data['processes']:
         stage, trial = source['stage'], source['trial']
         phases, windows, rates = {}, [], []
@@ -380,6 +440,7 @@ def stage_phase_clock_diagnostics(output):
         processes.append(dict(stage=stage, trial=trial, source=source['source'],
             source_sha256=source['source_sha256'], distinct_sms=len({c['sm'] for c in source['ctas']}),
             phases=phases, later_minus_first_ghz=failure_stats(b-a for a,b in zip(*rates)),
+            order_decomposition=stage_order_decomposition(source['ctas'],order_witness_pairs.get((stage,trial))),
             common_clock_max_nested_cycle_excess=maximum_violation))
     if Counter(p['stage'] for p in processes) != {4:10, 6:10} or len({(p['stage'],p['trial']) for p in processes}) != 20:
         raise ValueError('stage clock report requires all twenty independent stage4/6 dual processes')
@@ -397,6 +458,11 @@ def stage_phase_clock_diagnostics(output):
             phases[phase]['E_rate_above_L'] = dict(positive=sum(v['E_minus_L_ghz']['positive'] for v in values),
                                                    total=sum(v['E_minus_L_ghz']['n'] for v in values))
         summary[str(stage)] = dict(phases=phases,
+            reversed_order=dict(processes_with_pairs=sum(p['order_decomposition']['actual_reversed_pairs']>0 for p in group),
+                actual_pairs=failure_stats(p['order_decomposition']['actual_reversed_pairs'] for p in group),
+                retained_fraction={name:failure_stats(p['order_decomposition']['retained'][name]['fraction'] for p in group
+                    if p['order_decomposition']['retained'][name]['fraction'] is not None)
+                    for name in ('common_rate','common_cycles','cycle_only','rate_only')}),
             later_rate_above_first=dict(positive=sum(p['later_minus_first_ghz']['positive'] for p in group),
                                        total=sum(p['later_minus_first_ghz']['n'] for p in group)),
             common_clock_max_nested_cycle_excess=failure_stats(p['common_clock_max_nested_cycle_excess'] for p in group))
@@ -408,6 +474,8 @@ def stage_phase_clock_diagnostics(output):
         method=dict(window='L=FIRST->MAIN, E=EPI_BEGIN->EPI_DONE; each delta stays within one CTA, SM, consumer role and output tile.',
             statistics='Each independent process first summarizes its CTAs. Stage summaries contain ten process values; no CTA pooling as independent runs.',
             spatial='FIRST/MAIN spans use globaltimer only. The common-median-rate calculation preserves actual FIRST positions and converts each local cycle delta; it is descriptive, not a clock correction.',
+            order_decomposition='MAIN1-FIRST0=L0+G+L1, with G=FIRST1-MAIN0 allowed negative. Select every pair with FIRST0_a+32<FIRST0_b and MAIN1_a>MAIN1_b+32. Each replacement retains observed FIRST0; common_rate uses each output process-median f with actual C/G; common_cycles uses each output process-median C with actual f/G. cycle_only/rate_only additionally fix G to its process median. Report the fraction of these same observed pairs still reversed, not a causal or predictive success rate.',
+            symmetric_decomposition='For each matched phase, delta L=delta C*(1/fa+1/fb)/2+(Ca+Cb)*(1/fa-1/fb)/2. C and f=C/L share observations and are correlated; the two algebraic terms are not independent causes or physical DVFS contributions. No absolute clock64 values are subtracted across CTAs.',
             exact_common_clock='A contained interval cannot accumulate more cycles than its containing interval under an exact shared nonnegative f(t). These raw endpoint violations do not identify physical clock variation.',
             witness_bound='If cycle deltas are exact and all ns endpoints have absolute error <=epsilon, containment persists for epsilon<=min(left,right)/2. A repair by ns endpoint error alone must exceed that value; this is not a measured skew or an error upper bound.',
             limits='PTX specifies a global nanosecond timer with target-specific behavior. Neither this definition, the observed timestamp grid, nor adjacent CLOCK/GLOBALTIMER reads bounds cross-SM skew or endpoint read delay. Do not attribute all spatial spread to supply or call the ratios a physical DVFS measurement.'))
@@ -435,7 +503,31 @@ def stage_phase_clock_diagnostics(output):
         '|---|---|---:|---:|---:|']
     for w in witnesses:
         lines.append(f"| {w['stage']} / {w['trial']} | {w['inner']['cta']} / {w['outer']['cta']} | {w['cycle_excess']} | {w['left_margin_ns']} / {w['right_margin_ns']} | {w['necessary_endpoint_error_bound_ns']:g} |")
-    lines += ['', '若 cycles 准确且坚持共同非负 f(t)，仅靠 ns 端点修复必须越过该下界；它不是实测 skew，也不是误差上界。精确共同 f(t) 与原始端点不一致，不等于正式预测模型已被这项检查判定失败。', '',
+    lines += ['', '若 cycles 准确且坚持共同非负 f(t)，仅靠 ns 端点修复必须越过该下界；它不是实测 skew，也不是误差上界。精确共同 f(t) 与原始端点不一致，不等于正式预测模型已被这项检查判定失败。']
+    lines += ['', '## 观测逆序保留在哪些代数替换中？', '',
+        '`MAIN1−FIRST0=L0+G+L1`，其中 `G=FIRST1−MAIN0` 可为负，跨 role 只作相位关系。'
+        '全部逆序对要求 FIRST0_a 比 b 早超过32ns，MAIN_END1_a却晚超过32ns；没有筛选子集。'
+        '下表保留实际 FIRST0，每个输出分别取本进程共同中位 f 或 C；“cycle-only/rate-only”再把 G 固定为本进程中位。', '',
+        '| stage | 原逆序对数，中位[范围] | 共同f、实际C/G | 共同C、实际f/G | cycle-only | rate-only |',
+        '|---|---:|---:|---:|---:|---:|']
+    for stage in ('4','6'):
+        q=summary[stage]['reversed_order'];n=q['actual_pairs']
+        cells=[f"{q['retained_fraction'][name]['median']:.1%} [{q['retained_fraction'][name]['minimum']:.1%},{q['retained_fraction'][name]['maximum']:.1%}]"
+               for name in ('common_rate','common_cycles','cycle_only','rate_only')]
+        lines.append(f"| {stage} | {n['median']:g} [{n['minimum']},{n['maximum']}] | "+' | '.join(cells)+' |')
+    lines += ['', '百分比是每进程原逆序对在替换后仍逆序的比例，再汇总十进程；不是独立CTA对的置信度，也不统计替换后新产生的逆序。', '',
+        '| stage / trial / CTA a,b | ΔFIRST0 ns | ΔG ns | L0：cycle项 / rate项 ns | L1：cycle项 / rate项 ns | ΔMAIN1 ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    for p in processes:
+        w=p['order_decomposition'].get('witness')
+        if w:
+            a,b=w['L_terms']
+            lines.append(f"| {p['stage']} / {p['trial']} / {w['a']['cta']},{w['b']['cta']} | {w['first_delta_ns']} | {w['G_delta_ns']} | "
+                f"{a['symmetric_cycle_term_ns']:.1f} / {a['symmetric_inverse_rate_term_ns']:.1f} | "
+                f"{b['symmetric_cycle_term_ns']:.1f} / {b['symmetric_inverse_rate_term_ns']:.1f} | {w['MAIN1_delta_ns']} |")
+    lines += ['', '两见证按 a−b 对称分解：`ΔL=ΔC·(1/fa+1/fb)/2+(Ca+Cb)·Δ(1/f)/2`，逐见证精确闭合。'
+        'C 与 f=C/L 共用观测而相关；替换没有重新演化生产者、屏障、计算和输出状态，因此不能区分物理供给、频率或计时偏差的因果贡献。JSON保留每进程比例、原始见证端点与来源。']
+    lines += ['',
         f'[官方 PTX 文档]({ptx_url}) 将 %globaltimer 定义为全局纳秒计时器，同时说明行为依赖目标架构；未给上述端点或跨 SM 偏差上界。本批时间戳的 {timestamp_gcd} ns 格点也不是全部误差上界。现有证据不唯一归因物理 DVFS，不把全部空间分散归入供给。', '']
     (output/'A-stage-clock.md').write_text('\n'.join(lines))
     return result
