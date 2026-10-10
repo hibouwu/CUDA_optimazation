@@ -124,9 +124,9 @@ max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `suppl
 
 ### 开发候选：有限槽与共享请求
 
-[supply_model.shared_stage_events](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)给当前cfg_b两输出组织实现一个纯事件候选。对软件前驱允许发出的请求j，FIFO服务结束为`F_j=max(a_j,F_(j−1))+τv_j`，就绪/源复用为`R_j=F_j+ℓ_type`。输入16KiB请求取v=1，输出8KiB取v=η/2；这只是逻辑服务，不命名为物理L2/HBM。输入S槽、普通/尾释放、输出8子tile和双缓冲都显式保留，E0相位由图生成。
+[supply_model.shared_stage_events](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)给当前cfg_b两输出组织实现一个纯事件候选。对软件前驱允许发出的请求j，FIFO服务结束为`F_j=max(a_j,F_(j−1))+τv_j`，就绪/源复用为`R_j=F_j+ℓ_type`。每Ktile的A16KiB取v=1、B0/B1各8KiB取v=1/2，输出8KiB取v=η/2；这只是逻辑服务，不命名为物理L2/HBM。输入S槽、普通/尾释放、输出8子tile和双缓冲都显式保留，E0相位由图生成。
 
-当前公共入口、同质请求及无本地TC竞争的版本没有通过机制迁移：[R13](R13-async-retirement.md#stage-shared-service)的联合窗口最大残差虽只有2.84%，但全卡M跨度过窄、本CTA输出干预效应不足。两低误差校准解也不唯一。它不参与V09预测；测后E0、入口或完成排序不进入参数。末端仅覆盖源读取尾，不是全局D可见或完整CUDA时间。
+当前公共入口、同质请求及无本地TC竞争的版本没有通过机制迁移：[R13](R13-async-retirement.md#stage-shared-service)的联合窗口最大残差虽只有3.32%，但全卡M跨度过窄、本CTA输出干预效应不足。两低误差校准解也不唯一。它不参与V09预测；测后E0、入口或完成排序不进入参数。末端仅覆盖源读取尾，不是全局D可见或完整CUDA时间。[请求形成](R13-async-retirement.md#stage-request-formation)已纠正B的请求粒度；[分阶段计时](R09-inkernel-clock-stages.md#stage-phase-clock)显示首/次输出换算率不同，当前统一ns服务价仍是待检验假设。观测PROD仅在单列诊断中作输入；极小非零偏移仍改变队列相位，说明零发射间隔与同时到达的处理也未受约束，不能据此宣称识别起步放大规律。
 
 ## 已测条件关系
 

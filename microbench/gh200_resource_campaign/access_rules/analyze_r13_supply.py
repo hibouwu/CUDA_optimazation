@@ -4165,6 +4165,121 @@ def stage_background_baseline_diagnostics(output):
     return report
 
 
+def stage_request_formation_diagnostics(base, output):
+    """Matched CTA timelines and static TMA atoms; no fitted per-CTA prices."""
+    from analyze_r13_sm import select_attempts
+    from supply_model import static_tma_requests
+    import v06_run as common
+    root=Path(base)/'20261010-R09-R13-R18-failure-controls';output=Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    phases=('entry_offset','producer_front','producer_to_FIRST0','FIRST0_to_FIRST1','L1')
+    processes=[];failures=[];hashes={};source_layouts={}
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+    for stage in (4,6):
+        row=rows[f'r13_stage_k4096_s{stage}'];setup=setups[row['id']]
+        static=static_tma_requests(row,setup);source_layouts[stage]=static
+        selected,failed,_=select_attempts(root,row['id'],('dual',))
+        failures.extend(failed)
+        if {i['record']['trial'] for i in selected}!=set(range(10)):
+            raise ValueError('formation comparison requires ten dual processes per stage')
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row);ctas=obs['ctas']
+            if len(ctas)!=132 or len({c['sm'] for c in ctas})!=132:
+                raise ValueError('formation geometry/SM coverage changed')
+            origin=min(c['entry_ns'] for c in ctas);records=[]
+            for c in ctas:
+                work=[list(w) for w in c['work']]
+                expected=[t['coord'] for t in static['ctas'][c['cta']]]
+                if work!=expected or len(c['tiles_ns'])!=2:
+                    raise ValueError('formation observed work differs from static source coordinates')
+                e=c['entry_ns']-origin;p=c['prod_ns']-origin
+                first=c['tiles_ns'][0][0]-origin;next_first=c['tiles_ns'][1][0]-origin
+                end=c['tiles_ns'][1][1]-origin
+                parts=[e,p-e,first-p,next_first-first,end-next_first]
+                if min(parts)<0 or sum(parts)!=end:
+                    raise ValueError('formation same-call timeline does not close')
+                records.append(dict(cta=c['cta'],sm=c['sm'],work=work,
+                    entry_ns=c['entry_ns'],prod_ns=c['prod_ns'],tiles_ns=c['tiles_ns'],tiles_c=c['tiles'],
+                    entry_c=c['entry_c'],prod_c=c['prod_c'],
+                    components_ns=dict(zip(phases,parts)),second_MAIN_relative_ns=end,
+                    source_groups=dict(A_first=work[0][0],A_second=work[1][0],B=work[0][1])))
+            # All absolute integer timestamps have been subtracted before using numpy.
+            parts=np.array([[c['components_ns'][k] for k in phases] for c in records],dtype=float)
+            end=parts.sum(axis=1);phase_stats={}
+            for j,k in enumerate(phases):
+                values=parts[:,j]
+                phase_stats[k]=dict(spatial_span_ns=float(np.ptp(values)),
+                    span_with_phase_flattened_ns=float(np.ptp(end-values+np.median(values))))
+            processes.append(dict(stage=stage,trial=record['trial'],source=str(root/record['raw']),
+                source_sha256=record['raw_sha256'],record_path=str(root/item['path']),gpu_uuid=setup['gpu_uuid'],
+                ctas=records,phase_stats=phase_stats,second_MAIN_span_ns=float(np.ptp(end))))
+            hashes[str(root/record['raw'])]=record['raw_sha256']
+            hashes[str(root/item['path'])]=common.sha(root/item['path'])
+    summaries=[]
+    for stage in (4,6):
+        group=[p for p in processes if p['stage']==stage]
+        summaries.append(dict(stage=stage,second_MAIN_span_ns=span(p['second_MAIN_span_ns'] for p in group),
+            phases={k:{field:span(p['phase_stats'][k][field] for p in group)
+                for field in ('spatial_span_ns','span_with_phase_flattened_ns')} for k in phases}))
+    atom_root=Path(base)/'20261010-R13-output-background';common.verify(atom_root)
+    sass=[]
+    import re
+    for binary in ('cfg_b_plain','cfg_b_progress','cfg_b_s4_plain','cfg_b_s4_progress'):
+        path=atom_root/'build'/f'{binary}.sass'
+        sites=re.findall(r'/\*([0-9a-f]+)\*/[^\n]*UTMALDG\.3D[^\n]*',path.read_text())
+        if len(sites)!=3:raise ValueError('recheck three input TMA instruction sites')
+        sass.append(dict(binary=binary,path=str(path),load_sites=sites))
+        hashes[str(path)]=common.sha(path)
+    for p in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',
+            root/'source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
+            root/'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
+            root/'source/overlay/v06_trace.hpp',Path(__file__),Path(__file__).with_name('supply_model.py')):
+        hashes[str(p)]=common.sha(p)
+    report=dict(scope='Existing same-call formation diagnostic, not a new clock/traffic calibration.',
+        processes=processes,summaries=summaries,failed_attempts=failures,source_layouts=source_layouts,sass=sass,
+        static_facts=dict(work_mapping=['[cta//12,cta%12]','[cta//12+11,cta%12]'],
+            A_groups_per_output=11,A_group_size=12,B0_groups_per_output=12,B1_groups_per_output=12,B_group_size=11,
+            atoms_per_Ktile=[dict(operand='A',bytes=16384),dict(operand='B0',bytes=8192),dict(operand='B1',bytes=8192)],
+            input_atom_count=50688,normalized_input_work_16KiB=33792,output_atom_count=2112,
+            cross_output='A changes row group; the same CTA reuses its B0/B1 source addresses'),
+        endpoint_meaning=dict(PROD='producer first-work loop before coordinates and collective_mainloop.load, not prefill completion or first TMA issue',
+            FIRST='after first consumer_wait return, before first warpgroup_arrive',
+            MAIN='after mma_tail wait0 and last input-slot release'),
+        limitations=['PROD-to-FIRST includes producer/consumer software and wait-return paths, not bare request-ready latency.',
+            'FIRST0-to-FIRST1 is a cross-role elapsed relation, not a same-role service or frequency window.',
+            'Flattening a measured phase keeps every other observation fixed; it localizes dispersion algebraically and does not simulate changed scheduling.',
+            'Static source groups are potential reuse, not measured hits/coalescing or physical traffic; source coordinates and CTA/SM placement are confounded here.',
+            'All statistics use independent processes as units; 132 CTAs in one process are correlated.'],input_sha256=hashes)
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-request-formation.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 请求形成、源身份与推进分散','',
+        '源码核对：PROD在producer首工作循环入口，尚未形成tile坐标或调用load；FIRST在consumer首full等待返回后、首GMMA之前。'
+        '所以PROD→FIRST不能叫预填完成之后的硬件ready服务。','',
+        '四份实际SASS的producer循环均有3条UTMALDG：A为16KiB，B由两个8KiB atom构成。'
+        '完整两输出几何为50688输入原子加2112输出原子；输入归一工作仍为33792个16KiB单位。'
+        '早期两请求聚合版本保留为旧结果，不作为修正版本的成绩。','',
+        'CTA i的两工作坐标是(i//12,i%12)与(i//12+11,i%12)。每轮11个A源组各12个CTA，'
+        'B0/B1各12个源组、每组11个CTA。同CTA第二输出更换A行组、重复B地址。'
+        '这些静态身份在等权FIFO中被折叠了，但本批的源坐标与物理CTA/SM绑定，不能由相关性直接判缓存命中或路由。','',
+        '下表先在每次调用的132个CTA内求跨度，再取10进程中位。所有差值来自同一次调用的直接ns。','',
+        '| stage | 到第二MAIN的总跨度ns | entry偏移 | entry→PROD | PROD→FIRST0 | FIRST0→FIRST1 | 第二L |',
+        '|---|---:|---:|---:|---:|---:|---:|']
+    for r in summaries:
+        lines.append(f'| {r["stage"]} | {r["second_MAIN_span_ns"]["median"]:.1f} | '+
+            ' | '.join(f'{r["phases"][k]["spatial_span_ns"]["median"]:.1f}' for k in phases)+' |')
+    lines+=['','这五段对每CTA相加精确闭合，但各段跨度之和不等于总跨度。'
+        'FIRST0→FIRST1是两个consumer之间的推进关系，不称为一段纯计算服务。'
+        'JSON另保留逐段替换为调用内中位后的跨度；这种代数替换不重算下游请求，不提供因果收费。','',
+        '结论：完成分散不仅出现在入口或首输入前，首输出推进和第二L也保留明显空间差异。'
+        '还必须联立同role周期与ns检查，不能把所有ns差异归入供给；见[A-stage-clock](A-stage-clock.md)。','']
+    (output/'B-stage-request-formation.md').write_text('\n'.join(lines))
+    return report
+
+
 def shared_stage_service_diagnostics(output):
     """Fit the explicit shared-server hypothesis; keep causal transfer failures."""
     from scipy.optimize import least_squares
@@ -4245,6 +4360,38 @@ def shared_stage_service_diagnostics(output):
     fit('flag2_start_A',[.74,.97,850.,160.],(2,))
     second=fit('flag2_start_B',[.74,.80,800.,120.],(2,))
     fit('joint_development',second['coordinate_parameters'],(1,2))
+    # Conditional cut only: older measured starts test amplification by this graph.
+    # Parameters remain the newer joint fit; absolute cross-batch scores are invalid.
+    formation_source=output/'B-stage-request-formation.json'
+    formation=read_json(formation_source);producer_cuts=[];cut_summaries=[]
+    def spatial(model):
+        result={}
+        for name,values in [('FIRST0',[a['starts'][0] for a in model['ctas']]),
+                ('MAIN1',[a['main_ends'][1] for a in model['ctas']])]:
+            result[name]=dict(span_ns=max(values)-min(values),
+                strictly_earlier_than_CTA0=sum(v<values[0] for v in values))
+        return result
+    for stage in (4,6):
+        default=spatial(shared_stage_events(64,stage,132,**fits[-1]['parameters']))
+        for process in (p for p in formation['processes'] if p['stage']==stage):
+            ctas=sorted(process['ctas'],key=lambda a:a['cta'])
+            origin=min(a['prod_ns'] for a in ctas)
+            offsets=[a['prod_ns']-origin for a in ctas]
+            scaled=[]
+            for scale in (1e-6,.1,1.):
+                cut=shared_stage_events(64,stage,132,**fits[-1]['parameters'],
+                    diagnostic_producer_offsets_ns=[v*scale for v in offsets])
+                scaled.append(dict(scale=scale,spatial=spatial(cut)))
+            producer_cuts.append(dict(stage=stage,trial=process['trial'],source=process['source'],
+                producer_offsets_ns=offsets,producer_span_ns=max(offsets),default=default,conditional=spatial(cut),scaled=scaled))
+        selected=[r for r in producer_cuts if r['stage']==stage]
+        cut_summaries.append(dict(stage=stage,default=default,
+            producer_span_ns_median=statistics.median(r['producer_span_ns'] for r in selected),
+            conditional={key:{field:statistics.median(r['conditional'][key][field] for r in selected)
+                for field in ('span_ns','strictly_earlier_than_CTA0')} for key in ('FIRST0','MAIN1')},
+            scaled=[dict(scale=scale,MAIN1_span_ns_median=statistics.median(
+                next(x for x in r['scaled'] if x['scale']==scale)['spatial']['MAIN1']['span_ns']
+                for r in selected)) for scale in (1e-6,.1,1.)]))
     old_source=output/'B-epilogue-order.json';old=read_json(old_source);local=[]
     for stage in (4,6):
         a={p['trial']:p for p in old['processes'] if (p['stages'],p['variant'],p['epilogue_defer'])==(stage,'progress',0)}
@@ -4281,7 +4428,7 @@ def shared_stage_service_diagnostics(output):
         entry_evidence.append(dict(stages=stage,processes=values,
             medians={k:statistics.median(v[k] for v in values) for k in values[0] if k not in ('trial','source','sm')}))
     report=dict(scope='New cfg_b software-graph hypothesis tested on development data; not used in frozen V09.',
-        static=dict(ctas=132,outputs_per_cta=2,Ktiles=64,input_requests=33792,input_request_bytes=16384,
+        static=dict(ctas=132,outputs_per_cta=2,Ktiles=64,input_requests=50688,input_atoms=dict(A_count=16896,A_bytes=16384,B_count=33792,B_bytes=8192),input_service_units_16KiB=33792,
             store_requests=2112,store_request_bytes=8192,store_buffers=2,delay_tma_store=True),
         fixed_assumptions=dict(compute_ns=c,commit_lead_ns=c/2,completion_lag_ns=0,output_latency_ns=0,
             prepare_write_split=[.5,.5],all_entries_ns=0,arbitration='FIFO arrival; insertion-order ties initialized by CTA index',
@@ -4290,17 +4437,21 @@ def shared_stage_service_diagnostics(output):
         calibration_rule='Two local starts fit flag2 early/post/E0 on both stages; c comes from its stage6 early. Joint fit then explicitly uses both arms.',
         solver_scope='Finite local least-squares searches, not exhaustive feasible-set bounds. No fit selected by flag1 transfer score.',
         fits=fits,observed_current=observed,observed_old_local=local,old_entry_evidence=entry_evidence,
-        input_sha256={**entry_hashes,**{str(p):common.sha(p) for p in (source,old_source,entry_root/'source_hashes.json',entry_root/'cases.json',Path(__file__),Path(__file__).with_name('supply_model.py'))}},
+        producer_cut=dict(processes=producer_cuts,summaries=cut_summaries,
+            scope='Conditional graph sensitivity only: old measured producer-loop offsets with newer fixed joint parameters; no fitting or cross-batch absolute score.'),
+        input_sha256={**entry_hashes,**{str(p):common.sha(p) for p in (source,old_source,formation_source,entry_root/'source_hashes.json',entry_root/'cases.json',Path(__file__),Path(__file__).with_name('supply_model.py'))}},
         limitations=['The stage6 early calibration is fixed by c, and its computed post is nearly 47c; six windows are not six independent identifications.',
             'Abstract logical service and per-byte read/write weighting are not physical bandwidth or traffic measurements.',
             'The predicted endpoint is final epilogue source-read completion. Global D visibility and kernel launch/exit costs are absent.',
             'Plain whole differences are compared with source-tail differences as a diagnostic, not equated by an assumed universal fixed term.',
             'Old local-output control uses another observer; only dimensionless within-batch cycle responses are compared.',
             'Simultaneous CTA entries and symmetric request costs can put CTA0 first incorrectly; phase failure is distinct from aggregate-window residual.',
-            'No observed E0/CTA entry/target frequency, stage-specific correction or post-measurement critical-CTA expansion enters the candidate.'])
+            'Free candidate uses no observed E0/CTA entry/target frequency or stage-specific correction. The separately labelled producer cut uses old measured offsets only to test graph sensitivity.'])
     (output/'B-stage-shared-service.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
-    lines=['# 有限槽与共享服务：首个可计算候选','',
-        '输入A/B分别入固定FIFO，服务后再经过公共延迟才满足full；consumer保留commit、wait1、普通/尾slot释放。'
+    lines=['# 有限槽与共享服务：按SASS修正后的候选','',
+        '早期两请求聚合版本保留在[B-stage-shared-service-two-request](B-stage-shared-service-two-request.md)；'
+        '本版把B的两个8KiB原子分开。逻辑总量仍为33792个16KiB服务单位，实际输入原子数改为50688，另有2112个输出原子。','',
+        '每Ktile按SASS发出A16KiB、B0/B1各8KiB三个原子请求，分别入FIFO，三者完成才满足full；consumer保留commit、wait1、普通/尾slot释放。'
         '输出由8个8KiB子tile、DelayTmaStore和两个源buffer生成，处理flag只改变等待前驱。'
         '不输入实测E0时刻。所有时间为ns；输出请求权重可与等字节输入不同，但不是物理流量或L2/HBM带宽。','',
         f'固定compute={c:.4f}ns来自stage6 flag2 early15，q=compute/2；λ及输出后延迟为0，局部准备与写各占一半。'
@@ -4335,7 +4486,7 @@ def shared_stage_service_diagnostics(output):
         v=entry['medians']
         lines.append(f'| {entry["stages"]} | {v["entry_offset_ns"]:.1f} | {v["entry_rank"]:.1f} | '
             f'{v["first_input_rank"]:.1f} | {v["second_MAIN_rank"]:.1f} | {v["entry_span_ns"]:.1f} |')
-    lines+=['','入口端点有32ns量化与并列，PROD是已有预填锚点而不是首TMA发出；旧MAIN_END也不是本批M返回。'
+    lines+=['','入口端点有32ns量化与并列，PROD在producer首次工作循环入口、坐标计算和load之前，不是预填完成或首TMA发出；旧MAIN_END也不是本批M返回。'
         '因此它们不拼成当前调用，但足以说明不能未经检查把CTA0完成较晚全部补成入口延迟。'
         '全卡M跨度过窄也不能仅重命名FIFO次序修好。下一步应检查初次请求生成与请求身份、服务组织，'
         '当前不按测后完成排名重排仲裁，也不立即增加第二资源。']
@@ -4344,6 +4495,29 @@ def shared_stage_service_diagnostics(output):
         '上述候选的本地响应明显不足；共同入口、仲裁、请求身份和未建模本地资源仍需分开检查，不能唯一归因某一硬件端口。','',
         '候选不接入正式预测。旧dual显示CTA0已接近最早入口，下一步沿初次请求生成与实际请求身份检查相位；'
         '不能用当前M完成次序去排列FIFO。局部窗口拟合好并未通过全卡机制检验，也未预测最终D全局可见或完整kernel固定项。','']
+    lines+=['## 测得的producer起步差能否在当前图中放大？','',
+        '仅将旧739095每次调用的PROD相对起步量代入图，固定本批joint参数、flag0，不重新拟合。'
+        '此切口忽略PROD到真正发出之间的未知软件成本，只测试当前图对起步分散的敏感性。'
+        '旧批时钟/观察协议不同，表中只比较模型内部自由与条件运行，不给跨批绝对误差成绩。','',
+        '| stage | 代入PROD跨度ns中位 | FIRST0自由/条件跨度ns | MAIN1自由/条件跨度ns | MAIN1严格早于CTA0数量，自由/条件中位 |',
+        '|---|---:|---:|---:|---:|']
+    for r in cut_summaries:
+        a=r['default'];b=r['conditional']
+        lines.append(f'| {r["stage"]} | {r["producer_span_ns_median"]:.1f} | '
+            f'{a["FIRST0"]["span_ns"]:.2f} / {b["FIRST0"]["span_ns"]:.2f} | '
+            f'{a["MAIN1"]["span_ns"]:.2f} / {b["MAIN1"]["span_ns"]:.2f} | '
+            f'{a["MAIN1"]["strictly_earlier_than_CTA0"]} / {b["MAIN1"]["strictly_earlier_than_CTA0"]:.1f} |')
+    lines+=['','再保留PROD次序、把偏移幅度缩小，检查零软件发射间隔与同时到达时的FIFO并列处理：','',
+        '| stage | 全0起步MAIN1跨度ns | 原偏移×1e−6 | 原偏移×0.1 | 原偏移×1 |',
+        '|---|---:|---:|---:|---:|']
+    for r in cut_summaries:
+        lines.append(f'| {r["stage"]} | {r["default"]["MAIN1"]["span_ns"]:.2f} | '+
+            ' | '.join(f'{x["MAIN1_span_ns_median"]:.2f}' for x in r['scaled'])+' |')
+    lines+=['','微小非零偏移已能打破大量同时入队，不能把原幅度试验的全部增量解释为240ns起步差的物理放大。'
+        '当前producer/operand发射间隔取0，单CTA可在同一时刻发完所有初始槽；并列排序因而是模型假设。'
+        '这要求先约束真实请求发射组织，再讨论额外资源或按源身份收费；本诊断没有选择新的时间常数。']
+    lines+=['','这些观测起步量不是正式预测输入。当前图的敏感性不能排除未建模的请求身份、仲裁或局部资源；'
+        'FIRST0和MAIN1也不等同于前表的新协议C1或M端点。','']
     (output/'B-stage-shared-service.md').write_text('\n'.join(lines))
     return report
 

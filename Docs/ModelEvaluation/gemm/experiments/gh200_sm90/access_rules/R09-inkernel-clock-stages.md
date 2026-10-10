@@ -1,6 +1,7 @@
 # R09：调用内时钟、输入与时间换算
 
 当前时钟候选以名义 Tensor/源请求工作和输入模式预测有效 cycle/ns，参数及组合见 [V09 r2](RULES.md#v09-model)。**V09 整体未通过**：cfg_b K32768 的频率低估 25.00%，完整时间高估 35.46%；训练窗口内的拟合不能代替跨 K 验证。
+调用内也不能直接统一换算：同卡 stage4/6 的首输出与次输出周期率明显不同，且小幅跨 CTA 比率差足以影响数百 ns 的空间分散；这还不是物理 DVFS 归因，见[分阶段窗口](#stage-phase-clock)。
 固定Q/S/D后，sw1→sw8的服务收益仍存在；把两组前序改成共同16次sw1后，周期减少24.60%，频率差却从同期adaptive的14.12%降到0.33%。前序协议参与了频率响应。连续调用进一步表明：共同sw1前序的最大CTA周期也随历史增加；切sw8后周期立即下降，频率却未立即改变。仅增加一个频率时间常数尚不能解释轨迹。镜像源前序后，目标窗口仍比早段慢约11%，表明大幅变慢不要求反复访问目标那份A/B。
 同参数量的正值倒数响应已做离线比较：它缓解G6低估，却使独立于训练的旧wide六点频率RMS从6.56%升至10.74%；加入既有跨K数据仍未修复，因此没有替换现行组件。
 逐进程分解进一步定位：cfg_b 长K在**观测包络下**的频率误差为−53.39%，自由联立缓和到−25.00%；代入同次观测频率后，包络误差仅−0.47%。直接删除源请求项使原训练频率RMS从2.39%恶化到30.76%，因此保留现行候选。新卡观察协议对照没有出现同量级的系统频率差，但长窗口plain仍比两种记录版本慢，后续须分开检查源工作代理与完整时间映射。同卡zero/random也会同时改变周期窗口与频率，不能只换一个GHz常数。完整旧推导见 [cee978a 固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。
@@ -15,7 +16,24 @@
 | event−包络 | 同次带记录调用内相减 | 不能用不同进程群中位数之差命名物理固定开销 |
 | 输出/最终记录 | cooperative `store()`/`store_tail()`，后者为 `.read0` | 源 SMEM 可复用不等于全局写完成；plain 映射仍需独立校准 |
 
-旧 R09 的 globaltimer 实测步长为 32 ns，≥3.2 µs 窗口才用于其频率统计。公共 cfg_a/b/c 与旧 128×256×64、cluster2×1、4 stage 探针的阶段、资源和端点不同，旧常数不直接迁入当前模型。
+旧 R09 的 globaltimer 实测格点为 32 ns，≥3.2 µs 窗口才用于其频率统计；格点不是端点误差上界。公共 cfg_a/b/c 与旧 128×256×64、cluster2×1、4 stage 探针的阶段、资源和端点不同，旧常数不直接迁入当前模型。
+
+<a id="stage-phase-clock"></a>
+
+### 首输出和后续输出能共用换算率吗？
+
+job739095，a058/GPU-ef8692f3，cfg_b 2816×1536×4096、stage4/6 各10个 dual 进程。每 CTA 两个输出，分别由 thread128/256 记录；每个 L=`FIRST→MAIN`、对应输出 E=`EPI_PERMIT→EPI_DONE` 均使用同 CTA、同角色、同 tile 的整数 cycle/ns 差。先取每进程132个 CTA 的中位，再汇总10进程：
+
+| stage / 输出 | L 周期率，GHz | 对应输出 E 周期率，GHz | 同调用 L 周期率跨度，GHz |
+|---|---:|---:|---:|
+| 4 / 首 | 1.56457 | 1.75419 | 0.03935 |
+| 4 / 次 | 1.75875 | 1.82642 | 0.03431 |
+| 6 / 首 | 1.52241 | 1.69049 | 0.03889 |
+| 6 / 次 | 1.72620 | 1.85053 | 0.04383 |
+
+次输出的 L 周期率在2640/2640个同 CTA 配对中升高；同一 thread128 的 E0 也全部高于自己的 L，所以固定角色差不能解释全部变化。stage4 的 L cycle/ns 空间相关为0.939/0.952，差异主要随 cycle；stage6 的 L cycle 跨度仅314.5/707，而 L ns 跨度为656/640，起点与比率残差不可忽略。不能把全部完成分散归入供给，也不能把 later 的共同 `c_ns` 未经检查用于首输出。
+
+归档 SASS 确认两端都是相邻、同序的 CLOCK→GLOBALTIMER，未发现角色错配；相邻并不等于同时读取或固定延迟。原始端点还有“较短包含区间反而累计更多 cycle”的见证，说明精确共同非负 `f(t)` 不能复现全部读数，但不唯一指向物理时钟差。[官方 PTX 文档](https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-globaltimer-globaltimer-lo-globaltimer-hi) 定义了全局纳秒计时器，同时说明行为依赖目标架构，未给这些端点或跨 SM 偏差的误差上界。这里保留周期率与计时残差，不据此拟合新频率项。[逐进程统计、空间跨度与包含裕量](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-stage-clock.md)。
 
 <a id="s-prefill-alignment"></a>
 

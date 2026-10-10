@@ -105,12 +105,12 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         wait_overhead_ns=0., loop_advance_ns=0., return_overhead_ns=0.,
                         handoff_delay_ns=0., epilogue_prepare_ns=0., epilogue_write_ns=0.,
                         epilogue_control_ns=0., epilogue_tail_ns=0., epilogue_defer=0,
-                        trace_requests=False):
+                        trace_requests=False, diagnostic_producer_offsets_ns=None):
     """Development FIFO server coupled to cfg_b's two-output software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
-    B, each 16 KiB. Eight 8 KiB D subtiles use DelayTmaStore and two source
-    buffers. A logical input request has work 1; an output has work eta/2.
+    B0 then B1: A is 16 KiB, each B atom is 8 KiB. Eight 8 KiB D subtiles use DelayTmaStore and two source
+    buffers. A has work 1, B0/B1 each 1/2; an output has work eta/2.
     The abstract server is not identified with a physical cache or memory port.
     Local epilogue preparation/write costs do not contend with TC in this first
     candidate; failure of the local-output intervention can falsify this choice.
@@ -119,7 +119,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     CTA index; this deterministic FIFO hypothesis is not measured arbitration.
     Input slots and output buffers constrain requests; there is no fitted queue
     capacity. defer=1 delays CTA0 E0 until its M1; defer=2 delays every E0.
-    No measured entry, E0 timestamp, per-condition penalty or target clock enters.
+    Default prediction uses no measured entry, E0 timestamp or target clock.
+    diagnostic_producer_offsets_ns is an explicit conditional cut at each
+    producer first-work loop; observed values are never formal prediction inputs.
     """
     import heapq
 
@@ -131,15 +133,18 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         raise ValueError('shared stage candidate requires positive geometry/compute and nonnegative costs')
     if issue_floor_ns>compute_ns or epilogue_defer not in (0,1,2):
         raise ValueError('invalid issue floor or output-order treatment')
+    offsets=[0.]*cta_count if diagnostic_producer_offsets_ns is None else list(diagnostic_producer_offsets_ns)
+    if len(offsets)!=cta_count or min(offsets)<0:
+        raise ValueError('diagnostic producer offsets must match CTA count and be nonnegative')
     total=2*kt;events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
     actors=[]
     def push(time,kind,cta,index):
         nonlocal serial
         heapq.heappush(events,(time,serial,kind,cta,index));serial+=1
     for cta in range(cta_count):
-        actor={name:[None]*total for name in ('issued_a','issued_b','ready','starts',
+        actor={name:[None]*total for name in ('issued_a','issued_b0','issued_b1','issued_b','ready','starts',
             'service_frontier','commits','completed','wait1_return','released')}
-        actor.update(ready_count=[0]*total,producer_index=0,producer_free=0.,producer_scheduled=False,
+        actor.update(ready_count=[0]*total,producer_index=0,producer_free=offsets[cta],producer_scheduled=False,
             consumer_index=0,consumer_free=0.,consumer_scheduled=False,
             mma_returns=[None,None],main_ends=[None,None],
             outputs=[dict(begin=None,end=None,scheduled=False,
@@ -159,7 +164,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
 
     def consumer(cta):
         a=actors[cta];i=a['consumer_index']
-        if i==total or a['consumer_scheduled'] or a['ready_count'][i]!=2:return
+        if i==total or a['consumer_scheduled'] or a['ready_count'][i]!=3:return
         a['consumer_scheduled']=True
         push(max(a['consumer_free'],a['ready'][i]),'mma',cta,i)
 
@@ -186,11 +191,15 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     for cta in range(cta_count):producer(cta)
     while events:
         t,_,kind,cta,i=heapq.heappop(events);a=actors[cta]
-        if kind in ('issue_a','issue_b'):
-            a['issued_a' if kind=='issue_a' else 'issued_b'][i]=t
-            done=request(t,cta,kind,i,1.,read_latency_ns);push(done,'input_ready',cta,i)
-            if kind=='issue_a':push(t+operand_gap_ns,'issue_b',cta,i)
+        if kind in ('issue_a','issue_b0','issue_b1'):
+            field={'issue_a':'issued_a','issue_b0':'issued_b0','issue_b1':'issued_b1'}[kind]
+            a[field][i]=t
+            done=request(t,cta,kind,i,1. if kind=='issue_a' else .5,read_latency_ns)
+            push(done,'input_ready',cta,i)
+            if kind=='issue_a':push(t+operand_gap_ns,'issue_b0',cta,i)
+            elif kind=='issue_b0':push(t+operand_gap_ns,'issue_b1',cta,i)
             else:
+                a['issued_b'][i]=t
                 a['producer_index']=i+1;a['producer_free']=t+producer_gap_ns
                 a['producer_scheduled']=False;producer(cta)
         elif kind=='input_ready':

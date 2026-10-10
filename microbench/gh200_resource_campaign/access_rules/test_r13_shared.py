@@ -31,7 +31,8 @@ class SharedStageTests(unittest.TestCase):
                     prior=admission_stage_events(8,stages,7.,29.,q,lag,service_cycles=64.,
                         issue_floor=9.,wait_overhead=4.,loop_advance=5.,return_overhead=6.,
                         reuse_delay=3.,handoff_delay=7.)
-                    mapping={'issued_a':'issued','issued_b':'issued','ready':'ready',
+                    mapping={'issued_a':'issued','issued_b0':'issued','issued_b1':'issued',
+                        'issued_b':'issued','ready':'ready',
                         'starts':'first_mma_or_commit','service_frontier':'service_frontier',
                         'commits':'commits','completed':'completed','wait1_return':'wait1_return',
                         'released':'released','mma_returns':'mma_returns','main_ends':'main_ends'}
@@ -40,16 +41,20 @@ class SharedStageTests(unittest.TestCase):
                             self.assertEqual(cta[new],prior[old],new)
                         self.assertEqual([cta['main_ends'][j]-cta['starts'][8*j] for j in range(2)],prior['windows'])
 
-    def test_input_pair_readiness_slot_identity_and_tail_release(self):
+    def test_three_input_atoms_readiness_slot_identity_and_tail_release(self):
         kt,stages=8,4
         params=self.parameters(operand_gap_ns=5.)
         result=shared_stage_events(kt,stages,3,trace_requests=True,**params)
         requests={(r['cta'],r['kind'],r['index']):r for r in result['requests']}
         for cta,a in enumerate(result['ctas']):
             for i in range(2*kt):
-                ra,rb=(requests[cta,kind,i] for kind in ('issue_a','issue_b'))
-                self.assertEqual(a['issued_b'][i]-a['issued_a'][i],params['operand_gap_ns'])
-                self.assertEqual(a['ready'][i],max(ra['ready_ns'],rb['ready_ns']))
+                ra,rb0,rb1=(requests[cta,kind,i] for kind in ('issue_a','issue_b0','issue_b1'))
+                self.assertEqual((ra['work'],rb0['work'],rb1['work']),(1.,.5,.5))
+                self.assertEqual(a['issued_b0'][i]-a['issued_a'][i],params['operand_gap_ns'])
+                self.assertEqual(a['issued_b1'][i]-a['issued_b0'][i],params['operand_gap_ns'])
+                self.assertEqual(a['issued_b'][i],a['issued_b1'][i])
+                self.assertEqual(a['ready_count'][i],3)
+                self.assertEqual(a['ready'][i],max(ra['ready_ns'],rb0['ready_ns'],rb1['ready_ns']))
                 self.assertGreaterEqual(a['starts'][i],a['ready'][i])
                 if i:self.assertGreaterEqual(a['issued_a'][i],a['issued_b'][i-1]+params['producer_gap_ns'])
                 if i>=stages:
@@ -103,7 +108,7 @@ class SharedStageTests(unittest.TestCase):
         runs=[shared_stage_events(8,4,3,epilogue_defer=flag,**params) for flag in (0,1,2)]
         for flag,result in enumerate(runs):
             for i,a in enumerate(result['ctas']):
-                for key in ('issued_a','issued_b','ready','starts','commits','completed',
+                for key in ('issued_a','issued_b0','issued_b1','issued_b','ready','starts','commits','completed',
                             'wait1_return','released','mma_returns','main_ends'):
                     self.assertEqual(a[key],runs[0]['ctas'][i][key],(flag,i,key))
                 deferred=flag==2 or (flag==1 and i==0)
@@ -130,12 +135,65 @@ class SharedStageTests(unittest.TestCase):
         self.assertLessEqual(result['shared_busy_ns'],result['last_service_end_ns'])
         self.assertLessEqual(result['last_service_end_ns'],result['makespan_ns'])
 
+    def test_uniform_diagnostic_offsets_translate_all_events(self):
+        delta=123.5
+        actor_times=('issued_a','issued_b0','issued_b1','issued_b','ready','starts',
+            'service_frontier','commits','completed','wait1_return','released',
+            'mma_returns','main_ends')
+        output_times=('prepare_begin','prepare_end','write_begin','write_end',
+            'submitted','source_done')
+        request_times=('arrival_ns','start_ns','service_end_ns','ready_ns')
+        for stages in (4,6):
+            for flag in (0,1,2):
+                with self.subTest(stages=stages,flag=flag):
+                    params=self.parameters(epilogue_defer=flag,trace_requests=True)
+                    base=shared_stage_events(8,stages,3,**params)
+                    zero=shared_stage_events(8,stages,3,
+                        diagnostic_producer_offsets_ns=[0.]*3,**params)
+                    shifted=shared_stage_events(8,stages,3,
+                        diagnostic_producer_offsets_ns=[delta]*3,**params)
+                    self.assertEqual(zero,base)
+                    for key in ('makespan_ns','last_service_end_ns'):
+                        self.assertEqual(shifted[key],base[key]+delta,key)
+                    for key in ('shared_busy_ns','request_count'):
+                        self.assertEqual(shifted[key],base[key],key)
+                    self.assertEqual(len(shifted['requests']),len(base['requests']))
+                    for actual,original in zip(shifted['requests'],base['requests']):
+                        for key in ('cta','kind','index','work'):
+                            self.assertEqual(actual[key],original[key],key)
+                        for key in request_times:
+                            self.assertEqual(actual[key],original[key]+delta,key)
+                    for actual,original in zip(shifted['ctas'],base['ctas']):
+                        for key in actor_times:
+                            self.assertEqual(actual[key],[t+delta for t in original[key]],key)
+                        for out in range(2):
+                            self.assertEqual(actual['main_ends'][out]-actual['starts'][8*out],
+                                original['main_ends'][out]-original['starts'][8*out])
+                        for e,old_e in zip(actual['outputs'],original['outputs']):
+                            for key in ('begin','end'):
+                                self.assertEqual(e[key],old_e[key]+delta,key)
+                            for key in output_times:
+                                self.assertEqual(e[key],[t+delta for t in old_e[key]],key)
+                            self.assertEqual(e['end']-e['begin'],old_e['end']-old_e['begin'])
+
+    def test_diagnostic_offsets_gate_each_first_producer_issue(self):
+        offsets=[0.,2000.,37.5]
+        result=shared_stage_events(8,4,3,diagnostic_producer_offsets_ns=offsets,
+            trace_requests=True,**self.parameters())
+        first_requests={r['cta']:r for r in result['requests']
+            if r['kind']=='issue_a' and r['index']==0}
+        self.assertEqual(len(first_requests),len(offsets))
+        for i,offset in enumerate(offsets):
+            self.assertGreaterEqual(result['ctas'][i]['issued_a'][0],offset)
+            self.assertEqual(first_requests[i]['arrival_ns'],result['ctas'][i]['issued_a'][0])
+            self.assertGreaterEqual(first_requests[i]['start_ns'],offset)
+
     def test_full_declared_geometry_request_counts_and_work_budget(self):
         params=self.parameters(service_ns=.25,output_weight=2.)
         result=shared_stage_events(64,4,132,trace_requests=True,**params)
         counts=Counter(r['kind'] for r in result['requests'])
-        self.assertEqual(counts,dict(issue_a=16896,issue_b=16896,store=2112))
-        self.assertEqual(result['request_count'],35904)
+        self.assertEqual(counts,dict(issue_a=16896,issue_b0=16896,issue_b1=16896,store=2112))
+        self.assertEqual(result['request_count'],52800)
         self.assertEqual(len(result['requests']),result['request_count'])
         expected_work=33792+1056*params['output_weight']
         self.assertEqual(sum(r['work'] for r in result['requests']),expected_work)

@@ -312,6 +312,135 @@ def role_window_diagnostics(ctas):
                 frequency_min_window_ns=3200)
 
 
+def stage_phase_clock_diagnostics(output):
+    """Same-role stage windows from the shared 739095 replay; no clock fitting."""
+    output = Path(output)
+    path = output/'B-stage-request-formation.json'
+    data = clock.read_json(path)
+    processes, witnesses = [], []
+    timestamp_gcd = 0
+    # These two previously inspected pairs illustrate nonzero containment margins.
+    witness_pairs = {(4, 3): (32, 0), (6, 0): (48, 84)}
+    for source in data['processes']:
+        stage, trial = source['stage'], source['trial']
+        phases, windows, rates = {}, [], []
+        for role, phase in enumerate(('first', 'later')):
+            local = []
+            for cta in source['ctas']:
+                cycles, ns = cta['tiles_c'][role], cta['tiles_ns'][role]
+                if len(cycles) != 4 or len(ns) != 4 or len(cta['work']) != 2:
+                    raise ValueError('stage clock requires the two complete pingpong output tiles')
+                if any(not isinstance(t, int) for t in cycles+ns):
+                    raise ValueError('subtract integer timestamps before converting to floating point')
+                for value in ns:
+                    timestamp_gcd = math.gcd(timestamp_gcd, value)
+                Lc, Ln = cycles[1]-cycles[0], ns[1]-ns[0]
+                Ec, En = cycles[3]-cycles[2], ns[3]-ns[2]
+                if min(Lc, Ln, Ec, En) <= 0:
+                    raise ValueError('nonpositive same-role L/E window')
+                local.append(dict(cta=cta['cta'], sm=cta['sm'], role=role,
+                    work=cta['work'][role], begin_ns=ns[0], end_ns=ns[1],
+                    L_cycles=Lc, L_ns=Ln, L_ghz=Lc/Ln, E_cycles=Ec, E_ns=En, E_ghz=Ec/En))
+            C, N, F = ([w[key] for w in local] for key in ('L_cycles', 'L_ns', 'L_ghz'))
+            f = statistics.median(F)
+            error = [w['L_ns']-w['L_cycles']/f for w in local]
+            origin = min(w['begin_ns'] for w in local)
+            virtual_main = [w['begin_ns']-origin+w['L_cycles']/f for w in local]
+            phases[phase] = dict(role=role, ctas=len(local),
+                **{key:failure_stats(w[key] for w in local)
+                   for key in ('L_cycles', 'L_ns', 'L_ghz', 'E_cycles', 'E_ns', 'E_ghz')},
+                L_cycles_span=max(C)-min(C), L_ns_span=max(N)-min(N), L_ghz_span=max(F)-min(F),
+                first_ns_span=max(w['begin_ns'] for w in local)-origin,
+                main_ns_span=max(w['end_ns'] for w in local)-min(w['end_ns'] for w in local),
+                cycle_ns_correlation=statistics.correlation(C, N) if len(set(C))>1 and len(set(N))>1 else None,
+                common_median_rate_main_span_ns=max(virtual_main)-min(virtual_main),
+                common_median_rate_residual_span_ns=max(error)-min(error),
+                E_minus_L_ghz=failure_stats(w['E_ghz']-w['L_ghz'] for w in local))
+            rates.append(F)
+            windows.extend(local)
+        maximum_violation = 0
+        for inner in windows:
+            for outer in windows:
+                if (inner['cta'] != outer['cta'] and outer['begin_ns'] <= inner['begin_ns']
+                        and inner['end_ns'] <= outer['end_ns']):
+                    maximum_violation = max(maximum_violation, inner['L_cycles']-outer['L_cycles'])
+        if (stage, trial) in witness_pairs:
+            inner_id, outer_id = witness_pairs[stage, trial]
+            inner, outer = [next(w for w in windows if w['cta']==cid and w['role']==0)
+                            for cid in (inner_id, outer_id)]
+            left = inner['begin_ns']-outer['begin_ns']
+            right = outer['end_ns']-inner['end_ns']
+            if min(left, right) < 0 or inner['L_cycles'] <= outer['L_cycles']:
+                raise ValueError('the recorded common-clock containment witness no longer holds')
+            witnesses.append(dict(stage=stage, trial=trial, source=source['source'],
+                source_sha256=source['source_sha256'], inner=inner, outer=outer,
+                left_margin_ns=left, right_margin_ns=right,
+                cycle_excess=inner['L_cycles']-outer['L_cycles'],
+                necessary_endpoint_error_bound_ns=min(left, right)/2))
+        processes.append(dict(stage=stage, trial=trial, source=source['source'],
+            source_sha256=source['source_sha256'], distinct_sms=len({c['sm'] for c in source['ctas']}),
+            phases=phases, later_minus_first_ghz=failure_stats(b-a for a,b in zip(*rates)),
+            common_clock_max_nested_cycle_excess=maximum_violation))
+    if Counter(p['stage'] for p in processes) != {4:10, 6:10} or len({(p['stage'],p['trial']) for p in processes}) != 20:
+        raise ValueError('stage clock report requires all twenty independent stage4/6 dual processes')
+    summary = {}
+    for stage in (4, 6):
+        group = [p for p in processes if p['stage']==stage]
+        phases = {}
+        for phase in ('first', 'later'):
+            values = [p['phases'][phase] for p in group]
+            phases[phase] = {key+'_process_median':failure_stats(v[key]['median'] for v in values)
+                for key in ('L_cycles', 'L_ns', 'L_ghz', 'E_cycles', 'E_ns', 'E_ghz')}
+            phases[phase].update({key:failure_stats(v[key] for v in values if v[key] is not None)
+                for key in ('L_cycles_span', 'L_ns_span', 'L_ghz_span', 'first_ns_span', 'main_ns_span',
+                            'cycle_ns_correlation', 'common_median_rate_main_span_ns', 'common_median_rate_residual_span_ns')})
+            phases[phase]['E_rate_above_L'] = dict(positive=sum(v['E_minus_L_ghz']['positive'] for v in values),
+                                                   total=sum(v['E_minus_L_ghz']['n'] for v in values))
+        summary[str(stage)] = dict(phases=phases,
+            later_rate_above_first=dict(positive=sum(p['later_minus_first_ghz']['positive'] for p in group),
+                                       total=sum(p['later_minus_first_ghz']['n'] for p in group)),
+            common_clock_max_nested_cycle_excess=failure_stats(p['common_clock_max_nested_cycle_excess'] for p in group))
+    ptx_url = 'https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-globaltimer-globaltimer-lo-globaltimer-hi'
+    result = dict(scope='Development diagnosis of job739095 stage4/6 K4096 dual; no new prediction score or fit.',
+        source_sha256=clock.sha256(Path(__file__)), input_report=str(path), input_report_sha256=clock.sha256(path),
+        processes=processes, summary=summary, containment_witnesses=witnesses,
+        globaltimer_timestamp_gcd_ns=timestamp_gcd, ptx_globaltimer_reference=ptx_url,
+        method=dict(window='L=FIRST->MAIN, E=EPI_BEGIN->EPI_DONE; each delta stays within one CTA, SM, consumer role and output tile.',
+            statistics='Each independent process first summarizes its CTAs. Stage summaries contain ten process values; no CTA pooling as independent runs.',
+            spatial='FIRST/MAIN spans use globaltimer only. The common-median-rate calculation preserves actual FIRST positions and converts each local cycle delta; it is descriptive, not a clock correction.',
+            exact_common_clock='A contained interval cannot accumulate more cycles than its containing interval under an exact shared nonnegative f(t). These raw endpoint violations do not identify physical clock variation.',
+            witness_bound='If cycle deltas are exact and all ns endpoints have absolute error <=epsilon, containment persists for epsilon<=min(left,right)/2. A repair by ns endpoint error alone must exceed that value; this is not a measured skew or an error upper bound.',
+            limits='PTX specifies a global nanosecond timer with target-specific behavior. Neither this definition, the observed timestamp grid, nor adjacent CLOCK/GLOBALTIMER reads bounds cross-SM skew or endpoint read delay. Do not attribute all spatial spread to supply or call the ratios a physical DVFS measurement.'))
+    (output/'A-stage-clock.json').write_text(json.dumps(result, indent=2, allow_nan=False)+'\n')
+    lines = ['# 同调用、同角色的分阶段周期率', '',
+        '输入：[B-stage-request-formation.json](B-stage-request-formation.json)；每 stage 10 个 dual 进程，逐进程统计 CTA 后再汇总。L 为 FIRST→MAIN，E 为 EPI_BEGIN→EPI_DONE。这里没有重新解码或拟合。', '',
+        '| stage / 输出 | L cycles | L ns | L cycle/ns | E cycle/ns | 同调用 L cycle/ns 跨度 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for stage in ('4', '6'):
+        for phase, label in (('first', '首'), ('later', '次')):
+            p = summary[stage]['phases'][phase]
+            fields = [p[key+'_process_median']['median'] for key in ('L_cycles','L_ns','L_ghz','E_ghz')]
+            lines.append(f"| {stage} / {label} | {fields[0]:.2f} | {fields[1]:.1f} | {fields[2]:.5f} | {fields[3]:.5f} | {p['L_ghz_span']['median']:.5f} |")
+    lines += ['', '表中各列分别取中位，不将中位数相除作闭合。JSON 保留每进程分布和源文件身份。', '',
+        '| stage / 输出 | L cycle 跨度 | L ns 跨度 | FIRST ns 跨度 | MAIN ns 跨度 | cycle 与 ns 相关 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for stage in ('4', '6'):
+        for phase, label in (('first', '首'), ('later', '次')):
+            p = summary[stage]['phases'][phase]
+            fields = [p[key]['median'] for key in ('L_cycles_span','L_ns_span','first_ns_span','main_ns_span','cycle_ns_correlation')]
+            lines.append(f"| {stage} / {label} | {fields[0]:.1f} | {fields[1]:.1f} | {fields[2]:.1f} | {fields[3]:.1f} | {fields[4]:.3f} |")
+    lines += ['', 'stage4 的 L 空间变化主要跟随 cycle；stage6 的 cycle 跨度较小，起点及比率残差不能忽略。later 的共同换算率不能未经检查覆盖首输出。', '',
+        '首、次输出比率差不只来自固定角色差：同一 role 后续 E 窗口也升高。源码和 SASS 显示每端点由同一 leader 顺次相邻读取 CLOCK 与 GLOBALTIMER；这证明配对位置，不能证明两次读取同时或延迟恒定。', '',
+        '| stage / trial | 内 / 外 CTA（均首输出） | 多出的 cycles | 左 / 右包含裕量 ns | 仅修 ns 端点时必要 ε 下界 ns |',
+        '|---|---|---:|---:|---:|']
+    for w in witnesses:
+        lines.append(f"| {w['stage']} / {w['trial']} | {w['inner']['cta']} / {w['outer']['cta']} | {w['cycle_excess']} | {w['left_margin_ns']} / {w['right_margin_ns']} | {w['necessary_endpoint_error_bound_ns']:g} |")
+    lines += ['', '若 cycles 准确且坚持共同非负 f(t)，仅靠 ns 端点修复必须越过该下界；它不是实测 skew，也不是误差上界。精确共同 f(t) 与原始端点不一致，不等于正式预测模型已被这项检查判定失败。', '',
+        f'[官方 PTX 文档]({ptx_url}) 将 %globaltimer 定义为全局纳秒计时器，同时说明行为依赖目标架构；未给上述端点或跨 SM 偏差上界。本批时间戳的 {timestamp_gcd} ns 格点也不是全部误差上界。现有证据不唯一归因物理 DVFS，不把全部空间分散归入供给。', '']
+    (output/'A-stage-clock.md').write_text('\n'.join(lines))
+    return result
+
+
 def failure_component_errors(ctas, prediction):
     from collections import defaultdict
     errors = defaultdict(list)

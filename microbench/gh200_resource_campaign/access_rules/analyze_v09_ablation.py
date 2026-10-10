@@ -325,9 +325,12 @@ def main():
                 args.epilogue_order,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,
                 args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)):
             parser.error('--output-background is an independent replay; run other diagnostics separately')
-        from analyze_r13_supply import stage_output_background_diagnostics, stage_background_baseline_diagnostics
+        from analyze_r13_supply import stage_output_background_diagnostics, stage_background_baseline_diagnostics, stage_request_formation_diagnostics
         stage_output_background_diagnostics(args.output_background.resolve(),out)
         stage_background_baseline_diagnostics(out)
+        stage_request_formation_diagnostics(base,out)
+        from r09_input_source_clock import stage_phase_clock_diagnostics
+        stage_phase_clock_diagnostics(out)
         if args.shared_service:
             from analyze_r13_supply import shared_stage_service_diagnostics
             shared_stage_service_diagnostics(out)

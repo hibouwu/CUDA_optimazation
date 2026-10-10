@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给尚未通过V09迁移。新增共享服务事件候选保留输入槽、WGMMA释放和输出双缓冲，能拟合当前两处理的窗口摘要，但全卡相位与本CTA输出干预响应没有同时迁移，因此不进入正式预测。stage4/6全卡M返回跨度分别只预测约182/82ns，实测中位2528/976ns；不能靠重排CTA标签修复这个差别。固定窗口的c/T条件界仍保留，不能据低窗口残差宣称机制已正确。
+当前供给尚未通过V09迁移。新增共享服务事件候选保留输入槽、WGMMA释放和输出双缓冲，能拟合当前两处理的窗口摘要，但全卡相位与本CTA输出干预响应没有同时迁移，因此不进入正式预测。stage4/6全卡M返回跨度分别只预测约191/42ns，实测中位2528/976ns；不能靠重排CTA标签修复这个差别。固定窗口的c/T条件界仍保留，不能据低窗口残差宣称机制已正确。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -57,23 +57,42 @@
 
 ## 一条共享服务队列能解释输出干预吗？
 
-纯函数`shared_stage_events`已在[supply_model.py](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)实现：132 CTA、每CTA两个完整输出、输入S槽跨输出保留；A/B分别入FIFO并共同满足full，普通wait1释放前group、tail释放末group。8个8KiB输出子tile按真实延迟提交和两源buffer推进，flag只改变等待前驱。没有喂入实测E0时刻或目标调用频率。
+纯函数`shared_stage_events`已在[supply_model.py](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)实现：132 CTA、每CTA两个完整输出、输入S槽跨输出保留；每Ktile的A16KiB、B0/B1各8KiB分别入FIFO，三者完成才满足full，普通wait1释放前group、tail释放末group。8个8KiB输出子tile按真实延迟提交和两源buffer推进，flag只改变等待前驱。没有喂入实测E0时刻或目标调用频率。
 
-本次固定共同入口、同质请求、FIFO及局部准备不干扰TC；以stage6 flag2 early定`compute=291.2ns`，q取其一半，其它未分离软件费用先取0。只拟flag2六窗口的两个起点都达到约0.33% RMS，却给出不同的输入服务和局部准备成本，对flag1的末端变化甚至变号。共享服务总预算另取全部plain最短时间，包括flag1；不是未见数据验证。stage6 early由compute定义，post也几乎预定，六个窗口并非六个独立辨识条件。
+本次固定共同入口、同质请求、FIFO及局部准备不干扰TC；以stage6 flag2 early定`compute=291.2ns`，q取其一半，其它未分离软件费用先取0。只拟flag2六窗口的两个起点分别达到约0.34%和0.34% RMS，却给出不同的输入服务和局部准备成本，对flag1的末端变化甚至变号。共享服务总预算另取全部plain最短时间，包括flag1；不是未见数据验证。stage6 early由compute定义，post也几乎预定，六个窗口并非六个独立辨识条件。
 
-为给候选一次联合开发机会，再用两flag的12个early/post/E0窗口拟合同一组参数，最大相对残差2.84%，但其全卡相位仍错误：
+为给候选一次联合开发机会，再用两flag的12个early/post/E0窗口拟合同一组参数，最大相对残差3.32%，但其全卡相位仍错误：
 
 | flag2 | stage4 | stage6 |
 |---|---:|---:|
 | 模型/实测，C16→M内其它E0 CTA数中位 | 0 / 60 | 0 / 60 |
 | 模型/实测，比CTA0更早M的CTA数中位 | 0 / 70.5 | 0 / 75 |
-| 模型/实测，全卡M跨度ns中位 | 181.98 / 2528 | 81.64 / 976 |
+| 模型/实测，全卡M跨度ns中位 | 190.69 / 2528 | 41.91 / 976 |
 
 739717本CTA输出延后的stage4 early周期配对中位为−6.82%；候选对应无量纲变化只有约−0.1%～−0.2%。旧观察协议与本批不同，只比相对响应，不用新频率换算旧周期。这个缺口不能唯一指向某个本地端口，也不能因联合拟合好就忽略。
 
-复用739095同卡dual作独立入口检查：stage6 CTA0的entry十次都处在最早32ns格点，但首输入FIRST前面已有2～105个CTA，第二MAIN_END前面已有58～105个。stage4 entry中位仅比最早晚32ns。PROD不是首请求发出，旧MAIN_END也不是本批M；这些端点不能跨批拼接，但足以阻止把后续落后全部补成一个CTA0入口延迟。下一步沿入口→预填→首输入的同调用链和真实A/B请求身份检查，不能按测后M排名改变仲裁或拟CTA专属常数。
+复用739095同卡dual作独立入口检查：stage6 CTA0的entry十次都处在最早32ns格点，但首输入FIRST前面已有2～105个CTA，第二MAIN_END前面已有58～105个。stage4 entry中位仅比最早晚32ns。PROD不是首请求发出，旧MAIN_END也不是本批M；这些端点不能跨批拼接，但足以阻止把后续落后全部补成一个CTA0入口延迟。请求形成与分阶段换算检查见下节；不能按测后M排名改变仲裁或拟CTA专属常数。
 
 [完整分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)保存两个原拟合、联合开发解、每CTA预测相位和原始来源。模型末端是最后E1源读取完成，尚无全局D可见尾项或kernel固定项，不冒充完整CUDA时间。CPU退化及依赖测试通过只证明实现按候选运行；该候选仍不采用。
+
+<a id="stage-request-formation"></a>
+
+## 起步分散与请求粒度
+
+四个实际二进制的producer循环都发出三条UTMALDG：A16KiB、B0/B1各8KiB。旧候选将B合为16KiB，逻辑工作总量正确，但FIFO粒度不符；上节已按三请求重算，旧[两请求结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service-two-request.md)保留。当前两输出共50688个输入原子，归一工作仍为33792个16KiB单位。
+
+739095的PROD在producer首次工作循环入口，早于坐标计算与load，不能叫预填完成或首TMA发出。以下每列先在同调用132个CTA内求跨度，再取十个进程中位，单位ns：
+
+| stage | 到第二MAIN总跨度 | entry偏移 | entry→PROD | PROD→FIRST0 | FIRST0→FIRST1 | 第二L |
+|---|---:|---:|---:|---:|---:|---:|
+| 4 | 2624 | 112 | 208 | 560 | 1600 | 1488 |
+| 6 | 1136 | 96 | 224 | 688 | 736 | 640 |
+
+完成分散在首输入后继续累积，不能只补入口延迟。各段逐CTA相加闭合，跨度不相加；FIRST0→FIRST1跨consumer角色，也不是纯计算服务。每轮11组A源各供12个CTA、B0/B1各12组各供11个CTA；第二输出换A组、复用B地址。这些身份在等权服务中被折叠，但与物理CTA/SM绑定，尚不能分离缓存、路由和到达组织。[逐CTA来源与静态请求](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-request-formation.md)。
+
+起步差条件诊断固定新批joint参数，把旧PROD偏移仅作模型输入切口；不重拟合、不报跨批绝对成绩。进一步保持次序、将偏移缩至百万分之一时，全卡分散仍明显增加。当前producer/operand发射间隔取0，单CTA可同时发完初始槽，极小非零偏移就改变FIFO并列处理。因此不能把全部变化解释为实测240ns起步差的物理放大，下一步先约束真实发射组织，而不是增加位置或硬件端口常数。逐进程和幅度对照见[共享服务报告](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)。
+
+[R09分阶段换算](R09-inkernel-clock-stages.md#stage-phase-clock)同时表明首/次输出周期率不同：stage4第二L的cycle/ns空间相关中位为0.952，stage6仅0.413。不能把所有ns分散归入供给，也不能把次输出的291.2ns计算间隔直接当成首输出已验证的服务价。
 
 ## 序列供给：消费者与在途组织会改变结果
 
