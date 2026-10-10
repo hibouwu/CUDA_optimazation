@@ -320,8 +320,9 @@ def main():
                 args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,
                 args.first_supply,args.ready_observer,args.ready_release)):
             parser.error('--stage-handoff is an independent replay; run other diagnostics separately')
-        from analyze_r13_supply import stage_handoff_sample_diagnostics
+        from analyze_r13_supply import stage_handoff_sample_diagnostics, stage_conditioned_diagnostics
         stage_handoff_sample_diagnostics(args.stage_handoff.resolve(),out)
+        stage_conditioned_diagnostics(out)
         return
     if args.analysis!='ablation':
         controls=args.controls.resolve() if args.controls else None

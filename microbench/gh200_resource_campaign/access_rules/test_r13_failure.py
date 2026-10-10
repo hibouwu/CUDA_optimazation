@@ -174,6 +174,56 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_internal_stall_bounds_do_not_need_first_output_or_q_cap(self):
+        from supply_model import admission_stage_events
+        for stage in (4,6):
+            for p,latency,q,lag,g in ((50,700,407,93,0),(520,2400,900,20,200),
+                                     (0,0,1500,0,400),(300,1800,20,900,100)):
+                t=admission_stage_events(64,stage,p,latency,q,lag,issue_floor=g,
+                    wait_overhead=43,loop_advance=97,return_overhead=100)
+                E,C,B=(t[k] for k in ('service_frontier','commits','first_mma_or_commit'))
+                for i in (81,127):
+                    self.assertGreaterEqual(E[i]-B[i],512)
+                    self.assertLessEqual(E[i]-B[i],1024)
+                self.assertLessEqual(abs((E[127]-C[127])-(E[81]-C[81])),512)
+                stalls=sum(max(0,B[i]-E[i-1]) for i in range(82,128))
+                self.assertEqual(stalls,E[127]-E[81]-46*512)
+                self.assertGreaterEqual(stalls,max(0,C[127]-C[81]-47*512))
+                self.assertGreaterEqual(C[127]-C[81],45*512)
+                self.assertGreaterEqual(C[127]-C[81],(46//(stage-1))*latency)
+
+    def test_conditioned_entry_is_one_lipschitz_after_the_cut(self):
+        from supply_model import admission_stage_events
+        kw=dict(wait_overhead=43,loop_advance=89,return_overhead=100)
+        a=admission_stage_events(64,6,50,2257.5,379,105,**kw,observed_second_entry=(134,239))
+        b=admission_stage_events(64,6,50,2257.5,379,105,**kw,observed_second_entry=(139,240))
+        for field in ('commits','service_frontier','completed','wait1_return','issued'):
+            for x,y in zip(a[field][64:],b[field][64:]):
+                self.assertGreaterEqual(y-x,0)
+                self.assertLessEqual(y-x,1)
+
+    def test_observed_entry_preserves_state_and_rejects_early_readiness(self):
+        from supply_model import admission_stage_events
+        args=(64,6,50,700,407,93)
+        kw=dict(wait_overhead=27,loop_advance=89.5,return_overhead=13)
+        free=admission_stage_events(*args,**kw)
+        t=admission_stage_events(*args,**kw,handoff_delay=900,
+            observed_second_entry=(135,239))
+        for key in ('issued','ready','commits','completed','service_frontier'):
+            self.assertEqual(t[key][:64],free[key][:64])
+        self.assertEqual(t['consumer_available'][64]-t['mma_returns'][0],135)
+        self.assertEqual(t['first_mma_or_commit'][64]-t['mma_returns'][0],239)
+        self.assertLess(t['first_mma_or_commit'][64],t['completed'][63])
+        self.assertGreaterEqual(t['service_frontier'][64],t['service_frontier'][63]+512)
+        self.assertEqual(t['slot'][64],4)
+        for i in range(64,128):
+            self.assertGreaterEqual(t['issued'][i],t['released'][i-6])
+        with self.assertRaisesRegex(ValueError,'H gap'):
+            admission_stage_events(*args,**kw,observed_second_entry=(240,239))
+        with self.assertRaisesRegex(ValueError,'precedes modeled readiness'):
+            admission_stage_events(64,4,50,2257.5,407,93,**kw,
+                observed_second_entry=(135,239))
+
     def test_handoff_bounds_preserve_signed_overlap_and_clock_domains(self):
         c=dict(tiles=[[100,1000,1020,1200],[920,1800,1810,1900]],
                tiles_ns=[[10,100,102,120],[110,190,191,195]])

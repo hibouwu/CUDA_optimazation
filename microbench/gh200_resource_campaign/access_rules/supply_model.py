@@ -30,7 +30,8 @@ def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
 def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            commit_lead, completion_lag, *, service_cycles=512.,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
-                           return_overhead=0., reuse_delay=0., handoff_delay=0.):
+                           return_overhead=0., reuse_delay=0., handoff_delay=0.,
+                           observed_second_entry=None):
     """Development recurrence for two pingpong outputs; not a fitted hardware rule.
 
     I is the end-of-copy-pair marker. E is cumulative TC service progress,
@@ -42,6 +43,10 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     represents the release-to-next-pair-issue path, not a physical latency.
     handoff_delay is a sensitivity input from a sender's mma return to the
     next consumer becoming available. It is not a measured barrier price.
+    observed_second_entry=(H_gap,B_gap) is a diagnostic cut relative to the
+    preceding modeled mma return. It replaces handoff_delay at output 1 and
+    preserves the producer, service and slot states. Inconsistent ready times
+    raise ValueError; measured entry times must never become prediction inputs.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,
@@ -50,13 +55,23 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         raise ValueError('admission diagnostic requires Ktile/stages>=2 and nonnegative times')
     if issue_floor>service_cycles:
         raise ValueError('issue floor must not exceed per-tile service')
+    if observed_second_entry is not None:
+        entry_h,entry_b=observed_second_entry
+        if not 0<=entry_h<=entry_b:
+            raise ValueError('observed entry requires 0 <= H gap <= B gap')
     issued=[];ready=[];available=[];starts=[];frontier=[];commits=[];done=[];wait=[]
     released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.
     for i in range(2*kt):
         issue=issued[-1]+producer_interval if issued else 0.
         if i>=stages:issue=max(issue,released[i-stages]+reuse_delay)
-        issued.append(issue);ready.append(issue+ready_latency);available.append(next_consumer)
-        start=max(ready[-1],next_consumer);starts.append(start)
+        issued.append(issue);ready.append(issue+ready_latency)
+        if i==kt and observed_second_entry is not None:
+            next_consumer=returns[0]+entry_h
+            start=returns[0]+entry_b
+            if ready[-1]>start+1e-8:
+                raise ValueError('observed entry precedes modeled readiness')
+        else:start=max(ready[-1],next_consumer)
+        available.append(next_consumer);starts.append(start)
         service_end=max(start,frontier[-1] if frontier else start)+service_cycles
         frontier.append(service_end)
         commit=max(start+issue_floor,service_end-commit_lead);commits.append(commit)

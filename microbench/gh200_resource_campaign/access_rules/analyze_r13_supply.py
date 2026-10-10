@@ -3140,6 +3140,133 @@ def stage_handoff_sample_diagnostics(root, output):
     return report
 
 
+def stage_conditioned_diagnostics(output):
+    """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
+    from supply_model import admission_stage_events
+    import v06_run as common
+    output=Path(output);source=output/'B-stage-handoff-samples.json'
+    data=read_json(source)
+    rows=[r for r in data['processes'] if r['variant']=='stamped' and r['set']=='ctrl']
+    stage6=[r for r in rows if r['stages']==6]
+    q_min=max(1024-r['intervals']['first_to_commit1'] for r in stage6)
+    tail=min(r['intervals']['last_commit_to_main_end'] for r in stage6)
+    # The old latency and one formerly flat producer interval are witnesses,
+    # not new calibration. q takes the stage6 necessary bound; tail-q is an
+    # explicit active-branch subclass, checked in each replay below.
+    parameters=dict(producer_interval=50.,ready_latency=2257.5,
+        commit_lead=float(q_min),completion_lag=tail-q_min)
+    c_upper=min(r['clocks']['commit63']-r['clocks']['commit17'] for r in stage6)/45
+    records=[]
+    for row in rows:
+        c=row['clocks'];v=row['intervals'];stage=row['stages']
+        w=v['commit_to_wait1_16'];h=v['loop_advance_16_to17'];r=v['last_commit_to_mma_return']-w
+        H=c['first_wait_begin']-c['sender_mma_return'];B=c['first_mma']-c['sender_mma_return']
+        protocol=dict(wait_overhead=w,loop_advance=h,return_overhead=r)
+        free=admission_stage_events(64,stage,**parameters,**protocol)
+        violation=free['ready'][64]-(free['mma_returns'][0]+B)
+        diff=c['commit63']-c['commit17']
+        entry=dict(case=row['case'],trial=row['trial'],stages=stage,source=row['source'],
+            protocol=protocol,observed_entry=[H,B],entry_ready_minus_B=violation,
+            entry_feasible=violation<=1e-8,observed=v,
+            late_commit_difference=diff,
+            ready_combination_upper=diff/(46//(stage-1))-w,
+            ready_plus_reuse_upper=diff/(46//(stage-1)),
+            late_stall_lower_512=max(0,diff-47*512),
+            late_stall_lower_common_c=max(0,diff-47*c_upper))
+        if entry['entry_feasible']:
+            t=admission_stage_events(64,stage,**parameters,**protocol,observed_second_entry=(H,B))
+            C,W,A,E,Bs,Hs=(t[k] for k in ('commits','wait1_return','ready','service_frontier',
+                'first_mma_or_commit','consumer_available'))
+            clocks=dict(first_mma=Bs[64],commit1=C[65],full_wait_begin16=Hs[80],commit16=C[80],
+                wait1_end16=W[80],full_wait_begin17=Hs[81],commit17=C[81],commit63=C[127],
+                mma_return=t['mma_returns'][1],main_end=t['main_ends'][1])
+            entry.update(predicted=_stage_progress_intervals(dict(clocks=clocks)),
+                entry_return_slack=Bs[64]-max(A[64],Hs[64]),
+                last_commit_lead_branch=abs(C[127]-(E[127]-q_min))<1e-8,
+                last_MAIN_completion_branch=abs(t['main_ends'][1]-t['completed'][127])<1e-8,
+                extra_wait16=W[80]-C[80]-w)
+        records.append(entry)
+    def span(v):
+        v=list(v);return dict(median=statistics.median(v),minimum=min(v),maximum=max(v))
+    summaries={}
+    for stage in (4,6):
+        selected=[r for r in records if r['stages']==stage]
+        summaries[stage]=dict(processes=len(selected),entry_feasible=sum(r['entry_feasible'] for r in selected),
+            maximum_entry_violation=max(r['entry_ready_minus_B'] for r in selected),
+            ready_combination_upper=min(r['ready_combination_upper'] for r in selected),
+            ready_plus_reuse_upper=min(r['ready_plus_reuse_upper'] for r in selected),
+            late_stall_lower_512=span(r['late_stall_lower_512'] for r in selected),
+            late_stall_lower_common_c=span(r['late_stall_lower_common_c'] for r in selected))
+    # This post-measurement pair is a deterministic variation diagnostic, not
+    # a heldout score or a reason by itself to add state to a median predictor.
+    pair=[next(r for r in records if r['stages']==6 and r['trial']==t) for t in (1,9)]
+    if pair[0]['protocol']!=pair[1]['protocol']:raise ValueError('variation pair changed software protocol')
+    input_delta=abs(pair[1]['observed_entry'][1]-pair[0]['observed_entry'][1])
+    observed_delta=abs(pair[1]['observed']['commit1_to16']-pair[0]['observed']['commit1_to16'])
+    residual=max(0,(observed_delta-input_delta)/2)
+    variation=dict(trials=[1,9],protocol=pair[0]['protocol'],
+        first_entry_difference=input_delta,early_interval_difference=observed_delta,
+        minimum_maximum_per_process_residual=residual,
+        residual_fraction_of_median_L=residual/statistics.median(r['intervals']['L'] for r in stage6))
+    report=dict(scope='Development conditional replay. Observed H/B are diagnostic inputs only; no fit or new prediction.',
+        witness_parameters=parameters,stage6_necessary_q_lower=q_min,
+        common_service_upper=c_upper,records=records,summaries=summaries,variation_pair=variation,
+        input_sha256={str(p):common.sha(p) for p in (source,Path(__file__),Path(__file__).with_name('supply_model.py'))},
+        limitations=['The first output is simulated with the second-output w/h/r: an unmeasured cross-output hypothesis.',
+            'The observed commit-to-wait16 interval is used as w conditionally; extra modeled completion waiting is reported.',
+            'lambda=tail-q applies only to the checked last lead/completion branch subclass, not a universal equality.',
+            'Entry conflicts reject a tuple and inherited-state hypothesis, not every constant-ready model.',
+            'Internal slot/stall bounds do not use first-output state; they remain conditional on the recurrence structure.',
+            'Model service-frontier stalls are not measured TC idle cycles and do not identify TMA as the sole cause.',
+            'The process-pair variation bound does not establish failure of a median predictor or justify another GPU matrix.'])
+    (output/'B-stage-conditioned.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 固定观测入口后的条件检验','',
+        '只切第二输出入口：H=M0+(实测first_wait_begin−sender标记)，B=M0+(实测FIRST−sender标记)。'
+        'producer、E和slot状态沿用递推；A>B时明确拒绝，不提前ready迁就观测。观测不进入正式预测。','',
+        '第一输出仍使用第二输出的w/h/r模拟，这是未测得的跨输出假设；条件切割没有恢复真实初态。'
+        '本次不做拟合，见证取p=50、ℓ=2257.5、q='+str(q_min)+f'、λ={tail-q_min}、g=a=0。'
+        'q来自本批stage6局部必要界，λ拆分仅在末端分支成立时解释。','',
+        '| stage | 入口因果可行 | 最大 A−B cycle | 后段Z上界 | 不定w时ℓ+a上界 |', '|---|---:|---:|---:|---:|']
+    for stage in (6,4):
+        r=summaries[stage]
+        lines.append(f'| {stage} | {r["entry_feasible"]}/{r["processes"]} | {r["maximum_entry_violation"]:.2f} | {r["ready_combination_upper"]:.2f} | {r["ready_plus_reuse_upper"]:.2f} |')
+    lines+=['','Z=ℓ+max(g,512−q)+a。后段slot复用给C_i≥C_(i−S+1)+Z+w，'
+        '46间隔至少容纳floor(46/(S−1))次跳跃，其他间隔仅取非负。这个必要界只用第二输出内部，'
+        '不依赖入口或第一输出初态；进一步只用w/g/a非负，可得不定软件价格的ℓ+a上界。'
+        '因此旧ℓ=2257.5连stage4的这个宽松上界也违反，不能靠入口或继承初态修复；'
+        'stage4上界只作诊断，不能用它反选stage6参数。','',
+        '| stage6局部量 | 合法条件重放中位 | 观测中位 |','|---|---:|---:|']
+    valid=[r for r in records if r['stages']==6 and r['entry_feasible']]
+    for f in ('first_to_commit1','average_commit1_to16','average_commit17_to63','full_wait_to_commit16','last_commit_to_main_end','L'):
+        lines.append(f'| {f} | {statistics.median(r["predicted"][f] for r in valid):.2f} | '
+            f'{statistics.median(r["observed"][f] for r in valid):.2f} |')
+    lines+=['','入口冲突的stage4进程不计算预测误差；JSON记录逐调用违反量、返回余量、末端分支及额外wait16，'
+        '不能把强制入口后产生的非因果轨迹作为成绩。','',
+        '## 后段必须出现内部停顿','',
+        '沿用当前递推的0≤g≤c以及q/λ/w/h非负约束。普通位置有B_i≥max(B_(i−1),E_(i−2))=E_(i−1)−c，所以c≤E_i−B_i≤2c。'
+        '当前递推中g/q固定，d_i=E_i−C_i=min(E_i−B_i−g,q)，两个后段端点的d差最多c。'
+        '因此46步的模型内部停顿Σmax(0,B_i−E_(i−1))至少为max(0,C63−C17−47c)。'
+        '这不需要q上限、λ=tail−q、第一输出初态或w/h的具体取值。','',
+        f'同理C63−C17≥45c，用stage6自身得到共同c≤{c_upper:.4f}。'
+        '允许c在这个范围内变化，stage4的正下界仍然存在：','',
+        '| stage | c=512时下界，中位 [范围] | 仅用stage6约束c时下界，中位 [范围] |',
+        '|---|---:|---:|']
+    for stage in (4,6):
+        a=summaries[stage]['late_stall_lower_512'];b=summaries[stage]['late_stall_lower_common_c']
+        lines.append(f'| {stage} | {a["median"]:.2f} [{a["minimum"]:.2f},{a["maximum"]:.2f}] | '
+            f'{b["median"]:.2f} [{b["minimum"]:.2f},{b["maximum"]:.2f}] |')
+    lines+=['','这些是解释当前局部端点所需的模型内部停顿，不是硬件TC空闲实测，也不能单独归因于TMA带宽。'
+        '需要继续检验ready、循环推进与有限slot的组合关系；不能只移动入口或末端领先量来消除后段差。','',
+        '## 逐调用波动的有限结论','',
+        f'stage6 trial1/9的(w,h,r)相同，强制B只相差{input_delta} cycle；对共同常量及相同第一输出状态，'
+        f'max-plus递推使后续任意区间变化至多{input_delta}，实测C1→16却差{observed_delta}。'
+        f'每调用至少需{residual:.1f} cycle量级的最大残差，约为本批stage6 L中位的'
+        f'{100*variation["residual_fraction_of_median_L"]:.2f}%。'
+        '它只拒绝逐调用的精确共同常量解释；不能据此宣称中位预测失败，或为这约1%的波动继续扩大状态模型/打点。','']
+    (output/'B-stage-conditioned.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_handoff_diagnostics(base,output):
     """Expose ready/handoff ambiguity without choosing parameters on stage4."""
     from analyze_r13_sm import select_attempts

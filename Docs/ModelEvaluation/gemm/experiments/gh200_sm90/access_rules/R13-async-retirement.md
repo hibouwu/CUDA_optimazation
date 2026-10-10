@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。同调用交接补测确认：交接不能取零，但stage4比stage6增加的启动等待主要在首full窗口；之后累计推进差仍继续扩大。新观察协议改变了局部软件边界，不能把其周期数直接回填旧progress或plain模型。下一步约束可观测的组合时间与等待位置，不继续为未辨识的裸延迟加常数。
+当前条件供给尚未通过V09的行距与stage迁移。入口条件重放后，旧ready延迟2257.5仍违反stage4后段的缓冲复用必要界；这次反证不依赖交接或第一输出初态。stage6接近计算饱和，不能独自辨识供给价格。下一候选用已公开的两stage开发数据约束共同复用代价，保留有限窗口与协议差异，不加stage专属常数，也不将观察值作为正式预测输入。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -22,6 +22,7 @@
 | 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
 | 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
 | 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
+| 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -326,7 +327,21 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 **该协议有明显局部扰动。** handoff相对原progress的整调用中位只变+0.38%/−0.63%（stage4/6），但stage6 FIRST→commit1逐trial差为−142 cycle，10/10为负。lastcommit→mma返回多106/103 cycle，随后到MAIN少126/119。SASS显示新协议在循环退出后、返回取时前增加了CTA坐标读取和两个线程谓词判断；这解释了部分窗口的重新划分，不能给每条指令单独定价，也不能将239直接作为旧协议缺失的δ。
 
-两plain参照相对739578中位变化−2.59%/−0.23%，只作跨批背景。下一步先给定本批观测的consumer入口作条件重放：首H对齐first_wait_begin、B对齐FIRST，观测量只作诊断输入；检验去掉入口歧义后，共享ready关系能否解释后段累计推进与slot复用。各协议保留自己的w/h/r，不能混用旧27/40/500与新43/143/484。对预测不敏感的裸延迟不再单独拆价。本批不产生新拟合参数，不默认追加观察矩阵。[同批扰动、原端点与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.json)。
+两plain参照相对739578中位变化−2.59%/−0.23%，只作跨批背景。各协议保留自己的w/h/r，不能混用旧27/40/500与新43/143/484。条件入口重放见下一节，本批不直接产生硬件定值。[同批扰动、原端点与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.json)。
+
+<a id="stage-conditioned"></a>
+
+### 固定入口后仍须解释第二输出内部的停顿
+
+条件重放把第二输出H/B分别对齐本调用的首full等待前/FIRST，相对前输出模拟M0定位；保留producer、E前沿和slot状态，A>B即报告不相容。保留旧ℓ=2257.5的见证点在stage6有10/10次入口可行，在stage4只有1/10，最严重晚766.5 cycle。第一输出仍用了第二输出的软件映射，所以单凭入口冲突不能定位失败原因；冲突进程不计算预测误差，也不把观测入口放入正式预测。
+
+更稳的检验只用第二输出17→63的46个commit间隔。由slot复用可得C_i≥C_(i−S+1)+ℓ+max(g,c−q)+w+a；所有代价非负，因此**ℓ+a≤(C63−C17)/floor(46/(S−1))**。stage6仅给2620.67 cycle上界，stage4给1786.73。旧ℓ=2257.5违反后者，不论如何调整交接、q或第一输出初态都不能修复这个见证；这没有否定所有较短的常量ready模型。
+
+后段还必须有模型内部停顿。在当前递推的0≤g≤c、q/λ/w/h非负且g/q在窗口内固定条件下，普通位置c≤E_i−B_i≤2c，端点E−C的变化至多c，所以46步的停顿至少为max(0,C63−C17−47c)。无需指定q上限或λ拆分。即使不固定c=512，仅用stage6得到共同c≤524.1333，stage4仍需至少2166.73～4048.73 cycle内部停顿，中位3130.23。**这是模型解释局部端点所需的停顿，不是TC空闲实测，也没有唯一归因于TMA。**
+
+逐调用波动不另立机制任务：stage6 trial1/9相同(w,h,r)、入口B只差1 cycle，但C1→16差637，共同常量递推至少留下约318 cycle的单调用最大残差，仅约L中位的0.96%。它不能单独证明中位预测失败，不据此扩大打点。
+
+原“stage6定值→stage4诊断”在这里结束，失败与不可辨识结论保留。下一候选将已公开的两stage同列**开发校准**，优先约束共同的复用组合代价及其区间，而非逐个裸延迟；保留有限窗口递推，不把平均间隔直接当稳态等式。新候选另看未参与拟合的K/几何作开发检查，最终仍需新冻结验证，不能把训练数据上的吻合称为迁移通过。[逐调用结果与推导](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.json)。
 
 <a id="first-supply"></a>
 
