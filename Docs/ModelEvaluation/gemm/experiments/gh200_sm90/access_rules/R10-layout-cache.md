@@ -1,6 +1,6 @@
 # R10：A/B 行距、地址覆盖与执行规模
 
-**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
+**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。单输出对照进一步确认，同一B源组在不同全局执行组织下的行距代价不同，跨输出预取不是大幅惩罚的必要条件。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
 
 ## 作业与证据索引
 
@@ -13,6 +13,7 @@
 | 738203 | cfg_b B 行距五点，2304×3072×1024，局部冻结检验 | [冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/b-pitch-score-v1/b-pitch-score.json)、[位置与扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/localization.json) |
 | 739011，V09 | 新几何 A16/B32/B80/B112 与 stage4 | [完整留出](V09-component-validation.md)、[逐例复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv) |
 | 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
+| 739585 | 同输入map，36/126单输出CTA与132持久CTA，各配B0/B32 | [同源组压力对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json) |
 
 ## 原 B 行距对照：配置之间不能共用一个罚项
 
@@ -241,6 +242,24 @@ CUTLASS 3.9.2 `get_rasterization_order` 在 N tile数大于M时选AlongM，否�
 当前供给模型对两方向生成的432行`(CTA,j,T,Ktile,X,compute_cycles)`逐项相同，B0和B32各自的输入SHA也完全相等。实际坐标列表虽不同，七列汇总请求却丢失了源分组。因此仅重拟合现有七列的系数，无法表达这次方向响应；下一候选需要保留访问组织，不能把失败归于参数没调好。
 
 dual/plain完整时间扰动中位为2.60%～5.76%，最大8.91%，故不把局部窗口当裸服务价格；plain自身已独立显示方向×行距效应。同卡参照相对739556中位变化−1.41%/−0.61%，旧432卡的绝对参数未混入拟合。原冻结和V09成绩保持不变。[四点、逐进程和差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json)、[工作位置表](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch-positions.csv)。
+
+## 相同B源组在不同执行规模下的代价不同
+
+源分组不能简化成另一个标量罚项。739571中，唯一B字节更少的AlongM反而更慢；AlongM首末轮的同B使用者数相同、该B面板均未在此前软件轮出现，惩罚却不同。`活动CTA数×同B使用者数`的非减响应也给错顺序。首轮再按相同M坐标、A/B使用者数量和此前轮成员逐窗口匹配，T4的行距周期增量仍比T3多384.375 cycle，十进程范围207.75～643.5；两组B地址及后续工作不同，故只否定计数充分性，不否定任意源身份/历史规则。[无参数反证与实际窗口重叠](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-organization.json)。
+
+739585固定input map、初始化与分配容量为2304×3072×1024、AlongM、stage6、dyadic seed17。逻辑N=256/896分别启动36/126个单输出CTA；前36个CTA的当前坐标、两组B面板及每组18个使用者完全相同，没有下一输出的producer预取。另同期复测原132 CTA、每CTA 3/4输出的B0/B32。每档先在内部匹配行距配对，再比较前36个CTA首输出L的响应：
+
+| 执行组织 | plain aligned / B32，µs | plain B32变化 | 首36 CTA的L，ns变化 | L，cycle变化 | 配对L的ns增量〔十进程范围〕 |
+|---|---:|---:|---:|---:|---:|
+| 单输出36 CTA | 11.344 / 11.792 | +2.77% | 未分辨 | 未分辨 | 0〔0～0〕 |
+| 单输出126 CTA | 12.720 / 13.952 | +9.24% | +23.36% | +26.00% | 1200〔1120～1248〕 |
+| 持久132 CTA | 28.256 / 32.944 | +16.91% | +20.40% | +20.36% | 1120〔832～1248〕 |
+
+各变化列先按trial匹配、在该进程36个窗口内取中位，再跨进程汇总；零指进程中位在32 ns分辨率内未分辨，不表示每个窗口或物理请求零代价。126减36的行距响应差十次均为正，中位1200 ns、2204.75 cycle；局部cycle/ns的行距变化约1.94%，不能解释23%的时间差。B32条件下，目标窗口实际重叠的同B伙伴中位为16.65/16.36，其它CTA则为34.32/118.58；每个peer CTA的L区间先求并集，未把pingpong两个输出重复计入。它仍不是TMA发起并发数。
+
+这说明**当前B面板的使用者、源布局与逻辑坐标相同，改变其它源组和A侧共享组织，仍会改变行距响应**；跨输出预取和126～132间的窄阈值都不是这次大幅惩罚的必要条件。逻辑输出量、epilogue写出者、预热工作及频率随执行组织变化，不能进一步唯一归因某层缓存、TMA队列或全卡物理带宽。下一候选须保留共享需求与每个源组的竞争关系；已有首末轮反例仍要求状态，不能直接给36/126或方向加常数。
+
+作业在同a058/GPU-ef8692f3完成140个成功独立进程，另有一个暖机CV未收敛的失败plain尝试，按原规则重试且原件保留。数值回放通过，两个二进制均168寄存器、16条HGMMA、零spill，实际SM数为36/126/132；参照相对739571变化+1.43%/+0.035%。dual/plain扰动中位2.59%～5.77%、单次最大10.43%，所以局部窗口不当作裸服务常数；plain的126档十次也均变慢4.22%～15.65%。[条件](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r10-source-pressure.json)与[完整逐进程分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json)保留分项、来源和失败记录；V09评分不变。
 
 ## 历史推导与复核
 

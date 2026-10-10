@@ -639,6 +639,346 @@ def raster_pitch_diagnostics(root, output):
     return report
 
 
+def mainloop_overlap_features(windows):
+    """Same-call L-window overlap, counting each other CTA at most once.
+
+    These observed intervals diagnose a software-ordinal grouping; they are not
+    TMA issue windows and must never be formal prediction inputs.
+    """
+    from collections import defaultdict
+
+    by_cta=defaultdict(list)
+    for window in windows:
+        if window['end']<=window['begin']:
+            raise ValueError('positive same-endpoint mainloop window required')
+        by_cta[window['cta']].append(window)
+
+    def union_length(intervals):
+        total=0;last=None
+        for lo,hi in sorted(intervals):
+            if last is None or lo>last:
+                total+=hi-lo;last=hi
+            elif hi>last:
+                total+=hi-last;last=hi
+        return total
+
+    result=[]
+    for target in windows:
+        totals=dict(other_cta=0,same_A=0,same_B=0,other_ordinal=0)
+        for cta,peers in by_cta.items():
+            if cta==target['cta']:continue
+            intervals={key:[] for key in totals}
+            for peer in peers:
+                lo=max(target['begin'],peer['begin']);hi=min(target['end'],peer['end'])
+                if hi<=lo:continue
+                intervals['other_cta'].append((lo,hi))
+                if peer['mi']==target['mi']:intervals['same_A'].append((lo,hi))
+                if peer['ni']==target['ni']:intervals['same_B'].append((lo,hi))
+                if peer['j']!=target['j']:intervals['other_ordinal'].append((lo,hi))
+            for key in totals:totals[key]+=union_length(intervals[key])
+        duration=target['end']-target['begin']
+        result.append({key:value/duration for key,value in totals.items()})
+    return result
+
+
+def source_panel_features(work):
+    """Logical source sharing by software ordinal, without observed timestamps."""
+    from collections import Counter
+    previous=[set(),set()];seen=[set(),set()];groups=[];windows=[]
+    for j in range(max(map(len,work))):
+        active=[(i,c[j]) for i,c in enumerate(work) if len(c)>j]
+        counts=[Counter(c[o] for _,c in active) for o in (0,1)]
+        current=[]
+        for cta,coord in active:
+            item=dict(cta=cta,j=j,T=len(work[cta]),mi=coord[0],ni=coord[1],active_ctas=len(active))
+            for o,op in enumerate(('A','B')):
+                item[op+'_peer']=counts[o][coord[o]]-1
+                item[op+'_seen_previous_wave']=int(coord[o] in previous[o])
+                item[op+'_seen_earlier_wave']=int(coord[o] in seen[o])
+            item['active_times_B_peer']=len(active)*item['B_peer']
+            current.append(item);windows.append(item)
+        for T in sorted({x['T'] for x in current}):
+            subset=[x for x in current if x['T']==T]
+            summary=dict(j=j,T=T,windows=len(subset),active_ctas=len(active),
+                unique_A_panels=len(counts[0]),unique_B_panels=len(counts[1]),
+                unique_source_KiB_per_ktile=16*(len(counts[0])+len(counts[1])),
+                unique_B_KiB_per_ktile=16*len(counts[1]),
+                wave_B_ordered_request_pairs=sum(n*(n-1) for n in counts[1].values()))
+            for field in ('A_peer','B_peer','active_times_B_peer'):
+                values=[x[field] for x in subset]
+                summary[field]=dict(median=statistics.median(values),mean=statistics.mean(values),minimum=min(values),maximum=max(values))
+            for field in ('A_seen_previous_wave','B_seen_previous_wave','A_seen_earlier_wave','B_seen_earlier_wave'):
+                summary[field+'_fraction']=statistics.mean(x[field] for x in subset)
+            groups.append(summary)
+        for o in (0,1):previous[o]=set(counts[o]);seen[o]|=previous[o]
+    return dict(groups=groups,windows=windows)
+
+
+def source_organization_diagnostics(root, output):
+    """Test static source-count candidates using existing pitch pairs; no fit."""
+    from collections import defaultdict
+    from analyze_r13_sm import select_attempts
+    from analyze_r13_supply import _failure_pair_windows
+    from analyze_r18 import replay
+    import v08_model
+
+    root,output=Path(root),Path(output)
+    def read(path):return json.loads(path.read_text())
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    raster_path=output/'R10-raster-pitch.json'
+    raster=read(raster_path)
+    csv_path=output/'R10-raster-pitch-positions.csv'
+    positions=list(csv.DictReader(csv_path.open()))
+    cohorts={};observed={};overlap_trials=[];hashes={};static={}
+    for name,context in raster['contexts'].items():
+        row,setup=context['row'],context['setup']
+        work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+        static[name]=source_panel_features(work)
+        features={(x['cta'],x['j']):x for x in static[name]['windows']}
+        observed[name]={}
+        selected,_,_=select_attempts(root,name,('dual',))
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row);observed[name][record['trial']]=obs
+            windows=[dict(cta=c['cta'],j=j,mi=coord[0],ni=coord[1],begin=t[0],end=t[1])
+                for c in obs['ctas'] for j,(coord,t) in enumerate(zip(c['work'],c['tiles_ns']))]
+            overlap=mainloop_overlap_features(windows)
+            for j,T in sorted({(x['j'],len(work[x['cta']])) for x in windows}):
+                selected_overlap=[z for x,z in zip(windows,overlap) if x['j']==j and len(work[x['cta']])==T]
+                overlap_trials.append(dict(case=name,trial=record['trial'],j=j,T=T,windows=len(selected_overlap),
+                    **{key:statistics.median(v[key] for v in selected_overlap) for key in ('other_cta','same_A','same_B','other_ordinal')}))
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+        if len(observed[name])!=10:raise ValueError('source organization needs ten dual processes')
+        groups=[]
+        for group in static[name]['groups']:
+            subset=[r for r in positions if r['variant']==name and int(r['j'])==group['j'] and int(r['T'])==group['T']]
+            trials=[r for r in overlap_trials if r['case']==name and r['j']==group['j'] and r['T']==group['T']]
+            groups.append(dict(**group,pitch_response={k:span(float(r[k]) for r in subset) for k in
+                ('L_ns_delta','L_cycles_delta','L_ns_ratio','L_cycles_ratio')} if subset else None,
+                observed_overlap={k:span(r[k] for r in trials) for k in ('other_cta','same_A','same_B','other_ordinal')}))
+        cohorts[name]=dict(row=row,gpu=setup['gpu_uuid'],groups=groups)
+
+    # Exact static feature strata, not a comparison of median input vectors.
+    m0,m32='r10_raster_along_m_p0','r10_raster_along_m_p32'
+    feature_map={(x['cta'],x['j']):x for x in static[m32]['windows']}
+    matched_trials=[];matched_strata=[]
+    for trial in sorted(observed[m0]):
+        paired=_failure_pair_windows(observed[m0][trial]['ctas'],observed[m32][trial]['ctas'])
+        buckets=defaultdict(lambda:defaultdict(list))
+        for r in paired:
+            f=feature_map[r['cta'],r['j']]
+            if r['j']==0 and f['B_peer']==17:
+                key=(r['mi'],f['A_peer'],f['B_peer'],f['A_seen_earlier_wave'],f['B_seen_earlier_wave'])
+                buckets[key][r['T']].append(r)
+        differences=[]
+        for key,values in sorted(buckets.items()):
+            if set(values)!={3,4}:continue
+            a,b=values[3],values[4]
+            record=dict(trial=trial,mi=key[0],A_peer=key[1],B_peer=key[2],A_earlier=key[3],B_earlier=key[4],
+                T3_windows=len(a),T4_windows=len(b))
+            for field in ('L_cycles_delta','L_ns_delta'):
+                record[field+'_T3']=statistics.median(x[field] for x in a)
+                record[field+'_T4']=statistics.median(x[field] for x in b)
+                record[field+'_T4_minus_T3']=record[field+'_T4']-record[field+'_T3']
+            matched_strata.append(record);differences.append(record)
+        matched_trials.append(dict(trial=trial,matched_M_strata=len(differences),
+            **{field:statistics.median(x[field] for x in differences) for field in
+                ('L_cycles_delta_T3','L_cycles_delta_T4','L_cycles_delta_T4_minus_T3',
+                 'L_ns_delta_T3','L_ns_delta_T4','L_ns_delta_T4_minus_T3')}))
+    matched=dict(strata=matched_strata,processes=matched_trials,
+        summary={k:span(r[k] for r in matched_trials) for k in matched_trials[0] if k not in ('trial','matched_M_strata')},
+        scope='Match mi, A/B peer counts, ordinal, active count and prior logical-wave membership exactly. '
+            'B panel identities/addresses and future work differ. This tests count-only source rules, not arbitrary address/history rules.')
+
+    old_base=root.parent/'20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1'
+    old_path=old_base/'B-summary.json';old=read(old_path)
+    old_csv=old_base/'B-paired-windows.csv';old_positions=list(csv.DictReader(old_csv.open()))
+    historical=[]
+    for folder,names in [
+        ('20261009-R10-b-coverage-job738203',('cfg_b_bcurve_p32','cfg_b_bcurve_p64')),
+        ('20261009-V09-heldout-job739011',('v09d_cfg_b_G5_B32','v09d_cfg_b_G5_B80','v09d_cfg_b_G5_B112'))]:
+        run=root.parent/folder;rows={r['id']:r for r in read(run/'cases.json')}
+        setups={r['case']:r['setup'] for r in read(run/'static_setup.json')}
+        for name in names:
+            row,setup=rows[name],setups[name]
+            work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
+            groups=[]
+            for group in source_panel_features(work)['groups']:
+                subset=[r for r in old_positions if r['variant']==name and int(r['j'])==group['j'] and int(r['T'])==group['T']]
+                groups.append(dict(**group,pitch_response={k:span(float(r[k]) for r in subset) for k in
+                    ('L_ns_delta','L_cycles_delta','L_ns_ratio','L_cycles_ratio')}))
+            historical.append(dict(case=name,source=str(run),row=row,gpu=setup['gpu_uuid'],groups=groups))
+        for path in (run/'cases.json',run/'static_setup.json'):hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in (raster_path,csv_path,old_path,old_csv):hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    def group(case,j,T):return next(g for g in cohorts[case]['groups'] if g['j']==j and g['T']==T)
+    first,last=group(m32,0,4),group(m32,3,4)
+    nfirst=group('r10_raster_along_n_p32',0,4)
+    report=dict(scope='Post-measurement structural tests, no new service fit or validation score. Old and new cards stay separate.',
+        definitions=dict(panel='A panel identity=mi; B panel identity=ni at a fixed Ktile. '
+                'Each full cfg_b panel is 16 KiB per Ktile; these are logical sources, not physical traffic.',
+            active='C_j = number of CTAs with output ordinal j.',
+            fanout='n_B(j,p) = count of current-ordinal requests for B panel p; peer=n_B-1.',
+            active_sharing='P_i=C_j*(n_B(j,p_i)-1). Also report sum_p n_p*(n_p-1).',
+            revisit='Membership in earlier software ordinals of the same invocation, not cache residency or coldness. '
+                'Repeated warmup means a panel absent from earlier ordinals may already have been read in another invocation.',
+            overlap='Duration-weighted count of other CTA L intervals. Union all qualifying windows of each peer CTA first. '
+                'L overlap is not TMA issue overlap; observed timestamps are diagnostic only.'),
+        current=cohorts,historical=historical,observed_overlap_processes=overlap_trials,matched_first_groups=matched,
+        rejected_candidates=[
+            dict(name='Unique B source bytes alone',reason='AlongM first has 8 B panels; AlongN has 24. '
+                'A nondecreasing cost of only unique B bytes predicts the opposite pitch-response order.',
+                examples=[first,nfirst]),
+            dict(name='B fanout plus previous-wave membership alone',reason='AlongM first T4 and last T4 have peer=17 '
+                'and no earlier-wave B occurrence, but pitch responses differ.',examples=[first,last]),
+            dict(name='Monotone active-times-sharing response',reason='Median P is 612 for AlongM last T4, 660 for AlongN first T4. '
+                'The measured penalty order is opposite. A nondecreasing single-feature response, including a nonnegative hinge, fails.',
+                examples=[last,nfirst]),
+            dict(name='Count-only two-resource service',formula='Delta=max(512,a*C+b*B_extra128*peer_B)-max(512,a*C), a,b>=0.',
+                reason='Matched first-output strata share the exact count inputs, but future work and B identities differ. '
+                    'The measured T4-minus-T3 response is reported above; do not infer impossibility from equal median inputs alone.')],
+        retained_boundary='Keep active demand, operand-specific panel multiplicities, source identity and predecessor/successor work '
+            'as separate computable inputs. Current evidence does not identify a transferable scalar service price; '
+            'do not add direction coefficients or call overlap a predictor.',
+        next_discriminator='Single-output 36/126 CTA cohorts keep the first two B panels and 18 users each while changing other '
+            'source groups. They remove producer-next-output mixing present in grid36/132 persistent work. '
+            'If both single cohorts lack a penalty while persistent132 has one, a narrow 126-to132 demand threshold remains possible.',
+        input_sha256=hashes,analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-source-organization.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 源分组能解释方向，计数还不能成为供给规则','',
+        '固定几何的方向对照先否定简单计数假设；旧R10与V09只检查趋势和静态归属，不混合跨卡定值。','',
+        '| 分组（B32） | 活动CTA | 唯一B面板 | B peer中位 | C×peer中位 | 此前轮见过B的比例 | ΔL周期中位 / 十次范围 |',
+        '|---|---:|---:|---:|---:|---:|---:|']
+    for order in ('along_m','along_n'):
+        for g in cohorts[f'r10_raster_{order}_p32']['groups']:
+            d=g['pitch_response']['L_cycles_delta']
+            lines.append(f'| {order}, j{g["j"]}/T{g["T"]} | {g["active_ctas"]} | {g["unique_B_panels"]} | '
+                f'{g["B_peer"]["median"]:.1f} | {g["active_times_B_peer"]["median"]:.1f} | '
+                f'{g["B_seen_earlier_wave_fraction"]:.2f} | {d["median"]:.1f} / {d["trial_min"]:.1f}～{d["trial_max"]:.1f} |')
+    d=matched['summary']['L_cycles_delta_T4_minus_T3']
+    lines+=['','唯一B源字节的方向相反；fan-out相同又不能解释首末轮响应；active×fan-out单变量仍把AlongM末轮和AlongN首轮的顺序预测反。'
+        '这些反例不否定任意多变量访问模型，但否定直接给上述单变量配一个正价格或阈值。',
+        '',f'首轮T3/T4进一步按相同mi、A/B peer数、历史成员标记逐窗口分层，'
+        f'T4−T3的B32周期差中位为{d["median"]:.1f}，十进程范围{d["trial_min"]:.1f}～{d["trial_max"]:.1f}。'
+        '两个集合仍使用不同B面板地址和后续工作；这限制的是仅依赖计数的服务形式，不能推广为任意源身份/历史函数的矛盾。',
+        '','| 同调用实际L重叠（B32） | 其它CTA中位 | 同B peer中位 | 跨ordinal peer中位 |','|---|---:|---:|---:|']
+    for name,j,T in [(m32,0,4),(m32,3,4),('r10_raster_along_n_p32',0,4)]:
+        g=group(name,j,T);o=g['observed_overlap']
+        lines.append(f'| {name}, j{j}/T{T} | {o["other_cta"]["median"]:.2f} | {o["same_B"]["median"]:.2f} | {o["other_ordinal"]["median"]:.2f} |')
+    lines+=['','每个peer CTA先把重叠L窗口取并集，再计时长，避免pingpong输出重叠重复计数。'
+        '同B使用者集中程度的方向仍存在；这不是TMA发起并发度，不能将实测时序带入预测。',
+        '','最短下一步保留当前源分组向量，做相同前两B面板、各18个使用者的single-output 36/126 CTA配对。'
+        '它能检验其它源组是否改变局部面板响应，避免persistent grid扫描的下一输出预取混杂。'
+        '若两者都无罚而原persistent132有罚，仍保留126–132之间窄阈值的可能，不直接归因缓存或硬件队列。',
+        '','目前没有拟合方向常数、自由非线性函数或新服务价格。JSON保留全部(j,T)静态量、逐进程重叠和精确匹配分层。','']
+    (output/'R10-source-organization.md').write_text('\n'.join(lines))
+    return report
+
+
+def source_pressure_diagnostics(root, output):
+    """Matched first B panels: one output at 36/126 CTAs, persistent at 132."""
+    from analyze_r13_sm import select_attempts
+    from analyze_r13_supply import _failure_pair_windows
+    from analyze_r18 import replay
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in json.loads((root/'cases.json').read_text())}
+    setups={r['case']:r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
+    def span(v):
+        v=list(v)
+        return dict(median=statistics.median(v),trial_min=min(v),trial_max=max(v))
+    controls=[r for r in rows.values() if r['set']=='ctrl']
+    fixed=('config','m','k','lda','ldd','storage_m','storage_n','zero_m','zero_n','swizzle','evict',
+           'input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','raster_order','warmup_policy')
+    if len(controls)!=6 or any(r.get(k)!=controls[0].get(k) for r in controls for k in fixed):
+        raise ValueError('source pressure contrast changed an undeclared condition')
+    calls={};plain={};processes=[];hashes={};failures={};contexts={}
+    expected=[[m,n] for n in range(2) for m in range(18)]
+    for row in rows.values():
+        name=row['id'];setup=setups[name]
+        selected,failed,_=select_attempts(root,name,tuple(row['variants']))
+        failures[name]=[x['path'] for x in failed];calls[name]={};plain[name]={}
+        work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
+        if row['set']=='ctrl':
+            if [list(w[0]) for w in work[:36]]!=expected:
+                raise ValueError('selected first-output coordinates changed')
+            if row['sm_count'] in (36,126) and any(len(w)!=1 for w in work):
+                raise ValueError('single-output group has future persistent work')
+            if len(work)!=row['sm_count'] or setup['initialized_input_columns']!=3072:
+                raise ValueError('actual grid or initialized source region changed')
+            contexts[name]=dict(row=row,setup=setup,cta_count=len(work),tile_counts=sorted(set(map(len,work))),
+                selected_first_coordinates=expected,first_B_users={str(n):sum(w[0][1]==n for w in work) for n in (0,1)})
+        for item in selected:
+            rec=item['record'];obs=replay(root,rec,row)
+            for path in (root/item['path'],root/rec['raw']):hashes[str(path)]=common.sha(path)
+            if rec['variant']=='plain':plain[name][rec['trial']]=obs['elapsed_us'];continue
+            if [c['work'] for c in obs['ctas']]!=work:raise ValueError('actual work differs from static scheduling')
+            calls[name][rec['trial']]=obs
+            wins=[dict(cta=c['cta'],j=j,mi=p[0],ni=p[1],begin=t[0],end=t[1])
+                  for c in obs['ctas'] for j,(p,t) in enumerate(zip(c['work'],c['tiles_ns']))]
+            overlaps=mainloop_overlap_features(wins)
+            chosen=[(w,o) for w,o in zip(wins,overlaps) if w['cta']<36 and w['j']==0]
+            processes.append(dict(case=name,trial=rec['trial'],event_us=obs['elapsed_us'],source=item['path'],
+                observed_sms=len({c['sm'] for c in obs['ctas']}),
+                selected_first_L_overlap={key:statistics.median(o[key] for w,o in chosen) for key in overlaps[0]}))
+        if len(plain[name])!=10 or (row['set']=='ctrl' and calls[name].keys()!=plain[name].keys()):
+            raise ValueError('ten successful processes for each declared variant required')
+    paired=[];summaries={}
+    for label in ('single36','single126','persistent132'):
+        a,b=(f'r10_source_{label}_p{x}' for x in (0,32))
+        for trial in sorted(calls[a]):
+            windows=_failure_pair_windows(calls[a][trial]['ctas'],calls[b][trial]['ctas'])
+            subset=[w for w in windows if w['cta']<36 and w['j']==0]
+            if len(subset)!=36:raise ValueError('missing matched first B-panel users')
+            fields=('L_ns_base','L_ns_variant','L_ns_delta','L_ns_ratio','L_cycles_base','L_cycles_variant',
+                    'L_cycles_delta','L_cycles_ratio','L_rate_ratio','prefix_ns_delta','prefill_ns_delta','E_ns_delta')
+            paired.append(dict(group=label,trial=trial,windows=36,
+                plain_base_us=plain[a][trial],plain_variant_us=plain[b][trial],
+                plain_pitch_ratio=plain[b][trial]/plain[a][trial]-1,
+                **{key:statistics.median(w[key] for w in subset) for key in fields}))
+        summaries[label]={key:span(r[key] for r in paired if r['group']==label)
+                          for key in paired[-1] if key not in ('group','trial','windows')}
+        summaries[label]['dual_disturbance']={name:span(calls[name][t]['elapsed_us']/plain[name][t]-1 for t in plain[name]) for name in (a,b)}
+    interaction=[]
+    for trial in range(10):
+        groups={r['group']:r for r in paired if r['trial']==trial}
+        for a,b in [('single36','single126'),('single126','persistent132')]:
+            interaction.append(dict(comparison=b+' minus '+a,trial=trial,
+                **{key:groups[b][key]-groups[a][key] for key in ('L_ns_delta','L_cycles_delta','L_ns_ratio','L_cycles_ratio')}))
+    differences={label:{key:span(r[key] for r in interaction if r['comparison']==label) for key in interaction[0] if key not in ('comparison','trial')}
+                 for label in sorted({r['comparison'] for r in interaction})}
+    references={}
+    previous=root.parent/'20261010-R10-raster-pitch'
+    if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
+        raise ValueError('same-card reference identity changed')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        name=row['id'];selected,_,_=select_attempts(previous,name,('plain',))
+        old=[replay(previous,r['record'],row)['elapsed_us'] for r in selected]
+        for item in selected:
+            for p in (previous/item['path'],previous/item['record']['raw']):hashes[str(p)]=common.sha(p)
+        references[name]=dict(current=span(plain[name].values()),previous=span(old),median_ratio=statistics.median(plain[name].values())/statistics.median(old)-1)
+    for name in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json'):
+        hashes[str(root/name)]=common.sha(root/name)
+    report=dict(scope='Three within-context pitch pairs (six conditions), developed after raster counterexample; no frozen validation score.',
+        environment=json.loads((root/'environment.json').read_text()),contexts=contexts,summaries=summaries,
+        paired_trials=paired,interaction=interaction,interaction_summary=differences,processes=processes,
+        references=references,failed_attempts=failures,input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)),
+        limits=['Each reported difference first pairs B0/B32 inside a fixed logical shape and execution organization.',
+                'Across single-output groups, the selected 36 CTAs use the same current coordinates, source maps and 18 users per B panel.',
+                'The groups change A-source multiplicity, other B panels, output writers, invocation work and frequency; no unique physical attribution.',
+                '126-to-132 pressure threshold is not separated from persistent organization by these conditions.',
+                'L-window overlap counts each other CTA at most once; it is not instantaneous TMA request concurrency.',
+                'Cycle/ns is diagnostic only and is not admitted as a formal prediction input.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-source-pressure.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    return report
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path)

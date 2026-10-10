@@ -6,7 +6,7 @@ import unittest
 from r09_input_source_clock import (fit_tensor_only, mixed_failure_clock,
                                     role_window_diagnostics, source_frequency, control_window,
                                     reciprocal_frequency, fit_reciprocal_clock, source_design, static_output_kib,
-                                    static_revisit_features, history_state_weights, history_series_design, fit_history_series)
+                                    static_revisit_features, history_state_weights, history_series_design, fit_history_series, history_localization_diagnostics)
 
 
 class R09FailureDiagnostics(unittest.TestCase):
@@ -185,6 +185,34 @@ class R09FailureDiagnostics(unittest.TestCase):
         self.assertEqual(original['fits'][key]['tau_profile'],altered['fits'][key]['tau_profile'])
         self.assertLess(original['last9_comparison']['state']['rms'],1e-6)
         self.assertGreater(altered['last9_comparison']['state']['rms'],.1)
+
+
+    def test_history_localization_reuses_paired_role_windows_and_allows_sm_remapping(self):
+        import hashlib,json,tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/'cases.json').write_text('[]')
+            calls=[]
+            for j in range(35):
+                ns=100 if j<6 else 120
+                calls.append(dict(event_us=ns/1000,first_entry_ns=j*1000,
+                    role_windows=[[0,0,1,j%2,ns*2,ns],[0,1,1,j%2,ns*2,ns]]))
+            process=dict(case='synthetic',mode='series',swizzle=1,trial=0,host_start_ns=0,raw_sha256='synthetic',
+                prefix_call_event_us=[c['event_us'] for c in calls[:16]],event_gaps_us=[.9]*34,calls=calls)
+            report=dict(run=str(root),environment={},processes=[process],verification={'synthetic':True},
+                input_sha256={'cases.json':hashlib.sha256(b'[]').hexdigest()})
+            path=root/'A-history-series.json';path.write_text(json.dumps(report))
+            result=history_localization_diagnostics(root,root)
+            onset=result['processes'][0]['matched_role_onsets']['0.05']
+            self.assertEqual(onset['ns']['index0'],6)
+            self.assertEqual(onset['C']['index0'],6)
+            self.assertIsNone(onset['f']['index0'])
+            self.assertEqual(result['processes'][0]['matched_role_calls'][6]['same_sm_as_baseline_fraction'],0)
+            self.assertEqual(result['input_sha256'][str(path)],hashlib.sha256(path.read_bytes()).hexdigest())
+            report['processes'][0]['calls'][3]['role_windows'][0][-1]=0
+            path.write_text(json.dumps(report))
+            with self.assertRaisesRegex(ValueError,'invalid same-role'):
+                history_localization_diagnostics(root,root)
 
 
 if __name__ == '__main__':

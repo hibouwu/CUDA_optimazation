@@ -1062,6 +1062,13 @@ def history_series_diagnostics(root, output):
                         local_frequency_ghz=failure_stats((t['end_c']-t['entry_c'])/(t['end_ns']-t['entry_ns']) for t in observers),
                         event_gap_before_us=None if j==0 else p['event_gaps_us'][j-1],
                         globaltimer_gap_before_us=None if j==0 else trajectory['inter_call_globaltimer_us'][j-1])
+                    c['role_windows']=[]
+                    for t in old['ctas']:
+                        for role,r in enumerate(t['roles']):
+                            if not r['tiles']:continue
+                            cycles,ns=r['final_c']-t['entry_c'],r['final_ns']-t['entry_ns']
+                            if min(cycles,ns)<=0:raise ValueError('nonpositive same-role history window')
+                            c['role_windows'].append([t['cta'],role,r['tiles'],t['sm'],cycles,ns])
                     p['calls'].append(c)
                 p['target']=p['calls'][16]
                 p['globaltimer_boundary_gap_fraction']=sum(trajectory['inter_call_globaltimer_us'])/(
@@ -1174,6 +1181,105 @@ def plot_history_series(report, output):
                  'Thin lines: all processes; thick line: median; band: empirical 10-90%',fontsize=11)
     fig.savefig(Path(output)/'A-history-series.png',dpi=160)
     plt.close(fig)
+
+
+def history_localization_diagnostics(root, output):
+    """Localize archived same-role drift from the single shared series replay."""
+    root,output=Path(root),Path(output)
+    path=output/'A-history-series.json';data=clock.read_json(path)
+    if data['input_sha256']['cases.json']!=clock.sha256(root/'cases.json'):
+        raise ValueError('history-series report belongs to another case matrix')
+    def stats(v):
+        values=list(v);r=failure_stats(values)
+        if values:r['cv']=statistics.pstdev(values)/statistics.fmean(values) if statistics.fmean(values) else None
+        return r
+    def onset(values,threshold):
+        return next((j for j in range(3,len(values)-1) if values[j]>threshold and values[j+1]>threshold),None)
+    processes,call_table,role_table=[],[],[]
+    for source in data['processes']:
+        p={k:source[k] for k in ('case','mode','swizzle','trial','host_start_ns','raw_sha256')}
+        warm=source['prefix_call_event_us'];base_event=statistics.median(warm[:3])
+        p['event_ratios']=[x/base_event-1 for x in warm]
+        p['prefix_onsets']={}
+        for threshold in (.03,.05,.10):
+            j=onset(p['event_ratios'],threshold)
+            p['prefix_onsets'][str(threshold)]=dict(index0=j,
+                prior_kernel_us=sum(warm[:j]) if j is not None else None,
+                event_elapsed_before_us=sum(warm[:j])+sum(source['event_gaps_us'][:j]) if j is not None else None)
+        if p['mode']=='series':
+            calls=source['calls'];roles=[]
+            for call in calls:
+                local={}
+                for c,role,tiles,sm,C,ns in call['role_windows']:
+                    if min(C,ns,tiles)<=0:raise ValueError('invalid same-role interval in shared report')
+                    local[c,role]=dict(C=C,ns=ns,f=C/ns,sm=sm,tiles=tiles)
+                roles.append(local)
+            baseline={key:sorted((roles[j][key] for j in range(3)),key=lambda w:w['ns'])[1] for key in roles[0]}
+            for j in range(16):
+                if set(roles[j])!=set(baseline) or any(roles[j][k]['tiles']!=baseline[k]['tiles'] for k in baseline):
+                    raise ValueError('same CTA/role did not retain its prefix work count')
+            per_call=[];per_role_onsets=[]
+            for key,b in baseline.items():
+                r=dict(case=p['case'],swizzle=p['swizzle'],trial=p['trial'],cta=key[0],role=key[1],tiles=b['tiles'])
+                for name in ('C','ns','f'):
+                    r[name+'_onset_index0']=onset([roles[j][key][name]/b[name]-1 for j in range(16)],.05)
+                per_role_onsets.append(r);role_table.append(r)
+            for j,local in enumerate(roles):
+                comparisons={name:[local[k][name]/b[name]-1 for k,b in baseline.items()] for name in ('C','ns','f')}
+                residual=max(abs(math.log(local[k]['C']/b['C'])-math.log(local[k]['f']/b['f'])-math.log(local[k]['ns']/b['ns'])) for k,b in baseline.items())
+                if residual>1e-12:raise ValueError('paired C=f*ns identity failed')
+                r=dict(case=p['case'],swizzle=p['swizzle'],trial=p['trial'],index0=j,phase='prefix' if j<16 else 'target',
+                    C_ratio=statistics.median(comparisons['C']),ns_ratio=statistics.median(comparisons['ns']),f_ratio=statistics.median(comparisons['f']),
+                    role_ns_over5_fraction=sum(x>.05 for x in comparisons['ns'])/len(baseline),
+                    same_sm_as_baseline_fraction=sum(local[k]['sm']==b['sm'] for k,b in baseline.items())/len(baseline),
+                    prior_kernel_us=sum(c['event_us'] for c in calls[:j]),
+                    elapsed_globaltimer_us=(calls[j]['first_entry_ns']-calls[0]['first_entry_ns'])/1000,
+                    event_us=calls[j]['event_us'],local_ns_median=statistics.median(x['ns'] for x in local.values()),
+                    local_f_median=statistics.median(x['f'] for x in local.values()),role_count=len(local))
+                per_call.append(r);call_table.append(r)
+            p['matched_role_calls']=per_call;p['matched_role_onsets']={}
+            for threshold in (.03,.05,.10):
+                p['matched_role_onsets'][str(threshold)]={}
+                for name in ('C','ns','f'):
+                    j=onset([c[name+'_ratio'] for c in per_call[:16]],threshold)
+                    p['matched_role_onsets'][str(threshold)][name]=dict(index0=j,
+                        prior_kernel_us=per_call[j]['prior_kernel_us'] if j is not None else None,
+                        elapsed_globaltimer_us=per_call[j]['elapsed_globaltimer_us'] if j is not None else None)
+            p['role_onset_spread']={name:dict(histogram=dict(Counter(str(r[name+'_onset_index0']) for r in per_role_onsets)),
+                detected=sum(r[name+'_onset_index0'] is not None for r in per_role_onsets),total=len(per_role_onsets)) for name in ('C','ns','f')}
+        processes.append(p)
+    series=[p for p in processes if p['mode']=='series'];summary={}
+    for key in ('0.03','0.05','0.1'):
+        summary[key]={}
+        for name in ('C','ns','f'):
+            group=[p['matched_role_onsets'][key][name] for p in series]
+            summary[key][name]=dict(index0=stats(p['index0'] for p in group if p['index0'] is not None),
+                histogram=dict(Counter(str(p['index0']) for p in group)),
+                prior_kernel_us=stats(p['prior_kernel_us'] for p in group if p['index0'] is not None),
+                elapsed_globaltimer_us=stats(p['elapsed_globaltimer_us'] for p in group if p['index0'] is not None))
+    event_summary={mode:{key:dict(index0=stats(p['prefix_onsets'][key]['index0'] for p in processes if p['mode']==mode and p['prefix_onsets'][key]['index0'] is not None),
+        histogram=dict(Counter(str(p['prefix_onsets'][key]['index0']) for p in processes if p['mode']==mode)),
+        prior_kernel_us=stats(p['prefix_onsets'][key]['prior_kernel_us'] for p in processes if p['mode']==mode and p['prefix_onsets'][key]['index0'] is not None))
+        for key in ('0.03','0.05','0.1')} for mode in ('single','series')}
+    paired=[]
+    for p in series:
+        on=p['matched_role_onsets']['0.05'];f,ns=on['f']['index0'],on['ns']['index0']
+        paired.append(dict(case=p['case'],trial=p['trial'],f_index0=f,ns_index0=ns,
+            f_to_ns_calls=ns-f if f is not None and ns is not None else None))
+    result=dict(run=data['run'],environment=data['environment'],source_sha256=clock.sha256(Path(__file__)),
+        input_sha256={str(path):clock.sha256(path)},parent_verification=data['verification'],
+        matched_role_onset_summary=summary,event_onset_summary=event_summary,processes=processes,
+        frequency_and_ns_onsets=paired,
+        method=dict(baseline='For each logical CTA and consumer role, select the median-ns call among first three prefix calls and retain its paired C/f/ns.',
+            window='Same CTA entry to the same consumer-role final endpoint. Shared decoder already checked role SM IDs; this function requires positive nonempty windows and unchanged prefix work. CTA index is software work identity, not a pinned physical SM. Absolute cycles across calls are never subtracted.',
+            onset='First call index j>=3 with two consecutive same-role median ratios above threshold. Primary 5%; 3% and 10% are sensitivity, not physical cutoffs.',
+            time='Prior kernel event sum and actual globaltimer elapsed-before-call are both reported. Fixed per-call work leaves repetition count and cumulative active time confounded.',
+            limits='Ends do not localize first/later source panels inside the affected call. All raw decoding comes from A-history-series; no extra parser, clock fit, GPU task or current experiment-page edit.'))
+    (output/'A-history-localization.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    for name,table in [('calls',call_table),('role-onsets',role_table)]:
+        with (output/f'A-history-localization-{name}.csv').open('w') as stream:
+            writer=csv.DictWriter(stream,fieldnames=list(table[0]));writer.writeheader();writer.writerows(table)
+    return result
 
 
 def response_development(base, output):

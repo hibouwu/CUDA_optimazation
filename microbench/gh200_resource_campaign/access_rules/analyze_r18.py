@@ -197,7 +197,8 @@ def decode_history_series(setup, call, event, row):
                 raise ValueError('history work/SM identity changed')
             if tiles and (end_c<=h[0] or end_ns<=h[1]):
                 raise ValueError('history CTA interval invalid')
-            ctas.append(dict(cta=c,sm=h[2]-1,tiles=tiles,entry_c=h[0],entry_ns=h[1],end_c=end_c,end_ns=end_ns))
+            ctas.append(dict(cta=c,sm=h[2]-1,tiles=tiles,entry_c=h[0],entry_ns=h[1],end_c=end_c,end_ns=end_ns,
+                roles=[dict(final_c=r[0],final_ns=r[1],tiles=r[2]) for r in (r1,r2)]))
         active=[c for c in ctas if c['tiles']];largest=max(c['tiles'] for c in active)
         first=min(c['entry_ns'] for c in ctas);last=max(c['end_ns'] for c in active)
         if decoded and first<decoded[-1]['last_final_ns']:
