@@ -174,6 +174,121 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_second_prefill_reduced_closed_form_and_window_bound(self):
+        from supply_model import admission_stage_events
+        import random
+        rng=random.Random(739790)
+        # Regression coverage for the reduced subclass, not a proof by sampling.
+        for case in range(64):
+            c=rng.uniform(1.,700.)
+            q=rng.uniform(0.,c)
+            w=rng.uniform(0.,q)
+            h=rng.uniform(0.,q-w)
+            latency=rng.uniform(0.,5*c)
+            reuse=rng.uniform(0.,3*c)
+            params=dict(producer_interval=rng.uniform(0.,c),ready_latency=latency,
+                commit_lead=q,completion_lag=rng.uniform(0.,c-q),service_cycles=c,
+                issue_floor=rng.uniform(0.,c-q),wait_overhead=w,loop_advance=h,
+                return_overhead=rng.uniform(0.,4*c),reuse_delay=reuse,
+                handoff_delay=rng.uniform(0.,8*c),producer_boundary_delay=rng.uniform(0.,8*c),
+                second_prefill=True)
+            for stage in (4,6):
+                with self.subTest(case=case,stage=stage):
+                    trace=admission_stage_events(64,stage,**params)
+                    commits=trace['commits'][64:]
+                    residual=max(0.,latency+reuse+c-q+w-(stage-1)*c)
+                    for j in range(1,64):
+                        expected=commits[0]+j*c+((j-1)//(stage-1))*residual
+                        self.assertAlmostEqual(commits[j],expected,delta=1e-7)
+                    early=commits[16]-commits[1]
+                    late=commits[63]-commits[17]
+                    self.assertAlmostEqual(late,c+3*early,delta=1e-7)
+                    self.assertLessEqual(late,(46/15)*early+1e-7)
+
+    def test_second_prefill_window_bound_does_not_cover_wide_parameters(self):
+        from supply_model import admission_stage_events
+        # Deliberately violates reduced assumptions (including p<=c and q+lag<=c).
+        # This is a structural counterexample, not a fit to measured data.
+        params=dict(producer_interval=1700,ready_latency=2900,commit_lead=430,
+            completion_lag=240,service_cycles=512,issue_floor=160,wait_overhead=245,
+            loop_advance=90,return_overhead=290,reuse_delay=320,handoff_delay=1860,
+            producer_boundary_delay=2740,second_prefill=True)
+        for stage,expected_early in ((4,24183),(6,20783)):
+            with self.subTest(stage=stage):
+                commits=admission_stage_events(64,stage,**params)['commits'][64:]
+                early=commits[16]-commits[1]
+                late=commits[63]-commits[17]
+                self.assertEqual(early,expected_early)
+                self.assertEqual(late,78200)
+                self.assertGreater(late-(46/15)*early,4000)
+
+    def test_second_prefill_default_preserves_original_trace(self):
+        from supply_model import admission_stage_events
+        args=(3,2,2,7,3,4)
+        params=dict(service_cycles=10,issue_floor=1,wait_overhead=2,loop_advance=1,
+            return_overhead=3,reuse_delay=5,handoff_delay=2,producer_boundary_delay=4)
+        # Captured from the original recurrence before introducing the intervention.
+        expected=dict(windows=[45.,45.],issued=[0.,2.,31.,52.,57.,83.],
+            ready=[7.,9.,38.,59.,64.,90.],consumer_available=[0.,15.,27.,52.,67.,79.],
+            first_mma_or_commit=[7.,15.,38.,59.,67.,90.],
+            service_frontier=[17.,27.,48.,69.,79.,100.],commits=[14.,24.,45.,66.,76.,97.],
+            completed=[21.,31.,52.,73.,83.,104.],wait1_return=[14.,26.,47.,66.,78.,99.],
+            released=[26.,47.,52.,78.,99.,104.],mma_returns=[50.,102.],
+            main_ends=[52.,104.],slot=[0,1,0,1,0,1])
+        self.assertEqual(admission_stage_events(*args,**params),expected)
+        self.assertEqual(admission_stage_events(*args,**params,second_prefill=False),expected)
+
+    def test_second_prefill_without_new_wait_leaves_all_events_unchanged(self):
+        from supply_model import admission_stage_events
+        for stage in (4,6):
+            for latency,handoff in ((0.,0.),(900.,10000.)):
+                with self.subTest(stage=stage,latency=latency):
+                    args=(8,stage,0.,latency,0.,0.)
+                    params=dict(service_cycles=64.,handoff_delay=handoff)
+                    baseline=admission_stage_events(*args,**params)
+                    filled=admission_stage_events(*args,**params,second_prefill=True)
+                    wait=filled.pop('second_prefill')
+                    self.assertEqual(wait['begin'],wait['end'])
+                    self.assertEqual(wait['waited_stages'],stage)
+                    self.assertEqual(filled,baseline)
+
+    def test_second_prefill_waits_full_ring_without_releasing_or_resetting_it(self):
+        from supply_model import admission_stage_events
+        kt=8
+        for stage in (4,6):
+            with self.subTest(stage=stage):
+                args=(kt,stage,9.,900.,40.,12.)
+                params=dict(service_cycles=64.,wait_overhead=4.,loop_advance=3.,
+                    return_overhead=2.,reuse_delay=17.,handoff_delay=5.,producer_boundary_delay=23.)
+                baseline=admission_stage_events(*args,**params)
+                filled=admission_stage_events(*args,**params,second_prefill=True)
+                wait=filled['second_prefill']
+                self.assertEqual(wait['begin'],baseline['consumer_available'][kt])
+                self.assertGreater(wait['end'],wait['begin'])
+                self.assertEqual(wait['end'],max(wait['begin'],*filled['ready'][kt:kt+stage]))
+                self.assertEqual(filled['first_mma_or_commit'][kt],wait['end'])
+                self.assertLessEqual(filled['main_ends'][0],wait['end'])
+                for key in ('issued','ready'):
+                    self.assertEqual(filled[key][:kt+stage],baseline[key][:kt+stage])
+                for key in ('commits','completed','service_frontier','wait1_return','released'):
+                    self.assertEqual(filled[key][:kt],baseline[key][:kt])
+                self.assertEqual(filled['service_frontier'][kt],
+                    max(filled['first_mma_or_commit'][kt],filled['service_frontier'][kt-1])+64.)
+                for i in range(kt,2*kt):
+                    release=filled['main_ends'][1] if i==2*kt-1 else filled['wait1_return'][i+1]
+                    self.assertEqual(filled['released'][i],release)
+                    self.assertGreaterEqual(filled['released'][i],baseline['released'][i])
+                    self.assertGreaterEqual(filled['issued'][i],filled['released'][i-stage]+17.)
+                # The next group beyond the initial fill still needs a real release.
+                self.assertGreaterEqual(filled['issued'][kt+stage],filled['wait1_return'][kt+1]+17.)
+
+    def test_second_prefill_rejects_missing_groups_and_observed_entry_cut(self):
+        from supply_model import admission_stage_events
+        with self.assertRaisesRegex(ValueError,'Ktile>=stages'):
+            admission_stage_events(4,6,0,0,0,0,second_prefill=True)
+        with self.assertRaisesRegex(ValueError,'observed entry cut'):
+            admission_stage_events(8,4,0,0,0,0,second_prefill=True,observed_second_entry=(0,0))
+
     def test_wide_retirement_inequalities_allow_different_ready_histories(self):
         from supply_model import admission_stage_events
         import random

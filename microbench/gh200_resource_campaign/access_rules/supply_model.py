@@ -31,7 +31,8 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            commit_lead, completion_lag, *, service_cycles=512.,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
                            return_overhead=0., reuse_delay=0., handoff_delay=0.,
-                           observed_second_entry=None, producer_boundary_delay=0.):
+                           observed_second_entry=None, producer_boundary_delay=0.,
+                           second_prefill=False):
     """Development recurrence for two pingpong outputs; not a fitted hardware rule.
 
     I is the end-of-copy-pair marker. E is cumulative TC service progress,
@@ -49,6 +50,10 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     raise ValueError; measured entry times must never become prediction inputs.
     producer_boundary_delay is a one-time control gap between the two producer
     load calls, before the empty-slot constraint; it is not a per-stage price.
+    second_prefill waits for the second output's first S ready groups before
+    its prologue, without releasing slots or resetting TC progress. Its begin/end
+    are modeled events, not observed readiness. Only this enabled intervention
+    adds a second_prefill diagnostic to the otherwise unchanged return schema.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,
@@ -57,23 +62,35 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         raise ValueError('admission diagnostic requires Ktile/stages>=2 and nonnegative times')
     if issue_floor>service_cycles:
         raise ValueError('issue floor must not exceed per-tile service')
+    if second_prefill and (kt<stages or observed_second_entry is not None):
+        raise ValueError('second prefill requires Ktile>=stages and no observed entry cut')
     if observed_second_entry is not None:
         entry_h,entry_b=observed_second_entry
         if not 0<=entry_h<=entry_b:
             raise ValueError('observed entry requires 0 <= H gap <= B gap')
     issued=[];ready=[];available=[];starts=[];frontier=[];commits=[];done=[];wait=[]
-    released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.
+    released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.;prefill=None
     for i in range(2*kt):
-        issue=issued[-1]+producer_interval if issued else 0.
-        if i==kt:issue+=producer_boundary_delay
-        if i>=stages:issue=max(issue,released[i-stages]+reuse_delay)
-        issued.append(issue);ready.append(issue+ready_latency)
+        # At this boundary all S release predecessors belong to output 0.
+        # Schedule the initial fill before consuming it; later slots still wait
+        # for output 1's actual releases, as in the untreated recurrence.
+        through=kt+stages if i==kt and second_prefill else i+1
+        while len(issued)<through:
+            j=len(issued)
+            issue=issued[-1]+producer_interval if issued else 0.
+            if j==kt:issue+=producer_boundary_delay
+            if j>=stages:issue=max(issue,released[j-stages]+reuse_delay)
+            issued.append(issue);ready.append(issue+ready_latency)
+        if i==kt and second_prefill:
+            prefill=dict(begin=next_consumer,end=max(next_consumer,max(ready[kt:kt+stages])),
+                waited_stages=stages)
+            next_consumer=prefill['end']
         if i==kt and observed_second_entry is not None:
             next_consumer=returns[0]+entry_h
             start=returns[0]+entry_b
-            if ready[-1]>start+1e-8:
+            if ready[i]>start+1e-8:
                 raise ValueError('observed entry precedes modeled readiness')
-        else:start=max(ready[-1],next_consumer)
+        else:start=max(ready[i],next_consumer)
         available.append(next_consumer);starts.append(start)
         service_end=max(start,frontier[-1] if frontier else start)+service_cycles
         frontier.append(service_end)
@@ -91,11 +108,13 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
             returns.append(mma_return);ends.append(end)
             next_consumer=mma_return+handoff_delay  # Do not reset TC or slots, or wait for tail.
         else:next_consumer=returned+loop_advance
-    return dict(windows=[ends[j]-starts[j*kt] for j in range(2)],
+    result=dict(windows=[ends[j]-starts[j*kt] for j in range(2)],
         issued=issued,ready=ready,consumer_available=available,
         first_mma_or_commit=starts,service_frontier=frontier,commits=commits,
         completed=done,wait1_return=wait,released=released,
         mma_returns=returns,main_ends=ends,slot=[i%stages for i in range(2*kt)])
+    if prefill is not None:result['second_prefill']=prefill
+    return result
 
 
 def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,

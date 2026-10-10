@@ -4208,6 +4208,34 @@ def stage_second_prefill_diagnostics(root, output):
                     delta_background={phase:{k:span(p['delta_background'][phase][k] for p in pairs)
                         for k in ('overlapping_ctas','sum_overlap_ns')} for phase in ('early','post')})
             treatment.append(result)
+    # For the reduced constant-reuse class, full initial readiness removes the
+    # inherited phase: C_j=C_0+j*c+floor((j-1)/(S-1))*R for j>=1.
+    # At S=4/6, late46=c+3*early15 and c<=early15/15. This is a
+    # necessary condition, not a fit; test each same-call pair of cycle windows.
+    reuse_records=[]
+    for entry in processes:
+        if entry['variant']!='progress' or entry['second_prefill_flag']!=1:continue
+        early=entry['intervals']['commit1_to16'];late=entry['intervals']['commit17_to63']
+        excess=late-46*early/15
+        reuse_records.append(dict(stages=entry['stages'],trial=entry['trial'],source=entry['source'],
+            early15_cycles=early,late46_cycles=late,implied_service_cycles=late-3*early,
+            service_upper_cycles=early/15,late_upper_cycles=46*early/15,
+            excess_cycles=excess,minimum_equal_window_slack_cycles=max(0.,excess)*15/61))
+    reuse_summary={str(stage):dict(processes=10,
+        outside=sum(r['excess_cycles']>0 for r in reuse_records if r['stages']==stage),
+        excess_cycles=span(r['excess_cycles'] for r in reuse_records if r['stages']==stage),
+        minimum_equal_window_slack_cycles=span(r['minimum_equal_window_slack_cycles']
+            for r in reuse_records if r['stages']==stage)) for stage in (4,6)}
+    reuse_check=dict(equation='late46 = c + 3*early15 <= (46/15)*early15',
+        assumptions=['The first S input groups are ready and the previous WG is drained before second-output prologue.',
+            'One constant producer interval p<=c, issue floor g<=c-q, q+lambda<=c, q>=w+h; all costs nonnegative.',
+            'Fixed aggregate ready latency, reuse cost and software paths; no shared background or observer-specific per-iteration change.'],
+        scope='Post-treatment same-call necessary condition of the reduced local recurrence; not a proof against the full model family.',
+        records=reuse_records,summary=reuse_summary,
+        limitations=['The 46/15 bound is parameter-free within this subclass. No measured initial state or on/off-specific constant is used.',
+            'Equal-window slack is the minimum independent +/-epsilon correction to both duration measurements needed to remove the violation. It is not a measured observer error or a confidence bound.',
+            'Stage6 also has a small positive residual; known nonuniform measured paths limit exact equality, without identifying the full residual cause.',
+            'Constant costs outside the stated branch restrictions can violate this bound. A failure here does not uniquely establish time-varying hardware service.'])
     correctness=[]
     for stage in (4,6):
         row=rows[keys[stage,1]]
@@ -4221,12 +4249,12 @@ def stage_second_prefill_diagnostics(root, output):
                 raise ValueError('second prefill full-output comparison failed')
             correctness.append(dict(case=row['id'],variant=variant,source=str(path),**check));hashes[str(path)]=common.sha(path)
     for path in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',root/'build/binary_hashes.json',
-            root/'build/resources.json',root/'build/sass_hashes.json',root/'environment.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
+            root/'build/resources.json',root/'build/sass_hashes.json',root/'environment.json',Path(__file__),Path(__file__).with_name('analyze_r18.py'),Path(__file__).with_name('supply_model.py')):
         hashes[str(path)]=common.sha(path)
     report=dict(root=str(root),scope='Same-stage on-minus-off joint S-ready, prior-WG-drain and phase intervention; development only.',
         environment=read_json(root/'environment.json'),contexts={name:dict(row=row,setup=setups[name]) for name,row in rows.items()},
         processes=processes,timing=timing,on_minus_off=treatment,progress_minus_plain=observer,
-        full_output_checks=correctness,failed_attempts=failures,input_sha256=hashes,references_completed_first=refs_first,
+        prefilled_constant_reuse=reuse_check,full_output_checks=correctness,failed_attempts=failures,input_sha256=hashes,references_completed_first=refs_first,
         attempt_directories=[str(p.relative_to(root)) for p in sorted((root/'attempts').glob('*')) if p.is_dir()],
         reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in sorted({p['case'] for p in refs})},
         resources=read_json(root/'build/resources.json'),
@@ -4272,6 +4300,27 @@ def stage_second_prefill_diagnostics(root, output):
         '四份独立完整输出比较均检查全部4325376个元素，on/off差异与非有限数为0。'
         '两条plain参照共20进程先于80个控制进程完成，且属于同一GPU；原始身份、失败记录、资源、'
         '预热与逐进程同stage配对保留于[B-second-prefill.json](B-second-prefill.json)。没有重拟参数、筛选进程或更新冻结成绩。','']
+    lines+=['## 全预填后的恒定复用检验','',
+        '本检验只针对已声明的reduced局部递推：p≤c、g≤c−q、q+λ≤c、q≥w+h，'
+        'ready/复用成本和软件路径恒定。预等使初始S槽全ready、前WG已排空；'
+        '于是C_j=C_0+jc+floor((j−1)/(S−1))R（j≥1），'
+        'R=max(0,ℓ+a+c−q+w−(S−1)c)。对stage4/6，'
+        'late46=c+3early15≤(46/15)early15。未知初态不再是该子类的自由参数。','',
+        '推导：前S次提交等间距c。普通位置W=C+w且consumer推进不限制TC；'
+        'producer自身前驱的p≤c分支被前次提交+c覆盖，释放前驱变成C_(j−S+1)+T。'
+        '从j≥S开始，两者取max给出上述闭式。任意旧输出尾项、交接延迟或producer单次边界间隙'
+        '只改变已就绪的起点C0，不能改变这个后续关系。','',
+        '| stage | late46超出上界 cycle，中位[最小,最大] | 两窗口独立±ε所需最小ε cycle |',
+        '|---|---:|---:|']
+    for stage in (4,6):
+        r=reuse_summary[str(stage)]
+        lines.append(f'| {stage} | {cell(r["excess_cycles"])} | {cell(r["minimum_equal_window_slack_cycles"])} |')
+    lines+=['','每一行统计都先在同一个progress调用内形成early/late，不拼不同trial或stage。'
+        'stage4十个启用进程均不相容；stage6只有约13～24cycle差，已知相邻打点路径不均匀，'
+        '不能把这个小残差也命名为新硬件瓶颈。ε只表示修复两个窗口所需的数值松弛，不是实测观察误差界。','',
+        '此结果排除“全预填后沿恒定reduced复用关系推进”的完整解释，不能扩大到任意恒定成本模型。'
+        '放开p≤c等限制可给出违反该界的模型轨迹，但仍须同时解释stage6及各局部端点。'
+        '下一步需区分更宽的指令推进关系、后续ready变化和共享背景响应；不从此表直接拟合分段价格。','']
     (output/'B-second-prefill.md').write_text('\n'.join(lines))
     return report
 
