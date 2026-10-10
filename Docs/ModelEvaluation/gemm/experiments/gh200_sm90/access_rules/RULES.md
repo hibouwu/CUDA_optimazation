@@ -97,6 +97,20 @@ DONE_j = epilogue_end(ep_j, 下一轮主循环窗口)
 
 后续对照给下一版增加了三项结构约束，尚未产生可迁移的新系数：[R13](R13-async-retirement.md#v09-stage-failure)的stage响应不能仅用固定启动项或恒定每Ktile罚项描述；[R18](R18-cluster-boundary.md#v09-boundary-failure)的输入边界代价必须区分首轮、后续轮次及同cluster的完整伙伴；[R09](R09-inkernel-clock-stages.md#v09-three-layer-diagnostic)的长K条件时钟失配不能仅归结于服务误差，也没有依据设置硬频率下限。新卡局部配对只约束候选形式，不替换旧卡参数或V09成绩。
 
+<a id="source-sharing-dev"></a>
+
+### 开发候选：共享需求与B源组响应
+
+该候选只用于当前cfg_b完整tile、B32对照，尚未接入上面的V09预测。令C为当前软件输出轮的CTA数，p_B为同B面板的其它使用者数，E_B为该B请求多覆盖的128 B granule对应KiB，则
+
+\[
+\Delta L=K_t\left[\max(512,aC+bE_Bp_B)-\max(512,aC)\right],\qquad a,b\ge0.
+\]
+
+max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `supply_model.source_sharing_delta_cycles(a,b,C,E_B*p_B,K_t)`；源覆盖和软件轮次仍不等于物理流量或同时发起的请求。仅用739585两个单输出条件约束参数，并以非负启动项所需的 `K_t*a*C≤aligned L` 排除共同基线大错被相减隐藏的解。保留相关分片参数域，不把a、b范围当独立矩形；目前没有物理上优先的一对参数。
+
+迁移评估只对B32响应作开发检查，实测对齐L仍作为锚，不能称完整L或总时间预测。所有迁移组必须共用同一对参数；看过迁移后发现的好顶点仅是存在例，不能追认为事前选中的预测器。分组中位数的小误差不能替代逐CTA检验：完整训练参数域对稳定位置仍有18%～20%的必要误差下界，放宽训练到5%整L后仍超过15%；该形式尚不能满足局部服务目标。证据和逐CTA限制见[R10](R10-layout-cache.md#shared-service-candidate)，完整域见[候选参数与迁移](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)。
+
 ## 计量与组合约定
 
 - 有效数学工作为 `2MNK FLOP`；补齐 tile、消费者归约、地址、同步与排空按实际窗口计入时间，不能混入同一有效 FLOP 分子。

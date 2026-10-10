@@ -14,6 +14,19 @@ CONFIGS = {"cfg_a": (128, 128, 2, 1), "cfg_b": (128, 128, 1, 1),
            "cfg_c": (256, 128, 1, 2)}
 
 
+def source_sharing_delta_cycles(a, b, active_ctas, extra128_times_B_peer, kt=1):
+    """Explicit development candidate; not used by the production predictor.
+
+    a and b are shared calibrated coefficients. extra128_times_B_peer is the
+    logical B extra-128-byte coverage in KiB times other users of that panel.
+    It is not physical traffic. Inputs retain their numeric type, including
+    Fraction for the offline parameter-domain analysis.
+    """
+    aligned = a * active_ctas
+    pitched = aligned + b * extra128_times_B_peer
+    return kt * (max(512, pitched) - max(512, aligned))
+
+
 @lru_cache(None)
 def address_box(rows, row_bytes, pitch_bytes, start_mod128):
     """Valid address spans, counted per row; extra coverage is not physical traffic."""

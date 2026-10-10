@@ -137,3 +137,5 @@ A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。�
 更关键的是，P2十次进程中，实际最后CTA及其唯一静态cluster伙伴都不属于冻结的7个候选。常见实际pair为CTA56/122，也有9/75、35/101、11/77；这些身份直接由同调用端点和静态scheduler核对。问题发生在cluster之间的服务排序，不能通过把每个冻结候选再加上伙伴来解决。这里没有扩充或替换冻结候选集合。
 
 因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
+
+[R10逐CTA复核](R10-layout-cache.md#shared-service-candidate)补充了派发限制：同a058/GPU-ef上，739571两个raster方向与739585持久对照的十次B0/B32中，CTA55始终映射SM55、CTA91始终映射SM87。稳定的逻辑位置误差与固定SM位置混杂，不能据此识别某个源地址或GPC服务规则；该局部绑定不外推到其它grid、卡或驱动。

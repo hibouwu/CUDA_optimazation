@@ -1014,6 +1014,32 @@ def fit_history_series(processes, cap):
             'A profile minimum, an active clock bound, or small residual alone does not identify a physical time constant; inspect boundary sensitivity, cross-process scatter, direction, and held-segment residuals.'])
 
 
+def history_call_metrics(trajectory, event_gaps_us):
+    """Preserve common ends-decoder windows for R09 history interventions."""
+    calls=[]
+    for j,old in enumerate(trajectory['calls']):
+        c={k:v for k,v in old.items() if k!='ctas'}
+        maximum=max(t['tiles'] for t in old['ctas'])
+        observers=[t for t in old['ctas'] if t['tiles']==maximum]
+        c.update(frequency_observers_us=[[(t['entry_ns']-old['first_entry_ns'])/1000,
+            (t['end_ns']-t['entry_ns'])/1000] for t in observers],
+            median_full_cta_cycles=statistics.median(t['end_c']-t['entry_c'] for t in observers),
+            median_full_cta_window_us=statistics.median((t['end_ns']-t['entry_ns'])/1000 for t in observers),
+            max_cycles_over_process_f_us=old['max_cta_cycles']/(1000*old['frequency_ghz']),
+            local_frequency_ghz=failure_stats((t['end_c']-t['entry_c'])/(t['end_ns']-t['entry_ns']) for t in observers),
+            event_gap_before_us=None if j==0 else event_gaps_us[j-1],
+            globaltimer_gap_before_us=None if j==0 else trajectory['inter_call_globaltimer_us'][j-1])
+        c['role_windows']=[]
+        for t in old['ctas']:
+            for role,r in enumerate(t['roles']):
+                if not r['tiles']:continue
+                cycles,ns=r['final_c']-t['entry_c'],r['final_ns']-t['entry_ns']
+                if min(cycles,ns)<=0:raise ValueError('nonpositive same-role history window')
+                c['role_windows'].append([t['cta'],role,r['tiles'],t['sm'],cycles,ns])
+        calls.append(c)
+    return calls
+
+
 def history_series_diagnostics(root, output):
     """Same-process clock trajectories with a contemporaneous recording perturbation pair."""
     import gzip
@@ -1050,26 +1076,7 @@ def history_series_diagnostics(root, output):
                 preceding_target_calls=call['preceding_target_calls'],event_gaps_us=call['history_inter_call_event_us'])
             if p['mode']=='series':
                 trajectory=decoded['history_series'];p['calls']=[]
-                for j,old in enumerate(trajectory['calls']):
-                    c={k:v for k,v in old.items() if k!='ctas'}
-                    maximum=max(t['tiles'] for t in old['ctas'])
-                    observers=[t for t in old['ctas'] if t['tiles']==maximum]
-                    c.update(frequency_observers_us=[[(t['entry_ns']-old['first_entry_ns'])/1000,
-                        (t['end_ns']-t['entry_ns'])/1000] for t in observers],
-                        median_full_cta_cycles=statistics.median(t['end_c']-t['entry_c'] for t in observers),
-                        median_full_cta_window_us=statistics.median((t['end_ns']-t['entry_ns'])/1000 for t in observers),
-                        max_cycles_over_process_f_us=old['max_cta_cycles']/(1000*old['frequency_ghz']),
-                        local_frequency_ghz=failure_stats((t['end_c']-t['entry_c'])/(t['end_ns']-t['entry_ns']) for t in observers),
-                        event_gap_before_us=None if j==0 else p['event_gaps_us'][j-1],
-                        globaltimer_gap_before_us=None if j==0 else trajectory['inter_call_globaltimer_us'][j-1])
-                    c['role_windows']=[]
-                    for t in old['ctas']:
-                        for role,r in enumerate(t['roles']):
-                            if not r['tiles']:continue
-                            cycles,ns=r['final_c']-t['entry_c'],r['final_ns']-t['entry_ns']
-                            if min(cycles,ns)<=0:raise ValueError('nonpositive same-role history window')
-                            c['role_windows'].append([t['cta'],role,r['tiles'],t['sm'],cycles,ns])
-                    p['calls'].append(c)
+                p['calls']=history_call_metrics(trajectory,p['event_gaps_us'])
                 p['target']=p['calls'][16]
                 p['globaltimer_boundary_gap_fraction']=sum(trajectory['inter_call_globaltimer_us'])/(
                     (p['calls'][-1]['last_final_ns']-p['calls'][0]['first_entry_ns'])/1000)
@@ -1279,6 +1286,172 @@ def history_localization_diagnostics(root, output):
     for name,table in [('calls',call_table),('role-onsets',role_table)]:
         with (output/f'A-history-localization-{name}.csv').open('w') as stream:
             writer=csv.DictWriter(stream,fieldnames=list(table[0]));writer.writeheader();writer.writerows(table)
+    return result
+
+
+def mirror_pair_metrics(same, mirror):
+    """Match CTA/role work; compare 19 targets without treating target1 as steady state."""
+    if len(same['calls'])!=35 or len(mirror['calls'])!=35:
+        raise ValueError('mirror comparison requires all sixteen prefix and nineteen target calls')
+    comparisons=[]
+    for j,(a,b) in enumerate(zip(same['calls'],mirror['calls'])):
+        windows=[]
+        for c in (a,b):
+            local={(x[0],x[1]):dict(tiles=x[2],sm=x[3],C=x[4],ns=x[5]) for x in c['role_windows']}
+            if len(local)!=len(c['role_windows']) or any(min(w['tiles'],w['C'],w['ns'])<=0 for w in local.values()):
+                raise ValueError('missing, duplicate or nonpositive same-role mirror windows')
+            windows.append(local)
+        left,right=windows
+        if set(left)!=set(right) or any(left[k]['tiles']!=right[k]['tiles'] for k in left):
+            raise ValueError('mirror comparison changed logical CTA/role work')
+        ns=[right[k]['ns']/left[k]['ns']-1 for k in left]
+        cycles=[right[k]['C']/left[k]['C']-1 for k in left]
+        freq=[(right[k]['C']/right[k]['ns'])/(left[k]['C']/left[k]['ns'])-1 for k in left]
+        q=dict(index=j,phase='prefix' if j<16 else 'target',target_index=None if j<16 else j-16,
+            role_window_change=statistics.median(ns),role_cycles_change=statistics.median(cycles),
+            role_frequency_change=statistics.median(freq),role_count=len(left),
+            event_change=b['event_us']/a['event_us']-1,window_change=b['window_us']/a['window_us']-1,
+            same_event_us=a['event_us'],mirror_event_us=b['event_us'],
+            same_role_ns=statistics.median(w['ns'] for w in left.values()),
+            mirror_role_ns=statistics.median(w['ns'] for w in right.values()))
+        comparisons.append(q)
+    indices=dict(prefix_all=range(16),prefix_first3=range(3),prefix_last3=range(13,16),
+        target_first1=range(16,17),target_first3=range(16,19),target_middle3=range(24,27),
+        target_last3=range(32,35),target_all=range(16,35))
+    fields=('role_window_change','role_cycles_change','role_frequency_change','event_change','window_change')
+    segments={name:{key:statistics.median(comparisons[j][key] for j in segment) for key in fields}
+              for name,segment in indices.items()}
+    return dict(calls=comparisons,segments=segments,
+        prefix_event_span_change=mirror['prefix_event_us']/same['prefix_event_us']-1,
+        prefix_kernel_sum_change=mirror['prefix_kernel_sum_us']/same['prefix_kernel_sum_us']-1,
+        target_gap_reduction={key:abs(segments['target_first3'][key])-abs(segments['target_last3'][key]) for key in fields},
+        note='Positive gap reduction means the absolute mirror/same difference shrank; it does not alone prove catch-up or identify a physical source mechanism.')
+
+
+def mirror_nvml_snapshots(root):
+    """Read only the two existing whole-batch snapshots for this exact GPU."""
+    root=Path(root);uuid=clock.read_json(root/'environment.json')['gpu'].split(',')[0]
+    wanted={'Clocks Event Reasons','Clocks Event Reasons Counters','Utilization','Temperature',
+        'GPU Power Readings','GPU Memory Power Readings','Module Power Readings','Clocks','Max Clocks'}
+    snapshots={}
+    for name in ('nvidia-smi-before.txt','nvidia-smi-after.txt'):
+        text=(root/name).read_text()
+        blocks=[b for b in re.split(r'(?m)^GPU ',text)[1:] if uuid in b]
+        if len(blocks)!=1:raise ValueError('snapshot does not identify exactly the run GPU')
+        block=blocks[0];sections={};current=None
+        for line in block.splitlines():
+            if re.match(r'^    \S',line):
+                current=line.strip() if ':' not in line else None
+                if current in wanted:sections[current]={}
+            elif current in wanted and ':' in line:
+                key,value=line.split(':',1);sections[current][key.strip()]=value.strip()
+        snapshots[name]=dict(timestamp=re.search(r'^Timestamp\s*:\s*(.+)$',text,re.M)[1],
+            gpu_header=block.splitlines()[0],uuid=uuid,sha256=clock.sha256(root/name),sections=sections)
+    before,after=[snapshots[name]['sections']['Clocks Event Reasons Counters'] for name in ('nvidia-smi-before.txt','nvidia-smi-after.txt')]
+    delta={key:int(after[key].split()[0])-int(value.split()[0]) for key,value in before.items()}
+    return dict(run=str(root),source_sha256=clock.sha256(Path(__file__)),snapshots=snapshots,counter_delta_us=delta,
+        scope='Existing batch-before/after snapshots on the exact run GPU. Cumulative counters cover the entire batch including initialization, timed calls and numeric checks; no counter delta locates timed calls or proves the cause of a particular cycle/ns increase. Endpoint clocks, power and temperatures may be idle snapshots and do not describe intervening trajectories.')
+
+
+def mirror_history_diagnostics(root, output):
+    """R09 same/mirror source prehistory, allocation slot stratified, no clock fit."""
+    import gzip
+    from analyze_r13_sm import select_attempts
+    from analyze_r18 import replay
+    import v06_run as common
+    root,output=Path(root),Path(output);common.verify(root)
+    rows=clock.read_json(root/'cases.json')
+    if len(rows)!=4 or {(r.get('history_source'),r.get('mirror_target_slot')) for r in rows}!={(s,t) for s in ('same','mirror') for t in (0,1)}:
+        raise ValueError('same/mirror by both allocation slots required')
+    if any(r.get('history_mode')!='series' or r['swizzle']!=1 or r['warmup_policy']!='common-sw1-16' for r in rows):
+        raise ValueError('source contrast must retain the full sw1 history protocol')
+    setups={r['case']:r['setup'] for r in clock.read_json(root/'static_setup.json')}
+    fixed=('gpu_uuid','config','m','n','k','lda','ldb','ldd','alloc_lda','alloc_ldb','allocated_a_elements',
+        'allocated_b_elements','input_mode','seed','grid','stages','zero_m','zero_n','evict','history_capacity_bytes','source_copies')
+    anchor=setups[rows[0]['id']]
+    if anchor.get('source_copies')!=2 or any(any(setups[r['id']].get(k)!=anchor.get(k) for k in fixed) for r in rows):
+        raise ValueError('source-history comparison changed allocation/input/device conditions')
+    inputs={name:clock.sha256(root/name) for name in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/binary_hashes.json')}
+    processes=[];failures=[];records={}
+    for row in rows:
+        selected,failed,_=select_attempts(root,row['id'],('ends',));failures.extend(failed)
+        for item in selected:
+            record=item['record'];observed=replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                call=next(e for line in stream if line.strip() for e in [json.loads(line)] if e['event']=='call')
+            p=dict(case=row['id'],history_source=row['history_source'],target_slot=row['mirror_target_slot'],trial=record['trial'],
+                host_start_ns=record['host_start_ns'],host_stop_ns=record['host_stop_ns'],raw_sha256=record['raw_sha256'],
+                raw=record['raw'],record_path=item['path'],
+                protocol=call['history_protocol'],preceding_target_calls=call['preceding_target_calls'],
+                prefix_event_us=call['history_prefix_event_us'],prefix_kernel_sum_us=sum(call['warmup_us']),
+                total_event_us=call['history_event_us'],prefix_call_event_us=call['warmup_us'],
+                prefix_last5_cv=statistics.pstdev(call['warmup_us'][-5:])/statistics.fmean(call['warmup_us'][-5:]),
+                source_identity={key:call[key] for key in ('history_source','mirror_target_slot','source_copies',
+                    'target_a_ptr','target_b_ptr','prefix_a_ptr','prefix_b_ptr')},
+                calls=history_call_metrics(observed['history_series'],call['history_inter_call_event_us']))
+            fields=('median_full_cta_window_us','median_full_cta_cycles','max_cta_cycles','frequency_ghz','event_us')
+            c=p['calls'];early={key:statistics.median(x[key] for x in c[:3]) for key in fields}
+            p['relative_to_early_prefix']={segment:{key:statistics.median(c[j][key] for j in indices)/early[key]-1 for key in fields}
+                for segment,indices in dict(prefix_last3=range(13,16),target_first1=range(16,17),
+                    target_first3=range(16,19),target_middle3=range(24,27),target_last3=range(32,35)).items()}
+            processes.append(p);records[p['history_source'],p['target_slot'],p['trial']]=p
+            inputs[item['path']]=clock.sha256(root/item['path'])
+    if set(records)!={(source,slot,trial) for source in ('same','mirror') for slot in (0,1) for trial in range(10)}:
+        raise ValueError('ten successful full-history processes per source/slot required')
+    pairs=[]
+    for slot in (0,1):
+        for trial in range(10):
+            a,b=records['same',slot,trial],records['mirror',slot,trial]
+            pairs.append(dict(target_slot=slot,trial=trial,
+                first_source='same' if a['host_start_ns']<b['host_start_ns'] else 'mirror',
+                separation_s=abs(a['host_start_ns']-b['host_start_ns'])/1e9,**mirror_pair_metrics(a,b)))
+    fields=('role_window_change','role_cycles_change','role_frequency_change','event_change','window_change')
+    strata={}
+    for label,group in [('pooled',pairs),('slot0',[p for p in pairs if p['target_slot']==0]),('slot1',[p for p in pairs if p['target_slot']==1])]:
+        strata[label]=dict(order_counts={s:sum(p['first_source']==s for p in group) for s in ('same','mirror')},
+            prefix_event_span_change=failure_stats(p['prefix_event_span_change'] for p in group),
+            prefix_kernel_sum_change=failure_stats(p['prefix_kernel_sum_change'] for p in group),
+            segments={segment:{key:failure_stats(p['segments'][segment][key] for p in group) for key in fields}
+                for segment in group[0]['segments']},
+            by_call=[dict(index=j,phase='prefix' if j<16 else 'target',
+                metrics={key:failure_stats(p['calls'][j][key] for p in group) for key in fields}) for j in range(35)],
+            gap_reduction={key:failure_stats(p['target_gap_reduction'][key] for p in group) for key in fields})
+    progression={}
+    for source in ('same','mirror'):
+        progression[source]={}
+        for label,slot in (('pooled',None),('slot0',0),('slot1',1)):
+            group=[p for p in processes if p['history_source']==source and (slot is None or p['target_slot']==slot)]
+            progression[source][label]={segment:{key:failure_stats(p['relative_to_early_prefix'][segment][key] for p in group)
+                for key in group[0]['relative_to_early_prefix'][segment]} for segment in group[0]['relative_to_early_prefix']}
+    snapshots=mirror_nvml_snapshots(root)
+    inputs.update({name:value['sha256'] for name,value in snapshots['snapshots'].items()})
+    # Paired role ratios have been computed; keep their summaries and raw
+    # locations instead of duplicating all 1,400 calls' role windows in JSON.
+    for process in processes:
+        for call in process['calls']:
+            del call['role_windows']
+    result=dict(scope='Same/mirror source intervention with nineteen-target trajectories; mechanism development, not prediction validation.',
+        run=str(root),environment=clock.read_json(root/'environment.json'),source_sha256=clock.sha256(Path(__file__)),
+        input_sha256=inputs,conditions={key:anchor.get(key) for key in fixed},processes=processes,
+        paired_trials=pairs,strata=strata,relative_to_early_prefix=progression,failed_attempts=failures,
+        batch_counter_delta_us=snapshots['counter_delta_us'],batch_counter_scope=snapshots['scope'],
+        verification=dict(source_and_binary_hashes=True,successful_raw_replays=len(processes),series_calls=sum(len(p['calls']) for p in processes),
+            fixed_prefix_cv_exclusions=0,same_different_source_pointer_checks='Shared validate_warmup compares each process internally; setup and measurement processes need not have equal absolute pointer values.'),
+        interpretation=['Read both prefix pressure curves and paired prefix duration differences before assigning target differences to source-address history.',
+            'The target source and swizzle stay fixed. Source allocation slot is a separate stratum; any slot-dependent response must be retained before pooling.',
+            'Compare target1 and the first/middle/last three target calls. A target1 difference may be cold-source or descriptor first-use and does not by itself establish repeated-address degradation.',
+            'Catch-up means a sustained target trajectory difference narrows, not merely equal final medians. Gap-reduction statistics preserve direction and process spread rather than supplying a binary acceptance gate.',
+            'Unchanged target source after disjoint prehistory can support a device-wide-state explanation only conditionally on similar prefix pressure; a changed response establishes source identity involvement, not a named cache/TLB/HBM mechanism.',
+            'Every local ratio matches logical CTA and consumer role work and uses within-call local endpoints. Absolute cycles across SMs or processes are never subtracted.',
+            'Per-role windows are decoded once for paired metrics, then omitted from this report; every process retains raw and record paths plus raw SHA for further inspection.',
+            'Within-process early-prefix ratios use the median of three per-call metrics; median_full_cta_window_us is a median of same-CTA C/f intervals, not maximum C divided by a cross-process frequency.',
+            'New extra input capacity and initialization differ from 739579. Older runs are qualitative references only; no old absolute clock coefficient is used.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-mirror-history.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    (output/'A-mirror-nvml-snapshots.json').write_text(json.dumps(snapshots,indent=2,allow_nan=False)+'\n')
+    with (output/'A-mirror-history-pairs.csv').open('w') as stream:
+        rows=[dict(target_slot=p['target_slot'],trial=p['trial'],first_source=p['first_source'],**c) for p in pairs for c in p['calls']]
+        writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
     return result
 
 

@@ -1,7 +1,7 @@
 # R09：调用内时钟、输入与时间换算
 
 当前时钟候选以名义 Tensor/源请求工作和输入模式预测有效 cycle/ns，参数及组合见 [V09 r2](RULES.md#v09-model)。**V09 整体未通过**：cfg_b K32768 的频率低估 25.00%，完整时间高估 35.46%；训练窗口内的拟合不能代替跨 K 验证。
-固定Q/S/D后，sw1→sw8的服务收益仍存在；把两组前序改成共同16次sw1后，周期减少24.60%，频率差却从同期adaptive的14.12%降到0.33%。前序协议参与了频率响应。连续调用进一步表明：共同sw1前序的最大CTA周期也随历史增加；切sw8后周期立即下降，频率却未立即改变。仅增加一个频率时间常数尚不能解释轨迹。
+固定Q/S/D后，sw1→sw8的服务收益仍存在；把两组前序改成共同16次sw1后，周期减少24.60%，频率差却从同期adaptive的14.12%降到0.33%。前序协议参与了频率响应。连续调用进一步表明：共同sw1前序的最大CTA周期也随历史增加；切sw8后周期立即下降，频率却未立即改变。仅增加一个频率时间常数尚不能解释轨迹。镜像源前序后，目标窗口仍比早段慢约11%，表明大幅变慢不要求反复访问目标那份A/B。
 同参数量的正值倒数响应已做离线比较：它缓解G6低估，却使独立于训练的旧wide六点频率RMS从6.56%升至10.74%；加入既有跨K数据仍未修复，因此没有替换现行组件。
 逐进程分解进一步定位：cfg_b 长K在**观测包络下**的频率误差为−53.39%，自由联立缓和到−25.00%；代入同次观测频率后，包络误差仅−0.47%。直接删除源请求项使原训练频率RMS从2.39%恶化到30.76%，因此保留现行候选。新卡观察协议对照没有出现同量级的系统频率差，但长窗口plain仍比两种记录版本慢，后续须分开检查源工作代理与完整时间映射。同卡zero/random也会同时改变周期窗口与频率，不能只换一个GHz常数。完整旧推导见 [cee978a 固定正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。
 
@@ -310,11 +310,26 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 
 **记录扰动的中位小，配对离散并不小。** series首目标相对同期single的频率变化中位为sw1 −0.019%、sw8 −0.395%，各自范围−14.34%～+8.16%、−7.99%～+12.87%；两组前序event跨度变化中位+0.34%/+0.51%。因此没有看到同方向的大中位偏移，但不能据此证明D2D记录无扰动。调用间event间隔占全过程中位为single 0.257%、series 0.339%；series的globaltimer末端到下次入口间隔占0.404%。二者边界不同，均不能直接叫纯空闲时间，且小间隔占比不证明没有状态影响。
 
-同CTA、同消费者角色的入口→最终端点进一步显示，变慢并非只发生在关键CTA。以连续两次比前三次配对基准高5%作为离线定位规则，ns起点在19/20进程出现，中位为第8次调用；累计kernel时间中位42.06 ms、范围29.72～61.60 ms，换时间轴后的离散程度并未减小。第8次受影响角色占比中位84.09%，第11次为100%；无D2D的single也在相近调用出现event变慢。调用次数、累计负载和同一源地址的重复仍共线，约42 ms不能当硬件阈值。后续需要比较相同前序负载访问目标源T或镜像源P后的T调用轨迹，以区分设备范围状态与目标源身份的参与。[逐角色配对定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-localization.md)。
+同CTA、同消费者角色的入口→最终端点进一步显示，变慢并非只发生在关键CTA。以连续两次比前三次配对基准高5%作为离线定位规则，ns起点在19/20进程出现，中位为第8次调用；累计kernel时间中位42.06 ms、范围29.72～61.60 ms，换时间轴后的离散程度并未减小。第8次受影响角色占比中位84.09%，第11次为100%；无D2D的single也在相近调用出现event变慢。调用次数、累计负载和同一源地址的重复仍共线，约42 ms不能当硬件阈值。相同负载访问目标源T或镜像源P后的对照已完成，见下文；原起点定位本身仍不能区分两者。[逐角色配对定位](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-localization.md)。
 
 **同一单极模型未通过留段检查。** 用每进程初态、共享sw1/sw8平衡值与τ，直接拟合局部CTA窗口的平均GHz；前16次prefix和前10次target训练，末9次target留作时间外推。间隔内沿用上一次负载平衡值，这是未单独识别idle响应的近似。训练选择τ=3.04 s，sw1平衡值触1.98 GHz上界；末9次频率RMS为3.24%，差于保持最后训练频率的1.95%。把末9次也纳入描述拟合后τ变为25.12 ms；两次MSE≤最优1.10倍的敏感范围都延伸到10 s扫描边界。拟合参数不稳定，末段不支持新增这个动态频率组件。
 
 下一步的缺口已收窄为**同一前序中周期成本为什么变化，以及局部频率状态为何出现平台和转向**，而非继续搜索响应函数。所有实测时轴、每进程初态与两个局部平衡值都只用于机制诊断，不接入静态预测，不改变V09冻结成绩。[全部轨迹、扰动配对、τ剖面与末段检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-series.json)。
+
+### 镜像源前序：目标地址重复不是必要条件
+
+739590在同a058/GPU-ef8692f3比较16次sw1(T/P)之后的19次sw1(T)。两组都先分配、初始化双份相同A/B，D不变；目标在两份分配中的slot0/1分别成组，每组same/mirror各十进程。全部40进程、1400次调用保留，源码/二进制/指针身份及端点通过回放；数值检查覆盖每进程末次目标。编译仍为168寄存器、16条HGMMA、零spill。
+
+| mirror相对same，同CTA/消费者角色的ns变化 | 两slot共20对 | slot0 | slot1 |
+|---|---:|---:|---:|
+| 前序末3次 | −0.14% | +0.88% | −0.70% |
+| 目标前3次 | −0.57% | +0.62% | −1.78% |
+| 目标第9–11次 | −0.45% | −1.39% | +0.52% |
+| 目标末3次 | +0.98% | +2.00% | +0.77% |
+
+两组前序的整体服务接近，但逐对末段ns差为−5.54%～+7.62%、频率差为−9.54%～+11.23%，不是完全相同的初态；没有按差异或CV筛进程。目标差距从前3到末3缩小仅9/20，未见共同的大幅恢复再逐渐追上轨迹。更直接的是，mirror目标前3次相对其本进程前序最初3次的局部CTA窗口仍增加11.05%，20/20为正、范围6.28%～16.01%；same为12.74%。镜像前序没有通过GEMM重复读取T，T却已表现出晚段代价，因此不能把变慢归结为必须重复目标地址。slot早段方向不同，也不能把小总体中位数当成逐对等价。
+
+该GPU批次前后NVML的SW Power Capping累计增加24.407 s；热降频、HW Power Braking和Sync Boost计数未增加。两端均在0% GPU利用率下读到SM1980 MHz、显存2619 MHz。这只说明整批期间发生过软件功率封顶，计数包含初始化、前序、目标和检查，不能定位第8次调用，也不能由端点时钟相同证明调用内显存时钟恒定。当前证据约束到跨这两份源数据延续的状态，没有唯一确定功率或其它共享资源机制。[完整分层轨迹与限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-mirror-history.md)、[NVML摘录](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-mirror-nvml-snapshots.json)。
 
 ## 作业与复核索引
 
@@ -334,5 +349,6 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 | 次序配对，739539 | 固定Q/S/D后sw8仍升频并减少周期，时长项不充分 | [sw1/sw8](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-swizzle.json) |
 | 共同前序，739552 | 共同前序下频率差缩小，周期收益保留 | [四条件、40进程](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-common-history.json) |
 | 连续历史，739579 | 周期即时响应与频率历史分离，单极留段无优势 | [700次调用与同期对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-history-series.json) |
+| 镜像源前序，739590 | 目标源未被前序重复计算仍表现晚段成本；未出现共同重置/追上轨迹 | [40进程、1400调用](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-mirror-history.json) |
 
 离线复核使用各结果中的原分析器或现有 `r09_analyze.py --shared`、`r09_input_source_clock.py`、`r09_equal_work_clock.py`、`r09_zero_activity_clock.py`；参数和命令见对应归档及[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R09-inkernel-clock-stages.md)。新输出写新目录，旧summary/frozen只读；本页不复制准备包启动步骤。

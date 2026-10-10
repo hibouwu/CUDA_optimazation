@@ -9,6 +9,7 @@ from pathlib import Path
 import statistics
 import time
 from fractions import Fraction
+from supply_model import source_sharing_delta_cycles as _source_service_value
 
 
 def input_value(row, col, a, seed=17):
@@ -825,7 +826,7 @@ def source_organization_diagnostics(root, output):
             overlap='Duration-weighted count of other CTA L intervals. Union all qualifying windows of each peer CTA first. '
                 'L overlap is not TMA issue overlap; observed timestamps are diagnostic only.'),
         current=cohorts,historical=historical,observed_overlap_processes=overlap_trials,matched_first_groups=matched,
-        rejected_candidates=[
+        exact_response_counterexamples=[
             dict(name='Unique B source bytes alone',reason='AlongM first has 8 B panels; AlongN has 24. '
                 'A nondecreasing cost of only unique B bytes predicts the opposite pitch-response order.',
                 examples=[first,nfirst]),
@@ -837,6 +838,8 @@ def source_organization_diagnostics(root, output):
             dict(name='Count-only two-resource service',formula='Delta=max(512,a*C+b*B_extra128*peer_B)-max(512,a*C), a,b>=0.',
                 reason='Matched first-output strata share the exact count inputs, but future work and B identities differ. '
                     'The measured T4-minus-T3 response is reported above; do not infer impossibility from equal median inputs alone.')],
+        error_scale='Exact-response mismatches alone do not establish failure at the intended whole-L error target. '
+            'The separately reported shared-service candidate checks full-window-normalized residuals.',
         retained_boundary='Keep active demand, operand-specific panel multiplicities, source identity and predecessor/successor work '
             'as separate computable inputs. Current evidence does not identify a transferable scalar service price; '
             'do not add direction coefficients or call overlap a predictor.',
@@ -846,7 +849,7 @@ def source_organization_diagnostics(root, output):
         input_sha256=hashes,analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     output.mkdir(parents=True,exist_ok=True)
     (output/'R10-source-organization.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
-    lines=['# 源分组能解释方向，计数还不能成为供给规则','',
+    lines=['# 源分组与计数候选的精确响应缺项','',
         '固定几何的方向对照先否定简单计数假设；旧R10与V09只检查趋势和静态归属，不混合跨卡定值。','',
         '| 分组（B32） | 活动CTA | 唯一B面板 | B peer中位 | C×peer中位 | 此前轮见过B的比例 | ΔL周期中位 / 十次范围 |',
         '|---|---:|---:|---:|---:|---:|---:|']
@@ -858,7 +861,7 @@ def source_organization_diagnostics(root, output):
                 f'{g["B_seen_earlier_wave_fraction"]:.2f} | {d["median"]:.1f} / {d["trial_min"]:.1f}～{d["trial_max"]:.1f} |')
     d=matched['summary']['L_cycles_delta_T4_minus_T3']
     lines+=['','唯一B源字节的方向相反；fan-out相同又不能解释首末轮响应；active×fan-out单变量仍把AlongM末轮和AlongN首轮的顺序预测反。'
-        '这些反例不否定任意多变量访问模型，但否定直接给上述单变量配一个正价格或阈值。',
+        '这些是精确响应的反例，不代表整窗误差一定超过5%/10%目标；共享两参数候选的容许区间另见R10-shared-service-candidate.md。',
         '',f'首轮T3/T4进一步按相同mi、A/B peer数、历史成员标记逐窗口分层，'
         f'T4−T3的B32周期差中位为{d["median"]:.1f}，十进程范围{d["trial_min"]:.1f}～{d["trial_max"]:.1f}。'
         '两个集合仍使用不同B面板地址和后续工作；这限制的是仅依赖计数的服务形式，不能推广为任意源身份/历史函数的矛盾。',
@@ -976,6 +979,498 @@ def source_pressure_diagnostics(root, output):
                 'Cycle/ns is diagnostic only and is not admitted as a formal prediction input.'])
     output.mkdir(parents=True,exist_ok=True)
     (output/'R10-source-pressure.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    return report
+
+def _source_polygon_vertices(constraints):
+    """Exact vertices of the bounded two-parameter diagnostic region."""
+    points=set()
+    for i,(p,q,r) in enumerate(constraints):
+        for u,v,w in constraints[i+1:]:
+            det=p*v-q*u
+            if not det:continue
+            a,b=(r*v-q*w)/det,(p*w-r*u)/det
+            if all(x*a+y*b<=z for x,y,z in constraints):points.add((a,b))
+    return sorted(points)
+
+
+def _source_service_branches(C,X):
+    # Constraints are p*a+q*b<=r; the final tuple is delta/K's affine form.
+    z=Fraction(0);floor=Fraction(512)
+    return [([(C,X,floor)],(z,z,z)),
+        ([(C,z,floor),(-C,-X,-floor)],(C,X,-floor)),
+        ([(-C,z,-floor)],(z,X,z))]
+
+
+def _source_service_clip(regions,C,Xs,kt,lower,upper):
+    """Constrain the median response (one/two middle Xs) without choosing a fit."""
+    from itertools import product
+    C,kt,lower,upper=map(lambda x:Fraction(str(x)),(C,kt,lower,upper))
+    Xs=[Fraction(str(x)) for x in Xs]
+    output=[];seen=set()
+    for region in regions:
+        for branches in product(*[_source_service_branches(C,X) for X in Xs]):
+            extra=[c for conditions,_ in branches for c in conditions]
+            affine=[sum(b[1][i] for b in branches)*kt/len(Xs) for i in range(3)]
+            p,q,r=affine
+            conditions=region+extra+[(p,q,upper-r),(-p,-q,r-lower)]
+            vertices=_source_polygon_vertices(conditions)
+            key=tuple(vertices)
+            if vertices and key not in seen:seen.add(key);output.append(conditions)
+    return output
+
+
+def _source_service_interval(regions,C,Xs,kt):
+    """Include target max-branch crossings, not only training polygon corners."""
+    from itertools import product
+    C,kt=Fraction(str(C)),Fraction(str(kt));Xs=[Fraction(str(x)) for x in Xs]
+    values=[]
+    for region in regions:
+        for branches in product(*[_source_service_branches(C,X) for X in Xs]):
+            vertices=_source_polygon_vertices(region+[c for conditions,_ in branches for c in conditions])
+            values.extend(sum(_source_service_value(a,b,C,X,kt) for X in Xs)/len(Xs) for a,b in vertices)
+    if not values:raise ValueError('empty service parameter domain')
+    return [float(min(values)),float(max(values))]
+
+
+def shared_source_service_diagnostics(root, output):
+    """Two single-output pairs train a shared response; older raster data checks it."""
+    from collections import defaultdict
+    import supply_model
+    import v08_model
+
+    root,output=Path(root),Path(output)
+    pressure_path=output/'R10-source-pressure.json';raster_path=output/'R10-raster-pitch.json'
+    position_path=output/'R10-raster-pitch-positions.csv'
+    pressure=json.loads(pressure_path.read_text());raster=json.loads(raster_path.read_text())
+    if pressure['environment']['gpu']!=raster['environment']['gpu']:raise ValueError('candidate migration changed GPU')
+    F=lambda x:Fraction(str(x))
+    initial=[[(-F(1),F(0),F(0)),(F(0),-F(1),F(0))]]
+    empirical=initial;target5=initial;training=[]
+    for label,C in (('single36',36),('single126',126)):
+        samples=[r for r in pressure['paired_trials'] if r['group']==label]
+        context=pressure['contexts'][f'r10_source_{label}_p32']
+        requests=supply_model.static_tma_requests(context['row'],context['setup'])
+        extras={tile['B']['source_KiB'][2] for tiles in requests['ctas'] for tile in tiles}
+        if extras!={12.}:raise ValueError('expected same 12 KiB B extra128 coverage per request')
+        X=12*17;kt=context['row']['k']//64
+        lo,hi=min(r['L_cycles_delta'] for r in samples),max(r['L_cycles_delta'] for r in samples)
+        empirical=_source_service_clip(empirical,C,[X],kt,lo,hi)
+        # The 5% band constrains each process's paired delta relative to its
+        # observed variant L; it is not a 5% error on the sometimes-zero delta.
+        lo5=max(r['L_cycles_delta']-.05*r['L_cycles_variant'] for r in samples)
+        hi5=min(r['L_cycles_delta']+.05*r['L_cycles_variant'] for r in samples)
+        target5=_source_service_clip(target5,C,[X],kt,lo5,hi5)
+        training.append(dict(group=label,C=C,X=X,kt=kt,processes=samples,
+            empirical_delta_interval=[lo,hi],per_process_5pct_L_delta_interval=[lo5,hi5],
+            baseline_empirical_upper=max(r['L_cycles_base'] for r in samples),
+            baseline_5pct_upper=min(1.05*r['L_cycles_base'] for r in samples)))
+    def add_baseline(regions,kind):
+        bounded=[]
+        for region in regions:
+            conditions=region+[(F(r['C']*r['kt']),F(0),F(r[kind])) for r in training]
+            if _source_polygon_vertices(conditions):bounded.append(conditions)
+        return bounded
+    families=dict(response_empirical=empirical,
+        response_plus_baseline_empirical=add_baseline(empirical,'baseline_empirical_upper'),
+        process_5pct_L_and_baseline=add_baseline(target5,'baseline_5pct_upper'))
+    def describe(regions):
+        vertices=sorted({point for region in regions for point in _source_polygon_vertices(region)})
+        return dict(feasible=bool(vertices),parameter_ranges={name:[float(min(v[i] for v in vertices)),float(max(v[i] for v in vertices))]
+            for i,name in enumerate(('a','b'))} if vertices else {},
+            regions=[dict(vertices=[[float(a),float(b)] for a,b in _source_polygon_vertices(r)],
+                exact_constraints=[[str(x) for x in c] for c in r]) for r in regions])
+    descriptions={name:describe(regions) for name,regions in families.items()}
+
+    tests=[]
+    for trial in pressure['paired_trials']:
+        if trial['group']=='persistent132':
+            tests.append(dict(cohort='739585 persistent132 (not trained)',case='r10_source_persistent132_p32',
+                trial=trial['trial'],j=0,T='3/4 selected first 36',C=132,Xs=[204.],kt=16,
+                observed_delta=trial['L_cycles_delta'],observed_variant_L=trial['L_cycles_variant']))
+    positions=list(csv.DictReader(position_path.open()))
+    for case,context in raster['contexts'].items():
+        if not case.endswith('p32'):continue
+        row,setup=context['row'],context['setup']
+        work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+        features=source_panel_features(work)['windows']
+        for r in [v for v in positions if v['variant']==case]:
+            j,T=int(r['j']),int(r['T'])
+            members=[v for v in features if v['j']==j and v['T']==T]
+            xs=sorted(12*v['B_peer'] for v in members);n=len(xs)
+            middle=[xs[(n-1)//2],xs[n//2]]
+            tests.append(dict(cohort='739571 raster development transfer',case=case,trial=int(r['trial']),j=j,T=T,
+                C=members[0]['active_ctas'],Xs=middle,kt=row['k']//64,
+                observed_delta=float(r['L_cycles_delta']),observed_variant_L=float(r['L_cycles_variant'])))
+    interval_cache={}
+    for t in tests:
+        key=(t['C'],tuple(t['Xs']),t['kt'])
+        if key not in interval_cache:
+            interval_cache[key]={name:_source_service_interval(regions,*key) for name,regions in families.items() if regions}
+        t['predicted_delta_intervals']=interval_cache[key]
+        t['conditional_L_error_intervals']={name:[(p-t['observed_delta'])/t['observed_variant_L'] for p in interval]
+            for name,interval in t['predicted_delta_intervals'].items()}
+    # Illustrative, training-only parameter choices. Every witness is scored as
+    # one shared (a,b) across all positions; no target-wise parameter selection.
+    calibration_points=sorted({point for region in families['response_plus_baseline_empirical']
+        for point in _source_polygon_vertices(region)})
+    witnesses=[]
+    for a,b in calibration_points:
+        per_cohort=defaultdict(list)
+        for t in tests:
+            prediction=sum(float(_source_service_value(a,b,F(t['C']),F(x),F(t['kt']))) for x in t['Xs'])/len(t['Xs'])
+            per_cohort[t['cohort']].append(abs((prediction-t['observed_delta'])/t['observed_variant_L']))
+        witnesses.append(dict(a=float(a),b=float(b),scores={name:dict(group_processes=len(values),
+            median_abs_pct=100*statistics.median(values),max_abs_pct=100*max(values)) for name,values in per_cohort.items()}))
+    grouped=defaultdict(list)
+    for t in tests:grouped[t['cohort'],t['case'],t['j'],str(t['T'])].append(t)
+    summaries=[]
+    for (cohort,case,j,T),items in grouped.items():
+        t=items[0]
+        summaries.append(dict(cohort=cohort,case=case,j=j,T=T,C=t['C'],Xs=t['Xs'],kt=t['kt'],
+            observed_delta=dict(median=statistics.median(r['observed_delta'] for r in items),
+                trial_min=min(r['observed_delta'] for r in items),trial_max=max(r['observed_delta'] for r in items)),
+            observed_variant_L_median=statistics.median(r['observed_variant_L'] for r in items),
+            predicted_delta_intervals=t['predicted_delta_intervals'],
+            conditional_L_error_envelopes={name:[min(r['conditional_L_error_intervals'][name][0] for r in items),
+                max(r['conditional_L_error_intervals'][name][1] for r in items)] for name in families},
+            zero_response_max_L_error_pct=100*max(abs(r['observed_delta'])/r['observed_variant_L'] for r in items)))
+    prospective=[dict(active_ctas=C,logical_n=C//18*128,B_peer=17,kt=16,
+        delta_interval=_source_service_interval(families['response_plus_baseline_empirical'],C,[204],16))
+        for C in (54,72,90,108)]
+    report=dict(scope='Post-measurement development transfer, not new heldout validation or full GEMM prediction.',
+        formula='Delta_L=Kt*(max(512,a*C+b*B_extra128_KiB*peer_B)-max(512,a*C)); a,b>=0.',
+        definitions=dict(C='software-ordinal active CTA count',B_extra128='extra 128-byte address coverage per B request, not traffic',
+            peer_B='other current-ordinal requests for the same B panel',
+            baseline='A necessary condition for nonnegative omitted startup is Kt*a*C<=observed aligned L. '
+                'It does not establish a unique startup, a complete baseline fit or the physical identity of either coefficient.'),
+        training=training,parameter_families=descriptions,transfer_groups=summaries,transfer_processes=tests,
+        training_vertex_witnesses=witnesses,
+        witness_selection='All vertices of the training-derived baseline-constrained domain are listed. '
+            'A successful vertex was noticed after inspecting transfer scores: it is an existence example, '
+            'not a preselected predictor or a physically preferred minimum-a rule.',
+        prospective_single_output_sensitivity=prospective,
+        calibration_next_step='First consider reclassifying the existing AlongN/B32 development data as extra calibration '
+            'if its low-peer direction is the main uncertainty; then it ceases to be an independent migration check. '
+            'If another measurement is needed, compare these fixed-map single-output pressure intervals and choose the '
+            'condition that shrinks the needed migration prediction interval, not one that merely makes all parameters unique. '
+            'No such measurement is launched here.',
+        interpretation=['Empirical bands are observed trial extrema, not confidence intervals; the separate 5% family enforces every process.',
+            'Transfer errors are grouped Δ residuals divided by measured variant L. Observed aligned L anchors this response diagnosis; '
+            'it is not a predicted baseline or an end-to-end accuracy claim.',
+            'Each group interval marginalizes over the same training domain. Best endpoints chosen separately across groups do not prove '
+            'a single shared parameter pair passes. Witness rows always use one pair for every transfer position.',
+            'A nonzero residual may be acceptable at the full-window error target; exact equality is not required.',
+            'No 739571 or persistent132 observation trains the reported families or chooses the vertex witnesses.'],
+        input_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (pressure_path,raster_path,position_path,Path(supply_model.__file__))},
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    (output/'R10-shared-service-candidate.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 两个单输出对照约束共享供给候选','',
+        '`ΔL=Kt·[max(512,aC+b·B_extra128·peer_B)−max(512,aC)]`，a、b非负。'
+        '只用739585的single36/single126训练，B extra128均为12 KiB、peer均17。'
+        '响应经验包络与每进程5%整L容许范围分列；额外施加非负启动项的必要baseline界，避免共同基线错误被相减消掉。','',
+        '| 训练约束族 | a范围 | b范围 |','|---|---:|---:|']
+    for name,d in descriptions.items():
+        ranges=d['parameter_ranges'];lines.append(f'| {name} | {ranges.get("a")} | {ranges.get("b")} |')
+    lines+=['','| 独立开发迁移组 | 实测ΔL中位 | baseline必要界后的ΔL区间 | 整L误差包络 |',
+        '|---|---:|---:|---:|']
+    for g in summaries:
+        interval=g['predicted_delta_intervals']['response_plus_baseline_empirical']
+        errors=g['conditional_L_error_envelopes']['response_plus_baseline_empirical']
+        lines.append(f'| {g["case"]}, j{g["j"]}/T{g["T"]} | {g["observed_delta"]["median"]:.1f} | '
+            f'{interval[0]:.1f}～{interval[1]:.1f} | {100*errors[0]:+.2f}%～{100*errors[1]:+.2f}% |')
+    lines+=['','上述每组区间保留参数非唯一性，不允许各组挑不同参数后声称通过。'
+        'JSON列出全部训练域顶点，每个例子用同一对参数评估全部迁移位置。'
+        '其中好点是在看完迁移结果后注意到的，只说明域内存在满足误差尺度的例子，不是预先选中的预测器。'
+        '最小a没有物理优先性；若以后采用此确定规则，须在新验证冻结前声明。'
+        '这些误差用实测对齐L作锚，只衡量B32响应是否已足够解释整窗；不是完整L或总时间预测的留出成绩。','']
+    lines+=['| 训练域中的共享参数例子 | persistent中位/最大误差 | raster中位/最大误差 |',
+        '|---|---:|---:|']
+    for witness in witnesses:
+        p=witness['scores']['739585 persistent132 (not trained)'];r=witness['scores']['739571 raster development transfer']
+        lines.append(f'| a={witness["a"]:.6f}, b={witness["b"]:.6f} | {p["median_abs_pct"]:.2f}% / {p["max_abs_pct"]:.2f}% | '
+            f'{r["median_abs_pct"]:.2f}% / {r["max_abs_pct"]:.2f}% |')
+    lines+=['','不能只展示好点：整个训练容许域对persistent的误差上界约12.69%，价格尚未识别到可保证迁移目标的程度。'
+        '已有AlongN数据可以转为额外开发校准，代价是它不再作为独立迁移检查；若再测，应先比较下表对剩余预测区间的区分度。','',
+        '| 同输入map、单输出的候选CTA数 | B32增量预测区间（cycle） |','|---:|---:|']
+    for p in prospective:
+        lo,hi=p['delta_interval'];lines.append(f'| {p["active_ctas"]} | {lo:.1f}～{hi:.1f} |')
+    lines+=['','这些是已有模型域的前瞻区间，没有申请或运行新GPU测量。','']
+    lines+=['逐CTA窗口的补充检查见 [R10-shared-service-windows.md](R10-shared-service-windows.md)。上述0.87%/7.12%只对应分组中位，不能表示所有CTA准确率。','']
+    (output/'R10-shared-service-candidate.md').write_text('\n'.join(lines))
+    windows=shared_source_window_diagnostics(root,output)
+    failing={name:d['positions_with_median_target_lower_bound_over_10pct'] for name,d in windows['full_parameter_domain'].items()}
+    lines.insert(2,'逐CTA补充检查已经改变适用结论：完整参数域对十进程中位目标仍有必超10%的位置，'
+        +str(failing)+'。下文的好点只说明分组响应可拟合，不能说明所有CTA达到目标；应先处理位置状态缺项，暂不靠C90缩参数域。\n')
+    (output/'R10-shared-service-candidate.md').write_text('\n'.join(lines))
+    return report
+
+def _source_service_window_errors(a,b,windows,features,kt):
+    """One shared parameter pair; each CTA keeps its own static sharing count."""
+    result=[]
+    for window in windows:
+        f=features[window['cta'],window['j']]
+        if (f['mi'],f['ni'])!=(window['mi'],window['ni']):raise ValueError('static source/window identity mismatch')
+        delta=float(_source_service_value(a,b,f['active_ctas'],12*f['B_peer'],kt))
+        predicted=window['L_cycles_base']+delta
+        result.append(dict(cta=window['cta'],j=window['j'],T=window['T'],mi=window['mi'],ni=window['ni'],
+            active_ctas=f['active_ctas'],B_peer=f['B_peer'],observed_B0_L=window['L_cycles_base'],
+            observed_B32_L=window['L_cycles_variant'],predicted_delta=delta,predicted_B32_L=predicted,
+            relative_error=predicted/window['L_cycles_variant']-1))
+    return result
+
+
+def _source_interval_error_floor(interval,observed_delta,observed_variant_L):
+    lo,hi=interval
+    return max(lo-observed_delta,observed_delta-hi,0)/observed_variant_L
+
+
+def shared_source_window_diagnostics(root, output):
+    """Replay every CTA/output, retaining independent processes as the summary unit."""
+    from collections import defaultdict
+    from analyze_r18 import replay
+    from analyze_r13_sm import select_attempts
+    from analyze_r13_supply import _failure_pair_windows
+    import v08_model
+
+    root,output=Path(root),Path(output)
+    candidate_path=output/'R10-shared-service-candidate.json'
+    candidate=json.loads(candidate_path.read_text())
+    domain=candidate['parameter_families']['response_plus_baseline_empirical']['regions']
+    vertices=sorted({point for region in domain for point in _source_polygon_vertices(
+        [[Fraction(x) for x in row] for row in region['exact_constraints']])})
+    inputs=[];hashes={};gpu=None
+    for folder,pairs in [
+        ('20261010-R10-raster-pitch',[('739571 AlongM','r10_raster_along_m_p0','r10_raster_along_m_p32'),
+                                     ('739571 AlongN','r10_raster_along_n_p0','r10_raster_along_n_p32')]),
+        ('20261010-R10-source-pressure',[('739585 persistent132','r10_source_persistent132_p0','r10_source_persistent132_p32')])]:
+        run=root.parent/folder
+        rows={r['id']:r for r in json.loads((run/'cases.json').read_text())}
+        setups={r['case']:r['setup'] for r in json.loads((run/'static_setup.json').read_text())}
+        for cohort,base_name,variant_name in pairs:
+            row,setup=rows[variant_name],setups[variant_name]
+            if gpu is None:gpu=setup['gpu_uuid']
+            if setup['gpu_uuid']!=gpu:raise ValueError('window-level development check changed GPU')
+            work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
+            features={(r['cta'],r['j']):r for r in source_panel_features(work)['windows']}
+            calls={}
+            for name in (base_name,variant_name):
+                selected,_,_=select_attempts(run,name,('dual',));calls[name]={}
+                for item in selected:
+                    record=item['record'];obs=replay(run,record,rows[name]);calls[name][record['trial']]=obs
+                    for path in (run/item['path'],run/record['raw']):
+                        hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+                if len(calls[name])!=10:raise ValueError('window check requires ten dual calls')
+            if calls[base_name].keys()!=calls[variant_name].keys():raise ValueError('window trial sets differ')
+            for trial in sorted(calls[base_name]):
+                base,variant=calls[base_name][trial],calls[variant_name][trial]
+                windows=_failure_pair_windows(base['ctas'],variant['ctas'])
+                ctas={label:{c['cta']:c for c in obs['ctas']} for label,obs in (('base',base),('variant',variant))}
+                for w in windows:
+                    w['base_sm']=ctas['base'][w['cta']]['sm'];w['variant_sm']=ctas['variant'][w['cta']]['sm']
+                    if w['j']!=0:continue
+                    for label in ('base','variant'):
+                        c=ctas[label][w['cta']]
+                        direct=c['tiles_ns'][0][1]-c['entry_ns']
+                        if direct!=w['prefix_ns_'+label]+w['L_ns_'+label]:raise ValueError('entry-to-FIRST_MMA plus L does not close')
+                        w['entry_to_main_end_ns_'+label]=direct
+                    w['entry_to_main_end_ns_delta']=w['entry_to_main_end_ns_variant']-w['entry_to_main_end_ns_base']
+                critical=max(variant['ctas'],key=lambda c:c['end_ns'])['cta']
+                inputs.append(dict(cohort=cohort,case=variant_name,trial=trial,kt=row['k']//64,
+                    critical_observed_time_cta=critical,windows=windows,features=features))
+        for file in ('cases.json','static_setup.json','source_hashes.json'):
+            path=run/file;hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),process_min=min(values),process_max=max(values))
+    domain_constraints=[[[Fraction(x) for x in row] for row in region['exact_constraints']] for region in domain]
+    relaxed_constraints=[[[Fraction(x) for x in row] for row in region['exact_constraints']]
+        for region in candidate['parameter_families']['process_5pct_L_and_baseline']['regions']]
+    intervals={};relaxed_intervals={};positions=defaultdict(list);process_bounds=[]
+    for data in inputs:
+        current=[]
+        for w in data['windows']:
+            f=data['features'][w['cta'],w['j']]
+            key=f['active_ctas'],12*f['B_peer'],data['kt']
+            if key not in intervals:intervals[key]=_source_service_interval(domain_constraints,key[0],[key[1]],key[2])
+            if key not in relaxed_intervals:relaxed_intervals[key]=_source_service_interval(relaxed_constraints,key[0],[key[1]],key[2])
+            lo,hi=intervals[key];delta=w['L_cycles_variant']-w['L_cycles_base']
+            bound=_source_interval_error_floor((lo,hi),delta,w['L_cycles_variant'])
+            entry=dict(cohort=data['cohort'],case=data['case'],trial=data['trial'],cta=w['cta'],j=w['j'],T=w['T'],
+                mi=w['mi'],ni=w['ni'],C=f['active_ctas'],B_peer=f['B_peer'],kt=data['kt'],
+                observed_delta=delta,observed_variant_L=w['L_cycles_variant'],prediction_interval=[lo,hi],
+                unavoidable_error_pct=100*bound,relaxed_training_prediction_interval=relaxed_intervals[key],
+                relaxed_training_error_floor_pct=100*_source_interval_error_floor(relaxed_intervals[key],delta,w['L_cycles_variant']))
+            current.append(entry);positions[data['cohort'],w['cta'],w['j']].append(entry)
+        process_bounds.append(dict(cohort=data['cohort'],trial=data['trial'],windows=len(current),
+            maximum_unavoidable_error_pct=max(r['unavoidable_error_pct'] for r in current),
+            fraction_unavoidable_over_10pct=sum(r['unavoidable_error_pct']>10 for r in current)/len(current),
+            worst=max(current,key=lambda r:r['unavoidable_error_pct'])))
+    position_medians=[]
+    for (cohort,cta,j),values in sorted(positions.items()):
+        first=values[0]
+        if len(values)!=10 or len({(r['C'],r['B_peer'],r['mi'],r['ni']) for r in values})!=1:
+            raise ValueError('position median needs ten matching static windows')
+        delta=statistics.median(v['observed_delta'] for v in values)
+        denominator=statistics.median(v['observed_variant_L'] for v in values)
+        position_medians.append(dict(cohort=cohort,cta=cta,j=j,T=first['T'],mi=first['mi'],ni=first['ni'],
+            C=first['C'],B_peer=first['B_peer'],kt=first['kt'],prediction_interval=first['prediction_interval'],
+            observed_delta_median=delta,observed_delta_trial_min=min(r['observed_delta'] for r in values),
+            observed_delta_trial_max=max(r['observed_delta'] for r in values),observed_variant_L_median=denominator,
+            median_target_unavoidable_error_pct=100*_source_interval_error_floor(first['prediction_interval'],delta,denominator),
+            per_process_unavoidable_error_pct=span(r['unavoidable_error_pct'] for r in values),
+            relaxed_training_prediction_interval=first['relaxed_training_prediction_interval'],
+            relaxed_training_median_target_error_floor_pct=100*_source_interval_error_floor(first['relaxed_training_prediction_interval'],delta,denominator),
+            relaxed_training_per_process_error_floor_pct=span(r['relaxed_training_error_floor_pct'] for r in values)))
+    domain_summary={}
+    for cohort in sorted({p['cohort'] for p in position_medians}):
+        members=[p for p in position_medians if p['cohort']==cohort]
+        worst=max(members,key=lambda r:r['median_target_unavoidable_error_pct'])
+        domain_summary[cohort]=dict(positions=len(members),
+            positions_with_median_target_lower_bound_over_10pct=sum(p['median_target_unavoidable_error_pct']>10 for p in members),
+            worst_position=worst,worst_position_processes=positions[cohort,worst['cta'],worst['j']],
+            per_process_maximum_lower_bound=span(p['maximum_unavoidable_error_pct'] for p in process_bounds if p['cohort']==cohort))
+        relaxed_worst=max(members,key=lambda r:r['relaxed_training_median_target_error_floor_pct'])
+        domain_summary[cohort]['relaxed_training_5pct_domain']=dict(
+            positions_with_median_target_lower_bound_over_10pct=sum(p['relaxed_training_median_target_error_floor_pct']>10 for p in members),
+            worst_position=relaxed_worst)
+    first_boundaries={}
+    for cohort in ('739571 AlongM','739585 persistent132'):
+        records=[]
+        for data in [d for d in inputs if d['cohort']==cohort]:
+            for w in data['windows']:
+                f=data['features'][w['cta'],w['j']]
+                if w['j']!=0 or w['T']!=3 or w['mi']!=1 or f['B_peer']!=17:continue
+                records.append(dict(trial=data['trial'],cta=w['cta'],mi=w['mi'],ni=w['ni'],A_peer=f['A_peer'],B_peer=f['B_peer'],
+                    prefix_delta_ns=w['prefix_ns_delta'],prefill_delta_ns=w['prefill_ns_delta'],L_delta_ns=w['L_ns_delta'],
+                    entry_to_main_end_delta_ns=w['entry_to_main_end_ns_delta']))
+        fields=('prefix_delta_ns','prefill_delta_ns','L_delta_ns','entry_to_main_end_delta_ns')
+        position_summary={str(cta):{field:span(r[field] for r in records if r['cta']==cta) for field in fields}
+            for cta in sorted({r['cta'] for r in records})}
+        contrasts=[]
+        for trial in range(10):
+            a=next(r for r in records if r['cta']==55 and r['trial']==trial)
+            b=next(r for r in records if r['cta']==91 and r['trial']==trial)
+            contrasts.append(dict(trial=trial,**{field:b[field]-a[field] for field in fields}))
+        first_boundaries[cohort]=dict(positions=position_summary,processes=records,CTA91_minus_CTA55=contrasts,
+            contrast_summary={field:span(r[field] for r in contrasts) for field in fields},
+            closure='Within each B0 and B32 call, (FIRST_MMA-entry)+(MAIN_END-FIRST_MMA)=MAIN_END-entry exactly. '
+                'Pitch differences still compare independent processes; no cross-call event timeline is constructed.')
+    witnesses=[]
+    for a,b in vertices:
+        processes=[]
+        for data in inputs:
+            errors=_source_service_window_errors(float(a),float(b),data['windows'],data['features'],data['kt'])
+            critical=[r for r in errors if r['cta']==data['critical_observed_time_cta']]
+            groups=defaultdict(list)
+            for r in errors:groups[r['j'],r['T'],r['B_peer']].append(r)
+            processes.append(dict(cohort=data['cohort'],case=data['case'],trial=data['trial'],windows=len(errors),
+                median_absolute_error_pct=100*statistics.median(abs(r['relative_error']) for r in errors),
+                maximum_absolute_error_pct=100*max(abs(r['relative_error']) for r in errors),
+                fraction_over_10pct=sum(abs(r['relative_error'])>.1 for r in errors)/len(errors),
+                worst_window=max(errors,key=lambda r:abs(r['relative_error'])),
+                critical_observed_time_cta=data['critical_observed_time_cta'],
+                critical_CTA_maximum_L_error_pct=100*max(abs(r['relative_error']) for r in critical),
+                critical_CTA_sum_L_error_pct=100*(sum(r['predicted_B32_L'] for r in critical)/sum(r['observed_B32_L'] for r in critical)-1),
+                groups=[dict(j=j,T=T,B_peer=peer,windows=len(members),
+                    median_absolute_error_pct=100*statistics.median(abs(r['relative_error']) for r in members),
+                    maximum_absolute_error_pct=100*max(abs(r['relative_error']) for r in members))
+                    for (j,T,peer),members in sorted(groups.items())]))
+        cohorts={}
+        for name in sorted({p['cohort'] for p in processes}):
+            members=[p for p in processes if p['cohort']==name]
+            cohorts[name]=dict(processes=len(members),windows_per_process=sorted({p['windows'] for p in members}),
+                median_absolute_error_pct=span(p['median_absolute_error_pct'] for p in members),
+                maximum_absolute_error_pct=span(p['maximum_absolute_error_pct'] for p in members),
+                fraction_over_10pct=span(p['fraction_over_10pct'] for p in members),
+                critical_CTA_maximum_L_error_pct=span(p['critical_CTA_maximum_L_error_pct'] for p in members),
+                critical_CTA_sum_L_error_pct=span(p['critical_CTA_sum_L_error_pct'] for p in members))
+            coordinate_scores=[]
+            for position in [p for p in position_medians if p['cohort']==name]:
+                delta=float(_source_service_value(a,b,position['C'],12*position['B_peer'],position['kt']))
+                error=100*(delta-position['observed_delta_median'])/position['observed_variant_L_median']
+                coordinate_scores.append(dict(cta=position['cta'],j=position['j'],B_peer=position['B_peer'],
+                    predicted_delta=delta,observed_delta_median=position['observed_delta_median'],relative_error_pct=error))
+            cohorts[name]['position_median_target_errors']=dict(
+                median_absolute_error_pct=statistics.median(abs(p['relative_error_pct']) for p in coordinate_scores),
+                maximum_absolute_error_pct=max(abs(p['relative_error_pct']) for p in coordinate_scores),
+                worst=max(coordinate_scores,key=lambda p:abs(p['relative_error_pct'])))
+        witnesses.append(dict(a=float(a),b=float(b),exact_a=str(a),exact_b=str(b),cohorts=cohorts,processes=processes))
+    placement={}
+    for cohort in sorted({d['cohort'] for d in inputs}):
+        placement[cohort]={}
+        for cta in (55,91):
+            matched=[dict(trial=d['trial'],**{k:w[k] for k in ('base_sm','variant_sm')})
+                for d in inputs if d['cohort']==cohort for w in d['windows'] if w['cta']==cta and w['j']==0]
+            placement[cohort][str(cta)]=dict(processes=matched,
+                base_sms=sorted({r['base_sm'] for r in matched}),variant_sms=sorted({r['variant_sm'] for r in matched}))
+    hashes[str(candidate_path)]=hashlib.sha256(candidate_path.read_bytes()).hexdigest()
+    report=dict(scope='Per-window response development check; every window uses observed B0 L plus the same shared (a,b) static delta. '
+        'This remains an observed-baseline diagnostic, not full-kernel prediction or frozen validation.',
+        gpu=gpu,parameter_domain='All vertices of response_plus_baseline_empirical, without CTA-specific selection.',
+        input_process_pairs=len(inputs),input_windows=sum(len(d['windows']) for d in inputs),witnesses=witnesses,
+        full_parameter_domain=domain_summary,process_domain_lower_bounds=process_bounds,selected_CTA_placement=placement,
+        position_median_targets=position_medians,first_wait_boundary_checks=first_boundaries,
+        interpretation=['The earlier 0.87%/7.12% values summarize grouped medians, not all CTA windows.',
+            'prefix=FIRST_MMA-entry, whereas prefill=FIRST_MMA-producer_first_work; only the latter is model S. Source identity, arrival/pipeline state and hardware placement remain distinct possible omissions.',
+            'Each process first reports median and maximum absolute error over all its CTA/output windows. '
+            'Then process summaries are reduced; windows are not independent repetitions.',
+            'Critical CTA is selected by observed B32 final globaltimer only. Its L-window errors do not estimate '
+            'the complete CTA/kernel error because supply, epilogue, timing conversion and CTA selection remain observed.',
+            'No parameter was selected separately by CTA, ordinal, raster, or process.',
+            'The full-domain residual floor is distance(observed delta, predicted delta interval)/observed pitched L. '
+            'It permits each window its own optimistic endpoint only to prove a necessary lower bound, never to construct a predictor.',
+            'Position targets first take the median of paired delta across ten independent processes, then normalize by '
+            'the median pitched L at that same CTA/j. Trial ranges are reported separately; 12960 windows are not independent replicates.'],
+        input_sha256=hashes,analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    (output/'R10-shared-service-windows.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 共享供给候选的逐CTA窗口检查','',
+        '每个窗口使用自己的 `X=12×B_peer`，全部窗口共享同一对训练域顶点参数。'
+        '预测为实测B0 L加静态Δ，对照同trial B32 L；仍是响应诊断，不是完整L或整核预测。'
+        '先在每个进程内求中位、最大误差，再报告十进程范围，原分组0.87%/7.12%不能当作所有CTA准确率。','',
+        '| a / b | 条件 | 进程中位误差的十次范围 | 进程最大误差的十次范围 | 超10%窗口比例范围 |',
+        '|---|---|---:|---:|---:|']
+    for witness in witnesses:
+        for name,c in witness['cohorts'].items():
+            med,maximum,frac=(c[k] for k in ('median_absolute_error_pct','maximum_absolute_error_pct','fraction_over_10pct'))
+            lines.append(f'| {witness["a"]:.6f} / {witness["b"]:.6f} | {name} | '
+                f'{med["process_min"]:.2f}%～{med["process_max"]:.2f}% | '
+                f'{maximum["process_min"]:.2f}%～{maximum["process_max"]:.2f}% | '
+                f'{100*frac["process_min"]:.2f}%～{100*frac["process_max"]:.2f}% |')
+    lines+=['','## 完整参数域能否消除稳定位置误差？','',
+        '| 条件 | 十进程中位目标仍必超10%的位置数 | 最差位置CTA/j/peer | ΔL预测区间 | 配对ΔL中位 / 十次范围 | 位置中位目标的误差下界 |',
+        '|---|---:|---|---:|---:|---:|']
+    for name,d in domain_summary.items():
+        w=d['worst_position'];lo,hi=w['prediction_interval']
+        lines.append(f'| {name} | {d["positions_with_median_target_lower_bound_over_10pct"]}/{d["positions"]} | '
+            f'{w["cta"]}/{w["j"]}/{w["B_peer"]} | {lo:.1f}～{hi:.1f} | '
+            f'{w["observed_delta_median"]:.1f} / {w["observed_delta_trial_min"]:.1f}～{w["observed_delta_trial_max"]:.1f} | '
+            f'{w["median_target_unavoidable_error_pct"]:.2f}% |')
+    lines+=['','即使把训练允许范围放宽到每进程5%整L误差并保留baseline必要界：','',
+        '| 条件 | 位置中位目标仍必超10%的个数 | 最差位置中位目标下界 |','|---|---:|---:|']
+    for name,d in domain_summary.items():
+        relaxed=d['relaxed_training_5pct_domain']
+        lines.append(f'| {name} | {relaxed["positions_with_median_target_lower_bound_over_10pct"]}/432 | '
+            f'{relaxed["worst_position"]["relaxed_training_median_target_error_floor_pct"]:.2f}% |')
+    lines+=['','这些下界遍历完整训练参数域，包含目标max分支的内部交点，不只检查八个顶点。'
+        '每个位置先对十次配对响应取中位；同时保留单进程范围，避免用一次噪声极值判结构失败。'
+        '允许每个窗口各自选最有利参数仍超10%，才说明缩小当前参数域无法救回该位置。',
+        '','JSON保留每进程最差窗口、按(j,T,B_peer)的局部误差，以及实测末次完成CTA的L窗口误差。'
+        '关键CTA由B32最终globaltimer确定，不能把这些L误差称作关键CTA总时间误差。','']
+    lines+=['## CTA91的短L是否把成本移到了首段等待？','',
+        '只检查同mi=1、T3、B peer=17的五个位置，并重点比较CTA91与55。'
+        'S与L逐调用闭合；B0/B32仍是独立进程，以下是配对响应的差，不拼接不同调用的时间线。','',
+        '| 条件 | CTA91−55的Δprefix | CTA91−55的Δprefill | CTA91−55的ΔL | CTA91−55的Δ(prefix+L) |',
+        '|---|---:|---:|---:|---:|']
+    for name,d in first_boundaries.items():
+        cells=[]
+        for field in ('prefix_delta_ns','prefill_delta_ns','L_delta_ns','entry_to_main_end_delta_ns'):
+            v=d['contrast_summary'][field];cells.append(f'{v["median"]:+.0f} [{v["process_min"]:+.0f},{v["process_max"]:+.0f}]')
+        lines.append(f'| {name} | '+' | '.join(cells)+' |')
+    lines+=['','单位ns，括号为十进程范围。CTA91的首段等待确实增加，但只补偿部分L差；'
+        '两批Δ(prefix+L)差的十次范围均与零分离，不能只靠移动FIRST_MMA边界解释。'
+        '这继续约束源身份/到达历史/流水组织，不直接归因为地址bank或某级缓存。'
+        '既然完整参数域在稳定位置上仍必超10%，此时补C90只缩参数域也不能救回，应先处理这个状态缺项。','']
+    (output/'R10-shared-service-windows.md').write_text('\n'.join(lines))
     return report
 
 

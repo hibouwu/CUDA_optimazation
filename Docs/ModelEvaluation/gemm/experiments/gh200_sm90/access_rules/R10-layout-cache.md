@@ -261,6 +261,24 @@ dual/plain完整时间扰动中位为2.60%～5.76%，最大8.91%，故不把局�
 
 作业在同a058/GPU-ef8692f3完成140个成功独立进程，另有一个暖机CV未收敛的失败plain尝试，按原规则重试且原件保留。数值回放通过，两个二进制均168寄存器、16条HGMMA、零spill，实际SM数为36/126/132；参照相对739571变化+1.43%/+0.035%。dual/plain扰动中位2.59%～5.77%、单次最大10.43%，所以局部窗口不当作裸服务常数；plain的126档十次也均变慢4.22%～15.65%。[条件](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r10-source-pressure.json)与[完整逐进程分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json)保留分项、来源和失败记录；V09评分不变。
 
+<a id="shared-service-candidate"></a>
+
+## 从分组响应到逐CTA：两参数候选仍缺状态
+
+[RULES中的共享响应候选](RULES.md#source-sharing-dev)只用739585的single36/single126约束两个非负参数。额外用aligned L限制共同基线，防止响应相减藏住两边都错的部分；参数仍为相关分片域，不能随CTA选不同价格。域内确有一对参数使739571的(j,T)分组中位目标误差为0.87%/7.12%，同批未训练persistent组为3.82%/7.67%。这只是**实测B0窗口锚定的分组响应诊断**，好点也在看完迁移后才被注意到，不能称作事前选中的完整预测。
+
+逐CTA复核改变了判断。30个配对进程、12960个窗口分别计算各自的B使用者数，再用同一对参数；不把窗口当独立样本。低a好点在AlongM和persistent的每进程最大局部误差达到约22%～29%，分组中位掩盖了稳定位置差异。更强的检验是对**完整参数域**求每个位置最有利的响应区间，再与该位置十个进程的中位目标比较：
+
+| 配对 | 中位目标必超10%的位置 | 最差位置 | ΔL预测区间，cycle | 实测ΔL中位〔十次范围〕 | 整L误差下界 |
+|---|---:|---|---:|---:|---:|
+| 739571 AlongM | 74/432 | CTA91/j0，M/N tile=(1,5) | 2041.5～2686.9 | 366〔23～485〕 | 18.15% |
+| 739585 persistent | 68/432 | 同一位置 | 2041.5～2686.9 | 273〔48～494〕 | 19.62% |
+| 739571 AlongN | 0/432 | — | 按位置保留 | — | 最差3.27% |
+
+即使将训练条件放宽到每进程5%的整L容许范围，两批仍有47/46个位置必超10%，CTA91下界为15.25%/16.64%。所以问题不只是经验范围过窄或一次噪声极值，缩小当前参数域、补中间CTA规模不能救回这些位置。
+
+CTA55/j0与CTA91/j0的M坐标、T3工作量、同B使用者数相同。部分代价确实移到了首次输入等待：91相对55的行距响应差，在739571的首段为+240 ns、L为−1200 ns，合起来仍为−1024 ns〔−1280～−832〕；739585合起来仍为−576 ns〔−928～−448〕。每次调用分别核对入口→FIRST_MMA→MAIN_END闭合，再做同期B0/B32配对，未拼接不同调用的绝对时轴。首次full等待只能解释部分L差。SMID回放还显示，两批十次B0/B32中CTA55始终在SM55、CTA91始终在SM87，沿N时也保持该映射；源位置与硬件位置当前绑定，稳定差值不能直接归因源地址。源身份、时间状态及硬件派发/位置仍未隔离；下一步不能直接给CTA91或某个tile编号加常数。[完整参数域](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)、[逐CTA、关键CTA窗口和端点闭合](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-windows.json)。
+
 ## 历史推导与复核
 
 行距入口为 `run_r10.py`，joint/coverage重算为 `analyze_r10.py --joint-pitch`、`--score-b-pitch`，grid扫描为 `run_r13_sm.py` / `analyze_r13_sm.py`。已有reanalysis优先使用上表链接；采样前冻结算法、完整命令与准备过程见[固定 cee978a 旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R10-layout-cache.md)。历史参数只用于复核旧判定，现行规则不在本页复制。

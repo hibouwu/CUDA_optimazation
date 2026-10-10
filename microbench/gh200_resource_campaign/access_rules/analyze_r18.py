@@ -138,6 +138,23 @@ def validate_warmup(setup, call, row):
             raise ValueError('history prefix or capacity changed')
         if call.get('target_calls')!=(19 if history=='series' else 1) or call.get('preceding_target_calls')!=(18 if history=='series' else 0):
             raise ValueError('history target-call identity changed')
+    source=row.get('history_source','original')
+    slot=row.get('mirror_target_slot',0)
+    if source not in ('original','same','mirror') or slot not in (0,1):
+        raise ValueError('unknown history source or target slot')
+    for event in (setup,call):
+        if event.get('history_source','original')!=source or event.get('mirror_target_slot',0)!=slot:
+            raise ValueError('history source identity changed')
+        if source!='original':
+            if history!='series' or row['swizzle']!=1 or event.get('source_copies')!=2:
+                raise ValueError('mirror source comparison changed its history or capacity')
+            for op in ('a','b'):
+                target,prefix=event.get('target_'+op+'_ptr'),event.get('prefix_'+op+'_ptr')
+                if not isinstance(target,int) or not isinstance(prefix,int) or min(target,prefix)<=0:
+                    raise ValueError('missing source pointer identity')
+                if (target==prefix)!=(source=='same'):
+                    raise ValueError('prefix does not use declared source identity')
+    # Setup is a different process: compare pointer identity only within each call.
     warm = call['warmup_us']
     if not warm or any(not math.isfinite(x) or x<=0 for x in warm):
         raise ValueError('invalid warmup durations')

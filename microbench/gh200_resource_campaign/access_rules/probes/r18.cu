@@ -126,6 +126,8 @@ struct Args {
   std::string input_mode = "dyadic";
   std::string warmup_policy = "adaptive";
   std::string history_mode = "off";
+  std::string history_source = "original";
+  int mirror_target_slot = 0;
   std::string raster_order = "heuristic";
   int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
@@ -156,6 +158,8 @@ struct Args {
       else if(key=="--input-mode")input_mode=v;
       else if(key=="--warmup-policy")warmup_policy=v;
       else if(key=="--history-mode")history_mode=v;
+      else if(key=="--history-source")history_source=v;
+      else if(key=="--mirror-target-slot")mirror_target_slot=std::stoi(v);
       else if(key=="--raster-order")raster_order=v;
       else if(key=="--seed")seed=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
@@ -170,6 +174,13 @@ struct Args {
       throw std::runtime_error("history-mode must be off, single or series");
     if (history_mode != "off" && warmup_policy != "common-sw1-16")
       throw std::runtime_error("history observation requires common-sw1-16 prefix");
+    if (history_source != "original" && history_source != "same" && history_source != "mirror")
+      throw std::runtime_error("history-source must be original, same or mirror");
+    if ((mirror_target_slot != 0 && mirror_target_slot != 1) ||
+        (history_source == "original" && mirror_target_slot != 0))
+      throw std::runtime_error("mirror target slot requires paired source allocations");
+    if (history_source != "original" && (history_mode != "series" || swizzle != 1))
+      throw std::runtime_error("mirror source comparison uses the sw1 history series");
     if (raster_order != "heuristic" && raster_order != "along_m" && raster_order != "along_n")
       throw std::runtime_error("raster-order must be heuristic, along_m or along_n");
   }
@@ -297,14 +308,24 @@ int main(int argc, char** argv) {
     int64_t alloc_lda=o.alloc_lda?o.alloc_lda:lda,alloc_ldb=o.alloc_ldb?o.alloc_ldb:ldb;
     if(alloc_lda<lda||alloc_ldb<ldb)throw std::runtime_error("allocation pitch is smaller than physical pitch");
     DeviceBuffer<__half> a(size_t(storage_m)*alloc_lda), b(size_t(o.k)*alloc_ldb);
+    const bool mirror_sources = o.history_source != "original";
+    std::unique_ptr<DeviceBuffer<__half>> mirror_a, mirror_b;
+    if (mirror_sources) {
+      mirror_a = std::make_unique<DeviceBuffer<__half>>(a.count);
+      mirror_b = std::make_unique<DeviceBuffer<__half>>(b.count);
+    }
+    __half* target_a = o.mirror_target_slot ? mirror_a->pointer : a.pointer;
+    __half* target_b = o.mirror_target_slot ? mirror_b->pointer : b.pointer;
+    __half* prefix_a = o.history_source == "mirror" ? (o.mirror_target_slot ? a.pointer : mirror_a->pointer) : target_a;
+    __half* prefix_b = o.history_source == "mirror" ? (o.mirror_target_slot ? b.pointer : mirror_b->pointer) : target_b;
     DeviceBuffer<float> d(size_t(storage_m)*ldd);
     typename Kernel::StrideA sa = make_stride(lda, Int<1>{}, int64_t(o.m) * lda);
     typename Kernel::StrideB sb = make_stride(Int<1>{}, ldb, int64_t(o.k) * ldb);
     typename Kernel::StrideD sd = make_stride(ldd, Int<1>{}, int64_t(o.m) * ldd);
     typename Gemm::Arguments arguments{cutlass::gemm::GemmUniversalMode::kGemm,
                                        {o.m, o.n, o.k, 1},
-                                       {reinterpret_cast<cutlass::half_t*>(a.pointer), sa,
-                                        reinterpret_cast<cutlass::half_t*>(b.pointer), sb},
+                                       {reinterpret_cast<cutlass::half_t*>(target_a), sa,
+                                        reinterpret_cast<cutlass::half_t*>(target_b), sb},
                                        {{1.f, 0.f}, nullptr, sd, d.pointer, sd}};
     cudaDeviceProp properties{};
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
@@ -350,7 +371,7 @@ int main(int argc, char** argv) {
       throw std::runtime_error("unexpected persistent grid");
 
     // Both parameter sets exist before input/cache preparation. The common
-    // history uses this same kernel and buffers, changing only scheduler swizzle.
+    // history uses the same kernel; its source identity is an explicit condition.
     const bool common_history = o.warmup_policy == "common-sw1-16";
     const bool history_series = o.history_mode == "series";
     const bool history_enabled = o.history_mode != "off";
@@ -373,6 +394,12 @@ int main(int argc, char** argv) {
       cutlass_check(warmup_gemm.initialize(warmup_arguments, workspace.pointer), "warmup initialize");
       warmup_launch_params = warmup_gemm.params();
       warmup_launch_params.mainloop = launch_params.mainloop;
+      if (o.history_source == "mirror") {
+        warmup_arguments.mainloop.ptr_A = reinterpret_cast<cutlass::half_t*>(prefix_a);
+        warmup_arguments.mainloop.ptr_B = reinterpret_cast<cutlass::half_t*>(prefix_b);
+        warmup_launch_params.mainloop = Mainloop::to_underlying_arguments(
+            make_shape(input_map_m,input_map_n,o.k,1),warmup_arguments.mainloop,nullptr);
+      }
       dim3 warmup_grid = Gemm::get_grid_shape(warmup_launch_params);
       if (warmup_grid.x != grid.x || warmup_grid.y != grid.y || warmup_grid.z != grid.z)
         throw std::runtime_error("common history changes persistent grid");
@@ -394,6 +421,13 @@ int main(int argc, char** argv) {
     if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,input_rows,o.k,lda,o.zero_m,-1);
     if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,input_columns,ldb,-1,o.zero_n);
     CUDA_CHECK(cudaGetLastError());
+    if (mirror_sources) {
+      gaps::fill_input_strided<<<256,256>>>(mirror_a->pointer,input_rows,o.k,lda,check.seed,true,input_mode,o.alloc_lda?a.count:0);
+      gaps::fill_input_strided<<<256,256>>>(mirror_b->pointer,o.k,input_columns,ldb,check.seed,false,input_mode,o.alloc_ldb?b.count:0);
+      if(o.zero_m>=0) zero_panel<<<256,256>>>(mirror_a->pointer,input_rows,o.k,lda,o.zero_m,-1);
+      if(o.zero_n>=0) zero_panel<<<256,256>>>(mirror_b->pointer,o.k,input_columns,ldb,-1,o.zero_n);
+      CUDA_CHECK(cudaGetLastError());
+    }
     gaps::fill_output_sentinel<<<256, 256>>>(d.pointer, d.count);
     DeviceBuffer<uint64_t> trace(size_t(ctas) * kTraceWords);
     CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
@@ -463,6 +497,13 @@ int main(int argc, char** argv) {
                 << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
                 << ",\"target_swizzle\":" << o.swizzle
                 << ",\"history_protocol\":\"" << history_protocol << "\""
+                << ",\"history_source\":\"" << o.history_source << "\""
+                << ",\"mirror_target_slot\":" << o.mirror_target_slot
+                << ",\"source_copies\":" << (mirror_sources ? 2 : 1)
+                << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
+                << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                << ",\"prefix_a_ptr\":" << reinterpret_cast<uintptr_t>(prefix_a)
+                << ",\"prefix_b_ptr\":" << reinterpret_cast<uintptr_t>(prefix_b)
                 << ",\"target_calls\":" << (history_series ? history_target_calls : 1)
                 << ",\"preceding_target_calls\":" << (history_series ? history_target_calls-1 : 0)
                 << ",\"warmup_last5_cv\":" << coefficient_of_variation({warm.end()-5,warm.end()});
@@ -552,6 +593,13 @@ int main(int argc, char** argv) {
               << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
               << ",\"history_mode\":\"" << o.history_mode << "\""
               << ",\"history_protocol\":\"" << history_protocol << "\""
+                << ",\"history_source\":\"" << o.history_source << "\""
+                << ",\"mirror_target_slot\":" << o.mirror_target_slot
+                << ",\"source_copies\":" << (mirror_sources ? 2 : 1)
+                << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
+                << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                << ",\"prefix_a_ptr\":" << reinterpret_cast<uintptr_t>(prefix_a)
+                << ",\"prefix_b_ptr\":" << reinterpret_cast<uintptr_t>(prefix_b)
               << ",\"history_capacity_bytes\":" << (history_enabled ? history->count*sizeof(uint64_t) : 0)
               << ",\"raster_order\":\"" << o.raster_order << "\""
               << ",\"resolved_raster_order\":\"" << resolved_raster << "\""
@@ -577,11 +625,15 @@ int main(int argc, char** argv) {
 
     double max_error_ratio = 0;
     Errors e = check_boundary_output(d.pointer, o.m, o.n, o.k, ldd, check.seed,
-                                       4096,o.zero_m,o.zero_n,input_mode,a.pointer,b.pointer,
+                                       4096,o.zero_m,o.zero_n,input_mode,target_a,target_b,
                                        lda,ldb,max_error_ratio);
     size_t padding_bad = gaps::padding_errors(a.pointer, input_rows, o.k, lda, __half(65504.f))
         + gaps::padding_errors(b.pointer, o.k, input_columns, ldb, __half(65504.f))
         + gaps::padding_errors(d.pointer, o.m, o.n, ldd, gaps::output_sentinel());
+    if (mirror_sources) {
+      padding_bad += gaps::padding_errors(mirror_a->pointer,input_rows,o.k,lda,__half(65504.f))
+          + gaps::padding_errors(mirror_b->pointer,o.k,input_columns,ldb,__half(65504.f));
+    }
     size_t zero_storage_bad=0,zero_storage_checked=0;
     if(separate_input_map&&o.zero_m==o.m&&storage_m>o.m){
       zero_storage_checked+=size_t(storage_m-o.m)*o.k;
