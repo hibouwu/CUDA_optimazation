@@ -533,7 +533,11 @@ int main(int argc, char** argv) {
 #ifdef R10_PRODUCER_DELAY
 #ifdef R13_FIRST_SUPPLY
 #ifdef R13_READY_OBSERVER
+#ifdef R13_READY_RELEASE
+    DeviceBuffer<uint64_t> delay_trace(18);
+#else
     DeviceBuffer<uint64_t> delay_trace(16);
+#endif
     CUDA_CHECK(cudaMemcpyToSymbol(r13_ready_observer,&o.ready_observer,sizeof(unsigned)));
 #else
     DeviceBuffer<uint64_t> delay_trace(8);
@@ -601,6 +605,10 @@ int main(int argc, char** argv) {
       CUDA_CHECK(cudaMemcpy(delay_events.data(),delay_trace.pointer,32,cudaMemcpyDeviceToHost));
 #ifdef R13_FIRST_SUPPLY
 #ifdef R13_READY_OBSERVER
+#ifdef R13_READY_RELEASE
+      std::vector<uint64_t> release_events(2);
+      CUDA_CHECK(cudaMemcpy(release_events.data(),delay_trace.pointer+16,16,cudaMemcpyDeviceToHost));
+#endif
       std::vector<uint64_t> ready_events(8);
       CUDA_CHECK(cudaMemcpy(ready_events.data(),delay_trace.pointer+8,64,cudaMemcpyDeviceToHost));
 #endif
@@ -629,7 +637,11 @@ int main(int argc, char** argv) {
                 << ",\"first_supply_scratch_bytes\":" << delay_trace.count*8
 #ifdef R13_READY_OBSERVER
                 << ",\"ready_observer\":" << o.ready_observer
+#ifdef R13_READY_RELEASE
+                << ",\"ready_observer_protocol\":\"r13-ready-release-v1\""
+#else
                 << ",\"ready_observer_protocol\":\"r13-ready-observer-v1\""
+#endif
 #endif
 #endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns
@@ -651,6 +663,9 @@ int main(int argc, char** argv) {
       print_u64("first_supply_trace",first_events);
 #ifdef R13_READY_OBSERVER
       print_u64("ready_observer_trace",ready_events);
+#ifdef R13_READY_RELEASE
+      print_u64("first_release_trace",release_events);
+#endif
 #endif
 #endif
 #endif
@@ -752,7 +767,11 @@ int main(int argc, char** argv) {
                 << ",\"first_supply_scratch_bytes\":" << delay_trace.count*8
 #ifdef R13_READY_OBSERVER
                 << ",\"ready_observer\":" << o.ready_observer
+#ifdef R13_READY_RELEASE
+                << ",\"ready_observer_protocol\":\"r13-ready-release-v1\""
+#else
                 << ",\"ready_observer_protocol\":\"r13-ready-observer-v1\""
+#endif
 #endif
 #endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns

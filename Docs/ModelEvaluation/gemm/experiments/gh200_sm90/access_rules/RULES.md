@@ -111,7 +111,7 @@ max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `suppl
 
 迁移评估只对B32响应作开发检查，实测对齐L仍作为锚，不能称完整L或总时间预测。所有迁移组必须共用同一对参数；看过迁移后发现的好顶点仅是存在例，不能追认为事前选中的预测器。完整训练参数域对稳定位置仍有18%～20%的必要误差下界，放宽训练到5%整L后仍超过15%；分组中位数的小误差不能替代逐CTA检验，当前形式不满足局部服务目标。证据见[R10](R10-layout-cache.md#shared-service-candidate)，完整域见[候选参数与迁移](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)。
 
-后续候选必须保留时间状态。[同位置起步干预](R10-layout-cache.md#producer-delay)在工作/SM不变时改变了行距响应，而且B0在扣除实际producer后移量后，首输出仍多耗816 ns、1156.5 cycle。固定事件前驱、固定同域边成本且其它根时刻不变的max-plus图，不能把单根延迟放大；仅平移旧时间线或增加固定位置罚项不充分。该约束不排除带可变仲裁、等待返回与初态的有限stage模型。producer/FIRST软件名次也不是物理请求到达，不直接拟合为服务价格。 [首次供给端点](R13-async-retirement.md#first-supply)把额外量定位在copy发出标记到FIRST之间，首次发射前成本与consumer进入等待时刻未明显增长；仍不能把此段当裸TMA延迟。[独立ready观察](R13-async-retirement.md#ready-observer)仅10/40满足采样前第一代绑定；30次成功检测区间跨FIRST，尚不足以分配异步完成、可见性与等待返回的代价。
+后续候选必须保留时间状态。[同位置起步干预](R10-layout-cache.md#producer-delay)在工作/SM不变时改变了行距响应，而且B0在扣除实际producer后移量后，首输出仍多耗816 ns、1156.5 cycle。固定事件前驱、固定同域边成本且其它根时刻不变的max-plus图，不能把单根延迟放大；仅平移旧时间线或增加固定位置罚项不充分。该约束不排除带可变仲裁、等待返回与初态的有限stage模型。producer/FIRST软件名次也不是物理请求到达，不直接拟合为服务价格。 [首次供给端点](R13-async-retirement.md#first-supply)把额外量定位在copy发出标记到FIRST之间，首次发射前成本与consumer进入等待时刻未明显增长；仍不能把此段当裸TMA延迟。[释放前端点约束的ready观察](R13-async-retirement.md#ready-observer)在新批40/40次绑定首代事务：延迟干预的issue→ready增量下界在两种行距各十次均正，ready→FIRST增量区间全部含零，排除本协议下仅consumer返回变慢的解释。请求排队、数据服务与完成可见性仍不可分；B32的L缩短也大多兼容等待移入S，不能直接提高稳态供给价。
 
 ## 计量与组合约定
 

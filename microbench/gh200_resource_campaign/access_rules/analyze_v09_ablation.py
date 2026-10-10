@@ -223,7 +223,7 @@ def failure_decomposition(base,out,controls=None):
     if controls is not None:reference_comparison(base,controls,out)
 
 
-def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None,raster_pitch=None,stage_progress=None,history_series=None,source_pressure=None,mirror_history=None,base_shift=None,work_swap=None,producer_delay=None,first_supply=None,ready_observer=None):
+def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None,raster_pitch=None,stage_progress=None,history_series=None,source_pressure=None,mirror_history=None,base_shift=None,work_swap=None,producer_delay=None,first_supply=None,ready_observer=None,ready_release=None):
     """Compare explicit candidate mechanisms without changing frozen predictions."""
     import r09_input_source_clock
     import analyze_r13_supply
@@ -267,6 +267,8 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
         analyze_r13_supply.first_supply_diagnostics(first_supply,out)
     if ready_observer is not None:
         analyze_r13_supply.ready_observer_diagnostics(ready_observer,out)
+    if ready_release is not None:
+        analyze_r13_supply.ready_observer_diagnostics(ready_release,out)
     if mirror_history is not None:
         r09_input_source_clock.mirror_history_diagnostics(mirror_history,out)
     if stage_progress is not None:
@@ -289,6 +291,7 @@ def main():
     parser.add_argument('--base-shift',type=Path,help='R10 B base offset by pitch paired run')
     parser.add_argument('--work-swap',type=Path,help='R10 CTA55/91 whole-work-sequence permutation by pitch')
     parser.add_argument('--producer-delay',type=Path,help='R10 CTA55 producer start delay by pitch')
+    parser.add_argument('--ready-release',type=Path,help='R13 first-release-bound ready observer pair')
     parser.add_argument('--ready-observer',type=Path,help='R13 phase-0 read-only barrier observer pair')
     parser.add_argument('--first-supply',type=Path,help='R13 first TMA issue and consumer wait markers, matched observation switch')
     parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
@@ -296,7 +299,7 @@ def main():
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
-    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer)) and args.analysis!='candidate-development':
+    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
         parser.error('candidate control runs require candidate-development')
     if args.analysis!='ablation':
         controls=args.controls.resolve() if args.controls else None
@@ -316,7 +319,8 @@ def main():
                 args.work_swap.resolve() if args.work_swap else None,
                 args.producer_delay.resolve() if args.producer_delay else None,
                 args.first_supply.resolve() if args.first_supply else None,
-                args.ready_observer.resolve() if args.ready_observer else None)
+                args.ready_observer.resolve() if args.ready_observer else None,
+                args.ready_release.resolve() if args.ready_release else None)
         return
     out.mkdir(parents=True,exist_ok=False)
     frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'

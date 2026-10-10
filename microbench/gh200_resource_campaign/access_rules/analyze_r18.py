@@ -112,11 +112,15 @@ def decode_stage_sparse(setup, call):
 
 
 
-def decode_ready_observer(values, enabled, cta):
+def decode_ready_observer(values, enabled, cta, release_values=None):
     """Read-only phase observer; late successes and polling limits are retained."""
     if len(values)!=8 or (not enabled and any(values)):
         raise ValueError('ready observation record length or disabled contents')
-    result=dict(cta=55,enabled=bool(enabled),protocol='r13-ready-observer-v1')
+    release_bound=release_values is not None
+    protocol='r13-ready-release-v1' if release_bound else 'r13-ready-observer-v1'
+    result=dict(cta=55,enabled=bool(enabled),protocol=protocol)
+    if release_bound and (len(release_values)!=2 or (not enabled and any(release_values))):
+        raise ValueError('first-release observation record length or disabled contents')
     if not enabled:return result
     sc,sn,lc,ln,ec,en,tests,flags=values
     success=bool(flags&1);sm=(flags>>1)-1
@@ -129,8 +133,16 @@ def decode_ready_observer(values, enabled, cta):
     elif not (sc<=lc<=ec and sn<=ln<=en):
         raise ValueError('missing or unordered false-test endpoint')
     if not success and tests!=4096:raise ValueError('polling stopped before its limit without success')
-    first_generation=success and ec<=cta['tiles'][0][0]
-    status=('upper_only' if tests==1 else 'interval') if first_generation else ('after_first' if success else 'poll_limit')
+    bound_c=cta['tiles'][0][0]
+    if release_bound:
+        rc,rn=release_values
+        if not (cta['tiles'][0][0]<=rc<=cta['tiles'][0][1] and cta['tiles_ns'][0][0]<=rn<=cta['tiles_ns'][0][1]):
+            raise ValueError('first release marker outside the current first consumer mainloop')
+        result.update(release_pre_c=rc,release_pre_ns=rn,generation_bound='first_release')
+        bound_c=rc
+    first_generation=success and ec<=bound_c
+    late='after_release' if release_bound else 'after_first'
+    status=('upper_only' if tests==1 else 'interval') if first_generation else (late if success else 'poll_limit')
     result.update(start_c=sc,start_ns=sn,last_false_pre_c=lc,last_false_pre_ns=ln,
         exit_c=ec,exit_ns=en,tests=tests,success=success,sm=sm,
         first_generation=first_generation,status=status)
@@ -147,11 +159,11 @@ def validate_warmup(setup, call, row):
                 raise ValueError('producer delay identity changed')
     if 'first_supply_events' in row:
         for event in (setup,call):
-            if event.get('first_supply_events')!=row['first_supply_events'] or event.get('first_supply_protocol')!='r13-first-supply-v1' or event.get('first_supply_scratch_bytes')!=(128 if 'ready_observer' in row else 64):
+            if event.get('first_supply_events')!=row['first_supply_events'] or event.get('first_supply_protocol')!='r13-first-supply-v1' or event.get('first_supply_scratch_bytes')!=(144 if row.get('ready_generation_bound')=='first_release' else 128 if 'ready_observer' in row else 64):
                 raise ValueError('first supply observation identity changed')
     if 'ready_observer' in row:
         for event in (setup,call):
-            if event.get('ready_observer')!=row['ready_observer'] or event.get('ready_observer_protocol')!='r13-ready-observer-v1':
+            if event.get('ready_observer')!=row['ready_observer'] or event.get('ready_observer_protocol')!=('r13-ready-release-v1' if row.get('ready_generation_bound')=='first_release' else 'r13-ready-observer-v1'):
                 raise ValueError('ready observation identity changed')
     policy = row.get('warmup_policy','adaptive')
     if policy not in ('adaptive','common-sw1-16'):
@@ -430,7 +442,8 @@ def replay(root,record,row,retain_roles=False):
             first.update(issue_end_c=ic,issue_end_ns=ins,wait_begin_c=wc,wait_begin_ns=wns)
         result['first_supply']=first
     if 'ready_observer' in row:
-        result['ready_observer']=decode_ready_observer(call.get('ready_observer_trace',[]),row['ready_observer'],result['ctas'][55])
+        release_values=call.get('first_release_trace',[]) if row.get('ready_generation_bound')=='first_release' else None
+        result['ready_observer']=decode_ready_observer(call.get('ready_observer_trace',[]),row['ready_observer'],result['ctas'][55],release_values)
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
     tm=256 if row['config'].startswith('cfg_c') else 128;tn=128
     required={(i,j) for i in range(model.cdiv(row['m'],tm)) for j in range(model.cdiv(row['n'],tn))}

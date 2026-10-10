@@ -50,6 +50,13 @@ __device__ __forceinline__ void r13_first_issue_stamp() {
 }
 #endif
 
+#ifdef R13_READY_RELEASE
+__device__ __forceinline__ void r13_first_release_stamp() {
+  uint64_t c=v06_clock(),n=v06_ns();
+  r10_producer_delay_trace[16]=c; r10_producer_delay_trace[17]=n;
+}
+#endif
+
 #ifdef R13_READY_OBSERVER
 // Read-only phase-0 observation in the otherwise idle static-scheduler warp.
 // Test timestamps are bounds: false uses the pre-test read, true the exit read.

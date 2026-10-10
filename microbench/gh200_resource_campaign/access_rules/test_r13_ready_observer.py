@@ -4,10 +4,17 @@ from pathlib import Path
 import unittest
 
 import v08_model
-from analyze_r13_supply import _ready_window_bounds, _ready_bound_difference, _ready_bound_summary, _ready_call_bounds
+from analyze_r13_supply import _ready_window_bounds, _ready_bound_difference, _ready_bound_summary, _ready_call_bounds, _startup_shift_check
 
 
 class ReadyObserverConfigTests(unittest.TestCase):
+    def test_current_ready_config_binds_only_controls_to_first_release(self):
+        self.assertTrue(all(row["set"] == "reference" and "ready_generation_bound" not in row
+                            for row in self.rows[:2]))
+        self.assertEqual(len(self.rows[2:]), 8)
+        self.assertTrue(all(row["set"] == "ctrl" and row["ready_generation_bound"] == "first_release"
+                            for row in self.rows[2:]))
+
     @classmethod
     def setUpClass(cls):
         configs = Path(__file__).parent / "configs"
@@ -46,7 +53,7 @@ class ReadyObserverConfigTests(unittest.TestCase):
                     for row in self.previous
                     if row["set"] == "ctrl" and row["first_supply_events"] == 1}
         self.assertEqual(len(previous), 4)
-        ignored = {"id", "group", "variants", "ready_observer"}
+        ignored = {"id", "group", "variants", "ready_observer", "ready_generation_bound"}
         for row in self.rows[2:]:
             baseline = previous[row["producer_delay_ns"], row["ldb"]]
             self.assertEqual({key: value for key, value in row.items() if key not in ignored},
@@ -74,6 +81,15 @@ class ReadyObserverConfigTests(unittest.TestCase):
 
 
 class ReadyIntervalTests(unittest.TestCase):
+    def test_startup_shift_is_a_necessary_bound_with_explicit_violations(self):
+        for delta_l in (-100,-40,0):
+            self.assertTrue(_startup_shift_check(100,delta_l)['satisfies'])
+        low=_startup_shift_check(100,-101)
+        self.assertFalse(low['satisfies']);self.assertEqual(low['lower_violation'],1)
+        high=_startup_shift_check(100,12)
+        self.assertFalse(high['satisfies']);self.assertEqual(high['upper_violation'],12)
+        self.assertFalse(_startup_shift_check(-1,0)['premise_delta_S_nonnegative'])
+
     def test_ready_partitions_keep_complementary_bounds(self):
         result=_ready_window_bounds(150,170,100,220)
         self.assertEqual(result['issue_to_ready'],dict(lower=50,upper=70))
@@ -127,6 +143,29 @@ class ReadyIntervalTests(unittest.TestCase):
             self.assertTrue(all(b==dict(lower=None,upper=None) for b in result['bounds'].values()))
             self.assertEqual(result['status'],status)
 
+    def test_new_release_boundary_keeps_signed_FIRST_interval_without_upgrading_old_protocol(self):
+        cta=dict(sm=55,tiles=[[300,900]],tiles_ns=[[1000,1500]])
+        events=dict(issue_end_c=100,issue_end_ns=900,wait_begin_c=50,wait_begin_ns=800)
+        old=dict(success=True,exit_c=340,exit_ns=1056,last_false_pre_c=270,last_false_pre_ns=992,
+            tests=12,sm=55,first_generation=False,status='after_first')
+        self.assertEqual(_ready_call_bounds(cta,events,old)['bounds']['ready_to_FIRST_cycles'],dict(lower=None,upper=None))
+        new=dict(old,generation_bound='first_release',release_pre_c=700,release_pre_ns=1280,
+            first_generation=True,status='interval')
+        bound=_ready_call_bounds(cta,events,new)
+        self.assertEqual(bound['bounds']['ready_to_FIRST_cycles'],dict(lower=-40,upper=30))
+        self.assertEqual(bound['bounds']['issue_to_ready_cycles'],dict(lower=170,upper=240))
+        self.assertFalse(_ready_call_bounds(cta,events,old)['first_generation'])
+
+    def test_success_after_release_stays_censored(self):
+        cta=dict(sm=55,tiles=[[300,900]],tiles_ns=[[1000,1500]])
+        events=dict(issue_end_c=100,issue_end_ns=900,wait_begin_c=50,wait_begin_ns=800)
+        observer=dict(success=True,exit_c=701,exit_ns=1312,last_false_pre_c=600,last_false_pre_ns=1248,
+            tests=12,sm=55,first_generation=False,status='after_release',generation_bound='first_release',
+            release_pre_c=700,release_pre_ns=1280)
+        result=_ready_call_bounds(cta,events,observer)
+        self.assertEqual(result['status'],'after_release')
+        self.assertTrue(all(v==dict(lower=None,upper=None) for v in result['bounds'].values()))
+
 
 class ReadyDecoderTests(unittest.TestCase):
     def setUp(self):
@@ -171,6 +210,28 @@ class ReadyDecoderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'disabled'):
             self.decode([1]+[0]*7,False,self.cta)
 
+    def test_release_decoder_does_not_change_the_legacy_generation_rule(self):
+        values=[110,1024,280,1088,340,1152,12,self.success_flag]
+        self.assertEqual(self.decode(values,True,self.cta)['status'],'after_first')
+        new=self.decode(values,True,self.cta,release_values=[500,1248])
+        self.assertEqual(new['protocol'],'r13-ready-release-v1')
+        self.assertEqual(new['generation_bound'],'first_release')
+        self.assertEqual(new['status'],'interval')
+        self.assertTrue(new['first_generation'])
+        self.assertEqual(self.decode(values,True,self.cta)['status'],'after_first')
+
+    def test_release_decoder_censors_late_success_and_checks_marker_identity(self):
+        values=[110,1024,480,1216,501,1280,12,self.success_flag]
+        late=self.decode(values,True,self.cta,release_values=[500,1248])
+        self.assertEqual(late['status'],'after_release')
+        self.assertFalse(late['first_generation'])
+        off=self.decode([0]*8,False,self.cta,release_values=[0,0])
+        self.assertEqual(off,dict(cta=55,enabled=False,protocol='r13-ready-release-v1'))
+        with self.assertRaisesRegex(ValueError,'disabled'):
+            self.decode([0]*8,False,self.cta,release_values=[500,1248])
+        with self.assertRaisesRegex(ValueError,'outside'):
+            self.decode(values,True,self.cta,release_values=[299,1248])
+
     def test_public_observer_identity_and_128B_allocation(self):
         from test_r09_history_series import synthetic
         from analyze_r18 import validate_warmup
@@ -181,6 +242,20 @@ class ReadyDecoderTests(unittest.TestCase):
                     first_supply_scratch_bytes=128,ready_observer=enabled,ready_observer_protocol='r13-ready-observer-v1')
             validate_warmup(setup,call,row)
             for changes in (dict(ready_observer=1-enabled),dict(ready_observer_protocol='other'),dict(first_supply_scratch_bytes=64)):
+                with self.subTest(changes=changes),self.assertRaises(ValueError):
+                    validate_warmup(setup,dict(call,**changes),row)
+
+    def test_release_protocol_requires_its_144B_identity(self):
+        from test_r09_history_series import synthetic
+        from analyze_r18 import validate_warmup
+        for enabled in (0,1):
+            row,setup,call,_=synthetic()
+            row.update(first_supply_events=1,ready_observer=enabled,ready_generation_bound='first_release')
+            for event in (setup,call):
+                event.update(first_supply_events=1,first_supply_protocol='r13-first-supply-v1',
+                    first_supply_scratch_bytes=144,ready_observer=enabled,ready_observer_protocol='r13-ready-release-v1')
+            validate_warmup(setup,call,row)
+            for changes in (dict(first_supply_scratch_bytes=128),dict(ready_observer_protocol='r13-ready-observer-v1')):
                 with self.subTest(changes=changes),self.assertRaises(ValueError):
                     validate_warmup(setup,dict(call,**changes),row)
 

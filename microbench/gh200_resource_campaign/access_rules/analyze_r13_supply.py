@@ -2348,10 +2348,13 @@ def _ready_bound_summary(bounds):
 
 
 def _ready_call_bounds(cta, first_supply, observer):
-    """Bind only successful observations completed by FIRST in the local cycle domain."""
-    success=bool(observer['success']);bound=success and observer['exit_c']<=cta['tiles'][0][0]
+    """Use the protocol's recorded generation boundary; never upgrade an old trace."""
+    release_bound=observer.get('generation_bound')=='first_release'
+    limit=observer['release_pre_c'] if release_bound else cta['tiles'][0][0]
+    late_status='after_release' if release_bound else 'after_first'
+    success=bool(observer['success']);bound=success and observer['exit_c']<=limit
     if observer['sm']!=cta['sm']:raise ValueError('ready observer is not on the target SM')
-    status=('upper_only' if observer['tests']==1 else 'interval') if bound else ('after_first' if success else 'poll_limit')
+    status=('upper_only' if observer['tests']==1 else 'interval') if bound else (late_status if success else 'poll_limit')
     if observer['first_generation']!=bound or observer['status']!=status:
         raise ValueError('ready first-generation classification disagrees with clocks')
     windows={};widths={}
@@ -2366,6 +2369,13 @@ def _ready_call_bounds(cta, first_supply, observer):
             upper=None if upper is None else upper-wait)
         widths[unit]=result['width']
     return dict(status=status,first_generation=bound,tests=observer['tests'],bounds=windows,width=widths)
+
+
+def _startup_shift_check(delta_s, delta_l):
+    """Necessary max-plus bound for a delayed first consumer and fixed later roots."""
+    return dict(delta_S=delta_s,delta_L=delta_l,delta_S_plus_L=delta_s+delta_l,
+        premise_delta_S_nonnegative=delta_s>=0,satisfies=delta_s>=0 and -delta_s<=delta_l<=0,
+        lower_violation=max(0,-delta_s-delta_l),upper_violation=max(0,delta_l))
 
 
 def first_supply_diagnostics(root, output):
@@ -2626,6 +2636,13 @@ def ready_observer_diagnostics(root, output):
     if {(r['ready_observer'],r['producer_delay_ns'],r['ldb']) for r in controls}!={
         (o,d,p) for o in (0,1) for d in (0,512) for p in (3072,3088)}:
         raise ValueError('ready observer factors incomplete')
+    release_bound=controls[0].get('ready_generation_bound')=='first_release'
+    protocol='r13-ready-release-v1' if release_bound else 'r13-ready-observer-v1'
+    artifact='R13-ready-release' if release_bound else 'R13-ready-observer'
+    boundary='release_pre_c' if release_bound else 'FIRST_c'
+    late_status='after_release' if release_bound else 'after_first'
+    previous_name='20261010-R13-ready-observer' if release_bound else '20261010-R13-first-supply'
+    previous_job='739645' if release_bound else '739629'
     def span(values):
         values=list(values)
         return dict(median=statistics.median(values),process_min=min(values),process_max=max(values))
@@ -2649,8 +2666,10 @@ def ready_observer_diagnostics(root, output):
             if record['variant']=='plain':plain[case][trial]=obs['elapsed_us'];continue
             if [c['work'] for c in obs['ctas']]!=work:raise ValueError('ready observer actual work changed')
             c=next(c for c in obs['ctas'] if c['cta']==55);first=obs['first_supply'];ready=obs['ready_observer']
-            if not first['enabled'] or (ready['cta'],int(ready['enabled']),ready['protocol'])!=(55,row['ready_observer'],'r13-ready-observer-v1'):
+            if not first['enabled'] or (ready['cta'],int(ready['enabled']),ready['protocol'])!=(55,row['ready_observer'],protocol):
                 raise ValueError('ready observation identity changed')
+            if ready['enabled'] and release_bound and ready.get('generation_bound')!='first_release':
+                raise ValueError('ready release boundary missing from new protocol')
             intervals=_first_supply_intervals(c,first);delay=obs['producer_delay']
             intervals.update(delay_cycles=delay['duration_cycles'],delay_ns=delay['duration_ns'],
                 end_to_prod_cycles=c['prod_c']-delay['end_c'],end_to_prod_ns=c['prod_ns']-delay['end_ns'])
@@ -2668,6 +2687,9 @@ def ready_observer_diagnostics(root, output):
                     start_minus_FIRST_cycles=ready['start_c']-first_c,exit_minus_FIRST_cycles=ready['exit_c']-first_c,
                     last_false_pre_minus_FIRST_cycles=ready['last_false_pre_c']-first_c if ready['last_false_pre_c'] else None,
                     last_false_pre_to_exit_cycles=ready['exit_c']-ready['last_false_pre_c'] if ready['last_false_pre_c'] else None)
+                if release_bound:
+                    target['observer_position'].update(release_pre_minus_FIRST_cycles=ready['release_pre_c']-first_c,
+                        exit_minus_release_pre_cycles=ready['exit_c']-ready['release_pre_c'])
             calls[case][trial]=obs;targets[case][trial]=target;processes.append(target)
         for variant in row['variants']:
             if len(plain[case] if variant=='plain' else calls[case])!=10:
@@ -2724,6 +2746,29 @@ def ready_observer_diagnostics(root, output):
         b=next(r['delta'] for r in interactions if r['observer']==1 and r['trial']==trial)
         observer_interactions.append(dict(trial=trial,delta={k:b[k]-a[k] for k in a}))
     observer_interaction_summary=summarize([r['delta'] for r in observer_interactions])
+    shift_processes=[];shift_summaries=[];ready_change_checks=[]
+    for r in paired:
+        if r['kind']!='delay':continue
+        for unit in ('cycles','ns'):
+            shift_processes.append(dict(observer=r['observer'],pitch_bytes=r['pitch_bytes'],trial=r['trial'],unit=unit,
+                **_startup_shift_check(r['delta']['S_'+unit],r['delta']['L_'+unit])))
+    for observer in (0,1):
+        for pitch in (0,32):
+            for unit in ('cycles','ns'):
+                group=[r for r in shift_processes if (r['observer'],r['pitch_bytes'],r['unit'])==(observer,pitch,unit)]
+                shift_summaries.append(dict(observer=observer,pitch_bytes=pitch,unit=unit,processes=len(group),
+                    premise_count=sum(r['premise_delta_S_nonnegative'] for r in group),satisfies_count=sum(r['satisfies'] for r in group),
+                    **{k:span(r[k] for r in group) for k in ('delta_S','delta_L','delta_S_plus_L','lower_violation','upper_violation')}))
+    for pitch in (0,32):
+        group=[r for r in paired if r['kind']=='delay' and r['observer']==1 and r['pitch_bytes']==pitch]
+        for unit in ('cycles','ns'):
+            issued=[r['bounds']['issue_to_ready_'+unit] for r in group]
+            tails=[r['bounds']['ready_to_FIRST_'+unit] for r in group]
+            ready_change_checks.append(dict(pitch_bytes=pitch,unit=unit,processes=len(group),
+                finite_ready_change=sum(b['lower'] is not None and b['upper'] is not None for b in issued),
+                positive_ready_lower=sum(b['lower'] is not None and b['lower']>0 for b in issued),
+                finite_tail_change=sum(b['lower'] is not None and b['upper'] is not None for b in tails),
+                tail_change_contains_zero=sum(b['lower'] is not None and b['upper'] is not None and b['lower']<=0<=b['upper'] for b in tails)))
     cases=[];coverage=[];timing={}
     for case,records in targets.items():
         if not records:continue
@@ -2743,7 +2788,15 @@ def ready_observer_diagnostics(root, output):
                 bounds={k:_ready_bound_summary([r['bounds'][k] for r in bounded]) for k in bounded[0]['bounds']}))
     enabled=[r for r in processes if r['observer']]
     total_coverage=dict(processes=len(enabled),status_counts=dict(Counter(r['ready_bounds']['status'] for r in enabled)))
-    late=[r for r in enabled if r['ready_bounds']['status']=='after_first']
+    shared_tail={}
+    for unit in ('cycles','ns'):
+        bounds=[r['ready_bounds']['bounds']['ready_to_FIRST_'+unit] for r in enabled]
+        lowers=[b['lower'] for b in bounds if b['lower'] is not None]
+        uppers=[b['upper'] for b in bounds if b['upper'] is not None]
+        lo=max(lowers) if lowers else None;hi=min(uppers) if uppers else None
+        shared_tail[unit]=dict(processes=len(bounds),lower_constraints=len(lowers),upper_constraints=len(uppers),
+            lower=lo,upper=hi,nonempty=lo<=hi if lo is not None and hi is not None else None)
+    late=[r for r in enabled if r['ready_observer']['success'] and r['observer_position']['exit_minus_FIRST_cycles']>0]
     late_false=[r for r in late if r['observer_position']['last_false_pre_minus_FIRST_cycles'] is not None]
     observer_positions=dict(enabled_processes=len(enabled),start_before_issue=sum(r['observer_position']['start_minus_issue_cycles']<0 for r in enabled),
         tests=span(r['ready_observer']['tests'] for r in enabled),
@@ -2753,8 +2806,11 @@ def ready_observer_diagnostics(root, output):
         late_exit_minus_FIRST_cycles=span(r['observer_position']['exit_minus_FIRST_cycles'] for r in late) if late else None,
         late_last_false_pre_minus_FIRST_cycles=span(r['observer_position']['last_false_pre_minus_FIRST_cycles'] for r in late_false) if late_false else None,
         late_last_false_pre_to_exit_cycles=span(r['observer_position']['last_false_pre_to_exit_cycles'] for r in late_false) if late_false else None,
-        interpretation='This locates the observation interval relative to FIRST; after_first cases remain censored under the original binding rule.')
-    previous=root.parent/'20261010-R13-first-supply';references={}
+        interpretation='Positions relative to FIRST do not change the protocol generation boundary: '+boundary+'.')
+    if release_bound:
+        observer_positions.update(release_pre_minus_FIRST_cycles=span(r['observer_position']['release_pre_minus_FIRST_cycles'] for r in enabled),
+            exit_minus_release_pre_cycles=span(r['observer_position']['exit_minus_release_pre_cycles'] for r in enabled))
+    previous=root.parent/previous_name;references={}
     if read_json(previous/'environment.json')['gpu']!=read_json(root/'environment.json')['gpu']:
         raise ValueError('ready reference comparison changed card')
     for row in rows.values():
@@ -2772,9 +2828,12 @@ def ready_observer_diagnostics(root, output):
     origins=[dict(trial=t,by_case={r['case']:r['b_address']['b_buffer_ptr'] for r in processes if r['trial']==t}) for t in range(10)]
     report=dict(scope='CTA55 first-output first-generation readiness bounds from an independent read-only stage0 observer. '
         'Every enabled process, including censored results, remains in the denominator and interval statistics.',
-        root=str(root),environment=read_json(root/'environment.json'),contexts=contexts,processes=processes,case_summaries=cases,
+        root=str(root),protocol=protocol,generation_boundary=boundary,
+        environment=read_json(root/'environment.json'),contexts=contexts,processes=processes,case_summaries=cases,
         total_coverage=total_coverage,coverage=coverage,observer_positions=observer_positions,
+        shared_tail_feasible_intersection=shared_tail,
         paired_processes=paired,paired_summaries=paired_summaries,
+        delay_bound_checks=ready_change_checks,startup_shift_processes=shift_processes,startup_shift_summaries=shift_summaries,
         interaction_processes=interactions,interaction_summaries=interaction_summaries,
         observer_interaction_change_processes=observer_interactions,observer_interaction_change=observer_interaction_summary,
         background_processes=background,background_summaries=background_summaries,timing=timing,references=references,
@@ -2783,24 +2842,34 @@ def ready_observer_diagnostics(root, output):
         resources=read_json(root/'build/resources.json'),sass_hashes=read_json(root/'build/sass_hashes.json'),
         failed_attempts=failures,input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)),
         interpretation=['Same-binary observer1-minus-observer0 S/L/complete-window and pitch interactions precede any readiness attribution.',
-            'Only success with exit_c<=FIRST_c binds the first stage generation. after_first and poll_limit are censored, not errors to retry.',
+            f'Only success with exit_c<={boundary} binds the first stage generation. {late_status} and poll_limit are censored, not errors to retry. '
+            'The old FIRST-bound protocol is unchanged and receives no release-bound backfill.',
             'Last-false pre-test timestamp is a lower bound; successful exit timestamp is an upper bound. First-test success supplies only an upper bound.',
             'Censored bounds are unbounded (JSON null), retained in median bounds. Finite widths are separately labeled by coverage.',
             'Clock cycles are primary. Adjacent per-role globaltimer reads are quantized at 32ns; negative ns residuals are retained, not rejected.',
             'The measured event is test_wait visibility to the observer thread, not a direct DRAM/TMA completion timestamp.',
             'Condition changes subtract intervals conservatively; no midpoint or per-process constant assigns uncertainty to ready versus consumer progress.',
             'issue-to-ready and ready-to-FIRST share a boundary and are complementary. Their independent extrema must not be added as independent errors.',
+            'The intersection of ready-to-FIRST intervals is only a feasible common-tail set, not an identified hardware latency. '
+            'A single quantized ns value is not used as a constant or frequency conversion.',
+            'The startup-shift check is only a necessary bound: if all later ready roots translate with the producer and edge costs stay fixed, '
+            'extra first-consumer delay delta_S>=0 requires -delta_S<=delta_L<=0. Satisfying it does not identify the cause or fit a model.',
+            'Observer0 still includes the existing dual and first-supply instrumentation. Fixed edge costs must be assessed separately in cycles and ns; '
+            'frequency/service-rate changes and independent-process variability can change which bound holds in each domain.',
             'Independent processes remain repetitions; CTA backgrounds and common virtual origins do not create additional samples or establish common physical pages.',
-            '739629 plain references only contextualize cross-batch card/binary changes; they are not same-binary observer error.'])
+            f'{previous_job} plain references only contextualize cross-batch card/binary changes; they are not same-binary observer error.'])
+    if release_bound:
+        report['interpretation'].append('Observer1 enables both polling and the first-release marker; observer0 enables neither. '
+            'Their same-binary contrast measures combined observer perturbation. ready-to-FIRST remains signed and is never clipped to zero.')
     output.mkdir(parents=True,exist_ok=True)
-    (output/'R13-ready-observer.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    (output/(artifact+'.json')).write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     def cell(v):return '未知' if v is None else f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]'
     def bound_cell(v):
         a='未知' if v['median_lower'] is None else f'{v["median_lower"]:.1f}'
         b='未知' if v['median_upper'] is None else f'{v["median_upper"]:.1f}'
         return f'[{a}, {b}]'
     lines=['# CTA55独立ready观察','',
-        '先检查同一binary观察开关的扰动；所有40个启用进程保留。仅成功且exit_c≤FIRST_c绑定第一代。'
+        f'先检查同一binary观察开关的扰动；所有40个启用进程保留。仅成功且exit_c≤{boundary}绑定第一代。'
         '区间按端点传播，不取中点；条件中位界包含censored的未知区间。','',
         '| 观察器1−0 | ΔS ns | ΔL ns | Δ(entry→MAIN_END) ns | 整调用变化 |','|---|---:|---:|---:|---:|']
     for r in paired_summaries:
@@ -2817,30 +2886,57 @@ def ready_observer_diagnostics(root, output):
     lines+=['',f'{p["start_before_issue"]}/{p["enabled_processes"]}个观察器在issue_end前已启动，'
         f'start−issue_end为{cell(p["all_start_minus_issue_cycles"])} cycles；每进程测试次数为{cell(p["tests"])}。']
     if late:
-        lines+=[f'{p["late_intervals_crossing_FIRST"]}/{p["late_processes"]}个after_first的最后失败到成功退出区间跨过FIRST。'
+        lines+=[f'{p["late_intervals_crossing_FIRST"]}/{p["late_processes"]}个退出晚于FIRST的最后失败到成功退出区间跨过FIRST。'
             f'last_false_pre−FIRST为{cell(p["late_last_false_pre_minus_FIRST_cycles"])} cycles，'
             f'exit−FIRST为{cell(p["late_exit_minus_FIRST_cycles"])} cycles，'
             f'区间宽度为{cell(p["late_last_false_pre_to_exit_cycles"])} cycles。'
-            '这定位了成功退出读表边界跨FIRST的覆盖损失；不将这些进程回填为第一代ready。']
+            f'这里只描述相对FIRST的位置，第一代绑定仍以本协议的{boundary}为准；旧批次不回填。']
+    if release_bound:
+        lines+=[f'release_pre−FIRST为{cell(p["release_pre_minus_FIRST_cycles"])} cycles，'
+            f'exit−release_pre为{cell(p["exit_minus_release_pre_cycles"])} cycles。'
+            '本批开关比较轮询与释放前标记的总扰动；ready→FIRST保留有符号区间，不强裁为0。']
     lines+=['','| 观察器1中直接延迟512−0 | Δ(issue→ready) 中位界 cycles | Δ(ready→FIRST) 中位界 cycles | Δ(issue→FIRST) cycles |',
         '|---|---:|---:|---:|']
     for r in paired_summaries:
         if r['kind']!='delay' or not r['observer']:continue
         lines.append(f'| B+{r["pitch_bytes"]} B | {bound_cell(r["bounds"]["issue_to_ready_cycles"])} | '
             f'{bound_cell(r["bounds"]["ready_to_FIRST_cycles"])} | {cell(r["delta"]["issue_to_FIRST_cycles"])} |')
+    lines+=['','| 观察器1中直接延迟512−0 | Δ(issue→ready) 中位界 ns | Δ(ready→FIRST) 中位界 ns |',
+        '|---|---:|---:|']
+    for r in paired_summaries:
+        if r['kind']!='delay' or not r['observer']:continue
+        lines.append(f'| B+{r["pitch_bytes"]} B | {bound_cell(r["bounds"]["issue_to_ready_ns"])} | '
+            f'{bound_cell(r["bounds"]["ready_to_FIRST_ns"])} |')
+    lines+=['','| 逐进程延迟配对 | ready变化有限 | ready增长下界>0 | 尾段变化有限且含0 |','|---|---:|---:|---:|']
+    for r in ready_change_checks:
+        lines.append(f'| B+{r["pitch_bytes"]} B, {r["unit"]} | {r["finite_ready_change"]}/{r["processes"]} | '
+            f'{r["positive_ready_lower"]}/{r["processes"]} | {r["tail_change_contains_zero"]}/{r["processes"]} |')
+    lines+=['','| 等待转移必要界：−ΔS≤ΔL≤0 | 满足/ΔS≥0配对数 | 最大下界违背 | 最大上界违背 | Δ(S+L) |',
+        '|---|---:|---:|---:|---:|']
+    for r in shift_summaries:
+        lines.append(f'| o{r["observer"]}, B+{r["pitch_bytes"]} B, {r["unit"]} | {r["satisfies_count"]}/{r["premise_count"]} | '
+            f'{r["lower_violation"]["process_max"]:.1f} | {r["upper_violation"]["process_max"]:.1f} | {cell(r["delta_S_plus_L"])} |')
+    lines+=['','该必要界假设后续ready根仅随producer共同平移、边成本不变，只首consumer增加ΔS。'
+        '满足不能证明等待转移，更不能说明稳态供给变快；违反也须结合域内固定成本、频率/服务率变化和进程波动。'
+        'o0仍有原dual与first-supply打点；cycles与ns分列，不跨域套用同一组固定边成本。']
+    tail=shared_tail['cycles'];tail_ns=shared_tail['ns']
+    lines+=[f'ready→FIRST共有区间为[{tail["lower"]}, {tail["upper"]}] cycles，来自'
+        f'{tail["lower_constraints"]}/{tail["processes"]}个下界与{tail["upper_constraints"]}/{tail["processes"]}个上界约束。'
+        '它只是小尾项的可行交集，不是唯一物理延迟，也未被采用为模型常数。'
+        f'ns交集[{tail_ns["lower"]}, {tail_ns["upper"]}]受32ns量化限制，不作定值。']
     lines+=['','| delay×pitch交互 | 观察器0 ns | 观察器1 ns |','|---|---:|---:|']
     for k in ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
         lines.append(f'| {k} | '+' | '.join(cell(r['delta'][k]) for r in interaction_summaries)+' |')
     lines+=['','| 交互的观察器1−0变化 | ns中位与十进程范围 |','|---|---:|']
     for k in ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
         lines.append(f'| {k} | {cell(observer_interaction_summary[k])} |')
-    lines+=['','| plain参照 | 本批中位 µs | 739629中位 µs | 变化 |','|---|---:|---:|---:|']
+    lines+=['',f'| plain参照 | 本批中位 µs | {previous_job}中位 µs | 变化 |','|---|---:|---:|---:|']
     for case,r in references.items():
         lines.append(f'| {case} | {r["current"]["median"]:.3f} | {r["previous"]["median"]:.3f} | {100*r["median_change"]:+.2f}% |')
     lines+=['','cycles为主要区间；ns受32ns量化与相邻读表影响，可出现有符号的边界差。'
-        '首测成功只有上界，poll_limit/after_first不生成ready上界，也不删除或重测。'
+        f'首测成功只有上界，poll_limit/{late_status}不生成ready上界，也不删除或重测。'
         'JSON保留所有逐进程端点、覆盖、区间传播、同B17伙伴/其他130CTA背景、SM/work/VA和原始文件SHA。','']
-    (output/'R13-ready-observer.md').write_text('\n'.join(lines))
+    (output/(artifact+'.md')).write_text('\n'.join(lines))
     return report
 
 

@@ -231,6 +231,13 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '        } else {\n'
             '          ::r13_observe_ready(cute::cast_smem_ptr_to_uint(&shared_storage.pipelines.mainloop.full_barrier_[0]));\n',after=False)
         path.write_text(text)
+    ready_release = any(row.get('ready_generation_bound')=='first_release' for row in rows)
+    if ready_release:
+        if not ready_observer:raise ValueError('release-bound observation requires the ready observer')
+        path=source/'overlay'/common.MAINLOOP;text=path.read_text()
+        text=common.insert_once(text,'      pipeline.consumer_release(smem_pipe_release);\n',
+            '      if (threadIdx.x==128 && r13_first_target(v06_tile_seq) && r13_ready_observer && smem_pipe_release.count()==0) r13_first_release_stamp();\n')
+        path.write_text(text)
     if stage_sparse and stage_progress:raise ValueError("choose one stage observation protocol")
     if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
@@ -253,6 +260,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
             if ready_observer:cmd.append('-DR13_READY_OBSERVER')
+            if ready_release:cmd.append('-DR13_READY_RELEASE')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
             if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
