@@ -2951,6 +2951,195 @@ def _stage_handoff_windows(cta):
     return result
 
 
+def stage_handoff_sample_diagnostics(root, output):
+    """Replay the paired progress/handoff run without fitting any model."""
+    from analyze_r13_sm import select_attempts
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    controls=[r for r in rows.values() if r.get('set')!='reference']
+    if len(controls)!=2 or {setups[r['id']]['stages'] for r in controls}!={4,6}:
+        raise ValueError('handoff samples require the two stage4/6 controls')
+    gpu={setups[r['id']]['gpu_uuid'] for r in rows.values()}
+    if len(gpu)!=1:raise ValueError('handoff run spans different GPUs')
+    handoff_fields=('sender_to_math_return','math_wait_total','math_return_to_full_begin',
+        'first_full_wait','sender_to_first','receiver_late_entry','after_sender_and_wait_entry',
+        'math_wait_begin_minus_sender')
+    processes=[];calls={};failures=[];hashes={};contexts={}
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    def remember(run,item):
+        for path in (run/item['path'],run/item['record']['raw']):hashes[str(path)]=common.sha(path)
+    for row in rows.values():
+        name=row['id'];reference=row.get('set')=='reference';stage=setups[name]['stages']
+        variants=('plain',) if reference else ('plain','progress','stamped')
+        selected,failed,_=select_attempts(root,name,variants)
+        contexts[name]=dict(row=row,setup=setups[name])
+        for item in failed:
+            failures.append(dict(case=name,set=row.get('set'),**item));remember(root,item)
+        grouped={v:{} for v in variants}
+        for item in selected:
+            record=item['record'];variant=record['variant'];obs=replay(root,record,row)
+            remember(root,item)
+            entry=dict(case=name,set=row.get('set'),stages=stage,variant=variant,trial=record['trial'],
+                elapsed_us=obs['elapsed_us'],source=record['raw'],record_path=item['path'],
+                host_start_ns=record['host_start_ns'],host_stop_ns=record['host_stop_ns'])
+            if variant!='plain':
+                progress=obs['progress'];clocks=progress['clocks']
+                intervals=_stage_progress_intervals(dict(clocks=clocks))
+                entry.update(cta=progress['cta'],sm=progress['sm'],work=progress['work'],
+                    output=progress['output'],clocks=clocks,intervals=intervals)
+                if variant=='stamped':
+                    if 'sender_work' not in progress:raise ValueError('stamped run lacks handoff endpoints')
+                    intervals.update({k:progress['intervals'][k] for k in handoff_fields[:-1]})
+                    intervals['math_wait_begin_minus_sender']=clocks['math_wait_begin']-clocks['sender_mma_return']
+                    for endpoint in ('commit1','commit16','commit63','main_end'):
+                        intervals['sender_to_'+endpoint]=clocks[endpoint]-clocks['sender_mma_return']
+                    entry['sender_work']=progress['sender_work']
+                    entry['handoff_closure_cycles']=(intervals['sender_to_math_return']+
+                        intervals['math_return_to_full_begin']+intervals['first_full_wait']-intervals['sender_to_first'])
+                    entry['arrival_split_closure_cycles']=(intervals['receiver_late_entry']+
+                        intervals['after_sender_and_wait_entry']-intervals['sender_to_math_return'])
+                    if entry['handoff_closure_cycles'] or entry['arrival_split_closure_cycles']:
+                        raise ValueError('handoff same-call intervals do not close')
+                elif 'sender_work' in progress:
+                    raise ValueError('progress control unexpectedly contains handoff markers')
+            grouped[variant][record['trial']]=entry;processes.append(entry)
+        if any(set(v)!=set(range(10)) for v in grouped.values()):
+            raise ValueError(name+': ten matched independent processes required')
+        calls[name]=grouped
+    control_by_stage={setups[r['id']]['stages']:r['id'] for r in controls}
+    common_fields=tuple(calls[control_by_stage[4]]['progress'][0]['intervals'])
+    timing=[];perturbation=[];stage_pairs=[]
+    for stage in (4,6):
+        name=control_by_stage[stage];group=calls[name]
+        pairs=[]
+        for trial in range(10):
+            p,h=group['progress'][trial],group['stamped'][trial]
+            if (p['cta'],p['work'],p['output'])!=(h['cta'],h['work'],h['output']):
+                raise ValueError('handoff/progress pair changed selected work')
+            pairs.append(dict(trial=trial,progress_sm=p['sm'],handoff_sm=h['sm'],
+                delta_cycles={k:h['intervals'][k]-p['intervals'][k] for k in common_fields},
+                whole_delta_us=h['elapsed_us']-p['elapsed_us'],
+                whole_relative=h['elapsed_us']/p['elapsed_us']-1))
+        perturbation.append(dict(stages=stage,processes=pairs,
+            delta_cycles={k:span(p['delta_cycles'][k] for p in pairs) for k in common_fields},
+            whole_delta_us=span(p['whole_delta_us'] for p in pairs),
+            whole_relative=span(p['whole_relative'] for p in pairs)))
+        timing.append(dict(stages=stage,
+            elapsed_us={v:span(p['elapsed_us'] for p in records.values()) for v,records in group.items()},
+            relative_to_plain={v:span(group[v][t]['elapsed_us']/group['plain'][t]['elapsed_us']-1
+                for t in range(10)) for v in ('progress','stamped')},
+            intervals={v:{k:span(p['intervals'][k] for p in group[v].values())
+                for k in group[v][0]['intervals']} for v in ('progress','stamped')}))
+    for variant in ('plain','progress','stamped'):
+        a,b=(calls[control_by_stage[s]][variant] for s in (6,4));paired=[]
+        for trial in range(10):
+            x,y=a[trial],b[trial]
+            entry=dict(trial=trial,whole_delta_us=y['elapsed_us']-x['elapsed_us'],
+                whole_relative=y['elapsed_us']/x['elapsed_us']-1)
+            if variant!='plain':
+                if (x['cta'],x['work'],x['output'])!=(y['cta'],y['work'],y['output']):
+                    raise ValueError('stage pair changed selected receiver work')
+                if variant=='stamped' and x['sender_work']!=y['sender_work']:
+                    raise ValueError('stage pair changed selected sender work')
+                entry.update(stage6_sm=x['sm'],stage4_sm=y['sm'],
+                    delta_cycles={k:y['intervals'][k]-x['intervals'][k] for k in x['intervals']})
+            paired.append(entry)
+        summary=dict(variant=variant,processes=paired,whole_delta_us=span(p['whole_delta_us'] for p in paired),
+            whole_relative=span(p['whole_relative'] for p in paired))
+        if variant!='plain':summary['delta_cycles']={k:span(p['delta_cycles'][k] for p in paired)
+            for k in paired[0]['delta_cycles']}
+        stage_pairs.append(summary)
+    references=[];old=root.parent/'20261010-R13-stage-progress'
+    old_rows={r['id']:r for r in read_json(old/'cases.json')}
+    old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
+    for row in rows.values():
+        if row.get('set')!='reference':continue
+        name=row['id'];selected,failed,_=select_attempts(old,name,('plain',));prior=[]
+        for item in selected:
+            record=item['record'];obs=replay(old,record,old_rows[name]);remember(old,item)
+            prior.append(dict(trial=record['trial'],elapsed_us=obs['elapsed_us'],source=record['raw']))
+        if len(prior)!=10:raise ValueError('old plain reference is incomplete: '+name)
+        current=span(p['elapsed_us'] for p in calls[name]['plain'].values())
+        previous=span(p['elapsed_us'] for p in prior)
+        references.append(dict(case=name,current_us=current,previous_us=previous,previous_processes=prior,
+            previous_root=str(old),previous_failed_attempts=failed,
+            same_gpu=setups[name]['gpu_uuid']==old_setups[name]['gpu_uuid'],
+            median_relative=current['median']/previous['median']-1))
+    ref_end=max(p['host_stop_ns'] for p in processes if p['set']=='reference')
+    ctrl_begin=min(p['host_start_ns'] for p in processes if p['set']!='reference')
+    for path in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',
+            root/'build/resources.json',root/'build/sass_hashes.json',root/'build/binary_hashes.json',
+            old/'cases.json',old/'static_setup.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
+        hashes[str(path)]=common.sha(path)
+    report=dict(scope='Same-call CTA0 sender output0 and receiver output1 on one SM; development measurement, no fit.',
+        root=str(root),gpu=next(iter(gpu)),contexts=contexts,processes=processes,timing=timing,
+        handoff_minus_progress=perturbation,stage4_minus_stage6=stage_pairs,references=references,
+        reference_order=dict(last_reference_stop_ns=ref_end,first_control_start_ns=ctrl_begin,
+            references_completed_first=ref_end<=ctrl_begin),failed_attempts=failures,
+        resources=read_json(root/'build/resources.json'),input_sha256=hashes,
+        limitations=['stamped is the new handoff observer; progress is the unchanged progress observer.',
+            'sender_to_math_return combines remaining sender arrivals, receiver arrival and barrier recovery.',
+            'math_wait_begin can precede or follow sender_mma_return; the signed difference is retained.',
+            'first_full_wait includes try_wait, wait and observation instructions; it is not bare TMA latency.',
+            'New timestamps and register lifetimes can change the observed path; local and whole-call perturbations are separate.',
+            'Trial pairing compares independent processes. Cross-job reference medians are background, not observer error.',
+            'No parameters are fitted and the prior B-stage-handoff counterexamples are not overwritten.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-handoff-samples.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(value):return f'{value["median"]:.2f} [{value["trial_min"]:.2f}, {value["trial_max"]:.2f}]'
+    labels={'sender_to_math_return':'sender mma返回→math等待返回',
+        'math_return_to_full_begin':'math等待返回→首full等待前','first_full_wait':'首full等待前→FIRST',
+        'sender_to_first':'sender mma返回→FIRST','math_wait_total':'math等待前→返回',
+        'math_wait_begin_minus_sender':'math等待前−sender返回（有符号）',
+        'receiver_late_entry':'receiver较晚进入','after_sender_and_wait_entry':'两者均到达→math等待返回'}
+    ts={x['stages']:x for x in timing};delta=next(p['delta_cycles'] for p in stage_pairs if p['variant']=='stamped')
+    lines=['# 同调用 math交接与首full等待','',
+        'CTA0第一输出的thread128记录mma返回，第二输出的thread256记录math等待前后、首full等待前及原progress端点。'
+        '以下cycle差都在同调用、同SM内计算，再按trial比较两个stage；方括号为十个独立进程的范围。','',
+        '| 新handoff窗口 | stage4 cycle | stage6 cycle | stage4−stage6 cycle |',
+        '|---|---:|---:|---:|']
+    for k,label in labels.items():
+        lines.append(f'| {label} | {cell(ts[4]["intervals"]["stamped"][k])} | {cell(ts[6]["intervals"]["stamped"][k])} | {cell(delta[k])} |')
+    lines+=['','三段sender→math返回、math返回→full等待前、full等待前→FIRST逐调用精确闭合；'
+        'receiver较晚进入与双方均到达后的剩余窗口也逐调用闭合。各列独立取中位，不能要求中位数相加。','',
+        '| 从sender mma返回起的累计推进 | stage4 cycle | stage6 cycle | stage4−stage6 cycle |',
+        '|---|---:|---:|---:|']
+    for endpoint in ('commit1','commit16','commit63','main_end'):
+        k='sender_to_'+endpoint
+        lines.append(f'| →{endpoint} | {cell(ts[4]["intervals"]["stamped"][k])} | {cell(ts[6]["intervals"]["stamped"][k])} | {cell(delta[k])} |')
+    lines+=['','这些累计窗口直接相减同一次调用的原端点，用来检查stage差是否只来自FIRST边界移动；'
+        '没有拼接旧progress的价格，也没有将独立中位数相加。','',
+        '| handoff−progress同名局部窗口 | stage4 cycle | stage6 cycle |','|---|---:|---:|']
+    ps={x['stages']:x for x in perturbation}
+    for k in ('first_to_commit1','average_commit1_to16','average_commit17_to63','commit_to_wait1_16',
+            'loop_advance_16_to17','last_commit_to_mma_return','mma_return_to_main_end','L'):
+        lines.append(f'| {k} | {cell(ps[4]["delta_cycles"][k])} | {cell(ps[6]["delta_cycles"][k])} |')
+    lines+=['','| 整调用对照 | stage4相对变化 | stage6相对变化 |','|---|---:|---:|']
+    def percent(v):return cell({k:100*x for k,x in v.items()})+'%'
+    for variant in ('progress','stamped'):
+        lines.append(f'| {variant}/plain | {percent(ts[4]["relative_to_plain"][variant])} | {percent(ts[6]["relative_to_plain"][variant])} |')
+    lines.append(f'| handoff/progress | {percent(ps[4]["whole_relative"])} | {percent(ps[6]["whole_relative"])} |')
+    lines+=['','| stage4−stage6 | 局部L差 cycle | 整调用差µs | 整调用相对变化 |','|---|---:|---:|---:|']
+    for pair in stage_pairs:
+        local=cell(pair['delta_cycles']['L']) if 'delta_cycles' in pair else '—'
+        lines.append(f'| {pair["variant"]} | {local} | {cell(pair["whole_delta_us"])} | {percent(pair["whole_relative"])} |')
+    lines+=['','| plain参照 | 本批µs | 739578 µs | 中位变化 |','|---|---:|---:|---:|']
+    for r in references:lines.append(f'| {r["case"]} | {r["current_us"]["median"]:.3f} | {r["previous_us"]["median"]:.3f} | {100*r["median_relative"]:+.2f}% |')
+    lines+=['',f'两参照的成功进程先于控制采样完成：{report["reference_order"]["references_completed_first"]}。'
+        '跨批参照只提供背景，不用于估计本批插桩误差。JSON保留原端点、SM、工作坐标、raw定位、失败尝试和源码身份。','',
+        'sender到math返回包含发送方剩余arrival、接收方进入和恢复；没有记录128次arrival完成时刻。'
+        '首full窗口包含等待及观察指令，不直接当作TMA服务。寄存器暂存避免即时全局写，仍可能改变等待路径；'
+        '先看同批局部扰动，再解释窗口差。本报告不拟参数，不改变旧递推反例或冻结预测。','']
+    (output/'B-stage-handoff-samples.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_handoff_diagnostics(base,output):
     """Expose ready/handoff ambiguity without choosing parameters on stage4."""
     from analyze_r13_sm import select_attempts

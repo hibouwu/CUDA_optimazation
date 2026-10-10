@@ -70,5 +70,29 @@ class StageSparseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'event order'):
             decode_stage_sparse(setup,dict(trace=b))
 
+    def test_handoff_accepts_early_or_late_receiver_but_not_missing_sender(self):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=b[38]=3
+        b[13]=12;b[14]=b[39]=b[40]=1;b[31]=0x52313303
+        for i,value in {21:300,20:900,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500,
+                        34:100,35:50,36:200,37:230}.items():b[i]=value
+        setup=dict(grid=[1,132,1],trace_words=width,trace_version='r13-stage-handoff-v1')
+        r=decode_stage_sparse(setup,dict(trace=b));v=r['intervals']
+        self.assertEqual(v['sender_to_first'],200)
+        self.assertEqual(v['sender_to_math_return']+v['math_return_to_full_begin']+v['first_full_wait'],200)
+        self.assertEqual(v['receiver_late_entry'],0)
+        self.assertEqual(r['sender_work'],[0,0])
+        b[35]=150
+        v=decode_stage_sparse(setup,dict(trace=b))['intervals']
+        self.assertEqual(v['receiver_late_entry'],50)
+        self.assertEqual(v['after_sender_and_wait_entry'],50)
+        b[34]=201
+        with self.assertRaisesRegex(ValueError,'handoff event order'):
+            decode_stage_sparse(setup,dict(trace=b))
+        b[34]=100;b[38]=4
+        with self.assertRaisesRegex(ValueError,'sender SM'):
+            decode_stage_sparse(setup,dict(trace=b))
+
 
 if __name__=='__main__':unittest.main()

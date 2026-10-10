@@ -305,14 +305,24 @@ def main():
     parser.add_argument('--first-supply',type=Path,help='R13 first TMA issue and consumer wait markers, matched observation switch')
     parser.add_argument('--stage-admission',action='store_true',help='offline stage6 local calibration and constrained stage4 transfer')
     parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
+    parser.add_argument('--stage-handoff',type=Path,help='independent replay of the R13 plain/progress/handoff run; no model fitting')
     parser.add_argument('--history-series',type=Path,help='R09 prefix/target trajectory run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
     if args.stage_admission and args.analysis!='candidate-development':
         parser.error('--stage-admission requires candidate-development')
-    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
+    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.stage_handoff,args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)) and args.analysis!='candidate-development':
         parser.error('candidate control runs require candidate-development')
+    if args.stage_handoff is not None:
+        if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,
+                args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series,
+                args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,args.producer_delay,
+                args.first_supply,args.ready_observer,args.ready_release)):
+            parser.error('--stage-handoff is an independent replay; run other diagnostics separately')
+        from analyze_r13_supply import stage_handoff_sample_diagnostics
+        stage_handoff_sample_diagnostics(args.stage_handoff.resolve(),out)
+        return
     if args.analysis!='ablation':
         controls=args.controls.resolve() if args.controls else None
         if args.analysis=='failure-decomposition':

@@ -47,17 +47,18 @@ def decode_stage_sparse(setup, call):
     if len(words)!=math.prod(setup['grid'])*width or any(words[width:]):
         raise ValueError('sparse trace size or non-target CTA writes')
     b=words[:width]
-    if setup.get('trace_version')=='r13-stage-progress-v1':
+    if setup.get('trace_version') in ('r13-stage-progress-v1','r13-stage-handoff-v1'):
+        handoff=setup['trace_version']=='r13-stage-handoff-v1'
         mapping={'first_mma':21,'commit1':20,'full_wait_begin16':15,'commit16':17,
             'wait1_end16':18,'full_wait_begin17':16,'commit17':19,'commit63':24,
             'mma_return':32,'main_end':22}
         c={name:b[index] for name,index in mapping.items()}
         sequence=[c[name] for name in mapping]
-        if b[31]!=0x52313302 or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
+        if b[31]!=(0x52313303 if handoff else 0x52313302) or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
             raise ValueError('invalid consumer progress event order')
         if not b[1] or b[1]!=b[23] or min(b[13],b[14])<=0:
             raise ValueError('progress consumer SM/work mismatch')
-        return dict(cta=0,sm=b[1]-1,work=[b[13]-1,b[14]-1],output=1,clocks=c,
+        result=dict(cta=0,sm=b[1]-1,work=[b[13]-1,b[14]-1],output=1,clocks=c,
             intervals={name:c[end]-c[start] for name,start,end in [
                 ('commit16_to17','commit16','commit17'),
                 ('loop_advance_16_to17','wait1_end16','full_wait_begin17'),
@@ -72,6 +73,23 @@ def decode_stage_sparse(setup, call):
                 ('mma_return_to_main_end','mma_return','main_end'),
                 ('last_commit_to_main_end','commit63','main_end'),
                 ('L','first_mma','main_end')]})
+        if handoff:
+            h={name:b[i] for name,i in dict(sender_mma_return=34,math_wait_begin=35,
+                math_wait_end=36,first_wait_begin=37).items()}
+            if b[38]!=b[1] or min(b[39],b[40])<=0:raise ValueError('handoff sender SM/work mismatch')
+            if not all(h.values()) or not (h['math_wait_begin']<=h['math_wait_end']<=h['first_wait_begin']<=c['first_mma']) or h['sender_mma_return']>h['math_wait_end']:
+                raise ValueError('invalid handoff event order')
+            result['sender_work']=[b[39]-1,b[40]-1]
+            c.update(h)
+            result['intervals'].update({name:c[end]-c[start] for name,start,end in [
+                ('sender_to_math_return','sender_mma_return','math_wait_end'),
+                ('math_wait_total','math_wait_begin','math_wait_end'),
+                ('math_return_to_full_begin','math_wait_end','first_wait_begin'),
+                ('first_full_wait','first_wait_begin','first_mma'),
+                ('sender_to_first','sender_mma_return','first_mma')]})
+            result['intervals']['receiver_late_entry']=max(0,h['math_wait_begin']-h['sender_mma_return'])
+            result['intervals']['after_sender_and_wait_entry']=h['math_wait_end']-max(h['math_wait_begin'],h['sender_mma_return'])
+        return result
     clocks={name:b[index] for name,index in {
         'entry':0,'acquire_begin':6,'acquire_end':7,'issue_end':8,
         'refill_begin':9,'refill_end':11,'refill_issue_end':12,
@@ -362,8 +380,8 @@ def replay(root,record,row,retain_roles=False):
         result['preceding_target_calls']=18
         return result
     if record['variant'] in ['plain','wide']:return result
-    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1'):
-        key='progress' if setup['trace_version']=='r13-stage-progress-v1' else 'sparse'
+    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1'):
+        key='sparse' if setup['trace_version']=='r13-stage-sparse-v1' else 'progress'
         result[key]=decode_stage_sparse(setup,call)
         return result
     tile_words=setup.get('trace_tile_words',6)

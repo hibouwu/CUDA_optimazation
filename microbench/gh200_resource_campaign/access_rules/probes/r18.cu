@@ -120,7 +120,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_STAGE_PROGRESS)
+#if defined(R13_STAGE_HANDOFF)
+constexpr const char* kTraceVersion="r13-stage-handoff-v1";
+#elif defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-stage-progress-v1";
 #elif defined(R13_STAGE_SPARSE)
 constexpr const char* kTraceVersion="r13-stage-sparse-v1";

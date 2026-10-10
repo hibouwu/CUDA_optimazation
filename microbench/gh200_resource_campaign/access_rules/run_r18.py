@@ -45,7 +45,7 @@ def cases(family='r18'):
 
 
 
-def make_stage_sparse_overlay(source, progress=False):
+def make_stage_sparse_overlay(source, progress=False, handoff=False):
     """Only cfg_b: CTA0, output 1, Ktile16 and its next same-slot producer use."""
     path=source/'overlay'/common.MAINLOOP
     text=path.read_text()
@@ -84,6 +84,13 @@ def make_stage_sparse_overlay(source, progress=False):
     text=text.replace(signature,'      Params const& mainloop_params, int v06_tile_seq = 0, R13SparseConsumer* r13_s = nullptr) {\n',1)
     text=text.replace('      v06_stamp(V06_FIRST_MMA, v06_tile_seq);\n',
         '      if (r13_target) r13_s->first_mma=v06_clock();\n',1)
+    if handoff:
+        begin=text.index('    // Prologue GMMAs');end=text.index('    // Mainloop GMMAs',begin)
+        prologue=text[begin:end].replace('      auto barrier_token = pipeline.consumer_try_wait(smem_pipe_read);\n',
+            '#ifdef R13_STAGE_HANDOFF\n'
+            '      if (r13_target) r13_s->first_wait_begin=v06_clock();\n'
+            '#endif\n      auto barrier_token = pipeline.consumer_try_wait(smem_pipe_read);\n',1)
+        text=text[:begin]+prologue+text[end:]
     begin=text.index('    // Mainloop GMMAs')
     end=text.index('  /// Perform a Consumer Epilogue',begin)
     mma=text[begin:end]
@@ -132,6 +139,25 @@ def make_stage_sparse_overlay(source, progress=False):
         '      R13SparseConsumer r13_s;\n')
     consumer=consumer.replace('          params.mainloop, v06_tile_seq\n',
         '          params.mainloop, v06_tile_seq, &r13_s\n',1)
+    if handoff:
+        site='        math_wg_order_barrier.wait();\n'
+        consumer=consumer.replace(site,
+            '#ifdef R13_STAGE_HANDOFF\n'
+            '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.math_wait_begin=v06_clock();\n'
+            '#endif\n'+site+
+            '#ifdef R13_STAGE_HANDOFF\n'
+            '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.math_wait_end=v06_clock();\n'
+            '#endif\n',1)
+        consumer=common.insert_once(consumer,'        // Cue for next Math WG\'s MMA to start',
+            '#ifdef R13_STAGE_HANDOFF\n'
+            '        if (r13_sparse_cta() && threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_mma_return=v06_clock();\n'
+            '#endif\n')
+        consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
+            '#ifdef R13_STAGE_HANDOFF\n'
+            '      if (r13_sparse_cta() && threadIdx.x==128) {\n'
+            '        unsigned sm; asm volatile("mov.u32 %0, %%smid;":"=r"(sm));\n'
+            '        v06_base()[34]=r13_s.sender_mma_return; v06_base()[38]=uint64_t(sm)+1;\n'
+            '      }\n#endif\n')
     consumer=common.insert_once(consumer,'        // Cue for next Math WG\'s MMA to start',
         '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.mma_return=v06_clock();\n')
     if not progress:
@@ -176,7 +202,8 @@ def make_first_supply_overlay(source):
     path.write_text(text[:start]+producer+text[end:])
 
 
-def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False):
+def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False,stage_handoff=False):
+    stage_progress=stage_progress or stage_handoff
     rows=cases(family) if rows is None else rows
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
     for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py','v08_model.py']:
@@ -242,10 +269,11 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
     if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
         if any((r['config'],r['m'],r['n'],r['k'],r.get('stages',6)) not in [('cfg_b',2816,1536,4096,4),('cfg_b',2816,1536,4096,6)] and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage-sparse is the declared cfg_b pair only')
-        if any(r.get('variants',['plain','stamped'])!=['plain','stamped'] and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage-sparse uses plain/stamped')
-        make_stage_sparse_overlay(source, progress=stage_progress)
+        stage_variants=['plain','progress','stamped'] if stage_handoff else ['plain','stamped']
+        if any(r.get('variants',stage_variants)!=stage_variants and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage observation variants differ from declared protocol')
+        make_stage_sparse_overlay(source, progress=stage_progress, handoff=stage_handoff)
     commands={}
-    variants=['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
+    variants=['plain','progress','stamped'] if stage_handoff else ['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
     configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
     for prefix,(config,stages) in sorted(configurations.items()):
         if stages is not None and stages<=0:raise ValueError('explicit stage count must be positive')
@@ -253,7 +281,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         if selected_variants==['ends']:
             selected_variants=['ends','plain']  # Plain is used only for static setup.
         for variant in selected_variants:
-            if variant not in ['plain','wide','stamped','dual','ends']:raise ValueError('unknown observation variant')
+            if variant not in ['plain','wide','stamped','dual','ends'] and not (stage_handoff and variant=='progress'):raise ValueError('unknown observation variant')
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if work_swap:cmd.append('-DR10_WORK_SWAP')
@@ -263,16 +291,17 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if ready_release:cmd.append('-DR13_READY_RELEASE')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
-            if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
+            if stage_progress and variant in ['stamped','progress']:cmd.append('-DR13_STAGE_PROGRESS')
+            if stage_handoff and variant=='stamped':cmd.append('-DR13_STAGE_HANDOFF')
             if dual_clock and variant not in ['plain','ends']:cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
-            if variant in ['stamped','dual','ends']:
+            if variant in ['stamped','dual','ends','progress']:
                 cmd+=['-DV06_TRACE','-Isource/overlay']
                 if variant=='ends':cmd+=['-DV08_ENDS']
                 if family=='r18_lite':cmd+=['-DR18_LIGHT']
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
@@ -350,13 +379,14 @@ def main(family='r18'):
     p.add_argument('--dual-clock',action='store_true',help='prepare: add same-call globaltimer events; wide/stamped/dual share scratch layout, ends keeps its original layout')
     p.add_argument('--stage-sparse',action='store_true',help='prepare: cfg_b stage4/6 same-slot sparse clock events, plain already matches scratch')
     p.add_argument('--stage-progress',action='store_true',help='prepare: consumer commit/loop progress only, same cfg_b stage pair')
+    p.add_argument('--stage-handoff',action='store_true',help='prepare: extend progress with same-call sender/receiver handoff endpoints')
     p.add_argument('--set',help='sample: select the named case set, e.g. reference before ctrl')
     a=p.parse_args()
     if a.step=='list':print(json.dumps(cases(family),indent=2));return
     root=a.output.resolve()
     if a.step=='prepare':
         rows=json.loads(a.cases_file.read_text()) if a.cases_file else None
-        prepare(root,a.cutlass_root.resolve(),family,rows,a.dual_clock,a.stage_sparse,a.stage_progress);return
+        prepare(root,a.cutlass_root.resolve(),family,rows,a.dual_clock,a.stage_sparse,a.stage_progress,a.stage_handoff);return
     if not os.environ.get('SLURM_JOB_ID'):raise ValueError('Slurm allocation required')
     if a.step=='build':
         version=subprocess.check_output(['nvcc','--version'],text=True)

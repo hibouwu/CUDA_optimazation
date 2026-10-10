@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。stage4的额外时间出现在主循环早段与后段，最终drain没有贡献；旧局部标定参数仍把stage4的L高估21%～26%。新反例表明，stage6的现有校准量不能分开ready延迟与计算组交接：省略交接会使供给参数吸收缺失时间。先补齐这段事件边界，不据旧参数失败直接引入供给队列。
+当前条件供给尚未通过V09的行距与stage迁移。同调用交接补测确认：交接不能取零，但stage4比stage6增加的启动等待主要在首full窗口；之后累计推进差仍继续扩大。新观察协议改变了局部软件边界，不能把其周期数直接回填旧progress或plain模型。下一步约束可观测的组合时间与等待位置，不继续为未辨识的裸延迟加常数。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -21,6 +21,7 @@
 | consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
 | 组内服务递推，离线 | 仅stage6三个局部量校准；独立局部约束的q剖面仍高估stage4，推导有限窗口下界 | [参数族与逐分项比较](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-admission.md) |
 | 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
+| 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -306,7 +307,26 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 
 这里固定p=50、q=407、λ=93及原w/h/r；700只作反例，1858来自独立供给上界。**三组没有按stage4挑选，也没有通过新的验证。** 相同stage6观测对应不同stage4响应，足以说明旧ℓ不是已辨识的ready价格。早段512仍低于实测522.27，旧参数的有限窗口反证也仍成立。
 
-739095同次CTA0记录只能给FIRST1−MAIN0：K4096时stage6为−319 cycle、stage4为+535 cycle（十进程中位）。MAIN0晚于MMA0，所以它只是FIRST1−MMA0的下界；负值表示两输出重叠。现有739556/739578没有前输出MMA0，不能分离交接和full等待。下一次仅沿用两stage条件，增加同调用的前输出mma返回、后输出math等待前后与首full等待前后，并保留commit进度及plain/原progress扰动对照。先定位交接与首full等待各占多少，再决定是否引入状态相关ready服务。[逐进程来源、范围与重放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.json)。
+739095同次CTA0记录只能给FIRST1−MAIN0：K4096时stage6为−319 cycle、stage4为+535 cycle（十进程中位）。MAIN0晚于MMA0，所以它只是FIRST1−MMA0的下界；负值表示两输出重叠。739556/739578没有前输出MMA0，不能分离交接和full等待。[逐进程来源与范围](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.json)。
+
+<a id="stage-handoff-measured"></a>
+
+### 同调用补测：交接非零，stage差主要在首full等待
+
+739686沿用cfg_b 2816×1536×4096、stage4/6，在a058/GPU-ef8692f3完成80个有效独立进程：20个plain参照、两stage各10个plain/原progress/新handoff，无失败尝试。CTA0位于SM124；sender thread128处理(0,0)，receiver thread256处理(11,0)。六个binary均168寄存器、16条静态HGMMA、零spill；原progress的GEMM指令行与739578逐行相同。
+
+| 同调用窗口，cycle中位 | stage4 | stage6 | 逐trial stage4−stage6中位 [范围] |
+|---|---:|---:|---:|
+| sender返回标记→math等待返回 | 148.5 | 133 | 13.5 [0,69] |
+| math等待返回→首full等待前 | 3 | 2 | 0.5 [−1,2] |
+| 首full等待前→FIRST | 717 | 101.5 | 618 [104,1067] |
+| sender返回标记→FIRST | 871.5 | 239 | 631.5 [121,1076] |
+
+全部receiver在sender返回前已经进入math等待，排除本批“接收组较晚才到门口”。三段逐调用精确闭合，各列中位不要求相加。stage差主要落在首full等待，而非交接恢复段；首full仍包含轮询和观察指令，不等于裸TMA服务。以同调用sender标记为起点，到下一输出commit1、commit16、commit63和MAIN的stage4−6中位差依次为631.5、3721.5、7899、7890 cycle，均非仅FIRST边界移动，亦非固定启动差能解释。
+
+**该协议有明显局部扰动。** handoff相对原progress的整调用中位只变+0.38%/−0.63%（stage4/6），但stage6 FIRST→commit1逐trial差为−142 cycle，10/10为负。lastcommit→mma返回多106/103 cycle，随后到MAIN少126/119。SASS显示新协议在循环退出后、返回取时前增加了CTA坐标读取和两个线程谓词判断；这解释了部分窗口的重新划分，不能给每条指令单独定价，也不能将239直接作为旧协议缺失的δ。
+
+两plain参照相对739578中位变化−2.59%/−0.23%，只作跨批背景。下一步先给定本批观测的consumer入口作条件重放：首H对齐first_wait_begin、B对齐FIRST，观测量只作诊断输入；检验去掉入口歧义后，共享ready关系能否解释后段累计推进与slot复用。各协议保留自己的w/h/r，不能混用旧27/40/500与新43/143/484。对预测不敏感的裸延迟不再单独拆价。本批不产生新拟合参数，不默认追加观察矩阵。[同批扰动、原端点与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.json)。
 
 <a id="first-supply"></a>
 
