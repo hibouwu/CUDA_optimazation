@@ -81,10 +81,10 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 
 | 对象 | 已有结果 | 当前工作/边界 |
 |---|---|---|
-| 管理 | 对话`01a11cfc-87f0-76e3-b53e-dc2b5e241844`；共同前序739552与stage事件739556完成 | `gh200-v09-failure-analysis`持续开发；[候选分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/README.md)统一重放，未进入V10 |
-| 供给 | [R10/R13](R13-async-retirement.md) stage额外L在mma返回前积累，Ktile16相邻等待/发射窗口存在转移 | 行距迁移仍失败；复用累计端点后按需定位更细进度，不把局部等待当全循环价格或物理槽容量 |
-| 输出/边界 | [R18](R18-cluster-boundary.md)四map排除单一精确max/sum/any增量；完整cluster-max重拟合未改善预测 | P1伙伴影响被现行计算/供给max屏蔽；定位first内部延长。P2关键CTA失配仍未修复 |
-| 时间/输入 | [R09](R09-inkernel-clock-stages.md)共同前序把频率响应从14.12%降至0.33%，周期收益保留 | 下一时钟候选明确前序协议；原工作代理与三种替代均不足，尚未形成可迁移新频率模型 |
+| 管理 | 对话`01a11cfc-87f0-76e3-b53e-dc2b5e241844`；739571/739578/739579共200成功进程 | `gh200-v09-failure-analysis`持续开发；[候选分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/README.md)统一重放，未进入V10 |
+| 供给 | [R10](R10-layout-cache.md)固定几何的raster改变B32响应；[R13](R13-async-retirement.md)观测到非零循环推进 | 七列需求丢失源分组；共享h候选仍失败，下一结构需保留真实事件位置与访问历史 |
+| 输出/边界 | [R18](R18-cluster-boundary.md)同cluster轨迹相关；源码证明full/empty跨rank依赖 | 将依赖作为候选约束，不直接收费；P2最后cluster仍在冻结候选外 |
+| 时间/输入 | [R09](R09-inkernel-clock-stages.md)700次连续调用显示服务与频率均有历史响应；single也复现变慢 | 单极状态留段劣于末值基线，不采用；下一候选须同时解释服务与时间换算 |
 | V09 | 739011完成30条件；29受支持预测4.11%/35.46%，1冻结前拒绝 | **整体未通过**，冻结/判定不改；新候选须另用新留出检验 |
 | 计数器 | 既有权限拒绝证据可复用 | 受支持入口仍未确认，账户持有人联系管理员 |
 

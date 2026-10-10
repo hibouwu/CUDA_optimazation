@@ -223,7 +223,7 @@ def failure_decomposition(base,out,controls=None):
     if controls is not None:reference_comparison(base,controls,out)
 
 
-def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None):
+def candidate_development(base,out,controls=None,swizzle_controls=None,stage_events=None,common_history=None,raster_pitch=None,stage_progress=None,history_series=None):
     """Compare explicit candidate mechanisms without changing frozen predictions."""
     import r09_input_source_clock
     import analyze_r13_supply
@@ -234,6 +234,7 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
     analyze_r18.boundary_candidate_analysis(base,out)
     analyze_r18.first_cluster_development(base,out)
     analyze_r18.boundary_endpoint_distribution(base,out)
+    analyze_r18.boundary_cluster_coupling(base,out)
     if controls is not None:
         analyze_r18.fill_discrimination(controls,out)
         reference_comparison(base,controls,out)
@@ -241,8 +242,17 @@ def candidate_development(base,out,controls=None,swizzle_controls=None,stage_eve
         r09_input_source_clock.swizzle_diagnostics(swizzle_controls,out)
     if stage_events is not None:
         analyze_r13_supply.stage_event_diagnostics(stage_events,out)
+        analyze_r13_supply.stage_event_model_diagnostics(base,out)
     if common_history is not None:
         r09_input_source_clock.common_history_diagnostics(common_history,out)
+        r09_input_source_clock.history_state_diagnostics(common_history,out)
+    if raster_pitch is not None:
+        import analyze_r10
+        analyze_r10.raster_pitch_diagnostics(raster_pitch,out)
+    if stage_progress is not None:
+        analyze_r13_supply.stage_progress_diagnostics(stage_progress,out)
+    if history_series is not None:
+        r09_input_source_clock.history_series_diagnostics(history_series,out)
 
 
 def main():
@@ -252,11 +262,14 @@ def main():
     parser.add_argument('--swizzle-controls',type=Path,help='R09 sw1/sw8 paired run for candidate development')
     parser.add_argument('--stage-events',type=Path,help='R13 stage4/6 sparse event run')
     parser.add_argument('--common-history',type=Path,help='R09 common/adaptive history paired run')
+    parser.add_argument('--raster-pitch',type=Path,help='R10 fixed-geometry raster/B32 paired run')
+    parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
+    parser.add_argument('--history-series',type=Path,help='R09 prefix/target trajectory run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
-    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history)) and args.analysis!='candidate-development':
-        parser.error('--swizzle-controls, --stage-events and --common-history require candidate-development')
+    if any(p is not None for p in (args.swizzle_controls,args.stage_events,args.common_history,args.raster_pitch,args.stage_progress,args.history_series)) and args.analysis!='candidate-development':
+        parser.error('candidate control runs require candidate-development')
     if args.analysis!='ablation':
         controls=args.controls.resolve() if args.controls else None
         if args.analysis=='failure-decomposition':
@@ -265,7 +278,10 @@ def main():
             candidate_development(base,out,controls,
                 args.swizzle_controls.resolve() if args.swizzle_controls else None,
                 args.stage_events.resolve() if args.stage_events else None,
-                args.common_history.resolve() if args.common_history else None)
+                args.common_history.resolve() if args.common_history else None,
+                args.raster_pitch.resolve() if args.raster_pitch else None,
+                args.stage_progress.resolve() if args.stage_progress else None,
+                args.history_series.resolve() if args.history_series else None)
         return
     out.mkdir(parents=True,exist_ok=False)
     frozen=base/'20261009-V09-freeze-job738972-r2';target=base/'20261009-V09-heldout-job739011'

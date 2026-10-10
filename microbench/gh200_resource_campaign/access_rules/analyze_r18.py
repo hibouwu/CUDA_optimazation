@@ -47,6 +47,31 @@ def decode_stage_sparse(setup, call):
     if len(words)!=math.prod(setup['grid'])*width or any(words[width:]):
         raise ValueError('sparse trace size or non-target CTA writes')
     b=words[:width]
+    if setup.get('trace_version')=='r13-stage-progress-v1':
+        mapping={'first_mma':21,'commit1':20,'full_wait_begin16':15,'commit16':17,
+            'wait1_end16':18,'full_wait_begin17':16,'commit17':19,'commit63':24,
+            'mma_return':32,'main_end':22}
+        c={name:b[index] for name,index in mapping.items()}
+        sequence=[c[name] for name in mapping]
+        if b[31]!=0x52313302 or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
+            raise ValueError('invalid consumer progress event order')
+        if not b[1] or b[1]!=b[23] or min(b[13],b[14])<=0:
+            raise ValueError('progress consumer SM/work mismatch')
+        return dict(cta=0,sm=b[1]-1,work=[b[13]-1,b[14]-1],output=1,clocks=c,
+            intervals={name:c[end]-c[start] for name,start,end in [
+                ('commit16_to17','commit16','commit17'),
+                ('loop_advance_16_to17','wait1_end16','full_wait_begin17'),
+                ('full_wait_to_commit16','full_wait_begin16','commit16'),
+                ('full_wait_to_commit17','full_wait_begin17','commit17'),
+                ('commit_to_wait1_16','commit16','wait1_end16'),
+                ('first_to_commit1','first_mma','commit1'),
+                ('first_to_commit16','first_mma','commit16'),
+                ('first_to_commit17','first_mma','commit17'),
+                ('first_to_commit63','first_mma','commit63'),
+                ('last_commit_to_mma_return','commit63','mma_return'),
+                ('mma_return_to_main_end','mma_return','main_end'),
+                ('last_commit_to_main_end','commit63','main_end'),
+                ('L','first_mma','main_end')]})
     clocks={name:b[index] for name,index in {
         'entry':0,'acquire_begin':6,'acquire_end':7,'issue_end':8,
         'refill_begin':9,'refill_end':11,'refill_issue_end':12,
@@ -102,6 +127,17 @@ def validate_warmup(setup, call, row):
                 raise ValueError('warmup prefix identity changed')
     if call.get('target_swizzle',row['swizzle']) != row['swizzle']:
         raise ValueError('target swizzle identity changed')
+    history = row.get('history_mode','off')
+    protocol = {'off':'none','single':'single-common16-ends-v1','series':'prefix16-target19-ends-v1'}.get(history)
+    if protocol is None or setup.get('history_mode','off')!=history:
+        raise ValueError('history mode identity changed')
+    if any(e.get('history_protocol','none')!=protocol for e in (setup,call)):
+        raise ValueError('history protocol identity changed')
+    if history!='off':
+        if policy!='common-sw1-16' or setup.get('history_capacity_bytes')!=35*math.prod(setup['grid'])*16*8:
+            raise ValueError('history prefix or capacity changed')
+        if call.get('target_calls')!=(19 if history=='series' else 1) or call.get('preceding_target_calls')!=(18 if history=='series' else 0):
+            raise ValueError('history target-call identity changed')
     warm = call['warmup_us']
     if not warm or any(not math.isfinite(x) or x<=0 for x in warm):
         raise ValueError('invalid warmup durations')
@@ -112,7 +148,74 @@ def validate_warmup(setup, call, row):
             raise ValueError('common-sw1-16 must execute exactly sixteen prefix calls')
     elif not 8<=len(warm)<=30 or statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])>.02:
         raise ValueError('warmup did not converge')
+    if history!='off':
+        calls=35 if history=='series' else 17
+        gaps=call.get('history_inter_call_event_us',[])
+        if call.get('history_recorded_calls')!=calls or len(gaps)!=calls-1 or any(not math.isfinite(x) or x<0 for x in gaps):
+            raise ValueError('history event intervals incomplete')
+        if abs(call['history_prefix_event_us']-sum(warm)-sum(gaps[:15]))>1.:
+            raise ValueError('history prefix event timeline does not close')
+        if history=='single' and abs(call['history_event_us']-sum(warm)-call['elapsed_us']-sum(gaps))>1.:
+            raise ValueError('single event timeline does not close')
     return statistics.pstdev(warm[-5:])/statistics.mean(warm[-5:])
+
+
+def decode_history_series(setup, call, event, row):
+    """Explicit 16-prefix/19-target ends history; never a single common16 call."""
+    import v08_model
+    count=math.prod(setup['grid'])
+    if (event.get('protocol'),event.get('prefix_calls'),event.get('target_calls'),event.get('prefix_swizzle'),event.get('target_swizzle'),event.get('ctas'),event.get('head_words')) != ('prefix16-target19-ends-v1',16,19,1,row['swizzle'],count,16):
+        raise ValueError('history series contract changed')
+    if len(event['heads'])!=35*count*16 or len(event['call_elapsed_us'])!=35 or len(event['inter_call_event_us'])!=34:
+        raise ValueError('history series is incomplete')
+    if any(not math.isfinite(x) or x<=0 for x in event['call_elapsed_us']) or any(not math.isfinite(x) or x<0 for x in event['inter_call_event_us']):
+        raise ValueError('invalid history event timing')
+    for name,calls,gaps in [('prefix_elapsed_us',16,15),('series_elapsed_us',35,34)]:
+        if abs(event[name]-sum(event['call_elapsed_us'][:calls])-sum(event['inter_call_event_us'][:gaps]))>1.:
+            raise ValueError('history event timeline does not close')
+    if any(abs(a-b)>1e-3 for a,b in zip(call['warmup_us'],event['call_elapsed_us'][:16])) or abs(call['elapsed_us']-event['call_elapsed_us'][-1])>1e-3:
+        raise ValueError('history summary does not identify its prefix and last target')
+    if event['prefix_elapsed_us']!=call['history_prefix_event_us'] or event['series_elapsed_us']!=call['history_event_us'] or event['inter_call_event_us']!=call['history_inter_call_event_us']:
+        raise ValueError('series event timeline differs from its call summary')
+    decoded=[]
+    for j in range(35):
+        sw=1 if j<16 else row['swizzle']
+        work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],sw,row.get('raster_order','heuristic'))
+        ctas=[]
+        for c in range(count):
+            h=event['heads'][(j*count+c)*16:(j*count+c+1)*16]
+            if h[10] or not all(h[k] for k in (0,1,2,3)):
+                raise ValueError('missing history CTA head')
+            r1,r2=h[4:7],h[7:10]
+            if row['config']!='cfg_b':
+                if r1[2]!=r2[2]:raise ValueError('history consumers disagree')
+                end_c,end_ns,tiles=r2
+            else:
+                last=max((r1,r2),key=lambda r:r[0] if r[2] else 0)
+                end_c,end_ns=last[:2];tiles=r1[2]+r2[2]
+            if tiles!=len(work[c]) or h[11]!=h[2] or (r2[2] and h[12]!=h[2]):
+                raise ValueError('history work/SM identity changed')
+            if tiles and (end_c<=h[0] or end_ns<=h[1]):
+                raise ValueError('history CTA interval invalid')
+            ctas.append(dict(cta=c,sm=h[2]-1,tiles=tiles,entry_c=h[0],entry_ns=h[1],end_c=end_c,end_ns=end_ns))
+        active=[c for c in ctas if c['tiles']];largest=max(c['tiles'] for c in active)
+        first=min(c['entry_ns'] for c in ctas);last=max(c['end_ns'] for c in active)
+        if decoded and first<decoded[-1]['last_final_ns']:
+            raise ValueError('history calls overlap or were reordered')
+        decoded.append(dict(index=j,phase='prefix' if j<16 else 'target',swizzle=sw,
+            event_us=event['call_elapsed_us'][j],first_entry_ns=first,last_final_ns=last,
+            window_us=(last-first)/1000,max_cta_cycles=max(c['end_c']-c['entry_c'] for c in active),
+            frequency_ghz=statistics.median((c['end_c']-c['entry_c'])/(c['end_ns']-c['entry_ns']) for c in active if c['tiles']==largest),
+            ctas=ctas))
+    for c in range(count):
+        saved=event['heads'][(34*count+c)*16:(34*count+c+1)*16]
+        if call['trace'][c*setup['trace_words']:c*setup['trace_words']+16]!=saved:
+            raise ValueError('last-target trace is not the last series slot')
+    return dict(protocol=event['protocol'],calls=decoded,prefix_elapsed_us=event['prefix_elapsed_us'],
+        series_elapsed_us=event['series_elapsed_us'],inter_call_event_us=event['inter_call_event_us'],
+        inter_call_globaltimer_us=[(b['first_entry_ns']-a['last_final_ns'])/1000 for a,b in zip(decoded,decoded[1:])],
+        numeric_check_scope='Only the final target has the process numeric output check; every call has complete ends/work/SM records.',
+        scope='Recorded history includes 16 prefix and 19 target calls; the call summary is the last target, after 18 preceding target calls.')
 
 
 def replay(root,record,row,retain_roles=False):
@@ -126,6 +229,10 @@ def replay(root,record,row,retain_roles=False):
     if setup.get('input_mode','dyadic')!=mode or setup.get('seed',17)!=seed:
         raise ValueError('input mode or seed changed')
     if setup.get('requested_sm_count',0)!=row.get('sm_count',0):raise ValueError('requested SM count changed')
+    if setup.get('raster_order','heuristic')!=row.get('raster_order','heuristic'):
+        raise ValueError('requested raster order changed')
+    if row.get('raster_order','heuristic')!='heuristic' and setup.get('resolved_raster_order')!=row['raster_order']:
+        raise ValueError('resolved raster order differs from explicit request')
     for key in ['alloc_lda','alloc_ldb','input_map_m','input_map_n']:
         if key in row and setup.get(key)!=row[key]:raise ValueError('input allocation changed: '+key)
     if 'input_map_m' in row or 'input_map_n' in row:
@@ -158,9 +265,17 @@ def replay(root,record,row,retain_roles=False):
     if row['kind']=='explicit_zero' and zero_count<1:raise ValueError('zero panel unchecked')
     validate_warmup(setup,call,row)
     result=dict(case=row['id'],variant=record['variant'],trial=record['trial'],elapsed_us=call['elapsed_us'],checked_values=4096,zero_values=zero_count,ctas=[])
+    if row.get('history_mode')=='series':
+        if setup['trace_version']!='v08-ends' or 'history_series' not in events:
+            raise ValueError('series requires its explicit ends history record')
+        result['history_series']=decode_history_series(setup,call,events['history_series'],row)
+        result['history_protocol']='prefix16-target19-ends-v1'
+        result['preceding_target_calls']=18
+        return result
     if record['variant'] in ['plain','wide']:return result
-    if setup.get('trace_version')=='r13-stage-sparse-v1':
-        result['sparse']=decode_stage_sparse(setup,call)
+    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1'):
+        key='progress' if setup['trace_version']=='r13-stage-progress-v1' else 'sparse'
+        result[key]=decode_stage_sparse(setup,call)
         return result
     tile_words=setup.get('trace_tile_words',6)
     words=call['trace'];ctas=math.prod(setup['grid']);width=16+2*64*tile_words
@@ -170,7 +285,10 @@ def replay(root,record,row,retain_roles=False):
     schedule='pingpong' if row['config']=='cfg_b' else 'cooperative'
     seen=[]
     light=setup['trace_version']=='r18-light-events'
-    inferred_work=model.scheduled_work(row['config'],row['m'],row['n'],setup['grid']) if light else None
+    inferred_work=None
+    if light:
+        from v08_model import scheduled_work
+        inferred_work=scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
     for c in range(ctas):
         head=words[c*width:(c+1)*width]
         if head[10] or not head[0] or not head[2]:raise ValueError('missing/overflow CTA trace')
@@ -1353,6 +1471,134 @@ def boundary_endpoint_distribution(base,output):
             'Per-window accounting is exact; medians of separately grouped terms are not additive.'])
     common.write_json(output/'C-endpoint-localization.json',result)
     return result
+
+
+def boundary_cluster_coupling(base,output):
+    """Within-call rank timing versus static nonpartner controls; no stall inference."""
+    import csv
+    from analyze_r13_sm import select_attempts
+    base=Path(base);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    roots=('20261010-R18-cluster-fill-discrimination','20261010-R09-R13-R18-failure-controls','20261009-V09-heldout-job739011')
+    all_pairs=[];provenance={}
+    for name in roots:
+        root=base/name;all_rows=json.loads((root/'cases.json').read_text())
+        rows=[r for r in all_rows if r['id'].startswith(('r18_cluster_fill_map','r18_partial_map')) or r['id']=='v09d_cfg_c_P2_partial_later_sw8']
+        setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+        data={};statics={}
+        for row in rows:
+            data[row['id']]={};statics[row['id']]=static_boundary_features(row,setups[row['id']])
+            selected,_,_=select_attempts(root,row['id'],('dual',))
+            for item in selected:
+                rec=item['record'];data[row['id']][rec['trial']]=replay(root,rec,row,retain_roles=True)
+                provenance[str(root/rec['raw'])]=rec['raw_sha256']
+        baseline=next((r for r in rows if r.get('input_map_m')==1024),None)
+        for row in rows:
+            op='A' if row['config']=='cfg_a' else 'B';groups=defaultdict(list)
+            for f in statics[row['id']]:groups[tuple(f['cluster']),f['j']].append(f)
+            # Static rank classes and rotation are chosen without any observed timing.
+            strata=defaultdict(list)
+            for (cluster,j),members in sorted(groups.items()):
+                members.sort(key=lambda f:f['rank'])
+                if len(members)!=2 or len({f['T'] for f in members})!=1:raise ValueError('cooperative cluster pair mismatch')
+                classes=tuple(boundary_geometry(row,f['coord']) for f in members)
+                fills=tuple(f['operands'][op]['own'] for f in members)
+                strata[j,members[0]['T'],classes,fills].append(members)
+            for trial,obs in sorted(data[row['id']].items()):
+                ct=obs['ctas'];earliest=min(c['entry_ns'] for c in ct);last=set(maximum_set([c['end_ns'] for c in ct]))
+                if any(tuple(ct[f['cta']]['work'][f['j']])!=tuple(f['coord']) for f in statics[row['id']]):
+                    raise ValueError('cluster analysis static scheduler differs from observed work')
+                bc=data[baseline['id']][trial]['ctas'] if baseline else None
+                for (j,T,classes,fills),clusters in strata.items():
+                    for pos,members in enumerate(clusters):
+                        controls=[('partner',members[0],members[1])]
+                        if len(clusters)>1:controls.append(('rotated_nonpartner',members[0],clusters[(pos+1)%len(clusters)][1]))
+                        for relation,fa,fb in controls:
+                            a,b=ct[fa['cta']],ct[fb['cta']]
+                            for role in range(2):
+                                ta=a['roles'][role]['tiles_ns'][j];tb=b['roles'][role]['tiles_ns'][j]
+                                La,Lb=ta[1]-ta[0],tb[1]-tb[0]
+                                p=dict(run=name,case=row['id'],trial=trial,relation=relation,role=role,j=j,T=T,
+                                    phase='first' if j==0 else 'later',classes='+'.join(classes),fill_pattern='+'.join(str(v) for v in fills),
+                                    cta_a=fa['cta'],cta_b=fb['cta'],mi_a=fa['coord'][0],ni_a=fa['coord'][1],mi_b=fb['coord'][0],ni_b=fb['coord'][1],
+                                    cluster_m=fa['cluster'][0],cluster_n=fa['cluster'][1],
+                                    start_a_ns=ta[0]-earliest,start_b_ns=tb[0]-earliest,end_a_ns=ta[1]-earliest,end_b_ns=tb[1]-earliest,
+                                    L_a_ns=La,L_b_ns=Lb,start_signed_gap_ns=tb[0]-ta[0],end_signed_gap_ns=tb[1]-ta[1],
+                                    start_gap_ns=abs(tb[0]-ta[0]),end_gap_ns=abs(tb[1]-ta[1]),L_gap_ns=abs(Lb-La),
+                                    contains_actual_last=bool(last&{fa['cta'],fb['cta']}),delta_L_a_ns=None,delta_L_b_ns=None,delta_L_gap_ns=None)
+                                if bc:
+                                    ba=bc[fa['cta']]['roles'][role]['tiles_ns'][j];bb=bc[fb['cta']]['roles'][role]['tiles_ns'][j]
+                                    da=La-(ba[1]-ba[0]);db=Lb-(bb[1]-bb[0])
+                                    p.update(delta_L_a_ns=da,delta_L_b_ns=db,delta_L_gap_ns=abs(da-db))
+                                all_pairs.append(p)
+    keynames=('run','case','relation','role','phase','j','T','classes','fill_pattern')
+    grouped=defaultdict(list)
+    for p in all_pairs:grouped[tuple(p[k] for k in (*keynames,'trial'))].append(p)
+    metrics=('start_gap_ns','end_gap_ns','L_gap_ns','delta_L_a_ns','delta_L_b_ns','delta_L_gap_ns')
+    processes=[]
+    for key,group in sorted(grouped.items()):
+        r=dict(zip((*keynames,'trial'),key),pairs=len(group))
+        for metric in metrics:
+            values=[p[metric] for p in group if p[metric] is not None];r[metric]=statistics.median(values) if values else None
+        r['end_within_32ns_fraction']=sum(p['end_gap_ns']<=32 for p in group)/len(group)
+        r['end_within_128ns_fraction']=sum(p['end_gap_ns']<=128 for p in group)/len(group)
+        r['end_gap_smaller_than_start_fraction']=sum(p['end_gap_ns']<p['start_gap_ns'] for p in group)/len(group)
+        processes.append(r)
+    groups=defaultdict(list)
+    for p in processes:groups[tuple(p[k] for k in keynames)].append(p)
+    summary=[]
+    for key,group in sorted(groups.items()):
+        r=dict(zip(keynames,key),processes=len(group))
+        for metric in (*metrics,'end_within_32ns_fraction','end_within_128ns_fraction','end_gap_smaller_than_start_fraction'):
+            values=[p[metric] for p in group if p[metric] is not None];r[metric]=statistics.median(values) if values else None
+        summary.append(r)
+    # Retain actual-last partner rows separately for P2 without constructing new prediction candidates.
+    critical=[p for p in all_pairs if p['case']=='v09d_cfg_c_P2_partial_later_sw8' and p['relation']=='partner' and p['contains_actual_last']]
+    frozen_path=base/'20261009-V09-heldout-job739011/frozen/predictions.json'
+    predicted=json.loads(frozen_path.read_text())['predictions']['v09d_cfg_c_P2_partial_later_sw8']['critical_candidates']
+    last_clusters=[]
+    for trial in range(10):
+        pairs=sorted({(p['cta_a'],p['cta_b']) for p in critical if p['trial']==trial and p['role']==1 and p['j']==0})
+        last_clusters.append(dict(trial=trial,actual_last_clusters=pairs,
+            intersects_frozen_candidates=any(set(pair)&set(predicted) for pair in pairs)))
+    source_root=base/'20261010-R18-cluster-fill-discrimination/source'
+    evidence={}
+    for relative,markers in [
+        ('cutlass/include/cutlass/gemm/collective/builders/sm90_common.inl',
+         ('sm90_cluster_shape_to_tma_atom','return cute::SM90_TMA_LOAD','return cute::SM90_TMA_LOAD_MULTICAST')),
+        ('cutlass/include/cutlass/gemm/collective/builders/sm90_gmma_builder.inl',
+         ('using GmemTiledCopyA = decltype(detail::sm90_cluster_shape_to_tma_atom',
+          'using GmemTiledCopyB = decltype(detail::sm90_cluster_shape_to_tma_atom')),
+        ('cutlass/include/cutlass/pipeline/sm90_pipeline.hpp',
+         ('multicast_consumer_arrival_count =','is_same_row_or_col','empty_barrier_ptr_[stage].wait',
+          'full_barrier_ptr_[stage].arrive_and_expect_tx','empty_barrier_ptr_[stage].arrive','void producer_tail')),
+        ('overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
+         ('NumProducerThreadEvents =','K_PIPE_MMAS =','TmaTransactionBytes =','mcast_mask_b |=',
+          'get_slice(cluster_local_block_id.x)','pipeline.producer_acquire','tma_load_b.with','warpgroup_wait<','pipeline.consumer_release')),
+        ('overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp',
+         ('NumMMAThreads == 256','mainloop_pipeline_params.num_consumers','mainloop_pipe_producer_state.advance',
+          'mainloop_pipe_consumer_state.advance','collective_mainloop.load_tail'))]:
+        path=source_root/relative;lines=path.read_text().splitlines()
+        evidence[str(path)]=dict(sha256=common.sha(path),sites={m:[i+1 for i,line in enumerate(lines) if m in line] for m in markers})
+    common.write_json(output/'C-cluster-coupling.json',dict(summary=summary,processes=processes,p2_actual_last_pairs=critical,
+        p2_frozen_candidates=predicted,p2_last_cluster_overlap=last_clusters,frozen_prediction_sha256=common.sha(frozen_path),
+        source_evidence=evidence,cfg_a_pipeline=dict(stages=6,consumer_warpgroups_per_cta=2,empty_arrival_count=4,
+            empty_scope='same row OR column; both ranks for cluster 2x1',full_producer_arrival_count=1,
+            full_expected_bytes=32768,A_local_bytes=16384,B_slice_bytes_per_rank=8192,B_multicast_mask=3,
+            constraints=['Stage reuse waits for prior-generation releases by both consumer warpgroups in both ranks.',
+                'Each local full barrier requires local producer arrival and completion of local A plus B slices issued by both ranks.',
+                'GMMA issuance waits for local full readiness and local issue/queue dependencies; safe release follows warpgroup_wait<1>.',
+                'Pipeline generation advances across output tiles; startup free stages, mma_tail wait<0>, and producer-tail empty waits remain distinct.'],
+            scope='Source dependencies only, not a measured attribution of the microsecond excess or a new timing coefficient.'),
+        raw_sha256=provenance,analyzer_sha256=common.sha(Path(__file__)),
+        limits=['Start/end differences are same role in two ranks of one invocation, using globaltimer.',
+            'Map increments compare two independent processes of the same trial; they are not within-call treatment effects.',
+            'Static rotated nonpartners match j/T/logical geometry/fill pattern; no nearest-time selection.',
+            'Whole-L endpoints cannot identify shared stalls, which peer waited, or the wait-full/GMMA/drain interval.',
+            'End gap versus start gap is descriptive; duration differences algebraically depend on both and are not independent causal evidence.',
+            'P2 has no matched map intervention here. Actual-last rows are diagnostics, not an enlarged frozen candidate set.']))
+    with gzip.open(output/'C-cluster-coupling-pairs.csv.gz','wt',newline='') as f:
+        writer=csv.DictWriter(f,fieldnames=list(all_pairs[0]));writer.writeheader();writer.writerows(all_pairs)
+    return dict(pairs=len(all_pairs),process_strata=len(processes),summary_rows=len(summary))
 
 
 if __name__=='__main__':

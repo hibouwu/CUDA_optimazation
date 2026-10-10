@@ -33,14 +33,15 @@ def log_swizzle(bm,bn,maxsw):
     return 3 if maxsw>=8 and d>=6 else 2 if maxsw>=4 and d>=3 else 1 if maxsw>=2 and d>=2 else 0
 
 
-def scheduled_work(config,m,n,grid,swizzle=1):
-    """CUTLASS 3.9.2 PersistentTileSchedulerSm90 with heuristic raster and max_swizzle_size."""
+def scheduled_work(config,m,n,grid,swizzle=1,raster_order='heuristic'):
+    """CUTLASS 3.9.2 PersistentTileSchedulerSm90 with selected raster and max_swizzle_size."""
     tm,tn,_=base.CONFIGS[config]['tile'];cm,cn=base.CONFIGS[config]['cluster'];gx,gy,gz=grid
     if gz!=1:raise ValueError('one batch only')
     bm=cdiv(cdiv(m,tm),cm)*cm;bn=cdiv(cdiv(n,tn),cn)*cn
     lg=log_swizzle(bm,bn,swizzle);S=1<<lg
     nm=cdiv(bm,S*cm)*S*cm;nn=cdiv(bn,S*cn)*S*cn
-    along_n=not nn>nm
+    if raster_order not in ('heuristic','along_m','along_n'):raise ValueError('unknown raster order')
+    along_n=(not nn>nm) if raster_order=='heuristic' else raster_order=='along_n'
     minor,major,major_blocks=(cm,cn,nn//cn) if along_n else (cn,cm,nm//cm)
     out=[]
     for by in range(gy):
@@ -69,7 +70,7 @@ def footprint_mib(r):return (r['m']*r['k']*2+r['k']*r['n']*2+r['m']*r['n']*4)/2*
 
 
 def features(r,grid):
-    work=scheduled_work(r['config'],r['m'],r['n'],grid,r['swizzle']);counts=[len(w) for w in work];T=max(counts)
+    work=scheduled_work(r['config'],r['m'],r['n'],grid,r['swizzle'],r.get('raster_order','heuristic'));counts=[len(w) for w in work];T=max(counts)
     classes=[tuple(tile_class(r['config'],r,mi,ni) for mi,ni in w) for w in work]
     return dict(work=work,classes=classes,T=T,kt=cdiv(r['k'],64),q=sum(c==T for c in counts)/SMS,fp=footprint_mib(r),
                 boundary=r['config']=='cfg_a' and r['kind'] in ('oob','partial_odd'),cols=cdiv(r['n'],128),rows=cdiv(r['m'],128))
@@ -100,11 +101,13 @@ def _ends(root,record,r):
 
 def observe(root,record,r,setup=None):
     """Numeric check for every variant; per-CTA events for stamped and ends."""
-    replay(root,dict(record,variant='plain'),r)
+    validated=replay(root,dict(record,variant='plain'),r)
+    if 'history_series' in validated:
+        raise ValueError('history series requires explicit series analysis, not single-call observe')
     if record['variant']=='plain':return dict(elapsed_us=record['elapsed_us'])
     if setup is None:
         setup=next(s['setup'] for s in json.loads((root/'static_setup.json').read_text()) if s['case']==r['id'])
-    work=scheduled_work(r['config'],r['m'],r['n'],setup['grid'],r['swizzle'])
+    work=scheduled_work(r['config'],r['m'],r['n'],setup['grid'],r['swizzle'],r.get('raster_order','heuristic'))
     if record['variant']=='stamped':
         o=replay(root,record,r)
         if [[tuple(x) for x in c['work']] for c in o['ctas']]!=work:raise ValueError('scheduler model differs from recorded coordinates')

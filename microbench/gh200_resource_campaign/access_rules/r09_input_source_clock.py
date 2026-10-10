@@ -259,7 +259,7 @@ def failure_stats(values):
     if not values:
         return dict(n=0)
     return dict(n=len(values), median=statistics.median(values), minimum=min(values), maximum=max(values),
-                rms=math.sqrt(statistics.fmean(x*x for x in values)), positive=sum(x > 0 for x in values))
+                rms=math.sqrt(statistics.fmean(x*x for x in values)), positive=int(sum(x > 0 for x in values)))
 
 
 def role_window_diagnostics(ctas):
@@ -631,7 +631,7 @@ def static_revisit_features(row, setup):
     cfg = v08_model.base.CONFIGS[row['config']]
     tm,tn,tk = cfg['tile']
     cm,cn = cfg['cluster']
-    work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'])
+    work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
     if row['m']%tm or row['n']%tn or row['k']%tk or any(
             mi*tm>=row['m'] or ni*tn>=row['n'] for c in work for mi,ni in c):
         raise ValueError('revisit definition here requires full in-bounds tiles without cluster padding')
@@ -831,6 +831,351 @@ def common_history_diagnostics(root, output):
     return result
 
 
+def history_state_weights(policy, target_swizzle, prefix_us, window_us, tau_us):
+    """Weights of (initial f, sw1 equilibrium, sw8 equilibrium) for one pole."""
+    average = -math.expm1(-window_us/tau_us)/(window_us/tau_us)
+    decay = math.exp(-prefix_us/tau_us)
+    weights = [decay*average,0.,0.]
+    prefix_swizzle = 1 if policy=='common-sw1-16' else target_swizzle
+    weights[1 if prefix_swizzle==1 else 2] += (1-decay)*average
+    weights[1 if target_swizzle==1 else 2] += 1-average
+    return weights
+
+
+def history_state_diagnostics(root, output):
+    """Constrain one local state law; measured H/W are never predictor inputs."""
+    import numpy as np
+    from scipy.optimize import lsq_linear,linprog
+    root,output = Path(root),Path(output)
+    path = Path(output)/'A-common-history.json'
+    data = clock.read_json(path)
+    points = data['processes']
+    uuid = data['environment']['gpu'].split(',')[0]
+    smi_path = root/'nvidia-smi-before.txt'
+    smi = smi_path.read_text().split(uuid,1)[1].split('\nGPU ',1)[0]
+    maxima = smi.split('\n    Max Clocks\n',1)[1].split('\n    Max Customer',1)[0]
+    cap = int(re.search(r'\bSM\s*:\s*(\d+) MHz',maxima)[1])/1000
+    y = np.asarray([p['frequency_ghz'] for p in points])
+    def design(tau):
+        return np.asarray([history_state_weights(p['policy'],p['swizzle'],p['warmup_total_us'],
+            p['frequency_observer_window_us'],tau) for p in points])
+    def fit_tau(tau):
+        matrix = design(tau)
+        fit = lsq_linear(matrix,y,bounds=(0,cap),method='bvls',tol=1e-12)
+        if not fit.success:
+            raise ValueError('fixed-tau state fit failed')
+        values = matrix@fit.x
+        return dict(tau_us=float(tau),initial_and_equilibria_ghz=fit.x.tolist(),
+                    mse_ghz=float(np.mean((values-y)**2)),errors=failure_stats(values/y-1),
+                    active_bounds=fit.active_mask.tolist(),rank=int(np.linalg.matrix_rank(matrix)))
+    coarse = np.logspace(2,7,161)  # 0.1 ms .. 10 s, a profile not a physical bound.
+    profile = [fit_tau(tau) for tau in coarse]
+    i = min(range(len(profile)),key=lambda i:profile[i]['mse_ghz'])
+    fine = np.geomspace(coarse[max(0,i-1)],coarse[min(len(coarse)-1,i+1)],81)
+    profile += [fit_tau(tau) for tau in fine if float(tau) not in {p['tau_us'] for p in profile}]
+    best = min(profile,key=lambda p:p['mse_ghz'])
+    predicted = design(best['tau_us'])@best['initial_and_equilibria_ghz']
+    groups = {}
+    for policy in ('adaptive','common-sw1-16'):
+        for sw in (1,8):
+            indices = [i for i,p in enumerate(points) if p['policy']==policy and p['swizzle']==sw]
+            groups[policy+'/sw'+str(sw)] = failure_stats(predicted[indices]/y[indices]-1)
+    def variable_initial_problem(tau):
+        matrix = design(tau)
+        # Eliminate each unobserved f0_i with the conservative 0..MaxClocks
+        # bounds: equilibrium contribution <= y <= contribution+gain*cap.
+        return dict(A_ub=np.concatenate((matrix[:,1:],-matrix[:,1:])),
+                    b_ub=np.concatenate((y,-y+matrix[:,0]*cap)),bounds=[(0,cap)]*2,method='highs')
+    feasible = []
+    for tau in coarse:
+        fit = linprog([0.,0.],**variable_initial_problem(tau))
+        if fit.success:
+            feasible.append(float(tau))
+    bounds = []
+    for tau in (50000.,100000.,1000000.,10000000.):
+        problem = variable_initial_problem(tau)
+        ranges = []
+        for direction in np.eye(2):
+            lo,hi = (linprog(sign*direction,**problem) for sign in (1,-1))
+            ranges.append([float(lo.fun),float(-hi.fun)] if lo.success and hi.success else None)
+        bounds.append(dict(tau_us=tau,equilibrium_sw1_sw8_ranges_ghz=ranges))
+    near = [p['tau_us'] for p in profile if p['mse_ghz']<=best['mse_ghz']*1.1]
+    result = dict(scope='Local state-identification diagnostic for two loads on GPU-ef8692f3; not a GEMM frequency predictor.',
+        source_sha256=clock.sha256(Path(__file__)),input_sha256={str(path):clock.sha256(path),str(smi_path):clock.sha256(smi_path)},
+        formula='df/dt=(f_eq(load)-f)/tau; target mean = f_eq(target)+(f_eq(prefix)+(f0-f_eq(prefix))*exp(-H/tau)-f_eq(target))*(1-exp(-W/tau))/(W/tau)',
+        clock_cap_ghz=cap,parameter_order=['shared initial f0','sw1 load equilibrium','sw8 load equilibrium'],
+        shared_initial=dict(best=best,by_group=groups,tau_profile=sorted(profile,key=lambda p:p['tau_us']),
+            sensitivity_tau_us=[min(near),max(near)],sensitivity_rule='Profile MSE<=1.10*minimum, not a confidence interval.'),
+        unknown_initial=dict(feasible_tau_grid_us=feasible,equilibrium_ranges=bounds,
+            exact_fit=True if feasible else False,
+            limiting_case='As tau grows, initial-state gains approach one; measured target f can be assigned to f0_i independently of equilibrium values. The finite scan supplies no identified upper time constant.'),
+        process_diagnostics=[dict(case=p['case'],trial=p['trial'],observed_f_ghz=float(y[i]),
+            shared_initial_predicted_f_ghz=float(predicted[i]),prefix_kernel_sum_us=p['warmup_total_us'],
+            target_observer_window_us=p['frequency_observer_window_us']) for i,p in enumerate(points)],
+        notes=['Only one first-order response family is tested. Its two load equilibria are local identification parameters, not per-condition prediction constants.',
+               'H is a measured sum of kernel event intervals and misses resets, synchronization and host gaps. W is an observed median CTA interval. Neither is a formal static predictor input.',
+               'The process frequency is a median of CTA ratios, not an exact sample of one continuous scalar trajectory.',
+               'Shared initial state is an unmeasured assumption. Allowing bounded process initial states exposes nonidentifiability, not a preferred fitted model.',
+               'No prefix clocks or wall-clock inter-call gaps were recorded. Fitted tau is therefore not an identified hardware time constant.',
+               'Next measurement needs same-process prefix and target call trajectories, with one final host trace read and globaltimer endpoints preserving the inter-call spans.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-history-state.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    return result
+
+
+def history_series_design(processes, tau_us):
+    """One pole on the observed globaltimer axis; process initial states are nuisance."""
+    import numpy as np
+    matrix=[]
+    for pindex,process in enumerate(processes):
+        state=np.zeros(len(processes)+2);state[pindex]=1.
+        calls=process['calls']
+        for index,call in enumerate(calls):
+            equilibrium=np.zeros(len(processes)+2)
+            equilibrium[len(processes)+(call['swizzle']==8)]=1.
+            # Median of affine interval means equals their median attenuation
+            # times the common state difference, including a negative difference.
+            attenuation=statistics.median(math.exp(-offset/tau_us)*(-math.expm1(-width/tau_us))/(width/tau_us)
+                for offset,width in call['frequency_observers_us'])
+            matrix.append(attenuation*state+(1-attenuation)*equilibrium)
+            if index+1<len(calls):
+                dwell=(calls[index+1]['first_entry_ns']-call['first_entry_ns'])/1000
+                decay=math.exp(-dwell/tau_us)
+                state=decay*state+(1-decay)*equilibrium
+    return np.asarray(matrix)
+
+
+def fit_history_series(processes, cap):
+    """Fit observed GHz only; the last nine target calls are a temporal diagnostic."""
+    import numpy as np
+    from scipy.optimize import lsq_linear
+    points=[(p,c) for p in processes for c in p['calls']]
+    y=np.asarray([c['frequency_ghz'] for p,c in points])
+    masks=dict(prefix_and_first10_targets=np.asarray([c['index']<26 for p,c in points]),
+               all_calls=np.ones(len(points),dtype=bool))
+    reports,predictions={},{}
+    for name,mask in masks.items():
+        def at_tau(tau):
+            full=history_series_design(processes,tau);x=full[mask]
+            fit=lsq_linear(x,y[mask],bounds=(0,cap),method='bvls',tol=1e-11)
+            if not fit.success:raise ValueError('history-series state fit failed')
+            error=x@fit.x-y[mask]
+            singular=np.linalg.svd(x,compute_uv=False)
+            return dict(tau_us=float(tau),coefficients_ghz=fit.x.tolist(),
+                mse_ghz=float(np.mean(error**2)),active_bounds=fit.active_mask.tolist(),
+                rank=int(np.linalg.matrix_rank(x)),singular_ratio=float(singular[-1]/singular[0]))
+        coarse=np.logspace(2,7,61)
+        profile=[at_tau(t) for t in coarse]
+        i=min(range(len(profile)),key=lambda j:profile[j]['mse_ghz'])
+        fine=np.geomspace(coarse[max(i-1,0)],coarse[min(i+1,len(coarse)-1)],21)
+        profile.extend(at_tau(t) for t in fine if float(t) not in {p['tau_us'] for p in profile})
+        best=min(profile,key=lambda p:p['mse_ghz'])
+        predicted=history_series_design(processes,best['tau_us'])@best['coefficients_ghz']
+        predictions[name]=predicted
+        near=[p['tau_us'] for p in profile if p['mse_ghz']<=best['mse_ghz']*1.10]
+        groups={}
+        for sw in (1,8):
+            for segment,select in [('prefix',lambda c:c['index']<16),
+                    ('target_first10',lambda c:16<=c['index']<26),('target_last9',lambda c:c['index']>=26)]:
+                chosen=[j for j,(p,c) in enumerate(points) if p['swizzle']==sw and select(c)]
+                groups[f'sw{sw}/{segment}']=dict(relative=failure_stats(predicted[chosen]/y[chosen]-1),
+                    residual_ghz=failure_stats(predicted[chosen]-y[chosen]))
+        reports[name]=dict(best=best,by_segment=groups,tau_profile=sorted(profile,key=lambda p:p['tau_us']),
+            sensitivity_tau_us=[min(near),max(near)],
+            sensitivity_reaches_scan_edge=min(near)==float(coarse[0]) or max(near)==float(coarse[-1]),
+            sensitivity_rule='Profile MSE <= 1.10*minimum is sensitivity, not a confidence interval.',
+            parameter_order=[p['case']+'/trial'+str(p['trial'])+' initial f' for p in processes]+['sw1 equilibrium','sw8 equilibrium'])
+    process_predictions=[];carry_errors=[];holdout_errors=[];gap_ratios=[];training_residual=[]
+    cursor=0
+    for p in processes:
+        calls=[];carry=p['calls'][25]['frequency_ghz']
+        for c in p['calls']:
+            predicted=float(predictions['prefix_and_first10_targets'][cursor])
+            full=float(predictions['all_calls'][cursor]);observed=c['frequency_ghz']
+            calls.append(dict(index=c['index'],observed_ghz=observed,trained_ghz=predicted,
+                full_fit_ghz=full,last9_holdout=c['index']>=26))
+            if c['index']>=26:
+                carry_errors.append(carry/observed-1);holdout_errors.append(predicted/observed-1)
+            if c['index']>0:
+                gap_ratios.append(c['globaltimer_gap_before_us']/c['window_us'])
+                training_residual.append(predicted/observed-1)
+            cursor+=1
+        process_predictions.append(dict(case=p['case'],trial=p['trial'],swizzle=p['swizzle'],calls=calls))
+    correlation=float(np.corrcoef(gap_ratios,training_residual)[0,1]) if np.std(gap_ratios)>0 and np.std(training_residual)>0 else None
+    return dict(formula='df/dt=(f_eq(sw)-f)/tau, shared tau/equilibria with one initial state per process',
+        fits=reports,process_predictions=process_predictions,
+        last9_comparison=dict(state=failure_stats(holdout_errors),carry_last_training_call=failure_stats(carry_errors)),
+        residual_vs_preceding_globaltimer_gap_ratio=correlation,
+        scope='All time coordinates are observed diagnostics; no trace time, initial-state nuisance coefficient or local equilibrium is added to a formal predictor.',
+        assumptions=['All CTA interval means are represented by one process scalar state; median attenuation preserves the actual maximum-work CTA observation intervals.',
+            'The preceding load equilibrium remains active from its first CTA entry until the next call first entry, including the measured boundary gap. There is no independently identified idle-state response.',
+            'The first 16 prefix calls and first 10 target calls alone fit the temporal holdout model; the final 9 target calls never select its parameters or tau. Full-call fit is descriptive only.',
+            'Temporal holdout calls share a process and workload; they are mechanism diagnostics, not independent new-shape/GPU validation.',
+            'A profile minimum, an active clock bound, or small residual alone does not identify a physical time constant; inspect boundary sensitivity, cross-process scatter, direction, and held-segment residuals.'])
+
+
+def history_series_diagnostics(root, output):
+    """Same-process clock trajectories with a contemporaneous recording perturbation pair."""
+    import gzip
+    from analyze_r13_sm import select_attempts
+    from analyze_r18 import replay
+    import v06_run as common
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows=clock.read_json(root/'cases.json')
+    if len(rows)!=4 or {(r.get('history_mode'),r['swizzle']) for r in rows}!={(m,s) for m in ('single','series') for s in (1,8)}:
+        raise ValueError('four declared single/series sw1/sw8 conditions required')
+    setups={s['case']:s['setup'] for s in clock.read_json(root/'static_setup.json')}
+    fixed=('gpu_uuid','config','m','n','k','lda','ldb','ldd','alloc_lda','alloc_ldb','allocated_a_elements',
+        'allocated_b_elements','input_mode','seed','grid','stages','zero_m','zero_n','evict','history_capacity_bytes')
+    anchor=setups[rows[0]['id']]
+    if any(any(setups[r['id']].get(k)!=anchor.get(k) for k in fixed) for r in rows):
+        raise ValueError('history-series contrast changed geometry/input/device/allocation conditions')
+    inputs={name:clock.sha256(root/name) for name in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/binary_hashes.json','nvidia-smi-before.txt')}
+    processes,failures,records=[],[],{}
+    for row in rows:
+        selected,failed,_=select_attempts(root,row['id'],('ends',));failures.extend(failed)
+        for item in selected:
+            rec=item['record']
+            decoded=replay(root,rec,row) if row['history_mode']=='series' else v08_model.observe(root,rec,row,setups[row['id']])
+            with gzip.open(root/rec['raw'],'rt') as stream:
+                call=next(ev for line in stream if line.strip() for ev in [json.loads(line)] if ev['event']=='call')
+            p=dict(case=row['id'],mode=row['history_mode'],swizzle=row['swizzle'],trial=rec['trial'],
+                protocol=call['history_protocol'],host_start_ns=rec['host_start_ns'],host_stop_ns=rec['host_stop_ns'],
+                raw_sha256=rec['raw_sha256'],prefix_kernel_sum_us=sum(call['warmup_us']),
+                prefix_call_event_us=call['warmup_us'],
+                prefix_last3_over_first3_event=statistics.median(call['warmup_us'][-3:])/statistics.median(call['warmup_us'][:3])-1,
+                prefix_event_us=call['history_prefix_event_us'],total_event_us=call['history_event_us'],
+                warmup_last5_cv=statistics.pstdev(call['warmup_us'][-5:])/statistics.fmean(call['warmup_us'][-5:]),
+                preceding_target_calls=call['preceding_target_calls'],event_gaps_us=call['history_inter_call_event_us'])
+            if p['mode']=='series':
+                trajectory=decoded['history_series'];p['calls']=[]
+                for j,old in enumerate(trajectory['calls']):
+                    c={k:v for k,v in old.items() if k!='ctas'}
+                    maximum=max(t['tiles'] for t in old['ctas'])
+                    observers=[t for t in old['ctas'] if t['tiles']==maximum]
+                    c.update(frequency_observers_us=[[(t['entry_ns']-old['first_entry_ns'])/1000,
+                        (t['end_ns']-t['entry_ns'])/1000] for t in observers],
+                        median_full_cta_cycles=statistics.median(t['end_c']-t['entry_c'] for t in observers),
+                        median_full_cta_window_us=statistics.median((t['end_ns']-t['entry_ns'])/1000 for t in observers),
+                        max_cycles_over_process_f_us=old['max_cta_cycles']/(1000*old['frequency_ghz']),
+                        local_frequency_ghz=failure_stats((t['end_c']-t['entry_c'])/(t['end_ns']-t['entry_ns']) for t in observers),
+                        event_gap_before_us=None if j==0 else p['event_gaps_us'][j-1],
+                        globaltimer_gap_before_us=None if j==0 else trajectory['inter_call_globaltimer_us'][j-1])
+                    p['calls'].append(c)
+                p['target']=p['calls'][16]
+                p['globaltimer_boundary_gap_fraction']=sum(trajectory['inter_call_globaltimer_us'])/(
+                    (p['calls'][-1]['last_final_ns']-p['calls'][0]['first_entry_ns'])/1000)
+            else:
+                p['target']=dict(event_us=decoded['elapsed_us'],**control_window(decoded))
+                maximum=max(t['tiles'] for t in decoded['ctas'])
+                p['target']['median_full_cta_cycles']=statistics.median(t['end_c']-t['entry_c'] for t in decoded['ctas'] if t['tiles']==maximum)
+                p['target']['median_full_cta_window_us']=statistics.median((t['end_ns']-t['entry_ns'])/1000 for t in decoded['ctas'] if t['tiles']==maximum)
+                p['target']['max_cycles_over_process_f_us']=p['target']['max_cta_cycles']/(1000*p['target']['frequency_ghz'])
+            p['event_gap_fraction']=sum(p['event_gaps_us'])/p['total_event_us']
+            records[p['mode'],p['swizzle'],p['trial']]=p;processes.append(p)
+            inputs[item['path']]=clock.sha256(root/item['path'])
+    if set(records)!={(m,s,t) for m in ('single','series') for s in (1,8) for t in range(10)}:
+        raise ValueError('all forty successful processes required; no fixed-prefix CV filtering')
+    fields=('frequency_ghz','max_cta_cycles','median_full_cta_cycles','median_full_cta_window_us','max_cycles_over_process_f_us','window_us','event_us')
+    pairs=[];pair_summary={}
+    for sw in (1,8):
+        group=[]
+        for trial in range(10):
+            single,series=records['single',sw,trial],records['series',sw,trial]
+            group.append(dict(swizzle=sw,trial=trial,first_mode='single' if single['host_start_ns']<series['host_start_ns'] else 'series',
+                separation_s=abs(single['host_start_ns']-series['host_start_ns'])/1e9,
+                prefix_event_change=series['prefix_event_us']/single['prefix_event_us']-1,
+                prefix_kernel_sum_change=series['prefix_kernel_sum_us']/single['prefix_kernel_sum_us']-1,
+                **{key+'_change':series['target'][key]/single['target'][key]-1 for key in fields}))
+        pairs.extend(group)
+        pair_summary[str(sw)]=dict(metrics={key:failure_stats(p[key] for p in group) for key in group[0] if key.endswith('_change')},
+            order_counts={m:sum(p['first_mode']==m for p in group) for m in ('single','series')})
+    series=[p for p in processes if p['mode']=='series']
+    trajectory_summary={};transitions=[]
+    for sw in (1,8):
+        group=[p for p in series if p['swizzle']==sw]
+        trajectory_summary[str(sw)]=[]
+        for j in range(35):
+            samples=[p['calls'][j] for p in group]
+            summary={key:dict(failure_stats(c[key] for c in samples),
+                process_cv=statistics.pstdev(c[key] for c in samples)/statistics.fmean(c[key] for c in samples)) for key in fields}
+            if j:summary.update({key:failure_stats(c[key] for c in samples) for key in ('event_gap_before_us','globaltimer_gap_before_us')})
+            trajectory_summary[str(sw)].append(dict(index=j,phase=samples[0]['phase'],metrics=summary))
+        for p in group:
+            c=p['calls']
+            p['within_target_variation']={key:dict(
+                cv=statistics.pstdev(x[key] for x in c[16:])/statistics.fmean(x[key] for x in c[16:]),
+                max_over_min=max(x[key] for x in c[16:])/min(x[key] for x in c[16:])-1) for key in fields}
+            transitions.append(dict(swizzle=sw,trial=p['trial'],
+                first_target_over_last_prefix={key:c[16][key]/c[15][key]-1 for key in fields},
+                last3_target_over_first3_target={key:statistics.median(x[key] for x in c[-3:])/statistics.median(x[key] for x in c[16:19])-1 for key in fields},
+                prefix_last3_over_first3={key:statistics.median(x[key] for x in c[13:16])/statistics.median(x[key] for x in c[:3])-1 for key in fields}))
+    environment=clock.read_json(root/'environment.json');uuid=environment['gpu'].split(',')[0]
+    smi=(root/'nvidia-smi-before.txt').read_text().split(uuid,1)[1].split('\nGPU ',1)[0]
+    maxima=smi.split('\n    Max Clocks\n',1)[1].split('\n    Max Customer',1)[0]
+    cap=int(re.search(r'\bSM\s*:\s*(\d+) MHz',maxima)[1])/1000
+    result=dict(scope='New recorded prehistory trajectories and same-binary recording perturbation controls; not a new prediction score.',
+        run=str(root),environment=environment,source_sha256=clock.sha256(Path(__file__)),input_sha256=inputs,
+        conditions={k:anchor.get(k) for k in fixed},processes=processes,failed_attempts=failures,
+        recording_perturbation=dict(comparison='series first target / contemporaneous single target',paired_trials=pairs,by_swizzle=pair_summary),
+        prefix_event_trend={mode:dict(all=failure_stats(p['prefix_last3_over_first3_event'] for p in processes if p['mode']==mode),
+            by_swizzle={str(sw):failure_stats(p['prefix_last3_over_first3_event'] for p in processes if p['mode']==mode and p['swizzle']==sw) for sw in (1,8)}) for mode in ('single','series')},
+        trajectory_by_index=trajectory_summary,process_transitions=transitions,
+        target_variation={str(sw):{key:{measure:failure_stats(p['within_target_variation'][key][measure] for p in series if p['swizzle']==sw)
+            for measure in ('cv','max_over_min')} for key in fields} for sw in (1,8)},
+        gap_summary=dict(event_gap_fraction={mode:failure_stats(p['event_gap_fraction'] for p in processes if p['mode']==mode) for mode in ('single','series')},
+            series_globaltimer_boundary_gap_fraction=failure_stats(p['globaltimer_boundary_gap_fraction'] for p in series)),
+        transition_summary={str(sw):{segment:{key:failure_stats(p[segment][key] for p in transitions if p['swizzle']==sw) for key in fields}
+            for segment in ('first_target_over_last_prefix','last3_target_over_first3_target','prefix_last3_over_first3')} for sw in (1,8)},
+        state_diagnostic=fit_history_series(series,cap),
+        verification=dict(source_and_binary_hashes=True,successful_raw_replays=len(processes),fixed_prefix_cv_exclusions=0,
+            series_calls=sum(len(p['calls']) for p in series)),
+        notes=['All series contain sixteen sw1 prefix calls plus nineteen targets; their ordinary call summary is target19 after eighteen preceding targets.',
+            'Single/series share allocation capacity and event objects. Series alone adds D2D heads recording; equal allocation does not prove equal cache contents or unperturbed history.',
+            'Event gaps and globaltimer end-to-next-entry gaps have different boundaries; neither is asserted to be pure idle time.',
+            'median_full_cta_window_us is median same-CTA C/f over maximum-work CTAs, exactly the corresponding globaltimer interval. max_cycles_over_process_f_us combines maximum C and process-median f and is only a conversion proxy, not the global envelope.',
+            'Every series call has ends/work/SM checks; the process numeric output check covers only its last target.',
+            'A sequential process pair shares a trial label, not a common initial thermal/power/cache state. Report dispersion and actual execution order before causal attribution.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'A-history-series.json').write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
+    plot_history_series(result,output)
+    return result
+
+
+def plot_history_series(report, output):
+    """Process trajectories and empirical spread; bands are not confidence intervals."""
+    import numpy as np
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    fig,axes=plt.subplots(2,2,figsize=(10,6.6),sharex=True,layout='constrained')
+    fields=[('frequency_ghz',1,'Effective SM clock (GHz)'),
+            ('max_cta_cycles',1e6,'Maximum CTA cycles (million)'),
+            ('median_full_cta_window_us',1000,'Matched full-work CTA window (ms)'),
+            ('event_us',1000,'Kernel event time (ms)')]
+    x=np.arange(1,36)
+    for sw,color in [(1,'#2878b5'),(8,'#d97919')]:
+        group=[p for p in report['processes'] if p['mode']=='series' and p['swizzle']==sw]
+        for ax,(field,scale,label) in zip(axes.flat,fields):
+            values=np.array([[c[field]/scale for c in p['calls']] for p in group])
+            for trace in values:ax.plot(x,trace,color=color,alpha=.14,linewidth=.65)
+            lo,hi=np.quantile(values,[.1,.9],axis=0)
+            ax.fill_between(x,lo,hi,color=color,alpha=.13,linewidth=0)
+            ax.plot(x,np.median(values,axis=0),color=color,linewidth=1.8,label=f'target sw{sw}')
+            ax.set_ylabel(label,fontsize=9)
+    for ax in axes.flat:
+        ax.axvline(16.5,color='#777777',linestyle='--',linewidth=.9)
+        ax.set_xlim(1,35);ax.set_xticks([1,8,16,24,35]);ax.grid(alpha=.18)
+        ax.tick_params(labelsize=8)
+    axes[0,0].legend(frameon=False,fontsize=8)
+    for ax in axes[1]:ax.set_xlabel('Call index: 1-16 common sw1; 17-35 target',fontsize=9)
+    fig.suptitle('GH200 history response: 10 independent processes per target\n'
+                 'Thin lines: all processes; thick line: median; band: empirical 10-90%',fontsize=11)
+    fig.savefig(Path(output)/'A-history-series.png',dpi=160)
+    plt.close(fig)
+
+
 def response_development(base, output):
     """Declared response/activity contrasts on one training card; development only."""
     from collections import defaultdict
@@ -912,7 +1257,7 @@ def response_development(base, output):
     for item in data['v09_calls']['processes']:
         row = rows[item['case']]
         point = work_point(row,setups[row['id']])
-        work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setups[row['id']]['grid'],row['swizzle'])
+        work = v08_model.scheduled_work(row['config'],row['m'],row['n'],setups[row['id']]['grid'],row['swizzle'],row.get('raster_order','heuristic'))
         v09points.append(dict(point,case=row['id'],config=row['config'],group=row['group'],
             output_mean_kib=static_output_kib(row),
             zero_fraction=v09_model.zero_product_fraction(row,work),trial=item['trial'],

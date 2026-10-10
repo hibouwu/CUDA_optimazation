@@ -1527,13 +1527,14 @@ def _finite_stage_cycles(kt, stages, issue_interval, ready_latency, consumer_int
     """
     if kt < 2 or stages < 2 or min(issue_interval, ready_latency, consumer_interval) < 0:
         raise ValueError('finite-stage diagnostic requires Ktile>=2, stages>=2 and nonnegative times')
-    issued, ready, starts, done = [], [], [], []
+    issued, ready, starts, done, available, retired = [], [], [], [], [], []
     released = [0.]*(2*kt)
     next_consumer = 0.
     for i in range(2*kt):
         issue = max(issued[-1]+issue_interval if issued else 0., released[i-stages] if i >= stages else 0.)
         issued.append(issue)
         ready.append(issue+ready_latency)
+        available.append(next_consumer)
         commit = max(ready[-1],next_consumer)
         starts.append(commit)
         done.append(max(commit,done[-1] if done else 0.)+consumer_interval)
@@ -1544,11 +1545,49 @@ def _finite_stage_cycles(kt, stages, issue_interval, ready_latency, consumer_int
             released[i-1] = next_consumer  # wait1 has completed the previous group
         if i % kt == kt-1:
             released[i] = done[i]  # mma_tail wait0 releases the last stage
+        retired.append(next_consumer)
     windows = [done[kt-1]-starts[0],done[-1]-starts[kt]]
     if detail:
         return dict(windows=windows,issued=issued,ready=ready,first_mma_or_commit=starts,
-            completed=done,released=released,slot=[i % stages for i in range(2*kt)])
+            completed=done,released=released,consumer_available=available,wait1_return=retired,
+            commits=starts,slot=[i % stages for i in range(2*kt)])
     return windows
+
+
+def _commit_paced_stage_cycles(kt, stages, issue_interval, ready_latency, residual_tail, detail=False, loop_advance=0.):
+    """Three-parameter alternative: 512-cycle commit throughput, residual tail only.
+
+    Producer issue and software slot lifetimes are unchanged. The 512-cycle floor
+    comes from cfg_b's existing arithmetic demand, not the measured stage penalty.
+    The default has no loop-bookkeeping cost; the diagnostic wrapper adds one
+    shared loop parameter without changing slot or inter-output handoff semantics.
+    """
+    issued,ready,available,starts,commits,done,retired=[],[],[],[],[],[],[]
+    released=[0.]*(2*kt);next_consumer=0.
+    for i in range(2*kt):
+        issue=max(issued[-1]+issue_interval if issued else 0.,released[i-stages] if i>=stages else 0.)
+        issued.append(issue);ready.append(issue+ready_latency);available.append(next_consumer)
+        start=max(ready[-1],next_consumer);starts.append(start)
+        commit=max(start,commits[-1]+512 if commits else start)
+        commits.append(commit);done.append(commit+residual_tail)
+        if i%kt==0:next_consumer=commit
+        else:
+            next_consumer=max(commit,done[i-1]);released[i-1]=next_consumer
+        if i%kt==kt-1:released[i]=done[i]
+        retired.append(next_consumer)
+        if i%kt!=kt-1:next_consumer+=loop_advance
+    windows=[done[kt-1]-starts[0],done[-1]-starts[kt]]
+    if detail:
+        return dict(windows=windows,issued=issued,ready=ready,consumer_available=available,
+            first_mma_or_commit=starts,commits=commits,completed=done,released=released,
+            wait1_return=retired,slot=[i%stages for i in range(2*kt)])
+    return windows
+
+
+def _loop_paced_stage_cycles(kt, stages, issue_interval, ready_latency, residual_tail, loop_advance, detail=False):
+    """One shared loop-progress parameter, excluding the inter-output handoff."""
+    return _commit_paced_stage_cycles(kt,stages,issue_interval,ready_latency,residual_tail,
+        detail=detail,loop_advance=loop_advance)
 
 
 def _discount_stage_cycles(kt, stages, first_offset, first_price, later_offset, later_price):
@@ -1563,6 +1602,15 @@ def _fit_stage_candidate(rows, kind):
         evaluate = _finite_stage_cycles
         starts = [[p,latency,c] for p in (10.,300.,600.) for latency in (500.,1500.,2500.,4000.) for c in (512.,600.)]
         lower,upper = [0.,0.,512.],[2000.,20000.,1500.]
+    elif kind == 'commit_paced':
+        evaluate = _commit_paced_stage_cycles
+        starts = [[p,latency,tail] for p in (10.,300.,600.) for latency in (500.,1500.,2500.,4000.) for tail in (64.,256.,512.,1024.)]
+        lower,upper = [0.,0.,0.],[2000.,20000.,2000.]
+    elif kind == 'loop_paced':
+        evaluate = _loop_paced_stage_cycles
+        starts = [[p,latency,tail,h] for p in (10.,500.) for latency in (500.,1500.,4000.)
+            for tail in (256.,512.,1024.) for h in (0.,100.,300.)]
+        lower,upper = [0.,0.,0.,0.],[2000.,20000.,2000.,1024.]
     else:
         evaluate = _discount_stage_cycles
         starts = [[b,c,b,c] for b in (0.,500.,2000.) for c in (512.,600.,900.)]
@@ -1713,6 +1761,10 @@ def _stage_event_intervals(sparse):
     intervals['issue_to_observed_full'] = clocks['full_wait_end']-clocks['issue_end']
     intervals['slot_live_until_release_begin'] = clocks['release_begin']-clocks['acquire_end']
     intervals['refill_after_release_begin'] = clocks['refill_end']-clocks['release_begin']
+    intervals['refill_after_release_end'] = clocks['refill_end']-clocks['release_end']
+    intervals['release_begin_after_refill_wait_begin'] = clocks['release_begin']-clocks['refill_begin']
+    intervals['wait1_to_next_release_begin'] = clocks['release_begin']-clocks['wait1_end']
+    intervals['wait1_to_next_release_end'] = clocks['release_end']-clocks['wait1_end']
     intervals['consumer_wait_to_commit'] = clocks['commit_end']-clocks['full_wait_begin']
     intervals['consumer_wait_to_wait1'] = clocks['wait1_end']-clocks['full_wait_begin']
     intervals['before_selected_wait'] = clocks['full_wait_begin']-clocks['first_mma']
@@ -1838,6 +1890,10 @@ def stage_event_diagnostics(root, output):
         'refill_empty_wait':'同slot补发前empty等待','consumer_full_wait':'consumer full等待',
         'consumer_issue_to_commit':'full返回→commit','consumer_wait1':'commit→wait1返回',
         'consumer_wait_to_commit':'full等待前→commit','consumer_wait_to_wait1':'full等待前→wait1返回',
+        'wait1_to_next_release_begin':'Ktile16 wait1返回→目标slot release前（Ktile17）',
+        'wait1_to_next_release_end':'Ktile16 wait1返回→目标slot release后（Ktile17）',
+        'release_begin_after_refill_wait_begin':'补发开始等待→consumer release前',
+        'refill_after_release_end':'consumer release后→补发acquire返回',
         'before_selected_wait':'FIRST_MMA→Ktile16 full等待前',
         'through_selected_commit':'FIRST_MMA→Ktile16 commit',
         'after_selected_wait1_to_mma_return':'Ktile16 wait1返回→mma返回',
@@ -1859,6 +1915,377 @@ def stage_event_diagnostics(root, output):
         '与739095旧dual只按相同CTA、相同输出比较整L；两批窗口不拼接，事件价格不直接接入模型。',
         '','JSON保存逐进程值、静态资源/SASS及归档源码身份；CSV保留全部选中窗口，失败编译记录仍在原run的attempts目录。','']
     (output/'B-stage-events.md').write_text('\n'.join(lines))
+    return report
+
+
+def _stage_candidate_local_events(evaluate, parameters, stages):
+    """Expose what each simplified recurrence actually predicts at the sampled nodes."""
+    trace=evaluate(64,stages,*parameters,detail=True);i=80
+    I,A,H,B,C,D,U,W=(trace[k] for k in ('issued','ready','consumer_available','first_mma_or_commit',
+        'commits','completed','released','wait1_return'))
+    values=dict(consumer_full_wait=B[i]-H[i],consumer_issue_to_commit=C[i]-B[i],
+        consumer_wait1=W[i]-C[i],consumer_wait_to_wait1=W[i]-H[i],
+        wait1_to_next_release_begin=U[i]-W[i],
+        refill_empty_wait=I[i+stages]-(I[i+stages-1]+parameters[0]),
+        refill_after_release_begin=I[i+stages]-U[i],
+        mainloop_before_tail=W[-1]-B[64],mma_tail=D[-1]-W[-1],L=trace['windows'][1])
+    return dict(intervals=values,nodes_relative_to_FIRST_MMA=[dict(global_ktile=k,
+        issue=I[k]-B[64],ready=A[k]-B[64],consumer_available=H[k]-B[64],
+        full_return=B[k]-B[64],commit=C[k]-B[64],complete=D[k]-B[64],release=U[k]-B[64])
+        for k in sorted({i-1,i,i+1,i+stages})])
+
+
+def stage_event_model_diagnostics(base, output):
+    """Whole-window fits versus independently reported sparse local constraints."""
+    base,output=Path(base),Path(output)
+    fit_path=output/'B-finite-stage.json';event_path=output/'B-stage-events.json'
+    old=read_json(fit_path);events=read_json(event_path)
+    if old['gpu']!=events['gpu']:raise ValueError('local model comparison must use the same GPU')
+    revised=_fit_stage_candidate(old['targets'],'commit_paced')
+    revised['rows']=[dict(**r,predicted_cycles=_commit_paced_stage_cycles(r['kt'],r['stages'],*revised['parameters'])[r['j']],
+        relative_error=_commit_paced_stage_cycles(r['kt'],r['stages'],*revised['parameters'])[r['j']]/r['cycles']-1)
+        for r in old['targets']]
+    differences=[]
+    for n,name in enumerate(('producer_interval','ready_latency','residual_tail')):
+        p=revised['parameters'][:];p[n]+=1.
+        differences.append(dict(parameter=name,max_whole_L_change_for_plus_one_cycle=max(abs(
+            _commit_paced_stage_cycles(r['kt'],r['stages'],*p)[r['j']]-
+            _commit_paced_stage_cycles(r['kt'],r['stages'],*revised['parameters'])[r['j']]) for r in old['targets'])))
+    revised['local_sensitivity']=differences
+    comparisons={}
+    for name,evaluate,parameters in [('post_commit_compute',_finite_stage_cycles,old['models']['finite_buffer']['parameters']),
+                                    ('commit_paced',_commit_paced_stage_cycles,revised['parameters'])]:
+        cases=[]
+        for s in (4,6):
+            pred=_stage_candidate_local_events(evaluate,parameters,s)
+            actual=next(t['intervals'] for t in events['timing'] if t['stages']==s)
+            cases.append(dict(stages=s,predicted=pred,
+                observed={key:actual[key] for key in pred['intervals']},
+                median_residual_cycles={key:v-actual[key]['median'] for key,v in pred['intervals'].items()}))
+        comparisons[name]=cases
+    c6=next(t for t in events['timing'] if t['stages']==6)['intervals']['consumer_wait_to_wait1']
+    waiting={s:[p for p in events['processes'] if p['stages']==s] for s in (4,6)}
+    release_bounds={s:dict(already_waiting_before_release=sum(p['release_begin_after_refill_wait_begin']>0 for p in rows),
+        processes=len(rows),return_after_release_call_min=min(p['refill_after_release_end'] for p in rows),
+        return_after_release_call_max=max(p['refill_after_release_begin'] for p in rows)) for s,rows in waiting.items()}
+    report=dict(scope='Post-measurement candidate diagnosis. Parameters use only 739095 dual whole-L windows; '
+        '739556 sparse intervals remain a separate comparison, with no pooled likelihood or new validation score.',
+        gpu=events['gpu'],old_fit_parameters=old['models']['finite_buffer']['parameters'],revised_fit=revised,
+        revised_formula='I_i=max(I_(i-1)+p,U_(i-S)); A_i=I_i+latency; B_i=max(A_i,H_i); '
+            'C_i=max(B_i,C_(i-1)+512); D_i=C_i+tau. Wait1/release uses max(C_i,D_(i-1)); same slot lifecycle.',
+        local_comparisons=comparisons,
+        structural_constraint=dict(model='commit_paced with zero loop-bookkeeping time',
+            derivation='For ordinary iterations H_i=W_(i-1), W_i=max(C_i,C_(i-1)+tau). '
+                'Both arguments advance at least 512, so W_i-H_i>=512 for every parameter choice.',
+            observed_stage6_range=[c6['trial_min'],c6['trial_max']],
+            minimum_missing_interval_under_this_assumption=512-c6['trial_max'],
+            implication='No adjustment of the three parameters can place this combined interval inside the raw observed range. '
+                'Either loop/release bookkeeping before the next full-wait must be represented, or the arithmetic '
+                'throughput bound must constrain a service/average issue process rather than every commit spacing. '
+                'This is a limitation of the simplified event mapping, not a measured hardware 512-cycle issue rule.'),
+        release_to_acquire_bounds=release_bounds,
+        interpretation=['Ktile16 combined equality does not mean the next iteration advances equally: the same-call '
+            'wait1(K16)-to-release(K16, in K17) difference is reported independently.',
+            'Old recurrence treats a whole Ktile as starting compute after instantaneous commit; observed issue-to-commit '
+            'is nonzero and overlaps progress. Its fitted stage6 wait1 is therefore not a physical service estimate.',
+            'The three-parameter revision moves throughput earlier but whole-L fitting drives residual tail into a '
+            'different compensation; sparse commit/wait1/combined windows still reject that event representation.',
+            'Release-call to producer-acquire return includes polling, scheduling, expect_tx and observer overhead. '
+            'It is not a bare visibility latency; do not set a hardware constant from the roughly 200-cycle interval.'],
+        next_minimal_observation=dict(conditions='Same cfg_b stage4/6 pair; no new geometry or stage penalty.',
+            consumer_progress_commits=[1,16,17,63],
+            additional_endpoints=['FIRST_MMA','wait1 return at Ktile16','full-wait begin at Ktile17',
+                'mma return','mma_tail begin','MAIN_END'],
+            purpose='Adjacent commits separate per-step pacing from bursts; wait1(K16) to full-wait(K17) measures '
+                'the missing loop/slot-release progression; final commit separates residual completion from tail bookkeeping. '
+                'Ktile1 retains early cumulative progress. Drop producer trace now that slot/phase semantics are confirmed.',
+            status='Design only; no GPU or probe changes in this analysis.'),
+        input_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (fit_path,event_path)},
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-local-constraints.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 相邻Ktile约束与commit推进候选','',
+        '同调用Ktile16 combined相同，不能推出Ktile17进度相同。完整进程与配对结果仍见B-stage-events.json；'
+        '本页仅将739095 whole-L定值候选与739556局部观测分开比较，不拼接时间线。','',
+        '| 窗口 | 实测stage4 / stage6中位 | 原递推预测 | commit推进预测 |','|---|---:|---:|---:|']
+    for key in ('consumer_full_wait','consumer_issue_to_commit','consumer_wait1','consumer_wait_to_wait1',
+                'wait1_to_next_release_begin','refill_after_release_begin','mma_tail','L'):
+        measured=[next(t['intervals'][key]['median'] for t in events['timing'] if t['stages']==s) for s in (4,6)]
+        original=[c['predicted']['intervals'][key] for c in comparisons['post_commit_compute']]
+        changed=[c['predicted']['intervals'][key] for c in comparisons['commit_paced']]
+        fmt=lambda a:' / '.join(f'{x:.2f}' for x in a)
+        lines.append(f'| {key} | {fmt(measured)} | {fmt(original)} | {fmt(changed)} |')
+    met=revised['calibration_metrics']
+    lines+=['',f'修订仍只用三个共享参数p/ℓ/τ，commit最小间隔固定512。whole-L开发拟合中位/最大误差'
+        f'为{met["median_abs_pct"]:.2f}%/{met["max_abs_pct"]:.2f}%，局部参数秩{revised["local_jacobian_rank"]}。'
+        '拟合whole-L没有使局部关系成立。', '',
+        '更强的限制不依赖最佳参数：该零循环开销递推满足H_i=W_(i−1)，而W_i=max(C_i,C_(i−1)+τ)。'
+        '两个自变量都至少前进512，故full等待前→wait1返回至少512 cycle。stage6实测仅399～407。'
+        '不能靠调这三个参数修复；在每commit≥512假设下至少缺少105 cycle的下一次full-wait前推进，'
+        '或该吞吐下界只能限制服务/平均发射而不限制每一步commit。现有端点尚不能区分这两种情况。', '',
+        'producer在两stage的全部十次refill中都先于release开始等待，release调用结束到acquire返回仍有正间隔。'
+        '这个界限含轮询、软件调度、expect_tx和取时开销，不能当作约200 cycle的硬件裸可见性常数。', '',
+        '若继续，最小观测改为同一对条件的consumer commit后Ktile1/16/17/63，加wait1(K16)和full-wait开始(K17)，'
+        '保留FIRST_MMA与mma/tail端点。相邻commit直接检验单步吞吐；两个相邻循环边界给出遗漏推进；'
+        '最后commit分开残余完成与tail前软件时间。删除producer字段，不扩展几何。本轮只给设计，不申请GPU。','']
+    (output/'B-stage-local-constraints.md').write_text('\n'.join(lines))
+    return report
+
+
+def _stage_progress_intervals(progress):
+    """Direct differences within one call, including non-overlapping L partitions."""
+    c=progress['clocks']
+    pairs=[('commit16_to17','commit16','commit17'),
+        ('loop_advance_16_to17','wait1_end16','full_wait_begin17'),
+        ('full_wait_to_commit16','full_wait_begin16','commit16'),
+        ('full_wait_to_commit17','full_wait_begin17','commit17'),
+        ('commit_to_wait1_16','commit16','wait1_end16'),
+        ('first_to_commit1','first_mma','commit1'),
+        ('first_to_commit16','first_mma','commit16'),
+        ('first_to_commit17','first_mma','commit17'),
+        ('first_to_commit63','first_mma','commit63'),
+        ('commit1_to16','commit1','commit16'),
+        ('commit17_to63','commit17','commit63'),
+        ('last_commit_to_mma_return','commit63','mma_return'),
+        ('mma_return_to_main_end','mma_return','main_end'),
+        ('last_commit_to_main_end','commit63','main_end'),
+        ('L','first_mma','main_end')]
+    values={name:c[end]-c[start] for name,start,end in pairs}
+    for name,value in progress.get('intervals',{}).items():
+        if values[name]!=value:raise ValueError('progress decoded interval disagrees with clocks: '+name)
+    values['average_commit1_to16']=values['commit1_to16']/15
+    values['average_commit17_to63']=values['commit17_to63']/46
+    values['full_wait_to_wait1_16']=c['wait1_end16']-c['full_wait_begin16']
+    values['adjacent_closure_cycles']=(values['commit_to_wait1_16']+values['loop_advance_16_to17']+
+        values['full_wait_to_commit17']-values['commit16_to17'])
+    values['L_closure_cycles']=sum(values[k] for k in ('first_to_commit1','commit1_to16',
+        'commit16_to17','commit17_to63','last_commit_to_mma_return','mma_return_to_main_end'))-values['L']
+    if abs(values['adjacent_closure_cycles'])>1e-7 or abs(values['L_closure_cycles'])>1e-7:
+        raise ValueError('progress same-call partitions do not close')
+    return values
+
+
+def _stage_candidate_progress(evaluate, parameters, stages):
+    """Map the existing recurrence to progress endpoints, without refitting."""
+    t=evaluate(64,stages,*parameters,detail=True)
+    C,H,W,B,D=(t[k] for k in ('commits','consumer_available','wait1_return',
+        'first_mma_or_commit','completed'))
+    clocks=dict(first_mma=B[64],commit1=C[65],full_wait_begin16=H[80],commit16=C[80],
+        wait1_end16=W[80],full_wait_begin17=H[81],commit17=C[81],commit63=C[127],
+        mma_return=W[127],main_end=D[127])
+    return _stage_progress_intervals(dict(clocks=clocks))
+
+
+def stage_progress_diagnostics(root, output):
+    """Consumer progress on the fixed stage pair; no instantaneous throughput gate."""
+    from analyze_r13_sm import select_attempts
+
+    root,output=Path(root),Path(output)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    processes,by_stage,timing,hashes,failures=[],{},[],{},{}
+    def span(values):
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    for stages in (4,6):
+        name=f'r13_stage_k4096_s{stages}';row=rows[name]
+        selected,failed,_=select_attempts(root,name,('plain','stamped'))
+        failures[name]=[dict(path=f['path'],variant=f['record']['variant'],trial=f['record']['trial'],
+            returncode=f['record']['returncode']) for f in failed]
+        times=defaultdict(dict);by_stage[stages]={}
+        for item in selected:
+            record=item['record'];observed=replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):
+                hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+            times[record['variant']][record['trial']]=observed['elapsed_us']
+            if record['variant']=='stamped':
+                progress=observed['progress'];intervals=_stage_progress_intervals(progress)
+                entry=dict(case=name,stages=stages,trial=record['trial'],elapsed_us=observed['elapsed_us'],
+                    cta=progress['cta'],sm=progress['sm'],mi=progress['work'][0],ni=progress['work'][1],
+                    output=progress['output'],**intervals)
+                processes.append(entry);by_stage[stages][record['trial']]=entry
+        if len(times['plain'])!=10 or times['plain'].keys()!=times['stamped'].keys():
+            raise ValueError('progress comparison requires ten matched plain/stamped trials')
+        fields=list(intervals)
+        timing.append(dict(stages=stages,plain_us=span(list(times['plain'].values())),
+            stamped_us=span(list(times['stamped'].values())),
+            stamped_relative_to_plain=span([times['stamped'][t]/times['plain'][t]-1 for t in sorted(times['plain'])]),
+            intervals={f:span([r[f] for r in by_stage[stages].values()]) for f in fields},
+            sub512_adjacent_commits=sum(r['commit16_to17']<512 for r in by_stage[stages].values()),
+            plain_trials=times['plain'],stamped_trials=times['stamped']))
+    if by_stage[4].keys()!=by_stage[6].keys():raise ValueError('stage repetition sets differ')
+    paired=[]
+    for trial in sorted(by_stage[4]):
+        a,b=by_stage[6][trial],by_stage[4][trial]
+        if tuple(a[k] for k in ('cta','mi','ni','output'))!=tuple(b[k] for k in ('cta','mi','ni','output')):
+            raise ValueError('stage progress pair refers to different logical work')
+        paired.append(dict(trial=trial,**{f:b[f]-a[f] for f in fields}))
+    paired_summary={f:span([r[f] for r in paired]) for f in fields}
+    whole_time={}
+    for protocol in ('plain','stamped'):
+        a,b=timing[1][protocol+'_trials'],timing[0][protocol+'_trials']
+        whole_time[protocol]=dict(stage4_minus_stage6_us=span([b[t]-a[t] for t in sorted(a)]),
+            stage4_relative_change=span([b[t]/a[t]-1 for t in sorted(a)]))
+
+    # Compare observer programs as separate jobs, never concatenate their clocks.
+    old_root=root.parent/'20261010-R13-stage-events'
+    old_rows={r['id']:r for r in read_json(old_root/'cases.json')}
+    old_setups={r['case']:r['setup'] for r in read_json(old_root/'static_setup.json')}
+    old_cohort=[]
+    common_fields=('L','first_to_commit16','full_wait_to_commit16','commit_to_wait1_16',
+        'full_wait_to_wait1_16','mma_return_to_main_end')
+    for stages in (4,6):
+        name=f'r13_stage_k4096_s{stages}'
+        if old_setups[name]['gpu_uuid']!=setups[name]['gpu_uuid']:
+            raise ValueError('sparse/progress observer comparison needs the same GPU')
+        selected,_,_=select_attempts(old_root,name,('plain','stamped'))
+        times=defaultdict(dict);old_processes=[]
+        for item in selected:
+            record=item['record'];observed=replay(old_root,record,old_rows[name])
+            times[record['variant']][record['trial']]=observed['elapsed_us']
+            for path in (old_root/item['path'],old_root/record['raw']):
+                hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+            if record['variant']=='stamped':
+                sparse=observed['sparse'];c=sparse['clocks'];current=by_stage[stages][record['trial']]
+                if (sparse['cta'],*sparse['work'],sparse['output'])!=tuple(current[k] for k in ('cta','mi','ni','output')):
+                    raise ValueError('sparse/progress observer comparison changed selected work')
+                old_processes.append(dict(trial=record['trial'],L=c['main_end']-c['first_mma'],
+                    first_to_commit16=c['commit_end']-c['first_mma'],
+                    full_wait_to_commit16=c['commit_end']-c['full_wait_begin'],
+                    commit_to_wait1_16=c['wait1_end']-c['commit_end'],
+                    full_wait_to_wait1_16=c['wait1_end']-c['full_wait_begin'],
+                    mma_return_to_main_end=c['main_end']-c['mma_return']))
+        if len(old_processes)!=10 or times['plain'].keys()!=times['stamped'].keys():
+            raise ValueError('sparse observer cohort is incomplete')
+        old_span={f:span([p[f] for p in old_processes]) for f in common_fields}
+        current=next(t for t in timing if t['stages']==stages)
+        old_cohort.append(dict(stages=stages,source=str(old_root),processes=old_processes,intervals=old_span,
+            progress_minus_sparse_cohort_medians={f:current['intervals'][f]['median']-old_span[f]['median'] for f in common_fields},
+            sparse_stamped_relative_to_plain=span([times['stamped'][t]/times['plain'][t]-1 for t in sorted(times['plain'])]),
+            progress_stamped_relative_to_plain=current['stamped_relative_to_plain'],
+            plain_us=span(list(times['plain'].values())),stamped_us=span(list(times['stamped'].values())),
+            interpretation='Separate observer cohorts; only identical endpoints are compared. No paired cross-job timeline.'))
+
+    # Reuse parameters fitted to 739095 whole L. Progress is a development check,
+    # not another set of fit targets and not independent frozen validation.
+    fit_path=output/'B-finite-stage.json';local_path=output/'B-stage-local-constraints.json'
+    fit,local=read_json(fit_path),read_json(local_path)
+    gpu=setups['r13_stage_k4096_s4']['gpu_uuid']
+    if fit['gpu']!=gpu or local['gpu']!=gpu:raise ValueError('candidate parameters came from another GPU')
+    loop_fit=_fit_stage_candidate(fit['targets'],'loop_paced')
+    loop_fit['rows']=[dict(**r,predicted_cycles=_loop_paced_stage_cycles(r['kt'],r['stages'],*loop_fit['parameters'])[r['j']],
+        relative_error=_loop_paced_stage_cycles(r['kt'],r['stages'],*loop_fit['parameters'])[r['j']]/r['cycles']-1)
+        for r in fit['targets']]
+    loop_fit['local_sensitivity']=[]
+    for i,name in enumerate(('producer_interval','ready_latency','residual_tail','loop_advance')):
+        changed=loop_fit['parameters'][:];changed[i]+=1
+        loop_fit['local_sensitivity'].append(dict(parameter=name,max_whole_L_change_for_plus_one_cycle=max(abs(
+            _loop_paced_stage_cycles(r['kt'],r['stages'],*changed)[r['j']]-
+            _loop_paced_stage_cycles(r['kt'],r['stages'],*loop_fit['parameters'])[r['j']]) for r in fit['targets'])))
+    loop_fit['equal_loss_parameter_example_ranges']=[dict(parameter=name,
+        minimum=min(p[i] for p in loop_fit['equal_loss_multistart_parameters']),
+        maximum=max(p[i] for p in loop_fit['equal_loss_multistart_parameters']))
+        for i,name in enumerate(('producer_interval','ready_latency','residual_tail','loop_advance'))]
+    comparisons={}
+    for name,evaluate,parameters in [
+        ('post_commit_compute',_finite_stage_cycles,fit['models']['finite_buffer']['parameters']),
+        ('commit_paced',_commit_paced_stage_cycles,local['revised_fit']['parameters']),
+        ('loop_paced',_loop_paced_stage_cycles,loop_fit['parameters'])]:
+        comparisons[name]=[]
+        for stages in (4,6):
+            predicted=_stage_candidate_progress(evaluate,parameters,stages)
+            observed=next(t['intervals'] for t in timing if t['stages']==stages)
+            comparisons[name].append(dict(stages=stages,parameters=parameters,predicted=predicted,
+                observed={k:observed[k] for k in predicted},
+                median_residual_cycles={k:v-observed[k]['median'] for k,v in predicted.items()}))
+    for relative in ('environment.json','static_setup.json','cases.json','source_hashes.json',
+        'build/resources.json','build/sass_hashes.json','source/probes/r18_trace.hpp','source/probes/r18.cu',
+        'source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp',
+        'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp'):
+        path=root/relative;hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in [fit_path,local_path,*sorted((root/'build').glob('*.sass')),
+        old_root/'build/cfg_b_stamped.sass',
+        old_root/'source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp']:
+        hashes[str(path)]=hashlib.sha256(path.read_bytes()).hexdigest()
+    report=dict(scope='Same-call CTA0 second-output consumer progression, fixed cfg_b stage4/6 pair. '
+        'Endpoint partitions close before trial reduction; averages divide by 15 and 46 commit intervals. '
+        'No instantaneous commit spacing threshold, stage-specific fit constant or physical queue-depth claim.',
+        root=str(root),gpu=gpu,processes=processes,timing=timing,paired_stage4_minus_stage6=paired,
+        paired_summary=paired_summary,whole_time_response=whole_time,sparse_observer_cohort=old_cohort,
+        candidate_comparisons=comparisons,shared_loop_fit=loop_fit,
+        shared_loop_formula='H_(i+1)=W_i+h inside each output, while the handoff remains at mma return. '
+            'I,A,C,D and slot-release equations are unchanged; p,latency,tau,h are shared by all stages/K. '
+            'Only 739095 whole-L windows train these parameters.',
+        observer_instruction_evidence=dict(
+            source='After the progress commit16 stamp, source checks commit17 and commit63 before wait1; '
+                'the old sparse source checked only commit16.',
+            stage6_sparse='0x21d0 commit16 CS2R; 0x21e0 WARPGROUP.DEPBAR.LE 1; 0x21f0 wait1 CS2R.',
+            stage6_progress='0x1f60 commit16 CS2R; 0x1f70 predicated CS2R; 0x1f80 IMAD; '
+                '0x1f90 ISETP K63; 0x1fa0 predicated CS2R; 0x1fb0 WARPGROUP.DEPBAR.LE 1; 0x1fc0 wait1 CS2R.',
+            interpretation='The 6-to-27-cycle change includes observer/control instructions. '
+                'Neither 27 nor the roughly 90-cycle loop window is a bare hardware price.'),
+        resources=read_json(root/'build/resources.json'),
+        sass_hashes=read_json(root/'build/sass_hashes.json'),failed_attempts=failures,input_sha256=hashes,
+        interval_limits=['full-wait begin to commit includes readiness, instruction issue and observer effects.',
+            'wait1(K16) to full-wait begin(K17) is loop progression, not isolated barrier release service.',
+            'mma return to MAIN_END combines handoff and final drain; this probe omits tail-begin.',
+            'Commit1-to16 and commit17-to63 are measured cumulative spans, not extrapolations of Ktile16.',
+            'Candidate comparisons retain parameters fitted to earlier 739095 whole windows; cohorts are not pooled.',
+            'Plain matches scratch allocation/clear, not progress instructions or registers.'],
+        analyzer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-progress.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'B-stage-progress.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(processes[0]));writer.writeheader();writer.writerows(processes)
+    labels={'first_to_commit1':'FIRST_MMA→commit1','average_commit1_to16':'commit1→16 每间隔平均',
+        'full_wait_to_commit16':'full等待开始16→commit16','commit_to_wait1_16':'commit16→wait1返回16',
+        'loop_advance_16_to17':'wait1返回16→full等待开始17','full_wait_to_commit17':'full等待开始17→commit17',
+        'commit16_to17':'commit16→17','average_commit17_to63':'commit17→63 每间隔平均',
+        'last_commit_to_mma_return':'commit63→mma返回','mma_return_to_main_end':'mma返回→MAIN_END',
+        'L':'完整L'}
+    lines=['# stage 累计进度与相邻迭代分解','',
+        '仅分析同调用 CTA0 第二输出。差值先按 trial 配对再汇总；commit1→16 和 commit17→63 分别含 15、46 个间隔。'
+        '相邻三段及完整 L 的不重叠分段逐调用闭合，中位数之间不要求相加闭合。','',
+        '| 周期窗口 | stage4 中位 | stage6 中位 | stage4−6 中位 | 差值十次范围 |','|---|---:|---:|---:|---:|']
+    for field,label in labels.items():
+        a,b=timing[0]['intervals'][field],timing[1]['intervals'][field];d=paired_summary[field]
+        lines.append(f'| {label} | {a["median"]:.2f} | {b["median"]:.2f} | {d["median"]:+.2f} | {d["trial_min"]:+.2f}～{d["trial_max"]:+.2f} |')
+    lines+=['','| 完整调用比较 | 中位变化 | 十次范围 |','|---|---:|---:|']
+    for t in timing:
+        d=t['stamped_relative_to_plain']
+        lines.append(f'| stage{t["stages"]} progress/plain | {100*d["median"]:+.2f}% | {100*d["trial_min"]:+.2f}%～{100*d["trial_max"]:+.2f}% |')
+    for protocol,response in whole_time.items():
+        d=response['stage4_relative_change']
+        lines.append(f'| {protocol} stage4/stage6 | {100*d["median"]:+.2f}% | {100*d["trial_min"]:+.2f}%～{100*d["trial_max"]:+.2f}% |')
+    lines+=['','| 递推检查（stage4 / stage6） | 当前实测中位 | 原递推预测 | commit 推进预测 | 加共享循环项 |','|---|---:|---:|---:|---:|']
+    for field in ('commit16_to17','loop_advance_16_to17','full_wait_to_commit16','full_wait_to_commit17',
+        'commit_to_wait1_16','average_commit1_to16','average_commit17_to63','last_commit_to_main_end','L'):
+        groups=[[t['intervals'][field]['median'] for t in timing],
+            [c['predicted'][field] for c in comparisons['post_commit_compute']],
+            [c['predicted'][field] for c in comparisons['commit_paced']],
+            [c['predicted'][field] for c in comparisons['loop_paced']]]
+        cells=[' / '.join(f'{x:.2f}' for x in values) for values in groups]
+        lines.append(f'| {field} | '+ ' | '.join(cells)+' |')
+    met=loop_fit['calibration_metrics']
+    lines+=['',f'共享循环项仅以 739095 八个 whole-L 目标拟合 p/ℓ/τ/h；中位/最大误差 '
+        f'{met["median_abs_pct"]:.2f}%/{met["max_abs_pct"]:.2f}%，局部参数秩 {loop_fit["local_jacobian_rank"]}/4。'
+        '多起点等损失参数示例范围与逐参数敏感性保存在 JSON，不把这些范围当完整置信区间。'
+        '该候选的循环推进、wait1、尾段及stage4早段均与独立progress窗口不符；整体拟合改善不足以支持此修订。'
+        '不继续叠加参数，也不把拟合h或τ作为硬件常数。',
+        '','所有递推仅以 739095 whole-L 拟合参数；新进度没有参与拟合。'
+        '前两模型的零循环推进可以直接与 wait1→下一次 full-wait 比较；512 仅是旧候选假设，不是数据筛选条件。',
+        '','| 独立 observer 批次比较 | progress L 中位 | 739556 sparse L 中位 | 两批中位差 |',
+        '|---|---:|---:|---:|']
+    for old in old_cohort:
+        current=next(t for t in timing if t['stages']==old['stages'])
+        lines.append(f'| stage{old["stages"]} | {current["intervals"]["L"]["median"]:.1f} | '
+            f'{old["intervals"]["L"]["median"]:.1f} | {old["progress_minus_sparse_cohort_medians"]["L"]:+.1f} |')
+    lines+=['','739556 与本批只比较同名端点和各自 plain 扰动，不能拼成一条时间线。'
+        'stage6旧SASS的commit16 clock（0x21d0）后紧接wait1；新SASS的commit16 clock（0x1f60）后，'
+        '还执行predicated CS2R、IMAD、ISETP和另一次predicated CS2R，才到0x1fb0的wait1。'
+        '因此6→27 cycle含新增观测控制指令，不是裸wait服务价。'
+        '本 probe 没有 tail-begin，mma 返回后只报告 handoff 与 drain 的合并段。'
+        'JSON/CSV 保留逐调用周期、配对差、源码/SASS 身份及资源，结论不直接生成硬件服务价格。','']
+    (output/'B-stage-progress.md').write_text('\n'.join(lines))
     return report
 
 

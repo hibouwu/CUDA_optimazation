@@ -45,37 +45,38 @@ def cases(family='r18'):
 
 
 
-def make_stage_sparse_overlay(source):
+def make_stage_sparse_overlay(source, progress=False):
     """Only cfg_b: CTA0, output 1, Ktile16 and its next same-slot producer use."""
     path=source/'overlay'/common.MAINLOOP
     text=path.read_text()
-    begin=text.index('  /// Producer Perspective')
-    end=text.index('  /// Perform a Producer Epilogue',begin)
-    load=text[begin:end]
-    load=load.replace('TensorStorage& shared_tensors) {',
-        'TensorStorage& shared_tensors, int r13_output_seq = -1) {',1)
-    site='    if (lane_predicate) {\n'
-    load=common.insert_once(load,site,
-        '      const bool r13_target = r13_sparse_cta() && r13_output_seq == 1;\n'
-        '      const int r13_initial_k = k_tile_count;\n'
-        '      R13SparseProducer r13_p;\n',after=True)
-    site='        pipeline.producer_acquire(smem_pipe_write);\n'
-    load=common.insert_once(load,site,
-        '        const int r13_k = r13_initial_k-k_tile_count;\n'
-        '        if (r13_target && r13_k==16) { r13_p.state=smem_pipe_write.index() | (smem_pipe_write.phase()<<3); r13_p.acquire_begin=v06_clock(); }\n'
-        '        if (r13_target && r13_k==16+DispatchPolicy::Stages) { r13_p.state |= (smem_pipe_write.index()<<4) | (smem_pipe_write.phase()<<7); r13_p.refill_begin=v06_clock(); }\n')
-    load=common.insert_once(load,site,
-        '        if (r13_target && r13_k==16) r13_p.acquire_end=v06_clock();\n'
-        '        if (r13_target && r13_k==16+DispatchPolicy::Stages) r13_p.refill_end=v06_clock();\n',after=True)
-    site='        ++k_tile_iter;\n'
-    load=common.insert_once(load,site,
-        '        if (r13_target && r13_k==16) r13_p.issue_end=v06_clock();\n'
-        '        if (r13_target && r13_k==16+DispatchPolicy::Stages) r13_p.refill_issue_end=v06_clock();\n')
-    # Deferred writes occur after the producer has issued this entire output.
-    site='      }\n    }\n  }\n'
-    if load.count(site)!=1:raise ValueError('sparse producer closing site mismatch')
-    load=load.replace(site,'      }\n      if (r13_target) r13_sparse_producer_flush(r13_p);\n    }\n  }\n')
-    text=text[:begin]+load+text[end:]
+    if not progress:
+        begin=text.index('  /// Producer Perspective')
+        end=text.index('  /// Perform a Producer Epilogue',begin)
+        load=text[begin:end]
+        load=load.replace('TensorStorage& shared_tensors) {',
+            'TensorStorage& shared_tensors, int r13_output_seq = -1) {',1)
+        site='    if (lane_predicate) {\n'
+        load=common.insert_once(load,site,
+            '      const bool r13_target = r13_sparse_cta() && r13_output_seq == 1;\n'
+            '      const int r13_initial_k = k_tile_count;\n'
+            '      R13SparseProducer r13_p;\n',after=True)
+        site='        pipeline.producer_acquire(smem_pipe_write);\n'
+        load=common.insert_once(load,site,
+            '        const int r13_k = r13_initial_k-k_tile_count;\n'
+            '        if (r13_target && r13_k==16) { r13_p.state=smem_pipe_write.index() | (smem_pipe_write.phase()<<3); r13_p.acquire_begin=v06_clock(); }\n'
+            '        if (r13_target && r13_k==16+DispatchPolicy::Stages) { r13_p.state |= (smem_pipe_write.index()<<4) | (smem_pipe_write.phase()<<7); r13_p.refill_begin=v06_clock(); }\n')
+        load=common.insert_once(load,site,
+            '        if (r13_target && r13_k==16) r13_p.acquire_end=v06_clock();\n'
+            '        if (r13_target && r13_k==16+DispatchPolicy::Stages) r13_p.refill_end=v06_clock();\n',after=True)
+        site='        ++k_tile_iter;\n'
+        load=common.insert_once(load,site,
+            '        if (r13_target && r13_k==16) r13_p.issue_end=v06_clock();\n'
+            '        if (r13_target && r13_k==16+DispatchPolicy::Stages) r13_p.refill_issue_end=v06_clock();\n')
+        # Deferred writes occur after the producer has issued this entire output.
+        site='      }\n    }\n  }\n'
+        if load.count(site)!=1:raise ValueError('sparse producer closing site mismatch')
+        load=load.replace(site,'      }\n      if (r13_target) r13_sparse_producer_flush(r13_p);\n    }\n  }\n')
+        text=text[:begin]+load+text[end:]
     signature='      Params const& mainloop_params, int v06_tile_seq = 0) {\n'
     text=common.insert_once(text,signature,
         '    const int r13_initial_k = k_tile_count;\n'
@@ -89,28 +90,42 @@ def make_stage_sparse_overlay(source):
     site='      pipeline.consumer_wait(smem_pipe_read, barrier_token);\n'
     # Include try_wait in the interval: it can already return WaitDone.
     before='      auto barrier_token = pipeline.consumer_try_wait(smem_pipe_read);\n'
-    mma=common.insert_once(mma,before,
-        '      const int r13_k = r13_initial_k-k_tile_count;\n'
-        '      if (r13_target && r13_k==16) { r13_s->read_slot=smem_pipe_read.index(); r13_s->wait_begin=v06_clock(); }\n')
-    mma=common.insert_once(mma,site,'      if (r13_target && r13_k==16) r13_s->wait_end=v06_clock();\n',after=True)
-    mma=common.insert_once(mma,'      warpgroup_commit_batch();\n',
-        '      if (r13_target && r13_k==16) r13_s->commit_end=v06_clock();\n',after=True)
-    mma=common.insert_once(mma,'      warpgroup_wait<K_PIPE_MMAS>();\n',
-        '      if (r13_target && r13_k==16) r13_s->retire_end=v06_clock();\n',after=True)
-    site='      pipeline.consumer_release(smem_pipe_release);\n'
-    mma=common.insert_once(mma,site,
-        '      if (r13_target && r13_k==17) { r13_s->release_slot=smem_pipe_release.index(); r13_s->release_phase=smem_pipe_release.phase(); r13_s->release_begin=v06_clock(); }\n')
-    mma=common.insert_once(mma,site,'      if (r13_target && r13_k==17) r13_s->release_end=v06_clock();\n',after=True)
+    if progress:
+        mma=common.insert_once(mma,before,
+            '      const int r13_k = r13_initial_k-k_tile_count;\n'
+            '      if (r13_target && r13_k==16) r13_s->wait_begin=v06_clock();\n'
+            '      if (r13_target && r13_k==17) r13_s->next_wait_begin=v06_clock();\n')
+        mma=common.insert_once(mma,'      warpgroup_commit_batch();\n',
+            '      if (r13_target && r13_k==1) r13_s->commit1=v06_clock();\n'
+            '      if (r13_target && r13_k==16) r13_s->commit16=v06_clock();\n'
+            '      if (r13_target && r13_k==17) r13_s->commit17=v06_clock();\n'
+            '      if (r13_target && r13_k==63) r13_s->commit63=v06_clock();\n',after=True)
+        mma=common.insert_once(mma,'      warpgroup_wait<K_PIPE_MMAS>();\n',
+            '      if (r13_target && r13_k==16) r13_s->retire_end=v06_clock();\n',after=True)
+    else:
+        mma=common.insert_once(mma,before,
+            '      const int r13_k = r13_initial_k-k_tile_count;\n'
+            '      if (r13_target && r13_k==16) { r13_s->read_slot=smem_pipe_read.index(); r13_s->wait_begin=v06_clock(); }\n')
+        mma=common.insert_once(mma,site,'      if (r13_target && r13_k==16) r13_s->wait_end=v06_clock();\n',after=True)
+        mma=common.insert_once(mma,'      warpgroup_commit_batch();\n',
+            '      if (r13_target && r13_k==16) r13_s->commit_end=v06_clock();\n',after=True)
+        mma=common.insert_once(mma,'      warpgroup_wait<K_PIPE_MMAS>();\n',
+            '      if (r13_target && r13_k==16) r13_s->retire_end=v06_clock();\n',after=True)
+        site='      pipeline.consumer_release(smem_pipe_release);\n'
+        mma=common.insert_once(mma,site,
+            '      if (r13_target && r13_k==17) { r13_s->release_slot=smem_pipe_release.index(); r13_s->release_phase=smem_pipe_release.phase(); r13_s->release_begin=v06_clock(); }\n')
+        mma=common.insert_once(mma,site,'      if (r13_target && r13_k==17) r13_s->release_end=v06_clock();\n',after=True)
     text=text[:begin]+mma+text[end:]
     path.write_text(text)
     path=source/'overlay'/common.PING;text=path.read_text()
-    begin=text.index('      // Mainloop Producer Warp')
-    end=text.index('else if (producer_warp_role == ProducerWarpRole::MainloopAux)',begin)
-    producer=text[begin:end]
-    site='            shared_storage.tensors.mainloop\n          );'
-    if producer.count(site)!=1:raise ValueError('sparse producer call mismatch')
-    producer=producer.replace(site,'            shared_storage.tensors.mainloop, v06_tile_seq\n          );')
-    text=text[:begin]+producer+text[end:]
+    if not progress:
+        begin=text.index('      // Mainloop Producer Warp')
+        end=text.index('else if (producer_warp_role == ProducerWarpRole::MainloopAux)',begin)
+        producer=text[begin:end]
+        site='            shared_storage.tensors.mainloop\n          );'
+        if producer.count(site)!=1:raise ValueError('sparse producer call mismatch')
+        producer=producer.replace(site,'            shared_storage.tensors.mainloop, v06_tile_seq\n          );')
+        text=text[:begin]+producer+text[end:]
     begin=text.index('    else if (warp_group_role == WarpGroupRole::Consumer0')
     consumer=text[begin:]
     consumer=common.insert_once(consumer,'      while (work_tile_info.is_valid()) {\n',
@@ -119,8 +134,9 @@ def make_stage_sparse_overlay(source):
         '          params.mainloop, v06_tile_seq, &r13_s\n',1)
     consumer=common.insert_once(consumer,'        // Cue for next Math WG\'s MMA to start',
         '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.mma_return=v06_clock();\n')
-    consumer=common.insert_once(consumer,'        collective_mainloop.mma_tail(\n',
-        '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.tail_begin=v06_clock();\n')
+    if not progress:
+        consumer=common.insert_once(consumer,'        collective_mainloop.mma_tail(\n',
+            '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.tail_begin=v06_clock();\n')
     consumer=consumer.replace('          v06_stamp(V06_MAIN_END, v06_tile_seq);\n',
         '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.main_end=v06_clock();\n',1)
     consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
@@ -128,7 +144,7 @@ def make_stage_sparse_overlay(source):
     path.write_text(text[:begin]+consumer)
 
 
-def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False):
+def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False):
     rows=cases(family) if rows is None else rows
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
     for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py','v08_model.py']:
@@ -145,11 +161,12 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False):
         if text.count(site)!=1:raise ValueError('consumer coordinate site changed')
         text=text.replace(site,site+'        v06_begin(work_tile_info, v06_tile_seq);\n')
         path.write_text(text)
-    if stage_sparse:
+    if stage_sparse and stage_progress:raise ValueError("choose one stage observation protocol")
+    if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
         if any((r['config'],r['m'],r['n'],r['k'],r.get('stages',6)) not in [('cfg_b',2816,1536,4096,4),('cfg_b',2816,1536,4096,6)] and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage-sparse is the declared cfg_b pair only')
         if any(r.get('variants',['plain','stamped'])!=['plain','stamped'] and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage-sparse uses plain/stamped')
-        make_stage_sparse_overlay(source)
+        make_stage_sparse_overlay(source, progress=stage_progress)
     commands={}
     variants=['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
     configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
@@ -164,6 +181,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False):
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
+            if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
             if dual_clock and variant not in ['plain','ends']:cmd+=['-DR18_DUAL_CLOCK' if variant=='dual' else '-DR18_MATCH_DUAL_LAYOUT']
             if variant in ['stamped','dual','ends']:
                 cmd+=['-DV06_TRACE','-Isource/overlay']
@@ -172,14 +190,14 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False):
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 
@@ -224,7 +242,7 @@ def run_one(root,row,variant,trial,attempt=0):
     if row.get('warmup_policy','adaptive')=='adaptive' and proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:
         return run_one(root,row,variant,trial,attempt+1)
     if proc.returncode:raise ValueError('failed GEMM process: '+str(path))
-    if variant=='ends':
+    if variant=='ends' and row.get('history_mode')!='series':
         from v08_model import observe
         observe(root,record,row)
     else:
@@ -237,6 +255,8 @@ def trial_rows(subset,trial):
     subset=subset[:]
     if subset and all(r.get('sampling_order')=='alternate_swizzle' for r in subset):
         return sorted(subset,key=lambda r:r['swizzle'],reverse=bool(trial%2))
+    if subset and all(r.get('sampling_order')=='alternate_history' for r in subset):
+        return sorted(subset,key=lambda r:r['history_mode']=='series',reverse=bool(trial%2))
     random.Random(20261008+trial).shuffle(subset)
     return subset
 
@@ -247,13 +267,14 @@ def main(family='r18'):
     p.add_argument('--cases-file',type=Path,help='prepare: use a listed extension of an existing experiment')
     p.add_argument('--dual-clock',action='store_true',help='prepare: add same-call globaltimer events; wide/stamped/dual share scratch layout, ends keeps its original layout')
     p.add_argument('--stage-sparse',action='store_true',help='prepare: cfg_b stage4/6 same-slot sparse clock events, plain already matches scratch')
+    p.add_argument('--stage-progress',action='store_true',help='prepare: consumer commit/loop progress only, same cfg_b stage pair')
     p.add_argument('--set',help='sample: select the named case set, e.g. reference before ctrl')
     a=p.parse_args()
     if a.step=='list':print(json.dumps(cases(family),indent=2));return
     root=a.output.resolve()
     if a.step=='prepare':
         rows=json.loads(a.cases_file.read_text()) if a.cases_file else None
-        prepare(root,a.cutlass_root.resolve(),family,rows,a.dual_clock,a.stage_sparse);return
+        prepare(root,a.cutlass_root.resolve(),family,rows,a.dual_clock,a.stage_sparse,a.stage_progress);return
     if not os.environ.get('SLURM_JOB_ID'):raise ValueError('Slurm allocation required')
     if a.step=='build':
         version=subprocess.check_output(['nvcc','--version'],text=True)

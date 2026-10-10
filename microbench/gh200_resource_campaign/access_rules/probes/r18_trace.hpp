@@ -40,7 +40,7 @@ __device__ __forceinline__ uint64_t* v06_base() {
   return v06_trace_ptr + size_t(block) * V06CtaWords;
 }
 
-#ifdef R13_STAGE_SPARSE
+#if defined(R13_STAGE_SPARSE) || defined(R13_STAGE_PROGRESS)
 // Same 784-word allocation as ordinary plain. Only CTA0 writes selected fields.
 // Word 10 remains the existing overflow sentinel. Event values are same-SM clocks.
 struct R13SparseProducer {
@@ -50,12 +50,20 @@ struct R13SparseProducer {
   // Keep one metadata register live beside six clocks in the 40-register producer.
   uint32_t state=0;
 };
+#ifdef R13_STAGE_PROGRESS
+struct R13SparseConsumer {
+  uint64_t wait_begin=0, next_wait_begin=0, retire_end=0;
+  uint64_t commit1=0, commit16=0, commit17=0, commit63=0;
+  uint64_t first_mma=0, mma_return=0, main_end=0;
+};
+#else
 struct R13SparseConsumer {
   uint64_t wait_begin=0, wait_end=0, commit_end=0, retire_end=0;
   uint64_t release_begin=0, release_end=0, first_mma=0, main_end=0;
   uint64_t mma_return=0, tail_begin=0;
   int read_slot=0, release_slot=0, release_phase=0;
 };
+#endif
 __device__ __forceinline__ bool r13_sparse_cta() {
   return blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0;
 }
@@ -67,6 +75,14 @@ __device__ __forceinline__ void r13_sparse_producer_flush(R13SparseProducer cons
   b[27]=uint64_t((s.state>>4)&7)+1; b[28]=uint64_t((s.state>>7)&1)+1;
   b[29]=1; b[30]=16; b[31]=0x52313301;
 }
+#ifdef R13_STAGE_PROGRESS
+__device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer const& s) {
+  auto b=v06_base();
+  b[15]=s.wait_begin; b[16]=s.next_wait_begin; b[17]=s.commit16; b[18]=s.retire_end;
+  b[19]=s.commit17; b[20]=s.commit1; b[21]=s.first_mma; b[22]=s.main_end;
+  b[24]=s.commit63; b[32]=s.mma_return; b[31]=0x52313302;
+}
+#else
 __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer const& s) {
   auto b=v06_base();
   b[15]=s.wait_begin; b[16]=s.wait_end; b[17]=s.commit_end; b[18]=s.retire_end;
@@ -74,15 +90,24 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
   b[24]=uint64_t(s.read_slot)+1; b[25]=uint64_t(s.release_slot)+1;
   b[26]=uint64_t(s.release_phase)+1; b[32]=s.mma_return; b[33]=s.tail_begin;
 }
+#endif
 __device__ __forceinline__ void v06_entry() {
+#ifdef R13_STAGE_PROGRESS
+  if (!r13_sparse_cta() || threadIdx.x!=256) return;
+  unsigned sm;asm volatile("mov.u32 %0, %%smid;":"=r"(sm));
+  v06_base()[1]=uint64_t(sm)+1;
+#else
   if (!r13_sparse_cta() || threadIdx.x!=0) return;
   unsigned sm;asm volatile("mov.u32 %0, %%smid;":"=r"(sm));
   auto b=v06_base();b[0]=v06_clock();b[1]=uint64_t(sm)+1;
+#endif
 }
 template<class Work>
 __device__ __forceinline__ void v06_begin(Work const& work,int tile) {
   if (!r13_sparse_cta()) return;
+#ifndef R13_STAGE_PROGRESS
   if (threadIdx.x==0 && tile==1) {v06_base()[2]=uint64_t(work.M_idx)+1;v06_base()[3]=uint64_t(work.N_idx)+1;}
+#endif
   // Consumer1's first local work item is the CTA's second global output.
   if (threadIdx.x==256 && tile==0) {v06_base()[13]=uint64_t(work.M_idx)+1;v06_base()[14]=uint64_t(work.N_idx)+1;}
 }

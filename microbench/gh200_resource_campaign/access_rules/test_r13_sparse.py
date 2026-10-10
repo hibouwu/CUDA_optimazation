@@ -53,4 +53,22 @@ class StageSparseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'non-target CTA'):
             decode_stage_sparse(setup,call)
 
+    def test_progress_allows_sub512_commit_spacing_and_closes(self):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=3;b[13]=12;b[14]=1;b[31]=0x52313302
+        for i,value in {21:100,20:500,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500}.items():
+            b[i]=value
+        setup=dict(grid=[1,132,1],trace_words=width,trace_version='r13-stage-progress-v1')
+        r=decode_stage_sparse(setup,dict(trace=b))
+        self.assertEqual(r['intervals']['commit16_to17'],400)
+        self.assertEqual(r['intervals']['loop_advance_16_to17'],94)
+        self.assertEqual(r['intervals']['last_commit_to_main_end'],500)
+        self.assertEqual(r['intervals']['first_to_commit63']+
+                         r['intervals']['last_commit_to_main_end'],r['intervals']['L'])
+        b[19]=8200
+        with self.assertRaisesRegex(ValueError,'event order'):
+            decode_stage_sparse(setup,dict(trace=b))
+
+
 if __name__=='__main__':unittest.main()

@@ -19,7 +19,7 @@ def case_recurrence(row, setup, calibration):
         raise ValueError('cfg_a/c event and supply calibration is not yet available')
     if math.prod(setup['grid']) != 132 or setup['stages'] != 6:
         raise ValueError('current supply calibration covers the full 132-SM stage-6 grid')
-    work = events.scheduled_work('cfg_b', row['m'], row['n'], setup['grid'], row['swizzle'])
+    work = events.scheduled_work('cfg_b', row['m'], row['n'], setup['grid'], row['swizzle'],row.get('raster_order','heuristic'))
     requests = supply.fill_cta_features(row, setup)
     kt = row['k'] // 64
     ntiles = sum(map(len, work))
@@ -182,7 +182,7 @@ def predict_components(row, setup, calibration):
     spec = events.base.CONFIGS[cfg]
     tm, tn, tk = spec['tile']
     cm, cn = spec['cluster']
-    work = events.scheduled_work(cfg,row['m'],row['n'],setup['grid'],row['swizzle'])
+    work = events.scheduled_work(cfg,row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
     requests = supply.supply_request_rows(row,setup)
     kt = row['k']//64
     tiles = sum(map(len,work))

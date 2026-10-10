@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
+当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
 
 ## 作业与分析索引
 
@@ -16,6 +16,7 @@
 | V09，739011 | 冻结后的新几何、行距和 stage 迁移 | [完整留出与判定](V09-component-validation.md) |
 | stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
 | 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
+| consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
 
 ## 序列供给：消费者与在途组织会改变结果
 
@@ -211,6 +212,7 @@ job739556在同一a058卡复测cfg_b 2816×1536×4096的stage4/6，只记录CTA0
 | full返回→commit | 161.0 | 331.0 | −172.0 |
 | commit→wait1返回 | 6.0 | 6.0 | 0.0 |
 | **full等待前→wait1返回（直接合并）** | **404.0** | **404.0** | **0.0** |
+| wait1(Ktile16)→目标slot release前（Ktile17） | 635.5 | 533.0 | +103.0 |
 | FIRST_MMA→Ktile16 full等待前 | 11024.5 | 8111.0 | +2869.5 |
 | Ktile16 wait1返回→mma返回 | 28427.5 | 24169.0 | +4259.5 |
 | FIRST_MMA→mma返回 | 40038.0 | 32712.5 | +7183.0 |
@@ -222,7 +224,39 @@ job739556在同一a058卡复测cfg_b 2816×1536×4096的stage4/6，只记录CTA0
 
 每次调用的`mma返回前 + handoff + mma_tail = L`精确闭合；各列中位数不要求加和闭合。稀疏/plain完整时间扰动stage4/6中位+3.49%/+1.69%，单对最大+4.77%/+4.44%；plain的stage差+10.28%，稀疏为+12.16%。与739095旧dual按同CTA第二输出整L分批比较，新值分别+2.84%/−0.93%，没有明显整L失真，但不证明每个局部窗口无扰动，更不能拼接两批时间线或直接采用事件价格。
 
-现有端点已把差异定位到Ktile16前后两个主循环区间；尚不能区分其中的周期性补发、发射组织和源工作集效应。若需进一步定位，最小下一步仍是同一对条件，只保留consumer在Ktile1/7/31/63提交后的累计进度与FIRST_MMA/mma_tail端点，删除已完成语义核对的producer字段；无需重测形状或添加stage罚项。本节没有用一个位置外推全部K。[逐进程窗口与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.csv)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/)。
+紧接着的Ktile17并不相同：从Ktile16的wait1返回，到Ktile17中释放目标slot之前，成对差中位+103 cycle，范围−25～358；不能因Ktile16 combined相同就忽略下一步推进。两stage全部十次producer refill都在consumer release前已开始等待。把release发出时刻夹在调用前后，至producer acquire返回的可观察间隔在stage4为141～273、stage6为126～249 cycle；它包含轮询、调度、expect_tx和取时开销，不是裸barrier可见性延迟，也不是新的硬件常数。[逐进程窗口与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.json)、[CSV](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.csv)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/)。
+
+### 局部约束进一步否定了哪些递推简化？
+
+原三参数递推在该位置预测stage6的wait1约523.65 cycle，实测只有6；它把整个Ktile计算放到一次瞬时commit之后，无法表达已有的full返回→commit区间及其与执行的重叠。原模型还将已等待producer的release→复用视为零成本，与上述观测接口不符；不能因此把约200 cycle直接改称硬件延迟。
+
+又检验了一次最小修订：仍只拟合producer间隔p、ready时延ℓ和剩余尾延迟τ三个共享参数，把cfg_b的512 cycle吞吐下界放到commit推进，`C_i=max(B_i,C_(i−1)+512)`、`D_i=C_i+τ`，保留原slot释放语义。739095 dual八个whole-L目标的拟合中位/最大误差为3.32%/8.22%，但739556 sparse的局部约束仍不满足；两批分开评估，未混合拟合。该解局部秩为2，p增加1 cycle不改变任何训练L，不能声称三个服务参数均已识别。
+
+这个失败不只是一套参数不好：在修订的零循环推进开销假设下，full-wait开始为`H_i=W_(i−1)`，wait1返回为`W_i=max(C_i,C_(i−1)+τ)`。若相邻commit都至少间隔512，便必有`W_i−H_i≥512`，而stage6全部实测只有399～407。任何p/ℓ/τ都不能同时满足这条局部区间。在“每次commit≥512”的假设下，下一full-wait前至少遗漏105 cycle的release/循环推进；也可能512只应约束服务或平均发射率，而不应限制每一步commit。739556的端点尚不能区分两者；下节用新增相邻端点直接检查，不用自由常数消差。
+
+[局部约束与修订结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-local-constraints.md)保留两递推的局部残差与参数敏感性；后续consumer进度观测删除producer字段，只保留同一对stage条件，不增加几何。
+
+### 累计进度把额外时间定位到哪里？
+
+job739578在同一a058卡用相同几何记录CTA0第二输出的commit1/16/17/63、Ktile16的wait1返回和Ktile17的full-wait开始。四个二进制均168寄存器、16 HGMMA、无spill；plain使用相同scratch。以下周期先逐调用求差，stage差再按trial配对；两个累计段分别包含15和46个间隔，不是用单点乘K估算。
+
+| 同调用窗口 | stage4中位 | stage6中位 | stage4−6配对中位 |
+|---|---:|---:|---:|
+| commit1→16，每间隔平均 | 718.13 | 522.27 | +196.10 |
+| commit16→wait1返回16 | 24 | 27 | −3 |
+| wait1返回16→full-wait开始17 | 85 | 89.5 | −5.5 |
+| full-wait开始17→commit17 | 442.5 | 396.5 | +41 |
+| commit16→17（三段合计） | 551.5 | 514 | +36 |
+| commit17→63，每间隔平均 | 589.70 | 512.80 | +76.88 |
+| commit63→mma返回 | 40 | 40 | 0 |
+| mma返回→MAIN_END（handoff与drain合计） | 455 | 460 | −5 |
+| 完整L | 39612.5 | 33231.5 | +6388.5 |
+
+每个调用的相邻三段及完整L的不重叠分段精确闭合。stage6相邻commit的十次范围为514～517、后段平均512.783～512.826 cycle；本位置支持接近512 cycle的持续推进，未测出小于512的间隔，但不能据此限制未观测的每次commit。两个旧递推令下一次full-wait在上次wait1返回后立即开始，与实测stage4的84～85、stage6的86～95 cycle直接矛盾。stage4的循环推进反而略短，额外时间主要在full-wait开始到commit这一合并段；该段仍同时包含等输入和发射指令，不能仅据它判为TMA裸延迟。
+
+stage4早段平均差的十次范围为+151.53～+229.80、后段为+60.57～+94.26 cycle/间隔，说明额外时间跨早段与后段累积，且早段更强；尾段不能解释它。原递推/commit推进修订对stage4早段平均仅预测588.67/583.22，后段为587.26/575.86；后段接近不等于早段机制成立。修订还把最后commit→MAIN_END预测为785.72，而实测两stage为495/500，剩余尾延迟仍吸收了别处误差。只增加共享循环项h并继续仅用739095八个whole-L目标训练，中位/最大误差仅降到3.01%/8.13%，局部秩3/4；拟合h=264.43、尾延迟τ=769.17。独立progress对照中，stage6的full-wait开始17→commit17预测为0、wait1为247.57，stage4早段平均也仍只有583.12。这一修订仍分错执行重叠，不继续叠加参数，不将h或τ接入现行规则。
+
+progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为−1.43%～+1.76%/−1.93%～+3.02%；plain与progress的stage4减速分别为+11.37%/+11.18%。局部观察协议仍有可见影响：739556→739578的stage6 commit→wait1中位由6变27，full-wait开始→wait1由404变447。源码与SASS给出具体原因：旧stage6的commit16 clock（0x21d0）后紧接wait1；新clock（0x1f60）后还执行commit17/63的观测控制，包括predicated CS2R、IMAD和ISETP，才到0x1fb0的wait1。因此6→27包含观察器指令，不能定成裸wait开销，约90 cycle循环段同样不是硬件价格。两批只比较同名端点，不把旧combined窗口与新循环推进拼接；本批没有tail-begin，返回后只报告合并段。[逐调用数据与静态身份](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.json)、[原始记录](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-progress/)。
 
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 

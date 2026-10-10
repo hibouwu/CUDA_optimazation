@@ -1,11 +1,12 @@
 """Check causal boundaries of the R09 failure decomposition."""
 import copy
+import statistics
 import unittest
 
 from r09_input_source_clock import (fit_tensor_only, mixed_failure_clock,
                                     role_window_diagnostics, source_frequency, control_window,
                                     reciprocal_frequency, fit_reciprocal_clock, source_design, static_output_kib,
-                                    static_revisit_features)
+                                    static_revisit_features, history_state_weights, history_series_design, fit_history_series)
 
 
 class R09FailureDiagnostics(unittest.TestCase):
@@ -134,6 +135,56 @@ class R09FailureDiagnostics(unittest.TestCase):
         # Individually full tiles may still require a padded cluster member.
         with self.assertRaisesRegex(ValueError,'cluster padding'):
             static_revisit_features(dict(config='cfg_c',m=512,n=3968,k=1024,swizzle=1),dict(grid=[66,2,1]))
+
+    def test_history_state_uses_interval_mean_not_terminal_clock(self):
+        import math
+        H,W,tau=10000.,5000.,20000.
+        common=history_state_weights('common-sw1-16',8,H,W,tau)
+        self.assertAlmostEqual(sum(common),1.)
+        self.assertTrue(all(v>=0 for v in common))
+        mean_factor=-math.expm1(-W/tau)/(W/tau)
+        self.assertAlmostEqual(common[0],math.exp(-H/tau)*mean_factor)
+        self.assertAlmostEqual(common[2],1-mean_factor)
+        adaptive=history_state_weights('adaptive',8,H,W,tau)
+        self.assertEqual(adaptive[1],0.)
+        self.assertAlmostEqual(adaptive[2],1-adaptive[0])
+
+
+    def test_series_state_preserves_local_interval_means_and_observed_gaps(self):
+        import math
+        import numpy as np
+        calls=[dict(index=0,swizzle=1,first_entry_ns=0,frequency_observers_us=[[0.,2.],[1.,2.]]),
+               dict(index=1,swizzle=8,first_entry_ns=10000,frequency_observers_us=[[0.,2.]])]
+        matrix=history_series_design([dict(calls=calls)],10.)
+        self.assertTrue(np.allclose(matrix.sum(axis=1),1.))
+        average=-math.expm1(-.2)/.2
+        attenuation=statistics.median([average,math.exp(-.1)*average])
+        self.assertAlmostEqual(matrix[0,0],attenuation)
+        self.assertAlmostEqual(matrix[1,0],math.exp(-1)*average)
+        self.assertAlmostEqual(matrix[1,1],(1-math.exp(-1))*average)
+        self.assertAlmostEqual(matrix[1,2],1-average)
+        longer=copy.deepcopy(calls);longer[1]['first_entry_ns']=20000
+        self.assertLess(history_series_design([dict(calls=longer)],10.)[1,0],matrix[1,0])
+
+    def test_series_temporal_holdout_does_not_fit_last_nine_targets(self):
+        import numpy as np
+        processes=[]
+        for sw in (1,8):
+            calls=[dict(index=j,swizzle=1 if j<16 else sw,first_entry_ns=j*1000000,
+                frequency_observers_us=[[0.,900.]],window_us=900.,globaltimer_gap_before_us=100.) for j in range(35)]
+            processes.append(dict(case='sw'+str(sw),trial=0,swizzle=sw,calls=calls))
+        observed=history_series_design(processes,10000.)@np.asarray([1.8,1.7,1.,1.3])
+        for c,y in zip([c for p in processes for c in p['calls']],observed):c['frequency_ghz']=float(y)
+        original=fit_history_series(processes,1.98)
+        changed=copy.deepcopy(processes)
+        for p in changed:
+            for c in p['calls'][26:]:c['frequency_ghz']*=.9
+        altered=fit_history_series(changed,1.98)
+        key='prefix_and_first10_targets'
+        self.assertEqual(original['fits'][key]['best'],altered['fits'][key]['best'])
+        self.assertEqual(original['fits'][key]['tau_profile'],altered['fits'][key]['tau_profile'])
+        self.assertLess(original['last9_comparison']['state']['rms'],1e-6)
+        self.assertGreater(altered['last9_comparison']['state']['rms'],.1)
 
 
 if __name__ == '__main__':

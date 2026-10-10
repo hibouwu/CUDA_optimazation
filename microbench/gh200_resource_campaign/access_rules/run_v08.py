@@ -99,7 +99,7 @@ def identity():
 
 def case_args(r):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle','evict']
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode']:
         if key in r:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),r[key])]
 
@@ -137,7 +137,7 @@ def run_one(root,r,variant,trial,attempt=0):
     common.write_json(path,rec)
     if r.get('warmup_policy','adaptive')=='adaptive' and proc.returncode and 'last five warmups CV exceeds 2%' in proc.stderr and attempt<2:return run_one(root,r,variant,trial,attempt+1)
     if proc.returncode:raise ValueError('failed GEMM process: '+str(path)+' '+proc.stderr[-300:])
-    if variant in ['wide','dual']:
+    if variant in ['wide','dual'] or r.get('history_mode')=='series':
         from analyze_r18 import replay
         replay(root,rec,r)
     else:

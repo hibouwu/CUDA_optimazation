@@ -212,7 +212,7 @@ T1 的 first partial 与完整伙伴也分别缩短2.768/2.800 μs；role1 同�
 
 ### 哪个静态特征能够表达这个作用？
 
-特征只从输入形状、descriptor范围、静态scheduler和multicast mask构造。cfg_a的A mask仅含本CTA，cfg_c的B mask也仅含本CTA；对应的mask最大值/总和退化为自身fill，不能表达完整伙伴的额外代价。完整cluster聚合能覆盖伙伴，但它只是一项待检验的作用范围，不等于已经证明某个同步或填零硬件机制。
+特征只从输入形状、descriptor范围、静态scheduler和multicast mask构造。cfg_a的A mask仅含本CTA，cfg_c的B mask也仅含本CTA；对应的mask最大值/总和退化为自身fill，不能表达完整伙伴的额外代价。完整cluster聚合能覆盖伙伴。当前两rank配置确有下面源码所示的共享full/empty依赖，但聚合特征本身不能证明实测增量来自其中哪一个等待。
 
 | 每Ktile的cluster fill模式 | cluster最大 KiB | cluster总和 KiB | any_fill指示 |
 |---|---:|---:|---:|
@@ -300,3 +300,35 @@ MAIN_END→PERMIT的配对中位变化为0，最终consumer退出相对末次EPI
 [四点配对、直接变化、两角色一致性与拟合残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-fill-discrimination.json)、[旧校准候选与静态范围](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-candidate.json)、[逐CTA静态特征](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-static-features.json)。
 
 [逐窗口与逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-summary.json)、[原同输出配对复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-old-input-pairs.json)。同角色窗口与 merged 模型残差分开保存，前者用于周期/时间关系，后者用于比较递推模型。
+
+
+### cluster伙伴是否在同一调用里共同延长？
+
+按静态scheduler的逻辑cluster配对两个rank，比较**同一进程、同一consumer角色、同一j/T**的FIRST_MMA和MAIN_END。对照把rank1固定轮换到下一个同j/T、同逻辑几何与fill类别的cluster，没有按时间挑选“最近邻”。下表为role2、first/T2的进程中位；“增量差”来自分别与同trial map1024配对的两个rank，基线仍是另一个独立进程，不能称为同调用处理效应。
+
+| 条件 / 配对 | FIRST_MMA差 ns | MAIN_END差 ns | 两rank的L增量差 ns |
+|---|---:|---:|---:|
+| P1 map960 / 实际完整＋partial伙伴 | 0 | 32 | 48 |
+| P1 map960 / 轮换非伙伴 | 128 | 3200 | 2864 |
+| 四点map832 / 实际partial＋whole-OOB伙伴 | 0 | 32 | 48 |
+| 四点map832 / 轮换非伙伴 | 384 | 6448 | 6352 |
+| P1 map1024 / 原边界伙伴 | 0 | 48 | 0（基线） |
+
+P1两个rank的L增量分别约4.144/4.128μs，而在50个受影响cluster/进程样本中，FIRST_MMA差最大仅32ns。因此这批数微秒增量不是一个伙伴在FIRST_MMA之前晚到数微秒造成的；延长在实际cluster内共同变化，不能只描述为不同位置恰好具有相同类别均价。
+
+不过map1024伙伴本来也紧密对齐，端点接近只证明轨迹相关。共享供给、相同执行路径、K内full等待、组等待或尾排空均可能造成相同起止；现有端点不能证明一次共同stall，不能判断哪个rank等待另一个。`L差=结束差−开始差`是恒等式，其相关性不能再算独立因果证据。
+
+静态源码还证明了具体共享依赖，而不只是一种统计关联。cfg_a的`PipelineTmaAsync`有6个stage，每CTA有256个consumer线程，即两个warpgroup；empty到达数为`(cluster_M+cluster_N−1)×2=(2+1−1)×2=4`。`consumer_release`向同row **或** 同column的rank发送arrival，所以这个2×1配置的每个empty barrier必须等两rank、每rank两组consumer共同释放。它不是只等待本CTA。
+
+producer acquire先等empty，再由本地leader对full设置期望字节。A在cfg_a不多播，B沿cluster-M分片并多播给两个rank：每rank本地full要收齐A的16KiB，以及两个rank分别发起的8KiB B片，总计32KiB。逻辑越界提供的填零仍属于目的数据完成协议，不能因为有效源量减少就删掉这部分full依赖。只有对应full代次完成，consumer才能继续；consumer的safe release又在`warpgroup_wait<1>`之后，尾段另有`wait<0>`。producer/consumer的pipeline状态跨输出tile继续推进，不能在每个输出tile把所有stage重置为空。
+
+下一候选最少需要保留以下**事件约束**，不增加一个cluster罚项：
+
+- 复用某stage的新代次，须等前一代次由两rank、两consumer组安全释放；起始6个空stage单独初始化。
+- rank的full完成依赖本地A、两个B分片的事务完成及本地producer到达，不能由本CTA的平均源需求独立决定。
+- GMMA发射同时受full就绪和本地GMMA在途限制；stage释放跟随安全消费，允许一条rank的延迟通过empty回压影响另一条rank的后续供给。
+- 最后GMMA排空与producer退出前等待全部empty各自保留，不能合并成一项任意tail常数。
+
+因此“A本地变慢→本rank释放变晚→两个producer可复用stage变晚→后续B/full一起变晚”在源码依赖图上可行，与两rank共同延长一致。它尚未证明实测4μs沿这条链传播，也没有给链中每段定值；单CTA平均供给取max会丢掉有限stage和跨rank代次关系，仅增加cluster字节价格不能恢复这些约束。
+
+后续若使用前述稀疏布局，关键是两个rank保存同一K迭代的wait前/后和commit/group-wait后时刻，才能看出是否一方较晚到达、另一方在相应区间等待。若差异确实集中在full等待，仍需该pipeline阶段的producer acquire/issue及consumer release端点，才能区分未供给与晚伙伴释放导致的回压；当前不提前增加这些打点，也不拟合cluster罚项。[同调用配对、静态非伙伴对照与逐进程来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。

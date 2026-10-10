@@ -518,6 +518,127 @@ def score_b_pitch(run, frozen_path, output):
     print(json.dumps(reports, indent=2))
 
 
+def raster_pitch_diagnostics(root, output):
+    """A fixed-geometry order/pitch interaction; no timing parameter fit."""
+    from analyze_r13_sm import select_attempts
+    from analyze_r13_supply import _failure_pair_windows, _failure_pair_summary
+    from analyze_r18 import replay
+    from r09_input_source_clock import control_window
+    import v08_model
+    import v06_run as common
+    import supply_model
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in json.loads((root/'cases.json').read_text())}
+    setups={r['case']:r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
+    controls=[r for r in rows.values() if r['set']=='ctrl']
+    fixed=('config','m','n','k','lda','ldd','storage_m','storage_n','zero_m','zero_n',
+           'alloc_lda','alloc_ldb','sm_count','swizzle','input_mode','seed','evict','warmup_policy')
+    if len(controls)!=4 or any(any(r.get(k)!=controls[0].get(k) for k in fixed) for r in controls):
+        raise ValueError('raster/pitch contrast changed another declared condition')
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    calls={};plain={};processes=[];hashes={};failed={};contexts={}
+    for row in controls:
+        name=row['id'];setup=setups[name]
+        selected,failures,_=select_attempts(root,name,('plain','dual'))
+        failed[name]=[item['path'] for item in failures]
+        calls[name]={};plain[name]={}
+        work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+        contexts[name]=dict(row=row,setup=setup,work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest(),
+            waves=[dict(j=j,ctas=sum(len(c)>j for c in work),
+                unique_A_panels=len({c[j][0] for c in work if len(c)>j}),
+                unique_B_panels=len({c[j][1] for c in work if len(c)>j})) for j in range(max(map(len,work)))])
+        for item in selected:
+            rec=item['record'];obs=replay(root,rec,row)
+            for path in (root/item['path'],root/rec['raw']):
+                hashes[str(path)]=common.sha(path)
+            if rec['variant']=='plain':plain[name][rec['trial']]=obs['elapsed_us']
+            else:
+                if [c['work'] for c in obs['ctas']]!=work:
+                    raise ValueError('explicit raster mapping differs from traced coordinates')
+                calls[name][rec['trial']]=dict(row=row,trial=rec['trial'],record=rec,observed=obs)
+                processes.append(dict(case=name,trial=rec['trial'],variant='dual',event_us=obs['elapsed_us'],
+                    **control_window(obs)))
+        if len(plain[name])!=10 or plain[name].keys()!=calls[name].keys():
+            raise ValueError('ten matched plain/dual calls required')
+    comparisons=[];positions=[];paired=[];summaries={}
+    for order in ('along_m','along_n'):
+        a,b=(f'r10_raster_{order}_p{x}' for x in (0,32))
+        summary,windows=_failure_pair_summary('R10-raster',list(calls[a].values()),list(calls[b].values()))
+        comparisons.append(summary);positions.extend(windows)
+        for trial in sorted(calls[a]):
+            aw,bw=calls[a][trial]['observed'],calls[b][trial]['observed']
+            current=_failure_pair_windows(aw['ctas'],bw['ctas'])
+            for phase in ('all','first','later'):
+                subset=[x for x in current if phase=='all' or (x['j']==0)==(phase=='first')]
+                paired.append(dict(raster=order,trial=trial,phase=phase,windows=len(subset),
+                    **{field:statistics.median(x[field] for x in subset) for field in
+                       ('L_ns_delta','L_ns_ratio','L_cycles_delta','L_cycles_ratio')}))
+        summaries[order]=dict(plain_pitch_change=span(plain[b][t]/plain[a][t]-1 for t in plain[a]),
+            frequency_pitch_change=span(control_window(calls[b][t]['observed'])['frequency_ghz']/
+                control_window(calls[a][t]['observed'])['frequency_ghz']-1 for t in plain[a]),
+            plain_us={r:span(plain[r].values()) for r in (a,b)},
+            dual_disturbance={r:span(calls[r][t]['observed']['elapsed_us']/plain[r][t]-1 for t in plain[r]) for r in (a,b)},
+            first=summary['phases']['first'],later=summary['phases']['later'])
+    interaction=[]
+    for phase in ('all','first','later'):
+        groups={(r['raster'],r['trial']):r for r in paired if r['phase']==phase}
+        for trial in range(10):
+            a,b=groups['along_m',trial],groups['along_n',trial]
+            am,bm=(f'r10_raster_along_m_p{x}' for x in (0,32))
+            an,bn=(f'r10_raster_along_n_p{x}' for x in (0,32))
+            interaction.append(dict(phase=phase,trial=trial,
+                plain_difference_of_pitch_differences_us=(plain[bn][trial]-plain[an][trial])-(plain[bm][trial]-plain[am][trial]),
+                **{key:b[key]-a[key] for key in ('L_ns_delta','L_ns_ratio','L_cycles_delta','L_cycles_ratio')}))
+    interaction_summary={phase:{key:span(r[key] for r in interaction if r['phase']==phase)
+        for key in interaction[0] if key not in ('phase','trial')} for phase in ('all','first','later')}
+    blindness={}
+    for pitch in (0,32):
+        names=[f'r10_raster_{order}_p{pitch}' for order in ('along_m','along_n')]
+        features=[]
+        for name in names:
+            requests=supply_model.supply_request_rows(rows[name],setups[name])
+            features.append([{k:r[k] for k in ('cta','j','T','kt','X','compute_cycles')} for r in requests])
+        blindness[str(pitch)]=dict(current_supply_inputs_identical=features[0]==features[1],
+            windows=len(features[0]),feature_sha256=[hashlib.sha256(json.dumps(f,sort_keys=True).encode()).hexdigest() for f in features],
+            interpretation='Coordinate sequences differ, but the current seven-column service input and per-CTA counts are identical. '
+                'Refitting these same fields cannot distinguish the observed order response at this pitch.')
+    references={};previous=root.parent/'20261010-R13-stage-events'
+    for row in rows.values():
+        if row['set']!='reference':continue
+        series={}
+        for label,run in [('current',root),('previous_same_card',previous)]:
+            selected,failures,_=select_attempts(run,row['id'],('plain',));values=[]
+            if json.loads((run/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
+                raise ValueError('reference card changed')
+            for item in selected:
+                values.append(replay(run,item['record'],row)['elapsed_us'])
+                for path in (run/item['path'],run/item['record']['raw']):hashes[str(path)]=common.sha(path)
+            series[label]=span(values)
+        references[row['id']]=dict(**series,median_change=series['current']['median']/series['previous_same_card']['median']-1)
+    for name in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json'):
+        hashes[str(root/name)]=common.sha(root/name)
+    report=dict(scope='Fixed shape/K/capacity; within-raster pitch pairs precede cross-raster response differences. '
+        'Work ordering and grid orientation change together; no physical cache/traffic attribution.',
+        environment=json.loads((root/'environment.json').read_text()),contexts=contexts,comparisons=comparisons,
+        summaries=summaries,processes=processes,paired_phase_trials=paired,references=references,current_model_blindness=blindness,
+        interaction=interaction,interaction_summary=interaction_summary,failed_attempts=failed,
+        input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)),
+        limits=['First/later coordinate membership changes across raster orders; all phase includes all 432 output tiles.',
+                'Trial numbers pair independent processes, not simultaneous calls; uncertainty units are processes.',
+                'Within-raster windows match CTA, ordinal, total work and coordinates exactly.',
+                'Software panel unions are not measured memory traffic or concurrent TMA requests.',
+                'The original old-card B32 result must not be merged into a new-card parameter fit.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-raster-pitch.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    with (output/'R10-raster-pitch-positions.csv').open('w') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(positions[0]));writer.writeheader();writer.writerows(positions)
+    return report
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path)

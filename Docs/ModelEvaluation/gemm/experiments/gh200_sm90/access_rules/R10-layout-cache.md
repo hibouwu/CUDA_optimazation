@@ -1,6 +1,6 @@
 # R10：A/B 行距、地址覆盖与执行规模
 
-**行距响应依赖配置、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
+**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
 
 ## 作业与证据索引
 
@@ -12,6 +12,7 @@
 | 738169 | cfg_b h03 四角，2400×3000×1000，同容量 | [逐 trial 联合项与扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-joint-pitch-job738169/reanalysis/B-20261009-matched-joint-final/joint-pitch.json) |
 | 738203 | cfg_b B 行距五点，2304×3072×1024，局部冻结检验 | [冻结](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/frozen/r10-b-pitch.json)、[原评分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/b-pitch-score-v1/b-pitch-score.json)、[位置与扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R10-b-coverage-job738203/reanalysis/B-20261009-frozen-negative/localization.json) |
 | 739011，V09 | 新几何 A16/B32/B80/B112 与 stage4 | [完整留出](V09-component-validation.md)、[逐例复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv) |
+| 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
 
 ## 原 B 行距对照：配置之间不能共用一个罚项
 
@@ -221,6 +222,25 @@ V09 G3的cfg_b A16在2816×1536×4096下实测慢28.94%，模型只预计1.40%�
 A16也不是频率或输出可以补救：G3的两个输出位置都变慢，later L的十trial中位变化范围为29.82%–32.69%。校准批j1/T3、j1/T4的A16惩罚其实已有28.04%/27.62%，接近G3的31.12%；将各位置聚合成21.22%会遮住这点。模型却因G3的j1已经是末轮，把软件源需求从4224降至3828 KiB，拟合供给从371.12降至336.32 ns/Ktile，靠近计算下界，因而低估响应。首轮的两批静态请求向量及338.60 ns/Ktile供给价格完全相同，实测惩罚仍不同；只加末轮修正也不充分。源重访、几何和足迹尚未隔离，不能命名为某一层缓存带宽。
 
 以上分析支持先修正供给状态假设，不默认追加B64/B96矩阵。新点应能区分一个尚未被否定的原因；原冻结与V09判定不变。[分析与完整17组成对结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-analysis.md)、[逐trial/位置](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-paired-windows.csv)、[静态需求与来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-summary.json)。
+
+## 遍历方向足以改变B32响应
+
+CUTLASS 3.9.2 `get_rasterization_order` 在 N tile数大于M时选AlongM，否则AlongN。旧B曲线是18×24 tile、默认AlongM；V09 G5是18×18 tile、默认AlongN，原比较还混入了遍历方向。
+
+739571在a058/GPU-ef8692f3固定旧形状2304×3072×1024、132 CTA、stage6、sw1、dyadic seed17与全部分配容量，只做AlongM/AlongN×B增量0/32 B四点。四条件plain/dual各十进程，先采两个plain参照；共100成功进程、无失败。静态资源均168寄存器、16条HGMMA、零spill。每次dual实际坐标与显式raster调度逐CTA一致。
+
+| 方向 | plain aligned / B32，µs | plain B32变化 | first L，ns变化 | later L，ns变化 | later L，cycle变化 |
+|---|---:|---:|---:|---:|---:|
+| AlongM | 27.904 / 32.800 | +16.94% | +22.35% | +18.40% | +20.90% |
+| AlongN | 28.000 / 28.480 | +1.20% | +0.29% | 0.00% | −0.33% |
+
+变化列先按trial配对，L先匹配同方向的CTA/j/T/坐标并求进程内中位，再跨十进程汇总。AlongN的later L十次范围为−0.58%～+0.59%，未见AlongM的同量级惩罚。两方向的B32完整时间增量再作差，十次全部为负，中位−4.368µs、范围−5.984～−3.360µs。全CTA有效频率的B32变化仅约+0.71%/−0.74%，周期窗口也保留上述差异。
+
+方向改变了每个软件轮的源分组：AlongM前三轮各有18个A/8个B面板，AlongN各有6个A/24个B面板；432个输出tile、96 CTA×3和36 CTA×4的工作量不变，grid形状随raster转置。结果支持**执行顺序与源分组是B32迁移条件的一部分**，而非仅由K和足迹变化造成；没有测得物理请求数、缓存命中或某个L2资源，不能把面板分组直接命名为物理带宽。它也不意味着为AlongM单独添加一个B32常数就能迁移到其他行距和形状。
+
+当前供给模型对两方向生成的432行`(CTA,j,T,Ktile,X,compute_cycles)`逐项相同，B0和B32各自的输入SHA也完全相等。实际坐标列表虽不同，七列汇总请求却丢失了源分组。因此仅重拟合现有七列的系数，无法表达这次方向响应；下一候选需要保留访问组织，不能把失败归于参数没调好。
+
+dual/plain完整时间扰动中位为2.60%～5.76%，最大8.91%，故不把局部窗口当裸服务价格；plain自身已独立显示方向×行距效应。同卡参照相对739556中位变化−1.41%/−0.61%，旧432卡的绝对参数未混入拟合。原冻结和V09成绩保持不变。[四点、逐进程和差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json)、[工作位置表](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch-positions.csv)。
 
 ## 历史推导与复核
 

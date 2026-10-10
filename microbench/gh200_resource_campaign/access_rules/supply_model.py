@@ -67,7 +67,7 @@ def static_tma_requests(row, setup):
     if tuple(setup.get('tile',(tm,tn,64)))!=(tm,tn,64) or tuple(setup.get('cluster',(cm,cn))) not in ((cm,cn),(cm,cn,1)):
         raise ValueError('setup tile/cluster differs from the fixed R18 configuration')
     if setup['stages']<=0: raise ValueError('positive stage count required')
-    work=scheduled_work(row['config'],m,n,[gx,gy,gz],row['swizzle'])
+    work=scheduled_work(row['config'],m,n,[gx,gy,gz],row['swizzle'],row.get('raster_order','heuristic'))
     ctas=[]
     for coords in work:
         tiles=[]
@@ -246,7 +246,7 @@ def fill_cta_features(row, setup):
     """
     from v08_model import scheduled_work
     if row['config']!='cfg_b': raise ValueError('this fill component is calibrated for cfg_b only')
-    work=scheduled_work('cfg_b',row['m'],row['n'],setup['grid'],row['swizzle'])
+    work=scheduled_work('cfg_b',row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
     kt=(row['k']+63)//64
     if row['k']%64: raise ValueError('this fill comparison uses complete Ktiles')
     map_m=row.get('input_map_m',row['m']); map_n=row.get('input_map_n',row['n'])

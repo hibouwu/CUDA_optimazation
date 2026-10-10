@@ -6,7 +6,11 @@ from analyze_r13_supply import (
     _failure_pair_summary, _failure_pair_windows, _failure_stage_response,
     _failure_k_scaling,
     _finite_stage_cycles,
+    _commit_paced_stage_cycles,
+    _loop_paced_stage_cycles,
     _stage_event_intervals,
+    _stage_progress_intervals,
+    _stage_candidate_progress,
 )
 
 
@@ -99,7 +103,7 @@ class PairedFailureTests(unittest.TestCase):
         sparse=dict(intervals=dict(mainloop_before_tail=1000,handoff_before_tail=20,mma_tail=60,L=1080),
             clocks=dict(first_mma=0,mma_return=1000,release_end=305,
                 full_wait_begin=150,full_wait_end=200,commit_end=250,wait1_end=270,
-                issue_end=100,release_begin=300,acquire_end=80,refill_end=310))
+                issue_end=100,release_begin=300,acquire_end=80,refill_begin=250,refill_end=310))
         result=_stage_event_intervals(sparse)
         self.assertEqual(result['closure_cycles'],0)
         self.assertEqual(result['issue_to_observed_full'],100)
@@ -108,9 +112,63 @@ class PairedFailureTests(unittest.TestCase):
         self.assertEqual(result['consumer_wait_to_wait1'],120)
         self.assertEqual(result['before_selected_wait'],150)
         self.assertEqual(result['after_selected_wait1_to_mma_return'],730)
+        self.assertEqual(result['wait1_to_next_release_begin'],30)
+        self.assertEqual(result['refill_after_release_end'],5)
         sparse['intervals']['mma_tail']=61
         with self.assertRaisesRegex(ValueError,'does not close'):
             _stage_event_intervals(sparse)
+
+    def test_commit_pacing_separates_throughput_from_residual_tail(self):
+        trace=_commit_paced_stage_cycles(16,6,10,200,400,detail=True)
+        self.assertTrue(all(b-a>=512 for a,b in zip(trace['commits'],trace['commits'][1:])))
+        self.assertTrue(all(d-c==400 for c,d in zip(trace['commits'],trace['completed'])))
+        self.assertEqual(trace['wait1_return'][5]-trace['commits'][5],0)
+        self.assertEqual(trace['windows'][0],15*512+400)
+        for i in range(6,len(trace['issued'])):
+            self.assertGreaterEqual(trace['issued'][i],trace['released'][i-6])
+
+    def test_zero_bookkeeping_commit_model_forces_combined_window_floor(self):
+        for stages in (4,6):
+            for parameters in ((10,200,100),(500,1500,800),(100,4000,1500)):
+                trace=_commit_paced_stage_cycles(64,stages,*parameters,detail=True)
+                # The observed Ktile16 combined interval is inside the output,
+                # so prologue/tail exceptions cannot remove this model bound.
+                self.assertGreaterEqual(trace['wait1_return'][80]-trace['consumer_available'][80],512-1e-9)
+
+    def test_progress_partitions_and_interval_counts(self):
+        clocks=dict(first_mma=100,commit1=500,full_wait_begin16=8000,commit16=8300,
+            wait1_end16=8306,full_wait_begin17=8400,commit17=8700,commit63=31700,
+            mma_return=31800,main_end=32200)
+        progress=dict(clocks=clocks,intervals=dict(L=32100))
+        result=_stage_progress_intervals(progress)
+        self.assertEqual(result['commit16_to17'],400)
+        self.assertEqual(result['loop_advance_16_to17'],94)
+        self.assertEqual(result['average_commit1_to16'],520)
+        self.assertEqual(result['average_commit17_to63'],500)
+        self.assertEqual(result['adjacent_closure_cycles'],0)
+        self.assertEqual(result['L_closure_cycles'],0)
+        progress['intervals']['L']=32101
+        with self.assertRaisesRegex(ValueError,'disagrees with clocks'):
+            _stage_progress_intervals(progress)
+
+    def test_candidate_progress_exposes_zero_loop_gap_without_refitting(self):
+        for evaluate in (_finite_stage_cycles,_commit_paced_stage_cycles):
+            for stages in (4,6):
+                result=_stage_candidate_progress(evaluate,(500.75,1766.02,523.65),stages)
+                self.assertEqual(result['loop_advance_16_to17'],0)
+                self.assertAlmostEqual(result['adjacent_closure_cycles'],0)
+                self.assertAlmostEqual(result['L_closure_cycles'],0)
+                trace=evaluate(64,stages,500.75,1766.02,523.65,detail=True)
+                self.assertAlmostEqual(result['L'],trace['windows'][1])
+
+    def test_shared_loop_gap_does_not_delay_the_output_handoff(self):
+        zero=_loop_paced_stage_cycles(16,6,100,1200,600,0,detail=True)
+        original=_commit_paced_stage_cycles(16,6,100,1200,600,detail=True)
+        self.assertEqual(zero,original)
+        trace=_loop_paced_stage_cycles(16,6,100,1200,600,75,detail=True)
+        for i in range(1,32):
+            expected=0 if i%16==0 else 75
+            self.assertEqual(trace['consumer_available'][i]-trace['wait1_return'][i-1],expected)
 
 
 if __name__ == '__main__':

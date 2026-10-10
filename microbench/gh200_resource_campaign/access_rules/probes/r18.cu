@@ -1,6 +1,8 @@
 // R18/R19: physical-grid matched boundaries, explicit zeros, and recorded work coordinates.
 // Copied from the earlier probe: explicit lda/ldb/ldd, warm protocol, dyadic exact sampled check.
 #include "gaps_common.hpp"
+#include <algorithm>
+#include <memory>
 #include <cute/tensor.hpp>
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/collective/collective_builder.hpp>
@@ -84,7 +86,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_STAGE_SPARSE)
+#if defined(R13_STAGE_PROGRESS)
+constexpr const char* kTraceVersion="r13-stage-progress-v1";
+#elif defined(R13_STAGE_SPARSE)
 constexpr const char* kTraceVersion="r13-stage-sparse-v1";
 #elif defined(R18_DUAL_CLOCK)
 constexpr const char* kTraceVersion="r18-dual-clock-events";
@@ -121,6 +125,8 @@ struct Args {
   int sm_count = 0;
   std::string input_mode = "dyadic";
   std::string warmup_policy = "adaptive";
+  std::string history_mode = "off";
+  std::string raster_order = "heuristic";
   int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
@@ -149,6 +155,8 @@ struct Args {
       else if(key=="--sm-count")sm_count=std::stoi(v);
       else if(key=="--input-mode")input_mode=v;
       else if(key=="--warmup-policy")warmup_policy=v;
+      else if(key=="--history-mode")history_mode=v;
+      else if(key=="--raster-order")raster_order=v;
       else if(key=="--seed")seed=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
     }
@@ -158,6 +166,12 @@ struct Args {
       throw std::runtime_error("seed must be nonnegative");
     if (warmup_policy != "adaptive" && warmup_policy != "common-sw1-16")
       throw std::runtime_error("warmup-policy must be adaptive or common-sw1-16");
+    if (history_mode != "off" && history_mode != "single" && history_mode != "series")
+      throw std::runtime_error("history-mode must be off, single or series");
+    if (history_mode != "off" && warmup_policy != "common-sw1-16")
+      throw std::runtime_error("history observation requires common-sw1-16 prefix");
+    if (raster_order != "heuristic" && raster_order != "along_m" && raster_order != "along_n")
+      throw std::runtime_error("raster-order must be heuristic, along_m or along_n");
   }
 };
 
@@ -312,6 +326,9 @@ int main(int argc, char** argv) {
     arguments.hw_info.device_id = 0;
     arguments.hw_info.sm_count = scheduler_sms;
     arguments.scheduler.max_swizzle_size = o.swizzle;
+    using RasterOption = decltype(arguments.scheduler.raster_order);
+    arguments.scheduler.raster_order = o.raster_order == "along_m" ? RasterOption::AlongM :
+                                      o.raster_order == "along_n" ? RasterOption::AlongN : RasterOption::Heuristic;
     Gemm gemm;
     cutlass_check(gemm.can_implement(arguments), "can_implement");
     DeviceBuffer<unsigned char> workspace(std::max<size_t>(1, Gemm::get_workspace_size(arguments)));
@@ -326,6 +343,8 @@ int main(int argc, char** argv) {
       launch_params.mainloop=Mainloop::to_underlying_arguments(input_shape,arguments.mainloop,nullptr);
     }
     dim3 grid = Gemm::get_grid_shape(launch_params);
+    const char* resolved_raster = launch_params.scheduler.raster_order_ ==
+        decltype(launch_params.scheduler.raster_order_)::AlongN ? "along_n" : "along_m";
     int ctas = int(grid.x * grid.y * grid.z);
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
@@ -333,6 +352,15 @@ int main(int argc, char** argv) {
     // Both parameter sets exist before input/cache preparation. The common
     // history uses this same kernel and buffers, changing only scheduler swizzle.
     const bool common_history = o.warmup_policy == "common-sw1-16";
+    const bool history_series = o.history_mode == "series";
+    const bool history_enabled = o.history_mode != "off";
+    const char* history_protocol = history_series ? "prefix16-target19-ends-v1"
+        : history_enabled ? "single-common16-ends-v1" : "none";
+    if (history_enabled && o.mode != "setup") {
+#ifndef V08_ENDS
+      throw std::runtime_error("history observation requires the ends binary");
+#endif
+    }
     const int warmup_swizzle = common_history ? 1 : o.swizzle;
     auto warmup_launch_params = launch_params;
     if (common_history) {
@@ -349,6 +377,14 @@ int main(int argc, char** argv) {
       if (warmup_grid.x != grid.x || warmup_grid.y != grid.y || warmup_grid.z != grid.z)
         throw std::runtime_error("common history changes persistent grid");
     }
+
+    // Both single and series allocate the same compact capacity, before fills.
+    // Only series records D2D heads; no kernel trace layout or pointer changes.
+    constexpr int history_prefix_calls = 16, history_target_calls = 19;
+    constexpr int history_calls = history_prefix_calls + history_target_calls;
+    std::unique_ptr<DeviceBuffer<uint64_t>> history;
+    if (history_enabled) history = std::make_unique<DeviceBuffer<uint64_t>>(size_t(history_calls)*ctas*16);
+    std::vector<uint64_t> saved_history;
 
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
     int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
@@ -372,17 +408,33 @@ int main(int argc, char** argv) {
     cudaEvent_t begin, end;
     CUDA_CHECK(cudaEventCreate(&begin));
     CUDA_CHECK(cudaEventCreate(&end));
+    std::vector<cudaEvent_t> history_begin, history_end;
+    if (history_enabled) {
+      history_begin.resize(history_calls); history_end.resize(history_calls);
+      for (int j=0; j<history_calls; ++j) {
+        CUDA_CHECK(cudaEventCreate(&history_begin[j]));
+        CUDA_CHECK(cudaEventCreate(&history_end[j]));
+      }
+    }
+    int history_index = 0;
     auto timed = [&](typename Gemm::Params& params) {
       if(o.evict)evict_buffer<<<256,256>>>(eviction.pointer,eviction.count,++eviction_seed);
       CUDA_CHECK(cudaGetLastError());
       CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
       CUDA_CHECK(cudaDeviceSynchronize());
-      CUDA_CHECK(cudaEventRecord(begin));
+      cudaEvent_t call_begin = history_enabled ? history_begin[history_index] : begin;
+      cudaEvent_t call_end = history_enabled ? history_end[history_index] : end;
+      CUDA_CHECK(cudaEventRecord(call_begin));
       cutlass_check(Gemm::run(params), "run");
-      CUDA_CHECK(cudaEventRecord(end));
-      CUDA_CHECK(cudaEventSynchronize(end));
+      CUDA_CHECK(cudaEventRecord(call_end));
+      CUDA_CHECK(cudaEventSynchronize(call_end));
       float ms = 0;
-      CUDA_CHECK(cudaEventElapsedTime(&ms, begin, end));
+      CUDA_CHECK(cudaEventElapsedTime(&ms, call_begin, call_end));
+      if (history_series) {
+        CUDA_CHECK(cudaMemcpy2DAsync(history->pointer+size_t(history_index)*ctas*16,16*sizeof(uint64_t),
+            trace.pointer,kTraceWords*sizeof(uint64_t),16*sizeof(uint64_t),ctas,cudaMemcpyDeviceToDevice));
+      }
+      if (history_enabled) ++history_index;
       return ms;
     };
     // Read every role/tile record after the timed call.
@@ -391,7 +443,13 @@ int main(int argc, char** argv) {
 #ifdef V06_TRACE
       static_assert(kTraceWords == V06CtaWords, "trace layout mismatch");
       host.resize(size_t(ctas) * kTraceWords);
-      CUDA_CHECK(cudaMemcpy(host.data(), trace.pointer, host.size() * 8, cudaMemcpyDeviceToHost));
+      if (history_series) {
+        for (int cta=0; cta<ctas; ++cta)
+          std::copy_n(saved_history.data()+(size_t(history_calls-1)*ctas+cta)*16,16,
+                      host.data()+size_t(cta)*kTraceWords);
+      } else {
+        CUDA_CHECK(cudaMemcpy(host.data(), trace.pointer, host.size() * 8, cudaMemcpyDeviceToHost));
+      }
       for (int cta = 0; cta < ctas; ++cta)
         if (host[size_t(cta) * kTraceWords + 10])
           throw std::runtime_error("V06 trace tile capacity exceeded");
@@ -404,13 +462,56 @@ int main(int argc, char** argv) {
                 << ",\"warmup_swizzle\":" << warmup_swizzle
                 << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
                 << ",\"target_swizzle\":" << o.swizzle
+                << ",\"history_protocol\":\"" << history_protocol << "\""
+                << ",\"target_calls\":" << (history_series ? history_target_calls : 1)
+                << ",\"preceding_target_calls\":" << (history_series ? history_target_calls-1 : 0)
                 << ",\"warmup_last5_cv\":" << coefficient_of_variation({warm.end()-5,warm.end()});
+      if (history_enabled) {
+        float prefix_ms=0,observed_ms=0;
+        CUDA_CHECK(cudaEventElapsedTime(&prefix_ms,history_begin[0],history_end[history_prefix_calls-1]));
+        CUDA_CHECK(cudaEventElapsedTime(&observed_ms,history_begin[0],history_end[history_index-1]));
+        std::cout << ",\"history_recorded_calls\":" << history_index
+                  << ",\"history_prefix_event_us\":" << prefix_ms*1e3
+                  << ",\"history_event_us\":" << observed_ms*1e3;
+        std::vector<double> gaps_us;
+        for (int j=0; j<history_index-1; ++j) {
+          float ms=0; CUDA_CHECK(cudaEventElapsedTime(&ms,history_end[j],history_begin[j+1]));
+          gaps_us.push_back(ms*1e3);
+        }
+        print_f("history_inter_call_event_us",gaps_us);
+      }
       print_f("warmup_us", warm_us);
       print_u64("trace", host);
       std::cout << "}\n";
     };
     auto warm_sequence = [&]() {
       std::vector<float> warm;
+      if (history_series) {
+        std::vector<double> call_us, gaps_us;
+        for (int j=0; j<history_prefix_calls; ++j) {
+          float ms=timed(warmup_launch_params); warm.push_back(ms); call_us.push_back(ms*1e3);
+        }
+        for (int j=0; j<history_target_calls; ++j) call_us.push_back(timed(launch_params)*1e3);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        saved_history.resize(history->count);
+        CUDA_CHECK(cudaMemcpy(saved_history.data(),history->pointer,history->count*sizeof(uint64_t),cudaMemcpyDeviceToHost));
+        for (int j=0; j<history_calls-1; ++j) {
+          float ms=0; CUDA_CHECK(cudaEventElapsedTime(&ms,history_end[j],history_begin[j+1]));
+          gaps_us.push_back(ms*1e3);
+        }
+        float prefix_ms=0,series_ms=0;
+        CUDA_CHECK(cudaEventElapsedTime(&prefix_ms,history_begin[0],history_end[history_prefix_calls-1]));
+        CUDA_CHECK(cudaEventElapsedTime(&series_ms,history_begin[0],history_end[history_calls-1]));
+        std::cout << "{\"event\":\"history_series\",\"protocol\":\"" << history_protocol << "\""
+                  << ",\"prefix_calls\":" << history_prefix_calls << ",\"target_calls\":" << history_target_calls
+                  << ",\"prefix_swizzle\":1,\"target_swizzle\":" << o.swizzle
+                  << ",\"ctas\":" << ctas << ",\"head_words\":16,\"prefix_elapsed_us\":" << prefix_ms*1e3
+                  << ",\"series_elapsed_us\":" << series_ms*1e3;
+        print_f("call_elapsed_us",call_us); print_f("inter_call_event_us",gaps_us);
+        print_u64("heads",saved_history); std::cout << "}\n";
+        report("history-last-target",call_us.back()/1e3,warm);
+        return;
+      }
       if (common_history) {
         for (int i = 0; i < 16; ++i) warm.push_back(timed(warmup_launch_params));
         float ms = timed(launch_params);
@@ -449,6 +550,11 @@ int main(int argc, char** argv) {
               << ",\"warmup_policy\":\"" << o.warmup_policy << "\""
               << ",\"warmup_swizzle\":" << warmup_swizzle
               << ",\"warmup_fixed_calls\":" << (common_history ? 16 : 0)
+              << ",\"history_mode\":\"" << o.history_mode << "\""
+              << ",\"history_protocol\":\"" << history_protocol << "\""
+              << ",\"history_capacity_bytes\":" << (history_enabled ? history->count*sizeof(uint64_t) : 0)
+              << ",\"raster_order\":\"" << o.raster_order << "\""
+              << ",\"resolved_raster_order\":\"" << resolved_raster << "\""
               << std::setprecision(17)
               << ",\"check_atol\":" << (input_mode == 2 ? 0x1p-20 : 0.0)
               << ",\"check_sum_abs_rtol\":" << (input_mode == 2 ? 0x1p-21 : 0.0)
@@ -503,6 +609,8 @@ int main(int argc, char** argv) {
     gaps::print_check(e, padding_bad, numerical_ok);
     CUDA_CHECK(cudaEventDestroy(begin));
     CUDA_CHECK(cudaEventDestroy(end));
+    for (auto event:history_begin) CUDA_CHECK(cudaEventDestroy(event));
+    for (auto event:history_end) CUDA_CHECK(cudaEventDestroy(event));
     return ok ? 0 : 2;
   } catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
