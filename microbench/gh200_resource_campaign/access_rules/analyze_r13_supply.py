@@ -4165,6 +4165,189 @@ def stage_background_baseline_diagnostics(output):
     return report
 
 
+def shared_stage_service_diagnostics(output):
+    """Fit the explicit shared-server hypothesis; keep causal transfer failures."""
+    from scipy.optimize import least_squares
+    from supply_model import shared_stage_events
+    import v06_run as common
+    output=Path(output);source=output/'B-stage-background.json';data=read_json(source)
+    rows=[p for p in data['processes'] if p['variant']=='progress']
+    c=statistics.median(p['early_duration_ns'] for p in rows if (p['stages'],p['epilogue_defer'])==(6,2))/15
+    plain=[p for p in data['processes'] if p['variant']=='plain' and p['set']=='ctrl']
+    budget=min(p['elapsed_us']*1000 for p in plain)
+    def group(stage,flag):return [p for p in rows if (p['stages'],p['epilogue_defer'])==(stage,flag)]
+    def targets(flags):
+        return np.array([statistics.median(values) for flag in flags for stage in (4,6)
+            for values in ([p['early_duration_ns'] for p in group(stage,flag)],
+                [p['post_early_duration_ns'] for p in group(stage,flag)],
+                [p['direct_ns_background'][0]['epi_end_ns']-p['direct_ns_background'][0]['epi_begin_ns']
+                    for p in group(stage,flag)])])
+    target2=targets((2,));upper_prep=min(target2[2],target2[5])/8
+    def parameters(x):
+        fraction,read_share,latency,preparation=map(float,x)
+        tau=budget*fraction*read_share/33792
+        store=budget*fraction*(1-read_share)/2112
+        return dict(service_ns=tau,read_latency_ns=latency,compute_ns=c,commit_lead_ns=c/2,
+            output_weight=2*store/tau,epilogue_prepare_ns=preparation/2,epilogue_write_ns=preparation/2)
+    def evaluate(x,flags,detail=False):
+        result=[]
+        for flag in flags:
+            for stage in (4,6):
+                model=shared_stage_events(64,stage,132,epilogue_defer=flag,**parameters(x))
+                a=model['ctas'][0];C=a['commits'];e=a['outputs'][0];M=a['mma_returns'][1]
+                row=dict(stages=stage,epilogue_defer=flag,early_ns=C[80]-C[65],
+                    post_ns=M-C[80],E0_ns=e['end']-e['begin'],
+                    source_tail_makespan_ns=model['makespan_ns'],shared_busy_ns=model['shared_busy_ns'])
+                if detail:
+                    def overlap(begin,end):
+                        intervals=[z['outputs'][0] for z in model['ctas'][1:]]
+                        return dict(overlapping_ctas=sum(z['begin']<end and z['end']>begin for z in intervals),
+                            mean_active=sum(max(0,min(end,z['end'])-max(begin,z['begin'])) for z in intervals)/(end-begin))
+                    row.update(other_E0_early=overlap(C[65],C[80]),other_E0_post=overlap(C[80],M),
+                        earlier_M_ctas=sum(z['mma_returns'][1]<M for z in model['ctas']),
+                        M_span_ns=max(z['mma_returns'][1] for z in model['ctas'])-min(z['mma_returns'][1] for z in model['ctas']),
+                        ctas=[dict(cta=i,C1_ns=z['commits'][65],C16_ns=z['commits'][80],
+                            M_ns=z['mma_returns'][1],E0=[z['outputs'][0]['begin'],z['outputs'][0]['end']],
+                            E1=[z['outputs'][1]['begin'],z['outputs'][1]['end']]) for i,z in enumerate(model['ctas'])])
+                result.append(row)
+        return result
+    def vector(results):return np.array([r[k] for r in results for k in ('early_ns','post_ns','E0_ns')])
+    fits=[]
+    def fit(label,initial,flags):
+        y=targets(flags)
+        def residual(x):return (vector(evaluate(x,flags))-y)/y
+        solved=least_squares(residual,initial,
+            bounds=([.001,.001,0,0],[1,.999,budget/2,upper_prep]),
+            diff_step=.01,x_scale=[1,1,1000,200],max_nfev=45,ftol=1e-5,xtol=1e-5,gtol=1e-5)
+        predictions=evaluate(solved.x,(0,1,2),detail=True)
+        current=vector([r for r in predictions if r['epilogue_defer'] in (1,2)])
+        truth=targets((1,2));changes=[]
+        for stage in (4,6):
+            r={p['epilogue_defer']:p for p in predictions if p['stages']==stage}
+            observed=next(t for t in data['all_minus_cta0'] if t['stages']==stage and t['variant']=='progress')
+            plain_delta=next(t for t in data['all_minus_cta0'] if t['stages']==stage and t['variant']=='plain')
+            changes.append(dict(stages=stage,
+                all_minus_target_early_ns=r[2]['early_ns']-r[1]['early_ns'],
+                all_minus_target_post_ns=r[2]['post_ns']-r[1]['post_ns'],
+                all_minus_target_source_tail_ns=r[2]['source_tail_makespan_ns']-r[1]['source_tail_makespan_ns'],
+                target_minus_normal_early_relative=r[1]['early_ns']/r[0]['early_ns']-1,
+                observed_early_pair_ns=observed['early_delta_ns'],observed_post_pair_ns=observed['post_early_delta_ns'],
+                observed_plain_pair_ns={k:1000*v for k,v in plain_delta['whole_delta_us'].items()}))
+        entry=dict(name=label,calibration_flags=list(flags),initial=list(initial),coordinate_parameters=solved.x.tolist(),
+            parameters=parameters(solved.x),calibration_relative_residual=solved.fun.tolist(),
+            calibration_rms=float(np.sqrt(np.mean(solved.fun**2))),
+            all_current_max_relative=float(np.max(np.abs((current-truth)/truth))),
+            solver_success=bool(solved.success),solver_message=solved.message,nfev=solved.nfev,
+            predictions=predictions,changes=changes)
+        fits.append(entry)
+        print(label,'calibration RMS',entry['calibration_rms'],flush=True)
+        return entry
+    fit('flag2_start_A',[.74,.97,850.,160.],(2,))
+    second=fit('flag2_start_B',[.74,.80,800.,120.],(2,))
+    fit('joint_development',second['coordinate_parameters'],(1,2))
+    old_source=output/'B-epilogue-order.json';old=read_json(old_source);local=[]
+    for stage in (4,6):
+        a={p['trial']:p for p in old['processes'] if (p['stages'],p['variant'],p['epilogue_defer'])==(stage,'progress',0)}
+        b={p['trial']:p for p in old['processes'] if (p['stages'],p['variant'],p['epilogue_defer'])==(stage,'progress',1)}
+        values=[b[t]['intervals']['commit1_to16']/a[t]['intervals']['commit1_to16']-1 for t in sorted(a)]
+        local.append(dict(stages=stage,median_relative=statistics.median(values),minimum=min(values),maximum=max(values),
+            source=str(old_source),scope='Older observer, within-process cycle windows; compare relative response only, never convert with a newer call frequency.'))
+    observed=[]
+    for flag in (1,2):
+        for stage in (4,6):
+            g=group(stage,flag);y=targets((flag,));offset=0 if stage==4 else 3
+            observed.append(dict(stages=stage,epilogue_defer=flag,early_ns=y[offset],post_ns=y[offset+1],E0_ns=y[offset+2],
+                M_span_ns_median=statistics.median(max(z['mma_return_ns'] for z in p['direct_ns_background'])-min(z['mma_return_ns'] for z in p['direct_ns_background']) for p in g),
+                post_overlap_ctas_median=statistics.median(p['other_E0_post_early']['overlapping_ctas'] for p in g),
+                earlier_M_ctas_median=statistics.median(sum(z['mma_return_ns']<p['direct_ns_background'][0]['mma_return_ns'] for z in p['direct_ns_background']) for p in g)))
+    from analyze_r13_sm import select_attempts
+    entry_root=Path(data['root']).parent/'20261010-R09-R13-R18-failure-controls'
+    common.verify(entry_root);entry_rows={r['id']:r for r in read_json(entry_root/'cases.json')}
+    entry_evidence=[];entry_hashes={}
+    for stage in (4,6):
+        row=entry_rows[f'r13_stage_k4096_s{stage}'];selected,_,_=select_attempts(entry_root,row['id'],('dual',))
+        values=[]
+        for item in selected:
+            record=item['record'];obs=replay(entry_root,record,row);ctas=obs['ctas'];target=ctas[0]
+            values.append(dict(trial=record['trial'],source=str(entry_root/record['raw']),sm=target['sm'],
+                entry_offset_ns=target['entry_ns']-min(c['entry_ns'] for c in ctas),
+                entry_rank=sum(c['entry_ns']<target['entry_ns'] for c in ctas),
+                entry_span_ns=max(c['entry_ns'] for c in ctas)-min(c['entry_ns'] for c in ctas),
+                producer_anchor_rank=sum(c['prod_ns']<target['prod_ns'] for c in ctas),
+                first_input_rank=sum(c['tiles_ns'][0][0]<target['tiles_ns'][0][0] for c in ctas),
+                second_MAIN_rank=sum(c['tiles_ns'][1][1]<target['tiles_ns'][1][1] for c in ctas),
+                outputs_before_first=sum(c['tiles_ns'][0][2]<target['tiles_ns'][0][0] for c in ctas)))
+            entry_hashes[str(entry_root/record['raw'])]=record['raw_sha256']
+        entry_evidence.append(dict(stages=stage,processes=values,
+            medians={k:statistics.median(v[k] for v in values) for k in values[0] if k not in ('trial','source','sm')}))
+    report=dict(scope='New cfg_b software-graph hypothesis tested on development data; not used in frozen V09.',
+        static=dict(ctas=132,outputs_per_cta=2,Ktiles=64,input_requests=33792,input_request_bytes=16384,
+            store_requests=2112,store_request_bytes=8192,store_buffers=2,delay_tma_store=True),
+        fixed_assumptions=dict(compute_ns=c,commit_lead_ns=c/2,completion_lag_ns=0,output_latency_ns=0,
+            prepare_write_split=[.5,.5],all_entries_ns=0,arbitration='FIFO arrival; insertion-order ties initialized by CTA index',
+            local_epilogue_does_not_contend_with_TC=True,other_software_costs_ns=0),
+        budget_ns=budget,budget_source='minimum plain whole time across both development arms, used only as necessary logical service bound',
+        calibration_rule='Two local starts fit flag2 early/post/E0 on both stages; c comes from its stage6 early. Joint fit then explicitly uses both arms.',
+        solver_scope='Finite local least-squares searches, not exhaustive feasible-set bounds. No fit selected by flag1 transfer score.',
+        fits=fits,observed_current=observed,observed_old_local=local,old_entry_evidence=entry_evidence,
+        input_sha256={**entry_hashes,**{str(p):common.sha(p) for p in (source,old_source,entry_root/'source_hashes.json',entry_root/'cases.json',Path(__file__),Path(__file__).with_name('supply_model.py'))}},
+        limitations=['The stage6 early calibration is fixed by c, and its computed post is nearly 47c; six windows are not six independent identifications.',
+            'Abstract logical service and per-byte read/write weighting are not physical bandwidth or traffic measurements.',
+            'The predicted endpoint is final epilogue source-read completion. Global D visibility and kernel launch/exit costs are absent.',
+            'Plain whole differences are compared with source-tail differences as a diagnostic, not equated by an assumed universal fixed term.',
+            'Old local-output control uses another observer; only dimensionless within-batch cycle responses are compared.',
+            'Simultaneous CTA entries and symmetric request costs can put CTA0 first incorrectly; phase failure is distinct from aggregate-window residual.',
+            'No observed E0/CTA entry/target frequency, stage-specific correction or post-measurement critical-CTA expansion enters the candidate.'])
+    (output/'B-stage-shared-service.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 有限槽与共享服务：首个可计算候选','',
+        '输入A/B分别入固定FIFO，服务后再经过公共延迟才满足full；consumer保留commit、wait1、普通/尾slot释放。'
+        '输出由8个8KiB子tile、DelayTmaStore和两个源buffer生成，处理flag只改变等待前驱。'
+        '不输入实测E0时刻。所有时间为ns；输出请求权重可与等字节输入不同，但不是物理流量或L2/HBM带宽。','',
+        f'固定compute={c:.4f}ns来自stage6 flag2 early15，q=compute/2；λ及输出后延迟为0，局部准备与写各占一半。'
+        '其它未分离的软件成本取0，所有CTA同时进入。这里只实现一组可证伪假设，没有自动把这些值称为硬件常数。','',
+        '| 拟合 | 使用条件 | 校准RMS | 输入16KiB服务ns | 输出8KiB服务ns | 输入后延迟ns | 每subtile局部成本ns |',
+        '|---|---|---:|---:|---:|---:|---:|']
+    for f in fits:
+        p=f['parameters'];lines.append(f'| {f["name"]} | {f["calibration_flags"]} | {100*f["calibration_rms"]:.3f}% | '
+            f'{p["service_ns"]:.4f} | {p["service_ns"]*p["output_weight"]/2:.4f} | {p["read_latency_ns"]:.2f} | {2*p["epilogue_prepare_ns"]:.2f} |')
+    lines+=['','两起点只拟flag2；两解均保留，不用flag1迁移成绩反选。随后joint明确将两flag共同作开发训练，'
+        '不是独立验证。共享服务预算另用本批全部plain最短时间，包括flag1。stage6 early由c定义自动命中，post也近似47c，不能把低拟合误差当作六个独立约束。','',
+        '| 拟合 / stage | flag2−1 early ns | post ns | 源复用尾包络差ns | 实测plain配对中位ns | 本CTA 1−0 early相对变化 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for f in fits:
+        for d in f['changes']:
+            lines.append(f'| {f["name"]} / {d["stages"]} | {d["all_minus_target_early_ns"]:.2f} | '
+                f'{d["all_minus_target_post_ns"]:.2f} | {d["all_minus_target_source_tail_ns"]:.2f} | '
+                f'{d["observed_plain_pair_ns"]["median"]:.2f} | {100*d["target_minus_normal_early_relative"]:.3f}% |')
+    joint=fits[-1]
+    lines+=['',f'joint的12窗口最大相对误差为{100*joint["all_current_max_relative"]:.2f}%，但执行相位仍不对：','',
+        '| stage flag2 | 模型C16→M中其它E0参与CTA数 | 实测中位 | 模型中比CTA0更早M的CTA数 | 实测中位 | 模型/实测全卡M跨度ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    for stage in (4,6):
+        pred=next(p for p in joint['predictions'] if (p['stages'],p['epilogue_defer'])==(stage,2))
+        obs=next(p for p in observed if (p['stages'],p['epilogue_defer'])==(stage,2))
+        lines.append(f'| {stage} | {pred["other_E0_post"]["overlapping_ctas"]} | {obs["post_overlap_ctas_median"]:.1f} | '
+            f'{pred["earlier_M_ctas"]} | {obs["earlier_M_ctas_median"]:.1f} | {pred["M_span_ns"]:.2f} / {obs["M_span_ns_median"]:.1f} |')
+    lines+=['','旧739095的同卡dual提供了独立入口检查（每stage十个进程）：','',
+        '| stage | CTA0 entry晚于最早entry ns | entry严格更早CTA数 | 首输入FIRST更早CTA数 | 第二MAIN_END更早CTA数 | entry跨度ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    for entry in entry_evidence:
+        v=entry['medians']
+        lines.append(f'| {entry["stages"]} | {v["entry_offset_ns"]:.1f} | {v["entry_rank"]:.1f} | '
+            f'{v["first_input_rank"]:.1f} | {v["second_MAIN_rank"]:.1f} | {v["entry_span_ns"]:.1f} |')
+    lines+=['','入口端点有32ns量化与并列，PROD是已有预填锚点而不是首TMA发出；旧MAIN_END也不是本批M返回。'
+        '因此它们不拼成当前调用，但足以说明不能未经检查把CTA0完成较晚全部补成入口延迟。'
+        '全卡M跨度过窄也不能仅重命名FIFO次序修好。下一步应检查初次请求生成与请求身份、服务组织，'
+        '当前不按测后完成排名重排仲裁，也不立即增加第二资源。']
+    lines+=['','原739717本CTA输出延后的early周期配对相对中位为'+', '.join(f'stage{r["stages"]} {100*r["median_relative"]:.2f}%' for r in local)+
+        '。这是另一观察协议，只比较无量纲响应，不用本批频率换算旧周期。'
+        '上述候选的本地响应明显不足；共同入口、仲裁、请求身份和未建模本地资源仍需分开检查，不能唯一归因某一硬件端口。','',
+        '候选不接入正式预测。旧dual显示CTA0已接近最早入口，下一步沿初次请求生成与实际请求身份检查相位；'
+        '不能用当前M完成次序去排列FIFO。局部窗口拟合好并未通过全卡机制检验，也未预测最终D全局可见或完整kernel固定项。','']
+    (output/'B-stage-shared-service.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_conditioned_diagnostics(output):
     """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
     from supply_model import admission_stage_events

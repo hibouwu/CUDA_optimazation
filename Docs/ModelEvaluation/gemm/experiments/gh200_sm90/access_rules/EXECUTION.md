@@ -82,7 +82,7 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 | 对象 | 已有结果 | 当前工作/边界 |
 |---|---|---|
 | 管理 | 对话`01a11cfc-87f0-76e3-b53e-dc2b5e241844`；739740完成背景配对：100有效进程、8项全D比较；当前无活动GPU作业 | `gh200-v09-failure-analysis`持续开发；[候选分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/README.md)统一重放，未进入V10 |
-| 供给 | [R15背景配对](R15-output-service.md#stage-output-background)使stage4早段再10/10缩短，但后段变长、plain未改善 | 已完成无E0覆盖窗口的条件c/T迁移；延后E0进入后段，整段清洁假设不成立。下一步离线连接共享请求与有限slot，不按E0面积定价 |
+| 供给 | [R15背景配对](R15-output-service.md#stage-output-background)使stage4早段再10/10缩短，但后段变长、plain未改善 | 共享服务事件候选已实现；联合窗口拟合好但全卡相位、本CTA干预未迁移，不采用。旧dual入口近最早，下一步检查预填与请求组织，不按M排序改仲裁 |
 | 输出/边界 | [R18](R18-cluster-boundary.md)同cluster轨迹相关；源码证明full/empty跨rank依赖 | 将依赖作为候选约束，不直接收费；P2最后cluster仍在冻结候选外 |
 | 时间/输入 | [R09](R09-inkernel-clock-stages.md)700次连续调用显示服务与频率均有历史响应；single也复现变慢 | 单极状态留段劣于末值基线，不采用；镜像前序后目标仍呈晚段成本，重复目标地址不是必要条件；批次封顶计数不能定位调用；本组暂无独立GPU任务 |
 | V09 | 739011完成30条件；29受支持预测4.11%/35.46%，1冻结前拒绝 | **整体未通过**，冻结/判定不改；新候选须另用新留出检验 |

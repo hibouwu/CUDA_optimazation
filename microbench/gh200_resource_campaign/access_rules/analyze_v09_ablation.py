@@ -306,10 +306,13 @@ def main():
     parser.add_argument('--stage-admission',action='store_true',help='offline stage6 local calibration and constrained stage4 transfer')
     parser.add_argument('--stage-progress',type=Path,help='R13 consumer commit/loop progress run')
     parser.add_argument('--stage-handoff',type=Path,help='R13 handoff replay, conditional bounds and shared reuse development')
+    parser.add_argument('--shared-service',action='store_true',help='fit shared-service development graph after output-background replay')
     parser.add_argument('--output-background',type=Path,help='R13/R15 fixed target treatment with other-CTA epilogue background pair')
     parser.add_argument('--epilogue-order',type=Path,help='R13/R15 same-CTA output-order intervention replay')
     parser.add_argument('--history-series',type=Path,help='R09 prefix/target trajectory run')
     parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();base=args.base.resolve();out=args.output.resolve()
+    if args.shared_service and args.output_background is None:
+        parser.error('--shared-service requires --output-background')
     if args.controls is not None and args.analysis=='ablation':
         parser.error('--controls is not used by ablation')
     if args.stage_admission and args.analysis!='candidate-development':
@@ -325,6 +328,9 @@ def main():
         from analyze_r13_supply import stage_output_background_diagnostics, stage_background_baseline_diagnostics
         stage_output_background_diagnostics(args.output_background.resolve(),out)
         stage_background_baseline_diagnostics(out)
+        if args.shared_service:
+            from analyze_r13_supply import shared_stage_service_diagnostics
+            shared_stage_service_diagnostics(out)
         return
     if args.epilogue_order is not None:
         if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,

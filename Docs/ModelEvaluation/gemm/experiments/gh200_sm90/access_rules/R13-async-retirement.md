@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。新背景配对固定CTA0本地处理，延后其它CTA输出使stage4早段10/10缩短，但后段变长、plain未改善。延后的E0进入C16→M，不能把整个flag2主循环当作无输出背景。固定两个无E0覆盖窗口定条件c/T后，stage4 flag2 early/late仍在包络之外365/293 cycle；这是局部子类的开发迁移诊断，不是完整模型评分或严格排除。局部服务要考虑全卡组织；处理同时改变其它CTA输入进度，不能按输出面积或early单独加价。既有边界间隙及宽分支结论仍限定于各自假设，详见下文。
+当前供给尚未通过V09迁移。新增共享服务事件候选保留输入槽、WGMMA释放和输出双缓冲，能拟合当前两处理的窗口摘要，但全卡相位与本CTA输出干预响应没有同时迁移，因此不进入正式预测。stage4/6全卡M返回跨度分别只预测约182/82ns，实测中位2528/976ns；不能靠重排CTA标签修复这个差别。固定窗口的c/T条件界仍保留，不能据低窗口残差宣称机制已正确。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -27,6 +27,7 @@
 | 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
 | 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
 | 背景基线，离线 | 区分早/后段输出相位；仅两个无E0覆盖窗口约束c/T，固定后迁移 | [条件范围与未定项](#stage-background-baseline)、[逐进程包络](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md) |
+| 共享服务候选，离线 | 真实软件依赖自行生成E0；低窗口残差仍伴随相位/本地响应失败 | [候选边界](#stage-shared-service)、[拟合与全卡对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -51,6 +52,28 @@
 局部打点不适合直接反解所有参数：stage6 flag2的C16→C17为534/535，约比其early平均间隔多22cycle；W16−C16约49、C63→M为57，不能沿用旧协议43/10，也不能把被选中的单步开销应用于每次迭代。M→MAIN还与本CTA E0重叠约339cycle，不能拟成单一退休延迟λ。FIRST→C1混有继承的服务状态，q与ready时间仍不可分。
 
 下一候选须保留有限slot和共享请求的前驱关系，并自己生成输出相位；实测E0时刻只能用于诊断。这里不拼入观测FIRST/尾段构造完整L，不加入early专属常数。
+
+<a id="stage-shared-service"></a>
+
+## 一条共享服务队列能解释输出干预吗？
+
+纯函数`shared_stage_events`已在[supply_model.py](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)实现：132 CTA、每CTA两个完整输出、输入S槽跨输出保留；A/B分别入FIFO并共同满足full，普通wait1释放前group、tail释放末group。8个8KiB输出子tile按真实延迟提交和两源buffer推进，flag只改变等待前驱。没有喂入实测E0时刻或目标调用频率。
+
+本次固定共同入口、同质请求、FIFO及局部准备不干扰TC；以stage6 flag2 early定`compute=291.2ns`，q取其一半，其它未分离软件费用先取0。只拟flag2六窗口的两个起点都达到约0.33% RMS，却给出不同的输入服务和局部准备成本，对flag1的末端变化甚至变号。共享服务总预算另取全部plain最短时间，包括flag1；不是未见数据验证。stage6 early由compute定义，post也几乎预定，六个窗口并非六个独立辨识条件。
+
+为给候选一次联合开发机会，再用两flag的12个early/post/E0窗口拟合同一组参数，最大相对残差2.84%，但其全卡相位仍错误：
+
+| flag2 | stage4 | stage6 |
+|---|---:|---:|
+| 模型/实测，C16→M内其它E0 CTA数中位 | 0 / 60 | 0 / 60 |
+| 模型/实测，比CTA0更早M的CTA数中位 | 0 / 70.5 | 0 / 75 |
+| 模型/实测，全卡M跨度ns中位 | 181.98 / 2528 | 81.64 / 976 |
+
+739717本CTA输出延后的stage4 early周期配对中位为−6.82%；候选对应无量纲变化只有约−0.1%～−0.2%。旧观察协议与本批不同，只比相对响应，不用新频率换算旧周期。这个缺口不能唯一指向某个本地端口，也不能因联合拟合好就忽略。
+
+复用739095同卡dual作独立入口检查：stage6 CTA0的entry十次都处在最早32ns格点，但首输入FIRST前面已有2～105个CTA，第二MAIN_END前面已有58～105个。stage4 entry中位仅比最早晚32ns。PROD不是首请求发出，旧MAIN_END也不是本批M；这些端点不能跨批拼接，但足以阻止把后续落后全部补成一个CTA0入口延迟。下一步沿入口→预填→首输入的同调用链和真实A/B请求身份检查，不能按测后M排名改变仲裁或拟CTA专属常数。
+
+[完整分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md)保存两个原拟合、联合开发解、每CTA预测相位和原始来源。模型末端是最后E1源读取完成，尚无全局D可见尾项或kernel固定项，不冒充完整CUDA时间。CPU退化及依赖测试通过只证明实现按候选运行；该候选仍不采用。
 
 ## 序列供给：消费者与在途组织会改变结果
 

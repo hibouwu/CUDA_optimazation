@@ -103,6 +103,8 @@ C16→M包含相邻间隔、后46间隔及最终返回，不等于单独C17→C6
 
 [固定校准窗口检验](R13-async-retirement.md#stage-background-baseline)改用stage6 flag2 early及stage4 flag1 late，这两个实际窗口均无已记录E0覆盖。条件c/T固定后，stage4 flag2 early距包络上限365.26cycle，late距上限293.15cycle。它约束后续共享服务候选，没有形成完整L预测。
 
+[共享服务事件候选](R13-async-retirement.md#stage-shared-service)已保留上述8子tile双缓冲链并自行生成E0。联合拟合可以接近12个窗口摘要，却漏掉C16→M的真实全卡相位，且本CTA输出干预效应太小；没有据此给输出加入一个新共享价格。模型最后store源读完也没有替代全局D完成。
+
 **支持的范围是全卡组织参与局部服务。** 仅依赖CTA0固定几何、本地处理和stage的独立服务规则不充分。flag2也会改变其它CTA的输入请求进度，新增等待影响其调度，因而尚不能唯一定位输出物理资源，更不能按E0重叠面积加价。E0截止仍是store-tail源复用边界。
 
 [逐进程数据与对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md)保留100个有效进程，无失败；八次完整D比较均4325376元素逐位相同。四binary均168寄存器、16条静态HGMMA、无spill。progress/plain整调用配对中位扰动为0.60%～2.15%，不能约束局部扰动。两个先行plain参照相对739717为−2.13%/−0.34%，跨批漂移不算本批处理效果。少数进程暖机次数不同，全样本保留并单列共同暖机配对。

@@ -98,6 +98,164 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         mma_returns=returns,main_ends=ends,slot=[i%stages for i in range(2*kt)])
 
 
+def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
+                        compute_ns, output_latency_ns=0., output_weight=1.,
+                        producer_gap_ns=0., operand_gap_ns=0., reuse_delay_ns=0.,
+                        commit_lead_ns=0., completion_lag_ns=0., issue_floor_ns=0.,
+                        wait_overhead_ns=0., loop_advance_ns=0., return_overhead_ns=0.,
+                        handoff_delay_ns=0., epilogue_prepare_ns=0., epilogue_write_ns=0.,
+                        epilogue_control_ns=0., epilogue_tail_ns=0., epilogue_defer=0,
+                        trace_requests=False):
+    """Development FIFO server coupled to cfg_b's two-output software graph.
+
+    All times are ns supplied before prediction. Each input group sends A then
+    B, each 16 KiB. Eight 8 KiB D subtiles use DelayTmaStore and two source
+    buffers. A logical input request has work 1; an output has work eta/2.
+    The abstract server is not identified with a physical cache or memory port.
+    Local epilogue preparation/write costs do not contend with TC in this first
+    candidate; failure of the local-output intervention can falsify this choice.
+
+    CTAs enter together. Equal-time events use insertion order, initialized by
+    CTA index; this deterministic FIFO hypothesis is not measured arbitration.
+    Input slots and output buffers constrain requests; there is no fitted queue
+    capacity. defer=1 delays CTA0 E0 until its M1; defer=2 delays every E0.
+    No measured entry, E0 timestamp, per-condition penalty or target clock enters.
+    """
+    import heapq
+
+    costs=(service_ns,read_latency_ns,output_latency_ns,output_weight,producer_gap_ns,
+        operand_gap_ns,reuse_delay_ns,commit_lead_ns,completion_lag_ns,issue_floor_ns,
+        wait_overhead_ns,loop_advance_ns,return_overhead_ns,handoff_delay_ns,
+        epilogue_prepare_ns,epilogue_write_ns,epilogue_control_ns,epilogue_tail_ns)
+    if min(kt,stages)<2 or cta_count<1 or compute_ns<=0 or min(costs)<0:
+        raise ValueError('shared stage candidate requires positive geometry/compute and nonnegative costs')
+    if issue_floor_ns>compute_ns or epilogue_defer not in (0,1,2):
+        raise ValueError('invalid issue floor or output-order treatment')
+    total=2*kt;events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
+    actors=[]
+    def push(time,kind,cta,index):
+        nonlocal serial
+        heapq.heappush(events,(time,serial,kind,cta,index));serial+=1
+    for cta in range(cta_count):
+        actor={name:[None]*total for name in ('issued_a','issued_b','ready','starts',
+            'service_frontier','commits','completed','wait1_return','released')}
+        actor.update(ready_count=[0]*total,producer_index=0,producer_free=0.,producer_scheduled=False,
+            consumer_index=0,consumer_free=0.,consumer_scheduled=False,
+            mma_returns=[None,None],main_ends=[None,None],
+            outputs=[dict(begin=None,end=None,scheduled=False,
+                prepare_begin=[None]*8,prepare_end=[None]*8,write_begin=[None]*8,write_end=[None]*8,
+                submitted=[None]*8,source_done=[None]*8) for _ in range(2)])
+        actors.append(actor)
+
+    def producer(cta):
+        a=actors[cta];i=a['producer_index']
+        if i==total or a['producer_scheduled']:return
+        t=a['producer_free']
+        if i>=stages:
+            release=a['released'][i-stages]
+            if release is None:return
+            t=max(t,release+reuse_delay_ns)
+        a['producer_scheduled']=True;push(t,'issue_a',cta,i)
+
+    def consumer(cta):
+        a=actors[cta];i=a['consumer_index']
+        if i==total or a['consumer_scheduled'] or a['ready_count'][i]!=2:return
+        a['consumer_scheduled']=True
+        push(max(a['consumer_free'],a['ready'][i]),'mma',cta,i)
+
+    def epilogue(cta,out):
+        a=actors[cta];e=a['outputs'][out]
+        if e['scheduled'] or a['main_ends'][out] is None:return
+        t=a['main_ends'][out]
+        if out==0 and (epilogue_defer==2 or (epilogue_defer==1 and cta==0)):
+            if a['mma_returns'][1] is None:return
+            t=max(t,a['mma_returns'][1])
+        if out==1:
+            if a['outputs'][0]['end'] is None:return
+            t=max(t,a['outputs'][0]['end'])
+        e['scheduled']=True;push(t,'epi_begin',cta,out)
+
+    def request(t,cta,kind,index,weight,latency):
+        nonlocal frontier,busy,request_count
+        start=max(t,frontier);duration=service_ns*weight;frontier=start+duration
+        busy+=duration;request_count+=1;ready=frontier+latency
+        if trace_requests:requests.append(dict(cta=cta,kind=kind,index=index,arrival_ns=t,
+            start_ns=start,service_end_ns=frontier,ready_ns=ready,work=weight))
+        return ready
+
+    for cta in range(cta_count):producer(cta)
+    while events:
+        t,_,kind,cta,i=heapq.heappop(events);a=actors[cta]
+        if kind in ('issue_a','issue_b'):
+            a['issued_a' if kind=='issue_a' else 'issued_b'][i]=t
+            done=request(t,cta,kind,i,1.,read_latency_ns);push(done,'input_ready',cta,i)
+            if kind=='issue_a':push(t+operand_gap_ns,'issue_b',cta,i)
+            else:
+                a['producer_index']=i+1;a['producer_free']=t+producer_gap_ns
+                a['producer_scheduled']=False;producer(cta)
+        elif kind=='input_ready':
+            a['ready_count'][i]+=1;a['ready'][i]=t
+            consumer(cta)
+        elif kind=='mma':
+            a['starts'][i]=t
+            E=max(t,a['service_frontier'][i-1] if i else t)+compute_ns
+            C=max(t+issue_floor_ns,E-commit_lead_ns);D=E+completion_lag_ns
+            W=C if i%kt==0 else max(C,a['completed'][i-1])+wait_overhead_ns
+            for name,value in [('service_frontier',E),('commits',C),('completed',D),('wait1_return',W)]:
+                a[name][i]=value
+            if i%kt:push(W,'release',cta,i-1)
+            if i%kt==kt-1:
+                out=i//kt;M=W+return_overhead_ns
+                push(M,'mma_return',cta,out);push(max(M,D),'main_end',cta,out)
+            else:
+                a['consumer_index']=i+1;a['consumer_free']=W+loop_advance_ns
+                a['consumer_scheduled']=False;consumer(cta)
+        elif kind=='release':
+            a['released'][i]=t;producer(cta)
+        elif kind=='mma_return':
+            a['mma_returns'][i]=t
+            a['consumer_index']=(i+1)*kt;a['consumer_free']=t+handoff_delay_ns
+            a['consumer_scheduled']=False;consumer(cta)
+            epilogue(cta,0)
+        elif kind=='main_end':
+            a['main_ends'][i]=t;a['released'][(i+1)*kt-1]=t
+            producer(cta);epilogue(cta,i)
+        elif kind=='epi_begin':
+            e=a['outputs'][i];e['begin']=t;e['prepare_begin'][0]=t
+            push(t+epilogue_prepare_ns,'epi_prepared',cta,i*8)
+        elif kind=='epi_prepared':
+            out,j=divmod(i,8);e=a['outputs'][out];e['prepare_end'][j]=t
+            if j==0:
+                e['write_begin'][j]=t;push(t+epilogue_write_ns,'epi_written',cta,i)
+            else:push(t+epilogue_control_ns,'store',cta,i-1)
+        elif kind=='epi_written':
+            out,j=divmod(i,8);e=a['outputs'][out];e['write_end'][j]=t
+            if j==7:push(t+epilogue_control_ns,'store',cta,i)
+            else:
+                e['prepare_begin'][j+1]=t
+                push(t+epilogue_prepare_ns,'epi_prepared',cta,i+1)
+        elif kind=='store':
+            out,j=divmod(i,8);e=a['outputs'][out];e['submitted'][j]=t
+            done=request(t,cta,'store',i,output_weight/2,output_latency_ns);e['source_done'][j]=done
+            if j==7:
+                push(max(done,e['source_done'][j-1])+epilogue_tail_ns,'epi_end',cta,out)
+            else:
+                # After committing j, wait until at most one source read remains.
+                # Then write j+1 into the buffer formerly used by j-1.
+                begin=max(t,e['source_done'][j-1]) if j else t
+                e['write_begin'][j+1]=begin
+                push(begin+epilogue_write_ns,'epi_written',cta,i+1)
+        elif kind=='epi_end':
+            a['outputs'][i]['end']=t
+            if i==0:epilogue(cta,1)
+    if any(a['outputs'][1]['end'] is None for a in actors):
+        raise RuntimeError('shared stage graph did not complete')
+    makespan=max(a['outputs'][1]['end'] for a in actors)
+    return dict(ctas=actors,makespan_ns=makespan,shared_busy_ns=busy,
+        last_service_end_ns=frontier,request_count=request_count,requests=requests,
+        scope='cfg_b two-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time')
+
+
 def stage_reuse_window(intervals, stages, service_cycles, reuse_cycles, wait_overhead=0.):
     """Finite internal-window envelope for the constant reuse subclass.
 
