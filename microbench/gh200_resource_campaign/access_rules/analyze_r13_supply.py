@@ -3381,6 +3381,162 @@ def epilogue_order_diagnostics(root, output):
     return report
 
 
+def stage_boundary_diagnostics(base, output):
+    """Analytic single-gap exclusion and existing same-call refill bounds."""
+    from supply_model import admission_stage_events,stage_reuse_window
+    from analyze_r13_sm import select_attempts
+    import v06_run as common
+    base,output=Path(base),Path(output)
+    source=output/'B-epilogue-order.json';observed=read_json(source)
+    parameters=dict(producer_interval=50.,ready_latency=1548.,commit_lead=400.,
+        completion_lag=100.,service_cycles=512.,issue_floor=0.,wait_overhead=24.,
+        loop_advance=90.,return_overhead=40.,reuse_delay=100.,handoff_delay=134.)
+    witnesses=[]
+    for stage in (4,6):
+        original=admission_stage_events(64,stage,**parameters)
+        c=parameters['service_cycles'];m=stage-1
+        Z=parameters['ready_latency']+parameters['reuse_delay']+c-parameters['commit_lead']
+        extra=max(0,Z+parameters['wait_overhead']-m*c)
+        for gap in (0.,512.,2048.,8192.,65536.):
+            t=admission_stage_events(64,stage,**parameters,producer_boundary_delay=gap)
+            C=t['commits'];before=original['commits']
+            error=max(abs(C[64+j]-max(before[64+j],C[64]+j*c+((j-1)//m)*extra))
+                      for j in range(1,64))
+            early=C[80]-C[65];bound=stage_reuse_window(15,stage,c,Z,parameters['wait_overhead'])[1]
+            if error>1e-8 or early>bound+1e-8:raise ValueError('single-gap analytic identity failed')
+            witnesses.append(dict(stages=stage,producer_boundary_delay=gap,
+                first_commit_shift=C[64]-before[64],first_entry_after_previous_mma=
+                t['first_mma_or_commit'][64]-t['mma_returns'][0],early=early,
+                early_upper=bound,late=C[127]-C[81],L=t['windows'][1],identity_max_error=error))
+
+    # A counterexample to extending the narrow theorem, not a fitted predictor.
+    wide_parameters=dict(producer_interval=306.75038136816534,ready_latency=1473.0148793166884,
+        commit_lead=1821.3211425857085,completion_lag=354.6860660718234,
+        issue_floor=0.,reuse_delay=16.594099396544753,handoff_delay=987.6127317827884,
+        producer_boundary_delay=0.,service_cycles=23587/46,wait_overhead=43.,
+        loop_advance=89.,return_overhead=10.)
+    wide=[]
+    for stage in (4,6):
+        trace=admission_stage_events(64,stage,**wide_parameters)
+        C=trace['commits'];W=trace['wait1_return'];B=trace['first_mma_or_commit']
+        wide.append(dict(stages=stage,early=C[80]-C[65],late=C[127]-C[81],
+            first_to_commit1=C[65]-B[64],commit_to_wait1_16=W[80]-C[80],
+            last_commit_to_mma_return=trace['mma_returns'][1]-C[127]))
+    h=89.;c=23587/46
+    wide_limits=dict(scope='Necessary bounds for a deterministic central target, not statistical parameter confidence.',
+        g_upper=(652-h)/2,q_lower=2*c-652,w_upper=43.,w_plus_r_upper=53.,
+        lambda_plus_g_plus_w_upper=23587/23-h)
+    root=base/'20261010-R13-stage-events';common.verify(root)
+    rows=read_json(root/'cases.json');refill=[];hashes={str(source):common.sha(source)}
+    for row in rows:
+        if row.get('set')=='reference':continue
+        selected,_,_=select_attempts(root,row['id'],('stamped',))
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row)['sparse'];c=obs['clocks']
+            # All 128 arrivals include the selected lane: completion cannot
+            # precede its pre-arrive marker. Acquire return is after completion.
+            lower=c['refill_issue_end']-c['refill_end']
+            upper=c['refill_issue_end']-c['release_begin']
+            if not (c['refill_begin']<=c['release_begin']<=c['refill_end']<=c['refill_issue_end']):
+                raise ValueError('refill markers do not bracket the same release completion')
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            refill.append(dict(case=row['id'],stages=row.get('stages',6),trial=record['trial'],
+                cta=obs['cta'],sm=obs['sm'],work=obs['work'],clocks=c,source=record['raw'],
+                record_path=item['path'],empty_completion_to_issue_bounds=[lower,upper],
+                release_marker_to_acquire_return=c['refill_end']-c['release_begin']))
+    if len(refill)!=20:raise ValueError('expected twenty existing sparse processes')
+    summary=[]
+    for stage in (4,6):
+        chosen=[r for r in refill if r['stages']==stage]
+        lower=[r['empty_completion_to_issue_bounds'][0] for r in chosen]
+        upper=[r['empty_completion_to_issue_bounds'][1] for r in chosen]
+        summary.append(dict(stages=stage,processes=len(chosen),
+            median_bounds=[statistics.median(lower),statistics.median(upper)],
+            constant_interval=[max(lower),min(upper)],
+            release_marker_to_acquire_return_median=statistics.median(r['release_marker_to_acquire_return'] for r in chosen)))
+    interval=[max(r['empty_completion_to_issue_bounds'][0] for r in refill),
+              min(r['empty_completion_to_issue_bounds'][1] for r in refill)]
+    for path in (Path(__file__),Path(__file__).with_name('supply_model.py'),root/'source_hashes.json',root/'cases.json'):
+        hashes[str(path)]=common.sha(path)
+    report=dict(scope='No GPU sampling, no fitting, no formal-prediction change.',
+        single_gap=dict(assumptions=['p<=c; 0<=g<=c-q; q+lambda<=c; q>=w+h; q>=w+r+delta; nonnegative costs.',
+            'Default first output and kt=64; no observed_second_entry cut.',
+            'Only the producer issue carry before the second load receives a nonnegative gap; slot state is preserved.'],
+            equations=dict(internal='C_j=max(C_(j-1)+c,U_(64+j-S)+Z)',
+                impulse='Cgap_j=max(Cbase_j,Cgap_0+j*c+floor((j-1)/(S-1))*R), j>=1',
+                R='max(0,Z+w-(S-1)*c)',early='Cgap_16-Cgap_1 <= 15*c+15/(S-1)*R, S=4 or 6'),
+            witness_parameters=parameters,witnesses=witnesses,
+            observation_bounds=observed['full_inheritance_early_bounds'],
+            decision='Any nonnegative single producer-boundary gap preserves the early upper bound in this subclass; do not fit it to the residual.'),
+        wider_branch_counterexample=dict(parameters=wide_parameters,windows=wide,necessary_limits=wide_limits,
+            decision='Matches the two late windows but fails measured first and retirement windows; not a candidate and not an infeasibility proof for the wider family.'),
+        refill=dict(root=str(root),processes=refill,summary=summary,common_constant_interval=interval,
+            common_constant_not_excluded=interval[0]<=interval[1],
+            interpretation='The interval is empty-completion-to-pair-issue. It is not a timestamp for completion or the model wait1-to-issue reuse_delay.'),
+        limitations=['These existing sparse markers are at local16 release/local16+S refill, not a time series over early and late iterations.',
+            'A nonempty intersection only means these intervals do not reject a constant; it is not a measured common latency.',
+            'The 739556 sparse protocol is kept separate from 739717 progress; their endpoints and costs are not spliced.',
+            'The analytic exclusion does not cover time-varying readiness, release completion, service lead or arbitrary initial states.'],
+        input_sha256=hashes)
+    (output/'B-stage-boundary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 输出边界间隙与释放完成的可辨识范围','',
+        '本轮只作离线推导，未拟合新参数。先排除一次性producer边界间隙能解释剩余早段的说法，再单独检查已有同调用释放端点。','',
+        '## 任意单一producer间隙仍不能突破早段上界','',
+        '沿用[B-stage-reuse](B-stage-reuse.md)的固定服务子类：p≤c、0≤g≤c−q、q+λ≤c、q≥w+h、q≥w+r+δ，'
+        '默认第一输出初始化，无观测入口切割。令m=S−1、Z=ℓ+a+c−q、T=Z+w、R=max(0,T−mc)。','',
+        '在第二输出首issue的carry上加任意Δ≥0，槽位释放约束不变。后续I[j−1]+p分支贡献最多C[j−1]+p，'
+        '被C[j−1]+c支配，所以间隙只通过增大的C0传播。local m引用的是前WG tail释放，不引用本输出C0；'
+        '第一条内部长边是local1→localS。故j≥1时的最大传播路径为v_j=jc+floor((j−1)/m)R，'
+        '并有Cgap_j=max(Cbase_j,Cgap_0+v_j)。','',
+        '原默认继承状态满足Cbase_16≤Cbase_1+B，B=15c+(15/m)R。'
+        '因此Cgap_16≤max(Cbase_1+B,Cgap_0+c+B)=Cgap_1+B。'
+        'stage4/6的m=3/5均整除15，原早段上界对任意Δ仍成立。'
+        '前输出末槽tail不晚于虚拟普通释放、且最早只影响local m，因而不能在local1之前改变上述锚点。','',
+        '| 演示stage | producer间隙cycle | 首commit平移 | C1→C16 | 早段上界 | C17→C63 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for r in witnesses:
+        lines.append(f'| {r["stages"]} | {r["producer_boundary_delay"]:.0f} | {r["first_commit_shift"]:.0f} | '
+            f'{r["early"]:.0f} | {r["early_upper"]:.0f} | {r["late"]:.0f} |')
+    lines+=['','表中只是固定参数的数值见证，不是拟合或证明替代。解析界覆盖任意非负间隙。'
+        '739717正常/延后两组自身后段给出的stage4早段缺口仍分别约2242/1511 cycle；'
+        '不能靠给producer的输出边界添加一个常数消除。','',
+        '## 旧端点只能约束释放完成后的重新发出请求','',
+        '739556的同调用、同slot记录在producer已进入acquire后打到所选consumer的release前戳。'
+        'cfg_b的empty barrier需128线程arrive，因此真正完成U不早于所选线程release前戳，'
+        '又不晚于producer acquire返回。下一对TMA请求发出后的标记为I，故'
+        'I−acquire_end ≤ I−U ≤ I−release_begin。','',
+        '| stage | 十进程的中位区间cycle | 常数与十个区间的交集 | release前戳→acquire返回中位 |',
+        '|---|---:|---:|---:|']
+    for r in summary:
+        lines.append(f'| {r["stages"]} | {r["median_bounds"]} | {r["constant_interval"]} | '
+            f'{r["release_marker_to_acquire_return_median"]:.1f} |')
+    lines+=['',f'两stage的20个区间共同交集为{interval} cycle。'
+        '非空只表示当前端点没有排除共同常数，不是测得该常数。'
+        '它也不是模型a：模型的乐观起点是所选lane的wait1返回，实际empty完成还需其它线程到达；'
+        '本记录没有同一次local17的wait1端点，不能拼接另一批progress来补。','',
+        '这些点只覆盖local16释放及其重用，不能判断早段到后段是否改变。'
+        '保留“实际ready演化、释放完成、组内服务/观察路径仍未分离”的结论；'
+        '不把新的时间常数或状态项直接接入预测。','']
+    lines+=['## 不能把子类反证扩大成整个固定参数递推失败','',
+        '源码没有保证g≤c−q或q+λ≤c。以下宽分支参数点几乎匹配两stage的late，却超过原子类early界；'
+        '它同时严重违反已观测首段与退休端点，只作限定定理范围的反例，不作为候选。JSON保存全部参数。','',
+        '| 反例stage | C17→C63 | C1→C16 | FIRST→C1 | W16−C16 | M−C63 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for r in wide:
+        lines.append(f'| {r["stages"]} | {r["late"]:.2f} | {r["early"]:.2f} | '
+            f'{r["first_to_commit1"]:.2f} | {r["commit_to_wait1_16"]:.2f} | {r["last_commit_to_mma_return"]:.2f} |')
+    lines+=['','联立端点时，还要保留实际等待与基础软件项的区别：W16−C16=max(0,D15−C16)+w，'
+        '所以43只能给w≤43；M−C63给w+r≤53，不能先令w=43、r=10再声称排除宽族。'
+        '首窗口还要求FIRST→C1≥2g+h和≥2c−q；普通二步推进给'
+        'C_i−C_(i−2)≥λ+w+h+g。以h=89、c=23587/46及中央目标量计算，'
+        f'g≤{wide_limits["g_upper"]:.3f}，q≥{wide_limits["q_lower"]:.3f}，'
+        f'λ+g+w≤{wide_limits["lambda_plus_g_plus_w_upper"]:.3f}。这些是确定性中央候选约束，不是统计置信界。','',
+        '现有端点排除了上表这类只匹配late的见证，却尚未给出覆盖所有宽分支的不可行性证明。'
+        '下一步先联立这些约束检查宽递推，不因几次数值搜索没找到解就宣称必须新增状态或申请GPU。','']
+    (output/'B-stage-boundary.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_conditioned_diagnostics(output):
     """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
     from supply_model import admission_stage_events

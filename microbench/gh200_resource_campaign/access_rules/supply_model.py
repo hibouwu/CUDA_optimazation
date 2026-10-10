@@ -31,7 +31,7 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            commit_lead, completion_lag, *, service_cycles=512.,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
                            return_overhead=0., reuse_delay=0., handoff_delay=0.,
-                           observed_second_entry=None):
+                           observed_second_entry=None, producer_boundary_delay=0.):
     """Development recurrence for two pingpong outputs; not a fitted hardware rule.
 
     I is the end-of-copy-pair marker. E is cumulative TC service progress,
@@ -47,10 +47,12 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     preceding modeled mma return. It replaces handoff_delay at output 1 and
     preserves the producer, service and slot states. Inconsistent ready times
     raise ValueError; measured entry times must never become prediction inputs.
+    producer_boundary_delay is a one-time control gap between the two producer
+    load calls, before the empty-slot constraint; it is not a per-stage price.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,
-            return_overhead,reuse_delay,handoff_delay)
+            return_overhead,reuse_delay,handoff_delay,producer_boundary_delay)
     if kt<2 or stages<2 or min(values)<0 or service_cycles<=0:
         raise ValueError('admission diagnostic requires Ktile/stages>=2 and nonnegative times')
     if issue_floor>service_cycles:
@@ -63,6 +65,7 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.
     for i in range(2*kt):
         issue=issued[-1]+producer_interval if issued else 0.
+        if i==kt:issue+=producer_boundary_delay
         if i>=stages:issue=max(issue,released[i-stages]+reuse_delay)
         issued.append(issue);ready.append(issue+ready_latency)
         if i==kt and observed_second_entry is not None:

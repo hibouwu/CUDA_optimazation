@@ -321,8 +321,9 @@ def main():
                 args.history_series,args.source_pressure,args.mirror_history,args.base_shift,args.work_swap,
                 args.producer_delay,args.first_supply,args.ready_observer,args.ready_release)):
             parser.error('--epilogue-order is an independent replay; run other diagnostics separately')
-        from analyze_r13_supply import epilogue_order_diagnostics
+        from analyze_r13_supply import epilogue_order_diagnostics, stage_boundary_diagnostics
         epilogue_order_diagnostics(args.epilogue_order.resolve(),out)
+        stage_boundary_diagnostics(base,out)
         return
     if args.stage_handoff is not None:
         if args.stage_admission or any(p is not None for p in (args.controls,args.swizzle_controls,

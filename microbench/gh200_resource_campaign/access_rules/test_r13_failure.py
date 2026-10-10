@@ -174,6 +174,35 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_producer_boundary_gap_has_only_a_single_commit_impulse(self):
+        from supply_model import admission_stage_events,stage_reuse_window
+        import random
+        rng=random.Random(739717)
+        for stage in (4,6):
+            for _ in range(30):
+                c=rng.uniform(500,525);q=rng.uniform(200,480)
+                w=rng.uniform(0,40);h=rng.uniform(10,100)
+                params=dict(producer_interval=rng.uniform(0,c),ready_latency=rng.uniform(0,2500),
+                    commit_lead=q,completion_lag=rng.uniform(0,c-q),service_cycles=c,
+                    issue_floor=rng.uniform(0,c-q),wait_overhead=w,loop_advance=h,
+                    return_overhead=rng.uniform(0,80),reuse_delay=rng.uniform(0,300),
+                    handoff_delay=rng.uniform(0,40))
+                base=admission_stage_events(64,stage,**params)
+                m=stage-1;Z=params['ready_latency']+params['reuse_delay']+c-q
+                extra=max(0,Z+w-m*c)
+                for gap in (0,c/2,64*c):
+                    result=admission_stage_events(64,stage,**params,producer_boundary_delay=gap)
+                    for field in ('issued','ready','commits','released'):
+                        self.assertEqual(result[field][:64],base[field][:64])
+                    actual=result['commits'];old=base['commits']
+                    for j in range(1,64):
+                        # The first long edge out of the new output is 1 -> S.
+                        path=j*c+((j-1)//m)*extra
+                        expected=max(old[64+j],actual[64]+path)
+                        self.assertAlmostEqual(actual[64+j],expected,places=7)
+                    bound=stage_reuse_window(15,stage,c,Z,w)[1]
+                    self.assertLessEqual(actual[80]-actual[65],bound+1e-8)
+
     def test_reuse_reduction_and_full_inheritance_early_bound(self):
         from supply_model import admission_stage_events,stage_reuse_window
         import random
