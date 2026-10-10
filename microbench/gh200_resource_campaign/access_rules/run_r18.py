@@ -197,7 +197,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 

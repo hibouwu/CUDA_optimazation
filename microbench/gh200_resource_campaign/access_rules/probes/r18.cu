@@ -132,6 +132,7 @@ struct Args {
   int seed = 17;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
+  int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
   Args(int argc, char** argv) {
     if (argc % 2 == 0)
       throw std::runtime_error("options are --key value pairs");
@@ -146,6 +147,8 @@ struct Args {
       else if (key == "--ldd") ldd = std::stoll(v);
       else if (key == "--alloc-lda") alloc_lda = std::stoll(v);
       else if (key == "--alloc-ldb") alloc_ldb = std::stoll(v);
+      else if (key == "--b-offset-bytes") b_offset_bytes = std::stoi(v);
+      else if (key == "--b-allocation-extra-bytes") b_allocation_extra_bytes = std::stoi(v);
       else if(key=="--zero-m")zero_m=std::stoi(v);
       else if(key=="--zero-n")zero_n=std::stoi(v);
       else if(key=="--storage-m")storage_m=std::stoi(v);
@@ -164,6 +167,9 @@ struct Args {
       else if(key=="--seed")seed=std::stoi(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (b_offset_bytes < 0 || b_allocation_extra_bytes < b_offset_bytes ||
+        b_offset_bytes % 16 || b_allocation_extra_bytes % 16)
+      throw std::runtime_error("B base offset must be 16-byte aligned and fit extra allocation");
     if (input_mode != "dyadic" && input_mode != "zero" && input_mode != "random")
       throw std::runtime_error("input-mode must be dyadic, zero or random");
     if (seed < 0)
@@ -307,7 +313,8 @@ int main(int argc, char** argv) {
       throw std::runtime_error("input tensor map must cover logical input and fit allocated storage");
     int64_t alloc_lda=o.alloc_lda?o.alloc_lda:lda,alloc_ldb=o.alloc_ldb?o.alloc_ldb:ldb;
     if(alloc_lda<lda||alloc_ldb<ldb)throw std::runtime_error("allocation pitch is smaller than physical pitch");
-    DeviceBuffer<__half> a(size_t(storage_m)*alloc_lda), b(size_t(o.k)*alloc_ldb);
+    const size_t b_payload_elements=size_t(o.k)*alloc_ldb;
+    DeviceBuffer<__half> a(size_t(storage_m)*alloc_lda), b(b_payload_elements+o.b_allocation_extra_bytes/sizeof(__half));
     const bool mirror_sources = o.history_source != "original";
     std::unique_ptr<DeviceBuffer<__half>> mirror_a, mirror_b;
     if (mirror_sources) {
@@ -315,9 +322,11 @@ int main(int argc, char** argv) {
       mirror_b = std::make_unique<DeviceBuffer<__half>>(b.count);
     }
     __half* target_a = o.mirror_target_slot ? mirror_a->pointer : a.pointer;
-    __half* target_b = o.mirror_target_slot ? mirror_b->pointer : b.pointer;
+    __half* b_data=b.pointer+o.b_offset_bytes/sizeof(__half);
+    __half* mirror_b_data=mirror_sources ? mirror_b->pointer+o.b_offset_bytes/sizeof(__half) : nullptr;
+    __half* target_b = o.mirror_target_slot ? mirror_b_data : b_data;
     __half* prefix_a = o.history_source == "mirror" ? (o.mirror_target_slot ? a.pointer : mirror_a->pointer) : target_a;
-    __half* prefix_b = o.history_source == "mirror" ? (o.mirror_target_slot ? b.pointer : mirror_b->pointer) : target_b;
+    __half* prefix_b = o.history_source == "mirror" ? (o.mirror_target_slot ? b_data : mirror_b_data) : target_b;
     DeviceBuffer<float> d(size_t(storage_m)*ldd);
     typename Kernel::StrideA sa = make_stride(lda, Int<1>{}, int64_t(o.m) * lda);
     typename Kernel::StrideB sb = make_stride(Int<1>{}, ldb, int64_t(o.k) * ldb);
@@ -416,16 +425,16 @@ int main(int argc, char** argv) {
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
     int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
     gaps::fill_input_strided<<<256, 256>>>(a.pointer, input_rows, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
-    gaps::fill_input_strided<<<256, 256>>>(b.pointer, o.k, input_columns, ldb, check.seed, false, input_mode,o.alloc_ldb?b.count:0);
+    gaps::fill_input_strided<<<256, 256>>>(b_data, o.k, input_columns, ldb, check.seed, false, input_mode,o.alloc_ldb?b_payload_elements:0);
     CUDA_CHECK(cudaGetLastError());
     if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,input_rows,o.k,lda,o.zero_m,-1);
-    if(o.zero_n>=0) zero_panel<<<256,256>>>(b.pointer,o.k,input_columns,ldb,-1,o.zero_n);
+    if(o.zero_n>=0) zero_panel<<<256,256>>>(b_data,o.k,input_columns,ldb,-1,o.zero_n);
     CUDA_CHECK(cudaGetLastError());
     if (mirror_sources) {
       gaps::fill_input_strided<<<256,256>>>(mirror_a->pointer,input_rows,o.k,lda,check.seed,true,input_mode,o.alloc_lda?a.count:0);
-      gaps::fill_input_strided<<<256,256>>>(mirror_b->pointer,o.k,input_columns,ldb,check.seed,false,input_mode,o.alloc_ldb?b.count:0);
+      gaps::fill_input_strided<<<256,256>>>(mirror_b_data,o.k,input_columns,ldb,check.seed,false,input_mode,o.alloc_ldb?b_payload_elements:0);
       if(o.zero_m>=0) zero_panel<<<256,256>>>(mirror_a->pointer,input_rows,o.k,lda,o.zero_m,-1);
-      if(o.zero_n>=0) zero_panel<<<256,256>>>(mirror_b->pointer,o.k,input_columns,ldb,-1,o.zero_n);
+      if(o.zero_n>=0) zero_panel<<<256,256>>>(mirror_b_data,o.k,input_columns,ldb,-1,o.zero_n);
       CUDA_CHECK(cudaGetLastError());
     }
     gaps::fill_output_sentinel<<<256, 256>>>(d.pointer, d.count);
@@ -502,6 +511,10 @@ int main(int argc, char** argv) {
                 << ",\"source_copies\":" << (mirror_sources ? 2 : 1)
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"b_offset_bytes\":" << o.b_offset_bytes
+                << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
+                << ",\"b_payload_elements\":" << b_payload_elements
                 << ",\"prefix_a_ptr\":" << reinterpret_cast<uintptr_t>(prefix_a)
                 << ",\"prefix_b_ptr\":" << reinterpret_cast<uintptr_t>(prefix_b)
                 << ",\"target_calls\":" << (history_series ? history_target_calls : 1)
@@ -598,6 +611,10 @@ int main(int argc, char** argv) {
                 << ",\"source_copies\":" << (mirror_sources ? 2 : 1)
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"b_offset_bytes\":" << o.b_offset_bytes
+                << ",\"b_allocation_extra_bytes\":" << o.b_allocation_extra_bytes
+                << ",\"b_payload_elements\":" << b_payload_elements
                 << ",\"prefix_a_ptr\":" << reinterpret_cast<uintptr_t>(prefix_a)
                 << ",\"prefix_b_ptr\":" << reinterpret_cast<uintptr_t>(prefix_b)
               << ",\"history_capacity_bytes\":" << (history_enabled ? history->count*sizeof(uint64_t) : 0)
@@ -628,11 +645,11 @@ int main(int argc, char** argv) {
                                        4096,o.zero_m,o.zero_n,input_mode,target_a,target_b,
                                        lda,ldb,max_error_ratio);
     size_t padding_bad = gaps::padding_errors(a.pointer, input_rows, o.k, lda, __half(65504.f))
-        + gaps::padding_errors(b.pointer, o.k, input_columns, ldb, __half(65504.f))
+        + gaps::padding_errors(b_data, o.k, input_columns, ldb, __half(65504.f))
         + gaps::padding_errors(d.pointer, o.m, o.n, ldd, gaps::output_sentinel());
     if (mirror_sources) {
       padding_bad += gaps::padding_errors(mirror_a->pointer,input_rows,o.k,lda,__half(65504.f))
-          + gaps::padding_errors(mirror_b->pointer,o.k,input_columns,ldb,__half(65504.f));
+          + gaps::padding_errors(mirror_b_data,o.k,input_columns,ldb,__half(65504.f));
     }
     size_t zero_storage_bad=0,zero_storage_checked=0;
     if(separate_input_map&&o.zero_m==o.m&&storage_m>o.m){
@@ -641,7 +658,7 @@ int main(int argc, char** argv) {
     }
     if(separate_input_map&&o.zero_n==o.n&&storage_n>o.n){
       zero_storage_checked+=size_t(o.k)*(storage_n-o.n);
-      zero_storage_bad+=nonzero_input_rectangle(b.pointer+o.n,o.k,storage_n-o.n,ldb);
+      zero_storage_bad+=nonzero_input_rectangle(b_data+o.n,o.k,storage_n-o.n,ldb);
     }
     if(separate_input_map)
       std::cout << "{\"event\":\"input_zero_storage\",\"checked\":" << zero_storage_checked

@@ -1,6 +1,6 @@
 # R10：A/B 行距、地址覆盖与执行规模
 
-**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。单输出对照进一步确认，同一B源组在不同全局执行组织下的行距代价不同，跨输出预取不是大幅惩罚的必要条件。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
+**行距响应依赖配置、遍历方向、几何和输出位置，现有结果不支持通用的 32 B 或 128 B 对齐罚项。** 旧 job738203 的 B32/B64 虽满足 32 B 对齐仍变慢；V09 另一几何下 B32 未见明显惩罚，二者同时保留。同卡固定旧几何后，沿M的B32惩罚约16.94%，沿N仅1.20%，执行顺序参与了迁移失败。单输出对照进一步确认，同一B源组在不同全局执行组织下的行距代价不同，跨输出预取不是大幅惩罚的必要条件。+256 B基址平移没有让响应整体跟随相邻B面板，工作位置与SM位置仍未隔离。地址覆盖只是软件需求，不是物理流量。有效供给与 stage 关系见 [R13](R13-async-retirement.md)，OOB/显式零的边界路径见 [R18](R18-cluster-boundary.md)；现行公式由 [RULES](RULES.md#v09-model)维护。
 
 ## 作业与证据索引
 
@@ -14,6 +14,7 @@
 | 739011，V09 | 新几何 A16/B32/B80/B112 与 stage4 | [完整留出](V09-component-validation.md)、[逐例复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/manager-results-v1/cases.csv) |
 | 739571 | 同几何AlongM/N×B0/B32 | [方向与行距差分](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-raster-pitch.json) |
 | 739585 | 同输入map，36/126单输出CTA与132持久CTA，各配B0/B32 | [同源组压力对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-source-pressure.json) |
+| 739598 | B基址+0/+256 B × 行距+0/+32 B，分配容量相同 | [位置与相邻面板对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift.json) |
 
 ## 原 B 行距对照：配置之间不能共用一个罚项
 
@@ -278,6 +279,29 @@ dual/plain完整时间扰动中位为2.60%～5.76%，最大8.91%，故不把局�
 即使将训练条件放宽到每进程5%的整L容许范围，两批仍有47/46个位置必超10%，CTA91下界为15.25%/16.64%。所以问题不只是经验范围过窄或一次噪声极值，缩小当前参数域、补中间CTA规模不能救回这些位置。
 
 CTA55/j0与CTA91/j0的M坐标、T3工作量、同B使用者数相同。部分代价确实移到了首次输入等待：91相对55的行距响应差，在739571的首段为+240 ns、L为−1200 ns，合起来仍为−1024 ns〔−1280～−832〕；739585合起来仍为−576 ns〔−928～−448〕。每次调用分别核对入口→FIRST_MMA→MAIN_END闭合，再做同期B0/B32配对，未拼接不同调用的绝对时轴。首次full等待只能解释部分L差。SMID回放还显示，两批十次B0/B32中CTA55始终在SM55、CTA91始终在SM87，沿N时也保持该映射；源位置与硬件位置当前绑定，稳定差值不能直接归因源地址。源身份、时间状态及硬件派发/位置仍未隔离；下一步不能直接给CTA91或某个tile编号加常数。[完整参数域](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-candidate.json)、[逐CTA、关键CTA窗口和端点闭合](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-shared-service-windows.json)。
+
+<a id="base-shift"></a>
+
+## 基址平移没有让响应整体跟随相邻B面板
+
+739598在同a058/GPU-ef保持2304×3072×1024、AlongM、132 CTA、stage6、sw1与dyadic seed17，仅改变B的相对基址0/256 B及行距增量0/32 B。两边同样预留256 B，移动后的指针同时用于初始化、tensor map与数值检查，设备侧没有新增按tile变换地址的逻辑。100个成功进程、无失败；plain/dual均168寄存器、16条HGMMA、零spill。每进程payload为3211264个FP16元素，总容量为3211392个元素。
+
+先在各offset内按同CTA/j/T/坐标求B32−B0，再比较两offset的响应。下列统计先在每个trial内部计算，再取十个进程配对的中位。相邻面板只匹配同M的ni+1，不绕末列；两种对应使用相同目标子集。
+
+| 对应关系 | 每进程窗口数 | 周期响应Pearson相关中位 | 响应差RMS，cycle |
+|---|---:|---:|---:|
+| 同工作位置，匹配上下文的共同子集 | 270 | 0.804 | 606 |
+| 相邻B面板，同j/T/共享条件 | 270 | 0.339 | 1011 |
+| 同工作位置，只看首轮T3 | 72 | 0.864 | 410 |
+| 相邻B面板，只看首轮T3 | 72 | 0.216 | 847 |
+
+纳秒统计方向相同；因此不只是把不同软件轮的平均值混在一起造成对应。plain的B32减速为17.31%/17.69%。CTA55的周期增量从2291变为1870.5，CTA91从453.5变为509，原有大小关系保留；两位置的配对offset交互范围都跨零，不能只看中位数断言稳定局部效应。反过来，整个432位置中有17个在十次比较的cycle/ns交互都为正、11个都为负，也不能写成基址条件完全不影响局部窗口；这是本批观察到的同号计数，不是多重检验后的显著性结论。[响应空间图](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift-response.png)。
+
+40个dual进程只有一种CTA→SM映射，同CTA与同SM对应因此相同，仍不能认定SM机制。B分配VA原点却有三个，相差512 MiB/1 GiB；只有trial5四条件原点全同，该旁证也更接近同位置对应，但不替代全批结果、不证明同PA。每进程自身的指针差严格为0/256 B；本结果只限制这一次相对基址干预，不能排除所有地址依赖。dual/plain中位扰动为2.07%～4.28%、单次最大7.18%；两个同卡参照相对739585变化−2.03%/+1.22%，未把跨批绝对值并入拟合。
+
+此前的到达定位也未提供替代规则：CTA91−55的行距入口响应变化中位为0 ns，producer first-work只有−32/−16 ns；FIRST_MMA与L的负相关部分来自共用端点，入口→MAIN_END的净差仍保留。first-work不能当请求到达，尚缺其它stage是否ready和已发Ktile数。[60个dual进程的到达分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/A-arrival-localization.md)。
+
+下一对照直接交换CTA55/91承担的整条持久工作序列。两者均T3、M序列相同；交换保持每轮工作集合、A/B源组和地址集合不变，再核对实际SM映射与响应跟随对象。这比继续扫描基址更直接，仍不向模型加入CTA或SM专属常数。
 
 ## 历史推导与复核
 

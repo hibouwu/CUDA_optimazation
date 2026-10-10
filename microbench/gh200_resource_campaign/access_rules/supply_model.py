@@ -95,7 +95,7 @@ def static_tma_requests(row, setup):
             b_boxes=[]
             for offset in (0,64):
                 b_n=ni*tn+offset; cols=max(0,min(64,map_n-b_n))
-                value=address_box(64//cm,2*cols,2*ldb,2*(b_k*ldb+b_n)%128) if cols else (0,0,0)
+                value=address_box(64//cm,2*cols,2*ldb,(row.get('b_offset_bytes',0)+2*(b_k*ldb+b_n))%128) if cols else (0,0,0)
                 b_boxes.append(dict(origin=[b_n,b_k],shape=[64,64//cm],source_KiB=list(value)))
             b=np.sum([box['source_KiB'] for box in b_boxes],axis=0).tolist()
             av=max(0,min(tm,map_m-mi*tm))*64*2/1024

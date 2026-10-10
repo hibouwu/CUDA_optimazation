@@ -1436,7 +1436,7 @@ def mirror_history_diagnostics(root, output):
         paired_trials=pairs,strata=strata,relative_to_early_prefix=progression,failed_attempts=failures,
         batch_counter_delta_us=snapshots['counter_delta_us'],batch_counter_scope=snapshots['scope'],
         verification=dict(source_and_binary_hashes=True,successful_raw_replays=len(processes),series_calls=sum(len(p['calls']) for p in processes),
-            fixed_prefix_cv_exclusions=0,same_different_source_pointer_checks='Shared validate_warmup compares each process internally; setup and measurement processes need not have equal absolute pointer values.'),
+            fixed_prefix_cv_exclusions=0,same_different_source_pointer_checks='Shared validate_warmup checks raw setup/call pointers within each process; the separate static_setup process need not have identical absolute addresses.'),
         interpretation=['Read both prefix pressure curves and paired prefix duration differences before assigning target differences to source-address history.',
             'The target source and swizzle stay fixed. Source allocation slot is a separate stratum; any slot-dependent response must be retained before pooling.',
             'Compare target1 and the first/middle/last three target calls. A target1 difference may be cold-source or descriptor first-use and does not by itself establish repeated-address degradation.',

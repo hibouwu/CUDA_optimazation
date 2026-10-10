@@ -138,6 +138,21 @@ def validate_warmup(setup, call, row):
             raise ValueError('history prefix or capacity changed')
         if call.get('target_calls')!=(19 if history=='series' else 1) or call.get('preceding_target_calls')!=(18 if history=='series' else 0):
             raise ValueError('history target-call identity changed')
+    if 'b_offset_bytes' in row or 'b_allocation_extra_bytes' in row:
+        offset=row.get('b_offset_bytes',0);extra=row.get('b_allocation_extra_bytes',0)
+        if offset<0 or extra<offset or offset%16 or extra%16:
+            raise ValueError('invalid B base-offset capacity')
+        for event in (setup,call):
+            if event.get('b_offset_bytes')!=offset or event.get('b_allocation_extra_bytes')!=extra:
+                raise ValueError('B base-offset identity changed')
+            if event.get('b_payload_elements')!=row['k']*row.get('alloc_ldb',row.get('ldb',row['n'])):
+                raise ValueError('B initialized payload extent changed')
+            if event.get('target_b_ptr',0)-event.get('b_buffer_ptr',0)!=offset or not event.get('b_buffer_ptr'):
+                raise ValueError('B target pointer does not match declared offset')
+        for key in ('target_b_ptr','b_buffer_ptr'):
+            if setup[key]!=call[key]:raise ValueError('B pointer changed within process')
+        if setup.get('allocated_b_elements')!=setup['b_payload_elements']+extra//2:
+            raise ValueError('B allocation does not include the common extra capacity')
     source=row.get('history_source','original')
     slot=row.get('mirror_target_slot',0)
     if source not in ('original','same','mirror') or slot not in (0,1):
@@ -154,7 +169,10 @@ def validate_warmup(setup, call, row):
                     raise ValueError('missing source pointer identity')
                 if (target==prefix)!=(source=='same'):
                     raise ValueError('prefix does not use declared source identity')
-    # Setup is a different process: compare pointer identity only within each call.
+    # Raw setup and call belong to one process; static_setup.json is separate.
+    if source!='original':
+        for key in ('target_a_ptr','target_b_ptr','prefix_a_ptr','prefix_b_ptr'):
+            if setup[key]!=call[key]:raise ValueError('source pointer changed within process')
     warm = call['warmup_us']
     if not warm or any(not math.isfinite(x) or x<=0 for x in warm):
         raise ValueError('invalid warmup durations')
@@ -283,6 +301,8 @@ def replay(root,record,row,retain_roles=False):
     if row['kind']=='explicit_zero' and zero_count<1:raise ValueError('zero panel unchecked')
     validate_warmup(setup,call,row)
     result=dict(case=row['id'],variant=record['variant'],trial=record['trial'],elapsed_us=call['elapsed_us'],checked_values=4096,zero_values=zero_count,ctas=[])
+    if 'b_offset_bytes' in row or 'b_allocation_extra_bytes' in row:
+        result['b_address']={key:setup[key] for key in ('b_buffer_ptr','target_b_ptr','b_offset_bytes','b_allocation_extra_bytes','b_payload_elements','allocated_b_elements')}
     if row.get('history_mode')=='series':
         if setup['trace_version']!='v08-ends' or 'history_series' not in events:
             raise ValueError('series requires its explicit ends history record')

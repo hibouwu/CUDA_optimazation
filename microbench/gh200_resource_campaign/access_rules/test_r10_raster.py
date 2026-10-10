@@ -1,13 +1,15 @@
 """Explicit scheduler order preserves work while changing source-panel grouping."""
 import json
+from copy import deepcopy
 from pathlib import Path
 import unittest
 from fractions import Fraction
-from supply_model import source_sharing_delta_cycles
+from supply_model import source_sharing_delta_cycles, supply_request_rows
 import v08_model
 from analyze_r10 import (mainloop_overlap_features, source_panel_features,
     _source_service_clip, _source_service_interval, _source_polygon_vertices, _source_service_value,
-    _source_service_window_errors, _source_interval_error_floor)
+    _source_service_window_errors, _source_interval_error_floor,
+    _base_shift_response_pairs, _base_shift_pattern_metrics)
 
 
 class RasterOrderTests(unittest.TestCase):
@@ -146,6 +148,63 @@ class RasterOrderTests(unittest.TestCase):
         self.assertEqual(_source_interval_error_floor((20,40),30,100),0)
         self.assertEqual(_source_interval_error_floor((20,40),10,100),.1)
         self.assertEqual(_source_interval_error_floor((20,40),50,100),.1)
+
+    def test_base_shift_factorial_keeps_capacity_and_all_other_control_fields(self):
+        rows=json.loads((Path(__file__).parent/'configs/r10-base-shift.json').read_text())
+        references=[r for r in rows if r['set']=='reference']
+        controls=[r for r in rows if r['set']=='ctrl']
+        self.assertEqual(len(references),2)
+        self.assertTrue(all(r['variants']==['plain'] for r in references))
+        self.assertEqual(rows[:2],references)
+        self.assertEqual({(r['b_offset_bytes'],r['ldb']) for r in controls},
+            {(offset,ldb) for offset in (0,256) for ldb in (3072,3088)})
+        ignored={'id','group','b_offset_bytes','ldb'}
+        fixed=[{k:v for k,v in r.items() if k not in ignored} for r in controls]
+        self.assertTrue(all(r==fixed[0] for r in fixed))
+        self.assertTrue(all(r['b_allocation_extra_bytes']==256 and r['alloc_ldb']==3136 for r in controls))
+
+    def test_static_service_features_preserve_256B_shift_and_track_low_bits(self):
+        row=dict(id='static',config='cfg_b',m=2304,n=3072,k=1024,lda=1024,ldb=3072,
+            storage_m=2304,storage_n=3072,swizzle=1,raster_order='along_m')
+        setup=dict(grid=[132,1,1],stages=6,tile=[128,128,64],cluster=[1,1,1])
+        original=supply_request_rows(row,setup)
+        self.assertEqual(original,supply_request_rows(dict(row,b_offset_bytes=0),setup))
+        self.assertEqual(original,supply_request_rows(dict(row,b_offset_bytes=256),setup))
+        shifted=supply_request_rows(dict(row,b_offset_bytes=16),setup)
+        self.assertNotEqual(original[0]['X'],shifted[0]['X'])
+        self.assertEqual(original[0]['X'][0],shifted[0]['X'][0])
+
+    def test_base_offset_public_validation_rejects_pointer_and_capacity_changes(self):
+        from test_r09_history_series import synthetic
+        from analyze_r18 import validate_warmup
+        for offset in (0,256):
+            row,setup,call,_=synthetic();row.update(alloc_ldb=128,b_offset_bytes=offset,b_allocation_extra_bytes=256)
+            payload=row['k']*row['alloc_ldb']
+            for event in (setup,call):
+                event.update(b_offset_bytes=offset,b_allocation_extra_bytes=256,b_payload_elements=payload,
+                    allocated_b_elements=payload+128,b_buffer_ptr=1048576,target_b_ptr=1048576+offset)
+            validate_warmup(setup,call,row)
+            bad=deepcopy(call);bad['target_b_ptr']+=16
+            with self.assertRaisesRegex(ValueError,'declared offset'):validate_warmup(setup,bad,row)
+            bad=deepcopy(setup);bad['allocated_b_elements']-=128
+            with self.assertRaisesRegex(ValueError,'common extra capacity'):validate_warmup(bad,call,row)
+            bad=deepcopy(call);bad['b_buffer_ptr']+=256;bad['target_b_ptr']+=256
+            with self.assertRaisesRegex(ValueError,'within process'):validate_warmup(setup,bad,row)
+
+    def test_base_shift_neighbor_mapping_never_wraps_M_or_hides_context_change(self):
+        def row(cta,mi,ni,j=0):
+            return dict(cta=cta,mi=mi,ni=ni,j=j,T=1,active_ctas=4,A_peer=1,B_peer=1,
+                base_sm=cta,variant_sm=cta,L_cycles_delta=cta*10)
+        reference=[row(0,0,0),row(1,0,1),row(2,1,0),row(3,1,1,1)]
+        shifted=deepcopy(reference)
+        groups=_base_shift_response_pairs(reference,shifted)
+        self.assertEqual([(a['cta'],b['cta']) for a,b in groups['next_B_panel']],[(1,0),(3,2)])
+        self.assertEqual([(a['cta'],b['cta']) for a,b in groups['next_B_panel_matched_context']],[(1,0)])
+        self.assertEqual([b['cta'] for a,b in groups['same_work_on_neighbor_subset']],[0])
+        self.assertEqual(_base_shift_pattern_metrics(groups['same_work'],'L_cycles_delta')['maximum_absolute_residual'],0)
+        for r in reference+shifted:r['base_sm']=r['variant_sm']=0
+        self.assertEqual(_base_shift_response_pairs(reference,shifted)['same_SM_and_ordinal'],[(reference[3],shifted[3])])
+        self.assertIsNone(_base_shift_pattern_metrics([],'L_cycles_delta')['correlation'])
 
 
 if __name__=='__main__':unittest.main()

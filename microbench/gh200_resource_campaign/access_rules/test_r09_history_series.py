@@ -123,15 +123,17 @@ class HistorySeries(unittest.TestCase):
                 args=runner.case_args(row)
                 self.assertEqual(args[args.index('--history-mode')+1],row['history_mode'])
 
-    def test_mirror_identity_is_local_to_each_process(self):
+    def test_mirror_identity_matches_within_each_process(self):
         row,setup,call,event=synthetic()
         row.update(swizzle=1,history_source='mirror',mirror_target_slot=1)
-        for item,offset in ((setup,0),(call,4096)):
+        for item,offset in ((setup,0),(call,0)):
             item.update(history_source='mirror',mirror_target_slot=1,source_copies=2,
                 target_a_ptr=256+offset,target_b_ptr=512+offset,
                 prefix_a_ptr=768+offset,prefix_b_ptr=1024+offset)
         call['target_swizzle']=1
         analyze_r18.validate_warmup(setup,call,row)
+        with self.assertRaisesRegex(ValueError,'within process'):
+            analyze_r18.validate_warmup(setup,dict(call,target_a_ptr=4096),row)
         with self.assertRaisesRegex(ValueError,'declared source'):
             analyze_r18.validate_warmup(setup,dict(call,prefix_a_ptr=call['target_a_ptr']),row)
         with self.assertRaisesRegex(ValueError,'capacity'):

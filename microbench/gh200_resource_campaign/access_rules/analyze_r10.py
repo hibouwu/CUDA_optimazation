@@ -1473,6 +1473,287 @@ def shared_source_window_diagnostics(root, output):
     (output/'R10-shared-service-windows.md').write_text('\n'.join(lines))
     return report
 
+def _base_shift_response_pairs(reference, shifted):
+    """Two predeclared mappings; a +256 B origin matches the next 128-column panel."""
+    by_work={(r['cta'],r['j'],r['T'],r['mi'],r['ni']):r for r in reference}
+    by_coord={(r['mi'],r['ni']):r for r in reference}
+    from collections import Counter,defaultdict
+    by_sm=defaultdict(list)
+    for r in reference:
+        if r['base_sm']==r['variant_sm']:by_sm[r['variant_sm'],r['j']].append(r)
+    shifted_sm_counts=Counter((r['variant_sm'],r['j']) for r in shifted if r['base_sm']==r['variant_sm'])
+    fixed=[];neighbor=[];matched_neighbor=[];fixed_common=[];same_sm=[]
+    for row in shifted:
+        key=tuple(row[k] for k in ('cta','j','T','mi','ni'))
+        ref=by_work[key];fixed.append((ref,row))
+        next_panel=by_coord.get((row['mi'],row['ni']+1))
+        if next_panel is not None:
+            neighbor.append((next_panel,row))
+            context=('j','T','active_ctas','A_peer','B_peer')
+            if all(next_panel[k]==row[k] for k in context):
+                matched_neighbor.append((next_panel,row));fixed_common.append((ref,row))
+        if row['base_sm']==row['variant_sm']:
+            sm_key=row['variant_sm'],row['j'];sm_refs=by_sm[sm_key]
+            if len(sm_refs)==1 and shifted_sm_counts[sm_key]==1 and sm_refs[0]['T']==row['T']:
+                same_sm.append((sm_refs[0],row))
+    return dict(same_work=fixed,next_B_panel=neighbor,next_B_panel_matched_context=matched_neighbor,
+        same_work_on_neighbor_subset=fixed_common,same_SM_and_ordinal=same_sm,
+        same_work_first_T3_common=[(a,b) for a,b in fixed_common if b['j']==0 and b['T']==3],
+        next_B_first_T3_same_context=[(a,b) for a,b in matched_neighbor if b['j']==0 and b['T']==3])
+
+
+def _base_shift_pattern_metrics(pairs,field):
+    """Pattern agreement per process; no timing parameter is fitted."""
+    if not pairs:return dict(windows=0,median_signed_residual=None,median_absolute_residual=None,
+        root_mean_square_residual=None,maximum_absolute_residual=None,correlation=None)
+    x=[a[field] for a,b in pairs];y=[b[field] for a,b in pairs]
+    residual=[b-a for a,b in zip(x,y)]
+    mx,my=statistics.mean(x),statistics.mean(y)
+    covariance=sum((a-mx)*(b-my) for a,b in zip(x,y))
+    variance=math.sqrt(sum((a-mx)**2 for a in x)*sum((b-my)**2 for b in y))
+    return dict(windows=len(pairs),median_signed_residual=statistics.median(residual),
+        median_absolute_residual=statistics.median(abs(v) for v in residual),
+        root_mean_square_residual=math.sqrt(statistics.mean(v*v for v in residual)),
+        maximum_absolute_residual=max(map(abs,residual)),correlation=covariance/variance if variance else None)
+
+
+def base_shift_diagnostics(root, output):
+    """Address-origin/pitch factorial, preserving all CTA positions and SM identity."""
+    from collections import defaultdict
+    from analyze_r18 import replay
+    from analyze_r13_sm import select_attempts
+    from analyze_r13_supply import _failure_pair_windows
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in json.loads((root/'cases.json').read_text())}
+    setups={r['case']:r['setup'] for r in json.loads((root/'static_setup.json').read_text())}
+    controls=[r for r in rows.values() if r['set']=='ctrl']
+    variable={'id','group','ldb','b_offset_bytes'}
+    if len(controls)!=4 or any({k:v for k,v in r.items() if k not in variable}!=
+        {k:v for k,v in controls[0].items() if k not in variable} for r in controls):
+        raise ValueError('base-shift controls changed a non-factor condition')
+    if {(r['b_offset_bytes'],r['ldb']) for r in controls}!={(o,p) for o in (0,256) for p in (3072,3088)}:
+        raise ValueError('base-shift factorial is incomplete')
+    def span(v):
+        v=list(v)
+        return dict(median=statistics.median(v),process_min=min(v),process_max=max(v))
+    calls={};plain={};hashes={};processes=[];failed={};contexts={};features=None
+    for row in rows.values():
+        name=row['id'];calls[name]={};plain[name]={}
+        selected,failures,_=select_attempts(root,name,tuple(row['variants']))
+        failed[name]=[x['path'] for x in failures]
+        if row['set']=='ctrl':
+            setup=setups[name]
+            for field in ('b_offset_bytes','b_allocation_extra_bytes'):
+                if setup.get(field)!=row[field]:raise ValueError('actual B pointer/allocation option changed')
+            work=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+            current={(r['cta'],r['j']):r for r in source_panel_features(work)['windows']}
+            if features is None:features=current
+            if current!=features:raise ValueError('base shift changed static software work')
+            contexts[name]=dict(row=row,setup=setup,work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest())
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if record['variant']=='plain':plain[name][record['trial']]=obs['elapsed_us']
+            else:
+                if [c['work'] for c in obs['ctas']]!=work:raise ValueError('base-shift trace/work mismatch')
+                calls[name][record['trial']]=obs
+                processes.append(dict(case=name,trial=record['trial'],elapsed_us=obs['elapsed_us'],
+                    observed_sm_count=len({c['sm'] for c in obs['ctas']}),
+                    cta_sm=[dict(cta=c['cta'],sm=c['sm']) for c in obs['ctas']],
+                    address_metadata=obs.get('b_address')))
+        if len(plain[name])!=10 or (row['set']=='ctrl' and calls[name].keys()!=plain[name].keys()):
+            raise ValueError('base-shift analysis needs all ten declared successful processes')
+    if len({setups[r['id']]['allocated_b_elements'] for r in controls})!=1:
+        raise ValueError('base-shift total B capacity differs')
+    if len({setups[r['id']]['gpu_uuid'] for r in controls})!=1:raise ValueError('factorial spans different cards')
+
+    responses={};timing={};position_values=defaultdict(list);selected_values=[]
+    fields=('L_cycles_delta','L_ns_delta','L_cycles_ratio','L_ns_ratio','L_rate_ratio',
+        'prefix_ns_delta','prefill_ns_delta','prefix_plus_L_ns_delta','prefill_plus_L_ns_delta')
+    for offset in (0,256):
+        a,b=(f'r10_baseshift_o{offset}_p{pitch}' for pitch in (0,32))
+        responses[offset]={}
+        for trial in sorted(calls[a]):
+            base,variant=calls[a][trial],calls[b][trial]
+            windows=_failure_pair_windows(base['ctas'],variant['ctas'])
+            maps={label:{c['cta']:c for c in obs['ctas']} for label,obs in (('base',base),('variant',variant))}
+            for w in windows:
+                f=features[w['cta'],w['j']]
+                w.update(active_ctas=f['active_ctas'],A_peer=f['A_peer'],B_peer=f['B_peer'],
+                    base_sm=maps['base'][w['cta']]['sm'],variant_sm=maps['variant'][w['cta']]['sm'])
+                if w['j']==0:
+                    for label in ('base','variant'):
+                        c=maps[label][w['cta']]
+                        if w['prefix_ns_'+label]+w['L_ns_'+label]!=c['tiles_ns'][0][1]-c['entry_ns']:
+                            raise ValueError('prefix+L same-call closure failed')
+                        if w['prefill_ns_'+label]+w['L_ns_'+label]!=c['tiles_ns'][0][1]-c['prod_ns']:
+                            raise ValueError('prefill+L same-call closure failed')
+                    w['prefix_plus_L_ns_delta']=w['prefix_ns_delta']+w['L_ns_delta']
+                    w['prefill_plus_L_ns_delta']=w['prefill_ns_delta']+w['L_ns_delta']
+                key=offset,w['cta'],w['j']
+                position_values[key].append(dict(trial=trial,**w))
+                if w['cta'] in (55,91) and w['j']==0:selected_values.append(dict(offset=offset,trial=trial,**w))
+            responses[offset][trial]=windows
+        timing[str(offset)]=dict(plain_pitch_change=span(plain[b][t]/plain[a][t]-1 for t in plain[a]),
+            plain_pitch_delta_us=span(plain[b][t]-plain[a][t] for t in plain[a]),
+            dual_disturbance={name:span(calls[name][t]['elapsed_us']/plain[name][t]-1 for t in plain[name]) for name in (a,b)})
+    timing['base_shift_plain']={str(p):dict(relative=span(plain[f'r10_baseshift_o256_p{p}'][t]/plain[f'r10_baseshift_o0_p{p}'][t]-1 for t in range(10)),
+        delta_us=span(plain[f'r10_baseshift_o256_p{p}'][t]-plain[f'r10_baseshift_o0_p{p}'][t] for t in range(10))) for p in (0,32)}
+
+    timing['plain_offset_by_pitch_interaction_us']=span(
+        (plain['r10_baseshift_o256_p32'][t]-plain['r10_baseshift_o256_p0'][t])-
+        (plain['r10_baseshift_o0_p32'][t]-plain['r10_baseshift_o0_p0'][t]) for t in range(10))
+    pattern_processes=[];interaction_values=defaultdict(list);selected_interactions=[]
+    for trial in range(10):
+        pairings=_base_shift_response_pairs(responses[0][trial],responses[256][trial])
+        for mapping,pairs in pairings.items():
+            for field in ('L_cycles_delta','L_ns_delta'):
+                pattern_processes.append(dict(trial=trial,mapping=mapping,metric=field,
+                    **_base_shift_pattern_metrics(pairs,field)))
+        for a,b in pairings['same_work']:
+            entry=dict(trial=trial,cta=b['cta'],j=b['j'],T=b['T'],mi=b['mi'],ni=b['ni'],
+                offset0_base_sm=a['base_sm'],offset0_variant_sm=a['variant_sm'],
+                offset256_base_sm=b['base_sm'],offset256_variant_sm=b['variant_sm'],
+                **{field:b[field]-a[field] for field in fields if field in a})
+            interaction_values[b['cta'],b['j']].append(entry)
+            if b['cta'] in (55,91) and b['j']==0:selected_interactions.append(entry)
+    pattern_summaries=[]
+    for mapping,metric in sorted({(r['mapping'],r['metric']) for r in pattern_processes}):
+        values=[r for r in pattern_processes if r['mapping']==mapping and r['metric']==metric]
+        valid=[r for r in values if r['windows']]
+        summary=dict(mapping=mapping,metric=metric,matched_window_counts=sorted({r['windows'] for r in values}),
+            comparable_processes=len(valid),
+            **{field:span(r[field] for r in valid) if valid else None for field in
+                ('median_signed_residual','median_absolute_residual','root_mean_square_residual','maximum_absolute_residual')})
+        correlations=[r['correlation'] for r in valid if r['correlation'] is not None]
+        summary['correlation']=span(correlations) if correlations else None
+        pattern_summaries.append(summary)
+    position_summaries=[]
+    for (offset,cta,j),values in sorted(position_values.items()):
+        first=values[0]
+        position_summaries.append(dict(offset=offset,cta=cta,j=j,T=first['T'],mi=first['mi'],ni=first['ni'],
+            active_ctas=first['active_ctas'],A_peer=first['A_peer'],B_peer=first['B_peer'],
+            base_sms=sorted({r['base_sm'] for r in values}),variant_sms=sorted({r['variant_sm'] for r in values}),
+            **{field:span(r[field] for r in values) for field in fields if field in first}))
+    interactions=[]
+    for (cta,j),values in sorted(interaction_values.items()):
+        first=values[0]
+        interactions.append(dict(cta=cta,j=j,T=first['T'],mi=first['mi'],ni=first['ni'],
+            **{field:span(r[field] for r in values) for field in fields if field in first}))
+    references={}
+    previous=root.parent/'20261010-R10-source-pressure'
+    if json.loads((previous/'environment.json').read_text())['gpu']!=json.loads((root/'environment.json').read_text())['gpu']:
+        raise ValueError('base-shift reference is on another GPU')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        name=row['id'];old=[]
+        for item in select_attempts(previous,name,('plain',))[0]:
+            old.append(replay(previous,item['record'],row)['elapsed_us'])
+            for path in (previous/item['path'],previous/item['record']['raw']):hashes[str(path)]=common.sha(path)
+        references[name]=dict(current=span(plain[name].values()),previous=span(old),
+            median_change=statistics.median(plain[name].values())/statistics.median(old)-1)
+    for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json','build/sass_hashes.json'):
+        path=root/filename;hashes[str(path)]=common.sha(path)
+    origins_by_trial=[]
+    for trial in range(10):
+        members=[p for p in processes if p['trial']==trial]
+        origins={p['case']:p['address_metadata']['b_buffer_ptr'] for p in members}
+        origins_by_trial.append(dict(trial=trial,allocation_origins=origins,all_four_same=len(set(origins.values()))==1))
+    common_origin_trials=[r['trial'] for r in origins_by_trial if r['all_four_same']]
+    origins=sorted({p['address_metadata']['b_buffer_ptr'] for p in processes})
+    placement_maps={tuple((r['cta'],r['sm']) for r in p['cta_sm']) for p in processes}
+    address_comparison=dict(virtual_allocation_origins=origins,
+        relative_to_minimum_origin_bytes=[v-origins[0] for v in origins],process_trial_origins=origins_by_trial,
+        same_allocation_origin_trial_ids=common_origin_trials,
+        same_origin_pattern_processes=[r for r in pattern_processes if r['trial'] in common_origin_trials],
+        distinct_CTA_to_SM_maps=len(placement_maps),
+        limitation='The full 40-process comparison remains primary. Common-VA-origin trials are separate diagnostics only; '
+            'equal virtual origins across processes do not establish equal physical addresses.')
+    consistent_interactions={}
+    for label,subset in [('all',interactions),('first',[r for r in interactions if r['j']==0]),
+                         ('later',[r for r in interactions if r['j']>0])]:
+        consistent_interactions[label]=dict(positions=len(subset),
+            positive_cycles_and_ns=sum(r['L_cycles_delta']['process_min']>0 and r['L_ns_delta']['process_min']>0 for r in subset),
+            negative_cycles_and_ns=sum(r['L_cycles_delta']['process_max']<0 and r['L_ns_delta']['process_max']<0 for r in subset))
+    report=dict(scope='B pitch-by-relative-origin factorial. Pitch responses are formed within each offset before comparing offsets; '
+        'independent processes remain the repetition units, no new service fit.',
+        environment=json.loads((root/'environment.json').read_text()),contexts=contexts,timing=timing,
+        address_comparison=address_comparison,pattern_processes=pattern_processes,pattern_summaries=pattern_summaries,position_responses=position_summaries,
+        same_position_interactions=interactions,consistent_interaction_signs=consistent_interactions,selected_CTA_processes=selected_values,
+        selected_CTA_interactions=selected_interactions,process_placement_and_addresses=processes,references=references,
+        interpretation=['The relative +256 B origin corresponds to +128 FP16 columns at fixed row pitch. '
+            'Only (mi,ni) to (mi,ni+1) is matched; no column-tail wrap or M change.',
+            'Adjacent panels can change CTA/ordinal/future work. Compare the matched j/T/active/A-peer/B-peer subset '
+            'against identical-work mapping on exactly the same target subset.',
+            'Same-SM mapping requires stable SMID inside each pitch pair and matches ordinal/T. '
+            'If CTA-to-SM mapping stays fixed, CTA and SM explanations remain confounded.',
+            'Matching relative offsets does not prove equal virtual allocation origins, physical addresses or bank selection.',
+            'prefix=FIRST_MMA-entry, prefill=FIRST_MMA-producer_first_work; only prefill corresponds to model S. '
+            'Both plus-L intervals close within each call; B0/B32 response differences still compare independent calls.',
+            'A good pattern correlation identifies a correspondence, not a physical cache/queue/bank mechanism. '
+            'No translation under +256 B only constrains this intervention, not all address dependencies.',
+            'Consistent-sign position counts describe ten observed process pairs, not a multiple-testing correction or proof that every address effect is absent.'],
+        input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)))
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R10-base-shift.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    common_fixed=next(x for x in pattern_summaries if x['mapping']=='same_work_on_neighbor_subset' and x['metric']=='L_cycles_delta')
+    common_neighbor=next(x for x in pattern_summaries if x['mapping']=='next_B_panel_matched_context' and x['metric']=='L_cycles_delta')
+    first_fixed=next(x for x in pattern_summaries if x['mapping']=='same_work_first_T3_common' and x['metric']=='L_cycles_delta')
+    first_neighbor=next(x for x in pattern_summaries if x['mapping']=='next_B_first_T3_same_context' and x['metric']=='L_cycles_delta')
+    disturbances=[v for offset in ('0','256') for v in timing[offset]['dual_disturbance'].values()]
+    lines=['# B基址平移与行距响应','',
+        '每个offset先作B32−B0，再比较offset256−offset0。所有逐位置结果先形成十个进程内的配对差，再跨进程汇总；不拟合新服务价格。','',
+        f'相同270个目标窗口内，固定工作位置的周期响应相关中位为{common_fixed["correlation"]["median"]:.3f}、'
+        f'RMS差{common_fixed["root_mean_square_residual"]["median"]:.1f}；相邻B面板对应为'
+        f'{common_neighbor["correlation"]["median"]:.3f}、{common_neighbor["root_mean_square_residual"]["median"]:.1f}。'
+        f'只看首轮T3的72窗口，相关仍分别为{first_fixed["correlation"]["median"]:.3f}/'
+        f'{first_neighbor["correlation"]["median"]:.3f}，不是单靠首末轮平均差得到这种对应。'
+        '本次+256 B干预没有表现为响应整体平移到相邻panel，但不能因此排除其它地址依赖或认定SM机制。','',
+        f'plain中的B32减速，offset0/+256分别为{100*timing["0"]["plain_pitch_change"]["median"]:.2f}%/'
+        f'{100*timing["256"]["plain_pitch_change"]["median"]:.2f}%。dual/plain中位范围'
+        f'{100*min(v["median"] for v in disturbances):.2f}%～{100*max(v["median"] for v in disturbances):.2f}%，'
+        f'单对最大{100*max(v["process_max"] for v in disturbances):.2f}%；局部数值属于这个观察协议，不直接定硬件价格。','',
+        f'全部432个位置中，{consistent_interactions["all"]["positive_cycles_and_ns"]}个位置在十次比较里周期和ns交互均为正，'
+        f'{consistent_interactions["all"]["negative_cycles_and_ns"]}个均为负；这是观察到的同号计数，不是多重检验后的显著性结论。'
+        '因此不能把未发生整体平移写成基址条件完全不影响局部窗口。','',
+        '| 对应关系 | 窗口数 | ΔL周期响应差的绝对中位 | ΔL周期响应差RMS | 响应相关系数 |',
+        '|---|---:|---:|---:|---:|']
+    for summary in pattern_summaries:
+        if summary['metric']!='L_cycles_delta':continue
+        med=summary['median_absolute_residual'];rms=summary['root_mean_square_residual'];corr=summary['correlation']
+        if med is None:
+            lines.append(f'| {summary["mapping"]} | 0 | 无唯一对应 | 无唯一对应 | 未定义 |');continue
+        correlation=f'{corr["median"]:.3f} [{corr["process_min"]:.3f},{corr["process_max"]:.3f}]' if corr else '未定义'
+        lines.append(f'| {summary["mapping"]} | {summary["matched_window_counts"]} | {med["median"]:.1f} | {rms["median"]:.1f} | {correlation} |')
+    lines+=['','邻panel只在同一M比较ni+1，末列不绕回。matched-context与same-work-on-neighbor-subset使用完全相同目标窗口，'
+        '防止仅靠选择不同窗口得到较好对应。JSON保留每个位置的周期/ns响应、SM分布、首段闭合和完整调用扰动。',
+        '','| offset | CTA | ΔL cycles中位/范围 | Δprefix ns中位 | Δprefill ns中位 | Δ(prefix+L) ns中位 |','|---:|---:|---:|---:|---:|---:|']
+    for r in position_summaries:
+        if r['cta'] not in (55,91) or r['j']!=0:continue
+        d=r['L_cycles_delta']
+        lines.append(f'| {r["offset"]} | {r["cta"]} | {d["median"]:.1f} [{d["process_min"]:.1f},{d["process_max"]:.1f}] | '
+            f'{r["prefix_ns_delta"]["median"]:.1f} | {r["prefill_ns_delta"]["median"]:.1f} | {r["prefix_plus_L_ns_delta"]["median"]:.1f} |')
+    for trial in common_origin_trials:
+        common=[r for r in pattern_processes if r['trial']==trial and r['metric']=='L_cycles_delta']
+        a=next(r for r in common if r['mapping']=='same_work_on_neighbor_subset')
+        b=next(r for r in common if r['mapping']=='next_B_panel_matched_context')
+        lines+=['',f'四条件同VA原点的trial{trial}中，同270窗口的固定位置/邻panel RMS差为'
+            f'{a["root_mean_square_residual"]:.1f}/{b["root_mean_square_residual"]:.1f} cycles。'
+            '这是单次四进程组的另列诊断，不替代全批统计，也不证明同PA。']
+    lines+=['',f'四十个dual进程出现{len(origins)}个VA分配原点，相对最小值的间隔为'
+        f'{address_comparison["relative_to_minimum_origin_bytes"]} B；四条件同trial原点全相同的只有{common_origin_trials}。'
+        '该子集结果另列于JSON，不替代全部进程比较，也不证明同PA。',
+        '',f'全部进程只有{len(placement_maps)}种CTA→SM映射，因此同CTA与同SM对应无法分离。',
+        '','基址只声明相对分配原点偏移；VA原点与PA对应未证明时，不解释为物理bank平移。'
+        'CTA和SM映射若固定，也不能凭相同逻辑位置的响应直接区分软件位置与硬件派发。','']
+    lines+=['[响应空间图](R10-base-shift-response.png)使用同一JSON，第三幅为先配对再取中位的offset交互，不直接相减两幅中位。','']
+    (output/'R10-base-shift.md').write_text('\n'.join(lines))
+    return report
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
