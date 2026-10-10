@@ -196,6 +196,9 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
         '      if (r13_sparse_cta() && threadIdx.x==128) {\n'
         '        unsigned sm; asm volatile("mov.u32 %0, %%smid;":"=r"(sm));\n'
         '        auto b=v06_base(); b[41]=r13_s.sender_epi_begin; b[42]=r13_s.sender_epi_end; b[43]=uint64_t(sm)+1;\n'
+        '#ifdef R13_SECOND_PREFILL\n'
+        '        r13_first_tail_flush(r13_s);\n'
+        '#endif\n'
         '      }\n#endif\n')
     consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
         '#ifdef R13_OUTPUT_BACKGROUND\n'
@@ -237,6 +240,42 @@ def make_first_supply_overlay(source):
     path.write_text(text[:start]+producer+text[end:])
 
 
+def make_second_prefill_overlay(source):
+    """Change both plain and progress; only progress reads diagnostic endpoints."""
+    path=source/'cutlass/include'/common.MAINLOOP
+    text=path.read_text()
+    end=text.index('  /// Perform a Consumer Epilogue')
+    text=common.insert_once(text[:end],'    // Prologue GMMAs\n',
+        '#ifdef R13_SECOND_PREFILL\n'
+        '    if (blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0 &&\n'
+        '        threadIdx.x>=256 && threadIdx.x<384 &&\n'
+        '        smem_pipe_read.count()==64 && k_tile_count==64) {\n'
+        '#ifdef R13_STAGE_PROGRESS\n'
+        '      if (threadIdx.x==256) {\n'
+        '        r13_s->prefill_begin_c=v06_clock(); r13_s->prefill_begin_ns=v06_ns();\n'
+        '        r13_s->prefill_waited=0;\n'
+        '      }\n'
+        '#endif\n'
+        '      if (::r13_second_prefill) {\n'
+        '        auto prefill_state=smem_pipe_read;\n'
+        '        for (int slot=0; slot<DispatchPolicy::Stages; ++slot) {\n'
+        '          pipeline.consumer_wait(prefill_state);\n'
+        '          ++prefill_state;\n'
+        '        }\n'
+        '#ifdef R13_STAGE_PROGRESS\n'
+        '        if (threadIdx.x==256) r13_s->prefill_waited=DispatchPolicy::Stages;\n'
+        '#endif\n'
+        '      }\n'
+        '#ifdef R13_STAGE_PROGRESS\n'
+        '      if (threadIdx.x==256) {\n'
+        '        r13_s->prefill_end_c=v06_clock(); r13_s->prefill_end_ns=v06_ns();\n'
+        '      }\n'
+        '#endif\n'
+        '    }\n'
+        '#endif\n')+text[end:]
+    path.write_text(text)
+
+
 def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False,stage_handoff=False):
     stage_progress=stage_progress or stage_handoff
     rows=cases(family) if rows is None else rows
@@ -274,6 +313,13 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         path.write_text(text[:start]+producer+text[end:])
     epilogue_order = any('epilogue_defer' in row for row in rows)
     output_background = any(row.get('epilogue_defer')==2 for row in rows)
+    second_prefill = any('second_prefill' in row for row in rows)
+    if second_prefill:
+        if not stage_progress or stage_handoff or stage_sparse:
+            raise ValueError('second prefill uses the original progress observer')
+        if any(row['second_prefill'] not in (0,1) or row.get('epilogue_defer')!=2
+               for row in rows if 'second_prefill' in row):
+            raise ValueError('second prefill requires switch 0/1 and all-CTA epilogue deferral')
     if epilogue_order:
         if not stage_progress or stage_handoff or stage_sparse:
             raise ValueError('epilogue order uses the original progress observer')
@@ -281,6 +327,12 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         site='        // Update starting mainloop pipeline state for the next tile\n'
         text=common.insert_once(text,site,
             '#ifdef R13_EPILOGUE_ORDER\n'
+            '#if defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)\n'
+            '        if (blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0 &&\n'
+            '            threadIdx.x==128 && mainloop_pipe_consumer_state.count()==0) {\n'
+            '          r13_s.first_tail_c=v06_clock(); r13_s.first_tail_ns=v06_ns();\n'
+            '        }\n'
+            '#endif\n'
             '        // The first WG has already released its last input slot.\n'
             '        // Read the next WG math completion without advancing its barrier.\n'
             '        if (warp_group_role==WarpGroupRole::Consumer0 &&\n'
@@ -290,6 +342,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '          shared_storage.pipelines.math_wg_order.barrier_[0][0].wait(0);\n'
             '#endif\n')
         path.write_text(text)
+    if second_prefill:make_second_prefill_overlay(source)
     common.make_overlay(source/'cutlass',source/'overlay')
     shutil.copy2(ROOT/'probes/r18_trace.hpp',source/'overlay/v06_trace.hpp')
     for header in [common.COOP,common.PING]:
@@ -339,6 +392,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if epilogue_order:cmd.append('-DR13_EPILOGUE_ORDER')
             if output_background:cmd.append('-DR13_OUTPUT_BACKGROUND')
+            if second_prefill:cmd.append('-DR13_SECOND_PREFILL')
             if work_swap:cmd.append('-DR10_WORK_SWAP')
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
@@ -356,14 +410,14 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-second-prefill-v1' if second_prefill else 'r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer','epilogue_defer']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer','epilogue_defer','second_prefill']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 

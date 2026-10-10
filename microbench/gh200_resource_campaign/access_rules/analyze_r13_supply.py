@@ -4067,6 +4067,215 @@ def stage_output_background_diagnostics(base, output):
     return report
 
 
+def stage_second_prefill_diagnostics(root, output):
+    """Same-stage joint initial-state intervention; no fitting or cross-stage residual."""
+    import gzip
+    from analyze_r13_sm import select_attempts, validate_setup
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={s['case']:s['setup'] for s in read_json(root/'static_setup.json')}
+    controls=[r for r in rows.values() if r.get('set')!='reference']
+    keys={(setups[r['id']]['stages'],r['second_prefill']):r['id'] for r in controls}
+    if len(controls)!=4 or set(keys)!={(s,f) for s in (4,6) for f in (0,1)}:
+        raise ValueError('second prefill requires stage4/6 crossed with flags0/1')
+    fields=('config','m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n',
+        'alloc_lda','alloc_ldb','allocated_a_elements','allocated_b_elements','grid','tile','cluster',
+        'sm_count','requested_sm_count','scheduler_sm_count','input_mode','seed','swizzle','evict',
+        'input_map_m','input_map_n','initialized_input_rows','initialized_input_columns')
+    first=setups[controls[0]['id']]
+    for row in controls:
+        setup=setups[row['id']]
+        if row.get('epilogue_defer')!=2 or setup.get('second_prefill')!=row['second_prefill']:
+            raise ValueError('second prefill changed its treatment or all-CTA E0 deferral')
+        if (setup['config'],setup['m'],setup['n'],setup['k'])!=('cfg_b',2816,1536,4096):
+            raise ValueError('second prefill geometry changed')
+        if setup['tile']!=[128,128,64] or setup['cluster']!=[1,1] or np.prod(setup['grid'])!=132:
+            raise ValueError('second prefill tile or persistent grid changed')
+        if any(setup.get(k)!=first.get(k) for k in fields):
+            raise ValueError('second prefill input geometry or allocation capacity changed')
+    for stage in (4,6):
+        a,b=(setups[keys[stage,f]] for f in (0,1))
+        if any(a[k]!=b[k] for k in ('smem','smem_epilogue','max_active_ctas_per_sm')):
+            raise ValueError('second prefill same-stage resources changed')
+    binaries=read_json(root/'build/binary_hashes.json')
+    processes=[];calls={};failures=[];hashes={}
+
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values),
+                    negative=sum(v<0 for v in values),positive=sum(v>0 for v in values))
+
+    def overlap(records,begin,end):
+        if end<=begin:raise ValueError('nonpositive second prefill observation window')
+        lengths=[max(0,min(x['epi_end_ns'],end)-max(x['epi_begin_ns'],begin)) for x in records]
+        return dict(overlapping_ctas=sum(v>0 for v in lengths),sum_overlap_ns=sum(lengths))
+
+    for row in rows.values():
+        name=row['id'];reference=row.get('set')=='reference'
+        variants=('plain',) if reference else ('plain','progress')
+        selected,failed,_=select_attempts(root,name,variants)
+        failures.extend(dict(case=name,**item) for item in failed)
+        for item in selected+failed:
+            raw=root/item['record']['raw']
+            if common.sha(raw)!=item['record']['raw_sha256']:raise ValueError('second prefill raw identity changed')
+            for path in (root/item['path'],raw):hashes[str(path)]=common.sha(path)
+        group={v:{} for v in variants}
+        for item in selected:
+            record=item['record'];variant=record['variant'];obs=replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+            setup,call=events['setup'],events['call'];validate_setup(row,setups[name],setup)
+            binary='build/'+common.binary_prefix(row)+'_'+variant
+            if Path(record['command'][0]).name!=Path(binary).name or binary not in binaries:
+                raise ValueError('second prefill sample binary identity changed')
+            addresses={k:setup[k] for k in ('target_a_ptr','target_b_ptr')}
+            if any(not v or call.get(k)!=v for k,v in addresses.items()):
+                raise ValueError('second prefill source address changed within the call')
+            if not call['warmup_us'] or call['warmup_calls']!=len(call['warmup_us']):
+                raise ValueError('second prefill warmup count changed')
+            entry=dict(case=name,set=row.get('set'),stages=setup['stages'],second_prefill_flag=row.get('second_prefill',0),
+                epilogue_defer=row.get('epilogue_defer',0),variant=variant,trial=record['trial'],elapsed_us=obs['elapsed_us'],
+                source=record['raw'],source_sha256=record['raw_sha256'],record_path=item['path'],
+                binary=binary,binary_sha256=binaries[binary],gpu_uuid=setup['gpu_uuid'],
+                host_start_ns=record['host_start_ns'],host_stop_ns=record['host_stop_ns'],target_addresses=addresses,
+                warmup_us=call['warmup_us'],warmup_calls=call['warmup_calls'],warmup_last5_cv=call['warmup_last5_cv'])
+            if variant=='progress':
+                if setup['trace_version']!='r13-second-prefill-v1':raise ValueError('second prefill trace protocol changed')
+                p=obs['progress'];c=p['clocks'];direct=p['direct_ns_background'];begin,end=p['early_ns']
+                if len(direct)!=132 or p['work']!=[11,0] or p['sender_work']!=[0,0]:
+                    raise ValueError('second prefill CTA/work identity changed')
+                if any(x['epi_begin_ns']<x['mma_return_ns'] for x in direct):
+                    raise ValueError('all-CTA E0 deferral was not preserved')
+                M=next(x['mma_return_ns'] for x in direct if x['cta']==0)
+                intervals=_stage_progress_intervals(dict(clocks=c));prefill=p['second_prefill']
+                metrics=dict(early_cycles=c['commit16']-c['commit1'],early_ns=end-begin,
+                    post_cycles=c['mma_return']-c['commit16'],post_ns=M-end,
+                    first_to_commit1_cycles=c['commit1']-c['first_mma'],
+                    prefill_wait_cycles=prefill['wait_cycles'],prefill_wait_ns=prefill['wait_ns'],
+                    first_tail_minus_end_cycles=prefill['first_tail_minus_end_cycles'],
+                    first_tail_minus_end_ns=prefill['first_tail_minus_end_ns'])
+                if min(metrics['early_ns'],metrics['post_ns'])<=0:raise ValueError('nonpositive second prefill phase window')
+                metrics.update(early_frequency_ghz=metrics['early_cycles']/metrics['early_ns'],
+                               post_frequency_ghz=metrics['post_cycles']/metrics['post_ns'])
+                entry.update(cta=p['cta'],sm=p['sm'],work=p['work'],sender_work=p['sender_work'],
+                    clocks=c,intervals=intervals,second_prefill=prefill,early_ns=[begin,end],post_ns=[end,M],
+                    direct_ns_background=direct,metrics=metrics,
+                    other_E0_early=overlap([x for x in direct if x['cta']!=0],begin,end),
+                    other_E0_post=overlap([x for x in direct if x['cta']!=0],end,M))
+            group[variant][record['trial']]=entry;processes.append(entry)
+        if any(set(v)!=set(range(10)) for v in group.values()):
+            raise ValueError(name+': ten independent processes per variant required')
+        calls[name]=group
+    refs=[p for p in processes if p['set']=='reference'];ctrl=[p for p in processes if p['set']!='reference']
+    if len(refs)!=20 or len(ctrl)!=80 or not all(p['gpu_uuid'] for p in processes) or len({p['gpu_uuid'] for p in processes})!=1:
+        raise ValueError('second prefill needs twenty reference and eighty control calls on one GPU')
+    refs_first=max(p['host_stop_ns'] for p in refs)<=min(p['host_start_ns'] for p in ctrl)
+    if not refs_first:raise ValueError('second prefill references did not complete before controls')
+    timing=[];treatment=[];observer=[]
+    for stage in (4,6):
+        for flag in (0,1):
+            group=calls[keys[stage,flag]];progress=list(group['progress'].values())
+            timing.append(dict(stages=stage,second_prefill=flag,
+                elapsed_us={v:span(p['elapsed_us'] for p in group[v].values()) for v in ('plain','progress')},
+                metrics={k:span(p['metrics'][k] for p in progress) for k in progress[0]['metrics']},
+                background={phase:{k:span(p['other_E0_'+phase][k] for p in progress)
+                    for k in ('overlapping_ctas','sum_overlap_ns')} for phase in ('early','post')}))
+            pairs=[dict(trial=t,whole_delta_us=group['progress'][t]['elapsed_us']-group['plain'][t]['elapsed_us'],
+                whole_relative=group['progress'][t]['elapsed_us']/group['plain'][t]['elapsed_us']-1) for t in range(10)]
+            observer.append(dict(stages=stage,second_prefill=flag,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),whole_relative=span(p['whole_relative'] for p in pairs)))
+        for variant in ('plain','progress'):
+            off,on=(calls[keys[stage,flag]][variant] for flag in (0,1));pairs=[]
+            for trial in range(10):
+                a,b=off[trial],on[trial]
+                if (a['binary'],a['binary_sha256'])!=(b['binary'],b['binary_sha256']):
+                    raise ValueError('second prefill same-stage pair changed binary')
+                pair=dict(trial=trial,source_off=a['source'],source_on=b['source'],
+                    whole_delta_us=b['elapsed_us']-a['elapsed_us'],whole_relative=b['elapsed_us']/a['elapsed_us']-1,
+                    same_target_addresses=a['target_addresses']==b['target_addresses'])
+                if variant=='progress':
+                    pair.update(sm_off=a['sm'],sm_on=b['sm'],delta={k:b['metrics'][k]-a['metrics'][k] for k in a['metrics']},
+                        delta_background={phase:{k:b['other_E0_'+phase][k]-a['other_E0_'+phase][k]
+                            for k in ('overlapping_ctas','sum_overlap_ns')} for phase in ('early','post')})
+                pairs.append(pair)
+            result=dict(stages=stage,variant=variant,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),whole_relative=span(p['whole_relative'] for p in pairs))
+            if variant=='progress':
+                result.update(delta={k:span(p['delta'][k] for p in pairs) for k in pairs[0]['delta']},
+                    delta_background={phase:{k:span(p['delta_background'][phase][k] for p in pairs)
+                        for k in ('overlapping_ctas','sum_overlap_ns')} for phase in ('early','post')})
+            treatment.append(result)
+    correctness=[]
+    for stage in (4,6):
+        row=rows[keys[stage,1]]
+        for variant in ('plain','progress'):
+            path=root/'correctness'/f'{row["id"]}_{variant}.jsonl'
+            events={e['event']:e for line in path.read_text().splitlines() if line.strip() for e in [json.loads(line)]}
+            check=events['second_prefill_check'];validate_setup(row,setups[row['id']],events['setup'])
+            if events['setup'].get('second_prefill')!=1 or events['setup'].get('epilogue_defer')!=2:
+                raise ValueError('second prefill full-output treatment identity changed')
+            if (check.get('comparison_flag'),check['elements'],check['different'],check['nonfinite'])!=(1,row['m']*row['n'],0,0):
+                raise ValueError('second prefill full-output comparison failed')
+            correctness.append(dict(case=row['id'],variant=variant,source=str(path),**check));hashes[str(path)]=common.sha(path)
+    for path in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',root/'build/binary_hashes.json',
+            root/'build/resources.json',root/'build/sass_hashes.json',root/'environment.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
+        hashes[str(path)]=common.sha(path)
+    report=dict(root=str(root),scope='Same-stage on-minus-off joint S-ready, prior-WG-drain and phase intervention; development only.',
+        environment=read_json(root/'environment.json'),contexts={name:dict(row=row,setup=setups[name]) for name,row in rows.items()},
+        processes=processes,timing=timing,on_minus_off=treatment,progress_minus_plain=observer,
+        full_output_checks=correctness,failed_attempts=failures,input_sha256=hashes,references_completed_first=refs_first,
+        attempt_directories=[str(p.relative_to(root)) for p in sorted((root/'attempts').glob('*')) if p.is_dir()],
+        reference_elapsed_us={name:span(p['elapsed_us'] for p in refs if p['case']==name) for name in sorted({p['case'] for p in refs})},
+        resources=read_json(root/'build/resources.json'),
+        limitations=['Only CTA0 second WG is treated; all E0 remains deferred past each CTA own M1. Other-CTA source and output overlap can still change.',
+            'S readiness, prior-WG drain and launch phase change jointly. The first-tail timestamp can lag actual drain; its signed relation to wait end is descriptive, not an acceptance gate.',
+            'Early=C1-to-C16 and post=C16-to-mma_return use matching same-call cycle/ns endpoints. FIRST-to-C1 has cycles only; no ns or physical DVFS claim is synthesized.',
+            'Background is the simple sum of clipped other-131-CTA E0 intervals and the number overlapping; it is not a union, queue size, physical bandwidth or causal attribution.',
+            'Primary effects are same-stage on/off paired by trial, which are separate processes. No address/warmup subset or sample is selected for a better result.',
+            'Whole progress/plain perturbation does not bound local observer cost. Raw stage4-stage6 differences are not model failure excess; no fitting or validation score is performed.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-second-prefill.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(v,digits=1):return f'{v["median"]:.{digits}f} [{v["trial_min"]:.{digits}f},{v["trial_max"]:.{digits}f}]'
+    lines=['# 第二WG初始输入就绪的联合干预','',
+        '仅CTA0第二WG在进入MMA前等待初始S槽，全部CTA仍采用E0 defer2。它同时改变输入就绪、旧WG排空条件和相位，'
+        '不把stage4−stage6原始差命名为失败超额。主结果按同stage、同binary、同trial比较on−off；全部进程保留。','',
+        '| stage / 开关 | early cycles | early ns | post cycles | post ns | FIRST→C1 cycles | 等待 cycles / ns |',
+        '|---|---:|---:|---:|---:|---:|---:|']
+    for t in timing:
+        v=t['metrics'];values=[cell(v[k]) for k in ('early_cycles','early_ns','post_cycles','post_ns','first_to_commit1_cycles')]
+        lines.append(f'| {t["stages"]} / {t["second_prefill"]} | '+' | '.join(values)+
+            f' | {cell(v["prefill_wait_cycles"])} / {cell(v["prefill_wait_ns"])} |')
+    lines+=['','M为第二WG的mma返回；early=C1→C16，post=C16→M。cycle/ns仅用本调用匹配窗口。表为十进程中位[最小,最大]。','',
+        '| progress on−off | early cycles | early ns | post cycles | post ns | FIRST→C1 cycles | wait ns |',
+        '|---|---:|---:|---:|---:|---:|---:|']
+    for t in treatment:
+        if t['variant']=='progress':
+            lines.append(f'| stage{t["stages"]} | '+' | '.join(cell(t['delta'][k]) for k in
+                ('early_cycles','early_ns','post_cycles','post_ns','first_to_commit1_cycles','prefill_wait_ns'))+' |')
+    lines+=['','| 完整时间 on−off | Δµs | 相对变化 |','|---|---:|---:|']
+    for t in treatment:
+        v=t['whole_relative'];percent={k:100*v[k] for k in ('median','trial_min','trial_max')}
+        lines.append(f'| stage{t["stages"]} {t["variant"]} | {cell(t["whole_delta_us"],3)} | {cell(percent,2)}% |')
+    lines+=['','| stage / 开关 | 其它E0与early重叠CTA数 / ns总和 | 与post重叠CTA数 / ns总和 | tail标记−wait结束 cycles / ns | progress/plain变化 |',
+        '|---|---:|---:|---:|---:|']
+    for t,o in zip(timing,observer):
+        b=t['background'];v=t['metrics'];rel=o['whole_relative']
+        lines.append(f'| {t["stages"]} / {t["second_prefill"]} | '+
+            ' | '.join(cell(b[p]['overlapping_ctas'])+' / '+cell(b[p]['sum_overlap_ns']) for p in ('early','post'))+
+            f' | {cell(v["first_tail_minus_end_cycles"])} / {cell(v["first_tail_minus_end_ns"])} | '+
+            cell({k:100*rel[k] for k in ('median','trial_min','trial_max')},2)+'% |')
+    lines+=['','tail标记晚于wait结束不会判为失败：排空先后来自代码依赖，标记仍可受调度延迟。'
+        'E0重叠只是同调用执行背景，求和不去重，不能归因共享端口或硬件带宽。', '',
+        '四份独立完整输出比较均检查全部4325376个元素，on/off差异与非有限数为0。'
+        '两条plain参照共20进程先于80个控制进程完成，且属于同一GPU；原始身份、失败记录、资源、'
+        '预热与逐进程同stage配对保留于[B-second-prefill.json](B-second-prefill.json)。没有重拟参数、筛选进程或更新冻结成绩。','']
+    (output/'B-second-prefill.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_background_baseline_diagnostics(output):
     """Conditional commit-window baseline; never fit tail timestamps as retire latency."""
     from supply_model import stage_reuse_window

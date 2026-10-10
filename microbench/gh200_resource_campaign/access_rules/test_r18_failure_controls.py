@@ -80,6 +80,57 @@ class FailureControlsTests(unittest.TestCase):
             self.assertEqual([s for s,v in seen[8:]],['ctrl']*18)
             self.assertEqual(sum(v=='ends' for s,v in seen),2)
 
+    def test_second_prefill_uses_copy_and_preserves_tail_order_in_both_builds(self):
+        # Minimal source sites include both prologues, so only mma is patched.
+        mainloop=('mma body\n    // Prologue GMMAs\noriginal prologue\n'
+            '  /// Perform a Consumer Epilogue\n    // Prologue GMMAs\noriginal tail\n')
+        ping=('        collective_mainloop.mma_tail(\noriginal arguments\n        );\n'
+            '        // Update starting mainloop pipeline state for the next tile\n')
+        def overlay(cutlass,out):
+            for name in (run_r18.common.COOP,run_r18.common.PING,run_r18.common.MAINLOOP):
+                dest=out/name;dest.parent.mkdir(parents=True,exist_ok=True)
+                body=(cutlass/'include'/name).read_text()
+                dest.write_text(body+('        ++v06_tile_seq;\n' if name!=run_r18.common.MAINLOOP else ''))
+        row=dict(ROWS[0],id='prefill0',config='cfg_b',m=2816,n=1536,k=4096,
+            stages=4,epilogue_defer=2,second_prefill=0,variants=['plain','progress'])
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);cutlass=base/'cutlass';(cutlass/'tools/util/include').mkdir(parents=True)
+            for name,body in ((run_r18.common.MAINLOOP,mainloop),(run_r18.common.PING,ping),
+                              (run_r18.common.COOP,'cooperative body\n')):
+                path=cutlass/'include'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(body)
+            root=base/'run'
+            with patch.object(run_r18.common,'make_overlay',side_effect=overlay),patch.object(run_r18,'make_stage_sparse_overlay'):
+                run_r18.prepare(root,cutlass,'r18',[row,dict(row,id='prefill1',second_prefill=1)],stage_progress=True)
+            commands=json.loads((root/'build/commands.json').read_text())
+            self.assertEqual(set(commands),{'cfg_b_s4_plain','cfg_b_s4_progress'})
+            for command in commands.values():
+                self.assertIn('-DR13_SECOND_PREFILL',command)
+                self.assertIn('-DR13_OUTPUT_BACKGROUND',command)
+            self.assertNotIn('-DR13_STAGE_PROGRESS',commands['cfg_b_s4_plain'])
+            self.assertIn('-DR13_STAGE_PROGRESS',commands['cfg_b_s4_progress'])
+            self.assertEqual(json.loads((root/'run_config.json').read_text())['trace_version'],'r13-second-prefill-v1')
+            for flag in (0,1):
+                args=run_r18.case_args(dict(row,second_prefill=flag))
+                self.assertEqual(args[args.index('--second-prefill')+1],str(flag))
+            raw=(root/'source/cutlass/include'/run_r18.common.MAINLOOP).read_text()
+            stamped=(root/'source/overlay'/run_r18.common.MAINLOOP).read_text()
+            self.assertEqual(raw,stamped)
+            added=raw[:raw.index('    // Prologue GMMAs')]
+            self.assertIn('auto prefill_state=smem_pipe_read;',added)
+            self.assertIn('pipeline.consumer_wait(prefill_state);',added)
+            self.assertIn('++prefill_state;',added)
+            self.assertNotIn('consumer_release',added)
+            self.assertNotIn('++smem_pipe_read',added)
+            self.assertIn('threadIdx.x>=256 && threadIdx.x<384',added)
+            self.assertIn('smem_pipe_read.count()==64 && k_tile_count==64',added)
+            self.assertLess(added.index('prefill_begin_c'),added.index('if (::r13_second_prefill)'))
+            self.assertGreater(added.index('prefill_end_c'),added.index('++prefill_state'))
+            self.assertEqual(raw[raw.index('  /// Perform a Consumer Epilogue'):],mainloop[mainloop.index('  /// Perform a Consumer Epilogue'):])
+            kernel=(root/'source/cutlass/include'/run_r18.common.PING).read_text()
+            self.assertLess(kernel.index('collective_mainloop.mma_tail'),kernel.index('r13_s.first_tail_c'))
+            self.assertLess(kernel.index('r13_s.first_tail_ns'),kernel.index('math_wg_order.barrier_[0][0].wait(0)'))
+            self.assertIn('threadIdx.x==128 && mainloop_pipe_consumer_state.count()==0',kernel)
+
     def test_ends_uses_ends_decoder(self):
         with tempfile.TemporaryDirectory() as directory:
             row=next(r for r in ROWS if r['id']=='r09_protocol_k4096')

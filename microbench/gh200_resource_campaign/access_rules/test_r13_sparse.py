@@ -196,5 +196,61 @@ class StageSparseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'warmup prefix'):
                 validate_warmup(bad_setup,bad_call,row)
 
+    def second_prefill_trace(self,stages=6,enabled=1):
+        setup,call=self.background_trace(2)
+        setup.update(trace_version='r13-second-prefill-v1',stages=stages,second_prefill=enabled)
+        b=call['trace'];origin=1_700_000_000_000_000_001
+        b[31]=0x52313306
+        b[51:58]=[100,origin+100,200,origin+200,stages if enabled else 0,250,origin+250]
+        return setup,call
+
+    def test_second_prefill_preserves_background_and_allows_late_tail_stamp(self):
+        for stages in (4,6):
+            for flag in (0,1):
+                with self.subTest(stages=stages,flag=flag):
+                    setup,call=self.second_prefill_trace(stages,flag)
+                    self.assertEqual(call['trace'][0],0)  # No fabricated entry-clock requirement.
+                    r=decode_stage_sparse(setup,call);p=r['second_prefill']
+                    self.assertEqual(p['enabled'],bool(flag))
+                    self.assertEqual(p['waited_stages'],stages if flag else 0)
+                    self.assertEqual((p['wait_cycles'],p['wait_ns']),(100,100))
+                    self.assertEqual((p['first_tail_minus_end_cycles'],p['first_tail_minus_end_ns']),(50,50))
+                    self.assertEqual(len(r['direct_ns_background']),132)
+                    self.assertEqual(r['early_ns'],call['trace'][49:51])
+                    self.assertEqual((r['sm'],r['work'],r['sender_work']),(2,[11,0],[0,0]))
+                    call['trace'][56]=150;call['trace'][57]-=100
+                    p=decode_stage_sparse(setup,call)['second_prefill']
+                    self.assertEqual((p['first_tail_minus_end_cycles'],p['first_tail_minus_end_ns']),(-50,-50))
+
+    def test_second_prefill_rejects_missing_misordered_or_wrong_identity(self):
+        for index,value,reason in [(51,0,'wait endpoints'),(53,99,'wait endpoints'),
+                (53,301,'wait endpoints'),(54,1_700_000_000_000_001_002,'wait endpoints'),
+                (55,5,'waited stages'),(56,32101,'tail endpoints'),
+                (57,1_700_000_000_000_005_102,'tail endpoints'),
+                (43,4,'sender SM/work'),(23,4,'consumer SM/work'),
+                (784+51,1,'non-target CTA background'),(31,0x52313305,'event order')]:
+            with self.subTest(index=index):
+                setup,call=self.second_prefill_trace()
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):decode_stage_sparse(setup,call)
+        for key,value,reason in [('second_prefill',2,'treatment identity'),
+                ('second_prefill',0,'waited stages'),('epilogue_defer',1,'treatment identity')]:
+            with self.subTest(key=key,value=value):
+                setup,call=self.second_prefill_trace();setup[key]=value
+                with self.assertRaisesRegex(ValueError,reason):decode_stage_sparse(setup,call)
+
+    def test_second_prefill_matches_setup_call_and_keeps_warmup_untreated(self):
+        row=dict(swizzle=1,second_prefill=1)
+        setup=dict(trace_version='r13-second-prefill-v1',second_prefill=1,second_prefill_warmup=0)
+        call=dict(setup,warmup_us=[100.]*8)
+        self.assertEqual(validate_warmup(setup,call,row),0)
+        self.assertEqual(validate_warmup(setup,call,dict(swizzle=1)),0)
+        for event_index,key,value,reason in [(0,'second_prefill',0,'identity'),
+                (1,'second_prefill',0,'identity'),(0,'second_prefill_warmup',1,'warmup prefix'),
+                (1,'second_prefill_warmup',1,'warmup prefix')]:
+            with self.subTest(event=event_index,key=key):
+                events=[dict(setup),dict(call)];events[event_index][key]=value
+                with self.assertRaisesRegex(ValueError,reason):validate_warmup(*events,row)
+
 
 if __name__=='__main__':unittest.main()

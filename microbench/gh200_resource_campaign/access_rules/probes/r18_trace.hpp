@@ -103,6 +103,11 @@ struct R13SparseProducer {
 };
 #ifdef R13_STAGE_PROGRESS
 struct R13SparseConsumer {
+#ifdef R13_SECOND_PREFILL
+  uint64_t prefill_begin_c=0, prefill_begin_ns=0, prefill_end_c=0, prefill_end_ns=0;
+  unsigned prefill_waited=0;
+  uint64_t first_tail_c=0, first_tail_ns=0;
+#endif
   uint64_t wait_begin=0, next_wait_begin=0, retire_end=0;
   uint64_t commit1=0, commit16=0, commit17=0, commit63=0;
   uint64_t first_mma=0, mma_return=0, main_end=0;
@@ -124,6 +129,11 @@ struct R13SparseConsumer {
   uint64_t mma_return=0, tail_begin=0;
   int read_slot=0, release_slot=0, release_phase=0;
 };
+#endif
+#ifdef R13_SECOND_PREFILL
+__device__ __forceinline__ void r13_first_tail_flush(R13SparseConsumer const& s) {
+  auto b=v06_base(); b[56]=s.first_tail_c; b[57]=s.first_tail_ns;
+}
 #endif
 __device__ __forceinline__ bool r13_sparse_cta() {
   return blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0;
@@ -147,6 +157,11 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
 #ifdef R13_OUTPUT_BACKGROUND
   b[31]=0x52313305; b[49]=s.commit1_ns; b[50]=s.commit16_ns;
 #endif
+#endif
+#ifdef R13_SECOND_PREFILL
+  b[51]=s.prefill_begin_c; b[52]=s.prefill_begin_ns;
+  b[53]=s.prefill_end_c; b[54]=s.prefill_end_ns; b[55]=s.prefill_waited;
+  b[31]=0x52313306;
 #endif
 #ifdef R13_STAGE_HANDOFF
   b[35]=s.math_wait_begin; b[36]=s.math_wait_end; b[37]=s.first_wait_begin;

@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给尚未通过V09迁移。同质FIFO事件候选与同调用的名义阶段排序不相容：即使允许任意producer起步偏移，固定同质依赖图也只能保持对应事件次序；旧dual的20/20进程却都有FIRST0较早、第二MAIN较晚的CTA对。因此统一gap或入口调参不能修复该反例，不继续为此标定发射间隔。局部窗口拟合和固定c/T界保留为条件证据，下一候选需解释非同质推进，不能按CTA标签直接加价。
+当前供给尚未通过V09迁移。[第二WG联合初态对照](#second-prefill)使stage4早段在10/10配对中缩短，stage6基本不变；输入ready、前WG排空与相位仍不可分，完整调用没有稳定改善。同质FIFO事件候选与同调用的名义阶段排序不相容：即使允许任意producer起步偏移，固定同质依赖图也只能保持对应事件次序；旧dual的20/20进程却都有FIRST0较早、第二MAIN较晚的CTA对。因此统一gap或入口调参不能修复该反例，不继续为此标定发射间隔。局部窗口拟合和固定c/T界保留为条件证据，下一候选需解释非同质推进，不能按CTA标签直接加价。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -26,11 +26,34 @@
 | 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
 | 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
 | 输出背景，739740 | 固定CTA0处理、仅改变其它CTA首输出；stage4早段缩短、后段变长 | [R15统一分析](R15-output-service.md#stage-output-background)、[同调用背景与进程差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-background.md) |
+| 第二WG初态，739790 | 仅CTA0预等S槽，stage4/6同binary开关；early与完整时间分列 | [同批配对与限制](#second-prefill)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md) |
 | 背景基线，离线 | 区分早/后段输出相位；仅两个无E0覆盖窗口约束c/T，固定后迁移 | [条件范围与未定项](#stage-background-baseline)、[逐进程包络](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-baseline.md) |
 | 共享服务候选，离线 | 真实软件依赖自行生成E0；低窗口残差仍伴随相位/本地响应失败 | [候选边界](#stage-shared-service)、[拟合与全卡对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-shared-service.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
+
+<a id="second-prefill"></a>
+
+## 第二WG的初态是否影响早段推进？
+
+cfg_b 2816×1536×4096、132 CTA各做两个输出，全部首输出E0仍等自身第二MMA返回。仅CTA0第二WG在原prologue前，以read-state副本预等最初S槽（stage4或6），不释放槽、不推进真实read state。最后一个新槽依赖前WG tail释放，因此处理同时保证初始S槽ready和前WG排空，并推迟消费相位；它不是纯输入填充对照。SASS确认4/6次等待及原状态重读，40个progress记录的waited均与开关一致，暖机处理均关闭。
+
+739790在a058的GPU-ef8692f3上完成；每格plain/progress各十个有效独立进程，另20个先行参照。下表为同stage、同binary、同trial的开减关，先作进程配对再取中位[最小,最大]。early是同CTA第二WG的C1→C16，post是C16→mma返回；cycle/ns使用同调用匹配端点。
+
+| 配对变化 | stage4 | stage6 |
+|---|---:|---:|
+| 新增预等 ns | +992 [896,1088] | +1040 [832,1120] |
+| early cycle | **−1317 [−1863,−150]** | 0 [−2,3] |
+| early ns | **−768 [−1024,−64]** | 0 [−32,64] |
+| post cycle | +73 [−894,1278] | 0 [−505,1] |
+| plain完整时间 µs | −0.192 [−1.120,1.152] | +0.176 [−0.832,0.480] |
+
+stage4 early在10/10配对中缩短，两个时钟域一致；40个progress的early均无其它E0覆盖。stage6同样多等约1µs却没有early收益，因而不能用统一频率修正或通用固定启动费用描述处理响应。但新增等待会抵消局部收益，完整时间方向不稳定，不作为优化成绩。开启后stage4 early仍为7684～9059 cycle，不能声称初态问题已完全解决，也不将两stage的原始差当模型误差。
+
+stage6 post与其它E0重叠的CTA数由35～71变为每次131，post cycle配对中位却不变；重叠数或重叠时长总和不能直接定价。它们只描述执行背景，既不识别物理请求，也不排除共享资源。预等还改变了producer补槽/consumer释放相位；现有证据不能在ready、前WG未排空及相位三者中唯一归因。下一候选先显式保留交接时的槽就绪与未完成计算状态，按真实依赖施加这次处理，检验早段和后段的联合响应；不按stage4另加常数。
+
+四份计时外全D比较各4325376元素，差异/非有限数均为0；四binary均168寄存器、16 HGMMA、无spill。100个有效进程无采样重试，采样前停止的739785构建尝试保留于原run的attempts。两项同卡参照相对739740的批次中位变化为+2.41%/+0.76%，只作背景，主要结论来自本批配对；新旧批次绝对参数未合并。[原始数据](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill)、[逐进程与观察扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。冻结V09与正式预测参数未改。
 
 <a id="stage-background-baseline"></a>
 

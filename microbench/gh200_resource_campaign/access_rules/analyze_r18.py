@@ -44,7 +44,8 @@ def random_references(indices,m,n,k,seed):
 def decode_stage_sparse(setup, call):
     """CTA0 cycle windows; background protocol adds direct globaltimer endpoints."""
     words=call['trace'];width=setup['trace_words']
-    background=setup.get('trace_version')=='r13-output-background-v1'
+    second_prefill=setup.get('trace_version')=='r13-second-prefill-v1'
+    background=second_prefill or setup.get('trace_version')=='r13-output-background-v1'
     if len(words)!=math.prod(setup['grid'])*width or (not background and any(words[width:])):
         raise ValueError('sparse trace size or non-target CTA writes')
     if background:
@@ -53,7 +54,7 @@ def decode_stage_sparse(setup, call):
             if any(head[:46]) or any(head[49:]):
                 raise ValueError('unexpected non-target CTA background fields')
     b=words[:width]
-    if setup.get('trace_version') in ('r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1'):
+    if setup.get('trace_version') in ('r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1','r13-second-prefill-v1'):
         handoff=setup['trace_version']=='r13-stage-handoff-v1'
         epilogue_order=background or setup['trace_version']=='r13-epilogue-order-v1'
         mapping={'first_mma':21,'commit1':20,'full_wait_begin16':15,'commit16':17,
@@ -61,7 +62,7 @@ def decode_stage_sparse(setup, call):
             'mma_return':32,'main_end':22}
         c={name:b[index] for name,index in mapping.items()}
         sequence=[c[name] for name in mapping]
-        marker=0x52313305 if background else 0x52313304 if epilogue_order else 0x52313303 if handoff else 0x52313302
+        marker=0x52313306 if second_prefill else 0x52313305 if background else 0x52313304 if epilogue_order else 0x52313303 if handoff else 0x52313302
         if b[31]!=marker or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
             raise ValueError('invalid consumer progress event order')
         if not b[1] or b[1]!=b[23] or min(b[13],b[14])<=0:
@@ -125,6 +126,25 @@ def decode_stage_sparse(setup, call):
             if not 0<b[49]<=b[50]<=direct[0]['mma_return_ns']:
                 raise ValueError('invalid direct early-window endpoints')
             result.update(direct_ns_background=direct,early_ns=[b[49],b[50]])
+        if second_prefill:
+            flag=setup.get('second_prefill')
+            if flag not in (0,1) or setup.get('epilogue_defer')!=2:
+                raise ValueError('invalid second prefill treatment identity')
+            bc,bn,ec,en,waited,tc,tn=b[51:58]
+            if waited!=(setup['stages'] if flag else 0):
+                raise ValueError('second prefill waited stages mismatch')
+            if not (0<bc<=ec<=c['first_mma'] and 0<bn<=en<=b[49]):
+                raise ValueError('invalid second prefill wait endpoints')
+            if not (0<tc<=c['sender_epi_begin'] and 0<tn<=direct[0]['epi_begin_ns']):
+                raise ValueError('invalid first output tail endpoints')
+            # There is no CTA entry ns in this protocol. Trace clearing and the
+            # existing role SM/work checks bind the reads to this invocation.
+            # All-S readiness implies drain by the source dependency, not by
+            # forcing the delayed sender timestamp to precede the wait end.
+            result['second_prefill']=dict(enabled=bool(flag),waited_stages=waited,
+                begin_c=bc,begin_ns=bn,end_c=ec,end_ns=en,first_tail_c=tc,first_tail_ns=tn,
+                wait_cycles=ec-bc,wait_ns=en-bn,
+                first_tail_minus_end_cycles=tc-ec,first_tail_minus_end_ns=tn-en)
         return result
     clocks={name:b[index] for name,index in {
         'entry':0,'acquire_begin':6,'acquire_end':7,'issue_end':8,
@@ -212,6 +232,12 @@ def validate_warmup(setup, call, row):
             raise ValueError('epilogue order identity changed')
         if any(event.get('epilogue_warmup_defer')!=0 for event in (setup,call)):
             raise ValueError('epilogue treatment entered the warmup prefix')
+    if 'second_prefill' in row or setup.get('trace_version')=='r13-second-prefill-v1':
+        flag=row.get('second_prefill',setup.get('second_prefill'))
+        if flag not in (0,1) or any(event.get('second_prefill')!=flag for event in (setup,call)):
+            raise ValueError('second prefill identity changed')
+        if any(event.get('second_prefill_warmup')!=0 for event in (setup,call)):
+            raise ValueError('second prefill treatment entered the warmup prefix')
     if 'producer_delay_ns' in row:
         for event in (setup,call):
             if event.get('producer_delay_ns')!=row['producer_delay_ns'] or event.get('producer_delay_protocol')!='cta55-pre-first-load-v1':
@@ -421,7 +447,7 @@ def replay(root,record,row,retain_roles=False):
         result['preceding_target_calls']=18
         return result
     if record['variant'] in ['plain','wide']:return result
-    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1'):
+    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1','r13-second-prefill-v1'):
         key='sparse' if setup['trace_version']=='r13-stage-sparse-v1' else 'progress'
         result[key]=decode_stage_sparse(setup,call)
         return result

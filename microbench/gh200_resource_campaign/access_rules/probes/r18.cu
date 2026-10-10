@@ -3,6 +3,9 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#ifdef R13_SECOND_PREFILL
+__device__ __constant__ unsigned r13_second_prefill;
+#endif
 #ifdef R13_EPILOGUE_ORDER
 __device__ __constant__ unsigned r13_epilogue_defer;
 #endif
@@ -123,7 +126,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_OUTPUT_BACKGROUND) && defined(R13_STAGE_PROGRESS)
+#if defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)
+constexpr const char* kTraceVersion="r13-second-prefill-v1";
+#elif defined(R13_OUTPUT_BACKGROUND) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-output-background-v1";
 #elif defined(R13_EPILOGUE_ORDER) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-epilogue-order-v1";
@@ -178,6 +183,7 @@ struct Args {
   unsigned first_supply_events = 0;
   unsigned ready_observer = 0;
   unsigned epilogue_defer = 0;
+  unsigned second_prefill = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -217,9 +223,14 @@ struct Args {
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
       else if(key=="--ready-observer")ready_observer=std::stoul(v);
       else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
+      else if(key=="--second-prefill")second_prefill=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (second_prefill > 1) throw std::runtime_error("second-prefill must be 0 or 1");
+#ifndef R13_SECOND_PREFILL
+    if (second_prefill || mode == "check-second-prefill") throw std::runtime_error("second prefill requires experiment build");
+#endif
     if (epilogue_defer > 2) throw std::runtime_error("epilogue-defer must be 0, 1 or 2");
 #ifndef R13_OUTPUT_BACKGROUND
     if (epilogue_defer == 2) throw std::runtime_error("all-CTA deferral requires the background experiment build");
@@ -369,7 +380,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -462,6 +473,14 @@ int main(int argc, char** argv) {
       throw std::runtime_error("epilogue order requires the declared two-output cfg_b pair");
     unsigned normal_epilogue=0;
     CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&normal_epilogue,sizeof(normal_epilogue)));
+#endif
+#ifdef R13_SECOND_PREFILL
+    if ((o.second_prefill || o.mode == "check-second-prefill") &&
+        (V06_CFG != 1 || o.m != 2816 || o.n != 1536 || o.k != 4096 ||
+         ctas != 132 || o.swizzle != 1 || o.history_mode != "off" || o.epilogue_defer != 2))
+      throw std::runtime_error("second prefill requires the declared all-E0-deferred cfg_b pair");
+    unsigned no_second_prefill=0;
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_second_prefill,&no_second_prefill,sizeof(no_second_prefill)));
 #endif
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
@@ -659,6 +678,8 @@ int main(int argc, char** argv) {
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
+                << ",\"second_prefill\":" << o.second_prefill
+                << ",\"second_prefill_warmup\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
@@ -718,6 +739,9 @@ int main(int argc, char** argv) {
     auto set_target_epilogue = [&]() {
 #ifdef R13_EPILOGUE_ORDER
       CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&o.epilogue_defer,sizeof(o.epilogue_defer)));
+#endif
+#ifdef R13_SECOND_PREFILL
+      CUDA_CHECK(cudaMemcpyToSymbol(r13_second_prefill,&o.second_prefill,sizeof(o.second_prefill)));
 #endif
     };
     auto warm_sequence = [&]() {
@@ -798,6 +822,8 @@ int main(int argc, char** argv) {
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
+                << ",\"second_prefill\":" << o.second_prefill
+                << ",\"second_prefill_warmup\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
@@ -843,11 +869,18 @@ int main(int argc, char** argv) {
     if (o.mode == "setup")
       return 0;
 #if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order") {
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
+      if (o.mode == "check-second-prefill") set_target_epilogue();
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_SECOND_PREFILL
+        if (o.mode == "check-second-prefill") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_second_prefill,&value,sizeof(value)));
+          return;
+        }
+#endif
 #ifdef R13_EPILOGUE_ORDER
         if (o.mode == "check-epilogue-order") {
           CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&value,sizeof(value)));
@@ -890,7 +923,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }
