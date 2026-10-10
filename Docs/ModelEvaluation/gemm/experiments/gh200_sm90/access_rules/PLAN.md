@@ -57,7 +57,7 @@ V10冻结前，按配置、输入模式、窗口和工作量标注外推范围�
 
 ### 当前候选的机制约束
 
-- **R10/R13首次供给。** 739629确认prod→首对A/B copy发出标记约192 ns、起步干预后基本不变，consumer进入首次等待也未明显变晚；新增时间在issue_end→FIRST。同批开关保留交互方向，但短S存在观察扰动，不直接拟合精确价。下一最小观测保持first_supply_events=1及旧四条件，使用cfg_b静态scheduler空闲producer warp的一lane，对stage0/full barrier只读test_wait(phase0)，比较同binary观察开关。开始须在初始化同步后；记录test前最后失败和首次成功后的同域时间，循环内不写全局内存，有限轮询后统一写回。首测即成功只给上界；首次成功不晚于本次首FIRST才绑定第一代（以同SM clock64核对，短ns差注明分辨率）；否则保留为未证实/截尾，不筛掉进程、不用后续phase当first ready。先检查原S/L与交互是否被改写，再分解issue→观测ready区间与ready→FIRST；不改arrive、expect_tx或release，不将原try_wait hint改动代替独立观察，不扩延迟/形状扫描。
+- **R10/R13首次供给。** 739629把增长定位在copy发出标记之后。739645的独立ready观察保留原S+L交互方向，但仅10/40满足预定第一代绑定；30次成功检测区间均跨FIRST，观察早于issue，不能归咎晚启动，[依据](R13-async-retirement.md#ready-observer)。下一步固定四条件和观察开关，在thread128首输出、release.count()==0的stage0释放前加同SM端点；仅成功退出早于该戳才绑定首代事务。cluster1 empty需要128次到达，故该戳约束slot0再次取得，而不是full barrier首次phase转换。先检查端点/观察扰动，再分解issue→ready与ready→FIRST；不回填本批30次未知，不加密轮询或扩形状。
 - **R09调用历史。** 739590已比较16次同源/镜像源前序后的19次固定目标。镜像目标仍比早段慢11.05%，20/20成立；没有共同的大幅重置再追上轨迹。大幅变慢不要求此前通过GEMM重复目标A/B。批次SW功率封顶累计增加24.407 s，但不能定位timed调用；前序状态也未逐对完全匹配。保留可跨源数据延续的状态约束，先与服务周期分开检验，不直接拟合功率机制，也不再补一轮相同的源身份对照。
 - **R13事件位置。** 739578直接测到stage6相邻commit约514cycle和非零循环推进。共享循环常数的拟合仍不能解释早段与局部窗口；不继续叠参数。保留真实的WGMMA发射、commit、wait、release位置和跨输出初态，再检验可辨的结构。观察分支改变局部价，不能把27/90cycle当裸服务常数。
 - **R18/R19跨rank依赖。** 同cluster的首轮轨迹共同变化，源码也证明empty复用需伙伴consumer释放，full依赖伙伴B分片。下一边界递推要保留这些有限stage依赖；平均fill价格无法替代。P2最后cluster仍在冻结候选外，不能靠将伙伴加入集合修复。

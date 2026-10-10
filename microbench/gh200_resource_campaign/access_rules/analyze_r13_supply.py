@@ -2317,6 +2317,57 @@ def _first_supply_intervals(cta, events):
     return values
 
 
+def _ready_window_bounds(lower, upper, issue, first):
+    """Conservative endpoint intervals; a first successful poll has no lower bound."""
+    if lower is not None and upper is not None and lower>upper:
+        raise ValueError('ready lower bound exceeds upper bound')
+    return dict(ready=dict(lower=lower,upper=upper),
+        issue_to_ready=dict(lower=None if lower is None else lower-issue,
+            upper=None if upper is None else upper-issue),
+        ready_to_FIRST=dict(lower=None if upper is None else first-upper,
+            upper=None if lower is None else first-lower),
+        width=None if lower is None or upper is None else upper-lower)
+
+
+def _ready_bound_difference(left, right):
+    """right-minus-left without choosing a readiness point inside either interval."""
+    return dict(lower=None if right['lower'] is None or left['upper'] is None else right['lower']-left['upper'],
+        upper=None if right['upper'] is None or left['lower'] is None else right['upper']-left['lower'])
+
+
+def _ready_bound_summary(bounds):
+    """Median bounds keep censored repetitions as unbounded, rather than dropping them."""
+    import math
+    lows=[-math.inf if b['lower'] is None else b['lower'] for b in bounds]
+    highs=[math.inf if b['upper'] is None else b['upper'] for b in bounds]
+    lo,hi=statistics.median(lows),statistics.median(highs)
+    return dict(processes=len(bounds),both_finite=sum(b['lower'] is not None and b['upper'] is not None for b in bounds),
+        median_lower=lo if math.isfinite(lo) else None,median_upper=hi if math.isfinite(hi) else None,
+        process_lower=min(lows) if all(math.isfinite(v) for v in lows) else None,
+        process_upper=max(highs) if all(math.isfinite(v) for v in highs) else None)
+
+
+def _ready_call_bounds(cta, first_supply, observer):
+    """Bind only successful observations completed by FIRST in the local cycle domain."""
+    success=bool(observer['success']);bound=success and observer['exit_c']<=cta['tiles'][0][0]
+    if observer['sm']!=cta['sm']:raise ValueError('ready observer is not on the target SM')
+    status=('upper_only' if observer['tests']==1 else 'interval') if bound else ('after_first' if success else 'poll_limit')
+    if observer['first_generation']!=bound or observer['status']!=status:
+        raise ValueError('ready first-generation classification disagrees with clocks')
+    windows={};widths={}
+    for unit,suffix,first in (('cycles','c',cta['tiles'][0][0]),('ns','ns',cta['tiles_ns'][0][0])):
+        lower=observer['last_false_pre_'+suffix] if status=='interval' else None
+        upper=observer['exit_'+suffix] if bound else None
+        result=_ready_window_bounds(lower,upper,first_supply['issue_end_'+suffix],first)
+        windows['issue_to_ready_'+unit]=result['issue_to_ready']
+        windows['ready_to_FIRST_'+unit]=result['ready_to_FIRST']
+        wait=first_supply['wait_begin_'+suffix]
+        windows['wait_begin_to_ready_'+unit]=dict(lower=None if lower is None else lower-wait,
+            upper=None if upper is None else upper-wait)
+        widths[unit]=result['width']
+    return dict(status=status,first_generation=bound,tests=observer['tests'],bounds=windows,width=widths)
+
+
 def first_supply_diagnostics(root, output):
     """First-supply event decomposition, preceded by same-binary observer controls."""
     from analyze_r13_sm import select_attempts
@@ -2554,6 +2605,242 @@ def first_supply_diagnostics(root, output):
         'issue_end与FIRST之间包含异步事务完成、消费者进度和观测指令，不能直接当成裸TMA延迟。'
         '描述符预取、请求服务与调度初态尚需根据这些窗口判断可区分范围，不拟合新常数。','']
     (output/'R13-first-supply.md').write_text('\n'.join(lines))
+    return report
+
+
+def ready_observer_diagnostics(root, output):
+    """Read-only first-generation readiness bounds, retaining every censored process."""
+    from analyze_r13_sm import select_attempts
+    from analyze_r10 import _work_swap_pitch_windows, _producer_group_rank
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output);common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    controls=[r for r in rows.values() if r['set']=='ctrl']
+    ignored={'id','group','variants','ready_observer','producer_delay_ns','ldb'}
+    fixed={k:v for k,v in controls[0].items() if k not in ignored}
+    if len(controls)!=8 or any({k:v for k,v in r.items() if k not in ignored}!=fixed for r in controls):
+        raise ValueError('ready observer changed another factorial condition')
+    if {(r['ready_observer'],r['producer_delay_ns'],r['ldb']) for r in controls}!={
+        (o,d,p) for o in (0,1) for d in (0,512) for p in (3072,3088)}:
+        raise ValueError('ready observer factors incomplete')
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),process_min=min(values),process_max=max(values))
+    def summarize(values):return {k:span(v[k] for v in values) for k in values[0]}
+    def name(o,d,p):return f'r13_ready_o{o}_d{d}_p{p}'
+    calls={};plain={};targets={};processes=[];contexts={};hashes={};failures={};placements={};work=None
+    for row in rows.values():
+        case=row['id'];calls[case]={};plain[case]={};targets[case]={}
+        if row['set']=='ctrl':
+            if row['first_supply_events']!=1 or row['variants']!=(['dual'] if row['ready_observer'] else ['plain','dual']):
+                raise ValueError('ready observer changed first-supply events or variants')
+            setup=setups[case]
+            current=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+            if work is None:work=current
+            if work!=current:raise ValueError('ready observer changed software work')
+            contexts[case]=dict(row=row,setup=setup)
+        selected,failed,_=select_attempts(root,case,tuple(row['variants']));failures[case]=[r['path'] for r in failed]
+        for item in selected:
+            record=item['record'];trial=record['trial'];obs=replay(root,record,row)
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if record['variant']=='plain':plain[case][trial]=obs['elapsed_us'];continue
+            if [c['work'] for c in obs['ctas']]!=work:raise ValueError('ready observer actual work changed')
+            c=next(c for c in obs['ctas'] if c['cta']==55);first=obs['first_supply'];ready=obs['ready_observer']
+            if not first['enabled'] or (ready['cta'],int(ready['enabled']),ready['protocol'])!=(55,row['ready_observer'],'r13-ready-observer-v1'):
+                raise ValueError('ready observation identity changed')
+            intervals=_first_supply_intervals(c,first);delay=obs['producer_delay']
+            intervals.update(delay_cycles=delay['duration_cycles'],delay_ns=delay['duration_ns'],
+                end_to_prod_cycles=c['prod_c']-delay['end_c'],end_to_prod_ns=c['prod_ns']-delay['end_ns'])
+            mapping=tuple((q['cta'],q['sm']) for q in obs['ctas'])
+            mapping_id=hashlib.sha256(json.dumps(mapping).encode()).hexdigest();placements[mapping_id]=mapping
+            target=dict(case=case,trial=trial,observer=row['ready_observer'],delay_ns=row['producer_delay_ns'],
+                pitch_bytes=2*(row['ldb']-3072),sm=c['sm'],work=c['work'],intervals=intervals,
+                ready_observer=ready,first_supply=first,producer_delay=delay,elapsed_us=obs['elapsed_us'],
+                source_group=_producer_group_rank(obs['ctas']),placement=mapping_id,b_address=obs['b_address'])
+            if ready['enabled']:
+                target['ready_bounds']=_ready_call_bounds(c,first,ready)
+                first_c=c['tiles'][0][0]
+                target['observer_position']=dict(start_minus_issue_cycles=ready['start_c']-first['issue_end_c'],
+                    start_minus_wait_cycles=ready['start_c']-first['wait_begin_c'],
+                    start_minus_FIRST_cycles=ready['start_c']-first_c,exit_minus_FIRST_cycles=ready['exit_c']-first_c,
+                    last_false_pre_minus_FIRST_cycles=ready['last_false_pre_c']-first_c if ready['last_false_pre_c'] else None,
+                    last_false_pre_to_exit_cycles=ready['exit_c']-ready['last_false_pre_c'] if ready['last_false_pre_c'] else None)
+            calls[case][trial]=obs;targets[case][trial]=target;processes.append(target)
+        for variant in row['variants']:
+            if len(plain[case] if variant=='plain' else calls[case])!=10:
+                raise ValueError('ready observer requires ten processes without censor-based replacement')
+    if len({setups[r['id']]['gpu_uuid'] for r in controls})!=1:raise ValueError('ready controls span cards')
+
+    paired=[];paired_summaries=[];background=[];background_summaries=[]
+    def compare(kind,factors,left,right):
+        pair=right+' minus '+left;differences=[];ratios=[];elapsed=[];bound_rows=[];bg=defaultdict(list)
+        for trial in range(10):
+            a,b=targets[left][trial],targets[right][trial]
+            delta={k:b['intervals'][k]-a['intervals'][k] for k in a['intervals']};differences.append(delta)
+            relative={k:b['intervals'][k]/a['intervals'][k]-1 for k in ('S_cycles','L_cycles','S_ns','L_ns','entry_to_MAIN_END_ns')}
+            ratios.append(relative);elapsed.append(dict(delta_us=b['elapsed_us']-a['elapsed_us'],ratio=b['elapsed_us']/a['elapsed_us']-1))
+            entry=dict(kind=kind,pair=pair,**factors,trial=trial,delta=delta,relative=relative,elapsed=elapsed[-1])
+            if a['observer'] and b['observer']:
+                bounds={k:_ready_bound_difference(a['ready_bounds']['bounds'][k],b['ready_bounds']['bounds'][k])
+                    for k in a['ready_bounds']['bounds']}
+                entry['bounds']=bounds;bound_rows.append(bounds)
+            paired.append(entry)
+            first=[w for w in _work_swap_pitch_windows(calls[left][trial],calls[right][trial]) if w['j']==0]
+            for label,group in (('same_B_partners',[w for w in first if w['ni']==work[55][0][1] and w['cta']!=55]),
+                ('other130',[w for w in first if w['cta'] not in (55,91)]),('CTA91',[w for w in first if w['cta']==91])):
+                values={k:statistics.median(w[k] for w in group) for k in ('L_cycles_delta','L_ns_delta',
+                    'prefill_ns_delta','entry_relative_ns_delta','producer_relative_ns_delta','FIRST_relative_ns_delta','entry_to_MAIN_END_ns_delta')}
+                bg[label].append(values);background.append(dict(pair=pair,trial=trial,group=label,CTAs=len(group),delta=values))
+        result=dict(kind=kind,pair=pair,**factors,delta=summarize(differences),relative=summarize(ratios),elapsed=summarize(elapsed))
+        if bound_rows:result['bounds']={k:_ready_bound_summary([r[k] for r in bound_rows]) for k in bound_rows[0]}
+        paired_summaries.append(result)
+        for label,values in bg.items():background_summaries.append(dict(pair=pair,group=label,delta=summarize(values)))
+    for d in (0,512):
+        for p in (0,32):compare('observer',dict(delay_ns=d,pitch_bytes=p),name(0,d,p),name(1,d,p))
+    for o in (0,1):
+        for d in (0,512):compare('pitch',dict(observer=o,delay_ns=d),name(o,d,0),name(o,d,32))
+        for p in (0,32):compare('delay',dict(observer=o,pitch_bytes=p),name(o,0,p),name(o,512,p))
+    interactions=[];interaction_summaries=[]
+    for o in (0,1):
+        group=[];bound_rows=[]
+        for trial in range(10):
+            a=next(r for r in paired if r['kind']=='pitch' and r['observer']==o and r['delay_ns']==0 and r['trial']==trial)
+            b=next(r for r in paired if r['kind']=='pitch' and r['observer']==o and r['delay_ns']==512 and r['trial']==trial)
+            delta={k:b['delta'][k]-a['delta'][k] for k in a['delta']};group.append(delta)
+            entry=dict(observer=o,trial=trial,delta=delta)
+            if o:
+                entry['bounds']={k:_ready_bound_difference(a['bounds'][k],b['bounds'][k]) for k in a['bounds']}
+                bound_rows.append(entry['bounds'])
+            interactions.append(entry)
+        result=dict(observer=o,delta=summarize(group))
+        if bound_rows:result['bounds']={k:_ready_bound_summary([r[k] for r in bound_rows]) for k in bound_rows[0]}
+        interaction_summaries.append(result)
+    observer_interactions=[]
+    for trial in range(10):
+        a=next(r['delta'] for r in interactions if r['observer']==0 and r['trial']==trial)
+        b=next(r['delta'] for r in interactions if r['observer']==1 and r['trial']==trial)
+        observer_interactions.append(dict(trial=trial,delta={k:b[k]-a[k] for k in a}))
+    observer_interaction_summary=summarize([r['delta'] for r in observer_interactions])
+    cases=[];coverage=[];timing={}
+    for case,records in targets.items():
+        if not records:continue
+        values=list(records.values());first=values[0]
+        cases.append(dict(case=case,observer=first['observer'],delay_ns=first['delay_ns'],pitch_bytes=first['pitch_bytes'],
+            intervals=summarize([r['intervals'] for r in values]),sms=sorted({r['sm'] for r in values}),
+            ranks={event:summarize([{k:r['source_group'][event][k] for k in ('rank_min','rank_max','target_minus_peer_median_ns')}
+                for r in values]) for event in ('entry','producer','FIRST')}))
+        base=name(0,first['delay_ns'],first['pitch_bytes'])
+        timing[case]=dict(dual_us=span(r['elapsed_us'] for r in values),observer0_plain_us=span(plain[base].values()),
+            dual_relative_to_observer0_plain=span(records[t]['elapsed_us']/plain[base][t]-1 for t in range(10)))
+        if first['observer']:
+            bounded=[r['ready_bounds'] for r in values]
+            widths={unit:[r['width'][unit] for r in bounded if r['width'][unit] is not None] for unit in ('cycles','ns')}
+            coverage.append(dict(case=case,processes=len(values),status_counts=dict(Counter(r['status'] for r in bounded)),
+                tests=span(r['tests'] for r in bounded),width={u:dict(finite_processes=len(w),values=w,summary=span(w) if w else None) for u,w in widths.items()},
+                bounds={k:_ready_bound_summary([r['bounds'][k] for r in bounded]) for k in bounded[0]['bounds']}))
+    enabled=[r for r in processes if r['observer']]
+    total_coverage=dict(processes=len(enabled),status_counts=dict(Counter(r['ready_bounds']['status'] for r in enabled)))
+    late=[r for r in enabled if r['ready_bounds']['status']=='after_first']
+    late_false=[r for r in late if r['observer_position']['last_false_pre_minus_FIRST_cycles'] is not None]
+    observer_positions=dict(enabled_processes=len(enabled),start_before_issue=sum(r['observer_position']['start_minus_issue_cycles']<0 for r in enabled),
+        tests=span(r['ready_observer']['tests'] for r in enabled),
+        all_start_minus_issue_cycles=span(r['observer_position']['start_minus_issue_cycles'] for r in enabled),
+        late_processes=len(late),late_with_false_endpoint=len(late_false),
+        late_intervals_crossing_FIRST=sum(r['observer_position']['last_false_pre_minus_FIRST_cycles']<0<r['observer_position']['exit_minus_FIRST_cycles'] for r in late_false),
+        late_exit_minus_FIRST_cycles=span(r['observer_position']['exit_minus_FIRST_cycles'] for r in late) if late else None,
+        late_last_false_pre_minus_FIRST_cycles=span(r['observer_position']['last_false_pre_minus_FIRST_cycles'] for r in late_false) if late_false else None,
+        late_last_false_pre_to_exit_cycles=span(r['observer_position']['last_false_pre_to_exit_cycles'] for r in late_false) if late_false else None,
+        interpretation='This locates the observation interval relative to FIRST; after_first cases remain censored under the original binding rule.')
+    previous=root.parent/'20261010-R13-first-supply';references={}
+    if read_json(previous/'environment.json')['gpu']!=read_json(root/'environment.json')['gpu']:
+        raise ValueError('ready reference comparison changed card')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        case=row['id'];old=[]
+        for item in select_attempts(previous,case,('plain',))[0]:
+            old.append(replay(previous,item['record'],row)['elapsed_us'])
+            for path in (previous/item['path'],previous/item['record']['raw']):hashes[str(path)]=common.sha(path)
+        if len(old)!=10:raise ValueError('ready historical reference incomplete')
+        references[case]=dict(current=span(plain[case].values()),previous=span(old),median_change=statistics.median(plain[case].values())/statistics.median(old)-1)
+    for run in (root,previous):
+        for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json'):
+            path=run/filename;hashes[str(path)]=common.sha(path)
+    for path in [root/'build/resources.json',root/'build/sass_hashes.json',*sorted(root.glob('correctness-*.jsonl'))]:hashes[str(path)]=common.sha(path)
+    origins=[dict(trial=t,by_case={r['case']:r['b_address']['b_buffer_ptr'] for r in processes if r['trial']==t}) for t in range(10)]
+    report=dict(scope='CTA55 first-output first-generation readiness bounds from an independent read-only stage0 observer. '
+        'Every enabled process, including censored results, remains in the denominator and interval statistics.',
+        root=str(root),environment=read_json(root/'environment.json'),contexts=contexts,processes=processes,case_summaries=cases,
+        total_coverage=total_coverage,coverage=coverage,observer_positions=observer_positions,
+        paired_processes=paired,paired_summaries=paired_summaries,
+        interaction_processes=interactions,interaction_summaries=interaction_summaries,
+        observer_interaction_change_processes=observer_interactions,observer_interaction_change=observer_interaction_summary,
+        background_processes=background,background_summaries=background_summaries,timing=timing,references=references,
+        placement_maps=placements,work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest(),
+        virtual_origins=dict(per_trial=origins,same_origin_trials=[r['trial'] for r in origins if len(set(r['by_case'].values()))==1]),
+        resources=read_json(root/'build/resources.json'),sass_hashes=read_json(root/'build/sass_hashes.json'),
+        failed_attempts=failures,input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)),
+        interpretation=['Same-binary observer1-minus-observer0 S/L/complete-window and pitch interactions precede any readiness attribution.',
+            'Only success with exit_c<=FIRST_c binds the first stage generation. after_first and poll_limit are censored, not errors to retry.',
+            'Last-false pre-test timestamp is a lower bound; successful exit timestamp is an upper bound. First-test success supplies only an upper bound.',
+            'Censored bounds are unbounded (JSON null), retained in median bounds. Finite widths are separately labeled by coverage.',
+            'Clock cycles are primary. Adjacent per-role globaltimer reads are quantized at 32ns; negative ns residuals are retained, not rejected.',
+            'The measured event is test_wait visibility to the observer thread, not a direct DRAM/TMA completion timestamp.',
+            'Condition changes subtract intervals conservatively; no midpoint or per-process constant assigns uncertainty to ready versus consumer progress.',
+            'issue-to-ready and ready-to-FIRST share a boundary and are complementary. Their independent extrema must not be added as independent errors.',
+            'Independent processes remain repetitions; CTA backgrounds and common virtual origins do not create additional samples or establish common physical pages.',
+            '739629 plain references only contextualize cross-batch card/binary changes; they are not same-binary observer error.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R13-ready-observer.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(v):return '未知' if v is None else f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]'
+    def bound_cell(v):
+        a='未知' if v['median_lower'] is None else f'{v["median_lower"]:.1f}'
+        b='未知' if v['median_upper'] is None else f'{v["median_upper"]:.1f}'
+        return f'[{a}, {b}]'
+    lines=['# CTA55独立ready观察','',
+        '先检查同一binary观察开关的扰动；所有40个启用进程保留。仅成功且exit_c≤FIRST_c绑定第一代。'
+        '区间按端点传播，不取中点；条件中位界包含censored的未知区间。','',
+        '| 观察器1−0 | ΔS ns | ΔL ns | Δ(entry→MAIN_END) ns | 整调用变化 |','|---|---:|---:|---:|---:|']
+    for r in paired_summaries:
+        if r['kind']!='observer':continue
+        lines.append(f'| delay{r["delay_ns"]}, B+{r["pitch_bytes"]} B | '+' | '.join(cell(r['delta'][k]) for k in
+            ('S_ns','L_ns','entry_to_MAIN_END_ns'))+f' | {100*r["elapsed"]["ratio"]["median"]:+.2f}% |')
+    lines+=['','| 条件 | 全部进程与状态 | 有限宽度 cycles | issue→ready 中位界 cycles | ready→FIRST 中位界 cycles |',
+        '|---|---|---:|---:|---:|']
+    for r in coverage:
+        width=r['width']['cycles'];w=cell(width['summary']) if width['summary'] else '未知'
+        lines.append(f'| {r["case"]} | {r["processes"]}: {r["status_counts"]} | {width["finite_processes"]}次: {w} | '
+            f'{bound_cell(r["bounds"]["issue_to_ready_cycles"])} | {bound_cell(r["bounds"]["ready_to_FIRST_cycles"])} |')
+    p=observer_positions
+    lines+=['',f'{p["start_before_issue"]}/{p["enabled_processes"]}个观察器在issue_end前已启动，'
+        f'start−issue_end为{cell(p["all_start_minus_issue_cycles"])} cycles；每进程测试次数为{cell(p["tests"])}。']
+    if late:
+        lines+=[f'{p["late_intervals_crossing_FIRST"]}/{p["late_processes"]}个after_first的最后失败到成功退出区间跨过FIRST。'
+            f'last_false_pre−FIRST为{cell(p["late_last_false_pre_minus_FIRST_cycles"])} cycles，'
+            f'exit−FIRST为{cell(p["late_exit_minus_FIRST_cycles"])} cycles，'
+            f'区间宽度为{cell(p["late_last_false_pre_to_exit_cycles"])} cycles。'
+            '这定位了成功退出读表边界跨FIRST的覆盖损失；不将这些进程回填为第一代ready。']
+    lines+=['','| 观察器1中直接延迟512−0 | Δ(issue→ready) 中位界 cycles | Δ(ready→FIRST) 中位界 cycles | Δ(issue→FIRST) cycles |',
+        '|---|---:|---:|---:|']
+    for r in paired_summaries:
+        if r['kind']!='delay' or not r['observer']:continue
+        lines.append(f'| B+{r["pitch_bytes"]} B | {bound_cell(r["bounds"]["issue_to_ready_cycles"])} | '
+            f'{bound_cell(r["bounds"]["ready_to_FIRST_cycles"])} | {cell(r["delta"]["issue_to_FIRST_cycles"])} |')
+    lines+=['','| delay×pitch交互 | 观察器0 ns | 观察器1 ns |','|---|---:|---:|']
+    for k in ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
+        lines.append(f'| {k} | '+' | '.join(cell(r['delta'][k]) for r in interaction_summaries)+' |')
+    lines+=['','| 交互的观察器1−0变化 | ns中位与十进程范围 |','|---|---:|']
+    for k in ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
+        lines.append(f'| {k} | {cell(observer_interaction_summary[k])} |')
+    lines+=['','| plain参照 | 本批中位 µs | 739629中位 µs | 变化 |','|---|---:|---:|---:|']
+    for case,r in references.items():
+        lines.append(f'| {case} | {r["current"]["median"]:.3f} | {r["previous"]["median"]:.3f} | {100*r["median_change"]:+.2f}% |')
+    lines+=['','cycles为主要区间；ns受32ns量化与相邻读表影响，可出现有符号的边界差。'
+        '首测成功只有上界，poll_limit/after_first不生成ready上界，也不删除或重测。'
+        'JSON保留所有逐进程端点、覆盖、区间传播、同B17伙伴/其他130CTA背景、SM/work/VA和原始文件SHA。','']
+    (output/'R13-ready-observer.md').write_text('\n'.join(lines))
     return report
 
 

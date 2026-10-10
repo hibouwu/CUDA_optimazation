@@ -7,6 +7,9 @@
 // Experimental initial-work permutation; every later advance keeps the same stride.
 __device__ __constant__ int r10_work_swap55_91;
 #endif
+#ifdef R13_READY_OBSERVER
+__device__ __constant__ unsigned r13_ready_observer;
+#endif
 #ifdef R13_FIRST_SUPPLY
 __device__ __constant__ unsigned r13_first_supply_events;
 #endif
@@ -164,6 +167,7 @@ struct Args {
   int work_swap55_91 = 0;
   unsigned producer_delay_ns = 0;
   unsigned first_supply_events = 0;
+  unsigned ready_observer = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -201,9 +205,15 @@ struct Args {
       else if(key=="--seed")seed=std::stoi(v);
       else if(key=="--work-swap55-91")work_swap55_91=std::stoi(v);
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
+      else if(key=="--ready-observer")ready_observer=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (ready_observer > 1) throw std::runtime_error("ready-observer must be 0 or 1");
+#ifndef R13_READY_OBSERVER
+    if (ready_observer || mode == "check-ready-observer") throw std::runtime_error("ready observer requires experiment build");
+#endif
+    if (ready_observer && !first_supply_events) throw std::runtime_error("ready observer requires first supply endpoints");
     if (first_supply_events > 1) throw std::runtime_error("first-supply-events must be 0 or 1");
 #ifndef R13_FIRST_SUPPLY
     if (first_supply_events) throw std::runtime_error("first supply events require experiment build");
@@ -341,7 +351,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -441,7 +451,7 @@ int main(int argc, char** argv) {
 #endif
 
 #ifdef R10_PRODUCER_DELAY
-    if ((o.producer_delay_ns || o.first_supply_events || o.mode == "check-producer-delay" || o.mode == "check-first-supply") &&
+    if ((o.producer_delay_ns || o.first_supply_events || o.ready_observer || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer") &&
         (V06_CFG != 1 || o.m != 2304 || o.n != 3072 || o.k != 1024 ||
          ctas != 132 || o.swizzle != 1 || o.work_swap55_91 || std::string(resolved_raster) != "along_m"))
       throw std::runtime_error("producer delay is only the declared cfg_b no-swap pair");
@@ -522,7 +532,12 @@ int main(int argc, char** argv) {
 #endif
 #ifdef R10_PRODUCER_DELAY
 #ifdef R13_FIRST_SUPPLY
+#ifdef R13_READY_OBSERVER
+    DeviceBuffer<uint64_t> delay_trace(16);
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_ready_observer,&o.ready_observer,sizeof(unsigned)));
+#else
     DeviceBuffer<uint64_t> delay_trace(8);
+#endif
     CUDA_CHECK(cudaMemcpyToSymbol(r13_first_supply_events,&o.first_supply_events,sizeof(unsigned)));
 #else
     DeviceBuffer<uint64_t> delay_trace(4);
@@ -585,6 +600,10 @@ int main(int argc, char** argv) {
       std::vector<uint64_t> delay_events(4);
       CUDA_CHECK(cudaMemcpy(delay_events.data(),delay_trace.pointer,32,cudaMemcpyDeviceToHost));
 #ifdef R13_FIRST_SUPPLY
+#ifdef R13_READY_OBSERVER
+      std::vector<uint64_t> ready_events(8);
+      CUDA_CHECK(cudaMemcpy(ready_events.data(),delay_trace.pointer+8,64,cudaMemcpyDeviceToHost));
+#endif
       std::vector<uint64_t> first_events(4);
       CUDA_CHECK(cudaMemcpy(first_events.data(),delay_trace.pointer+4,32,cudaMemcpyDeviceToHost));
 #endif
@@ -607,7 +626,11 @@ int main(int argc, char** argv) {
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
-                << ",\"first_supply_scratch_bytes\":64"
+                << ",\"first_supply_scratch_bytes\":" << delay_trace.count*8
+#ifdef R13_READY_OBSERVER
+                << ",\"ready_observer\":" << o.ready_observer
+                << ",\"ready_observer_protocol\":\"r13-ready-observer-v1\""
+#endif
 #endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns
 #ifdef R10_PRODUCER_DELAY
@@ -626,6 +649,9 @@ int main(int argc, char** argv) {
       print_u64("producer_delay_trace",delay_events);
 #ifdef R13_FIRST_SUPPLY
       print_u64("first_supply_trace",first_events);
+#ifdef R13_READY_OBSERVER
+      print_u64("ready_observer_trace",ready_events);
+#endif
 #endif
 #endif
       if (history_enabled) {
@@ -723,7 +749,11 @@ int main(int argc, char** argv) {
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
-                << ",\"first_supply_scratch_bytes\":64"
+                << ",\"first_supply_scratch_bytes\":" << delay_trace.count*8
+#ifdef R13_READY_OBSERVER
+                << ",\"ready_observer\":" << o.ready_observer
+                << ",\"ready_observer_protocol\":\"r13-ready-observer-v1\""
+#endif
 #endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns
 #ifdef R10_PRODUCER_DELAY
@@ -757,11 +787,17 @@ int main(int argc, char** argv) {
     if (o.mode == "setup")
       return 0;
 #if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply") {
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_READY_OBSERVER
+        if (o.mode == "check-ready-observer") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_ready_observer,&value,sizeof(value)));
+          return;
+        }
+#endif
 #ifdef R13_FIRST_SUPPLY
         if (o.mode == "check-first-supply") {
           CUDA_CHECK(cudaMemcpyToSymbol(r13_first_supply_events, &value, sizeof(value)));
@@ -792,7 +828,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

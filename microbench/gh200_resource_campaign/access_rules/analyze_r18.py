@@ -112,6 +112,31 @@ def decode_stage_sparse(setup, call):
 
 
 
+def decode_ready_observer(values, enabled, cta):
+    """Read-only phase observer; late successes and polling limits are retained."""
+    if len(values)!=8 or (not enabled and any(values)):
+        raise ValueError('ready observation record length or disabled contents')
+    result=dict(cta=55,enabled=bool(enabled),protocol='r13-ready-observer-v1')
+    if not enabled:return result
+    sc,sn,lc,ln,ec,en,tests,flags=values
+    success=bool(flags&1);sm=(flags>>1)-1
+    if sm!=cta['sm'] or not 1<=tests<=4096 or not all((sc,sn,ec,en)):
+        raise ValueError('ready observer SM, count or missing endpoints')
+    if not (cta['entry_c']<=sc<=ec and cta['entry_ns']<=sn<=en):
+        raise ValueError('ready observer endpoints precede this invocation')
+    if success and tests==1:
+        if lc or ln:raise ValueError('first-test success has a false endpoint')
+    elif not (sc<=lc<=ec and sn<=ln<=en):
+        raise ValueError('missing or unordered false-test endpoint')
+    if not success and tests!=4096:raise ValueError('polling stopped before its limit without success')
+    first_generation=success and ec<=cta['tiles'][0][0]
+    status=('upper_only' if tests==1 else 'interval') if first_generation else ('after_first' if success else 'poll_limit')
+    result.update(start_c=sc,start_ns=sn,last_false_pre_c=lc,last_false_pre_ns=ln,
+        exit_c=ec,exit_ns=en,tests=tests,success=success,sm=sm,
+        first_generation=first_generation,status=status)
+    return result
+
+
 def validate_warmup(setup, call, row):
     """Legacy adaptive convergence, or an explicitly fixed common history."""
     if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
@@ -122,8 +147,12 @@ def validate_warmup(setup, call, row):
                 raise ValueError('producer delay identity changed')
     if 'first_supply_events' in row:
         for event in (setup,call):
-            if event.get('first_supply_events')!=row['first_supply_events'] or event.get('first_supply_protocol')!='r13-first-supply-v1' or event.get('first_supply_scratch_bytes')!=64:
+            if event.get('first_supply_events')!=row['first_supply_events'] or event.get('first_supply_protocol')!='r13-first-supply-v1' or event.get('first_supply_scratch_bytes')!=(128 if 'ready_observer' in row else 64):
                 raise ValueError('first supply observation identity changed')
+    if 'ready_observer' in row:
+        for event in (setup,call):
+            if event.get('ready_observer')!=row['ready_observer'] or event.get('ready_observer_protocol')!='r13-ready-observer-v1':
+                raise ValueError('ready observation identity changed')
     policy = row.get('warmup_policy','adaptive')
     if policy not in ('adaptive','common-sw1-16'):
         raise ValueError('unknown warmup policy')
@@ -400,6 +429,8 @@ def replay(root,record,row,retain_roles=False):
                 raise ValueError('first consumer wait marker is outside its local interval')
             first.update(issue_end_c=ic,issue_end_ns=ins,wait_begin_c=wc,wait_begin_ns=wns)
         result['first_supply']=first
+    if 'ready_observer' in row:
+        result['ready_observer']=decode_ready_observer(call.get('ready_observer_trace',[]),row['ready_observer'],result['ctas'][55])
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
     tm=256 if row['config'].startswith('cfg_c') else 128;tn=128
     required={(i,j) for i in range(model.cdiv(row['m'],tm)) for j in range(model.cdiv(row['n'],tn))}

@@ -50,6 +50,40 @@ __device__ __forceinline__ void r13_first_issue_stamp() {
 }
 #endif
 
+#ifdef R13_READY_OBSERVER
+// Read-only phase-0 observation in the otherwise idle static-scheduler warp.
+// Test timestamps are bounds: false uses the pre-test read, true the exit read.
+__device__ __forceinline__ void r13_observe_ready(unsigned bar) {
+  if (threadIdx.x!=32 || blockIdx.x!=55 || blockIdx.y || blockIdx.z || !r13_ready_observer) return;
+  uint64_t sc,sn,lc,ln,ec,en;
+  unsigned success,tests,sm;
+  asm volatile(
+    "{ .reg .pred ready,again; .reg .u32 addr,n,ok;\n"
+    "  .reg .u64 sc,sn,lc,ln,ec,en,pc,pn;\n"
+    "  mov.u32 addr,%8; mov.u32 n,0; mov.u32 ok,0;\n"
+    "  mov.u64 lc,0; mov.u64 ln,0;\n"
+    "  mov.u64 sc,%%clock64; mov.u64 sn,%%globaltimer;\n"
+    "R13_READY_LOOP:\n"
+    "  mov.u64 pc,%%clock64; mov.u64 pn,%%globaltimer;\n"
+    "  mbarrier.test_wait.parity.acquire.cta.shared::cta.b64 ready,[addr],0;\n"
+    "  add.u32 n,n,1; @ready bra R13_READY_SUCCESS;\n"
+    "  mov.u64 lc,pc; mov.u64 ln,pn;\n"
+    "  setp.lt.u32 again,n,4096; @again bra R13_READY_LOOP;\n"
+    "  bra R13_READY_DONE;\n"
+    "R13_READY_SUCCESS: mov.u32 ok,1;\n"
+    "R13_READY_DONE:\n"
+    "  mov.u64 ec,%%clock64; mov.u64 en,%%globaltimer;\n"
+    "  mov.u64 %0,sc; mov.u64 %1,sn; mov.u64 %2,lc; mov.u64 %3,ln;\n"
+    "  mov.u64 %4,ec; mov.u64 %5,en; mov.u32 %6,ok; mov.u32 %7,n; }\n"
+    : "=l"(sc),"=l"(sn),"=l"(lc),"=l"(ln),"=l"(ec),"=l"(en),"=r"(success),"=r"(tests)
+    : "r"(bar) : "memory");
+  asm volatile("mov.u32 %0, %%smid;" : "=r"(sm));
+  auto out=r10_producer_delay_trace+8;
+  out[0]=sc;out[1]=sn;out[2]=lc;out[3]=ln;out[4]=ec;out[5]=en;
+  out[6]=tests;out[7]=uint64_t(success)|(uint64_t(sm+1)<<1);
+}
+#endif
+
 #if defined(R13_STAGE_SPARSE) || defined(R13_STAGE_PROGRESS)
 // Same 784-word allocation as ordinary plain. Only CTA0 writes selected fields.
 // Word 10 remains the existing overflow sentinel. Event values are same-SM clocks.

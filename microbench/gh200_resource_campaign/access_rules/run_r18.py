@@ -222,6 +222,15 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
     if first_supply:
         if not producer_delay or not dual_clock:raise ValueError('first supply uses the declared delay/dual experiment')
         make_first_supply_overlay(source)
+    ready_observer = any('ready_observer' in row for row in rows)
+    if ready_observer:
+        if not first_supply:raise ValueError('ready observer requires first supply markers')
+        path=source/'overlay'/common.PING;text=path.read_text()
+        site='        } \n      } // Scheduler Producer Warp End'
+        text=common.insert_once(text,site,
+            '        } else {\n'
+            '          ::r13_observe_ready(cute::cast_smem_ptr_to_uint(&shared_storage.pipelines.mainloop.full_barrier_[0]));\n',after=False)
+        path.write_text(text)
     if stage_sparse and stage_progress:raise ValueError("choose one stage observation protocol")
     if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
@@ -243,6 +252,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if work_swap:cmd.append('-DR10_WORK_SWAP')
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
+            if ready_observer:cmd.append('-DR13_READY_OBSERVER')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
             if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
@@ -261,7 +271,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 

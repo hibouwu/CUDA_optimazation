@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。[R10起步干预](R10-layout-cache.md#producer-delay)还显示，固定工作与SM后只推迟producer，会改变S+L并放大起点时移，固定局部时间线不充分。首次供给分解进一步把S的增长定位在copy发出标记之后，尚未分开异步完成与consumer等待返回。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
+当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。[R10起步干预](R10-layout-cache.md#producer-delay)还显示，固定工作与SM后只推迟producer，会改变S+L并放大起点时移，固定局部时间线不充分。首次供给分解把S的增长定位在copy发出标记之后；独立ready观察仅10/40次满足预定第一代绑定，其余成功边界跨FIRST，尚不能分配异步完成与consumer返回的代价。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
 
 ## 作业与分析索引
 
@@ -18,6 +18,7 @@
 | 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
 | consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
+| 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 
 ## 序列供给：消费者与在途组织会改变结果
 
@@ -284,7 +285,28 @@ progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为
 
 观察保持相同64 B侧缓冲，关闭时plain/dual、开启时dual，各十进程，加两个plain参照，共140成功进程、无失败。10次独立全输出比较均7077888元素逐位相同。两个二进制均168寄存器、215040 B SMEM、16 HGMMA、零spill；新增打点的整调用变化中位−0.17%～+0.76%，不能替代上述局部扰动检查。两参照相对739619变化+0.85%/+0.07%，只作跨批背景，不估计本批观察误差。80个dual进程的实际工作/SM保持一致，40个延迟进程的producer/FIRST均在同源组第18位；跨进程VA不当同PA。
 
-下一步才比较独立full-barrier观察与consumer返回：使用只读、非挂起的test_wait取得首次观测就绪上界，同binary保留观察开关与扰动对照。首测即成功只给上界；最后失败的test前时刻仅在第一代绑定成立时作下界，以同SM clock64核对第一代，短ns差注明分辨率；若首次成功晚于首FIRST，须保留为代际未证实，不能把后续phase成功当首次ready。不改变arrive、事务计数或release，也不把轮询写成无扰动硬件时间戳。非阻塞test与可能挂起的try、以及phase跟踪要求，按[CUDA 12.9 PTX 8.8语义](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)执行。
+<a id="ready-observer"></a>
+
+## 独立ready观察：主要限制是成功边界跨FIRST
+
+739645固定上一批四个几何/延迟/行距条件和首次供给打点，只在CTA55的空闲warp1/thread32添加只读phase0 `test_wait`。每次test前读cycle/ns，保留最后失败前戳，成功或4096次上限后读退出戳，循环内不写全局内存。不改变arrive、事务计数或release。非挂起test及phase语义按[CUDA 12.9 PTX 8.8](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)；SASS中的循环为`0x61b0–0x6250`，含`SYNCS.PHASECHK.TRANS64`，无TRYWAIT/STG。
+
+同binary观察器1−0使首输出完整窗口变化中位分别为0、−48、−32、+112 ns，十进程范围均跨零；整调用中位−1.12%～+0.55%，单对最大绝对3.71%。延迟×行距的L交互在关闭/开启时为−528〔−960,−416〕/−592〔−800,−288〕ns，S+L为−592〔−768,−384〕/−416〔−576,−320〕ns，各十次均负。主要效应保留，但S+L交互的观察器1−0变化为+176〔−128,+288〕ns，不声称幅度不变。
+
+按采样前规则，仅成功后的`exit_c≤FIRST_c`绑定第一代；最后失败前戳和成功退出戳形成区间。全部40个开启进程均成功、未达到轮询上限，但覆盖如下：
+
+| 条件 | 可绑定/全部 | 成功晚于FIRST | 可绑定区间宽度中位 cycle |
+|---|---:|---:|---:|
+| delay0，B0 | 4/10 | 6/10 | 117.5 |
+| delay0，B32 | 2/10 | 8/10 | 116 |
+| delay512，B0 | 2/10 | 8/10 | 122.5 |
+| delay512，B32 | 2/10 | 8/10 | 116 |
+
+40次观察都在issue标记前633～1706 cycle开始，测试26～66次，排除“观察器大多启动太晚”。30个晚成功的最后失败前戳在FIRST前74～122 cycle，退出只晚2～55 cycle，其117～129 cycle的成功检测区间均跨FIRST。这是检测/退出边界的分辨限制，不是读到了几轮以后的已证实结果。仍按原规则保留30次代际未证实，四条件的总体ready中位界均未知；不能用另10次的窄区间替代全部进程。
+
+开启观察时，延迟512−0的issue→FIRST仍增加828.5〔421,1337〕/1147〔998,1335〕cycle，prod→issue仅−3/−2.5 cycle。因此此前定位仍成立；目前不能确定新增量发生于异步完成、就绪可见性还是consumer返回。所有140个进程成功、无失败，10次全输出逐位相同；128 B侧缓冲两模式一致，两binary均168寄存器、215040 B SMEM、16 HGMMA、零spill。两plain参照相对739629为−1.52%/−0.72%，只作跨批背景；全部工作/SM映射一致，只有trial7八条件VA原点相同，不推定PA一致。
+
+下一步应取得槽复用边界，而不是增加轮询压力。cfg_b的cluster1 empty barrier要求128个consumer到达；thread128首个stage0 `consumer_release`尚未发出时，producer不能再次取得slot0。因此下一配对在首输出且release.count()==0的该release之前增加同SM戳，成功退出早于此戳才绑定首代事务，允许晚于FIRST。这里限制的是slot0复用，不是首次完成时已经自动发生的full-barrier phase转换。保留同binary观察开关并检查新增端点的扰动；不回填本批30个未知，不改原评分，不扩大几何。
 
 ## 复核入口
 
