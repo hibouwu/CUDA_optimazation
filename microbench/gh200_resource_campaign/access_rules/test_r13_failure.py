@@ -174,6 +174,36 @@ class PairedFailureTests(unittest.TestCase):
 
 
 class AdmissionStageTests(unittest.TestCase):
+    def test_wide_retirement_inequalities_allow_different_ready_histories(self):
+        from supply_model import admission_stage_events
+        import random
+        rng=random.Random(739718);active=0
+        for _ in range(200):
+            c=rng.uniform(100,700);g=rng.uniform(0,c);q=rng.uniform(0,3*c)
+            lag=rng.uniform(0,2*c);w=rng.uniform(0,70);r=rng.uniform(0,100)
+            traces=[];advances=[]
+            # Sharing service parameters does not require sharing readiness
+            # or entry history across the two independent stage processes.
+            for stage in (4,6):
+                h=rng.uniform(0,160);advances.append(h)
+                traces.append(admission_stage_events(64,stage,rng.uniform(0,2*c),
+                    rng.uniform(0,5*c),q,lag,service_cycles=c,issue_floor=g,
+                    wait_overhead=w,loop_advance=h,return_overhead=r,
+                    reuse_delay=rng.uniform(0,c),handoff_delay=rng.uniform(0,5*c),
+                    producer_boundary_delay=rng.uniform(0,20*c)))
+            a,b=traces;G=max(g,c-q);L=lag-G
+            C,E,W,H=(a[k] for k in ('commits','service_frontier','wait1_return','consumer_available'))
+            X=W[80]-H[80];Y=W[80]-C[80]
+            Z=b['mma_returns'][1]-b['commits'][81]
+            self.assertGreaterEqual(Z+1e-7,46*c+L+w+r)
+            self.assertGreaterEqual(Z+1e-7,45*c)
+            if Y>w+1e-7:
+                active+=1
+                self.assertLessEqual(X,c+max(0,L)-advances[0]+1e-7)
+                if X>c-advances[0]:
+                    self.assertGreaterEqual(Z-X+1e-7,45*c+advances[0]+w+r)
+        self.assertGreater(active,20)
+
     def test_producer_boundary_gap_has_only_a_single_commit_impulse(self):
         from supply_model import admission_stage_events,stage_reuse_window
         import random

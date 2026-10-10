@@ -49,6 +49,24 @@ I=A+J; E=J+R; max(DONE)−M=W+J+R
 
 旧[V08F D-only对照](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)保留为弱干预：旧099卡、stage6、2304×3072×1024、ldd3072→3080，后续L仅+0.423%、完整时间+0.226%；它没有当前早段端点，也未固定输入VA，不能替代本次顺序对照。E0末端沿用store_tail边界，不是全局D可见完成。
 
+
+<a id="stage-output-context"></a>
+
+### 整卡首输出重叠集中在第二主循环的前段
+
+复用739095的stage4/6各10个dual进程，所有132 CTA均有两tile的直接globaltimer端点。下表以每次调用的CTA0第二L为窗口，统计其它131 CTA首输出PERMIT→DONE；数值为进程中位，不与739717的progress提交点拼接。
+
+| stage | CTA0第二L，µs | L入口时其它E0活跃数 | 其它E0至少一个活跃的覆盖比例 | 整段平均并发数 | FIRST1−本CTA E0开始，ns |
+|---|---:|---:|---:|---:|---:|
+| 4 | 22.592 | 107.5 | 18.95% | 17.99 | +208 |
+| 6 | 19.440 | 13.5 | 27.35% | 31.17 | −352 |
+
+20次都曾同时有其它131个E0活跃，但这些记录窗口在L后半均已结束。stage6累计重叠更多、L却更短，不能直接按重叠面积给stage4加价；两个stage进入该背景的相位和预取余量不同。stage4的FIRST1有8/10次严格晚于本CTA E0开始、1/10同一记录时刻；stage6十次均早于。端点差落在32ns格点，同值不证明严格同时。[逐进程上下文及端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-output-context.md)。
+
+源码的输入复用依赖也给出不同预取机会：第二输出首输入group64依赖前输出group(64−S)的槽，由commit(65−S)之后的wait1释放；到前输出末次commit63，stage4/6分别相隔2/4个group。这个结构关系不能直接换成2c/4c的就绪时间，全部线程release、重新发出请求和服务完成仍未定值。
+
+下一候选应同时表达到达相位、有限输入槽和并发背景。这里仅确认时间上下文，未证明某种资源争用；E0记录结束也不表示全局D写已经完成，不据此新增一个early或并发价格。
+
 ## 周期变短是否等于输出服务变快？
 
 <a id="v08-输出窗口离线复核2026-10-09"></a>

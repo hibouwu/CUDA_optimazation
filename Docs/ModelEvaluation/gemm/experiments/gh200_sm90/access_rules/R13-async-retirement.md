@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。输出顺序对照解释了stage4的一部分早段变化，当前固定服务子类仍缺约1511 cycle；任意非负、一次性的producer输出边界间隙也不能突破该子类的早段上界。槽位/phase没有发现错位。更宽的提交/退休分支尚未被排除，下一步联立首段、wait1和后段约束，不直接添加状态或early专属常数。
+当前条件供给尚未通过V09的行距与stage迁移。原固定服务子类的早段缺口不能靠一次性producer间隙修复；更宽分支只得到局部必要约束，完整代表轨迹仍未确定。逐调用联合端点在c≥512、各窗口允许±20cycle时排除w<23的分支，这不等于整个预测模型失败。整卡旧记录显示stage6输出重叠更多却更快，关键还包括入口相位与输入槽余量，不能按重叠面积或early单独加价。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -23,7 +23,7 @@
 | 交接不可辨识性，离线 | 不同ready/交接组合给出相同stage6局部量及L，却产生不同stage4响应 | [同调用下界与参数反例](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff.md) |
 | 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
 | 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
-| 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md) |
+| 共同复用组合，离线 | 有限窗口与任意单一producer间隙的条件界；宽分支须联立端点 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md)、[边界间隙与适用限制](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-boundary.md)、[联合端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md) |
 | 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
@@ -377,6 +377,17 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 739556的同调用释放/重用端点只能给empty完成到下一对请求发出的区间：stage4中位[61,292.5]、stage6[62,303.5] cycle，20进程的共同常数交集为[69,207]。这不是测得该常数，也不是模型a：cfg_b要128线程完成empty-arrive，所选lane的wait1是更早的起点；同一次local17的wait1未被打点，不能借另一批progress补齐。这些点只覆盖local16释放，不能判断早/晚段是否变价。
 
 **上述反证仍只针对声明的子类。** 放开g≤c−q、q+λ≤c后，已有参数见证能匹配两组late并突破原early界，却把FIRST→C1算成89而非652/724，M−C63也远高于53，所以不能采用。中央候选还需满足g≤281.5、q≥373.522、w≤43、w+r≤53、λ+g+w≤936.522（h=89、c=23587/46）；这些不是统计置信界。尚未证明整个宽分支参数族不可行，先联立已有端点继续检查，不把搜索未找到解当作必须新增状态的证明。
+
+
+<a id="stage-joint"></a>
+
+### 联合端点约束的是哪一层模型
+
+取同次stage4调用的X=W16−H16、Y=W16−C16，以及同次stage6调用的Z=M−C17。宽递推令G=max(g,c−q)、L=λ−G，普遍有Z≥46c+L+w+r。若w<Y且X+h>c，退休分支还要求L≥X+h−c，因此Z−X≥45c+h+w+r；不需要p≤c、固定ready历史或原子类的提交分支。
+
+739717延后组trial0为X840、Y43、Z23637。若共同服务参数解释这两个实际调用，w<43会要求c≤506.6，与既有c≥512候选不容；给每个X/Y/Z窗口±20cycle容限，trial0和8仍排除w<23。此时仅得到必要区间w∈[23,63]、w+r≤73，并未标定plain硬件延迟。±20是模型偏差敏感性，不是测得的时间戳精度或新验收标准。[全部十配对与推导](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md)。
+
+该结果要求共同局部规则解释所列实际调用，允许其ready历史不同；若只找每条件一条落入进程包络的代表轨迹，就不能借最大X那次调用直接排除它。当前完整递推求解未决定可行性，不把超时当无解。所选打点的软件路径也不保证每次迭代相同。暂不将全族排除作为推进门槛。[整卡上下文](R15-output-service.md#stage-output-context)已经确认stage6输出重叠更多但L更短，且第二L入口相对于前输出更早。输入group64的释放前驱距前输出末次提交在stage4/6相隔2/4组；下一候选先表达这个缓冲与相位关系，避免用孤立CTA常数吸收未建模重叠。
 
 <a id="first-supply"></a>
 

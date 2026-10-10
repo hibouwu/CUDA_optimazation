@@ -3537,6 +3537,230 @@ def stage_boundary_diagnostics(base, output):
     return report
 
 
+def stage_joint_diagnostics(output):
+    """Same-call branch constraints, distinct from median-trajectory fitting."""
+    import v06_run as common
+    output=Path(output);source=output/'B-epilogue-order.json';data=read_json(source)
+    selected={(r['stages'],r['trial']):r for r in data['processes']
+        if r.get('set')=='ctrl' and r['variant']=='progress' and r['epilogue_defer']==1}
+    if set(selected)!={(s,t) for s in (4,6) for t in range(10)}:
+        raise ValueError('joint branch check needs both stages and ten trials')
+    pairs=[]
+    for trial in range(10):
+        a,b=selected[4,trial],selected[6,trial];ca,cb=a['clocks'],b['clocks']
+        X=ca['wait1_end16']-ca['full_wait_begin16']
+        Y=ca['wait1_end16']-ca['commit16']
+        Z=cb['mma_return']-cb['commit17']
+        if X!=a['intervals']['full_wait_to_commit16']+a['intervals']['commit_to_wait1_16']:
+            raise ValueError('stage4 same-call window does not close')
+        if Z!=b['intervals']['commit17_to63']+b['intervals']['last_commit_to_mma_return']:
+            raise ValueError('stage6 same-call window does not close')
+        pairs.append(dict(trial=trial,X_stage4=X,Y_stage4=Y,Z_stage6=Z,
+            active_retirement_c_upper=(Z-X)/45,
+            shortage_at_c512=45*512-(Z-X),
+            sources=dict(stage4=a['source'],stage6=b['source']),
+            source_sha256=dict(stage4=a['source_sha256'],stage6=b['source_sha256']),
+            stage4_clocks={k:ca[k] for k in ('full_wait_begin16','commit16','wait1_end16')},
+            stage6_clocks={k:cb[k] for k in ('commit17','mma_return')}))
+    sensitivities=[]
+    allY=[r['clocks']['wait1_end16']-r['clocks']['commit16'] for r in selected.values()]
+    allT=[r['clocks']['mma_return']-r['clocks']['commit63'] for r in selected.values()]
+    for epsilon in (0.,10.,20.,40.):
+        exclusions=[]
+        for pair in pairs:
+            low_X=pair['X_stage4']-epsilon;high_Z=pair['Z_stage6']+epsilon
+            # G<=c and lambda>=0 give Z>=45c before selecting a branch.
+            # This also checks that X>c throughout the allowed c range.
+            positive_L_forced=low_X>high_Z/45
+            c_upper=(high_Z-low_X)/45
+            if positive_L_forced and c_upper<512:
+                exclusions.append(dict(trial=pair['trial'],c_upper=c_upper,
+                    excluded_w_below=max(0.,pair['Y_stage4']-epsilon)))
+        w_low=max((r['excluded_w_below'] for r in exclusions),default=0.)
+        w_high=min(allY)+epsilon
+        z_high=min(r['Z_stage6'] for r in pairs)+epsilon
+        sensitivities.append(dict(window_error_cycles=epsilon,excluded_pairs=exclusions,
+            common_w_necessary_interval=[w_low,w_high],w_plus_r_upper=min(allT)+epsilon,
+            lambda_minus_G_plus_r_upper=z_high-46*512-w_low))
+    report=dict(scope='Shared local service-parameter consistency across actual processes; not a representative-trajectory feasibility proof.',
+        c_floor_hypothesis=512,pairs=pairs,sensitivity=sensitivities,
+        assumptions=['Common c,g,q,lambda,w,r for the tested process pair; 0<=g<=c and all costs nonnegative.',
+            'Readiness, producer cadence, initial state and nonnegative loop advance may differ between the two processes.',
+            'Within each modeled call, the same software w appears at ordinary wait returns; selected-marker nonuniformity is part of model discrepancy.',
+            'Each sensitivity epsilon is an allowed error of a whole X/Y/Z window, not a measured timestamp resolution or a validation tolerance.'],
+        proof=dict(G='max(g,c-q)',L='lambda-G',lead='E_i-C_i >= c-G',
+            late='Z=M-C17 >= 46*c+L+w+r; hence Z>=45*c',
+            local='If w<Y, X=W16-H16 <= c+max(0,L)-h',
+            combined='If w<Y and X+h>c, Z-X >= 45*c+h+w+r'),
+        decision='At c>=512, small software w cannot explain the selected actual calls by assigning the rest of their 43-cycle wait window to retirement. '
+            'This constrains a branch, not the complete predictor or every representative trajectory.',
+        limitations=['No whole-family infeasibility result is claimed. A bounded full-recurrence solver did not establish feasibility or infeasibility.',
+            'The largest stage4 X is required only by this actual-process mechanism check; a median or min/max representative fit has a different target.',
+            'Neither w nor the latent TC frontier is identified as a plain-kernel hardware constant.',
+            'No new model coefficients, GPU measurements or frozen scores are produced.'],
+        input_sha256={str(p):common.sha(p) for p in (source,Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-stage-joint.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 提交与退休分支：逐调用一致性和代表轨迹分开','',
+        '本轮没有找到完整宽递推的共同预测参数，也没有证明全族不可行。'
+        '先保留一个不依赖producer间隔、ready历史或原窄子类的局部必要关系。','',
+        '## 三个窗口都在各自同一次调用内形成','',
+        'stage4取X=W16−H16、Y=W16−C16；stage6取Z=M−C17。'
+        '跨stage只求共同参数约束的交集，不拼接两进程的时钟或绝对时间线。'
+        '令G=max(g,c−q)、L=λ−G，原宽递推给E_i−C_i≥c−G。'
+        'M≥E62+λ+w+r且E62≥E17+45c，故Z≥46c+L+w+r。'
+        '若w<Y，W16必须由退休分支决定，且X≤c+max(0,L)−h。'
+        '当X+h>c时，联立得到Z−X≥45c+h+w+r。这里仅需h≥0。','',
+        '| 配对trial | stage4 X | stage4 Y | stage6 Z | 退休活跃分支的c上界 | 对c=512少多少cycle |',
+        '|---|---:|---:|---:|---:|---:|']
+    for r in pairs:
+        lines.append(f'| {r["trial"]} | {r["X_stage4"]} | {r["Y_stage4"]} | {r["Z_stage6"]} | '
+            f'{r["active_retirement_c_upper"]:.3f} | {r["shortage_at_c512"]:+.0f} |')
+    lines+=['','正差只在X>c得到保证时用于排除该分支，负差不证明存在完整可行参数。'
+        'trial0的X840/Y43/Z23637要求c≤506.6。若沿用c≥512的候选下界，'
+        '不能令w<43并把剩余窗口解释为退休等待。','',
+        '| 每个X/Y/Z窗口允许误差 | 排除低w分支的trial | 共同w的必要区间 | w+r上界 | λ−G+r上界 |',
+        '|---|---|---:|---:|---:|']
+    for r in sensitivities:
+        lines.append(f'| ±{r["window_error_cycles"]:.0f} cycle | '
+            f'{[x["trial"] for x in r["excluded_pairs"]]} | {r["common_w_necessary_interval"]} | '
+            f'{r["w_plus_r_upper"]:.1f} | {r["lambda_minus_G_plus_r_upper"]:.1f} |')
+    lines+=['','例如各窗口允许±20cycle，w<23仍会使trial0需要c≤507.489，低于512；'
+        'trial8也排除该低w分支。这是显式模型误差敏感性，不是新测得的计时误差或验收标准。'
+        '所选43cycle窗口在该共享参数解释中需要较大的基础路径项；它不是可直接迁移到plain的硬件wait延迟。','',
+        '## 不把逐调用约束偷换成中央预测失败','',
+        '本检验要求同一组局部服务参数解释所列实际调用，允许各调用有不同ready历史。'
+        '如果只要求每个条件找一个落入十进程包络的代表轨迹，它没有义务解释最大X那次调用；'
+        '上述排除不能直接用于那个目标。当前有限box的完整递推求解只返回超时，未得到可行或不可行结论。'
+        '同时，loop/打点路径的非均匀开销仍需与恒定软件w假设分开。','',
+        '下一步使用这些分支关系缩短检验，但仍按中央预测和逐调用机制两种范围分别报告；'
+        '不将一个条件不等式变成新状态价格，不增加GPU矩阵。','']
+    (output/'B-stage-joint.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_output_context_diagnostics(base, output):
+    """Whole-card E0 context from one existing dual-clock invocation at a time."""
+    from analyze_r13_sm import select_attempts
+    from math import gcd
+    import v06_run as common
+
+    root=Path(base)/'20261010-R09-R13-R18-failure-controls';output=Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    processes=[];failures=[];hashes={}
+
+    def overlap_context(intervals, begin, end):
+        duration=end-begin
+        if duration<=0:raise ValueError('nonpositive receiver mainloop window')
+        clipped=sorted((max(a,begin),min(b,end)) for a,b in intervals if a<end and b>begin)
+        union=[];events=defaultdict(int)
+        for a,b in clipped:
+            if union and a<=union[-1][1]:union[-1][1]=max(union[-1][1],b)
+            else:union.append([a,b])
+            events[a]+=1;events[b]-=1
+        active=peak=0
+        for t in sorted(events):
+            active+=events[t];peak=max(peak,active)
+        # Subtract integer globaltimer origins before any half-window arithmetic.
+        # Absolute timestamps are too large to retain ns precision in float64.
+        relative=[(a-begin,b-begin) for a,b in intervals]
+        middle=duration/2
+        def mean_active(a,b):return sum(max(0,min(y,b)-max(x,a)) for x,y in relative)/(b-a)
+        return dict(active_at_start=sum(a<=begin<b for a,b in intervals),peak_active=peak,
+            union_fraction=sum(b-a for a,b in union)/duration,
+            mean_active=mean_active(0,duration),first_half_mean_active=mean_active(0,middle),
+            second_half_mean_active=mean_active(middle,duration),
+            last_end_relative_to_L_start_ns=max(b for a,b in intervals)-begin)
+
+    for stage in (4,6):
+        name=f'r13_stage_k4096_s{stage}';row=rows[name]
+        if setups[name]['stages']!=stage:raise ValueError('output-context stage identity changed')
+        selected,failed,_=select_attempts(root,name,('dual',))
+        if {item['record']['trial'] for item in selected}!=set(range(10)):
+            raise ValueError('output context requires ten independent dual processes per stage')
+        failures.extend(dict(case=name,**item) for item in failed)
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row)
+            if len(obs['ctas'])!=132 or any(len(c.get('tiles_ns',[]))!=2 for c in obs['ctas']):
+                raise ValueError('output context requires two direct-ns tiles on every CTA')
+            ctas={c['cta']:c for c in obs['ctas']};target=ctas[0]
+            begin,end=target['tiles_ns'][1][:2]
+            other=[tuple(c['tiles_ns'][0][2:4]) for c in obs['ctas'] if c['cta']!=0]
+            own=[tuple(target['tiles_ns'][0][2:4])]
+            processes.append(dict(case=name,stages=stage,trial=record['trial'],variant='dual',
+                elapsed_us=obs['elapsed_us'],source=record['raw'],source_sha256=record['raw_sha256'],
+                record_path=item['path'],gpu_uuid=setups[name]['gpu_uuid'],
+                receiver=dict(cta=0,sm=target['sm'],work=target['work'][1],L_ns=[begin,end],duration_ns=end-begin),
+                next_first_minus_own_E0_begin_ns=begin-own[0][0],
+                other_E0=overlap_context(other,begin,end),own_E0=overlap_context(own,begin,end),
+                ctas=[dict(cta=c['cta'],sm=c['sm'],work=c['work'],tiles_ns=c['tiles_ns']) for c in obs['ctas']]))
+        for item in selected+failed:
+            for path in (root/item['path'],root/item['record']['raw']):hashes[str(path)]=common.sha(path)
+    if len({p['gpu_uuid'] for p in processes})!=1:raise ValueError('output-context stages span GPUs')
+    summary=[]
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+    for stage in (4,6):
+        group=[p for p in processes if p['stages']==stage]
+        summary.append(dict(stages=stage,L_ns=span(p['receiver']['duration_ns'] for p in group),
+            next_first_minus_own_E0_begin_ns=span(p['next_first_minus_own_E0_begin_ns'] for p in group),
+            first_after_E0=sum(p['next_first_minus_own_E0_begin_ns']>0 for p in group),
+            first_equal_E0=sum(p['next_first_minus_own_E0_begin_ns']==0 for p in group),
+            **{role:{key:span(p[role][key] for p in group) for key in group[0][role]}
+                for role in ('other_E0','own_E0')}))
+    for path in (root/'cases.json',root/'static_setup.json',root/'source_hashes.json',
+            root/'build/binary_hashes.json',Path(__file__),Path(__file__).with_name('analyze_r18.py')):
+        hashes[str(path)]=common.sha(path)
+    lattice=0
+    for process in processes:
+        origin=process['receiver']['L_ns'][0]
+        for cta in process['ctas']:
+            for tile in cta['tiles_ns']:
+                for stamp in tile:lattice=gcd(lattice,stamp-origin)
+    report=dict(root=str(root),scope='739095 same-call direct globaltimer context; no fit or cross-protocol timeline.',
+        processes=processes,summary=summary,failed_attempts=failures,input_sha256=hashes,
+        observed_ns_difference_lattice=lattice,
+        boundary='E0 is tile0 PERMIT to DONE; L1 is CTA0 tile1 FIRST to MAIN. Half-open intervals.',
+        limitations=['Other-CTA temporal overlap is not evidence of resource contention or a causal E0 price.',
+            'These full-L dual windows are not spliced with later progress Ktile timestamps.',
+            'First/second halves divide elapsed ns, not Ktiles; different calls are independent samples.',
+            'E0 DONE is the recorded store-tail/source-reuse boundary, not proof of global D visibility.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-stage-output-context.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(value):return f'{value["median"]:.2f} [{value["trial_min"]:.2f}, {value["trial_max"]:.2f}]'
+    lines=['# 第二主循环期间的整卡首输出上下文','',
+        '复用739095的stage4/6各10个dual进程。每次调用直接以CTA0第二主循环的globaltimer窗口，'
+        '统计其它131个CTA首输出PERMIT→DONE的时间重叠，并把本CTA首输出分列。数值为进程中位[最小,最大]；'
+        '前后半段按ns等分，不代表Ktile早晚段。','',
+        '| stage / 输出来源 | L开始时活跃数 | 峰值 | union覆盖比例 | 平均并发数 | 前半平均并发 | 后半平均并发 | 最后E结束−L开始 ns |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|']
+    fields=('active_at_start','peak_active','union_fraction','mean_active','first_half_mean_active',
+        'second_half_mean_active','last_end_relative_to_L_start_ns')
+    for item in summary:
+        for role,label in (('other_E0','其它131 CTA'),('own_E0','本CTA')):
+            lines.append(f'| {item["stages"]} / {label} | '+' | '.join(cell(item[role][k]) for k in fields)+' |')
+    lines+=['','这里的平均并发数是重叠ns总和除以L窗口长度；union比例只计是否至少有一个输出活跃。'
+        'JSON保留全部20次调用的132个CTA直接ns端点、工作坐标、SM、来源哈希与失败记录。','',
+        '这些结果只描述候选需要面对的并发上下文。时间重叠不证明资源争用，也不为E0或early定价；'
+        '不能把本批dual与后续progress记录拼成同一条Ktile时间线。','']
+    lines+=[f'本批直接ns端点的差落在{lattice}ns格点，相同记录时刻不证明严格同时。', '',
+        '第二主循环入口相位也不同：stage4的FIRST1−本CTA E0开始中位为'
+        f'{summary[0]["next_first_minus_own_E0_begin_ns"]["median"]:.0f}ns，'
+        f'{summary[0]["first_after_E0"]}/10严格晚于、{summary[0]["first_equal_E0"]}/10同一记录时刻；'
+        'stage6中位为'
+        f'{summary[1]["next_first_minus_own_E0_begin_ns"]["median"]:.0f}ns，十次均早于。'
+        '不能只比较整段重叠面积：stage6面积更大但主循环更短，stage与进入时刻也改变了缓冲余量。','',
+        '源码给出一个静态依赖：第二输出首输入group64复用group(64−S)的槽，'
+        '后者在commit(65−S)后的wait1释放；前输出mma返回在commit63之后。'
+        '释放前驱到末次提交分别相隔2/4个group索引，提供不同的预取机会；这不保证2c/4c的实测提前量。'
+        'release完成、producer重发与ready仍未定值。可先检验该相位与有限缓冲关系，'
+        '不把E0重叠面积直接加成服务价格。','']
+    (output/'B-stage-output-context.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_conditioned_diagnostics(output):
     """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
     from supply_model import admission_stage_events
