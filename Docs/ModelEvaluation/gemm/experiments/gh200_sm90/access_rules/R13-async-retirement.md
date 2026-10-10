@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。[R10起步干预](R10-layout-cache.md#producer-delay)还显示，固定工作与SM后只推迟producer，会改变S+L并放大起点时移，固定局部时间线不充分。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
+当前供给关系能在已见条件内用于组合试算，但 **V09 的行距与 stage 响应未迁移成立**，还不是通用供给规则。同卡stage四点对照进一步排除了“只多一个固定启动项”；惩罚随K和输出位置变化，恒定每Ktile罚项也不充分。累计进度表明stage4在早段与后段都变慢，最终drain没有贡献；两种三参数递推都遗漏了实测约85～90 cycle的循环推进。源请求、地址覆盖和 OOB 目的填零是软件需求，不能解释成物理 L2/HBM 流量。[R10起步干预](R10-layout-cache.md#producer-delay)还显示，固定工作与SM后只推迟producer，会改变S+L并放大起点时移，固定局部时间线不充分。首次供给分解进一步把S的增长定位在copy发出标记之后，尚未分开异步完成与consumer等待返回。first/later 分别定值，有限预填量仍是假设；部分新频率会激活未唯一识别的服务方向。现行公式只在 [RULES](RULES.md#v09-model) 维护。本页保留供给候选的依据与失败，行距实验见 [R10](R10-layout-cache.md)，边界/显式零/填零实验见 [R18](R18-cluster-boundary.md)。
 
 ## 作业与分析索引
 
@@ -17,6 +17,7 @@
 | stage×K，739095 | 同卡四条件；固定启动差和恒定每Ktile罚项均不充分 | [成对窗口、协议扰动与缩放残差](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/B-controls.json) |
 | 同次stage事件，739556 | CTA0第二输出Ktile16；额外L在mma返回前，局部等待与发射区间互相转移 | [窗口与累计进度](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-events.md) |
 | consumer累计进度，739578 | 同几何stage4/6；相邻commit分解与早/后段累计差，区分循环推进和最终drain | [同次端点与递推对照](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-progress.md) |
+| 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 
 ## 序列供给：消费者与在途组织会改变结果
 
@@ -261,6 +262,29 @@ progress/plain完整时间扰动stage4/6中位为+1.01%/+0.72%，十次范围为
 行距方面，cfg_b A16 的实测惩罚 28.94% 只被预测为 1.40%；旧几何 B32/B64 变慢与 V09 新几何 B32 未见明显惩罚同时成立。几何、K 和软件波次数不同，完整比较由 [R10](R10-layout-cache.md#v09-pitch-comparison)维护，不据两批结果宣布 32 B 因果翻转。
 
 当前可继续复用条件关系作开发组合，但需要分别验证：有限 stage 响应、first/later 转移，以及改变频率后计算分支是否暴露未识别服务。不能用代数支持、同批拟合或完整时间误差抵消替代这些检验。[V09 原评分](V09-component-validation.md)保持整体未通过。
+
+<a id="first-supply"></a>
+
+## 首次供给增长发生在copy发出标记之后
+
+739629沿用R10的同卡、同工作与SM55、0/512 ns起步等待及B0/B32，只增加首输出/Ktile0的两个软件端点：producer完成首对A/B copy后的`issue_end`，consumer thread128在prologue首个`consumer_try_wait`前的`wait_begin`。原FIRST位于`try_wait`与`consumer_wait`之后。producer立即写回新戳；consumer先在寄存器保存wait_begin，待原FIRST之后再写回。它们不是物理发射或硬件ready时刻。
+
+先看同binary的开关对照。events0的S+L行距×延迟交互为−496 ns〔−704,−64〕，events1为−608〔−736,−288〕；两者十次均负，原效应保留。但新增打点使delay0/B32的S相对变化中位+5.49%、范围−9.68%～+35.71%；e1−e0的S+L交互变化为−128 ns〔−640,+416〕，不能称幅度不变。events0保留主要因果对照，events1用于定位数百ns增长，不能把新S绝对值当精确服务价。
+
+以下在events1内先逐进程求直接延迟512−0，范围为十个独立进程配对；cycle来自同CTA/同SM，不经统一GHz换算。
+
+| 增加起步延迟后的区间变化 | B0 | B32 |
+|---|---:|---:|
+| prod→issue_end，cycle | 0〔−4,+1〕 | −1.5〔−6,+2〕 |
+| issue_end→FIRST，cycle | +807〔686,879〕 | +1013〔432,1245〕 |
+| issue_end→FIRST，ns | +672〔640,736〕 | +800〔512,960〕 |
+| entry→wait_begin，ns | +32〔−32,64〕 | 0〔−64,64〕 |
+
+四条件的prod→issue_end中位均192 ns（约358～366 cycle），新增时间不在这段首次发射前的工作。wait_begin−issue_end在零档约−160 ns、延迟档约−672 ns：consumer已经在等，并非更晚走到等待点。因而现有证据不支持用“prod之后的首次准备变慢”或“consumer更晚开始等待”解释主要增量。异步请求排队、翻译/缓存与数据服务、完成通知的可见性、consumer恢复，以及producer后续stage推进仍未分开。
+
+观察保持相同64 B侧缓冲，关闭时plain/dual、开启时dual，各十进程，加两个plain参照，共140成功进程、无失败。10次独立全输出比较均7077888元素逐位相同。两个二进制均168寄存器、215040 B SMEM、16 HGMMA、零spill；新增打点的整调用变化中位−0.17%～+0.76%，不能替代上述局部扰动检查。两参照相对739619变化+0.85%/+0.07%，只作跨批背景，不估计本批观察误差。80个dual进程的实际工作/SM保持一致，40个延迟进程的producer/FIRST均在同源组第18位；跨进程VA不当同PA。
+
+下一步才比较独立full-barrier观察与consumer返回：使用只读、非挂起的test_wait取得首次观测就绪上界，同binary保留观察开关与扰动对照。首测即成功只给上界；最后失败的test前时刻仅在第一代绑定成立时作下界，以同SM clock64核对第一代，短ns差注明分辨率；若首次成功晚于首FIRST，须保留为代际未证实，不能把后续phase成功当首次ready。不改变arrive、事务计数或release，也不把轮询写成无扰动硬件时间戳。非阻塞test与可能挂起的try、以及phase跟踪要求，按[CUDA 12.9 PTX 8.8语义](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)执行。
 
 ## 复核入口
 

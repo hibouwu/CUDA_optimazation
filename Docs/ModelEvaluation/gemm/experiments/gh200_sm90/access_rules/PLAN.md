@@ -57,7 +57,7 @@ V10冻结前，按配置、输入模式、窗口和工作量标注外推范围�
 
 ### 当前候选的机制约束
 
-- **R10访问组织。** 739619固定工作/SM，仅加0/512 ns起步等待后，CTA55成为同源组最后，S+L行距交互仍减少576 ns；不采用固定位置罚项。B0的P0后移512 ns，完整首输出却后移1312 ns，也不支持只平移固定服务时间线。下一步复用R13稀疏打点模板，只在CTA55首输出/Ktile0增加首对A/B copy后的`issue_end`和prologue首次`consumer_try_wait`前的`wait_begin`，沿用FIRST作为等待返回后的端点；保留0/512×B0/B32和背景。先分解发射前与发射后增加的等待：若额外量在issue_end−prod，查发射前；若issue_end约随prod平移、wait_begin稳定而FIRST−issue_end增加，才进一步区分异步完成与等待返回。descriptor prefetch早于起步等待，FIRST不是真实硬件ready时刻；不搬全部R13 refill字段，不扫延迟，不将try_wait超时参数当实测延迟。
+- **R10/R13首次供给。** 739629确认prod→首对A/B copy发出标记约192 ns、起步干预后基本不变，consumer进入首次等待也未明显变晚；新增时间在issue_end→FIRST。同批开关保留交互方向，但短S存在观察扰动，不直接拟合精确价。下一最小观测保持first_supply_events=1及旧四条件，使用cfg_b静态scheduler空闲producer warp的一lane，对stage0/full barrier只读test_wait(phase0)，比较同binary观察开关。开始须在初始化同步后；记录test前最后失败和首次成功后的同域时间，循环内不写全局内存，有限轮询后统一写回。首测即成功只给上界；首次成功不晚于本次首FIRST才绑定第一代（以同SM clock64核对，短ns差注明分辨率）；否则保留为未证实/截尾，不筛掉进程、不用后续phase当first ready。先检查原S/L与交互是否被改写，再分解issue→观测ready区间与ready→FIRST；不改arrive、expect_tx或release，不将原try_wait hint改动代替独立观察，不扩延迟/形状扫描。
 - **R09调用历史。** 739590已比较16次同源/镜像源前序后的19次固定目标。镜像目标仍比早段慢11.05%，20/20成立；没有共同的大幅重置再追上轨迹。大幅变慢不要求此前通过GEMM重复目标A/B。批次SW功率封顶累计增加24.407 s，但不能定位timed调用；前序状态也未逐对完全匹配。保留可跨源数据延续的状态约束，先与服务周期分开检验，不直接拟合功率机制，也不再补一轮相同的源身份对照。
 - **R13事件位置。** 739578直接测到stage6相邻commit约514cycle和非零循环推进。共享循环常数的拟合仍不能解释早段与局部窗口；不继续叠参数。保留真实的WGMMA发射、commit、wait、release位置和跨输出初态，再检验可辨的结构。观察分支改变局部价，不能把27/90cycle当裸服务常数。
 - **R18/R19跨rank依赖。** 同cluster的首轮轨迹共同变化，源码也证明empty复用需伙伴consumer释放，full依赖伙伴B分片。下一边界递推要保留这些有限stage依赖；平均fill价格无法替代。P2最后cluster仍在冻结候选外，不能靠将伙伴加入集合修复。

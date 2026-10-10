@@ -7,6 +7,9 @@
 // Experimental initial-work permutation; every later advance keeps the same stride.
 __device__ __constant__ int r10_work_swap55_91;
 #endif
+#ifdef R13_FIRST_SUPPLY
+__device__ __constant__ unsigned r13_first_supply_events;
+#endif
 #ifdef R10_PRODUCER_DELAY
 __device__ __constant__ unsigned r10_producer_delay_ns;
 __device__ __constant__ uint64_t* r10_producer_delay_trace;
@@ -160,6 +163,7 @@ struct Args {
   int seed = 17;
   int work_swap55_91 = 0;
   unsigned producer_delay_ns = 0;
+  unsigned first_supply_events = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -197,8 +201,13 @@ struct Args {
       else if(key=="--seed")seed=std::stoi(v);
       else if(key=="--work-swap55-91")work_swap55_91=std::stoi(v);
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
+      else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (first_supply_events > 1) throw std::runtime_error("first-supply-events must be 0 or 1");
+#ifndef R13_FIRST_SUPPLY
+    if (first_supply_events) throw std::runtime_error("first supply events require experiment build");
+#endif
     if (producer_delay_ns != 0 && producer_delay_ns != 512)
       throw std::runtime_error("producer-delay-ns is the declared 0/512 ns pair");
 #ifndef R10_PRODUCER_DELAY
@@ -332,7 +341,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -432,7 +441,7 @@ int main(int argc, char** argv) {
 #endif
 
 #ifdef R10_PRODUCER_DELAY
-    if ((o.producer_delay_ns || o.mode == "check-producer-delay") &&
+    if ((o.producer_delay_ns || o.first_supply_events || o.mode == "check-producer-delay" || o.mode == "check-first-supply") &&
         (V06_CFG != 1 || o.m != 2304 || o.n != 3072 || o.k != 1024 ||
          ctas != 132 || o.swizzle != 1 || o.work_swap55_91 || std::string(resolved_raster) != "along_m"))
       throw std::runtime_error("producer delay is only the declared cfg_b no-swap pair");
@@ -441,6 +450,9 @@ int main(int argc, char** argv) {
     if (o.mode == "check-producer-delay") throw std::runtime_error("producer delay check requires experiment build");
 #endif
 
+#ifndef R13_FIRST_SUPPLY
+    if (o.mode == "check-first-supply") throw std::runtime_error("first supply check requires experiment build");
+#endif
     // Both parameter sets exist before input/cache preparation. The common
     // history uses the same kernel; its source identity is an explicit condition.
     const bool common_history = o.warmup_policy == "common-sw1-16";
@@ -509,7 +521,12 @@ int main(int argc, char** argv) {
     const bool traced = false;
 #endif
 #ifdef R10_PRODUCER_DELAY
+#ifdef R13_FIRST_SUPPLY
+    DeviceBuffer<uint64_t> delay_trace(8);
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_first_supply_events,&o.first_supply_events,sizeof(unsigned)));
+#else
     DeviceBuffer<uint64_t> delay_trace(4);
+#endif
     CUDA_CHECK(cudaMemset(delay_trace.pointer,0,delay_trace.count*8));
     CUDA_CHECK(cudaMemcpyToSymbol(r10_producer_delay_trace, &delay_trace.pointer, sizeof(delay_trace.pointer)));
 #endif
@@ -567,6 +584,10 @@ int main(int argc, char** argv) {
 #if defined(R10_PRODUCER_DELAY) && defined(R18_DUAL_CLOCK)
       std::vector<uint64_t> delay_events(4);
       CUDA_CHECK(cudaMemcpy(delay_events.data(),delay_trace.pointer,32,cudaMemcpyDeviceToHost));
+#ifdef R13_FIRST_SUPPLY
+      std::vector<uint64_t> first_events(4);
+      CUDA_CHECK(cudaMemcpy(first_events.data(),delay_trace.pointer+4,32,cudaMemcpyDeviceToHost));
+#endif
 #endif
       std::vector<double> warm_us;
       for (float w : warm) warm_us.push_back(w * 1e3);
@@ -583,6 +604,11 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"first_supply_events\":" << o.first_supply_events
+#ifdef R13_FIRST_SUPPLY
+                << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
+                << ",\"first_supply_scratch_bytes\":64"
+#endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns
 #ifdef R10_PRODUCER_DELAY
                 << ",\"producer_delay_protocol\":\"cta55-pre-first-load-v1\""
@@ -598,6 +624,9 @@ int main(int argc, char** argv) {
                 << ",\"warmup_last5_cv\":" << coefficient_of_variation({warm.end()-5,warm.end()});
 #if defined(R10_PRODUCER_DELAY) && defined(R18_DUAL_CLOCK)
       print_u64("producer_delay_trace",delay_events);
+#ifdef R13_FIRST_SUPPLY
+      print_u64("first_supply_trace",first_events);
+#endif
 #endif
       if (history_enabled) {
         float prefix_ms=0,observed_ms=0;
@@ -691,6 +720,11 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"first_supply_events\":" << o.first_supply_events
+#ifdef R13_FIRST_SUPPLY
+                << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
+                << ",\"first_supply_scratch_bytes\":64"
+#endif
                 << ",\"producer_delay_ns\":" << o.producer_delay_ns
 #ifdef R10_PRODUCER_DELAY
                 << ",\"producer_delay_protocol\":\"cta55-pre-first-load-v1\""
@@ -723,11 +757,17 @@ int main(int argc, char** argv) {
     if (o.mode == "setup")
       return 0;
 #if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay") {
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_FIRST_SUPPLY
+        if (o.mode == "check-first-supply") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_first_supply_events, &value, sizeof(value)));
+          return;
+        }
+#endif
 #ifdef R10_PRODUCER_DELAY
         if (o.mode == "check-producer-delay") {
           CUDA_CHECK(cudaMemcpyToSymbol(r10_producer_delay_ns, &value, sizeof(value)));
@@ -752,7 +792,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

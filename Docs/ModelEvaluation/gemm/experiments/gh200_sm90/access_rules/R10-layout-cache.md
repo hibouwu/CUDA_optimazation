@@ -360,4 +360,4 @@ CTA55/j0与CTA91/j0的M坐标、T3工作量、同B使用者数相同。部分代
 
 按同CTA本地周期复核，B0的P0增加974 cycle〔833,1052〕，入口→MAIN_END增加2099.5〔1947,2326〕；逐试次减掉P0后仍增加1156.5〔1047,1356〕。在事件前驱、同域边成本和其它根时刻不变的max-plus递推中，单根后移δ不能使完成点增加超过δ。因此本批反对简单平移固定局部时间线，不依赖统一GHz；这不排除带可变仲裁、等待返回和初态的有限stage模型，也不把跨进程配对当成隐藏状态完全相同。
 
-现有S仍合并了地址准备、TMA发出前工作、异步完成和consumer等待。下一步复用R13模板，仅记CTA55首输出/Ktile0的首对A/B copy后`issue_end`与prologue首次`consumer_try_wait`前`wait_begin`，沿用FIRST；先分开发射前后增加的等待。`try_wait`自身可能等待，不能只包后面的`consumer_wait`，返回也不等于硬件首次ready。不继续扫描延迟或将名次拟合成服务价格。
+[R13首次供给分解](R13-async-retirement.md#first-supply)已将新增时间定位到首对A/B copy的软件发出标记之后：prod→issue_end基本不变，consumer进入首次等待也未明显变晚。尚需区分异步完成与等待返回，FIRST不等于硬件首次ready；不继续扫描延迟或将名次拟合成服务价格。

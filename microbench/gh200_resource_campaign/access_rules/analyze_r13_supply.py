@@ -2289,6 +2289,274 @@ def stage_progress_diagnostics(root, output):
     return report
 
 
+def _first_supply_intervals(cta, events):
+    """CTA55 first-output endpoints; producer/consumer markers have no total order."""
+    values={}
+    for unit,entry,prod,first,end in (
+        ('cycles',cta['entry_c'],cta['prod_c'],*cta['tiles'][0][:2]),
+        ('ns',cta['entry_ns'],cta['prod_ns'],*cta['tiles_ns'][0][:2])):
+        if not entry<=prod<=first<=end:
+            raise ValueError('first-supply ordinary endpoints are not ordered')
+        intervals=dict(P0=prod-entry,S=first-prod,L=end-first,
+            S_plus_L=end-prod,entry_to_FIRST=first-entry,entry_to_MAIN_END=end-entry)
+        if events['enabled']:
+            suffix='c' if unit=='cycles' else 'ns'
+            issue,wait=events['issue_end_'+suffix],events['wait_begin_'+suffix]
+            if issue<prod or not entry<=wait<=first:
+                raise ValueError('first-supply role-local endpoints are not ordered')
+            intervals.update(prod_to_issue=issue-prod,issue_to_FIRST=first-issue,
+                wait_minus_issue=wait-issue,wait_to_FIRST=first-wait,
+                entry_to_wait=wait-entry,prod_to_wait=wait-prod)
+            if intervals['prod_to_issue']+intervals['issue_to_FIRST']!=intervals['S']:
+                raise ValueError('first-supply producer partition does not close')
+            if intervals['wait_minus_issue']+intervals['wait_to_FIRST']!=intervals['issue_to_FIRST']:
+                raise ValueError('first-supply role partition does not close')
+        if intervals['P0']+intervals['S']+intervals['L']!=intervals['entry_to_MAIN_END']:
+            raise ValueError('first-supply complete window does not close')
+        values.update({name+'_'+unit:value for name,value in intervals.items()})
+    return values
+
+
+def first_supply_diagnostics(root, output):
+    """First-supply event decomposition, preceded by same-binary observer controls."""
+    from analyze_r13_sm import select_attempts
+    from analyze_r10 import _work_swap_pitch_windows, _producer_group_rank
+    import v08_model
+    import v06_run as common
+
+    root,output=Path(root),Path(output);common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    controls=[r for r in rows.values() if r['set']=='ctrl']
+    ignored={'id','group','variants','first_supply_events','producer_delay_ns','ldb'}
+    fixed={k:v for k,v in controls[0].items() if k not in ignored}
+    if len(controls)!=8 or any({k:v for k,v in r.items() if k not in ignored}!=fixed for r in controls):
+        raise ValueError('first-supply event controls changed another condition')
+    if {(r['first_supply_events'],r['producer_delay_ns'],r['ldb']) for r in controls}!={
+        (e,d,p) for e in (0,1) for d in (0,512) for p in (3072,3088)}:
+        raise ValueError('first-supply factors incomplete')
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),process_min=min(values),process_max=max(values))
+    def summary(records):
+        return {k:span(r[k] for r in records) for k in records[0]}
+    def name(e,d,p):return f'r13_first_e{e}_d{d}_p{p}'
+    calls={};plain={};targets={};processes=[];hashes={};failures={};contexts={};work=None
+    placements={}
+    for row in rows.values():
+        case=row['id'];calls[case]={};plain[case]={};targets[case]={}
+        if row['set']=='ctrl':
+            expected=['dual'] if row['first_supply_events'] else ['plain','dual']
+            if row['variants']!=expected:raise ValueError('first-supply variants changed')
+            setup=setups[case]
+            current=v08_model.scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row['raster_order'])
+            if work is None:work=current
+            if current!=work:raise ValueError('first-supply events changed software work')
+            contexts[case]=dict(row=row,setup=setup)
+        selected,failed,_=select_attempts(root,case,tuple(row['variants']))
+        failures[case]=[r['path'] for r in failed]
+        for item in selected:
+            record=item['record'];obs=replay(root,record,row);trial=record['trial']
+            for path in (root/item['path'],root/record['raw']):hashes[str(path)]=common.sha(path)
+            if record['variant']=='plain':plain[case][trial]=obs['elapsed_us'];continue
+            if [c['work'] for c in obs['ctas']]!=work:raise ValueError('actual first-supply work changed')
+            events=obs['first_supply']
+            if (events['cta'],int(events['enabled']),events['protocol'])!=(55,row['first_supply_events'],'r13-first-supply-v1'):
+                raise ValueError('first-supply endpoint identity changed')
+            c=next(c for c in obs['ctas'] if c['cta']==55)
+            intervals=_first_supply_intervals(c,events);delay=obs['producer_delay']
+            intervals.update(delay_ns=delay['duration_ns'],delay_cycles=delay['duration_cycles'],
+                end_to_prod_ns=c['prod_ns']-delay['end_ns'],end_to_prod_cycles=c['prod_c']-delay['end_c'])
+            placement=tuple((z['cta'],z['sm']) for z in obs['ctas'])
+            placement_key=hashlib.sha256(json.dumps(placement).encode()).hexdigest()
+            placements[placement_key]=placement
+            target=dict(case=case,trial=trial,events=row['first_supply_events'],delay_ns=row['producer_delay_ns'],
+                pitch_bytes=2*(row['ldb']-3072),sm=c['sm'],work=c['work'],intervals=intervals,
+                first_supply=events,producer_delay=delay,elapsed_us=obs['elapsed_us'],
+                source_group=_producer_group_rank(obs['ctas']),placement=placement_key,b_address=obs['b_address'])
+            processes.append(target);targets[case][trial]=target;calls[case][trial]=obs
+        for variant in row['variants']:
+            if len(plain[case] if variant=='plain' else calls[case])!=10:
+                raise ValueError('first-supply comparison requires ten successful processes per variant')
+    if len({setups[r['id']]['gpu_uuid'] for r in controls})!=1:raise ValueError('first-supply controls span cards')
+
+    paired=[];pair_summaries=[];background=[];background_summaries=[];selected_windows=[];selected_summaries=[]
+    window_fields=('L_cycles_delta','L_ns_delta','entry_relative_ns_delta','producer_relative_ns_delta',
+        'FIRST_relative_ns_delta','entry_to_producer_ns_delta','entry_to_FIRST_ns_delta','entry_to_MAIN_END_ns_delta',
+        'entry_to_FIRST_cycles_delta','entry_to_MAIN_END_cycles_delta','prefill_ns_delta')
+    def compare(kind,factors,left,right):
+        pair_id=right+' minus '+left;first_B=work[55][0][1];target_rows=[];relative_rows=[];time_rows=[]
+        selected_groups=defaultdict(list);background_groups=defaultdict(list)
+        for trial in range(10):
+            a,b=targets[left][trial],targets[right][trial]
+            common_fields=a['intervals'].keys()&b['intervals'].keys()
+            delta={k:b['intervals'][k]-a['intervals'][k] for k in sorted(common_fields)}
+            target_rows.append(delta)
+            relative={k:b['intervals'][k]/a['intervals'][k]-1 for k in
+                ('S_ns','L_ns','entry_to_MAIN_END_ns','S_cycles','L_cycles')}
+            relative_rows.append(relative)
+            time=dict(elapsed_us=b['elapsed_us']-a['elapsed_us'],elapsed_ratio=b['elapsed_us']/a['elapsed_us']-1)
+            time_rows.append(time)
+            paired.append(dict(pair=pair_id,kind=kind,**factors,trial=trial,target_delta=delta,
+                target_relative=relative,whole_call_delta=time))
+            windows=_work_swap_pitch_windows(calls[left][trial],calls[right][trial])
+            for w in windows:
+                if w['cta'] not in (55,91):continue
+                values={k:w[k] for k in window_fields if k in w}
+                selected_groups[w['cta'],w['j']].append(values)
+                selected_windows.append(dict(pair=pair_id,trial=trial,cta=w['cta'],j=w['j'],T=w['T'],
+                    coord=[w['mi'],w['ni']],base_sm=w['base_sm'],variant_sm=w['variant_sm'],delta=values))
+            first=[w for w in windows if w['j']==0]
+            groups={'same_B_partners':[w for w in first if w['ni']==first_B and w['cta']!=55],
+                'other130':[w for w in first if w['cta'] not in (55,91)]}
+            for group,subset in groups.items():
+                values={k:statistics.median(w[k] for w in subset) for k in window_fields}
+                background_groups[group].append(values)
+                background.append(dict(pair=pair_id,trial=trial,group=group,CTAs=len(subset),delta=values))
+        pair_summaries.append(dict(pair=pair_id,kind=kind,**factors,target_delta=summary(target_rows),
+            target_relative=summary(relative_rows),whole_call_delta=summary(time_rows)))
+        for (cta,j),values in selected_groups.items():
+            selected_summaries.append(dict(pair=pair_id,cta=cta,j=j,delta=summary(values)))
+        for group,values in background_groups.items():
+            background_summaries.append(dict(pair=pair_id,group=group,delta=summary(values)))
+    for d in (0,512):
+        for p in (0,32):compare('observer',dict(delay_ns=d,pitch_bytes=p),name(0,d,p),name(1,d,p))
+    for e in (0,1):
+        for d in (0,512):compare('pitch',dict(events=e,delay_ns=d),name(e,d,0),name(e,d,32))
+        for p in (0,32):compare('delay',dict(events=e,pitch_bytes=p),name(e,0,p),name(e,512,p))
+    interactions=[];interaction_summaries=[]
+    for e in (0,1):
+        group=[]
+        for trial in range(10):
+            a=next(r for r in paired if r['kind']=='pitch' and r['events']==e and r['delay_ns']==0 and r['trial']==trial)
+            b=next(r for r in paired if r['kind']=='pitch' and r['events']==e and r['delay_ns']==512 and r['trial']==trial)
+            delta={k:b['target_delta'][k]-a['target_delta'][k] for k in a['target_delta']}
+            group.append(delta);interactions.append(dict(events=e,trial=trial,delta=delta))
+        interaction_summaries.append(dict(events=e,delta=summary(group)))
+    observer_interaction=[]
+    for trial in range(10):
+        a=next(r['delta'] for r in interactions if r['events']==0 and r['trial']==trial)
+        b=next(r['delta'] for r in interactions if r['events']==1 and r['trial']==trial)
+        observer_interaction.append(dict(trial=trial,delta={k:b[k]-a[k] for k in a}))
+    observer_interaction_summary=summary([r['delta'] for r in observer_interaction])
+    case_summaries=[]
+    for case,values in targets.items():
+        if not values:continue
+        values=list(values.values());sample=values[0]
+        case_summaries.append(dict(case=case,events=sample['events'],delay_ns=sample['delay_ns'],pitch_bytes=sample['pitch_bytes'],
+            intervals=summary([r['intervals'] for r in values]),sms=sorted({r['sm'] for r in values}),
+            ranks={event:summary([{k:r['source_group'][event][k] for k in
+                ('rank_min','rank_max','target_minus_peer_median_ns')} for r in values]) for event in ('entry','producer','FIRST')}))
+    timing={}
+    for e in (0,1):
+        for d in (0,512):
+            for p in (0,32):
+                case=name(e,d,p);base=name(0,d,p)
+                timing[case]=dict(dual_us=span(r['elapsed_us'] for r in targets[case].values()),
+                    events0_plain_us=span(plain[base].values()),
+                    dual_relative_to_events0_plain=span(targets[case][t]['elapsed_us']/plain[base][t]-1 for t in range(10)))
+    previous=root.parent/'20261010-R10-producer-delay';reference_comparison={}
+    if read_json(previous/'environment.json')['gpu']!=read_json(root/'environment.json')['gpu']:
+        raise ValueError('first-supply reference comparison changed card')
+    for row in rows.values():
+        if row['set']!='reference':continue
+        case=row['id'];old=[]
+        for item in select_attempts(previous,case,('plain',))[0]:
+            old.append(replay(previous,item['record'],row)['elapsed_us'])
+            for path in (previous/item['path'],previous/item['record']['raw']):hashes[str(path)]=common.sha(path)
+        if len(old)!=10:raise ValueError('previous first-supply reference needs ten processes')
+        reference_comparison[case]=dict(current=span(plain[case].values()),previous=span(old),
+            median_change=statistics.median(plain[case].values())/statistics.median(old)-1)
+    for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json'):
+        path=previous/filename;hashes[str(path)]=common.sha(path)
+    for filename in ('cases.json','static_setup.json','environment.json','source_hashes.json','build/resources.json','build/sass_hashes.json'):
+        path=root/filename;hashes[str(path)]=common.sha(path)
+    for path in sorted(root.glob('correctness-*.jsonl')):hashes[str(path)]=common.sha(path)
+    origins=[dict(trial=t,by_case={r['case']:r['b_address']['b_buffer_ptr'] for r in processes if r['trial']==t}) for t in range(10)]
+    report=dict(scope='CTA55 first output/Ktile0, same-binary events0/1 observer controls precede first-supply decomposition. '
+        'Process-level intervals close before independent column reductions; no fitted hardware prices.',
+        root=str(root),environment=read_json(root/'environment.json'),contexts=contexts,processes=processes,
+        case_summaries=case_summaries,paired_processes=paired,paired_summaries=pair_summaries,
+        interaction_processes=interactions,interaction_summaries=interaction_summaries,
+        observer_interaction_change_processes=observer_interaction,observer_interaction_change=observer_interaction_summary,
+        selected_window_processes=selected_windows,selected_window_summaries=selected_summaries,
+        background_processes=background,background_summaries=background_summaries,timing=timing,
+        references=reference_comparison,
+        placement_maps=placements,work_sha256=hashlib.sha256(json.dumps(work).encode()).hexdigest(),
+        virtual_origins=dict(per_trial=origins,same_origin_trials=[r['trial'] for r in origins if len(set(r['by_case'].values()))==1]),
+        resources=read_json(root/'build/resources.json'),sass_hashes=read_json(root/'build/sass_hashes.json'),
+        failed_attempts=failures,input_sha256=hashes,analyzer_sha256=common.sha(Path(__file__)),
+        interpretation=['issue_end follows the producer two-copy issue sequence; it does not timestamp physical TMA service start or completion.',
+            'wait_begin precedes consumer128 first consumer_try_wait; FIRST follows the existing consumer wait/instruction path. '
+            'wait_begin-to-FIRST is not pure wait latency and FIRST is not a measured hardware-ready event.',
+            'Producer and consumer roles have no imposed total order: wait-minus-issue and issue-to-FIRST may be negative.',
+            'Events0 and events1 use one binary and equal scratch capacity but different dynamic observer instructions. '
+            'Report their changes in S/L/complete window before interpreting events1 local intervals.',
+            'The two plain references compare the present batch with 739619 only for card/binary context; '
+            'they do not estimate events1-minus-events0 observer error.',
+            'Descriptor prefetch precedes the producer delay. Delay changes temporal state and prefetch completion opportunity, not uniquely source arrival order.',
+            'Each column is independently reduced over ten processes; interval closure is checked per process, not by summing medians.',
+            'The zero-delay path still reads timers. Short cycle/ns spans do not calibrate frequency.',
+            'Trial pairs are independent processes. Common virtual origins do not establish common physical pages; backgrounds are not extra process replicas.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'R13-first-supply.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(v):return f'{v["median"]:.1f} [{v["process_min"]:.1f},{v["process_max"]:.1f}]'
+    lines=['# CTA55首次供给分解','',
+        '先比较同一binary的events1−events0，随后解释新增端点。每列独立取十进程中位；闭合在逐进程检验。'
+        '方括号为十进程范围。两个角色不预设总顺序，FIRST不等于硬件ready时刻。','',
+        '| 新增打点扰动 | ΔS ns | ΔL ns | Δ(entry→MAIN_END) ns | 完整调用变化 |',
+        '|---|---:|---:|---:|---:|']
+    for r in pair_summaries:
+        if r['kind']!='observer':continue
+        s=r['target_delta'];v=r['whole_call_delta']['elapsed_ratio']
+        lines.append(f'| delay{r["delay_ns"]}, B+{r["pitch_bytes"]} B | '+
+            ' | '.join(cell(s[k]) for k in ('S_ns','L_ns','entry_to_MAIN_END_ns'))+f' | {100*v["median"]:+.2f}% |')
+    observer=next(r for r in pair_summaries if r['kind']=='observer' and r['delay_ns']==0 and r['pitch_bytes']==32)
+    s=observer['target_relative']['S_ns']
+    lines+=['',f'delay0/B+32 B的S观察扰动中位 {100*s["median"]:+.2f}%，十进程范围 '
+        f'{100*s["process_min"]:+.2f}%～{100*s["process_max"]:+.2f}%。'
+        '整窗口接近不能证明局部S无扰动；下述分解用于定位增长区间，不将绝对区间作为裸服务价格。']
+    lines+=['','| events1条件 | prod→issue_end ns | issue_end→FIRST ns | wait_begin−issue_end ns | wait_begin→FIRST ns |',
+        '|---|---:|---:|---:|---:|']
+    for r in case_summaries:
+        if r['events']!=1:continue
+        lines.append(f'| delay{r["delay_ns"]}, B+{r["pitch_bytes"]} B | '+' | '.join(cell(r['intervals'][k]) for k in
+            ('prod_to_issue_ns','issue_to_FIRST_ns','wait_minus_issue_ns','wait_to_FIRST_ns'))+' |')
+    lines+=['','| events1直接延迟512−0 | Δ(prod→issue_end) cycles | Δ(issue_end→FIRST) cycles | Δ(issue_end→FIRST) ns | Δ(entry→wait_begin) ns |',
+        '|---|---:|---:|---:|---:|']
+    for r in pair_summaries:
+        if r['kind']!='delay' or r['events']!=1:continue
+        lines.append(f'| B+{r["pitch_bytes"]} B | '+' | '.join(cell(r['target_delta'][k]) for k in
+            ('prod_to_issue_cycles','issue_to_FIRST_cycles','issue_to_FIRST_ns','entry_to_wait_ns'))+' |')
+    lines+=['','增长落在两次copy发出后的issue_end→FIRST区间；prod之后的发射准备没有相应增长，'
+        '消费者进入首次等待也没有同量级推迟。它限制了“发射准备变慢”或“消费者更晚到达等待点”作为主要解释。'
+        'TMA完成、屏障可见性、消费者从等待中恢复的调度，以及producer继续推进后续tile的相互影响仍未分开。']
+    lines+=['','| 首输出直接延迟512−0 | ΔS ns | ΔL ns | Δ(S+L) ns | Δ(entry→MAIN_END) ns |',
+        '|---|---:|---:|---:|---:|']
+    for r in pair_summaries:
+        if r['kind']!='delay':continue
+        lines.append(f'| events{r["events"]}, B+{r["pitch_bytes"]} B | '+' | '.join(cell(r['target_delta'][k]) for k in
+            ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'))+' |')
+    lines+=['','| delay×pitch交互 | events0 ns | events1 ns |','|---|---:|---:|']
+    for k in ('S_ns','L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
+        lines.append(f'| {k} | '+ ' | '.join(cell(r['delta'][k]) for r in interaction_summaries)+' |')
+    lines+=['','| 交互的观察协议差（events1−events0） | ns中位与十进程范围 |','|---|---:|']
+    for k in ('L_ns','S_plus_L_ns','entry_to_MAIN_END_ns'):
+        lines.append(f'| {k} | {cell(observer_interaction_summary[k])} |')
+    lines+=['','e0保留为主要因果对照；e1用于定位端点之间的增长。交互方向保留不等于幅度完全一致，'
+        'e1的S交互范围跨零，不能单凭其中位值声称首段行距惩罚稳定增大。']
+    lines+=['','| plain参照 | 本批中位 µs | 739619中位 µs | 中位变化 |','|---|---:|---:|---:|']
+    for case,r in reference_comparison.items():
+        lines.append(f'| {case} | {r["current"]["median"]:.3f} | {r["previous"]["median"]:.3f} | {100*r["median_change"]:+.2f}% |')
+    lines+=['','跨批参照只提供卡状态与二进制背景，不作为本批events1−events0的观察误差。']
+    lines+=['','JSON保留同端点cycles、ns、逐进程差、实际延迟和同B进度名次；'
+        'CTA55/91各输出及17个同B伙伴、其余130CTA背景分列。'
+        'issue_end与FIRST之间包含异步事务完成、消费者进度和观测指令，不能直接当成裸TMA延迟。'
+        '描述符预取、请求服务与调度初态尚需根据这些窗口判断可区分范围，不拟合新常数。','']
+    (output/'R13-first-supply.md').write_text('\n'.join(lines))
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", required=True, type=Path)

@@ -144,6 +144,38 @@ def make_stage_sparse_overlay(source, progress=False):
     path.write_text(text[:begin]+consumer)
 
 
+def make_first_supply_overlay(source):
+    """CTA55 first output: issued A/B pair and entry to the first consumer wait."""
+    path=source/'overlay'/common.MAINLOOP;text=path.read_text()
+    start=text.index('  /// Producer Perspective');end=text.index('  /// Perform a Producer Epilogue',start)
+    load=text[start:end].replace('TensorStorage& shared_tensors) {',
+        'TensorStorage& shared_tensors, int r13_output_seq = -1) {',1)
+    load=common.insert_once(load,'    if (lane_predicate) {\n',
+        '      const int r13_first_k = k_tile_count;\n'
+        '      const bool r13_target = r13_first_target(r13_output_seq);\n',after=True)
+    load=common.insert_once(load,'        ++k_tile_iter;\n',
+        '        if (r13_target && k_tile_count==r13_first_k) r13_first_issue_stamp();\n')
+    text=text[:start]+load+text[end:]
+    start=text.index('    // Prologue GMMAs');end=text.index('    // Mainloop GMMAs',start)
+    prologue=text[start:end]
+    site='      auto barrier_token = pipeline.consumer_try_wait(smem_pipe_read);\n'
+    # Only the initial block, not the later k_tile_prologue loop.
+    pos=prologue.index(site)
+    prologue=prologue[:pos]+('      const bool r13_target = threadIdx.x==128 && r13_first_target(v06_tile_seq);\n'
+        '      uint64_t r13_wait_c=0, r13_wait_ns=0;\n'
+        '      if (r13_target) { r13_wait_c=v06_clock(); r13_wait_ns=v06_ns(); }\n')+prologue[pos:]
+    prologue=common.insert_once(prologue,'      v06_stamp(V06_FIRST_MMA, v06_tile_seq);\n',
+        '      if (r13_target) { r10_producer_delay_trace[6]=r13_wait_c; r10_producer_delay_trace[7]=r13_wait_ns; }\n',after=True)
+    path.write_text(text[:start]+prologue+text[end:])
+    path=source/'overlay'/common.PING;text=path.read_text()
+    start=text.index('      // Mainloop Producer Warp');end=text.index('else if (producer_warp_role == ProducerWarpRole::MainloopAux)',start)
+    producer=text[start:end]
+    site='            shared_storage.tensors.mainloop\n          );'
+    if producer.count(site)!=1:raise ValueError('first-supply producer call site changed')
+    producer=producer.replace(site,'            shared_storage.tensors.mainloop, v06_tile_seq\n          );')
+    path.write_text(text[:start]+producer+text[end:])
+
+
 def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False):
     rows=cases(family) if rows is None else rows
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
@@ -186,6 +218,10 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         if text.count(site)!=1:raise ValueError('consumer coordinate site changed')
         text=text.replace(site,site+'        v06_begin(work_tile_info, v06_tile_seq);\n')
         path.write_text(text)
+    first_supply = any('first_supply_events' in row for row in rows)
+    if first_supply:
+        if not producer_delay or not dual_clock:raise ValueError('first supply uses the declared delay/dual experiment')
+        make_first_supply_overlay(source)
     if stage_sparse and stage_progress:raise ValueError("choose one stage observation protocol")
     if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
@@ -206,6 +242,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
             if work_swap:cmd.append('-DR10_WORK_SWAP')
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
+            if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
             if stages is not None:cmd.append(f'-DR18_STAGE_COUNT={stages}')
             if stage_sparse and variant=='stamped':cmd.append('-DR13_STAGE_SPARSE')
             if stage_progress and variant=='stamped':cmd.append('-DR13_STAGE_PROGRESS')
@@ -224,7 +261,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 

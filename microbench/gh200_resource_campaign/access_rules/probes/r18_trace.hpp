@@ -40,6 +40,16 @@ __device__ __forceinline__ uint64_t* v06_base() {
   return v06_trace_ptr + size_t(block) * V06CtaWords;
 }
 
+#ifdef R13_FIRST_SUPPLY
+__device__ __forceinline__ bool r13_first_target(int output_seq) {
+  return blockIdx.x==55 && blockIdx.y==0 && blockIdx.z==0 && output_seq==0 && r13_first_supply_events;
+}
+__device__ __forceinline__ void r13_first_issue_stamp() {
+  uint64_t c=v06_clock(),n=v06_ns();
+  r10_producer_delay_trace[4]=c; r10_producer_delay_trace[5]=n;
+}
+#endif
+
 #if defined(R13_STAGE_SPARSE) || defined(R13_STAGE_PROGRESS)
 // Same 784-word allocation as ordinary plain. Only CTA0 writes selected fields.
 // Word 10 remains the existing overflow sentinel. Event values are same-SM clocks.

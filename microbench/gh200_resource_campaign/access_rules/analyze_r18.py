@@ -120,6 +120,10 @@ def validate_warmup(setup, call, row):
         for event in (setup,call):
             if event.get('producer_delay_ns')!=row['producer_delay_ns'] or event.get('producer_delay_protocol')!='cta55-pre-first-load-v1':
                 raise ValueError('producer delay identity changed')
+    if 'first_supply_events' in row:
+        for event in (setup,call):
+            if event.get('first_supply_events')!=row['first_supply_events'] or event.get('first_supply_protocol')!='r13-first-supply-v1' or event.get('first_supply_scratch_bytes')!=64:
+                raise ValueError('first supply observation identity changed')
     policy = row.get('warmup_policy','adaptive')
     if policy not in ('adaptive','common-sw1-16'):
         raise ValueError('unknown warmup policy')
@@ -383,6 +387,19 @@ def replay(root,record,row,retain_roles=False):
         if en-bn<row['producer_delay_ns']:raise ValueError('requested producer delay not observed')
         result['producer_delay']=dict(cta=55,requested_ns=row['producer_delay_ns'],begin_c=bc,begin_ns=bn,
             end_c=ec,end_ns=en,duration_cycles=ec-bc,duration_ns=en-bn)
+    if 'first_supply_events' in row:
+        values=call.get('first_supply_trace',[]);enabled=bool(row['first_supply_events'])
+        if len(values)!=4 or (enabled and not all(values)) or (not enabled and any(values)):
+            raise ValueError('first supply observation record is incomplete or enabled unexpectedly')
+        first=dict(cta=55,enabled=enabled,protocol='r13-first-supply-v1')
+        if enabled:
+            ic,ins,wc,wns=values;c=result['ctas'][55]
+            if not (c['prod_c']<=ic<=c['end_c'] and c['prod_ns']<=ins<=c['end_ns']):
+                raise ValueError('first TMA issue marker is outside its producer call')
+            if not (c['entry_c']<=wc<=c['tiles'][0][0] and c['entry_ns']<=wns<=c['tiles_ns'][0][0]):
+                raise ValueError('first consumer wait marker is outside its local interval')
+            first.update(issue_end_c=ic,issue_end_ns=ins,wait_begin_c=wc,wait_begin_ns=wns)
+        result['first_supply']=first
     if len(seen)!=len(set(seen)):raise ValueError('duplicated logical work tiles')
     tm=256 if row['config'].startswith('cfg_c') else 128;tn=128
     required={(i,j) for i in range(model.cdiv(row['m'],tm)) for j in range(model.cdiv(row['n'],tn))}
