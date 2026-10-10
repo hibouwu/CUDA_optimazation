@@ -29,13 +29,25 @@ I=A+J; E=J+R; max(DONE)−M=W+J+R
 
 ## 前一输出是否拖慢下一主循环？
 
-[R13共同复用候选](R13-async-retirement.md#stage-reuse)仍缺少cfg_b stage4早段约2k cycle。pingpong允许前WG epilogue与后WG mainloop重叠，但时间重叠本身不是竞争的因果证据。
+**改变输出顺序会改变早段，但不能解释全部缺口。** [739717同卡对照](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-epilogue-order)保持cfg_b 2816×1536×4096、stage4/6、A/B和分配容量不变，只让CTA0前WG在释放全部输入slot后，等待后WG的mma返回再做epilogue。正常/延后使用同一二进制，预热flag均为0、全部控制的预热均为8次。40个progress进程的工作与SM一致；20个延后进程均确认E0开始晚于同调用M1返回，早段重叠为零。
 
-已有最接近的输出干预是[V08F job737322](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/cases.json)的`cfg_b_p_ref_k1024`与`cfg_b_p_dpitch_k1024`：2304×3072×1024、stage6、swizzle1、grid132，case只改ldd 3072→3080。每case有10个plain/stamped/ends成功进程；同CTA逐输出FIRST/MAIN/PERMIT/DONE可重放。旧[汇总](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)中后续L只变+0.423%、完整时间+0.226%，末E为2512→2513 cycle，尚不足以证明有效改变了输出竞争。
+| 同调用窗口或同trial配对 | stage4 | stage6 |
+|---|---:|---:|
+| 正常→延后，早段C1→C16中位cycle | 11130.5→10481.5 | 7947.5→7890 |
+| 早段配对差中位[范围] | −772 [−1091,−146]，10/10缩短 | −124 [−731,319]，5/10缩短 |
+| 后段C17→C63配对差中位 | +304.5 | +1 |
+| 整个L配对差中位 | −140.5 | +109 |
+| E0自身窗口中位 | 6429.5→2524 | 8098→2679.5 |
+| M1返回→MAIN配对差中位 | +94 | +93 |
+| plain完整时间配对变化中位 | −0.39% | +1.43% |
 
-它只覆盖旧099卡、stage6、K1024，没有当前stage4/K4096的早段commit端点。逻辑A/B及分配尺寸相同，旧记录却未保存输入VA；D分配与初始化量也随行距改变。故不能借此排除当前输入初态解释。EPI_DONE也不是全局D写完成的证明。
+早段收益没有完整转化成L或整调用收益。延后的E0仍与M1的tail重叠约376/377 cycle，不能把尾段增长直接称为硬件drain变慢。E0自身明显缩短，说明固定几何的输出窗口也依赖执行重叠或所处时段；延后同时改变了它遇到的全卡输出背景，不能唯一归因本SM端口竞争。
 
-当前尚不能区分本SM前WG输出竞争与输入/全卡继承状态。需要改变输出时间顺序的对照，不能仅从重叠区间定价；具体最小干预见[PLAN](PLAN.md)。等待本身可能改变调度，阴性结果也不能直接排除全部竞争。
+两种顺序各用自身两stage后段检查[R13固定复用子类](R13-async-retirement.md#stage-reuse)：stage4早段上界分别8888.58/8970.58，仍少算约2242/1511 cycle。该界沿用计算受限c和默认继承状态等前提，不是任意模型的下界。不能给early补一个772或1511的专属常数，也不能继续单独修E0来宣称整个缺口已经解释。
+
+[逐进程分析](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md)保留原端点、重叠、VA、预热与失败来源。100个有效进程无失败；四次同分配全部4325376个D元素逐位相同；四binary均168寄存器、16条静态HGMMA、无spill。两个先行plain参照相对739686为+0.52%/+1.04%。progress相对plain的整调用配对中位扰动为1.08%～2.13%，不代表局部扰动同样小。sender记录在自身epilogue结束后写出，正常组仍可能落在receiver主循环内；不同进程VA也有变化，stage4的四个同VA配对仍全部早段缩短，但相同VA不证明相同物理映射。
+
+旧[V08F D-only对照](../../../../../../results/gh200_resource_campaign/access_rules/20261008-V08F-job737322-v1/reanalysis/followup-v1/followup.json)保留为弱干预：旧099卡、stage6、2304×3072×1024、ldd3072→3080，后续L仅+0.423%、完整时间+0.226%；它没有当前早段端点，也未固定输入VA，不能替代本次顺序对照。E0末端沿用store_tail边界，不是全局D可见完成。
 
 ## 周期变短是否等于输出服务变快？
 

@@ -47,14 +47,16 @@ def decode_stage_sparse(setup, call):
     if len(words)!=math.prod(setup['grid'])*width or any(words[width:]):
         raise ValueError('sparse trace size or non-target CTA writes')
     b=words[:width]
-    if setup.get('trace_version') in ('r13-stage-progress-v1','r13-stage-handoff-v1'):
+    if setup.get('trace_version') in ('r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1'):
         handoff=setup['trace_version']=='r13-stage-handoff-v1'
+        epilogue_order=setup['trace_version']=='r13-epilogue-order-v1'
         mapping={'first_mma':21,'commit1':20,'full_wait_begin16':15,'commit16':17,
             'wait1_end16':18,'full_wait_begin17':16,'commit17':19,'commit63':24,
             'mma_return':32,'main_end':22}
         c={name:b[index] for name,index in mapping.items()}
         sequence=[c[name] for name in mapping]
-        if b[31]!=(0x52313303 if handoff else 0x52313302) or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
+        marker=0x52313304 if epilogue_order else 0x52313303 if handoff else 0x52313302
+        if b[31]!=marker or b[10] or not all(sequence) or any(a>z for a,z in zip(sequence,sequence[1:])):
             raise ValueError('invalid consumer progress event order')
         if not b[1] or b[1]!=b[23] or min(b[13],b[14])<=0:
             raise ValueError('progress consumer SM/work mismatch')
@@ -89,6 +91,22 @@ def decode_stage_sparse(setup, call):
                 ('sender_to_first','sender_mma_return','first_mma')]})
             result['intervals']['receiver_late_entry']=max(0,h['math_wait_begin']-h['sender_mma_return'])
             result['intervals']['after_sender_and_wait_entry']=h['math_wait_end']-max(h['math_wait_begin'],h['sender_mma_return'])
+        if epilogue_order:
+            if b[43]!=b[1] or min(b[44],b[45])<=0 or (b[44],b[45])==(b[13],b[14]):
+                raise ValueError('epilogue sender SM/work mismatch')
+            begin,end=b[41],b[42]
+            if not 0<begin<=end:
+                raise ValueError('invalid sender epilogue event order')
+            if setup.get('epilogue_defer') not in (0,1):
+                raise ValueError('missing epilogue defer identity')
+            if setup['epilogue_defer']==1 and begin<c['mma_return']:
+                raise ValueError('deferred epilogue precedes receiver mma return')
+            result['sender_work']=[b[44]-1,b[45]-1]
+            c.update(sender_epi_begin=begin,sender_epi_end=end)
+            result['intervals'].update(
+                sender_epilogue=end-begin,
+                epilogue_overlap_L=max(0,min(end,c['main_end'])-max(begin,c['first_mma'])),
+                epilogue_overlap_early=max(0,min(end,c['commit16'])-max(begin,c['commit1'])))
         return result
     clocks={name:b[index] for name,index in {
         'entry':0,'acquire_begin':6,'acquire_end':7,'issue_end':8,
@@ -171,6 +189,11 @@ def validate_warmup(setup, call, row):
     """Legacy adaptive convergence, or an explicitly fixed common history."""
     if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
         raise ValueError('work permutation identity changed')
+    if 'epilogue_defer' in row:
+        if any(event.get('epilogue_defer')!=row['epilogue_defer'] for event in (setup,call)):
+            raise ValueError('epilogue order identity changed')
+        if any(event.get('epilogue_warmup_defer')!=0 for event in (setup,call)):
+            raise ValueError('epilogue treatment entered the warmup prefix')
     if 'producer_delay_ns' in row:
         for event in (setup,call):
             if event.get('producer_delay_ns')!=row['producer_delay_ns'] or event.get('producer_delay_protocol')!='cta55-pre-first-load-v1':
@@ -380,7 +403,7 @@ def replay(root,record,row,retain_roles=False):
         result['preceding_target_calls']=18
         return result
     if record['variant'] in ['plain','wide']:return result
-    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1'):
+    if setup.get('trace_version') in ('r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1'):
         key='sparse' if setup['trace_version']=='r13-stage-sparse-v1' else 'progress'
         result[key]=decode_stage_sparse(setup,call)
         return result

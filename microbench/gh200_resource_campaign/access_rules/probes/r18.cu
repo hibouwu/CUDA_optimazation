@@ -3,6 +3,9 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#ifdef R13_EPILOGUE_ORDER
+__device__ __constant__ unsigned r13_epilogue_defer;
+#endif
 #ifdef R10_WORK_SWAP
 // Experimental initial-work permutation; every later advance keeps the same stride.
 __device__ __constant__ int r10_work_swap55_91;
@@ -120,7 +123,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_STAGE_HANDOFF)
+#if defined(R13_EPILOGUE_ORDER) && defined(R13_STAGE_PROGRESS)
+constexpr const char* kTraceVersion="r13-epilogue-order-v1";
+#elif defined(R13_STAGE_HANDOFF)
 constexpr const char* kTraceVersion="r13-stage-handoff-v1";
 #elif defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-stage-progress-v1";
@@ -170,6 +175,7 @@ struct Args {
   unsigned producer_delay_ns = 0;
   unsigned first_supply_events = 0;
   unsigned ready_observer = 0;
+  unsigned epilogue_defer = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -208,9 +214,14 @@ struct Args {
       else if(key=="--work-swap55-91")work_swap55_91=std::stoi(v);
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
       else if(key=="--ready-observer")ready_observer=std::stoul(v);
+      else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (epilogue_defer > 1) throw std::runtime_error("epilogue-defer must be 0 or 1");
+#ifndef R13_EPILOGUE_ORDER
+    if (epilogue_defer || mode == "check-epilogue-order") throw std::runtime_error("epilogue order requires experiment build");
+#endif
     if (ready_observer > 1) throw std::runtime_error("ready-observer must be 0 or 1");
 #ifndef R13_READY_OBSERVER
     if (ready_observer || mode == "check-ready-observer") throw std::runtime_error("ready observer requires experiment build");
@@ -353,7 +364,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -439,6 +450,14 @@ int main(int argc, char** argv) {
     const char* resolved_raster = launch_params.scheduler.raster_order_ ==
         decltype(launch_params.scheduler.raster_order_)::AlongN ? "along_n" : "along_m";
     int ctas = int(grid.x * grid.y * grid.z);
+#ifdef R13_EPILOGUE_ORDER
+    if ((o.epilogue_defer || o.mode == "check-epilogue-order") &&
+        (V06_CFG != 1 || o.m != 2816 || o.n != 1536 || o.k != 4096 ||
+         ctas != 132 || o.swizzle != 1 || o.history_mode != "off"))
+      throw std::runtime_error("epilogue order requires the declared two-output cfg_b pair");
+    unsigned normal_epilogue=0;
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&normal_epilogue,sizeof(normal_epilogue)));
+#endif
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
 
@@ -633,6 +652,8 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"epilogue_defer\":" << o.epilogue_defer
+                << ",\"epilogue_warmup_defer\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
@@ -689,6 +710,11 @@ int main(int argc, char** argv) {
       print_u64("trace", host);
       std::cout << "}\n";
     };
+    auto set_target_epilogue = [&]() {
+#ifdef R13_EPILOGUE_ORDER
+      CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&o.epilogue_defer,sizeof(o.epilogue_defer)));
+#endif
+    };
     auto warm_sequence = [&]() {
       std::vector<float> warm;
       if (history_series) {
@@ -719,6 +745,7 @@ int main(int argc, char** argv) {
       }
       if (common_history) {
         for (int i = 0; i < 16; ++i) warm.push_back(timed(warmup_launch_params));
+        set_target_epilogue();
         float ms = timed(launch_params);
         report("warm", ms, warm);
         return;  // Fixed history: CV is a diagnostic, never a retry condition.
@@ -728,6 +755,7 @@ int main(int argc, char** argv) {
         if (i >= 7 && coefficient_of_variation({warm.end() - 5, warm.end()}) <= 0.02)
           break;
       }
+      set_target_epilogue();
       float ms = timed(launch_params);
       report("warm", ms, warm);
       if (warm.size() < 8 || coefficient_of_variation({warm.end() - 5, warm.end()}) > 0.02)
@@ -763,6 +791,8 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"epilogue_defer\":" << o.epilogue_defer
+                << ",\"epilogue_warmup_defer\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
 #ifdef R13_FIRST_SUPPLY
                 << ",\"first_supply_protocol\":\"r13-first-supply-v1\""
@@ -807,12 +837,18 @@ int main(int argc, char** argv) {
               << ",\"trace_words\":" << kTraceWords << "}\n";
     if (o.mode == "setup")
       return 0;
-#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer") {
+#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER)
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_EPILOGUE_ORDER
+        if (o.mode == "check-epilogue-order") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&value,sizeof(value)));
+          return;
+        }
+#endif
 #ifdef R13_READY_OBSERVER
         if (o.mode == "check-ready-observer") {
           CUDA_CHECK(cudaMemcpyToSymbol(r13_ready_observer,&value,sizeof(value)));
@@ -849,7 +885,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

@@ -1,6 +1,6 @@
 # R13：有效供给、阶段与可辨识性
 
-当前条件供给尚未通过V09的行距与stage迁移。两stage的后段中位窗口允许共同复用组合Z约1755～1773 cycle，但当前完整继承状态子类仍少算stage4早段至少约2079 cycle；不交付为完整模型。下一步区分输入/继承状态与前一WG输出并发的影响，同时保留非均匀观察路径的限制，不给early加专属常数。
+当前条件供给尚未通过V09的行距与stage迁移。后段共同复用组合只给出受限约束。739717把前WG输出延后后，stage4早段10/10缩短、配对中位−772 cycle，但按该组自身后段约束，当前完整继承子类仍少算早段约1511 cycle；输出并发参与偏差，尚不能解释全部。源码核对未发现prologue、steady和tail的slot/phase错位；剩余是释放完成、请求推进和服务状态的时间关系，不给early加专属常数。
 
 首次供给的释放前端点使新批40/40次ready观察能绑定首代事务，排除了本协议下“只是consumer晚返回”；请求排队、数据服务与就绪可见性仍未分开。逻辑源请求与填零量不等于物理流量。现行公式只在[RULES](RULES.md#v09-model)维护；行距证据见[R10](R10-layout-cache.md)，边界/填零证据见[R18](R18-cluster-boundary.md)。
 
@@ -24,6 +24,7 @@
 | 同次计算组交接，739686 | 原两stage×plain/progress/handoff；交接非零，stage差主要在首full等待，局部观察扰动明显 | [三段闭合与累计推进](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-handoff-samples.md) |
 | 固定入口，离线 | 旧延迟违反后段必要界；stage4必须有内部停顿，不能只移动入口或末端领先量 | [条件重放与参数无关界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-conditioned.md) |
 | 共同复用组合，离线 | 两stage后段联合开发；有限窗口保留相位，完整子类仍缺早段推进 | [中位区间与早段上界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.md) |
+| 前一输出顺序，739717 | 消除早段E0重叠后stage4早段缩短，完整继承子类仍有缺口 | [R15统一分析](R15-output-service.md#next-mainloop-overlap)、[逐进程结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-epilogue-order.md) |
 | 首次供给，739629 | 同binary新增打点开关 × 起步0/512 ns × B0/B32；定位S增长 | [同批观察扰动与端点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-first-supply.md) |
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
@@ -363,6 +364,9 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 最后两行使用额外条件q≥w+r+δ、默认首输出初始化且没有观测入口切割：首H不阻塞E，前输出末slot释放只会早于普通释放；它最早影响第二输出local S−1，尚未影响local C1，所以C16−C1≤(15/m)max(mc,Z+w)。因此这个完整子类不能解释stage4早段约2079 cycle的缺口。该反证不覆盖未知的真实第一输出状态或放宽分支后的其他模型。
 
 原progress另用自身两stage后段校准，仍有约1767 cycle早段缺口；它不要求新增handoff打点存在，但原progress的非均匀观察路径尚未排除，不能只因2079大于19就排除观察扰动。共同后段组合保留为受限约束，完整候选不进入预测；不加early专属项、不把观察值传入正式接口。[计算与完整前提](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-reuse.json)。已有输出路径对照及其不足集中在[R15](R15-output-service.md#next-mainloop-overlap)。
+
+
+当前顺序对照后的源码检查未发现漏释放：各WG prologue不释放前WG尾槽，local1起wait1释放自身前一槽，tail只释放自身末槽；第二输出local S−1走前输出tail、j≥S才恢复内部S−1依赖，递推已经对应。cfg_b单CTA cluster的empty barrier要128线程各自arrive，所选lane的wait1时间只是乐观释放边界；统一a也未辨识全部arrival、producer获得槽和下一请求发出的时间。producer两次load之间另有状态推进与坐标/scheduler路径；源码证明路径存在，不能证明它解释剩余1511 cycle。下一步先离线检验单一输出边界间隙能否影响该早段窗口，再判断是否需要状态相关服务。
 
 <a id="first-supply"></a>
 

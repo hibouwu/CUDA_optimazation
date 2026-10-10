@@ -94,5 +94,47 @@ class StageSparseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'sender SM'):
             decode_stage_sparse(setup,dict(trace=b))
 
+    def epilogue_trace(self, deferred=0):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=b[43]=3
+        b[13]=12;b[14]=b[44]=b[45]=1;b[31]=0x52313304
+        for i,value in {21:300,20:900,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500,
+                        41:500,42:8500}.items():b[i]=value
+        if deferred:b[41],b[42]=32100,33000
+        setup=dict(grid=[1,132,1],trace_words=width,
+                   trace_version='r13-epilogue-order-v1',epilogue_defer=deferred)
+        return setup,dict(trace=b)
+
+    def test_epilogue_overlap_and_deferred_receiver_order(self):
+        setup,call=self.epilogue_trace()
+        r=decode_stage_sparse(setup,call)
+        self.assertEqual(r['sender_work'],[0,0])
+        self.assertEqual(r['clocks']['sender_epi_begin'],500)
+        self.assertEqual(r['intervals']['sender_epilogue'],8000)
+        self.assertEqual(r['intervals']['epilogue_overlap_L'],8000)
+        self.assertEqual(r['intervals']['epilogue_overlap_early'],7400)
+        setup,call=self.epilogue_trace(1)
+        r=decode_stage_sparse(setup,call)
+        self.assertEqual(r['intervals']['epilogue_overlap_L'],400)
+        self.assertEqual(r['intervals']['epilogue_overlap_early'],0)
+        call['trace'][41]-=1
+        with self.assertRaisesRegex(ValueError,'precedes receiver'):
+            decode_stage_sparse(setup,call)
+
+    def test_epilogue_rejects_wrong_sender_missing_endpoints_or_protocol(self):
+        for index,value,reason in [(43,4,'sender SM/work'),(44,0,'sender SM/work'),
+                (44,12,'sender SM/work'),(41,0,'epilogue event order'),
+                (42,499,'epilogue event order'),(31,0x52313302,'progress event order')]:
+            with self.subTest(index=index,value=value):
+                setup,call=self.epilogue_trace()
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):
+                    decode_stage_sparse(setup,call)
+        setup,call=self.epilogue_trace()
+        del setup['epilogue_defer']
+        with self.assertRaisesRegex(ValueError,'defer identity'):
+            decode_stage_sparse(setup,call)
+
 
 if __name__=='__main__':unittest.main()

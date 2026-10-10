@@ -3140,6 +3140,247 @@ def stage_handoff_sample_diagnostics(root, output):
     return report
 
 
+def epilogue_order_diagnostics(root, output):
+    """Same-binary E0 defer control; same-call windows, independent-process pairs."""
+    import gzip
+    from analyze_r13_sm import select_attempts, validate_setup
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows={r['id']:r for r in read_json(root/'cases.json')}
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    references=[r for r in rows.values() if r.get('set')=='reference']
+    controls=[r for r in rows.values() if r.get('set')!='reference']
+    keys={(setups[r['id']]['stages'],r.get('epilogue_defer')):r['id'] for r in controls}
+    if len(references)!=2 or len(controls)!=4 or set(keys)!={(s,d) for s in (4,6) for d in (0,1)}:
+        raise ValueError('epilogue-order run requires two references and four stage/defer controls')
+    for row in controls:
+        if (row['config'],row['m'],row['n'],row['k'])!=('cfg_b',2816,1536,4096):
+            raise ValueError('epilogue-order geometry differs from declared pair')
+    gpu={s['gpu_uuid'] for s in setups.values()}
+    if len(gpu)!=1:raise ValueError('epilogue-order run spans GPUs')
+    binaries=read_json(root/'build/binary_hashes.json')
+    processes=[];failures=[];hashes={};calls={};contexts={}
+
+    def span(values):
+        values=list(values)
+        return dict(median=statistics.median(values),trial_min=min(values),trial_max=max(values))
+
+    def remember(run,item):
+        raw=run/item['record']['raw']
+        if common.sha(raw)!=item['record']['raw_sha256']:
+            raise ValueError('epilogue raw identity changed: '+str(raw))
+        for path in (run/item['path'],raw):hashes[str(path)]=common.sha(path)
+
+    for row in rows.values():
+        name=row['id'];reference=row.get('set')=='reference'
+        variants=('plain',) if reference else ('plain','progress')
+        selected,failed,_=select_attempts(root,name,variants)
+        contexts[name]=dict(row=row,setup=setups[name])
+        for item in failed:
+            remember(root,item);failures.append(dict(case=name,**item))
+        grouped={v:{} for v in variants}
+        for item in selected:
+            record=item['record'];variant=record['variant'];remember(root,item)
+            obs=replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+            setup,call=events['setup'],events['call']
+            validate_setup(row,setups[name],setup)
+            binary='build/'+common.binary_prefix(row)+'_'+variant
+            if Path(record['command'][0]).name!=Path(binary).name or binary not in binaries:
+                raise ValueError('epilogue sample binary differs from its configuration')
+            warm=call['warmup_us']
+            if call['warmup_calls']!=len(warm) or not warm:
+                raise ValueError('epilogue warmup count mismatch')
+            addresses={key:setup[key] for key in ('target_a_ptr','target_b_ptr')}
+            if any(not value or call.get(key)!=value for key,value in addresses.items()):
+                raise ValueError('epilogue target address changed within a process')
+            entry=dict(case=name,set=row.get('set'),stages=setup['stages'],variant=variant,
+                epilogue_defer=row.get('epilogue_defer',0),trial=record['trial'],
+                elapsed_us=obs['elapsed_us'],source=record['raw'],source_sha256=record['raw_sha256'],
+                record_path=item['path'],binary=binary,binary_sha256=binaries[binary],
+                gpu_uuid=setup['gpu_uuid'],host_start_ns=record['host_start_ns'],host_stop_ns=record['host_stop_ns'],
+                warmup_calls=len(warm),warmup_last5_cv=call['warmup_last5_cv'],
+                warmup_us=warm,target_addresses=addresses)
+            if variant=='progress':
+                if setup['trace_version']!='r13-epilogue-order-v1':
+                    raise ValueError('epilogue observation lacks its explicit protocol')
+                p=obs['progress'];c=p['clocks']
+                intervals=_stage_progress_intervals(dict(clocks=c))
+                intervals.update({key:p['intervals'][key] for key in
+                    ('sender_epilogue','epilogue_overlap_L','epilogue_overlap_early')})
+                intervals['sender_epi_begin_minus_mma_return']=c['sender_epi_begin']-c['mma_return']
+                if p['sender_work']!=[0,0] or p['work']!=[11,0]:
+                    raise ValueError('epilogue treatment changed selected output coordinates')
+                if row['epilogue_defer'] and intervals['sender_epi_begin_minus_mma_return']<0:
+                    raise ValueError('deferred output began before receiver mma returned')
+                entry.update(cta=p['cta'],sm=p['sm'],work=p['work'],sender_work=p['sender_work'],
+                    output=p['output'],clocks=c,intervals=intervals)
+            grouped[variant][record['trial']]=entry;processes.append(entry)
+        if any(set(v)!=set(range(10)) for v in grouped.values()):
+            raise ValueError(name+': ten independent processes per variant required')
+        calls[name]=grouped
+
+    timing=[];treatment=[];observer=[]
+    for stage in (4,6):
+        for defer in (0,1):
+            name=keys[stage,defer];group=calls[name]
+            timing.append(dict(stages=stage,epilogue_defer=defer,
+                elapsed_us={v:span(p['elapsed_us'] for p in group[v].values()) for v in ('plain','progress')},
+                intervals={k:span(p['intervals'][k] for p in group['progress'].values())
+                    for k in group['progress'][0]['intervals']}))
+            pairs=[]
+            for trial in range(10):
+                plain,progress=(group[v][trial] for v in ('plain','progress'))
+                pairs.append(dict(trial=trial,whole_delta_us=progress['elapsed_us']-plain['elapsed_us'],
+                    whole_relative=progress['elapsed_us']/plain['elapsed_us']-1,
+                    source_plain=plain['source'],source_progress=progress['source'],
+                    same_target_addresses=plain['target_addresses']==progress['target_addresses']))
+            observer.append(dict(stages=stage,epilogue_defer=defer,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),
+                whole_relative=span(p['whole_relative'] for p in pairs)))
+        for variant in ('plain','progress'):
+            a,b=(calls[keys[stage,d]][variant] for d in (0,1));pairs=[]
+            for trial in range(10):
+                normal,deferred=a[trial],b[trial]
+                if normal['binary_sha256']!=deferred['binary_sha256']:
+                    raise ValueError('normal/deferred control does not share a binary')
+                pair=dict(trial=trial,whole_delta_us=deferred['elapsed_us']-normal['elapsed_us'],
+                    whole_relative=deferred['elapsed_us']/normal['elapsed_us']-1,
+                    source_normal=normal['source'],source_deferred=deferred['source'],
+                    same_target_addresses=normal['target_addresses']==deferred['target_addresses'],
+                    warmup_calls_normal=normal['warmup_calls'],warmup_calls_deferred=deferred['warmup_calls'])
+                if variant=='progress':
+                    pair.update(normal_sm=normal['sm'],deferred_sm=deferred['sm'],
+                        delta_cycles={k:deferred['intervals'][k]-normal['intervals'][k] for k in normal['intervals']})
+                pairs.append(pair)
+            summary=dict(stages=stage,variant=variant,processes=pairs,
+                whole_delta_us=span(p['whole_delta_us'] for p in pairs),
+                whole_relative=span(p['whole_relative'] for p in pairs))
+            if variant=='progress':summary['delta_cycles']={k:span(p['delta_cycles'][k] for p in pairs)
+                for k in pairs[0]['delta_cycles']}
+            treatment.append(summary)
+
+    old=root.parent/'20261010-R13-stage-handoff';common.verify(old)
+    old_rows={r['id']:r for r in read_json(old/'cases.json')}
+    old_setups={r['case']:r['setup'] for r in read_json(old/'static_setup.json')}
+    reference_results=[]
+    for row in references:
+        name=row['id'];selected,failed,_=select_attempts(old,name,('plain',));prior=[]
+        for item in selected:
+            remember(old,item);record=item['record'];obs=replay(old,record,old_rows[name])
+            prior.append(dict(trial=record['trial'],elapsed_us=obs['elapsed_us'],source=record['raw'],
+                source_sha256=record['raw_sha256']))
+        for item in failed:remember(old,item)
+        if {p['trial'] for p in prior}!=set(range(10)):raise ValueError('739686 reference incomplete')
+        current=span(p['elapsed_us'] for p in calls[name]['plain'].values())
+        previous=span(p['elapsed_us'] for p in prior)
+        reference_results.append(dict(case=name,current_us=current,previous_us=previous,previous_root=str(old),
+            previous_processes=prior,previous_failed_attempts=failed,
+            same_gpu=setups[name]['gpu_uuid']==old_setups[name]['gpu_uuid'],
+            median_relative=current['median']/previous['median']-1))
+    early_bounds=[]
+    for defer in (0,1):
+        t4=next(t for t in timing if (t['stages'],t['epilogue_defer'])==(4,defer))
+        t6=next(t for t in timing if (t['stages'],t['epilogue_defer'])==(6,defer))
+        c=t6['intervals']['commit17_to63']['median']/46
+        # Same reduced/default-inheritance subclass as stage_reuse_diagnostics.
+        # D46 >= 15*(Z+w)+c; D15 <= 5*(Z+w) in the stage4 stalled branch.
+        upper=max(15*c,(t4['intervals']['commit17_to63']['median']-c)/3)
+        early_bounds.append(dict(epilogue_defer=defer,effective_c=c,
+            stage4_early_upper=upper,stage4_early_observed=t4['intervals']['commit1_to16']['median'],
+            stage4_early_shortfall=t4['intervals']['commit1_to16']['median']-upper))
+    correctness=[]
+    for path in sorted((root/'correctness').glob('*.jsonl')):
+        check=next(json.loads(line) for line in path.read_text().splitlines() if '"epilogue_order_check"' in line)
+        if check['different'] or check['nonfinite'] or check['elements']!=2816*1536:
+            raise ValueError('full output comparison failed')
+        correctness.append(dict(source=str(path),**check));hashes[str(path)]=common.sha(path)
+    if len(correctness)!=4:raise ValueError('four full-output comparisons required')
+    ref_end=max(p['host_stop_ns'] for p in processes if p['set']=='reference')
+    ctrl_begin=min(p['host_start_ns'] for p in processes if p['set']!='reference')
+    for run in (root,old):
+        for relative in ('cases.json','static_setup.json','source_hashes.json','build/binary_hashes.json',
+                'build/resources.json','build/sass_hashes.json'):
+            path=run/relative;hashes[str(path)]=common.sha(path)
+    for path in (Path(__file__),Path(__file__).with_name('analyze_r18.py')):hashes[str(path)]=common.sha(path)
+    report=dict(scope='CTA0 E0 order intervention after its mma_tail; no model fit or full-validation score.',
+        root=str(root),gpu=next(iter(gpu)),contexts=contexts,processes=processes,timing=timing,
+        deferred_minus_normal=treatment,progress_minus_plain=observer,references=reference_results,
+        reference_order=dict(last_reference_stop_ns=ref_end,first_control_start_ns=ctrl_begin,
+            references_completed_first=ref_end<=ctrl_begin),failed_attempts=failures,
+        resources=read_json(root/'build/resources.json'),input_sha256=hashes,
+        full_output_checks=correctness,full_inheritance_early_bounds=early_bounds,
+        limitations=['Differences are formed within each call before pairing independent processes by trial.',
+            'Only CTA0 E0 is delayed; other CTAs retain their output organization.',
+            'Sender trace writes occur after its epilogue, which can still overlap receiver math in the normal arm.',
+            'Moving E0 also changes its phase relative to other CTAs; its shorter window does not uniquely identify local-SM contention.',
+            'The added barrier wait can alter scheduling; removing overlap does not isolate a unique physical resource.',
+            'E0 end is the source-reuse/store-tail boundary, not proof of global D visibility.',
+            'Virtual addresses are recorded per process; equal virtual addresses do not prove identical physical mappings.',
+            'Cross-job reference drift is separate from same-job treatment and observation perturbation.',
+            'No timing-derived parameters are fitted and frozen V09 remains unchanged.'])
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-epilogue-order.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    def cell(value):return f'{value["median"]:.2f} [{value["trial_min"]:.2f}, {value["trial_max"]:.2f}]'
+    def percent(value):return cell({k:v*100 for k,v in value.items()})+'%'
+    lines=['# 前一输出与下一主循环的同CTA顺序对照','',
+        'cfg_b 2816×1536×4096，stage4/6各比较同一二进制的正常输出与CTA0首输出延期。'
+        '延期等待放在首输出mma_tail之后，等待第二消费者mma返回。全部差值先在同调用内形成；'
+        '处理差按trial配对独立进程。方括号为十个进程或十个配对的最小、最大值，不是置信区间。','',
+        '| stage | 输出顺序 | C1→C16 cycle | C16→C17 cycle | C17→C63 cycle | L cycle | E0与早段重叠 cycle |',
+        '|---|---|---:|---:|---:|---:|---:|']
+    for item in timing:
+        v=item['intervals'];fields=('commit1_to16','commit16_to17','commit17_to63','L','epilogue_overlap_early')
+        lines.append(f'| {item["stages"]} | {"延期" if item["epilogue_defer"] else "正常"} | '+' | '.join(cell(v[k]) for k in fields)+' |')
+    lines+=['','| 延期−正常 | early cycle | late cycle | L cycle | 整调用µs | 整调用相对变化 |',
+        '|---|---:|---:|---:|---:|---:|']
+    for item in treatment:
+        v=item.get('delta_cycles');fields=('commit1_to16','commit17_to63','L')
+        local=' | '.join(cell(v[k]) if v else '—' for k in fields)
+        lines.append(f'| stage{item["stages"]} {item["variant"]} | {local} | {cell(item["whole_delta_us"])} | {percent(item["whole_relative"])} |')
+    lines+=['','两种顺序各用自身两stage后段作条件诊断，沿用[B-stage-reuse](B-stage-reuse.md)'
+        '的固定复用/默认继承子类及其全部前提；stage6后段计算受限只是有效参数假设。'
+        'stage4早段上界为max(15c,(D46−c)/3)，不是任意初态或统计置信界。','',
+        '| 顺序 | stage4早段条件上界 | 实测早段中位 | 仍少算cycle |','|---|---:|---:|---:|']
+    for b in early_bounds:
+        lines.append(f'| {"延期" if b["epilogue_defer"] else "正常"} | {b["stage4_early_upper"]:.2f} | '
+            f'{b["stage4_early_observed"]:.2f} | {b["stage4_early_shortfall"]:.2f} |')
+    lines+=['','| stage | 正常E0窗口中位 | 延期E0窗口中位 | 延期−正常的M1返回→MAIN中位差 |',
+        '|---|---:|---:|---:|']
+    for stage in (4,6):
+        a,b=[next(t for t in timing if (t['stages'],t['epilogue_defer'])==(stage,d)) for d in (0,1)]
+        pair=next(t for t in treatment if (t['stages'],t['variant'])==(stage,'progress'))
+        lines.append(f'| {stage} | {a["intervals"]["sender_epilogue"]["median"]:.2f} | '
+            f'{b["intervals"]["sender_epilogue"]["median"]:.2f} | '
+            f'{pair["delta_cycles"]["mma_return_to_main_end"]["median"]:+.2f} |')
+    lines+=['','延期排除了E0与C1→C16的重叠，但E0仍可与接收组mma_tail重叠；'
+        'M1返回→MAIN的增长不能直接命名为硬件drain变化。E0变短同时改变了它与其他CTA的时间位置。'
+        'sender记录在自身epilogue结束后才写出，正常组中这些写仍可能落在receiver主循环内；'
+        '整调用观察扰动较小不能排除局部观察影响。四次同分配完整D比较均逐位相同，每次4325376个有效元素。','']
+    lines+=['','源码核对没有发现跨输出slot错位：每个WG prologue只提交，不释放前WG尾槽；'
+        'local1起wait1后释放前一输入槽，tail只释放自身最后一个槽。'
+        '第二输出local S−1引用前输出tail，local j≥S才恢复内部S−1复用关系；当前递推已分别处理。'
+        '仍未定量的是128线程empty-arrive完成到producer重发的路径、两次producer load之间的控制间隙，'
+        '以及把两WG折叠成同一固定TC服务frontier的假设；源码不能证明这些时间跨早/晚段恒定。','']
+    lines+=['','| progress相对plain的观察扰动 | 整调用µs | 整调用相对变化 |','|---|---:|---:|']
+    for item in observer:
+        lines.append(f'| stage{item["stages"]} {"延期" if item["epilogue_defer"] else "正常"} | {cell(item["whole_delta_us"])} | {percent(item["whole_relative"])} |')
+    lines+=['','| plain参照 | 本批µs | 739686 µs | 中位变化 | 同GPU |','|---|---:|---:|---:|---|']
+    for item in reference_results:
+        lines.append(f'| {item["case"]} | {item["current_us"]["median"]:.3f} | {item["previous_us"]["median"]:.3f} | {100*item["median_relative"]:+.2f}% | {item["same_gpu"]} |')
+    lines+=['',f'参照成功进程先于处理采样完成：{ref_end<=ctrl_begin}。'
+        '每个延期progress进程都通过E0开始不早于同调用M1返回的检查。JSON保留原端点、工作坐标、SM、'
+        'A/B虚拟地址、预热次数与CV、二进制和raw哈希、失败尝试及逐trial差值。','',
+        '局部early或L缩短，只能支持输出并发或新等待改变执行组织参与了原偏差；'
+        '不能直接命名为某种硬件端口冲突。若early保持不变，也要结合等待扰动解释，不能仅凭阴性结果排除全部竞争。'
+        '本报告不拟合参数，不把跨批参照漂移当作本批因果差，不更新冻结成绩。','']
+    (output/'B-epilogue-order.md').write_text('\n'.join(lines))
+    return report
+
+
 def stage_conditioned_diagnostics(output):
     """Observed-entry cuts and internal necessary bounds; no parameter fitting."""
     from supply_model import admission_stage_events

@@ -167,6 +167,21 @@ def make_stage_sparse_overlay(source, progress=False, handoff=False):
         '        if (r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0) r13_s.main_end=v06_clock();\n',1)
     consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
         '      if (r13_sparse_cta() && threadIdx.x==256) r13_sparse_consumer_flush(r13_s);\n')
+    # Both normal/deferred progress binaries collect the same two E0 markers.
+    consumer=consumer.replace('        v06_stamp(V06_EPI_PERMIT, v06_tile_seq);\n',
+        '#ifdef R13_EPILOGUE_ORDER\n'
+        '        if (r13_sparse_cta() && threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_begin=v06_clock();\n'
+        '#endif\n        v06_stamp(V06_EPI_PERMIT, v06_tile_seq);\n',1)
+    consumer=consumer.replace('        v06_stamp(V06_EPI_DONE, v06_tile_seq);\n',
+        '#ifdef R13_EPILOGUE_ORDER\n'
+        '        if (r13_sparse_cta() && threadIdx.x==128 && v06_tile_seq==0) r13_s.sender_epi_end=v06_clock();\n'
+        '#endif\n        v06_stamp(V06_EPI_DONE, v06_tile_seq);\n',1)
+    consumer=common.insert_once(consumer,'      v06_final(v06_tile_seq + 1);\n',
+        '#ifdef R13_EPILOGUE_ORDER\n'
+        '      if (r13_sparse_cta() && threadIdx.x==128) {\n'
+        '        unsigned sm; asm volatile("mov.u32 %0, %%smid;":"=r"(sm));\n'
+        '        auto b=v06_base(); b[41]=r13_s.sender_epi_begin; b[42]=r13_s.sender_epi_end; b[43]=uint64_t(sm)+1;\n'
+        '      }\n#endif\n')
     path.write_text(text[:begin]+consumer)
 
 
@@ -237,6 +252,22 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             '        ::r10_delay_first_producer();\n'
             '#endif\n')
         path.write_text(text[:start]+producer+text[end:])
+    epilogue_order = any('epilogue_defer' in row for row in rows)
+    if epilogue_order:
+        if not stage_progress or stage_handoff or stage_sparse:
+            raise ValueError('epilogue order uses the original progress observer')
+        path=source/'cutlass/include'/common.PING;text=path.read_text()
+        site='        // Update starting mainloop pipeline state for the next tile\n'
+        text=common.insert_once(text,site,
+            '#ifdef R13_EPILOGUE_ORDER\n'
+            '        // The first WG has already released its last input slot.\n'
+            '        // Read the next WG math completion without advancing its barrier.\n'
+            '        if (blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0 &&\n'
+            '            warp_group_role==WarpGroupRole::Consumer0 &&\n'
+            '            mainloop_pipe_consumer_state.count()==0 && ::r13_epilogue_defer)\n'
+            '          shared_storage.pipelines.math_wg_order.barrier_[0][0].wait(0);\n'
+            '#endif\n')
+        path.write_text(text)
     common.make_overlay(source/'cutlass',source/'overlay')
     shutil.copy2(ROOT/'probes/r18_trace.hpp',source/'overlay/v06_trace.hpp')
     for header in [common.COOP,common.PING]:
@@ -269,11 +300,11 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
     if stage_sparse or stage_progress:
         if dual_clock:raise ValueError('stage-sparse and dual-clock are separate protocols')
         if any((r['config'],r['m'],r['n'],r['k'],r.get('stages',6)) not in [('cfg_b',2816,1536,4096,4),('cfg_b',2816,1536,4096,6)] and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage-sparse is the declared cfg_b pair only')
-        stage_variants=['plain','progress','stamped'] if stage_handoff else ['plain','stamped']
+        stage_variants=['plain','progress'] if epilogue_order else ['plain','progress','stamped'] if stage_handoff else ['plain','stamped']
         if any(r.get('variants',stage_variants)!=stage_variants and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage observation variants differ from declared protocol')
         make_stage_sparse_overlay(source, progress=stage_progress, handoff=stage_handoff)
     commands={}
-    variants=['plain','progress','stamped'] if stage_handoff else ['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
+    variants=['plain','progress'] if epilogue_order else ['plain','progress','stamped'] if stage_handoff else ['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
     configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
     for prefix,(config,stages) in sorted(configurations.items()):
         if stages is not None and stages<=0:raise ValueError('explicit stage count must be positive')
@@ -281,9 +312,10 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         if selected_variants==['ends']:
             selected_variants=['ends','plain']  # Plain is used only for static setup.
         for variant in selected_variants:
-            if variant not in ['plain','wide','stamped','dual','ends'] and not (stage_handoff and variant=='progress'):raise ValueError('unknown observation variant')
+            if variant not in ['plain','wide','stamped','dual','ends'] and not (stage_progress and variant=='progress'):raise ValueError('unknown observation variant')
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
+            if epilogue_order:cmd.append('-DR13_EPILOGUE_ORDER')
             if work_swap:cmd.append('-DR10_WORK_SWAP')
             if producer_delay:cmd.append('-DR10_PRODUCER_DELAY')
             if first_supply:cmd.append('-DR13_FIRST_SUPPLY')
@@ -301,14 +333,14 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer','epilogue_defer']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 

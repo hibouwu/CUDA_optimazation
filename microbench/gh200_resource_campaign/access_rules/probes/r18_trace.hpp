@@ -106,6 +106,9 @@ struct R13SparseConsumer {
   uint64_t wait_begin=0, next_wait_begin=0, retire_end=0;
   uint64_t commit1=0, commit16=0, commit17=0, commit63=0;
   uint64_t first_mma=0, mma_return=0, main_end=0;
+#ifdef R13_EPILOGUE_ORDER
+  uint64_t sender_epi_begin=0, sender_epi_end=0;
+#endif
 #ifdef R13_STAGE_HANDOFF
   uint64_t sender_mma_return=0, math_wait_begin=0, math_wait_end=0, first_wait_begin=0;
 #endif
@@ -135,6 +138,9 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
   b[15]=s.wait_begin; b[16]=s.next_wait_begin; b[17]=s.commit16; b[18]=s.retire_end;
   b[19]=s.commit17; b[20]=s.commit1; b[21]=s.first_mma; b[22]=s.main_end;
   b[24]=s.commit63; b[32]=s.mma_return; b[31]=0x52313302;
+#ifdef R13_EPILOGUE_ORDER
+  b[31]=0x52313304;
+#endif
 #ifdef R13_STAGE_HANDOFF
   b[35]=s.math_wait_begin; b[36]=s.math_wait_end; b[37]=s.first_wait_begin;
   b[31]=0x52313303;
@@ -168,6 +174,9 @@ __device__ __forceinline__ void v06_begin(Work const& work,int tile) {
 #endif
   // Consumer1's first local work item is the CTA's second global output.
   if (threadIdx.x==256 && tile==0) {v06_base()[13]=uint64_t(work.M_idx)+1;v06_base()[14]=uint64_t(work.N_idx)+1;}
+#ifdef R13_EPILOGUE_ORDER
+  if (threadIdx.x==128 && tile==0) {v06_base()[44]=uint64_t(work.M_idx)+1;v06_base()[45]=uint64_t(work.N_idx)+1;}
+#endif
 #ifdef R13_STAGE_HANDOFF
   if (threadIdx.x==128 && tile==0) {v06_base()[39]=uint64_t(work.M_idx)+1;v06_base()[40]=uint64_t(work.N_idx)+1;}
 #endif
