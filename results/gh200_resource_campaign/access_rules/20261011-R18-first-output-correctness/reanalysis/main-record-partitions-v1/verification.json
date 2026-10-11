@@ -1,0 +1,18 @@
+{
+  "delivery_hashes_verified": 7,
+  "input_hashes_per_report": [
+    37,
+    37
+  ],
+  "common_input_paths": 36,
+  "relocated_analyzer_byte_identical": true,
+  "complete_report_equal_except_input_paths": true,
+  "complete_payloads_byte_equal": [
+    "call-identities.json",
+    "records.json.gz",
+    "record-partitions.csv",
+    "signed-record-differences.csv"
+  ],
+  "qualification": false,
+  "scope": "Exact record arithmetic, not causal map comparison or qualified timing."
+}

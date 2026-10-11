@@ -1,0 +1,14 @@
+{
+  "input_hash_counts": [
+    18,
+    18
+  ],
+  "complete_report_equal_except_input_paths": true,
+  "markdown_byte_equal": true,
+  "independent_axis_volume_cases": 3,
+  "independent_release_pointer_records": 672,
+  "independent_last_slot_exit_certificates": 6,
+  "public_r13_tests_passed": 199,
+  "qualification": false,
+  "scope": "Source work and software ordering only; no measured service or time prediction."
+}

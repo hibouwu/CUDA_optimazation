@@ -1,0 +1,15 @@
+{
+  "schema": "C-record-partitions-delivery/1",
+  "artifact_sha256": {
+    "analyze.py": "63fac45ec7451b5593dadee25f84f07fa4b4ef09d7f0f467e7b49a81151a5286",
+    "README.md": "620a5e9e30b6974e2f71a425881e613a46335cffbbe29ea15fb12e6c7932461f",
+    "data/report.json": "e1e3f89582d6ac08520f31172daaf5e9622566baba076f7bf685ff19bcc50c49",
+    "data/call-identities.json": "6b073cc754746625d457e39243558c6a4bb428786820018015601ce9edd435d8",
+    "data/records.json.gz": "df04cc1e5a5c768b279232d1924204af387aabe15278943c80aa394c6948041e",
+    "data/record-partitions.csv": "2be0af137a7b38f504797d2a2302afbc22a18631eded84b27d47042733f0ceed",
+    "data/signed-record-differences.csv": "424d8d2fee1282f810e4b831f658d43b7a801a50ab1bee33680ce2ee317d8a14"
+  },
+  "record_arithmetic_only": true,
+  "all_qualification_false": true,
+  "GPU_processes_added_by_C": 0
+}

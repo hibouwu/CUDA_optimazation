@@ -293,3 +293,7 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 [旧R10窗口工作口径核对](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-window-work-normalization-v1/README.md)：41SHA/30旧trace进程/120窗口重现原cycles/32及完整统计。j2内部输出有效K2000/密集tile K2048工作分别65536000/67108864 FLOP，换算固定128/125，仅改变计量单位，不改变三行距响应。首full等待在窗外、后续等待/control/尾release在窗内，不作裸MMA/SM吞吐或跨卡服务价格。无GPU、新价、模型修改或资格；B继续独立核对完整MMA与阶段依赖语义。
 
 [十进程同调用率区间复验](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-output-rate-interval-v1/README.md)：A b118af97接入bb310223，三完整分析及独立verify逐字节同，67输入/16冻结/6480窗口/2520配对/4负例通过。840共同+1680同WG首/次率区间均分离，共同比值差7.500..11.193%（中位9.529%）；仅条件精确常率排除，原控制失败不变，无物理频率/预测资格、新价或GPU。冻结程序bundle含独立verify，主线按原布局复制并核对公共模块身份，不跳过SHA。
+
+[旧R10完整MMA与输入退出复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-boundary-lifecycle-v1/README.md)：B ff4a7423接入8a5413a0，两侧18SHA、完整报告重算同、199R13测试；独立轴工作守恒/672释放指针/6槽位退出证书通过。每K组固定8 atom，K16仍保留6个零有效K调用；每输出31普通释放+1tail释放，empty须128到达。输出切换q5才依赖前输出tail，producer_tail仅关闭输入阶段；零源fill、empty完成与旧pingpong输出接口仍未定价，无GPU/新资格。
+
+[旧首输出记录分段重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-correctness/reanalysis/main-record-partitions-v1/README.md)：C交付7SHA、各37输入SHA及完整报告/4数据文件一致；48角色/288分段/144有符号差、96调用内和48差值闭合、16384数值通过。740067为432卡非排他correctness采集，各map的prefix沿用自身目标参数，不能称相同历史状态或map因果性能比较。保留全部原记录、控制失败和资格false，无新GPU/模型/价格。
