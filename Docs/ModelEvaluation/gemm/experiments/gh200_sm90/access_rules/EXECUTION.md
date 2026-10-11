@@ -160,7 +160,7 @@ A时间与C边界的本次普通有界任务均已交付并停止；旧持续目
 | 新任务 | 工作树 / 分支 | 准备状态 | 执行预算 |
 |---|---|---|---|
 | 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 本有界主线完成，终点2：必要测量；停止继续开发 | 最多8小时，实际GPU 0 |
-| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 目标active；离线修复检查点已交付，第二提交等待用户决定 | 最多8小时，GPU已提交1/2 |
+| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 目标blocked；离线修复检查点已交付，第二提交等待用户决定 | 最多8小时，GPU已提交1/2 |
 
 当前主集成负责新主线目标；“GH200 输出与边界”负责新SMEM目标，每次命令显式选择新工作树。用户清除旧机制目标后工具已确认goal=null并成功创建新目标，原研究范围未恢复。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
 
@@ -169,6 +169,8 @@ A时间与C边界的本次普通有界任务均已交付并停止；旧持续目
 m11作业740708失败完整保留：CUDA12.9编译成功，独立读及原CUTLASS读被PTXAS移出重复循环，动态LDS工作量不符，采样未开始。当前尚无GPU校准/留出数值；CUDA13 device-only修复SASS只是准备，不替代12.9运行资格。第二次提交未执行，原合同要求第二作业前冻结参数与预测；是否将其改为开发重试已向用户提出异步选择，答复前仅离线准备，不自改预算或将校准称留出。
 
 2026-10-12巴黎时间00:13后，主集成核对[m11离线修复交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-m11-lds-sts-bounded/run-20261011T210745Z/README.md)及242项文件SHA，清单`1055066c4fbfd24cdd64a67e0959c8fd019fc47d67a71ebc4c9510fe0de5dcbe`一致；源提交`b555c60`、`3397207`及干净工作树核对通过，七个修改文件全部在专属范围，未推送。九个普通LDS/STS内核的CUDA13 device-only静态检查通过，native/CUDA12.9修正版执行仍待验证；新计时样本、校准参数及独立留出均为零/未完成。独立复核记录见[公共交付核对](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/smem-checkpoint-review-20261012.json)。截止仍为07:07:45；当前没有再次提交授权，不据等待时间自动执行。
+
+随后m11执行对话确认，同一第二提交授权阻碍已连续出现三轮，`update_goal`实际返回`blocked`，停止无效自动继续。未标为complete；校准和独立留出仍未完成，唯一740708失败、无存活GPU作业、第二提交未执行。人类明确允许改为开发重试后，才可在原07:07:45截止与剩余一次提交内恢复；不重新计时，不追加第三作业。此前启动/交付清单的active字段是历史快照，当前状态以本表为准。
 
 原分项、关键CTA及跨卡联合要求仍未完成；V09仅作开发，拟支持范围的成绩不改写原冻结评分。以下表格与后续逐批记录保存此前研究状态，本轮任务A结果单列于[新分析目录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/)。
 
