@@ -1,0 +1,187 @@
+{
+  "CTA_output_counts": {
+    "0": {
+      "1": 48,
+      "2": 84
+    },
+    "1": {
+      "1": 48,
+      "2": 84
+    }
+  },
+  "WG_windows": 432,
+  "binary_sha256": "c5476d9b00679859eef64bff34e87532e4936ea73f7f432c476597b8c36a6480",
+  "common_first_second_pairs": 84,
+  "common_minimum_first_over_second_minus_one": {
+    "maximum": 0.10969350253164896,
+    "median": 0.10195148467334002,
+    "minimum": 0.09745246793952794
+  },
+  "common_output_summaries": [
+    {
+      "cycles": {
+        "maximum": 66361,
+        "median": 66111.5,
+        "minimum": 66009
+      },
+      "elapsed_high_max": 38240,
+      "elapsed_low_min": 37536,
+      "interval_width_ns": {
+        "maximum": 192,
+        "median": 64.0,
+        "minimum": 0
+      },
+      "output_ordinal": 0,
+      "rate_high_max": "16529/9384",
+      "rate_low_min": "66041/38144",
+      "windows": 132
+    },
+    {
+      "cycles": {
+        "maximum": 66152,
+        "median": 66017.0,
+        "minimum": 65989
+      },
+      "elapsed_high_max": 42272,
+      "elapsed_low_min": 41248,
+      "interval_width_ns": {
+        "maximum": 128,
+        "median": 64.0,
+        "minimum": 32
+      },
+      "output_ordinal": 1,
+      "rate_high_max": "33001/20624",
+      "rate_low_min": "66019/42272",
+      "windows": 84
+    }
+  ],
+  "common_selector_counts": {
+    "(0, 0)": 33,
+    "(0, 1)": 3,
+    "(1, 0)": 179,
+    "(1, 1)": 1
+  },
+  "common_windows": 216,
+  "conditional_premises": "Actual central CLOCK sampling is enclosed by its two GT reads; exact recorded GT coordinate. No physical accuracy claim.",
+  "constant_average_rate_feasible_pairs": 0,
+  "first_second_pairs": 252,
+  "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+  "gt_error_ns": 0,
+  "hardware_sampling_enclosure": false,
+  "identity": {
+    "archive_file_matches": {
+      "input.tar.gz": 15,
+      "output.tar.gz": 30
+    },
+    "build_source_files": 858,
+    "checked_files": [
+      {
+        "path": "freeze.json",
+        "sha256": "8243563e72d8a66cbc2d2f76a8e86cb2964753e1ced4aab73adf5c8931785b3b",
+        "source": "run"
+      },
+      {
+        "path": "input-receipt.json",
+        "sha256": "d269ce558cf383986aa20a3931f3459f1d5edba3692a5278b303aa5b97b3eee4",
+        "source": "run"
+      },
+      {
+        "path": "input.tar.gz",
+        "sha256": "6e52303c70270969064624238f376557d1c700577abfe27f09039c3fa3348c79",
+        "source": "run"
+      },
+      {
+        "path": "manifest.json",
+        "sha256": "adf3bba26d238d6daa48a19efa1cd68aeb5de4f101516d457e3c0f6964d97744",
+        "source": "run"
+      },
+      {
+        "path": "output.tar.gz",
+        "sha256": "e5132dd861d0fdd5696ea9e0e06ea9fcbb5a569e2fcbd3eefe537d0365c9ca59",
+        "source": "run"
+      },
+      {
+        "path": "receipt.json",
+        "sha256": "9c09f7f04d93e4bb391767852438df1aab93a88d26b3385da7a72ca5625b4bfa",
+        "source": "run"
+      },
+      {
+        "path": "returned/assigned-context.json",
+        "sha256": "3156576b7f775a1ebd307f5bca47f6daa0429bca5de8d0f284cbc4c1eee60cfd",
+        "source": "run"
+      },
+      {
+        "path": "returned/full-d.bin",
+        "sha256": "d317610b4cf39254970256860400b4e8f7bd7403eda502ac00d3dd9e682f906d",
+        "source": "run"
+      },
+      {
+        "path": "returned/raw/flag0.jsonl.gz",
+        "sha256": "fb9d908f4b1c4f3a2b628500becd71acdf92fd3433ecee9a9c5bd734fcedfa2d",
+        "source": "run"
+      },
+      {
+        "path": "returned/raw/flag1.jsonl.gz",
+        "sha256": "beac021143a115d8f7c3163df35b5a1d329f02d8cf0df295605028298a6c7af9",
+        "source": "run"
+      },
+      {
+        "path": "returned/raw/full_D.jsonl.gz",
+        "sha256": "30bd6c0935b464951d138890529b88f42253c08d5b0f5e5fef32afb7c795ad5b",
+        "source": "run"
+      },
+      {
+        "path": "returned/records.json",
+        "sha256": "8d64f7f2b6859bdab6933d65a61d9241316f90c3b823e3ad1792f12b55716b08",
+        "source": "run"
+      },
+      {
+        "path": "verification.json",
+        "sha256": "fbf894967cc4e9360883ea05733a182d5038660b0af37d27f5254ce3ac33d3dd",
+        "source": "run"
+      },
+      {
+        "path": "build-audit.json",
+        "sha256": "847ba6632c4a950784c5892888149f5c0297ed3408d3cf93708c7b94ccc55a9c",
+        "source": "build"
+      },
+      {
+        "path": "returned/build/cfg_c_s4_dual",
+        "sha256": "c5476d9b00679859eef64bff34e87532e4936ea73f7f432c476597b8c36a6480",
+        "source": "build"
+      },
+      {
+        "path": "returned/build/cfg_c_s4_dual.sass",
+        "sha256": "661d4d641e89247121928175761fa2141dacaed08d2415926845230faab6e7a9",
+        "source": "build"
+      },
+      {
+        "path": "source_hashes.json",
+        "sha256": "c39c78b6f59d6feef53b33c3639d5e610b2d50bd0c7b5030d4a5344fe4e5e3c8",
+        "source": "build"
+      }
+    ],
+    "smoke_frozen_files": 14
+  },
+  "job": 740160,
+  "joint_feasibility_proved": false,
+  "limits": "One process per warm arm. Disjoint marginal rate intervals reject one shared average rate under stated premises; they do not identify physical frequency or assess observer/null distributions. No old-binary calibration or prediction is used.",
+  "main_reader_triples_and_intervals_matched": 432,
+  "numeric_proof": {
+    "full_D_elements": 7077888,
+    "full_D_sha256": "d317610b4cf39254970256860400b4e8f7bd7403eda502ac00d3dd9e682f906d",
+    "main_report_sha256": "fbf894967cc4e9360883ea05733a182d5038660b0af37d27f5254ce3ac33d3dd",
+    "status": "reused_main_full_D_and_sample_reference_checks_not_recomputed_by_A"
+  },
+  "observation_qualified": false,
+  "physical_ns_accuracy": false,
+  "prediction_qualified": false,
+  "stamp_width_histogram": {
+    "0": 58,
+    "128": 1,
+    "32": 729,
+    "64": 75,
+    "96": 1
+  },
+  "stamps": 864
+}

@@ -1,0 +1,11 @@
+{
+  "GPU_submitted": false,
+  "analysis_files_byte_identical": {
+    "audit.json": "acb3793596d59fd2fda89bb11c1c4433132bc355904790ea577a3900249cf493",
+    "phase-pairs.jsonl": "5406d3abd75778e9801ef88148e071b311464f624eda0f1401d1728678d742b4",
+    "windows.jsonl": "fa25a30a13e2ca84e298b2052812c5003edd55d29f36f0f9482962cb884fdd75"
+  },
+  "fresh_directory_replay": true,
+  "independent_verification_byte_identical": true,
+  "prediction_rescored": false
+}

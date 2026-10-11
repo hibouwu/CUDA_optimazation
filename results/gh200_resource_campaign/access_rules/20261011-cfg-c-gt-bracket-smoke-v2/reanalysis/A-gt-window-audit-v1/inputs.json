@@ -1,0 +1,33 @@
+{
+  "build_files": {
+    "build-audit.json": "847ba6632c4a950784c5892888149f5c0297ed3408d3cf93708c7b94ccc55a9c",
+    "returned/build/cfg_c_s4_dual": "c5476d9b00679859eef64bff34e87532e4936ea73f7f432c476597b8c36a6480",
+    "returned/build/cfg_c_s4_dual.sass": "661d4d641e89247121928175761fa2141dacaed08d2415926845230faab6e7a9",
+    "source_hashes.json": "c39c78b6f59d6feef53b33c3639d5e610b2d50bd0c7b5030d4a5344fe4e5e3c8"
+  },
+  "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+  "program_files": {
+    "r09_gt_brackets.py": "484b77a9fa88100429991a1130733dc3ad20cddce1f3187ca1c67188ca117c93",
+    "r09_gt_window_audit.py": "ea167d594851220c732b381f82ac78d1d6f0c215981f21df466bb3cdc927b09c"
+  },
+  "qualification": {
+    "observation": false,
+    "prediction": false
+  },
+  "run_files": {
+    "freeze.json": "8243563e72d8a66cbc2d2f76a8e86cb2964753e1ced4aab73adf5c8931785b3b",
+    "input-receipt.json": "d269ce558cf383986aa20a3931f3459f1d5edba3692a5278b303aa5b97b3eee4",
+    "input.tar.gz": "6e52303c70270969064624238f376557d1c700577abfe27f09039c3fa3348c79",
+    "manifest.json": "adf3bba26d238d6daa48a19efa1cd68aeb5de4f101516d457e3c0f6964d97744",
+    "output.tar.gz": "e5132dd861d0fdd5696ea9e0e06ea9fcbb5a569e2fcbd3eefe537d0365c9ca59",
+    "receipt.json": "9c09f7f04d93e4bb391767852438df1aab93a88d26b3385da7a72ca5625b4bfa",
+    "returned/assigned-context.json": "3156576b7f775a1ebd307f5bca47f6daa0429bca5de8d0f284cbc4c1eee60cfd",
+    "returned/full-d.bin": "d317610b4cf39254970256860400b4e8f7bd7403eda502ac00d3dd9e682f906d",
+    "returned/raw/flag0.jsonl.gz": "fb9d908f4b1c4f3a2b628500becd71acdf92fd3433ecee9a9c5bd734fcedfa2d",
+    "returned/raw/flag1.jsonl.gz": "beac021143a115d8f7c3163df35b5a1d329f02d8cf0df295605028298a6c7af9",
+    "returned/raw/full_D.jsonl.gz": "30bd6c0935b464951d138890529b88f42253c08d5b0f5e5fef32afb7c795ad5b",
+    "returned/records.json": "8d64f7f2b6859bdab6933d65a61d9241316f90c3b823e3ad1792f12b55716b08",
+    "verification.json": "fbf894967cc4e9360883ea05733a182d5038660b0af37d27f5254ce3ac33d3dd"
+  },
+  "source_job": 740160
+}
