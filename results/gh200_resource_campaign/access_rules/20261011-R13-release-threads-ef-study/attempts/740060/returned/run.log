@@ -1,0 +1,13 @@
+Loading aarch64 (arm, gpus available) environment
+Environment loaded. Spack available.
+Traceback (most recent call last):
+  File "/tmp/gh200-r13-thread-study-JMaOTD3s/collect.py", line 23, in <module>
+    uuid=(ctypes.c_ubyte*16)();rc=lib.cudaDeviceGetUuid(ctypes.byref(uuid),device)
+                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/apps/2025/spack_install/linux-rhel9-neoverse_v2/linux-rhel9-neoverse_v2/gcc-11.4.1/anaconda3-2024.10-1-74annk4cq7xtafpjvhcjzzwrnobcnzh3/lib/python3.12/ctypes/__init__.py", line 392, in __getattr__
+    func = self.__getitem__(name)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/apps/2025/spack_install/linux-rhel9-neoverse_v2/linux-rhel9-neoverse_v2/gcc-11.4.1/anaconda3-2024.10-1-74annk4cq7xtafpjvhcjzzwrnobcnzh3/lib/python3.12/ctypes/__init__.py", line 397, in __getitem__
+    func = self._FuncPtr((name_or_ordinal, self))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: /gpfs/app/2025/spack_install/linux-rhel9-neoverse_v2/linux-rhel9-neoverse_v2/none-none/cuda-12.9.0-iw66xwzm5ra52ihrtyoi4ohl7dqfqpp7/targets/sbsa-linux/lib/libcudart.so.12.9.37: undefined symbol: cudaDeviceGetUuid

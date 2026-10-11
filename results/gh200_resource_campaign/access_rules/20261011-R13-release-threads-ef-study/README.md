@@ -9,3 +9,5 @@
 四次全D off/on和两次plain/stamped完整D比较在计时前执行；全部时间样本另验证4096个参考值。源/二进制/数值/身份/参照/局部与整调用门槛齐全才可能取得观察资格。这轮仅开发机制辨识，不是V10、新独立留出、跨卡通过或新服务价。
 
 740059在CUDA Runtime按名称加载时失败，未开始数值或时间调用，records不存在。完整失败包归attempts/740059。revision2仅从当前nvcc安装前缀定位唯一libcudart.so.12，并保存库路径/SHA；manifest、条件、顺序、二进制和全部门槛不变。新freeze在重试前保存。
+
+740060在UUID符号查找时失败，也没有数值或时间样本；完整包归attempts/740060。revision3移除临时ctypes枚举，逐个原Slurm可见token调用现有plain二进制setup取得UUID，确认目标属于分配后才选中。仅启动层变化，manifest SHA继续不变；两次失败不计入样本或替换样本。

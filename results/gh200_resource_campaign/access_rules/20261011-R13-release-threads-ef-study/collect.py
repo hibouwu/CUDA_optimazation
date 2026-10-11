@@ -1,4 +1,4 @@
-import ctypes,gzip,hashlib,json,os,subprocess,sys,shutil
+import gzip,hashlib,json,os,subprocess,sys
 from pathlib import Path
 root=Path.cwd();m=json.loads(Path('manifest.json').read_text());rows={r['id']:r for r in json.loads(Path('cases.json').read_text())}
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
@@ -11,22 +11,22 @@ for name,digest in m['binary_sha256'].items():
  if sha(Path('build')/name)!=digest:raise RuntimeError('binary identity differs')
 if not os.environ.get('CUDA_VISIBLE_DEVICES') or not os.environ.get('SLURM_JOB_ID'):raise RuntimeError('missing assigned CUDA visibility')
 original={k:os.environ.get(k) for k in ('SLURM_JOB_ID','SLURM_JOB_GPUS','SLURM_STEP_GPUS','CUDA_VISIBLE_DEVICES')}
-cuda_root=Path(shutil.which('nvcc')).resolve().parent.parent
-candidates=[cuda_root/'lib64/libcudart.so.12',cuda_root/'lib/libcudart.so.12',*cuda_root.glob('targets/*/lib/libcudart.so.12')]
-libraries=sorted({p.resolve() for p in candidates if p.is_file()})
-if len(libraries)!=1:raise RuntimeError('expected one CUDA12 runtime under '+str(cuda_root)+': '+str(libraries))
-Path('runtime-library.json').write_text(json.dumps(dict(path=str(libraries[0]),sha256=sha(libraries[0])),indent=2)+'\n')
-lib=ctypes.CDLL(str(libraries[0]));count=ctypes.c_int();rc=lib.cudaGetDeviceCount(ctypes.byref(count))
-if rc:raise RuntimeError('cudaGetDeviceCount failed: '+str(rc))
-assigned=[]
-for device in range(count.value):
- uuid=(ctypes.c_ubyte*16)();rc=lib.cudaDeviceGetUuid(ctypes.byref(uuid),device)
- if rc:raise RuntimeError('cudaDeviceGetUuid failed: '+str(rc))
- h=bytes(uuid).hex();assigned.append('GPU-'+h[:8]+'-'+h[8:12]+'-'+h[12:16]+'-'+h[16:20]+'-'+h[20:])
-Path('assigned-devices.json').write_text(json.dumps(dict(original=original,runtime_visible_uuids=assigned,selected=m['gpu_uuid']),indent=2)+'\n')
-if m['gpu_uuid'] not in assigned:raise RuntimeError('requested GPU is not in this step assigned CUDA visibility')
-env=dict(os.environ,CUDA_VISIBLE_DEVICES=m['gpu_uuid']);Path('raw').mkdir();Path('full-d').mkdir()
 def events(data):return {v['event']:v for l in data.decode().splitlines() if l.startswith('{') for v in [json.loads(l)]}
+Path('device-setup').mkdir()
+setup_row=next(r for r in rows.values() if r['stages']==6 and r['release_warp_observer']==0)
+assigned=[]
+for index,token in enumerate(original['CUDA_VISIBLE_DEVICES'].split(',')):
+ if not token.strip():raise RuntimeError('empty assigned device token')
+ probe_env=dict(os.environ,CUDA_VISIBLE_DEVICES=token.strip())
+ p=subprocess.run(['build/cfg_b_s6_plain','--mode','setup',*case_args(setup_row)],env=probe_env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+ Path(f'device-setup/{index}.jsonl').write_bytes(p.stdout)
+ Path(f'device-setup/{index}.stderr').write_bytes(p.stderr)
+ if p.returncode:raise RuntimeError('allocated device setup failed: '+token)
+ setup=events(p.stdout)['setup']
+ assigned.append(dict(assigned_visibility_token=token.strip(),gpu_uuid=setup['gpu_uuid']))
+Path('assigned-devices.json').write_text(json.dumps(dict(original=original,allocated_devices=assigned,selected=m['gpu_uuid']),indent=2)+'\n')
+if m['gpu_uuid'] not in [d['gpu_uuid'] for d in assigned]:raise RuntimeError('requested GPU is not in this step assigned CUDA visibility')
+env=dict(os.environ,CUDA_VISIBLE_DEVICES=m['gpu_uuid']);Path('raw').mkdir();Path('full-d').mkdir()
 checks=[]
 for stage in (4,6):
  row=next(r for r in rows.values() if r['stages']==stage and r['release_warp_observer']==0)
