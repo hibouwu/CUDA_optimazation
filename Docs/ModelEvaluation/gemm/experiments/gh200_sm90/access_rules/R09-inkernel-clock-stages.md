@@ -421,6 +421,10 @@ stage4/6各进程先取132个CTA必要界的中位，再取10进程中位，分�
 
 当前保留结构反例，没有采用纯时间新候选。单极状态末段RMS 3.24%劣于末值基线1.95%的失败继续有效。下一步需要区分同角色真实首/后换算变化与读寄存器配对延迟/端点误差；最小观察接口请求在本轮目录，交主集成决定公共probe和GPU调度。它是观察有效性实验，尚不是新的局部留出通过结果。
 
+请求r2的纯CPU判定在[r09_clock_brackets.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_brackets.py)。每个戳记录`CLOCK_before/GT/CLOCK_after`；用整数差得到窗口cycle区间[Clo,Chi]。**128 ns是整个窗口起止差的总容差**，正f可行区间为`[Clo/(N+128), Chi/(N−128)]`，不是每端点各128 ns；计算用精确有理数。最小总区间容差δ再减一次128，剩余单端点等价量为`max(0,δ−128)/2`。首/后L的端点不共享；这不是任意共享事件图的联合可行性证明。
+
+观察扰动也在采样前限定：bracket-dual相对匹配dual的每phase配对绝对L差中位≤384 ns、9/10对≤1024 ns，cycle差中位≤512 cycle，完整event差中位≤512 ns。384/1024 ns依据旧stage6的L进程MAD 192/128 ns和跨度896/528 ns，512 ns低于旧必要端点界的最小进程中位555.08 ns；这些是推断筛选门槛，不是置信界或计时器精度。任一失败保留夹取算术结果，原首/后现象归因记不可判，不采后放宽。原dual还须在共同plain前序下复现必要端点界>256 ns；现有`common-sw1-16`使用当前编译变体，不能自动宣称plain前序相同。[r2的配对、阈值及完整边界](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/minimum-observer-request-r2.json)仍待主集成实施与冻结。
+
 复核入口：[r09_time_contract.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_time_contract.py)。[本轮结果与契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/README.md)包含逐进程CSV、源哈希、经验下界、支持/排除/不可区分及独立复放命令。持续目标仍未完成，后续规则须另经冻结的新局部留出与组合检查。
 
 ## 作业与复核索引
