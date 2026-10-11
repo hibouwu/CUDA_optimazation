@@ -258,6 +258,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [前序event局部候选主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-ordinal-clock-v1/README.md)：接入A736ac190，五份完整内容重算相同；167SHA/2160校准/4320评分/8640有标签分项与输入拒绝通过。共同系数自由局部误差3.541%/6.446%，两序号0.798%/3.437%，保留简单共同候选，不称序号必要；仅后验开发，同cfg_c协议，仍需新有效观察与独立冻结采集，公共组合未采用，无GPU/资格。
 
+[请求路径闭区间排除主线验收](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-bound-replay-v1/README.md)：接入B689edf8f，1029SHA/完整重跑一致、183测试通过；独立756包络/1722闭段/630余量/2542断点及后十组队列递推通过，原producer_gap保留。必要区间全域single126 B32首L=4608ns，无法给出正B32响应；停止该固定模型的同区间调价。仅有理数模型条件排除，不扩大队列家族、不授资格，无GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

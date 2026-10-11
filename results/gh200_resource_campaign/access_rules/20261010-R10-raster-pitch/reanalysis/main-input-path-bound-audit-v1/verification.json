@@ -1,0 +1,105 @@
+{
+  "B_snapshot_sha256": "22c73908784a3b859f3e8f9afb527caf6cd8631c473fda3262a6274df6bfd23b",
+  "initial_margin_checks": 630,
+  "envelope_breakpoint_checks": 2542,
+  "initial_minimum_margin_ns": 56.766146993318486,
+  "cohorts": [
+    {
+      "group": 6,
+      "latest_issue": "52176409978725037/35184372088832",
+      "source_complete_upper": "939745393207042117/562949953421312",
+      "path_complete_upper": "27080190328198435181/15797783067885568",
+      "destination_complete_upper": "41270627324074624593/15797783067885568",
+      "earliest_compute": "758961297337635199/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 7,
+      "latest_issue": "62309509140308653/35184372088832",
+      "source_complete_upper": "1101874979792379973/562949953421312",
+      "path_complete_upper": "31629951851749478765/15797783067885568",
+      "destination_complete_upper": "45820388847625668177/15797783067885568",
+      "earliest_compute": "840026090630304127/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 8,
+      "latest_issue": "72442608301892269/35184372088832",
+      "source_complete_upper": "1264004566377717829/562949953421312",
+      "path_complete_upper": "36179713375300522349/15797783067885568",
+      "destination_complete_upper": "50370150371176711761/15797783067885568",
+      "earliest_compute": "921090883922973055/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 9,
+      "latest_issue": "82575707463475885/35184372088832",
+      "source_complete_upper": "1426134152963055685/562949953421312",
+      "path_complete_upper": "40729474898851565933/15797783067885568",
+      "destination_complete_upper": "54919911894727755345/15797783067885568",
+      "earliest_compute": "1002155677215641983/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 10,
+      "latest_issue": "92708806625059501/35184372088832",
+      "source_complete_upper": "1588263739548393541/562949953421312",
+      "path_complete_upper": "45279236422402609517/15797783067885568",
+      "destination_complete_upper": "59469673418278798929/15797783067885568",
+      "earliest_compute": "1083220470508310911/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 11,
+      "latest_issue": "102841905786643117/35184372088832",
+      "source_complete_upper": "1750393326133731397/562949953421312",
+      "path_complete_upper": "49828997945953653101/15797783067885568",
+      "destination_complete_upper": "64019434941829842513/15797783067885568",
+      "earliest_compute": "1164285263800979839/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 12,
+      "latest_issue": "112975004948226733/35184372088832",
+      "source_complete_upper": "1912522912719069253/562949953421312",
+      "path_complete_upper": "54378759469504696685/15797783067885568",
+      "destination_complete_upper": "68569196465380886097/15797783067885568",
+      "earliest_compute": "1245350057093648767/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 13,
+      "latest_issue": "123108104109810349/35184372088832",
+      "source_complete_upper": "2074652499304407109/562949953421312",
+      "path_complete_upper": "58928520993055740269/15797783067885568",
+      "destination_complete_upper": "73118957988931929681/15797783067885568",
+      "earliest_compute": "1326414850386317695/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 14,
+      "latest_issue": "133241203271393965/35184372088832",
+      "source_complete_upper": "2236782085889744965/562949953421312",
+      "path_complete_upper": "63478282516606783853/15797783067885568",
+      "destination_complete_upper": "77668719512482973265/15797783067885568",
+      "earliest_compute": "1407479643678986623/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    },
+    {
+      "group": 15,
+      "latest_issue": "143374302432977581/35184372088832",
+      "source_complete_upper": "2398911672475082821/562949953421312",
+      "path_complete_upper": "68028044040157827437/15797783067885568",
+      "destination_complete_upper": "82218481036034016849/15797783067885568",
+      "earliest_compute": "1488544436971655551/281474976710656",
+      "conservative_margin_ns": "10608603912001207607/126382264543084544"
+    }
+  ],
+  "minimum_refill_margin_ns": 83.94060630544142,
+  "source_union_static_reference_sha256": "dae59357c0adc80bcbed513202a376bf1317603ae7eac0028a3c3784d3ed7d3b",
+  "partial_audit_passed": true,
+  "full_certificate_accepted": false,
+  "initial_source_and_request_ends_independently_derived": true,
+  "remaining": "Bind final delivered code and complete initial affine-envelope construction; extrema and later-cohort recursion are independently checked here.",
+  "scope": "Exact algebra and explicit later-cohort recursion for the supplied rational envelopes, not hardware validation."
+}

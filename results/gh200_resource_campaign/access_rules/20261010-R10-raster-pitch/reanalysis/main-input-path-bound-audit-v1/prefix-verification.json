@@ -1,0 +1,9 @@
+{
+  "envelopes": 756,
+  "affine_segments_checked": 1722,
+  "exact_initial_demands": 2268,
+  "all_envelopes_equal_on_closed_interval": true,
+  "B_snapshot_sha256": "22c73908784a3b859f3e8f9afb527caf6cd8631c473fda3262a6274df6bfd23b",
+  "method": "Unpruned closed request FIFO terms and local FIFO recursion; each reported segment has an actual attaining line and all terms lie below it at both endpoints.",
+  "scope": "Rational initial-prefix formulas only; final delivered source binding still required."
+}

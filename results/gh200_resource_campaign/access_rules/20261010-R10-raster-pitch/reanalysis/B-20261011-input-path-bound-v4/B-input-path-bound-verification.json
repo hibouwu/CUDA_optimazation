@@ -1,0 +1,33 @@
+{
+  "report_sha256": "cd3e04cd10a701385cfec1dae8efdf73f12f3730e16d6bc6ed5dbbdbb55f0f61",
+  "input_hashes_reverified": 1029,
+  "reused_data_inputs": 1018,
+  "initial_margin_checks": 630,
+  "positive_sufficient_conditions": 12,
+  "all_closed_interval_first_L_ns": {
+    "exact": "4608",
+    "ns": 4608.0
+  },
+  "source_union_units": [
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248,
+    3248
+  ],
+  "R13_tests_passed": 176,
+  "new_tests": 4,
+  "compiled": true,
+  "scope": "Fixed-model exact-arithmetic exclusion; not an IEEE rounding proof, hardware identification, observer qualification or heldout pass."
+}

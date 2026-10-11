@@ -1,0 +1,20 @@
+{
+  "B_report_sha256": "cd3e04cd10a701385cfec1dae8efdf73f12f3730e16d6bc6ed5dbbdbb55f0f61",
+  "all_report_results_equal": true,
+  "shared_input_hashes": 1024,
+  "relocated_module_count": 5,
+  "all_inputs_rehashed": 1029,
+  "audited_snapshot_fields_match_final": [
+    "parameters",
+    "price_interval",
+    "initial_prefix_demands",
+    "K_cohort_address_units",
+    "initial_envelopes",
+    "first_min",
+    "first_max",
+    "initial_margins",
+    "bounds",
+    "all_first_L_ns"
+  ],
+  "accepted_scope": "Fixed rational-model closed-interval exclusion for single126 B32; not hardware, whole-family or prediction qualification."
+}
