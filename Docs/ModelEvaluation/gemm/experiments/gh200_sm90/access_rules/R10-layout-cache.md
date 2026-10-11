@@ -329,6 +329,25 @@ v2 全网格 trace 的 cfg_b3008/3072 有负向扰动超过 5%，不采用其周
 
 [生命周期审计](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-lifecycle-v2/B-boundary-lifecycle.json)保存10份归档源码的原manifest核对、既有阶段图位置、T3/T4释放／尾部检查账本和MMA角点展开。每条件16128组、129024次atom调用，其中15624组普通释放、504组tail释放；有效数学量为31200000000FLOP，完整tile名义量为33822867456FLOP。新增6项静态测试后192项R13测试通过；供给模块和原full-tile guard未改，旧几何仍明确拒绝进入原时间入口。未重做局部计量归一化、未定价、未执行GPU或新增资格判定。
 
+<a id="legacy-completion-ports"></a>
+
+### 零源盒与目的完成端口
+
+`completion_fragment`把已绑定账本展开为无时间的完成条件。每组从外部`empty_acquired`端口开始，经`arrive_expect_tx`和`acquire_return`发起A、B0、B1；A发起先于B，两个B盒的相对顺序不作断言。每盒有有效数据时保留availability／valid delivery条件，有fill时保留fill delivery条件，二者共同构成该盒的destination completion。full合流始终保留`arrive_expect_tx`及三个目的完成义务。
+
+零源B1不建立有效数据分支，但仍保留`submit → fill_delivered → destination_complete → full`，其中fill为8192B。四个事件的完成时间均未赋值；valid／fill拆分只表达逻辑条件，不声明独立硬件队列或可分别观测的微事件。[PTX8.8](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)的tensor零填充和mbarrier完成语义，结合归档CUTLASS的完整事务期待量，要求保留该目的义务。
+
+每条件48384个目的盒中，有47712个非空有效源义务、3558个fill义务，含672个零源B1盒。两种看似简化的转换与归档账本不一致：
+
+| 转换 | 少计的K组数 | 少计目的字节 |
+|---|---:|---:|
+| 将full预算改为有效源字节 | 1868 | 26882304 |
+| 删除零源目的盒 | 672 | 5505024 |
+
+三个行距抹去实际地址／stride后，CTA／输出／K／ring状态、完成拓扑、valid／fill工作和2208个逻辑源身份的等价类完全一致。相同参数与初始状态、只读取这份投影的模型不能区分三个行距；这一结构结论不排除地址相关的工作、共享、仲裁或其他状态。完整源身份仍保存在各盒中，相同身份不会自动合并完成节点或确定物理读取owner。
+
+[完成端口报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/B-boundary-completion.json)保存三份逐组压缩端口账本、预算反例和相同的工作／身份拓扑投影哈希。4份实际使用的归档源码与原manifest一致，12个输入SHA全部复核；新增6项测试后198项R13测试通过，供给模块与ff4a7423逐字节相同。端口没有闭合empty到达、consumer释放、producer tail或D完成；主集成负责后续依赖组合，无价节点不能按零时间求解，旧时间入口与guard保持不变。
+
 <a id="v08-stride"></a>
 
 ## V08F：分开行距和尺寸尾部
