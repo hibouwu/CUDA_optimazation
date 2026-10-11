@@ -186,6 +186,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [cfg_c完成边界不可识别见证](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-completion-identifiability-v1/README.md)：同真实cluster全部36端点固定，未定价图producer_tail或D_visible仍无上界，三份逐边合法赋值给出不同完成时间。任意1000ns只作数学见证，不称实际延迟；consumer FINAL不能替代全部完成边界。另发现绝对GT加浮点容差导致假冲突，脚本先整数减原点规避，C继续修复比较。
 
+[大整数bounds修复独立回归](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-large-integer-bounds-v1/README.md)：接入C e6eda283，先lower−upper再比1e-9；47测试通过。预定150调用各首cluster，940350节点区间绝对/相对整数平移逐字段一致；旧696e0b5对这150绝对值全误拒，相对值全通过。原直接整数偏序及减原点完成见证不受影响，未改变图边/价格/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
