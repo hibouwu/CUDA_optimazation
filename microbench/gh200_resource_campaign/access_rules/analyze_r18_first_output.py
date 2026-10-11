@@ -51,9 +51,60 @@ def first_output_windows(record):
                   ns=stamps['MAIN']['globaltimer_ns']-stamps['FIRST']['globaltimer_ns'])
     if any(sum(window[unit] for window in windows)!=duration[unit] for unit in ('cycles','ns')):
         raise ValueError('window decomposition is not exact')
-    return dict(invocation_id=record['invocation_id'],cta=record['cta'],role=record['role'],
+    return dict(invocation_id=record['invocation_id'],cta=record['cta'],role=record['role'],sm=record['sm_start'],
+                physical_thread=record['physical_thread'],tile_seq=record['tile_seq'],
                 windows=windows,L=duration,
                 scope='Endpoint windows only; source binding and observer validity are caller obligations.')
+
+
+def first_output_call_windows(records):
+    """Require every selected CTA/WG in one invocation before local comparison."""
+    results=[];seen=set();invocation=None;sm_by_cta={}
+    for record in records:
+        result=first_output_windows(record)
+        key=result['cta'],result['role']
+        if key in seen:raise ValueError('duplicate selected CTA/role')
+        seen.add(key)
+        if invocation is None:invocation=result['invocation_id']
+        if result['invocation_id']!=invocation:raise ValueError('mixed invocations in one call')
+        cta=result['cta'];sm=record['sm_start']
+        if cta in sm_by_cta and sm_by_cta[cta]!=sm:
+            raise ValueError('two roles of one CTA disagree on SM identity')
+        sm_by_cta[cta]=sm;results.append(result)
+    expected={(cta,role) for cta in SELECTED_CTAS for role in (1,2)}
+    if seen!=expected:raise ValueError('complete fixed 12-CTA / 24-role coverage required')
+    return dict(invocation_id=invocation,records=sorted(results,key=lambda item:(item['cta'],item['role'])),
+        scope='Complete selected first-output call; source, setup, preparation and observer validity remain caller obligations.')
+
+
+def paired_first_output_windows(map960_records, map1024_records):
+    """Signed differences of within-call windows, with all 24 observers retained.
+
+    Caller binds maps, trials, GPU, binary, preparation/history, raw SHA and valid
+    controls before calling. This function does not qualify or pair raw samples.
+    Native clock origins may differ between CTAs and between invocations.
+    """
+    target=first_output_call_windows(map960_records)
+    reference=first_output_call_windows(map1024_records)
+    if target['invocation_id']==reference['invocation_id']:
+        raise ValueError('two distinct map invocations required')
+    records=[]
+    for left,right in zip(target['records'],reference['records']):
+        windows=[]
+        for a,b in zip(left['windows'],right['windows']):
+            windows.append(dict(start=a['start'],end=a['end'],
+                map960={unit:a[unit] for unit in ('cycles','ns')},
+                map1024={unit:b[unit] for unit in ('cycles','ns')},
+                delta={unit:a[unit]-b[unit] for unit in ('cycles','ns')}))
+        delta={unit:left['L'][unit]-right['L'][unit] for unit in ('cycles','ns')}
+        if any(sum(window['delta'][unit] for window in windows)!=delta[unit] for unit in ('cycles','ns')):
+            raise ValueError('paired signed windows do not sum to the L difference')
+        records.append(dict(cta=left['cta'],role=left['role'],windows=windows,
+            map960_sm=left['sm'],map1024_sm=right['sm'],sm_changed=left['sm']!=right['sm'],
+            map960_L=left['L'],map1024_L=right['L'],delta_L=delta))
+    return dict(map960_invocation=target['invocation_id'],map1024_invocation=reference['invocation_id'],
+        records=records,
+        scope='Paired within-CTA/role duration differences only; no cross-call raw-clock subtraction or service inference.')
 
 
 def source_ports(run,output):

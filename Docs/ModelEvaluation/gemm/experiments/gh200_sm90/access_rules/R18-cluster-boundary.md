@@ -389,3 +389,7 @@ cluster2×1的有效发送者由`spread_arrivals_to_warpgroup`决定。其`Swizz
 已有FIRST、MAIN加五个新点构成六个连续窗口。新局部接口`first_output_windows`保留原生整数clock64/globaltimer，逐CTA、逐consumer角色相减，核对六段之和精确等于同记录L；零戳、缺点、反向端点、错角色或跨SM本地周期均拒绝。map960减map1024时先在各调用内求时长，再按原配对求有符号差，不对不同调用的原始时钟相减，也不把负分段变化截成零。分别汇总的中位数不要求可加。
 
 commit63→mma返回包含最后一次wait1/release62及返回路径；mma返回→MAIN包含最终wait0/release63及端点开销。两段仍是源码窗口，不能直接作为裸GMMA退休成本。1920bytes只是新增时间戳载荷，分配容量、元数据和清零大小仍需公共实现单独声明并匹配。源码SHA、逐点位置、两条件完整工作列表及复算命令见[切点契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-first-output-source-ports-v1/README.md)。本次为源码和CPU接口验证，没有新GPU样本、观察器资格或服务价。
+
+`first_output_call_windows`进一步要求同一invocation内完整覆盖12CTA×两角色，拒绝缺失、重复、混入另一调用以及同CTA两角色的SM不一致。`paired_first_output_windows`只接收两个完整调用，按固定CTA/role保留全部观察者，先各自相减再求map960−map1024的有符号分段差，逐记录核对其和等于L差。调用间SM变化单独保留，不据此比较原生clock64原点，也不静默筛掉改变位置的样本。
+
+这些入口接收公共解析器已经绑定的记录；map标签、原trial配对、GPU、binary、源码、清零/预热/历史身份、原始SHA和观察器资格由调用方先验证。完整24角色覆盖不替代这些条件，也不证明两个调用具有相同的物理执行状态。11项CPU测试通过，包括缺少弱响应cluster、跨调用拼接、重复角色、大整数原点、负分段响应及SM改变；五切点源位置和原观察矩阵不变。
