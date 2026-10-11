@@ -302,6 +302,33 @@ v2 全网格 trace 的 cfg_b3008/3072 有负向扰动超过 5%，不采用其周
 
 [静态绑定报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/B-boundary-binding.json)保存三条件完整压缩账本、各输出序号的边界分布和全局K组源覆盖并集／交集。15份实际使用的归档源码与原`source_hashes.json`一致，60个记录SHA与旧独立审查一致；三条件48384组ring参数通过独立逐次推进核对，源身份／有效字节／fill／D范围逐盒保留。新增5项测试后186项R13测试通过；剔除新增绑定函数后，供给模块AST与f521a01f相同。旧几何仍未进入时间图，D源缓冲与完成依赖也没有因此绑定。
 
+<a id="legacy-tail-lifecycle"></a>
+
+### 最后K16的完整MMA工作与stage释放
+
+归档SS builder对cfg_b选择`m64n128k16` FP16／FP32 atom，`AtomLayoutMNK`为1×1×1；128×128×64主循环tile展开为2个M片×1个N片×4个K片，共8次atom调用后commit一组。展开尺寸来自静态tile，不随有效M/N/K缩小。最后K组虽只有16个有效K元素，仍保留8次调用，其中6次覆盖填充的K区域；M40/N56/K16角点仅1次调用含有效数学工作，其余调用也不跳过。这里统计源码调用工作，不把它当作新实测吞吐或硬件周期。
+
+每个逻辑输出仍执行32组，以下计数不因三种B行距或边界变化：
+
+| 软件工作／义务 | 每输出 |
+|---|---:|
+| 完整MMA atom调用／commit组 | 256／32 |
+| full等待API调用，每consumer线程 | 32 |
+| 普通`wait_group<1>`后释放前一组 | 31 |
+| `mma_tail`中`wait_group<0>`后释放末组 | 1 |
+| 每K组full事务期待量 | 32768B |
+| 每组empty完成所需的线程到达 | 所属WG的128次 |
+
+`K_PIPE_MMAS=1`。q0的prologue提交后不释放上一输出的组；q1–31各自在提交当前组、`wait_group<1>`返回后释放前一组。最后q31由`mma_tail`的`wait_group<0>`排空后释放。[PTX8.8的WGMMA等待语义](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)保证比最近N组更早的组完成，N=0排空全部组。empty barrier的128次到达来自当前拥有该组的一个WG，不应按两个交替WG改成256次。
+
+源码在`mma`返回后先通知下一WG的MMA顺序，再调用`mma_tail`；MMA和epilogue使用ordered barrier的两个独立stage。S6/Kt32下，下一输出q0–4的acquire分别依赖前输出q26–30的普通释放，q5才依赖前输出q31的tail释放。旧j2末组g95因此限制下一输出g101的同slot复用，不能把它默认添加为g96首组的MMA顺序前驱。这里没有宣称实际发生重叠；首组仍需满足自己的full等待。
+
+既有`shared_stage_events`中的`ready/starts/commits/completed`、普通`wait1_return/released`、分开的`mma_returns/main_ends`和同WG的j+2输出约束可以复用其结构。数值含义仍有缺口：零源B1仍需目的fill，但现有地址单元路径要求非空源单元；释放时刻也尚未独立分开128次empty到达与acquire返回。`compute_ns`、commit lead、retire lag与handoff价格不能由完整调用数确定。
+
+归档producer在最终持续状态再检查六个empty slot。T3的检查覆盖组90–95，T4覆盖122–127；更早的释放已经被后续同slot acquire要求，二者合起来恰好覆盖全部输入组。既有时间图没有显式producer-tail／输入安全退出节点，不能把其返回的end直接当成安全退出证明。输入stage释放也不等于D完成：C接口仍需明确自身`mma_tail`与epilogue顺序之后的入口、每输出`store_tail`返回、128次epilogue顺序到达、D源读取完成与全局可见，以及同WG的j+2许可。
+
+[生命周期审计](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-lifecycle-v2/B-boundary-lifecycle.json)保存10份归档源码的原manifest核对、既有阶段图位置、T3/T4释放／尾部检查账本和MMA角点展开。每条件16128组、129024次atom调用，其中15624组普通释放、504组tail释放；有效数学量为31200000000FLOP，完整tile名义量为33822867456FLOP。新增6项静态测试后192项R13测试通过；供给模块和原full-tile guard未改，旧几何仍明确拒绝进入原时间入口。未重做局部计量归一化、未定价、未执行GPU或新增资格判定。
+
 <a id="v08-stride"></a>
 
 ## V08F：分开行距和尺寸尾部
