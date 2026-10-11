@@ -1,0 +1,28 @@
+{
+  "source_ready_ordered_ctas": 132,
+  "all_target_initial_demands_merged": true,
+  "source_order_and_issue_order_preserved": true,
+  "price_upper_derivation": [
+    {
+      "placement": "return",
+      "tail_service_slope": "1320",
+      "independently_derived_price_upper": "292/165",
+      "last_branch_start_prices": [
+        "549165077064811/549755813888000",
+        "549165077064811/549755813888000"
+      ]
+    },
+    {
+      "placement": "request",
+      "tail_service_slope": "1320",
+      "independently_derived_price_upper": "292/165",
+      "last_branch_start_prices": [
+        "804406235652463/993958511509504",
+        "10007807767590283/13598759812333568"
+      ]
+    }
+  ],
+  "report_sha256": "640179b779b0fa820764451076a8f99f2710e00aca9c449ccb25bf5ab8045272",
+  "prefix_sha256": "54fb4aa25ea98d63f03a0d788352b0e464ff86551574fb3d584387d39588a0fb",
+  "scope": "Independent prefix-order and high-price bound checks; no new hardware evidence."
+}
