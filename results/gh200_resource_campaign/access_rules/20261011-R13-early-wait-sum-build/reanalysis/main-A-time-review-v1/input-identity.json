@@ -1,0 +1,20 @@
+{
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/decode_r13_wait_sum.py": "add8b409031814910c048e32768916d4cc37fef604420264b6f053646d722259",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_r13_wait_sum.py": "eca328971a209c562647b9b5ba4769a26f1c5983d8571ed252b7d2463f48b18f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r18.py": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/v06_model.py": "224eeaefc366d673a27a631e35b2f7961da809713f429e55edad5099326afdf5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/v06_run.py": "0beed5b186642496bf182a6e6d79a40d93a7fada8d420526b345bed85a5e1b89",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/r13_wait_sum.cuh": "43392e9efb861bf453a7e559f13e0928f20298fb6c0bc8e6be004e3233481c93",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu": "a179e9bdaa92424ccac9c14d3bac8f108c254d8aa6b7b2e131d9713f70c0a2c8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp": "08004dadd81f7e89b674bfdf318ccc00f53953f8441127538addc616844e7eec",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18_trace.hpp": "08004dadd81f7e89b674bfdf318ccc00f53953f8441127538addc616844e7eec",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r13_wait_sum.cuh": "43392e9efb861bf453a7e559f13e0928f20298fb6c0bc8e6be004e3233481c93",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/v06_trace.hpp": "987b47f2e74494970692751fc30300d950186645604d1fd42983c41106da8f74",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp": "89d40fc260c9a1a253f18f0406dae417029aba47fff03851d1e81fbe1d116653",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp": "6457364348ece3db958853a3acb256fa9ecbdf7369f4b057e2b9dd6c449851c1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source_hashes.json": "b57bbb9852ce7da56f87ad5eac6be5412589e0d32c369e0499b41414a0b8021d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/contract.json": "258e11dfd79c98991ec71a6b192292fbea4009f9289397855b859341a1264357"
+  },
+  "review_scope": "Fixed prepare3 source, same-thread windows,16off prefix and cycle-only decoder. No GPU, new ns model or extra conversion counterexample."
+}

@@ -20,6 +20,6 @@
 
 源码生成入口为 `microbench/gh200_resource_campaign/access_rules/prepare_r13_wait_sum.py --base results/gh200_resource_campaign/access_rules/20261010-R13-stage-progress --output NEW_DIRECTORY`。编译命令在该输出的build/commands.json；本次成功采用prepare3/source_hashes.json固定来源和CUDA12.9.41。测试运行 `python -m unittest discover -s microbench/gh200_resource_campaign/access_rules -p test_r13_wait_sum.py -v`。
 
-严格decoder为decode_r13_wait_sum.py，要求caller固定raw SHA和GPU UUID；数值检查按同次4096个唯一样本独立重算，尚不代表全D正确。当前无实际Q采样、无扰动/null通过、无新增服务价、无完整预测资格。trace word23仅退出SMID，不含FINAL时间；CUDA event包含末次flush，不能输出最后CTA证书。
+严格decoder为decode_r13_wait_sum.py，要求caller固定raw SHA和GPU UUID；数值检查按同次4096个唯一样本独立重算，尚不代表全D正确。四目标正确性smoke现已取得实际Q记录，详见下方链接；尚无扰动/null通过、无新增服务价、无完整预测资格。trace word23仅退出SMID，不含FINAL时间；CUDA event包含末次flush，不能输出最后CTA证书。
 
-下一步仅[四目标正确性smoke](../20261011-R13-early-wait-sum-correctness/manifest.json)，每stage×flag一次，先验证数值和trace是否按设计产生；它不执行64次中位数草案、不判定性能或局部观察等价。任何后续性能结论仍需另行冻结有效观察标准。
+本轮[四目标正确性smoke](../20261011-R13-early-wait-sum-correctness/manifest.json)，每stage×flag一次，先验证数值和trace是否按设计产生；它不执行64次中位数草案、不判定性能或局部观察等价。任何后续性能结论仍需另行冻结有效观察标准。

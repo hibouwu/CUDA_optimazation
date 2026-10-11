@@ -1,0 +1,22 @@
+[
+  {
+    "stage": 4,
+    "accepted": true,
+    "first_H2": 193,
+    "old_H16": 190,
+    "last_B16": 195,
+    "full_wait_cycles": 2,
+    "outside_wait_cycles": 98,
+    "observation_qualified": false
+  },
+  {
+    "stage": 6,
+    "accepted": true,
+    "first_H2": 193,
+    "old_H16": 190,
+    "last_B16": 195,
+    "full_wait_cycles": 2,
+    "outside_wait_cycles": 98,
+    "observation_qualified": false
+  }
+]

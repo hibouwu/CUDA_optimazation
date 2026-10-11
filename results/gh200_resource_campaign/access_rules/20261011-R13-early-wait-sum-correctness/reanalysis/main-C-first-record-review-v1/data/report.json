@@ -1,0 +1,107 @@
+{
+  "schema": "C-wait-sum-first-record-review/1",
+  "job": 740259,
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/freeze.json": "019fec6691f81bfb065ee894faeb68ea7d7303867e291fc5e17d6995ca35d9bb",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/manifest.json": "ad046f2856d8f97d2bf48bf77f00498306a3806f70fb3aaa75878ac958e2ec43",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/collect.py": "ea80ec5e3d383b07cc71a58923b4902f965051442e7e8f1af539b1573ceb84d5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/validate_allocation.py": "2c165aa1e21ffa8e81be93332c57645230384fba793f2d5e0d1959d3eee15d00",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/run.sh": "f3e791938b95cf1a51e8fbc4f529921feec8170f2dbd90576359256011b31b75",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/command.json": "50fab55898c8409979f407b7a201473fd2a90ada1a0d24c17190071449fc2f32",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/build/cfg_b_s4_stamped": "1b843ba5579b069645974717eb6d2f4bf1de9d8c2641e0adb98222520ee1a69b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/build/cfg_b_stamped": "e89113484da13e295e08b671fee249820f76495eb2569e929e3e27caed5f4526",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/analysis_snapshot/decode_r13_wait_sum.py": "4a002672dcc887612d69401e93b0abbd88fcba9359f9c62a5086437687285c5f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/analysis_snapshot/analyze_r18.py": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/analysis_snapshot/v06_model.py": "224eeaefc366d673a27a631e35b2f7961da809713f429e55edad5099326afdf5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/analysis_snapshot/v06_run.py": "0beed5b186642496bf182a6e6d79a40d93a7fada8d420526b345bed85a5e1b89",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/receipt.json": "2d8c08c684892102a64a5fc089cedbca91b8040b0c1ae34ee9c00cc8e1ce6a16",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/output.tar.gz": "313d844177db6d8757eb5315e122a3c1d6b0c4dfccdce247daf8c829c3053e84",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/returned/records.json": "4aabb460b6df64d2ea22928dccec62c1496a78d891a77786c7df8a6b9675be27",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/returned/raw/stage4_flag0.jsonl.gz": "0b925c73d66aacaec2192701d3004425b9f8d72a7e0dea624c118938b852dd00",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source_hashes.json": "b57bbb9852ce7da56f87ad5eac6be5412589e0d32c369e0499b41414a0b8021d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r00_common.hpp": "8b1a6fff063d33606ea139cbe0923d8a74a1c0c5dc17fe9802f0d35d7a603c5c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/gaps_common.hpp": "39de1941f270594d1575869bb39526303d67f601a04b0ab5e7de6ecb6e41ffa5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu": "a179e9bdaa92424ccac9c14d3bac8f108c254d8aa6b7b2e131d9713f70c0a2c8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/build-audit.json": "84a55562e6ded5eee12962aa8a0f365ea460b76602b0b5b875cee22b4f803b7c"
+  },
+  "original_archive_sha256": "313d844177db6d8757eb5315e122a3c1d6b0c4dfccdce247daf8c829c3053e84",
+  "original_batch_returncode": 1,
+  "original_first_process_returncode": 0,
+  "original_frozen_decoder_packet_count_rejection_reproduced": true,
+  "original_frozen_decoder_cluster_layout_rejection_reproduced": true,
+  "raw_cluster": [
+    1,
+    1
+  ],
+  "frozen_decoder_expected_cluster": [
+    1,
+    1,
+    1
+  ],
+  "original_failed_batch_preserved": true,
+  "batch_complete": false,
+  "targets_declared": 4,
+  "targets_returned": 1,
+  "missing_targets": [
+    "stage4_flag1",
+    "stage6_flag0",
+    "stage6_flag1"
+  ],
+  "first_target_id": "stage4_flag0",
+  "raw_sha256": "0b925c73d66aacaec2192701d3004425b9f8d72a7e0dea624c118938b852dd00",
+  "input_zero_storage_packet": {
+    "event": "input_zero_storage",
+    "checked": 0,
+    "nonzero": 0
+  },
+  "input_zero_storage_interpretation": "No extra logical rectangle was checked; checked=0 is not a positive-size zero-storage validation.",
+  "independently_verified_sampled_values": 4096,
+  "unique_indices": 4096,
+  "direct_dot_coordinate_classes": 289,
+  "direct_integer_products": 1183744,
+  "exact_value_mismatches": 0,
+  "trace_scope": {
+    "cta": 0,
+    "physical_thread": 256,
+    "cta_output_ordinal": 1,
+    "WG_local_output_ordinal": 0,
+    "work": [
+      11,
+      0
+    ],
+    "sm": 124,
+    "stages": 4,
+    "observer": 0,
+    "early_cycles": 11500,
+    "full_wait_cycles": null,
+    "outside_wait_cycles": null,
+    "full_wait_ns": null,
+    "outside_wait_ns": null,
+    "clocks": {
+      "FIRST": 1457433906071046,
+      "C1": 1457433906071893,
+      "H16": 1457433906082965,
+      "C16": 1457433906083393,
+      "WAIT1_16": 1457433906083413,
+      "H17": 1457433906083492,
+      "C17": 1457433906084052,
+      "C63": 1457433906111766,
+      "MMA_RETURN": 1457433906111804,
+      "MAIN": 1457433906112264
+    },
+    "inspection": "Independent raw progress layout/order check only; original frozen decoder still rejects the two-axis cluster.",
+    "observation_qualified": false,
+    "prediction_qualified": false
+  },
+  "full_D_verified": false,
+  "hardware_ready_identified": false,
+  "limits": [
+    "Only stage4 observer-off ran. No enabled Q sample and no stage6 result.",
+    "A successful target process and offline checks do not repair the frozen four-target collector failure.",
+    "No whole-D dump, observer perturbation, service estimate, critical CTA or holdout score.",
+    "Prefix duration fields are retained; this trace version does not record A/B pointer addresses."
+  ],
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "independent_holdout_passed": false
+}
