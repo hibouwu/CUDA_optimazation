@@ -1,0 +1,12 @@
+{
+  "input.tar.gz": "091f168aa3680d22dfceda8f0d1b41fc1217e6dc4c87f918a3e528bd87719b26",
+  "output.tar.gz": "f288c6467a27c520eb5936430dc57108ac186e3035a74b9c5cecb3f1b505c4af",
+  "returned/plain.jsonl": "e4bed156c3b847100c14035a3ffe989f99f138960b43491a89723054f5b2259e",
+  "returned/dual.jsonl": "bac74c7deebff2660456a13f2cf7f2ac0646bf1a344b93a393d13c8dc49433d2",
+  "returned/build/plain_prefix.so": "08371faad4d4065d062b84d742a0b69b865941d7b2bb384676e4e4a0a946f48d",
+  "returned/build/plain_host": "909425ba433bd9db112566cededd1d1f348f0d226b2c270d00e0830a6e867d17",
+  "returned/build/dual_host": "5ed185bc473b0e3a728fe3bd33c9afc5251dad79ac295cc1de1586c500eee9f1",
+  "returned/build/plain_prefix.so.sass": "279c10aca0667d2d4c6e535a336bac8e1ed67c49dc8e9022b078ea7ae8e84680",
+  "returned/build/plain_host.sass": "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038",
+  "returned/build/dual_host.sass": "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26"
+}

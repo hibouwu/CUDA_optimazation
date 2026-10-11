@@ -35,7 +35,9 @@ B首版静态账本 `abc8179` 已由主集成合入为 `c7509ef`。总模型通�
 
 A首批时间契约 `8634da9` 已合入为 `a98cb3f`。主集成在新临时目录独立执行 `r09_time_contract.py` 的完整与 `--stage-endpoints` 两条复放：七份主JSON与一份端点JSON均与A-v3逐项一致，5项时间契约测试通过。历史固定点下界及首/后换算端点约束仅作开发证据，未采用新时钟候选。A提出的bracket观察尚未冻结：现有common-sw1-16调用当前变体kernel，不满足三变体相同plain前序；需补精确区间判定和扰动标准后才进入公共probe准备。
 
-公共plain前序的共享库源码已准备：`probes/r09_plain_prefix.cu/.h`复用原cfg_b/stage6 kernel定义，通过C ABI接收调用方A/B/D地址，在初始化阶段创建workspace，run只入队同一个plain kernel。ABI 1仅接受A观察请求的2816×1536×4096、132SM目标，不扩充正式模型范围。[740042构建检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-plain-prefix-build/README.md)已用CUDA12.9.41通过：仅4CPU/16GiB、无GPU分配；共享库可加载，非法ABI拒绝，GEMM的1280条SASS与同批及冻结V09 plain一致。当前仍未接host加载路径或验证GPU运行；本机CUDA13/GCC不兼容只作为失败准备记录，不影响远端构建结论。普通r18路径只增加不启用的library main guard，默认正文逐字节保持。
+公共plain前序的共享库源码已准备：`probes/r09_plain_prefix.cu/.h`复用原cfg_b/stage6 kernel定义，通过C ABI接收调用方A/B/D地址，在初始化阶段创建workspace，run只入队同一个plain kernel。ABI 1仅接受A观察请求的2816×1536×4096、132SM目标，不扩充正式模型范围。[740042构建检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-plain-prefix-build/README.md)已用CUDA12.9.41通过：仅4CPU/16GiB、无GPU分配；共享库可加载，非法ABI拒绝，GEMM的1280条SASS与同批及冻结V09 plain一致。[740048 host检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-host-check-r5/README.md)已完成plain/dual各一次共享plain前序＋目标调用，原容差4096抽样与padding检查通过；两目标kernel SASS分别与冻结V09一致。四次准备失败保留，实际grid更正为[1,132,1]。尚未验证bracket观察资格或开展正式采样。普通r18路径只增加不启用的library main guard，默认正文逐字节保持。
+
+C首版依赖图 `e097a6b` 已合入为 `2878c1a`。主集成9项专用测试通过；100进程独立复放产生13200CTA、146880阶段行和91760区间行，两图及五份CSV内容精确相同。主JSON仅因已合入B账本而改变supply_model源码哈希，诊断一致。图无服务价，370条轨迹可行不能作因果或预测通过证明。
 
 长期执行对话用独立worktree；同目录临时agent按明确文件边界工作。共享文件需求交管理者合成，不能各自复制cfg_a/b/c框架。各组只提交本组文件，管理者串行集成；不reset/stash他人修改、不追改冻结包。已完成的证据可读取复用，单组完成不代表整轮预测通过。
 

@@ -46,6 +46,8 @@ R09_EXPORT int r09_plain_prefix_create(const R09PlainPrefixSpec* s, void** handl
     args.hw_info.device_id = device;
     args.hw_info.sm_count = s->sm_count;
     args.scheduler.max_swizzle_size = 1;
+    using RasterOption = decltype(args.scheduler.raster_order);
+    args.scheduler.raster_order = RasterOption::Heuristic;
     auto prefix = std::make_unique<Prefix>();
     Gemm gemm;
     cutlass_check(gemm.can_implement(args), "prefix can_implement");
@@ -54,8 +56,8 @@ R09_EXPORT int r09_plain_prefix_create(const R09PlainPrefixSpec* s, void** handl
     cutlass_check(gemm.initialize(args,prefix->workspace->pointer), "prefix initialize");
     prefix->params = gemm.params();
     dim3 grid = Gemm::get_grid_shape(prefix->params);
-    if (grid.x != 132 || grid.y != 1 || grid.z != 1)
-      throw std::runtime_error("plain-prefix persistent grid mismatch");
+    if (grid.x != 1 || grid.y != 132 || grid.z != 1)
+      throw std::runtime_error("plain-prefix persistent grid mismatch: "+std::to_string(grid.x)+","+std::to_string(grid.y)+","+std::to_string(grid.z));
     *info = {1,6,int(grid.x),int(grid.y),int(grid.z),bytes};
     *handle = prefix.release();
     report_error(error,capacity,"");

@@ -3,6 +3,9 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#ifdef R09_PLAIN_PREFIX_HOST
+#include "r09_plain_prefix_host.hpp"
+#endif
 #ifdef R13_A_ROW_ROTATION
 __device__ __constant__ unsigned r13_a_row_rotation;
 // Inverse storage permutation preserves every value delivered to a logical CTA.
@@ -188,6 +191,9 @@ struct Args {
   std::string input_mode = "dyadic";
   std::string warmup_policy = "adaptive";
   std::string history_mode = "off";
+#ifdef R09_PLAIN_PREFIX_HOST
+  std::string plain_prefix_module;
+#endif
   std::string history_source = "original";
   int mirror_target_slot = 0;
   std::string raster_order = "heuristic";
@@ -229,6 +235,9 @@ struct Args {
       else if(key=="--sm-count")sm_count=std::stoi(v);
       else if(key=="--input-mode")input_mode=v;
       else if(key=="--warmup-policy")warmup_policy=v;
+#ifdef R09_PLAIN_PREFIX_HOST
+      else if(key=="--plain-prefix-module")plain_prefix_module=v;
+#endif
       else if(key=="--history-mode")history_mode=v;
       else if(key=="--history-source")history_source=v;
       else if(key=="--mirror-target-slot")mirror_target_slot=std::stoi(v);
@@ -582,6 +591,29 @@ int main(int argc, char** argv) {
     if (history_enabled) history = std::make_unique<DeviceBuffer<uint64_t>>(size_t(history_calls)*ctas*16);
     std::vector<uint64_t> saved_history;
 
+#ifdef R09_PLAIN_PREFIX_HOST
+    if (o.plain_prefix_module.empty() || (o.mode!="warm" && o.mode!="setup") ||
+        !common_history || history_enabled || mirror_sources ||
+        o.swizzle!=1 || o.raster_order!="heuristic" || separate_input_map || o.evict ||
+        o.zero_m!=-1 || o.zero_n!=-1 || o.input_mode!="dyadic" || o.seed!=17 ||
+        o.work_swap55_91 || o.producer_delay_ns || o.epilogue_defer || o.second_prefill || o.a_row_rotation ||
+        o.first_supply_events || o.ready_observer || o.b_offset_bytes)
+      throw std::runtime_error("plain prefix host requires the declared fixed-history observation target");
+    R09PlainPrefixSpec prefix_spec{1,o.m,o.n,o.k,scheduler_sms,lda,ldb,ldd,target_a,target_b,d.pointer};
+    R09PlainPrefixHost plain_prefix(o.plain_prefix_module,prefix_spec);
+    if (plain_prefix.info.grid_x!=int(grid.x) || plain_prefix.info.grid_y!=int(grid.y) || plain_prefix.info.grid_z!=int(grid.z))
+      throw std::runtime_error("prefix/target grid mismatch");
+    // All observer storage and event handles exist before input fills/prefix.
+    DeviceBuffer<uint64_t> trace(size_t(ctas)*kTraceWords);
+    cudaEvent_t begin, end;
+    CUDA_CHECK(cudaEventCreate(&begin)); CUDA_CHECK(cudaEventCreate(&end));
+    std::vector<cudaEvent_t> prefix_begin(17), prefix_end(17);
+    for (int i=0;i<17;++i) {
+      CUDA_CHECK(cudaEventCreate(&prefix_begin[i])); CUDA_CHECK(cudaEventCreate(&prefix_end[i]));
+    }
+    int prefix_call_index=0;
+#endif
+
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
     int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
 #ifdef R13_A_ROW_ROTATION
@@ -602,7 +634,9 @@ int main(int argc, char** argv) {
       CUDA_CHECK(cudaGetLastError());
     }
     gaps::fill_output_sentinel<<<256, 256>>>(d.pointer, d.count);
+#ifndef R09_PLAIN_PREFIX_HOST
     DeviceBuffer<uint64_t> trace(size_t(ctas) * kTraceWords);
+#endif
     CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
 #ifdef V06_TRACE
     CUDA_CHECK(cudaMemcpyToSymbol(v06_trace_ptr, &trace.pointer, sizeof(trace.pointer)));
@@ -631,9 +665,11 @@ int main(int argc, char** argv) {
 #endif
     CUDA_CHECK(cudaDeviceSynchronize());
 
+#ifndef R09_PLAIN_PREFIX_HOST
     cudaEvent_t begin, end;
     CUDA_CHECK(cudaEventCreate(&begin));
     CUDA_CHECK(cudaEventCreate(&end));
+#endif
     std::vector<cudaEvent_t> history_begin, history_end;
     if (history_enabled) {
       history_begin.resize(history_calls); history_end.resize(history_calls);
@@ -643,14 +679,23 @@ int main(int argc, char** argv) {
       }
     }
     int history_index = 0;
-    auto timed = [&](typename Gemm::Params& params) {
+    auto timed = [&](typename Gemm::Params& params, bool use_plain_prefix=false) {
       if(o.evict)evict_buffer<<<256,256>>>(eviction.pointer,eviction.count,++eviction_seed);
       CUDA_CHECK(cudaGetLastError());
       CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
       CUDA_CHECK(cudaDeviceSynchronize());
       cudaEvent_t call_begin = history_enabled ? history_begin[history_index] : begin;
       cudaEvent_t call_end = history_enabled ? history_end[history_index] : end;
+#ifdef R09_PLAIN_PREFIX_HOST
+      if (prefix_call_index>=17) throw std::runtime_error("plain prefix call count exceeds protocol");
+      call_begin=prefix_begin[prefix_call_index]; call_end=prefix_end[prefix_call_index];
+      ++prefix_call_index;
+#endif
       CUDA_CHECK(cudaEventRecord(call_begin));
+#ifdef R09_PLAIN_PREFIX_HOST
+      if (use_plain_prefix) plain_prefix.run();
+      else
+#endif
       cutlass_check(Gemm::run(params), "run");
       CUDA_CHECK(cudaEventRecord(call_end));
       CUDA_CHECK(cudaEventSynchronize(call_end));
@@ -768,6 +813,17 @@ int main(int argc, char** argv) {
         }
         print_f("history_inter_call_event_us",gaps_us);
       }
+#ifdef R09_PLAIN_PREFIX_HOST
+      if (prefix_call_index!=17) throw std::runtime_error("incomplete plain prefix/target history");
+      std::vector<double> prefix_gaps;
+      for (int i=0;i<16;++i) {
+        float gap=0; CUDA_CHECK(cudaEventElapsedTime(&gap,prefix_end[i],prefix_begin[i+1]));
+        prefix_gaps.push_back(gap*1e3);
+      }
+      std::cout << ",\"plain_prefix_abi\":1,\"plain_prefix_calls\":16"
+                << ",\"plain_prefix_same_buffers\":true";
+      print_f("plain_prefix_inter_call_us",prefix_gaps);
+#endif
       print_f("warmup_us", warm_us);
       print_u64("trace", host);
       std::cout << "}\n";
@@ -809,7 +865,13 @@ int main(int argc, char** argv) {
         return;
       }
       if (common_history) {
-        for (int i = 0; i < 16; ++i) warm.push_back(timed(warmup_launch_params));
+        for (int i = 0; i < 16; ++i) {
+#ifdef R09_PLAIN_PREFIX_HOST
+          warm.push_back(timed(warmup_launch_params,true));
+#else
+          warm.push_back(timed(warmup_launch_params));
+#endif
+        }
         set_target_epilogue();
         float ms = timed(launch_params);
         report("warm", ms, warm);
@@ -1011,6 +1073,10 @@ int main(int argc, char** argv) {
     if (input_mode == 2)
       std::cout << "{\"event\":\"tolerance\",\"max_error_ratio\":" << max_error_ratio << "}\n";
     gaps::print_check(e, padding_bad, numerical_ok);
+#ifdef R09_PLAIN_PREFIX_HOST
+    for (auto event:prefix_begin) CUDA_CHECK(cudaEventDestroy(event));
+    for (auto event:prefix_end) CUDA_CHECK(cudaEventDestroy(event));
+#endif
     CUDA_CHECK(cudaEventDestroy(begin));
     CUDA_CHECK(cudaEventDestroy(end));
     for (auto event:history_begin) CUDA_CHECK(cudaEventDestroy(event));
