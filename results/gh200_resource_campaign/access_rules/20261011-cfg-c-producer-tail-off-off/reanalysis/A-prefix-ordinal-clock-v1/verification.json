@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "input_hashes": 167,
+  "calibration_processes": 10,
+  "calibration_native_windows": 2160,
+  "evaluation_processes": 20,
+  "evaluation_native_windows": 4320,
+  "exact_labeled_errors": 8640,
+  "process_summary_groups": 80,
+  "prediction_input_boundary": "Only frozen static setup, one completed prefix host event and calibration are accessed.",
+  "unsupported_setup_rejections": [
+    "gpu_uuid",
+    "k",
+    "stages",
+    "seed",
+    "prefix_calls",
+    "prefix_same_a",
+    "producer_tail_observer",
+    "swizzle"
+  ],
+  "invalid_prefix_rejections": 4,
+  "closed_but_swapped_terms_rejected": true,
+  "prospective_holdout": false
+}

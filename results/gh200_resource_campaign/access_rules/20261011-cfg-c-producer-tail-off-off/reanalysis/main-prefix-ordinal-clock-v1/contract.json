@@ -1,0 +1,14 @@
+{
+  "schema": "r09-prefix-ordinal-clock-contract/1",
+  "calibration_run": "20261011-cfg-c-producer-tail-control",
+  "calibration_flag": 0,
+  "evaluation_run": "20261011-cfg-c-producer-tail-off-off",
+  "evaluation_arms": [0, 1],
+  "reference_run": "20261011-cfg-c-mma-reference",
+  "formula": "kappa_o = median_process(E_prefix_ns * median_CTA(C_common/N_common)); rate_hat_o = kappa_o/E_prefix_ns; N_hat_o = C_static/rate_hat_o",
+  "common_baseline": "One kappa is the median of all 20 calibration process/ordinal centers; no ordinal split.",
+  "native_cycles": "Use only 740095's prescribed long-reference work-scaled native cycles 1049379/16; no GEMM target cycle or intercept.",
+  "selection": "Two fixed profiles and one common baseline; no search over prefix index, filters, per-CTA coefficients, subsets or losses.",
+  "status": "Retrospective development split: both batches and the later reference were already revealed; this freeze only separates calibration from this scoring implementation, not a prospective holdout.",
+  "qualification": "All observation, prediction, physical-rate, complete-event and cross-card qualifications remain false. No GPU submission."
+}

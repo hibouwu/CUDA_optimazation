@@ -256,6 +256,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [single126源并集独立核对](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-single126-source-union-v1/README.md)：B0/B32共1024不同描述符/6553600有效FP16元素独立地址枚举与128B覆盖函数同；每组总单元3200/3248，16组各120组对不重叠。仅静态工作前提，单次服务界仍须证明同组订阅不失效，不称物理流量或全区间结论，无GPU/资格。
 
+[前序event局部候选主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-ordinal-clock-v1/README.md)：接入A736ac190，五份完整内容重算相同；167SHA/2160校准/4320评分/8640有标签分项与输入拒绝通过。共同系数自由局部误差3.541%/6.446%，两序号0.798%/3.437%，保留简单共同候选，不称序号必要；仅后验开发，同cfg_c协议，仍需新有效观察与独立冻结采集，公共组合未采用，无GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

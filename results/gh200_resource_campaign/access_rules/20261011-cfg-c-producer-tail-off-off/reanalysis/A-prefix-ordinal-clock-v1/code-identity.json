@@ -1,0 +1,10 @@
+{
+  "worktree": "/home/jianyeshi/.codex/worktrees/9cce/CUDA_optimazation",
+  "head_before_document_commit": "1b6678004cf413aeeba84a15a4d22dcf188db537",
+  "module_path": "/home/jianyeshi/.codex/worktrees/9cce/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/r09_prefix_ordinal_clock.py",
+  "module_sha256": "42735ffb5c8124d006995bebe1ee18b8c502b35cc917571bcddb9d74d813400c",
+  "scripts": {
+    "analyze.py": "9afca60cfd5c8bee39385374db126dbe008a1c58687486e9e1da36172b9451a8",
+    "verify.py": "30e587d05fd3f620797ab1a4dedad091610bec036486d38d33562e44af9d734e"
+  }
+}
