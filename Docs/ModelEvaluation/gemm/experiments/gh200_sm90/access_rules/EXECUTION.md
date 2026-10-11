@@ -164,6 +164,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 当前状态只在本节维护；具体实验分析归原页。历史A/B/C长期对话ID、工作树、提交表和故障记录见[固定状态表](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#status)，不把旧绑定或旧“待补测”状态当作当前任务。
 
+主集成已接入并独立重算[740068共同时钟分析](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-control/reanalysis/main-clock-consistency-v2/README.md)：20进程的160证书与98560次反演通过，第一L无上限模型仍需97..113ns单端点容差，原观察失败不变。另接入[ cfg_c源/full端口](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-source-ports-v1/README.md)，26静态条件、150历史调用、18960CTA、614400值及19个压缩绑定/模板独立复核；cfg_a22绑定不变。cfg_c完整rank生命周期仍未闭合，开放端口不当作零成本；C继续补源码依赖，无新GPU或价格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
