@@ -1,0 +1,260 @@
+{
+  "job_id": 740091,
+  "total_series": 6372,
+  "failed_series": 4771,
+  "groups": {
+    "DONE": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        112.0,
+        544.0
+      ],
+      "maximum_abs_range_ns": [
+        320,
+        1312
+      ],
+      "sm_change_pairs": 0
+    },
+    "E": {
+      "series": 432,
+      "failed": 279,
+      "median_abs_range_ns": [
+        0.0,
+        352.0
+      ],
+      "maximum_abs_range_ns": [
+        32,
+        512
+      ],
+      "sm_change_pairs": 0
+    },
+    "FIRST": {
+      "series": 432,
+      "failed": 386,
+      "median_abs_range_ns": [
+        16.0,
+        448.0
+      ],
+      "maximum_abs_range_ns": [
+        96,
+        864
+      ],
+      "sm_change_pairs": 0
+    },
+    "GAP": {
+      "series": 432,
+      "failed": 158,
+      "median_abs_range_ns": [
+        0.0,
+        208.0
+      ],
+      "maximum_abs_range_ns": [
+        32,
+        448
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_DONE": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        96.0,
+        544.0
+      ],
+      "maximum_abs_range_ns": [
+        320,
+        1312
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_FIRST": {
+      "series": 432,
+      "failed": 378,
+      "median_abs_range_ns": [
+        16.0,
+        448.0
+      ],
+      "maximum_abs_range_ns": [
+        96,
+        864
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_MAIN": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        96.0,
+        592.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1504
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_PERMIT": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        80.0,
+        592.0
+      ],
+      "maximum_abs_range_ns": [
+        288,
+        1504
+      ],
+      "sm_change_pairs": 0
+    },
+    "L": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        32.0,
+        608.0
+      ],
+      "maximum_abs_range_ns": [
+        320,
+        1280
+      ],
+      "sm_change_pairs": 0
+    },
+    "MAIN": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        96.0,
+        624.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1504
+      ],
+      "sm_change_pairs": 0
+    },
+    "PERMIT": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        80.0,
+        624.0
+      ],
+      "maximum_abs_range_ns": [
+        288,
+        1504
+      ],
+      "sm_change_pairs": 0
+    },
+    "W": {
+      "series": 432,
+      "failed": 2,
+      "median_abs_range_ns": [
+        0.0,
+        96.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        128
+      ],
+      "sm_change_pairs": 0
+    },
+    "FINAL": {
+      "series": 264,
+      "failed": 264,
+      "median_abs_range_ns": [
+        64.0,
+        544.0
+      ],
+      "maximum_abs_range_ns": [
+        384,
+        1312
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_FINAL": {
+      "series": 264,
+      "failed": 264,
+      "median_abs_range_ns": [
+        64.0,
+        544.0
+      ],
+      "maximum_abs_range_ns": [
+        384,
+        1312
+      ],
+      "sm_change_pairs": 0
+    },
+    "TAIL": {
+      "series": 264,
+      "failed": 0,
+      "median_abs_range_ns": [
+        0.0,
+        64.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        128
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_ENTRY": {
+      "series": 132,
+      "failed": 0,
+      "median_abs_range_ns": [
+        0.0,
+        32.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        32
+      ],
+      "sm_change_pairs": 0
+    },
+    "GLOBAL_PRODUCER": {
+      "series": 132,
+      "failed": 8,
+      "median_abs_range_ns": [
+        0.0,
+        96.0
+      ],
+      "maximum_abs_range_ns": [
+        64,
+        224
+      ],
+      "sm_change_pairs": 0
+    },
+    "producer": {
+      "series": 132,
+      "failed": 8,
+      "median_abs_range_ns": [
+        0.0,
+        96.0
+      ],
+      "maximum_abs_range_ns": [
+        64,
+        224
+      ],
+      "sm_change_pairs": 0
+    }
+  },
+  "event": {
+    "signed": [
+      -0.0010225026665587889,
+      -0.005140546216360065,
+      0.0,
+      0.0034483021990192597,
+      -0.003772319420217052,
+      -0.003428205560641384,
+      0.011359730954664471,
+      -0.007184374805087379,
+      0.00548693024557978,
+      0.009625293918426037
+    ],
+    "median_absolute": 0.004456432818288558,
+    "maximum_absolute": 0.011359730954664471,
+    "passed": true
+  },
+  "off_cv": 0.0031007069440807528,
+  "incremental_control_passed": false
+}

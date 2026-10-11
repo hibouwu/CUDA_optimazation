@@ -210,6 +210,8 @@ producer-tail冻结前按C反馈补齐W/E/GAP/TAIL直接差门槛，防止两个
 
 producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列，防止各CTA单独归零隐藏跨CTA相位移动；当前6372系列/进程、16相关测试通过，禁止跨SM clock相减，整调用launch边界仍不获资格。所有修改均在冻结和新采样前。
 
+[cfg_c producer-tail对照740091](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control/README.md)：b11fae8冻结后参考ef/a058独占执行20进程，81920样本、完整记录/身份通过，CTA→SM配对无变化。6372系列4771失败，432条L全失败（逐条max320..1280ns）；event中位0.446%/最大1.136%、off CV0.310%通过。增量观察资格仍失败，不补抽/调门槛/校正抵消；未识别差异物理原因，无V10或跨卡性能结论。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
