@@ -1,0 +1,90 @@
+{
+  "results": [
+    {
+      "id": "g64_p0",
+      "iterations": 64,
+      "cycles": 66339,
+      "work_flop": 268435456,
+      "flop_per_SM_cycle": 4046.419994271846,
+      "output_values_checked": 32768,
+      "sm": 124
+    },
+    {
+      "id": "g1024_p0",
+      "iterations": 1024,
+      "cycles": 1049379,
+      "work_flop": 4294967296,
+      "flop_per_SM_cycle": 4092.8656815125896,
+      "output_values_checked": 32768,
+      "sm": 124
+    },
+    {
+      "id": "g64_p1",
+      "iterations": 64,
+      "cycles": 66339,
+      "work_flop": 268435456,
+      "flop_per_SM_cycle": 4046.419994271846,
+      "output_values_checked": 32768,
+      "sm": 124
+    },
+    {
+      "id": "g1024_p1",
+      "iterations": 1024,
+      "cycles": 1049379,
+      "work_flop": 4294967296,
+      "flop_per_SM_cycle": 4092.8656815125896,
+      "output_values_checked": 32768,
+      "sm": 124
+    },
+    {
+      "id": "g64_p2",
+      "iterations": 64,
+      "cycles": 66339,
+      "work_flop": 268435456,
+      "flop_per_SM_cycle": 4046.419994271846,
+      "output_values_checked": 32768,
+      "sm": 124
+    },
+    {
+      "id": "g1024_p2",
+      "iterations": 1024,
+      "cycles": 1049379,
+      "work_flop": 4294967296,
+      "flop_per_SM_cycle": 4092.8656815125896,
+      "output_values_checked": 32768,
+      "sm": 124
+    }
+  ],
+  "summary": [
+    {
+      "iterations": 64,
+      "cycles": [
+        66339,
+        66339,
+        66339
+      ],
+      "median_cycles": 66339,
+      "median_flop_per_SM_cycle": 4046.419994271846
+    },
+    {
+      "iterations": 1024,
+      "cycles": [
+        1049379,
+        1049379,
+        1049379
+      ],
+      "median_cycles": 1049379,
+      "median_flop_per_SM_cycle": 4092.8656815125896
+    }
+  ],
+  "formal_output_values_checked": 196608,
+  "short_coordinate_checks_from_host": true,
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "limits": [
+    "Six prescribed independent processes; no retries or removal based on timing.",
+    "64 groups matches target MMA count, 1024 probes sustained service; no intercept fit.",
+    "Coordinate short checks and full formal outputs required before timing interpretation.",
+    "Fixed16 warmup, native single-CTA clock64 scope; no conversion to ns."
+  ]
+}
