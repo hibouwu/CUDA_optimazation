@@ -3,7 +3,7 @@ from decode_r09_clock_observer import decode,VERSIONS
 from v08_model import scheduled_work
 
 def packet(arm='guarded_bracket'):
-    s=dict(config='cfg_b',m=2816,n=1536,k=4096,tile=[128,128,64],cluster=[1,1],grid=[1,132,1],stages=6,
+    s=dict(config='cfg_b',m=2816,n=1536,k=4096,tile=[128,128,64],cluster=[1,1],grid=[1,132,1],sm_count=132,stages=6,
         swizzle=1,lda=4096,ldb=1536,ldd=1536,alloc_lda=4104,alloc_ldb=1536,storage_m=2816,storage_n=1536,
         input_map_m=2816,input_map_n=1536,zero_m=-1,zero_n=-1,input_mode='dyadic',seed=17,
         trace_tile_words=12,trace_words=1552,scratch_bytes=1638912,trace_version=VERSIONS[arm],gpu_uuid='synthetic',traced=arm!='plain')
@@ -16,7 +16,7 @@ def packet(arm='guarded_bracket'):
     if arm=='plain':return s,c
     work=scheduled_work('cfg_b',2816,1536,[1,132,1],1);t=[0]*(132*1552)
     for cta in range(132):
-        base=cta*1552;t[base+2]=7
+        base=cta*1552;t[base:base+4]=[10,10,7,20];t[base+13]=20
         for role in (1,2):
             t[base+10+role]=7;t[base+4+(role-1)*3:base+7+(role-1)*3]=[600,600,1]
             start=base+16+(role-1)*768
@@ -24,6 +24,19 @@ def packet(arm='guarded_bracket'):
     c['trace']=t;return s,c
 
 class PacketTest(unittest.TestCase):
+    def test_rejects_missing_or_reversed_header_endpoints(self):
+        for index,value in [(0,0),(1,0),(3,0),(13,0),(0,21),(1,21),(3,101),(13,101)]:
+            with self.subTest(index=index,value=value):
+                s,c=packet();c['trace'][index]=value
+                result=decode(s,c,'guarded_bracket','synthetic')
+                self.assertFalse(result['record_valid'])
+                self.assertEqual([(e['cta'],e['role']) for e in result['errors']],[(0,1),(0,2)])
+                self.assertEqual(len(result['records']),262)
+    def test_rejects_consistent_but_out_of_range_sm(self):
+        s,c=packet()
+        for index in (2,11,12):c['trace'][index]=133
+        result=decode(s,c,'guarded_bracket','synthetic')
+        self.assertFalse(result['record_valid']);self.assertEqual(len(result['errors']),2)
     def test_three_arms(self):
         for arm in VERSIONS:
             result=decode(*packet(arm),arm,'synthetic');self.assertTrue(result['record_valid']);self.assertFalse(result['observation_qualified'])

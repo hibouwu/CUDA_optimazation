@@ -147,6 +147,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [740071条件括号算术](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/conditional-brackets-v1/README.md)在假设读包围成立时，用原128ns总区间预算得到0/132同CTA常数周期率交集；独立Fraction逐对复核精确最小预算1149.598..1242.163ns。单对guarded首段cycle差中位-761.5，不能替代原10进程扰动评分；保留inconclusive/false，不调预算、不定价、不证明物理频率。
 
+[740071头字段加严回放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-packet-header-v1/README.md)：修复A发现的entry/producer缺失与固定设备SM越界接受缺口，补充两个时钟域事件顺序检查。冻结三臂原记录仍全部通过，matched/guarded各264角色；10个原raw副本破坏检查均拒绝，9项reader测试通过。原快照不改，物理观察资格仍false。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。

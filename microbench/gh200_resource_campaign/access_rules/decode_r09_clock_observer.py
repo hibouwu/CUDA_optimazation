@@ -13,7 +13,7 @@ def matches(actual,expected):
 def decode(setup,call,arm,gpu_uuid):
     if arm not in VERSIONS:raise ValueError('explicit supported arm required')
     fixed=dict(config='cfg_b',m=2816,n=1536,k=4096,tile=[128,128,64],cluster=[1,1],
-        grid=[1,132,1],stages=6,swizzle=1,lda=4096,ldb=1536,ldd=1536,alloc_lda=4104,alloc_ldb=1536,
+        grid=[1,132,1],sm_count=132,stages=6,swizzle=1,lda=4096,ldb=1536,ldd=1536,alloc_lda=4104,alloc_ldb=1536,
         storage_m=2816,storage_n=1536,input_map_m=2816,input_map_n=1536,zero_m=-1,zero_n=-1,
         input_mode='dyadic',seed=17,trace_tile_words=12,trace_words=1552,scratch_bytes=1638912,
         trace_version=VERSIONS[arm],gpu_uuid=gpu_uuid)
@@ -49,11 +49,14 @@ def decode(setup,call,arm,gpu_uuid):
         b=trace[cta*1552:(cta+1)*1552]
         for role in (1,2):
             try:
-                if b[10] or not b[2] or b[10+role]!=b[2]:raise ValueError('overflow/missing/different SM')
+                if b[10] or not 1<=b[2]<=setup['sm_count'] or b[10+role]!=b[2]:raise ValueError('overflow/missing/out-of-range/different SM')
+                if any(b[i]<=0 for i in (0,1,3,13)):raise ValueError('missing entry/producer endpoint')
+                if b[3]<b[0] or b[13]<b[1]:raise ValueError('producer precedes entry')
                 if len(work[cta])!=2 or b[6+(role-1)*3]!=1:raise ValueError('one output per original role required')
                 offset=16+(role-1)*64*12;tile=b[offset:offset+12]
                 if any(b[offset+12:offset+64*12]):raise ValueError('unexpected extra output records')
                 window=observer_L_window(tile,arm)
+                if tile[0]<b[3] or tile[6]<b[13]:raise ValueError('first MMA precedes producer')
                 if window['work_coordinate']!=list(work[cta][role-1]):raise ValueError('role work mismatch')
                 final=b[4+(role-1)*3:6+(role-1)*3]
                 if final[0]<tile[3] or final[1]<tile[9]:raise ValueError('final precedes epilogue completion')
