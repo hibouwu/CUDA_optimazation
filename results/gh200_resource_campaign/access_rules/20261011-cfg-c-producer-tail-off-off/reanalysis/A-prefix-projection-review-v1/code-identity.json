@@ -1,0 +1,11 @@
+{
+  "worktree": "/home/jianyeshi/.codex/worktrees/9cce/CUDA_optimazation",
+  "head_before_document_commit": "271e86deffbd40c7ca527fcc6659c446489d0c71",
+  "review_sha256": "8c708c9009869136471bf5e348866c1abb7f9ec5dfd941311f27f81f70a1eb74",
+  "original_main_commit": "255e93ad",
+  "fixed_main_commit": "3233d2e0",
+  "extractor_snapshots": {
+    "extractor-snapshot.py": "44a01fdd418822358331e1c0d82b5292954fef5b0f2f5721df6df6f85d5c93b9",
+    "extractor-fixed-snapshot.py": "368c2ecbf74f486094887051f3199dd29e4013091183dee923a006b1f3b7b03a"
+  }
+}

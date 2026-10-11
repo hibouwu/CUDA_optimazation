@@ -1,0 +1,18 @@
+{
+  "extractor_sha256": "44a01fdd418822358331e1c0d82b5292954fef5b0f2f5721df6df6f85d5c93b9",
+  "valid_original_records": 20,
+  "target_measurement_poison_noninterference": 20,
+  "failed_check_cli_noninterference": true,
+  "static_contradiction_cases": 260,
+  "accepted_static_contradictions": 260,
+  "rejected_static_contradictions": 0
+}
+{
+  "extractor_sha256": "368c2ecbf74f486094887051f3199dd29e4013091183dee923a006b1f3b7b03a",
+  "valid_original_records": 20,
+  "target_measurement_poison_noninterference": 20,
+  "failed_check_cli_noninterference": true,
+  "static_contradiction_cases": 260,
+  "accepted_static_contradictions": 0,
+  "rejected_static_contradictions": 260
+}

@@ -1,0 +1,53 @@
+{
+  "candidate": "frozen common kappa only; no ordinal alternative fitted or selected",
+  "formula": "N_hat=C_static*last_prefix_event_ns/kappa_common; residual=(N_arm1-N_arm0)-(N_hat_arm1-N_hat_arm0)",
+  "static_cycles": "1049379/16",
+  "common_kappa_cycles": "917936573709006448703/5896626048000000",
+  "prefix_only_input_checks": 20,
+  "scored_common_windows": 4320,
+  "matched_common_series": 216,
+  "diagnostic_summaries": {
+    "raw": {
+      "series": 216,
+      "failed": 215,
+      "median_abs_range_ns": [
+        64.0,
+        384.0
+      ],
+      "maximum_abs_range_ns": [
+        192.0,
+        896.0
+      ]
+    },
+    "residual": {
+      "series": 216,
+      "failed": 216,
+      "median_abs_range_ns": [
+        177.86136892203425,
+        593.0486155361178
+      ],
+      "maximum_abs_range_ns": [
+        798.8462175285702,
+        1688.1848438547147
+      ]
+    }
+  },
+  "common_free_prediction_error": {
+    "count": 4320,
+    "median": 0.022934494559469207,
+    "median_absolute": 0.03540995761706324,
+    "maximum_absolute": 0.06446419263914402,
+    "minimum": -0.06446419263914402,
+    "maximum": 0.059694644120397725
+  },
+  "strict_cycle_vs_ns_extrema_disagreements": 0,
+  "original_roles_L_failed": 432,
+  "original_all_series_failed": 4884,
+  "original_gate_rejudged": false,
+  "numeric_predictions_committed_before_target": false,
+  "prefix_host_available_before_target": true,
+  "prospective_holdout": false,
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "new_gpu_runs_by_C": 0
+}

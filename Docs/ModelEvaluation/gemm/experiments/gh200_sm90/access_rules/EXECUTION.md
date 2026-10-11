@@ -270,6 +270,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [请求工作静态审查主线重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-request-work-audit-v1/README.md)：接入B6c5015b2，14条件/305856需求/34176计数检查及1318SHA通过，完整报告/张量一致。两方向全计数张量相同却响应异，single36/126前36局部源程序同却规模响应异；需要源关联/共享影响信息，不能仅换覆盖计数定价。保留旧尾部不支持和跨卡计时分离，无新模型/候选/GPU/资格。
 
+[前序规则观测否决重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-observation-review-v1/README.md)：C结果重跑同、33SHA核对，216共同系列扣除冻结预测配对变化后全超原64/256诊断尺；相对预测通过不代表绝对背景受控。GT→clock→GT目标内区间只是待审实现提案，需采样顺序、独立shadow及扰动/null证据，不授新资格。另[A投影修复审查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-projection-review-v1/README.md)两完整报告重跑同，260协议反例由接受变拒绝，合法预测/数值失败保留，无GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
