@@ -1,0 +1,66 @@
+{
+  "version": "r13-wait-feedback-v1",
+  "base_source_manifest_sha256": "b57bbb9852ce7da56f87ad5eac6be5412589e0d32c369e0499b41414a0b8021d",
+  "base_source_files_verified": 857,
+  "changed_base_files": [
+    "source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+    "source/probes/r13_wait_sum.cuh",
+    "source/probes/r18.cu",
+    "source/probes/r18_trace.hpp",
+    "source/probes/v06_trace.hpp"
+  ],
+  "config": "cfg_b",
+  "stages": [
+    4,
+    6
+  ],
+  "shape": [
+    2816,
+    1536,
+    4096
+  ],
+  "cta": 0,
+  "physical_thread": 256,
+  "cta_output_ordinal": 1,
+  "WG_local_output_ordinal": 0,
+  "modes": {
+    "0": "no selected waits",
+    "1": "all local groups 2..16",
+    "2": "only group2",
+    "3": "only group16"
+  },
+  "group_masks": {
+    "0": 0,
+    "1": 131068,
+    "2": 4,
+    "3": 65536
+  },
+  "prefix_calls": 16,
+  "prefix_mode": 0,
+  "original_progress_fields_preserved": true,
+  "trace_words_per_CTA": 784,
+  "fields": {
+    "34": "selected sum",
+    "35": "count",
+    "36": "mask",
+    "37": "first selected H",
+    "38": "last selected B",
+    "39": "invalid bits",
+    "40": "declared selection mask",
+    "41": "Q2 when selected",
+    "42": "Q16 when selected"
+  },
+  "interval": "Same iteration H before consumer_try_wait, B after consumer_wait; unchanged token path.",
+  "collector": "All updates after B, final global flush after full consumer loop.",
+  "missingness": "off Q/R absent; single-group sum is not Q_early; unselected Q2/Q16 absent, not zero.",
+  "contrast": "Compare Q16(all) vs Q16(only16); group2 all vs only2 is a no-prior-collector control.",
+  "limits": [
+    "Selector/control instructions and register allocation are part of the new observer.",
+    "Not the pure price of fourteen arithmetic updates; current-wait timestamp overhead remains.",
+    "Different stages run different off-prefix kernels; no component ns conversion."
+  ],
+  "compiled": false,
+  "hardware_correctness": false,
+  "observation_qualified": false,
+  "prediction_qualified": false
+}

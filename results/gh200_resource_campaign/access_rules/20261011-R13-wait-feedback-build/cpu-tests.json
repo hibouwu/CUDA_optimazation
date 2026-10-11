@@ -1,0 +1,5 @@
+{
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "test_actual_cpp_mask_selection_and_recorded_points (test_r13_wait_feedback.FeedbackTests.test_actual_cpp_mask_selection_and_recorded_points) ... ok\ntest_all_modes_and_large_native_clocks (test_r13_wait_feedback.FeedbackTests.test_all_modes_and_large_native_clocks) ... ok\ntest_four_packets_and_numeric_error (test_r13_wait_feedback.FeedbackTests.test_four_packets_and_numeric_error) ... ok\ntest_invalid_mode_mask_counts_endpoints_and_missingness (test_r13_wait_feedback.FeedbackTests.test_invalid_mode_mask_counts_endpoints_and_missingness) ... ok\ntest_old_protocol_rejected (test_r13_wait_feedback.FeedbackTests.test_old_protocol_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 5 tests in 0.290s\n\nOK\n"
+}

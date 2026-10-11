@@ -1,0 +1,52 @@
+{
+  "job": 740367,
+  "CPU_only": true,
+  "CUDA": "12.9.41",
+  "source_files_verified": 858,
+  "source_manifest_sha256": "ab9dc741f4e72da413833b6e984b58054e9c37d05232e6f88bbfcfdb0b334b9e",
+  "output_archive_sha256": "966dd267a5ff54c22df59d6c34b8e209236957dab20fbd4b48b6739236876fd7",
+  "binaries": [
+    {
+      "stage": 4,
+      "name": "cfg_b_s4_stamped",
+      "binary_sha256": "8dbeaaa865d80d918f68c17ee119a0baca6a2a68bbc8ce587bce2dbdfdb9058a",
+      "sass_sha256": "110cebdf4a345bf39e7dc99aef3f7459bf1eb6bf1524a64ebab1576ca1934670",
+      "H": "0x1ed0",
+      "B": "0x1f80",
+      "try_address": "0x1f20",
+      "wait_address": "0x1f40",
+      "slow_entry": "0x5a40",
+      "collector_end": "0x22c0",
+      "static_B_through_collector_end": 53,
+      "registers": 168,
+      "spill_bytes": 0,
+      "static_HGMMA": 16
+    },
+    {
+      "stage": 6,
+      "name": "cfg_b_stamped",
+      "binary_sha256": "c634a55856e2c762e2abd628402b2fd5928c7f3240b07906a409752a4d7eaae8",
+      "sass_sha256": "2caa937566023fbfe97f1cc6f35c939fe3699c678e92b7226ec8d9b61039d7be",
+      "H": "0x1dd0",
+      "B": "0x1e80",
+      "try_address": "0x1e20",
+      "wait_address": "0x1e40",
+      "slow_entry": "0x5960",
+      "collector_end": "0x21c0",
+      "static_B_through_collector_end": 53,
+      "registers": 168,
+      "spill_bytes": 0,
+      "static_HGMMA": 16
+    }
+  ],
+  "selected_clock_pair_shared_across_modes": true,
+  "collector_after_B_no_loop_stores": true,
+  "limits": [
+    "Same selected instruction addresses do not prove equal scheduling or background state.",
+    "Group2 controls no prior selected observation; it is not a pure collector-cost subtraction.",
+    "New binary and protocol are separate from the earlier cumulative-wait measurement."
+  ],
+  "hardware_correctness": false,
+  "observation_qualified": false,
+  "prediction_qualified": false
+}
