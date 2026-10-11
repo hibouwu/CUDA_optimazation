@@ -1,0 +1,16 @@
+{
+  "report_sha256": "63d701d1f4b12d33a1389ad76257d58748bdf3917bb9169d84daacfa6f704842",
+  "input_hashes_reverified": 1318,
+  "reused_data_inputs": 1310,
+  "cases": 14,
+  "logical_demands": 305856,
+  "independent_descriptor_width_checks": 34176,
+  "raster_full_tensors_equal": 2,
+  "historical_full_tensors_equal": 2,
+  "local_first36_source_programs_equal": 2,
+  "tensor_sha256": "6853cd6e156729c1ad7914308ea266aad8df9e7580e322daa4cd328122ec73be",
+  "tensor_bytes_unchanged_from_v2": true,
+  "source_model_modified": false,
+  "new_candidate_scored": false,
+  "new_GPU": false
+}

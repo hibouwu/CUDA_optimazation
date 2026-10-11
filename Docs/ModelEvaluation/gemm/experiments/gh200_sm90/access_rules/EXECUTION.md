@@ -268,6 +268,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [前序投影协议一致性修复](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-extraction-v2/README.md)：按A独立发现补22项call/setup静态声明检查；20原记录440矛盾/440缺失拒绝，目标毒值仍不影响输入，与255e93a旧版20合法输入逐值相同。固定raw身份不能替代协议自洽；规则未变，C继续原gate残差否决检查，无GPU/资格。
 
+[请求工作静态审查主线重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-request-work-audit-v1/README.md)：接入B6c5015b2，14条件/305856需求/34176计数检查及1318SHA通过，完整报告/张量一致。两方向全计数张量相同却响应异，single36/126前36局部源程序同却规模响应异；需要源关联/共享影响信息，不能仅换覆盖计数定价。保留旧尾部不支持和跨卡计时分离，无新模型/候选/GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
