@@ -429,6 +429,23 @@ stage4/6各进程先取132个CTA必要界的中位，再取10进程中位，分�
 
 r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic AlongN的原V09与739095 setup均为`[1,132,1]`，此前误写为`[132,1,1]`。总CTA数仍为132；prefix与target须逐维匹配，不能只检查乘积。[原setup哈希与校验](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/grid-correction-verification.json)保留修订来源，r3及主集成记录的740046/740047在GEMM前拒绝不追改。
 
+### 同plain前序接口的两进程冒烟证明了什么？
+
+主集成740048在GPU-43269fbc上完成plain-host/dual-host各一进程，二者都通过共享库调用16次同plain kernel，再在同A/B/D上执行目标。实际grid均为`[1,132,1]`、stage6；各4096值按原标准精确正确、padding/非有限为零。本组独立重放原gzip及检查值。设备SASS与冻结plain/dual各自相同的证明来自主集成，本组绑定其报告与源包哈希，不把两进程冒烟算正式计时、观察扰动资格或局部留出。
+
+前序执行器相同还不代表准备过程相同。归档`timed()`在每个prefix/target前清零trace并同步；本批记录为：
+
+| host目标 | 每调用清零scratch | 16次prefix的kernel event总和 | 首15个gap占prefix首入口到末出口 | 全16个gap中位 |
+|---|---:|---:|---:|---:|
+| plain | 827904 B | 814.080 µs | 29.59% | 22.368 µs |
+| dual | 1368576 B | 816.864 µs | 27.92% | 20.784 µs |
+
+gap由相邻CUDA event相减，包含准备、主机与设备路径，不能命名为纯空闲时间。当前`warmup_policy=common-sw1-16`仍是旧标签，plain模块身份只在call的`plain_prefix_abi/calls`中表达；旧reader仅检查该标签会接受这种不同执行器。因此正式清单/解析须同时绑定模块/二进制、准备字节与顺序、间隔规则；比较dual/bracket时先验证这些历史输入匹配。观测到的prefix间隔可作历史诊断，不能隐式成为自由预测的目标W/f。
+
+这一个dual调用的原角色首/后L周期率中位为1.58318/1.76108 GHz，同CTA单常数换算的必要单端点容差中位为529.73 ns。它只表明新接口下仍有需要解释的端点算术；没有重复分布、夹取read跨度或误差界，不能据此判定物理频率或认证旧观察版本。最小下一步仍是审查采样包围关系，而不是增加phase时钟价格。
+
+[独立审计结果](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-host-check-r5/reanalysis/A-history-contract-audit-v1/prefix-history-audit.json)绑定原始样本、源包与有效trace include路径；[本组入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_plain_prefix_audit.py)独立验证plain模块身份，不修改公共reader。源包中overlay trace有两个同名成员，最后的stub引用`source/probes/v06_trace.hpp`；审计保留两成员哈希并读取该有效实现，避免将较早成员误当实际编译源。
+
 复核入口：[r09_time_contract.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_time_contract.py)。[本轮结果与契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/README.md)包含逐进程CSV、源哈希、经验下界、支持/排除/不可区分及独立复放命令。持续目标仍未完成，后续规则须另经冻结的新局部留出与组合检查。
 
 ## 作业与复核索引
