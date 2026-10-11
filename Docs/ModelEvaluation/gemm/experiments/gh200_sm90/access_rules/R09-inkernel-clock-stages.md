@@ -407,6 +407,10 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 
 因此需保留同执行的process、前序输入、CTA/SM/WG、phase与端点身份：同标签窗口上先验证C/r误差关系，同执行内先形成阶段/并行组合，再聚合相应量；不同plain/trace进程不伪装成同次执行。完整时间和关键CTA仍按各自冻结对象独立验收。局部中位数及其同时不确定区间不能替代这些验证，也不要求先建立完整随机硬件模型。
 
+同执行向量还须绑定原采集归属。[740161联合提取器v3的定向复审](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/A-joint-extractor-audit-v1/README.md)交换同臂pair00/01的raw路径与SHA，或保留文件名、交换字节并更新自报SHA；原manifest、receipt和回收包均不变。两例仍被提取为40进程，全部12744条边际中位数记录不变，但4348条配对点值记录改变，off/on失败数4912→4917。原verifier最终通过完整旧统计比较拒绝两例，不能称为端到端静默通过；缺口在统计入口未将记录表与固定回收映射核对。
+
+[主线v4修复的独立复审](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/A-joint-extractor-audit-v4/README.md)使用预先记录的回收包SHA `4e372a3d…0b04`，先逐字绑定包内manifest/records/complete/raw，再解码。合法baseline通过40进程、17280窗口、69120复合标量及完整旧统计核对；两种原负例均在记录映射入口拒绝，未生成统计输出。setup、16次已完成前序event及联合ID/block/arm/原归档序号/raw身份另经独立核对。修复前后快照、尝试日志和可复核报告均保留；这只验证本批回收归属，不能证明采集器正确性、物理时刻误差、总体平稳性或观察／预测资格。
+
 ### 忽略历史，固定点至少错多少？
 
 对同一静态目标，若各历史组的时间中心为正数y，任何一个固定预测p都满足
