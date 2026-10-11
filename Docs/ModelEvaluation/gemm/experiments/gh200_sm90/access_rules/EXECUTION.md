@@ -204,6 +204,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [producer-tail独立正确性审查重跑](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/reanalysis/main-producer-tail-correctness-review-v1/README.md)：C脚本主线执行结果逐字段同，856源/7077888参考值/8192样本/四拒绝路径通过。另完成[增量扰动对照规格](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control-preparation/README.md)：20个交替配对命令、全CTA/角色/输出共同端点及L门槛明确，尚待采集判定器和冻结，未执行GPU；通过也不自动授予tail精度或基础dual资格。
 
+[producer-tail对照判定器准备](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control-preparation/README.md)：逐系列分析及串行采集器已实现；两旧smoke包各2556系列/132CTA读取通过，不评分单对。14项相关测试覆盖共同平移相消、单次超限、event/CV及缺失/错序等拒绝；采集前实际设备setup检查。仍待独立规格审查、独占远端脚本及完整冻结，无新增GPU、无观察资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
