@@ -135,6 +135,8 @@ B的cc29004已合入63134e5。主集成独立复放60进程冻结release研究�
 
 [740070 guarded实际帧构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-frame-build/README.md)完成：cfg_b stage6三target+plain模块，CUDA12.9，130秒4CPU/16GiB，无GPU。四kernel168regs/2barrier/零spill，计算/TMA/arrival/wait静态数量相同，FIRST/MAIN两处64bit比较→BRA及有限重试保留。前序/target统一12word布局，原三overlay逐字节未变。尚未完成reader、动态occupancy或运行时包围/扰动资格，不迁为cfg_a观察通过；0c9afd和3aefacb已分别合入2a53633/8a3aec0。
 
+[地址服务反馈独立复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-20261011-address-feedback-v1/README.md)完成，af3a8ac合入f7f4414。10条件/17响应完整报告一致，214输入SHA核对，157相关测试通过；10组旧默认完整字典及旧覆盖预测不变，5组B0 MAIN精确不变。新候选工作变化反馈ready/订阅/stage，但首输出TC idle仍0，不能解释沿M与single126等20%以上响应，固定参数点不采用，不追加方向/规模价。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。
