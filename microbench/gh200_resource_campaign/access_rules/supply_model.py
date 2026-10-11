@@ -1017,6 +1017,80 @@ def cfg_b_source_program(row, setup):
         totals=ledger['totals'], ledger_schema=ledger['schema'])
 
 
+def cfg_b_logical_boundary_ledger(row):
+    """Unicast logical output/K boxes, including M/N/K tails, without CTA binding.
+
+    Source extents equal the logical M/N/K; no padded input-map override, rotation
+    or replicated source is inferred. A is 128x64; B is two logical 64x64 boxes.
+    Each K group retains 32KiB of destination/transaction work, even when a box
+    has no valid source. D uses the 64x32 FP32 epilogue lattice. Its nominal box
+    bytes are not a claim that every OOB box issues or reads that source work.
+    No output ordinal, global stage generation, ownership, timing or safe exit
+    is assigned: those require the actual persistent scheduler/output graph.
+    """
+    if row['config']!='cfg_b':raise ValueError('boundary ledger requires cfg_b')
+    m,n,k=(row[name] for name in ('m','n','k'))
+    if any(type(v) is not int or v<=0 for v in (m,n,k)):
+        raise ValueError('positive integer boundary dimensions required')
+    lda,ldb,ldd=(row.get(name,default) for name,default in (('lda',k),('ldb',n),('ldd',n)))
+    if (any(type(v) is not int or v<=0 for v in (lda,ldb,ldd)) or
+            n%8 or k%8 or lda%8 or ldb%8 or ldd%4 or lda<k or ldb<n or ldd<n):
+        raise ValueError('legal row-major FP16 input/FP32 output extents and pitches required')
+    if (row.get('input_map_m',m)!=m or row.get('input_map_n',n)!=n or
+            row.get('source_copies',1)!=1 or row.get('a_row_rotation',0) or
+            row.get('b_offset_bytes',0) or row.get('work_swap55_91',0)):
+        raise ValueError('boundary ledger requires logical source extents and ordinary single allocations')
+    if row.get('storage_m',m)<m or row.get('storage_n',n)<n:
+        raise ValueError('boundary source storage is too small')
+    ktiles=(k+63)//64;outputs=[];distinct={}
+    totals=dict(logical_input_atoms=0,source_nominal_bytes=0,source_valid_bytes=0,
+        destination_fill_bytes=0,transaction_expected_bytes=0,zero_source_atoms=0,
+        D_nominal_bytes=0,D_global_valid_bytes=0,D_global_oob_bytes=0,D_zero_valid_boxes=0)
+    for mi in range((m+127)//128):
+        for ni in range((n+127)//128):
+            groups=[]
+            for q in range(ktiles):
+                atoms=[]
+                for atom,op,extents,strides,origin,shape in (
+                    ('A','A',(m,k),(2*lda,2),(128*mi,64*q),(128,64)),
+                    ('B0','B',(n,k),(2,2*ldb),(128*ni,64*q),(64,64)),
+                    ('B1','B',(n,k),(2,2*ldb),(128*ni+64,64*q),(64,64))):
+                    valid_shape=tuple(max(0,min(shape[d],extents[d]-origin[d])) for d in range(2))
+                    nominal=math.prod(shape)*2;valid=math.prod(valid_shape)*2
+                    key=(op,'fp16','SW128',extents,strides,0,origin,shape)
+                    atoms.append(dict(atom=atom,source_key=key,valid_shape=valid_shape,
+                        source_valid_bytes=valid,destination_valid_bytes=valid,
+                        destination_fill_bytes=nominal-valid,transaction_bytes=nominal,
+                        destination_required=True))
+                    distinct[key]=valid
+                    totals['logical_input_atoms']+=1;totals['source_nominal_bytes']+=nominal
+                    totals['source_valid_bytes']+=valid;totals['destination_fill_bytes']+=nominal-valid
+                    totals['transaction_expected_bytes']+=nominal;totals['zero_source_atoms']+=valid==0
+                groups.append(dict(logical_k_group=q,valid_k=min(64,k-64*q),atoms=atoms,
+                    transaction_expected_bytes=sum(a['transaction_bytes'] for a in atoms)))
+            stores=[]
+            for dm in (0,64):
+                for dn in (0,32,64,96):
+                    origin=(128*mi+dm,128*ni+dn)
+                    valid_shape=(max(0,min(64,m-origin[0])),max(0,min(32,n-origin[1])))
+                    valid=math.prod(valid_shape)*4
+                    stores.append(dict(origin=origin,shape=(64,32),valid_shape=valid_shape,
+                        nominal_source_bytes=8192,global_valid_bytes=valid,global_oob_bytes=8192-valid))
+                    totals['D_nominal_bytes']+=8192;totals['D_global_valid_bytes']+=valid
+                    totals['D_global_oob_bytes']+=8192-valid;totals['D_zero_valid_boxes']+=valid==0
+            outputs.append(dict(coord=(mi,ni),groups=groups,D_boxes=stores,
+                cta=None,output_ordinal=None,global_group_binding=None))
+    totals['logical_output_tiles']=len(outputs);totals['logical_K_groups']=len(outputs)*ktiles
+    totals['distinct_logical_source_boxes']=len(distinct)
+    totals['distinct_valid_source_bytes']=sum(distinct.values())
+    if (totals['source_valid_bytes']+totals['destination_fill_bytes']!=totals['transaction_expected_bytes']
+            or totals['D_global_valid_bytes']!=m*n*4):
+        raise ValueError('boundary source/destination/D conservation failed')
+    return dict(schema='gh200-cfg-b-logical-boundary-ledger/1',shape=(m,n,k),ktiles=ktiles,
+        outputs=outputs,totals=totals,
+        scope='Logical output coordinates only; valid source, destination fill and D bounds, no CTA/stage binding or time prediction')
+
+
 def boundary_fill_features(row,setup):
     """Candidate coupling features from static requests, never from observed work.
 

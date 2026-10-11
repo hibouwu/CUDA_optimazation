@@ -253,6 +253,34 @@ v2 全网格 trace 的 cfg_b3008/3072 有负向扰动超过 5%，不采用其周
 
 实际 stride 同时用于初始化和 tensor map，B padding 填65504且计时外完整检查。v2/v3/v4 共300进程、1228800个保存值经未参与实现者逐K整数参考复算，误差0；数值见证不声明任意输入误差标准。[独立证据清单](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.json)。历史准备、v1–v4检查及命令见[固定旧正文](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/R10-layout-cache.md#时间抽样与数值边界)。
 
+<a id="legacy-boundary-ledger"></a>
+
+### 原始尾部的有效源、目的fill与D范围
+
+`cfg_b_logical_boundary_ledger`单独展开旧2600×3000×2000的逻辑输出坐标和K组，不给它们指定历史CTA、输出序号或全局stage。原`cfg_b_source_program`的完整tile约束保留，旧几何仍未进入时间图。归档源码确认128×128×64主循环tile、64×32 FP32 epilogue tile；60个plain/trace记录的六stage、132CTA和215040B SMEM与旧独立审查哈希一致，只复用已有数值状态。
+
+每条件为21×24=504个逻辑输出、每输出32个K组，最后一组只有16个有效K元素。三种B行距的以下账本相同，单位B：
+
+| 项目 | 每次调用 |
+|---|---:|
+| 逻辑输入原子A／B0／B1总数 | 48384个 |
+| 源有效字节，保留不同逻辑需求的重复 | 501600000 |
+| 目的填充字节 | 26882304 |
+| 目的完整事务期待字节 | 528482304 |
+| 去重逻辑源盒的有效字节 | 22400000 |
+| D有效全局输出 | 31200000 |
+| D名义盒范围／超出全局输出范围 | 33030144／1830144 |
+
+每条件672个B1逻辑盒没有有效源地址，仍保留8192B目的填充义务。最后M/N/K角点的A／B0／B1有效字节为1280／1792／0，合计3072B；目的fill为29696B，与有效部分共同保留32768B组事务。D有178个逻辑子盒完全超出有效输出；名义盒范围不证明这些OOB盒都发起或读取SMEM，D源缓冲与完成图仍需另外绑定。
+
+[PTX8.8](https://docs.nvidia.com/cuda/archive/12.9.1/parallel-thread-execution/index.html)规定tensor边界零填充和mbarrier事务完成语义；归档CUTLASS的`TmaTransactionBytes`按完整SMEM布局计算，经kernel参数传给`arrive_and_expect_tx`，未按最后K组或M/N尾部缩减。这里把有效源、目的fill和软件期待量分开，不把有效源字节当作full barrier预算。
+
+旧行距还有一个不能转移新几何证明的差别：普通完整K组的128B覆盖计数A／B0／B1为ldb3000的224／120／120、ldb3008和3072的224／64／64。A行距4000B使相邻K组的地址覆盖并集共享1950个128B单元；三个布局均如此，B对应交集为0。这只是几何重叠，不证明实际发起时仍可订阅或驻留，但已不满足前文新几何的跨K单元不交前提。归档probe又按`K*ldb`分配B，三档容量不同，不能作为固定容量的新卡控制来转移价格。
+
+源坐标中的K组可以归零，实际ring状态不能随输出归零。归档producer按`k_tile_count`推进、consumer按两WG跨度推进；绑定公式为`global_group=output_ordinal*32+logical_k_group`。六stage下，假设首输出的group31位于slot1，下一输出group32应在slot2，不能把它重新当成group0。这里仅保存未绑定模板，没有推测旧CTA的真实输出顺序。
+
+[边界账本](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-ledger-v4/B-boundary-ledger.json)保存三条件逐盒数据、源身份、目的义务、D范围、归档源码位置和全部哈希。36项普通／角点逐FP16元素枚举核对了覆盖和有效字节，5项新增边界／完整tile兼容性测试通过；181项R13测试通过，剔除新增函数后现有模块AST与6c5015b2完全相同。未拟合源/fill/D价格、未绑定就绪／释放／退出时间，也未升级GPU证据、观察资格或独立留出。
+
 <a id="v08-stride"></a>
 
 ## V08F：分开行距和尺寸尾部
