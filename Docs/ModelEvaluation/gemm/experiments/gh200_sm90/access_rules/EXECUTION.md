@@ -133,6 +133,8 @@ B的cc29004已合入63134e5。主集成独立复放60进程冻结release研究�
 
 [740068事后共同变化检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-control/reanalysis/main-common-mode-v1/README.md)复核原20trace全132CTA的5280首输出角色窗口与2640原配对时长差，全部同SM。trial3/8/9的数百ns变化在未新增打点的CTA上同样出现，对应cycle中位近零。它限制仅用局部读开销解释失败，尚不证明物理频率或读取偏差；不扣共同项、不改变冻结门槛或关键CTA集合。A的guarded读请求面向cfg_b，其实际帧构建即使通过也不能自动修复本cfg_a控制失败。
 
+[740070 guarded实际帧构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-frame-build/README.md)完成：cfg_b stage6三target+plain模块，CUDA12.9，130秒4CPU/16GiB，无GPU。四kernel168regs/2barrier/零spill，计算/TMA/arrival/wait静态数量相同，FIRST/MAIN两处64bit比较→BRA及有限重试保留。前序/target统一12word布局，原三overlay逐字节未变。尚未完成reader、动态occupancy或运行时包围/扰动资格，不迁为cfg_a观察通过；0c9afd和3aefacb已分别合入2a53633/8a3aec0。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。

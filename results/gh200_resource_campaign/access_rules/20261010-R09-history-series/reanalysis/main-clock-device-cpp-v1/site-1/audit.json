@@ -1,0 +1,25 @@
+{
+  "scope": "Isolated compile fixture only; original CUTLASS binary and hardware read enclosure unqualified.",
+  "sites": 1,
+  "special_reads": 3,
+  "dependent_exit_branches": [
+    {
+      "site": 0,
+      "read_pc": "0x30",
+      "next_read_pc": "0xc0",
+      "predicate": "P0",
+      "branch_pc": "0x60",
+      "guard_target_pc": "0xb0"
+    },
+    {
+      "site": 0,
+      "read_pc": "0xc0",
+      "next_read_pc": "0x170",
+      "predicate": "P0",
+      "branch_pc": "0xf0",
+      "guard_target_pc": "0x170"
+    }
+  ],
+  "predicate_selection_alone_accepted": false,
+  "runtime_qualified": false
+}
