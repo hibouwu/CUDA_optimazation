@@ -1,0 +1,18 @@
+{
+  "input_hashes_verified": 39,
+  "stored_graphs_checked": [
+    0,
+    107,
+    108
+  ],
+  "all_CTA_topology_and_source_order_checks": {
+    "own_input_tail_precedes_output_wait_and_store_tail": 504,
+    "issuing_thread_source_read_paths_closed": 129024,
+    "valid_D_visibility_separate_from_source_lifetime": 3854,
+    "next_WG_MMA_not_serialized_after_prior_D_tail": 372,
+    "next_WG_epilogue_keeps_prior_all128_arrivals": 372,
+    "same_WG_next_MMA_keeps_own_epilogue_permission": 240,
+    "zero_valid_boxes_without_fictitious_valid_write": 178
+  },
+  "qualification": false
+}

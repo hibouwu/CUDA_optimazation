@@ -1,0 +1,13 @@
+{
+  "delivery_hashes_verified": 10,
+  "input_hashes_per_report": [
+    15,
+    15
+  ],
+  "common_inputs": 13,
+  "relocated_inputs_byte_identical": 2,
+  "entire_report_equal_except_paths": true,
+  "entire_ledgers_byte_equal": 3,
+  "CPU_tests_passed": 18,
+  "qualification": false
+}

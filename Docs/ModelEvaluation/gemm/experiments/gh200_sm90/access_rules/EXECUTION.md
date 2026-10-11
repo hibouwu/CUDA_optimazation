@@ -305,3 +305,7 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 [旧R10输入必要依赖组合](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-input-composition-v1/README.md)：27SHA/三行距相同必要图/拓扑无环，132CTA的16128已用组均被producer退出依赖覆盖，504尾部、372输出切换及240同WG复用关系通过祖先核对；672零源fill路径保留。消费者端口为128线程聚合界，输出内部仍待C绑定，服务/D可见/kernel时间均None，不作零lag预测、关键CTA或时间资格。
 
 B对上述组合完成限定源码边审查，无行动项；16项定向父边/祖先检查通过，主线核对脚本及保存图身份并归档审查回执。`release_emit_all`固定为实际arrival发出之max，不能换成返回后打点；输入producer退出仍不代表最终D或kernel完成。
+
+[旧pingpong D接口主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-legacy-D-lifecycle-v1/README.md)：采用C正式v3，10交付SHA、各15输入SHA、完整报告与3ledger一致，18CPU测试通过。主线指出的逐线程own mma_tail→epilogue wait返回已修复；每条件4032子块含178全越界，仍保留源协议与独立D可见义务，不迁移cooperative输出图或价格。
+
+[旧R10输入/输出必要依赖组合](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-composition-v1/README.md)：3156对应聚合端点连接、132CTA全图无环；129024源码线程读路径被源生命周期要求覆盖，3854有效D可见义务仅进入CUDA完成要求，178全越界不虚构有效写。372次下一WG MMA/D解耦、372次epilogue顺序和240次同WG复用检查通过；129024线程级输入端口仍为符号，所有时间/服务未知，无GT锚点/预测资格。

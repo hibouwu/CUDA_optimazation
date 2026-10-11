@@ -1,0 +1,23 @@
+test_D_visibility_is_separate_from_read0_and_handoff (test_lifecycle.LifecycleTests.test_D_visibility_is_separate_from_read0_and_handoff) ... ok
+test_T3_and_T4_graphs_have_no_cycle (test_lifecycle.LifecycleTests.test_T3_and_T4_graphs_have_no_cycle) ... ok
+test_all128_explicit_tail_to_arrival_paths (test_lifecycle.LifecycleTests.test_all128_explicit_tail_to_arrival_paths) ... ok
+test_each_epilogue_wait_follows_its_own_mma_tail (test_lifecycle.LifecycleTests.test_each_epilogue_wait_follows_its_own_mma_tail) ... ok
+test_extra_pingpong_state_advance_and_order_phases (test_lifecycle.LifecycleTests.test_extra_pingpong_state_advance_and_order_phases) ... ok
+test_initial_next_WG_MMA_handoff_does_not_wait_for_D_tail (test_lifecycle.LifecycleTests.test_initial_next_WG_MMA_handoff_does_not_wait_for_D_tail) ... ok
+test_invalid_geometry_and_incomplete_CTA_are_rejected (test_lifecycle.LifecycleTests.test_invalid_geometry_and_incomplete_CTA_are_rejected) ... ok
+test_next_WG_epilogue_wait_requires_all128_prior_arrivals (test_lifecycle.LifecycleTests.test_next_WG_epilogue_wait_requires_all128_prior_arrivals) ... ok
+test_no_duration_or_clock_is_supplied (test_lifecycle.LifecycleTests.test_no_duration_or_clock_is_supplied) ... ok
+test_nonissuing_single_thread_can_arrive_before_final_read0 (test_lifecycle.LifecycleTests.test_nonissuing_single_thread_can_arrive_before_final_read0) ... ok
+test_producer_tail_is_not_global_D_completion (test_lifecycle.LifecycleTests.test_producer_tail_is_not_global_D_completion) ... ok
+test_read1_all_older_groups_but_latest_can_remain (test_lifecycle.LifecycleTests.test_read1_all_older_groups_but_latest_can_remain) ... ok
+test_read_completion_need_not_follow_commit (test_lifecycle.LifecycleTests.test_read_completion_need_not_follow_commit) ... ok
+test_same_WG_next_math_wait_is_per_thread_and_separate_from_epilogue (test_lifecycle.LifecycleTests.test_same_WG_next_math_wait_is_per_thread_and_separate_from_epilogue) ... ok
+test_source_subtile_order_is_not_B_coordinate_sort (test_lifecycle.LifecycleTests.test_source_subtile_order_is_not_B_coordinate_sort) ... ok
+test_total_valid_area_and_boundary_classes (test_lifecycle.LifecycleTests.test_total_valid_area_and_boundary_classes) ... ok
+test_zero_valid_box_keeps_read_but_has_no_valid_write_node (test_lifecycle.LifecycleTests.test_zero_valid_box_keeps_read_but_has_no_valid_write_node) ... ok
+test_zero_valid_protocol_is_retained_and_unpriced (test_lifecycle.LifecycleTests.test_zero_valid_protocol_is_retained_and_unpriced) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.604s
+
+OK
