@@ -124,7 +124,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         wait_overhead_ns=0., loop_advance_ns=0., return_overhead_ns=0.,
                         handoff_delay_ns=0., epilogue_prepare_ns=0., epilogue_write_ns=0.,
                         epilogue_control_ns=0., epilogue_tail_ns=0., epilogue_defer=0,
-                        trace_requests=False, diagnostic_producer_offsets_ns=None):
+                        trace_requests=False, diagnostic_producer_offsets_ns=None,
+                        share_inflight_sources=False, source_keys=None,
+                        destination_service_ns=0., second_prefill=False,
+                        source_join_boundary='ready',local_epilogue_exclusion='none'):
     """Development FIFO server coupled to cfg_b's two-output software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -141,21 +144,58 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     Default prediction uses no measured entry, E0 timestamp or target clock.
     diagnostic_producer_offsets_ns is an explicit conditional cut at each
     producer first-work loop; observed values are never formal prediction inputs.
+    Optional source sharing joins only reads still in flight at logical issue.
+    Completion removes the key: this is not a resident cache. Each logical atom
+    is separately delivered through its CTA's FIFO after source completion.
+    source_join_boundary closes subscription at ready (legacy), service_end,
+    or service_start. These are alternative event hypotheses, not cache facts.
+    Admission closes strictly at that timestamp, including equal-time issues.
+    Optional local epilogue exclusion blocks producer issue and/or MMA start
+    during this CTA's prepare/write intervals. Zero-duration request/compute
+    starts do not reserve the path themselves: this is a one-way exclusion
+    hypothesis, not a symmetric instruction scheduler or measured SM port.
+    second_prefill gates only CTA0's second output on all S destination slots.
     """
     import heapq
 
     costs=(service_ns,read_latency_ns,output_latency_ns,output_weight,producer_gap_ns,
         operand_gap_ns,reuse_delay_ns,commit_lead_ns,completion_lag_ns,issue_floor_ns,
         wait_overhead_ns,loop_advance_ns,return_overhead_ns,handoff_delay_ns,
-        epilogue_prepare_ns,epilogue_write_ns,epilogue_control_ns,epilogue_tail_ns)
+        epilogue_prepare_ns,epilogue_write_ns,epilogue_control_ns,epilogue_tail_ns,
+        destination_service_ns)
     if min(kt,stages)<2 or cta_count<1 or compute_ns<=0 or min(costs)<0:
         raise ValueError('shared stage candidate requires positive geometry/compute and nonnegative costs')
     if issue_floor_ns>compute_ns or epilogue_defer not in (0,1,2):
         raise ValueError('invalid issue floor or output-order treatment')
+    if second_prefill and kt<stages:
+        raise ValueError('second prefill requires Ktile>=stages')
+    if source_join_boundary not in ('ready','service_end','service_start'):
+        raise ValueError('unknown source subscription boundary')
+    if local_epilogue_exclusion not in ('none','producer','consumer','both'):
+        raise ValueError('unknown local epilogue exclusion scope')
+    if share_inflight_sources:
+        if source_keys is None or len(source_keys)!=cta_count or any(
+                len(groups)!=2*kt or any(len(keys)!=3 for keys in groups) for groups in source_keys):
+            raise ValueError('source keys must have shape [CTA][2*Ktile][A/B0/B1]')
+        weights={}
+        for groups in source_keys:
+            for keys in groups:
+                for key,weight in zip(keys,(1.,.5,.5)):
+                    if key in weights and weights[key]!=weight:
+                        raise ValueError('shared source key has inconsistent atom weight')
+                    weights[key]=weight
     offsets=[0.]*cta_count if diagnostic_producer_offsets_ns is None else list(diagnostic_producer_offsets_ns)
     if len(offsets)!=cta_count or min(offsets)<0:
         raise ValueError('diagnostic producer offsets must match CTA count and be nonnegative')
     total=2*kt;events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
+    pending={};source_generation_keys={};sources=[];demands=[];deliveries=[]
+    input_demand_count=0;input_source_count=0;input_merged_count=0;input_delivery_count=0
+    input_demand_work=0.;input_source_work=0.;input_merged_work=0.;input_delivery_work=0.
+    destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
+    local_intervals=[[] for _ in range(cta_count)]
+    local_blocked={'producer':0.,'consumer':0.}
+    routed_inputs=share_inflight_sources or destination_service_ns>0
+    prefill=None
     actors=[]
     def push(time,kind,cta,index):
         nonlocal serial
@@ -182,8 +222,14 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         a['producer_scheduled']=True;push(t,'issue_a',cta,i)
 
     def consumer(cta):
+        nonlocal prefill
         a=actors[cta];i=a['consumer_index']
         if i==total or a['consumer_scheduled'] or a['ready_count'][i]!=3:return
+        if second_prefill and cta==0 and i==kt:
+            if any(n!=3 for n in a['ready_count'][kt:kt+stages]):return
+            begin=a['consumer_free'];end=max(begin,max(a['ready'][kt:kt+stages]))
+            prefill=dict(begin_ns=begin,end_ns=end,waited_stages=stages)
+            a['consumer_free']=end
         a['consumer_scheduled']=True
         push(max(a['consumer_free'],a['ready'][i]),'mma',cta,i)
 
@@ -207,20 +253,74 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             start_ns=start,service_end_ns=frontier,ready_ns=ready,work=weight))
         return ready
 
+    def reserve_epilogue(cta,start,duration,kind,index):
+        if local_epilogue_exclusion!='none' and duration>0:
+            local_intervals[cta].append(dict(start_ns=start,end_ns=start+duration,
+                kind=kind,index=index))
+
+    def input_request(t,cta,kind,index,weight):
+        nonlocal input_demand_count,input_source_count,input_merged_count,input_delivery_count
+        nonlocal input_demand_work,input_source_work,input_merged_work,input_delivery_work
+        atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[kind]
+        key=source_keys[cta][index][atom] if share_inflight_sources else None
+        existing=pending.get(key) if share_inflight_sources else None
+        merged=existing is not None and t<existing[2]
+        if merged:
+            source_id,done,join_end=existing
+            input_merged_count+=1;input_merged_work+=weight
+        else:
+            done=request(t,cta,kind,index,weight,read_latency_ns)
+            join_end={'ready':done,'service_end':frontier,
+                      'service_start':frontier-service_ns*weight}[source_join_boundary]
+            source_id=input_source_count;input_source_count+=1;input_source_work+=weight
+            if share_inflight_sources:
+                pending[key]=(source_id,done,join_end);source_generation_keys[source_id]=key
+                push(done,'source_done',cta,source_id)
+            if trace_requests:
+                source=dict(requests[-1],source_id=source_id,source_key=key,join_end_ns=join_end)
+                sources.append(source)
+        demand_id=input_demand_count;input_demand_count+=1;input_demand_work+=weight
+        if routed_inputs or trace_requests:
+            demand=dict(demand_id=demand_id,source_id=source_id,source_key=key,merged=merged,
+                cta=cta,kind=kind,index=index,arrival_ns=t,source_ready_ns=done,work=weight)
+        if routed_inputs:
+            demands.append(demand);push(done,'deliver_input',cta,demand_id)
+        else:
+            # Preserve the original zero-destination event ordering exactly.
+            push(done,'input_ready',cta,index)
+            input_delivery_count+=1;input_delivery_work+=weight
+            if trace_requests:
+                demands.append(demand)
+                deliveries.append(dict(demand,start_ns=done,service_end_ns=done,ready_ns=done))
+
     for cta in range(cta_count):producer(cta)
     while events:
         t,_,kind,cta,i=heapq.heappop(events);a=actors[cta]
+        local_role='producer' if kind in ('issue_a','issue_b0','issue_b1') else 'consumer' if kind=='mma' else None
+        if local_role and local_epilogue_exclusion in (local_role,'both'):
+            end=max((r['end_ns'] for r in local_intervals[cta] if r['start_ns']<=t<r['end_ns']),default=t)
+            if end>t:
+                local_blocked[local_role]+=end-t;push(end,kind,cta,i);continue
         if kind in ('issue_a','issue_b0','issue_b1'):
             field={'issue_a':'issued_a','issue_b0':'issued_b0','issue_b1':'issued_b1'}[kind]
             a[field][i]=t
-            done=request(t,cta,kind,i,1. if kind=='issue_a' else .5,read_latency_ns)
-            push(done,'input_ready',cta,i)
+            input_request(t,cta,kind,i,1. if kind=='issue_a' else .5)
             if kind=='issue_a':push(t+operand_gap_ns,'issue_b0',cta,i)
             elif kind=='issue_b0':push(t+operand_gap_ns,'issue_b1',cta,i)
             else:
                 a['issued_b'][i]=t
                 a['producer_index']=i+1;a['producer_free']=t+producer_gap_ns
                 a['producer_scheduled']=False;producer(cta)
+        elif kind=='source_done':
+            key=source_generation_keys.pop(i)
+            if pending.get(key,(None,None))[0]==i:del pending[key]
+        elif kind=='deliver_input':
+            demand=demands[i];weight=demand['work']
+            start=max(t,destination_frontiers[cta]);duration=destination_service_ns*weight
+            done=start+duration;destination_frontiers[cta]=done;destination_busy[cta]+=duration
+            input_delivery_count+=1;input_delivery_work+=weight
+            if trace_requests:deliveries.append(dict(demand,start_ns=start,service_end_ns=done,ready_ns=done))
+            push(done,'input_ready',cta,demand['index'])
         elif kind=='input_ready':
             a['ready_count'][i]+=1;a['ready'][i]=t
             consumer(cta)
@@ -250,17 +350,21 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             producer(cta);epilogue(cta,i)
         elif kind=='epi_begin':
             e=a['outputs'][i];e['begin']=t;e['prepare_begin'][0]=t
+            reserve_epilogue(cta,t,epilogue_prepare_ns,'prepare',i*8)
             push(t+epilogue_prepare_ns,'epi_prepared',cta,i*8)
         elif kind=='epi_prepared':
             out,j=divmod(i,8);e=a['outputs'][out];e['prepare_end'][j]=t
             if j==0:
-                e['write_begin'][j]=t;push(t+epilogue_write_ns,'epi_written',cta,i)
+                e['write_begin'][j]=t
+                reserve_epilogue(cta,t,epilogue_write_ns,'write',i)
+                push(t+epilogue_write_ns,'epi_written',cta,i)
             else:push(t+epilogue_control_ns,'store',cta,i-1)
         elif kind=='epi_written':
             out,j=divmod(i,8);e=a['outputs'][out];e['write_end'][j]=t
             if j==7:push(t+epilogue_control_ns,'store',cta,i)
             else:
                 e['prepare_begin'][j+1]=t
+                reserve_epilogue(cta,t,epilogue_prepare_ns,'prepare',i+1)
                 push(t+epilogue_prepare_ns,'epi_prepared',cta,i+1)
         elif kind=='store':
             out,j=divmod(i,8);e=a['outputs'][out];e['submitted'][j]=t
@@ -272,6 +376,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 # Then write j+1 into the buffer formerly used by j-1.
                 begin=max(t,e['source_done'][j-1]) if j else t
                 e['write_begin'][j+1]=begin
+                reserve_epilogue(cta,begin,epilogue_write_ns,'write',i+1)
                 push(begin+epilogue_write_ns,'epi_written',cta,i+1)
         elif kind=='epi_end':
             a['outputs'][i]['end']=t
@@ -279,9 +384,20 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     if any(a['outputs'][1]['end'] is None for a in actors):
         raise RuntimeError('shared stage graph did not complete')
     makespan=max(a['outputs'][1]['end'] for a in actors)
-    return dict(ctas=actors,makespan_ns=makespan,shared_busy_ns=busy,
+    result=dict(ctas=actors,makespan_ns=makespan,shared_busy_ns=busy,
         last_service_end_ns=frontier,request_count=request_count,requests=requests,
+        input_demand_count=input_demand_count,input_source_count=input_source_count,
+        input_merged_count=input_merged_count,input_delivery_count=input_delivery_count,
+        input_demand_work=input_demand_work,input_source_work=input_source_work,
+        input_merged_work=input_merged_work,input_delivery_work=input_delivery_work,
+        source_busy_ns=service_ns*input_source_work,
+        destination_busy_ns=sum(destination_busy),destination_busy_by_cta_ns=destination_busy,
+        local_epilogue_blocked_ns=local_blocked,
+        local_epilogue_intervals=local_intervals if trace_requests else [],
+        sources=sources,input_demands=demands if trace_requests else [],deliveries=deliveries,
         scope='cfg_b two-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time')
+    if prefill is not None:result['second_prefill']=prefill
+    return result
 
 
 def stage_reuse_window(intervals, stages, service_cycles, reuse_cycles, wait_overhead=0.):
@@ -338,6 +454,8 @@ def static_tma_requests(row, setup):
     No general timing coefficients are assigned; cfg_b's old interface is separate.
     """
     from v08_model import scheduled_work
+    if row.get('a_row_rotation',0) or setup.get('a_row_rotation',0):
+        raise ValueError('ordinary static source boxes do not support A rotation')
     if row['config'] not in CONFIGS: raise ValueError('static requests support cfg_a/b/c only')
     tm,tn,cm,cn=CONFIGS[row['config']]
     m,n,k=row['m'],row['n'],row['k']

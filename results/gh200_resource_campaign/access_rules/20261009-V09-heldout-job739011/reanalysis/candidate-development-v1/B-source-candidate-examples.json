@@ -1,0 +1,149 @@
+{
+  "scope": "Recovered exploratory tuples, not accepted calibrations or independent validation; selection history is not reconstructed.",
+  "examples": {
+    "shared": {
+      "parameters": {
+        "service_ns": 7.3450401174877555,
+        "read_latency_ns": 754.2549598825127,
+        "compute_ns": 288.0,
+        "commit_lead_ns": 144.0,
+        "output_weight": 0.43359303573970265,
+        "epilogue_prepare_ns": 65.70133122662406,
+        "epilogue_write_ns": 65.70133122662406,
+        "producer_gap_ns": 10.238540769831417,
+        "operand_gap_ns": 10.238540769831417,
+        "destination_service_ns": 72.0
+      },
+      "rows": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early": 5248.000000000011,
+          "post": 16319.999999999993,
+          "prefix16": 6009.6000000000095,
+          "prefixM": 22329.600000000002,
+          "E0": 1604.767136721668,
+          "span": 124.86568199730391,
+          "source_count": 4480,
+          "source_work": 2944.0,
+          "busy": 24986.90280961327,
+          "end": 48808.60185935632
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early": 4503.064077297811,
+          "post": 16319.999999999993,
+          "prefix16": 6009.6000000000095,
+          "prefixM": 22329.600000000002,
+          "E0": 1623.8756861747243,
+          "span": 124.86568199730391,
+          "source_count": 4480,
+          "source_work": 2944.0,
+          "busy": 24986.90280961327,
+          "end": 48808.60185935632
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early": 4320.0,
+          "post": 13536.0,
+          "prefix16": 4896.0,
+          "prefixM": 18432.0,
+          "E0": 1604.767136721668,
+          "span": 60.25723923632904,
+          "source_count": 4480,
+          "source_work": 2944.0,
+          "busy": 24986.902809613275,
+          "end": 41199.0018593563
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early": 4320.0,
+          "post": 13536.0,
+          "prefix16": 5826.535922702198,
+          "prefixM": 19362.535922702198,
+          "E0": 1661.9940309106023,
+          "span": 930.5359227021981,
+          "source_count": 4654,
+          "source_work": 3060.0,
+          "busy": 25838.92746324174,
+          "end": 41610.03518700548
+        }
+      ]
+    },
+    "unshared": {
+      "parameters": {
+        "service_ns": 0.6399087981144636,
+        "read_latency_ns": 760.9600912018863,
+        "compute_ns": 288.0,
+        "commit_lead_ns": 144.0,
+        "output_weight": 4.976893975447021,
+        "epilogue_prepare_ns": 65.70133122662406,
+        "epilogue_write_ns": 65.70133122662406,
+        "producer_gap_ns": 10.238540769831417,
+        "operand_gap_ns": 10.238540769831417,
+        "destination_service_ns": 72.0
+      },
+      "rows": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early": 5248.000000000011,
+          "post": 16319.999999999993,
+          "prefix16": 6009.6000000000095,
+          "prefixM": 22329.600000000002,
+          "E0": 1556.9957630890276,
+          "span": 192.2925938333865,
+          "sources": 50688,
+          "source_work": 33792.0,
+          "busy": 24986.902809620722,
+          "end": 48813.790685045395
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early": 5248.9598631971785,
+          "post": 16321.599771995265,
+          "prefix16": 6730.859297172017,
+          "prefixM": 23052.459069167282,
+          "E0": 1595.9338225999381,
+          "span": 722.2191603691608,
+          "sources": 50688,
+          "source_work": 33792.0,
+          "busy": 24986.90280962073,
+          "end": 49008.3498292812
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early": 4320.0,
+          "post": 13536.0,
+          "prefix16": 4896.0,
+          "prefixM": 18432.0,
+          "E0": 1604.767136721668,
+          "span": 65.44606492538878,
+          "sources": 50688,
+          "source_work": 33792.0,
+          "busy": 24986.90280962073,
+          "end": 41204.19068504536
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early": 4320.0,
+          "post": 13535.999999999996,
+          "prefix16": 5826.535922701976,
+          "prefixM": 19362.535922701973,
+          "E0": 1661.8262234933209,
+          "span": 930.2159683029167,
+          "sources": 50688,
+          "source_work": 33792.0,
+          "busy": 24986.902809620733,
+          "end": 41615.05620527703
+        }
+      ]
+    }
+  }
+}

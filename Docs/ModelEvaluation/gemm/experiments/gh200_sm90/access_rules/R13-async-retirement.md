@@ -93,9 +93,133 @@ stage4十次均不相容，无需用off拟参或从观测反填初态；旧输�
 
 stage4到C1十次均变晚，early十次缩短，但到C16和M的累计变化有正有负；stage6两个累计端点则十次均变晚。各分项中位数不可相加，也不能把C16/M当整核完成。这限制了“局部服务变快”的解释，但未证明剩余变化全部由等待搬移造成。下一模型必须同时核算预等与后续推进，不能只拟缩短的early。
 
-下一候选转向逻辑源身份相关的共享状态：只假设相同源的在途请求可共用源就绪事件，每个目的CTA仍独立付出投递工作。先在现有共享事件函数中检验工作守恒和已测累计响应；这是假设检验，不代表已识别硬件合并，不再为当前恒定候选补统一偏移。
+下一候选转向逻辑源身份相关的共享状态：只假设相同源的在途请求可共用源就绪事件，每个目的CTA仍独立付出投递工作。这是假设检验，不代表已识别硬件合并，不再为当前恒定候选补统一偏移。下列具体候选的守恒已检查，但空间完成分布仍失败。
 
 四份计时外全D比较各4325376元素，差异/非有限数均为0；四binary均168寄存器、16 HGMMA、无spill。100个有效进程无采样重试，采样前停止的739785构建尝试保留于原run的attempts。两项同卡参照相对739740的批次中位变化为+2.41%/+0.76%，只作背景，主要结论来自本批配对；新旧批次绝对参数未合并。[原始数据](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill)、[逐进程与观察扰动](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.md)。冻结V09与正式预测参数未改。
+
+<a id="source-candidate-replay"></a>
+
+### 在途共享能解释局部预等方向，但当前参数仍失配空间完成分布
+
+2026-10-11离线复放两套已存在的探索参数，未再拟合。共享版本只合并源服务，每个CTA仍接受独立目的端投递；源完成后立即删除身份，不模拟驻留缓存。原临时结果的early、post、累计C16/M和E0逐项重现至1e-6 ns以内。原参数选择过程未完整重建，因此本次只是两个明确参数点的开发比较，不能称off校准后独立通过on留出。[参数、逐进程来源与复放结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-candidate-replay.md)。
+
+stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9ns，不共享预测+1.0ns；共享预测累计开始→C16/M均不变，与本批有正有负的范围相容。不共享预测分别+721.3/+722.9ns，均高于对应十进程差的最大值640/576ns。stage6两个候选都预测early不变，累计C16/M推迟930.5ns，落在本批范围内。累计起点在模型中是前WG的mma返回，实测是软件预等开始，映射尚未完全对齐；这里的相容不等于识别硬件机制。
+
+空间检验取同调用全132 CTA的第二WG mma返回跨度，直接相减globaltimer，不混用MAIN或不同进程时钟：
+
+| stage/预等 | 实测跨度ns，中位〔范围〕 | 共享预测ns | 不共享预测ns |
+|---|---:|---:|---:|
+| 4/off | 2608〔1984,2848〕 | 124.9 | 192.3 |
+| 4/on | 2672〔2336,2976〕 | 124.9 | 722.2 |
+| 6/off | 928〔704,1120〕 | 60.3 | 65.4 |
+| 6/on | 1616〔1408,2048〕 | 930.5 | 930.2 |
+
+两套参数在四条件均低于所有进程的跨度，不能因局部响应改善而采用。共享stage4/off能生成7对FIRST0→M逆序（两端差均超过32ns），说明旧同质FIFO的严格保序限制已被结构性打破；本观察协议没有全CTA FIRST，不能据这7对宣称复现实测排序。32ns只用于去除一个时间戳格点的近并列，不是观测误差界。
+
+固定CTA0，将其它同时起步的actor倒序或按偶/奇重排，同时携带其源身份，stage4/6的early、post、M跨度和源工作量在报告精度内均未改变。因此这三个插入顺序不能修复当前跨度失败，也不能据此证明任意仲裁次序都无影响。下一步先利用已有全CTA阶段记录约束共享状态的空间传播与首/后输出推进，检查源服务差异与周期到时间换算各自还缺多少；不新增stage专属常数，不把测后入口或频率当正式预测输入。只有剩余两个解释给出现有数据无法检验的不同响应时才补最小对照。
+
+复核：`analyze_r13_supply.py --source-candidate-replay --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。18项依赖与守恒测试通过只证明事件实现检查通过，不证明共享假设成立。原始样本、V09评分和正式预测参数未改。
+
+<a id="source-spatial"></a>
+
+### stage4周期离散集中在A行组，但源与位置尚未分开
+
+复用739095全部20个dual进程，以实际工作坐标组成11个A组×12个B组。每个首/后输出窗口均在同CTA、同consumer角色内计算`MAIN−FIRST`，先作整数时间戳差，再换成浮点。每进程独立分解`x_ab=全体均值+行效应+列效应+残差`；平衡表的三项平方和与总离散精确闭合，随后才汇总进程。[完整逐组曲线与复核结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-spatial.md)。
+
+| stage/输出 | 周期跨度中位 | A组均值周期跨度中位 | A组所占周期离散中位〔十进程范围〕 | A组所占ns离散中位 |
+|---|---:|---:|---:|---:|
+| 4/首 | 2844 | 2356 | 94.6%〔91.7,97.4〕 | 95.6% |
+| 4/后 | 2789 | 2463 | 96.5%〔91.6,98.7〕 | 98.5% |
+| 6/首 | 314.5 | 107.3 | 33.7%〔17.9,53.3〕 | 79.5% |
+| 6/后 | 707 | 451.5 | 54.0%〔32.3,83.3〕 | 85.5% |
+
+比例描述空间差异，不是运行时间占比。stage4在同SM周期窗口内已有成组的约两千cycle差异，单改周期到ns换算不能消除它。stage6的组间周期差较小，ns的成组性却较强；统一每进程、每角色的周期率后，首/后输出周期跨度折成206.7/411.8ns，实测ns跨度为656/640ns。剩余换算残差跨度555.5/484.3ns只作代数诊断，不能命名为独立DVFS代价，跨度也不能相加。
+
+全部20进程只有一种work/CTA/SM映射。共享A行组同时对应固定12个SM；第二输出虽然更换A地址，组与位置仍绑定。故这里支持“stage4存在成组的周期推进差异”，仍不可区分源地址/共享到达状态与固定位置相关服务。既有R10的55/91交换针对stage6、K1024和另一几何，只能保留其反对无状态面板价的原结论，不能直接解释本stage4结果。慢组也不是固定一个：stage4首输出最慢组在8/10间变化，后输出还出现3/4，不能给测后最慢组单独定价。
+
+当前在途共享候选只读取源键的相等关系；对所有键作一一重命名，源服务、目的投递和全部事件必须不变。stage4/6及预等开/关的CPU回归已验证这一结构不变量。若下一步确需新证据，最小辨识方向是在同一stage4完整几何中整体轮换A行组到固定CTA/SM集合，保留每组12个CTA、B工作、每轮地址集合和两轮工作量：纯相等关系模型预言零响应，地址相关的组服务与位置相关服务则可通过组差随地址迁移还是留在原位置区分。仍须控制映射指令开销、实际CTA→SM映射、输入/输出地址变化及同调用输出重叠；尚未据此启动采样，不将零结果自动判为某物理机制成立。
+
+复核使用`analyze_r13_supply.py --source-spatial-diagnostics --run results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。不把组编号、实测周期率或观测端点加入正式预测。
+
+<a id="source-offsets"></a>
+
+### 实测producer起步差仍未让共享候选产生足够分散
+
+源共享加入后重新检验起步切口：固定上述探索参数、使用739095普通输出组织defer0，把每个进程132个PROD相对偏移分别乘0、10⁻⁶、1。没有重新拟合，源身份与工作映射逐CTA核对。PROD是producer循环入口而非首TMA发射；参数来自另一观察协议/批次，因此这里只问该具体候选能否放大既有起步差，不作为跨批绝对验证。[20进程及完整预测窗口](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-offsets.md)。
+
+| stage | 实测PROD跨度ns | 实测第二MAIN跨度ns | 零偏移预测ns | 原幅偏移预测ns |
+|---|---:|---:|---:|---:|
+| 4 | 240〔224,256〕 | 2624〔1824,3168〕 | 126.0 | 129.9〔118.6,133.3〕 |
+| 6 | 240〔192,288〕 | 1136〔896,1472〕 | 146.9 | 318.3〔175.2,404.7〕 |
+
+表为十进程中位〔范围〕。10⁻⁶偏移的完成跨度在报告精度内与零偏移一致，旧零gap的微小扰动跳变没有在这套有限gap参数中复现。stage4原幅偏移下的首/后输出局部L跨度中位仅238.7/36.4ns，实测1696/1488ns；stage6预测0/89.4ns，实测656/640ns。故这套参数即使额外获得观测起步差，仍未产生实际分散；不再以入口参数修复它。这个结果不排除所有共享参数或非同质服务机制。
+
+两个stage均预先取trial0检查源generation，不按误差选择进程：1408个A服务各有12个订阅CTA，1536个B0和1536个B1服务各有11个订阅CTA；全部仅覆盖一个软件轮。即当前候选中每轮每Ktile的同组请求均完整共享，B在第二轮重新服务。共同ready吸收了组内到达差，而相同的目的端费用未恢复后续离散。它说明当前模型的同步状态，不是物理缓存命中率或真实流量证据。
+
+下一候选需要同时保留真实源复用关系与非同质推进；局部软件前驱、目的端服务及源状态何者造成差异仍未分开。先检查现有逐阶段事件能施加的必要约束，不为CTA/SM/A组加常数，也不把一份失败参数点升级为全族排除。工作整体轮换还会移动D地址并改变映射指令路径，最小对照须先解决这些混淆，暂不申请GPU。
+
+复核入口：`analyze_r13_supply.py --source-offset-diagnostics --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
+
+<a id="a-source-rotation-preparation"></a>
+
+### A源行组轮换未给出稳定的地址跟随规律
+
+740033固定cfg_b、2816×1536×4096、stage4、AlongN、swizzle1、dyadic/seed17、E0 defer2，只将A读取tile行m变成`11*(m/11)+(m%11+shift)%11`，shift为0/1。每轮11组独立循环，B分片、D写回、persistent工作与CTA位置不变；初始化逆排列A，保持每个逻辑CTA收到的FP16值及顺序。纯源键相等关系模型对该干预严格预言零响应。本批只作机制对照，不是V10或新留出。[配置](../../../../../../microbench/gh200_resource_campaign/access_rules/configs/r13-a-row-rotation.json)、[原始样本](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation)、[逐进程分析](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/reanalysis/B-a-source-rotation.md)。
+
+**主观测10/10配对有效。** 同档同binary各plain/dual十进程，共40进程、无采样重试；全体CTA的实际work/SM映射在配对内相同。首MAIN戳位于mma_tail之后、新增E0等待之前；20个dual调用中，全卡最后首MAIN比最早E0 permit早18720～20480ns，主窗口没有其它CTA输出覆盖。周期和ns均取同CTA、同consumer的FIRST→MAIN，不用跨SM clock64拼接。
+
+每进程先对11个A组求局部L均值并减去全体均值，再逐trial配对。固定位置直接比较组a；跟随A地址比较轮换后的组(a−1) mod11。RMSE同时使用全部11组，不挑测后慢组。以下为十进程中位〔范围〕：
+
+| 窗口/单位 | 固定位置RMSE | 跟随地址RMSE | 地址−位置RMSE | 固定位置更好的配对数 |
+|---|---:|---:|---:|---:|
+| 首输出 cycle（主） | 887.9〔608.4,1086.6〕 | 1053.6〔655.6,1141.2〕 | +135.5〔−237.0,503.0〕 | 8/10 |
+| 首输出 ns（主） | 475.0〔331.6,601.7〕 | 571.3〔340.4,637.7〕 | +96.7〔−142.3,230.6〕 | 8/10 |
+| 后输出 cycle | 711.2〔452.4,957.2〕 | 1031.1〔697.9,1433.3〕 | +306.2〔11.3,517.7〕 | 10/10 |
+| 后输出 ns | 387.5〔253.3,544.8〕 | 595.2〔361.2,781.6〕 | +189.5〔15.1,329.2〕 | 10/10 |
+
+主比较不支持组曲线稳定跟随A地址迁移，但两种对应都有较大残差，不能据8/10判定唯一位置机制。后输出的10/10不替代主窗口，而且可能受输出并发影响。同档其它九进程的平均组曲线预测剩下一进程，首输出shift0/1的RMSE中位仍651.7/573.9cycle；这只是重复性诊断，不是独立留出。尚不能将A地址组或SM组定成稳定价格。
+
+完整时间shift1−0的plain差为−0.176〔−0.576,+0.864〕µs，dual为−0.240〔−0.608,+0.864〕µs，没有十对一致的收益。dual/plain变化在shift0/1的中位分别+2.43%/+2.51%，范围+0.94%～+3.45%/+0.59%～+3.23%；它是跨进程整调用扰动，不能证明局部无扰动。首窗口平均L变化也有正有负，不能把本批直接定成严格零响应或用均值误差给共享模型背书。
+
+740031构建及两版全D比较通过：每版4325376元素逐位相同、无非有限数；168寄存器、149504B SMEM、16 HGMMA、无spill。plain在0x3bb0读constant3的轮换值，0x3bc0～0x3cf0为无轮换值分支的取模算术；dual对应读取在0x4b50。同档开关共用binary，静态路径一致不等于算术开销精确为零。740031/740033均使用GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114，Slurm整节点各实际分配4GPU，仅一个GPU执行流；当前作业已结束。
+
+**失败记录保留。** 首版740029构建检查通过，但740030的40进程主观察0/10有效：通用MAIN戳落在新增E0等待之后，首L包含第二WG等待。该批留在`attempts/observer-v1-job740030`，不改端点解释、不并入本表。仅将dual MAIN戳前移后重新构建和采样。740032因传输过滤误删构建检查JSON，在采样前停止，修复打包后由740033完成；原件留在`attempts/pre-sampling-740032`。
+
+本批仍不可分离共享到达历史、局部消费/释放状态和位置相关服务。反向初始化保持逻辑操作数，却改变物理A地址上的内容，不能进一步独占归因缓存或路由。下一步复用已有stage进度与本批有效首窗口，约束共同源ready之后的非同质推进；不因本批未唯一识别而扩展整套地址矩阵，不新增A组/SM价格。
+
+复核：`analyze_r13_supply.py --a-source-rotation --run results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation --output results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/reanalysis`。预定范围、门槛及执行身份保存在[planned_observations](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/planned_observations.json)。
+
+<a id="source-join-boundary"></a>
+
+### 缩短源订阅窗口没有同时修复空间分散与预等响应
+
+当前源ready含FIFO服务结束后的共同延迟。原候选允许后来请求直到ready前都订阅同一generation，可能强化同步。现已在纯模型中明确比较三个截止事件：ready、服务结束、服务开始。到达严格早于截止才能加入；关闭订阅不取消已有订阅者的目的投递，旧generation完成也不能删除后来新建的同源generation。它们是逻辑事件假设，未识别物理合并时限；默认仍为原ready行为。[实现](../../../../../../microbench/gh200_resource_campaign/access_rules/supply_model.py)、[开发诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-join-boundary.md)。
+
+先原样复放探索参数，服务结束/开始截止使stage4/off的M跨度从124.9增至653.0/664.0ns，但预等early由缩短变为增长。随后给每个边界一次共同起点的两坐标重拟，仅用739790 stage4/off的early=5168ns、post=16320ns，调整服务时间与ready延迟；范围分别0.01～30ns、0～2000ns，最多40次求解评估，没有多起点或大网格。stage6/on不进入本次两坐标目标；其它固定参数来自历史探索元组，不声称其选择未用过这些数据。所有候选均保留：
+
+| 截止边界 | 服务/ready延迟ns | stage4/off early、post残差 | stage4预等early变化ns | stage4/off M跨度ns |
+|---|---:|---:|---:|---:|
+| ready | 7.2622 / 745.93 | +0.734%、−0.773% | −743.03 | 123.46 |
+| 服务结束 | 7.3971 / 753.80 | +5.752%、+7.534% | +311.16 | 653.45 |
+| 服务开始 | 7.3156 / 754.74 | +4.049%、+7.157% | +319.20 | 684.27 |
+
+实测预等early十对均缩短，中位−768〔−1024,−64〕ns；stage4/off M跨度为2608〔1984,2848〕ns。两个较早截止候选既未修复空间分散，又给出相反的预等方向。ready候选保留该方向却仍过度同步；其缩放后局部Jacobian奇异值约1.33与2.1×10⁻¹²，两个窗口不能在该局部区域独立确定两个价格。这是局部数值诊断，不是任意分支的可行性证明；服务开始/结束的离散generation变化也使目标不光滑，求解停止不代表全族无解。
+
+三种候选全部保留33792个16KiB单位的目的投递工作。早截止增加的是模型中的源generation及服务工作，不能称物理流量增加。21项模型测试通过，包括严格截止、完成前的新generation与旧完成事件清理、投递守恒；不作为硬件假设成立的证据。
+
+本轮不采用任一截止边界或重拟参数，不进一步扫描截止常数，也不新增GPU条件。下一组合候选须同时检查局部发射、消费/释放与共享源服务的竞争前驱；仅靠改变源合并寿命不足以修复当前三个具体候选，不能把这一局部结论扩展成所有源共享模型的反证。复核入口为`analyze_r13_supply.py --source-join-boundary --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
+
+<a id="local-epilogue-exclusion"></a>
+
+### 本地E0排他只能解释部分响应，不能修复defer2缺口
+
+纯模型增加可关闭的局部排他候选：沿用已有epilogue prepare/write时长，在这些区间内分别推迟本CTA producer请求、MMA起动或两者；不重拟或新增时间常数。请求和MMA起动自身不占用此局部资源，因此这是单向排他假设，不是对称仲裁，也不命名SM端口。未来才开始的write区间不会阻塞之前的事件；同时间保持原插入顺序。[逐条件复放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-local-epilogue-exclusion.md)。
+
+stage4的输出延期early响应，原图为−0.135%，仅阻塞producer为−0.860%，仅阻塞consumer为+0.695%，同时阻塞为−0.801%；739717的周期配对中位为−6.822%〔−9.684,−1.309〕。跨观察协议只比较无量纲响应，不把模型ns与旧批周期拼成绝对时间。当前参数下该候选仍不足以解释幅度，未接入正式预测。
+
+更强的图结构限制是：defer2要求E0在本CTA第二M返回之后开始，而M返回之前该CTA的全部输入请求与MMA起动都已完成。此时局部排他没有可阻塞事件，E1更晚，因此不存在第一处变化可以传播到共享服务器。三个排他范围、两个stage的全部返回结果与关闭排他完全相同；阶段数2/4/6及预等开/关的回归同样检查了这一不变量。它与具体prepare/write价格无关，故不能通过增大E0常数修复defer2中仍存在的stage4缺口。
+
+24项事件模型测试通过，包括目的工作守恒、仅阻塞本CTA区间、零时长退化和defer2不变性。这些仅证明候选实现与结构边界，不证明硬件假设。本轮到此交接；待B继续约束producer与consumer本身的推进/释放竞争，以及跨调用状态，主集成不再展开下一轮供给研究。复核入口：`analyze_r13_supply.py --local-epilogue-exclusion --run results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill --output results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1`。
 
 <a id="stage-background-baseline"></a>
 

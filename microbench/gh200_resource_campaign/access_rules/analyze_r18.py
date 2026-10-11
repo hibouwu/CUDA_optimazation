@@ -227,6 +227,8 @@ def validate_warmup(setup, call, row):
     """Legacy adaptive convergence, or an explicitly fixed common history."""
     if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
         raise ValueError('work permutation identity changed')
+    if any(event.get('a_row_rotation',0)!=row.get('a_row_rotation',0) for event in (setup,call)):
+        raise ValueError('A source rotation identity changed')
     if 'epilogue_defer' in row:
         if any(event.get('epilogue_defer')!=row['epilogue_defer'] for event in (setup,call)):
             raise ValueError('epilogue order identity changed')

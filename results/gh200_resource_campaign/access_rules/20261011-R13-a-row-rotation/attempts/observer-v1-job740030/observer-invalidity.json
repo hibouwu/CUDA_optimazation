@@ -1,0 +1,7 @@
+{
+  "status": "primary-observation-invalid",
+  "valid_pairs": 0,
+  "total_pairs": 10,
+  "reason": "Generic MAIN_END stamp followed added E0 deferral; first L included waiting for second WG. Preserve forty samples; do not reinterpret as valid first-output evidence.",
+  "next": "Move only the dual MAIN_END stamp before the added deferral; repeat the same pair."
+}

@@ -3,6 +3,20 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#ifdef R13_A_ROW_ROTATION
+__device__ __constant__ unsigned r13_a_row_rotation;
+// Inverse storage permutation preserves every value delivered to a logical CTA.
+__global__ void r13_fill_rotated_a(__half* data, int rows, int columns, int64_t ld,
+                                 int seed, unsigned shift, size_t capacity) {
+  for (size_t q=size_t(blockIdx.x)*blockDim.x+threadIdx.x; q<capacity;
+       q+=size_t(gridDim.x)*blockDim.x) {
+    int row=int(q/ld), col=int(q%ld);
+    int tile=row/128, within=row%128;
+    int logical_tile=(tile/11)*11+(tile%11+11-int(shift))%11;
+    data[q]=__half(row<rows && col<columns ? input_value(logical_tile*128+within,col,seed,true) : 65504.f);
+  }
+}
+#endif
 #ifdef R13_SECOND_PREFILL
 __device__ __constant__ unsigned r13_second_prefill;
 #endif
@@ -184,6 +198,7 @@ struct Args {
   unsigned ready_observer = 0;
   unsigned epilogue_defer = 0;
   unsigned second_prefill = 0;
+  unsigned a_row_rotation = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -224,9 +239,14 @@ struct Args {
       else if(key=="--ready-observer")ready_observer=std::stoul(v);
       else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
       else if(key=="--second-prefill")second_prefill=std::stoul(v);
+      else if(key=="--a-row-rotation")a_row_rotation=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (a_row_rotation > 1) throw std::runtime_error("a-row-rotation must be 0 or 1");
+#ifndef R13_A_ROW_ROTATION
+    if (a_row_rotation || mode == "check-a-row-rotation") throw std::runtime_error("A rotation requires experiment build");
+#endif
     if (second_prefill > 1) throw std::runtime_error("second-prefill must be 0 or 1");
 #ifndef R13_SECOND_PREFILL
     if (second_prefill || mode == "check-second-prefill") throw std::runtime_error("second prefill requires experiment build");
@@ -380,7 +400,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill" && o.mode != "check-a-row-rotation")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -482,6 +502,16 @@ int main(int argc, char** argv) {
     unsigned no_second_prefill=0;
     CUDA_CHECK(cudaMemcpyToSymbol(r13_second_prefill,&no_second_prefill,sizeof(no_second_prefill)));
 #endif
+#ifdef R13_A_ROW_ROTATION
+    if ((V06_CFG != 1 || o.m != 2816 || o.n != 1536 || o.k != 4096 ||
+         ctas != 132 || o.swizzle != 1 || std::string(resolved_raster) != "along_n" ||
+         lda != 4096 || ldb != 1536 || ldd != 1536 || storage_m != 2816 || storage_n != 1536 ||
+         input_map_m != 2816 || input_map_n != 1536 || o.zero_m != -1 || o.zero_n != -1 ||
+         o.input_mode != "dyadic" || o.history_mode != "off" || mirror_sources ||
+         o.work_swap55_91 || o.producer_delay_ns || o.second_prefill || o.epilogue_defer != 2))
+      throw std::runtime_error("A rotation requires the declared full-tile cfg_b defer2 pair");
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_a_row_rotation,&o.a_row_rotation,sizeof(o.a_row_rotation)));
+#endif
     if (ctas <= 0 || ctas > properties.multiProcessorCount)
       throw std::runtime_error("unexpected persistent grid");
 
@@ -553,7 +583,11 @@ int main(int argc, char** argv) {
 
     // Same preparation order as R00 measure_gemm (fill A, B; D = NaN pattern).
     int input_rows=separate_input_map?storage_m:o.m,input_columns=separate_input_map?storage_n:o.n;
+#ifdef R13_A_ROW_ROTATION
+    r13_fill_rotated_a<<<256,256>>>(a.pointer,input_rows,o.k,lda,check.seed,o.a_row_rotation,a.count);
+#else
     gaps::fill_input_strided<<<256, 256>>>(a.pointer, input_rows, o.k, lda, check.seed, true, input_mode,o.alloc_lda?a.count:0);
+#endif
     gaps::fill_input_strided<<<256, 256>>>(b_data, o.k, input_columns, ldb, check.seed, false, input_mode,o.alloc_ldb?b_payload_elements:0);
     CUDA_CHECK(cudaGetLastError());
     if(o.zero_m>=0) zero_panel<<<256,256>>>(a.pointer,input_rows,o.k,lda,o.zero_m,-1);
@@ -678,6 +712,7 @@ int main(int argc, char** argv) {
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
+                << ",\"a_row_rotation\":" << o.a_row_rotation
                 << ",\"second_prefill\":" << o.second_prefill
                 << ",\"second_prefill_warmup\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
@@ -822,6 +857,7 @@ int main(int argc, char** argv) {
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
+                << ",\"a_row_rotation\":" << o.a_row_rotation
                 << ",\"second_prefill\":" << o.second_prefill
                 << ",\"second_prefill_warmup\":0"
                 << ",\"first_supply_events\":" << o.first_supply_events
@@ -868,13 +904,21 @@ int main(int argc, char** argv) {
               << ",\"trace_words\":" << kTraceWords << "}\n";
     if (o.mode == "setup")
       return 0;
-#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill") {
+#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION)
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
-      if (o.mode == "check-second-prefill") set_target_epilogue();
+      if (o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation") set_target_epilogue();
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_A_ROW_ROTATION
+        if (o.mode == "check-a-row-rotation") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_a_row_rotation,&value,sizeof(value)));
+          r13_fill_rotated_a<<<256,256>>>(a.pointer,input_rows,o.k,lda,check.seed,value,a.count);
+          CUDA_CHECK(cudaGetLastError());
+          return;
+        }
+#endif
 #ifdef R13_SECOND_PREFILL
         if (o.mode == "check-second-prefill") {
           CUDA_CHECK(cudaMemcpyToSymbol(r13_second_prefill,&value,sizeof(value)));
@@ -923,7 +967,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

@@ -1,0 +1,9 @@
+{
+  "family": "r18",
+  "cases_sha256": "fdaf181e9d5cb6265fc828802d35912a7fed97192b4072db6628103bb436a5a1",
+  "variants": [
+    "plain",
+    "dual"
+  ],
+  "trace_version": "r18-dual-clock-events"
+}

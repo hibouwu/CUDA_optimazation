@@ -7,6 +7,47 @@ from supply_model import admission_stage_events, shared_stage_events
 
 
 class SharedStageTests(unittest.TestCase):
+    def test_local_exclusion_preserves_work_and_blocks_only_its_own_intervals(self):
+        params=self.parameters(epilogue_prepare_ns=71.,epilogue_write_ns=83.,
+            service_ns=0.,read_latency_ns=31.,output_latency_ns=43.)
+        for mode in ('producer','consumer','both'):
+            with self.subTest(mode=mode):
+                model=shared_stage_events(8,4,2,local_epilogue_exclusion=mode,trace_requests=True,**params)
+                self.assertEqual(model['input_delivery_count'],96)
+                self.assertEqual(model['input_delivery_work'],64.)
+                self.assertEqual(len([r for r in model['requests'] if r['kind']=='store']),32)
+                for cta,a in enumerate(model['ctas']):
+                    intervals=model['local_epilogue_intervals'][cta]
+                    self.assertEqual(len(intervals),32)
+                    self.assertAlmostEqual(sum(r['end_ns']-r['start_ns'] for r in intervals),16*(71+83))
+                    fields=(['issued_a','issued_b0','issued_b1'] if mode in ('producer','both') else [])+(['starts'] if mode in ('consumer','both') else [])
+                    for field in fields:
+                        for t in a[field]:
+                            # Equal-time events preserve insertion order; a zero-time
+                            # issue already processed at reservation start is allowed.
+                            self.assertFalse(any(r['start_ns']<t<r['end_ns'] for r in intervals),(mode,field,t))
+                active=[model['local_epilogue_blocked_ns'][r] for r in ('producer','consumer') if mode in (r,'both')]
+                self.assertGreater(sum(active),0.)
+
+    def test_zero_duration_local_exclusion_preserves_the_legacy_graph(self):
+        params=self.parameters(epilogue_prepare_ns=0.,epilogue_write_ns=0.)
+        baseline=shared_stage_events(8,4,2,**params)
+        for mode in ('producer','consumer','both'):
+            self.assertEqual(shared_stage_events(8,4,2,local_epilogue_exclusion=mode,**params),baseline)
+
+    def test_all_E0_deferred_exclusion_cannot_change_input_or_compute_for_any_scope(self):
+        for stage in (2,4,6):
+            for prefill in (False,True):
+                params=self.parameters(epilogue_prepare_ns=173.,epilogue_write_ns=257.)
+                baseline=shared_stage_events(8,stage,3,epilogue_defer=2,second_prefill=prefill,**params)
+                for mode in ('producer','consumer','both'):
+                    model=shared_stage_events(8,stage,3,epilogue_defer=2,second_prefill=prefill,
+                        local_epilogue_exclusion=mode,**params)
+                    self.assertEqual(model,baseline)
+
+    def source_keys(self, kt, ctas):
+        return [[[(cta,i,atom) for atom in range(3)] for i in range(2*kt)] for cta in range(ctas)]
+
     def parameters(self, **overrides):
         values=dict(service_ns=2.,read_latency_ns=17.,compute_ns=64.,
             producer_gap_ns=3.,operand_gap_ns=1.,reuse_delay_ns=4.,
@@ -17,6 +58,192 @@ class SharedStageTests(unittest.TestCase):
             epilogue_control_ns=2.,epilogue_tail_ns=3.)
         values.update(overrides)
         return values
+
+    def test_bijective_source_rename_preserves_all_events(self):
+        # The hypothesis sees equality classes, not numeric addresses. A future
+        # address/placement control must not be fitted via opaque key labels.
+        kt,ctas=8,6
+        keys=[[[(('A',cta//3,i),('B0',cta%3,i),('B1',cta%3,i))[atom]
+                for atom in range(3)] for i in range(2*kt)] for cta in range(ctas)]
+        unique=list(dict.fromkeys(k for actor in keys for group in actor for k in group))
+        rename={key:('renamed',len(unique)-i) for i,key in enumerate(unique)}
+        renamed=[[[rename[k] for k in group] for group in actor] for actor in keys]
+        for stage in (4,6):
+            for prefill in (False,True):
+                args=dict(share_inflight_sources=True,second_prefill=prefill,
+                    epilogue_defer=2,**self.parameters(destination_service_ns=3.))
+                original=shared_stage_events(kt,stage,ctas,source_keys=keys,**args)
+                changed=shared_stage_events(kt,stage,ctas,source_keys=renamed,**args)
+                self.assertEqual(original,changed)
+
+    def test_inflight_source_is_served_once_but_delivered_twice(self):
+        kt,ctas=4,2
+        keys=self.source_keys(kt,ctas)
+        keys[1][0][0]=keys[0][0][0]
+        params=self.parameters(destination_service_ns=3.)
+        result=shared_stage_events(kt,4,ctas,share_inflight_sources=True,source_keys=keys,
+            trace_requests=True,**params)
+        first=[d for d in result['input_demands'] if d['kind']=='issue_a' and d['index']==0]
+        self.assertEqual(len(first),2)
+        self.assertEqual(first[0]['source_id'],first[1]['source_id'])
+        self.assertEqual([d['merged'] for d in first],[False,True])
+        copies=[d for d in result['deliveries'] if d['source_id']==first[0]['source_id']]
+        self.assertEqual({d['cta'] for d in copies},{0,1})
+        self.assertEqual(len(copies),2)
+        self.assertEqual(result['input_demand_count'],ctas*2*kt*3)
+        self.assertEqual(result['input_delivery_count'],result['input_demand_count'])
+        self.assertEqual(result['input_source_count']+result['input_merged_count'],result['input_demand_count'])
+        self.assertEqual(result['input_source_work']+result['input_merged_work'],ctas*2*kt*2)
+        self.assertEqual(result['input_demand_work'],result['input_delivery_work'])
+        stores=[r for r in result['requests'] if r['kind']=='store']
+        self.assertEqual(len(stores),ctas*16)
+        self.assertEqual(result['request_count'],result['input_source_count']+len(stores))
+        self.assertEqual(result['source_busy_ns'],params['service_ns']*result['input_source_work'])
+        self.assertEqual(result['shared_busy_ns'],result['source_busy_ns']+
+            params['service_ns']*ctas*8*params['output_weight'])
+        self.assertEqual(result['destination_busy_ns'],params['destination_service_ns']*result['input_demand_work'])
+        sources={s['source_id']:s for s in result['sources']}
+        for cta in range(ctas):
+            previous_end=0.
+            deliveries=[d for d in result['deliveries'] if d['cta']==cta]
+            for d in deliveries:
+                self.assertEqual(d['source_ready_ns'],sources[d['source_id']]['ready_ns'])
+                self.assertEqual(d['start_ns'],max(d['source_ready_ns'],previous_end))
+                self.assertEqual(d['service_end_ns']-d['start_ns'],params['destination_service_ns']*d['work'])
+                previous_end=d['service_end_ns']
+            for i in range(2*kt):
+                group=[d for d in deliveries if d['index']==i]
+                self.assertEqual({d['kind'] for d in group},{'issue_a','issue_b0','issue_b1'})
+                self.assertEqual(result['ctas'][cta]['ready'][i],max(d['ready_ns'] for d in group))
+
+    def test_source_expiry_is_independent_of_delivery_and_generation_cleanup(self):
+        keys=self.source_keys(2,3)
+        for cta in range(3):keys[cta][0][0]='revisited-A'
+        # At offset 10 the new issue was queued before the old source_done event.
+        # Its replacement must survive cleanup so CTA2 at 15 can subscribe to it.
+        for second,third in ((10.,15.),(20.,25.)):
+            with self.subTest(second=second):
+                result=shared_stage_events(2,2,3,share_inflight_sources=True,source_keys=keys,
+                    diagnostic_producer_offsets_ns=[0.,second,third],trace_requests=True,
+                    **self.parameters(service_ns=10.,read_latency_ns=0.,operand_gap_ns=1000.,
+                        destination_service_ns=100.))
+                first=sorted((d for d in result['input_demands'] if d['kind']=='issue_a' and d['index']==0),
+                    key=lambda d:d['cta'])
+                self.assertEqual(first[0]['source_ready_ns'],10.)
+                self.assertNotEqual(first[0]['source_id'],first[1]['source_id'])
+                self.assertEqual(first[1]['source_id'],first[2]['source_id'])
+                self.assertEqual([d['merged'] for d in first],[False,False,True])
+                old_delivery=next(d for d in result['deliveries'] if d['demand_id']==first[0]['demand_id'])
+                self.assertGreater(old_delivery['ready_ns'],first[1]['arrival_ns'])
+
+    def test_service_boundary_closes_admission_before_ready_without_losing_delivery(self):
+        keys=self.source_keys(2,3)
+        for actor in keys:actor[0][0]='same-A'
+        params=self.parameters(service_ns=10.,read_latency_ns=100.,operand_gap_ns=1000.,
+            destination_service_ns=3.)
+        for boundary,expected in [('ready',[False,True,True]),
+                                  ('service_end',[False,True,False]),
+                                  ('service_start',[False,False,False])]:
+            with self.subTest(boundary=boundary):
+                result=shared_stage_events(2,2,3,share_inflight_sources=True,source_keys=keys,
+                    source_join_boundary=boundary,diagnostic_producer_offsets_ns=[0.,5.,10.],
+                    trace_requests=True,**params)
+                first=sorted((d for d in result['input_demands'] if d['kind']=='issue_a' and d['index']==0),key=lambda d:d['cta'])
+                self.assertEqual([d['merged'] for d in first],expected)
+                self.assertEqual(result['input_delivery_count'],36)
+                self.assertEqual(result['input_demand_work'],result['input_delivery_work'])
+                sources={s['source_id']:s for s in result['sources']}
+                for d in result['input_demands']:
+                    if d['merged']:self.assertLess(d['arrival_ns'],sources[d['source_id']]['join_end_ns'])
+                    self.assertEqual(d['source_ready_ns'],sources[d['source_id']]['ready_ns'])
+
+    def test_service_closed_old_generation_cannot_remove_a_new_waiting_generation(self):
+        keys=self.source_keys(2,4)
+        for actor in keys:actor[0][0]='same-A'
+        result=shared_stage_events(2,2,4,share_inflight_sources=True,source_keys=keys,
+            source_join_boundary='service_end',diagnostic_producer_offsets_ns=[0.,109.,110.,115.],
+            trace_requests=True,**self.parameters(service_ns=10.,read_latency_ns=100.,operand_gap_ns=1000.))
+        first=sorted((d for d in result['input_demands'] if d['kind']=='issue_a' and d['index']==0),key=lambda d:d['cta'])
+        self.assertEqual([d['merged'] for d in first],[False,False,True,True])
+        self.assertEqual(len({d['source_id'] for d in first[1:]}),1)
+
+    def test_repeated_source_has_new_generations_across_slots_and_outputs(self):
+        kt=4;keys=self.source_keys(kt,1)
+        for group in keys[0]:group[0]='same-A-every-group'
+        result=shared_stage_events(kt,2,1,share_inflight_sources=True,source_keys=keys,
+            trace_requests=True,**self.parameters(service_ns=2.,read_latency_ns=5.,
+                operand_gap_ns=20.,output_weight=0.,destination_service_ns=5.))
+        a_demands=[d for d in result['input_demands'] if d['kind']=='issue_a']
+        self.assertEqual(len({d['source_id'] for d in a_demands}),2*kt)
+        self.assertTrue(all(not d['merged'] for d in a_demands))
+        identities={(d['cta'],d['index'],d['kind']) for d in result['deliveries']}
+        self.assertEqual(len(identities),2*kt*3)
+        self.assertEqual(result['ctas'][0]['ready_count'],[3]*(2*kt))
+        self.assertEqual(result['input_source_count'],result['input_demand_count'])
+
+    def test_source_keys_reject_different_weights_and_incomplete_shape(self):
+        keys=self.source_keys(2,1);keys[0][0][1]=keys[0][0][0]
+        with self.assertRaisesRegex(ValueError,'weight'):
+            shared_stage_events(2,2,1,share_inflight_sources=True,source_keys=keys,**self.parameters())
+        with self.assertRaisesRegex(ValueError,'shape'):
+            shared_stage_events(2,2,1,share_inflight_sources=True,source_keys=[],**self.parameters())
+
+    def test_zero_source_service_can_still_share_remaining_read_latency(self):
+        keys=self.source_keys(2,2);keys[1][0][0]=keys[0][0][0]
+        result=shared_stage_events(2,2,2,share_inflight_sources=True,source_keys=keys,
+            diagnostic_producer_offsets_ns=[0.,5.],trace_requests=True,
+            **self.parameters(service_ns=0.,read_latency_ns=10.,operand_gap_ns=100.))
+        demands=[d for d in result['input_demands'] if d['kind']=='issue_a' and d['index']==0]
+        self.assertEqual([d['source_ready_ns'] for d in demands],[10.,10.])
+        self.assertEqual([d['merged'] for d in demands],[False,True])
+
+    def test_zero_service_prefill_matches_admission_only_on_cta_zero(self):
+        kt=8
+        params=self.parameters(service_ns=0.,destination_service_ns=0.,operand_gap_ns=0.,
+            read_latency_ns=900.,producer_gap_ns=9.,reuse_delay_ns=17.,commit_lead_ns=40.,
+            completion_lag_ns=12.,issue_floor_ns=0.,wait_overhead_ns=4.,loop_advance_ns=3.,
+            return_overhead_ns=2.,handoff_delay_ns=5.)
+        mapping={'issued_a':'issued','issued_b0':'issued','issued_b1':'issued','ready':'ready',
+            'starts':'first_mma_or_commit','service_frontier':'service_frontier','commits':'commits',
+            'completed':'completed','wait1_return':'wait1_return','released':'released',
+            'mma_returns':'mma_returns','main_ends':'main_ends'}
+        for stage in (4,6):
+            for sharing in (False,True):
+                with self.subTest(stage=stage,sharing=sharing):
+                    # Distinct keys isolate the dependency graph: subscribing to
+                    # another CTA's remaining read latency would change readiness.
+                    keys=self.source_keys(kt,2)
+                    result=shared_stage_events(kt,stage,2,second_prefill=True,
+                        share_inflight_sources=sharing,source_keys=keys,**params)
+                    for cta in (0,1):
+                        prior=admission_stage_events(kt,stage,9.,900.,40.,12.,service_cycles=64.,
+                            wait_overhead=4.,loop_advance=3.,return_overhead=2.,reuse_delay=17.,
+                            handoff_delay=5.,second_prefill=cta==0)
+                        for field,old in mapping.items():self.assertEqual(result['ctas'][cta][field],prior[old],field)
+                        if cta==0:
+                            gate=result['second_prefill']
+                            self.assertEqual(gate['begin_ns'],prior['second_prefill']['begin'])
+                            self.assertEqual(gate['end_ns'],prior['second_prefill']['end'])
+                            self.assertEqual(gate['waited_stages'],stage)
+                            a=result['ctas'][0]
+                            self.assertGreaterEqual(gate['end_ns'],a['main_ends'][0])
+                            self.assertEqual(a['ready_count'][kt:kt+stage],[3]*stage)
+                            for i in range(kt,2*kt-1):
+                                self.assertEqual(a['released'][i],a['wait1_return'][i+1])
+
+    def test_second_prefill_waits_destination_delivery_not_source_completion(self):
+        kt,stage=8,4
+        result=shared_stage_events(kt,stage,2,share_inflight_sources=True,
+            source_keys=self.source_keys(kt,2),destination_service_ns=40.,second_prefill=True,
+            trace_requests=True,**self.parameters(service_ns=1.,read_latency_ns=0.))
+        gate=result['second_prefill'];actor=result['ctas'][0]
+        initial=[d for d in result['deliveries'] if d['cta']==0 and kt<=d['index']<kt+stage]
+        self.assertEqual(len(initial),3*stage)
+        self.assertEqual(gate['begin_ns'],actor['mma_returns'][0]+2.)
+        self.assertEqual(gate['end_ns'],max(gate['begin_ns'],max(d['ready_ns'] for d in initial)))
+        self.assertGreater(gate['end_ns'],max(d['source_ready_ns'] for d in initial))
+        self.assertEqual(actor['starts'][kt],gate['end_ns'])
+        self.assertGreaterEqual(gate['end_ns'],actor['main_ends'][0])
 
     def test_zero_service_matches_existing_two_output_recurrence(self):
         # Includes a broad lead/retirement regime, not only the reduced subclass.

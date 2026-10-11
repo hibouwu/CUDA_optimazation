@@ -130,6 +130,18 @@ max中的两项单位为cycle/Ktile，ΔL为SM cycle。纯计算入口为 `suppl
 
 当前同质请求及无本地TC竞争的版本不再作为待调参候选：[R13](R13-async-retirement.md#stage-shared-service)的联合窗口最大残差虽只有3.32%，但全卡M跨度过窄、本CTA输出干预效应不足。两低误差校准解也不唯一。它不参与V09预测；测后E0、入口或完成排序不进入参数。末端仅覆盖源读取尾，不是全局D可见或完整CUDA时间。[请求形成](R13-async-retirement.md#stage-request-formation)已纠正B的请求粒度；[分阶段计时](R09-inkernel-clock-stages.md#stage-phase-clock)显示首/次输出换算率不同，当前统一ns服务价仍是待检验假设。观测PROD仅在单列诊断中作输入；两个未标定的有限gap示例消除了微小起步偏移的全卡分布跳变，说明零间隔并列处理影响旧结果。现有61cycle组外窗口没有分离A→B0、B0→B1和跨组控制工作，尚不能给它们定价。更强的[保序反例](R13-async-retirement.md#stage-order-invariant)表明：即使允许任意producer起步偏移，同质FIFO图也不能产生实测的FIRST0→MAIN1严格逆序。因此停止用统一gap或入口调参修复这张图；下一候选必须解释非同质推进，不能据此宣称识别某种硬件仲裁。[分量替换](R09-inkernel-clock-stages.md#stage-order-decomposition)只用于诊断：stage4保留较强周期成本差，stage6排序更依赖观测周期率；没有将这些观测值或比例接入预测。
 
+在途源身份扩展仍是开发候选，未接入正式预测：[两套具体参数复放](R13-async-retirement.md#source-candidate-replay)中，共享版本能给出stage4预等early缩短约745ns、stage6不变的方向，但四条件的全CTA mma返回跨度都低于全部实测进程；不共享参数同时失配stage4累计响应。保留“源服务可共享、目的投递独立”的候选结构，拒绝将这两套参数当作可组合规则。三种同时请求插入顺序未修复跨度；下一步用既有逐CTA阶段与时钟记录约束非同质推进，不拟合stage专属价，不用观测入口/频率修正正式预测。
+
+[源组分解](R13-async-retirement.md#source-spatial)进一步限定缺口：739095的stage4首/后输出中，A行组均值解释周期离散的94.6%/96.5%，组均值跨度约2356/2463cycle；stage6周期差更小而ns成组性仍强。A组、CTA与SM集合在这20进程完全绑定，不能定为A源服务价格。当前源键相等关系模型对键的一一重命名严格不变；这一不变量可用于设计地址/位置对照，不加入组编号罚项。
+
+同一共享参数的[20进程producer切口](R13-async-retirement.md#source-offsets)也失败：原幅起步偏移下stage4/6的第二MAIN跨度中位仅129.9/318.3ns，实测2624/1136ns。trial0内部记录显示每个A/B源generation都被完整同组订阅，共同ready强烈同步了请求；这不是硬件复用率。有限gap下微小起步扰动未复现旧并列事件跳变，停止为这套参数调入口。非同质推进仍需由前驱、目的服务或源状态解释，不能转成组标签价格。
+
+[A源单独轮换](R13-async-retirement.md#a-source-rotation-preparation)740033的首窗口10/10配对通过同SM/无E0覆盖门槛，但固定位置对应仅8/10优于跟随地址，两个方向残差仍大；同档重复的组曲线也不稳定。不支持将空间差直接定成A地址组价格，也未识别唯一位置机制。后窗口10/10不能替代主窗口；完整时间变化范围跨零，不能当成严格零响应验证。保留共享状态与局部推进的候选边界，不追加地址矩阵。
+
+[源订阅截止检验](R13-async-retirement.md#source-join-boundary)未提供可采用的新参数：服务结束/开始截止虽减弱同步，但有界两坐标重拟后仍将stage4预等early预测为增长311/319ns，与十次实测缩短相反；ready截止保留方向而空间跨度仅123ns。默认模型保持原ready边界，其余选择仅作诊断。局部拟合退化、分支不光滑及单起点范围均保留，不宣称全族排除；下一步约束局部发射/消费与共享服务的组合，不再扩大截止时间扫描。
+
+[本地E0排他](R13-async-retirement.md#local-epilogue-exclusion)沿用既有prepare/write时长，不新增数值参数；stage4输出延期响应最多扩大到约−0.86%，仍不足以解释旧批约−6.82%的周期响应。defer2下本CTA全部输入与MMA起动先于E0，局部排他严格不改变图，不能靠放大E0价格修复剩余stage4缺口。该候选保留为开发诊断，默认关闭；下一专业供给轮次由B负责。
+
 ## 已测条件关系
 
 ### 源供给、推进和结果消费必须分开

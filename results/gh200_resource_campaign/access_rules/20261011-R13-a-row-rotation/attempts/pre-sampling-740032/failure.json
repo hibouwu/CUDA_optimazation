@@ -1,0 +1,5 @@
+{
+  "stage": "before sampling",
+  "reason": "Transport excluded buildcheck-result.json together with buildcheck directories; no timing samples collected.",
+  "repair": "Exclude only buildcheck directories, retain result JSON."
+}

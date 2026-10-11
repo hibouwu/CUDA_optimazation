@@ -14,6 +14,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 import statistics
 from collections import Counter, defaultdict
@@ -4187,6 +4188,749 @@ def _second_prefill_wide_candidates(processes):
             'Second mma return and post windows are local endpoints, not complete kernel time. Frequency is not fitted.'])
 
 
+def stage_source_identity(row, setup):
+    """Whole logical source boxes for the existing full-tile, two-output cfg_b case."""
+    from v08_model import scheduled_work
+
+    if row.get('a_row_rotation',0) or setup.get('a_row_rotation',0):
+        raise ValueError('unrotated source identity does not support A rotation')
+    geometry=('cfg_b',2816,1536,4096)
+    if tuple(row[k] for k in ('config','m','n','k'))!=geometry or tuple(
+            setup[k] for k in ('config','m','n','k'))!=geometry:
+        raise ValueError('source identity supports only cfg_b 2816x1536x4096 full tiles')
+    if (setup['tile']!=[128,128,64] or setup['cluster']!=[1,1] or
+            setup['grid'] not in ([1,132,1],[132,1,1]) or setup['stages'] not in (4,6)):
+        raise ValueError('source identity requires the original 132-CTA stage4/6 geometry')
+    if row['swizzle']!=1 or setup['swizzle']!=1 or row.get('work_swap55_91',0) or setup.get('work_swap55_91',0):
+        raise ValueError('source identity requires swizzle1 without work exchange')
+    for name,default in (('lda',4096),('ldb',1536),('input_map_m',2816),('input_map_n',1536),('b_offset_bytes',0)):
+        if row.get(name,default)!=setup.get(name,default):
+            raise ValueError('source identity row/setup mismatch: '+name)
+    if setup.get('input_map_m',2816)!=2816 or setup.get('input_map_n',1536)!=1536:
+        raise ValueError('source identity does not support padding or altered input-map extents')
+    if setup.get('source_copies',1)!=1:
+        raise ValueError('source identity requires one A allocation and one B allocation per call')
+    if row.get('raster_order','heuristic')!=setup.get('raster_order','heuristic') or setup.get('resolved_raster_order')!='along_n':
+        raise ValueError('source identity requires matching raster metadata resolved along N')
+    work=scheduled_work(row['config'],row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
+    if work!=[[(t//12,t%12),(t//12+11,t%12)] for t in range(132)]:
+        raise ValueError('source identity does not support a different two-output work mapping')
+    static=static_tma_requests(row,setup)
+    # Tensor names identify allocations within one call, not virtual addresses
+    # shared across processes. Axes follow source_boxes: A=(M,K), B=(N,K).
+    descriptors={
+        'A':('A','fp16','SW128',(2816,4096),(2*setup['lda'],2),0),
+        'B':('B','fp16','SW128',(1536,4096),(2,2*setup['ldb']),setup.get('b_offset_bytes',0)),
+    }
+    source_keys=[];templates=[];template_ids={};coordinates=[]
+    for cta,tiles in enumerate(static['ctas']):
+        if len(tiles)!=2 or [tuple(t['coord']) for t in tiles]!=work[cta]:
+            raise ValueError('static source boxes changed CTA work coordinates')
+        actor=[];outputs=[]
+        for tile in tiles:
+            atoms=[]
+            for operand,shape,kib,count in (('A',[128,64],16,1),('B',[64,64],8,2)):
+                item=tile[operand]
+                if item['multicast_mask']!=1 or item['destination_fill_KiB'] or len(item['source_boxes'])!=count:
+                    raise ValueError('source identity requires complete unicast source boxes')
+                for box in item['source_boxes']:
+                    if box['shape']!=shape or box['source_KiB'][0]!=kib:
+                        raise ValueError('source identity does not discard partial or OOB boxes')
+                    atoms.append(descriptors[operand]+(tuple(box['origin']),tuple(box['shape'])))
+            ids=[]
+            for key in atoms:
+                if key not in template_ids:
+                    template_ids[key]=len(templates);templates.append(key)
+                ids.append(template_ids[key])
+            outputs.append(dict(coord=tile['coord'],atom_template_ids=ids))
+            for k in range(64):
+                actor.append(tuple(key[:6]+((key[6][0],key[6][1]+64*k),key[7]) for key in atoms))
+        source_keys.append(actor)
+        coordinates.append(dict(cta=cta,outputs=outputs))
+    all_keys=[key for actor in source_keys for group in actor for key in group]
+    atom_counts=Counter(name for actor in source_keys for group in actor for name in ('A','B0','B1'))
+    unique=set(all_keys)
+    rounds=[]
+    for j in (0,1):
+        per_k=[]
+        for k in range(64):
+            keys={key for actor in source_keys for key in actor[j*64+k]}
+            values=Counter(key[0] for key in keys)
+            per_k.append((values['A'],values['B'],sum(key[7][0]*key[7][1]*2//1024 for key in keys)))
+        if set(per_k)!={(11,24,368)}:
+            raise ValueError('source identity software-round source conservation changed')
+        rounds.append(dict(output_ordinal=j,ktiles=64,unique_A_boxes_per_Ktile=11,
+            unique_B_boxes_per_Ktile=24,unique_source_KiB_per_Ktile=368))
+    counts=dict(destination_requests=len(all_keys),destination_atoms=dict(atom_counts),
+        destination_work_16KiB=sum(key[7][0]*key[7][1]*2 for key in all_keys)//16384,
+        destination_KiB=sum(key[7][0]*key[7][1]*2//1024 for key in all_keys),
+        output_atoms_8KiB=len(work)*2*8,unique_source_boxes=len(unique),
+        unique_source_KiB=sum(key[7][0]*key[7][1]*2//1024 for key in unique))
+    expected=dict(destination_requests=50688,destination_atoms=dict(A=16896,B0=16896,B1=16896),
+        destination_work_16KiB=33792,destination_KiB=540672,output_atoms_8KiB=2112,
+        unique_source_boxes=2944,unique_source_KiB=34816)
+    if counts!=expected:raise ValueError('source identity static work conservation changed')
+    digest=hashlib.sha256(json.dumps(source_keys,separators=(',',':')).encode()).hexdigest()
+    return dict(source_keys=source_keys,source_keys_sha256=digest,key_templates=templates,
+        cta_output_sources=coordinates,counts=counts,software_rounds=rounds)
+
+
+def local_epilogue_exclusion_diagnostics(root, output):
+    """No refit: isolate one-way producer/consumer interference from local E0."""
+    from supply_model import shared_stage_events
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    source=output/'B-source-candidate-examples.json';observed_path=output/'B-epilogue-order.json'
+    params=read_json(source)['examples']['shared']['parameters'];observed=read_json(observed_path)
+    rows=read_json(root/'cases.json');setups={v['case']:v['setup'] for v in read_json(root/'static_setup.json')}
+    row=next(r for r in rows if r.get('set')!='reference')
+    keys=stage_source_identity(row,setups[row['id']])['source_keys']
+    predictions=[];invariants=[];baselines={}
+    for scope in ('none','producer','consumer','both'):
+        for stage in (4,6):
+            for flag in (0,1,2):
+                model=shared_stage_events(64,stage,132,source_keys=keys,share_inflight_sources=True,
+                    local_epilogue_exclusion=scope,epilogue_defer=flag,**params)
+                a=model['ctas'][0]
+                predictions.append(dict(scope=scope,stage=stage,flag=flag,
+                    early_ns=a['commits'][80]-a['commits'][65],post_ns=a['mma_returns'][1]-a['commits'][80],
+                    E0_ns=a['outputs'][0]['end']-a['outputs'][0]['begin'],
+                    M_span_ns=max(c['mma_returns'][1] for c in model['ctas'])-min(c['mma_returns'][1] for c in model['ctas']),
+                    blocked_ns=model['local_epilogue_blocked_ns'],source_work=model['input_source_work']))
+                if flag==2:
+                    if scope=='none':baselines[stage]=model
+                    else:
+                        equal=model==baselines[stage]
+                        if not equal:raise ValueError('defer2 local exclusion altered the completed-input/compute graph')
+                        invariants.append(dict(scope=scope,stage=stage,all_returned_fields_equal=equal))
+    observations=[]
+    for stage in (4,6):
+        groups={f:{p['trial']:p for p in observed['processes'] if p['variant']=='progress' and p['stages']==stage and p['epilogue_defer']==f} for f in (0,1)}
+        if any(set(v)!=set(range(10)) for v in groups.values()):raise ValueError('ten epilogue order pairs required')
+        for trial in range(10):
+            a,b=(groups[f][trial] for f in (0,1))
+            observations.append(dict(stage=stage,trial=trial,
+                relative_early=b['intervals']['commit1_to16']/a['intervals']['commit1_to16']-1,
+                source_off=a['source'],source_on=b['source']))
+    def span(v):return dict(median=statistics.median(v),minimum=min(v),maximum=max(v))
+    comparisons=[]
+    for scope in ('none','producer','consumer','both'):
+        for stage in (4,6):
+            off,on=[next(r for r in predictions if (r['scope'],r['stage'],r['flag'])==(scope,stage,f)) for f in (0,1)]
+            comparisons.append(dict(scope=scope,stage=stage,predicted_relative_early=on['early_ns']/off['early_ns']-1,
+                observed_relative_early=span([p['relative_early'] for p in observations if p['stage']==stage])))
+    report=dict(scope='Development exclusion hypothesis, no fitting and no physical port identification.',parameters=params,
+        predictions=predictions,observations=observations,comparisons=comparisons,defer2_invariants=invariants,
+        invariant_argument='With defer2, local E0 cannot start before this CTA M1. M1 implies all 2*Ktile input requests and MMA-start events are complete. E1 is later still. No local blocked event can exist; consequently no first differing event can propagate through the shared server.',
+        limitations=['Producer and MMA start consume zero local service in this hypothesis; epilogue has priority during its pre-existing prepare/write intervals. This is not symmetric arbitration.',
+            'Equal timestamps use insertion order. Already processed zero-duration events are not retroactively blocked by a reservation starting at the same timestamp.',
+            'The epilogue-order observer and recovered parameters come from different batches/protocols; only dimensionless response is compared, never stitched absolute timelines.',
+            'A cycle response and an ns response are not assumed physically identical; this is a development screen, not a transferred calibrated prediction.',
+            'Local summed blocked times are not global makespan costs or physical issue utilization.'],
+        input_sha256={str(p):common.sha(p) for p in (source,observed_path,root/'cases.json',root/'static_setup.json',Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-local-epilogue-exclusion.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 本CTA epilogue准备/写入与发射的排他候选','',
+        '不重拟参数。只把既有prepare/write窗口作为本CTA局部排他区间，分别阻塞producer请求、下一MMA起动或两者。该假设不提供对称调度，也不命名SM端口。','',
+        '| 排他范围 | stage | 预测延期early相对变化 | 实测周期相对变化，中位〔范围〕 |','|---|---:|---:|---:|']
+    for r in comparisons:
+        v=r['observed_relative_early']
+        lines.append(f'| {r["scope"]} | {r["stage"]} | {100*r["predicted_relative_early"]:.3f}% | {100*v["median"]:.3f}% [{100*v["minimum"]:.3f},{100*v["maximum"]:.3f}] |')
+    lines+=['','defer2下三种排他范围、两个stage的全部返回结果与none完全相同。原因是E0开始之前该CTA的输入与MMA起动已完成，局部排他没有可阻塞事件；共享服务器也不会由此获得第一处变化。',
+        '因此当前局部E0竞争不能修复defer2中仍存在的stage4供给/空间缺口。这是不依赖具体价格的当前图结构限制，不否认其它局部竞争或跨调用历史。','']
+    (output/'B-local-epilogue-exclusion.md').write_text('\n'.join(lines))
+    return report
+
+
+def source_join_boundary_diagnostics(root, output):
+    """Three declared subscription boundaries; two-coordinate off-only fits."""
+    from supply_model import shared_stage_events
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    examples=output/'B-source-candidate-examples.json';observations=output/'B-second-prefill.json'
+    original=read_json(examples)['examples']['shared']['parameters']
+    data=read_json(observations)
+    cases=read_json(root/'cases.json');setups={v['case']:v['setup'] for v in read_json(root/'static_setup.json')}
+    row=next(r for r in cases if r.get('set')!='reference')
+    identity=stage_source_identity(row,setups[row['id']])
+    targets={}
+    for stage in (4,6):
+        for flag in (False,True):
+            group=[p for p in data['processes'] if p['variant']=='progress' and p['stages']==stage and bool(p['second_prefill_flag'])==flag]
+            if len(group)!=10:raise ValueError('join boundary diagnostic needs ten processes per arm')
+            targets[stage,flag]={k:statistics.median(p['metrics'][k] for p in group) for k in ('early_ns','post_ns')}
+    target=np.array([targets[4,False][k] for k in ('early_ns','post_ns')])
+
+    def evaluate(boundary,params,stage,flag):
+        m=shared_stage_events(64,stage,132,share_inflight_sources=True,source_keys=identity['source_keys'],
+            source_join_boundary=boundary,second_prefill=flag,epilogue_defer=2,**params)
+        a=m['ctas'][0];ends=[a['mma_returns'][1] for a in m['ctas']]
+        begin=a['mma_returns'][0]
+        return dict(stage=stage,flag=flag,early_ns=a['commits'][80]-a['commits'][65],
+            post_ns=a['mma_returns'][1]-a['commits'][80],
+            prefix16_ns=a['commits'][80]-begin,prefixM_ns=a['mma_returns'][1]-begin,
+            M_span_ns=max(ends)-min(ends),source_work=m['input_source_work'],
+            delivery_work=m['input_delivery_work'],source_count=m['input_source_count'])
+
+    candidates=[]
+    for boundary in ('ready','service_end','service_start'):
+        initial=[evaluate(boundary,original,s,f) for s in (4,6) for f in (False,True)]
+        def parameters(x):return dict(original,service_ns=float(x[0]*10),read_latency_ns=float(x[1]*1000))
+        def residual(x):
+            r=evaluate(boundary,parameters(x),4,False)
+            return np.array([r[k] for k in ('early_ns','post_ns')])/target-1
+        start=np.array([original['service_ns']/10,original['read_latency_ns']/1000])
+        fit=least_squares(residual,start,bounds=([.001,0.],[3.,2.]),max_nfev=40,
+            diff_step=1e-3,ftol=1e-8,xtol=1e-8,gtol=1e-8)
+        params=parameters(fit.x)
+        predicted=[evaluate(boundary,params,s,f) for s in (4,6) for f in (False,True)]
+        candidates.append(dict(boundary=boundary,initial=initial,parameters=params,
+            fit_status=fit.message,nfev=fit.nfev,calibration_relative_residual=fit.fun.tolist(),
+            scaled_jacobian_singular_values=np.linalg.svd(fit.jac,compute_uv=False).tolist(),
+            predictions=predicted))
+    report=dict(scope='Development sensitivity, not hardware attribution or independent validation.',
+        calibration=dict(stage=4,second_prefill=False,targets_ns=target.tolist(),fields=['early_ns','post_ns'],
+            free_coordinates=['service_ns','read_latency_ns'],bounds=dict(service_ns=[.01,30.],read_latency_ns=[0.,2000.]),
+            optimizer='one common initial tuple per boundary; at most 40 least-squares evaluations, no multistart'),
+        observed=[dict(stage=s,flag=f,**v) for (s,f),v in targets.items()],candidates=candidates,
+        limitations=['Boundary is a declared logical event choice, not a measured physical coalescing cutoff.',
+            'Other coordinates remain the recovered exploratory tuple; its selection history was not reconstructed.',
+            'Admission uses arrival < cutoff, including service_start ties. Changing a boundary changes subsequent source generations and queue demand.',
+            'Numerical convergence or failure is not evidence that a whole model family is valid or infeasible.',
+            'A two-window fit does not identify physical prices. Numerical Jacobian values are local and may cross event-graph changes.',
+            'Predicted prefix begins at modeled first MMA return, not the exact software prefill marker.'],
+        input_sha256={str(p):common.sha(p) for p in (examples,observations,root/'cases.json',root/'static_setup.json',Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-source-join-boundary.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 在途共享截止事件的开发检验','',
+        '固定三个候选：ready、服务结束、服务开始；后两者不再把服务后的ready延迟全部算进可订阅窗口。只以stage4/off的early和post两个中位量调整共同源服务和ready延迟。',
+        '本次两坐标重拟不读取stage6及on；其它固定坐标来自历史探索元组，不声称它们未使用过这些数据。全部候选保留，不按干预结果挑参数。有限边界与单起点求解不是全族可行性证明。','',
+        '| 边界 | 服务ns | ready延迟ns | off早/后相对残差 | stage4 on−off early ns | stage6 on−off early ns | stage4/off M跨度ns |',
+        '|---|---:|---:|---|---:|---:|---:|']
+    for c in candidates:
+        rows={(r['stage'],r['flag']):r for r in c['predictions']}
+        delta={s:rows[s,True]['early_ns']-rows[s,False]['early_ns'] for s in (4,6)}
+        lines.append(f'| {c["boundary"]} | {c["parameters"]["service_ns"]:.4f} | {c["parameters"]["read_latency_ns"]:.2f} | '+
+            '/'.join(f'{v*100:+.3f}%' for v in c['calibration_relative_residual'])+f' | {delta[4]:.2f} | {delta[6]:.2f} | {rows[4,False]["M_span_ns"]:.2f} |')
+    lines+=['','原参数与重拟后四条件的累计窗口、空间跨度、源工作及投递工作全部保存在JSON。源工作不是物理流量，关闭订阅也不取消已订阅请求的投递。','']
+    (output/'B-source-join-boundary.md').write_text('\n'.join(lines))
+    return report
+
+
+def a_source_rotation_diagnostics(root, output):
+    """Replay the declared A-only rotation pair without fitting source prices."""
+    from analyze_r13_sm import select_attempts
+    from analyze_r18 import replay
+    import v06_run as common
+    import gzip
+
+    root,output=Path(root),Path(output);common.verify(root)
+    rows=read_json(root/'cases.json');processes=[];failures=[];calls={}
+    expected_gpu=read_json(root/'buildcheck-result.json')['gpu_uuid']
+    if len(rows)!=2 or {r['a_row_rotation'] for r in rows}!={0,1}:
+        raise ValueError('A rotation requires the original two conditions')
+    for row in rows:
+        chosen,failed,_=select_attempts(root,row['id'],('plain','dual'))
+        failures.extend(dict(case=row['id'],**f) for f in failed)
+        for item in chosen:
+            record=item['record'];obs=replay(root,record,row)
+            with gzip.open(root/record['raw'],'rt') as stream:
+                events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+            setup,call=events['setup'],events['call']
+            if setup['gpu_uuid']!=expected_gpu or call.get('gpu_uuid',expected_gpu)!=expected_gpu:
+                raise ValueError('A rotation process changed allocated GPU')
+            if any(not setup.get(k) or setup[k]!=call.get(k) for k in ('target_a_ptr','target_b_ptr')):
+                raise ValueError('A rotation source allocation changed within call')
+            if Path(record['command'][0]).name!=common.binary_prefix(row)+'_'+record['variant']:
+                raise ValueError('A rotation process binary changed')
+            entry=dict(shift=row['a_row_rotation'],trial=record['trial'],variant=record['variant'],
+                source=record['raw'],source_sha256=record['raw_sha256'],elapsed_us=obs['elapsed_us'],
+                gpu_uuid=setup['gpu_uuid'],source_addresses={k:setup[k] for k in ('target_a_ptr','target_b_ptr')})
+            if common.sha(root/record['raw'])!=record['raw_sha256']:
+                raise ValueError('A rotation sample hash changed')
+            if record['variant']=='dual':
+                ctas=sorted(obs['ctas'],key=lambda c:c['cta'])
+                if [c['work'] for c in ctas]!=[[(i//12,i%12),(11+i//12,i%12)] for i in range(132)]:
+                    raise ValueError('A rotation altered logical CTA work')
+                margin=min(c['tiles_ns'][0][2] for c in ctas)-max(c['tiles_ns'][0][1] for c in ctas)
+                phases=[]
+                for role in (0,1):
+                    phase={}
+                    for name,key in [('cycles','tiles'),('ns','tiles_ns')]:
+                        values=[c[key][role][1]-c[key][role][0] for c in ctas]
+                        group=[statistics.mean(values[i*12:(i+1)*12]) for i in range(11)]
+                        mean=statistics.mean(group)
+                        phase[name]=dict(cta_values=values,row_means=group,
+                            centered_row_means=[v-mean for v in group],mean=mean,span=max(values)-min(values))
+                    phases.append(phase)
+                entry.update(sm_map=[c['sm'] for c in ctas],first_main_to_first_E0_margin_ns=margin,phases=phases)
+            calls[row['a_row_rotation'],record['variant'],record['trial']]=entry
+            processes.append(entry)
+    if set(calls)!={(s,v,t) for s in (0,1) for v in ('plain','dual') for t in range(10)}:
+        raise ValueError('A rotation requires all forty successful processes')
+    pairs=[]
+    for trial in range(10):
+        a,b=(calls[s,'dual',trial] for s in (0,1))
+        phases=[]
+        for role in (0,1):
+            phase={}
+            for unit in ('cycles','ns'):
+                x=a['phases'][role][unit]['centered_row_means'];y=b['phases'][role][unit]['centered_row_means']
+                position=[v-u for u,v in zip(x,y)]
+                address=[y[(i-1)%11]-x[i] for i in range(11)]
+                rmse=lambda values:math.sqrt(statistics.mean(v*v for v in values))
+                phase[unit]=dict(position_residual=position,address_residual=address,
+                    position_rmse=rmse(position),address_rmse=rmse(address),
+                    address_minus_position_rmse=rmse(address)-rmse(position),
+                    mean_change=b['phases'][role][unit]['mean']-a['phases'][role][unit]['mean'])
+            phases.append(phase)
+        pairs.append(dict(trial=trial,same_sm_map=a['sm_map']==b['sm_map'],
+            first_output_has_no_E0_overlap=min(a['first_main_to_first_E0_margin_ns'],b['first_main_to_first_E0_margin_ns'])>=0,
+            whole_delta_us={v:calls[1,v,trial]['elapsed_us']-calls[0,v,trial]['elapsed_us'] for v in ('plain','dual')},phases=phases))
+    def span(values):return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+    summary=dict(valid_primary_pairs=sum(p['same_sm_map'] and p['first_output_has_no_E0_overlap'] for p in pairs),
+        first_main_to_first_E0_margin_ns=span([p['first_main_to_first_E0_margin_ns'] for p in processes if p['variant']=='dual']),
+        whole_delta_us={v:span([p['whole_delta_us'][v] for p in pairs]) for v in ('plain','dual')},
+        observer_relative={str(s):span([calls[s,'dual',t]['elapsed_us']/calls[s,'plain',t]['elapsed_us']-1 for t in range(10)]) for s in (0,1)},
+        phases=[{unit:{key:span([p['phases'][role][unit][key] for p in pairs]) for key in ('position_rmse','address_rmse','address_minus_position_rmse','mean_change')}
+            for unit in ('cycles','ns')} for role in (0,1)])
+    for role in (0,1):
+        for unit in ('cycles','ns'):
+            summary['phases'][role][unit]['position_better_pairs']=sum(p['phases'][role][unit]['address_minus_position_rmse']>0 for p in pairs)
+    repeatability=[]
+    for shift in (0,1):
+        for role in (0,1):
+            profiles=[calls[shift,'dual',t]['phases'][role]['cycles']['centered_row_means'] for t in range(10)]
+            errors=[]
+            for t,x in enumerate(profiles):
+                mean=[statistics.mean(v[i] for j,v in enumerate(profiles) if j!=t) for i in range(11)]
+                errors.append(dict(trial=t,other_nine_profile_rmse_cycles=math.sqrt(statistics.mean((a-b)**2 for a,b in zip(x,mean))),
+                    zero_profile_rmse_cycles=math.sqrt(statistics.mean(a*a for a in x))))
+            repeatability.append(dict(shift=shift,role=role,processes=errors,
+                other_nine_profile_rmse_cycles=span([e['other_nine_profile_rmse_cycles'] for e in errors]),
+                zero_profile_rmse_cycles=span([e['zero_profile_rmse_cycles'] for e in errors])))
+    checks={}
+    for variant in ('plain','dual'):
+        events=[json.loads(line) for line in (root/f'correctness-{variant}.jsonl').read_text().splitlines() if line.strip()]
+        check=next(e for e in events if e.get('event')=='a_row_rotation_check')
+        if check['elements']!=4325376 or check['different'] or check['nonfinite']:
+            raise ValueError('A rotation full output comparison failed')
+        checks[variant]=check
+    report=dict(root=str(root),scope='Same-batch two-condition mechanism comparison; no model fitting or independent holdout score.',
+        processes=processes,pairs=pairs,summary=summary,repeatability=repeatability,full_output_checks=checks,failed_attempts=failures,
+        environment=read_json(root/'environment.json'),
+        limitations=['Raw group-profile comparisons retain all trials. If primary gates fail, these are descriptive only.',
+            'Negative address-minus-position RMSE favors address correspondence, but does not uniquely identify a physical source mechanism.',
+            'A inverse initialization changes physical contents while preserving logical operands. CTA groups within a process are not independent replicates.',
+            'Plain and dual are different processes; whole-time differences are observer diagnostics, not same-call local error estimates.'],
+        input_sha256={str(p):common.sha(p) for p in (root/'cases.json',root/'source_hashes.json',root/'build/binary_hashes.json',root/'planned_observations.json',Path(__file__))})
+    output.mkdir(parents=True,exist_ok=True)
+    (output/'B-a-source-rotation.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# A源轮换同卡对照','',f'有效主比较配对：{summary["valid_primary_pairs"]}/10。全D比较两版本均4325376元素逐位相同，无非有限数。','',
+        '| 输出/单位 | 固定位置RMSE | 跟随A地址RMSE | 地址−位置RMSE | 平均L变化 |','|---|---:|---:|---:|---:|']
+    def cell(v):return f'{v["median"]:.2f} [{v["minimum"]:.2f},{v["maximum"]:.2f}]'
+    for role,phase in enumerate(summary['phases']):
+        for unit,d in phase.items():
+            lines.append(f'| {role}/{unit} | {cell(d["position_rmse"])} | {cell(d["address_rmse"])} | {cell(d["address_minus_position_rmse"])} | {cell(d["mean_change"])} |')
+    lines+=['',f'完整时间shift1−0，plain {cell(summary["whole_delta_us"]["plain"])}µs；dual {cell(summary["whole_delta_us"]["dual"])}µs。',
+        '每进程11组曲线先减本进程均值；位置对应保持组序，地址对应取轮换后组(a−1) mod11。十进程范围不是置信区间，组之间不是独立样本。',
+        '主比较要求同CTA/SM映射且全体首MAIN早于最早E0 permit；失败配对仍保留，不据筛选后的子集宣布机制成立。','']
+    lines += [f'首MAIN→最早E0余量ns：{cell(summary["first_main_to_first_E0_margin_ns"])}。',
+        f'固定位置对应更好的首/后输出配对数：cycles {summary["phases"][0]["cycles"]["position_better_pairs"]}/10、{summary["phases"][1]["cycles"]["position_better_pairs"]}/10；ns {summary["phases"][0]["ns"]["position_better_pairs"]}/10、{summary["phases"][1]["ns"]["position_better_pairs"]}/10。',
+        '同档其它九进程均值预测一进程组曲线只用于重复性诊断，不作为独立留出或组价格。',
+        '| shift/输出 | 同档其它九进程曲线RMSE cycle | 零组差曲线RMSE cycle |','|---|---:|---:|']
+    for r in repeatability:
+        lines.append(f'| {r["shift"]}/{r["role"]} | {cell(r["other_nine_profile_rmse_cycles"])} | {cell(r["zero_profile_rmse_cycles"])} |')
+    (output/'B-a-source-rotation.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_source_offset_diagnostics(root, output):
+    """Conditional producer cuts for the fixed source-sharing tuple, no fitting."""
+    from supply_model import shared_stage_events
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    source=output/'B-stage-request-formation.json'
+    examples_path=output/'B-source-candidate-examples.json'
+    data=read_json(source)
+    parameters=read_json(examples_path)['examples']['shared']['parameters']
+    cases=read_json(root/'cases.json')
+    setups={r['case']:r['setup'] for r in read_json(root/'static_setup.json')}
+    row=next(r for r in cases if r.get('set')!='reference')
+    identity=stage_source_identity(row,setups[row['id']])
+    processes=[];baselines={};cohorts=[]
+
+    def summarize_model(model):
+        ctas=model['ctas'];first=[a['starts'][0] for a in ctas]
+        ends=[a['main_ends'][1] for a in ctas]
+        phases=[]
+        for role in (0,1):
+            values=[a['main_ends'][role]-a['starts'][role*64] for a in ctas]
+            rows=[statistics.mean(values[i*12:(i+1)*12]) for i in range(11)]
+            phases.append(dict(local_span_ns=max(values)-min(values),
+                row_mean_span_ns=max(rows)-min(rows),local_ns=values))
+        return dict(main1_span_ns=max(ends)-min(ends),
+            reversed_pairs_beyond_32ns=sum((first[i]-first[j])*(ends[i]-ends[j])<0
+                and abs(first[i]-first[j])>32 and abs(ends[i]-ends[j])>32
+                for i in range(132) for j in range(i)),phases=phases,
+            source_count=model['input_source_count'],source_work=model['input_source_work'],
+            input_delivery_count=model['input_delivery_count'])
+
+    for stage in (4,6):
+        baselines[stage]=summarize_model(shared_stage_events(64,stage,132,
+            share_inflight_sources=True,source_keys=identity['source_keys'],
+            epilogue_defer=0,**parameters))
+    for p in data['processes']:
+        if common.sha(Path(p['source']))!=p['source_sha256']:
+            raise ValueError('producer cut source hash changed')
+        ctas=sorted(p['ctas'],key=lambda c:c['cta'])
+        if [c['work'] for c in ctas]!=[[[i//12,i%12],[11+i//12,i%12]] for i in range(132)]:
+            raise ValueError('producer cut and static identity work mapping differ')
+        origin=min(c['prod_ns'] for c in ctas)
+        offsets=[c['prod_ns']-origin for c in ctas]
+        variants=[]
+        for scale in (1e-6,1.):
+            m=shared_stage_events(64,p['stage'],132,share_inflight_sources=True,
+                source_keys=identity['source_keys'],epilogue_defer=0,
+                trace_requests=p['trial']==0 and scale==1.,
+                diagnostic_producer_offsets_ns=[v*scale for v in offsets],**parameters)
+            variants.append(dict(scale=scale,**summarize_model(m)))
+            if p['trial']==0 and scale==1.:
+                groups={}
+                for demand in m['input_demands']:
+                    groups.setdefault(demand['source_id'],[]).append(demand)
+                counts=Counter((g[0]['kind'],len(g),len({d['index']//64 for d in g})) for g in groups.values())
+                cohorts.append(dict(stage=p['stage'],trial=0,source=p['source'],
+                    source_generations=[dict(kind=k[0],subscribers=k[1],software_rounds=k[2],count=v) for k,v in sorted(counts.items())],
+                    minimum_last_subscriber_before_source_ready_ns=min(g[0]['source_ready_ns']-max(d['arrival_ns'] for d in g) for g in groups.values()),
+                    maximum_subscriber_arrival_span_ns=max(max(d['arrival_ns'] for d in g)-min(d['arrival_ns'] for d in g) for g in groups.values())))
+        observed=[]
+        for role in (0,1):
+            values=[c['tiles_ns'][role][1]-c['tiles_ns'][role][0] for c in ctas]
+            rows=[statistics.mean(values[i*12:(i+1)*12]) for i in range(11)]
+            observed.append(dict(local_span_ns=max(values)-min(values),
+                row_mean_span_ns=max(rows)-min(rows),local_ns=values))
+        ends=[c['tiles_ns'][1][1] for c in ctas]
+        processes.append(dict(stage=p['stage'],trial=p['trial'],source=p['source'],
+            source_sha256=p['source_sha256'],producer_offsets_ns=offsets,
+            observed=dict(main1_span_ns=max(ends)-min(ends),phases=observed),variants=variants))
+    if Counter(p['stage'] for p in processes)!={4:10,6:10}:
+        raise ValueError('producer cuts require twenty processes')
+
+    def span(values):
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+
+    summaries=[]
+    for stage in (4,6):
+        group=[p for p in processes if p['stage']==stage]
+        summaries.append(dict(stage=stage,
+            producer_span_ns=span([max(p['producer_offsets_ns']) for p in group]),
+            observed_main1_span_ns=span([p['observed']['main1_span_ns'] for p in group]),
+            predicted_main1_span_ns={str(scale):span([next(v for v in p['variants'] if v['scale']==scale)['main1_span_ns'] for p in group]) for scale in (1e-6,1.)},
+            phases=[dict(role=role,observed_local_span_ns=span([p['observed']['phases'][role]['local_span_ns'] for p in group]),
+                predicted_local_span_ns=span([p['variants'][1]['phases'][role]['local_span_ns'] for p in group])) for role in (0,1)]))
+    report=dict(scope='Conditional sensitivity with a recovered tuple from another observer/batch, not cross-batch absolute validation.',
+        parameters=parameters,epilogue_defer=0,baselines=baselines,processes=processes,summaries=summaries,trial0_source_cohorts=cohorts,
+        limitations=['Observed PROD is a producer-loop marker, not first TMA issue. Offsets are diagnostic inputs only.',
+            'The model keeps one ns cost across CTAs/roles; observed effective rates are not inserted.',
+            'Source keys preserve the actual static work but not physical cache lines, routing or arbitration.',
+            'No parameter is chosen from these cuts. Failure of this tuple is not an impossibility proof for source sharing.',
+            'The 1e-6 scale diagnoses simultaneous-event ordering, not a physically measurable perturbation.'],
+        input_sha256={str(p):common.sha(p) for p in (source,examples_path,root/'cases.json',root/'static_setup.json',Path(__file__),Path(__file__).with_name('supply_model.py'))})
+    (output/'B-source-offsets.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 在途源共享对producer起步差的条件响应','',
+        '固定已有共享参数，不拟合；用739095每个进程的实际PROD相对偏移作诊断切口。PROD不是首TMA发射。',
+        '输出依赖使用本批普通组织defer0。参数来自另一观察协议/批次，只检验此候选是否能产生分散，不能作为跨批绝对预测成绩。','',
+        '| stage | 实测PROD跨度ns | 实测MAIN1跨度ns | 零偏移预测ns | 百万分之一偏移预测ns | 原幅偏移预测ns |',
+        '|---|---:|---:|---:|---:|---:|']
+    def cell(v):return f'{v["median"]:.1f} [{v["minimum"]:.1f},{v["maximum"]:.1f}]'
+    for r in summaries:
+        lines.append(f'| {r["stage"]} | {cell(r["producer_span_ns"])} | {cell(r["observed_main1_span_ns"])} | {baselines[r["stage"]]["main1_span_ns"]:.1f} | {cell(r["predicted_main1_span_ns"]["1e-06"])} | {cell(r["predicted_main1_span_ns"]["1.0"])} |')
+    lines+=['','| stage/输出 | 实测局部L跨度ns | 原幅偏移候选局部L跨度ns |','|---|---:|---:|']
+    for r in summaries:
+        for p in r['phases']:
+            lines.append(f'| {r["stage"]}/{p["role"]} | {cell(p["observed_local_span_ns"])} | {cell(p["predicted_local_span_ns"])} |')
+    lines+=['','## 预先选定trial0的源服务订阅','',
+        '只对两个stage的trial0、原幅偏移保存源generation统计；选择不依赖误差或排序。','',
+        '| stage | 源原子 | 每generation订阅CTA数 | 覆盖软件轮数 | generation数 |','|---|---|---:|---:|---:|']
+    for r in cohorts:
+        for c in r['source_generations']:
+            lines.append(f'| {r["stage"]} | {c["kind"]} | {c["subscribers"]} | {c["software_rounds"]} | {c["count"]} |')
+    lines+=['','两个尺度均保留完整逐CTA窗口、逆序计数和工作账本；不把观测起点加入正式预测，不根据跨度选择参数或CTA。',
+        '订阅统计是模型内部结果，不是硬件命中率。完整同组共享将到达差折叠为共同ready，后续独立投递不足以恢复实测分散；这一结论限定当前参数与事件图。','']
+    (output/'B-source-offsets.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_source_spatial_diagnostics(output):
+    """Balanced source-group decomposition of existing same-role windows."""
+    import v06_run as common
+
+    output=Path(output);source=output/'B-stage-request-formation.json'
+    data=read_json(source);processes=[]
+
+    def span(values):
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+
+    def decompose(values):
+        # Eleven A groups by twelve B groups: use static coordinates, never
+        # assume that flattened CTA IDs imply a physical source topology.
+        x=np.asarray(values,dtype=float);mean=float(x.mean())
+        row=x.mean(axis=1)-mean;column=x.mean(axis=0)-mean
+        residual=x-mean-row[:,None]-column[None,:]
+        total=float(np.sum((x-mean)**2))
+        row_ss=float(12*np.sum(row**2));column_ss=float(11*np.sum(column**2))
+        residual_ss=float(np.sum(residual**2))
+        if not np.isclose(total,row_ss+column_ss+residual_ss,atol=1e-6):
+            raise ValueError('balanced group decomposition does not close')
+        return dict(mean=mean,span=float(np.ptp(x)),row_profile=row.tolist(),
+            column_profile=column.tolist(),row_span=float(np.ptp(row)),
+            row_fraction=row_ss/total if total else None,
+            column_fraction=column_ss/total if total else None,
+            residual_fraction=residual_ss/total if total else None)
+
+    for p in data['processes']:
+        if common.sha(Path(p['source']))!=p['source_sha256']:
+            raise ValueError('spatial raw identity changed')
+        ctas=p['ctas'];coordinates={tuple(c['work'][0]):c for c in ctas}
+        if set(coordinates)!={(a,b) for a in range(11) for b in range(12)}:
+            raise ValueError('spatial analysis requires full balanced 11 by 12 work')
+        if any(c['work'][1]!=[c['work'][0][0]+11,c['work'][0][1]] for c in ctas):
+            raise ValueError('second output no longer exchanges A while preserving B')
+        phases=[]
+        for role in (0,1):
+            cycles=[];times=[]
+            for a in range(11):
+                c_row=[];n_row=[]
+                for b in range(12):
+                    c=coordinates[a,b];tc=c['tiles_c'][role];tn=c['tiles_ns'][role]
+                    # Subtract integers within one CTA/role before any float conversion.
+                    c_row.append(tc[1]-tc[0]);n_row.append(tn[1]-tn[0])
+                cycles.append(c_row);times.append(n_row)
+            C=np.asarray(cycles,dtype=float);N=np.asarray(times,dtype=float)
+            if np.min(C)<=0 or np.min(N)<=0:raise ValueError('nonpositive local window')
+            rate=C/N;common_rate=float(np.median(rate))
+            phases.append(dict(role=role,cycles=decompose(C),ns=decompose(N),
+                effective_ghz=decompose(rate),
+                common_rate_ns=decompose(C/common_rate),
+                rate_residual_ns=decompose(N-C/common_rate),common_rate_ghz=common_rate))
+        processes.append(dict(stage=p['stage'],trial=p['trial'],source=p['source'],
+            source_sha256=p['source_sha256'],phases=phases,
+            placement=[dict(cta=c['cta'],sm=c['sm'],work=c['work']) for c in ctas]))
+    if Counter(p['stage'] for p in processes)!={4:10,6:10}:
+        raise ValueError('spatial analysis requires all twenty processes')
+    summaries=[]
+    for stage in (4,6):
+        group=[p for p in processes if p['stage']==stage]
+        for role in (0,1):
+            phases=[p['phases'][role] for p in group]
+            summaries.append(dict(stage=stage,role=role,metrics={unit:{key:span([p[unit][key] for p in phases])
+                for key in ('span','row_span','row_fraction','column_fraction','residual_fraction')}
+                for unit in ('cycles','ns','effective_ghz','common_rate_ns','rate_residual_ns')},
+                slowest_row_each_process=[int(np.argmax(p['cycles']['row_profile'])) for p in phases]))
+    maps={tuple((c['cta'],c['sm'],tuple(map(tuple,c['work']))) for c in p['placement']) for p in processes}
+    report=dict(scope='Same-process descriptive decomposition, not source attribution or model calibration.',
+        formula='x_ab=mean+row_a+column_b+residual_ab; balanced sums of squares close exactly.',
+        processes=processes,summaries=summaries,distinct_work_sm_maps=len(maps),
+        limitations=['A source group, CTA block and fixed SM set are confounded in these twenty processes.',
+            'Fractions describe dispersion, not causality or fractions of runtime. Process medians of fractions need not sum to one.',
+            'Effective rate is C/N for the same endpoints, not an independently measured physical frequency.',
+            'Common-rate substitution and its residual are algebraic diagnostics, not additive physical costs.',
+            'R10 work-swap evidence uses another geometry/K and stage6; it does not identify this stage4 A-group mechanism.',
+            'No group ordinal, measured rate or observed endpoint is added to the predictor.'],
+        input_sha256={str(p):common.sha(p) for p in (source,Path(__file__))})
+    (output/'B-source-spatial.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 同调用源组与空间离散','',
+        '使用739095全部20个dual进程。按实际工作坐标组成11个A组×12个B组；每个窗口只减同CTA、同consumer角色的FIRST/MAIN戳。',
+        '对每进程独立作平衡行/列/残差平方和分解，随后汇总；行解释比例表示离散结构，不是运行时间占比或因果贡献。','',
+        '| stage/输出 | 周期跨度中位 | A组均值周期跨度中位 | A组周期离散比例中位〔范围〕 | A组ns离散比例中位 |',
+        '|---|---:|---:|---:|---:|']
+    for r in summaries:
+        c=r['metrics']['cycles'];n=r['metrics']['ns'];v=c['row_fraction']
+        lines.append(f'| {r["stage"]}/{r["role"]} | {c["span"]["median"]:.1f} | {c["row_span"]["median"]:.1f} | {100*v["median"]:.1f}% [{100*v["minimum"]:.1f},{100*v["maximum"]:.1f}] | {100*n["row_fraction"]["median"]:.1f}% |')
+    lines+=['','| stage/输出 | 实测ns跨度 | 共同周期率换算的周期跨度ns | 剩余换算残差跨度ns |','|---|---:|---:|---:|']
+    for r in summaries:
+        m=r['metrics']
+        lines.append(f'| {r["stage"]}/{r["role"]} | {m["ns"]["span"]["median"]:.1f} | {m["common_rate_ns"]["span"]["median"]:.1f} | {m["rate_residual_ns"]["span"]["median"]:.1f} |')
+    lines+=['',f'全部进程只有{len(maps)}种work/CTA/SM映射；源组与物理位置不能分离。第二输出更换A地址，但保留A组与SM集合的绑定。',
+        'R10的55/91工作交换已反对无状态面板价格，但其stage6、K1024与几何不同，不能代替本stage4条件的识别。',
+        '同组相关性要求下一候选解释共同推进；不据此加入A组编号、SM编号或测后周期率罚项。逐组曲线、全部进程及端点来源保存在JSON。','']
+    (output/'B-source-spatial.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_source_candidate_diagnostics(root, output):
+    """Replay two explicit exploratory tuples; do not refit or select on treatment."""
+    from supply_model import shared_stage_events
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    observed_path=output/'B-second-prefill.json'
+    examples_path=output/'B-source-candidate-examples.json'
+    observed=read_json(observed_path)
+    examples=read_json(examples_path)['examples']
+    cases=read_json(root/'cases.json')
+    setups={x['case']:x['setup'] for x in read_json(root/'static_setup.json')}
+    row=next(r for r in cases if r.get('set')!='reference')
+    identity=stage_source_identity(row,setups[row['id']])
+    processes=[p for p in observed['processes'] if p['variant']=='progress']
+    for p in processes:
+        if common.sha(root/p['source'])!=p['source_sha256']:
+            raise ValueError('second-prefill process identity changed')
+
+    def span(values):
+        return dict(median=statistics.median(values),minimum=min(values),maximum=max(values))
+
+    measurements=[]
+    for p in processes:
+        background=p['direct_ns_background']
+        ends=[r['mma_return_ns'] for r in background]
+        target=next(r for r in background if r['cta']==0)
+        measurements.append(dict(stage=p['stages'],flag=bool(p['second_prefill_flag']),
+            trial=p['trial'],source=p['source'],source_sha256=p['source_sha256'],
+            early=p['metrics']['early_ns'],post=p['metrics']['post_ns'],
+            prefix16=p['metrics']['prefill_begin_to_commit16_ns'],
+            prefixM=p['metrics']['prefill_begin_to_mma_ns'],
+            E0=target['epi_end_ns']-target['epi_begin_ns'],
+            M_span=max(ends)-min(ends),
+            earlier_than_CTA0=sum(t<target['mma_return_ns']-32 for t in ends)))
+    predictions=[]
+    for name,example in examples.items():
+        for stage in (4,6):
+            for flag in (False,True):
+                model=shared_stage_events(64,stage,132,epilogue_defer=2,
+                    share_inflight_sources=name=='shared',source_keys=identity['source_keys'],
+                    second_prefill=flag,**example['parameters'])
+                a=model['ctas'][0]
+                begin=a['mma_returns'][0]  # conditional mapping, not the software timestamp
+                ends=[x['mma_returns'][1] for x in model['ctas']]
+                first=[x['starts'][0] for x in model['ctas']]
+                inversions=sum((first[i]-first[j])*(ends[i]-ends[j])<0
+                    and abs(first[i]-first[j])>32 and abs(ends[i]-ends[j])>32
+                    for i in range(132) for j in range(i))
+                prediction=dict(candidate=name,stage=stage,flag=flag,
+                    early=a['commits'][80]-a['commits'][65],
+                    post=a['mma_returns'][1]-a['commits'][80],
+                    prefix16=a['commits'][80]-begin,prefixM=a['mma_returns'][1]-begin,
+                    E0=a['outputs'][0]['end']-a['outputs'][0]['begin'],
+                    M_span=max(ends)-min(ends),
+                    earlier_than_CTA0=sum(t<ends[0]-32 for t in ends),
+                    first_to_M_reversed_pairs_beyond_32ns=inversions,
+                    source_count=model['input_source_count'],source_work=model['input_source_work'],
+                    delivery_count=model['input_delivery_count'])
+                prior=next(r for r in example['rows'] if r['stage']==stage and r['flag']==flag)
+                for field in ('early','post','prefix16','prefixM','E0'):
+                    if abs(prediction[field]-prior[field])>1e-6:
+                        raise ValueError('recovered candidate replay differs: '+name+'/'+field)
+                predictions.append(prediction)
+    # Keep CTA0 fixed; permute the other simultaneous issuers without changing
+    # logical source sharing or software work. This is an implementation-order
+    # sensitivity test, not a physical CTA placement model or a fitted schedule.
+    insertion_sensitivity=[]
+    for stage in (4,6):
+        for label,order in [('natural',list(range(132))),
+                ('reverse_other_ctas',[0]+list(range(131,0,-1))),
+                ('even_then_odd',[0]+list(range(2,132,2))+list(range(1,132,2)))]:
+            model=shared_stage_events(64,stage,132,epilogue_defer=2,
+                share_inflight_sources=True,
+                source_keys=[identity['source_keys'][i] for i in order],
+                **examples['shared']['parameters'])
+            a=model['ctas'][0];ends=[x['mma_returns'][1] for x in model['ctas']]
+            insertion_sensitivity.append(dict(stage=stage,order=label,physical_cta_by_actor=order,
+                early=a['commits'][80]-a['commits'][65],
+                post=a['mma_returns'][1]-a['commits'][80],M_span=max(ends)-min(ends),
+                source_count=model['input_source_count'],source_work=model['input_source_work']))
+    fields=('early','post','prefix16','prefixM','E0','M_span','earlier_than_CTA0')
+    summaries=[];responses=[]
+    for stage in (4,6):
+        for flag in (False,True):
+            group=[r for r in measurements if (r['stage'],r['flag'])==(stage,flag)]
+            if len(group)!=10:raise ValueError('ten processes per arm required')
+            summaries.append(dict(stage=stage,flag=flag,**{f:span([r[f] for r in group]) for f in fields}))
+        off={r['trial']:r for r in measurements if r['stage']==stage and not r['flag']}
+        on={r['trial']:r for r in measurements if r['stage']==stage and r['flag']}
+        pairs=[dict(trial=t,**{f:on[t][f]-off[t][f] for f in fields}) for t in sorted(off)]
+        responses.append(dict(stage=stage,processes=pairs,
+            observed={f:span([r[f] for r in pairs]) for f in fields},
+            predicted={name:{f:next(r[f] for r in predictions if r['candidate']==name and r['stage']==stage and r['flag'])-
+                next(r[f] for r in predictions if r['candidate']==name and r['stage']==stage and not r['flag'])
+                for f in fields} for name in examples}))
+    report=dict(scope='Development replay of two recovered tuples, not an exhaustive family test.',
+        parameters={k:v['parameters'] for k,v in examples.items()},source_keys_sha256=identity['source_keys_sha256'],
+        processes=measurements,summaries=summaries,predictions=predictions,responses=responses,
+        insertion_sensitivity=insertion_sensitivity,
+        input_sha256={str(p):common.sha(p) for p in (observed_path,examples_path,root/'cases.json',root/'static_setup.json',Path(__file__),Path(__file__).with_name('supply_model.py'))},
+        limitations=['Prefix begins at modeled first MMA return; actual prefill marker includes software work.',
+            'Observed M is MMA return, not MAIN or final global D completion.',
+            'The 32 ns separation only removes one timestamp grid; it is not an uncertainty bound.',
+            'No observed first timestamps exist in this protocol for all CTAs: model inversions are not matched observed inversion counts.',
+            'Parameter selection history of recovered tuples is not established; neither treatment nor spatial comparison is an independent holdout.',
+            'Rejecting a tuple does not reject all source-sharing or nonsharing mechanisms.'])
+    (output/'B-source-candidate-replay.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    lines=['# 共享源与不共享源的具体候选复放','',
+        '两组探索参数原样固定，不重新拟合。原临时结果中的五个局部量逐项复放至1e-6 ns以内；它们不是已验收校准。',
+        'M取第二WG的mma返回，与实测端点一致；累计起点仍存在模型返回/软件预等标记的映射差异。','',
+        '| stage/预等 | 实测M跨度ns，中位[范围] | 共享预测 | 不共享预测 |',
+        '|---|---:|---:|---:|']
+    for s in summaries:
+        v=s['M_span'];pred=[next(r['M_span'] for r in predictions if r['candidate']==n and r['stage']==s['stage'] and r['flag']==s['flag']) for n in examples]
+        lines.append(f'| {s["stage"]}/{int(s["flag"])} | {v["median"]:.1f} [{v["minimum"]:.1f},{v["maximum"]:.1f}] | {pred[0]:.1f} | {pred[1]:.1f} |')
+    lines+=['','| stage，on−off | 实测ns，中位[范围] | 共享预测 | 不共享预测 |','|---|---:|---:|---:|']
+    for r in responses:
+        for field in ('early','post','prefix16','prefixM','E0'):
+            v=r['observed'][field]
+            lines.append(f'| {r["stage"]}，{field} | {v["median"]:.1f} [{v["minimum"]:.1f},{v["maximum"]:.1f}] | {r["predicted"]["shared"][field]:.1f} | {r["predicted"]["unshared"][field]:.1f} |')
+    lines+=['','## 同时请求的插入顺序敏感性','',
+        '保留CTA0，只重排其它模拟actor，并随actor携带完整源身份；全部起步仍为0。没有改变源等价关系、工作量或选择拟合参数。',
+        '| stage/顺序 | early ns | post ns | M跨度ns | 源工作量 |','|---|---:|---:|---:|---:|']
+    for r in insertion_sensitivity:
+        lines.append(f'| {r["stage"]}/{r["order"]} | {r["early"]:.1f} | {r["post"]:.1f} | {r["M_span"]:.1f} | {r["source_work"]:.1f} |')
+    lines+=['','逐进程来源、源服务量、投递量和模型逆序对保存在JSON。实测本协议缺少全CTA FIRST，不能把模型FIRST→M逆序数当作与实测匹配。',
+        '进程范围不是置信区间；32 ns仅为排序分离尺度，不是误差验收阈值。此处没有新的完整时间成绩。','']
+    (output/'B-source-candidate-replay.md').write_text('\n'.join(lines))
+    return report
+
+
+def stage_source_identity_diagnostics(root, output):
+    """Write one compact static identity table; no timing input, fitting or GPU work."""
+    import v06_run as common
+
+    root,output=Path(root),Path(output)
+    common.verify(root)
+    rows=read_json(root/'cases.json')
+    setups={s['case']:s['setup'] for s in read_json(root/'static_setup.json')}
+    controls=[r for r in rows if r.get('set')!='reference']
+    if len(controls)!=4 or {(setups[r['id']]['stages'],r['second_prefill']) for r in controls}!={(s,f) for s in (4,6) for f in (0,1)}:
+        raise ValueError('source identity expects the four existing second-prefill controls')
+    cases=[];identity=None
+    for row in controls:
+        setup=setups[row['id']]
+        current=stage_source_identity(row,setup)
+        if identity is not None and current['source_keys_sha256']!=identity['source_keys_sha256']:
+            raise ValueError('second-prefill controls changed logical source identity')
+        identity=current
+        cases.append(dict(case=row['id'],stages=setup['stages'],second_prefill=row['second_prefill'],
+            grid=setup['grid'],raster_order=setup['resolved_raster_order'],source_keys_sha256=current['source_keys_sha256'],
+            counts=current['counts']))
+    paths=[root/'cases.json',root/'static_setup.json',root/'source_hashes.json',root/'build/binary_hashes.json',
+        Path(__file__),Path(__file__).with_name('supply_model.py'),Path(__file__).with_name('v08_model.py'),Path(__file__).with_name('v06_model.py')]
+    report=dict(scope='Logical whole-source-box identity within one invocation; not physical cache lines or traffic. '
+        'Partial overlap is not merged. Static unique counts do not assert in-flight overlap or hardware sharing.',
+        source_run=str(root),cases=cases,reference_cases_not_modeled=[r['id'] for r in rows if r.get('set')=='reference'],
+        key_fields=['tensor_identity','element_type','descriptor_swizzle','descriptor_extents','descriptor_byte_strides',
+            'descriptor_base_offset_bytes','origin','box_shape'],descriptor_axes=dict(A=['M','K'],B=['N','K']),
+        expansion='For CTA t, output j and Ktile k: read each atom_template_ids key and add 64*k to origin[1]. '
+            'The model index is i=64*j+k, with atoms [A,B0,B1]. No output ordinal or CTA/SM label enters the source key.',
+        hash_encoding='SHA256 of json.dumps(source_keys,separators=(comma,colon)).encode(), preserving CTA/i/atom order.',
+        source_keys_sha256=identity['source_keys_sha256'],key_templates=identity['key_templates'],
+        cta_output_sources=identity['cta_output_sources'],counts=identity['counts'],software_rounds=identity['software_rounds'],
+        input_sha256={str(p):common.sha(p) for p in paths})
+    (output/'B-source-identity.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    return report
+
+
 def stage_second_prefill_diagnostics(root, output):
     """Replay same-stage initial-state controls; keep later off-only development fits separate."""
     import gzip
@@ -5641,10 +6385,28 @@ if __name__ == "__main__":
     parser.add_argument("--fill-suite", action='store_true',help='same-card valid-address/OOB cycle versus direct-ns development; --run is R10 job738203')
     parser.add_argument("--compose-fill",type=Path,help='compose an existing fill-suite report with same-card dual event calibration')
     parser.add_argument("--supply-calibration",action='store_true',help='single-run three-config per-CTA supply calibration; j0 remains diagnostic')
+    parser.add_argument("--source-candidate-replay",action='store_true',help='offline replay of recovered R13 source tuples; --run is second-prefill and --output contains B-second-prefill.json and B-source-candidate-examples.json')
+    parser.add_argument("--source-spatial-diagnostics",action='store_true',help='same-process source-group decomposition from existing B-stage-request-formation.json')
+    parser.add_argument("--source-offset-diagnostics",action='store_true',help='conditional observed producer cuts for the fixed source-sharing tuple; --run is second-prefill')
+    parser.add_argument("--a-source-rotation",action='store_true',help='replay the two-condition A-only source rotation run')
+    parser.add_argument("--source-join-boundary",action='store_true',help='three source subscription boundaries with bounded two-coordinate development fits; --run is second-prefill')
+    parser.add_argument("--local-epilogue-exclusion",action='store_true',help='no-refit local producer/consumer exclusion diagnostics; --run is second-prefill')
     parser.add_argument("--assumed-ghz",type=float,default=1.6,help='explicit frequency assumption for supply NS predictions and comparisons')
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.supply_calibration:
+    if args.local_epilogue_exclusion:
+        local_epilogue_exclusion_diagnostics(args.run.resolve(),args.output.resolve())
+    elif args.source_join_boundary:
+        source_join_boundary_diagnostics(args.run.resolve(),args.output.resolve())
+    elif args.a_source_rotation:
+        a_source_rotation_diagnostics(args.run.resolve(),args.output.resolve())
+    elif args.source_offset_diagnostics:
+        stage_source_offset_diagnostics(args.run.resolve(),args.output.resolve())
+    elif args.source_spatial_diagnostics:
+        stage_source_spatial_diagnostics(args.output.resolve())
+    elif args.source_candidate_replay:
+        stage_source_candidate_diagnostics(args.run.resolve(),args.output.resolve())
+    elif args.supply_calibration:
         if args.assumed_ghz<=0:parser.error('--assumed-ghz must be positive')
         supply_calibration(args.run.resolve(),args.output.resolve(),args.assumed_ghz)
     elif args.compose_fill:

@@ -1,0 +1,449 @@
+{
+  "scope": "Development sensitivity, not hardware attribution or independent validation.",
+  "calibration": {
+    "stage": 4,
+    "second_prefill": false,
+    "targets_ns": [
+      5168.0,
+      16320.0
+    ],
+    "fields": [
+      "early_ns",
+      "post_ns"
+    ],
+    "free_coordinates": [
+      "service_ns",
+      "read_latency_ns"
+    ],
+    "bounds": {
+      "service_ns": [
+        0.01,
+        30.0
+      ],
+      "read_latency_ns": [
+        0.0,
+        2000.0
+      ]
+    },
+    "optimizer": "one common initial tuple per boundary; at most 40 least-squares evaluations, no multistart"
+  },
+  "observed": [
+    {
+      "stage": 4,
+      "flag": false,
+      "early_ns": 5168.0,
+      "post_ns": 16320.0
+    },
+    {
+      "stage": 4,
+      "flag": true,
+      "early_ns": 4384.0,
+      "post_ns": 16448.0
+    },
+    {
+      "stage": 6,
+      "flag": false,
+      "early_ns": 4320.0,
+      "post_ns": 13472.0
+    },
+    {
+      "stage": 6,
+      "flag": true,
+      "early_ns": 4320.0,
+      "post_ns": 13488.0
+    }
+  ],
+  "candidates": [
+    {
+      "boundary": "ready",
+      "initial": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5248.000000000011,
+          "post_ns": 16319.999999999993,
+          "prefix16_ns": 6009.6000000000095,
+          "prefixM_ns": 22329.600000000002,
+          "M_span_ns": 124.86568199730391,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 4503.064077297811,
+          "post_ns": 16319.999999999993,
+          "prefix16_ns": 6009.6000000000095,
+          "prefixM_ns": 22329.600000000002,
+          "M_span_ns": 124.86568199730391,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18432.0,
+          "M_span_ns": 60.25723923632904,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 5826.535922702198,
+          "prefixM_ns": 19362.535922702198,
+          "M_span_ns": 930.5359227021981,
+          "source_work": 3060.0,
+          "delivery_work": 33792.0,
+          "source_count": 4654
+        }
+      ],
+      "parameters": {
+        "service_ns": 7.262167016904785,
+        "read_latency_ns": 745.9278461237024,
+        "compute_ns": 288.0,
+        "commit_lead_ns": 144.0,
+        "output_weight": 0.43359303573970265,
+        "epilogue_prepare_ns": 65.70133122662406,
+        "epilogue_write_ns": 65.70133122662406,
+        "producer_gap_ns": 10.238540769831417,
+        "operand_gap_ns": 10.238540769831417,
+        "destination_service_ns": 72.0
+      },
+      "fit_status": "`gtol` termination condition is satisfied.",
+      "nfev": 4,
+      "calibration_relative_residual": [
+        0.0073432789673058,
+        -0.007729767334000215
+      ],
+      "scaled_jacobian_singular_values": [
+        1.3345398473895538,
+        2.109988761773821e-12
+      ],
+      "predictions": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5205.950065703037,
+          "post_ns": 16193.850197109117,
+          "prefix16_ns": 5959.14007884364,
+          "prefixM_ns": 22152.990275952758,
+          "M_span_ns": 123.45683928734798,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 4462.920224314228,
+          "post_ns": 16193.850197109117,
+          "prefix16_ns": 5959.14007884364,
+          "prefixM_ns": 22152.990275952758,
+          "M_span_ns": 123.45683928734798,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13535.999999999996,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18431.999999999996,
+          "M_span_ns": 60.79591439012438,
+          "source_work": 2944.0,
+          "delivery_work": 33792.0,
+          "source_count": 4480
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 5816.219854529412,
+          "prefixM_ns": 19352.219854529412,
+          "M_span_ns": 920.2198545294159,
+          "source_work": 3060.0,
+          "delivery_work": 33792.0,
+          "source_count": 4654
+        }
+      ]
+    },
+    {
+      "boundary": "service_end",
+      "initial": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5673.302753957887,
+          "post_ns": 17921.897886671875,
+          "prefix16_ns": 6396.789205530335,
+          "prefixM_ns": 24318.68709220221,
+          "M_span_ns": 652.9678336556026,
+          "source_work": 6310.5,
+          "delivery_work": 33792.0,
+          "source_count": 9671
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 5947.198322945616,
+          "post_ns": 17880.759429225098,
+          "prefix16_ns": 7538.94294379952,
+          "prefixM_ns": 25419.70237302462,
+          "M_span_ns": 1038.5824398237673,
+          "source_work": 6325.0,
+          "delivery_work": 33792.0,
+          "source_count": 9684
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18432.0,
+          "M_span_ns": 60.25723923632904,
+          "source_work": 3796.5,
+          "delivery_work": 33792.0,
+          "source_count": 5635
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13535.999999999996,
+          "prefix16_ns": 5874.2786834658655,
+          "prefixM_ns": 19410.278683465862,
+          "M_span_ns": 978.2786834658618,
+          "source_work": 3912.5,
+          "delivery_work": 33792.0,
+          "source_count": 5809
+        }
+      ],
+      "parameters": {
+        "service_ns": 7.397057930262566,
+        "read_latency_ns": 753.7993624292658,
+        "compute_ns": 288.0,
+        "commit_lead_ns": 144.0,
+        "output_weight": 0.43359303573970265,
+        "epilogue_prepare_ns": 65.70133122662406,
+        "epilogue_write_ns": 65.70133122662406,
+        "producer_gap_ns": 10.238540769831417,
+        "operand_gap_ns": 10.238540769831417,
+        "destination_service_ns": 72.0
+      },
+      "fit_status": "`xtol` termination condition is satisfied.",
+      "nfev": 12,
+      "calibration_relative_residual": [
+        0.057515480790650386,
+        0.07533823159029951
+      ],
+      "scaled_jacobian_singular_values": [
+        48.39606936299386,
+        3.0428497423266987
+      ],
+      "predictions": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5465.240004726082,
+          "post_ns": 17549.519939553687,
+          "prefix16_ns": 6212.3428556825675,
+          "prefixM_ns": 23761.862795236255,
+          "M_span_ns": 653.4538210903047,
+          "source_work": 6173.5,
+          "delivery_work": 33792.0,
+          "source_count": 9215
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 5776.401697077323,
+          "post_ns": 17692.576763456076,
+          "prefix16_ns": 7362.585363838345,
+          "prefixM_ns": 25055.16212729442,
+          "M_span_ns": 1038.1008334641301,
+          "source_work": 6212.5,
+          "delivery_work": 33792.0,
+          "source_count": 9248
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13535.999999999996,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18431.999999999996,
+          "M_span_ns": 59.91912345329183,
+          "source_work": 3791.0,
+          "delivery_work": 33792.0,
+          "source_count": 5569
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13535.999999999996,
+          "prefix16_ns": 5879.108158267394,
+          "prefixM_ns": 19415.10815826739,
+          "M_span_ns": 983.1081582673942,
+          "source_work": 3907.0,
+          "delivery_work": 33792.0,
+          "source_count": 5743
+        }
+      ]
+    },
+    {
+      "boundary": "service_start",
+      "initial": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5486.004230962055,
+          "post_ns": 17672.16652267693,
+          "prefix16_ns": 6253.560923239427,
+          "prefixM_ns": 23925.727445916356,
+          "M_span_ns": 663.9853938318338,
+          "source_work": 6249.5,
+          "delivery_work": 33792.0,
+          "source_count": 9456
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 5781.934920302247,
+          "post_ns": 17803.636507991403,
+          "prefix16_ns": 7388.369621391135,
+          "prefixM_ns": 25192.00612938254,
+          "M_span_ns": 1034.9099197650212,
+          "source_work": 6280.0,
+          "delivery_work": 33792.0,
+          "source_count": 9538
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18432.0,
+          "M_span_ns": 60.25723923632904,
+          "source_work": 3913.0,
+          "delivery_work": 33792.0,
+          "source_count": 5691
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 5885.2962436421,
+          "prefixM_ns": 19421.2962436421,
+          "M_span_ns": 989.2962436421003,
+          "source_work": 4029.0,
+          "delivery_work": 33792.0,
+          "source_count": 5865
+        }
+      ],
+      "parameters": {
+        "service_ns": 7.315622779192338,
+        "read_latency_ns": 754.7355681294379,
+        "compute_ns": 288.0,
+        "commit_lead_ns": 144.0,
+        "output_weight": 0.43359303573970265,
+        "epilogue_prepare_ns": 65.70133122662406,
+        "epilogue_write_ns": 65.70133122662406,
+        "producer_gap_ns": 10.238540769831417,
+        "operand_gap_ns": 10.238540769831417,
+        "destination_service_ns": 72.0
+      },
+      "fit_status": "`xtol` termination condition is satisfied.",
+      "nfev": 13,
+      "calibration_relative_residual": [
+        0.040488015634749575,
+        0.07156839789566227
+      ],
+      "scaled_jacobian_singular_values": [
+        88.88158338794732,
+        7.506487521524258
+      ],
+      "predictions": [
+        {
+          "stage": 4,
+          "flag": false,
+          "early_ns": 5377.242064800386,
+          "post_ns": 17487.99625365721,
+          "prefix16_ns": 6138.066833836299,
+          "prefixM_ns": 23626.06308749351,
+          "M_span_ns": 684.2700519490536,
+          "source_work": 6227.5,
+          "delivery_work": 33792.0,
+          "source_count": 9308
+        },
+        {
+          "stage": 4,
+          "flag": true,
+          "early_ns": 5696.438755473278,
+          "post_ns": 17491.913387141456,
+          "prefix16_ns": 7282.961798779765,
+          "prefixM_ns": 24774.87518592122,
+          "M_span_ns": 1039.07775673984,
+          "source_work": 6247.0,
+          "delivery_work": 33792.0,
+          "source_count": 9346
+        },
+        {
+          "stage": 6,
+          "flag": false,
+          "early_ns": 4320.0,
+          "post_ns": 13536.000000000004,
+          "prefix16_ns": 4896.0,
+          "prefixM_ns": 18432.000000000004,
+          "M_span_ns": 60.44845193524816,
+          "source_work": 3913.0,
+          "delivery_work": 33792.0,
+          "source_count": 5691
+        },
+        {
+          "stage": 6,
+          "flag": true,
+          "early_ns": 4320.0,
+          "post_ns": 13536.0,
+          "prefix16_ns": 5884.835497063566,
+          "prefixM_ns": 19420.835497063566,
+          "M_span_ns": 988.8354970635628,
+          "source_work": 4029.0,
+          "delivery_work": 33792.0,
+          "source_count": 5865
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Boundary is a declared logical event choice, not a measured physical coalescing cutoff.",
+    "Other coordinates remain the recovered exploratory tuple; its selection history was not reconstructed.",
+    "Admission uses arrival < cutoff, including service_start ties. Changing a boundary changes subsequent source generations and queue demand.",
+    "Numerical convergence or failure is not evidence that a whole model family is valid or infeasible.",
+    "A two-window fit does not identify physical prices. Numerical Jacobian values are local and may cross event-graph changes.",
+    "Predicted prefix begins at modeled first MMA return, not the exact software prefill marker."
+  ],
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-candidate-examples.json": "a12b03d0e4a6dca604d21fc7a9d3d4d3c41289aa2424c823d60fac05e4b24993",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-second-prefill.json": "966d4925354154d673e16a6ed75bac437015a03ae9d9c2c265302299af2c3013",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/cases.json": "dfdfe19244f8a0a25971d8576ae35c67300e80ed9b46528c2315987466af6a62",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/static_setup.json": "e8ab81c4f620b1e52bc177d88c907855d5bfa60dc5b74e40e31826f6d950cb63",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r13_supply.py": "7aa4cabca91b778444487276e930aea59f730e759213b2516e548aecd51e3133",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/supply_model.py": "c5df790019c03933618405df6fcbd34aa6760297ccf7063ac3c8f5170a93384c"
+  }
+}
