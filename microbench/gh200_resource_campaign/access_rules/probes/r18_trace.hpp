@@ -145,6 +145,9 @@ __device__ __forceinline__ void r13_sparse_producer_flush(R13SparseProducer cons
   b[9]=s.refill_begin; b[11]=s.refill_end; b[12]=s.refill_issue_end;
   b[27]=uint64_t((s.state>>4)&7)+1; b[28]=uint64_t((s.state>>7)&1)+1;
   b[29]=1; b[30]=16; b[31]=0x52313301;
+#ifdef R13_RELEASE_WARPS
+  b[31]=0x52313307;
+#endif
 }
 #ifdef R13_STAGE_PROGRESS
 __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer const& s) {
@@ -175,6 +178,14 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
   b[19]=s.release_begin; b[20]=s.release_end; b[21]=s.first_mma; b[22]=s.main_end;
   b[24]=uint64_t(s.read_slot)+1; b[25]=uint64_t(s.release_slot)+1;
   b[26]=uint64_t(s.release_phase)+1; b[32]=s.mma_return; b[33]=s.tail_begin;
+}
+#endif
+#ifdef R13_RELEASE_WARPS
+// Deferred until the consumer leaves its work loop; no stores near arrival.
+// [40:47] holds (pre,post) for warp leaders 256/288/320/352.
+__device__ __forceinline__ void r13_release_warp_flush(R13SparseConsumer const& s) {
+  auto out=v06_base()+40+2*((threadIdx.x-256)/32);
+  out[0]=s.release_begin; out[1]=s.release_end;
 }
 #endif
 __device__ __forceinline__ void v06_entry() {

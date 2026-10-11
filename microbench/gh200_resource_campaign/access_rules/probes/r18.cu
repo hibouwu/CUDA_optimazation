@@ -20,6 +20,9 @@ __global__ void r13_fill_rotated_a(__half* data, int rows, int columns, int64_t 
   }
 }
 #endif
+#ifdef R13_RELEASE_WARPS
+__device__ __constant__ unsigned r13_release_warp_observer;
+#endif
 #ifdef R13_SECOND_PREFILL
 __device__ __constant__ unsigned r13_second_prefill;
 #endif
@@ -143,7 +146,9 @@ using Gemm = cutlass::gemm::device::GemmUniversalAdapter<Kernel>;
 static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing warp mapping");
 #endif
 
-#if defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)
+#if defined(R13_RELEASE_WARPS) && defined(R13_STAGE_SPARSE)
+constexpr const char* kTraceVersion="r13-release-warps-v1";
+#elif defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-second-prefill-v1";
 #elif defined(R13_OUTPUT_BACKGROUND) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-output-background-v1";
@@ -205,6 +210,7 @@ struct Args {
   unsigned epilogue_defer = 0;
   unsigned second_prefill = 0;
   unsigned a_row_rotation = 0;
+  unsigned release_warp_observer = 0;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -247,11 +253,16 @@ struct Args {
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
       else if(key=="--ready-observer")ready_observer=std::stoul(v);
       else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
+      else if(key=="--release-warp-observer")release_warp_observer=std::stoul(v);
       else if(key=="--second-prefill")second_prefill=std::stoul(v);
       else if(key=="--a-row-rotation")a_row_rotation=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (release_warp_observer > 1) throw std::runtime_error("release-warp-observer must be 0 or 1");
+#ifndef R13_RELEASE_WARPS
+    if (release_warp_observer || mode == "check-release-warps") throw std::runtime_error("release warp observer requires experiment build");
+#endif
     if (a_row_rotation > 1) throw std::runtime_error("a-row-rotation must be 0 or 1");
 #ifndef R13_A_ROW_ROTATION
     if (a_row_rotation || mode == "check-a-row-rotation") throw std::runtime_error("A rotation requires experiment build");
@@ -410,7 +421,7 @@ int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
     std::cout << std::setprecision(10);
-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill" && o.mode != "check-a-row-rotation")
+    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill" && o.mode != "check-a-row-rotation" && o.mode != "check-release-warps")
       throw std::runtime_error("unknown mode " + o.mode);
 
     Options check(1, argv);
@@ -496,6 +507,21 @@ int main(int argc, char** argv) {
     const char* resolved_raster = launch_params.scheduler.raster_order_ ==
         decltype(launch_params.scheduler.raster_order_)::AlongN ? "along_n" : "along_m";
     int ctas = int(grid.x * grid.y * grid.z);
+#ifdef R13_RELEASE_WARPS
+    if (V06_CFG != 1 || (Mainloop::DispatchPolicy::Stages != 4 && Mainloop::DispatchPolicy::Stages != 6) ||
+        o.m != 2816 || o.n != 1536 || o.k != 4096 ||
+        grid.x != 1 || grid.y != 132 || grid.z != 1 || o.swizzle != 1 ||
+        o.raster_order != "heuristic" || std::string(resolved_raster) != "along_n" ||
+        lda != 4096 || ldb != 1536 || ldd != 1536 || alloc_lda != 4104 || alloc_ldb != 1536 ||
+        storage_m != 2816 || storage_n != 1536 || input_map_m != 2816 || input_map_n != 1536 ||
+        o.zero_m != -1 || o.zero_n != -1 || o.input_mode != "dyadic" || o.seed != 17 ||
+        o.history_mode != "off" || mirror_sources || o.evict || o.b_offset_bytes || o.b_allocation_extra_bytes ||
+        o.work_swap55_91 || o.producer_delay_ns || o.second_prefill || o.epilogue_defer ||
+        o.a_row_rotation || o.first_supply_events || o.ready_observer)
+      throw std::runtime_error("release warp observer requires the declared sparse cfg_b pair");
+    unsigned no_release_observer=0;
+    CUDA_CHECK(cudaMemcpyToSymbol(r13_release_warp_observer,&no_release_observer,sizeof(unsigned)));
+#endif
 #ifdef R13_EPILOGUE_ORDER
     if ((o.epilogue_defer || o.mode == "check-epilogue-order") &&
         (V06_CFG != 1 || o.m != 2816 || o.n != 1536 || o.k != 4096 ||
@@ -597,7 +623,7 @@ int main(int argc, char** argv) {
         o.swizzle!=1 || o.raster_order!="heuristic" || separate_input_map || o.evict ||
         o.zero_m!=-1 || o.zero_n!=-1 || o.input_mode!="dyadic" || o.seed!=17 ||
         o.work_swap55_91 || o.producer_delay_ns || o.epilogue_defer || o.second_prefill || o.a_row_rotation ||
-        o.first_supply_events || o.ready_observer || o.b_offset_bytes)
+        o.first_supply_events || o.ready_observer || o.release_warp_observer || o.b_offset_bytes)
       throw std::runtime_error("plain prefix host requires the declared fixed-history observation target");
     R09PlainPrefixSpec prefix_spec{1,o.m,o.n,o.k,scheduler_sms,lda,ldb,ldd,target_a,target_b,d.pointer};
     R09PlainPrefixHost plain_prefix(o.plain_prefix_module,prefix_spec);
@@ -756,6 +782,8 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"release_warp_observer\":" << o.release_warp_observer
+                << ",\"release_warp_warmup\":0"
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
                 << ",\"a_row_rotation\":" << o.a_row_rotation
@@ -832,6 +860,10 @@ int main(int argc, char** argv) {
       std::cout << "}\n";
     };
     auto set_target_epilogue = [&]() {
+#ifdef R13_RELEASE_WARPS
+      if (o.release_warp_observer>1) throw std::runtime_error("invalid release warp observer flag");
+      CUDA_CHECK(cudaMemcpyToSymbol(r13_release_warp_observer,&o.release_warp_observer,sizeof(unsigned)));
+#endif
 #ifdef R13_EPILOGUE_ORDER
       CUDA_CHECK(cudaMemcpyToSymbol(r13_epilogue_defer,&o.epilogue_defer,sizeof(o.epilogue_defer)));
 #endif
@@ -921,6 +953,8 @@ int main(int argc, char** argv) {
                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
+                << ",\"release_warp_observer\":" << o.release_warp_observer
+                << ",\"release_warp_warmup\":0"
                 << ",\"epilogue_defer\":" << o.epilogue_defer
                 << ",\"epilogue_warmup_defer\":0"
                 << ",\"a_row_rotation\":" << o.a_row_rotation
@@ -977,13 +1011,19 @@ int main(int argc, char** argv) {
               << "}\n";
     if (o.mode == "setup")
       return 0;
-#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION)
-    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation") {
+#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION) || defined(R13_RELEASE_WARPS)
+    if (o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation" || o.mode == "check-release-warps") {
       // Outside timing: compare all output bits in one allocation, not a sampled hash.
       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
       unsigned flag=0;
       if (o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation") set_target_epilogue();
       auto set_check_flag = [&](unsigned value) {
+#ifdef R13_RELEASE_WARPS
+        if (o.mode == "check-release-warps") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r13_release_warp_observer,&value,sizeof(value)));
+          return;
+        }
+#endif
 #ifdef R13_A_ROW_ROTATION
         if (o.mode == "check-a-row-rotation") {
           CUDA_CHECK(cudaMemcpyToSymbol(r13_a_row_rotation,&value,sizeof(value)));
@@ -1040,7 +1080,7 @@ int main(int argc, char** argv) {
         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
       }
-      std::cout << "{\"event\":\"" << (o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+      std::cout << "{\"event\":\"" << (o.mode == "check-release-warps" ? "release_warps_check" : o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }

@@ -291,9 +291,55 @@ def make_a_row_rotation(source):
     path.write_text(text)
 
 
+def validate_release_warp_rows(rows,stage_sparse,stage_progress,dual_clock):
+    if not stage_sparse or stage_progress or dual_clock:
+        raise ValueError('release warp observer requires the original sparse protocol')
+    fixed=dict(config='cfg_b',m=2816,n=1536,k=4096,lda=4096,ldb=1536,ldd=1536,
+        alloc_lda=4104,alloc_ldb=1536,storage_m=2816,storage_n=1536,zero_m=-1,zero_n=-1,
+        swizzle=1,raster_order='heuristic',input_mode='dyadic',seed=17,variants=['plain','stamped'])
+    forbidden=('a_row_rotation','epilogue_defer','second_prefill','producer_delay_ns','first_supply_events',
+        'ready_observer','work_swap55_91','b_offset_bytes','b_allocation_extra_bytes','evict','mirror_target_slot')
+    for row in rows:
+        if (any(row.get(k)!=v for k,v in fixed.items()) or row.get('stages') not in (4,6)
+                or type(row.get('release_warp_observer')) is not int or row['release_warp_observer'] not in (0,1)
+                or any(row.get(k,0) for k in forbidden)
+                or row.get('history_mode','off')!='off' or row.get('history_source','original')!='original'
+                or row.get('input_map_m',2816)!=2816 or row.get('input_map_n',1536)!=1536):
+            raise ValueError('release warp observer is limited to the declared cfg_b target')
+
+
+def make_release_warp_overlay(source):
+    """Add deferred clock pairs for the other three warps; keep arrivals intact."""
+    path=source/'overlay'/common.MAINLOOP
+    text=path.read_text()
+    old='    const bool r13_target = r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0;\n'
+    new=old+('    const bool r13_release_target = r13_sparse_cta() && v06_tile_seq==0 &&\n'
+        '        (threadIdx.x==256 || (r13_release_warp_observer && threadIdx.x>=288 && threadIdx.x<=352 && threadIdx.x%32==0));\n')
+    if text.count(old)!=1:raise ValueError('release warp target site changed')
+    text=text.replace(old,new,1)
+    before='if (r13_target && r13_k==17) { r13_s->release_slot='
+    after='if (r13_target && r13_k==17) r13_s->release_end='
+    if text.count(before)!=1 or text.count(after)!=1:raise ValueError('release bracket sites changed')
+    count=text.count('pipeline.consumer_release(smem_pipe_release);')
+    text=text.replace(before,before.replace('r13_target','r13_release_target'),1)
+    text=text.replace(after,after.replace('r13_target','r13_release_target'),1)
+    if text.count('pipeline.consumer_release(smem_pipe_release);')!=count:
+        raise ValueError('release arrival count changed')
+    path.write_text(text)
+    path=source/'overlay'/common.PING;text=path.read_text()
+    site='      if (r13_sparse_cta() && threadIdx.x==256) r13_sparse_consumer_flush(r13_s);\n'
+    text=common.insert_once(text,site,
+        '      if (r13_sparse_cta() && threadIdx.x>=256 && threadIdx.x%32==0 &&\n'
+        '          (threadIdx.x==256 || r13_release_warp_observer)) r13_release_warp_flush(r13_s);\n',after=True)
+    path.write_text(text)
+
+
 def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,stage_progress=False,stage_handoff=False):
     stage_progress=stage_progress or stage_handoff
     rows=cases(family) if rows is None else rows
+    release_warps=any('release_warp_observer' in row for row in rows)
+    if release_warps:
+        validate_release_warp_rows(rows,stage_sparse,stage_progress,dual_clock)
     root.mkdir(parents=True,exist_ok=False);source=root/'source';(source/'probes').mkdir(parents=True);(root/'build').mkdir()
     for name in ['run_r18.py','run_r18_lite.py','run_r19.py','run_b01_cache.py','analyze_r18.py','v06_run.py','v06_model.py','v08_model.py']:
         shutil.copy2(ROOT/name,source/name)
@@ -414,6 +460,9 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
         stage_variants= ['plain','progress'] if epilogue_order else ['plain','progress','stamped'] if stage_handoff else ['plain','stamped']
         if any(r.get('variants',stage_variants)!=stage_variants and not (r['config']=='cfg_b' and r.get('set')=='reference' and r.get('variants')==['plain']) for r in rows):raise ValueError('stage observation variants differ from declared protocol')
         make_stage_sparse_overlay(source, progress=stage_progress, handoff=stage_handoff)
+    if release_warps:
+        make_release_warp_overlay(source)
+        (source/'overlay/v06_trace.hpp').write_text('#pragma once\n#include "../probes/v06_trace.hpp"\n')
     commands={}
     variants=['plain','dual'] if a_rotation else ['plain','progress'] if epilogue_order else ['plain','progress','stamped'] if stage_handoff else ['plain','wide','stamped','dual'] if dual_clock else ['plain'] if family=='b01_cache' else ['plain','stamped']
     configurations={common.binary_prefix(r):(r['config'],r.get('stages')) for r in rows}
@@ -426,6 +475,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             if variant not in ['plain','wide','stamped','dual','ends'] and not (stage_progress and variant=='progress'):raise ValueError('unknown observation variant')
             if variant=='dual' and not dual_clock:raise ValueError('dual observation requires --dual-clock')
             cmd=['nvcc','-std=c++17','-O3','-DNDEBUG','-gencode=arch=compute_90a,code=sm_90a','-lineinfo','--ptxas-options=-v',f'-DV06_CFG={CONFIGS[config]}']
+            if release_warps:cmd.append('-DR13_RELEASE_WARPS')
             if epilogue_order:cmd.append('-DR13_EPILOGUE_ORDER')
             if output_background:cmd.append('-DR13_OUTPUT_BACKGROUND')
             if second_prefill:cmd.append('-DR13_SECOND_PREFILL')
@@ -447,14 +497,14 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r18-dual-clock-events' if a_rotation else 'r13-second-prefill-v1' if second_prefill else 'r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-release-warps-v1' if release_warps else 'r18-dual-clock-events' if a_rotation else 'r13-second-prefill-v1' if second_prefill else 'r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 
 def case_args(row):
     keys=['m','n','k','lda','ldb','ldd','storage_m','storage_n','zero_m','zero_n','swizzle']
     if 'evict' in row:keys.append('evict')
-    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer','epilogue_defer','second_prefill','a_row_rotation']:
+    for key in ['sm_count','input_mode','seed','alloc_lda','alloc_ldb','input_map_m','input_map_n','warmup_policy','raster_order','history_mode','history_source','mirror_target_slot','b_offset_bytes','b_allocation_extra_bytes','work_swap55_91','producer_delay_ns','first_supply_events','ready_observer','epilogue_defer','second_prefill','a_row_rotation','release_warp_observer']:
         if key in row:keys.append(key)
     return [str(x) for key in keys for x in ('--'+key.replace('_','-'),row[key])]
 
