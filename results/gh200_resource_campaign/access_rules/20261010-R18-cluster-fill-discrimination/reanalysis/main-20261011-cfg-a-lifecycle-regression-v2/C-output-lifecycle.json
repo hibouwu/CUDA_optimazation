@@ -1,0 +1,355 @@
+{
+  "scope": "Existing R14 endpoint binding in cycles; no new heldout or transferred service price.",
+  "archive": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output",
+  "source_reference": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination",
+  "archived_source_files_verified": 852,
+  "qualification": [
+    {
+      "case": "cfg_a_k4096_t1",
+      "plain_cv": 0.029449640837233768,
+      "trace_cv": 0.015847336427610614,
+      "paired_perturbation": 0.027016846052768995,
+      "terminal_E_cycles": 3167.5,
+      "middle_windows": 0,
+      "middle_processes": [],
+      "middle_permit_to_release_cycles": null,
+      "middle_after_next_permit_cycles": null
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "plain_cv": 0.0024300581016087797,
+      "trace_cv": 0.0058944956214844425,
+      "paired_perturbation": 0.014870060035899524,
+      "terminal_E_cycles": 3052.0,
+      "middle_windows": 70,
+      "middle_processes": [
+        {
+          "trial": 0,
+          "windows": 7,
+          "permit_to_release_cycles": 36589,
+          "carried_to_next_permit_cycles": 35932,
+          "after_next_permit_cycles": 656
+        },
+        {
+          "trial": 1,
+          "windows": 7,
+          "permit_to_release_cycles": 36616,
+          "carried_to_next_permit_cycles": 35932,
+          "after_next_permit_cycles": 664
+        },
+        {
+          "trial": 2,
+          "windows": 7,
+          "permit_to_release_cycles": 36585,
+          "carried_to_next_permit_cycles": 35939,
+          "after_next_permit_cycles": 642
+        },
+        {
+          "trial": 3,
+          "windows": 7,
+          "permit_to_release_cycles": 36587,
+          "carried_to_next_permit_cycles": 35939,
+          "after_next_permit_cycles": 646
+        },
+        {
+          "trial": 4,
+          "windows": 7,
+          "permit_to_release_cycles": 36604,
+          "carried_to_next_permit_cycles": 35931,
+          "after_next_permit_cycles": 659
+        },
+        {
+          "trial": 5,
+          "windows": 7,
+          "permit_to_release_cycles": 36597,
+          "carried_to_next_permit_cycles": 35939,
+          "after_next_permit_cycles": 660
+        },
+        {
+          "trial": 6,
+          "windows": 7,
+          "permit_to_release_cycles": 36600,
+          "carried_to_next_permit_cycles": 35930,
+          "after_next_permit_cycles": 656
+        },
+        {
+          "trial": 7,
+          "windows": 7,
+          "permit_to_release_cycles": 36602,
+          "carried_to_next_permit_cycles": 35933,
+          "after_next_permit_cycles": 669
+        },
+        {
+          "trial": 8,
+          "windows": 7,
+          "permit_to_release_cycles": 36589,
+          "carried_to_next_permit_cycles": 35920,
+          "after_next_permit_cycles": 670
+        },
+        {
+          "trial": 9,
+          "windows": 7,
+          "permit_to_release_cycles": 36644,
+          "carried_to_next_permit_cycles": 35944,
+          "after_next_permit_cycles": 652
+        }
+      ],
+      "middle_permit_to_release_cycles": 36598.5,
+      "middle_after_next_permit_cycles": 657.5
+    }
+  ],
+  "processes": [
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 0,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-00/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 1,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-01/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 2,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-02/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 3,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-03/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 4,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-04/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 5,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-05/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 6,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-06/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 7,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-07/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 8,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-08/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t1",
+      "trial": 9,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-09/stdout.txt.gz",
+      "source_guarantee_windows": 1,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 0,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-00/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 1,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-01/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 2,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-02/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 3,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-03/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 4,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-04/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 5,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-05/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 6,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-06/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 7,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-07/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 8,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-08/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    },
+    {
+      "case": "cfg_a_k4096_t8",
+      "trial": 9,
+      "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-09/stdout.txt.gz",
+      "source_guarantee_windows": 8,
+      "zero_lag_feasible": true
+    }
+  ],
+  "failures": [],
+  "checked_values": 11796480,
+  "source_sha256": {
+    "cutlass/include/cutlass/pipeline/sm90_pipeline.hpp": "7c61d847933cb12a14fcdc68cec902b44c802c9eb34273218c29e601f9c53dee",
+    "cutlass/include/cutlass/epilogue/collective/sm90_epilogue_tma_warpspecialized.hpp": "5400755ecaaf74acc4d726b4f9f626336c47c5abd929018efbe81c06c26cb70d",
+    "cutlass/include/cutlass/epilogue/collective/builders/sm90_builder.inl": "a514f78ea6539cf83d50995ada026e08118da259da98bc80f8cd39eaac943fec",
+    "cutlass/include/cute/arch/copy_sm90_tma.hpp": "d31756a7105dc875751fdef875be1b9f2bc008111d0c45734fed39465c12c636",
+    "probes/r14.cu": "deb564a47b820b19c8f9751823bc7241dd8cb69bbae1702ef05b22441d4f296c",
+    "probes/r14_trace.hpp": "45e282c479649901ce17407fb886b1d7312db9b9468749370473902f70a27395",
+    "run_r14.py": "7c33a2a520886becf71d4228563a59cf4f3632febbc2f708f4887c0d4253473d"
+  },
+  "binary_sha256": {
+    "cfg_a_plain": "a9403f9c51bb32eb66ecd908dbe9a7333f38cd522a18ee40166b5ec0991a15d7",
+    "cfg_a_trace": "beca5dcc1b6a2c5f1aad27a38e6da09f14ecc0ff053f4a567757d36c743199a2"
+  },
+  "raw_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/source_hashes.json": "d68f9aeb64fb6c1502bb2eaa8d792735af476e23437bb404ab73b79989747d05",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/environment.json": "1c0a947094c4a504424093f2f105f3ed56c62c911094721303cbbf61fd7dc730",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/protocol-main.json": "8f17b3f04c0032e02be03da00308867398ea5c36bf03af8f0fb90c94b16368f1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/build/binary_hashes.json": "031936a40b9f4ef2a1ac76b1470e02e18cd942972f403963830aa8b277074e16",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-00/result.json": "2d205309776a2f9889520b682468294234f20165d19cb4779e79ed4abd751cc9",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-00/stdout.txt.gz": "26518f2f980da41e7d8e0434e9f9cdcdd3bb7024200add89bc2510ef86dcbc7d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-01/result.json": "dcb6dc84be97ea09543141e2bdf6dc380bf2c4cd9048b62cc403b3f572d4069b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-01/stdout.txt.gz": "ae59d42c5ad35e3f259e35611251759924bb713b2277d780309f1f9e0e2b1b3b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-02/result.json": "e0c6fead639bf9694a93c268b789f3a866d5d0015c81cad8880149ad842cb85a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-02/stdout.txt.gz": "d0dcd513144ae2e5ef7d52af57fe384c227fedea6af4d3912dc2941aa097296e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-03/result.json": "92bb03a653706666bb9d3b647836d91d0b36c49bae8a265647b57106574c5bbd",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-03/stdout.txt.gz": "52da16d9e0cf7905829b5ba81796e70e1cf58556562c8a5c8996b3a33d0ac237",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-04/result.json": "685ca473bf383b8d5fc68ae7c92ae8167d7bb7363923769775adf1f56b4b1e8a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-04/stdout.txt.gz": "3b4168a990c73e52fbb1796ae78456057b5517344d468b78106767be6172c7ff",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-05/result.json": "eba91ca4e9aa20a2c43ee202a652f338dae4eefe6348ec45a4e23064ef457c61",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-05/stdout.txt.gz": "209fcb85ca7aacf837b2785f3c14b599d8f454306af61021c31e17806cac86bf",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-06/result.json": "0cb75bf8beb2f154c9f12b8055bf8a4bbde153b46916ea3faa42a852770284ee",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-06/stdout.txt.gz": "993a5d403eeeb8e60b2c15bbaad5b1ec78995d30b0c2862ab8e27abf8dd4a6d9",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-07/result.json": "41b97bb20cc377532fa062ff160f18d95f95c783fbd27ae8bb10f68db3a24fd8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-07/stdout.txt.gz": "124d20fdb3bbf066062aad4235cecdf4ca9fac5b1cd9b3065731fb46591065fb",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-08/result.json": "e117576d1be046712a02fd9cd047e094689b2a3bcb9c69b49b851a172ddd0b55",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-08/stdout.txt.gz": "95bb4a06100e1dd007bf50060be784896c6924fc2f5aeb22d10b33713af41685",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-09/result.json": "9af1970fff09bc0d9ba53588c7faf1f38838dd5dbd0eab67e35e1865da32eed4",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t1/main-09/stdout.txt.gz": "8839286b5567cd6f8391579e1d7c5e821ce2e6ee96172d6dc7edb4e4335b65dd",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-00/result.json": "db86d1338fc7422001ffc5d87c640bdd72a590ee836458aaaadf659d2f1e1b1e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-00/stdout.txt.gz": "50d36f61740c269ccb9adac719a1db3837fc3a749d41bde4038497bb5b2cebf5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-01/result.json": "73e22bb8f2f1226cc74973131fbe68eafce18c4dd92e767dfb1515aa535ec5af",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-01/stdout.txt.gz": "73da3fcc4f0005b3ca6c1b45c4224a91d56f994ec0efdd9c15759646b83da7c6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-02/result.json": "4d2658cfbf80548179b9674618dea5fb8dc92720e43bc574b94198d5ee85a2a6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-02/stdout.txt.gz": "f3b0fb891f72a0e24b6106129bba61fb0a73466a7a5e1187f09c60abe13bc6f9",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-03/result.json": "8364a5e8dd3486fb3767370abfafe387bd9240fa5ba09f4b4ff82b1674695a8b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-03/stdout.txt.gz": "4e3607e88e726b6a42ebe637736fb4ee842f2910e11ba507eac04d6e0673180b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-04/result.json": "156ba2d7b9bacf5d9c499a0ae335b68e01e9877400baa2ebc1358851fbd64a94",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-04/stdout.txt.gz": "b48fb17dbbc588c8f589d3a9eae074533f7da38e61dd43b62de8a7d301409372",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-05/result.json": "51499f6da2fbad12a054e8d2a4a31ef6ea4cc3ad6ac20d04a3e3816fcd5a8e72",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-05/stdout.txt.gz": "35e564310240fb5de10d99844e2518836cf951b5ac22ca05ca11a26f055d6462",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-06/result.json": "d3b68fe97eb198cbdaa56c6e3721712f3252a48e09512aeeaddc30b28096403a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-06/stdout.txt.gz": "fba28e5d038dbe3b57871c9428417f97d806934407411c2e43bcf847174f59a3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-07/result.json": "680477ffcff0f66835c7194ca7ec20cd45010416789b9a4d2d27e5777b66eb11",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-07/stdout.txt.gz": "2e387d219865a4800c45ce0564ee62124309fa78ec4ee1280bb5d7c45949f09d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-08/result.json": "541f3ca9573e5b7684c9e22e91cb121e3a05697c9a6e57edb0dd3570ef5219e3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-08/stdout.txt.gz": "fdad3eeb413d9feb176fc0a5ca95064858465216f45189aed2fe97b70c0dbe21",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-09/result.json": "b3134bdfc08e71ad05c05e93a34490dc5de46f451b272144b9ef8bc6cb8b30a5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t1/main-09/stdout.txt.gz": "c0c00e5b169075557a9f16aa3db9f538a480ffcc4919fca128993ccf35e04b49",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-00/result.json": "7ee3bcd2b8fc314525fc82f2a256e9f78a7af98c9d433ddb083ce9e44b20b1a2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-00/stdout.txt.gz": "0ac51953baef0130261d5884d4971381f7a2c6c71f737ca7e2407860b0088605",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-01/result.json": "9abbffb3c32e42a6fd89707bfbbaf763762cba0a230dabb4d7d279ec1b6ee66f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-01/stdout.txt.gz": "e69ae51879301fe4c46e0e4c114ff9abb864599f01bdbbf1ac0b95335170b60f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-02/result.json": "c992dd9bac48818c81aaca6342de3e79879debd45cf2f5d69ed705cd395d9b26",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-02/stdout.txt.gz": "8b8b11e4b319ba3921030cc37ee3c9a2bd32f69a610c97dd11782d2ca1b44b21",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-03/result.json": "6cd0890b638506bcc8e8f3e3b969cd30c2db5f564222edfa9249867fc34a3ace",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-03/stdout.txt.gz": "fd6c52085b69600c79e0e6eafc04fe346f9434366a4a0f9085fd31d440b4fa3e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-04/result.json": "334416760fe13901e7aa920fcc567484cba38980bef9ffd2ed87bb290d3223bc",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-04/stdout.txt.gz": "960135db2aac57b25f3ec8fd73a827a99449369acd19accfe1c7f5ed0767a671",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-05/result.json": "f40508965fb099539e5d85d3f37c2548197d0334ec7a59feccd11ac8b6f0f6c3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-05/stdout.txt.gz": "273f412ac456f674bc9b6b8359a052fec3f35754774ee2b7ee4ac1fb32f7b21c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-06/result.json": "22a705a3d6ed58c0aa67b6c1953d50bdf1124151450fdf9c915954fc64b67e76",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-06/stdout.txt.gz": "5dd9c24c7c59d444ce0793a71f71a3a932d9e0b324a60a7e738ab88fc507d6b6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-07/result.json": "f47ef23e4ce5890deea78ec6432d7c91cdc6d682563fd1050f2693bbb73c8698",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-07/stdout.txt.gz": "bbd5704ba88ae06774bb4db800addea170ebc052b120cbbbd9af1cb56209e44e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-08/result.json": "2dcb5b5e82ecee7d1093e171ca81f93d16475582b783b1a6590f1640c3adce20",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-08/stdout.txt.gz": "0133dfc2cb6cfaf6d29bddd4d0313ca069e630ebf7a05bb64f42bf5e4dc52385",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-09/result.json": "d18dc59f51b95578545ee1ac136f3737e2f57902635cc574591549205d263fba",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/plain_cfg_a_k4096_t8/main-09/stdout.txt.gz": "3a7cfbd8bd43ba854fd3055e333031dbb312f29a0767e06a87cddb181bd5ace2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-00/result.json": "2e695a6a6ca4536e19bc0cf485da47e0f4b5be20faf9b0e84e790599cc002813",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-00/stdout.txt.gz": "2a44fef2eba858a8d6343092dd76b9a3b460853362de3e17e29efaec71fb033a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-01/result.json": "5fcab067c3601bac16224d5cbc64de00e08f58cfc01c89263fb4425e06f1ce90",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-01/stdout.txt.gz": "1062ea61fccda8881a9b6569959784a4a4d50ea3bc058a59d77cedfda5ab2f80",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-02/result.json": "8c60dfa660082cc5fee0bc29d7a62efd4dc2fb8cf1ca914cfe99bfa7acfa8cda",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-02/stdout.txt.gz": "0154d8bbe0be7081a5a3ea5a9003ff4b7ae199725ff3dac25acef249e3cb351b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-03/result.json": "2c4793092aef3c2aa40e9d500ee780d771726592f784baed2b03623782b996ab",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-03/stdout.txt.gz": "4c8d064601da8bd00b761ab6a8aa64c21c6b56b6c7b6b08d51093caf8e2ccbff",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-04/result.json": "d7026f80355fde38ad2f4f49e62b40a584db1cf9c2a17f0b5f4e63c2cae88944",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-04/stdout.txt.gz": "35ed805374f6da7007ded9ed0f15e1a007dc2fb5ae21d13c400410c9c9c0619e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-05/result.json": "892373a4ab40022e3053cbb5001ade0874f4f073e5017b7e698578c87a0d984a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-05/stdout.txt.gz": "3042d3a30d922afefaebf3d86718402a74395fcab8d40f229b85c0cebbe905d6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-06/result.json": "e9459581d104a07d3da6d4f187f34c592d49e1f0cddda76b3a5179aa5be75ef5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-06/stdout.txt.gz": "86c28c85bf661cb94860e03fbef1ce6b4a1e5213803c0558bf6dda7ddd61c07b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-07/result.json": "cd8a359e0614e122fd989c9c4ba08e23139878a42d5b337b0762a8c9bca39d94",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-07/stdout.txt.gz": "f773c966af08588e046ce31b9b9eaa73cd9545e33227e4624257d85fb4f9b07f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-08/result.json": "f4d959efddbc33360ce06adf385962e4d06f52b77dfc087c321b990a6a0346cc",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-08/stdout.txt.gz": "222ebf013ae2f9cdd2d1f6691abc09bcd3d5b035708907ea162a84f52e07862b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-09/result.json": "eb7a674e2c61ea583ba63d0374c468129283d89996d0a4a9dbe7100a61b4b852",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R14-job735985-v9-output/samples/trace_cfg_a_k4096_t8/main-09/stdout.txt.gz": "0b79d9c7f89b07d819ceabe6306163603322729086c280bc6001ad16fa6f3fe3"
+  },
+  "code_sha256": {
+    "analyze_r15_lifecycle.py": "0da9d57940ec6157f8e34970d7ee1f92bcf6755b1cb4f38feebb86d50993510d",
+    "output_model.py": "12d61317459ae649e5c7c438596d1e8b61a3fcd6faac7985afab44ebcec82a27",
+    "analyze_r14.py": "e44874ae3197c0ff04276120cd2700006a70d3d4abfb0c1d63615c7dc58852de"
+  },
+  "limits": [
+    "Middle source guarantee belongs to the next output acquire; not a standalone epilogue duration.",
+    "Actual source read completion may precede the guarantee timestamp.",
+    "Fine-stage ns slots are unobserved; no frequency conversion is used.",
+    "Four-CTA historical output observations do not calibrate full-GPU or new-card service."
+  ]
+}
