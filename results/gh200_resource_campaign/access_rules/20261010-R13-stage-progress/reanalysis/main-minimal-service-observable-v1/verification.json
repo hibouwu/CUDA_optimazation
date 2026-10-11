@@ -1,0 +1,447 @@
+{
+  "B_report_sha256": "2643ee51ae046a8640660281661ccb142e9be647a96c834ea629610a5410dfe2",
+  "verified_input_sha_count": 85,
+  "direct_raw_processes": 40,
+  "paired_early_difference_median_cycles": 2941.5,
+  "rows": [
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 0,
+      "values": {
+        "early": 11107,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "a4d5cb2e33e3b96e33c08e81290c04602f0d8bbb69fac006f8713cb81bcbed76"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 1,
+      "values": {
+        "early": 11090,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "3cdabea415200d3812cae492e7becbbde771f831a908359c6fc10062eeeb4d43"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 2,
+      "values": {
+        "early": 10310,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "d8aaad315fd9bc2cac51e7d30deb2b7c6f0f5febca0718193d48b2f0091542b0"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 3,
+      "values": {
+        "early": 10457,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "7733c924fff7d4bc89775eb0eb759abd7a705e6fcfecb8b7eb41fe53d91bd2a6"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 4,
+      "values": {
+        "early": 10311,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "ac45d1b77dfdde9ed142b2e8f515f78e3f83ae7b0296d6a2527c32e79e746a7b"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 5,
+      "values": {
+        "early": 10575,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "b8d902434b385d98425c887fca7636a2ad8182855be1b397a767b58bcb6e4db4"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 6,
+      "values": {
+        "early": 10679,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "5c611ca4f475294ffdff8a42f276c8d3841c6f4ab54c8cfb5011453f481cf471"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 7,
+      "values": {
+        "early": 11288,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "1481fc587ade5d429570780917e868e67a146b8475a1a547f209b5deac18f4d6"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 8,
+      "values": {
+        "early": 10982,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "d21f81d82caffc612fb999684388f62d48506961bb38204b3e86a96934f36e66"
+    },
+    {
+      "kind": "progress",
+      "stages": 4,
+      "trial": 9,
+      "values": {
+        "early": 10865,
+        "commit_to_wait1": 24
+      },
+      "raw_sha256": "c387c71859d22787724154e67e8020de43afa887d383f11bad8860084d28f9d1"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 0,
+      "values": {
+        "early": 7826,
+        "commit_to_wait1": 29
+      },
+      "raw_sha256": "5af7e12f2c375ee896f244f4b911749d865b6318428c99ca562a7e1940db1032"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 1,
+      "values": {
+        "early": 7929,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "e02a6c77364e2ab5980986e3af7d02260b4e23935d0b068d24d30cae0ce7a7b6"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 2,
+      "values": {
+        "early": 8037,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "cbc8421e612e2eb90276295153016d578e6e1001798d6ef194384051fa8421e5"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 3,
+      "values": {
+        "early": 7832,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "64bd9ec230e5d87860da1fccf6233bbd756718efbd09d2bf4a3c7c70dcdc5a81"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 4,
+      "values": {
+        "early": 8028,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "5dfaa3fb5b5c2fe9a2d14274cd860506a99969b05acc60e47df25f1a4c798a57"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 5,
+      "values": {
+        "early": 7834,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "9f59ca65442f206150e61bb08f89a07cac54c9729273eca4b79f8c2e2ca8e570"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 6,
+      "values": {
+        "early": 7832,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "c68c7ae309b5eeb8fce7c813a4f87f2839a87454d6c96d1c13c475f2f0e3ad75"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 7,
+      "values": {
+        "early": 7841,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "447a4f27bd4d7046635114c5bebb2b02157cd081bf182821cb9757a2aa5f29e5"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 8,
+      "values": {
+        "early": 7834,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "6dce24e1f3755fe115bc1e9f3cc9b06d2139227f5539bda86bbd86fc722983ae"
+    },
+    {
+      "kind": "progress",
+      "stages": 6,
+      "trial": 9,
+      "values": {
+        "early": 7829,
+        "commit_to_wait1": 27
+      },
+      "raw_sha256": "e2930ee6098e5c1262d7481974c6da37a7a842bd59b635b30908093ac1c5c202"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 0,
+      "values": {
+        "full_wait": 203,
+        "issue_to_commit": 195,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "6222f2f67a9ea21c7a85e1c1ebf1cac691b3a349f00b893379de3e864113c24c"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 1,
+      "values": {
+        "full_wait": 77,
+        "issue_to_commit": 321,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "bec07798a2c2c8bff4fb9c2aaadd898e61a4ed60ff9ccd0d57dad3f5413f292a"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 2,
+      "values": {
+        "full_wait": 326,
+        "issue_to_commit": 106,
+        "full_wait_to_wait1": 437
+      },
+      "raw_sha256": "4700c64cbc154a0a56825555c9dede62c3798bfe59722d2a3128cee17ec5f227"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 3,
+      "values": {
+        "full_wait": 430,
+        "issue_to_commit": 105,
+        "full_wait_to_wait1": 541
+      },
+      "raw_sha256": "5d777d327001fefc6fe988ee00fe90c8c948a4a4f24323ed3f039377205c5588"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 4,
+      "values": {
+        "full_wait": 442,
+        "issue_to_commit": 105,
+        "full_wait_to_wait1": 553
+      },
+      "raw_sha256": "113954dfedaab728bc937779907e0d1dad9ebd09a3a30243322b8305f16b6b56"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 5,
+      "values": {
+        "full_wait": 65,
+        "issue_to_commit": 333,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "419b454819f8f5f517218a19ec4fe94d9641a8f56d7d62045fbc46617962566c"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 6,
+      "values": {
+        "full_wait": 231,
+        "issue_to_commit": 167,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "1fb63e886db225614365331184a1daa33667fab2e1fcdb8ced060a1b16bbd919"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 7,
+      "values": {
+        "full_wait": 66,
+        "issue_to_commit": 332,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "9e7154d695a9d304f52c52fe5f1b81055f841dc60871ac1b3813f60f376f44b9"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 8,
+      "values": {
+        "full_wait": 387,
+        "issue_to_commit": 105,
+        "full_wait_to_wait1": 498
+      },
+      "raw_sha256": "f4b25063c913abe90494efc1e05bb2728f777694899b95ffc97396aa0ab6f2c3"
+    },
+    {
+      "kind": "sparse",
+      "stages": 4,
+      "trial": 9,
+      "values": {
+        "full_wait": 238,
+        "issue_to_commit": 155,
+        "full_wait_to_wait1": 399
+      },
+      "raw_sha256": "38b7bffe87873fc8a464a594a5585cbce9a7283c874ef7c0125ec0d5aca5ad89"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 0,
+      "values": {
+        "full_wait": 254,
+        "issue_to_commit": 144,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "41c6a7261f0623c7f87be600201b435f2525ac2376de838471e23c02684f10dc"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 1,
+      "values": {
+        "full_wait": 65,
+        "issue_to_commit": 333,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "c01dc625152de41ba76bee485e5d216628b5a8b84a2ce108845294c373aec044"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 2,
+      "values": {
+        "full_wait": 64,
+        "issue_to_commit": 329,
+        "full_wait_to_wait1": 399
+      },
+      "raw_sha256": "919c79cc263bab00c0630f598eb925f316fc386c657821835e0fc77753597c8b"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 3,
+      "values": {
+        "full_wait": 65,
+        "issue_to_commit": 333,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "dc9271ec7c600d2f2f0fc911b35e9173e912df3484b4f048207ecc9d60350b77"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 4,
+      "values": {
+        "full_wait": 65,
+        "issue_to_commit": 329,
+        "full_wait_to_wait1": 400
+      },
+      "raw_sha256": "3c07d50b476fbc12f3d0bfa49eccd7950bf2c96fc02a9a9712ed4d42f6f55448"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 5,
+      "values": {
+        "full_wait": 68,
+        "issue_to_commit": 330,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "f4de6cc2ec2062255c7bfdeae218c0c9a89dd6054b3ff85ddf2182e3f1e6aea6"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 6,
+      "values": {
+        "full_wait": 65,
+        "issue_to_commit": 336,
+        "full_wait_to_wait1": 407
+      },
+      "raw_sha256": "b959e69f3222d82a82aa6834421183023071103c19d52f8d5317544aa1b76e45"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 7,
+      "values": {
+        "full_wait": 66,
+        "issue_to_commit": 332,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "0a020a6b36b26eea60855eb33e96336b3a5317656740eebc7cc9014cdf052a35"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 8,
+      "values": {
+        "full_wait": 68,
+        "issue_to_commit": 333,
+        "full_wait_to_wait1": 407
+      },
+      "raw_sha256": "b9d1945daa2c2ca8e8a788479ceaa53936a07cdb221471217d0e3d49b38f7e4f"
+    },
+    {
+      "kind": "sparse",
+      "stages": 6,
+      "trial": 9,
+      "values": {
+        "full_wait": 68,
+        "issue_to_commit": 330,
+        "full_wait_to_wait1": 404
+      },
+      "raw_sha256": "4f5e6f20b2b2374c98d2926daa9984530f68941208ec6f9249f0e4cd713f5059"
+    }
+  ],
+  "source_has_no_wait_end_stamp": true,
+  "accepted_missing_observable": {
+    "name": "Q_early",
+    "definition": "sum over local K groups i=2..16 of B_i-H_i, in one CTA0/second-output/same-invocation native-cycle domain.",
+    "H_i": "marker immediately before consumer_try_wait/consumer_wait",
+    "B_i": "marker immediately after successful consumer_wait returns",
+    "measured_total": "D_early=C16-C1",
+    "exact_partition": "D_early=Q_early+sum_i[(H_i-C_(i-1))+(C_i-B_i)]",
+    "unit": "One invocation supplies one joint (D_early,Q_early) value; stage/trial arms are independent processes.",
+    "limitations": "Q_early measures the observed full-wait path including polling/observer effects. It is not hardware readiness, bare TMA latency, shared-source service, or a complete predictor."
+  },
+  "limits": [
+    "Progress has C1/C16 plus H16/H17 and selected wait1 markers, but no B_i or cumulative Q_early.",
+    "Sparse has B16-H16 and C16-B16 for only group16 under a different observer. It supplies no sum over groups2..16.",
+    "The selected sparse group full-wait increase is offset by a shorter issue-to-commit segment; multiplying it by15 or borrowing it into progress is invalid.",
+    "Handoff/second-prefill adds entry readiness controls, not the missing internal full-wait-return series. Uniform initial or boundary shifts have already failed the stated model subclasses."
+  ],
+  "prediction_qualified": false,
+  "observation_qualified": false
+}

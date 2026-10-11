@@ -1,0 +1,87 @@
+{
+  "schema": "r09-median-width-necessary-bound-review/1",
+  "reviewed_source_sha256": "1da365ee5d973222ccd6c5abef85046653ae0829ff3a7d42278735a2486d0f6b",
+  "reviewed_report_sha256": "9d77eeb9cab7bf44a2ec53be4ac797b9e45bf2313831666ad5920d2f7c88a2fa",
+  "ranks_verified": [
+    14,
+    51
+  ],
+  "required_count": 38,
+  "arm_width_limit_ns": 128,
+  "simultaneous_failure_14_exact": "27636660313296849/576460752303423488",
+  "simultaneous_failure_15_exact": "103870790347690737/576460752303423488",
+  "independent_integer_polynomial_recalculation": [
+    {
+      "cohort": "off_on",
+      "arm": 0,
+      "series": "6/1/1/0,16/L",
+      "values_ns": [
+        40224,
+        40608,
+        40928,
+        40768,
+        41120,
+        41120,
+        40544,
+        41312,
+        40768,
+        40768
+      ],
+      "count_histogram": {
+        "1": 4,
+        "2": 2,
+        "3": 1
+      },
+      "bound_exact": "10582152464154062322543727770949884499414381721771231004897/10000000000000000000000000000000000000000000000000000000000000000",
+      "bound_float": 1.0582152464154063e-06
+    },
+    {
+      "cohort": "off_off",
+      "arm": 1,
+      "series": "48/0/0/3,10/L",
+      "values_ns": [
+        37824,
+        38016,
+        37632,
+        38048,
+        38240,
+        37792,
+        38336,
+        37472,
+        37664,
+        37504
+      ],
+      "count_histogram": {
+        "1": 3,
+        "2": 7
+      },
+      "bound_exact": "83757061913860341259436597449563124618361940952838939/2000000000000000000000000000000000000000000000000000000000000000",
+      "bound_float": 4.187853095693017e-11
+    }
+  ],
+  "small_sample_width_implication_cases": 4530,
+  "proof": [
+    "Difference interval [B14-A51,B51-A14] has length (B51-B14)+(A51-A14). Containment in [-64,64] requires its nonnegative component widths each <=128.",
+    "Width X51-X14<=128 puts indices14 through51, inclusively38 samples, inside [X14,X14+128]. The observed X14 is one of the fixed empirical support values.",
+    "Under64 IID draws from the fixed empirical population, each support-start count is binomial. Summing upper-tail probabilities bounds the union. Overlapping intervals require no independence.",
+    "All-coordinate equivalence implies this single-arm width event. Therefore the minimum fixed marginal bound bounds full success without between-arm or between-coordinate independence."
+  ],
+  "assumption_checks": {
+    "within_arm_across_repetition_IID_required": true,
+    "between_arms_independence_required": false,
+    "between_coordinates_independence_required": false,
+    "empirical_population_is_hypothetical_not_estimated_confidence": true,
+    "actual_GPU_power_identified": false
+  },
+  "boundary_examples": [
+    "IID is essential: draw one value from the empirical population, repeat it64 times. Every draw has the same marginal empirical distribution but individual width is0 with probability1.",
+    "Width is necessary only: constant armA=0 and constant armB=1000 both have width0, but the difference interval is[1000,1000], outside[-64,64]."
+  ],
+  "conclusion": "The exact necessary-width upper bounds are correct under the explicitly frozen hypothetical empirical IID scenario. They support pausing this unexecuted256-process proposal for observation-design review, not asserting actual hardware pass probability, a noise floor, all-n impossibility or changed acceptance gates.",
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/data/protocol-proposal.json": "c2965e40b08ba865e47c8dfc0dc073beb1c5403be117aeb9101613022d0cc610",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/joint-replay-v4/receipt.json": "e4db4f655d3a7abfae9cdf94269abe94a731835b48c18816eb2f2310f782e5c8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/joint-replay-v4/joint-process-records.json.gz": "52d6fb142da694e74333d960978eafa557653c64a14da0519d6d718036508282"
+  },
+  "qualification": false
+}

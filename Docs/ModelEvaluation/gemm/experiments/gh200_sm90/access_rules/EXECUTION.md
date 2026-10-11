@@ -331,3 +331,9 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [联合进程记录提取器](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：新增raw身份→完整setup/前序/同调用series→固定block数组的提取路径，拒绝重复、缺项、错误臂与SM映射变化；13定向测试。正式joint-replay-v3复放40raw，独立字复核17280窗口/69120复合标量/40 consumer FINAL包络，完整median输出与旧回放一致。复合量另存不入原6372覆盖族，不称CUDA或全局D完成；A/C限定审查已交接，无新GPU/资格。另B两版解码完整40replay/5280CTA/17280tile一致性补查重放字节同，新增warmup检查边界明确。
 
 [联合记录采集身份绑定修复](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：接入A对正式v3的归属错配发现，旧verifier在最终旧统计比较时拒绝，非端到端静默通过。v4要求独立固定回收包SHA，解码/统计前逐字核对归档manifest、records、complete和raw；两种真实记录错配入口拒绝且不产出统计，另联合block后改在verifier拒绝。19定向测试、合法40进程/17280窗口/69120复合标量/40包络重放通过，原4912/4729失败与全部资格false不变。A限定修复审查待回交；无新GPU、模型或留出成绩。
+
+[联合记录限定审查闭合](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-joint-interface-review-v1/README.md)：A v4归属复审完整报告主线重放逐字同，合法40进程及两种入口拒绝通过；R09提交281fae5e接入b2c7b7c0。C六文件交付及55输入SHA复核，40同调用event/10560FINAL/8640可恢复括号的完整报告除重定位路径同；v3/v4联合及统计gzip逐字同，仅复用历史端点语义，不把FINAL当D可见/CUDA完成或event差值当尾部。原观测资格仍false。
+
+[64次中位数草案的规划诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：在明确假想的各臂旧十样本经验IID总体下，14/51秩的等价必要宽度要求38/64样本落128ns区间。1728 L臂坐标的精确二项尾并集界中，off/off最强全族通过概率上界4.1878531e-11、off/on 1.0582152e-6；9个小总体穷举及独立十进制递推核对。非真实GPU功效/噪声下界，不改阈值、样本数、失败或资格；当前不直接冻结执行256进程草案，先明确局部服务所需观察设计。无新GPU。
+
+[有限stage的最小缺失观测](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-progress/reanalysis/main-minimal-service-observable-v1/README.md)：B85输入SHA及20progress/20sparse直接trace槽复核，C16−C1的stage4−6配对中位2941.5cycle保留。缺同调用group2..16 full-wait累计量Q_early，现单点与非均匀软件路径不能重建；不把单点乘15、跨协议拼接或追加统一gap。先辨别等待内/外，未新增probe/GPU或服务价。上述中位数规划必要界经A整数多项式独立复算，主线同文有理数核对。
