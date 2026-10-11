@@ -1,0 +1,27 @@
+{
+  "report_sha256": "bcf89b77dc9cb53f0a85bcf59538a7371cd1f95ecf1c11eb9e6f172e3e6303d1",
+  "runs": 20,
+  "first_windows": 2232,
+  "supply_groups_checked": 33480,
+  "logical_demands": 279936,
+  "endpoint_summary": [
+    {
+      "endpoint": "lower_exact",
+      "price_ns": 0.6986019086775304,
+      "minimum_margin_ns": 66.73066646068082,
+      "limiting_case": "r10_raster_along_n_p32",
+      "cta": 1,
+      "group": 1
+    },
+    {
+      "endpoint": "upper_exact",
+      "price_ns": 0.9175946547884187,
+      "minimum_margin_ns": 45.755011135850964,
+      "limiting_case": "r10_raster_along_m_p0",
+      "cta": 0,
+      "group": 1
+    }
+  ],
+  "interval_proven": false,
+  "analysis_sha256": "7496bfc6c8ed96235023211f97397411541c24246aad564a585a4eb28e737b1e"
+}
