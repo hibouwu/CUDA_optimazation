@@ -396,6 +396,7 @@ inline Errors check_boundary_output(const float* data, int m, int n, int k, int6
 }
 
 
+#ifndef R09_PLAIN_PREFIX_LIBRARY
 int main(int argc, char** argv) {
   try {
     Args o(argc, argv);
@@ -1020,3 +1021,5 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
+
+#endif // R09_PLAIN_PREFIX_LIBRARY
