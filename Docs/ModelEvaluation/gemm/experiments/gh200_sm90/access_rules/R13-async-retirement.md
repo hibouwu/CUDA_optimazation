@@ -86,6 +86,7 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 | 739717仅本CTA E0延期 | stage4 early周期十对缩短 | 局部E0单向排他最大响应仍不足；不唯一识别端口 |
 | 739740其它CTA E0延期 | stage4 early缩短、后段变长，按全部配对保留 | overlap数不能定价；同质FIFO不能解释空间排序与相位 |
 | 739790 second-prefill | stage4 early十对缩短，stage6无同量级响应；prefix16/prefixM逐调用闭合 | 累计到C16/M并不稳定改善；reduced子类必要界在stage4十对均失败；宽分支低训练误差仍漏局部等待/干预 |
+| 740334早段累计full等待 | 16组等待内stage差全正、等待外全负；逐组D=Q+R闭合 | 只分解当前观察路径；stage6开关响应条件区间为正，off Q不可见，不能转为无观察服务价 |
 | 全CTA空间跨度与排序 | stage4组差在原生cycle中仍存在；源共享打破旧FIFO严格保序 | 当前共享/不共享参数四条件跨度均不足；观测PROD偏移不能补齐；不能让early改善抵消跨度失败 |
 | 740033 A源轮换 | 首窗10/10有效；固定位置RMSE仅8/10优于地址对应 | 不支持稳定地址跟随，也未识别固定位置价格；740030/740032失败保留，不重跑 |
 | ready/服务结束/服务开始订阅截止 | 三候选均保留全部目的工作 | 有界重拟均未同时修复early方向与跨度；不继续扫描截止 |
@@ -854,6 +855,33 @@ cfg_b每Ktile包含8条HGMMA；commit对先前已发起的异步MMA分组，不�
 739717延后组trial0为X840、Y43、Z23637。若共同服务参数解释这两个实际调用，w<43会要求c≤506.6，与既有c≥512候选不容；给每个X/Y/Z窗口±20cycle容限，trial0和8仍排除w<23。此时仅得到必要区间w∈[23,63]、w+r≤73，并未标定plain硬件延迟。±20是模型偏差敏感性，不是测得的时间戳精度或新验收标准。[全部十配对与推导](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-stage-joint.md)。
 
 该结果要求共同局部规则解释所列实际调用，允许其ready历史不同；若只找每条件一条落入进程包络的代表轨迹，就不能借最大X那次调用直接排除它。当前完整递推求解未决定可行性，不把超时当无解。所选打点的软件路径也不保证每次迭代相同。暂不将全族排除作为推进门槛。[整卡上下文](R15-output-service.md#stage-output-context)已经确认stage6输出重叠更多但L更短，且第二L入口相对于前输出更早。输入group64的释放前驱距前输出末次提交在stage4/6相隔2/4组；下一候选先表达这个缓冲与相位关系，避免用孤立CTA常数吸收未建模重叠。
+
+<a id="stage-wait-sum"></a>
+
+### 早段stage差在累计full等待与等待外反向变化
+
+固定cfg_b、2816×1536×4096、stage4/6、AlongN、132 CTA、dyadic/seed17。CTA0的thread256属于Consumer1，其本地首输出是CTA第二输出j1；K64 prologue消耗local0，C1→C16恰含local2～16的15次等待。各组H在`consumer_try_wait`前，B在`consumer_wait`返回后，同调用定义`D=C16−C1`、`Q=Σ(B_i−H_i)`、`R=D−Q`。关闭新增观察时Q/R未观测，不赋零；三者只使用原生cycle，不按整段频率分摊ns。
+
+job740240的CPU-only CUDA12.9构建确认两stage均168寄存器、零spill、16条静态HGMMA；快/慢等待路径均在H/B之间。Q仍包含地址/phase准备、等待控制和取时影响；B之后的collector与汇合属于R，并可能改变后续等待到达。新binary的off仍含共同资源/控制路径，不能视为旧progress binary。[源码与SASS边界](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/README.md)。
+
+四目标正确性检查保留740259的原collector格式失败；修复固定四包与二维cluster后离线复用原stage4/off，740276仅执行余下三目标，合计16384个逐目标样本精确正确、两个on的count15/mask0x1fffc及包含链通过。每条件一次、两job，只证明字段可用；没有全D检查或扰动资格。[正确性记录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/README.md)。
+
+独立诊断job740334在采样前冻结16组，每组四个新进程s4/off、s4/on、s6/off、s6/on随机排序，各自先16次同buffer、同stage binary的off前序。64目标全部有效；主线复核12个冻结输入、64份raw、262144个数值样本。逐组取stage4−6差并核`ΔD_on=ΔQ+ΔR`，另核`ΔD_on−ΔD_off=s4(on−off)−s6(on−off)`；全部联合记录保留，不将各分项中位数组装成轨迹。[冻结定义与完整结果](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-diagnostic/README.md)、[主线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-diagnostic/verification.json)。
+
+| 逐组联合差，cycle | 中位数 | 第3～14次序量条件区间 |
+|---|---:|---:|
+| ΔD_on | 2593.5 | [2202,3048] |
+| ΔQ | 3519.5 | [3223,4003] |
+| ΔR | −1045.5 | [−1157,−909] |
+| ΔQ−ΔR | 4484.5 | [4246,5123] |
+| ΔD_off | 3103 | [2747,3391] |
+| ΔD_on−ΔD_off | −539.5 | [−1058,190] |
+| stage4 on−off D | 157.5 | [−331,646] |
+| stage6 on−off D | 670.5 | [349,820] |
+
+16组ΔQ全部为正（3087～4720），ΔR全部为负（−1198～−828）：当前观察路径中，等待内的额外时间被等待外的反向变化部分抵消。各分项中位数仍不可加，`3519.5−1045.5=2474`不等于2593.5。八量区间仅在各组可视为IID且同分布时具有声明的同时覆盖；随机顺序没有证明该假设，16组也不保证精度。区间含0只表示未排除0，不判等价。即使D等价，Q/R仍可能重分配；本批不能恢复off Q，也不能给无观察服务、ready或物理流量定价。
+
+下一判别针对累计观察反馈：在新同binary中比较all15与only16的单组Q16，另以all15与only2的Q2作此前无新增累计的对照。Q2/Q16均来自本组同一H/B差，不能拿旧H16标记替代新H。single模式的sum只是单组量，Q_early/R_early保持未观测，不把`D−Q16`叫等待外。干预改变的是前面H/B、collector及汇合的整个观察路径，不单独代表14次算术费用；新协议结果与本批分列。当前没有新增服务拟合或观察/预测资格。
 
 <a id="first-supply"></a>
 
