@@ -390,6 +390,9 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 | 原冻结r2 | 按原设备、执行/前序协议和Q/S定义复放原预测及失败成绩 | 后续源码依赖、未知历史、新卡或新观察版本不能沿用原资格 |
 | [200c前序event开发规则](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-prefix-clock-local-rule-v1/README.md) | 仅GPU-ef、binary `9fdbf10a`、cfg_c 2304×3072×4096/S4/cluster1×2、dyadic/seed17/sw1、16次同buffer前序后旧dual的首目标，producer-tail=0；静态setup及已完成前序event给出局部共同L窗口预测 | 接口允许预冻结规则及声明前序输入，本批仍是后验开发，未证明目标前数值预提交；观察、独立留出、完整时间及跨卡资格均未取得；新GT binary `c5476d9b`不在校准域内 |
 | [GT-CLOCK-GT区间接口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_gt_brackets.py) | 在调用者声明的采样包围和GT误差预算下计算边际时间/计数率及有标签误差；e=0可用于记录GT坐标的条件算术 | 实际物理误差预算与观察资格仍未知；[55组零宽双点反例](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/A-gt-zero-width-witness-v1/README.md)拒绝e=0精确时刻盒与同SM单值非递减计数器的合取，不能将这些盒直接定为公共时钟锚点或服务价 |
+| [R13早段累计等待观察](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/reanalysis/A-wait-sum-time-contract-v1/README.md) | cfg_b 2816×1536×4096/S4或S6、CTA0/thread256、第二CTA输出的C1→C16，累计group2～16共15个try_wait前→wait返回后的原生周期窗口；同进程16次前序关闭，之后设置目标开关 | 仅同SM、不回绕的周期诊断；关闭时累计量未观测，组件ns始终为空；等待外残量包含collector算术，不能按整段周期率分摊时间或直接定为软件／TMA服务价；观察与预测资格未取得 |
+
+该累计量的源码／解析器时间输入复审发现并修复了一个必要顺序漏检：`C1≤H2≤旧H16≤B16≤C16`。原decoder接收H2晚于旧H16的完整数值正确记录；修复后stage4/6均拒绝。固定源码、6项CPU测试及8个开关／大整数CLOCK例核对通过，2⁶³+17的原点不影响整数周期差；缺1次前序event也被拒绝。这里只验证源码位置、16次前序和周期接口，不能替代GPU扰动／空对照；两个stage使用不同前序kernel，不证明跨stage初态相同。
 
 换卡或改变目标binary、执行/历史协议、源工作定义、观测/完成端点时，先重新绑定身份，再按实际变化复核受影响的周期、换算与observer→plain映射。未受影响的静态计数和已验证证据可复用；没有对应校准、有效误差合同与新冻结验证时，不扩展正式时间预测的支持范围。当前主线新增的必要源码依赖没有时间费用，也不构成重校准依据。
 
