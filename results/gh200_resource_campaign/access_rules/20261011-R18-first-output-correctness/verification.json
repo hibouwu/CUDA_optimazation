@@ -1,0 +1,4538 @@
+{
+  "full_D": [
+    {
+      "map": 960,
+      "elements": 2703360,
+      "mismatches": 0,
+      "sha256": "ce64213db8411ee11dd6573585523b9e207eb486abe451628d7f990277962301"
+    },
+    {
+      "map": 1024,
+      "elements": 2703360,
+      "mismatches": 0,
+      "sha256": "ce64213db8411ee11dd6573585523b9e207eb486abe451628d7f990277962301"
+    }
+  ],
+  "records": [
+    {
+      "map": 960,
+      "flag": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "elapsed_us": 54.33600023,
+      "decoded": {
+        "enabled": false,
+        "records": [],
+        "observation_qualified": false,
+        "limits": "Decode/source-order checks only; numerical, binary, preparation and perturbation qualification required."
+      },
+      "raw_sha256": "32518ed8f981760d5ccd251d4e03abf5b69e1b204b41ced7b7e177c10bc6ca5b"
+    },
+    {
+      "map": 960,
+      "flag": 1,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "elapsed_us": 53.44000086,
+      "decoded": {
+        "enabled": true,
+        "records": [
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 0,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 130,
+              "sm_end": 130,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837907,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369870819,
+                  "globaltimer_ns": 1791709263205829440
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838075,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846070,
+                  "globaltimer_ns": 1791709263205814624
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854344,
+                  "globaltimer_ns": 1791709263205819744
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870337,
+                  "globaltimer_ns": 1791709263205829184
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870497,
+                  "globaltimer_ns": 1791709263205829280
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 0,
+              "role": 1,
+              "sm": 130,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 168,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7995,
+                  "ns": 5184
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8274,
+                  "ns": 5120
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15993,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 160,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 322,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32912,
+                "ns": 20128
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 0,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 130,
+              "sm_end": 130,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837900,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369870980,
+                  "globaltimer_ns": 1791709263205829536
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838136,
+                  "globaltimer_ns": 1791709263205809472
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846326,
+                  "globaltimer_ns": 1791709263205814784
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854542,
+                  "globaltimer_ns": 1791709263205819840
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870570,
+                  "globaltimer_ns": 1791709263205829312
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870685,
+                  "globaltimer_ns": 1791709263205829376
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 0,
+              "role": 2,
+              "sm": 130,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 236,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8190,
+                  "ns": 5312
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16028,
+                  "ns": 9472
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 115,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 295,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33080,
+                "ns": 20224
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 1,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 131,
+              "sm_end": 131,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837910,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369870781,
+                  "globaltimer_ns": 1791709263205829440
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838086,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846094,
+                  "globaltimer_ns": 1791709263205814624
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854317,
+                  "globaltimer_ns": 1791709263205819712
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870343,
+                  "globaltimer_ns": 1791709263205829184
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870467,
+                  "globaltimer_ns": 1791709263205829248
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 1,
+              "role": 1,
+              "sm": 131,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 176,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8008,
+                  "ns": 5184
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8223,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16026,
+                  "ns": 9472
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 124,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 314,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 32871,
+                "ns": 20128
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 1,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 131,
+              "sm_end": 131,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837916,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369871006,
+                  "globaltimer_ns": 1791709263205829568
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838147,
+                  "globaltimer_ns": 1791709263205809472
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846338,
+                  "globaltimer_ns": 1791709263205814784
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854553,
+                  "globaltimer_ns": 1791709263205819872
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870544,
+                  "globaltimer_ns": 1791709263205829312
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870656,
+                  "globaltimer_ns": 1791709263205829376
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 1,
+              "role": 2,
+              "sm": 131,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 231,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8191,
+                  "ns": 5312
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8215,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15991,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 112,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 350,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33090,
+                "ns": 20256
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 6,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 128,
+              "sm_end": 128,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837940,
+                  "globaltimer_ns": 1791709263205809344
+                },
+                "MAIN": {
+                  "clock64": 443914369871016,
+                  "globaltimer_ns": 1791709263205829568
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838168,
+                  "globaltimer_ns": 1791709263205809504
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846358,
+                  "globaltimer_ns": 1791709263205814784
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854577,
+                  "globaltimer_ns": 1791709263205819872
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870610,
+                  "globaltimer_ns": 1791709263205829312
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870770,
+                  "globaltimer_ns": 1791709263205829408
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 6,
+              "role": 1,
+              "sm": 128,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 228,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8190,
+                  "ns": 5280
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8219,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16033,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 160,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 246,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33076,
+                "ns": 20224
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 6,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 128,
+              "sm_end": 128,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837929,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369870800,
+                  "globaltimer_ns": 1791709263205829440
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838110,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846154,
+                  "globaltimer_ns": 1791709263205814656
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854370,
+                  "globaltimer_ns": 1791709263205819744
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870366,
+                  "globaltimer_ns": 1791709263205829184
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870531,
+                  "globaltimer_ns": 1791709263205829280
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 6,
+              "role": 2,
+              "sm": 128,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 181,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8044,
+                  "ns": 5216
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15996,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 269,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32871,
+                "ns": 20128
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 7,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 129,
+              "sm_end": 129,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837927,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369870796,
+                  "globaltimer_ns": 1791709263205829440
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838108,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846147,
+                  "globaltimer_ns": 1791709263205814656
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854384,
+                  "globaltimer_ns": 1791709263205819776
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870303,
+                  "globaltimer_ns": 1791709263205829152
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870479,
+                  "globaltimer_ns": 1791709263205829248
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 7,
+              "role": 1,
+              "sm": 129,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 181,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8039,
+                  "ns": 5216
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8237,
+                  "ns": 5120
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15919,
+                  "ns": 9376
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 176,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 317,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 32869,
+                "ns": 20128
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 7,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 129,
+              "sm_end": 129,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443914369837933,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "MAIN": {
+                  "clock64": 443914369871033,
+                  "globaltimer_ns": 1791709263205829568
+                },
+                "COMMIT_G0": {
+                  "clock64": 443914369838169,
+                  "globaltimer_ns": 1791709263205809504
+                },
+                "COMMIT_G16": {
+                  "clock64": 443914369846360,
+                  "globaltimer_ns": 1791709263205814784
+                },
+                "COMMIT_G32": {
+                  "clock64": 443914369854571,
+                  "globaltimer_ns": 1791709263205819872
+                },
+                "COMMIT_G63": {
+                  "clock64": 443914369870559,
+                  "globaltimer_ns": 1791709263205829312
+                },
+                "MMA_RETURN": {
+                  "clock64": 443914369870670,
+                  "globaltimer_ns": 1791709263205829376
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 7,
+              "role": 2,
+              "sm": 129,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 236,
+                  "ns": 192
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8191,
+                  "ns": 5280
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8211,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15988,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 111,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 363,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33100,
+                "ns": 20256
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 14,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 6,
+              "sm_end": 6,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422438,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 444116708463590,
+                  "globaltimer_ns": 1791709263205833536
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422670,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432811,
+                  "globaltimer_ns": 1791709263205815776
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443745,
+                  "globaltimer_ns": 1791709263205822368
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708463139,
+                  "globaltimer_ns": 1791709263205833280
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463248,
+                  "globaltimer_ns": 1791709263205833344
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 14,
+              "role": 1,
+              "sm": 6,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 232,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10141,
+                  "ns": 6464
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10934,
+                  "ns": 6592
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19394,
+                  "ns": 10912
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 109,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 342,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 41152,
+                "ns": 24384
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 14,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 6,
+              "sm_end": 6,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422427,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 444116708463373,
+                  "globaltimer_ns": 1791709263205833408
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422609,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432753,
+                  "globaltimer_ns": 1791709263205815712
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443569,
+                  "globaltimer_ns": 1791709263205822240
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708462931,
+                  "globaltimer_ns": 1791709263205833184
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463055,
+                  "globaltimer_ns": 1791709263205833248
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 14,
+              "role": 2,
+              "sm": 6,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 182,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10144,
+                  "ns": 6432
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10816,
+                  "ns": 6528
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19362,
+                  "ns": 10944
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 124,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 318,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 40946,
+                "ns": 24256
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 15,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 7,
+              "sm_end": 7,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422427,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 444116708463581,
+                  "globaltimer_ns": 1791709263205833536
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422663,
+                  "globaltimer_ns": 1791709263205809312
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432748,
+                  "globaltimer_ns": 1791709263205815712
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443721,
+                  "globaltimer_ns": 1791709263205822336
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708463107,
+                  "globaltimer_ns": 1791709263205833280
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463218,
+                  "globaltimer_ns": 1791709263205833344
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 15,
+              "role": 1,
+              "sm": 7,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 236,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10085,
+                  "ns": 6400
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10973,
+                  "ns": 6624
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19386,
+                  "ns": 10944
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 111,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 363,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 41154,
+                "ns": 24384
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 15,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 7,
+              "sm_end": 7,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422434,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 444116708463344,
+                  "globaltimer_ns": 1791709263205833408
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422602,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432690,
+                  "globaltimer_ns": 1791709263205815680
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443636,
+                  "globaltimer_ns": 1791709263205822304
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708462847,
+                  "globaltimer_ns": 1791709263205833120
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463012,
+                  "globaltimer_ns": 1791709263205833216
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 15,
+              "role": 2,
+              "sm": 7,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 168,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10088,
+                  "ns": 6400
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10946,
+                  "ns": 6624
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19211,
+                  "ns": 10816
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 332,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 40910,
+                "ns": 24256
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 22,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 14,
+              "sm_end": 14,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708738097,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "MAIN": {
+                  "clock64": 443941708778733,
+                  "globaltimer_ns": 1791709263205833600
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738333,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748386,
+                  "globaltimer_ns": 1791709263205815904
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708758673,
+                  "globaltimer_ns": 1791709263205822176
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778290,
+                  "globaltimer_ns": 1791709263205833344
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778455,
+                  "globaltimer_ns": 1791709263205833440
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 22,
+              "role": 1,
+              "sm": 14,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 236,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10053,
+                  "ns": 6464
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10287,
+                  "ns": 6272
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19617,
+                  "ns": 11168
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 278,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 40636,
+                "ns": 24320
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 22,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 14,
+              "sm_end": 14,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708738104,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "MAIN": {
+                  "clock64": 443941708778951,
+                  "globaltimer_ns": 1791709263205833696
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738272,
+                  "globaltimer_ns": 1791709263205809408
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748444,
+                  "globaltimer_ns": 1791709263205815936
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708758819,
+                  "globaltimer_ns": 1791709263205822272
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778548,
+                  "globaltimer_ns": 1791709263205833504
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778710,
+                  "globaltimer_ns": 1791709263205833568
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 22,
+              "role": 2,
+              "sm": 14,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 168,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10172,
+                  "ns": 6528
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10375,
+                  "ns": 6336
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19729,
+                  "ns": 11232
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 162,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 241,
+                  "ns": 128
+                }
+              ],
+              "L": {
+                "cycles": 40847,
+                "ns": 24416
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 23,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 15,
+              "sm_end": 15,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708738103,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "MAIN": {
+                  "clock64": 443941708778981,
+                  "globaltimer_ns": 1791709263205833728
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738333,
+                  "globaltimer_ns": 1791709263205809440
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748452,
+                  "globaltimer_ns": 1791709263205815936
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708758807,
+                  "globaltimer_ns": 1791709263205822272
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778507,
+                  "globaltimer_ns": 1791709263205833472
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778618,
+                  "globaltimer_ns": 1791709263205833536
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 23,
+              "role": 1,
+              "sm": 15,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 230,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10119,
+                  "ns": 6496
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10355,
+                  "ns": 6336
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19700,
+                  "ns": 11200
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 111,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 363,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 40878,
+                "ns": 24448
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 23,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 15,
+              "sm_end": 15,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708738097,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "MAIN": {
+                  "clock64": 443941708778744,
+                  "globaltimer_ns": 1791709263205833600
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738272,
+                  "globaltimer_ns": 1791709263205809408
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748394,
+                  "globaltimer_ns": 1791709263205815904
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708758563,
+                  "globaltimer_ns": 1791709263205822112
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778247,
+                  "globaltimer_ns": 1791709263205833312
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778420,
+                  "globaltimer_ns": 1791709263205833408
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 23,
+              "role": 2,
+              "sm": 15,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 175,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10122,
+                  "ns": 6496
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10169,
+                  "ns": 6208
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19684,
+                  "ns": 11200
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 173,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 324,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 40647,
+                "ns": 24320
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 30,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 22,
+              "sm_end": 22,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422774,
+                  "globaltimer_ns": 1791709263205809376
+                },
+                "MAIN": {
+                  "clock64": 444116708463554,
+                  "globaltimer_ns": 1791709263205833504
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708423004,
+                  "globaltimer_ns": 1791709263205809568
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432928,
+                  "globaltimer_ns": 1791709263205815840
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443485,
+                  "globaltimer_ns": 1791709263205822208
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708463089,
+                  "globaltimer_ns": 1791709263205833248
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463201,
+                  "globaltimer_ns": 1791709263205833312
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 30,
+              "role": 1,
+              "sm": 22,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 230,
+                  "ns": 192
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 9924,
+                  "ns": 6272
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10557,
+                  "ns": 6368
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19604,
+                  "ns": 11040
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 112,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 353,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 40780,
+                "ns": 24128
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 30,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 22,
+              "sm_end": 22,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422763,
+                  "globaltimer_ns": 1791709263205809376
+                },
+                "MAIN": {
+                  "clock64": 444116708463326,
+                  "globaltimer_ns": 1791709263205833376
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422943,
+                  "globaltimer_ns": 1791709263205809504
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708432868,
+                  "globaltimer_ns": 1791709263205815808
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443342,
+                  "globaltimer_ns": 1791709263205822112
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708462885,
+                  "globaltimer_ns": 1791709263205833152
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463002,
+                  "globaltimer_ns": 1791709263205833216
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 30,
+              "role": 2,
+              "sm": 22,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 180,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 9925,
+                  "ns": 6304
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10474,
+                  "ns": 6304
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19543,
+                  "ns": 11040
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 117,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 324,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 40563,
+                "ns": 24000
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 31,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 23,
+              "sm_end": 23,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422755,
+                  "globaltimer_ns": 1791709263205809376
+                },
+                "MAIN": {
+                  "clock64": 444116708463368,
+                  "globaltimer_ns": 1791709263205833408
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422929,
+                  "globaltimer_ns": 1791709263205809504
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708433051,
+                  "globaltimer_ns": 1791709263205815904
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443751,
+                  "globaltimer_ns": 1791709263205822368
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708462867,
+                  "globaltimer_ns": 1791709263205833152
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463041,
+                  "globaltimer_ns": 1791709263205833248
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 31,
+              "role": 1,
+              "sm": 23,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 174,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10122,
+                  "ns": 6400
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10700,
+                  "ns": 6464
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19116,
+                  "ns": 10784
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 174,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 327,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 40613,
+                "ns": 24032
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 31,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 23,
+              "sm_end": 23,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444116708422762,
+                  "globaltimer_ns": 1791709263205809376
+                },
+                "MAIN": {
+                  "clock64": 444116708463577,
+                  "globaltimer_ns": 1791709263205833536
+                },
+                "COMMIT_G0": {
+                  "clock64": 444116708422990,
+                  "globaltimer_ns": 1791709263205809536
+                },
+                "COMMIT_G16": {
+                  "clock64": 444116708433109,
+                  "globaltimer_ns": 1791709263205815936
+                },
+                "COMMIT_G32": {
+                  "clock64": 444116708443545,
+                  "globaltimer_ns": 1791709263205822240
+                },
+                "COMMIT_G63": {
+                  "clock64": 444116708463126,
+                  "globaltimer_ns": 1791709263205833280
+                },
+                "MMA_RETURN": {
+                  "clock64": 444116708463350,
+                  "globaltimer_ns": 1791709263205833408
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 31,
+              "role": 2,
+              "sm": 23,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 228,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10119,
+                  "ns": 6400
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10436,
+                  "ns": 6304
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19581,
+                  "ns": 11040
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 224,
+                  "ns": 128
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 227,
+                  "ns": 128
+                }
+              ],
+              "L": {
+                "cycles": 40815,
+                "ns": 24160
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 38,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 30,
+              "sm_end": 30,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708737955,
+                  "globaltimer_ns": 1791709263205809184
+                },
+                "MAIN": {
+                  "clock64": 443941708779109,
+                  "globaltimer_ns": 1791709263205833792
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738187,
+                  "globaltimer_ns": 1791709263205809344
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748516,
+                  "globaltimer_ns": 1791709263205815968
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708759112,
+                  "globaltimer_ns": 1791709263205822432
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778726,
+                  "globaltimer_ns": 1791709263205833568
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778854,
+                  "globaltimer_ns": 1791709263205833664
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 38,
+              "role": 1,
+              "sm": 30,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 232,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10329,
+                  "ns": 6624
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10596,
+                  "ns": 6464
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19614,
+                  "ns": 11136
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 128,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 255,
+                  "ns": 128
+                }
+              ],
+              "L": {
+                "cycles": 41154,
+                "ns": 24608
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 38,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 30,
+              "sm_end": 30,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708737944,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 443941708779366,
+                  "globaltimer_ns": 1791709263205833920
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738126,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748458,
+                  "globaltimer_ns": 1791709263205815936
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708759165,
+                  "globaltimer_ns": 1791709263205822496
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778881,
+                  "globaltimer_ns": 1791709263205833664
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778995,
+                  "globaltimer_ns": 1791709263205833728
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 38,
+              "role": 2,
+              "sm": 30,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 182,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10332,
+                  "ns": 6656
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10707,
+                  "ns": 6560
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19716,
+                  "ns": 11168
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 114,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 371,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 41422,
+                "ns": 24768
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 39,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 31,
+              "sm_end": 31,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708737954,
+                  "globaltimer_ns": 1791709263205809184
+                },
+                "MAIN": {
+                  "clock64": 443941708779125,
+                  "globaltimer_ns": 1791709263205833792
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738182,
+                  "globaltimer_ns": 1791709263205809344
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748462,
+                  "globaltimer_ns": 1791709263205815936
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708759155,
+                  "globaltimer_ns": 1791709263205822464
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778687,
+                  "globaltimer_ns": 1791709263205833568
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778808,
+                  "globaltimer_ns": 1791709263205833632
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 39,
+              "role": 1,
+              "sm": 31,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 228,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10280,
+                  "ns": 6592
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10693,
+                  "ns": 6528
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19532,
+                  "ns": 11104
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 121,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 317,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 41171,
+                "ns": 24608
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map960_flag1",
+              "config": "cfg_a",
+              "cta": 39,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 31,
+              "sm_end": 31,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443941708737943,
+                  "globaltimer_ns": 1791709263205809152
+                },
+                "MAIN": {
+                  "clock64": 443941708779342,
+                  "globaltimer_ns": 1791709263205833920
+                },
+                "COMMIT_G0": {
+                  "clock64": 443941708738121,
+                  "globaltimer_ns": 1791709263205809280
+                },
+                "COMMIT_G16": {
+                  "clock64": 443941708748520,
+                  "globaltimer_ns": 1791709263205815968
+                },
+                "COMMIT_G32": {
+                  "clock64": 443941708759346,
+                  "globaltimer_ns": 1791709263205822592
+                },
+                "COMMIT_G63": {
+                  "clock64": 443941708778884,
+                  "globaltimer_ns": 1791709263205833664
+                },
+                "MMA_RETURN": {
+                  "clock64": 443941708778992,
+                  "globaltimer_ns": 1791709263205833728
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map960_flag1",
+              "cta": 39,
+              "role": 2,
+              "sm": 31,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 178,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 10399,
+                  "ns": 6688
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 10826,
+                  "ns": 6624
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 19538,
+                  "ns": 11072
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 108,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 350,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 41399,
+                "ns": 24768
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          }
+        ],
+        "observation_qualified": false,
+        "limits": "Decode/source-order checks only; numerical, binary, preparation and perturbation qualification required."
+      },
+      "raw_sha256": "a6c8f931f81371621bc41668203a43b17cc4b5595c7d14cf245909e016fcedbc"
+    },
+    {
+      "map": 1024,
+      "flag": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "elapsed_us": 49.98400062,
+      "decoded": {
+        "enabled": false,
+        "records": [],
+        "observation_qualified": false,
+        "limits": "Decode/source-order checks only; numerical, binary, preparation and perturbation qualification required."
+      },
+      "raw_sha256": "777ff844d562c200d7cee02da017d142eade467a8cf1ca0cbbcda565eaebe530"
+    },
+    {
+      "map": 1024,
+      "flag": 1,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "elapsed_us": 49.92000014,
+      "decoded": {
+        "enabled": true,
+        "records": [
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 0,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 130,
+              "sm_end": 130,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615799,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443916166648879,
+                  "globaltimer_ns": 1791709264107076320
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616031,
+                  "globaltimer_ns": 1791709264107056736
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624217,
+                  "globaltimer_ns": 1791709264107061824
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632436,
+                  "globaltimer_ns": 1791709264107066784
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648459,
+                  "globaltimer_ns": 1791709264107076096
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648616,
+                  "globaltimer_ns": 1791709264107076160
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 0,
+              "role": 1,
+              "sm": 130,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 232,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8186,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8219,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16023,
+                  "ns": 9312
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 157,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 263,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33080,
+                "ns": 19744
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 0,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 130,
+              "sm_end": 130,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615788,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443916166648667,
+                  "globaltimer_ns": 1791709264107076192
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166615973,
+                  "globaltimer_ns": 1791709264107056704
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166623961,
+                  "globaltimer_ns": 1791709264107061664
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632178,
+                  "globaltimer_ns": 1791709264107066624
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648210,
+                  "globaltimer_ns": 1791709264107075936
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648361,
+                  "globaltimer_ns": 1791709264107076032
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 0,
+              "role": 2,
+              "sm": 130,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 185,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7988,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8217,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16032,
+                  "ns": 9312
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 151,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 306,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32879,
+                "ns": 19616
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 1,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 131,
+              "sm_end": 131,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615801,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443916166648880,
+                  "globaltimer_ns": 1791709264107076320
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616031,
+                  "globaltimer_ns": 1791709264107056736
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624221,
+                  "globaltimer_ns": 1791709264107061824
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632434,
+                  "globaltimer_ns": 1791709264107066784
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648406,
+                  "globaltimer_ns": 1791709264107076064
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648517,
+                  "globaltimer_ns": 1791709264107076128
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 1,
+              "role": 1,
+              "sm": 131,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 230,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8190,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8213,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15972,
+                  "ns": 9280
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 111,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 363,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33079,
+                "ns": 19744
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 1,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 131,
+              "sm_end": 131,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615790,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443916166648643,
+                  "globaltimer_ns": 1791709264107076192
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166615970,
+                  "globaltimer_ns": 1791709264107056704
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166623964,
+                  "globaltimer_ns": 1791709264107061664
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632201,
+                  "globaltimer_ns": 1791709264107066656
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648146,
+                  "globaltimer_ns": 1791709264107075904
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648311,
+                  "globaltimer_ns": 1791709264107076000
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 1,
+              "role": 2,
+              "sm": 131,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 180,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7994,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8237,
+                  "ns": 4992
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15945,
+                  "ns": 9248
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 332,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 32853,
+                "ns": 19616
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 6,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 128,
+              "sm_end": 128,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615945,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "MAIN": {
+                  "clock64": 443916166649008,
+                  "globaltimer_ns": 1791709264107076384
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616168,
+                  "globaltimer_ns": 1791709264107056832
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624351,
+                  "globaltimer_ns": 1791709264107061920
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632574,
+                  "globaltimer_ns": 1791709264107066880
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648571,
+                  "globaltimer_ns": 1791709264107076160
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648686,
+                  "globaltimer_ns": 1791709264107076224
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 6,
+              "role": 1,
+              "sm": 128,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 223,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8183,
+                  "ns": 5088
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8223,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15997,
+                  "ns": 9280
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 115,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 322,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33063,
+                "ns": 19712
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 6,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 128,
+              "sm_end": 128,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615925,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "MAIN": {
+                  "clock64": 443916166648795,
+                  "globaltimer_ns": 1791709264107076256
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616108,
+                  "globaltimer_ns": 1791709264107056800
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624094,
+                  "globaltimer_ns": 1791709264107061760
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632315,
+                  "globaltimer_ns": 1791709264107066720
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648334,
+                  "globaltimer_ns": 1791709264107076000
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648499,
+                  "globaltimer_ns": 1791709264107076096
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 6,
+              "role": 2,
+              "sm": 128,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 183,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7986,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8221,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16019,
+                  "ns": 9280
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 296,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32870,
+                "ns": 19584
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 7,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 129,
+              "sm_end": 129,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615946,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "MAIN": {
+                  "clock64": 443916166649032,
+                  "globaltimer_ns": 1791709264107076384
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616198,
+                  "globaltimer_ns": 1791709264107056864
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624392,
+                  "globaltimer_ns": 1791709264107061920
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632615,
+                  "globaltimer_ns": 1791709264107066880
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648577,
+                  "globaltimer_ns": 1791709264107076160
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648805,
+                  "globaltimer_ns": 1791709264107076288
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 7,
+              "role": 1,
+              "sm": 129,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 252,
+                  "ns": 192
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8194,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8223,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15962,
+                  "ns": 9280
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 228,
+                  "ns": 128
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 227,
+                  "ns": 96
+                }
+              ],
+              "L": {
+                "cycles": 33086,
+                "ns": 19712
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 7,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 129,
+              "sm_end": 129,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443916166615937,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "MAIN": {
+                  "clock64": 443916166648823,
+                  "globaltimer_ns": 1791709264107076288
+                },
+                "COMMIT_G0": {
+                  "clock64": 443916166616137,
+                  "globaltimer_ns": 1791709264107056800
+                },
+                "COMMIT_G16": {
+                  "clock64": 443916166624137,
+                  "globaltimer_ns": 1791709264107061792
+                },
+                "COMMIT_G32": {
+                  "clock64": 443916166632352,
+                  "globaltimer_ns": 1791709264107066720
+                },
+                "COMMIT_G63": {
+                  "clock64": 443916166648317,
+                  "globaltimer_ns": 1791709264107076000
+                },
+                "MMA_RETURN": {
+                  "clock64": 443916166648482,
+                  "globaltimer_ns": 1791709264107076096
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 7,
+              "role": 2,
+              "sm": 129,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 200,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8000,
+                  "ns": 4992
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8215,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15965,
+                  "ns": 9280
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 341,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 32886,
+                "ns": 19616
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 14,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 6,
+              "sm_end": 6,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505662155,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "MAIN": {
+                  "clock64": 444118505695239,
+                  "globaltimer_ns": 1791709264107075968
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662390,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670573,
+                  "globaltimer_ns": 1791709264107061696
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678793,
+                  "globaltimer_ns": 1791709264107066592
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694831,
+                  "globaltimer_ns": 1791709264107075744
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694996,
+                  "globaltimer_ns": 1791709264107075840
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 14,
+              "role": 1,
+              "sm": 6,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 235,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8183,
+                  "ns": 5024
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8220,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16038,
+                  "ns": 9152
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 243,
+                  "ns": 128
+                }
+              ],
+              "L": {
+                "cycles": 33084,
+                "ns": 19456
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 14,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 6,
+              "sm_end": 6,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505662144,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "MAIN": {
+                  "clock64": 444118505695024,
+                  "globaltimer_ns": 1791709264107075840
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662326,
+                  "globaltimer_ns": 1791709264107056640
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670317,
+                  "globaltimer_ns": 1791709264107061536
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678533,
+                  "globaltimer_ns": 1791709264107066432
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694595,
+                  "globaltimer_ns": 1791709264107075616
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694710,
+                  "globaltimer_ns": 1791709264107075680
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 14,
+              "role": 2,
+              "sm": 6,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 182,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7991,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16062,
+                  "ns": 9184
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 115,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 314,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32880,
+                "ns": 19328
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 15,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 7,
+              "sm_end": 7,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505662141,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "MAIN": {
+                  "clock64": 444118505695251,
+                  "globaltimer_ns": 1791709264107075968
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662315,
+                  "globaltimer_ns": 1791709264107056640
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670566,
+                  "globaltimer_ns": 1791709264107061696
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678782,
+                  "globaltimer_ns": 1791709264107066592
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694789,
+                  "globaltimer_ns": 1791709264107075712
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694901,
+                  "globaltimer_ns": 1791709264107075776
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 15,
+              "role": 1,
+              "sm": 7,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 174,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8251,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16007,
+                  "ns": 9120
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 112,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 350,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33110,
+                "ns": 19456
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 15,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 7,
+              "sm_end": 7,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505662148,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "MAIN": {
+                  "clock64": 444118505695026,
+                  "globaltimer_ns": 1791709264107075840
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662377,
+                  "globaltimer_ns": 1791709264107056672
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670354,
+                  "globaltimer_ns": 1791709264107061568
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678562,
+                  "globaltimer_ns": 1791709264107066464
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694585,
+                  "globaltimer_ns": 1791709264107075616
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694702,
+                  "globaltimer_ns": 1791709264107075680
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 15,
+              "role": 2,
+              "sm": 7,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 229,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7977,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8208,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16023,
+                  "ns": 9152
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 117,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 324,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32878,
+                "ns": 19328
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 22,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 14,
+              "sm_end": 14,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467191,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443943505500611,
+                  "globaltimer_ns": 1791709264107076480
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467423,
+                  "globaltimer_ns": 1791709264107056736
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475609,
+                  "globaltimer_ns": 1791709264107061856
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505483830,
+                  "globaltimer_ns": 1791709264107066784
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500152,
+                  "globaltimer_ns": 1791709264107076224
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500260,
+                  "globaltimer_ns": 1791709264107076288
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 22,
+              "role": 1,
+              "sm": 14,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 232,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8186,
+                  "ns": 5120
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8221,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16322,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 108,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 351,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33420,
+                "ns": 19904
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 22,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 14,
+              "sm_end": 14,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467180,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443943505500386,
+                  "globaltimer_ns": 1791709264107076352
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467362,
+                  "globaltimer_ns": 1791709264107056704
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475409,
+                  "globaltimer_ns": 1791709264107061728
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505483573,
+                  "globaltimer_ns": 1791709264107066624
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505499945,
+                  "globaltimer_ns": 1791709264107076096
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500063,
+                  "globaltimer_ns": 1791709264107076160
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 22,
+              "role": 2,
+              "sm": 14,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 182,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8047,
+                  "ns": 5024
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8164,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16372,
+                  "ns": 9472
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 118,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 323,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33206,
+                "ns": 19776
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 23,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 15,
+              "sm_end": 15,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467182,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443943505500511,
+                  "globaltimer_ns": 1791709264107076416
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467356,
+                  "globaltimer_ns": 1791709264107056704
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475419,
+                  "globaltimer_ns": 1791709264107061728
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505483586,
+                  "globaltimer_ns": 1791709264107066656
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500069,
+                  "globaltimer_ns": 1791709264107076192
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500203,
+                  "globaltimer_ns": 1791709264107076256
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 23,
+              "role": 1,
+              "sm": 15,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 174,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8063,
+                  "ns": 5024
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8167,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16483,
+                  "ns": 9536
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 134,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 308,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33329,
+                "ns": 19840
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 23,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 15,
+              "sm_end": 15,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467189,
+                  "globaltimer_ns": 1791709264107056576
+                },
+                "MAIN": {
+                  "clock64": 443943505500641,
+                  "globaltimer_ns": 1791709264107076480
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467417,
+                  "globaltimer_ns": 1791709264107056736
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475610,
+                  "globaltimer_ns": 1791709264107061856
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505483823,
+                  "globaltimer_ns": 1791709264107066784
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500167,
+                  "globaltimer_ns": 1791709264107076224
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500284,
+                  "globaltimer_ns": 1791709264107076288
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 23,
+              "role": 2,
+              "sm": 15,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 228,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8193,
+                  "ns": 5120
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8213,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16344,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 117,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 357,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33452,
+                "ns": 19904
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 30,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 22,
+              "sm_end": 22,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505661945,
+                  "globaltimer_ns": 1791709264107056384
+                },
+                "MAIN": {
+                  "clock64": 444118505694884,
+                  "globaltimer_ns": 1791709264107075776
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662118,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670113,
+                  "globaltimer_ns": 1791709264107061440
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678329,
+                  "globaltimer_ns": 1791709264107066336
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694422,
+                  "globaltimer_ns": 1791709264107075520
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694579,
+                  "globaltimer_ns": 1791709264107075616
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 30,
+              "role": 1,
+              "sm": 22,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 173,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7995,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16093,
+                  "ns": 9184
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 157,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 305,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 32939,
+                "ns": 19392
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 30,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 22,
+              "sm_end": 22,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505661952,
+                  "globaltimer_ns": 1791709264107056384
+                },
+                "MAIN": {
+                  "clock64": 444118505695043,
+                  "globaltimer_ns": 1791709264107075872
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662179,
+                  "globaltimer_ns": 1791709264107056544
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670373,
+                  "globaltimer_ns": 1791709264107061568
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678588,
+                  "globaltimer_ns": 1791709264107066464
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694632,
+                  "globaltimer_ns": 1791709264107075648
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694736,
+                  "globaltimer_ns": 1791709264107075680
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 30,
+              "role": 2,
+              "sm": 22,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 227,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8194,
+                  "ns": 5024
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8215,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16044,
+                  "ns": 9184
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 104,
+                  "ns": 32
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 307,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33091,
+                "ns": 19488
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 31,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 23,
+              "sm_end": 23,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505661943,
+                  "globaltimer_ns": 1791709264107056384
+                },
+                "MAIN": {
+                  "clock64": 444118505695045,
+                  "globaltimer_ns": 1791709264107075872
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662123,
+                  "globaltimer_ns": 1791709264107056512
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670367,
+                  "globaltimer_ns": 1791709264107061568
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678395,
+                  "globaltimer_ns": 1791709264107066368
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694571,
+                  "globaltimer_ns": 1791709264107075616
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694678,
+                  "globaltimer_ns": 1791709264107075680
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 31,
+              "role": 1,
+              "sm": 23,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 180,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8244,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8028,
+                  "ns": 4800
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16176,
+                  "ns": 9248
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 107,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 367,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33102,
+                "ns": 19488
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 31,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 23,
+              "sm_end": 23,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 444118505661950,
+                  "globaltimer_ns": 1791709264107056384
+                },
+                "MAIN": {
+                  "clock64": 444118505694808,
+                  "globaltimer_ns": 1791709264107075744
+                },
+                "COMMIT_G0": {
+                  "clock64": 444118505662181,
+                  "globaltimer_ns": 1791709264107056544
+                },
+                "COMMIT_G16": {
+                  "clock64": 444118505670155,
+                  "globaltimer_ns": 1791709264107061440
+                },
+                "COMMIT_G32": {
+                  "clock64": 444118505678589,
+                  "globaltimer_ns": 1791709264107066464
+                },
+                "COMMIT_G63": {
+                  "clock64": 444118505694311,
+                  "globaltimer_ns": 1791709264107075456
+                },
+                "MMA_RETURN": {
+                  "clock64": 444118505694476,
+                  "globaltimer_ns": 1791709264107075552
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 31,
+              "role": 2,
+              "sm": 23,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 231,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7974,
+                  "ns": 4896
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8434,
+                  "ns": 5024
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 15722,
+                  "ns": 8992
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 332,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 32858,
+                "ns": 19360
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 38,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 30,
+              "sm_end": 30,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467622,
+                  "globaltimer_ns": 1791709264107056896
+                },
+                "MAIN": {
+                  "clock64": 443943505500872,
+                  "globaltimer_ns": 1791709264107076608
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467796,
+                  "globaltimer_ns": 1791709264107057024
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475791,
+                  "globaltimer_ns": 1791709264107061952
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505484007,
+                  "globaltimer_ns": 1791709264107066912
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500411,
+                  "globaltimer_ns": 1791709264107076384
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500576,
+                  "globaltimer_ns": 1791709264107076448
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 38,
+              "role": 1,
+              "sm": 30,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 174,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7995,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16404,
+                  "ns": 9472
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 165,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 296,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33250,
+                "ns": 19712
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 38,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 30,
+              "sm_end": 30,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467629,
+                  "globaltimer_ns": 1791709264107056896
+                },
+                "MAIN": {
+                  "clock64": 443943505501126,
+                  "globaltimer_ns": 1791709264107076736
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467857,
+                  "globaltimer_ns": 1791709264107057056
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505476051,
+                  "globaltimer_ns": 1791709264107062112
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505484263,
+                  "globaltimer_ns": 1791709264107067040
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500648,
+                  "globaltimer_ns": 1791709264107076480
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500763,
+                  "globaltimer_ns": 1791709264107076544
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 38,
+              "role": 2,
+              "sm": 30,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 228,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8194,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8212,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16385,
+                  "ns": 9440
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 115,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 363,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33497,
+                "ns": 19840
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 39,
+              "role": 1,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "sm_start": 31,
+              "sm_end": 31,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467623,
+                  "globaltimer_ns": 1791709264107056896
+                },
+                "MAIN": {
+                  "clock64": 443943505501078,
+                  "globaltimer_ns": 1791709264107076704
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467861,
+                  "globaltimer_ns": 1791709264107057056
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505476055,
+                  "globaltimer_ns": 1791709264107062112
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505484271,
+                  "globaltimer_ns": 1791709264107067040
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500588,
+                  "globaltimer_ns": 1791709264107076448
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500699,
+                  "globaltimer_ns": 1791709264107076512
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 39,
+              "role": 1,
+              "sm": 31,
+              "physical_thread": 128,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 238,
+                  "ns": 160
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 8194,
+                  "ns": 5056
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8216,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16317,
+                  "ns": 9408
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 111,
+                  "ns": 64
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 379,
+                  "ns": 192
+                }
+              ],
+              "L": {
+                "cycles": 33455,
+                "ns": 19808
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          },
+          {
+            "record": {
+              "invocation_id": "map1024_flag1",
+              "config": "cfg_a",
+              "cta": 39,
+              "role": 2,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "sm_start": 31,
+              "sm_end": 31,
+              "stamps": {
+                "FIRST": {
+                  "clock64": 443943505467629,
+                  "globaltimer_ns": 1791709264107056896
+                },
+                "MAIN": {
+                  "clock64": 443943505500817,
+                  "globaltimer_ns": 1791709264107076576
+                },
+                "COMMIT_G0": {
+                  "clock64": 443943505467800,
+                  "globaltimer_ns": 1791709264107057024
+                },
+                "COMMIT_G16": {
+                  "clock64": 443943505475799,
+                  "globaltimer_ns": 1791709264107061952
+                },
+                "COMMIT_G32": {
+                  "clock64": 443943505484011,
+                  "globaltimer_ns": 1791709264107066912
+                },
+                "COMMIT_G63": {
+                  "clock64": 443943505500346,
+                  "globaltimer_ns": 1791709264107076320
+                },
+                "MMA_RETURN": {
+                  "clock64": 443943505500503,
+                  "globaltimer_ns": 1791709264107076416
+                }
+              }
+            },
+            "partition": {
+              "invocation_id": "map1024_flag1",
+              "cta": 39,
+              "role": 2,
+              "sm": 31,
+              "physical_thread": 256,
+              "tile_seq": 0,
+              "windows": [
+                {
+                  "start": "FIRST",
+                  "end": "COMMIT_G0",
+                  "cycles": 171,
+                  "ns": 128
+                },
+                {
+                  "start": "COMMIT_G0",
+                  "end": "COMMIT_G16",
+                  "cycles": 7999,
+                  "ns": 4928
+                },
+                {
+                  "start": "COMMIT_G16",
+                  "end": "COMMIT_G32",
+                  "cycles": 8212,
+                  "ns": 4960
+                },
+                {
+                  "start": "COMMIT_G32",
+                  "end": "COMMIT_G63",
+                  "cycles": 16335,
+                  "ns": 9408
+                },
+                {
+                  "start": "COMMIT_G63",
+                  "end": "MMA_RETURN",
+                  "cycles": 157,
+                  "ns": 96
+                },
+                {
+                  "start": "MMA_RETURN",
+                  "end": "MAIN",
+                  "cycles": 314,
+                  "ns": 160
+                }
+              ],
+              "L": {
+                "cycles": 33188,
+                "ns": 19680
+              },
+              "scope": "Endpoint windows only; source binding and observer validity are caller obligations."
+            }
+          }
+        ],
+        "observation_qualified": false,
+        "limits": "Decode/source-order checks only; numerical, binary, preparation and perturbation qualification required."
+      },
+      "raw_sha256": "cd264bcf01f9f7497ff443988551fb3334cf081d2628bce3d698e8ccc853484f"
+    }
+  ],
+  "errors": [],
+  "observation_qualified": false
+}

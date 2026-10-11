@@ -125,6 +125,8 @@ C的cfg_c输出结构f0c3674合入f6e27c4，26项测试通过；主集成baselin
 
 [首输出五切点构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-build/README.md)已落实：派生prepare/helper/严格decoder已提交，C完整调用配对约束c8f6f76合入，16项CPU测试通过。740064头文件重复定义失败保留；740065成功后经C审查修复host模式入口，740066最终CPU构建通过，SASS与740065相同，168regs/2barrier/零spill，无GPU分配。五戳延迟写回，原HGMMA/TMA/arrival/wait数量相同；全D和独立控制pilot仍待执行，不判观察资格或新价格。
 
+[740067首输出数值检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-correctness/README.md)已完成：a057/GPU432、4CPU/16GiB/1GPU、6秒。两map各2703360全D逐位置解析复核精确相同，off/on及跨map完整D相同，四调用记录通过，两个on各24角色。没有性能/观察资格；独立控制pilot与正式ns门槛仍待完成。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。

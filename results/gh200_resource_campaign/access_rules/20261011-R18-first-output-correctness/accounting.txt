@@ -1,0 +1,3 @@
+740067|COMPLETED|00:00:06|billing=4,cpu=4,gres/gpu=1,mem=16G,node=1
+740067.extern|COMPLETED|00:00:06|billing=4,cpu=4,gres/gpu=1,mem=16G,node=1
+740067.0|COMPLETED|00:00:04|cpu=4,gres/gpu=1,mem=16G,node=1
