@@ -47,7 +47,7 @@
 | `destination_atoms`、`destination_valid_KiB`、`destination_fill_KiB` | 每个multicast目的rank分别收取切片；每个目的操作数保留全部源atom前驱 | 目的SMEM投递与full依赖；不能随源共享删掉目的工作 |
 | `output_nominal_KiB`、`output_valid_KiB`、`output_nominal_subtiles` | FP32 D的名义tile、逻辑有效面积与固定epilogue子tile格点 | 独立输出工作；不当作物理写流量或cooperative已验证的提交图 |
 
-cfg_b第二WG对照的四条件账目相同：50688次输入请求、540672KiB目的投递、264个D tile/2112个8KiB名义子tile；去重源为2944个box/34816KiB有效地址。源共享只可能改变服务generation，不能减少目的或D工作。cfg_a每rank发本地A16KiB和B的两个8KiB K切片，B投给两rank；cfg_c每rank发A的16KiB M切片并投给两rank，B两个8KiB切片本地使用。例如cfg_c M192时两个issuer的A有效源为16/8KiB，每个目的A均为24KiB有效＋8KiB fill，机械平分成12/12错误。
+cfg_b第二WG对照的四条件账目相同：50688次输入请求、540672KiB目的投递、264个D tile/2112个8KiB名义子tile；去重源为2944个box/34816KiB有效地址。源共享只可能改变服务generation，不能减少目的或D工作。cfg_a每rank发本地A16KiB和B的两个4KiB box（各N64×K32×FP16），B投给两rank；每issuer的B共8KiB，每目的收到两issuer共四box/16KiB，加本地A后full payload为32KiB。cfg_c每rank发A的16KiB M切片并投给两rank，B两个8KiB box本地使用。例如cfg_c M192时两个issuer的A有效源为16/8KiB，每个目的A均为24KiB有效＋8KiB fill，机械平分成12/12错误。
 
 `input_slot_state(g,S)`明确保留跨输出的全局K-group：slot=`g%S`、generation=`g//S`、consumer full等待phase=`generation%2`、producer empty等待phase=`(generation+1)%2`，复用前驱为g−S。phase是等待参数，不是观测到的barrier当前值。K4096、stage6第二输出从g=64开始，slot4/generation10；不能在输出边界重置到slot0。来源为快照CUTLASS `PipelineState`、`make_producer_start_state` 与pingpong consumer的两输出步进，不把MAIN戳等同于empty到达。
 

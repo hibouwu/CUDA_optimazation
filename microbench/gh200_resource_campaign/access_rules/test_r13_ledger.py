@@ -16,6 +16,7 @@ class SupplyLedgerTests(unittest.TestCase):
         # cfg_a: each A is local; both B K-halves reach each rank.
         a = self.ledger('cfg_a', 256, 128)
         self.assertEqual([len(o['operands']['B']['source_atoms']) for o in a['outputs']], [4, 4])
+        self.assertEqual([atom['payload_KiB'] for atom in a['source_atoms'] if atom['operand']=='B'], [4, 4, 4, 4])
         self.assertEqual(a['totals']['source_payload_KiB'], 96)
         self.assertEqual(a['totals']['destination_valid_KiB'], 128)
         # cfg_c: two different A M-halves reach both destinations.
