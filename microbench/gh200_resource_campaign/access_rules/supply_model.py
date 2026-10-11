@@ -131,7 +131,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         source_join_boundary='ready',local_epilogue_exclusion='none',
                         output_counts=None, source_service_costs_ns=None,
                         source_address_units=None, source_unit_service_ns=None,
-                        destination_latency_ns=0.):
+                        destination_latency_ns=0., input_min_latency_ns=0.):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -183,6 +183,12 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     to admission to the destination FIFO. It does not keep source subscription
     open. Source/read latency and this delay are alternative locations of an
     uncalibrated path; no physical split is inferred from their sum.
+    input_min_latency_ns optionally adds an independent per-demand lower bound
+    from logical issue to destination FIFO admission. Admission is the maximum
+    of source_ready+destination_latency and demand_issue+input_min_latency.
+    A subscriber therefore cannot inherit a completion earlier than its own
+    path allows. This does not extend source or address-unit subscription,
+    charge extra source work, or identify an actual hardware latency.
     """
     import heapq
 
@@ -204,6 +210,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     if (type(destination_latency_ns) not in (int,float) or not math.isfinite(destination_latency_ns)
             or destination_latency_ns<0):
         raise ValueError('finite nonnegative per-demand destination latency required')
+    if (type(input_min_latency_ns) not in (int,float) or not math.isfinite(input_min_latency_ns)
+            or input_min_latency_ns<0):
+        raise ValueError('finite nonnegative per-input minimum latency required')
     counts=[2]*cta_count if output_counts is None else list(output_counts)
     if len(counts)!=cta_count or any(type(n) is not int or n<1 for n in counts):
         raise ValueError('positive per-CTA output counts required')
@@ -257,7 +266,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
     local_intervals=[[] for _ in range(cta_count)]
     local_blocked={'producer':0.,'consumer':0.}
-    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0
+    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0 or input_min_latency_ns>0
     prefill=None
     actors=[]
     def push(time,kind,cta,index):
@@ -381,8 +390,11 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             demand=dict(demand_id=demand_id,source_id=source_id,source_key=key,merged=merged,
                 cta=cta,kind=kind,index=index,arrival_ns=t,source_ready_ns=done,work=weight)
         if routed_inputs:
-            if destination_latency_ns: demand['destination_arrival_ns']=done+destination_latency_ns
-            demands.append(demand);push(done+destination_latency_ns,'deliver_input',cta,demand_id)
+            destination_arrival=max(done+destination_latency_ns,t+input_min_latency_ns)
+            if destination_latency_ns or input_min_latency_ns:
+                demand['destination_arrival_ns']=destination_arrival
+            if input_min_latency_ns: demand['input_earliest_destination_ns']=t+input_min_latency_ns
+            demands.append(demand);push(destination_arrival,'deliver_input',cta,demand_id)
         else:
             # Preserve the original zero-destination event ordering exactly.
             push(done,'input_ready',cta,index)
