@@ -178,6 +178,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [cfg_c完整rank图主集成复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-rank-dependencies-v2/README.md)完成：接入C d6422c9，44测试通过，12完整图byte同、341输入SHA匹配，覆盖26静态条件/1556cluster/7148rank输出。接入前cfg_a三完整图、cfg_c三本地图和cfg_a arrival routes逐字段不变。源到四stage复用/两WG尾部/输出完成逻辑闭合，entry与服务仍未定价；不增加预测或观察资格。
 
+[cfg_c跨K输入可用时点](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cross-k-input-availability-v1/README.md)：独立查60raw/30配对，12对所选参考晚于目标开始、6对warmup不同、2目标无任何先前同pitch小K参考。原误差不改、无替换参考；限制为离线条件诊断。A245760数值及12960条换算恒等式复验通过，30条host差与主集成同。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
