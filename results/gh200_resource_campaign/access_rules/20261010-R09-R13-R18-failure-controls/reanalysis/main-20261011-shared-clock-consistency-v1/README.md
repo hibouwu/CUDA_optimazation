@@ -7,3 +7,5 @@
 模型允许各SM独立未知offset与共同任意非负F(t)，不直接相减跨SM cycle。这是假设端点预算的可行性边界，不是实测打点精度或物理DVFS证据；旧smoke资格保持false，不提供预测价格。
 
 完整报告以shared-clock-consistency.json.gz无损保存；解压后与复放JSON逐字节相同。
+
+数学边界更正（0a90ea6）：无rate cap时，相邻整数不可行/可行证书只给实数下确界的闭区间，不能断言下端点严格排除或下确界可取得。例(C,N)=(0,0),(1,0)在epsilon=0不可行，但任意正epsilon可行，下确界仍为0。归档旧JSON保持原样，其uncapped real_lower_bound_open=true表述撤回；整数预算和证书不改。有限正cap分支仍允许开下界。9项shared-clock测试通过，含此反例。
