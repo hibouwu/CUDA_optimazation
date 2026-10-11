@@ -143,6 +143,8 @@ A的shared-clock实数边界修正6e36df0合入0a90ea6，9项测试通过：无c
 
 C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的JSON与CSV完全一致，首L的ns差保留到原FINAL，未由后续输出整体抵消。B原生cycle复核0a1ef33合入529da26，100进程/9720窗口与原报告一致，211当前SHA核对；analyze_r18实际版本差单列。沿M/single126强响应在cycle域仍存在，AlongN小ns响应与cycle异号，不混成统一时钟修正。旧观察失败、V09评分及价格保持。
 
+[740071 guarded三臂最小检查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/README.md)完成：复用740070，GPU432获配单卡，三臂共12288抽样值精确，matched/guarded各264角色协议有效、plain无trace。三target动态smem215040、API最大CTA/SM=1；源码/binary/module/raw/snapshot身份链已复核。FIRST/MAIN括号最大130/138cycle只作记录检查，无全D、硬件包围或扰动资格，不启动30进程或V10。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。
