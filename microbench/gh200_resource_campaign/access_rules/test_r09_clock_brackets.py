@@ -2,7 +2,7 @@ import json
 import math
 import unittest
 
-from r09_clock_brackets import common_rate_interval, observer_perturbation_gate, window_bounds
+from r09_clock_brackets import common_rate_interval, local_clock_witness, observer_perturbation_gate, window_bounds
 
 
 def exact(cycles, ns, origin=1000):
@@ -128,6 +128,26 @@ class ClockBrackets(unittest.TestCase):
             observer_perturbation_gate(pairs,expected_ctas=2)
         with self.assertRaises(KeyError):
             observer_perturbation_gate([dict(event_ns_delta=0) for _ in range(10)],expected_ctas=2)
+
+    def test_local_varying_rate_fits_unequal_interval_rates(self):
+        result=local_clock_witness([(0,0),(100,100),(300,200)],declared_rate_cap_ghz=2)
+        self.assertEqual(result['minimum_endpoint_slack_ns'],0)
+        self.assertEqual(result['segment_rate_ghz'],[1,2])
+        # A varying-rate existence witness does not assert one constant rate.
+        self.assertFalse(common_rate_interval([exact(100,100),exact(200,100)],interval_tolerance_ns=0)['feasible'])
+
+    def test_local_witness_minimum_is_attained_at_inverted_pair(self):
+        result=local_clock_witness([(0,100),(100,50)],declared_rate_cap_ghz=2)
+        self.assertEqual(result['minimum_endpoint_slack_ns'],50)
+        self.assertEqual(result['adjusted_relative_ns'],[0,50])
+        self.assertEqual(result['segment_rate_ghz'],[2])
+
+    def test_local_clock_origins_and_equal_counter_values(self):
+        origin=1<<60
+        result=local_clock_witness([(1000,origin),(1000,origin+10),(1020,origin+20)],declared_rate_cap_ghz=2)
+        self.assertEqual(result['minimum_endpoint_slack_ns'],0)
+        self.assertEqual(result['segment_rate_ghz'],[0,2])
+        self.assertEqual(result['original_relative_ns'],[0,10,20])
 
 
 if __name__=='__main__':

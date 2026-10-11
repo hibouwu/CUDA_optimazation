@@ -93,6 +93,65 @@ def common_rate_interval(windows, *, interval_tolerance_ns=128):
     return result
 
 
+def local_clock_witness(points, *, declared_rate_cap_ghz=1.98):
+    """Existence of a per-CTA nonnegative varying rate, never a predictor.
+
+    Points are integer (clock64, globaltimer_ns) from ONE CTA/SM counter epoch.
+    A common per-endpoint timer allowance epsilon and 0<=f(t)<=cap are assumed.
+    For Ci<Cj, tj-ti >= (Cj-Ci)/cap. Thus the minimum epsilon equals
+    max(0, ((Cj-Ci)/cap-(Nj-Ni))/2) over all ordered-clock pairs.
+    Sorting C (ties by N) and taking a prefix max of N-C/cap-epsilon constructs
+    a witness. Integer origins are removed before rational arithmetic.
+
+    Endpoint observations construct this witness; it must never be fed to a
+    free target prediction or described as an identified physical trajectory.
+    No across-SM clock epoch or common f(t) assumption is made.
+    """
+    if not points or any(len(p)!=2 or any(not isinstance(v,int) or isinstance(v,bool) for v in p) for p in points):
+        raise ValueError('integer same-CTA clock/timer points required')
+    cap=_tolerance(declared_rate_cap_ghz)
+    if cap<=0:
+        raise ValueError('positive declared rate cap required')
+    order=sorted(range(len(points)),key=lambda i:points[i])
+    c0,n0=min(c for c,n in points),min(n for c,n in points)
+    relative=[(points[i][0]-c0,points[i][1]-n0) for i in order]
+    epsilon=Fraction(0);witness_pair=None
+    for a,(ca,na) in enumerate(relative):
+        for b,(cb,nb) in enumerate(relative[a+1:],a+1):
+            if cb>ca:
+                needed=(Fraction(cb-ca)/cap-(nb-na))/2
+                if needed>epsilon:
+                    epsilon,witness_pair=needed,(order[a],order[b])
+    adjusted=[];z=None
+    for c,n in relative:
+        lower=Fraction(n)-Fraction(c)/cap-epsilon
+        z=lower if z is None else max(z,lower)
+        t=z+Fraction(c)/cap
+        if abs(t-n)>epsilon:
+            raise ValueError('local clock witness exceeded timer allowance')
+        adjusted.append(t)
+    rates=[]
+    for (ca,na),(cb,nb),ta,tb in zip(relative,relative[1:],adjusted,adjusted[1:]):
+        dc,dt=cb-ca,tb-ta
+        if dt<0 or (dt==0 and dc!=0):
+            raise ValueError('local clock witness reversed time')
+        if dt:
+            rate=Fraction(dc)/dt
+            if not 0<=rate<=cap:
+                raise ValueError('local clock witness violated declared cap')
+            rates.append(float(rate))
+        else:
+            rates.append(None)  # Identical clock/time points, no interval.
+    return dict(declared_rate_cap_ghz=float(cap),minimum_endpoint_slack_ns=float(epsilon),
+                minimum_endpoint_slack_fraction=[epsilon.numerator,epsilon.denominator],
+                point_order=order,clock_origin=c0,timer_origin_ns=n0,
+                adjusted_relative_ns=[float(t) for t in adjusted],
+                original_relative_ns=[n for c,n in relative],
+                relative_cycles=[c for c,n in relative],
+                segment_rate_ghz=rates,witness_pair_indices=witness_pair,
+                scope='Observation-conditioned same-CTA existence witness only; neither a free clock model nor physical rate identification.')
+
+
 def paired_phase_summary(ctas, *, expected_ctas=132):
     """Audit every matched CTA/original role before taking phase centers.
 

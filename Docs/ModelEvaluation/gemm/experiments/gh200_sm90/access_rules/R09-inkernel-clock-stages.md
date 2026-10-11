@@ -446,6 +446,28 @@ gap由相邻CUDA event相减，包含准备、主机与设备路径，不能命�
 
 [独立审计结果](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-host-check-r5/reanalysis/A-history-contract-audit-v1/prefix-history-audit.json)绑定原始样本、源包与有效trace include路径；[本组入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_plain_prefix_audit.py)独立验证plain模块身份，不修改公共reader。源包中overlay trace有两个同名成员，最后的stub引用`source/probes/v06_trace.hpp`；审计保留两成员哈希并读取该有效实现，避免将较早成员误当实际编译源。
 
+### 大的常数率残差一定要求大的局部计时误差吗？
+
+不一定。对一个CTA的entry、producer、两原角色FIRST/MAIN/PERMIT/DONE/final，共12个配对端点，允许该SM的有效周期率随时间变化，但约束`0≤f(t)≤1.98 GHz`。1.98是r2声明的上限，本检验不新增物理硬件上限断言。若每个globaltimer端点允许误差ε，则对`C_i<C_j`必须有
+
+\[
+t_j-t_i\ge(C_j-C_i)/f_{cap},\qquad
+\epsilon_{min}=\max\left(0,\max_{C_i<C_j}
+\frac{(C_j-C_i)/f_{cap}-(N_j-N_i)}2\right).
+\]
+
+按C排序（同C按N排序），对`N−C/f_cap−ε`取前缀最大值，再加回`C/f_cap`，可构造满足所有端点与速率上限的见证；所有差先以整数相减，约束使用精确有理数。本轮逐CTA验证该构造，没有从见证读取预测参数。
+
+| 数据 | 首/后L常数率：必要端点容差的进程中位再中位 | 可变局部率：必要端点容差的进程中位再中位 | 可变局部率：全部CTA最大 |
+|---|---:|---:|---:|
+| 739095 stage4，10进程 | 658.42 ns | 8.40 ns | 14.65 ns |
+| 739095 stage6，10进程 | 671.22 ns | 4.78 ns | 13.55 ns |
+| 740048 dual，单次冒烟 | 529.73 ns | 4.78 ns | 11.53 ns |
+
+这说明**常数换算失败，不迫使局部端点存在数百ns误差**；允许局部率变化是与这些读数相容的另一解释。可变见证自由度更高、由目标端点构造，不能把表中差异叫预测精度提升，不能接入自由模型，也不能认定为已识别的DVFS或时钟门控。各CTA使用独立见证，它不修复跨SM共同f(t)的包含反例，也不消除读取配对延迟的可能性。下一步观察设计必须保留这两个解释，不能先把常数率残差全部归给观察器。
+
+[2772个CTA的逐点见证与输入哈希](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-v1/local-clock-consistency.json)由[专用入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_local_clock_consistency.py)生成；纯构造函数在`r09_clock_brackets.local_clock_witness`，不解析数据、不拟合参数。
+
 复核入口：[r09_time_contract.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_time_contract.py)。[本轮结果与契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/README.md)包含逐进程CSV、源哈希、经验下界、支持/排除/不可区分及独立复放命令。持续目标仍未完成，后续规则须另经冻结的新局部留出与组合检查。
 
 ## 作业与复核索引
