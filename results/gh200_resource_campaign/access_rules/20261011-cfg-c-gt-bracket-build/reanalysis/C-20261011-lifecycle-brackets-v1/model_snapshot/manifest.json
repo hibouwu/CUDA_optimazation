@@ -1,0 +1,11 @@
+{
+  "C_model_commit": "e6eda2833da0df3c4dea801bc58658f59cc8835f",
+  "B_source_commit": "5c987464e0c370dc4303a961a9c5f68a88f5b414",
+  "input_sha256": {
+    "/home/jianyeshi/.codex/worktrees/9e4a/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/output_model.py": "795425df9114b7ffdc7066b2295b672b586b96679c751e64795fef6f63f98d89",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/cfg_c-S4-K64-T1-source-ports.json.gz": "f4f575dcd020d5278babe3896c4892cf72389416a19abfcad037815ba4176f18",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/cfg_c-S4-K64-T2-source-ports.json.gz": "fcd971a0a039b3ccf14145060dbe74d0b0b8236e8dcea5bd80fdece1d9a40c5e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/B-cfg-c-source-bindings.json.gz": "33c767c3c43915adabfd12f02ea274f75845e6ad3e070c6e96aa3cbc5da4ebaa"
+  },
+  "qualification": false
+}

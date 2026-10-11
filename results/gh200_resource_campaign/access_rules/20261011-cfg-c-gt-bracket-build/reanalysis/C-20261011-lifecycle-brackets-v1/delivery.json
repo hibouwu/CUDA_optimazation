@@ -1,0 +1,25 @@
+{
+  "schema": "C-lifecycle-bracket-delivery/1",
+  "artifact_sha256": {
+    "lifecycle_brackets.py": "a04d660009406bda13aee55785fd41207965c2c570ecf2f79475b8229e09b559",
+    "review_smoke.py": "e6e7f25da7f7dda9ad65e88ff8fe407c52b57eeae142667d81741a2132bd66ff",
+    "test_lifecycle_brackets.py": "cf27474c32ef574a73e2b7d14c3f1e7b556ff222acd6eaeb4ab2c0e47009d50f",
+    "tests-final.txt": "7dff5492f9c8be5806973b46dea70d026055e185f1cf82d22d3232a13a31dc0c",
+    "README.md": "5b6c12b298d0e5a227242602a9767827a844f48f8c537096c83680609a947c6f",
+    "model_snapshot/manifest.json": "ceecaa9f872aa9be40feea41c94efcbbfef83e2c1f770e6f69b96c63c932ac41",
+    "model_snapshot/output_model.py": "795425df9114b7ffdc7066b2295b672b586b96679c751e64795fef6f63f98d89",
+    "model_snapshot/cfg_c-S4-K64-T1-source-ports.json.gz": "f4f575dcd020d5278babe3896c4892cf72389416a19abfcad037815ba4176f18",
+    "model_snapshot/cfg_c-S4-K64-T2-source-ports.json.gz": "fcd971a0a039b3ccf14145060dbe74d0b0b8236e8dcea5bd80fdece1d9a40c5e",
+    "model_snapshot/cfg_c-K64-aligned-bindings.json": "b4aae7733e92a6c3eb505236ec9cd31c5d64bfab6edefb7b733a865875bcce83",
+    "smoke-review-final-v1/report.json": "a8459aa11eed94c5b5526c6003a2e8d4f1434d4a17d1fee638c4da8e8ef0b241",
+    "smoke-review-final-v1/packets.json.gz": "502f87c8f6f05886da755327af03b43ab508bfcbadd5faf0d5b7b9f16c3ea7ed",
+    "smoke-review-final-v1/projections.json.gz": "d8a54c7e3003d39d3caa4ec30e9dcdce24ab2bb251ad42ad088abc0e66cc996a",
+    "smoke-review-final-v1/consumer-endpoints.json": "2cbaefc99714cdbf4a111f116b85cb1d7a30ca257d0c70af91fa6ce85139ec07",
+    "smoke-review-final-v1/cli-example/projection.json": "c8f145d5d416d54206c675b96294d59f93bc93dccc9dd132305bac9437fee227"
+  },
+  "final_review": "smoke-review-final-v1",
+  "CPU_tests_passed": 18,
+  "CLI_projection_equal": true,
+  "new_C_GPU_processes": 0,
+  "qualification": false
+}

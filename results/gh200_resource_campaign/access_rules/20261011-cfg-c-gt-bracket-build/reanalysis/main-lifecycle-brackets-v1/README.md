@@ -1,0 +1,7 @@
+C最终生命周期适配主线重放：15项交付SHA核对，18项CPU测试通过。24共同输入SHA与9迁移后相同文件SHA相符；全部非身份报告字段相同，packets/projections两个gzip和consumer-endpoints.json逐字节相同。使用现有源图与静态坐标绑定，将740160的864个FIRST/MAIN GT bracket接入66cluster/132CTA/432WG窗口，源图约束可行。
+
+当前输入只有FIRST/MAIN锚点。132CTA的consumer_FINAL、66cluster的source_safe_exit和cuda_complete仍没有有限上界；在这些边际界下，每个CTA都保留可能最后完成的资格，无法给原冻结候选集合提供更小的覆盖证书。没有把FINAL、source_safe_exit、cuda_complete混为同一个端点，没有加载或修改V09候选。
+
+GT共享原点在smoke后构造，图使用零服务下界传播；这是条件观测适配而非前向数值预测。采样包围/物理GT精度/扰动/null等前提和缺失端点均保留，所有资格false。该适配不能覆盖后来740161必要控制失败。公共output_model、probe和reader未修改。
+
+重放：在本目录运行test_lifecycle_brackets.py；review_smoke.py的run指向gt-bracket-smoke-v2、ordering-review指向C排序审查report.json，output使用新目录。comparison.json保存完整输出比对；C最终产物及其smoke-review-final-v1保留，CPU中间产物未作为最终依据。
