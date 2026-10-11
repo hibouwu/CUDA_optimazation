@@ -573,7 +573,9 @@ def dependency_bounds(graph, anchors=None, latencies_ns=None):
         lower[n]=max(lower[n],max((lower[p]+latencies_ns.get(n,0) for p in graph['nodes'][n]),default=root_lower))
     for n in reversed(order):
         upper[n]=min(upper[n],min((upper[c]-latencies_ns.get(c,0) for c in children[n]),default=math.inf))
-    invalid=[n for n in order if lower[n]>upper[n]+1e-9]
+    # Subtract raw integer endpoints before the float tolerance: adding it to
+    # an absolute globaltimer stamp would round away low bits near 10**18.
+    invalid=[n for n in order if lower[n]-upper[n]>1e-9]
     if invalid:raise ValueError('infeasible event bounds: '+','.join(invalid[:4]))
     return {n:[lower[n] if math.isfinite(lower[n]) else None,
                upper[n] if math.isfinite(upper[n]) else None] for n in order}

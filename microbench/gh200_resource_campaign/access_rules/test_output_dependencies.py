@@ -192,6 +192,36 @@ class RankDependencyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dependency_order({'nodes': {'a': ['b'], 'b': ['a']}})
 
+    def test_large_integer_equal_bounds_and_one_ns_reversal(self):
+        graph={'nodes':{'a':[],'b':['a']}}
+        # Both downward and upward float rounding occurred in the old comparison.
+        for stamp in (1791000000000000001,1791000000000000129):
+            with self.subTest(stamp=stamp):
+                bounds=dependency_bounds(graph,{'a':(stamp,stamp),'b':(stamp,stamp)})
+                self.assertEqual(bounds,{'a':[stamp,stamp],'b':[stamp,stamp]})
+                self.assertTrue(all(type(value) is int for pair in bounds.values() for value in pair))
+                with self.assertRaisesRegex(ValueError,'infeasible'):
+                    dependency_bounds(graph,{'a':(stamp+1,stamp+1),'b':(stamp,stamp)})
+
+    def test_integer_anchored_bounds_are_translation_invariant(self):
+        graph={'nodes':{'a':[],'b':['a'],'c':['b'],'unknown':[]}}
+        anchors={'a':(2,5),'c':(20,21)};lags={'b':3,'c':7}
+        expected=dependency_bounds(graph,anchors,lags)
+        for shift in (1791000000000000001,-1791000000000000001):
+            translated={name:(low+shift,high+shift) for name,(low,high) in anchors.items()}
+            actual=dependency_bounds(graph,translated,lags)
+            unshifted={name:[None if value is None else value-shift for value in interval]
+                       for name,interval in actual.items()}
+            self.assertEqual(unshifted,expected)
+
+    def test_fractional_feasibility_tolerance_is_preserved(self):
+        graph={'nodes':{'a':[],'b':['a']}}
+        for reversal in (0.0,5e-10,1e-9):
+            with self.subTest(reversal=reversal):
+                dependency_bounds(graph,{'a':(0,0),'b':(-reversal,-reversal)})
+        with self.assertRaisesRegex(ValueError,'infeasible'):
+            dependency_bounds(graph,{'a':(0,0),'b':(-2e-9,-2e-9)})
+
     def test_coarse_endpoints_do_not_localize_a_synthetic_shared_delivery_delay(self):
         graph = cfg_a_rank_dependencies(6, 64, 2)
         prices = {n: (300 if n.endswith('.retired') else 10 if
