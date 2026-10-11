@@ -14,7 +14,9 @@
 
 129024 是展开的源码线程路径数，不是硬件 TMA 请求数或物理读取次数。source_lifetimes_closed、threads_return_all384 和 CUDA completion requirement 仍为不同端点。图只能表达必要不等式，不能证明存在完整物理执行、给出有限退出上界、预测最后 CTA 或形成零延迟时间解。
 
-三个原 B pitch 的 D 输出列表逐项相同，输入必要图也已核对相同，因此只重放一次共同必要顺序；地址与服务并未被判定相同。`summary.json` 保留所有 132 CTA 的组合图 SHA 与全量检查，CTA0、107、108 的压缩图分别覆盖 T4 内部、T4 双边界和 T3 路径。其它图可由固定输入与程序完整重建，不常驻展开所有图。C 的限定端点映射审查另行交回。
+三个原 B pitch 的 D 输出列表逐项相同，输入必要图也已核对相同，因此只重放一次共同必要顺序；地址与服务并未被判定相同。`summary.json` 保留所有 132 CTA 的组合图 SHA 与全量检查，CTA0、107、108 的压缩图分别覆盖 T4 内部、T4 双边界和 T3 路径。其它图可由固定输入与程序完整重建，不常驻展开所有图。
+
+C 的限定端点映射审查已由主线重放，完整报告除路径外一致，未发现问题。三份代表图均为原输入图与重命名 D 图的精确并集，12 个符号顺序扩展确认没有增加每线程 barrier 或把 D 全局可见强制并入源释放。详见 `../main-lifecycle-alias-review-v1`；这些检查不授予物理联合执行或时间资格。
 
 ```sh
 python microbench/gh200_resource_campaign/access_rules/analyze_r10_lifecycle_composition.py \

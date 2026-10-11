@@ -309,3 +309,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [旧pingpong D接口主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-legacy-D-lifecycle-v1/README.md)：采用C正式v3，10交付SHA、各15输入SHA、完整报告与3ledger一致，18CPU测试通过。主线指出的逐线程own mma_tail→epilogue wait返回已修复；每条件4032子块含178全越界，仍保留源协议与独立D可见义务，不迁移cooperative输出图或价格。
 
 [旧R10输入/输出必要依赖组合](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-composition-v1/README.md)：3156对应聚合端点连接、132CTA全图无环；129024源码线程读路径被源生命周期要求覆盖，3854有效D可见义务仅进入CUDA完成要求，178全越界不虚构有效写。372次下一WG MMA/D解耦、372次epilogue顺序和240次同WG复用检查通过；129024线程级输入端口仍为符号，所有时间/服务未知，无GT锚点/预测资格。
+
+[C端点映射审查主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-alias-review-v1/README.md)：每侧9输入SHA、5共同+4重定位程序相同，完整报告除路径一致，无行动项。CTA0/107/108精确图并集及12符号顺序扩展保留线程提前到达、下一WG MMA与前D tail分离、D全局可见晚于源关闭的可能性；不把这些必要图见证称作物理时间或联合执行证明。

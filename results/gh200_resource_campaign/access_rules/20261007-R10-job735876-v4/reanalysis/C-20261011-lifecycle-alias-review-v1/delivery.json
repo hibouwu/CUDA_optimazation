@@ -1,0 +1,21 @@
+{
+  "files_sha256": {
+    "README.md": "a4c0b137097dd60a4d6e111a2ed6a4bbb0d78db297b9a788dbb4f9fdc2cef0df",
+    "review.json": "d4c096b35f0f7be265390fe4c18d50f1f7e503b1cad8b9852de69a9e8995e3bb",
+    "review.py": "88885d84c16498c3af876efdc7e565335639215bab291359cef6f3a716facce2",
+    "source/analyze_r10_input_dependency_composition.py": "d3f0b624f0efe50375cc2087d9a358cc86738b05151c62fd24639bc8cc8ad03c",
+    "source/analyze_r10_lifecycle_composition.py": "bd4f2b75901d4e15222ac3e8859df688aa4ebf60a737b3335642b80b44350363",
+    "source/legacy_D_binding.py": "cd122a1ae0dc277e31849a5a7a7d7b66621e8f50dd35789097d3b5ef42fb0178"
+  },
+  "findings": [],
+  "qualification": {
+    "independent_local_holdout_passed": false,
+    "observation_qualified": false,
+    "physical_joint_execution_verified": false,
+    "source_alias_review_passed": true,
+    "time_prediction_qualified": false
+  },
+  "reviewed_script_sha256": "bd4f2b75901d4e15222ac3e8859df688aa4ebf60a737b3335642b80b44350363",
+  "schema": "C-lifecycle-alias-review-delivery/1",
+  "scope": "compose_cta only: six all128 alias meanings, aggregate/thread distinction, input producer exit and independent D-visible obligations. No recount, full source-manifest replay, prices, GPU or new model."
+}

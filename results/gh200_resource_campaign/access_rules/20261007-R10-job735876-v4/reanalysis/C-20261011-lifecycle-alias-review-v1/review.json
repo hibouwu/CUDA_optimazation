@@ -1,0 +1,227 @@
+{
+  "alias_definitions": [
+    [
+      "math_order.wait.return_all128",
+      "mma_order_wait_return_all",
+      "Same math-stage wait return maximum over the owning128 threads. Initial/opposite-phase and prior-WG notification retain their original meaning."
+    ],
+    [
+      "math_order.arrive_all128",
+      "mma_order_arrive_all",
+      "Same math-stage128 arrival completion after mma() return, before own mma_tail."
+    ],
+    [
+      "mma_tail.return_all128",
+      "mma_tail_return_all",
+      "Same owning128-thread tail return maximum after wait0 and last input release emission."
+    ],
+    [
+      "epilogue_order.wait.return_all128",
+      "epilogue_order_wait_return_all",
+      "Same epilogue-stage wait return maximum, after own thread tail and prior-WG128 epilogue arrivals."
+    ],
+    [
+      "store_tail.return_all128",
+      "store_tail_return_all",
+      "Same128-thread per-output store_tail return maximum; includes issuing-path read0. Does not require nonissuing threads to wait for all other thread returns."
+    ],
+    [
+      "epilogue_order.arrive_all128",
+      "epilogue_order_arrive_all",
+      "Same128 epilogue-stage arrival completion, after per-thread store_tail and pingpong state advance."
+    ]
+  ],
+  "cases": [
+    {
+      "D_visibility_independent_from_source_exit": true,
+      "cta": 0,
+      "output_endpoint_checks": [
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 0,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 1,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 2,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 3,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        }
+      ],
+      "producer_alias_is_input_lifetime_only": true,
+      "saved_graph_matches_exact_union": true,
+      "six_aliases_semantically_matched": true,
+      "symbolic_order_witnesses": [
+        {
+          "acyclic": true,
+          "after": "cta0.j0.q7.source_read_complete.t0",
+          "before": "cta0.j0.epilogue_order.arrive.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta0.j0.q7.source_read_complete.t0",
+          "before": "cta0.j2.math_order.wait.return.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "c0.o0.store_tail_return_all",
+          "before": "c0.o1.mma_order_wait_return_all",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta0.j0.q0.global_valid_writes_visible",
+          "before": "cta0.source_lifetimes_closed",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        }
+      ],
+      "unresolved_individual_input_ports_preserved": true
+    },
+    {
+      "D_visibility_independent_from_source_exit": true,
+      "cta": 107,
+      "output_endpoint_checks": [
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 0,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 1,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 2,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 3,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        }
+      ],
+      "producer_alias_is_input_lifetime_only": true,
+      "saved_graph_matches_exact_union": true,
+      "six_aliases_semantically_matched": true,
+      "symbolic_order_witnesses": [
+        {
+          "acyclic": true,
+          "after": "cta107.j0.q7.source_read_complete.t0",
+          "before": "cta107.j0.epilogue_order.arrive.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta107.j0.q7.source_read_complete.t0",
+          "before": "cta107.j2.math_order.wait.return.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "c107.o0.store_tail_return_all",
+          "before": "c107.o1.mma_order_wait_return_all",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta107.j0.q0.global_valid_writes_visible",
+          "before": "cta107.source_lifetimes_closed",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        }
+      ],
+      "unresolved_individual_input_ports_preserved": true
+    },
+    {
+      "D_visibility_independent_from_source_exit": true,
+      "cta": 108,
+      "output_endpoint_checks": [
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 0,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 1,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        },
+        {
+          "all128_means_max_or_arrival_completion": true,
+          "output": 2,
+          "thread_tail_wait_and_tail_arrival_preserved": true
+        }
+      ],
+      "producer_alias_is_input_lifetime_only": true,
+      "saved_graph_matches_exact_union": true,
+      "six_aliases_semantically_matched": true,
+      "symbolic_order_witnesses": [
+        {
+          "acyclic": true,
+          "after": "cta108.j0.q7.source_read_complete.t0",
+          "before": "cta108.j0.epilogue_order.arrive.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta108.j0.q7.source_read_complete.t0",
+          "before": "cta108.j2.math_order.wait.return.t96",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "c108.o0.store_tail_return_all",
+          "before": "c108.o1.mma_order_wait_return_all",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        },
+        {
+          "acyclic": true,
+          "after": "cta108.j0.q0.global_valid_writes_visible",
+          "before": "cta108.source_lifetimes_closed",
+          "interpretation": "Symbolic precedence witness only; no time, physical sampling, or GPU feasibility is asserted."
+        }
+      ],
+      "unresolved_individual_input_ports_preserved": true
+    }
+  ],
+  "findings": [],
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/C-20261011-legacy-D-lifecycle-v1/data-final-v3/cfg_b_ldb3000-D-lifecycle-ledger.json.gz": "618a681fe7b9d12a12fd43042f2508b36c988a2345823b105941fe28fc6de96f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/C-20261011-lifecycle-alias-review-v1/review.py": "88885d84c16498c3af876efdc7e565335639215bab291359cef6f3a716facce2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/C-20261011-lifecycle-alias-review-v1/source/analyze_r10_input_dependency_composition.py": "d3f0b624f0efe50375cc2087d9a358cc86738b05151c62fd24639bc8cc8ad03c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/C-20261011-lifecycle-alias-review-v1/source/analyze_r10_lifecycle_composition.py": "bd4f2b75901d4e15222ac3e8859df688aa4ebf60a737b3335642b80b44350363",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/C-20261011-lifecycle-alias-review-v1/source/legacy_D_binding.py": "cd122a1ae0dc277e31849a5a7a7d7b66621e8f50dd35789097d3b5ef42fb0178",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-input-composition-v1/required-order.json.gz": "e094d4f8b9ce4072a75b61c596f6f0a19838a4ddf1f7154a6fd3022f7a6dac3a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-composition-v1/cta0-required-lifecycle.json.gz": "69610b03437376e4aa384605170771383445db054ee7374e72a18fbbfa9c2c1a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-composition-v1/cta107-required-lifecycle.json.gz": "f219b587c57b7d253a864a31723e6f96edbcf0ed079c2a25ecfc5f6a93786294",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-composition-v1/cta108-required-lifecycle.json.gz": "0840ea3865d1837948b3bc549220ca7d6cb80d23ddd02e7fd99b6fac70ca4f55"
+  },
+  "limits": [
+    "The union preserves necessary precedence. Individual thread input endpoints remain symbolic; max equalities and hardware timing are not solved.",
+    "Acyclic order extensions are symbolic counterexamples to stronger inferred order, not measured or physically certified executions.",
+    "Main completion remains an external obligation. No finite upper bound or last-finisher prediction follows."
+  ],
+  "producer_alias_definition": "Logical input producer_tail completion requirement. No equality of physical return timestamps or all384-thread/CUDA completion is asserted.",
+  "qualification": {
+    "independent_local_holdout_passed": false,
+    "observation_qualified": false,
+    "physical_joint_execution_verified": false,
+    "source_alias_review_passed": true,
+    "time_prediction_qualified": false
+  },
+  "reviewed_script_sha256": "bd4f2b75901d4e15222ac3e8859df688aa4ebf60a737b3335642b80b44350363",
+  "schema": "C-legacy-lifecycle-alias-review/1",
+  "scope": "compose_cta only: six all128 alias meanings, aggregate/thread distinction, input producer exit and independent D-visible obligations. No recount, full source-manifest replay, prices, GPU or new model."
+}
