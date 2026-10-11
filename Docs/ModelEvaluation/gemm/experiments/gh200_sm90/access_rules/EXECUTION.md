@@ -155,14 +155,14 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 A时间与C边界的本次普通有界任务均已交付并停止；旧持续目标仍为paused，工具拒绝新建目标，未绕过限制或标记旧目标完成。B供给保持暂停。A/C专属代码分别保存在未推送提交`6ee1c0bd`、`8b80aa76`及交付源码快照；用户已将主集成任务 A 代码、已审查文档与原 R09 修改合并提交为`3b53dbf7`，11个文件范围与代码/原R09哈希已按归属核对；保留该提交，不拆分历史。原r2默认预测和原冻结评分保持。任务结论、比较表、参数/源码来源与复放入口见[任务A交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/README.md)。
 
-用户已批准新的[八小时主线合同](PLAN.md#mainline)与[m11 普通 SMEM 合同](PLAN.md#smem-contract)。两个独立工作树已从同一经审查提交`3b53dbf721d7d30828d6b78b92103a214be1fbfe`准备完成；本次仅准备，未启用八小时目标、未提交GPU作业，开始时间与截止时间均未设置。用户合并提交作为本次启动基点的例外已确认，后续分别提交各自修改。路径、只读输入、PLAN/源码SHA、预算与启动消息见[准备交付](PARALLEL-START-20261011.md)和[绑定清单](PARALLEL-START-20261011.json)。
+用户已批准新的[八小时主线合同](PLAN.md#mainline)与[m11 普通 SMEM 合同](PLAN.md#smem-contract)。两个独立工作树从同一经审查提交`3b53dbf721d7d30828d6b78b92103a214be1fbfe`启动；两个新目标均已启用为active。主线巴黎时间2026-10-11 23:07:35开始，最晚2026-10-12 07:07:35停止，归因检查点最迟02:37:35；SMEM于23:07:45开始、07:07:45截止。SMEM先按普通任务开始，用户清除旧目标后于23:12:20成功创建新目标，截止未延长。启动核对时两组新GPU提交均为0；后续SMEM提交以其作业清单更新。用户合并提交作为本次启动基点的例外已确认，后续分别提交各自修改。路径、只读输入、PLAN/源码SHA、预算与启动消息见[准备交付](PARALLEL-START-20261011.md)和[绑定清单](PARALLEL-START-20261011.json)；实际启动证据见[启动清单](../../../../../../results/gh200_resource_campaign/access_rules/20261011-parallel-bounded-preparation/launch.json)。
 
 | 新任务 | 工作树 / 分支 | 准备状态 | 执行预算 |
 |---|---|---|---|
-| 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | HEAD为共同基点，工作树干净，未启动 | 最多8小时，GPU 0 |
-| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | HEAD为共同基点，工作树干净，未启动 | 最多8小时，GPU作业2 |
+| 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 新目标active，归因分析已开始 | 最多8小时，GPU 0 |
+| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 新目标active，专属探针开发已开始 | 最多8小时，GPU作业2 |
 
-当前主集成可在正式启动时创建新的主线目标；机制建议复用“GH200 输出与边界”，每次命令显式选择新SMEM工作树。该对话此前报告旧持续目标paused且无法替换，正式启用新目标前须清除旧目标，不恢复旧研究范围或误报完成。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
+当前主集成负责新主线目标；“GH200 输出与边界”负责新SMEM目标，每次命令显式选择新工作树。用户清除旧机制目标后工具已确认goal=null并成功创建新目标，原研究范围未恢复。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
 
 原分项、关键CTA及跨卡联合要求仍未完成；V09仅作开发，拟支持范围的成绩不改写原冻结评分。以下表格与后续逐批记录保存此前研究状态，本轮任务A结果单列于[新分析目录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/)。
 
