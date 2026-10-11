@@ -216,6 +216,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [历史静态归一化重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/main-static-history-equivalence-v2/README.md)三个完整JSON内容与A相同，80raw/2120调用/1160末值预测匹配；静态输入签名相同，T0比值退化为1，跨卡拒绝保留。[共同倍率同批下界](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-common-history/reanalysis/main-switch-multiplier-bound-v1/README.md)直接复核十份原raw，trial9/5使10%倍率区间无交集，精确minimax10.521266%；只排除共同末值倍率，不排除完整历史状态，无新GPU或资格。
 
+[740091两域/轮次失败诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control/reanalysis/main-window-domain-diagnosis-v1/README.md)：4320窗口精确换算恒等式、1680同CTA/WG双输出对保留。pair1的168角色全首后轮ns差异号，观测C/N配对变化的轮次对比中位+2.926%；pair9为−2.012%，cycle分组中位多近零但不授资格。C独立冻结/raw/数值/门槛复核归档，原失败不变；无物理频率或tail开销归因，无校正/新GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
