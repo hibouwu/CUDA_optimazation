@@ -152,7 +152,9 @@ stage4上游单对差超过原最大192cycle；stage6单对local差超过原中�
 
 四leader区间仍依赖整warp arrival覆盖假设，不能由leader自身时钟无条件证明。主集成正准备`r13-release-threads-v2`，让目标WG的全部128个必要线程各记录自身原arrival前后戳。B的`thread_release_arrival_bounds`只接受256..383各且仅各一次、128对有序正uint64时钟；`release_thread_process`读取独立的`release_threads`字段，旧`release_process`遇到该字段直接拒绝，不能静默只用四leader兼容字段。关闭时没有完整128观测，不给机制分类；source/SASS指令顺序、同调用/SM/slot代数和数值/扰动资格仍由caller核对。
 
-[合成覆盖反例](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-required-thread-coverage-v1/B-required-thread-coverage-witness.json)令四leader都在[100,110]、未观察thread257在[200,210]、acquire后为230；四leader条件post-last界为[120,130]，全部必要线程的界却为[20,30]，按原64cycle尺度可从排除翻为相容。这不是测量或价格，说明缺少124条arrival不能由兼容字段补齐。增加覆盖、错类型、缺失/重复线程、异常acquire、v2防误用与关闭状态测试后，共89项相关测试通过；新协议尚未产生本组已验证的GPU时间样本。
+[合成覆盖反例](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-required-thread-coverage-v1/B-required-thread-coverage-witness.json)令四leader都在[100,110]、未观察thread257在[200,210]、acquire后为230；四leader条件post-last界为[120,130]，全部必要线程的界却为[20,30]，按原64cycle尺度可从排除翻为相容。这不是测量或价格，说明缺少124条arrival不能由兼容字段补齐。增加覆盖、错类型、缺失/重复线程、异常acquire、v2防误用与关闭状态测试后，共89项相关测试通过；新协议尚未取得正式时间观察资格。
+
+主集成740056在同一GPU432完成逐线程协议的正确性准备。B复放四份原始smoke及各4096个D抽样值，开启时两stage均保留全部128对线程戳，最大bracket宽分别25/22cycle；报告同时保留协议身份与四leader兼容字段，不能据兼容字段删掉内部lane。新的单对local on−off为0/+1cycle，上游为−6/+14cycle，event变化为−0.5414%/0%。这些实际数值落在原数值门槛内，但仍为非独占、不同于原ef卡的每stage一对smoke，正式资格保持不合格。新[逐线程报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-thread-smoke-v1/B-release-warp-smoke.json)的条件post-last界为stage4 [206,231]、stage6 [210,232]cycle；SM/调用/slot绑定、SASS指令顺序和正式观察资格仍须共同满足后才能解释。Markdown按实际metrics生成，不能套用旧四leader批的超限结论。
 
 <a id="second-prefill"></a>
 

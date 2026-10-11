@@ -190,7 +190,7 @@ def analyze_smoke(run, decoder_path, request_path, output):
             raw_sha = fingerprint(raw)
             events = {e['event']:e for line in gzip.open(raw,'rt') if line.strip() for e in [json.loads(line)]}
             setup,call = events['setup'],events['call']
-            process = dict(stages=stage,observer=flag,trial=0,gpu_uuid=setup['gpu_uuid'],
+            process = dict(stages=stage,observer=flag,trial=0,gpu_uuid=setup['gpu_uuid'],protocol=setup['trace_version'],
                 elapsed_us=call['elapsed_us'],raw=str(raw),raw_sha256=raw_sha)
             try:
                 if setup['stages']!=stage:
@@ -203,12 +203,21 @@ def analyze_smoke(run, decoder_path, request_path, output):
                     sampled_D_values_checked=replayed['checked_values'],
                     native_clocks=sparse['clocks'],warp_brackets=sparse['release_warps'],
                     diagnostic=(release_thread_process(sparse) if 'release_threads' in sparse else release_process(sparse)))
+                if 'release_threads' in sparse:
+                    process['thread_brackets'] = sparse['release_threads']
             except ValueError as error:
                 process['decode_error'] = str(error)
             processes.append(process)
     summaries = paired_observer_gates(processes)
-    for name in ('receipt.json','kernel-identity.json','returned/correctness-result.txt',
-            'returned/full-d-sha256.txt','returned/allocation.txt','returned/gpu.txt'):
+    protocols = sorted({p['protocol'] for p in processes})
+    if protocols==['r13-release-warps-v1']:
+        build_record = 'kernel-identity.json'
+    elif protocols==['r13-release-threads-v2']:
+        build_record = 'build-audit.json'
+    else:
+        raise ValueError('mixed or unsupported smoke protocols')
+    for name in ('receipt.json',build_record,'source_hashes.json','returned/source_hashes.json',
+            'returned/correctness-result.txt','returned/full-d-sha256.txt','returned/allocation.txt','returned/gpu.txt'):
         fingerprint(run/name)
     fingerprint(decoder_path)
     expected_gpu = request['resources']['gpu_uuid']
@@ -216,11 +225,13 @@ def analyze_smoke(run, decoder_path, request_path, output):
         'source_SASS_active_mask_and_full_D_qualification_not_independently_proved_by_this_analyzer']
     if any(p['gpu_uuid']!=expected_gpu for p in processes):
         reasons.append('smoke_GPU_differs_from_original_request_'+expected_gpu)
+    if protocols!=['r13-release-warps-v1']:
+        reasons.append('new_protocol_identity_requires_its_own_freeze_not_original_four_leader_request')
     if any(not s['gate_passed'] for s in summaries):
         reasons.append('paired_observer_gates_not_qualified')
     labels = Counter(tuple(sorted(p['diagnostic']['conditional_classification'].items()))
         for p in processes if 'diagnostic' in p and p['diagnostic']['conditional_classification'])
-    report = dict(schema='gh200-r13-release-interpretation/1',processes=processes,
+    report = dict(schema='gh200-r13-release-interpretation/1',protocols=protocols,processes=processes,
         smoke_preparation='common-sw1-16 explicitly declared by the archived run.sh; build rows are not smoke command records',
         paired_observer_gates=summaries,conditional_label_counts=[dict(labels=dict(k),count=v) for k,v in labels.items()],
         interpretation_qualified=False,unqualified_reasons=reasons,original_request=request,
@@ -232,9 +243,11 @@ def analyze_smoke(run, decoder_path, request_path, output):
         input_sha256=inputs)
     (output/'B-release-warp-smoke.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     checked = sum('decode_error' not in p for p in processes)
-    lines = ['# 四 warp release smoke：条件区间与观察扰动', '',
+    lines = ['# release smoke：条件区间与观察扰动', '',
         f'{checked}/4份原始 smoke 通过严格 replay 与每进程4096个 D 抽样值复核。每stage各一对，',
-        '实际GPU432，不是原GPU-ef请求的40进程研究；所有机制解释保持不合格。', '',
+        '不是预列40进程研究；所有机制解释保持不合格。',
+        '实际协议：'+', '.join(protocols)+'。',
+        '实际GPU：'+', '.join(sorted({p['gpu_uuid'] for p in processes}))+'。', '',
         'smoke暖机按归档run.sh中预先声明的common-sw1-16绑定；cases.json是构建矩阵，',
         '不能把其默认adaptive身份当作这四次实际命令。两份run.sh逐字一致并保存SHA。', '',
         '| stage | local on−off cycle | H16→wait1 on−off cycle | event on/off |',
@@ -243,7 +256,7 @@ def analyze_smoke(run, decoder_path, request_path, output):
         p = s['pairs'][0]
         if 'local_cycles' in p:
             lines.append(f'| {s["stages"]} | {p["local_cycles"]} | {p["upstream_cycles"]} | {100*p["event_ratio"]:.4f}% |')
-    lines += ['', '| stage | post-last-emit→acquire后 cycle | other-warp skew cycle |',
+    lines += ['', '| stage | post-last-emit→acquire后 cycle | 相对leader的必要arrival分散 cycle |',
         '|---|---|---|']
     for p in processes:
         if p['observer'] and 'diagnostic' in p:
@@ -251,8 +264,8 @@ def analyze_smoke(run, decoder_path, request_path, output):
             a = b['after_last_emit_to_acquire_end']
             c = b['other_thread_skew'] if 'other_thread_skew' in b else b['other_warp_skew']
             lines.append(f'| {p["stages"]} | [{a["lower"]},{a["upper"]}] | [{c["lower"]},{c["upper"]}] |')
-    lines += ['', 'stage4上游单对增量超过原最大192cycle，stage6 local单对增量超过原中位32cycle。',
-        '两者都只有一对，不判正式扰动门槛通过或正式研究失败；不选择性采用条件区间。',
+    lines += ['', '每stage仅有一对smoke。上表报告实际差值；不足十次，不能判正式扰动门槛通过或正式研究失败。',
+        '局部差值是否落在数值门槛内，不提升整批观察资格；不选择性采用条件区间。',
         '主集成已在正式采样前明确 median(abs(delta)) 口径；abs(median(delta))仅列诊断，',
         '不参与通过判定。最大绝对单对及其它阈值均不变。', '']
     (output/'B-release-warp-smoke.md').write_text('\n'.join(lines))
