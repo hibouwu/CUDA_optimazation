@@ -14,7 +14,7 @@ import math
 from pathlib import Path
 import statistics
 
-from analyze_r13_release import release_arrival_bounds
+from analyze_r13_release import release_arrival_bounds, thread_release_arrival_bounds
 
 
 def interval_classification(interval, scale=64):
@@ -25,6 +25,8 @@ def interval_classification(interval, scale=64):
 
 
 def release_process(sparse):
+    if 'release_threads' in sparse:
+        raise ValueError('release_threads requires release_thread_process; four-leader interpretation would drop required arrivals')
     clocks = sparse['clocks']
     warp = sparse['release_warps']
     local = clocks['refill_end']-clocks['release_begin']
@@ -46,6 +48,38 @@ def release_process(sparse):
         conditional_classification={
             'late_required_arrivals':interval_classification(bounds['after_last_emit_to_acquire_end']),
             'post_arrival_path':interval_classification(bounds['other_warp_skew'])})
+    return result
+
+
+def release_thread_process(sparse):
+    """v2 per-thread decoder interface; never fall back to four compatibility fields."""
+    threads = sparse['release_threads']
+    if (threads.get('requires_warp_simultaneity') is not False
+            or threads.get('conditional_on_sass_instruction_order') is not True):
+        raise ValueError('per-thread arrival coverage and SASS-order contract required')
+    clocks = sparse['clocks']
+    reasons = []
+    if not clocks['refill_begin']<clocks['release_begin']:
+        reasons.append('producer_not_waiting_before_leader_release')
+    result = dict(protocol='r13-release-threads-v2',
+        leader_pre_to_acquire_end_cycles=clocks['refill_end']-clocks['release_begin'],
+        H16_to_wait1_return_cycles=clocks['wait1_end']-clocks['full_wait_begin'],reasons=reasons)
+    if not threads['enabled']:
+        if clocks['release_end']-clocks['release_begin']>32:
+            reasons.append('warp_bracket_exceeds_32_cycles')
+        result.update(required_thread_brackets=False,conditional_classification=None)
+        return result
+    bounds = thread_release_arrival_bounds(threads['physical_threads'],
+        threads['pre'],threads['post'],clocks['refill_end'])
+    leader = threads['physical_threads'].index(256)
+    if (threads['pre'][leader],threads['post'][leader])!=(clocks['release_begin'],clocks['release_end']):
+        raise ValueError('per-thread leader differs from original sparse bracket')
+    if bounds['maximum_bracket_width']>32:
+        reasons.append('required_thread_bracket_exceeds_32_cycles')
+    result.update(required_thread_brackets=True,bounds=bounds,
+        conditional_classification={
+            'late_required_arrivals':interval_classification(bounds['after_last_emit_to_acquire_end']),
+            'post_arrival_path':interval_classification(bounds['other_thread_skew'])})
     return result
 
 
@@ -168,7 +202,7 @@ def analyze_smoke(run, decoder_path, request_path, output):
                 process.update(sm=sparse['sm'],work=sparse['work'],slot=sparse['slot'],phase=sparse['phase'],
                     sampled_D_values_checked=replayed['checked_values'],
                     native_clocks=sparse['clocks'],warp_brackets=sparse['release_warps'],
-                    diagnostic=release_process(sparse))
+                    diagnostic=(release_thread_process(sparse) if 'release_threads' in sparse else release_process(sparse)))
             except ValueError as error:
                 process['decode_error'] = str(error)
             processes.append(process)
@@ -214,7 +248,8 @@ def analyze_smoke(run, decoder_path, request_path, output):
     for p in processes:
         if p['observer'] and 'diagnostic' in p:
             b = p['diagnostic']['bounds']
-            a,c = b['after_last_emit_to_acquire_end'],b['other_warp_skew']
+            a = b['after_last_emit_to_acquire_end']
+            c = b['other_thread_skew'] if 'other_thread_skew' in b else b['other_warp_skew']
             lines.append(f'| {p["stages"]} | [{a["lower"]},{a["upper"]}] | [{c["lower"]},{c["upper"]}] |')
     lines += ['', 'stage4上游单对增量超过原最大192cycle，stage6 local单对增量超过原中位32cycle。',
         '两者都只有一对，不判正式扰动门槛通过或正式研究失败；不选择性采用条件区间。',

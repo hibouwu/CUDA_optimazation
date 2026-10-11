@@ -40,6 +40,34 @@ def release_arrival_bounds(before, after, acquire_end):
         maximum_bracket_width=max(e-b for b,e in zip(before,after)))
 
 
+def thread_release_arrival_bounds(threads, before, after, acquire_end):
+    """cfg_b output1: all required physical threads 256..383, native SM cycles.
+
+    Four leaders alone do not satisfy this contract. Each thread must bracket
+    its own original arrival. Caller verifies invocation/SM/group/slot/phase,
+    source/SASS and observer qualification; this does not prove visibility cost.
+    """
+    if (len(threads)!=128 or len(before)!=128 or len(after)!=128
+            or any(type(t) is not int for t in threads)
+            or set(threads)!=set(range(256,384))):
+        raise ValueError('all 128 distinct required physical threads 256..383 are required')
+    if any(type(v) is not int or not 0<v<2**64 for v in [*before,*after,acquire_end]):
+        raise ValueError('all required clock64 stamps must be positive unsigned 64-bit integers')
+    if any(b>e for b,e in zip(before,after)):
+        raise ValueError('each required arrival needs an ordered bracket')
+    lower = max(before)
+    upper = min(max(after),acquire_end)
+    if lower>upper:
+        raise ValueError('producer returned before a required thread could arrive')
+    leader = threads.index(256)
+    return dict(last_arrival_emit=dict(lower=lower,upper=upper),
+        other_thread_skew=dict(lower=max(0,lower-after[leader]),upper=upper-before[leader]),
+        after_last_emit_to_acquire_end=dict(lower=acquire_end-upper,upper=acquire_end-lower),
+        leader_pre_to_acquire_end=acquire_end-before[leader],
+        maximum_bracket_width=max(e-b for b,e in zip(before,after)),
+        required_thread_count=128)
+
+
 def request_spec():
     return dict(status='Proposed development observation; not an independent local holdout or a runnable runner config.',
         question='Does the cfg_b release-to-acquire interval mainly precede the last required warp arrival or follow it?',

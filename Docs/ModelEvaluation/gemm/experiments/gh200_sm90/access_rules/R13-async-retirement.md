@@ -150,6 +150,10 @@ stage4上游单对差超过原最大192cycle；stage6单对local差超过原中�
 
 [逐进程区间与门槛](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-warp-smoke-v2/B-release-warp-smoke.json)由专用`analyze_r13_release_interpretation.py`生成；纯`paired_observer_gates`保留缺失配对、SM/工作身份不符、宽bracket、最大单对超限及不足十次的原因。v1因将构建case当作smoke命令而被暖机身份检查拒绝；v2按两份一致的归档run.sh绑定，未修改旧case或raw。10项新增测试覆盖区间边界、混合/未分辨、符号抵消和失效保留，连同既有测试共84项通过。
 
+四leader区间仍依赖整warp arrival覆盖假设，不能由leader自身时钟无条件证明。主集成正准备`r13-release-threads-v2`，让目标WG的全部128个必要线程各记录自身原arrival前后戳。B的`thread_release_arrival_bounds`只接受256..383各且仅各一次、128对有序正uint64时钟；`release_thread_process`读取独立的`release_threads`字段，旧`release_process`遇到该字段直接拒绝，不能静默只用四leader兼容字段。关闭时没有完整128观测，不给机制分类；source/SASS指令顺序、同调用/SM/slot代数和数值/扰动资格仍由caller核对。
+
+[合成覆盖反例](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-required-thread-coverage-v1/B-required-thread-coverage-witness.json)令四leader都在[100,110]、未观察thread257在[200,210]、acquire后为230；四leader条件post-last界为[120,130]，全部必要线程的界却为[20,30]，按原64cycle尺度可从排除翻为相容。这不是测量或价格，说明缺少124条arrival不能由兼容字段补齐。增加覆盖、错类型、缺失/重复线程、异常acquire、v2防误用与关闭状态测试后，共89项相关测试通过；新协议尚未产生本组已验证的GPU时间样本。
+
 <a id="second-prefill"></a>
 
 ## 第二WG的初态是否影响早段推进？
