@@ -1,0 +1,14 @@
+{
+  "input_hashes_per_report": [
+    37,
+    37
+  ],
+  "common_input_paths": 31,
+  "relocated_modules_identical": 6,
+  "complete_report_equal_except_paths": true,
+  "complete_ledgers_byte_equal": 4,
+  "markdown_byte_equal": true,
+  "helper_tests_reused_unchanged": true,
+  "no_timing_or_calibration_transfer": true,
+  "qualification": false
+}

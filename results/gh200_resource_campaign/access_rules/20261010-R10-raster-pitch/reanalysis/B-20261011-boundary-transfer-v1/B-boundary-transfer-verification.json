@@ -1,0 +1,35 @@
+{
+  "report_sha256": "cb18063fafea7692e758fcc49c12e7242b7e5c519d35ce9c20711fdbec811f39",
+  "input_hashes_verified": 37,
+  "independent_inverse_coordinate_ring_valid_volume_checks": {
+    "atoms": 82944,
+    "valid": 905969664,
+    "groups": 27648,
+    "D_valid": 113246208,
+    "outputs": 1728
+  },
+  "source_pair_witness_checks": 64,
+  "independent_source_reuse_partition_sha256": {
+    "r10_raster_along_m_p0": "9793c07a2a12995b0efa79da29f0d73dd34383a523d5c35d55f13cd6a4b966a1",
+    "r10_raster_along_m_p32": "9793c07a2a12995b0efa79da29f0d73dd34383a523d5c35d55f13cd6a4b966a1",
+    "r10_raster_along_n_p0": "e0611b7b200c64145962853a0f558a71a69e4825a442df4cac4f99f3fe85fba4",
+    "r10_raster_along_n_p32": "e0611b7b200c64145962853a0f558a71a69e4825a442df4cac4f99f3fe85fba4"
+  },
+  "per_case_source_users": {
+    "A24": 288,
+    "B18": 768
+  },
+  "pure_work_state_signature_equal_across_new_quartet": true,
+  "frozen_helpers_byte_identical_to_12032695": {
+    "supply_model.py": "56d3f98c67fa2da8b707102be1b91ec261fb9d27b69efb1189d427d8a109a4e0",
+    "analyze_r10_boundary_completion.py": "246c2f4b9d990f0ab89f6b9437c326c50f9cb666864c09168a542ad486e21ba8",
+    "analyze_r10_boundary_lifecycle.py": "799bb09b3391073b9baef7dc946274564e775c9d8a73f208a329f974eece3293"
+  },
+  "source_snapshot_sha256": {
+    "analyze_r10_boundary_transfer.py": "4ebd2ab5beb6411a63bb0f9344cc32ac8f3fd7345741d3040c8512c6697a1bb2",
+    "analyze_r10_boundary_completion.py": "246c2f4b9d990f0ab89f6b9437c326c50f9cb666864c09168a542ad486e21ba8",
+    "analyze_r10_boundary_lifecycle.py": "799bb09b3391073b9baef7dc946274564e775c9d8a73f208a329f974eece3293",
+    "supply_model.py": "56d3f98c67fa2da8b707102be1b91ec261fb9d27b69efb1189d427d8a109a4e0"
+  },
+  "validation": "Targeted static transfer audit and serialized-ledger checks only; unchanged helper tests were not rerun. No timing, GPU or qualification."
+}
