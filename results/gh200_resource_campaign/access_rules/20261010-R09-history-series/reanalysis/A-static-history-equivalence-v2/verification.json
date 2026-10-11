@@ -1,0 +1,8 @@
+{
+  "input_hashes": 182,
+  "exact_forecast_identities": 1160,
+  "switch_bound_terms": 20,
+  "exact_lower_bound": "908874410158089769/9097591205021478403",
+  "passed": true,
+  "scope": "Hash/arithmetic check; extraction of complete static consumption remains audited against frozen source."
+}

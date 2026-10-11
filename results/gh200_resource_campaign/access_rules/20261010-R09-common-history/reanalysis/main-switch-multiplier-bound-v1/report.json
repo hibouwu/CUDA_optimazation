@@ -1,0 +1,96 @@
+{
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-00.json": "da2bd6a5afede252addab0568ddadb927dddcdd01ff2ccc85fee5f70e713a588",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-00.txt.gz": "6925bdf2424ed1e629a1627a07b554c8acd7774552718a958bae13888c241213",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-01.json": "c92a905c7ea414b57f8254f8ca9976ddca8bdada4f84cc41f059400ea3515f6c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-01.txt.gz": "4ca81f26bb34e1ca83cf9f36828e78196c3f50447551eab908ea448375994e84",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-02.json": "f48d1e52557c3eba2d4d631f21cedc8c8415a91ed9b789c8fbb52b21090aaca9",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-02.txt.gz": "68c6753100fffe5bd3efcaa01e3807206b531cfb5dbe2f84f27e24da5fd9c00d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-03.json": "ed8ca0626e70b6524c5b82ee57e423e40945377e02e7839cc994ff82a55ac940",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-03.txt.gz": "b984a7da2e7c114fabbc7fcc8e44ccd7a71bfcb6408e2316310222eca029b897",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-04.json": "46907ee1b2ad3c3e869016ba114722807373c88a6acfd644dcc0abfd85eb6e1c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-04.txt.gz": "95f4c6d9e006a40b6aaf3dbb1a33d29e07d4d8baa058a30a3759bdd8ff12b243",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-05.json": "a5748d76e925133017a5524d0daa331a34f89e8936c09932c1753d76423bef02",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-05.txt.gz": "7a83ac5d7822467acc268dbe2dc3621857eb463fdd66ab3605a8c050c11b67d0",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-06.json": "155263df20757cce052068ed485d03eec7d9585c277c1efb47f23874d8271137",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-06.txt.gz": "f55105debf6504af2c7d87cf020074fa04c51f3261d59f8665831a9c6a229ce1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-07.json": "dcd49f68049e54f1e45b7a2ea397d2507a3b0983d256f1f8f7140ce1d2ecf8f3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-07.txt.gz": "794ce89ed90536af9d340b109c3e382073598bc13c7460b92350f2bce4654ee5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-08.json": "41f8c4a56ec0624819c0ed4d1d776c8f49eb98eea32311886d74ee6512f3c8c2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-08.txt.gz": "4c97e1754a2d6b6a91a17edff2ce20e1f22bc9a3344ff2a41b0df7752a8b4828",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-09.json": "7f695d2f59e52064bf55746f307e31a92e96604c6db14e402d5829fcb2b0f8c1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-common-history/samples/r09_history_common_sw8/ends-09.txt.gz": "87749ac204ccd463ffccf59744caa1db7f0ccd4e1e9dc2920bea29b7ec71f1d7"
+  },
+  "raw_processes": 10,
+  "ten_percent_multiplier_lower": "16584671973/21173547110",
+  "ten_percent_multiplier_upper": "56544929023/72955198290",
+  "ten_percent_feasible": false,
+  "exact_minimax_error": "1279801964400078195/12163953950764594318",
+  "minimax_error": 0.10521266107881255,
+  "minimum_q_trial": 9,
+  "maximum_q_trial": 5,
+  "rows": [
+    {
+      "trial": 0,
+      "previous_us": "7045887947/1000000",
+      "target_us": "1412343979/250000",
+      "q": "7045887947/5649375916"
+    },
+    {
+      "trial": 1,
+      "previous_us": "7120255947/1000000",
+      "target_us": "1061100769/200000",
+      "q": "7120255947/5305503845"
+    },
+    {
+      "trial": 2,
+      "previous_us": "7035327911/1000000",
+      "target_us": "5683584213/1000000",
+      "q": "7035327911/5683584213"
+    },
+    {
+      "trial": 3,
+      "previous_us": "6849664211/1000000",
+      "target_us": "90619497/15625",
+      "q": "6849664211/5799647808"
+    },
+    {
+      "trial": 4,
+      "previous_us": "1722736001/250000",
+      "target_us": "5667679787/1000000",
+      "q": "984420572/809668541"
+    },
+    {
+      "trial": 5,
+      "previous_us": "7295519829/1000000",
+      "target_us": "5140448093/1000000",
+      "q": "7295519829/5140448093"
+    },
+    {
+      "trial": 6,
+      "previous_us": "6940063953/1000000",
+      "target_us": "2585839987/500000",
+      "q": "6940063953/5171679974"
+    },
+    {
+      "trial": 7,
+      "previous_us": "1374329567/200000",
+      "target_us": "1354823947/250000",
+      "q": "6871647835/5419295788"
+    },
+    {
+      "trial": 8,
+      "previous_us": "908115983/125000",
+      "target_us": "2587968111/500000",
+      "q": "3632463932/2587968111"
+    },
+    {
+      "trial": 9,
+      "previous_us": "6352064133/1000000",
+      "target_us": "5528223991/1000000",
+      "q": "6352064133/5528223991"
+    }
+  ],
+  "scope": "Same historical batch, one common positive multiplier times last prefix event. Not a general history-model or noise bound.",
+  "observation_qualified": false
+}

@@ -214,6 +214,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [每需求最小延迟独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-input-latency-v1/README.md)：接入B24b85629，12场景/248832需求全字段重现，804共同SHA+5模块SHA匹配；真实前版6dce665默认12完整字典相同，172测试通过。独立分数FIFO递推给出FIRST=max(V,δ+τ+144)，固定初始池/有界δ条件下任意共同τ均有ΔFIRST≤δ，仍无法解释旧20对正S；停止拟τ，不增加GPU或资格。
 
+[历史静态归一化重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/main-static-history-equivalence-v2/README.md)三个完整JSON内容与A相同，80raw/2120调用/1160末值预测匹配；静态输入签名相同，T0比值退化为1，跨卡拒绝保留。[共同倍率同批下界](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-common-history/reanalysis/main-switch-multiplier-bound-v1/README.md)直接复核十份原raw，trial9/5使10%倍率区间无交集，精确minimax10.521266%；只排除共同末值倍率，不排除完整历史状态，无新GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
