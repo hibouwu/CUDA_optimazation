@@ -1,0 +1,8 @@
+{
+  "source_hashes_sha256": "96ef6a08f41c1b571cfa9e250dffaa27c516bb201cbd6931561162dd312439a4",
+  "run_sha256": "f8f269c3cc1171077089f92de8d5de1db618d45eabdbc40b474816c94529b4da",
+  "scope": "CPU build only; no samples or service prices",
+  "revision": 2,
+  "previous_attempt": 740064,
+  "change": "Canonical probes/v06_trace.hpp; overlay forwards to avoid duplicate definitions"
+}

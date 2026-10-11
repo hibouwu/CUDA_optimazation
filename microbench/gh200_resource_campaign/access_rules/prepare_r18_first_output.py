@@ -24,6 +24,10 @@ def patch_source(source):
         '#if defined(R18_FIRST_OUTPUT)\nconstexpr const char* kTraceVersion="'+VERSION+'";\n#elif defined(R13_RELEASE_WARPS) && defined(R13_STAGE_SPARSE)')
     text=replace_once(text,'constexpr int kTraceWords = 16 + 2 * 64 * kTraceTileWords;',
         'constexpr int kTraceWords = 16 + 2 * 64 * kTraceTileWords + 22;')
+    text=replace_once(text,'if (o.mode != "warm" && o.mode != "setup" &&',
+        'if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-first-output" &&')
+    text=replace_once(text,'!check_output.empty() && mode != "check-release-warps"',
+        '!check_output.empty() && mode != "check-first-output"')
     text=replace_once(text,'  unsigned release_warp_observer = 0;',
         '  unsigned first_output_observer = 0;\n  unsigned release_warp_observer = 0;')
     text=replace_once(text,'      else if(key=="--release-warp-observer")',
@@ -58,6 +62,11 @@ def patch_source(source):
         '      auto set_check_flag = [&](unsigned value) {\n        if (o.mode == "check-first-output") {\n          CUDA_CHECK(cudaMemcpyToSymbol(r18_first_output_observer,&value,sizeof(unsigned)));\n          return;\n        }')
     text=replace_once(text,'(o.mode == "check-release-warps" ? "release_warps_check"',
         '(o.mode == "check-first-output" ? "first_output_check" : o.mode == "check-release-warps" ? "release_warps_check"')
+    admission=text[text.index('    if (o.mode != "warm"'):text.index('      throw std::runtime_error("unknown mode')]
+    if 'o.mode != "check-first-output"' not in admission:
+        raise ValueError('first-output full D check is not admitted')
+    if '!check_output.empty() && mode != "check-first-output"' not in text:
+        raise ValueError('full D output export is not admitted')
     probe.write_text(text)
     header=source/'overlay/v06_trace.hpp';text=header.read_text()
     text=replace_once(text,'V06Head + 2 * V06Tiles * V06TileWords;',
