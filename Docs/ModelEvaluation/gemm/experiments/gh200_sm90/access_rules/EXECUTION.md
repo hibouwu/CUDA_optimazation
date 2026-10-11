@@ -168,6 +168,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [740070/740071证据连接](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-frame-smoke-evidence-v1/README.md)已主集成审查并执行三份复核：860源/四binary/SASS、真实三臂12288抽样值、当前reader10个破坏副本拒绝。编译1024B静态shared与运行215040B动态shared分列；旧reader缺口与修复版本同时保留。物理包围及局部/空间扰动仍未资格化，无新增设备运行。
 
+[cfg_c跨K原角色诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-cross-k-v1/README.md)新增60历史进程/245760值/12960匹配窗口对复核；18组C4096/(4C1024)−1中位为−1.952%..+1.178%，ns首轮−7.165%..−4.189%、后轮+10.899%..+15.070%。保留全部角色/工作量，不拟合价格；K伴随A行距变化且观察资格未建立，只作为闭合生命周期后需解释的开发约束。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
