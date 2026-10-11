@@ -348,6 +348,26 @@ v2 全网格 trace 的 cfg_b3008/3072 有负向扰动超过 5%，不采用其周
 
 [完成端口报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/B-boundary-completion.json)保存三份逐组压缩端口账本、预算反例和相同的工作／身份拓扑投影哈希。4份实际使用的归档源码与原manifest一致，12个输入SHA全部复核；新增6项测试后198项R13测试通过，供给模块与ff4a7423逐字节相同。端口没有闭合empty到达、consumer释放、producer tail或D完成；主集成负责后续依赖组合，无价节点不能按零时间求解，旧时间入口与guard保持不变。
 
+<a id="legacy-new-common-interface"></a>
+
+### 旧尾部与新完整tile的共同接口
+
+旧2600×3000×2000与新2304×3072×1024归档中，12份主循环、MMA展开、pipeline和scheduler核心源码逐字节相同，且分别匹配各自manifest。新probe显式设置swizzle与raster。冻结的`completion_fragment`、`stage_lifecycle`和边界账本接口可按各自维度复用；四个新AlongM／AlongN、p0／p32条件的源keys逐组与原`cfg_b_source_program`一致，也与已验收完整工作审计的源身份哈希一致。
+
+| 每条件的静态工作 | 旧几何 | 新几何 |
+|---|---:|---:|
+| 输出tile数／每输出K组数 | 504／32 | 432／16 |
+| T4／T3的CTA数 | 108／24 | 36／96 |
+| K组／逻辑输入盒数 | 16128／48384 | 6912／20736 |
+| 源有效B／目的fill B | 501600000／26882304 | 226492416／0 |
+| 完整目的期待B | 528482304 | 226492416 |
+
+共同状态规则仍为`g=j*ceil(K/64)+q`、slot=`g%6`、同槽前驱=`g-6`、WG=`j%2`。但同一输出序号的状态不同：j1首组旧为g32/slot2/generation5/full-wait参数1，新为g16/slot4/generation2/full-wait参数0；j2首组旧为g64/slot4/generation10，新为g32/slot2/generation5。可复用公式，不能直接复制slot、phase或上一几何的初态。两几何的下一输出前五次acquire仍依赖普通释放，第六次依赖前输出末组tail；这里保留各自K组数和最终代际，没有移植时间价格。
+
+新四条件的纯完成工作／ring拓扑相同；同raster的两个pitch连源身份等价关系也相同，实际地址／stride不同。改变raster则会改变等价关系：AlongM的CTA0/1首输出坐标为(0,0)/(1,0)，A不同而B0/B1相同；AlongN为(0,0)/(0,1)，A相同而B0/B1不同。因此，身份关系能够为raster提供不同输入，但仅靠身份是否相同仍无法区分pitch。这个证书不声明实际共享、物理读取owner、仲裁或性能响应已确定。
+
+[共同接口审计](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-boundary-transfer-v1/B-boundary-transfer.json)保存四个新条件的压缩绑定账本、两类投影哈希、具体源复用见证、旧／新生命周期和37项输入SHA。复用既有验证后的接口，供给模块、完成端口和生命周期函数均未修改。新条件的B分配容量保持6422528B，旧条件仍随ldb改变；源覆盖、allocation、卡与观察窗口的边界均保留，没有重做测量归一化、组合层或时间评分，也未升级旧几何时间支持或留出资格。
+
 <a id="v08-stride"></a>
 
 ## V08F：分开行距和尺寸尾部
