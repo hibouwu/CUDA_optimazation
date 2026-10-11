@@ -692,6 +692,8 @@ T_low=0时正时间下端开、率上端无界，不夹到1ns；没有正时间�
 
 单进程接口检查未取得观察资格。后续[740161完整控制](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/README.md)的off/on 4912/6372、off/off 4729/6372序列失败，L各432/432失败；不复用旧binary校准、不评分新预测，原门槛及独立留出/跨卡边界保持。
 
+A随后复核740161全部10个开启观察的新进程，[逐进程首／次输出区间](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/A-output-rate-interval-v1/README.md)的840个共同配对与1680个同WG配对全部不相交；共同配对的`first.rate_low/second.rate_high−1`最小／中位／最大约7.500%／9.529%／11.193%。这只将条件分离复现到10进程，不把不同进程互减或拟合额外GT误差预算。67项输入SHA、16项冻结文件及122项archive文件核对，6480窗口／2520配对的独立有理数复算、四项负例与新目录逐字节重放通过；主线数值证据复用，观察/预测资格仍未通过。
+
 ## 作业与复核索引
 
 | 实验问题 / 作业 | 一句结果 | 证据入口 |
