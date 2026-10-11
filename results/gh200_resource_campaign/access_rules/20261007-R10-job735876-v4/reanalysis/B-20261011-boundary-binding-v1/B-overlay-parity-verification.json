@@ -1,0 +1,16 @@
+[
+  {
+    "base": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+    "overlay": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+    "base_sha256": "83a8e63dd9e7f70a735c17fbb779782fc31ce5215509ed644d13e68428438dee",
+    "overlay_sha256": "3e446fbe15026c6d8ed4c53e92f4016d2cc598a57b36ef965280cb289f66a930",
+    "only_added_trace_include_and_one_stamp": true
+  },
+  {
+    "base": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+    "overlay": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+    "base_sha256": "b78d838244bbc71e915cf0ec7efb353d0cdda2826de945a344c558923c90f375",
+    "overlay_sha256": "f12ac210e4bfda773d3e96ed7c7752e74ac10fae75994de7001c29fb6f3a0013",
+    "only_added_trace_include_and_one_stamp": true
+  }
+]

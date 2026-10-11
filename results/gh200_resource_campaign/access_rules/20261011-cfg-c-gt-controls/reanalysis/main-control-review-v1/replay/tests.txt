@@ -1,0 +1,31 @@
+test_both_arms_and_unqualified (test_cfg_c_producer_tail_packet.PacketTests.test_both_arms_and_unqualified) ... ok
+test_missing_or_off_tail_is_retained_as_error (test_cfg_c_producer_tail_packet.PacketTests.test_missing_or_off_tail_is_retained_as_error) ... ok
+test_rejects_bad_cta_work_sm_or_header (test_cfg_c_producer_tail_packet.PacketTests.test_rejects_bad_cta_work_sm_or_header) ... ok
+test_rejects_noninteger_or_short_trace (test_cfg_c_producer_tail_packet.PacketTests.test_rejects_noninteger_or_short_trace) ... ok
+test_rejects_prefix_history_and_pointer_mismatch (test_cfg_c_producer_tail_packet.PacketTests.test_rejects_prefix_history_and_pointer_mismatch) ... ok
+test_rejects_protocol_types_and_old_version (test_cfg_c_producer_tail_packet.PacketTests.test_rejects_protocol_types_and_old_version) ... ok
+test_tail_may_precede_or_follow_consumer_final (test_cfg_c_producer_tail_packet.PacketTests.test_tail_may_precede_or_follow_consumer_final) ... ok
+test_common_shift_is_caught_even_when_L_unchanged (test_cfg_c_tail_control.TailControl.test_common_shift_is_caught_even_when_L_unchanged) ... ok
+test_event_outlier_fails_even_with_local_agreement (test_cfg_c_tail_control.TailControl.test_event_outlier_fails_even_with_local_agreement) ... ok
+test_missing_reordered_bool_and_coordinate_mismatch_rejected (test_cfg_c_tail_control.TailControl.test_missing_reordered_bool_and_coordinate_mismatch_rejected) ... ok
+test_off_instability_fails_with_exact_pair_matching (test_cfg_c_tail_control.TailControl.test_off_instability_fails_with_exact_pair_matching) ... ok
+test_off_off_labels_are_separate_from_real_flags (test_cfg_c_tail_control.TailControl.test_off_off_labels_are_separate_from_real_flags) ... ok
+test_one_outlier_fails_without_median_failure (test_cfg_c_tail_control.TailControl.test_one_outlier_fails_without_median_failure) ... ok
+test_opposed_endpoints_require_direct_window_gate (test_cfg_c_tail_control.TailControl.test_opposed_endpoints_require_direct_window_gate) ... ok
+test_pass_never_qualifies_tail_or_baseline (test_cfg_c_tail_control.TailControl.test_pass_never_qualifies_tail_or_baseline) ... ok
+test_signed_cancellation_and_sm_changes_retained (test_cfg_c_tail_control.TailControl.test_signed_cancellation_and_sm_changes_retained) ... ok
+test_whole_cta_translation_is_caught_by_common_origin (test_cfg_c_tail_control.TailControl.test_whole_cta_translation_is_caught_by_common_origin) ... ok
+test_both_arms_full_fixed_work (test_cfg_c_gt_bracket_packet.GtPacketTests.test_both_arms_full_fixed_work) ... ok
+test_disabled_and_unused_shadow (test_cfg_c_gt_bracket_packet.GtPacketTests.test_disabled_and_unused_shadow) ... ok
+test_shadow_missing_short_and_noninteger_rejected (test_cfg_c_gt_bracket_packet.GtPacketTests.test_shadow_missing_short_and_noninteger_rejected) ... ok
+test_structural_and_shadow_failures_retained (test_cfg_c_gt_bracket_packet.GtPacketTests.test_structural_and_shadow_failures_retained) ... ok
+test_wrong_protocol_or_types_rejected (test_cfg_c_gt_bracket_packet.GtPacketTests.test_wrong_protocol_or_types_rejected) ... ok
+test_both_controls_keep_qualification_false (test_cfg_c_gt_control.GtControl.test_both_controls_keep_qualification_false) ... ok
+test_missing_enabled_window_and_disabled_brackets_rejected (test_cfg_c_gt_control.GtControl.test_missing_enabled_window_and_disabled_brackets_rejected) ... ok
+test_read_bound_does_not_erase_point_failure (test_cfg_c_gt_control.GtControl.test_read_bound_does_not_erase_point_failure) ... ok
+test_width_not_silently_turned_into_gate_or_clipped (test_cfg_c_gt_control.GtControl.test_width_not_silently_turned_into_gate_or_clipped) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.321s
+
+OK

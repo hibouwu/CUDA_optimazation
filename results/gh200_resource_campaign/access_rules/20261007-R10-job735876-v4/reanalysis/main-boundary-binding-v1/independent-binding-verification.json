@@ -1,0 +1,37 @@
+{
+  "cases": [
+    {
+      "case": "cfg_b_ldb3000",
+      "inverse_output_bindings": 504,
+      "ring_groups": 16128,
+      "coverage_cohorts": 256,
+      "consecutive_coverage_intersections": 254,
+      "sampled_windows_MN_interior_K_tail": true,
+      "A_last_to_first_K_overlap_units128": 1950
+    },
+    {
+      "case": "cfg_b_ldb3008",
+      "inverse_output_bindings": 504,
+      "ring_groups": 16128,
+      "coverage_cohorts": 256,
+      "consecutive_coverage_intersections": 254,
+      "sampled_windows_MN_interior_K_tail": true,
+      "A_last_to_first_K_overlap_units128": 1950
+    },
+    {
+      "case": "cfg_b_ldb3072",
+      "inverse_output_bindings": 504,
+      "ring_groups": 16128,
+      "coverage_cohorts": 256,
+      "consecutive_coverage_intersections": 254,
+      "sampled_windows_MN_interior_K_tail": true,
+      "A_last_to_first_K_overlap_units128": 1950
+    }
+  ],
+  "assumed_source_contract": "Pinned archived SS pingpong, swizzle1 AlongM, 132 CTA and stage6; source derivation is checked by main replay.",
+  "element_enumeration": true,
+  "no_schedule_or_granule_model_helpers": true,
+  "qualification": false,
+  "physical_inflight_sharing_proved": false,
+  "timing_support": false
+}
