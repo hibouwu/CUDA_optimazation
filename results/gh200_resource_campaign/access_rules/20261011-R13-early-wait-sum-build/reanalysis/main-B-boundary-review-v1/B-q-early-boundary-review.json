@@ -1,0 +1,438 @@
+{
+  "scope": "Source placement, state/index coverage, lifetime, and prefix switch only; no GPU or SSH/Slurm by B.",
+  "candidate": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3",
+  "manifests": [
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R13-stage-progress/source_hashes.json",
+      "sha256": "2bc91a493dcbbbbfa7f08504d6864f4038025bc20bac3254624b6f2cf57fe6e2",
+      "verified_source_files": 855
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source_hashes.json",
+      "sha256": "b57bbb9852ce7da56f87ad5eac6be5412589e0d32c369e0499b41414a0b8021d",
+      "verified_source_files": 857
+    }
+  ],
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp": "89d40fc260c9a1a253f18f0406dae417029aba47fff03851d1e81fbe1d116653",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp": "6457364348ece3db958853a3acb256fa9ecbdf7369f4b057e2b9dd6c449851c1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp": "7c61d847933cb12a14fcdc68cec902b44c802c9eb34273218c29e601f9c53dee",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp": "08004dadd81f7e89b674bfdf318ccc00f53953f8441127538addc616844e7eec",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu": "a179e9bdaa92424ccac9c14d3bac8f108c254d8aa6b7b2e131d9713f70c0a2c8",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/v06_trace.hpp": "987b47f2e74494970692751fc30300d950186645604d1fd42983c41106da8f74",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r13_wait_sum.cuh": "43392e9efb861bf453a7e559f13e0928f20298fb6c0bc8e6be004e3233481c93",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/prepare_r13_wait_sum.py": "01c17c0f7933f13aecfc300e9891e09745805dd42ebcd73b219df12ee39d6085",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/contract.json": "258e11dfd79c98991ec71a6b192292fbea4009f9289397855b859341a1264357",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/build/commands.json": "a8390274879ba13f8b39d0fe167796077d6adda4c5bd184072de864e8e80e6b4",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/decode_r13_wait_sum.py": "add8b409031814910c048e32768916d4cc37fef604420264b6f053646d722259",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_r13_wait_sum.py": "eca328971a209c562647b9b5ba4769a26f1c5983d8571ed252b7d2463f48b18f"
+  },
+  "source_checks": {
+    "restored_collective_equals_base": true,
+    "unchanged_kernel_and_pipeline": true,
+    "H_before_same_group_try_and_wait": true,
+    "B_after_wait_before_record": true,
+    "no_next_group_prefetched_token_in_selected_source": true,
+    "collector_outlives_WG_scheduler_loop": true,
+    "deferred_flush_after_WG_scheduler_loop": true,
+    "selected_only_CTA0_thread256_WG_local_output0": true,
+    "prefix_16_calls_observer_off_then_one_target_flag": true,
+    "fixed_progress_protocol_excludes_other_trace_variants": true,
+    "canonical_trace_header_with_forwarding_overlay": true
+  },
+  "decoder_interface_review": {
+    "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/decode_r13_wait_sum.py",
+    "reviewed": true,
+    "tests_repeated_by_B": false,
+    "count_mask_invalid_and_containment_enforced": true,
+    "Q_bound_is_stronger_than_Q_le_D": true,
+    "off_Q_and_residual_None": true,
+    "component_nanoseconds_None": true,
+    "raw_marker_same_SM_work_and_runtime_flag_checked": true,
+    "full_process_GPU_and_numerical_witness_checks_present": true,
+    "note": "Source interface review only. Main owns test execution, acquisition binding, build and qualification."
+  },
+  "coverage": [
+    {
+      "stages": 4,
+      "total_groups": 64,
+      "prologue_groups": [
+        0
+      ],
+      "loop_groups": [
+        1,
+        63
+      ],
+      "selected_groups": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "count": 15,
+      "mask": 131068,
+      "mask_hex": "0x1fffc",
+      "selected_global_groups": [
+        66,
+        80
+      ],
+      "C1_global_group": 65,
+      "C16_global_group": 80
+    },
+    {
+      "stages": 6,
+      "total_groups": 64,
+      "prologue_groups": [
+        0
+      ],
+      "loop_groups": [
+        1,
+        63
+      ],
+      "selected_groups": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "count": 15,
+      "mask": 131068,
+      "mask_hex": "0x1fffc",
+      "selected_global_groups": [
+        66,
+        80
+      ],
+      "C1_global_group": 65,
+      "C16_global_group": 80
+    }
+  ],
+  "source_sites": [
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        266
+      ],
+      "text": "K_PIPE_MMAS = 1"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        427
+      ],
+      "text": "const bool r13_target"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        428
+      ],
+      "text": "const bool r13_sum_enabled"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        485,
+        586
+      ],
+      "text": "prologue_mma_count = min"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        532,
+        587
+      ],
+      "text": "k_tile_count -= prologue_mma_count"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        374,
+        535
+      ],
+      "text": "for ( ; k_tile_count > 0"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        538
+      ],
+      "text": "r13_initial_k-k_tile_count"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        543
+      ],
+      "text": "if (r13_sum_selected) r13_wait_begin"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        491,
+        518,
+        544
+      ],
+      "text": "consumer_try_wait(smem_pipe_read)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        492,
+        519,
+        545
+      ],
+      "text": "consumer_wait(smem_pipe_read, barrier_token)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        547
+      ],
+      "text": "uint64_t r13_wait_end"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        548
+      ],
+      "text": "r13_s->wait_sum.record"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        561
+      ],
+      "text": "r13_k==1)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        562
+      ],
+      "text": "r13_k==16) r13_s->commit16"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        508,
+        527,
+        575
+      ],
+      "text": "++smem_pipe_read;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "lines": [
+        576,
+        596
+      ],
+      "text": "++smem_pipe_release;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        564
+      ],
+      "text": "mainloop_pipe_consumer_state.advance(k_tile_count);"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        838
+      ],
+      "text": "R13SparseConsumer r13_s;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        840
+      ],
+      "text": "++v06_tile_seq;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        861
+      ],
+      "text": "params.mainloop, v06_tile_seq, &r13_s"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        876
+      ],
+      "text": "mainloop_pipe_consumer_state.advance(k_tile_count * NumMmaWarpGroups)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        682,
+        724,
+        789,
+        947
+      ],
+      "text": "} // Scheduler work fetch loop"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp",
+      "lines": [
+        948
+      ],
+      "text": "r13_sparse_consumer_flush(r13_s)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp",
+      "lines": [
+        180
+      ],
+      "text": "PipelineState(): index_{}, phase_{}, count_{}"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp",
+      "lines": [
+        589,
+        957,
+        1194
+      ],
+      "text": "ConsumerToken consumer_try_wait(uint32_t stage"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp",
+      "lines": [
+        594,
+        962,
+        1199
+      ],
+      "text": "full_barrier_ptr_[stage].try_wait(phase)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp",
+      "lines": [
+        619,
+        933,
+        979,
+        1182,
+        1225
+      ],
+      "text": "if (barrier_token == BarrierStatus::WaitAgain)"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp",
+      "lines": [
+        35
+      ],
+      "text": "asm volatile(\"mov.u64 %0, %%clock64;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp",
+      "lines": [
+        60
+      ],
+      "text": "R13WaitSum wait_sum;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp",
+      "lines": [
+        90
+      ],
+      "text": "b[34]=s.wait_sum.cycles;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/v06_trace.hpp",
+      "lines": [
+        92
+      ],
+      "text": "b[39]=s.wait_sum.invalid;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu",
+      "lines": [
+        352
+      ],
+      "text": "unsigned wait_sum_off=0;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu",
+      "lines": [
+        307,
+        442
+      ],
+      "text": "for (int i = 0; i < 16;"
+    },
+    {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/attempts/prepare3/source/probes/r18.cu",
+      "lines": [
+        443
+      ],
+      "text": "cudaMemcpyToSymbol(r13_wait_sum_observer,&o.wait_sum_observer"
+    }
+  ],
+  "partition": {
+    "D": "C16-C1",
+    "Q": "sum(B_i-H_i), i=2..16",
+    "residual": "sum((H_i-C_(i-1))+(C_i-B_i)), i=2..16",
+    "identity": "D=Q+residual for ordered endpoints in one call/thread/output",
+    "first_after_C1": "H2",
+    "last_before_C16": "B16",
+    "interpretation": "Q is the measured full try/wait path, including observer clocks and software. Residual includes collector work after B and other loop/issue/release work."
+  },
+  "decoder_requirements": [
+    "Bind setup/call/raw marker to r13-early-wait-sum-v1 and the fixed shape/stages/output/thread identity.",
+    "Observer on: count=15, mask=0x1fffc, invalid=0; same-SM entry/final identity; C1<=H2<=B16<=C16.",
+    "Observer on: use integer cycle differences before aggregation; require 0<=Q<=C16-C1.",
+    "Observer off: all new accumulated fields zero and flag zero; report Q and residual as unobserved/None, never Q=0.",
+    "Compute per-call D, Q, D-Q before any median or stage comparison; components have no nanosecond allocation.",
+    "Off/on controls share one binary per stage and 16 observer-off prefix calls with the same buffers; this does not equate stage4 and stage6 histories."
+  ],
+  "SASS_pending_checks": [
+    "On every selected fast/slow path, the H clock precedes the actual full barrier try/test, and B follows successful wait/fast-path return.",
+    "No token/barrier evaluation hoisted before H; no record arithmetic or MMA/fence/state update moved before B.",
+    "No per-group global store; report register/spill/resource changes and added selected/unselected software paths."
+  ],
+  "minimal_fields": {
+    "cycles": "uint64 sum",
+    "count": "15",
+    "mask": "0x1fffc",
+    "observer": "explicit runtime 0/1 plus unique protocol"
+  },
+  "candidate_extra_fields": [
+    "first_H2",
+    "last_B16",
+    "invalid_bits"
+  ],
+  "observer_scope_limits": [
+    "The shared off/on binary measures the runtime flag increment. Its longer-lived collector/register allocation can differ from the old progress binary even with observer off.",
+    "Post-B collector work is assigned to the recorded residual, but can alter readiness of subsequent groups and thereby their measured Q. This is an observed-path partition, not counterfactual uninstrumented wait time."
+  ],
+  "findings": [],
+  "source_boundary_review_passed": true,
+  "SASS_reviewed": false,
+  "GPU_executed_by_B": false,
+  "hardware_correctness": false,
+  "observation_qualified": false,
+  "service_identified": false,
+  "prediction_qualified": false
+}

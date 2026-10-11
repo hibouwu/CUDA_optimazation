@@ -1,0 +1,23 @@
+[
+  "nvcc",
+  "-ccbin",
+  "/usr/bin/gcc-15",
+  "-std=c++17",
+  "-O3",
+  "-DNDEBUG",
+  "-gencode=arch=compute_90a,code=sm_90a",
+  "-lineinfo",
+  "--ptxas-options=-v",
+  "-DV06_CFG=1",
+  "-DR18_STAGE_COUNT=4",
+  "-DR13_WAIT_SUM",
+  "-DR13_STAGE_PROGRESS",
+  "-DV06_TRACE",
+  "-Isource/overlay",
+  "-Isource/probes",
+  "-Isource/cutlass/include",
+  "-Isource/cutlass/tools/util/include",
+  "source/probes/r18.cu",
+  "-o",
+  "build/cfg_b_s4_stamped"
+]

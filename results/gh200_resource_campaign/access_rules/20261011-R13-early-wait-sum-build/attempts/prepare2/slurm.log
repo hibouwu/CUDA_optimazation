@@ -1,0 +1,2 @@
+JOB=740238 NODE=romeo-a057 RUN_TMP=/tmp/gh200-r13-early-wait-sum-build-CHKdifte
+srun: error: romeo-a057: task 0: Exited with exit code 2
