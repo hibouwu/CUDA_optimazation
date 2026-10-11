@@ -129,7 +129,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         share_inflight_sources=False, source_keys=None,
                         destination_service_ns=0., second_prefill=False,
                         source_join_boundary='ready',local_epilogue_exclusion='none',
-                        output_counts=None, source_service_costs_ns=None):
+                        output_counts=None, source_service_costs_ns=None,
+                        source_address_units=None, source_unit_service_ns=None):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -164,6 +165,19 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     source_service_costs_ns optionally gives explicit per-input-atom service
     durations. Logical payload/destination work stays fixed; outputs retain
     the original service rule. Equal source identities require equal costs.
+    source_address_units optionally maps each source key to nonempty distinct
+    address identities, including allocation identity. In this alternative,
+    still-in-flight units can be shared between different boxes. New units are
+    one FIFO batch, cost len(new)*source_unit_service_ns, ready after read
+    latency. Joined units keep their owner's ready; box ready is their maximum.
+    Units expire strictly at ready, with no resident cache. Whole-box requests,
+    destinations and stages remain intact. This batch hypothesis is neither
+    per-unit streaming completion nor measured physical memory transactions.
+    It requires ready-based source sharing and excludes explicit box costs.
+    Whole-box in-flight joins apply first; a new box generation then checks
+    partial unit joins. input_source_work still counts logical box generations,
+    including boxes whose units all join. request_count counts server batches
+    and D atoms; address_unit_service separately reports the units actually paid.
     """
     import heapq
 
@@ -193,6 +207,14 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 any(len(costs)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or v<0 for v in costs)
                     for costs in groups) for c,groups in enumerate(source_service_costs_ns)):
             raise ValueError('finite nonnegative source costs require shape [CTA][outputs*Ktile][A/B0/B1]')
+    unit_mode=source_address_units is not None
+    if unit_mode:
+        if (not share_inflight_sources or source_join_boundary!='ready' or source_service_costs_ns is not None
+                or type(source_unit_service_ns) not in (int,float)
+                or not math.isfinite(source_unit_service_ns) or source_unit_service_ns<0):
+            raise ValueError('address units require ready-based sharing and a finite nonnegative unit cost, without box costs')
+    elif source_unit_service_ns is not None:
+        raise ValueError('unit cost requires address units')
     if share_inflight_sources:
         if source_keys is None or len(source_keys)!=cta_count or any(
                 len(groups)!=counts[c]*kt or any(len(keys)!=3 for keys in groups)
@@ -204,6 +226,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 for atom,(key,weight) in enumerate(zip(keys,(1.,.5,.5))):
                     if key in weights and weights[key]!=weight:
                         raise ValueError('shared source key has inconsistent atom weight')
+                    if unit_mode and key not in weights:
+                        units=source_address_units[key]
+                        if not isinstance(units,tuple) or not units or len(set(units))!=len(units):
+                            raise ValueError('each source requires nonempty distinct tuple address units')
                     weights[key]=weight
                     if source_service_costs_ns is not None:
                         cost=source_service_costs_ns[c][i][atom]
@@ -215,6 +241,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         raise ValueError('diagnostic producer offsets must match CTA count and be nonnegative')
     events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
     pending={};source_generation_keys={};sources=[];demands=[];deliveries=[]
+    pending_units={};source_generation_units={}
+    address_unit_generations=0;address_unit_joins=0
     input_demand_count=0;input_source_count=0;input_merged_count=0;input_delivery_count=0
     input_demand_work=0.;input_source_work=0.;input_merged_work=0.;input_delivery_work=0.
     input_source_busy=0.
@@ -296,6 +324,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         nonlocal input_demand_count,input_source_count,input_merged_count,input_delivery_count
         nonlocal input_demand_work,input_source_work,input_merged_work,input_delivery_work
         nonlocal input_source_busy
+        nonlocal address_unit_generations,address_unit_joins
         atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[kind]
         key=source_keys[cta][index][atom] if share_inflight_sources else None
         existing=pending.get(key) if share_inflight_sources else None
@@ -304,18 +333,40 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             source_id,done,join_end=existing
             input_merged_count+=1;input_merged_work+=weight
         else:
-            cost=None if source_service_costs_ns is None else source_service_costs_ns[cta][index][atom]
-            done=request(t,cta,kind,index,weight,read_latency_ns,cost)
-            duration=service_ns*weight if cost is None else cost
+            source_id=input_source_count
+            unit_trace={}
+            if unit_mode:
+                new_units=[];joined_ready=[];joined_owners=set()
+                for unit in source_address_units[key]:
+                    previous=pending_units.get(unit)
+                    if previous is not None and t<previous[1]:
+                        joined_ready.append(previous[1]);joined_owners.add(previous[0])
+                    else:new_units.append(unit)
+                duration=len(new_units)*source_unit_service_ns
+                batch_ready=request(t,cta,kind,index,weight,read_latency_ns,duration) if new_units else t
+                done=max(batch_ready,max(joined_ready,default=t))
+                for unit in new_units:pending_units[unit]=(source_id,batch_ready)
+                source_generation_units[source_id]=new_units
+                address_unit_generations+=len(new_units);address_unit_joins+=len(joined_ready)
+                unit_trace=dict(new_address_units=len(new_units),joined_address_units=len(joined_ready),
+                    batch_ready_ns=batch_ready if new_units else None,source_service_ns=duration,
+                    joined_owner_ids=sorted(joined_owners),joined_last_ready_ns=max(joined_ready,default=None))
+            else:
+                cost=None if source_service_costs_ns is None else source_service_costs_ns[cta][index][atom]
+                done=request(t,cta,kind,index,weight,read_latency_ns,cost)
+                duration=service_ns*weight if cost is None else cost
             input_source_busy+=duration
             join_end={'ready':done,'service_end':frontier,
                       'service_start':frontier-duration}[source_join_boundary]
-            source_id=input_source_count;input_source_count+=1;input_source_work+=weight
+            input_source_count+=1;input_source_work+=weight
             if share_inflight_sources:
                 pending[key]=(source_id,done,join_end);source_generation_keys[source_id]=key
                 push(done,'source_done',cta,source_id)
             if trace_requests:
-                source=dict(requests[-1],source_id=source_id,source_key=key,join_end_ns=join_end)
+                if unit_mode:
+                    source=dict(cta=cta,kind=kind,index=index,arrival_ns=t,work=weight,
+                        ready_ns=done,source_id=source_id,source_key=key,join_end_ns=join_end,**unit_trace)
+                else:source=dict(requests[-1],source_id=source_id,source_key=key,join_end_ns=join_end)
                 sources.append(source)
         demand_id=input_demand_count;input_demand_count+=1;input_demand_work+=weight
         if routed_inputs or trace_requests:
@@ -352,6 +403,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         elif kind=='source_done':
             key=source_generation_keys.pop(i)
             if pending.get(key,(None,None))[0]==i:del pending[key]
+            for unit in source_generation_units.pop(i,()):
+                if pending_units.get(unit,(None,None))[0]==i:del pending_units[unit]
         elif kind=='deliver_input':
             demand=demands[i];weight=demand['work']
             start=max(t,destination_frontiers[cta]);duration=destination_service_ns*weight
@@ -428,7 +481,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         input_merged_count=input_merged_count,input_delivery_count=input_delivery_count,
         input_demand_work=input_demand_work,input_source_work=input_source_work,
         input_merged_work=input_merged_work,input_delivery_work=input_delivery_work,
-        source_busy_ns=service_ns*input_source_work if source_service_costs_ns is None else input_source_busy,
+        source_busy_ns=service_ns*input_source_work if source_service_costs_ns is None and not unit_mode else input_source_busy,
         destination_busy_ns=sum(destination_busy),destination_busy_by_cta_ns=destination_busy,
         local_epilogue_blocked_ns=local_blocked,
         local_epilogue_intervals=local_intervals if trace_requests else [],
@@ -437,6 +490,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             if all(n==2 for n in counts) else
             'cfg_b variable-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'))
     if prefill is not None:result['second_prefill']=prefill
+    if unit_mode:result['address_unit_service']=dict(generations=address_unit_generations,
+        joins_between_box_generations=address_unit_joins,service_ns=source_unit_service_ns,
+        scope='In-flight address units in FIFO batches; logical box work remains distinct, no physical traffic claim.')
     return result
 
 
