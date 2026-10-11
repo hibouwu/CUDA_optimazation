@@ -194,6 +194,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [cfg_c elected-tail目标构建740082](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-build-v2/README.md)完成，4CPU16GiB无GPU。按C反馈撤回初版thread0端点证明，v2同elected lane于pipeline.producer_tail之后采样；SASS四槽快/慢等待→flag→CLOCK/GT→head14/15核对通过。168reg/2barrier/零spill，856源身份保留；无设备数值/全D/扰动资格，下一步先补正确性入口。
 
+[cfg_c producer-tail正确性740088](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/README.md)完成：740087补host全D入口，SASS/资源byte同740082；GPU-fd5317a4获配单卡，7077888全D off/on逐位且独立参考精确，两warm各132CTA严格有效、8192抽样值精确。身份与实际卡分别保存；不计跨卡性能或扰动资格，不将单对当正式对照。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
