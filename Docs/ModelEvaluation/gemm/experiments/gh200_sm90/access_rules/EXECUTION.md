@@ -222,6 +222,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [两臂off基线740092](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/README.md)：759fa55冻结，同binary/ef/前序/门槛20进程，实际flag全0、2640CTA尾槽0、81920样本及身份/解码通过，SM无变化。4884/6372系列失败、432L全失败，event中位0.272%/最大1.711%、arm0 CV0.794%通过。新增tail不是本次局部差异出现的必要条件；不能据此证明无扰动或扣除740091失败。17测试及旧完整判定回归通过，无资格升级。
 
+[前序event统一比例诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-scalar-diagnostic-v1/README.md)：740092末次前序预测整event中位0.462%/最大2.021%；但即使使用两臂目标cycle和arm0目标ns，432条L条件残差仍全超原64/256尺度。4320精确恒等式、全部16项前序变化及源码可用时点保留；仅排除这一个零参数比例代理，非自由局部预测/物理频率结论，无新GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
