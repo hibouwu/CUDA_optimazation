@@ -182,6 +182,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [cfg_c闭合图历史顺序检查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-observed-order-v1/README.md)：150既有dual调用、9480物理cluster、6492800可达标记先后关系均无GT反转，含跨rank约束。仅零lag偏序相容性，无内部服务价、完备性或观察资格结论；V09未读取计时。
 
+[源/目的延迟重分配独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/main-latency-relocation-v1/README.md)：8对模型405504需求与19字段/全actor/目的时线一致，6SHA匹配；另从真实前版加载比较8个默认完整字典全部同，165测试通过。整box共同L搬到目的后程等价旧service_end截止，继承其固定候选失败，不作为新机制或追加GPU区分；无新价格/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

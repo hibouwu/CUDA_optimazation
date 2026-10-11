@@ -1,0 +1,56 @@
+{
+  "previous_commit": "932154b1d0d66bfd0f51917c9f09b72199d6a98a",
+  "previous_source_sha256": "3890101111903f37dd6ec9ecaa22c9af49d218b45300262d377e646ea5787d99",
+  "current_source_sha256": "839e39f40822d0968fd804205d14d2bfcfbab26789c4d639ad932f97cd5cca18",
+  "checks": [
+    {
+      "stages": 4,
+      "treatment": "ordinary",
+      "complete_dictionary_equal": true,
+      "result_sha256": "d6584ed367aa83b521186c4ac63ea524ea1fe90b9d8667d2818073e884d29a87"
+    },
+    {
+      "stages": 4,
+      "treatment": "root512",
+      "complete_dictionary_equal": true,
+      "result_sha256": "e5072b9cee3608c470098c1ba1029a70f596f5c87120ea4f6b34335581b4ec11"
+    },
+    {
+      "stages": 4,
+      "treatment": "all_E0_deferred",
+      "complete_dictionary_equal": true,
+      "result_sha256": "adafabd7674617c34ab2bfb65027590d99cc916f46886633e34330f87ad602f8"
+    },
+    {
+      "stages": 4,
+      "treatment": "prefill_after_defer",
+      "complete_dictionary_equal": true,
+      "result_sha256": "6adb0c33a4829ddae90f433fffdc39f7ae1c88dbef44ce588d1dd2977bb42428"
+    },
+    {
+      "stages": 6,
+      "treatment": "ordinary",
+      "complete_dictionary_equal": true,
+      "result_sha256": "28e63022648bedd9d26e67bf48624cafe566c14582e8f616fa750e0ed13d67c3"
+    },
+    {
+      "stages": 6,
+      "treatment": "root512",
+      "complete_dictionary_equal": true,
+      "result_sha256": "62009e8920cab38078aaa57bec48f6652a42af4e87791b6d4b6a5af6d5929689"
+    },
+    {
+      "stages": 6,
+      "treatment": "all_E0_deferred",
+      "complete_dictionary_equal": true,
+      "result_sha256": "2980563787f8a2e8502bf5041a85eaacab4aabab0d4cf44f5530590e30668d0e"
+    },
+    {
+      "stages": 6,
+      "treatment": "prefill_after_defer",
+      "complete_dictionary_equal": true,
+      "result_sha256": "2551e1415e4c42fc934803716653f801fb9dd938ecca2459ded348cff7945fa8"
+    }
+  ],
+  "scope": "Complete default-output regression, no calibrated mechanism or observer qualification."
+}

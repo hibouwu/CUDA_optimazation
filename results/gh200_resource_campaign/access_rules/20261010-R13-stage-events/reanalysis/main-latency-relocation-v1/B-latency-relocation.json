@@ -1,0 +1,174 @@
+{
+  "scope": "Semantic equivalence audit of an already tested cutoff; no new family, fit, data or validation.",
+  "parameters": {
+    "service_ns": 7.3450401174877555,
+    "read_latency_ns": 754.2549598825127,
+    "compute_ns": 288.0,
+    "commit_lead_ns": 144.0,
+    "output_weight": 0.43359303573970265,
+    "epilogue_prepare_ns": 65.70133122662406,
+    "epilogue_write_ns": 65.70133122662406,
+    "producer_gap_ns": 10.238540769831417,
+    "operand_gap_ns": 10.238540769831417,
+    "destination_service_ns": 72.0
+  },
+  "results": [
+    {
+      "stages": 4,
+      "treatment": "ordinary",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "63d49b05aa2a5df1b4a592c2387d4274c80cd165eb5740134950abb4a3bf80c4",
+      "demands_matched": 50688,
+      "source_generations_matched": 9222,
+      "destination_timelines_matched": 50688,
+      "source_work": 6017.0,
+      "early_ns": 6131.320277038758,
+      "post_ns": 17337.967197331778,
+      "model_endpoint_ns": 50357.59633275198
+    },
+    {
+      "stages": 4,
+      "treatment": "root512",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "37dbdb08916521832dfce2c2cbe0e666d93e1ffe0d71cf685652caaf56d420ad",
+      "demands_matched": 50688,
+      "source_generations_matched": 9224,
+      "destination_timelines_matched": 50688,
+      "source_work": 6050.0,
+      "early_ns": 6147.806316962156,
+      "post_ns": 17333.553940472393,
+      "model_endpoint_ns": 50766.77894685397
+    },
+    {
+      "stages": 4,
+      "treatment": "all_E0_deferred",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "6592bd799b21b34143ba307ce39a24649fb500a5c7f795b9c650b65768186ede",
+      "demands_matched": 50688,
+      "source_generations_matched": 9671,
+      "destination_timelines_matched": 50688,
+      "source_work": 6310.5,
+      "early_ns": 5673.302753957887,
+      "post_ns": 17921.897886671875,
+      "model_endpoint_ns": 51927.111482735956
+    },
+    {
+      "stages": 4,
+      "treatment": "prefill_after_defer",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "ec0aead66dd9e92894d952e158d6aaf191a67ff3da8300934675d2367b1c9728",
+      "demands_matched": 50688,
+      "source_generations_matched": 9684,
+      "destination_timelines_matched": 50688,
+      "source_work": 6325.0,
+      "early_ns": 5947.198322945616,
+      "post_ns": 17880.759429225098,
+      "model_endpoint_ns": 52230.82114554291
+    },
+    {
+      "stages": 6,
+      "treatment": "ordinary",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "d9e9974d5e331e9a3c9983b7286b3fa74c3ac90a1cfec29b0738aa383d06f9f2",
+      "demands_matched": 50688,
+      "source_generations_matched": 6115,
+      "destination_timelines_matched": 50688,
+      "source_work": 4059.5,
+      "early_ns": 4687.273944793327,
+      "post_ns": 13536.0,
+      "model_endpoint_ns": 40036.06849239815
+    },
+    {
+      "stages": 6,
+      "treatment": "root512",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "5bad74c7e59d8afe3dc5c8d452a32b277375cf35675e895d496c889bde056503",
+      "demands_matched": 50688,
+      "source_generations_matched": 6494,
+      "destination_timelines_matched": 50688,
+      "source_work": 4333.5,
+      "early_ns": 4742.691800950826,
+      "post_ns": 13535.999999999996,
+      "model_endpoint_ns": 40575.57966952182
+    },
+    {
+      "stages": 6,
+      "treatment": "all_E0_deferred",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "c55a3eac99e7f7b50b7d3a5debb79c52dfb5bd9b256d8b7f9eb60779a5c80d58",
+      "demands_matched": 50688,
+      "source_generations_matched": 5635,
+      "destination_timelines_matched": 50688,
+      "source_work": 3796.5,
+      "early_ns": 4320.0,
+      "post_ns": 13536.0,
+      "model_endpoint_ns": 41199.0018593563
+    },
+    {
+      "stages": 6,
+      "treatment": "prefill_after_defer",
+      "matched_public_fields": 19,
+      "complete_actor_and_endpoint_sha256": "6e37471ada90ac45401c402eb48b4d49888366ebdb880c53b1aef337e085c510",
+      "demands_matched": 50688,
+      "source_generations_matched": 5809,
+      "destination_timelines_matched": 50688,
+      "source_work": 3912.5,
+      "early_ns": 4320.0,
+      "post_ns": 13535.999999999996,
+      "model_endpoint_ns": 41610.03518700548
+    }
+  ],
+  "previous_boundary_calibration": {
+    "stage": 4,
+    "second_prefill": false,
+    "targets_ns": [
+      5168.0,
+      16320.0
+    ],
+    "fields": [
+      "early_ns",
+      "post_ns"
+    ],
+    "free_coordinates": [
+      "service_ns",
+      "read_latency_ns"
+    ],
+    "bounds": {
+      "service_ns": [
+        0.01,
+        30.0
+      ],
+      "read_latency_ns": [
+        0.0,
+        2000.0
+      ]
+    },
+    "optimizer": "one common initial tuple per boundary; at most 40 least-squares evaluations, no multistart"
+  },
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-candidate-examples.json": "a12b03d0e4a6dca604d21fc7a9d3d4d3c41289aa2424c823d60fac05e4b24993",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-source-join-boundary.json": "5fdee8706c125ac573ef0ad4373070550d4ed0b6468403218473a06ab5484bf7",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/cases.json": "dfdfe19244f8a0a25971d8576ae35c67300e80ed9b46528c2315987466af6a62",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R13-second-prefill/static_setup.json": "e8ab81c4f620b1e52bc177d88c907855d5bfa60dc5b74e40e31826f6d950cb63",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r13_latency_relocation.py": "aca8538fc552608fd047d34ef3cac4097b3d3571dcb2b04262114936bbdfa36f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/supply_model.py": "839e39f40822d0968fd804205d14d2bfcfbab26789c4d639ad932f97cd5cca18"
+  },
+  "theorem": {
+    "assumptions": [
+      "Whole-box sharing; a common nonnegative read latency L for all input atoms.",
+      "Old source completion is server_end+L, subscription closes strictly at server_end.",
+      "New source completion/subscription end is server_end, each demand reaches destination FIFO after L.",
+      "Same FIFO/source costs, roots, stages, consumer/output graph and deterministic equal-time order."
+    ],
+    "induction": "Given matching actor states, input arrivals and server generations match because both close at server_end. Each demand then reaches the destination FIFO at the identical server_end+L. Deliveries/consumer/releases/output match, preserving subsequent actor states. Expired pending-key cleanup cannot reopen admission.",
+    "unobservable_from_these_ports": "Issue, destination/full, consumer/output and requested root-delay responses remain equal. The internal source_ready label changes; it is not independently observed by these ports."
+  },
+  "decision": "Full relocation is an alternative parameterization of the prior service_end cutoff. Inherit that fixed-family development failure; do not refit, rename it a new mechanism or request a distinguishing GPU pair.",
+  "limits": [
+    "Eight synthetic model scenarios reuse original geometry/tuple; no measured offset is a prediction input.",
+    "root512 is an ideal prescribed root shift, not a claim about observed timer overshoot or kernel intervention equivalence.",
+    "This theorem does not identify a physical source/destination latency split or cover all caching/partial-unit families.",
+    "The old cutoff search was bounded and is not a proof that every possible source family is infeasible.",
+    "Default destination latency remains zero; old models, frozen scores and observer-gate failures are unchanged."
+  ]
+}
