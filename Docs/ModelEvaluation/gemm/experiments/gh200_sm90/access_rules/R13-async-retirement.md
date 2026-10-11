@@ -115,7 +115,7 @@ C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组
 
 <a id="release-prerequisites"></a>
 
-### cfg_c的源切片与full接口已绑定，rank生命周期仍未闭合
+### cfg_c源切片与闭合rank依赖：影响范围已核对，服务时间仍未定
 
 `cfg_c_source_bindings`将cluster1×2的物理block/rank、各输出ordinal、descriptor及A/B目的绑定到统一账本。`cfg_c_source_port_graph`仅提供源到full的开放依赖：每rank的A16KiB投递到两rank，B0/B1各8KiB投递本地；每cluster每K-group为六个源atom/64KiB、八个目的atom/96KiB。每rank full需要本地`arrive_expect_tx`、两rank各一个A16及本地两个B8，共48KiB，不能沿用cfg_a的32KiB full。A与B、valid与fill、名义需求与实际服务继续分账，未给价格。
 
@@ -123,7 +123,24 @@ C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组
 
 [离线接口复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/B-cfg-c-source-ports.json)覆盖26个静态条件；其中原composition/first-fill的150个dual进程、18960个CTA、150×4096个D抽样值重新复核，实际物理伙伴及两consumer WG工作一致。另11个已揭示V09条件仅做静态几何，不重评或改变原失败。12个源接口模板与6个C本地输出模板通过拓扑和工作守恒检查；cfg_a的22份既有压缩绑定逐字节不变。
 
-当前C只提供cfg_a的完整rank依赖和cfg_c的本地输出图。cfg_c源图的`arrive_expect_tx`与`acquire_return`是待接的外部producer端口，`full`是待接consumer端口；empty发出/可见、producer次序、WGMMA安全释放、有限stage复用和完整退出尚未组合。这些开放根节点不能当作零成本完成，也没有把cfg_a的empty路由或cfg_b pingpong时间图迁入。当前交付是源/目的接口及绑定，不能称三配置时间模型已完成。
+上述v1交付时，`arrive_expect_tx`与`acquire_return`仍是外部producer端口，`full`待接consumer。随后C交付本配置的`cfg_c_rank_dependencies`；B通过只读接口将12份源模板接入，并逐项核对源前驱没有被覆盖。每rank的`acquire(g)`等待本地`B_issue(g−1)`；g≥4时另等两rank、两WG的四个`empty_to_rank(g−4)`。`arrive_expect_tx→acquire_return`、两WG的安全释放、empty发出/可见、四slot的producer尾部等待以及本地输出图均已接入。仅剩`cluster_initialized`这一外部入口；入口与所有服务均未赋价，结构闭合不代表自主时间预测成立。
+
+[闭合图接入与影响范围复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-closed-response-v1/B-cfg-c-supply-response.json)保持26份物理绑定与12份源模板逐字节不变，生成的12份闭合gzip与主集成规范版本逐字节相同。复核重新计算349份输入SHA，其中320份是v1的原始数据输入；150进程、18960 CTA和614400个D抽样值的数值/工作证据在SHA核对后复用，本次没有重新执行数值重放。V09仍只用静态几何，原失败判定不变。
+
+以下固定S=4，以全局K-group编号g、输出内位置q=`g%Ktiles`描述。只改变rank1所列事件的完成时间，固定入口、其它边成本及资源组织，不添加全局源服务或SM发射竞争边。表中给出依赖图中最早可达的rank0 full；可达只表示可能受影响，不保证延迟为正或成为关键路径。若所列组号已超过本次调用，则无后续full可达。
+
+| rank1的变化事件 | 最早可达的rank0 full | 前驱路径 |
+|---|---|---|
+| `A_source_ready(g)` | g | 同组A多播直接投递到rank0 |
+| `acquire_return(g)` | g | 本组A发出、完成与多播 |
+| `B0_issue(g)` | g+1 | 本地B发出汇合约束下一组producer，再经下一组A多播到rank0 |
+| `B0_source_ready(g)`，q=0 | g+4 | 本组消费/安全释放后的empty约束slot复用 |
+| `B0_source_ready(g)`，q>0 | g+3 | 本组commit约束g−1的安全释放，其empty约束g−1+S的复用 |
+| `empty_emit_to_r0(g)`或`empty_to_r0(g)` | g+4 | 本slot下一代acquire |
+
+126项可达性检查覆盖实际Ktiles/T为4/1、16/2、64/2的模板及合成2/2、4/2短调用，逐项保存最短见证路径。B完成变慢的跨rank影响不能统一写成g+S：普通位置会经前一组释放，首组则不会跨输出释放上一输出的末组。B发出变慢又可沿producer顺序更早到达g+1，两类事件需要分开。
+
+短调用还须分开D可见与退出。例如合成Ktiles=2、T=2的最后一组g=3，rank1的`B0_source_ready`无法到达rank0的full、MAIN或D可见节点，却仍能到达rank0的producer尾部、`source_safe_exit`及`cuda_complete`。该区别只来自当前图中的依赖；真实干预若同时改变指令或共享服务，可能增加图外路径，仍需单独的干预与观察资格。当前交付没有确定局部fill延迟、入口时间或任何服务价格，也未完成三配置时间模型的独立留出验收。
 
 ## cfg_b的释放标记没有定位全部128次empty arrival
 
