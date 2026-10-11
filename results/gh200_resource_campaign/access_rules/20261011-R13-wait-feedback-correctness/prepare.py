@@ -14,7 +14,7 @@ manifest=json.loads((old/'manifest.json').read_text())
 assert not (root/'freeze.json').exists()
 (root/'build').mkdir();(root/'analysis_snapshot').mkdir()
 for record in audit['binaries']:
-    shutil.copyfile(build/'attempts/prepare2/returned/build'/record['name'],root/'build'/record['name'])
+    shutil.copy2(build/'attempts/prepare2/returned/build'/record['name'],root/'build'/record['name'])
 modules=Path('microbench/gh200_resource_campaign/access_rules')
 for name in ('decode_r13_wait_feedback.py','analyze_r18.py','v06_model.py','v06_run.py'):
     shutil.copyfile(modules/name,root/'analysis_snapshot'/name)
