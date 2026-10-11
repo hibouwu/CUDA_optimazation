@@ -9,3 +9,9 @@
 此端点测量load_tail返回，不是D全局可见、全部线程退出或kernel完成。两个clock读也不建立硬件包围；后续只能按各自时钟域和明确边界分析。
 
 当前仅通过Python语法和源投影审查，未执行目标编译/GPU。仍需目标SASS和资源审查、严格新版本decoder、全D数值、冻结开/关扰动对照；未声明观测资格、完整时间预测、新留出或跨卡结果。旧runner/probe原文件未修改，未启动V10。
+
+## 解码接口补充
+
+新增decode_cfg_c_producer_tail.py，固定setup/版本/布局/同buffer前序和16调用记录，检查132CTA及双WG全部work、SM、原端点和未使用记录。on要求两个新端点有效且在producer首工作之后；off要求两个保留字段为零。CTA错误保留索引与原因，不丢弃后当作整体有效。producer-tail与consumer FINAL不强制相对顺序。
+
+7项合成测试通过，包含旧版本、错误类型、旗标、前序、指针、缺失tail、off非零、工作/SM/头字段破坏，以及tail在FINAL前后均可接受。设备记录测试仍为0；归档/binary/raw SHA绑定、数值和扰动资格不由decoder提供。旧prepared-source.tar.gz保持原身份，新增reader快照单独由decoder-audit.json绑定。
