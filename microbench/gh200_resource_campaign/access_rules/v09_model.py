@@ -185,10 +185,18 @@ def predict_components(row, setup, calibration):
     work = events.scheduled_work(cfg,row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
     requests = supply.supply_request_rows(row,setup)
     kt = row['k']//64
-    tiles = sum(map(len,work))
+    ledger = supply.supply_work_ledger(row, setup)
+    if (ledger['schema'] != 'gh200-supply-work-ledger/1'
+            or ledger['legacy_clock_source_field'] != 'totals.source_payload_KiB'):
+        raise ValueError('clock calibration requires the nominal source-payload ledger v1')
+    tiles = ledger['totals']['output_tiles']
+    if tiles != sum(map(len, work)):
+        raise ValueError('clock ledger and event schedule disagree on output work')
+    # r2 was fitted to nominal issued payload, including descriptor fill. Valid
+    # or distinct source bytes are different candidate variables, not substitutes.
     point = dict(input_mode=row.get('input_mode','dyadic'),
         tensor_mean_cycles=tiles*kt*(2*tm*tn*tk/4096)/132,
-        source_mean_kib=tiles*kt*(2*tm*tk/cn+2*tn*tk/cm)/1024/132)
+        source_mean_kib=ledger['totals']['source_payload_KiB']/132)
     params = calibration['events_ns'][cfg]
     output_rule=calibration.get('output_rules',{}).get(cfg)
     fractions=[[max(0,min(tm,row['m']-mi*tm))*max(0,min(tn,row['n']-ni*tn))/(tm*tn)
