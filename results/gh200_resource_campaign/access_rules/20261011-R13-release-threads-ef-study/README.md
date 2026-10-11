@@ -7,3 +7,5 @@
 原门槛不变：每线程bracket≤32cycle；local绝对配对差中位≤32/max≤128cycle；H16→wait1绝对配对差中位≤64/max≤192cycle；event绝对配对比例中位≤2%/max≤5%。先逐对abs再聚合，不用abs(median)替代。按同GPU/SM/work/group/slot/phase核对，所有40样本和无效原因保留。64cycle仅为诊断分辨带，不是硬件价格。
 
 四次全D off/on和两次plain/stamped完整D比较在计时前执行；全部时间样本另验证4096个参考值。源/二进制/数值/身份/参照/局部与整调用门槛齐全才可能取得观察资格。这轮仅开发机制辨识，不是V10、新独立留出、跨卡通过或新服务价。
+
+740059在CUDA Runtime按名称加载时失败，未开始数值或时间调用，records不存在。完整失败包归attempts/740059。revision2仅从当前nvcc安装前缀定位唯一libcudart.so.12，并保存库路径/SHA；manifest、条件、顺序、二进制和全部门槛不变。新freeze在重试前保存。

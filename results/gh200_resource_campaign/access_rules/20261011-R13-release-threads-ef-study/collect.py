@@ -1,4 +1,4 @@
-import ctypes,gzip,hashlib,json,os,subprocess,sys
+import ctypes,gzip,hashlib,json,os,subprocess,sys,shutil
 from pathlib import Path
 root=Path.cwd();m=json.loads(Path('manifest.json').read_text());rows={r['id']:r for r in json.loads(Path('cases.json').read_text())}
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
@@ -11,7 +11,12 @@ for name,digest in m['binary_sha256'].items():
  if sha(Path('build')/name)!=digest:raise RuntimeError('binary identity differs')
 if not os.environ.get('CUDA_VISIBLE_DEVICES') or not os.environ.get('SLURM_JOB_ID'):raise RuntimeError('missing assigned CUDA visibility')
 original={k:os.environ.get(k) for k in ('SLURM_JOB_ID','SLURM_JOB_GPUS','SLURM_STEP_GPUS','CUDA_VISIBLE_DEVICES')}
-lib=ctypes.CDLL('libcudart.so.12');count=ctypes.c_int();rc=lib.cudaGetDeviceCount(ctypes.byref(count))
+cuda_root=Path(shutil.which('nvcc')).resolve().parent.parent
+candidates=[cuda_root/'lib64/libcudart.so.12',cuda_root/'lib/libcudart.so.12',*cuda_root.glob('targets/*/lib/libcudart.so.12')]
+libraries=sorted({p.resolve() for p in candidates if p.is_file()})
+if len(libraries)!=1:raise RuntimeError('expected one CUDA12 runtime under '+str(cuda_root)+': '+str(libraries))
+Path('runtime-library.json').write_text(json.dumps(dict(path=str(libraries[0]),sha256=sha(libraries[0])),indent=2)+'\n')
+lib=ctypes.CDLL(str(libraries[0]));count=ctypes.c_int();rc=lib.cudaGetDeviceCount(ctypes.byref(count))
 if rc:raise RuntimeError('cudaGetDeviceCount failed: '+str(rc))
 assigned=[]
 for device in range(count.value):
