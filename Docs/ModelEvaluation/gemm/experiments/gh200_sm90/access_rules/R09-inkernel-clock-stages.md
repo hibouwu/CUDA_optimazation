@@ -396,6 +396,8 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 
 740259首条stage4/off实机记录暴露了CPU fixture与包装格式的差异：host输出二维cluster `[1,1]`，并有`input_zero_storage`包。[新decoder `f1b59f0e`的限定兼容性复审](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/reanalysis/A-wait-sum-time-contract-v1/format-update-v1/README.md)严格验证四包及原生整数`checked=nonzero=0`；纠正cluster表示后，整个前序／周期解析函数与原版AST相同。新7项CPU测试、8个整数边界例及固定原raw的16次前序、4096精确值核对通过；该off记录C16−C1=11500 cycle，累计等待量仍未观测。旧报告保留其原fixture适用范围，原采集失败状态不改写；包装修复没有授予性能、组件时间或预测资格。
 
+740334的[64条已验证记录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-diagnostic/verification.json)支持一个后验完整时间比较：对stage4/6各16条flag0目标，以同进程、同binary、同buffer的末次前序event作为目标event的参考，定义百分数误差`e=100×(E_last/E_target−1)`。两stage的`median(|e|)/max(|e|)`分别为1.0274%/3.0733%与2.4452%/4.1667%。flag0仍执行progress kernel；两个stage的前序kernel也不同。该比较不属于预冻结八量，未取得目标前预提交或新独立留出资格，仅作为后续完整时间候选的比较基线；不能由完整event换算C1→C16、Q或R的时间。本批64条记录的组件ns仍全部为空，局部换算仍缺匹配端点的时间／计数率证据。
+
 换卡或改变目标binary、执行/历史协议、源工作定义、观测/完成端点时，先重新绑定身份，再按实际变化复核受影响的周期、换算与observer→plain映射。未受影响的静态计数和已验证证据可复用；没有对应校准、有效误差合同与新冻结验证时，不扩展正式时间预测的支持范围。当前主线新增的必要源码依赖没有时间费用，也不构成重校准依据。
 
 ### 局部分量的中位数能直接组合吗？
