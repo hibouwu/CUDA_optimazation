@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import json
 from pathlib import Path
+from acquisition_identity import verify_acquisition
 
 
 def main():
@@ -11,15 +12,31 @@ def main():
     parser.add_argument('--joint',type=Path,required=True)
     parser.add_argument('--old-replay',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--run',type=Path,required=True)
+    parser.add_argument('--expected-output-sha256',required=True)
     args=parser.parse_args()
+    run=args.run.resolve()
+    manifest,acquired,acquisition_hashes=verify_acquisition(run,args.expected_output_sha256)
+    identities={record['id']:(index,record) for index,record in enumerate(acquired)}
     receipt=json.loads((args.joint/'receipt.json').read_text())
+    assert receipt['acquisition_archive_sha256']==args.expected_output_sha256
+    assert all(receipt['input_sha256'][name]==digest for name,digest in acquisition_hashes.items())
     for name,digest in receipt['source_sha256'].items():
         assert hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()==digest
     for name,digest in receipt['output_sha256'].items():
         assert hashlib.sha256((args.joint/name).read_bytes()).hexdigest()==digest
     records=json.loads(gzip.decompress((args.joint/'joint-process-records.json.gz').read_bytes()))
+    assert len(records)==len(identities)==len(acquired)
+    assert {record['id'] for record in records}==set(identities)
     windows=0;scalars=0
     for record in records:
+        index,original=identities[record['id']]
+        assert record['archive_record_index']==index
+        assert record['block']==original['pair'] and record['cohort']==original['comparison']
+        assert record['arm']==original['arm'] and record['flag']==original['flag']
+        assert record['raw_path']==str(run/'returned'/original['raw'])
+        assert record['raw_sha256']==original['sha256']
+        assert record['gpu_uuid']==manifest['gpu_uuid'] and record['binary_sha256']==manifest['binary_sha256']
         raw=Path(record['raw_path']);assert hashlib.sha256(raw.read_bytes()).hexdigest()==record['raw_sha256']
         with gzip.open(raw,'rt') as stream:packets={r['event']:r for line in stream for r in [json.loads(line)]}
         assert record['setup']==packets['setup']
@@ -49,6 +66,8 @@ def main():
     old=json.loads(gzip.decompress(args.old_replay.read_bytes()))
     assert new==old
     result=dict(processes=len(records),raw_window_vectors=windows,
+        acquisition_archive_sha256=args.expected_output_sha256,
+        acquisition_record_mapping_verified=True,
         directly_checked_composite_duration_scalars=scalars,consumer_envelopes=len(records),
         complete_median_diagnostic_equal_to_old_replay=True,
         joint_receipt_sha256=hashlib.sha256((args.joint/'receipt.json').read_bytes()).hexdigest(),

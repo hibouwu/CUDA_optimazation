@@ -36,11 +36,17 @@
 
 ### 联合记录提取与复核
 
-提取器核对调用者固定的协议 SHA、原始文件 SHA、声明进程 ID/臂/样本数、设备和 binary 身份及冻结解码器；拒绝重复 ID、重复 block/臂、重复 raw SHA、缺坐标、错误 observer 臂含义和配对 CTA→SM 映射变化。原始记录通过冻结解码器的数值与协议检查后，保留完整 setup、16次前序event及前序协议字段、完整 series 的 ns/cycles、CTA→SM、源 raw 路径/SHA、同调用 event 和 block/臂身份，再按共同 block 顺序产生边际统计输入。消费者不能仅凭一个“已验证”标记跳过这些绑定。
+提取器先核对调用者独立固定的回收包 SHA，并逐字核对包内 manifest、records、complete 及全部 raw 与本地输入的对应，再核对协议 SHA、声明进程 ID/臂/样本数、设备和 binary 身份及冻结解码器；拒绝重复 ID、重复 block/臂、重复 raw SHA、缺坐标、错误 observer 臂含义和配对 CTA→SM 映射变化。原始记录通过冻结解码器的数值与协议检查后，保留完整 setup、16次前序event及前序协议字段、完整 series 的 ns/cycles、CTA→SM、源 raw 路径/SHA、同调用 event 和 block/臂身份，再按共同 block 顺序产生边际统计输入。消费者不能仅凭一个“已验证”标记跳过这些绑定。
 
 每进程另存 864 个复合窗口（432 个 FIRST→DONE 与 432 个 MAIN→DONE，分别保存 ns 和同角色 cycles）及一个 consumer FINAL 记录包络。复合窗口在同调用内按原端点相减，并核对 L+W+E 或 W+E；包络仅在共享记录 GT 原点下取最大，不跨 SM 对原生 clock64 取最大。这些复合量**未加入**原 6372 系列的等价覆盖族，也不代表源安全退出、全局 D 可见或 CUDA 完成。
 
-正式保留的旧数据提取是 [joint-replay-v3/receipt.json](joint-replay-v3/receipt.json)，使用明确标为旧数据回放的 [十次协议副本](joint-replay-protocol.json)，不冒充新 64-block 采集。40 进程的完整统计输出与原候选回放一致；[独立 trace 字验证](joint-verification-v3.json)核对 17280 个窗口、69120 个复合时长标量和 40 个包络。共 13 项定向测试通过，含重复/缺项、身份、臂含义和 SM 映射拒绝。旧试验的 block 仍只是原 pair 标签，不称为新的随机 block。
+当前正式旧数据提取是 [joint-replay-v4/receipt.json](joint-replay-v4/receipt.json)，使用明确标为旧数据回放的 [十次协议副本](joint-replay-protocol.json)，不冒充新 64-block 采集。40 进程的完整统计输出与原候选回放一致；[独立 trace 字验证](joint-verification-v4.json)核对 17280 个窗口、69120 个复合时长标量和 40 个包络。共 19 项定向测试通过，含重复/缺项、身份、臂含义、SM 映射及归档错配拒绝。旧试验的 block 仍只是原 pair 标签，不称为新的随机 block。
+
+v3 的原始身份声明存在入口缺口：仅比较本地 records 自报 SHA，无法识别同臂进程归属交换。A 对正式 v3 两种错配的审查证据保留在 [原始报告](../A-joint-extractor-audit-v1/audit-report.json)：4348 项配对点统计改变，而全部 12744 项边际中位数结果不变。旧 verifier 最终通过与旧完整统计比较拒绝了错配，因此不称为端到端静默通过。v3 文件保留为历史结果，复现其旧行为需使用提交 `510d401b` 中的源文件。
+
+v4 在任何解码和统计前，以原回收包 SHA `4e372a3dbe50e33657fd57a0c265faba2b7ba857eb2ea34e78803b60435d0b04` 锚定采集映射。SHA 必须来自先前固定的回收证据；临时对待验包求 SHA 再传入不能证明原始身份。归档内记录映射、manifest、complete 和 raw 全部核对，不能只约束文件名。该机制证明与固定回收包一致，不独立证明采集器正确、真实执行顺序或采样假设。
+
+[实际原始记录负例](acquisition-binding-audit-v4.json)中，“交换路径及 SHA”和“保持原文件名、交换字节并更新 SHA”均在入口拒绝且不创建统计输出。第三例保留原边际统计，只更改联合记录 block 并更新输出 SHA，也被新版 verifier 的原始归属核对拒绝。合法 40 进程结果仍逐项等于旧统计，原失败数 4912/4729 不变。原 trace 字校验独立于提取器；归档身份检查由两入口复用同一模块，独立审查仍单列。
 
 [A 的精确换算/求和/最大值反例](../main-median-composition-contract-v1/README.md)与 [C 的完整系列包络反例及旧记录算术](../main-median-output-contract-v1/README.md)均已主线复核。局部完整边际甚至逐项条件等价，仍不能直接充当逐次 DAG 费用或最后 CTA 证书；同调用联合数据的保留是后续验证输入，不是联合模型已经正确的证明。
 
@@ -70,4 +76,6 @@ python results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/r
   --output /tmp/gh200-median-proposal
 ```
 
-`evaluate.py` 的输入是 `{off_on: {series: {arm0: [ns…], arm1: [ns…]}}, off_off: …}`。数组按共同 block 顺序排列；正式路径使用 `extract_joint.py --run RUN --protocol PROTOCOL --expected-protocol-sha256 SHA --output NEW_DIRECTORY` 从绑定的原始记录生成。CLI 拒绝身份不符和覆盖已有输出。提取器当前只支持原已审查的固定 cfg_c GT 解码协议，不自动扩展到 cfg_a/b、其他 binary 或采样规则；物理时间与采样假设仍未得到认证。
+`evaluate.py` 的输入是 `{off_on: {series: {arm0: [ns…], arm1: [ns…]}}, off_off: …}`。数组按共同 block 顺序排列；正式路径使用 `extract_joint.py --run RUN --protocol PROTOCOL --expected-protocol-sha256 SHA --expected-output-sha256 PINNED_ARCHIVE_SHA --output NEW_DIRECTORY` 从绑定的原始记录生成。CLI 拒绝身份不符和覆盖已有输出。提取器当前只支持原已审查的固定 cfg_c GT 解码协议，不自动扩展到 cfg_a/b、其他 binary 或采样规则；物理时间与采样假设仍未得到认证。
+
+新版独立端点复核同样要求 `verify_joint.py --run RUN --expected-output-sha256 PINNED_ARCHIVE_SHA --joint JOINT_DIRECTORY --old-replay OLD_DIAGNOSTIC_GZ --output NEW_REPORT`；先核对采集归属，再校验 raw 端点，最后比较旧统计。旧统计比较仅用于此次历史回放，不是采集身份依据。`audit_acquisition_binding.py --run RUN --output NEW_REPORT` 在临时副本中重放上述三项负例。

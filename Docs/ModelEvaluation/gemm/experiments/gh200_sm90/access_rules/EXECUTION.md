@@ -329,3 +329,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [中位数输出组合边界主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-output-contract-v1/README.md)：C 11交付SHA、完整报告除路径同、4数据文件及独立验证字节同，无实现行动项；完整6372系列合成边际全等价仍有FINAL包络median差H，67584合成关系核对。旧17280角色/8640merged同调用恒等式保留；统计不交换，不授逐次DAG/排序/完成资格。
 
 [联合进程记录提取器](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：新增raw身份→完整setup/前序/同调用series→固定block数组的提取路径，拒绝重复、缺项、错误臂与SM映射变化；13定向测试。正式joint-replay-v3复放40raw，独立字复核17280窗口/69120复合标量/40 consumer FINAL包络，完整median输出与旧回放一致。复合量另存不入原6372覆盖族，不称CUDA或全局D完成；A/C限定审查已交接，无新GPU/资格。另B两版解码完整40replay/5280CTA/17280tile一致性补查重放字节同，新增warmup检查边界明确。
+
+[联合记录采集身份绑定修复](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：接入A对正式v3的归属错配发现，旧verifier在最终旧统计比较时拒绝，非端到端静默通过。v4要求独立固定回收包SHA，解码/统计前逐字核对归档manifest、records、complete和raw；两种真实记录错配入口拒绝且不产出统计，另联合block后改在verifier拒绝。19定向测试、合法40进程/17280窗口/69120复合标量/40包络重放通过，原4912/4729失败与全部资格false不变。A限定修复审查待回交；无新GPU、模型或留出成绩。

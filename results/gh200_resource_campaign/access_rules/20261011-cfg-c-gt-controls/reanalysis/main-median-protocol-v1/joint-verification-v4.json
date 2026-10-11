@@ -1,0 +1,12 @@
+{
+  "processes": 40,
+  "raw_window_vectors": 17280,
+  "acquisition_archive_sha256": "4e372a3dbe50e33657fd57a0c265faba2b7ba857eb2ea34e78803b60435d0b04",
+  "acquisition_record_mapping_verified": true,
+  "directly_checked_composite_duration_scalars": 69120,
+  "consumer_envelopes": 40,
+  "complete_median_diagnostic_equal_to_old_replay": true,
+  "joint_receipt_sha256": "e4db4f655d3a7abfae9cdf94269abe94a731835b48c18816eb2f2310f782e5c8",
+  "verifier_sha256": "212d384ba961bea80380f574ba5125e590a26e4cc4f8567b48e091f69cdf0e1d",
+  "qualification": false
+}

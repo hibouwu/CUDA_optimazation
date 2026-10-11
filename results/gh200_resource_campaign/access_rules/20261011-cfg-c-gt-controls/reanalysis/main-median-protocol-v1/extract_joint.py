@@ -8,6 +8,7 @@ import sys
 
 from evaluate import evaluate
 from joint_records import assemble
+from acquisition_identity import verify_acquisition
 
 
 def validate_pair_identities(ordered):
@@ -28,16 +29,15 @@ def main():
     parser.add_argument('--run',type=Path,required=True)
     parser.add_argument('--protocol',type=Path,required=True)
     parser.add_argument('--expected-protocol-sha256',required=True)
+    parser.add_argument('--expected-output-sha256',required=True,
+                        help='Previously pinned acquisition output.tar.gz SHA; never derive from the input being checked')
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args()
     if hashlib.sha256(args.protocol.read_bytes()).hexdigest()!=args.expected_protocol_sha256:
         raise ValueError('protocol identity mismatch')
     if args.output.exists():raise ValueError('new output directory required')
-    protocol=json.loads(args.protocol.read_text());run=args.run.resolve();hashes={}
-    def load(relative):
-        path=run/relative;hashes[relative]=hashlib.sha256(path.read_bytes()).hexdigest()
-        return json.loads(path.read_text())
-    manifest=load('manifest.json');returned=load('returned/records.json')
+    protocol=json.loads(args.protocol.read_text());run=args.run.resolve()
+    manifest,returned,hashes=verify_acquisition(run,args.expected_output_sha256)
     if manifest['gpu_uuid']!=protocol['gpu_uuid'] or manifest['binary_sha256']!=protocol['binary_sha256']:
         raise ValueError('acquisition identity differs from protocol')
     # Only the existing, reviewed frozen decoder is supported by this adapter.
@@ -93,14 +93,17 @@ def main():
         (args.output/(name+'.json.gz')).write_bytes(gzip.compress(json.dumps(value,separators=(',',':')).encode(),mtime=0))
     receipt=dict(protocol_sha256=args.expected_protocol_sha256,input_sha256=hashes,
         source_sha256={name:hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                       for name in ('evaluate.py','joint_records.py','extract_joint.py')},
+                       for name in ('evaluate.py','joint_records.py','extract_joint.py','acquisition_identity.py')},
         output_sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in args.output.iterdir()},
         processes=len(ordered),series_per_process=len(protocol['series']),
         composite_windows_per_process=864,consumer_FINAL_envelopes=len(ordered),
         median_counts=result['counts'],original_point_failures=result['original_point_failures'],
         raw_identity_and_vector_binding_verified=True,
+        acquisition_archive_sha256=args.expected_output_sha256,
+        acquisition_record_mapping_verified=True,
         scope='Recorded domains only. Composite samples are preserved separately, not added to the6372-series equivalence family. No cross-SM raw-cycle maximum.',
         limits=['Block is the archive pair label; old cohorts were sequential, not the new randomized proposal.',
+                'Archive identity is caller-pinned evidence of the original mapping, not independent proof of collector correctness or physical execution.',
                 'Raw hash binding does not establish sampling stationarity, timestamp accuracy, causal equivalence or last-CTA accuracy.',
                 'Consumer FINAL envelope is not a certified CUDA completion or global-D-visible endpoint.'],
         observation_qualified=False,prediction_qualified=False)
