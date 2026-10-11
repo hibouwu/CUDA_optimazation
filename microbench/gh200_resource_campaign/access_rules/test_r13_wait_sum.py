@@ -1,7 +1,11 @@
 import copy
+import gzip
+import hashlib
+import json
 from pathlib import Path
 import subprocess
 import tempfile
+import tarfile
 import unittest
 
 from decode_r13_wait_sum import decode,decode_trace,MASK,VERSION
@@ -11,7 +15,7 @@ from analyze_r18 import reference
 class WaitSumTests(unittest.TestCase):
     def fixture(self,flag=1):
         setup=dict(config='cfg_b',m=2816,n=1536,k=4096,grid=[1,132,1],tile=[128,128,64],
-            cluster=[1,1,1],stages=4,trace_words=784,trace_tile_words=6,trace_version=VERSION,
+            cluster=[1,1],stages=4,trace_words=784,trace_tile_words=6,trace_version=VERSION,
             input_mode='dyadic',seed=17,swizzle=1,lda=4096,ldb=1536,ldd=1536,alloc_lda=4104,alloc_ldb=1536,
             storage_m=2816,storage_n=1536,input_map_m=2816,input_map_n=1536,zero_m=-1,zero_n=-1,evict=0,
             raster_order='heuristic',resolved_raster_order='along_n',mode='warm',gpu_uuid='test-gpu')
@@ -69,11 +73,31 @@ class WaitSumTests(unittest.TestCase):
         check=dict(event='check',status='ok',samples=4096,nonfinite=0,padding_errors=0,
             max_storage_reference_error=0,checked_indices=indices,
             checked_values=[reference((i//1536)%17,(i%1536)%17,4096,17) for i in indices])
-        result=decode([setup,call,check],'test-gpu')
+        witness=dict(event='input_zero_storage',checked=0,nonzero=0)
+        result=decode([setup,call,witness,check],'test-gpu')
         self.assertEqual(result['independently_checked_values'],4096)
-        with self.assertRaisesRegex(ValueError,'wrong GPU'):decode([setup,call,check],'other-gpu')
+        with self.assertRaisesRegex(ValueError,'input-region'):decode([setup,call,check],'test-gpu')
+        witness['nonzero']=1
+        with self.assertRaisesRegex(ValueError,'explicit-zero'):decode([setup,call,witness,check],'test-gpu')
+        witness['nonzero']=0
+        with self.assertRaisesRegex(ValueError,'wrong GPU'):decode([setup,call,witness,check],'other-gpu')
         check['checked_values'][200]+=1
-        with self.assertRaisesRegex(ValueError,'independent GEMM'):decode([setup,call,check],'test-gpu')
+        with self.assertRaisesRegex(ValueError,'independent GEMM'):decode([setup,call,witness,check],'test-gpu')
+
+    def test_actual_archived_off_record_format(self):
+        archive=Path(__file__).resolve().parents[3]/'results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-correctness/output.tar.gz'
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(),
+            '313d844177db6d8757eb5315e122a3c1d6b0c4dfccdce247daf8c829c3053e84')
+        with tarfile.open(archive) as bundle:
+            payload=bundle.extractfile('./raw/stage4_flag0.jsonl.gz').read()
+        self.assertEqual(hashlib.sha256(payload).hexdigest(),
+            '0b925c73d66aacaec2192701d3004425b9f8d72a7e0dea624c118938b852dd00')
+        events=[json.loads(line) for line in gzip.decompress(payload).decode().splitlines()]
+        result=decode(events,'GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114')
+        self.assertEqual(result['early_cycles'],11500)
+        self.assertIsNone(result['full_wait_cycles'])
+        self.assertEqual(result['independently_checked_values'],4096)
+        self.assertFalse(result['observation_qualified'])
 
     def test_actual_cpp_collector_partition_and_bad_sequences(self):
         # Execute the same accumulator body used by CUDA on the CPU. This checks

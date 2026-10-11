@@ -15,7 +15,7 @@ MASK=sum(1<<i for i in range(2,17))
 
 def decode_trace(setup,call):
     expected=dict(config='cfg_b',m=2816,n=1536,k=4096,grid=[1,132,1],tile=[128,128,64],
-        cluster=[1,1,1],stages=setup.get('stages'),trace_words=784,trace_tile_words=6,
+        cluster=[1,1],stages=setup.get('stages'),trace_words=784,trace_tile_words=6,
         trace_version=VERSION,input_mode='dyadic',seed=17,swizzle=1,lda=4096,ldb=1536,ldd=1536,
         alloc_lda=4104,alloc_ldb=1536,storage_m=2816,storage_n=1536,input_map_m=2816,input_map_n=1536,
         zero_m=-1,zero_n=-1,evict=0,resolved_raster_order='along_n',raster_order='heuristic')
@@ -83,8 +83,14 @@ def decode_trace(setup,call):
 
 def decode(events,expected_gpu):
     packets={packet['event']:packet for packet in events}
-    if len(packets)!=len(events) or set(packets)!={'setup','call','check'}:
-        raise ValueError('expected exactly setup, target call and numerical check')
+    required={'setup','call','input_zero_storage','check'}
+    if len(packets)!=len(events) or set(packets)!=required:
+        raise ValueError('expected setup, target call, empty input-region check and numerical check')
+    witness=packets['input_zero_storage']
+    # The frozen commands explicitly set --input-map-* and this fixed geometry
+    # has no extra explicit-zero rows or columns. Do not discard this packet.
+    if any(type(witness.get(key)) is not int or witness[key]!=0 for key in ('checked','nonzero')):
+        raise ValueError('unexpected explicit-zero input region')
     setup,call,check=(packets[name] for name in ('setup','call','check'))
     if setup.get('gpu_uuid')!=expected_gpu:
         raise ValueError('wrong GPU')
