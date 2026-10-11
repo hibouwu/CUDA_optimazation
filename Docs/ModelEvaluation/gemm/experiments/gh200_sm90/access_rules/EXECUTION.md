@@ -242,6 +242,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [冻结r2包络主线重算](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/main-envelope-contract-v1/README.md)：接入A30abc0ba，三个完整JSON重算相同，14SHA/30条件/3516CTA/1113分支/45包络段及三负例通过；360数值核对最大相对差2.0e-15。固定公式正根唯一，不能换根修复误差；29预测/1不支持保持，不推广到新供给/历史或新卡，无新GPU或资格。
 
+[请求路径完整图重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-v1/README.md)：接入B fad0d6b1，16图/384192需求结果全同，1017共同SHA+6模块匹配，179测试通过；独立旧版32全字典/1152 FIFO需求检查通过。固定中点B0 S响应出现但B32首窗、空间跨度和R13 S4预等失败，不采用该点。1116首轮窗口模型空闲全0、L全4608ns，下一步检查原必要区间的停顿分支而非另拟标签价格，无新GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

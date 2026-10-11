@@ -1,0 +1,18 @@
+{
+  "report_sha256": "b739c7fe668ffcb234395aa6365ec161c13fe5dd4f1b27bb9c8bf02c0c6e8436",
+  "input_hashes_reverified": 1023,
+  "reused_data_inputs": 1015,
+  "report_source_hashes_match": true,
+  "previous_git_blob_matches": true,
+  "complete_default_dictionary_comparisons": 24,
+  "default_comparison_demands": 497664,
+  "zero_path_previous_windows": 2916,
+  "decision_report_hash_matches": true,
+  "artifact_sha256": {
+    "B-default-regression.json": "3b53a2493d02fe08deee9ca9f07ef4177aa9820f10d0ab2178dad848c50085a2",
+    "B-input-path-decision.json": "a3ae63350df58f864740bf284b5cea6d7cd52b394db398ca02e49bb0c476073d",
+    "B-input-path.json": "b739c7fe668ffcb234395aa6365ec161c13fe5dd4f1b27bb9c8bf02c0c6e8436",
+    "B-input-path.md": "3f3d281a0a235b3762b706f2c0b6c5e1cc345f4479f1c8746ed3e647e51630fc"
+  },
+  "scope": "Final read-only SHA verification; no new numerical replay or observer qualification."
+}

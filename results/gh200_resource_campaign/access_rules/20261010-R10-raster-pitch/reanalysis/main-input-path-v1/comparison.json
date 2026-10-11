@@ -1,0 +1,18 @@
+{
+  "all_model_results_equal": true,
+  "common_input_hashes": 1017,
+  "path_changed_modules": {
+    "analyze_r10_input_path.py": "792978f357dfd3900ac786fcc4c8c7797ad4f1a8ac75067f0940189540ba4b44",
+    "analyze_r10_shared_path_prefix.py": "e22022c3899a893846523a4b7b03ad2a44794f2869c646210dd91accc3b29715",
+    "analyze_r10_granule_overlap.py": "0c83af3fda76ada5a2e33b7577774ab8eb30ca95c4315ce8d1d97d1e3517a797",
+    "analyze_r10_supply_events.py": "567fbf1938e29f5d3b221a28da8b0e02d98549908dd3fe0081b16a38a1e6b28e",
+    "supply_model.py": "ee50edee7c3b3f2d908d431cca159ec5bfabcab285584bfb6e2e04ef114c5b7a",
+    "test_r13_input_path.py": "e04503a96d10427264a54d671771b76467965d3405ddfcb5de7b6cbd09112df0"
+  },
+  "B_input_hash_count": 1023,
+  "main_input_hash_count": 1023,
+  "full_runs": 16,
+  "logical_demands": 384192,
+  "R13_tests_passed": 179,
+  "prediction_qualified": false
+}

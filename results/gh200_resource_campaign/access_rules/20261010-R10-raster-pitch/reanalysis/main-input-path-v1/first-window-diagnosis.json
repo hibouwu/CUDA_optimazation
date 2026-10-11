@@ -1,0 +1,67 @@
+{
+  "input_sha256": "bdbdf1ace4e93280ee2b1f29a2e6b67839abd3b9a68289aa6e252cf14bd63531",
+  "first_windows": 1116,
+  "rows": [
+    {
+      "case": "r10_raster_along_m_p0",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_raster_along_m_p32",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_raster_along_n_p0",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_raster_along_n_p32",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_source_single36_p0",
+      "first_windows": 36,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 0.0
+    },
+    {
+      "case": "r10_source_single36_p32",
+      "first_windows": 36,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 0.0
+    },
+    {
+      "case": "r10_source_single126_p0",
+      "first_windows": 126,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_source_single126_p32",
+      "first_windows": 126,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_source_persistent132_p0",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    },
+    {
+      "case": "r10_source_persistent132_p32",
+      "first_windows": 132,
+      "all_post_FIRST_idle_exactly_zero": true,
+      "max_L_compute_floor_difference_ns": 9.094947017729282e-13
+    }
+  ],
+  "scope": "Fixed midpoint only. No interval-wide monotonicity or hardware conclusion."
+}
