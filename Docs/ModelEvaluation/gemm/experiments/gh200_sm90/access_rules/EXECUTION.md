@@ -313,3 +313,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [C端点映射审查主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-lifecycle-alias-review-v1/README.md)：每侧9输入SHA、5共同+4重定位程序相同，完整报告除路径一致，无行动项。CTA0/107/108精确图并集及12符号顺序扩展保留线程提前到达、下一WG MMA与前D tail分离、D全局可见晚于源关闭的可能性；不把这些必要图见证称作物理时间或联合执行证明。
 
 [旧／新R10接口对应主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-boundary-transfer-v1/README.md)：B 59b1ee18接入3ac0938d，各37输入SHA、完整报告与4账本相同；12核心头文件匹配各自manifest且字节相同。Kt32→16后持续状态重建，源keys与旧full-tile API一致；新quartet纯工作/ring相同，raster改变源等价关系，pitch只改实际地址而不改等价关系。未重复未改helper测试，不转移价格、观察或时间资格。
+
+[同 SM 原生 L 一致性诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/README.md)：40原进程/45输入SHA/8640配对差匹配原分析；off/off相对原生周期差最大2.484611%，不将全部差异归因于ns换算。原64/256ns门槛及两批L各432/432失败保留；四个执行的合成反例区分点差、均值、中位数、尾部及准确度，不作为GPU证据。未设新门槛、拟合、启动GPU或授予资格；未来统计对象须单独明确。
