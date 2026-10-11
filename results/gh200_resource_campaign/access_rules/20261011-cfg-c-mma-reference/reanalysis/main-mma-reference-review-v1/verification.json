@@ -1,0 +1,9 @@
+{
+  "review_delivery_sha256": "42ebca46cf32918273568e2536bc5fece6e016fa0897155980f1ba9af40ecc24",
+  "review_artifact_hashes_verified": 4,
+  "input_hashes_verified": 937,
+  "replay_report_matches_delivered_sha256": true,
+  "formal_values_checked": 196608,
+  "observation_qualified": false,
+  "prediction_qualified": false
+}

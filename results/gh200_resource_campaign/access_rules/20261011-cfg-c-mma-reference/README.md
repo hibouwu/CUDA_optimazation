@@ -18,3 +18,5 @@
 重算：`python verify.py`；receipt.json绑定返回归档，freeze.json绑定输入。短坐标检查依据绑定程序的检查/成功状态；正式完整数组由脚本独立逐值核验。
 
 C预审补充边界：两WG、两链及四次q均复用同一K16 A/B描述符；contract中的k_per_group=64仅表示MMA工作量等价，不是遍历四个不同K16子块或cfg_c的M64分区。短坐标原始数组/每次误差与16个warmup原值均未导出；短检查只称程序自检通过，不能称独立短数组复核。固定16循环不会因converged=false补抽；本六进程导出converged均true，但无法离线重算warmup CV，不把该布尔值作为精度资格。正式uniform数组的独立逐值复核不受此限制。
+
+[C独立审查及主线重放](reanalysis/main-mma-reference-review-v1/README.md)确认全部正式数组和冻结身份；SASS开始读数后仍含CTA同步/描述符设置，结束读数前含128条FADD、drain和同步。参考全程ScaleOut::One，GEMM首组ScaleOut::Zero，producer WG及寄存器组织也不同；这些差异尚未获得可转移的服务价格。

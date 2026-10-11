@@ -238,6 +238,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [共同倍率两种精度界复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-common-converter-bound-v1/README.md)：接入A229cd678，119SHA/40raw/12960窗口/8640端点/40最优证书通过，主线独立区间交集及两窗口下界同。部分pair绝对oracle仍>256ns，但最优最大相对残差on/off≤1.721%、off/off≤0.920%；不能据绝对gate失败强制增加ordinal状态或否定全时间5%/10%。仍是读取目标的条件oracle，不采用/改gate/授资格。
 
+[MMA参考独立审查重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/reanalysis/main-mma-reference-review-v1/README.md)：C报告重跑SHA完全相同，交付及全部输入SHA核对；841源、196608正式值、4320旧同CTA窗口通过。明确起始描述符设置、末尾128 FADD/同步及ScaleOut/producer组织差异，不把参考窗口等同GEMM服务，不扣803cycle，不授观察或完整预测资格；无新GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
