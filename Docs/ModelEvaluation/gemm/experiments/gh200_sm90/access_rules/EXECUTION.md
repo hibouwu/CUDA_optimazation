@@ -41,6 +41,8 @@ C首版依赖图 `e097a6b` 已合入为 `2878c1a`。主集成9项专用测试通
 
 B的释放前驱分析 `1042b17` 与输入校验 `c786438` 已合入为 `a05437e`/`843fce4`。主集成20进程复放的逐项观测、两组非唯一分解和摘要与B-v3一致，5项测试通过；source位置/修订哈希单列。现有leader到acquire窗口不能当作最后128个arrival已到之后的价格，四warp观察已完成实现与740051 CPU构建，740054全D及单次轨迹smoke通过；正式40进程及扰动门槛尚未完成。
 
+B的可变输出供给图 `fd7d2f9` 已合入为 `d08a5a4`，65项专用测试及13组旧/新默认图逐字段比较通过。[R10独立复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-20261011-source-event-transfer-v1/README.md)的100进程/17组响应与B一致；AlongN方向、首输出和空间响应排除当前条件价格点，不引入新正式价。
+
 C的输出buffer generation接口 `287930d` 已合入为 `6854ee0`。主线[独立R14复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-output-lifecycle-v1/README.md)复核852份源码、两二进制及40进程数值；20份trace的90个保证、70个跨输出中间窗口与C一致。只规范化当前工作目录绝对前缀后，JSON和两个CSV完整文本相同。中间permit→保证36598.5cycle包含下一输出推进，下一permit→保证657.5cycle；不将前者收费或迁为ns。
 
 [740050前序身份构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-identity-build/README.md)已通过：setup/call显式区分模块plain前序及清零准备，解析器拒绝未声明身份。旧r5仅保留数值smoke，不升级为同准备或观察有效性通过；正式dual/bracket必须另核对模块及准备容量一致。
@@ -114,7 +116,7 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 | 对象 | 已有结果 | 当前工作/边界 |
 |---|---|---|
 | 管理 | 接续对话`01a129c0-b787-7e03-adf1-fcfdb2afa149`；740054完成四warp观察器全D对照与每条件一次smoke（a057/GPU432，4CPU/16GiB/1GPU，134秒）；4份GEMM SASS与740051相同；历史失败保留 | `gh200-v09-failure-analysis`持续开发；未进入V10；结论归[R13](R13-async-retirement.md#a-source-rotation-preparation) |
-| 供给 | R13在途源共享、订阅截止与局部E0排他均保留失败；740033 A源轮换40进程、主观测10/10有效但未唯一识别机制 | 主线已准备r13-release-warps-v1；全D及严格解码已通过；待覆盖边界核验、同卡参照和配对扰动门槛后才判40进程有效。B新R10候选失败提交待串行复核；现行预测仍未通过 |
+| 供给 | R13在途源共享、订阅截止与局部E0排他均保留失败；740033 A源轮换40进程、主观测10/10有效但未唯一识别机制 | 主线已准备r13-release-warps-v1；全D及严格解码已通过；待覆盖边界核验、同卡参照和配对扰动门槛后才判40进程有效。B新R10候选失败已独立复核；现行预测仍未通过 |
 | 输出/边界 | [R18](R18-cluster-boundary.md)同cluster轨迹相关；源码证明full/empty跨rank依赖 | 将依赖作为候选约束，不直接收费；P2最后cluster仍在冻结候选外 |
 | 时间/输入 | [R09](R09-inkernel-clock-stages.md)700次连续调用显示服务与频率均有历史响应；single也复现变慢 | 单极状态留段劣于末值基线，不采用；镜像前序后目标仍呈晚段成本，重复目标地址不是必要条件；批次封顶计数不能定位调用；同调用首/次输出周期率不同，已与供给组联查；本组暂无独立GPU任务 |
 | V09 | 739011完成30条件；29受支持预测4.11%/35.46%，1冻结前拒绝 | **整体未通过**，冻结/判定不改；新候选须另用新留出检验 |
