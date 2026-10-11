@@ -96,6 +96,32 @@ class AddressUnitTests(unittest.TestCase):
             units[keys[0][0][0]]=bad
             with self.assertRaises(ValueError):simulate(keys,units)
 
+    def test_time_unit_scaling_preserves_events_and_subscriptions(self):
+        keys,units=program()
+        for cta in range(3):units[keys[cta][0][0]]=(('A',cta),('A',cta+1))
+        params=dict(service_ns=20.,read_latency_ns=17.,compute_ns=8.,operand_gap_ns=1.,
+            producer_gap_ns=1.,destination_service_ns=3.,output_weight=.5)
+        results=[]
+        for factor in (1.,2.):
+            scaled={k:v*factor if k.endswith('_ns') else v for k,v in params.items()}
+            results.append(shared_stage_events(4,2,3,source_keys=keys,share_inflight_sources=True,
+                source_address_units=units,source_unit_service_ns=10.*factor,trace_requests=True,**scaled))
+        a,b=results
+        for field in ('request_count','input_source_count','input_merged_count','input_demand_work','input_delivery_work'):
+            self.assertEqual(a[field],b[field])
+        for field in ('generations','joins_between_box_generations'):
+            self.assertEqual(a['address_unit_service'][field],b['address_unit_service'][field])
+        for field in ('makespan_ns','shared_busy_ns','source_busy_ns','destination_busy_ns'):
+            self.assertEqual(a[field]*2,b[field])
+        for before,after in zip(a['ctas'],b['ctas']):
+            for field in ('issued_a','issued_b0','issued_b1','ready','starts','service_frontier',
+                    'commits','completed','wait1_return','released','mma_returns','main_ends'):
+                self.assertEqual([t*2 for t in before[field]],after[field])
+        for collection in ('sources','input_demands','deliveries','requests'):
+            for before,after in zip(a[collection],b[collection]):
+                for field,value in before.items():
+                    if field.endswith('_ns') and value is not None:self.assertEqual(value*2,after[field])
+
 
 if __name__=='__main__':
     unittest.main()
