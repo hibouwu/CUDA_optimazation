@@ -441,6 +441,10 @@ r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic Alo
 
 CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格解码12word的一个原角色L；matched与guarded不可互相回退。函数返回原生cycle/ns，guarded另给FIRST/MAIN三元戳及精确cycle区间，可直接接既有`common_rate_interval`。六项数学/拒绝测试覆盖字段位置、uint64、零值、原角色顺序与可行/不可行交集；原740048的264个dual10 tile在两种新arm下全部拒绝。它只完成tile到数学窗口，不替代调用者对协议、源码/二进制、前序、CTA/角色/SM/工作完整性及观察资格的检查，也未生成新设备观测。
 
+740070已完成目标CUDA12.9的实际cfg_b/stage6 CPU构建。本组[独立只读审查](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-frame-build/reanalysis/A-frame-compile-audit-v1/README.md)核对860份源SHA、四个二进制/SASS与编译资源：原overlay逐字节相同，plain/matched/guarded/prefix均168寄存器、2barrier、零stack/spill；动态寄存器池仍为消费者232、生产者40。实际FIRST在`1a60/1af0/1ba0`、MAIN在`24e0/2570/2620`保留两半比较、真实BRA、最多两次读与全零退出；SASS写者条件仍只接受thread128/256，新增存储偏移符合字段10/11。
+
+四kernel模板类型相同，overlay与plain的`SharedStorage`定义逐字节相同，启动/occupancy入口均使用`GemmKernel::SharedStorageSize`和384线程。编译报告的1024B静态shared不等于该动态启动字节数；本次没有执行二进制，未核定动态字节数值或查询运行时occupancy。审查通过的是上述编译接口条件，硬件读取包围、数值、扰动及归档身份完整绑定仍未资格化，不能进入30进程机制采样。
+
 ### 同plain前序接口的两进程冒烟证明了什么？
 
 主集成740048在GPU-43269fbc上完成plain-host/dual-host各一进程，二者都通过共享库调用16次同plain kernel，再在同A/B/D上执行目标。实际grid均为`[1,132,1]`、stage6；各4096值按原标准精确正确、padding/非有限为零。本组独立重放原gzip及检查值。设备SASS与冻结plain/dual各自相同的证明来自主集成，本组绑定其报告与源包哈希，不把两进程冒烟算正式计时、观察扰动资格或局部留出。
@@ -501,6 +505,23 @@ t_j-t_i\ge(C_j-C_i)/f_{cap},\qquad
 [逐进程上下界、负环及共同曲线证书](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/reanalysis/A-shared-clock-consistency-v1/README.md)由[r09_shared_clock.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_shared_clock.py)生成，复用已核验的整数端点并重新核对21份raw及冻结上限来源的SHA。全部仍为开发重复或旧协议冒烟，没有新增时钟拟合、独立留出或公共模型资格。
 
 2026-10-11纠正无上限分支的实数边界：同一timer值上的0、1两个cycle，ε=0不可行，但任意ε>0都可用斜率`1/(2ε)`连接，所以第一个可行整数为1，而下确界恰为0。旧报告的整数最小值和全部证书不变；撤回其无上限分支`real_lower_bound_open=true`的表述，原文件保留。纯函数与回归测试现区分有限上限的可取最小值、无上限且未证可取的下确界。
+
+### 740068首输出控制的共同时间变化能直接叫频率变化吗？
+
+不能。本批cfg_a/stage6、map1024、同ef卡的20个原调用，24个选定角色全部未过原64/256ns配对预算；完整event通过不能抵消。独立复核81920个数值、零填充、全部132CTA/两角色/工作与原端点，并与主集成共同变化报告逐项一致。5280个第一L窗口、2640个原配对全部保留，同配对SM均不变；没有map960样本或新关键CTA选择。
+
+对同CTA/角色，以off窗口的`Coff/Noff`为锚，逐条精确分解`ΔN=ΔC·Noff/Coff+[ΔN−ΔC·Noff/Coff]`。trial3/8/9的选定24角色ΔN中位为+320/−368/−416ns，周期项中位仅+7.24/+2.15/−1.23ns；其余240角色也出现同方向数百ns变化，周期项中位为−0.60/−1.23/−0.62ns。它限制了“只有新增五戳的局部读开销”解释；换算余项仍含端点效应，不能作为物理频率、因果分摊或修正量。逐角色恒等式精确闭合，分别取中位后不要求相加。
+
+另对每个调用的相同原端点检验全卡共同F，额外五戳不进入时钟约束。表中为最小可行整数单端点容差的进程中位〔范围〕，单位ns。
+
+| 740068原样本 | 仅第一L，共同≤1.98 | 仅第一L，共同无上限 | 全部原端点，共同≤1.98 | 全部原端点，共同无上限 |
+|---|---:|---:|---:|---:|
+| off，10进程 | 115〔106–124〕 | 113〔97–113〕 | 122.5〔116–155〕 | 113〔97–145〕 |
+| on，10进程 | 113〔107–119〕 | 105〔97–113〕 | 126〔118–134〕 | 113〔97–113〕 |
+
+各CTA独立的≤1.98可变率见证用全部原端点时，off/on最大仅16.81/18.76ns。全部20进程仅第一L的无上限共同模型也无法满足32ns/端点假设，off关闭新增五戳时亦如此。32ns不是timer精度断言，表中容差也不是原64/256ns配对窗口gate；这仍未区分SM局部计数与读取配对效应，不能以共同中位抵消原失败或采用SM专属价格。
+
+[A独立复核与全部证书](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-control/reanalysis/A-common-L-clock-v2/README.md)由[r09_first_output_clock.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_first_output_clock.py)生成。160份整数边界证书与98560次原端点反演通过无求解器复验；v1原文件保留，v2只纠正无上限实数下确界表述，整数结果、证书、逐角色分解与原gate不变。common_L_control_passed、internal_endpoints_qualified、observation_qualified全部保持false，仍没有自由时间规则或新留出资格。
 
 ### 只使用先前调用，能预测下一次时间吗？
 
