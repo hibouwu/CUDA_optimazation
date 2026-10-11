@@ -1,0 +1,22 @@
+{
+  "source_sha256": "efe4ad7dc6c050bd527c873d9aa61bd513a44828233df6c093336856a7a20095",
+  "source_path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-check-build/source/probes/r18.cu",
+  "source_manifest_sha256": "11eab809368ab860736fab64d5871d21df712c1e00d5ab9eb76961bf9517d7db",
+  "source_lines": {
+    "event_synchronize": 748,
+    "event_elapsed": 750,
+    "timed_return": 756,
+    "common_prefix_push": 931,
+    "set_target": 934,
+    "target_timed": 935,
+    "report_call": 936,
+    "prefix_print_inside_report": 881
+  },
+  "prefix_values_in_host_before_target": true,
+  "prefix_values_exported_before_target": false,
+  "existing_binary_generates_numeric_prediction": false,
+  "supported_validation": "Freeze deterministic rule and allowed inputs before new data; evaluate it using only prefix fields afterward, explicitly recording later evaluation.",
+  "unsupported_claim": "Numeric predictions were generated or externally committed before the target launch.",
+  "observation_qualification_unchanged": true,
+  "limits": "Source flow evidence bound to the previously verified build; not a fresh binary execution, observation qualification or new holdout."
+}

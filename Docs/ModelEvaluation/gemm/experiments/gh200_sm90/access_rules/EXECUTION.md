@@ -260,6 +260,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [请求路径闭区间排除主线验收](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-bound-replay-v1/README.md)：接入B689edf8f，1029SHA/完整重跑一致、183测试通过；独立756包络/1722闭段/630余量/2542断点及后十组队列递推通过，原producer_gap保留。必要区间全域single126 B32首L=4608ns，无法给出正B32响应；停止该固定模型的同区间调价。仅有理数模型条件排除，不扩大队列家族、不授资格，无GPU。
 
+[前序输入与预测保存时点核对](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-availability-v1/README.md)：绑定原构建源码，prefix event在目标前host可用、目标后report才输出；现binary未执行数值预测预提交。优先保持binary、预冻结确定性规则后仅用前序字段评价新数据，明确后处理时点；不等同观测有效性，C独立审查最小控制证据，无GPU/门槛变更。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
