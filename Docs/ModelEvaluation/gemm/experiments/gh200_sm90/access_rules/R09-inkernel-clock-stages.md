@@ -446,6 +446,8 @@ gap由相邻CUDA event相减，包含准备、主机与设备路径，不能命�
 
 [独立审计结果](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-host-check-r5/reanalysis/A-history-contract-audit-v1/prefix-history-audit.json)绑定原始样本、源包与有效trace include路径；[本组入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_plain_prefix_audit.py)独立验证plain模块身份，不修改公共reader。源包中overlay trace有两个同名成员，最后的stub引用`source/probes/v06_trace.hpp`；审计保留两成员哈希并读取该有效实现，避免将较早成员误当实际编译源。
 
+公共reader增加显式prefix协议/准备身份后，原740048 r5应以`undeclared plain-prefix protocol`拒绝，不能补写原metadata追认为新协议。本组入口改用仅接受这两份原raw SHA的历史诊断解码，重新核对各4096值、dual的132个CTA/264个输出和原端点；明确`current_prefix_protocol_qualified=false`，不调用或放宽公共身份验证。[当前公共reader下的复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-current-reader-v1/current-reader-verification.json)保留两份拒绝，21进程全部旧数值记录逐项相同；原失败目录与旧输出不追改。
+
 ### 大的常数率残差一定要求大的局部计时误差吗？
 
 不一定。对一个CTA的entry、producer、两原角色FIRST/MAIN/PERMIT/DONE/final，共12个配对端点，允许该SM的有效周期率随时间变化，但约束`0≤f(t)≤1.98 GHz`。1.98是r2声明的上限，本检验不新增物理硬件上限断言。若每个globaltimer端点允许误差ε，则对`C_i<C_j`必须有

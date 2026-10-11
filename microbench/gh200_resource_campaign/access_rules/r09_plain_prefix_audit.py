@@ -13,7 +13,7 @@ from pathlib import Path
 import statistics as st
 import tarfile
 
-from analyze_r18 import replay
+from analyze_r18 import reference
 from r09_time_contract import constant_rate_slack
 
 
@@ -47,6 +47,83 @@ def describe_prefix(setup,call):
         scope='Observed prefix diagnostics only; gaps include preparation/host/device effects, not pure idle. Physical initial states are not identified.')
 
 
+LEGACY_SMOKE_SHA256 = {
+    'plain':'8772e4bfd6192ece9875714b3ad866625c3c032d7ada3c277c05d84a4a2d51eb',
+    'dual':'4119552e23356f00aba11f2df791e142a2bdb84ba5c47c4b05e2a2622ebfe690',
+}
+
+
+def historical_smoke_events(events,variant):
+    """Diagnostic decoder for 740048 r5, never current prefix qualification.
+
+    The IO entry below restricts this path to the two original raw hashes.
+    Keep missing protocol/preparation metadata missing; do not call or weaken
+    the public replay validator. Only numeric checks and original endpoints
+    are needed here, so no whole-kernel event model is reconstructed.
+    """
+    if variant not in LEGACY_SMOKE_SHA256:
+        raise ValueError('only the two historical smoke variants are supported')
+    setup,call,check=(events[k] for k in ('setup','call','check'))
+    if any(key.startswith(('plain_prefix_protocol','plain_prefix_preparation','plain_prefix_clear_bytes'))
+           for event in (setup,call) for key in event):
+        raise ValueError('new prefix metadata cannot use the historical smoke path')
+    describe_prefix(setup,call)
+    if setup.get('input_mode')!='dyadic' or setup.get('seed')!=17 or setup.get('gpu_uuid')!='GPU-43269fbc-449d-3e0f-908a-9c81229546d3':
+        raise ValueError('historical smoke input/card identity changed')
+    if check['status']!='ok' or check['padding_errors'] or check['nonfinite']:
+        raise ValueError('historical smoke correctness check failed')
+    indices,values=check['checked_indices'],check['checked_values']
+    if len(indices)!=4096 or len(values)!=4096 or len(set(indices))!=4096:
+        raise ValueError('all 4096 distinct historical check values required')
+    for index,value in zip(indices,values):
+        i,j=divmod(index,setup['n'])
+        if not 0<=i<setup['m'] or value is None or not math.isfinite(value) or value!=reference(i%17,j%17,setup['k'],17):
+            raise ValueError('historical smoke numeric replay failed')
+    result=dict(checked_values=4096,ctas=[],historical_reader='740048-r5-only',
+                current_prefix_protocol_qualified=False,
+                qualification_reason='Original r5 lacks current protocol and preparation identity; arithmetic/correctness diagnostics only.')
+    if variant=='plain':
+        return result
+    width=16+2*64*10
+    if setup.get('trace_version')!='r18-dual-clock-events' or setup.get('trace_words')!=width or len(call['trace'])!=132*width:
+        raise ValueError('historical dual trace layout changed')
+    seen=[]
+    for cta in range(132):
+        head=call['trace'][cta*width:(cta+1)*width]
+        if not head[0] or not head[2] or head[10]:
+            raise ValueError('historical CTA trace absent or overflowed')
+        roles=[]
+        for role in (0,1):
+            end,ns,count=head[4+3*role:7+3*role]
+            if count!=1 or head[11+role]!=head[2]:
+                raise ValueError('historical original-role work/SM identity changed')
+            start=16+role*64*10
+            cycles=head[start:start+4];mi,ni=head[start+4:start+6];times=head[start+6:start+10]
+            if not all(cycles) or min(mi,ni)<=0 or not cycles[0]<=cycles[1]<=cycles[2]<=cycles[3]<=end:
+                raise ValueError('historical cycle endpoints invalid')
+            if not head[1]<=head[13]<=times[0]<=times[1]<=times[2]<=times[3]<=ns:
+                raise ValueError('historical timer endpoints invalid')
+            roles.append(dict(final_c=end,final_ns=ns,tiles=[cycles],tiles_ns=[times]))
+            seen.append((mi-1,ni-1))
+        result['ctas'].append(dict(cta=cta,sm=head[2]-1,entry_c=head[0],entry_ns=head[1],
+                                  prod_c=head[3],prod_ns=head[13],roles=roles))
+    required={(i,j) for i in range(22) for j in range(12)}
+    if len(seen)!=len(set(seen)) or set(seen)!=required or len({c['sm'] for c in result['ctas']})!=132:
+        raise ValueError('historical work coverage/SM mapping changed')
+    return result
+
+
+def replay_historical_smoke(returned,variant):
+    raw=returned/(variant+'.jsonl.gz')
+    if variant not in LEGACY_SMOKE_SHA256 or sha(raw)!=LEGACY_SMOKE_SHA256[variant]:
+        raise ValueError('historical smoke raw SHA mismatch; no fallback for other runs')
+    with gzip.open(raw,'rt') as stream:
+        events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
+    result=historical_smoke_events(events,variant)
+    result['raw_sha256']=LEGACY_SMOKE_SHA256[variant]
+    return result
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run',type=Path,required=True)
@@ -66,13 +143,10 @@ def main():
             events={e['event']:e for line in stream if line.strip() for e in [json.loads(line)]}
         setup,call=events['setup'],events['call']
         history=describe_prefix(setup,call)
-        row={k:setup[k] for k in ('config','m','n','k','lda','ldb','ldd','zero_m','zero_n',
-            'storage_m','storage_n','swizzle','alloc_lda','alloc_ldb','input_mode','seed')}
-        row.update(id='plain-prefix-smoke-'+variant,kind='ordinary',warmup_policy='common-sw1-16')
-        record=dict(raw=raw.name,raw_sha256=sha(raw),variant=variant,trial=0)
-        observed=replay(returned,record,row,retain_roles=True)
+        observed=replay_historical_smoke(returned,variant)
         item=dict(history=history,gpu_uuid=setup['gpu_uuid'],numerical_values_replayed=observed['checked_values'],
-                  ctas_replayed=len(observed['ctas']),formal_timing=False)
+                  ctas_replayed=len(observed['ctas']),formal_timing=False,
+                  current_prefix_protocol_qualified=False,historical_reader=observed['historical_reader'])
         if variant=='dual':
             phases={'first':[],'later':[]};slacks=[]
             for cta in observed['ctas']:

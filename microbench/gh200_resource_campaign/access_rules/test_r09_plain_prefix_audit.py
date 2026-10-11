@@ -1,7 +1,10 @@
 from copy import deepcopy
 import unittest
 
-from r09_plain_prefix_audit import describe_prefix
+from r09_plain_prefix_audit import describe_prefix, historical_smoke_events, replay_historical_smoke
+from analyze_r18 import reference
+from pathlib import Path
+import tempfile
 
 
 def fixture():
@@ -42,6 +45,29 @@ class PlainPrefixAudit(unittest.TestCase):
                        dict(plain_prefix_inter_call_us=[-1.]+[20.]*15)):
             with self.subTest(change=change),self.assertRaises(ValueError):
                 describe_prefix(setup,dict(call,**change))
+
+    def test_historical_diagnostic_never_qualifies_current_protocol(self):
+        setup,call=fixture()
+        setup.update(input_mode='dyadic',seed=17,gpu_uuid='GPU-43269fbc-449d-3e0f-908a-9c81229546d3')
+        indices=list(range(4096))
+        values=[reference((i//1536)%17,(i%1536)%17,4096,17) for i in indices]
+        events=dict(setup=setup,call=call,check=dict(status='ok',padding_errors=0,nonfinite=0,
+                    checked_indices=indices,checked_values=values))
+        result=historical_smoke_events(events,'plain')
+        self.assertEqual(result['checked_values'],4096)
+        self.assertFalse(result['current_prefix_protocol_qualified'])
+        self.assertNotIn('plain_prefix_protocol',setup)
+        for key in ('plain_prefix_protocol','plain_prefix_preparation','plain_prefix_clear_bytes'):
+            changed=deepcopy(events);changed['setup'][key]='new'
+            with self.subTest(key=key),self.assertRaises(ValueError):historical_smoke_events(changed,'plain')
+        changed=deepcopy(events);changed['check']['checked_values'][0]+=1
+        with self.assertRaises(ValueError):historical_smoke_events(changed,'plain')
+
+    def test_historical_io_has_no_fallback_for_other_raw_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/'dual.jsonl.gz').write_bytes(b'other run')
+            with self.assertRaisesRegex(ValueError,'raw SHA mismatch'):
+                replay_historical_smoke(root,'dual')
 
 
 if __name__=='__main__':unittest.main()

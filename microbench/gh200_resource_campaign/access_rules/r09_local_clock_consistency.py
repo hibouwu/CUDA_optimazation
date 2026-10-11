@@ -10,6 +10,7 @@ from analyze_r13_sm import select_attempts
 from analyze_r18 import replay
 from r09_clock_brackets import local_clock_witness
 from r09_time_contract import constant_rate_slack
+from r09_plain_prefix_audit import replay_historical_smoke
 
 
 def audit(ctas):
@@ -51,15 +52,11 @@ def main():
             provenance[str(root/rec['raw'])]=rec['raw_sha256']
     smoke=base/'20261011-R09-prefix-host-check-r5/returned'
     raw=smoke/'dual.jsonl.gz'
-    import gzip
-    with gzip.open(raw,'rt') as stream:
-        events={x['event']:x for line in stream if line.strip() for x in [json.loads(line)]}
-    setup=events['setup'];row={k:setup[k] for k in ('config','m','n','k','lda','ldb','ldd','zero_m','zero_n',
-        'storage_m','storage_n','swizzle','alloc_lda','alloc_ldb','input_mode','seed')}
-    row.update(id='plain-prefix-smoke-dual',kind='ordinary',warmup_policy='common-sw1-16')
-    digest=hashlib.sha256(raw.read_bytes()).hexdigest();record=dict(raw=raw.name,raw_sha256=digest,variant='dual',trial=0)
-    observed=replay(smoke,record,row,retain_roles=True)
-    processes.append(dict(case=row['id'],trial=0,stage=6,evidence='single correctness smoke; no formal timing',**audit(observed['ctas'])))
+    observed=replay_historical_smoke(smoke,'dual')
+    digest=observed['raw_sha256']
+    processes.append(dict(case='plain-prefix-smoke-dual',trial=0,stage=6,evidence='single correctness smoke; no formal timing',
+                          historical_reader=observed['historical_reader'],current_prefix_protocol_qualified=False,
+                          qualification_reason=observed['qualification_reason'],**audit(observed['ctas'])))
     provenance[str(raw)]=digest
     result=dict(scope='Per-CTA endpoint existence checks only; all observations remain development or smoke, no clock fitting/prediction.',
         declared_rate_cap_ghz=1.98,cap_scope='Frozen-r2 declared upper rate, not a newly proved physical counter limit.',
