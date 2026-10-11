@@ -9,6 +9,12 @@ def exact(cycles, ns, origin=1000):
     return ((0,origin,0),(cycles,origin+ns,cycles))
 
 
+def observer_pairs():
+    return [dict(event_ns_delta=0,cta_pairs=[dict(cta=i,role=role,phase=phase,
+        L_ns_delta=0,L_cycles_delta=0) for i in range(2)
+        for role,phase in ((0,'first'),(1,'later'))]) for _ in range(10)]
+
+
 class ClockBrackets(unittest.TestCase):
     def test_exact_common_positive_rate(self):
         result = common_rate_interval([exact(100,50),exact(200,100)],interval_tolerance_ns=0)
@@ -61,30 +67,67 @@ class ClockBrackets(unittest.TestCase):
                 common_rate_interval([exact(100,100)],interval_tolerance_ns=tolerance)
 
     def test_observer_screen_cannot_cancel_opposite_changes(self):
-        keys = ('first_L_ns_delta','later_L_ns_delta','first_L_cycles_delta',
-                'later_L_cycles_delta','event_ns_delta')
-        pairs = [dict.fromkeys(keys,0) for _ in range(10)]
-        self.assertTrue(observer_perturbation_gate(pairs)['passes'])
+        pairs = observer_pairs()
+        self.assertTrue(observer_perturbation_gate(pairs,expected_ctas=2)['passes'])
         for i,p in enumerate(pairs):
-            p['first_L_ns_delta']=400 if i%2 else -400
-        result = observer_perturbation_gate(pairs)
+            for x in p['cta_pairs']:
+                if x['phase']=='first':x['L_ns_delta']=400 if i%2 else -400
+        result = observer_perturbation_gate(pairs,expected_ctas=2)
         self.assertEqual(result['metrics']['first_L_ns_delta']['median_signed'],0)
         self.assertFalse(result['passes'])
+        self.assertFalse(result['center_screen_passes'])
 
     def test_local_outliers_and_event_changes_remain_inconclusive(self):
-        keys = ('first_L_ns_delta','later_L_ns_delta','first_L_cycles_delta',
-                'later_L_cycles_delta','event_ns_delta')
-        pairs = [dict.fromkeys(keys,0) for _ in range(10)]
-        pairs[0]['later_L_ns_delta']=1025
-        self.assertTrue(observer_perturbation_gate(pairs)['passes'])
-        pairs[1]['later_L_ns_delta']=1025
-        self.assertFalse(observer_perturbation_gate(pairs)['passes'])
+        pairs = observer_pairs()
+        for x in pairs[0]['cta_pairs']:
+            if x['phase']=='later':x['L_ns_delta']=1025
+        self.assertTrue(observer_perturbation_gate(pairs,expected_ctas=2)['center_screen_passes'])
+        for x in pairs[1]['cta_pairs']:
+            if x['phase']=='later':x['L_ns_delta']=1025
+        self.assertFalse(observer_perturbation_gate(pairs,expected_ctas=2)['center_screen_passes'])
         for p in pairs:
-            p['later_L_ns_delta']=0
+            for x in p['cta_pairs']:x['L_ns_delta']=0
             p['event_ns_delta']=513
-        self.assertFalse(observer_perturbation_gate(pairs)['passes'])
+        self.assertFalse(observer_perturbation_gate(pairs,expected_ctas=2)['passes'])
         with self.assertRaises(ValueError):
-            observer_perturbation_gate(pairs[:9])
+            observer_perturbation_gate(pairs[:9],expected_ctas=2)
+
+    def test_spatial_exchange_does_not_pass_zero_phase_centers(self):
+        pairs = observer_pairs()
+        for p in pairs:
+            for x in p['cta_pairs']:
+                x['L_ns_delta']=1024 if x['cta']==0 else -1024
+        result = observer_perturbation_gate(pairs,expected_ctas=2)
+        self.assertTrue(result['center_screen_passes'])
+        self.assertFalse(result['passes'])
+        self.assertIn('unresolved',result['spatial_screen_status'])
+        first = result['spatial_processes'][0]['phases']['first']['L_ns_delta']
+        self.assertEqual(first['center_signed'],0)
+        self.assertEqual(first['median_absolute'],1024)
+        self.assertEqual(first['maximum_absolute'],1024)
+        self.assertEqual(first['signed_values'],[1024,-1024])
+
+    def test_uniform_phase_shift_has_no_spatial_change_but_keeps_center_screen(self):
+        pairs = observer_pairs()
+        for p in pairs:
+            for x in p['cta_pairs']:x['L_ns_delta']=100
+        result = observer_perturbation_gate(pairs,expected_ctas=2)
+        self.assertTrue(result['exact_spatial_identity'])
+        self.assertTrue(result['passes'])
+        for p in pairs:
+            for x in p['cta_pairs']:x['L_ns_delta']=400
+        result = observer_perturbation_gate(pairs,expected_ctas=2)
+        self.assertTrue(result['exact_spatial_identity'])
+        self.assertFalse(result['center_screen_passes'])
+        self.assertFalse(result['passes'])
+
+    def test_missing_or_duplicated_cta_cannot_be_hidden_by_aggregation(self):
+        pairs = observer_pairs()
+        pairs[0]['cta_pairs'][0]=pairs[0]['cta_pairs'][1]
+        with self.assertRaises(ValueError):
+            observer_perturbation_gate(pairs,expected_ctas=2)
+        with self.assertRaises(KeyError):
+            observer_perturbation_gate([dict(event_ns_delta=0) for _ in range(10)],expected_ctas=2)
 
 
 if __name__=='__main__':

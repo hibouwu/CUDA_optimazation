@@ -10,6 +10,9 @@ import math
 import statistics as st
 
 
+SCHEMA = 'gh200-r09-clock-brackets/2'
+
+
 PERTURBATION_LIMITS = dict(local_median_absolute_ns=384,local_pair_ns=1024,
     local_pairs_required=9,cycle_median_absolute=512,event_median_absolute_ns=512)
 
@@ -81,7 +84,7 @@ def common_rate_interval(windows, *, interval_tolerance_ns=128):
     if not _intersection(bounds,minimum)['feasible']:
         raise ValueError('exact minimum slack did not produce an intersection')
     extra = max(Fraction(0),minimum-tolerance)
-    result.update(window_bounds=bounds,interval_tolerance_ns=float(tolerance),
+    result.update(schema=SCHEMA,window_bounds=bounds,interval_tolerance_ns=float(tolerance),
                   minimum_interval_slack_ns=float(minimum),
                   minimum_interval_slack_fraction=[minimum.numerator,minimum.denominator],
                   extra_interval_slack_ns=float(extra),
@@ -90,25 +93,73 @@ def common_rate_interval(windows, *, interval_tolerance_ns=128):
     return result
 
 
-def observer_perturbation_gate(pairs):
-    """Prelisted screen for bracket-dual minus matched original-dual.
+def paired_phase_summary(ctas, *, expected_ctas=132):
+    """Audit every matched CTA/original role before taking phase centers.
 
-    Inputs are ten sequential-process paired changes, each phase already a
-    median over same-role CTA L windows. Median ABSOLUTE changes are checked,
-    so opposite signed changes cannot cancel. Passing is only a prerequisite
-    for comparing the original and bracket observer, never proof of no
-    observation effect. Plain comparisons are reported separately.
+    Each row has cta, role, phase (first/later), L_ns_delta, L_cycles_delta.
+    Optional SM/work identities are retained by the caller and in the gate's
+    original cta_pairs. The fixed probe owns role0/first and role1/later.
+    """
+    keys = {(i,role,phase) for i in range(expected_ctas)
+            for role,phase in ((0,'first'),(1,'later'))}
+    supplied = [(x['cta'],x['role'],x['phase']) for x in ctas]
+    if len(supplied)!=len(keys) or set(supplied)!=keys:
+        raise ValueError('complete unique CTA/original-role pairs required')
+    if any(not math.isfinite(x[k]) for x in ctas for k in ('L_ns_delta','L_cycles_delta')):
+        raise ValueError('finite native CTA deltas required')
+    phases = {}
+    for phase in ('first','later'):
+        group = sorted((x for x in ctas if x['phase']==phase),key=lambda x:x['cta'])
+        phases[phase] = dict(cta_ids=[x['cta'] for x in group])
+        for key in ('L_ns_delta','L_cycles_delta'):
+            signed = [x[key] for x in group]
+            center = st.median(signed)
+            absolute = sorted(abs(v) for v in signed)
+            centered = sorted(abs(v-center) for v in signed)
+            phases[phase][key] = dict(center_signed=center,signed_values=signed,
+                absolute_values=absolute,median_absolute=st.median(absolute),
+                p95_absolute=absolute[math.ceil(.95*len(absolute))-1],maximum_absolute=max(absolute),
+                centered_absolute_values=centered,median_centered_absolute=st.median(centered),
+                p95_centered_absolute=centered[math.ceil(.95*len(centered))-1],
+                maximum_centered_absolute=max(centered))
+    return phases
+
+
+def observer_perturbation_gate(pairs, *, expected_ctas=132):
+    """Two-layer screen: process centers and unqualified spatial variation.
+
+    Inputs are TEN raw sequential-process pairs. Each pair contains event_ns_delta
+    and cta_pairs with all CTA/role native deltas. Phase center is explicitly
+    median(same-CTA signed deltas), never difference of separate CTA medians.
+    The old 384/1024 limits apply only to these PROCESS CENTERS. Their absolute
+    values across processes prevent process-level cancellation, but cannot
+    qualify spatial stability. Every CTA signed/absolute distribution remains.
+
+    No calibrated spatial tolerance exists. Nonzero CENTERED spatial deltas therefore
+    leave original-phenomenon inference inconclusive even if center limits pass.
+    Exact per-phase spatial shape preservation in cycle AND ns can pass as a
+    literal identity (a uniform phase shift is screened by the center limits),
+    not a noise-tolerance rule. Plain comparisons remain separately reported.
     """
     if len(pairs)!=10:
         raise ValueError('all ten prelisted pairs required')
+    if any(not math.isfinite(p['event_ns_delta']) for p in pairs):
+        raise ValueError('finite paired event differences required')
+    process_centers,spatial = [],[]
+    for index,p in enumerate(pairs):
+        phases = paired_phase_summary(p['cta_pairs'],expected_ctas=expected_ctas)
+        center = dict(event_ns_delta=p['event_ns_delta'])
+        for phase in ('first','later'):
+            for kind in ('ns','cycles'):
+                center[phase+'_L_'+kind+'_delta'] = phases[phase]['L_'+kind+'_delta']['center_signed']
+        process_centers.append(center)
+        spatial.append(dict(pair_index=index,phases=phases,cta_pairs=p['cta_pairs']))
     keys = ('first_L_ns_delta','later_L_ns_delta','first_L_cycles_delta',
             'later_L_cycles_delta','event_ns_delta')
-    if any(not math.isfinite(p[k]) for p in pairs for k in keys):
-        raise ValueError('finite paired native differences required')
     metrics = {}
     passes = True
     for key in keys:
-        values = [p[key] for p in pairs]
+        values = [p[key] for p in process_centers]
         median_absolute = st.median(abs(v) for v in values)
         if key.endswith('cycles_delta'):
             limit = PERTURBATION_LIMITS['cycle_median_absolute']
@@ -126,5 +177,10 @@ def observer_perturbation_gate(pairs):
             item['passes'] = ok
         metrics[key] = item
         passes &= ok
-    return dict(passes=passes,metrics=metrics,
-                interpretation='Prerequisite only; if false, original-phenomenon attribution is inconclusive. Bracket arithmetic is still reported.')
+    exact = all(p['phases'][phase][key]['maximum_centered_absolute']==0
+                for p in spatial for phase in ('first','later')
+                for key in ('L_ns_delta','L_cycles_delta'))
+    return dict(schema=SCHEMA,passes=passes and exact,center_screen_passes=passes,metrics=metrics,
+                spatial_screen_status='exact per-phase spatial shape identity' if exact else 'unresolved: no calibrated spatial tolerance',
+                exact_spatial_identity=exact,spatial_processes=spatial,
+                interpretation='Center limits alone do not qualify local stability. Nonzero centered spatial change is retained as unqualified; bracket arithmetic can still be reported, original-phenomenon attribution is inconclusive.')
