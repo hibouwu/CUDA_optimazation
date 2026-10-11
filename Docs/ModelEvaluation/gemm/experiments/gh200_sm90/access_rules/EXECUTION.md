@@ -250,6 +250,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [请求路径最小余量分支核对](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-witness-v1/README.md)：仅重放原两端极小窗口，FIRST/余量与原报告逐值同。下端g1由源完成限制，ready间隔221.269ns；上端由请求路径限制，间隔264σ=242.245ns，距compute288余45.755ns。两端限制分支不同，不能线性外推或据聚合吞吐作全区间证明，无新价/GPU/资格。
 
+[请求路径区间比较预审](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-interval-review-v1/README.md)：对B未提交源码快照独立检查300比较/2520严格内部点/20相等单点/6堆同刻排序通过。仅比较基础机制，不是全图证书；最终仍需覆盖全部开区间及单独边界，保留分段上限后的剩余域，无GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

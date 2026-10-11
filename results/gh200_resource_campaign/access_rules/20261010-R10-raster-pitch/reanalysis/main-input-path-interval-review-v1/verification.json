@@ -1,0 +1,9 @@
+{
+  "snapshot_sha256": "4b8f23fe05d013afe43736f03073f80c7d6053d039d712b4f19b1a594bd4c62e",
+  "rational_comparisons": 300,
+  "strict_interior_checks": 2520,
+  "equality_singletons": 20,
+  "equal_time_heap_checks": 6,
+  "scope": "Primitive sign/heap review of an uncommitted snapshot only; not full graph coverage or an interval certificate.",
+  "whole_price_interval_proven": false
+}
