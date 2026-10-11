@@ -554,6 +554,21 @@ series sw8排除首个切换后的180次，紧前event基线RMS为1.23%、最大
 
 [完整记录、分层结果与可用时点证据](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-history-forecast-v1/README.md)由[r09_history_forecast.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_history_forecast.py)生成：1160个目标、两个基线共2320个event预测，全部single/series、首个/连续目标、same/mirror及slot均保留。Q/S和校准系数未变，未增加纯时间候选；周期率的观测资格、独立局部留出和跨卡组合边界仍未完成。
 
+### cfg_c跨K的周期接近四倍，时间也能直接取四倍吗？
+
+738496开发数据固定cfg_c 2304×3072、stage4、cluster1×2、swizzle1，aligned/a16/b16各K1024/4096共60个dual调用。本组重新核对全部126个输入SHA，从raw独立复算245760个抽样值及12960个匹配原角色窗口；64个配对SM换位保留，没有跨SM或跨调用相减原始clock。主集成18个固定分组的`C4096/(4C1024)−1`中心接近零，不等于全部窗口无残差或时间规则通过。
+
+以小K四倍为零参数比例代理，统一误差为代理/目标−1：`eC=4C1024/C4096−1`、`ef=(C4096/N4096)/(C1024/N1024)−1`、`eN=4N1024/N4096−1`，12960条逐一精确满足`(1+eC)(1+ef)=1+eN`。全部窗口描述如下，原18分组与180进程中心另行保留。
+
+| 同CTA/原WG输出序号 | 窗口数 | 周期代理RMS / 最大绝对误差 | 条件换算项RMS / 最大绝对误差 | 时间代理RMS / 最大绝对误差 |
+|---|---:|---:|---:|---:|
+| 0 | 7920 | 1.539% / 4.809% | 5.481% / 7.721% | 6.283% / 10.135% |
+| 1 | 5040 | 1.509% / 4.761% | 11.793% / 13.913% | 11.479% / 17.378% |
+
+序号0/1的条件换算项有符号中位为+5.401%/−11.740%，不能以一个共同修正量抹平。换算项仍含端点效应，不是物理频率识别或自由模型输入。K1024的自适应前序调用数为8..12，K4096均8；K同时改变A行距与分配。同trial仅作历史诊断对齐，30对中12对的K4096目标先于K1024参考取得，不是已验证随机因果配对或满足在线时点的预测。
+
+[A跨K换算复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/A-cross-K-conversion-v1/README.md)保留全部布局、前序调用数、30个主机时序、分组与误差尾部。它约束后续周期代理与时间换算须分别检验，并保留WG/输出序号/历史输入；没有拟合服务价格、删异常、修改Q/S或提升观察、留出与跨卡资格。
+
 复核入口：[r09_time_contract.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_time_contract.py)。[本轮结果与契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/README.md)包含逐进程CSV、源哈希、经验下界、支持/排除/不可区分及独立复放命令。持续目标仍未完成，后续规则须另经冻结的新局部留出与组合检查。
 
 ## 作业与复核索引
