@@ -212,6 +212,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [cfg_c producer-tail对照740091](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control/README.md)：b11fae8冻结后参考ef/a058独占执行20进程，81920样本、完整记录/身份通过，CTA→SM配对无变化。6372系列4771失败，432条L全失败（逐条max320..1280ns）；event中位0.446%/最大1.136%、off CV0.310%通过。增量观察资格仍失败，不补抽/调门槛/校正抵消；未识别差异物理原因，无V10或跨卡性能结论。
 
+[每需求最小延迟独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-input-latency-v1/README.md)：接入B24b85629，12场景/248832需求全字段重现，804共同SHA+5模块SHA匹配；真实前版6dce665默认12完整字典相同，172测试通过。独立分数FIFO递推给出FIRST=max(V,δ+τ+144)，固定初始池/有界δ条件下任意共同τ均有ΔFIRST≤δ，仍无法解释旧20对正S；停止拟τ，不增加GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

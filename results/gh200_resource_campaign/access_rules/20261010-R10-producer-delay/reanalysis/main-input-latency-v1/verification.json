@@ -1,0 +1,84 @@
+{
+  "common_hashes": 804,
+  "module_path_only_differences": 5,
+  "rerun_scenarios": 12,
+  "default_complete_dictionaries_equal": 12,
+  "demands_per_replay": 248832,
+  "independent_FIFO_checks": [
+    {
+      "family": "coverage_box",
+      "pitch_bytes": 0,
+      "constant_fraction": "9731557622322679/10000000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    },
+    {
+      "family": "address32",
+      "pitch_bytes": 0,
+      "constant_fraction": "9731557622322679/10000000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    },
+    {
+      "family": "address128",
+      "pitch_bytes": 0,
+      "constant_fraction": "9731557622322679/10000000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    },
+    {
+      "family": "coverage_box",
+      "pitch_bytes": 32,
+      "constant_fraction": "2591592716216373/2500000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    },
+    {
+      "family": "address32",
+      "pitch_bytes": 32,
+      "constant_fraction": "9731557622322679/10000000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    },
+    {
+      "family": "address128",
+      "pitch_bytes": 32,
+      "constant_fraction": "1968346644816999/2000000000000",
+      "linear_offset_fraction": "144",
+      "piecewise_response": [
+        "0 if x+delta<=V",
+        "x+delta-V if x<V<x+delta",
+        "delta if V<=x"
+      ],
+      "bound_for_all_nonnegative_tau": true
+    }
+  ],
+  "observed_positive_S_pairs": 20,
+  "observation_qualified": false,
+  "new_numeric_replay": false
+}

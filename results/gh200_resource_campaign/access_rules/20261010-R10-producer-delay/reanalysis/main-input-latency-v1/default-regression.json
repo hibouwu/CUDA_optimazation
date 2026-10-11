@@ -1,0 +1,55 @@
+{
+  "previous_commit": "6dce665",
+  "previous_source_sha256": "839e39f40822d0968fd804205d14d2bfcfbab26789c4d639ad932f97cd5cca18",
+  "checks": [
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    },
+    {
+      "demands": 20736,
+      "whole_dictionary_equal": true
+    }
+  ],
+  "total_demands": 248832
+}

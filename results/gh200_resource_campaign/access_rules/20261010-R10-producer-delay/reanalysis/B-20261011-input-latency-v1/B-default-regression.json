@@ -1,0 +1,104 @@
+{
+  "previous_commit": "e541c4788831a4d4e52e24c92755f4be4bf37406",
+  "previous_source_sha256": "839e39f40822d0968fd804205d14d2bfcfbab26789c4d639ad932f97cd5cca18",
+  "current_source_sha256": "d6d3158b900f99414319d069f6b4c37e7563c3c4d0b8b0827ba1ce1cd527f45f",
+  "checks": [
+    {
+      "pitch_bytes": 0,
+      "family": "coverage_box",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 23,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 0,
+      "family": "coverage_box",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 23,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 0,
+      "family": "address32",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 0,
+      "family": "address32",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 0,
+      "family": "address128",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 0,
+      "family": "address128",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "coverage_box",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 23,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "coverage_box",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 23,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "address32",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "address32",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "address128",
+      "delta_ns": 0.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    },
+    {
+      "pitch_bytes": 32,
+      "family": "address128",
+      "delta_ns": 512.0,
+      "demands": 20736,
+      "public_fields": 24,
+      "complete_dictionary_equal": true
+    }
+  ],
+  "scope": "Full dictionaries including trace/source/demand/actor/output fields; default input floor is zero."
+}
