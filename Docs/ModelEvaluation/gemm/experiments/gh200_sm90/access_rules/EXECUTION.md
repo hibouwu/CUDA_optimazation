@@ -200,6 +200,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [guarded联合读取界独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-guarded-robustness-v1/README.md)：接入A37b10506，1091输入SHA/528原raw端点/46证书/25110边/10560交集通过，相关100测试通过。ε=32ns时四端点证明κ至少105cycle，完整图在此可行；容差是条件相容变量，不是硬件误差测量或校正量。物理时钟与读取误差仍不可区分，原观察资格及预算不变，无GPU运行。
 
+[迟发响应独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-startup-absorption-v1/README.md)：接入B e541c478，18次模型/373248需求、2592旧窗口复现；803共同SHA及4路径不同模块SHA匹配，完整结果相同。+512ns后初始订阅仍余256.945ns，首复用仍余708.862..772.343ns，三候选首full/FIRST/MAIN不变、producer→MAIN预测−512ns，与旧记录非负变化不符。失败定位到首次供给吸收迟发，保留后续D时刻差；无新价格、数值重放、GPU或资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
