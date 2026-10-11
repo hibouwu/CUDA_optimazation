@@ -172,6 +172,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [guarded共同可变时钟直接反例](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-guarded-common-curve-v1/README.md)：主集成从原raw复核528戳，138证书/1584交集通过。SM57/68相同18880ns起止读数给出[33043,33198]/[33573,33720]cycle，零额外端点平移下相隔375cycle；无需常数率或跨SMclock相减即可解释共同F负闭环。全模型最小整数额外单端点容差有/无cap为187/177ns，仍不证明硬件包围、物理频率或观察资格。
 
+[cfg_c角色边界分解](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-role-boundaries-v1/README.md)完成同60原raw、12960同CTA角色对精确恒等式复核。aligned FIRST差中位−7..+6cycle，MAIN差−635.25..−529.5；源码MAIN在mma_tail最终wait<0>/release之后，角色L差不能当裸WGMMA服务差。完整逐窗口与源码SHA保留，观察资格仍false。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
