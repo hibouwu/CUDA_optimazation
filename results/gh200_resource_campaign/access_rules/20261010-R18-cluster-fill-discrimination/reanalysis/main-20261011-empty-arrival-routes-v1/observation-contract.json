@@ -1,0 +1,141 @@
+{
+  "status": "Conditional second-stage development interface; no GPU job or runnable runner config.",
+  "preceding_stage": "First-output g0/g16/g32/g63 commit and mma-return localization over all five static boundary clusters and interior0/1.",
+  "unchanged_scope": "Second-stage group is selected only after first-stage localization; no per-K sweep or posthoc frozen CTA expansion.",
+  "routes": [
+    {
+      "source_rank": 0,
+      "destination_rank": 0,
+      "consumer_wg": 0,
+      "physical_thread": 128,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w0.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r0.w0.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 1,
+      "consumer_wg": 0,
+      "physical_thread": 168,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w0.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r0.w0.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 0,
+      "consumer_wg": 1,
+      "physical_thread": 256,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w1.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r0.w1.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 1,
+      "consumer_wg": 1,
+      "physical_thread": 296,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w1.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r0.w1.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 0,
+      "consumer_wg": 0,
+      "physical_thread": 128,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w0.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r1.w0.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 1,
+      "consumer_wg": 0,
+      "physical_thread": 168,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w0.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r1.w0.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 0,
+      "consumer_wg": 1,
+      "physical_thread": 256,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w1.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r1.w1.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 1,
+      "consumer_wg": 1,
+      "physical_thread": 296,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w1.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r1.w1.g{group}.empty_to_r1"
+    }
+  ],
+  "sender_fields": [
+    "invocation_id",
+    "cluster_id",
+    "source_rank",
+    "consumer_wg",
+    "physical_thread",
+    "destination_rank",
+    "release_group",
+    "slot",
+    "generation",
+    "consumer_phase",
+    "release_pre_ns",
+    "release_post_ns"
+  ],
+  "acquire_fields": [
+    "invocation_id",
+    "cluster_id",
+    "destination_rank",
+    "acquire_group",
+    "stages",
+    "slot",
+    "generation",
+    "empty_wait_phase",
+    "acquire_end_ns"
+  ],
+  "identity": "One raw invocation and physical cluster; acquire_group=release_group+S, same slot, next generation, producer empty-wait phase equals release consumer phase.",
+  "units": "Use globaltimer ns to compare ranks. Preserve local clock64 separately; never compare native clock64 across SMs.",
+  "endpoints": "Own sender pre/post enclose its original arrival emit, not remote visibility. acquire_end is after the complete producer_acquire call, including expect_tx.",
+  "graph_ports": {
+    "empty_wait_return": "r{rank}.g{group}.acquire",
+    "local_full_arrival": "r{rank}.g{group}.arrive_expect_tx",
+    "producer_acquire_call_return": "r{rank}.g{group}.acquire_return"
+  },
+  "result": "last_emit in [max(pre), min(max(post), acquire_end)]; remaining path is mixed visibility/polling/scheduling/expect_tx/clock overhead.",
+  "validity": "Same group/slot/phase and all four actual senders per destination required; source/SASS brackets and matched observer-on/off validity must pass before interpretation.",
+  "preparation": "Same binary and trace capacity/clearing in each paired arm; extra observer off for all warmups. History identities are declared and not pooled across protocols.",
+  "gates": "Specific ns resolution/noise and observer validity gates remain unfrozen; freeze them before target sampling after independent observer controls. Do not borrow cfg_b cycle gates.",
+  "limits": "No added arrival, named barrier, warpgroup synchronization, polling warp or reset of pipeline state. Main integration owns public implementation and scheduling."
+}

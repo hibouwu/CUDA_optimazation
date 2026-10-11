@@ -1,0 +1,13 @@
+{
+  "command": [
+    "c++",
+    "-std=c++17",
+    "-I/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include",
+    "-I/usr/local/cuda-13.0/targets/x86_64-linux/include",
+    "-I/usr/local/cuda-13.0/targets/x86_64-linux/include/cccl",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-empty-arrival-routes-v1/arrival_layout.cpp",
+    "-o",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-empty-arrival-routes-v1/arrival_layout"
+  ],
+  "returncode": 0
+}

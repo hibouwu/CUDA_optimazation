@@ -1,0 +1,47 @@
+In file included from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/integer_subbyte.h:47,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/numeric_types.h:40,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/functional.h:39,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/array.h:38,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/fast_math.h:45,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/numeric/math.hpp:36,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/numeric/integral_constant.hpp:33,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/container/array.hpp:35,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/int_tuple.hpp:34,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/layout.hpp:34,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-empty-arrival-routes-v1/arrival_layout.cpp:1:
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/platform/platform.h:599:21: warning: ‘long4’ is deprecated: use long4_16a or long4_32a [-Wdeprecated-declarations]
+  599 | struct alignment_of<long4> {
+      |                     ^~~~~
+In file included from /usr/local/cuda-13.0/targets/x86_64-linux/include/driver_types.h:61,
+                 from /usr/local/cuda-13.0/targets/x86_64-linux/include/builtin_types.h:59,
+                 from /usr/local/cuda-13.0/targets/x86_64-linux/include/cuda_runtime_api.h:150,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/util/debug.hpp:38,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/config.hpp:159,
+                 from /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/layout.hpp:33:
+/usr/local/cuda-13.0/targets/x86_64-linux/include/vector_types.h:532:98: note: declared here
+  532 | typedef __device_builtin__ struct long4 __VECTOR_TYPE_DEPRECATED__("use long4_16a or long4_32a") long4;
+      |                                                                                                  ^~~~~
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/platform/platform.h:603:21: warning: ‘ulong4’ is deprecated: use ulong4_16a or ulong4_32a [-Wdeprecated-declarations]
+  603 | struct alignment_of<ulong4> {
+      |                     ^~~~~~
+/usr/local/cuda-13.0/targets/x86_64-linux/include/vector_types.h:533:101: note: declared here
+  533 | typedef __device_builtin__ struct ulong4 __VECTOR_TYPE_DEPRECATED__("use ulong4_16a or ulong4_32a") ulong4;
+      |                                                                                                     ^~~~~~
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/platform/platform.h:619:21: warning: ‘longlong4’ is deprecated: use longlong4_16a or longlong4_32a [-Wdeprecated-declarations]
+  619 | struct alignment_of<longlong4> {
+      |                     ^~~~~~~~~
+/usr/local/cuda-13.0/targets/x86_64-linux/include/vector_types.h:550:110: note: declared here
+  550 | typedef __device_builtin__ struct longlong4 __VECTOR_TYPE_DEPRECATED__("use longlong4_16a or longlong4_32a") longlong4;
+      |                                                                                                              ^~~~~~~~~
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/platform/platform.h:623:21: warning: ‘ulonglong4’ is deprecated: use ulonglong4_16a or ulonglong4_32a [-Wdeprecated-declarations]
+  623 | struct alignment_of<ulonglong4> {
+      |                     ^~~~~~~~~~
+/usr/local/cuda-13.0/targets/x86_64-linux/include/vector_types.h:551:113: note: declared here
+  551 | typedef __device_builtin__ struct ulonglong4 __VECTOR_TYPE_DEPRECATED__("use ulonglong4_16a or ulonglong4_32a") ulonglong4;
+      |                                                                                                                 ^~~~~~~~~~
+/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/platform/platform.h:627:21: warning: ‘double4’ is deprecated: use double4_16a or double4_32a [-Wdeprecated-declarations]
+  627 | struct alignment_of<double4> {
+      |                     ^~~~~~~
+/usr/local/cuda-13.0/targets/x86_64-linux/include/vector_types.h:561:104: note: declared here
+  561 | typedef __device_builtin__ struct double4 __VECTOR_TYPE_DEPRECATED__("use double4_16a or double4_32a") double4;
+      |                                                                                                        ^~~~~~~

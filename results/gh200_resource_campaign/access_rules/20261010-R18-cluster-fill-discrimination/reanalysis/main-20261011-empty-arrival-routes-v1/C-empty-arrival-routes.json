@@ -1,0 +1,171 @@
+{
+  "scope": "Static emitters for cfg_a cluster2x1; no GPU launch or timing/visibility inference.",
+  "routes": [
+    {
+      "source_rank": 0,
+      "destination_rank": 0,
+      "consumer_wg": 0,
+      "physical_thread": 128,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w0.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r0.w0.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 1,
+      "consumer_wg": 0,
+      "physical_thread": 168,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w0.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r0.w0.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 0,
+      "consumer_wg": 1,
+      "physical_thread": 256,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w1.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r0.w1.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 0,
+      "destination_rank": 1,
+      "consumer_wg": 1,
+      "physical_thread": 296,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r0.w1.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r0.w1.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 0,
+      "consumer_wg": 0,
+      "physical_thread": 128,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w0.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r1.w0.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 1,
+      "consumer_wg": 0,
+      "physical_thread": 168,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w0.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r1.w0.g{group}.empty_to_r1"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 0,
+      "consumer_wg": 1,
+      "physical_thread": 256,
+      "thread_in_wg": 0,
+      "warp_in_wg": 0,
+      "lane": 0,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w1.g{group}.empty_emit_to_r0",
+      "visibility_token_template": "r1.w1.g{group}.empty_to_r0"
+    },
+    {
+      "source_rank": 1,
+      "destination_rank": 1,
+      "consumer_wg": 1,
+      "physical_thread": 296,
+      "thread_in_wg": 40,
+      "warp_in_wg": 1,
+      "lane": 8,
+      "arrival_count": 1,
+      "emit_token_template": "r1.w1.g{group}.empty_emit_to_r1",
+      "visibility_token_template": "r1.w1.g{group}.empty_to_r1"
+    }
+  ],
+  "cute_host_output": [
+    [
+      128,
+      0
+    ],
+    [
+      168,
+      1
+    ],
+    [
+      256,
+      0
+    ],
+    [
+      296,
+      1
+    ]
+  ],
+  "host_matches_prediction_metadata": true,
+  "layout_function": "Unchanged frozen spread_arrivals_to_warpgroup body compiled for CPU.",
+  "compiler_version": "c++ (GCC) 16.2.1 20260819 (Red Hat 16.2.1-2)",
+  "cuda_include": "/usr/local/cuda-13.0/targets/x86_64-linux/include",
+  "cuda_runtime_header_sha256": "3f91d3f84f1aafb17cccc475803f9c489b6474f2a3bf0fbc75a5380821c966e0",
+  "source_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp": "7c61d847933cb12a14fcdc68cec902b44c802c9eb34273218c29e601f9c53dee",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/layout.hpp": "e82936f04802ad5f749bb1bc2175368292e5fb3256677ccbf8b9f15e0e5b6ff1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/layout_composed.hpp": "54f1fbd500c43c68755c018f8eb1706b43e463e5a35527714e7e9e7eef2d34f1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/swizzle.hpp": "308f641a775688413cc2c0e2ba5a5b52670589b731e468acb8929dd6ff6c0a34",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cute/swizzle_layout.hpp": "481415b5c76197ae64af2091c0e498c6b0286aedc302c718452f42ada1af4be2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/cutlass.h": "07f5cf03084d62bcb9848c6c8c0e823f07305433491195001c06fed00c6543bf",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp": "03008efb93c9013ab22014e60d034748af79ff0f9d8f94857cd9cca33c724663",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp": "72e49e67cbe51b7655c1a988236494e280102f9961ceb8e3f7ea8a79614ef7a4",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/source/cutlass/include/cutlass/arch/barrier.h": "305fe8ee13d3b5052a9b801ef2f09401ec657e716732ef0aa67fd0d309809b37",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/build/cfg_a_dual.sass": "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b"
+  },
+  "code_sha256": {
+    "analyze_r18_arrivals.py": "103d25a78336b47df15366004c801b6c850650d8735e06b49ec2b6304efd7aff",
+    "output_model.py": "f8fb94c7c9ce071b4acdd7aad3cad45e3e5ed5b6aed31b3377fd5678f9773815"
+  },
+  "host_source_sha256": "ac93c463aa090ee8d5f7e094ea538428e7ba9dd77b670829ab03c862779bd8ca",
+  "host_binary_sha256": "9562aec5e3a521882f51b34949546f0548b1ed3611b32ebd35df376e82306ea6",
+  "sass_sites": {
+    "1fe0": "/*1fe0*/                   WARPGROUP.DEPBAR.LE gsb0, 0x1 ;",
+    "1ff0": "/*1ff0*/               @P1 SYNCS.ARRIVE.TRANS64.RED.A1T0 RZ, [R22+URZ], RZ ;",
+    "2050": "/*2050*/                   WARPGROUP.DEPBAR.LE gsb0, 0x0 ;",
+    "2120": "/*2120*/              @!P1 SYNCS.ARRIVE.TRANS64.RED.A1T0 RZ, [R22+URZ], RZ ;",
+    "2140": "/*2140*/                   CS2R R22, SR_CLOCKLO ;"
+  },
+  "dependency_refinement": [
+    {
+      "previous": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-source-guarantees-v1/cfg_a-S6-K64-T1.json",
+      "previous_sha256": "d6f10196a10e018648dff97eb18c9b1eef8a320da9bd8dc1120680cf6be231fc",
+      "old_nodes": 2918,
+      "new_nodes": 3558,
+      "old_predecessors_preserved_after_subdivision": true
+    },
+    {
+      "previous": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-source-guarantees-v1/cfg_a-S6-K64-T2.json",
+      "previous_sha256": "5c9d905b3cfdcceeb4a5ac6903e416a4967d239523ec6933941ea9b80257ece0",
+      "old_nodes": 5822,
+      "new_nodes": 7102,
+      "old_predecessors_preserved_after_subdivision": true
+    }
+  ],
+  "limits": [
+    "SASS sites confirm source order for this archived binary, not cross-warp ordering or remote visibility.",
+    "WG leader threads128/256 directly emit only to destination0; destination1 requires threads168/296.",
+    "cfg_b cluster1 needs128 consumer arrivals and must keep its separate four-warp observation.",
+    "No point service price or new local heldout follows from these static routes."
+  ]
+}

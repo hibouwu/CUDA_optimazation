@@ -1,0 +1,5 @@
+# 主线复放拒绝记录
+
+以a1bee93的r09_local_clock_consistency.py调用主线当前analyze_r18时，对旧740048 r5 smoke的replay在第61行被validate_plain_prefix拒绝：`ValueError: undeclared plain-prefix protocol`。程序尚未创建结果JSON；此目录仅记录该失败。
+
+保留主线1e4b533的严格前序身份要求，不修改旧raw或补造setup/call字段。A将修复专属历史诊断入口；在独立复放完成前，不将A的旧局部时钟相容性报告标为主线验证通过。
