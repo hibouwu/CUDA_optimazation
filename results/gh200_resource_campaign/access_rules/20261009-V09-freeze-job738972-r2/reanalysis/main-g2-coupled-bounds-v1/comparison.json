@@ -1,0 +1,54 @@
+{
+  "interpretation": "Retrospective development only; no V09 score change or point selection.",
+  "case": "v09d_cfg_c_G2_base",
+  "observed_plain_us": [
+    18.04799959,
+    17.53599942,
+    18.01599935,
+    18.62400025,
+    18.01599935,
+    17.7919995,
+    17.82399975,
+    17.27999933,
+    17.92000048,
+    17.34399982
+  ],
+  "observed_plain_median_us": 17.872000115,
+  "conditional_plain_interval_us": [
+    17.099059254443056,
+    17.442895835643235
+  ],
+  "signed_relative_error_interval": [
+    -0.04324870499011535,
+    -0.024009863283103727
+  ],
+  "observed_median_inside_conditional_parameter_interval": false,
+  "input_sha256": {
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-00.json": "f0b5d86dd7588a81cdd907245c8501c45a926478cbefcc8aec68d2ad57629af9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-00.txt.gz": "7ee4ba27ff2d8eed9bc04e62ecff374d065102ecbb5a2f8b3d21f1a43c2d7fb2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-01.json": "06be27d95a8fa8f12430147494d1a95631b84b0893dc588b35fa0e9f7366e5b9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-01.txt.gz": "9b4770a75ef2c98fd05b3af1104e93d64ac1fb342e9d7afa850e83ca04c59d70",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-02.json": "df46af85d4777bee2f8e79a35aa74549e0713a89df87f1fe802327109fd2a56f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-02.txt.gz": "6936c192d3d0f6239e759e7b959e2a4621a9f293384d9a9c7a51591fb2238155",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-03.json": "2eb0e94c2790cd42fa131d89c3b1568a43e572f7e76cb5df303eb0da4c0fe523",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-03.txt.gz": "43cd607faf80190abbba39e8ca4ebf75cc50282553466834a3d5704c5285d386",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-04.json": "d8f3e4e12780340eb0eab102cc4f77f2a94130099901cbc69312500c44a4242c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-04.txt.gz": "1f57eb8be361043d039ae1e7708d24cb88e6df65d75ee537006af42e1dca0e5a",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-05.json": "a0b52ce02a90a24b121650707c210c763797ee515b436e2116ce2537df4391bb",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-05.txt.gz": "7a070f0da0c42e4cb9cdd5c4406dbc7c5774236d085815b4577e15db44e09a57",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-06.json": "6430755932f85490b432f4fea82f2e5728fbe624db5554e5a12c25652246d148",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-06.txt.gz": "e46fd61a57bd4c397ff70821f64e64fa4b68889fc145b41570f8f00cdce54fd6",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-07.json": "f7751e95faac530028eea72c50e8d726490e8b7d3c247931e58c8d3185b21042",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-07.txt.gz": "7526b3a73c7af010f126f4d69e8556c58150f3c9ce748d42f3f821efee23d034",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-08.json": "991e9718280dcfc32a3966228b2d28ca8c52f8869e4103844322288a07713182",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-08.txt.gz": "384342be4c2c4aaae496b657a9e457915069616e945c99421b4b65b87d593978",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-09.json": "cd2bddae1e1ed8ac3ede62bc4f57a630635b33c6e07c3b8e7ec26a947e2d2cce",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/v09d_cfg_c_G2_base/plain-09.txt.gz": "8449944f4db306625a8a1f92d6b311a983e2f7769e73866d306226b4e143427b"
+  },
+  "report_sha256": "fcf5c10e46874ab6d2db9fd05c60fa12f3e91d3902ad776a1d26bd3daaaa0d2e",
+  "binding_sha256": "92123e07fd263bf46d55692bfd81943b96008068b561d672c9f6b74b22b6a96d",
+  "comparison_sha256": "1f25b8546c236a9e04e2a780f1f9885cece68bdc7f03a0af114227849f882c2c",
+  "original_frozen_status": "unsupported",
+  "prediction_qualified": false,
+  "observation_qualified": false
+}

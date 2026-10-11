@@ -315,3 +315,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [旧／新R10接口对应主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-boundary-transfer-v1/README.md)：B 59b1ee18接入3ac0938d，各37输入SHA、完整报告与4账本相同；12核心头文件匹配各自manifest且字节相同。Kt32→16后持续状态重建，源keys与旧full-tile API一致；新quartet纯工作/ring相同，raster改变源等价关系，pitch只改实际地址而不改等价关系。未重复未改helper测试，不转移价格、观察或时间资格。
 
 [同 SM 原生 L 一致性诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/README.md)：40原进程/45输入SHA/8640配对差匹配原分析；off/off相对原生周期差最大2.484611%，不将全部差异归因于ns换算。原64/256ns门槛及两批L各432/432失败保留；四个执行的合成反例区分点差、均值、中位数、尾部及准确度，不作为GPU证据。未设新门槛、拟合、启动GPU或授予资格；未来统计对象须单独明确。
+
+[cfg_c G2共享供给参数与时钟联合区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/main-g2-coupled-bounds-v1/README.md)：冻结source/15输入身份，64个单输出CTA共享θ的163次LP并求时钟闭合，plain条件区间17.099059–17.442896µs（宽2.010851%）。一维可行线段/仿射交点独立核对端点差≤2.65e−10µs，21组原预测器重放通过；两端关键集合分别64CTA并列与62/63并列，仅代数结果。独立读job739011十plain/20SHA得中位17.872000µs，整个区间仍低估2.401–4.325%；仅等价供给参数无法消除偏差，不包含其他组件/观测不确定性。原unsupported及评分不变，无新GPU/模型/资格。
