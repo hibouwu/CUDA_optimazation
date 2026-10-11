@@ -1,0 +1,22 @@
+{
+  "version": "cfg-c-producer-tail-v1",
+  "writer_thread": 0,
+  "fields": {
+    "cycles": 14,
+    "ns": 15
+  },
+  "cta_words": 1296,
+  "grid": [
+    66,
+    2,
+    1
+  ],
+  "prefix_calls": 16,
+  "prefix_flag": 0,
+  "target_flags": [
+    0,
+    1
+  ],
+  "endpoint": "Mainloop producer load_tail return; does not measure D visibility or kernel completion",
+  "status": "Source preparation only. Target compile/SASS, decoder, full-D correctness and perturbation qualification pending."
+}
