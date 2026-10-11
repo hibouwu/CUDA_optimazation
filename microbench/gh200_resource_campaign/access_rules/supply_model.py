@@ -667,6 +667,145 @@ def supply_work_ledger(row, setup):
         scope='within one invocation; logical source/delivery/output work only; no timing or physical traffic')
 
 
+def cfg_a_source_bindings(row, setup):
+    """Physical cluster/rank bindings for C's cfg_a dependency templates.
+
+    Source atoms remain at Ktile 0. A group's Ktile q adds 64*q to origin K;
+    its global group is output ordinal*Ktiles+q, without ring reset.
+    Geometry/valid/fill/coverage are static. No source or destination price.
+    """
+    if row['config'] != 'cfg_a':
+        raise ValueError('rank source bindings require cfg_a cluster2x1')
+    if len(setup['grid']) != 3 or setup['grid'][2] != 1:
+        raise ValueError('cfg_a source bindings require a two-dimensional grid')
+    ledger = supply_work_ledger(row, setup)
+    gx, gy, _ = setup['grid']
+    physical = {}
+    for cta in range(gx*gy):
+        bx, by = cta % gx, cta // gx
+        cluster = (bx//2, by)
+        physical.setdefault(cluster, dict(ctas=[None, None], rank_outputs=[[], []]))['ctas'][bx%2] = cta
+    atoms = defaultdict(list)
+    for atom in ledger['source_atoms']:
+        atoms[atom['cta'], atom['j']].append(atom)
+    for output in ledger['outputs']:
+        cta, j = output['cta'], output['j']
+        bx, by = cta % gx, cta // gx
+        rank = bx % 2
+        cluster = physical[(bx//2, by)]
+        if output['rank'] != rank or j != len(cluster['rank_outputs'][rank]):
+            raise ValueError('logical work rank/ordinal differs from physical cluster')
+        owned = atoms[cta, j]
+        if [(a['operand'], a['shape'], a['payload_KiB']) for a in owned] != [
+                ('A', [128,64], 16), ('B', [64,32], 4), ('B', [64,32], 4)]:
+            raise ValueError('cfg_a source atoms differ from A16/B0+B1 each4KiB')
+        sources = []
+        for label, atom in zip(('A','B0','B1'), owned):
+            targets = [rank] if label == 'A' else [0, 1]
+            expected = [dict(cta=cluster['ctas'][d], j=j, rank=d) for d in targets]
+            if atom['destinations'] != expected:
+                raise ValueError('source destination differs from physical cluster/rank/ordinal')
+            sources.append(dict(atom=label, operand=atom['operand'], source_atom_id=atom['id'],
+                origin=atom['origin'], shape=atom['shape'], extents=atom['extents'],
+                stride_bytes=atom['stride_bytes'],base_offset_bytes=atom['base_offset_bytes'],
+                payload_KiB=atom['payload_KiB'],valid_KiB=atom['valid_KiB'],fill_KiB=atom['fill_KiB'],
+                extra32_KiB=atom['extra32_KiB'],extra128_KiB=atom['extra128_KiB'],
+                multicast_mask=atom['multicast_mask'],destination_ranks=targets))
+        cluster['rank_outputs'][rank].append(dict(j=j,coord=output['coord'],
+            first_input_state=output['first_input_state'],sources=sources,
+            destination=output['operands'],output=output['output']))
+    clusters, idle = [], []
+    for coord, cluster in physical.items():
+        left, right = cluster['rank_outputs']
+        if len(left) != len(right):
+            raise ValueError('physical cluster ranks have different output counts')
+        if not left:
+            idle.append(dict(cluster=list(coord),ctas=cluster['ctas']))
+            continue
+        for a, b in zip(left, right):
+            if a['coord'][0]//2 != b['coord'][0]//2 or a['coord'][1] != b['coord'][1]:
+                raise ValueError('rank partners do not execute the same logical cluster')
+        clusters.append(dict(cluster=list(coord),ctas=cluster['ctas'],
+            output_tiles=len(left),rank_outputs=cluster['rank_outputs']))
+    return dict(schema='gh200-cfg-a-source-bindings/1',ledger_schema=ledger['schema'],
+        stages=ledger['stages'],k_tiles=ledger['ktiles'],K_origin_increment=[0,64],
+        clusters=clusters,idle_clusters=idle,totals=ledger['totals'],
+        scope='Static physical-rank source bindings, without calibrated timing or idle-CTA lifecycle')
+
+
+def cfg_a_atomic_source_graph(rank_graph):
+    """Refine C's cfg_a graph with separate source and destination atom events.
+
+    B_issue is a join after B0/B1 issue; B_to_rank is a join after two 4KiB
+    deliveries. Their compiled relative issue order is not asserted here;
+    either source may progress before the other issues. A serves its local
+    rank; each B source independently delivers to both ranks. Original C edges
+    and release/arrival/output nodes are preserved. No service is assigned.
+    """
+    stages, kt, outputs = (rank_graph.get(k) for k in ('stages','k_tiles','output_tiles'))
+    if any(type(v) is not int for v in (stages,kt,outputs)) or min(stages,kt)<2 or outputs<1:
+        raise ValueError('cfg_a rank graph requires integer dimensions')
+    total = kt*outputs
+    if len(rank_graph['groups']) != total:
+        raise ValueError('cfg_a rank graph group count differs from dimensions')
+    nodes = {k:list(v) for k,v in rank_graph['nodes'].items()}
+    if any(p not in nodes for predecessors in nodes.values() for p in predecessors):
+        raise ValueError('cfg_a rank graph contains missing predecessor nodes')
+    graph = dict(rank_graph, nodes=nodes)
+    requests, deliveries, joins = [], [], []
+    transfer_lookup = {(t['group'],t['operand'],t['source_rank'],t['destination_rank']):t
+        for t in rank_graph['transfers']}
+    if len(rank_graph['transfers']) != 6*total or len(transfer_lookup)!=6*total:
+        raise ValueError('cfg_a rank graph must contain six aggregate transfers per group')
+    def add(name, predecessor):
+        if name in nodes:raise ValueError('atomic source event already exists: '+name)
+        nodes[name] = [predecessor]
+    for g in range(total):
+        state = input_slot_state(g, stages)
+        group = rank_graph['groups'][g]
+        if (any(group.get(k)!=state[k] for k in ('group','slot','generation','full_wait_phase','empty_wait_phase'))
+                or group.get('tile')!=g//kt or group.get('k')!=g%kt
+                or group.get('expected_full_bytes')!=32768 or group.get('empty_arrivals')!=4):
+            raise ValueError('cfg_a group generation/full/empty contract differs')
+        for source in range(2):
+            prefix=f'r{source}.g{g}.'
+            full = [prefix+'arrive_expect_tx', prefix+'A_visible'] + [
+                f'r{s}.g{g}.B_to_r{source}' for s in range(2)]
+            if nodes.get(prefix+'full') != full:
+                raise ValueError('cfg_a full prerequisites differ from local arrival/A and both B ranks')
+            if nodes.get(prefix+'B_issue') != [prefix+'A_issue']:
+                raise ValueError('cfg_a aggregate B issue contract differs')
+            add(prefix+'B0_issue',prefix+'A_issue')
+            add(prefix+'B1_issue',prefix+'A_issue')
+            nodes[prefix+'B_issue'].extend([prefix+'B0_issue',prefix+'B1_issue'])
+            joins.append(prefix+'B_issue')
+            for atom,operand,size,targets in (('A','A',16384,[source]),
+                    ('B0','B',4096,[0,1]),('B1','B',4096,[0,1])):
+                issue=prefix+atom+'_issue';ready=prefix+atom+'_source_ready'
+                add(ready,issue)
+                requests.append(dict(group=g,source_rank=source,atom=atom,
+                    issue=issue,source_ready=ready,bytes=size))
+                for destination in targets:
+                    done=prefix+atom+f'_delivered_r{destination}'
+                    add(done,ready)
+                    deliveries.append(dict(group=g,source_rank=source,destination_rank=destination,
+                        atom=atom,source_ready=ready,completion=done,bytes=size))
+                    aggregate=prefix+'A_visible' if atom=='A' else prefix+f'B_to_r{destination}'
+                    t=transfer_lookup.get((g,operand,source,destination))
+                    if (t is None or t['completion']!=aggregate
+                            or t['bytes']!=(16384 if operand=='A' else 8192)):
+                        raise ValueError('cfg_a transfer token/bytes contract differs')
+                    nodes[aggregate].append(done)
+                    if aggregate not in joins:joins.append(aggregate)
+    graph.update(source_binding_schema='gh200-cfg-a-atomic-source-graph/1',
+        input_requests=requests,input_deliveries=deliveries,
+        transport_join_nodes=joins,
+        totals=dict(source_requests=len(requests),source_payload_bytes=sum(r['bytes'] for r in requests),
+            destination_atoms=len(deliveries),destination_payload_bytes=sum(d['bytes'] for d in deliveries)),
+        scope='cfg_a source/destination atom refinement of supplied rank graph; joins do not charge transport again; no timing prices')
+    return graph
+
+
 def cfg_b_source_program(row, setup):
     """Full-tile unicast cfg_b source identities for variable pingpong outputs.
 

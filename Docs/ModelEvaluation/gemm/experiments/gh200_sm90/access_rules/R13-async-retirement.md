@@ -99,6 +99,18 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 
 同一图的R10迁移现已完成一轮有界开发筛选，见[R10](R10-layout-cache.md#source-event-transfer)。原两输出默认保持不变；扩展仅接入每CTA实际输出次数、同WG accumulator须等E_(j−2)返回，以及显式的每源atom服务费用。用AlongM later一个响应定值B32覆盖价后，AlongN、single126首窗和空间分布仍明显失败，该价格点不采用。目的投递与D账目不随源覆盖价减少，未拟A16或stage4价格。
 
+<a id="cfg-a-source-composition"></a>
+
+### cfg_a源atom与跨rank依赖的组合接口
+
+`cfg_a_source_bindings(row, setup)`将统一账本按物理cluster与rank组织；`cfg_a_atomic_source_graph(rank_graph)`接收C的`cfg_a_rank_dependencies`完整图，细化输入请求与目的完成节点。两者均不读取观察时间或服务价格。图模板按stage、Ktiles与每rank输出数复用，具体源descriptor、origin、valid/fill及目的rank由静态绑定提供；global group=`j×Ktiles+local_K`，源K坐标增加`64×local_K`，跨输出不重置stage代数。
+
+每个K-group两rank发六个源atom：两个本地A16KiB和四个组播B4KiB，共48KiB。组播后共有十次目的投递/64KiB；每个full保留本地producer arrival、本地A16KiB，以及两issuer各两个B4KiB完成前驱，总payload32KiB。C的`B_issue`是两个B atom发起后的汇合，`B_to_r`是两个4KiB目的完成后的汇合，不能再收一份传输费用。B0/B1各有源就绪与目的完成事件，可以在另一个box尚未发出时推进；本次没有SASS确认两者的相对发起次序，偏序图不额外加入该顺序。
+
+[组合复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/B-20261011-cfg-a-source-composition-v2/B-cfg-a-source-composition.json)覆盖三份已有归档的22个cfg_a条件、220个dual进程、28200个CTA，全部实际工作坐标与两WG工作列表一致；12种stage6、K1024/4096、每rank输出数1/2/3/4/7/8图模板无环，保留C的147284条原依赖边、全部release/empty arrival与输出节点。OOB填充、扩展map的显式零路径、D有效面积和四个名义子tile分别守恒。任意scheduler映射若跨越物理cluster/rank/输出序号则拒绝；已见`[132,1,1]` grid通过，任意多行AlongM grid不据此宣称支持。空闲cluster仅列明，不赋予生命周期时间。
+
+入口为`analyze_cfg_a_supply.py --data-root <结果根> --c-model <只读C/output_model.py> --output <新B目录>`，保存源文件、case/setup、record/raw哈希与压缩后的绑定/完整图。v1加入了尚未由本次SASS确认的B0→B1顺序；v2删除该额外边并重新复核，v1保留。74项相关测试通过。以上仅确认结构接口及旧样本工作绑定，不证明源/目的服务价格、局部窗口、干预或空间时间分布；R10/V09失败结果不变，新的独立冻结局部留出仍未完成。
+
 <a id="release-prerequisites"></a>
 
 ## cfg_b的释放标记没有定位全部128次empty arrival
