@@ -360,6 +360,14 @@ stage4的early变化实测为−768〔−1024,−64〕ns，共享预测−744.9n
 
 <a id="local-epilogue-exclusion"></a>
 
+### 共同读延迟全部移到目的后程，等价于已有service_end截止
+
+`shared_stage_events`增加显式`destination_latency_ns`，表示每个逻辑需求从源就绪到目的FIFO准入的共同延迟；它不延长源订阅窗口，默认0保持旧图不变。源服务、目的FIFO服务和这个后程分别有端点，但这些参数尚未对应到已识别的物理服务。
+
+整box共享中，若旧源完成为`server_end+L`而订阅严格在`server_end`关闭，把源read latency改为0、每需求目的后程改为L，会得到同一图的另一参数化。两者都在`server_end`停止接收新订阅，每个需求都在`server_end+L`进入同一目的FIFO；源代次、队列工作、投递、消费、释放及输出随后按归纳一致，只有内部`source_ready`标签改变。因此仅靠issue/full、consumer/output端点或起步延迟响应不能区分这两个标签，不应另起一个“目的延迟机制”重新拟价或申请区分它们的GPU对照。
+
+[等价复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-latency-relocation-v1/B-latency-relocation.json)固定原探索元组，在stage4/6各复放普通、合成CTA55根延迟512ns、全E0延后及延后后的prefill共八对模型。405504个需求、全部源订阅身份和目的时间线一致；19项完整公开字段及全actor状态精确相等。512ns只是规定的合成根偏移，不输入实测起步戳，也不声称模拟了实际计时循环的overshoot。没有重扫截止、拟合或采样，原service_end分支的有界开发失败直接继承；该结论不排除所有缓存或部分地址单元模型，也不识别物理源/目的延迟分配。
+
 ### 本地E0排他只能解释部分响应，不能修复defer2缺口
 
 纯模型增加可关闭的局部排他候选：沿用已有epilogue prepare/write时长，在这些区间内分别推迟本CTA producer请求、MMA起动或两者；不重拟或新增时间常数。请求和MMA起动自身不占用此局部资源，因此这是单向排他假设，不是对称仲裁，也不命名SM端口。未来才开始的write区间不会阻塞之前的事件；同时间保持原插入顺序。[逐条件复放](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/B-local-epilogue-exclusion.md)。

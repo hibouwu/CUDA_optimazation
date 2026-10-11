@@ -130,7 +130,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         destination_service_ns=0., second_prefill=False,
                         source_join_boundary='ready',local_epilogue_exclusion='none',
                         output_counts=None, source_service_costs_ns=None,
-                        source_address_units=None, source_unit_service_ns=None):
+                        source_address_units=None, source_unit_service_ns=None,
+                        destination_latency_ns=0.):
     """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
@@ -178,6 +179,10 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     partial unit joins. input_source_work still counts logical box generations,
     including boxes whose units all join. request_count counts server batches
     and D atoms; address_unit_service separately reports the units actually paid.
+    destination_latency_ns is an explicit per-demand delay from source ready
+    to admission to the destination FIFO. It does not keep source subscription
+    open. Source/read latency and this delay are alternative locations of an
+    uncalibrated path; no physical split is inferred from their sum.
     """
     import heapq
 
@@ -196,6 +201,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         raise ValueError('unknown source subscription boundary')
     if local_epilogue_exclusion not in ('none','producer','consumer','both'):
         raise ValueError('unknown local epilogue exclusion scope')
+    if (type(destination_latency_ns) not in (int,float) or not math.isfinite(destination_latency_ns)
+            or destination_latency_ns<0):
+        raise ValueError('finite nonnegative per-demand destination latency required')
     counts=[2]*cta_count if output_counts is None else list(output_counts)
     if len(counts)!=cta_count or any(type(n) is not int or n<1 for n in counts):
         raise ValueError('positive per-CTA output counts required')
@@ -249,7 +257,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
     local_intervals=[[] for _ in range(cta_count)]
     local_blocked={'producer':0.,'consumer':0.}
-    routed_inputs=share_inflight_sources or destination_service_ns>0
+    routed_inputs=share_inflight_sources or destination_service_ns>0 or destination_latency_ns>0
     prefill=None
     actors=[]
     def push(time,kind,cta,index):
@@ -373,7 +381,8 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             demand=dict(demand_id=demand_id,source_id=source_id,source_key=key,merged=merged,
                 cta=cta,kind=kind,index=index,arrival_ns=t,source_ready_ns=done,work=weight)
         if routed_inputs:
-            demands.append(demand);push(done,'deliver_input',cta,demand_id)
+            if destination_latency_ns: demand['destination_arrival_ns']=done+destination_latency_ns
+            demands.append(demand);push(done+destination_latency_ns,'deliver_input',cta,demand_id)
         else:
             # Preserve the original zero-destination event ordering exactly.
             push(done,'input_ready',cta,index)
