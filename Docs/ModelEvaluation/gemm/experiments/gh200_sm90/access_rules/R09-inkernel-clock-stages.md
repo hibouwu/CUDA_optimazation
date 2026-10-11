@@ -160,6 +160,12 @@ cfg_b中窗口random的拟合中，Tensor项与a/c近似，源请求项较大，
 
 固定正C模型可证明唯一正根；组合ns递推后，需检查包络随f的性质，不能照搬旧证明。观测W条件拟合、自由频率与自由时间分别报告，任何一项都不代替另外两项。[参数、分组、τ剖面与旧C诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R09-input-clock-calibration-job738376/reanalysis/C-20261009-source-clock-dev-v2/source-clock.json)。
 
+2026-10-11补齐了**冻结r2全30条件**的包络数学检查。令x=1/f，固定存储参数按十进制有理数解释，供给`max(compute×x, service)`、输出与CTA递推形成精确分段仿射函数；全部包络在0<f≤1.98上连续、为正、随f非增，并在f趋零时发散。共45个包络分段，尾段对x的斜率最小为2048ns/(GHz⁻¹)。这证明的是既有公式的性质，不是硬件计时性质。
+
+独立检查器不导入构造器或公共模型，用原pingpong逐段消耗E工作的分支，而非构造器的重叠损失表达式，验证50个区间、141个CTA分组区间和1113条分支不等式；错误包络常数、删除分支断点及错误compute floor均被拒绝。另在360个固定f计算上核对归档原数值入口，最大相对差2.0×10⁻¹⁵；这是浮点数值核对，不是对全部IEEE舍入路径的形式证明。原cfg_c G2仍为unsupported，数学函数可求值不增加预测支持。[原批准身份、分段证书与复验](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/A-envelope-contract-v1/README.md)。
+
+在这些固定有理数包络内，非负Q/S价格使源时钟F(W)随W非减，所以`F(E(f))−f`严格递减、两端异号，正根唯一；不能靠寻找另一正根修补r2的预测误差。当前主线求根器与原冻结函数AST相同，时钟映射仅有duration_term的导入限定名差别。该证明不自动覆盖后续供给/输出结构、历史状态或新卡，也不改变既有误差、观测资格与独立留出要求。
+
 <a id="clock-form-candidates"></a>
 <a id="input-clock-mode-fit"></a>
 
