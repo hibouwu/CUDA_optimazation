@@ -1,0 +1,16 @@
+{
+  "trace_version": "r18-first-output-v1",
+  "role_words": 11,
+  "extra_cta_words": 22,
+  "cta_words": 1318,
+  "grid": [
+    132,
+    1,
+    1
+  ],
+  "timestamp_payload_bytes": 1920,
+  "extra_allocation_bytes": 23232,
+  "allocation_bytes": 1391808,
+  "history": "same binary, observer off for 16 prefix calls",
+  "status": "Prepared source only; build, numerical checks, SASS and observer qualification pending"
+}
