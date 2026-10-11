@@ -1,5 +1,5 @@
 import unittest
-from analyze_v09_gate_audit import error_summary, process_audit
+from analyze_v09_gate_audit import error_summary, process_audit, timing_audit
 
 
 class GateAuditTests(unittest.TestCase):
@@ -12,6 +12,24 @@ class GateAuditTests(unittest.TestCase):
         result = error_summary([], 2)
         self.assertIsNone(result['median_abs_pct'])
         self.assertEqual(result['invalid_windows'], 2)
+
+    def test_observer_separation_uses_full_empirical_ranges(self):
+        rows = [dict(variant=v, trial=i, elapsed_us=t) for v, times in
+                [('plain', [10, 12]), ('dual', [13, 15])] for i, t in enumerate(times)]
+        result = timing_audit(rows)
+        self.assertFalse(result['plain']['complete_trials'])
+        self.assertEqual(result['stamped']['processes'], 0)
+        self.assertGreater(result['dual']['observed_ratio_range_percent'][0], 0)
+        scaled = timing_audit([dict(r, elapsed_us=r['elapsed_us']*2) for r in rows])
+        self.assertEqual(result['dual']['observed_ratio_range_percent'],
+                         scaled['dual']['observed_ratio_range_percent'])
+
+    def test_invalid_or_duplicate_timing_is_rejected(self):
+        row = dict(variant='plain', trial=0, elapsed_us=10)
+        with self.assertRaisesRegex(ValueError, 'duplicate'):
+            timing_audit([row, row])
+        with self.assertRaisesRegex(ValueError, 'invalid'):
+            timing_audit([dict(row, elapsed_us=0)])
 
     def example(self):
         ctas = [dict(cta=0, entry_ns=0, prod_ns=10, end_ns=100, tiles_ns=[[20, 40, 50, 80]]),

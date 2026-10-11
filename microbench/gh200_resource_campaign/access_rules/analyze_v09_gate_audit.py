@@ -24,6 +24,36 @@ def error_summary(values, invalid=0):
                 max_abs_pct=100*max(abs(v) for v in values))
 
 
+def timing_audit(records):
+    """Whole-call descriptive ranges, not confidence intervals or local validity."""
+    variants = ('plain', 'wide', 'stamped', 'dual')
+    result = {}
+    for variant in variants:
+        rows = [r for r in records if r['variant'] == variant]
+        trials = [r['trial'] for r in rows]
+        if len(set(trials)) != len(trials):
+            raise ValueError('duplicate process trial')
+        values = [r['elapsed_us'] for r in rows]
+        if any(not math.isfinite(v) or v <= 0 for v in values):
+            raise ValueError('invalid whole-call time')
+        result[variant] = dict(processes=len(rows), trials=sorted(trials),
+                               complete_trials=sorted(trials) == list(range(10)))
+        if values:
+            center = st.median(values)
+            result[variant].update(median_us=center, minimum_us=min(values), maximum_us=max(values),
+                cv_percent=100*st.pstdev(values)/st.fmean(values),
+                max_deviation_from_median_percent=100*max(abs(v/center-1) for v in values))
+    plain = result['plain']
+    for variant in variants[1:]:
+        row = result[variant]
+        if plain['processes'] and row['processes']:
+            row.update(median_ratio_to_plain_percent=100*(row['median_us']/plain['median_us']-1),
+                       observed_ratio_range_percent=[
+                           100*(row['minimum_us']/plain['maximum_us']-1),
+                           100*(row['maximum_us']/plain['minimum_us']-1)])
+    return result
+
+
 def process_audit(ctas, prediction):
     predicted = prediction['cta_events']
     if len(ctas) != len(predicted):
@@ -91,8 +121,9 @@ def audit(root):
         if row['set'] != 'heldout':
             continue
         prediction = frozen['predictions'][row['id']]
-        selected, failed, _ = select_attempts(root, row['id'], ('dual',))
+        selected, failed, _ = select_attempts(root, row['id'], ('plain', 'wide', 'stamped', 'dual'))
         processes = []
+        timings = []
         for item in selected:
             record = item['record']
             provenance[item['path']] = sha(root/item['path'])
@@ -100,10 +131,12 @@ def audit(root):
                 raise ValueError('observation predates frozen binding')
             observed = replay(root, record, row)
             provenance[record['raw']] = record['raw_sha256']
-            if prediction['status'] == 'predicted':
+            timings.append(dict(variant=record['variant'], trial=record['trial'], elapsed_us=observed['elapsed_us']))
+            if record['variant'] == 'dual' and prediction['status'] == 'predicted':
                 processes.append(dict(trial=record['trial'], **process_audit(observed['ctas'], prediction)))
         cases.append(dict(case=row['id'], config=row['config'], status=prediction['status'],
-                          selected_dual_processes=len(selected), failed_attempts=failed,
+                          selected_dual_processes=sum(r['variant'] == 'dual' for r in timings), failed_attempts=failed,
+                          whole_call_observers=timing_audit(timings), whole_call_processes=timings,
                           processes=processes))
     summary = {}
     for key in COMPONENTS:
