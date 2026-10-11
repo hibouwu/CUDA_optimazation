@@ -23,7 +23,11 @@ def release_arrival_bounds(before, after, acquire_end):
     The post-arrival interval still contains processing, polling, scheduling,
     expect_tx and the acquire-end clock path. It is not barrier latency.
     """
-    if len(before)!=4 or len(after)!=4 or any(b>e for b,e in zip(before,after)):
+    if len(before)!=4 or len(after)!=4:
+        raise ValueError('four ordered warp arrival brackets required')
+    if any(type(v) is not int or not 0<=v<2**64 for v in [*before,*after,acquire_end]):
+        raise ValueError('clock64 stamps must be unsigned 64-bit integers, excluding bool')
+    if any(b>e for b,e in zip(before,after)):
         raise ValueError('four ordered warp arrival brackets required')
     lower = max(before)
     upper = min(max(after), acquire_end)

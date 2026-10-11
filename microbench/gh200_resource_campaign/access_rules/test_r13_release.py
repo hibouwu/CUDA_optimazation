@@ -39,6 +39,17 @@ class ReleasePrerequisiteTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'returned'):
             release_arrival_bounds([1,2,3,8],[2,3,4,9],7)
 
+    def test_non_clock_values_cannot_produce_feasible_bounds(self):
+        for value in (float('nan'),float('inf'),float('-inf'),True,False,1.0,-1,2**64,None):
+            for location in ('before','after','acquire_end'):
+                with self.subTest(value=value,location=location):
+                    before=[1,2,3,4];after=[2,3,4,5];end=6
+                    if location=='before':before[1]=value
+                    elif location=='after':after[1]=value
+                    else:end=value
+                    with self.assertRaisesRegex(ValueError,'unsigned 64-bit integers'):
+                        release_arrival_bounds(before,after,end)
+
 
 if __name__=='__main__':
     unittest.main()
