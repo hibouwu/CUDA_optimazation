@@ -1,0 +1,107 @@
+{
+  "source_sha256": "56d3f98c67fa2da8b707102be1b91ec261fb9d27b69efb1189d427d8a109a4e0",
+  "serialization": "json.dumps(result,separators=(comma,colon)); complete dictionary in insertion order",
+  "cases": [
+    {
+      "name": "short",
+      "arguments": {
+        "kt": 4,
+        "stages": 2,
+        "producer_interval": 0,
+        "ready_latency": 0,
+        "commit_lead": 0,
+        "completion_lag": 0,
+        "service_cycles": 1
+      },
+      "legacy_complete_json_sha256": "4ce11f13e066d3944ecac8ce3487cf6ca96ccadc7d2f10116ce4ed7697e8aa38"
+    },
+    {
+      "name": "overlap",
+      "arguments": {
+        "kt": 4,
+        "stages": 3,
+        "producer_interval": 7,
+        "ready_latency": 31,
+        "commit_lead": 9,
+        "completion_lag": 4,
+        "service_cycles": 16,
+        "issue_floor": 3,
+        "wait_overhead": 2,
+        "loop_advance": 1,
+        "return_overhead": 3,
+        "reuse_delay": 4,
+        "handoff_delay": 2
+      },
+      "legacy_complete_json_sha256": "e5ec383aca36abd4a71fd49c7b809c196526de52b2787c7e613fba4f16c7f6b0"
+    },
+    {
+      "name": "observed_entry",
+      "arguments": {
+        "kt": 4,
+        "stages": 2,
+        "producer_interval": 0,
+        "ready_latency": 0,
+        "commit_lead": 0,
+        "completion_lag": 0,
+        "service_cycles": 1,
+        "observed_second_entry": [
+          0,
+          1
+        ]
+      },
+      "legacy_complete_json_sha256": "2fdf495bff77f12b096d0905fcceb64101de111f52476a47eecc024889523d09"
+    },
+    {
+      "name": "second_prefill",
+      "arguments": {
+        "kt": 4,
+        "stages": 2,
+        "producer_interval": 0,
+        "ready_latency": 2,
+        "commit_lead": 0,
+        "completion_lag": 0,
+        "service_cycles": 1,
+        "second_prefill": true
+      },
+      "legacy_complete_json_sha256": "32644e8ab7cddb4439c9ed59935e8e07341b4e4deedc57f8d1702c4b2b74ef36"
+    },
+    {
+      "name": "K64_stage4",
+      "arguments": {
+        "kt": 64,
+        "stages": 4,
+        "producer_interval": 50,
+        "ready_latency": 1780,
+        "commit_lead": 420,
+        "completion_lag": 90,
+        "service_cycles": 512,
+        "issue_floor": 10,
+        "wait_overhead": 6,
+        "loop_advance": 85,
+        "return_overhead": 3,
+        "reuse_delay": 100,
+        "handoff_delay": 143
+      },
+      "legacy_complete_json_sha256": "1a9a2f0ab246230a0bfd9f9901a6e98cf04971566d46c9df11230ce3218fe9b8"
+    },
+    {
+      "name": "K64_stage6",
+      "arguments": {
+        "kt": 64,
+        "stages": 6,
+        "producer_interval": 50,
+        "ready_latency": 1780,
+        "commit_lead": 420,
+        "completion_lag": 90,
+        "service_cycles": 512,
+        "issue_floor": 10,
+        "wait_overhead": 6,
+        "loop_advance": 85,
+        "return_overhead": 3,
+        "reuse_delay": 100,
+        "handoff_delay": 143
+      },
+      "legacy_complete_json_sha256": "be8fa9ddae225da8a4b0c120559baa99f30a1c195a67a591044dec4f0dd5398f"
+    }
+  ]
+}

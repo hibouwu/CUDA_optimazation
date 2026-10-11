@@ -4,8 +4,10 @@ All coefficients and conditional LP constraints are explicit caller inputs.
 The request spans are descriptor coverage, not physical memory traffic.
 """
 from collections import defaultdict
+from collections.abc import Mapping
 from functools import lru_cache
 import math
+from numbers import Real
 
 import numpy as np
 
@@ -33,13 +35,15 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
                            issue_floor=0., wait_overhead=0., loop_advance=0.,
                            return_overhead=0., reuse_delay=0., handoff_delay=0.,
                            observed_second_entry=None, producer_boundary_delay=0.,
-                           second_prefill=False):
+                           second_prefill=False, pre_full_wait_cycles=None,
+                           post_full_wait_cycles=None):
     """Development recurrence for two pingpong outputs; not a fitted hardware rule.
 
     I is the end-of-copy-pair marker. E is cumulative TC service progress,
     C group commit, D retire eligibility.
-    Commit can overlap service: C=max(B+g,E-q), D=E+lambda. Restricting g<=c
-    and q>=0 ensures B<=C<=E<=D. q is effective service lead in cycles,
+    Commit can overlap service: C=max(M+g,E-q), D=E+lambda. Restricting g<=c
+    and q>=0 ensures M<=C<=E<=D. M is MMA admission, equal to the modeled
+    full-wait return B in legacy calls. q is effective service lead in cycles,
     not a hardware queue capacity. All times and overheads are caller inputs.
     Ordinary release is optimistic at wait1 return; reuse_delay separately
     represents the release-to-next-pair-issue path, not a physical latency.
@@ -55,6 +59,20 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
     its prologue, without releasing slots or resetting TC progress. Its begin/end
     are modeled events, not observed readiness. Only this enabled intervention
     adds a second_prefill diagnostic to the otherwise unchanged return schema.
+    pre_full_wait_cycles and post_full_wait_cycles are explicit per-group caller
+    inputs, each with 2*kt finite nonnegative real values in global group order
+    across both outputs (0 through 2*kt-1).
+    With either supplied, H=consumer entry+pre, B=max(H,ready), M=B+post.
+    An omitted vector contributes zero; a None element is unpriced and rejected.
+    H/B/M are modeled dependency points, not calibrated probe timestamps or
+    recorded wait costs. The intervention cannot be combined with an observed
+    entry cut. Delay surviving readiness/service overlap reaches the current
+    commit and the existing wait1/release path. Ordinary group g releases g-1,
+    gating producer group g+stages-1; no service cost or loop_advance is changed.
+    Only explicit phase inputs add consumer_phase_entry, full_wait_begin,
+    full_wait_return and mma_begin arrays. With both omitted the complete
+    legacy return schema, ordering and values are preserved.
+    In phased calls consumer_available is H and first_mma_or_commit is M.
     """
     values=(producer_interval,ready_latency,commit_lead,completion_lag,
             service_cycles,issue_floor,wait_overhead,loop_advance,
@@ -69,8 +87,34 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         entry_h,entry_b=observed_second_entry
         if not 0<=entry_h<=entry_b:
             raise ValueError('observed entry requires 0 <= H gap <= B gap')
+    phase_enabled=pre_full_wait_cycles is not None or post_full_wait_cycles is not None
+    if phase_enabled and observed_second_entry is not None:
+        raise ValueError('full-wait phase inputs cannot be combined with an observed entry cut')
+    phase_delays=[]
+    if phase_enabled:
+        for name,vector in (('pre_full_wait_cycles',pre_full_wait_cycles),
+                            ('post_full_wait_cycles',post_full_wait_cycles)):
+            if vector is None:
+                phase_delays.append([0.]*(2*kt))
+                continue
+            if isinstance(vector,(str,bytes,Mapping)):
+                raise ValueError(f'{name} requires a sequence of 2*Ktile cycle values')
+            try:
+                delays=list(vector)
+            except TypeError as error:
+                raise ValueError(f'{name} requires a sequence of 2*Ktile cycle values') from error
+            if len(delays)!=2*kt:
+                raise ValueError(f'{name} requires exactly 2*Ktile cycle values')
+            for group,delay in enumerate(delays):
+                if delay is None:
+                    raise ValueError(f'{name}[{group}] is unpriced; provide an explicit cycle value')
+                if isinstance(delay,bool) or not isinstance(delay,Real) or not math.isfinite(delay) or delay<0:
+                    raise ValueError(f'{name}[{group}] requires a finite nonnegative real cycle value')
+            phase_delays.append(delays)
+        pre_delays,post_delays=phase_delays
     issued=[];ready=[];available=[];starts=[];frontier=[];commits=[];done=[];wait=[]
     released=[0.]*(2*kt);returns=[];ends=[];next_consumer=0.;prefill=None
+    phase_entries=[];full_wait_begins=[];full_wait_returns=[]
     for i in range(2*kt):
         # At this boundary all S release predecessors belong to output 0.
         # Schedule the initial fill before consuming it; later slots still wait
@@ -86,13 +130,24 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
             prefill=dict(begin=next_consumer,end=max(next_consumer,max(ready[kt:kt+stages])),
                 waited_stages=stages)
             next_consumer=prefill['end']
-        if i==kt and observed_second_entry is not None:
+        if phase_enabled:
+            phase_entries.append(next_consumer)
+            full_wait_begin=next_consumer+pre_delays[i]
+            full_wait_return=max(ready[i],full_wait_begin)
+            start=full_wait_return+post_delays[i]
+            full_wait_begins.append(full_wait_begin)
+            full_wait_returns.append(full_wait_return)
+            available.append(full_wait_begin)
+        elif i==kt and observed_second_entry is not None:
             next_consumer=returns[0]+entry_h
             start=returns[0]+entry_b
             if ready[i]>start+1e-8:
                 raise ValueError('observed entry precedes modeled readiness')
-        else:start=max(ready[i],next_consumer)
-        available.append(next_consumer);starts.append(start)
+            available.append(next_consumer)
+        else:
+            start=max(ready[i],next_consumer)
+            available.append(next_consumer)
+        starts.append(start)
         service_end=max(start,frontier[-1] if frontier else start)+service_cycles
         frontier.append(service_end)
         commit=max(start+issue_floor,service_end-commit_lead);commits.append(commit)
@@ -115,6 +170,9 @@ def admission_stage_events(kt, stages, producer_interval, ready_latency,
         completed=done,wait1_return=wait,released=released,
         mma_returns=returns,main_ends=ends,slot=[i%stages for i in range(2*kt)])
     if prefill is not None:result['second_prefill']=prefill
+    if phase_enabled:
+        result.update(consumer_phase_entry=phase_entries,full_wait_begin=full_wait_begins,
+            full_wait_return=full_wait_returns,mma_begin=list(starts))
     return result
 
 
