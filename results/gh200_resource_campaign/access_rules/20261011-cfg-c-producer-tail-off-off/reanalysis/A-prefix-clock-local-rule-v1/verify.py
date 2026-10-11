@@ -28,6 +28,30 @@ def main():
     original=BASE/'20261011-cfg-c-producer-tail-off-off/reanalysis/A-prefix-ordinal-clock-v1'
     calibration=read(original/'calibration.json')
     assert rule['calibration']=={k:calibration[k] for k in ('schema','setup','kappa_cycles','common_kappa_cycles')}
+    source=BASE/'20261011-cfg-c-producer-tail-check-build/source/probes/r18.cu'
+    assert sha(source)==calibration['input_sha256'][str(source)]
+    text=source.read_text()
+    sync=text.index('cudaEventSynchronize(call_end)')
+    elapsed=text.index('cudaEventElapsedTime(&ms, call_begin, call_end)',sync)
+    returned=text.index('return ms;',elapsed)
+    report_definition=text.index('auto report =',returned)
+    serialization=text.index('print_f("warmup_us", warm_us)',report_definition)
+    report_end=text.index('auto set_target_epilogue =',serialization)
+    common=text.index('if (common_history) {',report_end)
+    prefix_insert=text.index('warm.push_back(timed(warmup_launch_params));',common)
+    target=text.index('float ms = timed(launch_params);',prefix_insert)
+    report_call=text.index('report("warm", ms, warm);',target)
+    assert sync<elapsed<returned<report_definition<serialization<report_end<common<prefix_insert<target<report_call
+    sites={name:text[:position].count('\n')+1 for name,position in
+        [('event_sync',sync),('event_read',elapsed),('timed_return',returned),
+         ('report_definition',report_definition),('prefix_json_in_report',serialization),
+         ('common_prefix_insert',prefix_insert),('target_timed_call',target),('report_call',report_call)]}
+    boundary=dict(source=str(source),source_sha256=sha(source),binary_sha256=calibration['setup']['binary_sha256'],
+        lines=sites,prefix_values_host_available_before_target=True,
+        prefix_json_serialization='After target timed() returns, when report() executes.',
+        numeric_prediction_precommit_status='Not implemented or demonstrated by this binary or CLI.',
+        supported_claim='Conditional prediction from allowed prior-prefix inputs under a prefrozen rule.')
+    (HERE/'serialization-boundary.json').write_text(json.dumps(boundary,indent=2)+'\n')
     ref=BASE/'20261011-cfg-c-mma-reference/returned';samples=[]
     for record in read(ref/'records.json'):
         if record['iterations']==1024:
@@ -107,6 +131,7 @@ def main():
         exact_past_forecast_matches=checked,known_development_raw_sha256=raw_identity,
         negative_cases=rejected,cli_sha_mismatch_rejected=True,cli_output_overwrite_rejected=True,
         self_contained_cli_prediction=True,preparation_replay_byte_identical=True,
+        serialization_boundary_sha256=sha(HERE/'serialization-boundary.json'),
         acquisition_status='No new acquisition; all twenty replay prefixes are known development records.',
         qualifications=dict(observation=False,prediction=False,prospective_holdout=False,cross_card=False))
     (HERE/'verification.json').write_text(json.dumps(verification,indent=2)+'\n')

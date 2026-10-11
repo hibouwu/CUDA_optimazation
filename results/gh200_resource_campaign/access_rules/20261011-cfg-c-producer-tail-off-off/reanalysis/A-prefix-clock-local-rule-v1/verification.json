@@ -54,6 +54,7 @@
   "cli_output_overwrite_rejected": true,
   "self_contained_cli_prediction": true,
   "preparation_replay_byte_identical": true,
+  "serialization_boundary_sha256": "e0b25086e701989cacb750749aee3673501cb7299a3c81ac973e0118267fefee",
   "acquisition_status": "No new acquisition; all twenty replay prefixes are known development records.",
   "qualifications": {
     "observation": false,

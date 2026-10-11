@@ -1,0 +1,19 @@
+{
+  "source": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-check-build/source/probes/r18.cu",
+  "source_sha256": "efe4ad7dc6c050bd527c873d9aa61bd513a44828233df6c093336856a7a20095",
+  "binary_sha256": "9fdbf10afe162a92f44a889a1fe3c87b89f57a0e73a5ec385abde32035742b55",
+  "lines": {
+    "event_sync": 748,
+    "event_read": 750,
+    "timed_return": 756,
+    "report_definition": 759,
+    "prefix_json_in_report": 881,
+    "common_prefix_insert": 931,
+    "target_timed_call": 935,
+    "report_call": 936
+  },
+  "prefix_values_host_available_before_target": true,
+  "prefix_json_serialization": "After target timed() returns, when report() executes.",
+  "numeric_prediction_precommit_status": "Not implemented or demonstrated by this binary or CLI.",
+  "supported_claim": "Conditional prediction from allowed prior-prefix inputs under a prefrozen rule."
+}

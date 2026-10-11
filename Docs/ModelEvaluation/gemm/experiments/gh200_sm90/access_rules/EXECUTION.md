@@ -264,6 +264,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [共同系数规则入口主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-clock-local-rule-v1/README.md)：接入A7d67c306，五文件逐字节同，20前序/40预测、23负例、固定SHA与拒绝覆盖/隔离目录重放通过。规则只读setup+16前序，不改binary；预冻结规则后处理不等于数值预提交，旧观察与新采集缺口保留，无GPU。
 
+[前序输入提取边界](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-extraction-v1/README.md)：新增固定raw身份的静态/前序投影工具，20已知记录目标毒值不影响输入，异buffer/无效pointer/缺历史及SHA/覆盖拒绝通过；目标正确性和trace独立后验检查，不能据预测成功筛样。接入A271e86de并重核时点证据，规则未变；尚未新实验冻结，无GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
