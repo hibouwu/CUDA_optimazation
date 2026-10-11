@@ -15,3 +15,5 @@ python /home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campai
 ```
 
 完整输入SHA、132个独立交集、10个复制负例见audit.json。重复入口只复验同一JSON，不改公共文件。
+
+主集成后续补齐head拒绝后，本组另独立加载SHA为18e6eea99ce7705867c3bd07f348fa5cb98e148a34bbb176eff51485bae926bc的当前reader复验：原三臂仍有效，10个复制负例全部拒绝，每个保留CTA0两角色原因。见current-header-verification.json。旧snapshot与先前反例保留，未修改740071冻结内容；SM范围规则仅按此固定完整GH200合同审查，不推广为通用CUDA SM-ID上界。

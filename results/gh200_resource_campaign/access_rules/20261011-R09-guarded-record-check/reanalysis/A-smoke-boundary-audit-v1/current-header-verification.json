@@ -1,0 +1,181 @@
+{
+  "current_parser_sha256": "18e6eea99ce7705867c3bd07f348fa5cb98e148a34bbb176eff51485bae926bc",
+  "main_replay_report_sha256": "a914ab641cf6ded3ac6f9f2ceb1dfa204c1a3cfe1930a45003c9b444d03b4f98",
+  "arms": [
+    {
+      "arm": "plain",
+      "raw_sha256": "49e191bf52b569465739de94adf7a443b43aefe480f729898832093b5d2662c3",
+      "actual_roles": 0,
+      "actual_valid": true,
+      "rejected_negative_copies": []
+    },
+    {
+      "arm": "matched_dual",
+      "raw_sha256": "4bfea33de5d28e4787ed4ac019b0ff9bd3fb49a5ff4e94bea929a4e53644fb3d",
+      "actual_roles": 264,
+      "actual_valid": true,
+      "rejected_negative_copies": [
+        {
+          "mutation": "entry_c_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "entry_ns_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "producer_c_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "producer_ns_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "out_of_range_sm",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "overflow/missing/out-of-range/different SM"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "overflow/missing/out-of-range/different SM"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "arm": "guarded_bracket",
+      "raw_sha256": "d722066e39a833e411a7178a8ac5c21c893ca0f669827782430ec4acef7c2fa7",
+      "actual_roles": 264,
+      "actual_valid": true,
+      "rejected_negative_copies": [
+        {
+          "mutation": "entry_c_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "entry_ns_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "producer_c_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "producer_ns_zero",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "out_of_range_sm",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "overflow/missing/out-of-range/different SM"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "overflow/missing/out-of-range/different SM"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "raw_modified": false,
+  "qualification_changed": false
+}
