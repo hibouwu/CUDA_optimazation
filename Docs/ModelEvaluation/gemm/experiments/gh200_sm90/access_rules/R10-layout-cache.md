@@ -281,6 +281,27 @@ v2 全网格 trace 的 cfg_b3008/3072 有负向扰动超过 5%，不采用其周
 
 [边界账本](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-ledger-v4/B-boundary-ledger.json)保存三条件逐盒数据、源身份、目的义务、D范围、归档源码位置和全部哈希。36项普通／角点逐FP16元素枚举核对了覆盖和有效字节，5项新增边界／完整tile兼容性测试通过；181项R13测试通过，剔除新增函数后现有模块AST与6c5015b2完全相同。未拟合源/fill/D价格、未绑定就绪／释放／退出时间，也未升级GPU证据、观察资格或独立留出。
 
+<a id="legacy-persistent-binding"></a>
+
+### 原始调度、输出序号与输入ring绑定
+
+在上述未绑定账本之外，`cfg_b_persistent_boundary_ledger`要求显式调度参数后再赋予CTA、输出序号、consumer WG和输入ring状态。归档FP16／FP16 builder选择SS主循环，不交换A/B；probe省略scheduler模板与参数，归档默认链为`void → PersistentTileSchedulerSm90`、`max_swizzle_size=1`、`Heuristic`。21个M tile、24个N tile因此取`AlongM`，cluster1不增加padding；保存的132CTA与grid公式共同确定`(132,1,1)`。这里从归档默认值推导，没有借用后续R18的显式sw1设置。
+
+源码绑定为`linear=c+j*132`、`(mi,ni)=(linear%21,linear//21)`。CTA0–107各有4个输出，CTA108–131各有3个；WG0消费偶数j，WG1消费奇数j。边界在各输出序号上的分布如下，单位为输出tile个数：
+
+| 输出序号j | 完整M/N | 仅M尾部 | 仅N尾部 | M/N双尾部 |
+|---:|---:|---:|---:|---:|
+| 0 | 126 | 6 | 0 | 0 |
+| 1 | 126 | 6 | 0 | 0 |
+| 2 | 126 | 6 | 0 | 0 |
+| 3 | 82 | 5 | 20 | 1 |
+
+旧trace只保存CTA0–3的WG0最后一次主循环，因此对应j=2，源码推导坐标依次为`(12,12)`、`(13,12)`、`(14,12)`、`(15,12)`。它们都是完整M/N输出，每个输出含1024000B有效输入和24576B目的fill，fill只来自最后K组。旧trace没有坐标字段；120个保存CTA的WG0计数均为2，与该绑定兼容，但计数2本身无法区分总输出数3与4。SMID没有参与坐标或并发推断。
+
+每个保存窗对应global K组64–95，而非重新开始的0–31。六stage下首组为slot4、generation10、full／empty wait参数0／1；末组为slot5、generation15、wait参数1／0。producer每输出推进32组，两个consumer分别从0／32开始、各次推进64组。这些是软件等待参数，不是实测barrier相位，也不提供就绪或释放时间。旧trace起点仍位于首个full-barrier返回后，首次输入等待在窗外。
+
+[静态绑定报告](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/B-boundary-binding.json)保存三条件完整压缩账本、各输出序号的边界分布和全局K组源覆盖并集／交集。15份实际使用的归档源码与原`source_hashes.json`一致，60个记录SHA与旧独立审查一致；三条件48384组ring参数通过独立逐次推进核对，源身份／有效字节／fill／D范围逐盒保留。新增5项测试后186项R13测试通过；剔除新增绑定函数后，供给模块AST与f521a01f相同。旧几何仍未进入时间图，D源缓冲与完成依赖也没有因此绑定。
+
 <a id="v08-stride"></a>
 
 ## V08F：分开行距和尺寸尾部

@@ -1091,6 +1091,49 @@ def cfg_b_logical_boundary_ledger(row):
         scope='Logical output coordinates only; valid source, destination fill and D bounds, no CTA/stage binding or time prediction')
 
 
+def cfg_b_persistent_boundary_ledger(row,setup):
+    """Bind logical SS pingpong boxes to an explicit swizzle-1 static scheduler.
+
+    The caller must establish the scheduler/raster/grid/stages from its source
+    and records. This assigns software work and ring wait arguments, not observed
+    coordinates, issue times, hardware barrier state or readiness/release times.
+    D boxes retain their bounds only; no epilogue pipeline binding is inferred.
+    """
+    from v08_model import scheduled_work
+    if (row.get('swizzle')!=1 or
+            row.get('raster_order') not in ('heuristic','along_m','along_n')):
+        raise ValueError('explicit swizzle-1 static raster contract required')
+    if tuple(setup.get('tile',()))!=(128,128,64) or tuple(setup.get('cluster',()))!=(1,1,1):
+        raise ValueError('cfg_b SS pingpong tile/cluster required')
+    grid=setup.get('grid',());stages=setup.get('stages')
+    if (len(grid)!=3 or any(type(v) is not int or v<1 for v in grid) or grid[2]!=1
+            or type(stages) is not int or stages<2):
+        raise ValueError('positive static grid and at least two stages required')
+    ledger=cfg_b_logical_boundary_ledger(row)
+    mt,nt=((row[name]+127)//128 for name in ('m','n'))
+    raster=row['raster_order']
+    if raster=='heuristic':raster='along_m' if nt>mt else 'along_n'
+    if ((raster=='along_m' and grid[1]!=1) or (raster=='along_n' and grid[0]!=1)
+            or math.prod(grid)>mt*nt):
+        raise ValueError('grid differs from cluster-1 static scheduler shape')
+    work=scheduled_work('cfg_b',row['m'],row['n'],grid,1,raster)
+    logical={o['coord']:o for o in ledger['outputs']};bound=[];kt=ledger['ktiles']
+    for cta,coords in enumerate(work):
+        for j,coord in enumerate(coords):
+            output=logical.pop(coord);first=j*kt
+            output.update(cta=cta,output_ordinal=j,consumer_warp_group=j%2,
+                global_group_binding=dict(first=first,last=first+kt-1))
+            for q,group in enumerate(output['groups']):
+                group['slot_state']=input_slot_state(first+q,stages)
+            bound.append(output)
+    if logical:raise ValueError('scheduler omitted logical output coordinates')
+    ledger.update(schema='gh200-cfg-b-persistent-boundary-ledger/1',outputs=bound,
+        scheduler=dict(swizzle=1,raster_order=raster,grid=list(grid),stages=stages,
+            output_counts=list(map(len,work))),
+        scope='Source-derived static CTA/output/WG and input ring wait arguments; no timing, readiness, release or safe-exit prediction')
+    return ledger
+
+
 def boundary_fill_features(row,setup):
     """Candidate coupling features from static requests, never from observed work.
 
