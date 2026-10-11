@@ -128,8 +128,9 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                         trace_requests=False, diagnostic_producer_offsets_ns=None,
                         share_inflight_sources=False, source_keys=None,
                         destination_service_ns=0., second_prefill=False,
-                        source_join_boundary='ready',local_epilogue_exclusion='none'):
-    """Development FIFO server coupled to cfg_b's two-output software graph.
+                        source_join_boundary='ready',local_epilogue_exclusion='none',
+                        output_counts=None, source_service_costs_ns=None):
+    """Development FIFO server coupled to cfg_b's pingpong software graph.
 
     All times are ns supplied before prediction. Each input group sends A then
     B0 then B1: A is 16 KiB, each B atom is 8 KiB. Eight 8 KiB D subtiles use DelayTmaStore and two source
@@ -156,6 +157,13 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     starts do not reserve the path themselves: this is a one-way exclusion
     hypothesis, not a symmetric instruction scheduler or measured SM port.
     second_prefill gates only CTA0's second output on all S destination slots.
+    output_counts optionally specifies positive per-CTA output counts. Default
+    is the original two-output graph. Starting output j>=2 also requires E[j-2]
+    to return: the same WG cannot overwrite its accumulator before epilogue.
+    Local scheduler/next-output preparation costs remain uncalibrated.
+    source_service_costs_ns optionally gives explicit per-input-atom service
+    durations. Logical payload/destination work stays fixed; outputs retain
+    the original service rule. Equal source identities require equal costs.
     """
     import heapq
 
@@ -174,24 +182,42 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         raise ValueError('unknown source subscription boundary')
     if local_epilogue_exclusion not in ('none','producer','consumer','both'):
         raise ValueError('unknown local epilogue exclusion scope')
+    counts=[2]*cta_count if output_counts is None else list(output_counts)
+    if len(counts)!=cta_count or any(type(n) is not int or n<1 for n in counts):
+        raise ValueError('positive per-CTA output counts required')
+    if ((epilogue_defer==2 and min(counts)<2) or
+            ((epilogue_defer==1 or second_prefill) and counts[0]<2)):
+        raise ValueError('second-output treatment requires the affected outputs')
+    if source_service_costs_ns is not None:
+        if len(source_service_costs_ns)!=cta_count or any(len(groups)!=counts[c]*kt or
+                any(len(costs)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or v<0 for v in costs)
+                    for costs in groups) for c,groups in enumerate(source_service_costs_ns)):
+            raise ValueError('finite nonnegative source costs require shape [CTA][outputs*Ktile][A/B0/B1]')
     if share_inflight_sources:
         if source_keys is None or len(source_keys)!=cta_count or any(
-                len(groups)!=2*kt or any(len(keys)!=3 for keys in groups) for groups in source_keys):
-            raise ValueError('source keys must have shape [CTA][2*Ktile][A/B0/B1]')
-        weights={}
-        for groups in source_keys:
-            for keys in groups:
-                for key,weight in zip(keys,(1.,.5,.5)):
+                len(groups)!=counts[c]*kt or any(len(keys)!=3 for keys in groups)
+                for c,groups in enumerate(source_keys)):
+            raise ValueError('source keys must have shape [CTA][outputs*Ktile][A/B0/B1]')
+        weights={};source_costs={}
+        for c,groups in enumerate(source_keys):
+            for i,keys in enumerate(groups):
+                for atom,(key,weight) in enumerate(zip(keys,(1.,.5,.5))):
                     if key in weights and weights[key]!=weight:
                         raise ValueError('shared source key has inconsistent atom weight')
                     weights[key]=weight
+                    if source_service_costs_ns is not None:
+                        cost=source_service_costs_ns[c][i][atom]
+                        if key in source_costs and source_costs[key]!=cost:
+                            raise ValueError('shared source key has inconsistent service cost')
+                        source_costs[key]=cost
     offsets=[0.]*cta_count if diagnostic_producer_offsets_ns is None else list(diagnostic_producer_offsets_ns)
     if len(offsets)!=cta_count or min(offsets)<0:
         raise ValueError('diagnostic producer offsets must match CTA count and be nonnegative')
-    total=2*kt;events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
+    events=[];serial=0;frontier=0.;busy=0.;requests=[];request_count=0
     pending={};source_generation_keys={};sources=[];demands=[];deliveries=[]
     input_demand_count=0;input_source_count=0;input_merged_count=0;input_delivery_count=0
     input_demand_work=0.;input_source_work=0.;input_merged_work=0.;input_delivery_work=0.
+    input_source_busy=0.
     destination_frontiers=[0.]*cta_count;destination_busy=[0.]*cta_count
     local_intervals=[[] for _ in range(cta_count)]
     local_blocked={'producer':0.,'consumer':0.}
@@ -202,19 +228,20 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         nonlocal serial
         heapq.heappush(events,(time,serial,kind,cta,index));serial+=1
     for cta in range(cta_count):
+        total=counts[cta]*kt
         actor={name:[None]*total for name in ('issued_a','issued_b0','issued_b1','issued_b','ready','starts',
             'service_frontier','commits','completed','wait1_return','released')}
         actor.update(ready_count=[0]*total,producer_index=0,producer_free=offsets[cta],producer_scheduled=False,
             consumer_index=0,consumer_free=0.,consumer_scheduled=False,
-            mma_returns=[None,None],main_ends=[None,None],
+            mma_returns=[None]*counts[cta],main_ends=[None]*counts[cta],
             outputs=[dict(begin=None,end=None,scheduled=False,
                 prepare_begin=[None]*8,prepare_end=[None]*8,write_begin=[None]*8,write_end=[None]*8,
-                submitted=[None]*8,source_done=[None]*8) for _ in range(2)])
+                submitted=[None]*8,source_done=[None]*8) for _ in range(counts[cta])])
         actors.append(actor)
 
     def producer(cta):
         a=actors[cta];i=a['producer_index']
-        if i==total or a['producer_scheduled']:return
+        if i==counts[cta]*kt or a['producer_scheduled']:return
         t=a['producer_free']
         if i>=stages:
             release=a['released'][i-stages]
@@ -225,7 +252,11 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     def consumer(cta):
         nonlocal prefill
         a=actors[cta];i=a['consumer_index']
-        if i==total or a['consumer_scheduled'] or a['ready_count'][i]!=3:return
+        if i==counts[cta]*kt or a['consumer_scheduled'] or a['ready_count'][i]!=3:return
+        if i%kt==0 and i//kt>=2:
+            previous=a['outputs'][i//kt-2]['end']
+            if previous is None:return
+            a['consumer_free']=max(a['consumer_free'],previous)
         if second_prefill and cta==0 and i==kt:
             if any(n!=3 for n in a['ready_count'][kt:kt+stages]):return
             begin=a['consumer_free'];end=max(begin,max(a['ready'][kt:kt+stages]))
@@ -235,20 +266,22 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
         push(max(a['consumer_free'],a['ready'][i]),'mma',cta,i)
 
     def epilogue(cta,out):
-        a=actors[cta];e=a['outputs'][out]
+        a=actors[cta]
+        if out==counts[cta]:return
+        e=a['outputs'][out]
         if e['scheduled'] or a['main_ends'][out] is None:return
         t=a['main_ends'][out]
         if out==0 and (epilogue_defer==2 or (epilogue_defer==1 and cta==0)):
             if a['mma_returns'][1] is None:return
             t=max(t,a['mma_returns'][1])
-        if out==1:
-            if a['outputs'][0]['end'] is None:return
-            t=max(t,a['outputs'][0]['end'])
+        if out>0:
+            if a['outputs'][out-1]['end'] is None:return
+            t=max(t,a['outputs'][out-1]['end'])
         e['scheduled']=True;push(t,'epi_begin',cta,out)
 
-    def request(t,cta,kind,index,weight,latency):
+    def request(t,cta,kind,index,weight,latency,source_cost=None):
         nonlocal frontier,busy,request_count
-        start=max(t,frontier);duration=service_ns*weight;frontier=start+duration
+        start=max(t,frontier);duration=service_ns*weight if source_cost is None else source_cost;frontier=start+duration
         busy+=duration;request_count+=1;ready=frontier+latency
         if trace_requests:requests.append(dict(cta=cta,kind=kind,index=index,arrival_ns=t,
             start_ns=start,service_end_ns=frontier,ready_ns=ready,work=weight))
@@ -262,6 +295,7 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
     def input_request(t,cta,kind,index,weight):
         nonlocal input_demand_count,input_source_count,input_merged_count,input_delivery_count
         nonlocal input_demand_work,input_source_work,input_merged_work,input_delivery_work
+        nonlocal input_source_busy
         atom={'issue_a':0,'issue_b0':1,'issue_b1':2}[kind]
         key=source_keys[cta][index][atom] if share_inflight_sources else None
         existing=pending.get(key) if share_inflight_sources else None
@@ -270,9 +304,12 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
             source_id,done,join_end=existing
             input_merged_count+=1;input_merged_work+=weight
         else:
-            done=request(t,cta,kind,index,weight,read_latency_ns)
+            cost=None if source_service_costs_ns is None else source_service_costs_ns[cta][index][atom]
+            done=request(t,cta,kind,index,weight,read_latency_ns,cost)
+            duration=service_ns*weight if cost is None else cost
+            input_source_busy+=duration
             join_end={'ready':done,'service_end':frontier,
-                      'service_start':frontier-service_ns*weight}[source_join_boundary]
+                      'service_start':frontier-duration}[source_join_boundary]
             source_id=input_source_count;input_source_count+=1;input_source_work+=weight
             if share_inflight_sources:
                 pending[key]=(source_id,done,join_end);source_generation_keys[source_id]=key
@@ -381,22 +418,24 @@ def shared_stage_events(kt, stages, cta_count, *, service_ns, read_latency_ns,
                 push(begin+epilogue_write_ns,'epi_written',cta,i+1)
         elif kind=='epi_end':
             a['outputs'][i]['end']=t
-            if i==0:epilogue(cta,1)
-    if any(a['outputs'][1]['end'] is None for a in actors):
+            epilogue(cta,i+1);consumer(cta)
+    if any(a['outputs'][-1]['end'] is None for a in actors):
         raise RuntimeError('shared stage graph did not complete')
-    makespan=max(a['outputs'][1]['end'] for a in actors)
+    makespan=max(a['outputs'][-1]['end'] for a in actors)
     result=dict(ctas=actors,makespan_ns=makespan,shared_busy_ns=busy,
         last_service_end_ns=frontier,request_count=request_count,requests=requests,
         input_demand_count=input_demand_count,input_source_count=input_source_count,
         input_merged_count=input_merged_count,input_delivery_count=input_delivery_count,
         input_demand_work=input_demand_work,input_source_work=input_source_work,
         input_merged_work=input_merged_work,input_delivery_work=input_delivery_work,
-        source_busy_ns=service_ns*input_source_work,
+        source_busy_ns=service_ns*input_source_work if source_service_costs_ns is None else input_source_busy,
         destination_busy_ns=sum(destination_busy),destination_busy_by_cta_ns=destination_busy,
         local_epilogue_blocked_ns=local_blocked,
         local_epilogue_intervals=local_intervals if trace_requests else [],
         sources=sources,input_demands=demands if trace_requests else [],deliveries=deliveries,
-        scope='cfg_b two-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time')
+        scope=('cfg_b two-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'
+            if all(n==2 for n in counts) else
+            'cfg_b variable-output development graph; endpoint is final source-read tail, not global D visibility or CUDA-event time'))
     if prefill is not None:result['second_prefill']=prefill
     return result
 
@@ -626,6 +665,50 @@ def supply_work_ledger(row, setup):
         legacy_clock_source_field='totals.source_payload_KiB',
         K_origin_increment=[0, 64],
         scope='within one invocation; logical source/delivery/output work only; no timing or physical traffic')
+
+
+def cfg_b_source_program(row, setup):
+    """Full-tile unicast cfg_b source identities for variable pingpong outputs.
+
+    Identity is descriptor plus whole source-box origin/shape, within one call.
+    This does not predict issue times, cache residence, source coalescing or a
+    price for pitch. Boundary/OOB output needs a separate output graph.
+    """
+    if row['config'] != 'cfg_b':
+        raise ValueError('source program requires cfg_b pingpong')
+    ledger = supply_work_ledger(row, setup)
+    if any(o['output']['valid_KiB'] != o['output']['nominal_KiB'] for o in ledger['outputs']):
+        raise ValueError('source program requires complete logical output tiles')
+    kt = ledger['ktiles']
+    count = math.prod(setup['grid'])
+    coords = [[] for _ in range(count)]
+    grouped = defaultdict(list)
+    for atom in ledger['source_atoms']:
+        if atom['multicast_mask'] != 1 or atom['fill_KiB']:
+            raise ValueError('source program requires valid unicast source boxes')
+        grouped[atom['cta'], atom['j']].append(atom)
+    keys = [[] for _ in range(count)]
+    for output in ledger['outputs']:
+        cta, j = output['cta'], output['j']
+        if j != len(coords[cta]):
+            raise ValueError('output ordinals are not contiguous')
+        coords[cta].append(output['coord'])
+        atoms = grouped[cta, j]
+        if [(a['operand'], a['shape'], a['payload_KiB']) for a in atoms] != [
+                ('A', [128,64], 16), ('B', [64,64], 8), ('B', [64,64], 8)]:
+            raise ValueError('source program requires A16KiB/B0+B1 each8KiB')
+        for k in range(kt):
+            group = []
+            for atom in atoms:
+                group.append((atom['operand'], 'fp16', 'SW128', tuple(atom['extents']),
+                    tuple(atom['stride_bytes']), atom['base_offset_bytes'],
+                    (atom['origin'][0], atom['origin'][1]+64*k), tuple(atom['shape'])))
+            keys[cta].append(tuple(group))
+    counts = [len(c) for c in coords]
+    if not all(counts):
+        raise ValueError('source program does not model idle launched CTAs')
+    return dict(source_keys=keys, output_counts=counts, cta_output_coords=coords,
+        totals=ledger['totals'], ledger_schema=ledger['schema'])
 
 
 def boundary_fill_features(row,setup):

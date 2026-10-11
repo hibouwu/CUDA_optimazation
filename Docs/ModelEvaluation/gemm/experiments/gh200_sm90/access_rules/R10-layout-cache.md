@@ -6,6 +6,7 @@
 
 2026-10-11，B的静态工作统一为 [R13供给账本](R13-async-retirement.md#supply-work-ledger)。`gh200-supply-work-ledger/1`保留每个CTA/输出的descriptor box、源身份和multicast目的前驱，不再只返回七列聚合覆盖；R10的两个raster与36/126/132执行规模已进入57条件守恒复核。名义源payload、有效源地址、去重源身份、目的投递和D输出分别记账。该接口仅补齐组织信息，没有给方向或B32另加价格；旧几何B32变慢、新几何未见同量级惩罚仍是同一供给状态候选必须同时解释的约束。A16和stage4不用于另拟行距价，原局部冻结失败不变。
 
+
 | 作业 | 固定对象 | 结果入口 |
 |---|---|---|
 | 735876 | 三配置，2600×3000×2000，B 行距 6000/6016/6144 B | [v2 完整时间](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json)、[v4 cfg_b 局部周期](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/analysis-formal/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.md) |
@@ -19,6 +20,30 @@
 | 739598 | B基址+0/+256 B × 行距+0/+32 B，分配容量相同 | [位置与相邻面板对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-base-shift.json) |
 | 739608 | CTA55/91整条工作序列交换 × B0/B32，逐轮工作集合不变 | [工作与物理位置对应](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-work-swap.json) |
 | 739619 | 固定CTA55工作与SM，producer起步0/512 ns × B0/B32 | [实际时移与行距交互](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R10-producer-delay.json) |
+
+<a id="source-event-transfer"></a>
+
+### 真实输出次数与源身份仍不足以迁移B32响应
+
+继续同一工作/状态定义，`cfg_b_source_program`从账本生成每CTA全部K-group的A/B0/B1源身份，不再限于2816×1536的两输出。`shared_stage_events(output_counts=...)`接入实际1/3/4输出，输入环不重置；两WG交替复用accumulator，j≥2须等自身E_(j−2)返回，E_j又须等E_(j−1)释放共享输出SMEM。该前驱来自原pingpong的store_tail、epilogue次序到达和下一次scheduler loop，不把其它WG的math返回直接当自身可开始。两输出默认的13组旧核心结果精确重现；事件实现通过不代表价格成立。
+
+本次只用GPU-ef8692f3的739571/739585，复放100个dual原记录并逐CTA核对工作与SHA。固定[R13已保存共享参数点](R13-async-retirement.md#source-candidate-replay)，每个源atom费用为原名义payload服务加`π×B_extra128_KiB`，目的投递和D工作不变。只以AlongM later的全部匹配窗口B32/B0比例中位18.4003%解一个π；括区间[0,4]ns/KiB，一次标量求根至π=0.973627275，无额外起点、A16价、stage4价或方向/位置常数。其它参数来自既有探索，未证明其选择历史未使用这些数据；这是开发参数点，不是独立留出，也不声称π唯一或物理可辨识。
+
+| 检查窗口 | 预测B32响应 | 实测中位响应 | 结论 |
+|---|---:|---:|---|
+| AlongM首轮，T3/T4 | 0% / 0% | +21.63% / +27.68% | first迁移失败 |
+| AlongM j1，T3/T4 | +17.71% / +18.29% | +19.94% / +20.12% | 接近已定值的later目标，不替代其它窗口 |
+| AlongM j2，T3/T4 | +19.47% / +18.52% | +19.35% / +18.52% | 接近同一开发目标 |
+| AlongM末j3/T4 | −2.16% | +5.30% | 末轮方向失败 |
+| AlongN全部七个j/T | +64.53%～+70.62% | −0.59%～+2.87% | raster迁移失败 |
+| single36首36 CTA | 0% | 0% | 本窗口相容，不推广到更大规模 |
+| single126首36 CTA | 0% | +23.36% | 无下一输出也存在的规模响应仍漏失 |
+| persistent132首36 CTA | 0% | +20.40% | 首窗仍漏失 |
+
+全部j/T的基线、响应、十次范围和逐CTA预测保存在[结果](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/B-20261011-source-event-transfer-v2/B-r10-event-transfer.json)。空间检验同样失败：AlongM B32首轮T3/T4的预测局部L跨度为7.18/0ns，实测中位1504/1648ns，对应原生cycle跨度2569.5/2735；single126 B32预测约0ns，实测1344ns。两个时钟域分别保存；本候选的ns价尚无可靠first周期映射，不用目标实测f换算预测。不是只缺一个完整时间常数。所拟价格只改变源服务时长，模型source/delivery工作守恒，不能把错误解释成应再删目的请求。
+
+本具体参数点不采用。原始432卡B曲线及V09 G5没有接收ef卡的时间价格；当前卡的raster干预已提供旧/新几何差异中的一个同卡因果桥，另一卡的数值迁移仍未完成。源身份、输入slot与accumulator前驱是必须保留的结构，但这套固定共同服务、同时入口和源订阅图仍不足以解释首/后输出、方向、规模及空间的联合响应。不据此排除全部源共享模型，不追加方向常数、A16价或stage4价。复核用 `analyze_r10_supply_events.py --data-root <主checkout结果根> --output <新的B目录>`，没有GPU操作或原冻结修改。
+
 
 ## 原 B 行距对照：配置之间不能共用一个罚项
 

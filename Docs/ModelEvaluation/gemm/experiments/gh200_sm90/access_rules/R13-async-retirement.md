@@ -97,6 +97,8 @@ cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B�
 
 下一轮先检验有限局部发射/消费/释放前驱与源ready的联合可行性，保留first/later和空间约束；没有两个明确解释给出现有证据无法区分的预测前，不申请补测。该里程碑没有独立冻结局部留出，持续目标未完成。
 
+同一图的R10迁移现已完成一轮有界开发筛选，见[R10](R10-layout-cache.md#source-event-transfer)。原两输出默认保持不变；扩展仅接入每CTA实际输出次数、同WG accumulator须等E_(j−2)返回，以及显式的每源atom服务费用。用AlongM later一个响应定值B32覆盖价后，AlongN、single126首窗和空间分布仍明显失败，该价格点不采用。目的投递与D账目不随源覆盖价减少，未拟A16或stage4价格。
+
 <a id="release-prerequisites"></a>
 
 ## cfg_b的释放标记没有定位全部128次empty arrival
