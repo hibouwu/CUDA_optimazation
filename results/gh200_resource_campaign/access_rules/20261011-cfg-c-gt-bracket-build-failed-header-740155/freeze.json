@@ -1,0 +1,7 @@
+{
+  "input.tar.gz": "d6b3ccf7ba781bbef05c033adf3012ae4bd661d8d3da06b08fc61f62969325df",
+  "source_hashes.json": "bf9c4c701ed74b92d54dcd05c518cc0ac54831eb185c6de9a794218609728892",
+  "contract.json": "0417e91a48d5d1f7a5a669bb1eb6288401c6497a7cf3a75ada86bc2d6b996c04",
+  "command.json": "0a029cd1a1b77fd8b94c4f0414b8fde97180280b1b264dd29221ffd3851dbac3",
+  "run.sh": "1b3812a1dbf71e7163355d03f81fdff75fa04c0b46a319ced23a5f3d00754714"
+}

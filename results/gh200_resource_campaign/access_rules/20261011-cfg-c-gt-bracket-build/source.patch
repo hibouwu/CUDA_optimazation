@@ -1,0 +1,182 @@
+--- base/source/probes/r18.cu
++++ candidate/source/probes/r18.cu
+@@ -148,7 +148,7 @@
+ #endif
+ 
+ #if defined(R18_PRODUCER_TAIL)
+-constexpr const char* kTraceVersion="cfg-c-producer-tail-v2";
++constexpr const char* kTraceVersion="cfg-c-gt-bracket-v1";
+ #elif defined(R13_RELEASE_WARPS) && defined(R13_STAGE_SPARSE)
+ constexpr const char* kTraceVersion="r13-release-threads-v2";
+ #elif defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)
+@@ -213,6 +213,7 @@
+   unsigned epilogue_defer = 0;
+   unsigned second_prefill = 0;
+   unsigned a_row_rotation = 0;
++  unsigned gt_bracket_observer = 0;
+   unsigned producer_tail_observer = 0;
+   unsigned release_warp_observer = 0;
+   std::string check_output;
+@@ -259,6 +260,7 @@
+       else if(key=="--ready-observer")ready_observer=std::stoul(v);
+       else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
+       else if(key=="--check-output")check_output=v;
++      else if(key=="--gt-bracket-observer")gt_bracket_observer=std::stoul(v);
+       else if(key=="--producer-tail-observer")producer_tail_observer=std::stoul(v);
+       else if(key=="--release-warp-observer")release_warp_observer=std::stoul(v);
+       else if(key=="--second-prefill")second_prefill=std::stoul(v);
+@@ -266,7 +268,7 @@
+       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
+       else throw std::runtime_error("unknown option " + key);
+     }
+-    if (!check_output.empty() && mode != "check-producer-tail") throw std::runtime_error("check-output only supports release correctness mode");
++    if (!check_output.empty() && mode != "check-gt-bracket") throw std::runtime_error("check-output only supports release correctness mode");
+     if (release_warp_observer > 1) throw std::runtime_error("release-warp-observer must be 0 or 1");
+ #ifndef R13_RELEASE_WARPS
+     if (release_warp_observer || mode == "check-release-warps") throw std::runtime_error("release warp observer requires experiment build");
+@@ -429,7 +431,7 @@
+   try {
+     Args o(argc, argv);
+     std::cout << std::setprecision(10);
+-    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-producer-tail" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill" && o.mode != "check-a-row-rotation" && o.mode != "check-release-warps")
++    if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-gt-bracket" && o.mode != "check-work-swap" && o.mode != "check-producer-delay" && o.mode != "check-first-supply" && o.mode != "check-ready-observer" && o.mode != "check-epilogue-order" && o.mode != "check-second-prefill" && o.mode != "check-a-row-rotation" && o.mode != "check-release-warps")
+       throw std::runtime_error("unknown mode " + o.mode);
+ 
+     Options check(1, argv);
+@@ -515,7 +517,7 @@
+     const char* resolved_raster = launch_params.scheduler.raster_order_ ==
+         decltype(launch_params.scheduler.raster_order_)::AlongN ? "along_n" : "along_m";
+     int ctas = int(grid.x * grid.y * grid.z);
+-    if ((o.mode!="setup" && o.mode!="warm" && o.mode!="check-producer-tail") || o.producer_tail_observer>1 ||
++    if ((o.mode!="setup" && o.mode!="warm" && o.mode!="check-gt-bracket") || o.producer_tail_observer!=0 || o.gt_bracket_observer>1 ||
+         V06_CFG!=2 || Mainloop::DispatchPolicy::Stages!=4 ||
+         o.m!=2304 || o.n!=3072 || o.k!=4096 || grid.x!=66 || grid.y!=2 || grid.z!=1 ||
+         storage_m!=2304 || storage_n!=3072 || input_map_m!=2304 || input_map_n!=3072 ||
+@@ -525,7 +527,9 @@
+         o.b_allocation_extra_bytes || o.work_swap55_91 || o.producer_delay_ns ||
+         o.second_prefill || o.epilogue_defer || o.a_row_rotation || o.first_supply_events ||
+         o.ready_observer || o.release_warp_observer || o.warmup_policy!="common-sw1-16")
+-      throw std::runtime_error("producer-tail observer requires fixed cfg_c geometry and history");
++      throw std::runtime_error("GT bracket observer requires fixed cfg_c geometry and history");
++    unsigned gt_bracket_off=0;
++    CUDA_CHECK(cudaMemcpyToSymbol(cfg_c_gt_observer,&gt_bracket_off,sizeof(unsigned)));
+     unsigned producer_tail_off=0;
+     CUDA_CHECK(cudaMemcpyToSymbol(r18_producer_tail_observer,&producer_tail_off,sizeof(unsigned)));
+ #ifdef R13_RELEASE_WARPS
+@@ -683,6 +687,9 @@
+     gaps::fill_output_sentinel<<<256, 256>>>(d.pointer, d.count);
+ #ifndef R09_PLAIN_PREFIX_HOST
+     DeviceBuffer<uint64_t> trace(size_t(ctas) * kTraceWords);
++    DeviceBuffer<uint64_t> gt_shadow(size_t(ctas)*CfgCGtShadowWords);
++    CUDA_CHECK(cudaMemcpyToSymbol(cfg_c_gt_shadow_ptr,&gt_shadow.pointer,sizeof(gt_shadow.pointer)));
++    CUDA_CHECK(cudaMemset(gt_shadow.pointer,0,gt_shadow.count*8));
+ #endif
+     CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
+ #ifdef V06_TRACE
+@@ -727,6 +734,7 @@
+     }
+     int history_index = 0;
+     auto timed = [&](typename Gemm::Params& params, bool use_plain_prefix=false) {
++      CUDA_CHECK(cudaMemset(gt_shadow.pointer,0,gt_shadow.count*8));
+       if(o.evict)evict_buffer<<<256,256>>>(eviction.pointer,eviction.count,++eviction_seed);
+       CUDA_CHECK(cudaGetLastError());
+       CUDA_CHECK(cudaMemset(trace.pointer, 0, trace.count * 8));
+@@ -803,6 +811,10 @@
+                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
+                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
++                << ",\"gt_bracket_protocol\":\"cfg-c-gt-bracket-v1\""
++                << ",\"gt_bracket_observer\":" << o.gt_bracket_observer
++                << ",\"gt_bracket_prefix_flag\":0,\"gt_shadow_words_per_cta\":9"
++                << ",\"gt_shadow_bytes\":" << gt_shadow.count*8
+                 << ",\"producer_tail_observer\":" << o.producer_tail_observer
+                 << ",\"producer_tail_prefix_flag\":0"
+                 << ",\"release_warp_observer\":" << o.release_warp_observer
+@@ -880,9 +892,13 @@
+ #endif
+       print_f("warmup_us", warm_us);
+       print_u64("trace", host);
++      std::vector<uint64_t> gt_host(gt_shadow.count);
++      CUDA_CHECK(cudaMemcpy(gt_host.data(),gt_shadow.pointer,gt_shadow.count*8,cudaMemcpyDeviceToHost));
++      print_u64("gt_shadow",gt_host);
+       std::cout << "}\n";
+     };
+     auto set_target_epilogue = [&]() {
++      CUDA_CHECK(cudaMemcpyToSymbol(cfg_c_gt_observer,&o.gt_bracket_observer,sizeof(unsigned)));
+       CUDA_CHECK(cudaMemcpyToSymbol(r18_producer_tail_observer,&o.producer_tail_observer,sizeof(unsigned)));
+ #ifdef R13_RELEASE_WARPS
+       if (o.release_warp_observer>1) throw std::runtime_error("invalid release warp observer flag");
+@@ -977,6 +993,10 @@
+                 << ",\"target_a_ptr\":" << reinterpret_cast<uintptr_t>(target_a)
+                 << ",\"target_b_ptr\":" << reinterpret_cast<uintptr_t>(target_b)
+                 << ",\"b_buffer_ptr\":" << reinterpret_cast<uintptr_t>(o.mirror_target_slot ? mirror_b->pointer : b.pointer)
++                << ",\"gt_bracket_protocol\":\"cfg-c-gt-bracket-v1\""
++                << ",\"gt_bracket_observer\":" << o.gt_bracket_observer
++                << ",\"gt_bracket_prefix_flag\":0,\"gt_shadow_words_per_cta\":9"
++                << ",\"gt_shadow_bytes\":" << gt_shadow.count*8
+                 << ",\"producer_tail_observer\":" << o.producer_tail_observer
+                 << ",\"producer_tail_prefix_flag\":0"
+                 << ",\"release_warp_observer\":" << o.release_warp_observer
+@@ -1038,14 +1058,14 @@
+     if (o.mode == "setup")
+       return 0;
+ #if defined(R18_PRODUCER_TAIL) || defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION) || defined(R13_RELEASE_WARPS)
+-    if (o.mode == "check-producer-tail" || o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation" || o.mode == "check-release-warps") {
++    if (o.mode == "check-gt-bracket" || o.mode == "check-work-swap" || o.mode == "check-producer-delay" || o.mode == "check-first-supply" || o.mode == "check-ready-observer" || o.mode == "check-epilogue-order" || o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation" || o.mode == "check-release-warps") {
+       // Outside timing: compare all output bits in one allocation, not a sampled hash.
+       std::vector<float> baseline(size_t(o.m)*ldd), swapped(baseline.size());
+       unsigned flag=0;
+       if (o.mode == "check-second-prefill" || o.mode == "check-a-row-rotation") set_target_epilogue();
+       auto set_check_flag = [&](unsigned value) {
+-        if (o.mode == "check-producer-tail") {
+-          CUDA_CHECK(cudaMemcpyToSymbol(r18_producer_tail_observer,&value,sizeof(value)));
++        if (o.mode == "check-gt-bracket") {
++          CUDA_CHECK(cudaMemcpyToSymbol(cfg_c_gt_observer,&value,sizeof(value)));
+           return;
+         }
+ #ifdef R13_RELEASE_WARPS
+@@ -1110,7 +1130,7 @@
+         different += std::memcmp(&baseline[pos], &swapped[pos], sizeof(float)) != 0;
+         nonfinite += !std::isfinite(baseline[pos]) || !std::isfinite(swapped[pos]);
+       }
+-      std::cout << "{\"event\":\"" << (o.mode == "check-producer-tail" ? "producer_tail_check" : o.mode == "check-release-warps" ? "release_warps_check" : o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
++      std::cout << "{\"event\":\"" << (o.mode == "check-gt-bracket" ? "gt_bracket_check" : o.mode == "check-release-warps" ? "release_warps_check" : o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
+                 << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
+       if (!o.check_output.empty() && different == 0 && nonfinite == 0) {
+         std::ofstream output(o.check_output,std::ios::binary);
+--- base/source/probes/v06_trace.hpp
++++ candidate/source/probes/v06_trace.hpp
+@@ -16,6 +16,10 @@
+ // Final: cooperative = after the post-loop store_tail of the TMA-issuing thread 256;
+ //        pingpong = each consumer warpgroup leaving its work loop (after its last store_tail).
+ #include <cstdint>
++#include "cfg_c_gt_bracket.cuh"
++constexpr int CfgCGtShadowWords = 9; // 2 WG x 2 output ordinals x 2 events + overflow
++__constant__ uint64_t* cfg_c_gt_shadow_ptr;
++__constant__ unsigned cfg_c_gt_observer;
+ #if defined(R18_DUAL_CLOCK) || defined(R18_MATCH_DUAL_LAYOUT)
+ constexpr int V06TileWords = 10;
+ #else
+@@ -263,10 +267,18 @@
+ __device__ __forceinline__ void v06_stamp(int event, int tile) {
+   if (threadIdx.x % 128 != 0 || threadIdx.x < 128) return;
+   int role = threadIdx.x / 128;
+-  uint64_t c = v06_clock();
+-#ifdef R18_DUAL_CLOCK
+-  uint64_t ns = v06_ns();
+-#endif
++  uint64_t c, ns, before=0;
++  bool bracket = cfg_c_gt_observer && (event==V06_FIRST_MMA || event==V06_MAIN_END);
++  if (bracket) {
++    auto stamp=cfg_c_gt_bracket();
++    before=stamp.before; c=stamp.cycles; ns=stamp.after;
++  } else { c=v06_clock(); ns=v06_ns(); }
++  if (bracket) {
++    unsigned block=blockIdx.x+gridDim.x*(blockIdx.y+gridDim.y*blockIdx.z);
++    auto shadow=cfg_c_gt_shadow_ptr+size_t(block)*CfgCGtShadowWords;
++    if (tile<0 || tile>=2 || role<1 || role>2) shadow[8]=1;
++    else shadow[((role-1)*2+tile)*2+event]=before;
++  }
+ #ifdef R15_OUTPUT_NS
+   if (threadIdx.x == 256 && tile == 0 &&
+       (event == V06_EPI_PERMIT || event == V06_EPI_DONE))

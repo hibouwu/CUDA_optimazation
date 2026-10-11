@@ -1,0 +1,42 @@
+{
+  "base_manifest_sha256": "11eab809368ab860736fab64d5871d21df712c1e00d5ab9eb76961bf9517d7db",
+  "calibration": "New binary identity. Old prefix rule cannot be applied as if its binary constraint matched.",
+  "events": [
+    "FIRST_MMA",
+    "MAIN_END"
+  ],
+  "fixed_grid": [
+    66,
+    2,
+    1
+  ],
+  "invalid": "zero prerequisite returns three zeros; no retry; zero/nonmonotonic/overflow rejects record",
+  "original_cta_words": 1296,
+  "original_fields": "cycles and GT_after retain original event slots; GT_before in separate shadow",
+  "prefix_calls": 16,
+  "prefix_flag": 0,
+  "qualification": {
+    "compiled": false,
+    "correctness": false,
+    "hardware_sampling_enclosure": false,
+    "null_gate": false,
+    "observer_perturbation": false,
+    "physical_ns_accuracy": false,
+    "prediction": false,
+    "sass_dependency_checked": false,
+    "source_prepared": true
+  },
+  "shadow_bytes": 9504,
+  "shadow_index": "((role-1)*2+output_ordinal)*2+event; slot 8 overflow",
+  "shadow_words_per_cta": 9,
+  "source_files_verified": 856,
+  "target_flags": [
+    0,
+    1
+  ],
+  "version": "cfg-c-gt-bracket-v1",
+  "writer_threads": [
+    128,
+    256
+  ]
+}

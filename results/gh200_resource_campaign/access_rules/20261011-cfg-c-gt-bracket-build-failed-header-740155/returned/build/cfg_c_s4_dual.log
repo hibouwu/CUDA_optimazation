@@ -1,0 +1,13 @@
+source/probes/r18.cu(532): error: identifier "cfg_c_gt_observer" is undefined
+      cuda_check((cudaMemcpyToSymbol(cfg_c_gt_observer,&gt_bracket_off,sizeof(unsigned))), "cudaMemcpyToSymbol(cfg_c_gt_observer,&gt_bracket_off,sizeof(unsigned))");
+                                     ^
+
+source/probes/r18.cu(690): error: identifier "CfgCGtShadowWords" is undefined
+      DeviceBuffer<uint64_t> gt_shadow(size_t(ctas)*CfgCGtShadowWords);
+                                                    ^
+
+source/probes/r18.cu(691): error: identifier "cfg_c_gt_shadow_ptr" is undefined
+      cuda_check((cudaMemcpyToSymbol(cfg_c_gt_shadow_ptr,&gt_shadow.pointer,sizeof(gt_shadow.pointer))), "cudaMemcpyToSymbol(cfg_c_gt_shadow_ptr,&gt_shadow.pointer,sizeof(gt_shadow.pointer))");
+                                     ^
+
+3 errors detected in the compilation of "source/probes/r18.cu".

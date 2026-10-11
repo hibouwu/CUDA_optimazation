@@ -1,0 +1,2 @@
+JOB=740155 NODE=romeo-a057 RUN_TMP=/tmp/gh200-cfg-c-gt-bracket-build-pu799In6
+srun: error: romeo-a057: task 0: Exited with exit code 2

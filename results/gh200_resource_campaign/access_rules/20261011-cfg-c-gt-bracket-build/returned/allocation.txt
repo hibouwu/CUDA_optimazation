@@ -1,0 +1,30 @@
+JobId=740156 JobName=cfg-c-gt-bracket-build
+   UserId=hibouwu(100800) GroupId=hibouwu(100800) MCS_label=N/A
+   Priority=7339 Nice=0 Account=r260073 QOS=normal
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=0 Reboot=0 ExitCode=0:0
+   DerivedExitCode=0:0
+   RunTime=00:00:04 TimeLimit=00:10:00 TimeMin=N/A
+   SubmitTime=2026-10-11T15:22:30 EligibleTime=2026-10-11T15:22:30
+   AccrueTime=Unknown
+   StartTime=2026-10-11T15:22:30 EndTime=2026-10-11T15:32:30 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-11T15:22:30 Scheduler=Main
+   Partition=instant AllocNode:Sid=romeo1:650125
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=romeo-a057
+   BatchHost=romeo-a057
+   NumNodes=1 NumCPUs=4 NumTasks=1 CPUs/Task=4 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=4,mem=16G,node=1,billing=4
+   AllocTRES=cpu=4,mem=16G,node=1,billing=4
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   JOB_GRES=(null)
+     Nodes=romeo-a057 CPU_IDs=32-35 Mem=16384 GRES=
+   MinCPUsNode=4 MinMemoryNode=16G MinTmpDiskNode=0
+   Features=armgpu DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)
+   Command=bash
+   WorkDir=/gpfs/home/hibouwu
+   Power=
+   TresPerTask=cpu:4
+   
+
