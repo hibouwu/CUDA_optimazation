@@ -1,0 +1,133 @@
+{
+  "reviewed_script": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r10_input_dependency_composition.py",
+  "reviewed_script_sha256": "d3f0b624f0efe50375cc2087d9a358cc86738b05151c62fd24639bc8cc8ad03c",
+  "scope": [
+    "Producer issue order",
+    "g-S empty completion",
+    "q>0 normal release",
+    "last-group wait0",
+    "six producer-tail slots and input producer exit"
+  ],
+  "findings": [],
+  "conclusion": "No unsupported necessary edge or omitted input-producer-exit prerequisite found within the requested scope.",
+  "source_arguments": [
+    {
+      "composition_lines": [
+        80,
+        83
+      ],
+      "source": "sm90_mma_tma_gmma_ss_warpspecialized.hpp:373-396; sm90_pipeline.hpp:511-516",
+      "argument": "One producer issues both B logical boxes before the next iteration. The next same-slot acquire waits the previous generation empty completion, not previous full completion."
+    },
+    {
+      "composition_lines": [
+        90,
+        100
+      ],
+      "source": "sm90_mma_tma_gmma_ss_warpspecialized.hpp:481-556",
+      "argument": "q0 has no normal release. After commit(q), wait1 retires previous groups and release emits for q-1. Per-thread loop order lifts to necessary inequalities between max-all events."
+    },
+    {
+      "composition_lines": [
+        102,
+        108
+      ],
+      "source": "sm90_mma_tma_gmma_ss_warpspecialized.hpp:564-577; sm90_gemm_tma_warpspecialized_pingpong.hpp:846-866",
+      "argument": "MMA order arrival follows mma return and precedes mma_tail. Tail wait0 additionally drains the last group, then releases it. Older group retirements are already transitive prerequisites."
+    },
+    {
+      "composition_lines": [
+        119,
+        127
+      ],
+      "source": "sm90_mma_tma_gmma_ss_warpspecialized.hpp:400-414; sm90_pipeline.hpp:447-451",
+      "argument": "Producer tail follows final submissions and serially checks the six persistent empty states. Earlier releases are prerequisites of subsequent same-slot acquisitions; latest six are explicit tail waits."
+    },
+    {
+      "composition_lines": [
+        132,
+        139
+      ],
+      "source": "Composition event_scope and output interface declarations",
+      "argument": "The claim is input producer exit only; consumer tail return, output source lifetime, global D completion and full kernel completion remain distinct."
+    }
+  ],
+  "event_contracts": [
+    "Consumer *_all means maximum over128 corresponding thread events; max(A_i)<=max(B_i) follows per-thread A_i<=B_i. It does not mean every thread waits for the global maximum.",
+    "release_emit_all denotes the last actual empty-arrival emission, not a consumer_release_post observation. Empty completion may precede such a post marker, so that substitution would not preserve the edge.",
+    "mma_retired is the logical completion obligation of a committed WGMMA group, not an isolated TensorCore service timestamp.",
+    "MMA order and epilogue order are separate sequence stages. No prior-output tail or final D-store edge is added to the next output first MMA without its own source dependency."
+  ],
+  "targeted_saved_graph_checks": [
+    {
+      "check": "Next output first full-wait needs prior MMA order arrival.",
+      "passed": true
+    },
+    {
+      "check": "Next output first full-wait has no prior tail wait0 predecessor.",
+      "passed": true
+    },
+    {
+      "check": "Next output first full-wait has no prior final-group retirement predecessor.",
+      "passed": true
+    },
+    {
+      "check": "Sixth next acquire needs the prior last-group empty completion.",
+      "passed": true
+    },
+    {
+      "check": "Last group release owner is tail wait0 only.",
+      "passed": true
+    },
+    {
+      "check": "Last normal wait1 transitively requires all31 prior groups retired.",
+      "passed": true
+    },
+    {
+      "check": "Tail wait0 transitively requires all32 own-output groups retired.",
+      "passed": true
+    },
+    {
+      "check": "Same-WG j2 needs own j0 epilogue permission.",
+      "passed": true
+    },
+    {
+      "check": "Same-WG j2 has no added j1 tail predecessor.",
+      "passed": true
+    },
+    {
+      "check": "CTA0/T4 input producer exit requires every used empty completion.",
+      "passed": true
+    },
+    {
+      "check": "CTA0/T4 tail checks exactly releases122..127.",
+      "passed": true
+    },
+    {
+      "check": "CTA0/T4 input producer exit does not claim final output store_tail.",
+      "passed": true
+    },
+    {
+      "check": "CTA108/T3 input producer exit requires every used empty completion.",
+      "passed": true
+    },
+    {
+      "check": "CTA108/T3 tail checks exactly releases90..95.",
+      "passed": true
+    },
+    {
+      "check": "CTA108/T3 input producer exit does not claim final output store_tail.",
+      "passed": true
+    },
+    {
+      "check": "Service durations, kernel completion and global D visibility remain None.",
+      "passed": true
+    }
+  ],
+  "avoided": [
+    "No full input SHA/count rerun",
+    "No code changes to main composition or C output model",
+    "No new time candidates, GPU work or prediction qualification"
+  ],
+  "qualification": "Bounded source-edge review only. Durations and complete kernel/D endpoint qualification remain unsupported."
+}

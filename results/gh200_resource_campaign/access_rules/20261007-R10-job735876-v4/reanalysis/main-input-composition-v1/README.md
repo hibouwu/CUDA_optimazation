@@ -26,6 +26,8 @@
 
 所有服务时间为 None；D 全局可见、kernel 完成也为 None。没有运行零 lag 时间求解，没有预测关键 CTA、输出时间或完整时间。C 的旧 pingpong D 源码接口仍需绑定，之后才能进一步细化输出内部；有效观测与服务识别要求也尚未满足。
 
+B 已完成限定源码边审查，未发现不成立的必要边或遗漏的输入 producer 退出前提。其 16 项定向父边/祖先检查全部通过，覆盖普通释放、末组 wait0、下一输出首组、同 WG j+2 和 T3/T4 最后六槽。主线已核对审查脚本 SHA 与保存图身份，见 `B-review-receipt.json`；完整审查在 `../B-20261011-input-edge-review-v1/B-input-edge-review.json`。该审查不授予时间或输出完成资格。
+
 ```sh
 python microbench/gh200_resource_campaign/access_rules/analyze_r10_input_dependency_composition.py \
   --completion results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2 \

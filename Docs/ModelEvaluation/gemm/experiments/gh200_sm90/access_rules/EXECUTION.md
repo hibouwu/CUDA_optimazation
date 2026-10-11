@@ -303,3 +303,5 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 [零源目的完成接口主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-boundary-completion-v1/README.md)：B 12032695接入01592905，两侧12SHA、完整报告及3压缩端口数据一致，205R13测试。每条件48384目的盒保留3558fill义务（含672零源B1），完整528482304B预算不按有效源缩减；移除地址/stride后的工作与源身份等价投影三行距相同，无服务价格或新时间支持。
 
 [旧R10输入必要依赖组合](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-input-composition-v1/README.md)：27SHA/三行距相同必要图/拓扑无环，132CTA的16128已用组均被producer退出依赖覆盖，504尾部、372输出切换及240同WG复用关系通过祖先核对；672零源fill路径保留。消费者端口为128线程聚合界，输出内部仍待C绑定，服务/D可见/kernel时间均None，不作零lag预测、关键CTA或时间资格。
+
+B对上述组合完成限定源码边审查，无行动项；16项定向父边/祖先检查通过，主线核对脚本及保存图身份并归档审查回执。`release_emit_all`固定为实际arrival发出之max，不能换成返回后打点；输入producer退出仍不代表最终D或kernel完成。
