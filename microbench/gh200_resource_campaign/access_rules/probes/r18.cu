@@ -821,7 +821,10 @@ int main(int argc, char** argv) {
         prefix_gaps.push_back(gap*1e3);
       }
       std::cout << ",\"plain_prefix_abi\":1,\"plain_prefix_calls\":16"
-                << ",\"plain_prefix_same_buffers\":true";
+                << ",\"plain_prefix_same_buffers\":true"
+                << ",\"plain_prefix_protocol\":\"r09-plain-module-sw1-16/v1\""
+                << ",\"plain_prefix_preparation\":\"trace-memset-device-sync-per-call\""
+                << ",\"plain_prefix_clear_bytes\":" << trace.count*sizeof(uint64_t);
       print_f("plain_prefix_inter_call_us",prefix_gaps);
 #endif
       print_f("warmup_us", warm_us);
@@ -964,7 +967,14 @@ int main(int argc, char** argv) {
               << ",\"trace_tile_capacity\":64,\"trace_version\":\"" << kTraceVersion << "\""
               << ",\"trace_tile_words\":" << kTraceTileWords
               << ",\"scratch_bytes\":" << trace.count * sizeof(uint64_t)
-              << ",\"trace_words\":" << kTraceWords << "}\n";
+              << ",\"trace_words\":" << kTraceWords
+#ifdef R09_PLAIN_PREFIX_HOST
+              << ",\"plain_prefix_abi\":1"
+              << ",\"plain_prefix_protocol\":\"r09-plain-module-sw1-16/v1\""
+              << ",\"plain_prefix_preparation\":\"trace-memset-device-sync-per-call\""
+              << ",\"plain_prefix_clear_bytes\":" << trace.count*sizeof(uint64_t)
+#endif
+              << "}\n";
     if (o.mode == "setup")
       return 0;
 #if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION)

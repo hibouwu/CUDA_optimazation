@@ -223,7 +223,34 @@ def decode_ready_observer(values, enabled, cta, release_values=None):
     return result
 
 
+def validate_plain_prefix(setup, call, row):
+    """A module prefix is a different history identity from legacy common-sw1-16."""
+    protocol = row.get('plain_prefix_protocol')
+    observed = any(any(k.startswith('plain_prefix_') for k in event) for event in (setup, call))
+    if protocol is None:
+        if observed:
+            raise ValueError('undeclared plain-prefix protocol')
+        return
+    if protocol != 'r09-plain-module-sw1-16/v1' or row.get('warmup_policy') != 'common-sw1-16':
+        raise ValueError('unsupported plain-prefix protocol')
+    expected_bytes = row.get('plain_prefix_clear_bytes')
+    if type(expected_bytes) is not int or expected_bytes <= 0:
+        raise ValueError('plain-prefix clear bytes must be explicitly declared')
+    if setup.get('scratch_bytes') != expected_bytes:
+        raise ValueError('plain-prefix scratch allocation differs from preparation')
+    for event in (setup, call):
+        if (event.get('plain_prefix_protocol') != protocol or event.get('plain_prefix_abi') != 1
+                or event.get('plain_prefix_clear_bytes') != expected_bytes
+                or event.get('plain_prefix_preparation') != 'trace-memset-device-sync-per-call'):
+            raise ValueError('plain-prefix preparation identity changed or missing')
+    gaps = call.get('plain_prefix_inter_call_us', [])
+    if (call.get('plain_prefix_calls') != 16 or call.get('plain_prefix_same_buffers') is not True
+            or len(gaps) != 16 or any(not math.isfinite(g) or g < 0 for g in gaps)):
+        raise ValueError('plain-prefix history incomplete')
+
+
 def validate_warmup(setup, call, row):
+    validate_plain_prefix(setup, call, row)
     """Legacy adaptive convergence, or an explicitly fixed common history."""
     if any(event.get('work_swap55_91',0) != row.get('work_swap55_91',0) for event in (setup,call)):
         raise ValueError('work permutation identity changed')
