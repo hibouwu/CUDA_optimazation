@@ -1,0 +1,224 @@
+{
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/samples/cfg_c_r13_comp_k4096_aligned/dual-00.txt.gz": "0e5549d1eb2044087225f3d786c3736872f02280bca194efa293c0cc21e3e8ec",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-rank-dependencies-v2/cfg_c-S4-K64-T2-rank-dependencies.json.gz": "4690ac82bb9331b69b6a7697803c75d0e2fe6cb955e24be54c363c0c499944b6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/output_model.py": "23965b2b88481a9de6e7e26ae10ec5c9a49c6b8fd98ec5328b49553e4e318ca1",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-completion-identifiability-v1/check.py": "a82118c0338db2993b383bc8239a52cce06f0b619902d479e905d9870f6da2ea"
+  },
+  "ctas": [
+    0,
+    66
+  ],
+  "exact_observed_markers": 36,
+  "observed_anchors": {
+    "r0.w0.t0.FIRST": [
+      2752,
+      2752
+    ],
+    "r0.w0.t0.MAIN": [
+      41184,
+      41184
+    ],
+    "r0.w0.t0.PERMIT": [
+      41312,
+      41312
+    ],
+    "r0.w0.t0.DONE": [
+      43616,
+      43616
+    ],
+    "r0.w0.t1.FIRST": [
+      44128,
+      44128
+    ],
+    "r0.w0.t1.MAIN": [
+      85760,
+      85760
+    ],
+    "r0.w0.t1.PERMIT": [
+      85824,
+      85824
+    ],
+    "r0.w0.t1.DONE": [
+      88288,
+      88288
+    ],
+    "r0.w0.FINAL": [
+      88448,
+      88448
+    ],
+    "r0.w1.t0.FIRST": [
+      2784,
+      2784
+    ],
+    "r0.w1.t0.MAIN": [
+      40928,
+      40928
+    ],
+    "r0.w1.t0.PERMIT": [
+      41056,
+      41056
+    ],
+    "r0.w1.t0.DONE": [
+      43616,
+      43616
+    ],
+    "r0.w1.t1.FIRST": [
+      44128,
+      44128
+    ],
+    "r0.w1.t1.MAIN": [
+      85376,
+      85376
+    ],
+    "r0.w1.t1.PERMIT": [
+      85504,
+      85504
+    ],
+    "r0.w1.t1.DONE": [
+      88288,
+      88288
+    ],
+    "r0.w1.FINAL": [
+      88544,
+      88544
+    ],
+    "r1.w0.t0.FIRST": [
+      2784,
+      2784
+    ],
+    "r1.w0.t0.MAIN": [
+      41216,
+      41216
+    ],
+    "r1.w0.t0.PERMIT": [
+      41280,
+      41280
+    ],
+    "r1.w0.t0.DONE": [
+      43584,
+      43584
+    ],
+    "r1.w0.t1.FIRST": [
+      44064,
+      44064
+    ],
+    "r1.w0.t1.MAIN": [
+      85760,
+      85760
+    ],
+    "r1.w0.t1.PERMIT": [
+      85856,
+      85856
+    ],
+    "r1.w0.t1.DONE": [
+      88288,
+      88288
+    ],
+    "r1.w0.FINAL": [
+      88448,
+      88448
+    ],
+    "r1.w1.t0.FIRST": [
+      2784,
+      2784
+    ],
+    "r1.w1.t0.MAIN": [
+      40704,
+      40704
+    ],
+    "r1.w1.t0.PERMIT": [
+      40832,
+      40832
+    ],
+    "r1.w1.t0.DONE": [
+      43552,
+      43552
+    ],
+    "r1.w1.t1.FIRST": [
+      44064,
+      44064
+    ],
+    "r1.w1.t1.MAIN": [
+      85376,
+      85376
+    ],
+    "r1.w1.t1.PERMIT": [
+      85504,
+      85504
+    ],
+    "r1.w1.t1.DONE": [
+      88288,
+      88288
+    ],
+    "r1.w1.FINAL": [
+      88544,
+      88544
+    ],
+    "cluster_initialized": [
+      0,
+      0
+    ]
+  },
+  "entry_boundary_assumption": "cluster_initialized fixed at minimum recorded CTA entry only for a conservative mathematical witness",
+  "bounds": {
+    "r0.producer_tail": [
+      44128,
+      null
+    ],
+    "r1.producer_tail": [
+      44128,
+      null
+    ],
+    "r0.D_visible": [
+      85824,
+      null
+    ],
+    "r1.D_visible": [
+      85856,
+      null
+    ],
+    "source_safe_exit": [
+      88544,
+      null
+    ],
+    "cuda_complete": [
+      88544,
+      null
+    ]
+  },
+  "witnesses": {
+    "earliest": {
+      "r0.producer_tail": 44128,
+      "r1.producer_tail": 44128,
+      "r0.D_visible": 85824,
+      "r1.D_visible": 85856,
+      "source_safe_exit": 88544,
+      "cuda_complete": 88544
+    },
+    "producer_tail_delayed": {
+      "r0.producer_tail": 89544,
+      "r1.producer_tail": 44128,
+      "r0.D_visible": 85824,
+      "r1.D_visible": 85856,
+      "source_safe_exit": 89544,
+      "cuda_complete": 89544
+    },
+    "D_visibility_delayed": {
+      "r0.producer_tail": 44128,
+      "r1.producer_tail": 44128,
+      "r0.D_visible": 89544,
+      "r1.D_visible": 85856,
+      "source_safe_exit": 88544,
+      "cuda_complete": 89544
+    }
+  },
+  "synthetic_delay_ns": 1000,
+  "observation_qualified": false,
+  "limits": [
+    "Schedules satisfy only the unpriced DAG, not a calibrated hardware service model.",
+    "All36 observed markers remain exactly fixed; 1000ns is arbitrary for demonstrating an unbounded endpoint, not an inferred latency.",
+    "Aggregate CUDA event timing cannot identify each cluster exit or per-rank visibility.",
+    "A producer-tail timestamp could constrain source_safe_exit but would not measure global D visibility or full kernel completion."
+  ]
+}
