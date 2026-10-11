@@ -110,6 +110,8 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 ## V09：入口替换不能修复关键 CTA
 
+2026-10-11的[八小时有界主线归因](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md)补查cfg_a G6：十进程实际最后者全部在原36个精确并列最大者中，且预测器在选择代表前已经对全CTA时长取max，所以只换代表编号不能改变频率、包络或plain预测。实测包络比最长CTA自身窗口只多64ns，中位代表退出遗憾325.408μs不能再次作为总时间补偿。代入每进程观测C/N后，实际最后者的later L残差中位500.850μs，同工作量cohort的later L残差中位131.039μs；这是原observer的条件诊断，不是纯物理服务周期。固定后续K迭代成本与同协议时钟组合仍使cfg_a G6时间误差恶化，达到必要测量终点；未改原冻结成绩或观察/关键CTA资格。
+
 分别把实际入口偏移加到冻结 CTA 内部时长上、或用实际内部时长并把所有入口设为零。两项只作诊断，不进入预测，也不扩充冻结候选。最后完成者按 `argmax(end_ns)` 的并列集合定义，最长本地窗口另按 `argmax(end_ns−entry_ns)` 和 `argmax(end_c−entry_c)` 保存。
 
 | 条件 | 冻结候选数 | 冻结集合命中 / 10 | 只换入口命中 / 10 | 只换内部时长命中 / 10 | 入口分散 ns | 冻结集合最好者距最晚退出 ns |

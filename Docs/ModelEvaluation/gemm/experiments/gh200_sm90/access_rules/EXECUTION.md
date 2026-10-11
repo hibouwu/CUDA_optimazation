@@ -159,10 +159,14 @@ A时间与C边界的本次普通有界任务均已交付并停止；旧持续目
 
 | 新任务 | 工作树 / 分支 | 准备状态 | 执行预算 |
 |---|---|---|---|
-| 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 新目标active，归因分析已开始 | 最多8小时，GPU 0 |
-| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 新目标active，专属探针开发已开始 | 最多8小时，GPU作业2 |
+| 长 K 时钟与事件组合 | `/home/jianyeshi/.codex/worktrees/gh200-long-k-event-20261011/CUDA_optimazation` / `codex/gh200-long-k-event-20261011` | 本有界主线完成，终点2：必要测量；停止继续开发 | 最多8小时，实际GPU 0 |
+| m11 普通 SMEM | `/home/jianyeshi/.codex/worktrees/gh200-smem-lds-sts-20261011/CUDA_optimazation` / `codex/gh200-smem-lds-sts-20261011` | 新目标active；740708采样前SASS失败，继续离线修复，第二提交等待用户决定 | 最多8小时，GPU已提交1/2 |
 
 当前主集成负责新主线目标；“GH200 输出与边界”负责新SMEM目标，每次命令显式选择新工作树。用户清除旧机制目标后工具已确认goal=null并成功创建新目标，原研究范围未恢复。时间与供给对话保持暂停。两工作树中的基点EXECUTION为历史副本；公共当前状态只在本主checkout维护。
+
+新主线[交付](../../../../../../results/gh200_resource_campaign/access_rules/20261011-long-k-event-bounded/README.md)：归因检查点先于实现，六参考+三十开发条件/360 dual进程完成时间账；固定后续K迭代成本与dual-only时钟组合使cfg_a G6 plain误差−3.70%→−16.74%，组件留掉G6形状后−36.51%，不采用。超L2源覆盖形式在独立后续L证据中不能定价；旧cfg_c长K dual仅单输出已核对，未漏用可定价的后续窗口。150预测/2160恒等式与八项原测试复放通过，默认29预测不变；仅交付18新校准条件/660进程、一个参考卡GPU作业的提案，未提交、未冻结V10，不自动开第四轮开发。失败实现与复放脚本独立提交`a4ca14c`，不合入公共预测器、不推送。
+
+m11作业740708失败完整保留：CUDA12.9编译成功，独立读及原CUTLASS读被PTXAS移出重复循环，动态LDS工作量不符，采样未开始。当前尚无GPU校准/留出数值；CUDA13 device-only修复SASS只是准备，不替代12.9运行资格。第二次提交未执行，原合同要求第二作业前冻结参数与预测；是否将其改为开发重试已向用户提出异步选择，答复前仅离线准备，不自改预算或将校准称留出。
 
 原分项、关键CTA及跨卡联合要求仍未完成；V09仅作开发，拟支持范围的成绩不改写原冻结评分。以下表格与后续逐批记录保存此前研究状态，本轮任务A结果单列于[新分析目录](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V10-taskA/)。
 
