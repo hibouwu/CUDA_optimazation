@@ -1,0 +1,1 @@
+740087以4CPU/16GiB、无GPU完成host全D入口重建。check-producer-tail支持同分配off/on逐位比较和完整D导出；设备全部SASS与资源报告逐字节同740082，原elected-lane审查可按SASS SHA复用。尚无设备数值或扰动结果。

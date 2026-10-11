@@ -1,0 +1,11 @@
+{
+  "files": {
+    "run.sh": "1b3812a1dbf71e7163355d03f81fdff75fa04c0b46a319ced23a5f3d00754714",
+    "command.json": "6568687f46f5659b3d91a5e2bdf1d07eb54f57613bc2fb1f4cad879e74b5966e",
+    "source_hashes.json": "11eab809368ab860736fab64d5871d21df712c1e00d5ab9eb76961bf9517d7db",
+    "cases.json": "514834ed9b4a9f25d93eb570497bf52b89522b45124b3145a42921d90b44c748",
+    "observer_contract.json": "1da5c4ca37866c1e873a2caf50fa377212e82fe983960c10a7237f9733928069",
+    "build/commands.json": "4790152480a737e289af741bd278972fa342c009700b28684040d8015665edaf"
+  },
+  "scope": "CPU-only rebuild adds host full-D comparison/export; device source must remain identical"
+}

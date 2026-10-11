@@ -27,7 +27,7 @@ def patch_source(source):
     text=replace_once(text,'      else if(key=="--release-warp-observer")',
         '      else if(key=="--producer-tail-observer")producer_tail_observer=std::stoul(v);\n      else if(key=="--release-warp-observer")')
     text=replace_once(text,'    int ctas = int(grid.x * grid.y * grid.z);','''    int ctas = int(grid.x * grid.y * grid.z);
-    if ((o.mode!="setup" && o.mode!="warm") || o.producer_tail_observer>1 ||
+    if ((o.mode!="setup" && o.mode!="warm" && o.mode!="check-producer-tail") || o.producer_tail_observer>1 ||
         V06_CFG!=2 || Mainloop::DispatchPolicy::Stages!=4 ||
         o.m!=2304 || o.n!=3072 || o.k!=4096 || grid.x!=66 || grid.y!=2 || grid.z!=1 ||
         storage_m!=2304 || storage_n!=3072 || input_map_m!=2304 || input_map_n!=3072 ||
@@ -47,6 +47,20 @@ def patch_source(source):
     text=text.replace(line,'                << ",\\\"producer_tail_observer\\\":" << o.producer_tail_observer\n                << ",\\\"producer_tail_prefix_flag\\\":0"\n'+line)
     text=replace_once(text,'#if defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION) || defined(R13_RELEASE_WARPS)',
         '#if defined(R18_PRODUCER_TAIL) || defined(R10_WORK_SWAP) || defined(R10_PRODUCER_DELAY) || defined(R13_EPILOGUE_ORDER) || defined(R13_A_ROW_ROTATION) || defined(R13_RELEASE_WARPS)')
+    text=replace_once(text,'if (o.mode != "warm" && o.mode != "setup" &&',
+        'if (o.mode != "warm" && o.mode != "setup" && o.mode != "check-producer-tail" &&')
+    text=replace_once(text,'!check_output.empty() && mode != "check-release-warps"',
+        '!check_output.empty() && mode != "check-producer-tail"')
+    text=replace_once(text,'if (o.mode == "check-work-swap" ||',
+        'if (o.mode == "check-producer-tail" || o.mode == "check-work-swap" ||')
+    text=replace_once(text,'      auto set_check_flag = [&](unsigned value) {',
+        '''      auto set_check_flag = [&](unsigned value) {
+        if (o.mode == "check-producer-tail") {
+          CUDA_CHECK(cudaMemcpyToSymbol(r18_producer_tail_observer,&value,sizeof(value)));
+          return;
+        }''')
+    text=replace_once(text,'(o.mode == "check-release-warps" ? "release_warps_check"',
+        '(o.mode == "check-producer-tail" ? "producer_tail_check" : o.mode == "check-release-warps" ? "release_warps_check"')
     probe.write_text(text)
     header=source/'overlay/v06_trace.hpp';original=header.read_text()
     (source/'probes/v06_trace.hpp').write_text(original+HELPER)
