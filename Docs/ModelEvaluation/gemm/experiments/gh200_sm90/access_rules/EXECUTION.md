@@ -224,6 +224,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [前序event统一比例诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-scalar-diagnostic-v1/README.md)：740092末次前序预测整event中位0.462%/最大2.021%；但即使使用两臂目标cycle和arm0目标ns，432条L条件残差仍全超原64/256尺度。4320精确恒等式、全部16项前序变化及源码可用时点保留；仅排除这一个零参数比例代理，非自由局部预测/物理频率结论，无新GPU或资格。
 
+[off/off原生cycle重复性](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-native-cycle-repeatability-v1/README.md)：L4320配对相对差中位0.1965%/最大2.5100%；W绝对差21/195cycle但相对中位12.7119%，E/GAP/TAIL尾差保留。逐坐标常数oracle仅诊断，不能追认cycle资格或替换ns失败。C独立740092冻结、arm/flag、6372系列/81920数值及门槛报告归档，无新GPU/拟价。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

@@ -1,0 +1,40 @@
+{
+  "review": "C independent frozen off/off baseline review",
+  "freeze_commit": "759fa555a252e7875455d947a33cdb29eae61dcb",
+  "job_id": 740092,
+  "report": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/C-20261011-off-off-review-v1/report.json",
+  "review_script": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/C-20261011-off-off-review-v1/review.py",
+  "artifacts_sha256": {
+    "analysis_snapshot/analyze_cfg_c_tail_control.py": "4b928138a6305f3c293dcd40afbd377a8fb8af3a2d5669a300cbeeb020afef5e",
+    "analysis_snapshot/analyze_r18.py": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264",
+    "analysis_snapshot/decode_cfg_c_producer_tail.py": "c68609e67f7d527f4bb86afe3caba93da5ec73935bb6c30b9ac4ec136a9cdfe9",
+    "analysis_snapshot/run_r18.py": "73d165e284c14cd0d359fc05b98315675eaf0561df5f789537dffb9befc8bc42",
+    "analysis_snapshot/test_cfg_c_producer_tail_packet.py": "0209bd203ceac21143af2192bafbf2c897961af3004750db5dff64c2e5fe99cc",
+    "analysis_snapshot/test_cfg_c_tail_control.py": "14fe48660c5ed70d176f9b5e7667ec98faa133c5614c7f69ac985dcc3c5a80ae",
+    "analysis_snapshot/v06_model.py": "224eeaefc366d673a27a631e35b2f7961da809713f429e55edad5099326afdf5",
+    "analysis_snapshot/v06_run.py": "0beed5b186642496bf182a6e6d79a40d93a7fada8d420526b345bed85a5e1b89",
+    "analysis_snapshot/v08_model.py": "bb555da028e32110adcdc4ced5b51929b032f4aefa243a03776bfe0ad7f1dbdc",
+    "analysis_snapshot/validate_allocation.py": "2c165aa1e21ffa8e81be93332c57645230384fba793f2d5e0d1959d3eee15d00",
+    "report.json": "af6d9dae8e69a44158eab5a5374007d9b10295993b1209ac5ff6abc606d6c879",
+    "review.py": "3fefbbe1af02b699a0ea5010696f9ee4386a2ba2cd5578a6a50bcb304304348d",
+    "tests.txt": "e848aa6dcf16139828edf251ce8f120d0fffdd501c584b497b63246b48777487"
+  },
+  "identity_allocation_protocol_numerics_verified": true,
+  "arm_separate_from_real_flag": true,
+  "real_flags_zero": 20,
+  "zero_tail_ctas": 2640,
+  "independent_result_exactly_matches_main": true,
+  "prior_off_on_all_fields_unchanged": true,
+  "baseline_consistency_passed": false,
+  "observation_qualified": false,
+  "tail_precision_qualified": false,
+  "baseline_dual_qualified": false,
+  "public_code_modified": false,
+  "new_gpu_runs_by_C": 0,
+  "findings": [
+    "全部差值按 arm1−arm0 配对，稳定性统计仅使用10次arm0。",
+    "4884/6372 系列失败，432 L 全失败，event和arm0 CV通过。",
+    "本次支持在同一binary和协议下，开启tail采样不是局部配对差异出现的必要条件。",
+    "不能证明tail无扰动，不能从740091扣除本批差异，不合并或重评分旧批次。"
+  ]
+}
