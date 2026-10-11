@@ -677,7 +677,20 @@ series sw8排除首个切换后的180次，紧前event基线RMS为1.23%、最大
 
 T_low=0时正时间下端开、率上端无界，不夹到1ns；没有正时间窗口则拒绝。接口同时传播固定周期误差、条件换算误差与自由时间误差，同一T的乘法关系及对应区间端点精确闭合。仅当整个误差范围达标才判within，范围跨越门槛则undetermined；不能挑有利T或中点当通过，多窗口边际相容也不证明联合相容。
 
-[九项解析测试与540个合成端点盒复验](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-gt-bracket-contract-v1/README.md)拒绝72个无正时间盒，核对1386个正角点和225个开零下界案例，错误界／闭合但分项互换负例被拒绝。当前只是条件数学合同，没有新GT-CLOCK-GT设备记录、独立GT误差界或硬件包围证明；不解除原observer/off-off失败，不改B口径、公共组合、原门槛或新留出/跨卡边界。
+[九项解析测试与540个合成端点盒复验](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-gt-bracket-contract-v1/README.md)拒绝72个无正时间盒，核对1386个正角点和225个开零下界案例，错误界／闭合但分项互换负例被拒绝。接口提交时只是条件数学合同，没有GT-CLOCK-GT设备记录；后续实录见下节。独立GT误差界和硬件包围仍未证明，不解除原observer/off-off失败，不改B口径、公共组合、原门槛或新留出/跨卡边界。
+
+### 真实GT三元组怎样约束同CTA首／次输出？
+
+740160在同GPU-ef取得新binary `c5476d9b`的完整132CTA记录；固定cfg_c 2304×3072×4096、S4、cluster1×2、dyadic/seed17/sw1及16次同buffer关闭观察的前序。A从原始槽位复算864个三元组、432个WG窗口与216个共同窗口。共同窗口在同SM原生cycle域取最早FIRST、最晚MAIN，GT沿用被选端点的标签；显式e=0仅作记录GT坐标的条件算术，不声称连续物理ns误差为零。
+
+| 输出序号 | 共同窗口数 | 原生cycle差中位 | 条件C/T区间的全样本范围，cycle/GT ns | 时间区间宽度中位／最大，GT ns |
+|---|---:|---:|---:|---:|
+| 0 | 132 | 66111.5 | 1.731360 / 1.761402 | 64 / 192 |
+| 1 | 84 | 66017 | 1.561767 / 1.600126 | 64 / 128 |
+
+84个同CTA共同窗口配对与168个同WG配对的计数率区间全部不相交；共同窗口首输出下界比次输出上界至少高9.745247%。三元组自身记录宽度不足以使两输出共享一个精确常数率，但这不唯一识别物理频率，也不自动排除允许误差的时间预测。点读数`N_post=GT_end_after−GT_begin_after`满足`N_post−T∈[−width_begin,+width_end]`，不扣除猜测开销。[原始索引、精确区间及独立复验](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-bracket-smoke-v2/reanalysis/A-gt-window-audit-v1/README.md)绑定17项输入SHA、858项构建source及45项archive文件；432个WG三元组/区间与冻结reader一致，648窗口、252配对、四项负例及新目录重放通过。主线全D精确reference证据仅绑定复用，A未重算全D。
+
+单进程接口检查未取得观察资格。后续[740161完整控制](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/README.md)的off/on 4912/6372、off/off 4729/6372序列失败，L各432/432失败；不复用旧binary校准、不评分新预测，原门槛及独立留出/跨卡边界保持。
 
 ## 作业与复核索引
 
