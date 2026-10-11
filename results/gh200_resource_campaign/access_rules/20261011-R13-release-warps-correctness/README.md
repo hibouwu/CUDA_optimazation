@@ -18,3 +18,5 @@ stage4/6均运行plain和stamped的 `check-release-warps`：每次对4,325,376�
 本次只增加host端 `--check-output` 导出；四个GEMM的指令序列与740051逐指令相同，SHA见 `kernel-identity.json`。740051的static-release-audit.json记录开关常量、lane选择与k17处同谓词前后clock、中间非谓词arrival及区间内无分支/写回的静态证据；尚未运行active mask观测，不把它写成物理到达或完成证明。
 
 40进程正式机制观察未启动；预热/二进制/同卡参照/配对顺序及扰动门槛仍须统一冻结。V09失败、cfg_a/b/c总目标和新独立留出标准不变。
+
+上游单对诊断：stage4 H16→wait1从399增至767cycle（+368），超过既定单对绝对差192cycle；stage6为389→388（−1）。leader-pre→refill-end分别为232→232和149→231。因本批非独占且每条件只有一对，不能归因到观察器，也不能当成合格的机制样本；保留该预警，后续正式门槛不放宽。正式配对统计明确先取各对绝对差，再取中位数；有符号中位数仅另列诊断，不能相互抵消。

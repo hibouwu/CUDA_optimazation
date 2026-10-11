@@ -1,0 +1,44 @@
+[
+  {
+    "stage": 4,
+    "off": {
+      "leader_pre_to_refill": 232,
+      "H16_to_wait1": 399
+    },
+    "on": {
+      "leader_pre_to_refill": 232,
+      "H16_to_wait1": 767
+    },
+    "signed_delta": {
+      "leader_pre_to_refill": 0,
+      "H16_to_wait1": 368
+    },
+    "absolute_delta": {
+      "leader_pre_to_refill": 0,
+      "H16_to_wait1": 368
+    },
+    "formal_qualification": false,
+    "reason": "Single pair, GPU432, nonexclusive correctness smoke; not the fixed ef study."
+  },
+  {
+    "stage": 6,
+    "off": {
+      "leader_pre_to_refill": 149,
+      "H16_to_wait1": 389
+    },
+    "on": {
+      "leader_pre_to_refill": 231,
+      "H16_to_wait1": 388
+    },
+    "signed_delta": {
+      "leader_pre_to_refill": 82,
+      "H16_to_wait1": -1
+    },
+    "absolute_delta": {
+      "leader_pre_to_refill": 82,
+      "H16_to_wait1": 1
+    },
+    "formal_qualification": false,
+    "reason": "Single pair, GPU432, nonexclusive correctness smoke; not the fixed ef study."
+  }
+]
