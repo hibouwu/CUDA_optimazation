@@ -2,7 +2,7 @@
 import math
 import unittest
 
-from output_model import cfg_a_rank_dependencies, cfg_a_output_source_guarantees, dependency_bounds, dependency_order
+from output_model import cfg_a_rank_dependencies, cfg_a_output_source_guarantees, cfg_a_empty_arrival_routes, cfg_a_empty_reuse_interval, dependency_bounds, dependency_order
 from analyze_r18 import rank_dependency_anchors, validate_rank_setup
 
 
@@ -23,6 +23,22 @@ class RankDependencyTests(unittest.TestCase):
                                             for s in range(2) for w in range(2)})
         self.assertFalse(any('empty_to' in n for n in self.nodes['r0.g5.acquire']))
 
+    def test_effective_arrival_threads_cover_each_destination_exactly_four_times(self):
+        routes=cfg_a_empty_arrival_routes()
+        for source in range(2):
+            selected=[r for r in routes if r['source_rank']==source]
+            self.assertEqual([(r['physical_thread'],r['destination_rank']) for r in selected],
+                             [(128,0),(168,1),(256,0),(296,1)])
+        for destination in range(2):
+            selected=[r for r in routes if r['destination_rank']==destination]
+            self.assertEqual(sum(r['arrival_count'] for r in selected),4)
+            self.assertEqual({(r['source_rank'],r['consumer_wg']) for r in selected},
+                             {(0,0),(0,1),(1,0),(1,1)})
+            for route in selected:
+                self.assertIn(route['visibility_token_template'].format(group=0),self.nodes[f'r{destination}.g6.acquire'])
+                self.assertIn(route['emit_token_template'].format(group=0),self.nodes)
+        self.assertTrue(all(r['lane']==8 and r['warp_in_wg']==1 for r in routes if r['destination_rank']==1))
+
     def test_slot_generation_continues_across_output_boundary(self):
         group = self.graph['groups'][8]
         self.assertEqual((group['tile'], group['k'], group['slot'], group['generation']), (1, 0, 2, 1))
@@ -35,8 +51,60 @@ class RankDependencyTests(unittest.TestCase):
                          ['r0.w0.g7.commit', 'r0.w0.g6.retired'])
         self.assertEqual(self.nodes['r0.w0.g7.safe_release'], ['r0.w0.g7.tail_wait0'])
         self.assertIn('r0.w0.g7.retired', self.nodes['r0.w0.g7.tail_wait0'])
-        self.assertEqual(self.nodes['r0.w0.g7.empty_to_r1'], ['r0.w0.g7.release_issue'])
+        self.assertEqual(self.nodes['r0.w0.g7.empty_to_r1'], ['r0.w0.g7.empty_emit_to_r1'])
+        self.assertEqual(self.nodes['r0.w0.g7.empty_emit_to_r1'], ['r0.w0.g7.release_issue'])
         self.assertNotIn('r0.w0.g7.empty_to_r1', self.nodes['r0.w0.t0.MAIN'])
+
+    def emitter_packet(self):
+        acquire=dict(invocation_id='raw-process:target0',cluster_id=3,destination_rank=1,acquire_group=22,stages=6,slot=4,generation=3,
+                     empty_wait_phase=0,acquire_end_ns=180)
+        senders=[]
+        for i,route in enumerate(r for r in cfg_a_empty_arrival_routes() if r['destination_rank']==1):
+            senders.append(dict(invocation_id=acquire['invocation_id'],cluster_id=3,source_rank=route['source_rank'],consumer_wg=route['consumer_wg'],
+                physical_thread=route['physical_thread'],destination_rank=1,release_group=16,
+                slot=4,generation=2,consumer_phase=0,release_pre_ns=100+10*i,release_post_ns=104+10*i))
+        return senders,acquire
+
+    def test_actual_sender_bounds_keep_emit_and_remote_processing_separate(self):
+        senders,acquire=self.emitter_packet()
+        result=cfg_a_empty_reuse_interval(senders,acquire)
+        self.assertEqual(result['last_emit_ns'],[130,134])
+        self.assertEqual(result['post_last_emit_to_acquire_end_ns'],[46,50])
+        acquire['acquire_end_ns']=132
+        self.assertEqual(cfg_a_empty_reuse_interval(senders,acquire)['last_emit_ns'],[130,132])
+        self.assertGreater(senders[-1]['release_post_ns'],acquire['acquire_end_ns'])
+
+    def test_reject_incomplete_wrong_sender_or_wrong_generation(self):
+        senders,acquire=self.emitter_packet()
+        with self.assertRaises(ValueError):cfg_a_empty_reuse_interval(senders[:-1],acquire)
+        for field,value in [('physical_thread',256),('release_group',10),('consumer_phase',1),
+                            ('cluster_id',99),('invocation_id','another-call')]:
+            changed=[dict(r) for r in senders];changed[0][field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):
+                cfg_a_empty_reuse_interval(changed,acquire)
+        changed=[dict(r) for r in senders];changed[-1]=dict(changed[0])
+        with self.assertRaises(ValueError):cfg_a_empty_reuse_interval(changed,acquire)
+
+    def test_reject_noninteger_or_inconsistent_globaltimer_observations(self):
+        senders,acquire=self.emitter_packet()
+        for bad in (math.nan,math.inf,True,130.5,-1,0,2**64):
+            changed=[dict(r) for r in senders];changed[0]['release_pre_ns']=bad
+            with self.subTest(bad=bad),self.assertRaises(ValueError):
+                cfg_a_empty_reuse_interval(changed,acquire)
+        with self.assertRaises(ValueError):
+            cfg_a_empty_reuse_interval(senders,dict(acquire,acquire_end_ns=129))
+
+    def test_producer_acquire_return_is_after_expect_tx(self):
+        self.assertEqual(self.nodes['r0.g6.acquire_return'],['r0.g6.arrive_expect_tx'])
+        self.assertEqual(self.nodes['r0.g6.A_issue'],['r0.g6.acquire_return'])
+
+    def test_reuse_packet_keeps_global_generation_across_output_boundary(self):
+        senders,acquire=self.emitter_packet()
+        acquire.update(acquire_group=69,slot=3,generation=11,empty_wait_phase=0)
+        for sender in senders:
+            sender.update(release_group=63,slot=3,generation=10,consumer_phase=0)
+        result=cfg_a_empty_reuse_interval(senders,acquire)
+        self.assertEqual((result['release_group'],result['acquire_group']),(63,69))
 
     def test_exit_keeps_source_read_and_global_visibility_separate(self):
         tail = self.nodes['r0.producer_tail']

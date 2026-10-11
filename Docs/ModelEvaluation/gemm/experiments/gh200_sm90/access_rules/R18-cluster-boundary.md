@@ -356,3 +356,20 @@ group g 的稳态安全释放需要 commit(g+1) 和 g 已退休；每个输出�
 一个非拟合的构造性反例进一步限定了现有证据：固定同一套示意服务价，将同一B源对两目的地的额外延迟放在g6或g63，得到完全相同的两轮FIRST/MAIN端点、首轮两个rank的L共同增加2520ns、后轮L恢复；但commit16的增量分别为2520ns和0。这不能说明真实瓶颈就是B，也不能把示意价格用于预测；它证明现有粗端点不能唯一定位延迟位置。单点局部A延迟的另一个示例虽产生首轮共慢，却留下1480ns的rank间MAIN差，未复现已有近对齐现象；该失败只适用于这套固定价格和干预，不排除其它A路径解释。
 
 已向主集成交付[最小稀疏观察请求](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/minimum-observation.md)。第一步覆盖全部五个静态受影响T2 cluster及一个内部对照，记录四个固定commit切点和mma返回；若区间指向循环内等待，再申请对应代次的full/empty/release观察。该阶段用于辨识，不计作新的局部留出或模型通过。
+
+### empty arrival 的实际发送线程
+
+cluster2×1的有效发送者由`spread_arrivals_to_warpgroup`决定。其`Swizzle<2,0,-2>`在4×4线程布局上分散arrival，再按cluster大小及同row/column裁剪；不能把cfg_b cluster1的128线程arrival模式复制过来。将冻结函数原body抽出、保留原CUTE布局在CPU执行，与纯模型枚举一致：
+
+| 每个源rank中的consumer WG | 发往rank0的physical thread | 发往rank1的physical thread |
+|---|---:|---:|
+| WG0 | 128 | 168 |
+| WG1 | 256 | 296 |
+
+两rank均采用此表，因此每个目的barrier仍需四次arrival。WG内分别是warp0/lane0与warp1/lane8；只记录WG leader128/256会漏掉发往rank1的路径。归档dual SASS在`1fe0`的wait1后执行`1ff0`稳态arrival，`2050`的wait0后执行`2120`末组arrival；它们是predicated指令，不能据leader的后clock认定另一个warp已emit或远端已可见。
+
+图新增`empty_emit_to_r`作为实际发送事件，原`empty_to_r`保留为目的可见事件；两者之间没有定价。producer的`acquire`是empty等待返回，`arrive_expect_tx`随后发生，新增`acquire_return`表示完整调用返回；调用后clock还包含expect_tx路径，不能精确锚定empty等待返回。
+
+第二阶段请求据此修订为两rank各四个实际发送线程的自身arrival前后界，绑定同一全局group/slot/generation/phase及目标producer下一代acquire。跨rank只比较globaltimer ns，clock64保留在各CTA本地。若四个emit分别在`[b_i,e_i]`、完整acquire调用后戳为A，则最后emit保守位于`[max(b_i), min(max(e_i), A)]`；某个后clock晚于A不构成失败，实际emit仍可能更早。剩余区间仍包含远端可见、处理、轮询、调度、expect_tx与打点，不作为裸延迟。
+
+`cfg_a_empty_reuse_interval`拒绝缺失/重复发送者、错误physical thread、跨代或相位错配、非整数/非法globaltimer、未观测的零戳及不可行因果关系。新增节点只细分旧依赖边，T1/T2旧节点投影关系全部保持；没有改动冻结CTA或服务参数。CPU布局程序、源码/SASS SHA、投影证明与[条件观察接口](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-empty-arrival-routes-v6/observation-contract.json)见[本轮报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-empty-arrival-routes-v6/README.md)。第一阶段五切点请求不变，第二阶段仍待第一阶段定位，未新增GPU任务或冻结数值门槛。

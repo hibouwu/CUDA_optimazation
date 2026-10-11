@@ -35,6 +35,81 @@ def output_intervals(params, schedule, valid, first_bytes, single, output_rule):
     return p, epilogues
 
 
+def cfg_a_empty_arrival_routes():
+    """Actual signaling threads for the fixed cluster2x1, two-WG consumer layout.
+
+    spread_arrivals_to_warpgroup uses Swizzle<2,0,-2> over (4*row+col).
+    Both cluster ranks have the same N coordinate, so both destinations survive
+    the same-row-or-column mask. These are emitters, not visibility timestamps.
+    """
+    routes=[]
+    for source in range(2):
+        for wg in range(2):
+            for local in range(128):
+                row=local//32
+                col=(local//8)%4
+                offset=4*row+col
+                destination=offset^((offset&3)<<2)
+                if local%8 or destination>=2:continue
+                routes.append(dict(source_rank=source,destination_rank=destination,consumer_wg=wg,
+                    physical_thread=128+128*wg+local,thread_in_wg=local,
+                    warp_in_wg=local//32,lane=local%32,arrival_count=1,
+                    emit_token_template=f'r{source}.w{wg}.g{{group}}.empty_emit_to_r{destination}',
+                    visibility_token_template=f'r{source}.w{wg}.g{{group}}.empty_to_r{destination}'))
+    return routes
+
+
+def cfg_a_empty_reuse_interval(emitters, acquire):
+    """Conservative last-emit bounds from four actual senders, in globaltimer ns.
+
+    Raw stamps must be positive; zero is the unobserved trace sentinel.
+    Brackets must enclose each sender's own original arrival; source/SASS and
+    observer validity remain the caller's obligation. Cross-SM clock64 values
+    must not be supplied. The post-emit path includes remote visibility, polling,
+    scheduling, expect_tx and the acquire-return clock path, not a bare latency.
+    """
+    fields=('cluster_id','destination_rank','acquire_group','stages','slot','generation','empty_wait_phase','acquire_end_ns')
+    if any(type(acquire.get(field)) is not int for field in fields):
+        raise ValueError('integer producer identity and globaltimer ns required')
+    destination=acquire['destination_rank'];stages=acquire['stages'];group=acquire['acquire_group']
+    invocation=acquire.get('invocation_id')
+    if not isinstance(invocation,str) or not invocation or acquire['cluster_id']<0:
+        raise ValueError('invocation and cluster identity required')
+    if destination not in (0,1) or stages<2 or group<stages:
+        raise ValueError('invalid reused cfg_a slot')
+    released=group-stages
+    if (acquire['slot'],acquire['generation'],acquire['empty_wait_phase'])!=(group%stages,group//stages,1^(group//stages%2)):
+        raise ValueError('producer slot/generation/phase mismatch')
+    expected={(r['source_rank'],r['consumer_wg']):r for r in cfg_a_empty_arrival_routes()
+              if r['destination_rank']==destination}
+    if len(emitters)!=4:raise ValueError('four distinct required sender brackets required')
+    before=[];after=[];seen=set()
+    sender_fields=('cluster_id','source_rank','consumer_wg','physical_thread','destination_rank','release_group',
+                   'slot','generation','consumer_phase','release_pre_ns','release_post_ns')
+    for record in emitters:
+        if any(type(record.get(field)) is not int for field in sender_fields):
+            raise ValueError('integer sender identity and globaltimer ns required')
+        if record.get('invocation_id')!=invocation or record['cluster_id']!=acquire['cluster_id']:
+            raise ValueError('sender belongs to another invocation or cluster')
+        key=record['source_rank'],record['consumer_wg']
+        if key not in expected or key in seen:raise ValueError('missing or duplicate required sender')
+        seen.add(key)
+        if (record['physical_thread'],record['destination_rank'])!=(expected[key]['physical_thread'],destination):
+            raise ValueError('wrong physical arrival sender or destination')
+        if (record['release_group'],record['slot'],record['generation'],record['consumer_phase'])!=(released,released%stages,released//stages,released//stages%2):
+            raise ValueError('sender slot/generation/phase mismatch')
+        low,high=record['release_pre_ns'],record['release_post_ns']
+        if not 0<low<=high<2**64:raise ValueError('invalid or unobserved globaltimer sender bracket')
+        before.append(low);after.append(high)
+    end=acquire['acquire_end_ns']
+    if not 0<end<2**64:raise ValueError('invalid or unobserved globaltimer acquire-return stamp')
+    low=max(before);high=min(max(after),end)
+    if low>high:raise ValueError('producer returned before a required sender could emit')
+    return dict(destination_rank=destination,release_group=released,acquire_group=group,
+        last_emit_ns=[low,high],post_last_emit_to_acquire_end_ns=[end-high,end-low],
+        maximum_sender_bracket_ns=max(e-b for b,e in zip(before,after)),required_sender_count=4)
+
+
 def cfg_a_output_source_guarantees(output_tiles):
     """Bind each output's last source buffer to the acquire/read0 guarantee.
 
@@ -88,7 +163,8 @@ def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
                 predecessors += [arrival(s,w,r,g-stages) for s in range(2) for w in range(2)]
             add(producer(r,g,'acquire'),predecessors)
             add(producer(r,g,'arrive_expect_tx'),[producer(r,g,'acquire')])
-            add(producer(r,g,'A_issue'),[producer(r,g,'arrive_expect_tx')])
+            add(producer(r,g,'acquire_return'),[producer(r,g,'arrive_expect_tx')])
+            add(producer(r,g,'A_issue'),[producer(r,g,'acquire_return')])
             add(producer(r,g,'B_issue'),[producer(r,g,'A_issue')])
             add(producer(r,g,'A_visible'),[producer(r,g,'A_issue')])
             transfers.append(dict(group=g,operand='A',source_rank=r,destination_rank=r,
@@ -122,7 +198,10 @@ def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
                     add(consumer(r,w,g,'tail_wait0'),[consumer(r,w,g,'mma_return'),consumer(r,w,g,'retired')])
                     add(consumer(r,w,g,'safe_release'),[consumer(r,w,g,'tail_wait0')])
                 add(consumer(r,w,g,'release_issue'),[consumer(r,w,g,'safe_release')])
-                for d in range(2):add(arrival(r,w,d,g),[consumer(r,w,g,'release_issue')])
+                for d in range(2):
+                    emit=f'r{r}.w{w}.g{g}.empty_emit_to_r{d}'
+                    add(emit,[consumer(r,w,g,'release_issue')])
+                    add(arrival(r,w,d,g),[emit])
                 if local==k_tiles-1:
                     prefix=f'r{r}.w{w}.t{tile}.'
                     add(prefix+'MAIN',[consumer(r,w,g,'release_issue')])
@@ -171,6 +250,10 @@ def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
         +[f'r{r}.w{w}.FINAL' for r in range(2) for w in range(2)])
     add('cuda_complete',['source_safe_exit','r0.D_visible','r1.D_visible'])
     return dict(nodes=nodes,markers=markers,groups=groups,transfers=transfers,outputs=outputs,
+                empty_arrival_routes=cfg_a_empty_arrival_routes(),
+                producer_observation_ports=dict(empty_wait_return='r{rank}.g{group}.acquire',
+                    local_full_arrival='r{rank}.g{group}.arrive_expect_tx',
+                    producer_acquire_call_return='r{rank}.g{group}.acquire_return'),
                 source_guarantees=cfg_a_output_source_guarantees(output_tiles),stages=stages,k_tiles=k_tiles,
                 output_tiles=output_tiles,scope='Partial order; no calibrated service or GPU timing prediction')
 
