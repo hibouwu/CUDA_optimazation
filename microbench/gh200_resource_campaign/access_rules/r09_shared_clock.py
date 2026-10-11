@@ -162,7 +162,13 @@ def verify_shared_witness(sm_points,graph,certificate):
 
 
 def minimum_shared_slack(sm_points, declared_rate_cap_ghz=1.98):
-    """Smallest INTEGER epsilon; the real infimum is in (epsilon-1,epsilon]."""
+    """Smallest INTEGER epsilon, with a separate real-valued bound convention.
+
+    A finite positive rate cap makes the feasible set closed, so a rejected
+    integer lower bound is strictly below the attained real minimum. Without a
+    cap, arbitrarily steep curves can approach a rejected lower endpoint. The
+    infimum can then equal that endpoint without being feasible there.
+    """
     def solve(epsilon):
         graph=clock_graph(sm_points,epsilon,declared_rate_cap_ghz)
         return graph,solve_clock_graph(graph)
@@ -187,7 +193,9 @@ def minimum_shared_slack(sm_points, declared_rate_cap_ghz=1.98):
     verification=verify_shared_witness(sm_points,upper_graph,upper_proof)
     return dict(minimum_integer_endpoint_slack_ns=upper,original_sample_verification=verification,
                 real_minimum_bracket_ns=[max(0,upper-1),upper],
-                real_lower_bound_open=(upper>0),
+                real_lower_bound_open=(upper>0 and declared_rate_cap_ghz is not None),
+                real_bound_kind=('attained minimum' if declared_rate_cap_ghz is not None
+                                 else 'infimum; attainment not established'),
                 feasible_graph=upper_graph,feasible_certificate=upper_proof,
                 infeasible_graph=lower_graph,infeasible_certificate=lower_proof)
 
@@ -239,7 +247,7 @@ def main():
         limits=['Clock origins are removed within each SM; offsets remain free. No cross-SM clock64 subtraction or shared counter epoch is assumed.',
                 'A feasible potential defines a continuous piecewise-linear F through time nodes; sample inequalities guarantee a suitable time in each endpoint bracket.',
                 'Negative closed cycles with strictly negative integer bound sums prove infeasibility. Both adjacent integer bounds are retained.',
-                'Integer-ns bisection brackets a real-valued minimum; the lower bound is open unless zero is feasible.',
+                'Integer-ns bisection has an open real lower bound for a finite cap and positive upper bound. Without a cap it bounds an infimum inclusively; attainment is not established.',
                 'Endpoint allowance is a hypothetical per-endpoint budget, not a measured timer precision or a proved read enclosure.',
                 'Arbitrary shared rate trajectories can change rapidly. This does not impose or identify physical DVFS dynamics.',
                 'uncapped_shared removes the rate upper bound; do not attribute a capped-only rejection to common nonnegative rate alone.',

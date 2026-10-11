@@ -42,6 +42,21 @@ class SharedClockConsistency(unittest.TestCase):
         nested={0:[(0,0),(100,100)],1:[(0,25),(200,75)]}
         self.assertEqual(minimum_shared_slack(nested,None)['minimum_integer_endpoint_slack_ns'],13)
 
+    def test_uncapped_infimum_can_equal_an_infeasible_integer_lower_bound(self):
+        # Two distinct cycles at one timer value cannot fit epsilon=0. For
+        # every epsilon>0, F can rise by one cycle over width 2*epsilon.
+        # The uncapped infimum is zero although the first feasible integer is 1.
+        points={0:[(0,0),(1,0)]}
+        uncapped=minimum_shared_slack(points,None)
+        self.assertEqual(uncapped['minimum_integer_endpoint_slack_ns'],1)
+        self.assertEqual(uncapped['real_minimum_bracket_ns'],[0,1])
+        self.assertFalse(uncapped['real_lower_bound_open'])
+        self.assertEqual(uncapped['real_bound_kind'],'infimum; attainment not established')
+        self.assertFalse(uncapped['infeasible_certificate']['feasible'])
+        capped=minimum_shared_slack(points,2)
+        self.assertTrue(capped['real_lower_bound_open'])
+        self.assertEqual(capped['real_bound_kind'],'attained minimum')
+
     def test_shifted_sm_epochs_and_global_time_leave_result_unchanged(self):
         points={0:[(0,0),(100,100)],1:[(0,25),(200,75)]}
         shifted={sm:[(c+10**18*(sm+1),n+10**18) for c,n in values] for sm,values in points.items()}
