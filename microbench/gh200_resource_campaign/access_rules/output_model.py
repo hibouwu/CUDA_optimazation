@@ -355,6 +355,179 @@ def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
                 output_tiles=output_tiles,scope='Partial order; no calibrated service or GPU timing prediction')
 
 
+def cfg_c_empty_arrival_routes():
+    """Enumerate signaling threads from cfg_c's actual 1x2 cluster mask."""
+    routes=[]
+    for source in range(2):
+        source_coord=(0,source)
+        for physical in range(128,384):
+            local=physical%128;row=(physical//32)%4;col=(local//8)%4
+            offset=4*row+col
+            destination=offset^((offset&3)<<2)
+            if local%8 or destination>=2:continue
+            destination_coord=(destination%1,destination//1)
+            same_row_or_col=(destination_coord[0]==source_coord[0]
+                             or destination_coord[1]==source_coord[1])
+            if not same_row_or_col:continue
+            wg=(physical-128)//128
+            routes.append(dict(source_rank=source,destination_rank=destination,consumer_wg=wg,
+                source_coord=list(source_coord),destination_coord=list(destination_coord),
+                physical_thread=physical,thread_in_wg=local,warp_in_wg=local//32,lane=local%32,
+                arrival_count=1,
+                emit_token_template=f'r{source}.w{wg}.g{{group}}.empty_emit_to_r{destination}',
+                visibility_token_template=f'r{source}.w{wg}.g{{group}}.empty_to_r{destination}'))
+    return routes
+
+
+def cfg_c_rank_dependencies(source_ports):
+    """Close B's cfg_c source ports using the fixed cooperative S4 lifecycle.
+
+    The 256x128/cluster1x2 graph is constructed from its own source contract.
+    Source-only empty predecessor lists never replace lifecycle predecessors.
+    cluster_initialized is an external entry boundary, not a measured zero time.
+    This partial order contains no service prices, trace anchors or GPU claims.
+    """
+    if not isinstance(source_ports,dict) or source_ports.get('schema')!='gh200-cfg-c-source-ports/1':
+        raise ValueError('cfg_c source-port schema/1 required')
+    stages=source_ports.get('stages');k_tiles=source_ports.get('k_tiles');output_tiles=source_ports.get('output_tiles')
+    if (any(type(v) is not int for v in (stages,k_tiles,output_tiles))
+        or stages!=4 or k_tiles<2 or output_tiles<1):
+        raise ValueError('fixed cfg_c stage4, integer Ktiles>=2 and outputs>=1 required')
+    total=k_tiles*output_tiles;supplied=source_ports.get('nodes')
+    source_groups=source_ports.get('groups',[])
+    if len(source_groups)!=total:raise ValueError('all source group states required')
+    for g,item in enumerate(source_groups):
+        expected=dict(group=g,slot=g%4,generation=g//4,full_wait_phase=g//4%2,
+            empty_wait_phase=1^(g//4%2),previous_group=g-4 if g>=4 else None,
+            tile=g//k_tiles,k=g%k_tiles,expected_full_bytes=49152)
+        if any(item.get(key)!=value for key,value in expected.items()):
+            raise ValueError('cfg_c source slot/generation/full-byte state differs')
+    if not isinstance(supplied,dict) or any(not isinstance(p,list) for p in supplied.values()):
+        raise ValueError('source node predecessor lists required')
+    expected_ports={f'r{r}.g{g}.{port}' for g in range(total) for r in range(2)
+                    for port in ('arrive_expect_tx','acquire_return')}
+    declared=source_ports.get('external_producer_ports',[])
+    if len(declared)!=len(expected_ports) or set(declared)!=expected_ports:
+        raise ValueError('exact external producer-port identities required')
+    expected_requests={(g,r,a,size) for g in range(total) for r in range(2)
+                       for a,size in (('A',16384),('B0',8192),('B1',8192))}
+    requests=source_ports.get('input_requests',[])
+    identities={(x['group'],x['source_rank'],x['atom'],x['bytes']) for x in requests}
+    if len(requests)!=len(expected_requests) or identities!=expected_requests:
+        raise ValueError('cfg_c requires six source atoms and 64KiB per cluster/group')
+    expected_deliveries={(g,s,d,a,size) for g in range(total) for s in range(2)
+                         for a,size,targets in (('A',16384,(0,1)),('B0',8192,(s,)),('B1',8192,(s,)))
+                         for d in targets}
+    deliveries=source_ports.get('input_deliveries',[])
+    identities={(x['group'],x['source_rank'],x['destination_rank'],x['atom'],x['bytes']) for x in deliveries}
+    if len(deliveries)!=len(expected_deliveries) or identities!=expected_deliveries:
+        raise ValueError('cfg_c requires two multicast A16 and two local B8 atoms per destination')
+    def require(name,parents):
+        if name not in supplied or not set(parents)<=set(supplied[name]):
+            raise ValueError('source dependency missing: '+name)
+    for row in requests:
+        prefix=f"r{row['source_rank']}.g{row['group']}.";atom=row['atom']
+        if (row['issue'],row['source_ready'])!=(prefix+atom+'_issue',prefix+atom+'_source_ready'):
+            raise ValueError('source atom port identity differs')
+        require(row['issue'],[prefix+'acquire_return' if atom=='A' else prefix+'A_issue'])
+        require(row['source_ready'],[row['issue']])
+    for row in deliveries:
+        prefix=f"r{row['source_rank']}.g{row['group']}.";atom=row['atom']
+        if (row['source_ready'],row['completion'])!=(prefix+atom+'_source_ready',prefix+atom+f"_delivered_r{row['destination_rank']}"):
+            raise ValueError('destination atom port identity differs')
+        require(row['completion'],[row['source_ready']])
+    full_ports={f'r{r}.g{g}.full' for g in range(total) for r in range(2)}
+    if len(source_ports.get('full_output_ports',[]))!=len(full_ports) or set(source_ports['full_output_ports'])!=full_ports:
+        raise ValueError('all cfg_c full output ports required')
+    for g in range(total):
+        for r in range(2):
+            prefix=f'r{r}.g{g}.'
+            require(prefix+'B_issue',[prefix+'B0_issue',prefix+'B1_issue'])
+            require(prefix+'full',[prefix+'arrive_expect_tx']+
+                [f'r{s}.g{g}.A_delivered_r{r}' for s in range(2)]+
+                [prefix+a+f'_delivered_r{r}' for a in ('B0','B1')])
+    # Build lifecycle first. Later source-node union cannot erase its predecessors.
+    nodes={'cluster_initialized':[]};markers={};groups=[];tail_waits=[]
+    routes=cfg_c_empty_arrival_routes()
+    def add(name,parents):nodes[name]=list(dict.fromkeys(nodes.get(name,[])+parents))
+    def arrivals(rank,group):
+        return [route['visibility_token_template'].format(group=group)
+                for route in routes if route['destination_rank']==rank]
+    for g in range(total):
+        tile,local=divmod(g,k_tiles)
+        groups.append(dict(group=g,tile=tile,k=local,slot=g%4,generation=g//4,
+            empty_wait_phase=1^(g//4%2),full_wait_phase=g//4%2,
+            expected_full_bytes=49152,empty_arrivals=4))
+        for r in range(2):
+            prefix=f'r{r}.g{g}.'
+            add(prefix+'acquire',([f'r{r}.g{g-1}.B_issue'] if g else ['cluster_initialized'])
+                +(arrivals(r,g-4) if g>=4 else []))
+            add(prefix+'arrive_expect_tx',[prefix+'acquire'])
+            add(prefix+'acquire_return',[prefix+'arrive_expect_tx'])
+            for w in range(2):
+                c=f'r{r}.w{w}.g{g}.'
+                previous=[]
+                if local==0 and tile:previous=[f'r{r}.w{w}.t{tile-1}.DONE']
+                elif local==1:previous=[f'r{r}.w{w}.g{g-1}.commit']
+                elif local>=2:previous=[f'r{r}.w{w}.g{g-2}.release_issue']
+                add(c+'wait_return',[prefix+'full']+previous)
+                before=c+'wait_return'
+                if local==0:
+                    before=f'r{r}.w{w}.t{tile}.FIRST';add(before,[c+'wait_return']);markers[before]=before
+                add(c+'commit',[before])
+                add(c+'retired',[c+'commit']+([f'r{r}.w{w}.g{g-1}.retired'] if local else []))
+                if local<k_tiles-1:
+                    add(c+'safe_release',[f'r{r}.w{w}.g{g+1}.commit',c+'retired'])
+                else:
+                    add(c+'mma_return',[f'r{r}.w{w}.g{g-1}.release_issue'])
+                    add(c+'tail_wait0',[c+'mma_return',c+'retired'])
+                    add(c+'safe_release',[c+'tail_wait0'])
+                    add(f'r{r}.w{w}.t{tile}.MAIN',[c+'release_issue'])
+                add(c+'release_issue',[c+'safe_release'])
+                for route in routes:
+                    if (route['source_rank'],route['consumer_wg'])!=(r,w):continue
+                    emit=route['emit_token_template'].format(group=g)
+                    add(emit,[c+'release_issue'])
+                    add(route['visibility_token_template'].format(group=g),[emit])
+    local_output=cooperative_output_source_dependencies('cfg_c',output_tiles)
+    for r in range(2):
+        for name,parents in local_output['nodes'].items():
+            add(name.replace('r0.',f'r{r}.'),[p.replace('r0.',f'r{r}.') for p in parents])
+        for name in local_output['markers']:
+            key=name.replace('r0.',f'r{r}.');markers[key]=key
+        previous=f'r{r}.g{total-1}.B_issue'
+        # producer_tail waits all four slots in its actual cyclic state order.
+        for step in range(4):
+            count=total+step;released=count-4;event=f'r{r}.producer_tail_wait{step}'
+            add(event,[previous]+(arrivals(r,released) if released>=0 else ['cluster_initialized']))
+            tail_waits.append(dict(rank=r,step=step,slot=count%4,generation=count//4,
+                empty_wait_phase=1^(count//4%2),release_group=released if released>=0 else None,
+                initial_empty=released<0,event=event))
+            previous=event
+        add(f'r{r}.producer_tail',[previous])
+    for name,parents in supplied.items():add(name,parents)
+    add('source_safe_exit',[f'r{r}.producer_tail' for r in range(2)]+
+        [f'r{r}.w{w}.FINAL' for r in range(2) for w in range(2)])
+    add('cuda_complete',['source_safe_exit','r0.D_visible','r1.D_visible'])
+    if {name for name,parents in nodes.items() if not parents}!={'cluster_initialized'}:
+        raise ValueError('unresolved source roots remain after lifecycle composition')
+    graph=dict(schema='gh200-cfg-c-rank-dependencies/1',nodes=nodes,markers=markers,groups=groups,
+        stages=4,k_tiles=k_tiles,output_tiles=output_tiles,tile=[256,128,64],cluster=[1,2],
+        empty_arrival_routes=routes,producer_tail_waits=tail_waits,
+        input_requests=[dict(x) for x in requests],input_deliveries=[dict(x) for x in deliveries],
+        input_totals=dict(source_requests=len(requests),source_payload_bytes=sum(x['bytes'] for x in requests),
+            destination_atoms=len(deliveries),destination_payload_bytes=sum(x['bytes'] for x in deliveries)),
+        local_output_layout=local_output['layout'],
+        source_guarantees=[dict(item,rank=r,source_completion=item['source_completion'].replace('r0.',f'r{r}.'),
+            guarantee_token=item['guarantee_token'].replace('r0.',f'r{r}.'))
+            for r in range(2) for item in local_output['layout']['source_guarantees']],
+        external_entry_ports=['cluster_initialized'],external_producer_ports=[],
+        completion_ports=dict(source_safe_exit='source_safe_exit',global_D_visible=['r0.D_visible','r1.D_visible'],cuda_complete='cuda_complete'),
+        scope='Fixed cfg_c static cooperative cluster lifecycle. Entry time and every service remain unpriced; no autonomous timing prediction or qualification.')
+    dependency_order(graph)
+    return graph
+
+
 def dependency_order(graph):
     """Deterministic topological order; reject missing predecessors and dependency cycles."""
     nodes=graph['nodes'];children={n:[] for n in nodes};degree={n:len(p) for n,p in nodes.items()}

@@ -302,3 +302,15 @@ R14归档没有正式cfg_c。其`baseline`为128×256、cluster2×1、stage4；�
 `cooperative_output_valid_subtiles`还保留各子tile的逻辑有效输出量。cfg_c的50% N边界为`[16,16,16,16,0,0,0,0]KiB`，两buffer各32KiB；同面积M边界为`[16,0,16,0,16,0,16,0]KiB`，两buffer分别64/0KiB。面积相同不保留最后有效子tile及缓冲分布，仍需实测才能判断这些差别是否改变服务。全OOB保留八个pipeline group，逻辑有效字节不解释为物理源读量或带宽。
 
 V09 P2的静态512个输出tile中，272个完整、16个上述N半边界、224个全OOB；逻辑有效FP32字节总和36,700,160，精确等于4096×2240×4。该账本不读取实测时间、不改关键CTA集合或partial插值，也不把P2的主循环漏算转成输出罚项。26项针对性CPU测试通过；cfg_a原40进程复放的两个CSV完整相同，JSON只变代码SHA，T1/T2/T8原完整依赖图逐字段相同。[八子tile报告与静态账本](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-eight-subtile-lifecycle-v2/README.md)保存适用范围与复算命令。尚无新局部留出或输出服务价。
+
+### cfg_c 完整 rank 生命周期接口
+
+`cfg_c_rank_dependencies(source_ports)`接收B的`gh200-cfg-c-source-ports/1`图，闭合固定256×128×64、cluster1×2、stage4、两consumer WG及八个输出子tile的依赖。它保留本地A16KiB向两rank投送、B0/B1各8KiB只投本地的实际结构；每rank full需本地expect_tx、两rank的A和本地B0/B1共48KiB。输入源、目的可见、empty emit及arrival分别成节点。
+
+`cfg_c_empty_arrival_routes`由实际1×2的同排/同列mask和swizzle枚举。每个源rank的thread128/256分别向rank0 arrival，thread168/296分别向rank1 arrival；每个目的槽共需四次arrival。物理编号恰与cfg_a相同，但本图不调用cfg_a的rank拓扑、32KiB full或B广播规则。
+
+group g的acquire依赖本rank前一group的全部B issue；g≥4还需g−4的四个empty arrival。两WG分别在下一commit与本group退休后安全释放，最后group另经wait0。slot/generation/phase跨输出连续；producer tail按实际状态顺序检查全部四槽，短工作量下未使用槽保留初始empty条件。B开放的expect_tx/acquire_return空前驱只在合并时加入并集，不能覆盖这些生命周期前驱。
+
+输出部分接入原cfg_c本地八subtile子图。`source_safe_exit`取两rank producer tail及四个consumer FINAL，`cuda_complete`再等待两个rank的D_visible。源read0和全局D可见仍分开；`cluster_initialized`是明确的外部入口边界，没有零耗时或已测就绪时刻含义。当前接口要求Ktiles≥2、两个rank具有相同正输出次数，适用于本批静态cooperative调度；全idle cluster、动态调度、split-K及未定服务不在闭合范围。
+
+[cfg_c源码绑定与完整依赖图](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/C-20261011-cfg-c-rank-dependencies-v2/README.md)覆盖B已保存的12种S4/K/T模板、26个静态条件。44项相关CPU测试通过，含跨输出复用、短K尾部、开放端口合并、实际源缺失拒绝和局部B延迟经empty链传播的合成依赖验证；合成延迟不是服务价格。原cfg_a完整T1/T2/T8图及cfg_c本地T1/T4/T12图逐字段不变，没有新增GPU、细阶段时序资格或独立局部留出。
