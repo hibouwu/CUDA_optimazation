@@ -28,6 +28,7 @@ def process(events, sample, gpu_uuid):
             raise ValueError('invalid numerical index')
         if value != reference(index//3072, index%3072, 4096, 17):
             raise ValueError('numerical sample mismatch')
+    common_origin = min(call['trace'][cta*1296+1] for cta in range(132))
     series = {}
     sms = {}
     for record in decoded['records']:
@@ -35,15 +36,19 @@ def process(events, sample, gpu_uuid):
         head = call['trace'][cta*1296:(cta+1)*1296]
         origin_ns, origin_cycles = head[1], head[0]
         sms[str(cta)] = record['sm']
+        series[f'{cta}/GLOBAL_ENTRY'] = [origin_ns-common_origin, None]
+        series[f'{cta}/GLOBAL_PRODUCER'] = [head[13]-common_origin, None]
         series[f'{cta}/producer'] = [head[13]-origin_ns, head[3]-origin_cycles]
         for role in record['roles']:
             wg = role['wg']
+            series[f'{cta}/{wg}/GLOBAL_FINAL'] = [role['final_ns']-common_origin, None]
             series[f'{cta}/{wg}/FINAL'] = [role['final_ns']-origin_ns, role['final_cycles']-origin_cycles]
             previous_ns, previous_cycles = head[13], head[3]
             for j, tile in enumerate(role['tiles']):
                 coord = ','.join(map(str, tile['work']))
                 prefix = f'{cta}/{wg}/{j}/{coord}/'
                 for k, name in enumerate(('FIRST', 'MAIN', 'PERMIT', 'DONE')):
+                    series[prefix+'GLOBAL_'+name] = [tile['ns'][k]-common_origin, None]
                     series[prefix+name] = [tile['ns'][k]-origin_ns, tile['cycles'][k]-origin_cycles]
                 series[prefix+'L'] = [tile['ns'][1]-tile['ns'][0], tile['cycles'][1]-tile['cycles'][0]]
                 for name, begin, end in (('W',1,2),('E',2,3)):
@@ -88,7 +93,7 @@ def evaluate(processes, manifest):
         delta = [b['series'][key][0]-a['series'][key][0] for a,b in pairs]
         local.append(dict(series=key, **metric(delta, gates['per_common_series_median_absolute_ns'],
             gates['per_common_series_maximum_absolute_ns']),
-            native_cycle_deltas=[b['series'][key][1]-a['series'][key][1] for a,b in pairs],
+            native_cycle_deltas=[None if a['series'][key][1] is None else b['series'][key][1]-a['series'][key][1] for a,b in pairs],
             sm_changed=[a['sms'][key.split('/')[0]] != b['sms'][key.split('/')[0]] for a,b in pairs]))
     event = metric([b['elapsed_us']/a['elapsed_us']-1 for a,b in pairs],
                    gates['event_median_absolute_ratio'], gates['event_maximum_absolute_ratio'])

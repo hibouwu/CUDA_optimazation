@@ -900,7 +900,8 @@
     "each CTA/WG FINAL minus its CTA entry",
     "each CTA/WG/output PERMIT minus MAIN (W), DONE minus PERMIT (E)",
     "each CTA/WG FIRST minus previous DONE, first output FIRST minus producer-start (GAP)",
-    "each CTA/WG FINAL minus last DONE (TAIL)"
+    "each CTA/WG FINAL minus last DONE (TAIL)",
+    "each CTA entry, producer-start, each output FIRST/MAIN/PERMIT/DONE and each WG FINAL minus per-call minimum CTA entry (ns only)"
   ],
   "requirements": [
     "All 20 records required; alternating pair order, serial fresh processes, 16 same-buffer same-dual observer-off prefix calls per target.",

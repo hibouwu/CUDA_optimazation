@@ -57,6 +57,14 @@ class TailControl(unittest.TestCase):
         self.assertEqual(local['sm_changed'],[True]*10)
         self.assertFalse(r['incremental_control_passed'])
 
+    def test_whole_cta_translation_is_caught_by_common_origin(self):
+        for p in self.rows:
+            p['series']['0/GLOBAL_ENTRY']=[80 if p['flag'] else 0,None]
+        r=evaluate(self.rows,self.manifest)
+        self.assertFalse(r['incremental_control_passed'])
+        global_row=next(x for x in r['local'] if x['series']=='0/GLOBAL_ENTRY')
+        self.assertEqual(global_row['native_cycle_deltas'],[None]*10)
+
     def test_opposed_endpoints_require_direct_window_gate(self):
         for p in self.rows:
             p['series']['0/0/0/0,0/PERMIT']=[1600,2400]
