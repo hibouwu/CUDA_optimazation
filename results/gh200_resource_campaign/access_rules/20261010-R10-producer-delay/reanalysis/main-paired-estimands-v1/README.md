@@ -4,6 +4,8 @@ B 提交 `1eb0b5ec846cbb9d7588c7962aa9ab58dacd81f0` 已接入为 `ad34fe27`。�
 
 两侧各 90 个输入 SHA 已核对，86 个共同文件字节相同；四个模块重定位，其中三个字节相同。`analyze_r18.py` 在主线增加了其他 trace 格式及其他分析功能，不能称为同一 SHA。其 `replay` 的 AST 差异只有 sparse trace 分派，实际 `r18-dual-clock-events` 在两版均不进入该分支。完整报告除输入路径/对应模块身份外一致，两份完整 gzip 账本字节相同，详见 [main-receipt.json](main-receipt.json)。
 
+另已重放 [完整解码路径限定审查](../main-paired-decoder-review-v1/B-decoder-review.json)：`validate_warmup` 新增的 prefix 检查在本批输入正常返回，release 校验分支未启用。分别加载两版解码器后，40 个完整 replay 字典、5280 个 CTA 字典和 17280 个输出 tile 记录全部相同；这只证明本批输入的结果一致，不宣称整个解码模块或所有 helper 相同。
+
 复制 B 的独立 `verify.py` 后在主线新输出上运行，不导入模型或分析模块，直接解码原始 trace 字并取排序中间两项。52800 个时长标量、10560 个同调用闭合关系、全部摘要和响应均通过，见 [verification.json](verification.json)。
 
 端点保持原定义：`P0=prod−entry`、`S=FIRST−prod`、`L=MAIN−FIRST`。`S+L` 不包含显式起步等待。

@@ -1,0 +1,18 @@
+{
+  "A_commit": "4669075053e94b78af656667e8f1ee34e94eeaad",
+  "main_cherry_pick": "1ce87c36",
+  "delivery_sha_verified": {
+    "README.md": "1b5caf5eb08436226b788594797ade653a38f2ba9274f422950110de47464b57",
+    "cases.json": "c1795d17352f839bbff51fe17a1294c10e60c5496f6f30e80e0e41f6d5e7895d",
+    "cases.sha256": "d8ebb3fc4934f031a6ed868d9e50bf101a323e4042951bb46269be6b898f27e8",
+    "r09_median_composition.py": "7a6f3d48fb04737e1e6d423a713af57b79a4b13e01e9ae13dc7d7f90c2d5492b",
+    "replay-verification.json": "cac5747a364e7fdef4911a5af06947cba9a03d11c14482f2baa8f554e13605a2",
+    "report.json": "11dd17456166cb8fb0b334d5154155fa97eaebf494b7e3a5af6ef10b93a4f7cd",
+    "source-identity.json": "9ff930b0f8662e33335e71f848be9a35b0062c1e7fea251fbc0e1b85257eee77",
+    "verification.json": "0b38041937252c3d95f06a109a59ddd623d2140e21177257627fcc04b590ea57",
+    "verify.py": "751f0eec6d957533455540c25d8d9f42d33ff066f36e65a9db47318d65938c0a"
+  },
+  "report_and_verification_byte_identical": true,
+  "GPU_evidence": false,
+  "qualification": false
+}

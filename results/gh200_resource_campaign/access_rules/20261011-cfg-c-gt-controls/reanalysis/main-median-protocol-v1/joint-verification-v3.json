@@ -1,0 +1,10 @@
+{
+  "processes": 40,
+  "raw_window_vectors": 17280,
+  "directly_checked_composite_duration_scalars": 69120,
+  "consumer_envelopes": 40,
+  "complete_median_diagnostic_equal_to_old_replay": true,
+  "joint_receipt_sha256": "0761ec90c1c45e8d452ca7236278f7cc1eab99cc05519c062f1e8f22c53ac838",
+  "verifier_sha256": "e5a1acbce535cef2fb722e19671410cca74bf68960351bb744bf97a1795381ea",
+  "qualification": false
+}

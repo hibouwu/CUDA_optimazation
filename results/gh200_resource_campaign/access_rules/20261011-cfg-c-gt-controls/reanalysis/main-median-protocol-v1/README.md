@@ -2,7 +2,7 @@
 
 本候选验证固定采样协议下两臂**记录 ns 的总体中位数之差**。它不验证逐次点值相同，也不从分项中位数相加、相除或取最大得到完整时间。关键 CTA 的逐次排序、物理时间戳准确度、完整时间和跨卡迁移继续单独验证。
 
-状态为提案，尚未冻结执行或提交 GPU。统计判定器已实现，原始记录提取复放已执行；未来采集日志、实验单元身份及采样假设的验收仍需完成。`evaluate.py` 是数值统计内核，不是完整实验资格判定器。
+状态为提案，尚未冻结执行或提交 GPU。统计判定器和带身份校验的联合记录提取器已实现，并在旧原始数据上复放；未来新采集及采样假设的验收仍需完成。`evaluate.py` 是数值统计内核，不是完整实验资格判定器。
 
 ## 判定
 
@@ -32,7 +32,17 @@
 2. 联合窗口的区间直接用其同调用原始样本计算，不把分项中位数或分项区间中心相加。若将联合窗口加入正式同时覆盖族，需要更新族大小与秩，不能沿用当前 6372 系列的计数。
 3. 本候选主目标仍是两臂总体中位数之差；调度块差值的中位数只能作为另列统计，不能互换或要求二者相等。原逐次 64/256 ns 对照仍按预列 block 配对计算。
 
-这些要求尚未由数值数组接口完整执行，正式使用前必须接入有身份校验的联合记录提取器。此次反馈不改变候选容差、采样规模或任何资格。
+现由 `extract_joint.py` 和 `joint_records.py` 执行原始身份到联合向量、再到数值数组的提取。纯数值 `evaluate.py` 仍不能自行证明其调用者提交的数组身份。此次反馈不改变候选容差、采样规模或任何资格。
+
+### 联合记录提取与复核
+
+提取器核对调用者固定的协议 SHA、原始文件 SHA、声明进程 ID/臂/样本数、设备和 binary 身份及冻结解码器；拒绝重复 ID、重复 block/臂、重复 raw SHA、缺坐标、错误 observer 臂含义和配对 CTA→SM 映射变化。原始记录通过冻结解码器的数值与协议检查后，保留完整 setup、16次前序event及前序协议字段、完整 series 的 ns/cycles、CTA→SM、源 raw 路径/SHA、同调用 event 和 block/臂身份，再按共同 block 顺序产生边际统计输入。消费者不能仅凭一个“已验证”标记跳过这些绑定。
+
+每进程另存 864 个复合窗口（432 个 FIRST→DONE 与 432 个 MAIN→DONE，分别保存 ns 和同角色 cycles）及一个 consumer FINAL 记录包络。复合窗口在同调用内按原端点相减，并核对 L+W+E 或 W+E；包络仅在共享记录 GT 原点下取最大，不跨 SM 对原生 clock64 取最大。这些复合量**未加入**原 6372 系列的等价覆盖族，也不代表源安全退出、全局 D 可见或 CUDA 完成。
+
+正式保留的旧数据提取是 [joint-replay-v3/receipt.json](joint-replay-v3/receipt.json)，使用明确标为旧数据回放的 [十次协议副本](joint-replay-protocol.json)，不冒充新 64-block 采集。40 进程的完整统计输出与原候选回放一致；[独立 trace 字验证](joint-verification-v3.json)核对 17280 个窗口、69120 个复合时长标量和 40 个包络。共 13 项定向测试通过，含重复/缺项、身份、臂含义和 SM 映射拒绝。旧试验的 block 仍只是原 pair 标签，不称为新的随机 block。
+
+[A 的精确换算/求和/最大值反例](../main-median-composition-contract-v1/README.md)与 [C 的完整系列包络反例及旧记录算术](../main-median-output-contract-v1/README.md)均已主线复核。局部完整边际甚至逐项条件等价，仍不能直接充当逐次 DAG 费用或最后 CTA 证书；同调用联合数据的保留是后续验证输入，不是联合模型已经正确的证明。
 
 ## 已执行的核对
 
@@ -49,7 +59,7 @@
 ```sh
 python -m unittest discover \
   -s results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1 \
-  -p test_evaluate.py -v
+  -p 'test_*.py' -v
 ```
 
 重新生成候选及旧数据回放，输出目录须不存在：
@@ -60,4 +70,4 @@ python results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/r
   --output /tmp/gh200-median-proposal
 ```
 
-`evaluate.py` 的输入是 `{off_on: {series: {arm0: [ns…], arm1: [ns…]}}, off_off: …}`。数组按共同 block 顺序排列，配对身份必须由提取器先验证；不能仅凭数值数组证明身份。CLI 要求调用者提供协议 SHA，拒绝身份不符和覆盖已有输出。此工具不能代替上述尚未完成的执行与观测验收。
+`evaluate.py` 的输入是 `{off_on: {series: {arm0: [ns…], arm1: [ns…]}}, off_off: …}`。数组按共同 block 顺序排列；正式路径使用 `extract_joint.py --run RUN --protocol PROTOCOL --expected-protocol-sha256 SHA --output NEW_DIRECTORY` 从绑定的原始记录生成。CLI 拒绝身份不符和覆盖已有输出。提取器当前只支持原已审查的固定 cfg_c GT 解码协议，不自动扩展到 cfg_a/b、其他 binary 或采样规则；物理时间与采样假设仍未得到认证。

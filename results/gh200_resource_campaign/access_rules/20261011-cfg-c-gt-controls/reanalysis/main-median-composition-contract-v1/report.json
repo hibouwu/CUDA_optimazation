@@ -1,0 +1,320 @@
+{
+  "cases_sha256": "c1795d17352f839bbff51fe17a1294c10e60c5496f6f30e80e0e41f6d5e7895d",
+  "complete_component_marginals_identical": true,
+  "composition": [
+    {
+      "component_distributions": [
+        [
+          {
+            "probability": "2/3",
+            "value": "1"
+          },
+          {
+            "probability": "1/3",
+            "value": "9"
+          }
+        ],
+        [
+          {
+            "probability": "2/3",
+            "value": "1"
+          },
+          {
+            "probability": "1/3",
+            "value": "9"
+          }
+        ]
+      ],
+      "component_medians": [
+        "1",
+        "1"
+      ],
+      "durations": [
+        [
+          "1",
+          "1"
+        ],
+        [
+          "1",
+          "1"
+        ],
+        [
+          "9",
+          "9"
+        ]
+      ],
+      "max_of_component_medians": "1",
+      "median_parallel_time": "1",
+      "median_serial_time": "2",
+      "name": "aligned",
+      "parallel_last_components": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "parallel_times": [
+        "1",
+        "1",
+        "9"
+      ],
+      "serial_times": [
+        "2",
+        "2",
+        "18"
+      ],
+      "sum_of_component_medians": "2"
+    },
+    {
+      "component_distributions": [
+        [
+          {
+            "probability": "2/3",
+            "value": "1"
+          },
+          {
+            "probability": "1/3",
+            "value": "9"
+          }
+        ],
+        [
+          {
+            "probability": "2/3",
+            "value": "1"
+          },
+          {
+            "probability": "1/3",
+            "value": "9"
+          }
+        ]
+      ],
+      "component_medians": [
+        "1",
+        "1"
+      ],
+      "durations": [
+        [
+          "1",
+          "1"
+        ],
+        [
+          "1",
+          "9"
+        ],
+        [
+          "9",
+          "1"
+        ]
+      ],
+      "max_of_component_medians": "1",
+      "median_parallel_time": "9",
+      "median_serial_time": "10",
+      "name": "split",
+      "parallel_last_components": [
+        [
+          0,
+          1
+        ],
+        [
+          1
+        ],
+        [
+          0
+        ]
+      ],
+      "parallel_times": [
+        "1",
+        "9",
+        "9"
+      ],
+      "serial_times": [
+        "2",
+        "10",
+        "10"
+      ],
+      "sum_of_component_medians": "2"
+    }
+  ],
+  "consequence": "Exact local population medians, even complete marginals, do not replace joint same-execution conversion/phase/CTA evidence and independent complete-time validation.",
+  "conversion": [
+    {
+      "cycle_distribution": [
+        {
+          "probability": "1/3",
+          "value": "8"
+        },
+        {
+          "probability": "1/3",
+          "value": "10"
+        },
+        {
+          "probability": "1/3",
+          "value": "12"
+        }
+      ],
+      "median_cycles": "10",
+      "median_rate": "5/4",
+      "median_time": "8",
+      "name": "aligned",
+      "rate_distribution": [
+        {
+          "probability": "1/3",
+          "value": "1"
+        },
+        {
+          "probability": "1/3",
+          "value": "5/4"
+        },
+        {
+          "probability": "1/3",
+          "value": "3/2"
+        }
+      ],
+      "ratio_of_component_medians": "8",
+      "rows": [
+        {
+          "conversion_error": "-1/5",
+          "cycle_error": "1/4",
+          "cycles": "8",
+          "rate": "1",
+          "state": 0,
+          "time": "8",
+          "time_error": "0"
+        },
+        {
+          "conversion_error": "0",
+          "cycle_error": "0",
+          "cycles": "10",
+          "rate": "5/4",
+          "state": 1,
+          "time": "8",
+          "time_error": "0"
+        },
+        {
+          "conversion_error": "1/5",
+          "cycle_error": "-1/6",
+          "cycles": "12",
+          "rate": "3/2",
+          "state": 2,
+          "time": "8",
+          "time_error": "0"
+        }
+      ],
+      "same_state_error_factorization": true,
+      "signed_error_medians": {
+        "conversion_error": "0",
+        "cycle_error": "0",
+        "time_error": "0"
+      },
+      "time_distribution": [
+        {
+          "probability": "1",
+          "value": "8"
+        }
+      ]
+    },
+    {
+      "cycle_distribution": [
+        {
+          "probability": "1/3",
+          "value": "8"
+        },
+        {
+          "probability": "1/3",
+          "value": "10"
+        },
+        {
+          "probability": "1/3",
+          "value": "12"
+        }
+      ],
+      "median_cycles": "10",
+      "median_rate": "5/4",
+      "median_time": "20/3",
+      "name": "rotated",
+      "rate_distribution": [
+        {
+          "probability": "1/3",
+          "value": "1"
+        },
+        {
+          "probability": "1/3",
+          "value": "5/4"
+        },
+        {
+          "probability": "1/3",
+          "value": "3/2"
+        }
+      ],
+      "ratio_of_component_medians": "8",
+      "rows": [
+        {
+          "conversion_error": "0",
+          "cycle_error": "1/4",
+          "cycles": "8",
+          "rate": "5/4",
+          "state": 0,
+          "time": "32/5",
+          "time_error": "1/4"
+        },
+        {
+          "conversion_error": "1/5",
+          "cycle_error": "0",
+          "cycles": "10",
+          "rate": "3/2",
+          "state": 1,
+          "time": "20/3",
+          "time_error": "1/5"
+        },
+        {
+          "conversion_error": "-1/5",
+          "cycle_error": "-1/6",
+          "cycles": "12",
+          "rate": "1",
+          "state": 2,
+          "time": "12",
+          "time_error": "-1/3"
+        }
+      ],
+      "same_state_error_factorization": true,
+      "signed_error_medians": {
+        "conversion_error": "0",
+        "cycle_error": "0",
+        "time_error": "1/5"
+      },
+      "time_distribution": [
+        {
+          "probability": "1/3",
+          "value": "32/5"
+        },
+        {
+          "probability": "1/3",
+          "value": "20/3"
+        },
+        {
+          "probability": "1/3",
+          "value": "12"
+        }
+      ]
+    }
+  ],
+  "cross_card_qualified": false,
+  "limits": "Synthetic nonidentifiability of a general implication; no claim that these populations occur on GH200 or give its error floor. Extra validated dependence/range assumptions can change the inference.",
+  "median_parallel_identified_by_stage_marginals": false,
+  "median_serial_identified_by_stage_marginals": false,
+  "median_time_identified_by_conversion_marginals": false,
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "prospective_holdout_qualified": false,
+  "schema": "r09-synthetic-median-composition-report/1",
+  "scope": "Exact known equiprobable populations; no GPU samples, fitted rule or timing score.",
+  "source_sha256": "7a6f3d48fb04737e1e6d423a713af57b79a4b13e01e9ae13dc7d7f90c2d5492b"
+}

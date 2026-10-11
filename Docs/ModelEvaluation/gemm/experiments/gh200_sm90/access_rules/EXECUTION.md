@@ -323,3 +323,9 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [局部中位数等价候选协议](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：落实全部6372系列×两批×两臂的数值判定器，候选95%同时覆盖、±64ns中位数差容差、64 block共256进程随机交错表；仅提案未冻结/执行，样本量不保证精度。52SHA/40原raw重提取，12744原点控制逐项复现4912/4729失败；n10回放全部覆盖不足，不追认通过。8定向测试通过；统计等价与观察/时间戳/关键CTA资格分开，全部资格false。B/C/A继续限定joint端点与统计组合审查，未改公共模型或启动GPU。
 
 [R10联合端点统计主线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-paired-estimands-v1/README.md)：B 1eb0b5ec接入ad34fe27；两侧90SHA（86共同、3重定位字节同、1新增其他trace分支）核对，完整报告除输入路径/模块身份同、两gzip账本同。独立原始字复验5280CTA/52800时长/13200响应向量通过。B32分段响应中位数之和336ns而联合窗口288ns；B0配对响应816ns而条件中位数差832ns。已接入候选协议联合记录/独立预列估计对象要求，未改统计目标、容差、旧控制或资格，无GPU。
+
+[中位数组合精确反例主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-composition-contract-v1/README.md)：A 46690750接入1ce87c36，9交付SHA、完整报告及有限CDF验证字节同；四合成总体/6换算状态、6种rate和3种stage列置换，4错误组合主张拒绝。只证明边际不能一般决定C/r、sum、max及逐次最后者，不是GPU误差或新价格。
+
+[中位数输出组合边界主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-output-contract-v1/README.md)：C 11交付SHA、完整报告除路径同、4数据文件及独立验证字节同，无实现行动项；完整6372系列合成边际全等价仍有FINAL包络median差H，67584合成关系核对。旧17280角色/8640merged同调用恒等式保留；统计不交换，不授逐次DAG/排序/完成资格。
+
+[联合进程记录提取器](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：新增raw身份→完整setup/前序/同调用series→固定block数组的提取路径，拒绝重复、缺项、错误臂与SM映射变化；13定向测试。正式joint-replay-v3复放40raw，独立字复核17280窗口/69120复合标量/40 consumer FINAL包络，完整median输出与旧回放一致。复合量另存不入原6372覆盖族，不称CUDA或全局D完成；A/C限定审查已交接，无新GPU/资格。另B两版解码完整40replay/5280CTA/17280tile一致性补查重放字节同，新增warmup检查边界明确。
