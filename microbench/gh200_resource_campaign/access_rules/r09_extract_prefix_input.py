@@ -7,8 +7,25 @@ from pathlib import Path
 
 from r09_prefix_ordinal_clock import SETUP_FIELDS
 
+CALL_PROTOCOL_FIELDS = (
+    'warmup_policy', 'warmup_swizzle', 'warmup_fixed_calls', 'history_protocol',
+    'history_source', 'source_copies', 'mirror_target_slot',
+    'producer_tail_observer', 'producer_tail_prefix_flag', 'release_warp_observer',
+    'epilogue_defer', 'a_row_rotation', 'second_prefill', 'first_supply_events',
+    'producer_delay_ns', 'work_swap55_91', 'b_offset_bytes', 'b_allocation_extra_bytes',
+)
+PREFIX_ZERO_FIELDS = ('release_warp_warmup', 'epilogue_warmup_defer', 'second_prefill_warmup')
+
 
 def extract_prefix_input(setup, call, binary_sha256):
+    for name in CALL_PROTOCOL_FIELDS:
+        if type(call[name]) is not type(setup[name]) or call[name] != setup[name]:
+            raise ValueError('setup/call protocol mismatch: ' + name)
+    if type(call['target_swizzle']) is not type(setup['swizzle']) or call['target_swizzle'] != setup['swizzle']:
+        raise ValueError('setup/call protocol mismatch: target_swizzle')
+    for name in PREFIX_ZERO_FIELDS:
+        if type(call[name]) is not int or call[name] != 0:
+            raise ValueError('unsupported prefix treatment: ' + name)
     for name in ('prefix_a_ptr', 'target_a_ptr', 'prefix_b_ptr', 'target_b_ptr'):
         if type(call[name]) is not int or call[name] <= 0:
             raise ValueError('positive integer buffer identities required')

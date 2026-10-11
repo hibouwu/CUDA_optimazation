@@ -266,6 +266,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [前序输入提取边界](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-extraction-v1/README.md)：新增固定raw身份的静态/前序投影工具，20已知记录目标毒值不影响输入，异buffer/无效pointer/缺历史及SHA/覆盖拒绝通过；目标正确性和trace独立后验检查，不能据预测成功筛样。接入A271e86de并重核时点证据，规则未变；尚未新实验冻结，无GPU/资格。
 
+[前序投影协议一致性修复](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-extraction-v2/README.md)：按A独立发现补22项call/setup静态声明检查；20原记录440矛盾/440缺失拒绝，目标毒值仍不影响输入，与255e93a旧版20合法输入逐值相同。固定raw身份不能替代协议自洽；规则未变，C继续原gate残差否决检查，无GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
