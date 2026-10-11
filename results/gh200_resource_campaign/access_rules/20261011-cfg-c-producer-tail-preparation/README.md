@@ -15,3 +15,7 @@
 新增decode_cfg_c_producer_tail.py，固定setup/版本/布局/同buffer前序和16调用记录，检查132CTA及双WG全部work、SM、原端点和未使用记录。on要求两个新端点有效且在producer首工作之后；off要求两个保留字段为零。CTA错误保留索引与原因，不丢弃后当作整体有效。producer-tail与consumer FINAL不强制相对顺序。
 
 7项合成测试通过，包含旧版本、错误类型、旗标、前序、指针、缺失tail、off非零、工作/SM/头字段破坏，以及tail在FINAL前后均可接受。设备记录测试仍为0；归档/binary/raw SHA绑定、数值和扰动资格不由decoder提供。旧prepared-source.tar.gz保持原身份，新增reader快照单独由decoder-audit.json绑定。
+
+## 初版端点限制
+
+C源码审查指出load_tail只让原elected lane执行等待，未保证该lane为thread0；初版不能仅凭调用后的thread0戳证明tail返回边界。未用初版执行GPU。后续v2将hook移至原elected分支内，初版源码和reader快照原样保留，不改写其身份。

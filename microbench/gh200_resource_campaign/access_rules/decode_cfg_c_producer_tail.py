@@ -1,7 +1,7 @@
 """Fixed cfg_c producer-tail packets; numeric, artifact and timing gates are external."""
 import math
 from v08_model import scheduled_work
-VERSION='cfg-c-producer-tail-v1'
+VERSION='cfg-c-producer-tail-v2'
 WORDS=1296
 
 def equal(a,b):

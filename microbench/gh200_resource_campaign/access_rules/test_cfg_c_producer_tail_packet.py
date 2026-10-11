@@ -31,7 +31,7 @@ class PacketTests(unittest.TestCase):
         for flag,tail in ((1,0),(0,40)):
             s,c=packet(flag);c['trace'][14:16]=[tail,tail];r=decode(s,c,'synthetic');self.assertFalse(r['record_valid']);self.assertEqual(r['errors'][0]['cta'],0);self.assertEqual(len(r['records']),131)
     def test_rejects_protocol_types_and_old_version(self):
-        for key,value in (('trace_version','r18-dual-clock-events'),('producer_tail_observer',True),('stages',6),('grid',[132,1,1])):
+        for key,value in (('trace_version','r18-dual-clock-events'),('trace_version','cfg-c-producer-tail-v1'),('producer_tail_observer',True),('stages',6),('grid',[132,1,1])):
             s,c=packet();s[key]=value
             with self.assertRaises(ValueError):decode(s,c,'synthetic')
     def test_rejects_prefix_history_and_pointer_mismatch(self):

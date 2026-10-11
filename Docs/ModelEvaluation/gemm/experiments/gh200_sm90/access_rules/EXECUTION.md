@@ -192,6 +192,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-preparation/README.md#解码接口补充)：固定132CTA双WG完整覆盖、前序和on/off尾戳，保留CTA错误；不强制tail与consumer FINAL顺序。尚无目标编译或设备记录资格，源归档身份不变。
 
+[cfg_c elected-tail目标构建740082](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-build-v2/README.md)完成，4CPU16GiB无GPU。按C反馈撤回初版thread0端点证明，v2同elected lane于pipeline.producer_tail之后采样；SASS四槽快/慢等待→flag→CLOCK/GT→head14/15核对通过。168reg/2barrier/零spill，856源身份保留；无设备数值/全D/扰动资格，下一步先补正确性入口。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

@@ -1,0 +1,13 @@
+{
+  "source_files": 856,
+  "kernel_hook_exact": true,
+  "original_kernels_unchanged": true,
+  "elected_return_hook": true,
+  "canonical_header": true,
+  "trace_words_per_CTA": 1296,
+  "trace_allocation_bytes": 1368576,
+  "new_timestamp_payload_bytes": 2112,
+  "device_compile_verified": false,
+  "numerical_verified": false,
+  "observation_qualified": false
+}

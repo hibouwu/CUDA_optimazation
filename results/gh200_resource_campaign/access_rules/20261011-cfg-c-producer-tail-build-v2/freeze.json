@@ -1,0 +1,11 @@
+{
+  "files": {
+    "run.sh": "1b3812a1dbf71e7163355d03f81fdff75fa04c0b46a319ced23a5f3d00754714",
+    "command.json": "9bd204bdf04e44b3d5c91ac773e35684ed4caf2239f5236a420c0b2384201bf4",
+    "source_hashes.json": "3db513b22ceae15686e25682eb99dae047e1219bb1ec45115b4c583e9d0228ce",
+    "cases.json": "514834ed9b4a9f25d93eb570497bf52b89522b45124b3145a42921d90b44c748",
+    "observer_contract.json": "1da5c4ca37866c1e873a2caf50fa377212e82fe983960c10a7237f9733928069",
+    "build/commands.json": "4790152480a737e289af741bd278972fa342c009700b28684040d8015665edaf"
+  },
+  "scope": "CPU-only target build; no device execution or timing"
+}

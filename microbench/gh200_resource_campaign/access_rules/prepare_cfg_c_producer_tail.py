@@ -5,13 +5,13 @@ from pathlib import Path
 import run_r18
 import v06_run as common
 from prepare_r18_first_output import replace_once
-VERSION='cfg-c-producer-tail-v1'
-HOOK='        collective_mainloop.load_tail(mainloop_pipeline, mainloop_pipe_producer_state);'
+VERSION='cfg-c-producer-tail-v2'
+HOOK='      pipeline.producer_tail(smem_pipe_write);'
 HELPER='''
 #ifdef R18_PRODUCER_TAIL
 __device__ __constant__ unsigned r18_producer_tail_observer;
 __device__ __forceinline__ void r18_producer_tail_stamp() {
-  if (threadIdx.x != 0 || !r18_producer_tail_observer) return;
+  if (!r18_producer_tail_observer) return;
   uint64_t c=v06_clock(), n=v06_ns();
   auto b=v06_base(); b[14]=c; b[15]=n;
 }
@@ -51,8 +51,8 @@ def patch_source(source):
     header=source/'overlay/v06_trace.hpp';original=header.read_text()
     (source/'probes/v06_trace.hpp').write_text(original+HELPER)
     header.write_text('#pragma once\n#include "../probes/v06_trace.hpp"\n')
-    kernel=source/'overlay'/common.COOP
-    kernel.write_text(replace_once(kernel.read_text(),HOOK,HOOK+'\n        r18_producer_tail_stamp();'))
+    kernel=source/'overlay'/common.MAINLOOP
+    kernel.write_text(replace_once(kernel.read_text(),HOOK,HOOK+'\n      r18_producer_tail_stamp();'))
 
 def prepare(root,cutlass):
     rows=[dict(id='cfg_c_producer_tail',config='cfg_c',m=2304,n=3072,k=4096,
@@ -64,9 +64,9 @@ def prepare(root,cutlass):
     commands=json.loads((root/'build/commands.json').read_text())
     for command in commands.values():command.insert(1,'-DR18_PRODUCER_TAIL')
     common.write_json(root/'build/commands.json',commands)
-    common.write_json(root/'observer_contract.json',dict(version=VERSION,writer_thread=0,fields=dict(cycles=14,ns=15),
+    common.write_json(root/'observer_contract.json',dict(version=VERSION,writer_thread="original elected lane in mainloop producer warp",fields=dict(cycles=14,ns=15),
         cta_words=1296,grid=[66,2,1],prefix_calls=16,prefix_flag=0,target_flags=[0,1],
-        endpoint='Mainloop producer load_tail return; does not measure D visibility or kernel completion',
+        endpoint='Original elected lane after pipeline.producer_tail returns; does not measure D visibility or kernel completion',
         status='Source preparation only. Target compile/SASS, decoder, full-D correctness and perturbation qualification pending.'))
     shutil.copy2(Path(__file__),root/'source/prepare_cfg_c_producer_tail.py')
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in (root/'source').rglob('*') if p.is_file()})
