@@ -1,0 +1,25 @@
+{
+  "report_sha256": "b7e5b38e060f0e2bd00ab5408936df9b4889fa94599b7793ffd3af1db399dcec",
+  "input_hashes_reverified": 71,
+  "serialized_counts": {
+    "cases": 3,
+    "outputs": 1512,
+    "K_groups": 48384,
+    "input_atoms": 145152,
+    "zero_source_atoms": 2016,
+    "D_boxes": 12096,
+    "zero_D_boxes": 534
+  },
+  "metadata_records_checked": 60,
+  "metadata_hashes_matching_prior_review": 60,
+  "independent_element_checks": 36,
+  "R13_tests_passed": 181,
+  "new_tests": 5,
+  "existing_module_AST_unchanged_against": "6c5015b2f8dd6e2201a219f19b461b1b0323f4dc",
+  "existing_timing_API_unchanged": true,
+  "physical_request_count_identified": false,
+  "persistent_CTA_binding": false,
+  "new_timing_candidate": false,
+  "new_numerical_replay": false,
+  "new_GPU": false
+}
