@@ -44,7 +44,8 @@ def random_references(indices,m,n,k,seed):
 def decode_stage_sparse(setup, call):
     """CTA0 cycle windows; background protocol adds direct globaltimer endpoints."""
     words=call['trace'];width=setup['trace_words']
-    release_warps=setup.get('trace_version')=='r13-release-warps-v1'
+    release_threads=setup.get('trace_version')=='r13-release-threads-v2'
+    release_warps=release_threads or setup.get('trace_version')=='r13-release-warps-v1'
     if release_warps:
         if (width!=784 or setup.get('grid')!=[1,132,1] or setup.get('stages') not in (4,6)
                 or setup.get('k')!=4096):
@@ -159,7 +160,7 @@ def decode_stage_sparse(setup, call):
         'full_wait_begin':15,'full_wait_end':16,'commit_end':17,'wait1_end':18,
         'release_begin':19,'release_end':20,'first_mma':21,'main_end':22,
         'mma_return':32,'tail_begin':33}.items()}
-    if not all(clocks.values()) or b[31]!=(0x52313307 if release_warps else 0x52313301) or b[10]:
+    if not all(clocks.values()) or b[31]!=(0x52313308 if release_threads else 0x52313307 if release_warps else 0x52313301) or b[10]:
         raise ValueError('incomplete sparse events')
     if not b[1] or b[1]!=b[23] or (b[2],b[3])!=(b[13],b[14]) or not min(b[2],b[3]):
         raise ValueError('sparse role SM/work mismatch')
@@ -188,13 +189,26 @@ def decode_stage_sparse(setup, call):
         active=pairs if flag else pairs[:1]
         if any(not pre or pre>post for pre,post in active) or (not flag and any(b[42:48])):
             raise ValueError('release warp missing, reversed or disabled brackets')
-        if any(b[34:40]) or any(b[48:]):
+        if any(b[34:40]) or any(b[304 if release_threads else 48:]):
             raise ValueError('unexpected release warp trace fields')
         if flag and max(pre for pre,post in pairs)>clocks['refill_end']:
             raise ValueError('producer returned before required warp arrival')
         release_fields['release_warps']=dict(enabled=bool(flag),warp_threads=[256,288,320,352],
             global_group=global_k,consumer_phase=consumer_phase,pre=[v[0] for v in pairs],
             post=[v[1] for v in pairs],conditional_on_sass_coverage=True)
+        if release_threads:
+            thread_pairs=[b[i:i+2] for i in range(48,304,2)]
+            active_threads=thread_pairs if flag else thread_pairs[:1]
+            if (any(not pre or pre>post for pre,post in active_threads)
+                    or (not flag and any(b[50:304]))):
+                raise ValueError('release thread missing, reversed or disabled bracket')
+            if any(thread_pairs[32*i]!=pair for i,pair in enumerate(pairs)):
+                raise ValueError('release thread and leader records differ')
+            if flag and max(pre for pre,post in thread_pairs)>clocks['refill_end']:
+                raise ValueError('producer returned before required thread arrival')
+            release_fields['release_threads']=dict(enabled=bool(flag),physical_threads=list(range(256,384)),
+                pre=[v[0] for v in thread_pairs],post=[v[1] for v in thread_pairs],
+                conditional_on_sass_instruction_order=True,requires_warp_simultaneity=False)
     return dict(**release_fields,cta=0,sm=b[1]-1,work=[b[2]-1,b[3]-1],output=1,ktile=16,
         slot=b[4]-1,phase=b[5]-1,clocks=clocks,
         intervals={name:clocks[end]-clocks[start] for name,start,end in [
@@ -276,7 +290,7 @@ def validate_plain_prefix(setup, call, row):
 
 def validate_warmup(setup, call, row):
     validate_plain_prefix(setup, call, row)
-    if 'release_warp_observer' in row or setup.get('trace_version')=='r13-release-warps-v1':
+    if 'release_warp_observer' in row or setup.get('trace_version') in ('r13-release-warps-v1','r13-release-threads-v2'):
         flag=row.get('release_warp_observer')
         if type(flag) is not int or flag not in (0,1) or any(
                 type(e.get('release_warp_observer')) is not int or e['release_warp_observer']!=flag
@@ -511,8 +525,8 @@ def replay(root,record,row,retain_roles=False):
         result['preceding_target_calls']=18
         return result
     if record['variant'] in ['plain','wide']:return result
-    if setup.get('trace_version') in ('r13-release-warps-v1','r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1','r13-second-prefill-v1'):
-        key='sparse' if setup['trace_version'] in ('r13-stage-sparse-v1','r13-release-warps-v1') else 'progress'
+    if setup.get('trace_version') in ('r13-release-threads-v2','r13-release-warps-v1','r13-stage-sparse-v1','r13-stage-progress-v1','r13-stage-handoff-v1','r13-epilogue-order-v1','r13-output-background-v1','r13-second-prefill-v1'):
+        key='sparse' if setup['trace_version'] in ('r13-stage-sparse-v1','r13-release-warps-v1','r13-release-threads-v2') else 'progress'
         result[key]=decode_stage_sparse(setup,call)
         return result
     tile_words=setup.get('trace_tile_words',6)

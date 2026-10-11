@@ -148,7 +148,7 @@ static_assert(Kernel::NumMMAThreads == 256, "recheck cooperative TMA issuing war
 #endif
 
 #if defined(R13_RELEASE_WARPS) && defined(R13_STAGE_SPARSE)
-constexpr const char* kTraceVersion="r13-release-warps-v1";
+constexpr const char* kTraceVersion="r13-release-threads-v2";
 #elif defined(R13_SECOND_PREFILL) && defined(R13_STAGE_PROGRESS)
 constexpr const char* kTraceVersion="r13-second-prefill-v1";
 #elif defined(R13_OUTPUT_BACKGROUND) && defined(R13_STAGE_PROGRESS)

@@ -49,6 +49,8 @@ A的专属离线链已串行合入至 `f950ca5`，63项R09测试通过；[历史
 
 C的输出buffer generation接口 `287930d` 已合入为 `6854ee0`。主线[独立R14复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-output-lifecycle-v1/README.md)复核852份源码、两二进制及40进程数值；20份trace的90个保证、70个跨输出中间窗口与C一致。只规范化当前工作目录绝对前缀后，JSON和两个CSV完整文本相同。中间permit→保证36598.5cycle包含下一输出推进，下一permit→保证657.5cycle；不将前者收费或迁为ns。
 
+[740056逐线程pilot](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-release-threads-correctness/README.md)已完成（a057/GPU432，4CPU/16GiB/1GPU，134秒）。新r13-release-threads-v2保留128线程各自原arrival前后戳；全D与严格解码通过，两stage on为128/128、最大区间25/22cycle，SASS保留原发出且无区间内分支/写回。旧四leader不能替代该覆盖；active-mask读数本身也不提供后续收敛保证。每stage仅一对、非独占且非ef，paired gate仍不合格，无新价格或V10。
+
 740054的数值/记录通过不等于局部观察合格：非独占单对smoke的stage4 H16→wait1差368cycle，超过原单对192cycle门槛；保留预警，不从本批采用机制区间。四warp正式配对门槛在采样前明确按 `median(abs(delta))` 和 `max(abs(delta))` 判定；有符号中位数仅作诊断，不允许抵消。
 
 [740050前序身份构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-identity-build/README.md)已通过：setup/call显式区分模块plain前序及清零准备，解析器拒绝未声明身份。旧r5仅保留数值smoke，不升级为同准备或观察有效性通过；正式dual/bracket必须另核对模块及准备容量一致。
@@ -121,8 +123,8 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 
 | 对象 | 已有结果 | 当前工作/边界 |
 |---|---|---|
-| 管理 | 接续对话`01a129c0-b787-7e03-adf1-fcfdb2afa149`；740054完成四warp观察器全D对照与每条件一次smoke（a057/GPU432，4CPU/16GiB/1GPU，134秒）；4份GEMM SASS与740051相同；历史失败保留 | `gh200-v09-failure-analysis`持续开发；未进入V10；结论归[R13](R13-async-retirement.md#a-source-rotation-preparation) |
-| 供给 | R13在途源共享、订阅截止与局部E0排他均保留失败；740033 A源轮换40进程、主观测10/10有效但未唯一识别机制 | 主线已准备r13-release-warps-v1；全D及严格解码已通过；待覆盖边界核验、同卡参照和配对扰动门槛后才判40进程有效。B新R10候选失败已独立复核；现行预测仍未通过 |
+| 管理 | 接续对话`01a129c0-b787-7e03-adf1-fcfdb2afa149`；740056完成128线程观察器全D与单次pilot；旧740054四leader记录及扰动预警保留 | `gh200-v09-failure-analysis`持续开发；未进入V10；结论归[R13](R13-async-retirement.md#a-source-rotation-preparation) |
+| 供给 | R13在途源共享、订阅截止与局部E0排他均保留失败；740033 A源轮换40进程、主观测10/10有效但未唯一识别机制 | 主线已升级r13-release-threads-v2；128线程全D及严格解码已通过；待覆盖边界核验、同卡参照和配对扰动门槛后才判40进程有效。B新R10候选失败已独立复核；现行预测仍未通过 |
 | 输出/边界 | [R18](R18-cluster-boundary.md)同cluster轨迹相关；源码证明full/empty跨rank依赖 | 将依赖作为候选约束，不直接收费；P2最后cluster仍在冻结候选外 |
 | 时间/输入 | [R09](R09-inkernel-clock-stages.md)700次连续调用显示服务与频率均有历史响应；single也复现变慢 | 单极状态留段劣于末值基线，不采用；镜像前序后目标仍呈晚段成本，重复目标地址不是必要条件；批次封顶计数不能定位调用；同调用首/次输出周期率不同，已与供给组联查；本组暂无独立GPU任务 |
 | V09 | 739011完成30条件；29受支持预测4.11%/35.46%，1冻结前拒绝 | **整体未通过**，冻结/判定不改；新候选须另用新留出检验 |

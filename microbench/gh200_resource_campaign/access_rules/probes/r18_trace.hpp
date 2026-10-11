@@ -146,7 +146,7 @@ __device__ __forceinline__ void r13_sparse_producer_flush(R13SparseProducer cons
   b[27]=uint64_t((s.state>>4)&7)+1; b[28]=uint64_t((s.state>>7)&1)+1;
   b[29]=1; b[30]=16; b[31]=0x52313301;
 #ifdef R13_RELEASE_WARPS
-  b[31]=0x52313307;
+  b[31]=0x52313308;
 #endif
 }
 #ifdef R13_STAGE_PROGRESS
@@ -185,6 +185,11 @@ __device__ __forceinline__ void r13_sparse_consumer_flush(R13SparseConsumer cons
 // [40:47] holds (pre,post) for warp leaders 256/288/320/352.
 __device__ __forceinline__ void r13_release_warp_flush(R13SparseConsumer const& s) {
   auto out=v06_base()+40+2*((threadIdx.x-256)/32);
+  out[0]=s.release_begin; out[1]=s.release_end;
+}
+// [48:303] preserves each required thread's own bracket, including leaders.
+__device__ __forceinline__ void r13_release_thread_flush(R13SparseConsumer const& s) {
+  auto out=v06_base()+48+2*(threadIdx.x-256);
   out[0]=s.release_begin; out[1]=s.release_end;
 }
 #endif

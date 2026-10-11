@@ -309,12 +309,12 @@ def validate_release_warp_rows(rows,stage_sparse,stage_progress,dual_clock):
 
 
 def make_release_warp_overlay(source):
-    """Add deferred clock pairs for the other three warps; keep arrivals intact."""
+    """Bracket all 128 original consumer arrivals; retain four leader records."""
     path=source/'overlay'/common.MAINLOOP
     text=path.read_text()
     old='    const bool r13_target = r13_sparse_cta() && threadIdx.x==256 && v06_tile_seq==0;\n'
     new=old+('    const bool r13_release_target = r13_sparse_cta() && v06_tile_seq==0 &&\n'
-        '        (threadIdx.x==256 || (r13_release_warp_observer && threadIdx.x>=288 && threadIdx.x<=352 && threadIdx.x%32==0));\n')
+        '        (threadIdx.x==256 || (r13_release_warp_observer && threadIdx.x>=256 && threadIdx.x<384));\n')
     if text.count(old)!=1:raise ValueError('release warp target site changed')
     text=text.replace(old,new,1)
     before='if (r13_target && r13_k==17) { r13_s->release_slot='
@@ -330,7 +330,9 @@ def make_release_warp_overlay(source):
     site='      if (r13_sparse_cta() && threadIdx.x==256) r13_sparse_consumer_flush(r13_s);\n'
     text=common.insert_once(text,site,
         '      if (r13_sparse_cta() && threadIdx.x>=256 && threadIdx.x%32==0 &&\n'
-        '          (threadIdx.x==256 || r13_release_warp_observer)) r13_release_warp_flush(r13_s);\n',after=True)
+        '          (threadIdx.x==256 || r13_release_warp_observer)) r13_release_warp_flush(r13_s);\n'
+        '      if (r13_sparse_cta() && threadIdx.x>=256 && threadIdx.x<384 &&\n'
+        '          (threadIdx.x==256 || r13_release_warp_observer)) r13_release_thread_flush(r13_s);\n',after=True)
     path.write_text(text)
 
 
@@ -497,7 +499,7 @@ def prepare(root,cutlass,family,rows=None,dual_clock=False,stage_sparse=False,st
             cmd+=['-Isource/probes','-Isource/cutlass/include','-Isource/cutlass/tools/util/include','source/probes/r18.cu','-o',f'build/{prefix}_{variant}']
             commands[f'{prefix}_{variant}']=cmd
     common.write_json(root/'build/commands.json',commands);common.write_json(root/'cases.json',rows)
-    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-release-warps-v1' if release_warps else 'r18-dual-clock-events' if a_rotation else 'r13-second-prefill-v1' if second_prefill else 'r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
+    common.write_json(root/'run_config.json',dict(family=family,cases_sha256=common.sha(root/'cases.json'),variants=variants,trace_version='r13-release-threads-v2' if release_warps else 'r18-dual-clock-events' if a_rotation else 'r13-second-prefill-v1' if second_prefill else 'r13-output-background-v1' if output_background else 'r13-epilogue-order-v1' if epilogue_order else 'r13-stage-handoff-v1' if stage_handoff else 'r13-stage-progress-v1' if stage_progress else 'r13-stage-sparse-v1' if stage_sparse else None))
     common.write_json(root/'source_hashes.json',{str(p.relative_to(root)):common.sha(p) for p in source.rglob('*') if p.is_file()})
 
 

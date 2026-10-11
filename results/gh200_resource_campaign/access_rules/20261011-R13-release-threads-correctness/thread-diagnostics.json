@@ -1,0 +1,232 @@
+{
+  "processes": [
+    {
+      "stages": 4,
+      "observer": 0,
+      "trial": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "sm": 124,
+      "work": [
+        11,
+        0
+      ],
+      "slot": 0,
+      "phase": 1,
+      "elapsed_us": 59.10399929,
+      "diagnostic": {
+        "protocol": "r13-release-threads-v2",
+        "leader_pre_to_acquire_end_cycles": 231,
+        "H16_to_wait1_return_cycles": 842,
+        "reasons": [],
+        "required_thread_brackets": false,
+        "conditional_classification": null
+      }
+    },
+    {
+      "stages": 4,
+      "observer": 1,
+      "trial": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "sm": 124,
+      "work": [
+        11,
+        0
+      ],
+      "slot": 0,
+      "phase": 1,
+      "elapsed_us": 58.78400058,
+      "diagnostic": {
+        "protocol": "r13-release-threads-v2",
+        "leader_pre_to_acquire_end_cycles": 231,
+        "H16_to_wait1_return_cycles": 836,
+        "reasons": [],
+        "required_thread_brackets": true,
+        "bounds": {
+          "last_arrival_emit": {
+            "lower": 443372141240232,
+            "upper": 443372141240257
+          },
+          "other_thread_skew": {
+            "lower": 0,
+            "upper": 25
+          },
+          "after_last_emit_to_acquire_end": {
+            "lower": 206,
+            "upper": 231
+          },
+          "leader_pre_to_acquire_end": 231,
+          "maximum_bracket_width": 25,
+          "required_thread_count": 128
+        },
+        "conditional_classification": {
+          "late_required_arrivals": "excluded",
+          "post_arrival_path": "compatible"
+        }
+      }
+    },
+    {
+      "stages": 6,
+      "observer": 0,
+      "trial": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "sm": 124,
+      "work": [
+        11,
+        0
+      ],
+      "slot": 2,
+      "phase": 0,
+      "elapsed_us": 49.95200038,
+      "diagnostic": {
+        "protocol": "r13-release-threads-v2",
+        "leader_pre_to_acquire_end_cycles": 231,
+        "H16_to_wait1_return_cycles": 356,
+        "reasons": [],
+        "required_thread_brackets": false,
+        "conditional_classification": null
+      }
+    },
+    {
+      "stages": 6,
+      "observer": 1,
+      "trial": 0,
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "sm": 124,
+      "work": [
+        11,
+        0
+      ],
+      "slot": 2,
+      "phase": 0,
+      "elapsed_us": 49.95200038,
+      "diagnostic": {
+        "protocol": "r13-release-threads-v2",
+        "leader_pre_to_acquire_end_cycles": 232,
+        "H16_to_wait1_return_cycles": 370,
+        "reasons": [],
+        "required_thread_brackets": true,
+        "bounds": {
+          "last_arrival_emit": {
+            "lower": 443374605659386,
+            "upper": 443374605659408
+          },
+          "other_thread_skew": {
+            "lower": 0,
+            "upper": 22
+          },
+          "after_last_emit_to_acquire_end": {
+            "lower": 210,
+            "upper": 232
+          },
+          "leader_pre_to_acquire_end": 232,
+          "maximum_bracket_width": 22,
+          "required_thread_count": 128
+        },
+        "conditional_classification": {
+          "late_required_arrivals": "excluded",
+          "post_arrival_path": "compatible"
+        }
+      }
+    }
+  ],
+  "gates": [
+    {
+      "stages": 4,
+      "pairs": [
+        {
+          "trial": 0,
+          "reasons": [],
+          "local_cycles": 0,
+          "upstream_cycles": -6,
+          "event_ratio": -0.00541416340423755
+        }
+      ],
+      "metrics": {
+        "local_cycles": {
+          "status": "pass",
+          "signed_median": 0,
+          "median_absolute": 0,
+          "absolute_median": 0,
+          "maximum_absolute": 0,
+          "median_limit": 32,
+          "maximum_limit": 128
+        },
+        "upstream_cycles": {
+          "status": "pass",
+          "signed_median": -6,
+          "median_absolute": 6,
+          "absolute_median": 6,
+          "maximum_absolute": 6,
+          "median_limit": 64,
+          "maximum_limit": 192
+        },
+        "event_ratio": {
+          "status": "pass",
+          "signed_median": -0.00541416340423755,
+          "median_absolute": 0.00541416340423755,
+          "absolute_median": 0.00541416340423755,
+          "maximum_absolute": 0.00541416340423755,
+          "median_limit": 0.02,
+          "maximum_limit": 0.05
+        }
+      },
+      "median_convention": "median_absolute",
+      "gate_passed": false,
+      "reasons": [
+        "not_ten_prelisted_trials_per_arm"
+      ]
+    },
+    {
+      "stages": 6,
+      "pairs": [
+        {
+          "trial": 0,
+          "reasons": [],
+          "local_cycles": 1,
+          "upstream_cycles": 14,
+          "event_ratio": 0.0
+        }
+      ],
+      "metrics": {
+        "local_cycles": {
+          "status": "pass",
+          "signed_median": 1,
+          "median_absolute": 1,
+          "absolute_median": 1,
+          "maximum_absolute": 1,
+          "median_limit": 32,
+          "maximum_limit": 128
+        },
+        "upstream_cycles": {
+          "status": "pass",
+          "signed_median": 14,
+          "median_absolute": 14,
+          "absolute_median": 14,
+          "maximum_absolute": 14,
+          "median_limit": 64,
+          "maximum_limit": 192
+        },
+        "event_ratio": {
+          "status": "pass",
+          "signed_median": 0.0,
+          "median_absolute": 0.0,
+          "absolute_median": 0.0,
+          "maximum_absolute": 0.0,
+          "median_limit": 0.02,
+          "maximum_limit": 0.05
+        }
+      },
+      "median_convention": "median_absolute",
+      "gate_passed": false,
+      "reasons": [
+        "not_ten_prelisted_trials_per_arm"
+      ]
+    }
+  ],
+  "interpretation_qualified": false,
+  "limits": [
+    "one pair per stage",
+    "nonexclusive correctness run",
+    "GPU432 rather than prescribed ef study"
+  ]
+}

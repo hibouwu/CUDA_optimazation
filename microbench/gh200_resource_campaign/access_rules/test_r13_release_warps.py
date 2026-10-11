@@ -35,6 +35,31 @@ class ReleaseWarpTests(unittest.TestCase):
         s,c=self.trace(4,0);c['trace'][42]=169
         with self.assertRaises(ValueError):decode_stage_sparse(s,c)
 
+    def thread_trace(self,flag=1):
+        setup,call=self.trace(6,flag)
+        setup['trace_version']='r13-release-threads-v2';b=call['trace'];b[31]=0x52313308
+        b[48:304]=[170,172]*128 if flag else [170,172]+[0,0]*127
+        for warp in range(4):b[48+64*warp:50+64*warp]=b[40+2*warp:42+2*warp]
+        return setup,call
+
+    def test_all_128_thread_brackets_are_kept(self):
+        for flag in (0,1):
+            s,c=self.thread_trace(flag);r=decode_stage_sparse(s,c)['release_threads']
+            self.assertEqual(r['physical_threads'],list(range(256,384)))
+            self.assertFalse(r['requires_warp_simultaneity'])
+            self.assertEqual(len(r['pre']),128)
+        s,c=self.thread_trace();c['trace'][48+2*63+1]=220
+        # A late post stamp is retained, not replaced by acquire-end.
+        self.assertEqual(decode_stage_sparse(s,c)['release_threads']['post'][63],220)
+
+    def test_interior_lane_cannot_be_missing_or_disagree_with_leader(self):
+        for index,value in [(48+2*63,0),(48+2*63,173),(48+2*32,168),(304,1),(31,0x52313307)]:
+            s,c=self.thread_trace();c['trace'][index]=value
+            with self.subTest(index=index,value=value):
+                with self.assertRaises(ValueError):decode_stage_sparse(s,c)
+        s,c=self.thread_trace(0);c['trace'][50:52]=[170,172]
+        with self.assertRaises(ValueError):decode_stage_sparse(s,c)
+
     def test_identity_and_warmup(self):
         row=dict(swizzle=1,release_warp_observer=1)
         setup=dict(release_warp_observer=1,release_warp_warmup=0)
