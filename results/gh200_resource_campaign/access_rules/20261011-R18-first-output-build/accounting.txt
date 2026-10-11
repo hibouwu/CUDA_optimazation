@@ -1,0 +1,9 @@
+740064|FAILED|00:00:09|billing=4,cpu=4,mem=16G,node=1
+740064.extern|COMPLETED|00:00:09|billing=4,cpu=4,mem=16G,node=1
+740064.0|FAILED|00:00:08|cpu=4,mem=16G,node=1
+740065|COMPLETED|00:00:34|billing=4,cpu=4,mem=16G,node=1
+740065.extern|COMPLETED|00:00:34|billing=4,cpu=4,mem=16G,node=1
+740065.0|COMPLETED|00:00:33|cpu=4,mem=16G,node=1
+740066|COMPLETED|00:00:35|billing=4,cpu=4,mem=16G,node=1
+740066.extern|COMPLETED|00:00:35|billing=4,cpu=4,mem=16G,node=1
+740066.0|COMPLETED|00:00:34|cpu=4,mem=16G,node=1

@@ -123,6 +123,8 @@ ROMEO账户持有人联系管理员；管理者可准备诊断、指标和窗口
 
 C的cfg_c输出结构f0c3674合入f6e27c4，26项测试通过；主集成baseline复放40进程/23592960值，两CSV及完整JSON与C一致。cfg_a回归40进程/11796480值，仅规范化仓库路径后CSV一致、JSON仅代码SHA改变，T1/T2/T8完整rank图与旧版相同。cfg_c八子tile本地输出图与P2逻辑字节守恒已覆盖，legacy时间不迁入。A有界时钟读fab91fd合入841f5d0，6测试及本地CUDA13一处/两处PTX fixture独立编译检查通过；目标CUDA12.9/CUTLASS及硬件观察资格仍未验证，尚未接入公共probe。
 
+[首输出五切点构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-build/README.md)已落实：派生prepare/helper/严格decoder已提交，C完整调用配对约束c8f6f76合入，16项CPU测试通过。740064头文件重复定义失败保留；740065成功后经C审查修复host模式入口，740066最终CPU构建通过，SASS与740065相同，168regs/2barrier/零spill，无GPU分配。五戳延迟写回，原HGMMA/TMA/arrival/wait数量相同；全D和独立控制pilot仍待执行，不判观察资格或新价格。
+
 ## 当前状态
 
 持续目标以新的独立冻结验证和跨卡评估为终点；完成一批分析、采样或提交只完成一个里程碑。沿同一预测主线继续选择最有辨识力的下一步，不自动展开全部机制矩阵。新完整留出仍先明确范围与采样授权，等待时推进独立工作。

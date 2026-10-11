@@ -9,10 +9,14 @@ WORDS=1318
 
 def decode(setup, call, invocation_id):
     fixed=dict(config='cfg_a',m=960,n=2816,k=4096,grid=[132,1,1],tile=[128,128,64],
-        cluster=[2,1],stages=6,trace_words=WORDS,trace_tile_words=10,trace_version=VERSION)
+        cluster=[2,1],stages=6,trace_words=WORDS,trace_tile_words=10,trace_version=VERSION,
+        swizzle=1,storage_m=1024,storage_n=2816,zero_m=960,zero_n=-1,input_map_n=2816,
+        lda=4096,ldb=2816,ldd=2816,alloc_lda=4096,alloc_ldb=2816,input_mode='dyadic',seed=17)
     if any(setup.get(k)!=v for k,v in fixed.items()):raise ValueError('first-output setup mismatch')
+    if type(setup.get('input_map_m')) is not int or setup['input_map_m'] not in (960,1024):
+        raise ValueError('first-output map extent mismatch')
     flag=setup.get('first_output_observer')
-    if type(flag) is not int or flag not in (0,1) or call.get('first_output_observer')!=flag:
+    if type(flag) is not int or flag not in (0,1) or type(call.get('first_output_observer')) is not int or call['first_output_observer']!=flag:
         raise ValueError('first-output flag mismatch')
     for packet in (setup,call):
         if packet.get('first_output_warmup')!=0 or packet.get('warmup_policy')!='common-sw1-16':

@@ -14,3 +14,6 @@ off/on同一二进制，16次同二进制前序调用固定off，目标才切fla
 C的完整调用/配对接口4dd64fd已合入c8f6f76；合并后16项first-output测试通过，保留全部24角色、负分段差及跨调用SM改变。source_ports的原静态矩阵不变。
 
 C独立源码审查发现740065主入口未放行check-first-output；主集成另发现check-output导出限制同样遗漏。该binary不用于后续数值检查，完整构建移至attempts/740065。revision3修复两处host入口并增加生成后可达性检查，GPU kernel源码不变。
+
+
+740066完成revision3目标CPU构建，完整SASS与740065逐字节相同，host入口修复不改变目标kernel；全部冻结源码SHA与回传清单一致。成功结果及两次先前构建保存在output.tar.gz及attempts/<job>/output.tar.gz，解包后为returned内容，含binary/SASS/compiler log/分配记录；实际终态与资源见accounting.txt。最终16项first-output测试通过，尚无GPU数值或扰动证据。
