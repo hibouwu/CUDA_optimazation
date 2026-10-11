@@ -1,0 +1,260 @@
+{
+  "job": 740092,
+  "failed_series": 4884,
+  "groups": {
+    "DONE": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        80.0,
+        512.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1088
+      ],
+      "sm_changes": 0
+    },
+    "E": {
+      "series": 432,
+      "failed": 325,
+      "median_abs_range_ns": [
+        0.0,
+        288.0
+      ],
+      "maximum_abs_range_ns": [
+        64,
+        544
+      ],
+      "sm_changes": 0
+    },
+    "FIRST": {
+      "series": 432,
+      "failed": 411,
+      "median_abs_range_ns": [
+        32.0,
+        496.0
+      ],
+      "maximum_abs_range_ns": [
+        128,
+        1152
+      ],
+      "sm_changes": 0
+    },
+    "GAP": {
+      "series": 432,
+      "failed": 180,
+      "median_abs_range_ns": [
+        0.0,
+        192.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        480
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_DONE": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        64.0,
+        512.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1088
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_FIRST": {
+      "series": 432,
+      "failed": 406,
+      "median_abs_range_ns": [
+        32.0,
+        496.0
+      ],
+      "maximum_abs_range_ns": [
+        128,
+        1152
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_MAIN": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        64.0,
+        592.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1280
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_PERMIT": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        80.0,
+        576.0
+      ],
+      "maximum_abs_range_ns": [
+        224,
+        1312
+      ],
+      "sm_changes": 0
+    },
+    "L": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        64.0,
+        512.0
+      ],
+      "maximum_abs_range_ns": [
+        192,
+        1088
+      ],
+      "sm_changes": 0
+    },
+    "MAIN": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        64.0,
+        560.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1248
+      ],
+      "sm_changes": 0
+    },
+    "PERMIT": {
+      "series": 432,
+      "failed": 432,
+      "median_abs_range_ns": [
+        80.0,
+        560.0
+      ],
+      "maximum_abs_range_ns": [
+        224,
+        1312
+      ],
+      "sm_changes": 0
+    },
+    "W": {
+      "series": 432,
+      "failed": 0,
+      "median_abs_range_ns": [
+        0.0,
+        64.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        128
+      ],
+      "sm_changes": 0
+    },
+    "FINAL": {
+      "series": 264,
+      "failed": 264,
+      "median_abs_range_ns": [
+        80.0,
+        512.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1088
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_FINAL": {
+      "series": 264,
+      "failed": 264,
+      "median_abs_range_ns": [
+        64.0,
+        512.0
+      ],
+      "maximum_abs_range_ns": [
+        256,
+        1088
+      ],
+      "sm_changes": 0
+    },
+    "TAIL": {
+      "series": 264,
+      "failed": 0,
+      "median_abs_range_ns": [
+        0.0,
+        48.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        128
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_ENTRY": {
+      "series": 132,
+      "failed": 0,
+      "median_abs_range_ns": [
+        0.0,
+        32.0
+      ],
+      "maximum_abs_range_ns": [
+        0,
+        32
+      ],
+      "sm_changes": 0
+    },
+    "GLOBAL_PRODUCER": {
+      "series": 132,
+      "failed": 3,
+      "median_abs_range_ns": [
+        0.0,
+        80.0
+      ],
+      "maximum_abs_range_ns": [
+        64,
+        256
+      ],
+      "sm_changes": 0
+    },
+    "producer": {
+      "series": 132,
+      "failed": 7,
+      "median_abs_range_ns": [
+        0.0,
+        80.0
+      ],
+      "maximum_abs_range_ns": [
+        96,
+        288
+      ],
+      "sm_changes": 0
+    }
+  },
+  "event": {
+    "signed": [
+      -0.002713724788721783,
+      -0.014400489860528998,
+      0.01710576453804391,
+      0.0010276772487851638,
+      0.00034176617808068244,
+      0.0013689358153279318,
+      0.0,
+      -0.016498363571460506,
+      0.0027359990339226314,
+      0.0030884816093930123
+    ],
+    "median_absolute": 0.0027248619113222072,
+    "maximum_absolute": 0.01710576453804391,
+    "passed": true
+  },
+  "off_cv": 0.007940100148372153,
+  "baseline_consistency_passed": false,
+  "observation_qualified": false
+}

@@ -1,0 +1,3 @@
+Filesystem          1024-blocks    Used Available Capacity Mounted on
+/dev/mapper/live-rw    16766976 7089528   9677448      43% /
+JOB=740092 NODE=romeo-a058 RUN_TMP=/tmp/gh200-cfg-c-tail-off-off-MnrKQE9o
