@@ -174,6 +174,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [cfg_c角色边界分解](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-role-boundaries-v1/README.md)完成同60原raw、12960同CTA角色对精确恒等式复核。aligned FIRST差中位−7..+6cycle，MAIN差−635.25..−529.5；源码MAIN在mma_tail最终wait<0>/release之后，角色L差不能当裸WGMMA服务差。完整逐窗口与源码SHA保留，观察资格仍false。
 
+[cfg_c跨K全窗口补查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-cross-k-v1/README.md#全窗口条件迁移检查)：12960窗口以4×K1024实测作条件迁移，按K4096目标分母的cycle误差最大4.809%，无>5%；ns最大17.378%，3921窗口>10%。精确分数验证，不以分组中位掩盖尾部；这种条件输入仍不是静态自由预测或验收通过。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
