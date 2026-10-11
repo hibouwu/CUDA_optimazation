@@ -1,0 +1,277 @@
+{
+  "blocks": [
+    {
+      "stage4_L16": -287,
+      "stage4_L2": -20,
+      "stage4_F": -267,
+      "stage6_L16": 40,
+      "stage6_L2": 20,
+      "stage6_F": 20
+    },
+    {
+      "stage4_L16": -273,
+      "stage4_L2": -1,
+      "stage4_F": -272,
+      "stage6_L16": 0,
+      "stage6_L2": -29,
+      "stage6_F": 29
+    },
+    {
+      "stage4_L16": 0,
+      "stage4_L2": -243,
+      "stage4_F": 243,
+      "stage6_L16": 46,
+      "stage6_L2": 24,
+      "stage6_F": 22
+    },
+    {
+      "stage4_L16": -336,
+      "stage4_L2": 43,
+      "stage4_F": -379,
+      "stage6_L16": 31,
+      "stage6_L2": 4,
+      "stage6_F": 27
+    },
+    {
+      "stage4_L16": -41,
+      "stage4_L2": 142,
+      "stage4_F": -183,
+      "stage6_L16": -44,
+      "stage6_L2": -47,
+      "stage6_F": 3
+    },
+    {
+      "stage4_L16": -74,
+      "stage4_L2": 32,
+      "stage4_F": -106,
+      "stage6_L16": -21,
+      "stage6_L2": -1,
+      "stage6_F": -20
+    },
+    {
+      "stage4_L16": -208,
+      "stage4_L2": 21,
+      "stage4_F": -229,
+      "stage6_L16": -21,
+      "stage6_L2": -29,
+      "stage6_F": 8
+    },
+    {
+      "stage4_L16": -133,
+      "stage4_L2": -10,
+      "stage4_F": -123,
+      "stage6_L16": 0,
+      "stage6_L2": -42,
+      "stage6_F": 42
+    },
+    {
+      "stage4_L16": -260,
+      "stage4_L2": 3,
+      "stage4_F": -263,
+      "stage6_L16": 39,
+      "stage6_L2": 22,
+      "stage6_F": 17
+    },
+    {
+      "stage4_L16": -126,
+      "stage4_L2": -105,
+      "stage4_F": -21,
+      "stage6_L16": 0,
+      "stage6_L2": -18,
+      "stage6_F": 18
+    },
+    {
+      "stage4_L16": -313,
+      "stage4_L2": -252,
+      "stage4_F": -61,
+      "stage6_L16": -11,
+      "stage6_L2": -30,
+      "stage6_F": 19
+    },
+    {
+      "stage4_L16": -191,
+      "stage4_L2": -82,
+      "stage4_F": -109,
+      "stage6_L16": -1,
+      "stage6_L2": -43,
+      "stage6_F": 42
+    },
+    {
+      "stage4_L16": -106,
+      "stage4_L2": 31,
+      "stage4_F": -137,
+      "stage6_L16": 5,
+      "stage6_L2": -3,
+      "stage6_F": 8
+    },
+    {
+      "stage4_L16": -186,
+      "stage4_L2": -122,
+      "stage4_F": -64,
+      "stage6_L16": -14,
+      "stage6_L2": 50,
+      "stage6_F": -64
+    },
+    {
+      "stage4_L16": 0,
+      "stage4_L2": -60,
+      "stage4_F": 60,
+      "stage6_L16": 33,
+      "stage6_L2": -4,
+      "stage6_F": 37
+    },
+    {
+      "stage4_L16": 41,
+      "stage4_L2": 5,
+      "stage4_F": 36,
+      "stage6_L16": 20,
+      "stage6_L2": 1,
+      "stage6_F": 19
+    }
+  ],
+  "summary": {
+    "stage4_L16": {
+      "median": -159.5,
+      "sum": -2493,
+      "count": 16,
+      "conditional_median_interval": [
+        -287,
+        0
+      ],
+      "minimum": -336,
+      "maximum": 41
+    },
+    "stage4_L2": {
+      "median": -5.5,
+      "sum": -618,
+      "count": 16,
+      "conditional_median_interval": [
+        -122,
+        32
+      ],
+      "minimum": -252,
+      "maximum": 142
+    },
+    "stage4_F": {
+      "median": -116.0,
+      "sum": -1875,
+      "count": 16,
+      "conditional_median_interval": [
+        -267,
+        36
+      ],
+      "minimum": -379,
+      "maximum": 243
+    },
+    "stage6_L16": {
+      "median": 0.0,
+      "sum": 102,
+      "count": 16,
+      "conditional_median_interval": [
+        -21,
+        39
+      ],
+      "minimum": -44,
+      "maximum": 46
+    },
+    "stage6_L2": {
+      "median": -3.5,
+      "sum": -125,
+      "count": 16,
+      "conditional_median_interval": [
+        -42,
+        22
+      ],
+      "minimum": -47,
+      "maximum": 50
+    },
+    "stage6_F": {
+      "median": 19.0,
+      "sum": 227,
+      "count": 16,
+      "conditional_median_interval": [
+        3,
+        37
+      ],
+      "minimum": -64,
+      "maximum": 42
+    }
+  },
+  "units": "native same-thread clock durations, differenced across calls",
+  "family_size": 6,
+  "ranks_one_based": [
+    3,
+    14
+  ],
+  "per_interval_tail_bound": "137/32768",
+  "family_tail_bound": "411/16384",
+  "coverage_assumption": "IID block contrast vectors with a common distribution; not established by random ordering",
+  "interpretation": "L16 and L2 compare complete observation bundles; F is their joint contrast, not pure collector cost.",
+  "group2_control_equivalence_proven": false,
+  "uninstrumented_wait_identified": false,
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "archive_sha256": "c1fb1fab886f23028e5dd4b27754b991f50876692cf525d33df56f5a82ebf295",
+  "verified_records_sha256": "1d42a6a7f0a68123d1dd6a2871c06b9ddb9d533de38de150be45599337b9e55b",
+  "independent_raw_slot_contrasts_checked": 96,
+  "independently_checked_values": 393216,
+  "sign_counts": {
+    "stage4_L16": {
+      "positive": 1,
+      "zero": 2,
+      "negative": 13
+    },
+    "stage4_L2": {
+      "positive": 7,
+      "zero": 0,
+      "negative": 9
+    },
+    "stage4_F": {
+      "positive": 3,
+      "zero": 0,
+      "negative": 13
+    },
+    "stage6_L16": {
+      "positive": 7,
+      "zero": 3,
+      "negative": 6
+    },
+    "stage6_L2": {
+      "positive": 6,
+      "zero": 0,
+      "negative": 10
+    },
+    "stage6_F": {
+      "positive": 14,
+      "zero": 0,
+      "negative": 2
+    }
+  },
+  "empirical_cells": {
+    "s4_m1": {
+      "early_cycles": 11416.5,
+      "selected_wait_cycles": 4336.5
+    },
+    "s4_m2": {
+      "early_cycles": 10968.5,
+      "selected_wait_cycles": 169.0
+    },
+    "s4_m3": {
+      "early_cycles": 11199.5,
+      "selected_wait_cycles": 325.5
+    },
+    "s6_m1": {
+      "early_cycles": 9786.5,
+      "selected_wait_cycles": 2256.5
+    },
+    "s6_m2": {
+      "early_cycles": 7946.0,
+      "selected_wait_cycles": 158.0
+    },
+    "s6_m3": {
+      "early_cycles": 7992.5,
+      "selected_wait_cycles": 153.0
+    }
+  },
+  "scorer_sha256": "8ad8ddada667508d07035ef43a63b051e02c66e10d9b4d5790870452f5a583da"
+}

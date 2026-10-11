@@ -10,4 +10,4 @@ CPU-only job740367在CUDA12.9.41编译成功，4CPU/16GiB/无GPU；两个GEMM均
 
 5项新CPU测试覆盖四模式×两stage×两个大整数clock原点、严格mask/包含/未观测拒绝、四包数值检查及实际C++位选择/累计代码。首次准备误把协议字符串出现次数3写为2，在编译前停止，根目录部分source保留；prepare2为实际构建。SASS检查脚本首次假设两stage的group均在UR17，实际stage6为UR21，脚本修正后通过，binary未改。
 
-完整证据在[build-audit.json](build-audit.json)、[CPU检查](cpu-tests.json)与两个SASS摘录。源码准备快照中的compiled=false保持原样；编译完成由build-audit单列。尚无硬件正确性、观察或预测资格。
+完整证据在[build-audit.json](build-audit.json)、[CPU检查](cpu-tests.json)与两个SASS摘录。源码准备快照中的compiled=false保持原样；编译完成由build-audit单列。后续[八目标正确性](../20261011-R13-wait-feedback-correctness/README.md)与[96调用反馈诊断](../20261011-R13-wait-feedback-diagnostic/README.md)已完成；没有获得观察或预测资格。
