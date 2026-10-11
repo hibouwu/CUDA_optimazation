@@ -1,0 +1,180 @@
+{
+  "parser_sha256": "18e6eea99ce7705867c3bd07f348fa5cb98e148a34bbb176eff51485bae926bc",
+  "arms": [
+    {
+      "arm": "plain",
+      "raw_sha256": "49e191bf52b569465739de94adf7a443b43aefe480f729898832093b5d2662c3",
+      "records": 0,
+      "record_valid": true,
+      "rejected_mutations": []
+    },
+    {
+      "arm": "matched_dual",
+      "raw_sha256": "4bfea33de5d28e4787ed4ac019b0ff9bd3fb49a5ff4e94bea929a4e53644fb3d",
+      "records": 264,
+      "record_valid": true,
+      "rejected_mutations": [
+        {
+          "mutation": "CTA0 header[0]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[1]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[3]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[13]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 all SM fields=133",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "overflow/missing/out-of-range/different SM"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "overflow/missing/out-of-range/different SM"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "arm": "guarded_bracket",
+      "raw_sha256": "d722066e39a833e411a7178a8ac5c21c893ca0f669827782430ec4acef7c2fa7",
+      "records": 264,
+      "record_valid": true,
+      "rejected_mutations": [
+        {
+          "mutation": "CTA0 header[0]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[1]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[3]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 header[13]=0",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "missing entry/producer endpoint"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "missing entry/producer endpoint"
+            }
+          ]
+        },
+        {
+          "mutation": "CTA0 all SM fields=133",
+          "errors": [
+            {
+              "cta": 0,
+              "role": 1,
+              "error": "overflow/missing/out-of-range/different SM"
+            },
+            {
+              "cta": 0,
+              "role": 2,
+              "error": "overflow/missing/out-of-range/different SM"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "observation_qualified": false,
+  "limits": "Current-reader replay; original frozen reader and raw bytes unchanged. Fixed full GH200 132-SM contract, not a general CUDA SM-ID rule."
+}
