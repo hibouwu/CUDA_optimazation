@@ -172,17 +172,28 @@ def zero_product_fraction(row, work):
     return 1-useful/nominal
 
 
-def predict_components(row, setup, calibration):
+def predict_components(row, setup, calibration, *, first_loop_extra_ns=None):
     """Three-config development composition with explicit support and time protocols.
 
     Numeric values outside supply support are diagnostics, not frozen predictions.
     A first-phase supply model can be supplied separately after calibration.
+    An optional static per-CTA first-L residual is in ns, outside the supply
+    max. Its price and applicability belong to the caller's frozen candidate.
+    Omitting it preserves the r2 recurrence and serialized output.
     """
     cfg = row['config']
     spec = events.base.CONFIGS[cfg]
     tm, tn, tk = spec['tile']
     cm, cn = spec['cluster']
     work = events.scheduled_work(cfg,row['m'],row['n'],setup['grid'],row['swizzle'],row.get('raster_order','heuristic'))
+    if first_loop_extra_ns is not None:
+        if len(first_loop_extra_ns) != len(work):
+            raise ValueError('first-L residual must contain one value per scheduled CTA')
+        if any(isinstance(v, bool) or not isinstance(v, (int, float))
+               or not math.isfinite(v) or v < 0 for v in first_loop_extra_ns):
+            raise ValueError('first-L residuals must be finite nonnegative ns')
+        if any(v != 0 and not cta for v, cta in zip(first_loop_extra_ns, work)):
+            raise ValueError('inactive CTA cannot receive a first-L residual')
     requests = supply.supply_request_rows(row,setup)
     kt = row['k']//64
     ledger = supply.supply_work_ledger(row, setup)
@@ -213,7 +224,9 @@ def predict_components(row, setup, calibration):
                                 (later,[r for r in requests if r['j']>0])):
             values, ok = supply.supply_predict(selected,model,frequency_ghz=frequency)
             for request,value,valid in zip(selected,values,ok):
-                loops[request['cta']].append((request['j'],float(value)))
+                extra = (first_loop_extra_ns[request['cta']]
+                         if first_loop_extra_ns is not None and request['j'] == 0 else 0)
+                loops[request['cta']].append((request['j'],float(value) + extra))
                 supported.append((request['cta'],request['j'],bool(valid)))
         durations=[];timelines=[]
         for cta,valid in zip(loops,fractions):

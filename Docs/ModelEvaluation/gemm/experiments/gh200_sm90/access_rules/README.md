@@ -10,7 +10,7 @@
 
 [V07](V07-rule-validation.md) 在同卡、cfg_a/b/c、swizzle=1、K 位于校准范围内的 24 个条件（12 个不同 M×N）上为 **3.06% / 8.71%**，总时间通过；供给、末次输出和关键 CTA 定位仍失配，20/24 预测偏长。它使用 V06 事件递推、同卡重新校准与 R18 边界修正；R19 只作诊断，R02/R11/R12/R16/B01 未用于 V07。
 
-现行V09候选的公式、输入与限制只维护在 [RULES](RULES.md#v09-model)。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但保留行距/边界反例；实验页以当前结论和证据索引为主。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口；[PLAN](PLAN.md)先恢复 V08 失败项主线（每 SM 有效供给、补齐 tile、输出窗口、时间换算、新完整验证），再把 25 类机制问题归入原 EXP/R/B 实验。实施已启动，当前批次与分工见 [EXECUTION](EXECUTION.md#status)；[V09](V09-component-validation.md) 的采样和评分已完成，后续先做离线误差定位。
+现行V09候选的公式、输入与限制只维护在 [RULES](RULES.md#v09-model)。[离线消融](V01-validation.md#v09-ablation)暂不支持整体退回聚合模型，但保留行距/边界反例；实验页以当前结论和证据索引为主。[微架构机制审阅](MICROARCH-REVIEW.md)区分已有证据与模型缺口。任务 A 已以无可冻结候选结束；[PLAN 主线合同](PLAN.md#mainline)改为长 K 时钟与事件组合修正，[m11 合同](PLAN.md#smem-contract)限定单 CTA、普通 LDS/STS 的 32/64/128 bit 访问。两合同各最多八小时，GPU 上限分别为 0、2 个作业，可独立并行；实际启动、分工与作业状态只见 [EXECUTION](EXECUTION.md#status)。其余机制问题保持储备；[V09](V09-component-validation.md) 的原采样和失败评分保留。
 
 <a id="当前状态2026-10-07"></a>
 

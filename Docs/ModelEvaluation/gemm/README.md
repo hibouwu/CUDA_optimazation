@@ -1,6 +1,6 @@
 # GEMM 设计与性能建模
 
-已有 L0–L4 接口和限定执行组织的 FP32 时间模型；GH200 的固定 CUTLASS 配置已完成 FP16 GEMM 时间预测与 V01–V08 留出验证。最新 V08 扩大范围后未达到整体误差目标，后续计划已暂停；当前结论与适用范围见 [GH200 预测实验入口](experiments/gh200_sm90/access_rules/README.md)。通用预测关系与配置选择仍待完善。
+已有 L0–L4 接口和限定执行组织的 FP32 时间模型；GH200 的固定 CUTLASS 配置已完成 FP16 GEMM 时间预测与 V01–V09 留出验证，最新 V09 整体未通过；当前结论与适用范围见 [GH200 预测实验入口](experiments/gh200_sm90/access_rules/README.md)。跨算子、跨硬件的分层 tile 级 DAG 路线见 [PLAN](PLAN.md)。
 
 当前基础问题范围：**单 GPU 的 Single GEMM**。Batched / Grouped 暂不考虑，Distributed GEMM 暂不实现；具体标记见[审查范围](modeling_review.md#当前范围与暂缓项)。`problem.md` 保留完整候选域。
 
@@ -31,6 +31,7 @@ CTA 是工作单元，SM 是承载工作单元的硬件资源。L1 分别描述�
 | 位置 | 维护内容 |
 |---|---|
 | `problem.md`、`workloads.yaml` | 问题定义与具体实例；保留旧模型的 2048³ FP16→FP32 实例作为参考 |
+| `PLAN.md` | 跨算子、跨硬件的分层 tile 级 DAG 建模路线；GH200 GEMM 实验计划另见 access_rules/PLAN |
 | `model/interfaces.md` | 操作、资源、事件、计账与时间下界的共同约定 |
 | `model/L0.md`–`L4.md` | 各层边界、接口、通用约束与时间组合关系 |
 | `hardware/<设备>/README.md`、`L0.md`–`L3.md` | 设备条件、分类资源参数、架构约束与证据；按实际新增内容分层 |
