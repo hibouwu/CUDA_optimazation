@@ -1,0 +1,2337 @@
+{
+  "scope": "Retrospective shared reference conditions only. No prospective holdout, causal card-only attribution, parameter recalibration or acceptance decision. Effective GHz is a CTA-window cycle/ns ratio.",
+  "roots": [
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls"
+  ],
+  "provenance": {
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/cases.json": "76e0f0b0808bfcfcd6b454eb7318a55b45846143f3bc0c60e3c68c196a5e3d83",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/static_setup.json": "c81794a682093fcc064474a457d469dbc681595d1acfd830badcc91657d87fd5",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/environment.json": "a96b093100e965f3c77367af5bedfcac9afa50ad74518ea08c8ff23020497d29",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/cases.json": "73d03a5359580268d34c8680e35f28184e8c34172021bc850fdae3c99eb6c72c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/static_setup.json": "b45891cdb9b616fbe694edf20809e213279d9cc0ac9ab12354f33d0851705f78",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/environment.json": "413a865f5e76841809b4ab6e2156a2e51c7e502663fe86c7090bb13f9181afd7",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_a_plain": "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_a_plain": "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_a_plain.sass": "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_a_plain.sass": "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_a_dual": "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_a_dual": "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_a_dual.sass": "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_a_dual.sass": "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-00.json": "2284714b1da2874feaa597a2c8cc2b654b907ef7f773141ef0cf5af8ab5234e9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-00.txt.gz": "f10e8f04f6269bec49749c2d0a9db1e9a5ef88075ff5539aa20e518da4c260a4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-01.json": "b2778c98f238f2ee9e0dc5c9c5ed3f9c4d42a2bf1772577802e9726197c25a45",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-01.txt.gz": "a7e507ec3f3450be60b7b2ae3445eb45192583f3e382f59f853730a14ecdaaa1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-02.json": "92471c5f65d73c5ddab008f0b349bdcd69930ed95dbd33f36e30dfb333aced23",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-02.txt.gz": "8945fa2d9365536bfb626737788c48541ef398a9ede1944c44926f6a36ca0f87",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-03.json": "f57e7c8e8fc3ba343f0c4f931e58688bf52cb6cba9d1e1adacae0dc8f49243b3",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-03.txt.gz": "ef5dbe85df83fb6b1853b5e05a163efe26b1085fbd96d51b6a7ae6e3c7aa966c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-04.json": "1d5da592ab61abcc4bc0012362d2a3dfa90c7aaa39cf70365233ce3c97dcfcef",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-04.txt.gz": "b3ad07fe0031c5f60abe69b4edfd138829f470c7e37f09a2d5c870f2b9e02500",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-05.json": "c28c262046b3eadd5c07af5d06a62d2458cb3823167feac00bc7f2ee0c2a98b5",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-05.txt.gz": "c9bc9b50e5a4a3ad19870548b629bf12756457ce3979f9bdfd5a3153dd276fc5",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-06.json": "65daf0d5796edb255b828003bff975a9e236f9ae2641b1b620980abdb137c19d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-06.txt.gz": "b36ce9a86e0c5e96c645fefa7a87c535d6573c1542ead4cd5f083eb39d14526f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-07.json": "ff08fa2cef16464a02549d61962638bcdbc3e3b42804bfa6b49939a948530d70",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-07.txt.gz": "d9b7d9f0e56fcfd820f974737c1317b01e127f0c042bc9ee3e9e37e95dedfb55",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-08.json": "ad407ac441a3dd4a449c69f727fbba9985313a6fdcf8fdc989c048cf0e0a40db",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-08.txt.gz": "67fec534ffc19dc4d04a9503c8e61dd12da8beb1b5e941b45f26d5d286ec01cb",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-09.json": "9de4235d355be668818a2b6b01f491973aa506de9e88578543b894afd5f554ac",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/dual-09.txt.gz": "5931035dd390b3e1600f7c5e0d6e4b7faed7b33bf7c191eeb4702ae03778a8a4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-00.json": "31df64109f6dc50826f290dd759acf45faff969e07502b79d6c545fa609d305e",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-00.txt.gz": "9cad61ccc917dcfde0a58e118a8d60cf073ff179e1ee41e753bc6bace968c699",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-01.json": "69ecd51793e132023586157002e180f679b9e3e90c0442c080625c4a37ffbd8c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-01.txt.gz": "b4cabb988067506b0d2c47d71be87a99e014c9279a44aa073519614179c3f1da",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-02.json": "85bfac0bc3a289d253c8678014c6a71adb4f7276a63109bc63f823f2b9beb267",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-02.txt.gz": "9cc8176264550a0f95a3a4f1246c1bdf09ab04a6d8088176fe1d97ea73b7c701",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-03.json": "17c5f2db193b3c17d4fe24151bdd637e8476d1a71d2de4eb5d9c9533b76dd7fe",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-03.txt.gz": "96f5847f87316c1670b2e624da3c7158a1077bdb7fca86a088025db2a26a1d45",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-04.json": "400b18c4875d0b6df0d0429938dbd94600a31f1166cca37cab7b792eedba1eda",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-04.txt.gz": "f76c18e376b9b79dbcf60f5f7c7dd52e3a3fd1920cdd60be74f9c1bfa1f01550",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-05.json": "6d0b058eaa9db5d115f7c0f7d6e0458074e1904583c11ca35ada6c19efa87869",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-05.txt.gz": "99c941a0c8d429e9e7ff3c5d634d54be87edeb3c4361051884b23abea1c84fcb",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-06.json": "534de009ba180a15261294d5de474b3a89e1e331fc6beec114c1ce27c5c45253",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-06.txt.gz": "eb8f75f5553fb26d0c313197cbda4f83b37c8ffdbd7a890ad989f53219d3ef67",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-07.json": "4a8808e5a6c8e9b055a0413578028f3267624bb674df0961280cf61aee6e7962",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-07.txt.gz": "2bd8ff2617318351c6a3be18b53a0e69ba4389bdbacef056f9a92c3869fccad1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-08.json": "79dad6b78edd2be55ea378a856b95658a6f8fd270a0ce463a75caa1bcbf17bae",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-08.txt.gz": "8bb11b2916ff60a9e1da0bac8e263c191845fdd636de21e257636104ab2d5a42",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-09.json": "ce268283d47cf607838037112befba107c07fc463567c19cb3001c1122230f8c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k1024_aligned/plain-09.txt.gz": "2414d05c1df61357f63363baa16ab376e65ce60dcad83312d120b49df26f6ce6",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-00.json": "f89849695aa2de5a3b4b27a4f33f65db82329f30efb11408e0eff9b9a3a25e8b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-00.txt.gz": "1b648c5aae3d08394bbcd5801fe43469ab66972cedb54e36d2047bab512cf929",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-01.json": "5a8e64f6c3278cef180726dc7019b991fd55d762652a6fd051c193caafdf8052",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-01.txt.gz": "eafb7c5c5c540d75a16c347e779ffbecd728dba48e72da623e100448e43fb66e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-02.json": "8c4019b2c0931d6bd4935bbfaa6e9896b8ccf5a9758a2de71e912dcd30bcb6a1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-02.txt.gz": "76ba182dcfce421358f206fd5654c95a89f35ebe67e845011ef532dd3901cf60",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-03.json": "9ddd0a0419afb0adb9446256ec8841d6313140a26c2174b8c7c21a67df4b595e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-03.txt.gz": "5508c43e22000baf9075b6ff690e81fc5028e3cdb1063efbaf69f487357a7aac",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-04.json": "d21c2f388cd98a3ddd950394312e0b02422a9318fb56636f652b15e0ca6da8a7",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-04.txt.gz": "f2f1efcc248d43ff34ac87bf3b5aa33ea956516deee460fa209cda266efb4206",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-05.json": "30a0a83dffa8da527dded6a8a69d1d6ba8d6fa882cad6644da4eee27745efccd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-05.txt.gz": "bfb008c289b73984f16f483aa5e93bcf0f5c3f391400c2f8d5986a99272cc33f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-06.json": "4c474f14f8bc5e315a14be5f3076c9dadf9ef94b6e7c5f940699f858d6ff73bd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-06.txt.gz": "1a820d16da78f414a9e536b5785f94bcd7770deea5d1a8bc098e9590e4e3fbab",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-07.json": "365d88093fe06313d8cfd3ad3d4a20cde11e12710fb62dc2b84f4d679fc54633",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-07.txt.gz": "02571dffe316f77c7ef704dc7ebf7a17eb6a03d54db30dc45051629b834f90ad",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-08.json": "db58e2e78d890f4571a886ffb0899b6a1d06bc64c311824c7a55a5f7dc3c3aca",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-08.txt.gz": "9230ae90bacb746fb145a97d4711d1f2d0341f90683f3d862723804fc30cb4ee",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-09.json": "903e59184d69e4fc822dc267083f08e36321716e9beec27c6108c92f591b2047",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/dual-09.txt.gz": "a712bfab1373347c830f0a0ef943549af25d16ef726c2c88f74049b9160dab08",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-00.json": "a56fc9f83e623fe2b6cdfcdb272d127c3e82ad85bc02a441613d40dd403603ba",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-00.txt.gz": "56d8cde908b0c027f79f53889dde00fb3185e47f291eec3c91fe62b85bf6f0aa",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-01.json": "1e6e629ed00bd535703910a0c067aca6f8022888209dfb17c1956f1a9a1d06cc",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-01.txt.gz": "85c98d30edffccb45a1da87c9013943dde9a31163789fbeb8e1f1aa337d11f23",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-02.json": "18c430b97a9ae6b17eaac2fdb470f64285a9062e8626d9b75b1b2ee3e65707b4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-02.txt.gz": "e23c66c0b4911c1997cb2be5bdefe1b1c6c94b859a82c7b8953eef72afeeac56",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-03.json": "42c9b6fdad34ad5afd91a51ed89ebb357b216add9a50c115089884e78ffaf60e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-03.txt.gz": "5375fd99bf67645d122b44a464751bdeb2f94650ccb8894acdb38e3d638273f4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-04.json": "f0b53eb1410a61fbc9797fede9081b8490f134e454b766eb912bf496f9c168af",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-04.txt.gz": "51bb0ecdcd31dbb51d7be7994cb7f1ae11add977233f9de940f3a0348b3e6bf2",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-05.json": "bbef01732478e257311bc6a1cda7a2ce6a27bdb45357670b1da4d9b1859d9cc5",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-05.txt.gz": "c4101bf2ac65378b188f2e46e905e0b4d9642ee49bfd53332f3fbccb2caf029d",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-06.json": "690ff1a1802c1433967d795907eca5277efd7d98ae682013873e7416618dcf32",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-06.txt.gz": "44f749c95b611f4dda14f0fff4450c6895dae23ea4a4452267e2c883317dd5e8",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-07.json": "bbe69c22883df63ebd2e6684b64dbe7fece652d39871dc29dff0f6f054a84611",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-07.txt.gz": "1b9c573acced3f51e75276d1a3f76c0d071cf5463665d75331d7f77fcc62f604",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-08.json": "861df8b5a1aa22779aa6f7d9572202a977284f587d569fe39a9262e075fba098",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-08.txt.gz": "b6dc5afa3d0262525b0925d4e6bf94d4e79230906d2141055acecde6f37df304",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-09.json": "9f628baf73987ea4b2233d1fd679d0c221fccf101889da61a30f02f7d369dbc4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k1024_aligned/plain-09.txt.gz": "d498aba178ccffc727f2fea8da1544b4ad4d16db082377828f99ecf86b853b43",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-00.json": "461be74780827884776520c56276af3247135e972a101a335151d027900ab52e",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-00.txt.gz": "a12e3ad5acfe73f278359c264e46cdc71ceda4f12ff34423cb2159d822e3bd28",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-01.json": "727738f294a42d559181c286eac70374d8c5418e168b78a9e8c1fc0f838d486f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-01.txt.gz": "2e6b9c55a69d82ed56febf30f18189c4c325a1b105d6584a468b05d039c546e8",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-02.json": "bd84ac6509988525e1592dcb052b13519d0e0f184573be67e80422c945290324",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-02.txt.gz": "e0c28be30ae0530d8d534f63696546b96f869e22fa67523d56de3c499cac3d0f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-03.json": "747376dc840c5cf679f9769c81e1dfa5430430b8d1492f89ac035b459b4f2563",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-03.txt.gz": "8caa27df117bd9c33418a27998319bc613183b6782de4e3950b81d7bff21e9f3",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-04.json": "7a03f1afcda84aa1628c7e06bcd23fb735b590db05802f1c807f05351ec8da84",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-04.txt.gz": "fa5b94d9cbca2cbba12b9f6dbc98dddb70f2cf7d20037f813a3e393dec9a953c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-05.json": "43a90746b57050edf5bc6ae965e4313c58145260387c5533387dc9d775fff4d3",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-05.txt.gz": "bc4a05383279f395c7f3649da9a405f5ac4cf63c856e4e82e9b896b93ccb3c93",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-06.json": "81f7955fc985eec003a4e3f5ac5a3a8535c644517cf07db11c09e2ebb947a636",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-06.txt.gz": "6933ee983e86c90101552d04192bf2a3b8fc8256601869e5ee4ecf0adc5dbcf1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-07.json": "1ccd6e2afc7819bad245c0d4f8a1d413efb329b4cb2f1de44131affec5360222",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-07.txt.gz": "fdacce71981bcce4bae89868395f0f16dbc4307d778ed05da6b359a11bfe2e6d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-08.json": "02ec43b015e3126499a5fc56bc31d05033ed80404f967b49beb838cb67797cd2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-08.txt.gz": "d2ff3415a0d7b61e384e41e7c43688b88b84f5bf7cb04aa54f65df0713e98c9d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-09.json": "ffa5a9fff50429214d5fb1283fd818f66a69be08bef80161b82b48fb7aa4406b",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/dual-09.txt.gz": "8bfe692d981c8c347cf65201c6fb7d57153d3b000e843db292b848a5356d2bf7",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-00.json": "4c3c508ced2d5c54573d65fdc7258382d9367b32afb994a6eaaffd7fb093640f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-00.txt.gz": "b7ee8bfc8237f1f171f1a29a4991e81d2f37c1b3a4d770d4f7b2828941fae255",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-01.json": "9b25c17c7f5633d1c46caaa3cd6d1c0328f1fe8640b917e0c1ab72c66d56a8bf",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-01.txt.gz": "908b31ba77b9bfbbc27cf82c5b41caeea77ede550c6aaae556270c17a9a1286d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-02.json": "a359c114b41ee2c50a9f3c8c3faee4f1fffb54ffc6c59b27d1a7cdcb4b9b6e7d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-02.txt.gz": "65544b033e58ccf3158821a7416c7e5e48a997c44374392df827e98a80ce9bb9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-03.json": "4f11549cd2bb6308de4ee3eddd5703ad817581614cd21fc547d0138f250c2658",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-03.txt.gz": "004087999986f471ce99b885a9ec3f93d0f75ea3b8c1a714e98163abb943f687",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-04.json": "7377c0a1188554fd6daf20337854ced05da90e221eb863566ca89443fa3a4746",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-04.txt.gz": "8265cbd5e7c2233a6b7a8c33b56ee206fa909eca5681a33dc88018c32fbf906f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-05.json": "45af4798ce729cf369fa61850d6a3b7ef0825ce3abe5beaa255bdbfc974c85d3",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-05.txt.gz": "f408d743aceb41cff07a7799b2874b8c7b5c76cf08ff7221f76f12a31e87bfba",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-06.json": "0fcdae70d0bda6f5a9dfdc49839f28e2f52d63db7f7aff89277c45086fa2d49f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-06.txt.gz": "437d7df0891ca54d347d8efeaaa131114f4f672e4bec7f7f817d7f8f649c2a94",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-07.json": "5a1f52aa7c5d69fcfd80efded62afb653abf5b5da351c9c078d780369b41cc2d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-07.txt.gz": "7bce713820d48fa41fa2508d158a7e89afb9d781778b102dec37de8a85fbbef0",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-08.json": "0547bba2479712248a0534f2c1069c554545e4a396696688e269f6a17becc47a",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-08.txt.gz": "91276e52d3f826151fb836cb7419a991b44b792ac30b434be435554c9f179a13",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-09.json": "8caf03abe43275cf4e55e351704b89bfada0f873fe259808f070ce277989b6e8",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_a_r13_comp_k4096_aligned/plain-09.txt.gz": "ed0e983dc9a75f3e5eb6132e35ee63f537f8178abf9b61ac5ef6b6324a229ea6",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-00.json": "62a6a458da5b28b90bb661e2e353ceb465c2c8ddb3a75768a7583bfe3c7fefb1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-00.txt.gz": "5bf0a1b0055c91ad37f385cbbaa6e623d8d8428c120cfd7f6525453c826bf232",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-01.json": "cebc3a3c80b36f79918484b62fe2e37c4e4c3b5320cd842b3e03690116b133d3",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-01.txt.gz": "fde1c0ebd91c078197035da27c0f9f866eac152dad98e6272f42559985c0dab1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-02.json": "c55c2093d22a7a0abf60cb238dd8d471c8fe0091ccd210c0a22dc1654d8eabb8",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-02.txt.gz": "9c934187b42ed37258dbc990ee247d63fed1ca1244cbaca40994ae99f70e330e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-03.json": "4bdb9e14b6c9f0d627aba1a06eda90c2e4fe30f931329c908672a33334a11a9a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-03.txt.gz": "5e5a24e5c7beab4e981d2895a47ce8d841df1c66762cf2c4564a5a2629662248",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-04.json": "4c5851276fed13aff7e550fb0fc3b8d344b35b1e655d39085999fed3220c839f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-04.txt.gz": "d50c7dbc7865c6d3260e99b990ff0b83fca273e7c4d3ae019c5b29b5b159a22c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-05.json": "a1e1c754d0f14f33bcefe4712b846fae685daf80e7fd8797cf1c05f4287acc22",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-05.txt.gz": "05bca124c714e75453ed3d2c1995bd6f9a4f2fcbed9674ce479efbdd6799ad9b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-06.json": "5343233c7d76d87a6862303475a8f709ca4696ffa8adbdb14163f648682ecbd4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-06.txt.gz": "63fdf3d5261cc746cf9d55639a036edf4f2d36ce75160fd891070e82bf0a3543",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-07.json": "a16adfe03b2856225dd47a7c2a02879fce96b2eb3aca285155d5dfa08ae9d10b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-07.txt.gz": "6ddd317e3546c2edcb3694e19caba44725eb2f6fa04e949d45b16f83059d8dfb",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-08.json": "5aaaba73e840d036b8486c98ad914f3024f02225e0c6e427d7c59565eff179cd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-08.txt.gz": "87030999d85a6e7d6b704745e32b7115100aed49b989444272017ca8106b21d9",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-09.json": "21ff6dc523059b345eb71b9e1a8463653dca39023ac9f8996cd94408f01bdd43",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/dual-09.txt.gz": "059637c4e18671253746e1b533610128abd5fb0215cb6fb2444ad19c42cc8569",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-00.json": "d22c5a78d134791af8a2d0bc0a83ad54656b5e7c83f65efc9192cb4468a87e3c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-00.txt.gz": "3e543a2b222a1a06aa436967885324ed6b8346958b8409d7c045ade16ca14f49",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-01.json": "111ceeb25440cd104b500a5cf3acebceb7e03561b156a5a8ce100e3c1950f853",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-01.txt.gz": "dcb0e7e76618e4df1177778e58f8bb0a0464866d42134fed185c5ce8420668fd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-02.json": "accda3e94fe8adcee8d812de245c269a13d59a3d54f9a705f38701f9e66e494a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-02.txt.gz": "34085310b52b3acd233c747e9d29e62db0f6c70795a10c2a4a82cec7224b8bb5",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-03.json": "aaeccd8b115d1cd3cd7d895e0f4eed228b212edfb9ca29d861f7b9e9217a8ed4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-03.txt.gz": "78a8272ea3b5dc49767fa781e4a6d328c1c7cfd7b8baf4a0eecbe9efa109b55b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-04.json": "6e86b7385e7ba13544bebe7c9dc0c186daa15db3a48878bb82600f8822b2e792",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-04.txt.gz": "7a56c88ba51ad8bf175f5eb7f87ce039955126946d927eecd56b375806248de6",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-05.json": "3af706b2e0f67023e23a8294e8c7077460f26e91486db63ab1f4c72fdb6a5aaa",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-05.txt.gz": "8006e452f9f04996c77811e7d5a0731c12427bb5d2accd0326ed7c7d3827b3d2",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-06.json": "ce9a79e99aa6625bca5f1899b4b6f534075830db729b27fc9cc6cb8644fa554c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-06.txt.gz": "a2deb04b12f310aed8821c3bdef94bf3968044920355eabb9e00f059cfcaa969",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-07.json": "90d6481a40220ea56644430ca4cd76f0ad9fd72fddb479ae6c1c1a427aa5d973",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-07.txt.gz": "c214c398bbd5c916ec49caedb577a85b0cb151986e176fb230084998adcfec7c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-08.json": "839b105ae02748d3d4e601bf0a48759b1eea3ba9854700eebb5fa08d8d4a35bf",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-08.txt.gz": "be6865dccfd6b8ccc73bbf2f611bca13e75bb6b02c4e38211a54d2e0cdaab3bf",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-09.json": "4b718a293b9919f6dcfbd06fa859754b65baca73c08e4e1e24d0dbb8ef4cf89f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_a_r13_comp_k4096_aligned/plain-09.txt.gz": "45c099543fe63079d16af3172c88aef90baba90bbdeb976d6f64bcc60be743e8",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_plain": "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_b_plain": "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_plain.sass": "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_b_plain.sass": "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_dual": "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_b_dual": "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/build/cfg_b_dual.sass": "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/build/cfg_b_dual.sass": "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-00.json": "02e2418c3db61c99d09ddadabb2c760e7235318f84355eb326cfc1e009b8c2b4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-00.txt.gz": "e3b9a5f11fea632801f1750e7dbcfc55ea044a90982601809d29d262e24cbd48",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-01.json": "f22e86eaa176bc13734a61062c304d45eb0c147232610c06055c0c890633dbd9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-01.txt.gz": "032a5eb47e99dc86b87b72c67ab5a8e0424eba2a5ce51cff4efa2b25f7746295",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-02.json": "279e9e0d4f515ede17ab61ca3ad1ee5e6ecf322759a92498d6dd6fc426114920",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-02.txt.gz": "de21926b1fdb5986072944cb34a79e8fc650ca3d645fa53e0f4378c71ca7bb36",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-03.json": "73d1ead0c9f18a990c1d3d81109fc6a229f8ae9207f250f9ea1363b3c3b8a9ff",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-03.txt.gz": "484f6cc7ec4dabf874cc3c9811aface2ed9b4eff81b19fe1620530442851110a",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-04.json": "9174a5983548d07ea9e8f2d7d12a6b5b3fae0af6de07cf333329bba8497abc75",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-04.txt.gz": "160153a6ff871d694a5e2bbf685babf055a89b69b02478fede21b90c10e38f76",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-05.json": "d1080aa5145153c7ebac3d0efa0216b2ec42461c6fd2556339356563f530ba4f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-05.txt.gz": "9197086fc1bb24f60c9d8a7a8a91cd428d7536d8e9b9506290ce2f161b1e9fad",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-06.json": "7a6387a2056c14da43439e1a531320337399dd3f0aa0d73374a42602bb467a7c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-06.txt.gz": "0b7a9cdcef004b62d9554b56d42878f0d44112e2d76a09879c2e93182ec37c0c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-07.json": "d830f6381cb8c4d19dec4d6e0387e90e11494490584b037133b9814421e8c61c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-07.txt.gz": "079782d03398c5b5ee557cf5e39accc6676c302e7a1e7246b9b8f347418df786",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-08.json": "9b8384b1c9330be692f6504e7dc385bbe09af3ea5a55c59c719ac8f042ebaff2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-08.txt.gz": "5abd1436c6cfc0c5691c5b8a6efdcf329c5e0a4a4d221ccd7a5264d0254b3ac2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-09.json": "00a09cba5a52056a1dd7b2187016670ad07d240b0f255c231d70a3c64acfe0cc",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/dual-09.txt.gz": "bcece66e24df0a3c0939aeaba0627d7d8e30841ce4753e769467f4bd9dc6a91f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-00.json": "4519ce504dea2292311dca83b3cdbaa6ba2d1b9330c3b62f5c6a42202dabbb51",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-00.txt.gz": "eb7ea741a5f3cdb41a4f588629c9f4508187b3834c6ba5873197125022b74281",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-01.json": "fe637d66f6452b4065e2385cb23d4b680b1a3a3b591cfc2ab9d9337d00a00397",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-01.txt.gz": "5faeae46f4dd9632f5cd4e2a225fcb86b82c3002031699c5f6c8c91d47fd734d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-02.json": "6a66978d2c58b45a1419dea4953ed96b25e57fdf646fa74620404d4639d36331",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-02.txt.gz": "cd499f2be6d83e90821f0af90655066be0bb5d59370b355e84c1f5fb0e18e717",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-03.json": "f091ae0ee79930be5dcefed6c2398af717b3e4001a20aba65e4e9f1f2b3ccd6d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-03.txt.gz": "bc14b114752e00749778b9539b6fa74f5dcca02f63f0ce16890bfac6752427bd",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-04.json": "665700689e724e63eb36e535684e361a362e71a2089be511288927b767343a50",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-04.txt.gz": "503d56dea0df6afadc3afe6685664b71d499e1f2961d2bcb0f1b48d14a38e951",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-05.json": "9717a17e77e6fa1bce9a91489205931679ff326afec71448093fc96957b816d4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-05.txt.gz": "2e1e09b1a37eeb26d9cf377b0cd5ef071e47f446dbd0cd33b82f4be428c52b0f",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-06.json": "e64118b81c5379a56e2600033c14aa86abc05445f3d7289e20a1dfe38db024a4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-06.txt.gz": "e40965393784367740a5be16eab6caf339819e293e28762c86935e87d268889e",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-07.json": "a15ec8ec0d99e594b7a5deb2996cd29510ea01b2a87f2ff3bf4cb6ff124b829b",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-07.txt.gz": "55e26d6927fde7164c4f9b079a432f031202695acb9dcab26718c2475dfa7e55",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-08.json": "5e6e4e633413cf1f87003f93af03a2c448a2408262c227f253000d074aef6630",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-08.txt.gz": "925be854a361a7ec198240ae395893bf21080e46147b7b7ced175e177701f0b4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-09.json": "745552f9f013fb591a77e46c39070f8346e1806b9bb098c0ba6a5ca3d2d4bb9e",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k1024_aligned/plain-09.txt.gz": "f1eb035dca788ede7cb47c60366bc51477c22b4c0c0fca22c740393641d5ff80",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-00.json": "1266f43fe48a4608fe6de1186399e70a86952e91669cd78597e62c856c6e8b41",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-00.txt.gz": "09fcaa574ab4779a56b020e8d9fcc4b741af445b520a4a22d88ec14c234c4c00",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-01.json": "e45508c070e3237356a1f8bfe6f05a635722c5b9bd4b490a4b5a9b3a67e81002",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-01.txt.gz": "a1b34703beb831e7eb7c12b532d6f3541adc37b4c4606ed6d16584ab20a15d44",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-02.json": "e3211d1a3e7addc3d58a0a51a10e40eafa606b676d8204bab270570473ac1565",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-02.txt.gz": "a26514a05e1d670a30fed52d2866875f2bc91a7953d158de1170c26f67521940",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-03.json": "23a0a44b8f0f82ed61c88ceec805668c59ec270b76e1d20522d73dab1ba71df0",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-03.txt.gz": "fe0530cb5718d7d9d91a04319052894022e7b9344bffdf8bbe2d92d2b6dc516a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-04.json": "cc8f35ea9a0a3912d310cb41e21004be2fce1bf411d82c42e004944a0aeb2e1e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-04.txt.gz": "c726f82327243c54f46e305cc648d91cb7c371824fe08792b966dacce441a05e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-05.json": "4471dfc8207f46ffcab1da45d73d69f4f0a7a29aaa86286c53b0736fa660be95",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-05.txt.gz": "314d8bfd4401dc6211d083588f585ddb07c5e74f3221e92df5e675e839b0c8ba",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-06.json": "60b27bee65f586d4a2805c1d3821dec31218df79e46c94805fcc6c02583129da",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-06.txt.gz": "8277c821efdf653cf8e958aebabb2444e825eca473c448bd14c1686b7d052cc3",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-07.json": "89a7b30463cccf0d18c809bad06532af92768d31409fd48ef15d9c5c88a026a9",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-07.txt.gz": "e4c1d94b57947a5cfd95c001d4f58c2ca17d15f672f27342057d751580bbe7b9",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-08.json": "338334b5c3a46319bc5bac63832b294df8d2a40312b0c3e154eae14d297234c4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-08.txt.gz": "5a594b0247f1c417ab03facebeac0996db9b9d1251d6fe2855061314cee1c4c1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-09.json": "bedcd80ca90db7ee1c096bef357078392898af9bc15219e573c2524f1f5d7edd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/dual-09.txt.gz": "2bf44324ba79306d7bb8eec20ae24c1f08ef427fe37e4b56ccf8aee09ac53863",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-00.json": "ff74a22f153d46c4e1a0757cab8881eefbe3e8d96dbb599d71347d9529d6337e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-00.txt.gz": "0658389eb34bbdc2dcdfa19be3054282738926656f3287ee1510628ce4426579",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-01.json": "80cb82acc525034da84d9aa9671f747a7bfaa75b9d7ae1a4b9d235c5195d91d5",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-01.txt.gz": "179bda68220857adf6aef6e944a05f0393de63c8835d8ae18a3139167a6f3458",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-02.json": "8a034c922d5df978ec7f1a3572cd8168c10e9390c8e028b40ac086ddc3c9fb2b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-02.txt.gz": "2e265a5c2e3b2dfd9ccd4ac7b7a9ee595bcd15af54da6567708c95bfb6afa29c",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-03.json": "30b5c7b10d1012bbb446e2c7be4d9b71b130d8fd1ef5a91954e05937996c52d4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-03.txt.gz": "38e281c59907ae0984227ceee490eca7c40cbe69b6f8aa099ca79671b623dd62",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-04.json": "dc9cdf0ef3217278e896993215557b9739ce91b391611cf05596723af673ba5a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-04.txt.gz": "ef924af84e0cf51f95df0c6e9685449f61f89811b657691457895668e9628dba",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-05.json": "77ad6db6cec8054b451e353ece664e00b9823009d82ad63602281089df81bf7d",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-05.txt.gz": "b3b6a85bf12be707a2814eb5125da90e551fc0349d100046b92501ab1ad94565",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-06.json": "68fcd5f073415edc2500446e5814daf9a07edc9428d6d5e41a4977eeba0997c7",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-06.txt.gz": "2a4a124c0e18409c2bbc68ae11f48fdf7606983a8b2a07b63acd6bb4ac8b6228",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-07.json": "0808509fcb4f457d66fa2c160afe4cc59b7ca71a6988a08d978177e03546f869",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-07.txt.gz": "7fbacd0b6e248e3542b1af3d8e43452a990295c7a26e08035ec761f4a8237b96",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-08.json": "ec24043187a53e587c7efb3aa7032340d3bfea5c3e2df4b7f38cff86daeb1f31",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-08.txt.gz": "e1170383c9657eebc9b74108a405c798f598eca2a888c15839e47fb0ff4ea044",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-09.json": "37820735b4eea96b5e4f87cdb35c7fd0854e8be2c0af864cf196f5de7454abc4",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k1024_aligned/plain-09.txt.gz": "0a403592b5b3e3017b6cff92c466ec2a69de46674e2563cc6161aed4a1ac5b13",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-00.json": "969426170812e4aeca3f6ff6958c6829122443848ab0d63fbecf9a72c254dd65",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-00.txt.gz": "a1edb85248820d62a02b8fc99902103facd3158b6b85aa095a21121561f7c861",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-01.json": "7df11584d8d3bb217b595b1a47b500dc33d54bd44d38a786703bcd641a7b575d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-01.txt.gz": "2147f2c60d57c2769fbfd59de328a1dc252c58fc690ec025d5f9e393d69c1354",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-02.json": "a67e0dde875aac514610eb0fa820866eb811fdbd4b165b1b38cdf0f967684366",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-02.txt.gz": "f139e578178e330ca154afcbf53e1bb7bd6e4dacce4b181df93de5f7ad31bd2c",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-03.json": "a6876624cb5f2fe4ca20486b2a3996ef92129dba6e64702dbef4c80101be4b45",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-03.txt.gz": "413dc1aa07f139fa9c68adceb301e159342281faba01c9272c9701456c781489",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-04.json": "8a903b40b8b6cdbece39da8eadaf774cbd61e119de42c1cd8d283efb44c10d24",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-04.txt.gz": "09c3b1591706c5181d86093ac1b2c96593d79059d0e687c1bb37500e0735f3f4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-05.json": "e42130f37ebd9c14d5cbf6989c63d10468c169d4b29e48e4948c842b700adfa7",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-05.txt.gz": "550887f64e7a7c209bcdfe921951744cf58bd699e80d2586dfe54908c40af931",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-06.json": "0ac003a3dbdb95c13cb559ab32e51672697fa89b59a644314957d4455cb22759",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-06.txt.gz": "789661963935fba174617cbdea3001d0bf36fa6b2699da976610c68f21033bcc",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-07.json": "1ee278965959666a0ff0dca61dd822dade45c514fa6b6809a04414b2dbac1976",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-07.txt.gz": "8452a392fd196e521f4ce91d159e995fa921ef7ecf85f11692fd81d5296705e9",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-08.json": "ed219c4ecf05bfe24b00230335fd052f28c4e40e3c3b3042b815a83d12876ad2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-08.txt.gz": "de95a79538017da107f6df886d04ff216cc110a94a5df79544b39998f5ffb91d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-09.json": "9c00f605ea3575844aecfa6e0e55e7db91abd0fecce8735233e3e5f050bf5f38",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/dual-09.txt.gz": "30745efd5aadbed1430783d565ad6d573045afe8fd46771e52a523fad94fb2e1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-00.json": "602ce81d409fb3a37a5f173bd913d2cb3bb1be292640031230b67bedff31fabb",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-00.txt.gz": "75717f5daae6b30b9d6b45eff94aca2d25976a11e2113d7638313b4564bbd90d",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-01.json": "c83a117011c5a23bcff696860c88e312f474b25ebda7790b51bde6e51a1caff0",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-01.txt.gz": "269e6a734744cefca685a4bbae807cf1c6b6ee206ad3f930ecc89ca5c96ce2f4",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-02.json": "f2fedf03c9a141bcc8462a9281d73877e7bb697f17cabea2e3bac3ce0fc70385",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-02.txt.gz": "2bcbc783ff9511531cddeea113006de38d82266c2c71fc0267b1f88bab6ddf51",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-03.json": "c184ee88618891527f2f26296b409858105e1558af5f1ad46b1ac0e8f2747498",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-03.txt.gz": "9f129f7857b7e30f0974eef43b188e16d659550eef997c7c171f7408504f5424",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-04.json": "889e5b045c5700e6e55fef519346197cfd82bd6ff7e42d5e2c9e087ed690a200",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-04.txt.gz": "19162738c6cf164861785faf3bbd9368e5dbb16ce69170fa288a0c966954eba1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-05.json": "652080c085315f525dcdd209e1ee6fa7d85ebfe0bf6e2eefbc42d83419ae1bff",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-05.txt.gz": "15da296567c931493b071efc27b715b8151dc070b4000db1f44930b82e6c7d90",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-06.json": "eef4fd530e0e86353b0765a6fadc9f32658a973324d884ad32f9b8932929a7f8",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-06.txt.gz": "f0af1ecdd44c9eb1acb0b8ca86ac4fc58b81215e3f5c3a1c4766a6120cd72485",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-07.json": "d42a65a5a9f5e695a803d34a2599b7d615f170f4b831945d20774654715bbec2",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-07.txt.gz": "7a82f08a4a6637c67e2b34ab575e89ff70be233aa8c7484997269c7a21a96a95",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-08.json": "4e861c60c5759ef0257f03ef9e4eef48f3fbf5a6855de2b0f9139eca11ba4e63",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-08.txt.gz": "d3f9ce80fe1e0f3411065f0018c33bde3270dc63bfe103c83737f7c557edc0b1",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-09.json": "820637859933987eb37cd7116647f5b70a2a3fe10c480155067e9e578f274d11",
+    "results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/samples/cfg_b_r13_comp_k4096_aligned/plain-09.txt.gz": "5263456c524dfbd04af6256ff7f957961335b4dfc3b6a5bc5efc28a5cca12a3a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-00.json": "22e5108d81274b86d8a4c2d7d8cda5bdf02e87d0c51443cdb03a6bd098e5e87a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-00.txt.gz": "37c111b6b44e4b1498447598542fe613c9c012cceed01edc29e879ceff1f9c9e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-01.json": "265cb0ef4d6c35b11de1dbfe37c4f482e3d639ab0ae1025a216b6d4e0617863a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-01.txt.gz": "4f24c12b0ca13b2d07df5c0d31a02a2890ed79e3d6148ca7ce7fec5603d466bd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-02.json": "63c10472d6609c6cb05b9e21549598caa6b39daf1cb010226e02101827bbc07f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-02.txt.gz": "3b6657f456cb85e77fb1aa93371bf5690e962293b02c994a76f4687d5a4a104a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-03.json": "2e07c90191e5037429124a8f3a7968513faf1a534af765b7d838dd74bd075d53",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-03.txt.gz": "8bde443276dc4f602c04ac10fec4468bfc6646a29de0dd84eeb9707a5762aeca",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-04.json": "6d1ed4eb7a5909a8b6af70cadd80305dd74b622a8e574a52fcbc7191c9993a90",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-04.txt.gz": "e436c7b5f0ab93187776115f32637d3af260d42b00350e669091e1b3e6a7bbb9",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-05.json": "05de039d8782bae5b9ecc77945bd1dea223f9bec690b4773444c49793a1b3b49",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-05.txt.gz": "88dea52ff98ebd543553341bfb990f241705a1c840955f5218f160ba238830a1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-06.json": "c651a28e394e4e778058fb3c08973c10423082680ab3a1352478210c96786fe8",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-06.txt.gz": "0a7dd7d6a7a1ada8440a3223812b9cecbe28151f8eeb65cc2c6492b99c7a16f0",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-07.json": "f6ccb81c53cbf842ab16ef1323c032cda3841ff612e550a9491cd90d90ab9e4b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-07.txt.gz": "2bb71b1837e145c2179da1d427cb75cc0de3d83bae2d0a5a35ab263b7f023562",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-08.json": "b7e05ac2f8622e1e0bb7b2f8e7cf89e1110244a29873776bd0439574808f9a7f",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-08.txt.gz": "f9d77643980c5bcd7162041193d03c1cf89de12871e11bf4cc2453ed1c6955e0",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-09.json": "0db269b90f992d38de620e8eba1da004658a03a6f2c8d74659e26af6b9e7c0bd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/dual-09.txt.gz": "85142d2c2bf53141eeb38298dcbc28c414f5f8d4b5060ca23612f49bfa8167ba",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-00.json": "3ecc02974d72a0714d77bf910ee5fc435775dbd8dcee3cf1a9c6e87122b9e50a",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-00.txt.gz": "ef6f04fb53c71683770c2620bf4595bb322266dab3acdce281b1be5c6d5907dc",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-01.json": "97501bc2a3d6047713db638b2e38e53400ac4212e3cb6c16df365a7dbdacaea2",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-01.txt.gz": "69db13fde09217923e6e1f33540bbeaa045a653beb7fcc6d45311ce37bcaaf96",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-02.json": "e1b1b2931fd0d26c2e8895350ec1dfd6f78e33432037194dc95e40081da62f64",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-02.txt.gz": "da1b05c4f43511a4ff2efedffc4dc8c1eed17a9d7685e4a78afe2339f4708afc",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-03.json": "2002c81696c6c89e003af32b4645b63f79f89b01305e3bd204e14672f60522cd",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-03.txt.gz": "c2137a955c06a935a174608f3ad262b975d9ef1843a07046d9bb9ac92b996950",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-04.json": "735f742240162f03135ac8b2d8edb7c2e177efba2e56dffc6f1ac985eb576d06",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-04.txt.gz": "e58d56674d4e3d824991b91b4da4a1bddfe296a2282808df7aef8a50b4c880c7",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-05.json": "49ed25bbb9d3c2a9fcb710a7b7fbc543a5b82f242f2a88161c1c1f38c48ab663",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-05.txt.gz": "82314459a114e9e49dd617bb272f525c7de5a17f9cf0aad366b95fb8d430f3c3",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-06.json": "d90d90c069ee74945258a695147e11131f4fa3f5b24c671e1d93224a0f7bdc43",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-06.txt.gz": "997abed97c3b781569432ef5dbc0ef617ce46e2194cc816a8c86173a957218c1",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-07.json": "2f14156af98cd5cc54ba87cf6e9e883e87fedfcc2a33764a3ccc356fce96b1e8",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-07.txt.gz": "c0ff9d9d539d4dfbcaad079007a2a3c37021d1386624b54dd57803e5dab6069e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-08.json": "cef4a92b37c2a0c6bcc2f16564489d2e113cb7d8478076a7674bea3f336c638b",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-08.txt.gz": "6375c2304ccd584beb5199cf9bbfc4bd1e07579ba29adb10f57586262354779e",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-09.json": "1f3e5c9b13af3482e23b36134c7350f02ff372dee389b0113b0e5549654b9989",
+    "results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/samples/cfg_b_r13_comp_k4096_aligned/plain-09.txt.gz": "17645c40ebbb8c28387b2f92098100d54a4a8c57d69211b1d19ef90faf23c133"
+  },
+  "cases": [
+    {
+      "case": "cfg_a_r13_comp_k1024_aligned",
+      "compatible": true,
+      "config": "cfg_a",
+      "gpu": [
+        "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+        "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+      ],
+      "binary_identity": {
+        "build/cfg_a_plain": {
+          "hashes": [
+            "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4",
+            "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_plain.sass": {
+          "hashes": [
+            "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b",
+            "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_dual": {
+          "hashes": [
+            "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1",
+            "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_dual.sass": {
+          "hashes": [
+            "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b",
+            "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b"
+          ],
+          "identical": true
+        }
+      },
+      "observations": [
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 34.17599946,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30848,
+            "max_cta_cycles": 53210,
+            "median_cta_effective_ghz": 1.706744695612853
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 34.97600183,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30848,
+            "max_cta_cycles": 52962,
+            "median_cta_effective_ghz": 1.702440429367793
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 35.16799957,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30560,
+            "max_cta_cycles": 52847,
+            "median_cta_effective_ghz": 1.7211077056246467
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 35.2640003,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30784,
+            "max_cta_cycles": 53040,
+            "median_cta_effective_ghz": 1.7055478144218181
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 34.07999873,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30720,
+            "max_cta_cycles": 53162,
+            "median_cta_effective_ghz": 1.7127572460821239
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 34.75200012,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30816,
+            "max_cta_cycles": 52832,
+            "median_cta_effective_ghz": 1.6994761506501153
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 34.49599817,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30624,
+            "max_cta_cycles": 52858,
+            "median_cta_effective_ghz": 1.7083054067627876
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 34.65599939,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30752,
+            "max_cta_cycles": 52844,
+            "median_cta_effective_ghz": 1.7068743935473438
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 34.20799971,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30784,
+            "max_cta_cycles": 53120,
+            "median_cta_effective_ghz": 1.7060957215245982
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 34.84800085,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 30848,
+            "max_cta_cycles": 52889,
+            "median_cta_effective_ghz": 1.6944396790012761
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 32.76799992,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 33.66399929,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 33.34400058,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 33.28000009,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 33.28000009,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 33.53599831,
+            "warmup_calls": 10,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 33.63199905,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 32.51200169,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 33.2159996,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 33.63199905,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          }
+        ],
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 34.97600183,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 30880,
+            "max_cta_cycles": 52861,
+            "median_cta_effective_ghz": 1.698767395292253
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 35.07199883,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31072,
+            "max_cta_cycles": 53087,
+            "median_cta_effective_ghz": 1.6952499679393633
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 35.19999981,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31136,
+            "max_cta_cycles": 52681,
+            "median_cta_effective_ghz": 1.6774435215197796
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 34.97600183,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31488,
+            "max_cta_cycles": 53254,
+            "median_cta_effective_ghz": 1.674542802044131
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 35.16799957,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31104,
+            "max_cta_cycles": 52996,
+            "median_cta_effective_ghz": 1.6917225037153687
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 35.8720012,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31040,
+            "max_cta_cycles": 52883,
+            "median_cta_effective_ghz": 1.6862142377145823
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 34.94400159,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 30944,
+            "max_cta_cycles": 53052,
+            "median_cta_effective_ghz": 1.6982300266426538
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 35.16799957,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 31104,
+            "max_cta_cycles": 52508,
+            "median_cta_effective_ghz": 1.6699842087765957
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 35.07199883,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 30976,
+            "max_cta_cycles": 52770,
+            "median_cta_effective_ghz": 1.686906127129751
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 34.91200134,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 30976,
+            "max_cta_cycles": 53059,
+            "median_cta_effective_ghz": 1.696932279856387
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 33.82400051,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 32.8320004,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 33.85600075,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 33.69599953,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 33.88800099,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 33.24799985,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 34.81600061,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 33.28000009,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 35.03999859,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 33.72799978,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          }
+        ]
+      ],
+      "failed_attempts": [
+        [],
+        []
+      ],
+      "metrics": {
+        "plain/elapsed_us": {
+          "medians": [
+            33.312000335,
+            33.776000145
+          ],
+          "target_over_source_percent": 1.3928908661557715,
+          "ranges": [
+            [
+              32.51200169,
+              33.66399929
+            ],
+            [
+              32.8320004,
+              35.03999859
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -2.4714796445683973,
+            7.7755806120592075
+          ]
+        },
+        "dual/elapsed_us": {
+          "medians": [
+            34.703999755,
+            35.07199883
+          ],
+          "target_over_source_percent": 1.0603938381684053,
+          "ranges": [
+            [
+              34.07999873,
+              35.2640003
+            ],
+            [
+              34.91200134,
+              35.8720012
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -0.998182160292227,
+            5.258223406042939
+          ]
+        },
+        "dual/envelope_ns": {
+          "medians": [
+            30784.0,
+            31056.0
+          ],
+          "target_over_source_percent": 0.8835758835758822,
+          "ranges": [
+            [
+              30560,
+              30848
+            ],
+            [
+              30880,
+              31488
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            0.10373443983402453,
+            3.0366492146596924
+          ]
+        },
+        "dual/max_cta_cycles": {
+          "medians": [
+            52925.5,
+            52939.5
+          ],
+          "target_over_source_percent": 0.026452277257660306,
+          "ranges": [
+            [
+              52832,
+              53210
+            ],
+            [
+              52508,
+              53254
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.3193008832926179,
+            0.7987583282858868
+          ]
+        },
+        "dual/median_cta_effective_ghz": {
+          "medians": [
+            1.7064202085687254,
+            1.6893143154225598
+          ],
+          "target_over_source_percent": -1.0024431883933982,
+          "ranges": [
+            [
+              1.6944396790012761,
+              1.7211077056246467
+            ],
+            [
+              1.6699842087765957,
+              1.698767395292253
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -2.9703833572400695,
+            0.25540692564092193
+          ]
+        }
+      }
+    },
+    {
+      "case": "cfg_a_r13_comp_k4096_aligned",
+      "compatible": true,
+      "config": "cfg_a",
+      "gpu": [
+        "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+        "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+      ],
+      "binary_identity": {
+        "build/cfg_a_plain": {
+          "hashes": [
+            "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4",
+            "a85e4adead29784d9130a4c3cbdb7571a94dc45256cbb69adc1cf71a9c3569a4"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_plain.sass": {
+          "hashes": [
+            "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b",
+            "5e62bb10fc81368740b9069e9f9e4eb62fa0f81e75d2b024ed858cd4a3ea6a5b"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_dual": {
+          "hashes": [
+            "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1",
+            "e7cad47152cedde7a97913d9755991d9f155a039bc7a8f1d64025609c15478b1"
+          ],
+          "identical": true
+        },
+        "build/cfg_a_dual.sass": {
+          "hashes": [
+            "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b",
+            "d854d921f7dc153cee0a770ef34466e8f1f392b4c6d2b3e703a0ddc9170ded0b"
+          ],
+          "identical": true
+        }
+      },
+      "observations": [
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 98.84800017,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94336,
+            "max_cta_cycles": 155780,
+            "median_cta_effective_ghz": 1.6884965927761304
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 98.04800153,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94080,
+            "max_cta_cycles": 154930,
+            "median_cta_effective_ghz": 1.6754568045702811
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 98.20800275,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94848,
+            "max_cta_cycles": 155776,
+            "median_cta_effective_ghz": 1.675156834051729
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 100.4799977,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 95424,
+            "max_cta_cycles": 155719,
+            "median_cta_effective_ghz": 1.6735182071543453
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 97.79199958,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 93760,
+            "max_cta_cycles": 152380,
+            "median_cta_effective_ghz": 1.6570955855449312
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 97.47199714,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94080,
+            "max_cta_cycles": 153256,
+            "median_cta_effective_ghz": 1.6552230716567777
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 98.49599749,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94432,
+            "max_cta_cycles": 155166,
+            "median_cta_effective_ghz": 1.676425499407787
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 99.23200309,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 94304,
+            "max_cta_cycles": 153807,
+            "median_cta_effective_ghz": 1.6678013600948138
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 98.78399968,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 95360,
+            "max_cta_cycles": 154590,
+            "median_cta_effective_ghz": 1.6585030019327096
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 99.23200309,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 95104,
+            "max_cta_cycles": 156824,
+            "median_cta_effective_ghz": 1.6805058698376372
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 95.58399767,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 97.98400104,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 97.59999812,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 97.79199958,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 97.92000055,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 96.16000205,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 96.57599777,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 96.28800303,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 96.57599777,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 96.96000069,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          }
+        ],
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 99.23200309,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 95136,
+            "max_cta_cycles": 156197,
+            "median_cta_effective_ghz": 1.6737957287875886
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 99.35999662,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 95424,
+            "max_cta_cycles": 154454,
+            "median_cta_effective_ghz": 1.6666838387922747
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 98.55999798,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 95104,
+            "max_cta_cycles": 154071,
+            "median_cta_effective_ghz": 1.6682900733567263
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 99.80800003,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 95840,
+            "max_cta_cycles": 155828,
+            "median_cta_effective_ghz": 1.6715716574426631
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 98.55999798,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 94528,
+            "max_cta_cycles": 154925,
+            "median_cta_effective_ghz": 1.6755608632714831
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 99.74399954,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 95936,
+            "max_cta_cycles": 155972,
+            "median_cta_effective_ghz": 1.6713900374189419
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 100.6079987,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 96448,
+            "max_cta_cycles": 155832,
+            "median_cta_effective_ghz": 1.6647663361144112
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 100.7039994,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 96672,
+            "max_cta_cycles": 156234,
+            "median_cta_effective_ghz": 1.660239956152335
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 100.8320004,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 96736,
+            "max_cta_cycles": 156830,
+            "median_cta_effective_ghz": 1.6644861124499357
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 100.1280025,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 96096,
+            "max_cta_cycles": 156507,
+            "median_cta_effective_ghz": 1.6703152516931146
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 97.85600007,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 97.98400104,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 97.02400118,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 96.96000069,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 99.07200187,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 96.25600278,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 97.69599885,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 96.32000327,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 100.1280025,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 98.11200202,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          }
+        ]
+      ],
+      "failed_attempts": [
+        [],
+        []
+      ],
+      "metrics": {
+        "plain/elapsed_us": {
+          "medians": [
+            96.76799923,
+            97.77599946
+          ],
+          "target_over_source_percent": 1.0416669126372735,
+          "ranges": [
+            [
+              95.58399767,
+              97.98400104
+            ],
+            [
+              96.25600278,
+              100.1280025
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.7635514386624918,
+            4.753938881786457
+          ]
+        },
+        "dual/elapsed_us": {
+          "medians": [
+            98.639998585,
+            99.77599978500001
+          ],
+          "target_over_source_percent": 1.1516638445823624,
+          "ranges": [
+            [
+              97.47199714,
+              100.4799977
+            ],
+            [
+              98.55999798,
+              100.8320004
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.9108277905543702,
+            3.4471472408367676
+          ]
+        },
+        "dual/envelope_ns": {
+          "medians": [
+            94384.0,
+            95888.0
+          ],
+          "target_over_source_percent": 1.593490422105437,
+          "ranges": [
+            [
+              93760,
+              95424
+            ],
+            [
+              94528,
+              96736
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -0.9389671361502372,
+            3.174061433447095
+          ]
+        },
+        "dual/max_cta_cycles": {
+          "medians": [
+            155048.0,
+            155902.0
+          ],
+          "target_over_source_percent": 0.5507971724885152,
+          "ranges": [
+            [
+              152380,
+              156824
+            ],
+            [
+              154071,
+              156830
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.7554711013620383,
+            2.9203307520671906
+          ]
+        },
+        "dual/median_cta_effective_ghz": {
+          "medians": [
+            1.674337520603037,
+            1.6693026625249203
+          ],
+          "target_over_source_percent": -0.30070747481686366,
+          "ranges": [
+            [
+              1.6552230716567777,
+              1.6884965927761304
+            ],
+            [
+              1.660239956152335,
+              1.6755608632714831
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.6734790431135793,
+            1.2287039712628234
+          ]
+        }
+      }
+    },
+    {
+      "case": "cfg_b_r13_comp_k1024_aligned",
+      "compatible": true,
+      "config": "cfg_b",
+      "gpu": [
+        "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+        "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+      ],
+      "binary_identity": {
+        "build/cfg_b_plain": {
+          "hashes": [
+            "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6",
+            "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_plain.sass": {
+          "hashes": [
+            "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038",
+            "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_dual": {
+          "hashes": [
+            "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f",
+            "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_dual.sass": {
+          "hashes": [
+            "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26",
+            "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26"
+          ],
+          "identical": true
+        }
+      },
+      "observations": [
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 29.40800041,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25440,
+            "max_cta_cycles": 43936,
+            "median_cta_effective_ghz": 1.7004215628566062
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 29.75999936,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25728,
+            "max_cta_cycles": 44335,
+            "median_cta_effective_ghz": 1.6929829684299944
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 29.75999936,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25760,
+            "max_cta_cycles": 44075,
+            "median_cta_effective_ghz": 1.6785168865024707
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 29.18400057,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25888,
+            "max_cta_cycles": 44617,
+            "median_cta_effective_ghz": 1.692768460070464
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 29.4720009,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25536,
+            "max_cta_cycles": 44075,
+            "median_cta_effective_ghz": 1.7011341593799494
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 30.14400043,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 26144,
+            "max_cta_cycles": 44452,
+            "median_cta_effective_ghz": 1.6693329387810771
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 29.15200032,
+            "warmup_calls": 9,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25760,
+            "max_cta_cycles": 44069,
+            "median_cta_effective_ghz": 1.685364391393887
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 29.53599952,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25536,
+            "max_cta_cycles": 43950,
+            "median_cta_effective_ghz": 1.6969618797483381
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 29.75999936,
+            "warmup_calls": 10,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25792,
+            "max_cta_cycles": 44366,
+            "median_cta_effective_ghz": 1.6903582317073171
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 29.05599959,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 25728,
+            "max_cta_cycles": 44074,
+            "median_cta_effective_ghz": 1.6840808901869049
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 27.71200053,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 27.77599916,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 28.35199982,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 28.35199982,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 28.22400071,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 28.19200046,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 27.83999965,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 28.31999958,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 28.48000079,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 28.54399942,
+            "warmup_calls": 12,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          }
+        ],
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 28.89600024,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25600,
+            "max_cta_cycles": 43796,
+            "median_cta_effective_ghz": 1.6822048347309542
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 29.69600074,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25568,
+            "max_cta_cycles": 43593,
+            "median_cta_effective_ghz": 1.686054907514081
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 29.21600081,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25856,
+            "max_cta_cycles": 44071,
+            "median_cta_effective_ghz": 1.681302988006617
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 29.40800041,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25568,
+            "max_cta_cycles": 43751,
+            "median_cta_effective_ghz": 1.6899820458074535
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 29.8560001,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25792,
+            "max_cta_cycles": 43790,
+            "median_cta_effective_ghz": 1.666313559322034
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 29.08799984,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25760,
+            "max_cta_cycles": 43911,
+            "median_cta_effective_ghz": 1.6801616941121371
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 28.96000072,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25568,
+            "max_cta_cycles": 43871,
+            "median_cta_effective_ghz": 1.6882970634151593
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 29.08799984,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25728,
+            "max_cta_cycles": 43842,
+            "median_cta_effective_ghz": 1.675188054363292
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 28.73600088,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25568,
+            "max_cta_cycles": 43689,
+            "median_cta_effective_ghz": 1.677372214649757
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 29.02399935,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 25504,
+            "max_cta_cycles": 43418,
+            "median_cta_effective_ghz": 1.673129538275473
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 28.41600031,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 27.64800005,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 27.93600038,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 28.38400006,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 28.51199917,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 28.51199917,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 29.08799984,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 27.71200053,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 28.19200046,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 28.28799933,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          }
+        ]
+      ],
+      "failed_attempts": [
+        [],
+        []
+      ],
+      "metrics": {
+        "plain/elapsed_us": {
+          "medians": [
+            28.272000145,
+            28.335999695
+          ],
+          "target_over_source_percent": 0.22637078972751468,
+          "ranges": [
+            [
+              27.71200053,
+              28.54399942
+            ],
+            [
+              27.64800005,
+              29.08799984
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -3.1390113095791206,
+            4.96535538280749
+          ]
+        },
+        "dual/elapsed_us": {
+          "medians": [
+            29.50400021,
+            29.08799984
+          ],
+          "target_over_source_percent": -1.4099795520575054,
+          "ranges": [
+            [
+              29.05599959,
+              30.14400043
+            ],
+            [
+              28.73600088,
+              29.8560001
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -4.6709113917034255,
+            2.753305758840008
+          ]
+        },
+        "dual/envelope_ns": {
+          "medians": [
+            25744.0,
+            25584.0
+          ],
+          "target_over_source_percent": -0.621504039776255,
+          "ranges": [
+            [
+              25440,
+              26144
+            ],
+            [
+              25504,
+              25856
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -2.44798041615667,
+            1.6352201257861632
+          ]
+        },
+        "dual/max_cta_cycles": {
+          "medians": [
+            44075.0,
+            43793.0
+          ],
+          "target_over_source_percent": -0.6398184912081661,
+          "ranges": [
+            [
+              43936,
+              44617
+            ],
+            [
+              43418,
+              44071
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -2.6873164937131544,
+            0.30726511289147496
+          ]
+        },
+        "dual/median_cta_effective_ghz": {
+          "medians": [
+            1.6915633458888906,
+            1.680732341059377
+          ],
+          "target_over_source_percent": -0.6402955500210306,
+          "ranges": [
+            [
+              1.6693329387810771,
+              1.7011341593799494
+            ],
+            [
+              1.666313559322034,
+              1.6899820458074535
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -2.0469049937018036,
+            1.2369675663054913
+          ]
+        }
+      }
+    },
+    {
+      "case": "cfg_b_r13_comp_k4096_aligned",
+      "compatible": true,
+      "config": "cfg_b",
+      "gpu": [
+        "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+        "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+      ],
+      "binary_identity": {
+        "build/cfg_b_plain": {
+          "hashes": [
+            "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6",
+            "9191f6b495636ba74f75dcea89fe3ed6ede6e30729900e02ec5931f6997475c6"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_plain.sass": {
+          "hashes": [
+            "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038",
+            "7352448e110531f4338a8f6d5ee0ba2461fd318c35fca6a27ed313064c929038"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_dual": {
+          "hashes": [
+            "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f",
+            "eb9801d9376519444c9ff015446bed4b9b74fd508e17682d5d89e6c914f3f67f"
+          ],
+          "identical": true
+        },
+        "build/cfg_b_dual.sass": {
+          "hashes": [
+            "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26",
+            "27178ee30f8463fa6e58d50788d140331bf6a34ca25fc2ea3d947783bef22a26"
+          ],
+          "identical": true
+        }
+      },
+      "observations": [
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 92.22400188,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88864,
+            "max_cta_cycles": 142477,
+            "median_cta_effective_ghz": 1.6256932277042935
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 92.09600091,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88032,
+            "max_cta_cycles": 144266,
+            "median_cta_effective_ghz": 1.6529503501001117
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 91.74399823,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 87936,
+            "max_cta_cycles": 143250,
+            "median_cta_effective_ghz": 1.6316462547825659
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 92.1600014,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88224,
+            "max_cta_cycles": 141943,
+            "median_cta_effective_ghz": 1.6296216183943562
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 91.83999896,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88384,
+            "max_cta_cycles": 143052,
+            "median_cta_effective_ghz": 1.6340900248220485
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 92.54399687,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88576,
+            "max_cta_cycles": 142396,
+            "median_cta_effective_ghz": 1.625023143293208
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 91.13600105,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 87872,
+            "max_cta_cycles": 142418,
+            "median_cta_effective_ghz": 1.6286055792747542
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 92.32000262,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88192,
+            "max_cta_cycles": 142865,
+            "median_cta_effective_ghz": 1.6263890557424316
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 92.32000262,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88448,
+            "max_cta_cycles": 142882,
+            "median_cta_effective_ghz": 1.6415525778693068
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 91.80799872,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+            "envelope_ns": 88288,
+            "max_cta_cycles": 142467,
+            "median_cta_effective_ghz": 1.6454658047365878
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 91.392003,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 90.59199691,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 91.13600105,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 91.67999774,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 91.20000154,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 91.42400324,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 90.75199813,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 90.27200192,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 91.67999774,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 91.00800008,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3"
+          }
+        ],
+        [
+          {
+            "variant": "dual",
+            "trial": 0,
+            "elapsed_us": 92.44800359,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 88896,
+            "max_cta_cycles": 147009,
+            "median_cta_effective_ghz": 1.6772706812294567
+          },
+          {
+            "variant": "dual",
+            "trial": 1,
+            "elapsed_us": 93.34400296,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89408,
+            "max_cta_cycles": 146142,
+            "median_cta_effective_ghz": 1.6685332319645374
+          },
+          {
+            "variant": "dual",
+            "trial": 2,
+            "elapsed_us": 96.70399874,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 91872,
+            "max_cta_cycles": 150123,
+            "median_cta_effective_ghz": 1.6726179534313725
+          },
+          {
+            "variant": "dual",
+            "trial": 3,
+            "elapsed_us": 93.79199892,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89888,
+            "max_cta_cycles": 149098,
+            "median_cta_effective_ghz": 1.6751139695039412
+          },
+          {
+            "variant": "dual",
+            "trial": 4,
+            "elapsed_us": 93.18400174,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89600,
+            "max_cta_cycles": 146764,
+            "median_cta_effective_ghz": 1.672762574111434
+          },
+          {
+            "variant": "dual",
+            "trial": 5,
+            "elapsed_us": 92.92799979,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 88832,
+            "max_cta_cycles": 147061,
+            "median_cta_effective_ghz": 1.6801100471551869
+          },
+          {
+            "variant": "dual",
+            "trial": 6,
+            "elapsed_us": 92.54399687,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 88416,
+            "max_cta_cycles": 145981,
+            "median_cta_effective_ghz": 1.6738832298654556
+          },
+          {
+            "variant": "dual",
+            "trial": 7,
+            "elapsed_us": 92.54399687,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89056,
+            "max_cta_cycles": 146410,
+            "median_cta_effective_ghz": 1.6781161831141032
+          },
+          {
+            "variant": "dual",
+            "trial": 8,
+            "elapsed_us": 93.79199892,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89152,
+            "max_cta_cycles": 145975,
+            "median_cta_effective_ghz": 1.6726610593355051
+          },
+          {
+            "variant": "dual",
+            "trial": 9,
+            "elapsed_us": 93.02400053,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+            "envelope_ns": 89504,
+            "max_cta_cycles": 147970,
+            "median_cta_effective_ghz": 1.6767087716499645
+          },
+          {
+            "variant": "plain",
+            "trial": 0,
+            "elapsed_us": 92.99200028,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 1,
+            "elapsed_us": 92.06400067,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 2,
+            "elapsed_us": 92.67199785,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 3,
+            "elapsed_us": 91.96799994,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 4,
+            "elapsed_us": 92.83199906,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 5,
+            "elapsed_us": 91.23200178,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 6,
+            "elapsed_us": 90.68799764,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 7,
+            "elapsed_us": 92.28800237,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 8,
+            "elapsed_us": 93.21600199,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          },
+          {
+            "variant": "plain",
+            "trial": 9,
+            "elapsed_us": 92.32000262,
+            "warmup_calls": 8,
+            "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+          }
+        ]
+      ],
+      "failed_attempts": [
+        [],
+        []
+      ],
+      "metrics": {
+        "plain/elapsed_us": {
+          "medians": [
+            91.16800129500001,
+            92.30400249499999
+          ],
+          "target_over_source_percent": 1.246052544602927,
+          "ranges": [
+            [
+              90.27200192,
+              91.67999774
+            ],
+            [
+              90.68799764,
+              93.21600199
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -1.08202456855776,
+            3.2612548823377274
+          ]
+        },
+        "dual/elapsed_us": {
+          "medians": [
+            92.12800115499999,
+            93.104001135
+          ],
+          "target_over_source_percent": 1.0593955884899087,
+          "ranges": [
+            [
+              91.13600105,
+              92.54399687
+            ],
+            [
+              92.44800359,
+              96.70399874
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -0.1037271819314678,
+            6.109547956734707
+          ]
+        },
+        "dual/envelope_ns": {
+          "medians": [
+            88256.0,
+            89280.0
+          ],
+          "target_over_source_percent": 1.16026105873821,
+          "ranges": [
+            [
+              87872,
+              88864
+            ],
+            [
+              88416,
+              91872
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            -0.5041411595246625,
+            4.552075746540418
+          ]
+        },
+        "dual/max_cta_cycles": {
+          "medians": [
+            142671.0,
+            146886.5
+          ],
+          "target_over_source_percent": 2.9546999740662105,
+          "ranges": [
+            [
+              141943,
+              144266
+            ],
+            [
+              145975,
+              150123
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            1.184617304146518,
+            5.762876647668436
+          ]
+        },
+        "dual/median_cta_effective_ghz": {
+          "medians": [
+            1.630633936588461,
+            1.6744985996846984
+          ],
+          "target_over_source_percent": 2.690037421152236,
+          "ranges": [
+            [
+              1.625023143293208,
+              1.6529503501001117
+            ],
+            [
+              1.6685332319645374,
+              1.6801100471551869
+            ]
+          ],
+          "empirical_ratio_range_percent": [
+            0.9427313932013792,
+            3.3899150353232432
+          ]
+        }
+      }
+    }
+  ]
+}
