@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "synthetic_endpoint_boxes": 540,
+  "inconsistent_boxes_rejected": 72,
+  "positive_corner_error_checks": 1386,
+  "open_zero_elapsed_cases": 225,
+  "negative_certificates_rejected": [
+    "incorrect elapsed bound",
+    "closed but swapped labeled errors"
+  ],
+  "sample": {
+    "cycles": 150,
+    "elapsed_ns": [
+      "88",
+      "116"
+    ],
+    "rate_cycle_per_ns": [
+      "75/58",
+      "75/44"
+    ],
+    "predicted_cycles": "144",
+    "predicted_rate": "3/2",
+    "predicted_ns": "96",
+    "cycle_error": "-1/25",
+    "conditional_conversion_error": [
+      "-4/29",
+      "3/22"
+    ],
+    "free_time_error": [
+      "-5/29",
+      "1/11"
+    ],
+    "status_at_five_percent": "undetermined"
+  },
+  "scope": "Pure conditional interval arithmetic; no actual GT-CLOCK-GT samples, accuracy, enclosure or observation qualification.",
+  "observation_qualified": false,
+  "prediction_qualified": false
+}
