@@ -1,0 +1,489 @@
+{
+  "status": "Prospective first-stage source contract; no GPU observations or accepted service prices.",
+  "source": {
+    "collective": {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/source/overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp",
+      "sha256": "72e49e67cbe51b7655c1a988236494e280102f9961ceb8e3f7ea8a79614ef7a4"
+    },
+    "kernel": {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/source/overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp",
+      "sha256": "03008efb93c9013ab22014e60d034748af79ff0f9d8f94857cd9cca33c724663"
+    },
+    "pipeline": {
+      "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp",
+      "sha256": "7c61d847933cb12a14fcdc68cec902b44c802c9eb34273218c29e601f9c53dee"
+    }
+  },
+  "source_ports": [
+    {
+      "event": "COMMIT_G0",
+      "group": 0,
+      "slot": 0,
+      "generation": 0,
+      "full_wait_phase": 0,
+      "source": "collective",
+      "after_line": 503,
+      "selector": "prologue",
+      "before": "read-state increment"
+    },
+    {
+      "event": "COMMIT_G16",
+      "group": 16,
+      "slot": 4,
+      "generation": 2,
+      "full_wait_phase": 0,
+      "source": "collective",
+      "after_line": 547,
+      "selector": "64-k_tile_count==16",
+      "before": "wait<1> and release(group-1)"
+    },
+    {
+      "event": "COMMIT_G32",
+      "group": 32,
+      "slot": 2,
+      "generation": 5,
+      "full_wait_phase": 1,
+      "source": "collective",
+      "after_line": 547,
+      "selector": "64-k_tile_count==32",
+      "before": "wait<1> and release(group-1)"
+    },
+    {
+      "event": "COMMIT_G63",
+      "group": 63,
+      "slot": 3,
+      "generation": 10,
+      "full_wait_phase": 0,
+      "source": "collective",
+      "after_line": 547,
+      "selector": "64-k_tile_count==63",
+      "before": "wait<1> and release(group-1)"
+    },
+    {
+      "event": "MMA_RETURN",
+      "source": "kernel",
+      "after_line": 783,
+      "before_line": 786,
+      "completed_source_path": "last wait<1> and release62; final fence and return",
+      "pending_source_path": "mma_tail wait<0> and release63"
+    }
+  ],
+  "existing_endpoints": [
+    "FIRST",
+    "MAIN"
+  ],
+  "static_selection": [
+    {
+      "case": "r18_partial_map960",
+      "maximum_output_tiles": 2,
+      "selected": [
+        {
+          "cta": 0,
+          "work": [
+            [
+              0,
+              0
+            ],
+            [
+              4,
+              16
+            ]
+          ]
+        },
+        {
+          "cta": 1,
+          "work": [
+            [
+              1,
+              0
+            ],
+            [
+              5,
+              16
+            ]
+          ]
+        },
+        {
+          "cta": 6,
+          "work": [
+            [
+              6,
+              0
+            ],
+            [
+              2,
+              17
+            ]
+          ]
+        },
+        {
+          "cta": 7,
+          "work": [
+            [
+              7,
+              0
+            ],
+            [
+              3,
+              17
+            ]
+          ]
+        },
+        {
+          "cta": 14,
+          "work": [
+            [
+              6,
+              1
+            ],
+            [
+              2,
+              18
+            ]
+          ]
+        },
+        {
+          "cta": 15,
+          "work": [
+            [
+              7,
+              1
+            ],
+            [
+              3,
+              18
+            ]
+          ]
+        },
+        {
+          "cta": 22,
+          "work": [
+            [
+              6,
+              2
+            ],
+            [
+              2,
+              19
+            ]
+          ]
+        },
+        {
+          "cta": 23,
+          "work": [
+            [
+              7,
+              2
+            ],
+            [
+              3,
+              19
+            ]
+          ]
+        },
+        {
+          "cta": 30,
+          "work": [
+            [
+              6,
+              3
+            ],
+            [
+              2,
+              20
+            ]
+          ]
+        },
+        {
+          "cta": 31,
+          "work": [
+            [
+              7,
+              3
+            ],
+            [
+              3,
+              20
+            ]
+          ]
+        },
+        {
+          "cta": 38,
+          "work": [
+            [
+              6,
+              4
+            ],
+            [
+              2,
+              21
+            ]
+          ]
+        },
+        {
+          "cta": 39,
+          "work": [
+            [
+              7,
+              4
+            ],
+            [
+              3,
+              21
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "case": "r18_partial_map1024",
+      "maximum_output_tiles": 2,
+      "selected": [
+        {
+          "cta": 0,
+          "work": [
+            [
+              0,
+              0
+            ],
+            [
+              4,
+              16
+            ]
+          ]
+        },
+        {
+          "cta": 1,
+          "work": [
+            [
+              1,
+              0
+            ],
+            [
+              5,
+              16
+            ]
+          ]
+        },
+        {
+          "cta": 6,
+          "work": [
+            [
+              6,
+              0
+            ],
+            [
+              2,
+              17
+            ]
+          ]
+        },
+        {
+          "cta": 7,
+          "work": [
+            [
+              7,
+              0
+            ],
+            [
+              3,
+              17
+            ]
+          ]
+        },
+        {
+          "cta": 14,
+          "work": [
+            [
+              6,
+              1
+            ],
+            [
+              2,
+              18
+            ]
+          ]
+        },
+        {
+          "cta": 15,
+          "work": [
+            [
+              7,
+              1
+            ],
+            [
+              3,
+              18
+            ]
+          ]
+        },
+        {
+          "cta": 22,
+          "work": [
+            [
+              6,
+              2
+            ],
+            [
+              2,
+              19
+            ]
+          ]
+        },
+        {
+          "cta": 23,
+          "work": [
+            [
+              7,
+              2
+            ],
+            [
+              3,
+              19
+            ]
+          ]
+        },
+        {
+          "cta": 30,
+          "work": [
+            [
+              6,
+              3
+            ],
+            [
+              2,
+              20
+            ]
+          ]
+        },
+        {
+          "cta": 31,
+          "work": [
+            [
+              7,
+              3
+            ],
+            [
+              3,
+              20
+            ]
+          ]
+        },
+        {
+          "cta": 38,
+          "work": [
+            [
+              6,
+              4
+            ],
+            [
+              2,
+              21
+            ]
+          ]
+        },
+        {
+          "cta": 39,
+          "work": [
+            [
+              7,
+              4
+            ],
+            [
+              3,
+              21
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "condition_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/cases.json": "73d03a5359580268d34c8680e35f28184e8c34172021bc850fdae3c99eb6c72c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/static_setup.json": "b45891cdb9b616fbe694edf20809e213279d9cc0ac9ab12354f33d0851705f78"
+  },
+  "fixed_scope": {
+    "config": "cfg_a",
+    "logical": [
+      960,
+      2816,
+      4096
+    ],
+    "storage_m": 1024,
+    "zero_m": 960,
+    "input_map_m": [
+      960,
+      1024
+    ],
+    "stages": 6,
+    "k_tiles": 64,
+    "output_tile_seq": 0,
+    "ctas": [
+      0,
+      1,
+      6,
+      7,
+      14,
+      15,
+      22,
+      23,
+      30,
+      31,
+      38,
+      39
+    ],
+    "roles": [
+      1,
+      2
+    ],
+    "physical_threads": [
+      128,
+      256
+    ]
+  },
+  "payload": {
+    "new_points": 5,
+    "writers": 24,
+    "timestamp_words_per_point": 2,
+    "uint64_bytes": 8,
+    "new_timestamp_bytes": 1920,
+    "meaning": "Timestamp payload only; total allocation, metadata and clearing capacity are separately declared."
+  },
+  "windows": [
+    {
+      "start": "FIRST",
+      "end": "COMMIT_G0"
+    },
+    {
+      "start": "COMMIT_G0",
+      "end": "COMMIT_G16"
+    },
+    {
+      "start": "COMMIT_G16",
+      "end": "COMMIT_G32"
+    },
+    {
+      "start": "COMMIT_G32",
+      "end": "COMMIT_G63"
+    },
+    {
+      "start": "COMMIT_G63",
+      "end": "MMA_RETURN"
+    },
+    {
+      "start": "MMA_RETURN",
+      "end": "MAIN"
+    }
+  ],
+  "comparison": "Subtract endpoints inside each invocation/CTA/role first; then map960 minus map1024 durations. Preserve signed segment differences.",
+  "aggregation": "Per-record windows and paired signed deltas telescope exactly. Independently aggregated medians need not add.",
+  "implementation": "Main integration owns probe/runner and actual source/SASS binding. Do not reuse cfg_b commit1 naming or its trace decoder.",
+  "gates": "Matched on/off preparation and an independent control pilot must freeze concrete ns validity gates before target sampling.",
+  "limits": [
+    "COMMIT_G63 to MMA_RETURN includes last wait<1>/release62 and return overhead.",
+    "MMA_RETURN to MAIN includes final wait<0>/release63 and endpoint overhead, not bare GMMA retirement.",
+    "WG leaders identify source control-flow cuts, not completion of every remote empty arrival.",
+    "No added waits, arrivals or synchronization; no pipeline-state reset between outputs.",
+    "clock64 stays within one CTA on one SM; cross-rank comparison uses globaltimer windows."
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "binary": "cfg_b_s4_plain",
+    "elements": 4325376,
+    "D_sha256": "069572268437ecad997fdc04c96f39175b9e0fa816cf01e83742a908dd7cf533"
+  },
+  {
+    "binary": "cfg_b_s4_stamped",
+    "elements": 4325376,
+    "D_sha256": "069572268437ecad997fdc04c96f39175b9e0fa816cf01e83742a908dd7cf533"
+  },
+  {
+    "binary": "cfg_b_s6_plain",
+    "elements": 4325376,
+    "D_sha256": "069572268437ecad997fdc04c96f39175b9e0fa816cf01e83742a908dd7cf533"
+  },
+  {
+    "binary": "cfg_b_s6_stamped",
+    "elements": 4325376,
+    "D_sha256": "069572268437ecad997fdc04c96f39175b9e0fa816cf01e83742a908dd7cf533"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "original": {
+    "SLURM_JOB_ID": "740061",
+    "SLURM_JOB_GPUS": null,
+    "SLURM_STEP_GPUS": "0,1,2,3",
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3"
+  },
+  "allocated_devices": [
+    {
+      "assigned_visibility_token": "0",
+      "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+    },
+    {
+      "assigned_visibility_token": "1",
+      "gpu_uuid": "GPU-14c18060-d707-1827-6d26-4d2c57fe3c9c"
+    },
+    {
+      "assigned_visibility_token": "2",
+      "gpu_uuid": "GPU-57fe4001-37de-e203-ab45-7f685b91aae2"
+    },
+    {
+      "assigned_visibility_token": "3",
+      "gpu_uuid": "GPU-93f3bdb6-f1c8-855c-ac34-cc21454a5702"
+    }
+  ],
+  "selected": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114"
+}

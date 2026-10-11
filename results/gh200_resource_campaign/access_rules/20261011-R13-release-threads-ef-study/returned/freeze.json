@@ -1,0 +1,14 @@
+{
+  "schema": "gh200-r13-study-execution-freeze/1",
+  "files": {
+    "manifest.json": "482b6557fcbe00a8fc4659bfcca778773a82fe299acf0abbfd1f03b7e77ded74",
+    "cases.json": "3673adaa613c1e9b20ef2628a7f92a68510acbe9322f8a72689ad0686e4d25cc",
+    "collect.py": "9aca609bafbb5b91ac71973ca9cf38c81ad90d237176be45c0ed69d01e3f9cda",
+    "run.sh": "29122e5183658f9271514456ec42e96025ee2974b5e1ac7c1822f26fa7455716",
+    "analyze-study.py": "2f85133435f4660724e098536d15e1315caeb946adcd967b03d21b2fd37f3599",
+    "source_hashes.json": "519b5f719f7bc9562197788455d0d06dc5f5a613262d938cbc4014068b636eff",
+    "build-audit.json": "0d1fddedaa9ff8efe0498bbc58465dd14624f6686f9879cc2e6a397f747f5091"
+  },
+  "revision": 3,
+  "previous_attempt": "740060: unsupported CUDA Runtime UUID symbol; no correctness or timing process started"
+}

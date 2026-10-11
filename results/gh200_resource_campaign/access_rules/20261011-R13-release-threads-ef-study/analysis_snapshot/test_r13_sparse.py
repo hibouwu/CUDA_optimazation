@@ -1,0 +1,256 @@
+import copy
+import unittest
+from analyze_r18 import decode_stage_sparse, validate_warmup
+
+class StageSparseTests(unittest.TestCase):
+    def trace(self,stages):
+        width=16+2*64*6
+        b=[0]*(132*width)
+        # Global Ktile = 1 output * 64 Ktiles + local Ktile16.
+        global_k=80
+        slot=global_k%stages
+        cphase=(global_k//stages)%2
+        b[1]=b[23]=7
+        b[2]=b[13]=12
+        b[3]=b[14]=1
+        b[4]=b[24]=b[25]=b[27]=slot+1
+        b[26]=cphase+1
+        b[5]=(1-cphase)+1
+        b[28]=cphase+1
+        b[29]=1;b[30]=16;b[31]=0x52313301
+        for i,value in {0:1,6:20,7:30,8:40,9:125,11:171,12:180,
+                        21:10,15:50,16:80,17:100,18:120,19:170,20:172,
+                        32:200,33:205,22:250}.items():
+            b[i]=value
+        return dict(k=4096,stages=stages,grid=[1,132,1],trace_words=width),dict(trace=b)
+
+    def test_real_stage4_and_stage6_slot_phase_sequences(self):
+        for stages,slot,consumer_phase in [(4,0,0),(6,2,1)]:
+            setup,call=self.trace(stages)
+            result=decode_stage_sparse(setup,call)
+            self.assertEqual(result['slot'],slot)
+            self.assertEqual(result['phase'],1-consumer_phase)
+            self.assertEqual(result['intervals']['consumer_full_wait'],30)
+            self.assertEqual(result['intervals']['L'],240)
+            self.assertEqual(result['intervals']['mainloop_before_tail'],190)
+            self.assertEqual(result['intervals']['mma_tail'],45)
+            # Acquire can return between release's before/after stamps.
+            self.assertLess(result['clocks']['refill_end'],result['clocks']['release_end'])
+
+    def test_same_producer_and_consumer_phase_is_rejected(self):
+        setup,call=self.trace(6)
+        call['trace'][5]=call['trace'][26]
+        with self.assertRaisesRegex(ValueError,'phase mismatch'):
+            decode_stage_sparse(setup,call)
+
+    def test_wrong_slot_or_other_CTA_write_is_rejected(self):
+        setup,call=self.trace(4)
+        wrong=copy.deepcopy(call)
+        for idx in (4,24,25,27):wrong['trace'][idx]=2
+        with self.assertRaisesRegex(ValueError,'sequence mismatch'):
+            decode_stage_sparse(setup,wrong)
+        call['trace'][setup['trace_words']]=1
+        with self.assertRaisesRegex(ValueError,'non-target CTA'):
+            decode_stage_sparse(setup,call)
+
+    def test_progress_allows_sub512_commit_spacing_and_closes(self):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=3;b[13]=12;b[14]=1;b[31]=0x52313302
+        for i,value in {21:100,20:500,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500}.items():
+            b[i]=value
+        setup=dict(grid=[1,132,1],trace_words=width,trace_version='r13-stage-progress-v1')
+        r=decode_stage_sparse(setup,dict(trace=b))
+        self.assertEqual(r['intervals']['commit16_to17'],400)
+        self.assertEqual(r['intervals']['loop_advance_16_to17'],94)
+        self.assertEqual(r['intervals']['last_commit_to_main_end'],500)
+        self.assertEqual(r['intervals']['first_to_commit63']+
+                         r['intervals']['last_commit_to_main_end'],r['intervals']['L'])
+        b[19]=8200
+        with self.assertRaisesRegex(ValueError,'event order'):
+            decode_stage_sparse(setup,dict(trace=b))
+
+    def test_handoff_accepts_early_or_late_receiver_but_not_missing_sender(self):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=b[38]=3
+        b[13]=12;b[14]=b[39]=b[40]=1;b[31]=0x52313303
+        for i,value in {21:300,20:900,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500,
+                        34:100,35:50,36:200,37:230}.items():b[i]=value
+        setup=dict(grid=[1,132,1],trace_words=width,trace_version='r13-stage-handoff-v1')
+        r=decode_stage_sparse(setup,dict(trace=b));v=r['intervals']
+        self.assertEqual(v['sender_to_first'],200)
+        self.assertEqual(v['sender_to_math_return']+v['math_return_to_full_begin']+v['first_full_wait'],200)
+        self.assertEqual(v['receiver_late_entry'],0)
+        self.assertEqual(r['sender_work'],[0,0])
+        b[35]=150
+        v=decode_stage_sparse(setup,dict(trace=b))['intervals']
+        self.assertEqual(v['receiver_late_entry'],50)
+        self.assertEqual(v['after_sender_and_wait_entry'],50)
+        b[34]=201
+        with self.assertRaisesRegex(ValueError,'handoff event order'):
+            decode_stage_sparse(setup,dict(trace=b))
+        b[34]=100;b[38]=4
+        with self.assertRaisesRegex(ValueError,'sender SM'):
+            decode_stage_sparse(setup,dict(trace=b))
+
+    def epilogue_trace(self, deferred=0):
+        width=16+2*64*6
+        b=[0]*(132*width);b[1]=b[23]=b[43]=3
+        b[13]=12;b[14]=b[44]=b[45]=1;b[31]=0x52313304
+        for i,value in {21:300,20:900,15:8000,17:8300,18:8306,16:8400,
+                        19:8700,24:32000,32:32100,22:32500,
+                        41:500,42:8500}.items():b[i]=value
+        if deferred:b[41],b[42]=32100,33000
+        setup=dict(grid=[1,132,1],trace_words=width,
+                   trace_version='r13-epilogue-order-v1',epilogue_defer=deferred)
+        return setup,dict(trace=b)
+
+    def test_epilogue_overlap_and_deferred_receiver_order(self):
+        setup,call=self.epilogue_trace()
+        r=decode_stage_sparse(setup,call)
+        self.assertEqual(r['sender_work'],[0,0])
+        self.assertEqual(r['clocks']['sender_epi_begin'],500)
+        self.assertEqual(r['intervals']['sender_epilogue'],8000)
+        self.assertEqual(r['intervals']['epilogue_overlap_L'],8000)
+        self.assertEqual(r['intervals']['epilogue_overlap_early'],7400)
+        setup,call=self.epilogue_trace(1)
+        r=decode_stage_sparse(setup,call)
+        self.assertEqual(r['intervals']['epilogue_overlap_L'],400)
+        self.assertEqual(r['intervals']['epilogue_overlap_early'],0)
+        call['trace'][41]-=1
+        with self.assertRaisesRegex(ValueError,'precedes receiver'):
+            decode_stage_sparse(setup,call)
+
+    def test_epilogue_rejects_wrong_sender_missing_endpoints_or_protocol(self):
+        for index,value,reason in [(43,4,'sender SM/work'),(44,0,'sender SM/work'),
+                (44,12,'sender SM/work'),(41,0,'epilogue event order'),
+                (42,499,'epilogue event order'),(31,0x52313302,'progress event order')]:
+            with self.subTest(index=index,value=value):
+                setup,call=self.epilogue_trace()
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):
+                    decode_stage_sparse(setup,call)
+        setup,call=self.epilogue_trace()
+        del setup['epilogue_defer']
+        with self.assertRaisesRegex(ValueError,'defer identity'):
+            decode_stage_sparse(setup,call)
+
+    def background_trace(self,deferred):
+        setup,call=self.epilogue_trace(deferred)
+        setup.update(trace_version='r13-output-background-v1',epilogue_defer=deferred)
+        b=call['trace'];width=setup['trace_words'];b[31]=0x52313305
+        origin=1_700_000_000_000_000_001
+        for cta in range(132):
+            offset=cta*width;mma=origin+5000+cta*64
+            begin=mma+100 if deferred==2 or (cta==0 and deferred>0) else mma-3000
+            b[offset+46:offset+49]=[begin,begin+1000,mma]
+        b[49:51]=[origin+1000,origin+4000]
+        return setup,call
+
+    def test_background_preserves_direct_ns_and_checks_treatment_scope(self):
+        for flag in (0,1,2):
+            with self.subTest(flag=flag):
+                setup,call=self.background_trace(flag)
+                r=decode_stage_sparse(setup,call)
+                self.assertEqual(len(r['direct_ns_background']),132)
+                self.assertEqual(r['early_ns'][1]-r['early_ns'][0],3000)
+                self.assertEqual(r['early_ns'][0],1_700_000_000_000_001_001)
+                self.assertEqual(r['clocks']['commit16'],8300)
+                for cta in r['direct_ns_background']:
+                    self.assertEqual(cta['epi_end_ns']-cta['epi_begin_ns'],1000)
+                if flag==1:
+                    cta=r['direct_ns_background'][1]
+                    self.assertLess(cta['epi_begin_ns'],cta['mma_return_ns'])
+        setup,call=self.background_trace(1)
+        setup['epilogue_defer']=2
+        with self.assertRaisesRegex(ValueError,'background epilogue precedes'):
+            decode_stage_sparse(setup,call)
+
+    def test_background_rejects_missing_or_wrong_fields_and_early_order(self):
+        for index,value,reason in [(784+46,0,'background endpoints'),
+                (784+1,3,'non-target CTA background'),(784+49,123,'non-target CTA background'),
+                (49,0,'early-window endpoints'),(50,1_700_000_000_000_006_001,'early-window endpoints'),
+                (31,0x52313304,'progress event order')]:
+            with self.subTest(index=index):
+                setup,call=self.background_trace(2)
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):
+                    decode_stage_sparse(setup,call)
+        setup,call=self.background_trace(1)
+        call['trace'][46]=call['trace'][48]-1
+        with self.assertRaisesRegex(ValueError,'background epilogue precedes'):
+            decode_stage_sparse(setup,call)
+        setup,call=self.epilogue_trace(1)
+        setup['epilogue_defer']=2
+        with self.assertRaisesRegex(ValueError,'defer identity'):
+            decode_stage_sparse(setup,call)
+
+    def test_background_treatment_keeps_warmup_untreated(self):
+        row=dict(swizzle=1,epilogue_defer=2)
+        setup=dict(epilogue_defer=2,epilogue_warmup_defer=0)
+        call=dict(setup,warmup_us=[100.]*8)
+        self.assertEqual(validate_warmup(setup,call,row),0)
+        for bad_setup,bad_call in ((dict(setup,epilogue_warmup_defer=2),call),
+                (setup,dict(call,epilogue_warmup_defer=1))):
+            with self.assertRaisesRegex(ValueError,'warmup prefix'):
+                validate_warmup(bad_setup,bad_call,row)
+
+    def second_prefill_trace(self,stages=6,enabled=1):
+        setup,call=self.background_trace(2)
+        setup.update(trace_version='r13-second-prefill-v1',stages=stages,second_prefill=enabled)
+        b=call['trace'];origin=1_700_000_000_000_000_001
+        b[31]=0x52313306
+        b[51:58]=[100,origin+100,200,origin+200,stages if enabled else 0,250,origin+250]
+        return setup,call
+
+    def test_second_prefill_preserves_background_and_allows_late_tail_stamp(self):
+        for stages in (4,6):
+            for flag in (0,1):
+                with self.subTest(stages=stages,flag=flag):
+                    setup,call=self.second_prefill_trace(stages,flag)
+                    self.assertEqual(call['trace'][0],0)  # No fabricated entry-clock requirement.
+                    r=decode_stage_sparse(setup,call);p=r['second_prefill']
+                    self.assertEqual(p['enabled'],bool(flag))
+                    self.assertEqual(p['waited_stages'],stages if flag else 0)
+                    self.assertEqual((p['wait_cycles'],p['wait_ns']),(100,100))
+                    self.assertEqual((p['first_tail_minus_end_cycles'],p['first_tail_minus_end_ns']),(50,50))
+                    self.assertEqual(len(r['direct_ns_background']),132)
+                    self.assertEqual(r['early_ns'],call['trace'][49:51])
+                    self.assertEqual((r['sm'],r['work'],r['sender_work']),(2,[11,0],[0,0]))
+                    call['trace'][56]=150;call['trace'][57]-=100
+                    p=decode_stage_sparse(setup,call)['second_prefill']
+                    self.assertEqual((p['first_tail_minus_end_cycles'],p['first_tail_minus_end_ns']),(-50,-50))
+
+    def test_second_prefill_rejects_missing_misordered_or_wrong_identity(self):
+        for index,value,reason in [(51,0,'wait endpoints'),(53,99,'wait endpoints'),
+                (53,301,'wait endpoints'),(54,1_700_000_000_000_001_002,'wait endpoints'),
+                (55,5,'waited stages'),(56,32101,'tail endpoints'),
+                (57,1_700_000_000_000_005_102,'tail endpoints'),
+                (43,4,'sender SM/work'),(23,4,'consumer SM/work'),
+                (784+51,1,'non-target CTA background'),(31,0x52313305,'event order')]:
+            with self.subTest(index=index):
+                setup,call=self.second_prefill_trace()
+                call['trace'][index]=value
+                with self.assertRaisesRegex(ValueError,reason):decode_stage_sparse(setup,call)
+        for key,value,reason in [('second_prefill',2,'treatment identity'),
+                ('second_prefill',0,'waited stages'),('epilogue_defer',1,'treatment identity')]:
+            with self.subTest(key=key,value=value):
+                setup,call=self.second_prefill_trace();setup[key]=value
+                with self.assertRaisesRegex(ValueError,reason):decode_stage_sparse(setup,call)
+
+    def test_second_prefill_matches_setup_call_and_keeps_warmup_untreated(self):
+        row=dict(swizzle=1,second_prefill=1)
+        setup=dict(trace_version='r13-second-prefill-v1',second_prefill=1,second_prefill_warmup=0)
+        call=dict(setup,warmup_us=[100.]*8)
+        self.assertEqual(validate_warmup(setup,call,row),0)
+        self.assertEqual(validate_warmup(setup,call,dict(swizzle=1)),0)
+        for event_index,key,value,reason in [(0,'second_prefill',0,'identity'),
+                (1,'second_prefill',0,'identity'),(0,'second_prefill_warmup',1,'warmup prefix'),
+                (1,'second_prefill_warmup',1,'warmup prefix')]:
+            with self.subTest(event=event_index,key=key):
+                events=[dict(setup),dict(call)];events[event_index][key]=value
+                with self.assertRaisesRegex(ValueError,reason):validate_warmup(*events,row)
+
+
+if __name__=='__main__':unittest.main()
