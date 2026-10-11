@@ -15,9 +15,21 @@
 
 2026-10-11用户批准恢复以上三个既有专业工作树；实际同步与恢复由规划对话负责，主集成不重复checkout或派发启动任务。当前供给轮次在[本地E0排他检验](R13-async-retirement.md#local-epilogue-exclusion)处交接，不以先解决R13为前提。交接后主集成停止并行修改专业模块；跨组接口由主集成合入。源工作口径由B定义、A使用；跨rank依赖由C提出、B接入供给前驱。
 
+规划对话已确认三个旧worktree均从干净状态切到共同交接提交 `94f9bcfaa991c2a9fb5af4c4dfeb4844d8c4feb7`，旧分支HEAD原样保留：
+
+| 专业组 | 原worktree标识 | 恢复后的分支 |
+|---|---|---|
+| A | `9cce` | `codex/gh200-clock-parallel-20261011` |
+| B | `0785` | `codex/gh200-supply-parallel-20261011` |
+| C | `9e4a` | `codex/gh200-boundary-parallel-20261011` |
+
+规划对话已从三个create_goal原始工具结果核实A/B/C目标均为active、无token预算，并核对各自turn_context的工作树与权限；三组已开始离线研究。主集成的wait_threads也确认三组当前turn均在执行，A另已交回恢复与首轮分析范围。主集成统一接收专业组交回及发送集成反馈；并行恢复完成不代表研究目标完成。
+
 专业组只写各自原实验的独占分析输出，不运行会覆盖共同`candidate-development-v1`的总分析。旧共同目录作为只读证据输入；需要公共probe/runner或总模型改动时提交有界接口需求。用户已授权主集成与上述三个专业对话互发有界协调消息，不能扩展到其它对话或外部人员。全组cfg_a/b/c范围、完整时间中位≤5%/最大≤10%、分项/关键CTA、新冻结留出与跨卡要求不变，V10采样授权边界不变。
 
 [本次交接结果索引](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-a-row-rotation/handoff-manifest.json)列出可复放命令、已保存的失败候选、未决问题以及仍留在主checkout的忽略数据路径。上层DAG规划的三个文件保持原未提交状态，不纳入本次研究交接提交。
+
+主集成已复放[冻结V09联合验收缺口](../../../../../../results/gh200_resource_campaign/access_rules/20261011-V09-gate-audit/README.md)：分项先取绝对值与共同globaltimer关键终点差单独报告；历史总时间评分不变，下一次冻结前仍需确定有效观测及联合门槛。
 
 长期执行对话用独立worktree；同目录临时agent按明确文件边界工作。共享文件需求交管理者合成，不能各自复制cfg_a/b/c框架。各组只提交本组文件，管理者串行集成；不reset/stash他人修改、不追改冻结包。已完成的证据可读取复用，单组完成不代表整轮预测通过。
 
