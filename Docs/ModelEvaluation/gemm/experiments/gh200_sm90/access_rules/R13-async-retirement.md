@@ -156,6 +156,22 @@ stage4上游单对差超过原最大192cycle；stage6单对local差超过原中�
 
 主集成740056在同一GPU432完成逐线程协议的正确性准备。B复放四份原始smoke及各4096个D抽样值，开启时两stage均保留全部128对线程戳，最大bracket宽分别25/22cycle；报告同时保留协议身份与四leader兼容字段，不能据兼容字段删掉内部lane。新的单对local on−off为0/+1cycle，上游为−6/+14cycle，event变化为−0.5414%/0%。这些实际数值落在原数值门槛内，但仍为非独占、不同于原ef卡的每stage一对smoke，正式资格保持不合格。新[逐线程报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-thread-smoke-v1/B-release-warp-smoke.json)的条件post-last界为stage4 [206,231]、stage6 [210,232]cycle；SM/调用/slot绑定、SASS指令顺序和正式观察资格仍须共同满足后才能解释。Markdown按实际metrics生成，不能套用旧四leader批的超限结论。
 
+### ef卡冻结研究未通过上游门槛
+
+主集成740061在a058独占分配cpu288/gpu4/mem16G，仅目标GPU-ef单计时流运行65秒。冻结的40个study与20个plain参照全部收齐，四份完整D校验输出一致；每进程4096个数值检查、身份和decoder均通过。原manifest身份不变，execution freeze r3仅修正采样前的GPU枚举路径；740059/740060均在数值/时间样本前停止并保留。B只读复放root/returned冻结文件、分析snapshot、四二进制和全部raw SHA，主线9组完整结果字段逐项相等，未重配对或补样。
+
+| 门槛：绝对配对差的中位/最大 | stage4 | stage6 | 冻结上限 |
+|---|---:|---:|---:|
+| local，cycle | 2 / 43 | 6 / 64 | 32 / 128 |
+| H16→wait1-return，cycle | 64.5 / 848 | 8.5 / 1020 | 64 / 192 |
+| CUDA event，% | 1.3132 / 3.6866 | 0.8521 / 2.1066 | 2 / 5 |
+
+plain参照CV分别0.9939%/0.6383%，低于5%。两stage均因上游门槛失败，整体`observation_qualified=false`；20个on条件分类虽均排除短post-last近似、与集中arrival相容，也不采用为机制或价格。stage4 signed median为0并不能抵消absolute median64.5，最大单对失败也不能由整调用差小抵消。
+
+[同调用分解](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R13-stage-events/reanalysis/B-20261011-release-study-replay-v3/B-release-study-replay.json)保留全部40个H16=`full_wait+issue/commit+wait1`、20个原on/off差及各臂内部波动。最大两个窗口分别为stage4 trial8 off：1451=1338+107+6cycle；stage6 trial0 on：1395=1282+107+6cycle。对应producer三请求发出后的`issue_end`早于full_wait开始826/1945cycle。全部40次issue_end都早于wait开始，整段full_wait均在这三个请求已经发出标记之后，不能用“producer尚未发出”解释这些局部窗口；仍未区分排队、源/目的完成、通知、轮询和调度，不称为裸TMA延迟。
+
+stage4的10个off自身H16范围已为383～1451cycle，45个同臂绝对差的中位/最大为107/1068；stage6 off为368～389cycle，而full_wait为61～228、issue/commit为144～317，两个分项的变化大于H16总变化，wait1仅6～7。两个最大上游配对差−848/+1020对应local差仅+1/−1cycle，故不把上游变化直接写成release可见性或TC退休价格。20个on记录中最早新增release前戳都在H16结束至少493cycle之后；这些读取不属于该计时区间，但不能据此排除此前控制、执行历史或调度的间接影响。同臂45对差仅作描述，不替换冻结评分；原观察资格失败保持不变。
+
 <a id="second-prefill"></a>
 
 ## 第二WG的初态是否影响早段推进？
