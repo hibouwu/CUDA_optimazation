@@ -299,3 +299,7 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 [旧首输出记录分段重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-correctness/reanalysis/main-record-partitions-v1/README.md)：C交付7SHA、各37输入SHA及完整报告/4数据文件一致；48角色/288分段/144有符号差、96调用内和48差值闭合、16384数值通过。740067为432卡非排他correctness采集，各map的prefix沿用自身目标参数，不能称相同历史状态或map因果性能比较。保留全部原记录、控制失败和资格false，无新GPU/模型/价格。
 
 [零宽GT联合双点反例主线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-gt-zero-width-witness-v1/README.md)：A 30e5a211接入ef02d2e5，8交付/88输入SHA、2完整分析及独立verify逐字节同。11进程9504三元组/29040同SM有序双点中55个零宽GT同坐标却CLOCK不同（54×8cycles、1×12）；拒绝e=0精确物理盒与同SM单值非递减CLOCK的联合前提，不识别乱序/实际GT误差或拟合e。边际代数与零lag生命周期可行性均不能认证联合物理锚点，原控制失败/资格false保留，无新GPU/价格。
+
+[零源目的完成接口主线重放](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-boundary-completion-v1/README.md)：B 12032695接入01592905，两侧12SHA、完整报告及3压缩端口数据一致，205R13测试。每条件48384目的盒保留3558fill义务（含672零源B1），完整528482304B预算不按有效源缩减；移除地址/stride后的工作与源身份等价投影三行距相同，无服务价格或新时间支持。
+
+[旧R10输入必要依赖组合](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-input-composition-v1/README.md)：27SHA/三行距相同必要图/拓扑无环，132CTA的16128已用组均被producer退出依赖覆盖，504尾部、372输出切换及240同WG复用关系通过祖先核对；672零源fill路径保留。消费者端口为128线程聚合界，输出内部仍待C绑定，服务/D可见/kernel时间均None，不作零lag预测、关键CTA或时间资格。

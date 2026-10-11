@@ -1,0 +1,17 @@
+{
+  "input_hashes_verified": 27,
+  "CTAs": 132,
+  "outputs": 504,
+  "checks": {
+    "every_used_empty_generation_required_at_producer_exit": 16128,
+    "own_last_committed_group_completed_before_tail_return": 504,
+    "all_output_committed_groups_completed_before_tail_return": 16128,
+    "next_MMA_order_does_not_require_prior_tail": 372,
+    "boundary_acquire_without_prior_tail": 1860,
+    "boundary_sixth_acquire_requires_prior_tail": 372,
+    "same_WG_output_reuse_requires_own_epilogue": 240
+  },
+  "zero_source_fill_paths_preserved": 672,
+  "unknown_services_and_output_endpoints_preserved": true,
+  "scope": "Reachability of required source ordering, not timing feasibility or prediction."
+}

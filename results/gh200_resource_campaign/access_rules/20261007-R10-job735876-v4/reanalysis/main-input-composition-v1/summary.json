@@ -1,0 +1,58 @@
+{
+  "cases": [
+    {
+      "case": "cfg_b_ldb3000",
+      "groups": 16128,
+      "nodes": 361746,
+      "edges": 478668
+    },
+    {
+      "case": "cfg_b_ldb3008",
+      "groups": 16128,
+      "nodes": 361746,
+      "edges": 478668
+    },
+    {
+      "case": "cfg_b_ldb3072",
+      "groups": 16128,
+      "nodes": 361746,
+      "edges": 478668
+    }
+  ],
+  "identical_required_order_across_pitches": true,
+  "graph_sha256": "e094d4f8b9ce4072a75b61c596f6f0a19838a4ddf1f7154a6fd3022f7a6dac3a",
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/B-boundary-completion.json": "ec3c98a6710936422a1cd0d1eabe382a97671713a45557f315c2eca361039220",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-lifecycle-v2/B-boundary-lifecycle.json": "6a488789657d54eca4e313ff0023e98adc77221cb5849eccebdadcef9509c656",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source_hashes.json": "bb54fd59a527fda4a318e4c9ba5f0f6537b1ef0e1163968fb0a7b15dd5f8bf1f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/B-boundary-binding.json": "793aae41e60824e06fe638b7523d3a15495bc2cebf7e8181efafd546024858a2",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/atom/copy_traits_sm90_tma.hpp": "a8f843eecf712cd3af447891a7cd21d3aac7cfa6a68a343b81647edb5fa08f7e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp": "b78d838244bbc71e915cf0ec7efb353d0cdda2826de945a344c558923c90f375",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/pipeline/sm90_pipeline.hpp": "7c61d847933cb12a14fcdc68cec902b44c802c9eb34273218c29e601f9c53dee",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_pingpong.hpp": "83a8e63dd9e7f70a735c17fbb779782fc31ce5215509ed644d13e68428438dee",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/cfg_b_ldb3000-persistent-ledger.json.gz": "23667b7f0c846d8fedaf415cb4cd81321e2ab6d5dc113f274ef7a5f9dfa1fe58",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/cfg_b_ldb3008-persistent-ledger.json.gz": "b449d60aab3f5939012ce47e2a0eceb6d346abf46cc1dbef29b369ab57b22544",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-binding-v1/cfg_b_ldb3072-persistent-ledger.json.gz": "c626f86e911cbfaebe73b14fb6190398e346715b47048e2ae0b61e305ec7eb31",
+    "/home/jianyeshi/.codex/worktrees/0785/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r10_boundary_completion.py": "246c2f4b9d990f0ab89f6b9437c326c50f9cb666864c09168a542ad486e21ba8",
+    "/home/jianyeshi/.codex/worktrees/0785/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_r13_boundary_completion.py": "561bffaa5566381fbcbad88aeaf835e5918f4edd700e3c151ea37a37c4fe5caa",
+    "/home/jianyeshi/.codex/worktrees/0785/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/supply_model.py": "56d3f98c67fa2da8b707102be1b91ec261fb9d27b69efb1189d427d8a109a4e0",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/probes/r10.cu": "508de5ebe59451e21dc7a37babdf202205aa008ef5e13c5017928c6ca3c15f4d",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cutlass/gemm/collective/builders/sm90_gmma_builder.inl": "6e382ee35274a35ffc4bef09a533bb73928b33521c477f12f30884b9ebf1158e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/arch/mma_sm90.hpp": "eede4c08af6c2d79a6a956072c91a902026dec8112fa8f43392fd11a2dab9de5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/atom/mma_traits_sm90_gmma.hpp": "956d254e25fbc5a0f400424bdfecb5a5857d258a0da3839bfa971f0fc56f19d3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/atom/mma_atom.hpp": "68c4f5ef714b4b914591ac7a30eb1a453ce01ad6afb62654d67f52ed0b3bfb44",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/algorithm/gemm.hpp": "25272aefdc06ac7b90ac8b638b651730d9ffd0b9e89b6bc56440deef21e2e0ea",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/source/cutlass/include/cute/arch/mma_sm90_gmma.hpp": "bbe378e69891013e93ae348850a80d39ea299249d0211758c5d849cd46b4c17a",
+    "/home/jianyeshi/.codex/worktrees/0785/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r10_boundary_lifecycle.py": "799bb09b3391073b9baef7dc946274564e775c9d8a73f208a329f974eece3293",
+    "/home/jianyeshi/.codex/worktrees/0785/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_r13_boundary_lifecycle.py": "e89a75ea951d66a795cc67497ab20c9305e9bf5c330ad804dd25f1b0ea53c882",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/cfg_b_ldb3000-completion-ports.json.gz": "e954e36334c6712e5843918c58c653a49ad760db46cb3a2c4491df41ababce08",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/cfg_b_ldb3008-completion-ports.json.gz": "9e8097f3d74a1046f1319c5c0e039541ee0d5a69e6ed6b006bae567c76c2381e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/B-20261011-boundary-completion-v2/cfg_b_ldb3072-completion-ports.json.gz": "9436f0f36778728109653039bfa97286570b6d53a40f2c74315dd224c6305313",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_r10_input_dependency_composition.py": "d3f0b624f0efe50375cc2087d9a358cc86738b05151c62fd24639bc8cc8ad03c"
+  },
+  "limits": [
+    "Graph equality is not timing equality: address-dependent service and cross-CTA sharing remain unpriced.",
+    "Store-tail/output order are necessary open interfaces pending the legacy epilogue source binding.",
+    "Unknown durations are None, not zero. No full-time, physical endpoint or critical-CTA prediction is emitted."
+  ]
+}

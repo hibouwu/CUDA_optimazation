@@ -1,0 +1,32 @@
+{
+  "report_sha256": "ec3c98a6710936422a1cd0d1eabe382a97671713a45557f315c2eca361039220",
+  "input_hashes_verified": 12,
+  "serialized_group_atom_byte_and_edge_checks": {
+    "nonempty": 143136,
+    "valid": 1504800000,
+    "fill_bytes": 80646912,
+    "transaction": 1585446912,
+    "atoms": 145152,
+    "groups": 48384,
+    "nodes": 780786,
+    "edges": 886212,
+    "fill": 10674,
+    "zero": 2016
+  },
+  "independent_geometry_identity_projection_sha256": "bb5cc08f2e5bd5d634cb1589b59b826ce36aa3e8f897c7083e824cb05041b06e",
+  "three_geometry_identity_projections_equal": true,
+  "distinct_logical_source_identities_per_case": 2208,
+  "distinct_nonempty_source_identities_per_case": 2176,
+  "entire_D_bounds_preserved_and_completion_unbound": true,
+  "supply_module_byte_identical_to": "ff4a7423d4ff9a1ab3006a9d5bf5fce07639e918",
+  "r13_tests": {
+    "passed": 198,
+    "new_completion_tests": 6
+  },
+  "source_snapshot_sha256": {
+    "analyze_r10_boundary_completion.py": "246c2f4b9d990f0ab89f6b9437c326c50f9cb666864c09168a542ad486e21ba8",
+    "test_r13_boundary_completion.py": "561bffaa5566381fbcbad88aeaf835e5918f4edd700e3c151ea37a37c4fe5caa",
+    "supply_model.py": "56d3f98c67fa2da8b707102be1b91ec261fb9d27b69efb1189d427d8a109a4e0"
+  },
+  "status": "Static open completion interface only; completion values remain None, guards and timing model unchanged."
+}
