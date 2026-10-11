@@ -1,0 +1,4352 @@
+{
+  "errors": [],
+  "processes": [
+    {
+      "id": "pair02_flag0",
+      "trial": 2,
+      "flag": 0,
+      "raw": "raw/pair02_flag0.jsonl.gz",
+      "sha256": "7eed0240ebffd7eae21eb8ef9daa2be06c64d0216066e2bb52fe18dd23b55e04",
+      "returncode": 0,
+      "elapsed_us": 48.00000042,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 32866,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33116,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33084,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32856,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 32863,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33110,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 32868,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33086,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 32882,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 33130,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19872,
+          "cycles": 33087,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19776,
+          "cycles": 32854,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32869,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33116,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33081,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32855,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19872,
+          "cycles": 33076,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19776,
+          "cycles": 32873,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19744,
+          "cycles": 32871,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 33101,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33128,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32885,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33092,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32849,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair02_flag1",
+      "trial": 2,
+      "flag": 1,
+      "raw": "raw/pair02_flag1.jsonl.gz",
+      "sha256": "3005f98cb81b2a890caeb29528b2a2a4a99f847640afea0e49ac86d79726f289",
+      "returncode": 0,
+      "elapsed_us": 47.68000171,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33085,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32874,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32850,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33093,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32869,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33119,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32873,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 33092,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33139,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32871,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33053,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32843,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33072,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32867,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32861,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33109,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33095,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32864,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19680,
+          "cycles": 32856,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33067,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33188,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32971,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32961,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 33205,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair01_flag1",
+      "trial": 1,
+      "flag": 1,
+      "raw": "raw/pair01_flag1.jsonl.gz",
+      "sha256": "1ea4cbd91813aa26ee1d5b77be2a82e771c7da45c9f0049dde89fd7922a11bc3",
+      "returncode": 0,
+      "elapsed_us": 48.38399962,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33082,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32863,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32871,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 33084,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33117,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32874,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33083,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32853,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33075,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32851,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33110,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32864,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33145,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32880,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33087,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32861,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19744,
+          "cycles": 33127,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32859,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19616,
+          "cycles": 32862,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 33090,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33100,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32875,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33094,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32854,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair01_flag0",
+      "trial": 1,
+      "flag": 0,
+      "raw": "raw/pair01_flag0.jsonl.gz",
+      "sha256": "24948f909e4f22b3670a548af6fb33cc79911bc08e04b5997926044b5db39ce5",
+      "returncode": 0,
+      "elapsed_us": 48.41599986,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20480,
+          "cycles": 33310,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20608,
+          "cycles": 33562,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20480,
+          "cycles": 33317,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20608,
+          "cycles": 33527,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20544,
+          "cycles": 33465,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20416,
+          "cycles": 33217,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20416,
+          "cycles": 33198,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20512,
+          "cycles": 33395,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33246,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33453,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33466,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33273,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20576,
+          "cycles": 33660,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20704,
+          "cycles": 33910,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20576,
+          "cycles": 33664,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20704,
+          "cycles": 33874,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33537,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33310,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33539,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33307,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20384,
+          "cycles": 33308,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20512,
+          "cycles": 33554,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20512,
+          "cycles": 33555,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20448,
+          "cycles": 33346,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair03_flag1",
+      "trial": 3,
+      "flag": 1,
+      "raw": "raw/pair03_flag1.jsonl.gz",
+      "sha256": "1bbb33d6b5568e7afd772184d97ab168503e2f636ee5c9d4d3b57e0bc42af582",
+      "returncode": 0,
+      "elapsed_us": 48.12800139,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20512,
+          "cycles": 33157,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 32888,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20320,
+          "cycles": 32851,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20480,
+          "cycles": 33101,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20480,
+          "cycles": 33109,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 32860,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20480,
+          "cycles": 33096,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 32878,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20192,
+          "cycles": 33112,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32868,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32855,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33085,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20352,
+          "cycles": 33070,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20288,
+          "cycles": 32858,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 32833,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 33075,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32866,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33121,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32867,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33097,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 32879,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 33133,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 32907,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20320,
+          "cycles": 33067,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair03_flag0",
+      "trial": 3,
+      "flag": 0,
+      "raw": "raw/pair03_flag0.jsonl.gz",
+      "sha256": "07211cca909f297a9790157e8e6c550fedcf6f35ec3e38fd869eea3808ddbb9e",
+      "returncode": 0,
+      "elapsed_us": 47.96800017,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33082,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32870,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32871,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33082,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 33079,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32879,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 33086,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32859,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33129,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19744,
+          "cycles": 32882,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33128,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32885,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33191,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32981,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33206,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33047,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33065,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32860,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19680,
+          "cycles": 32853,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33083,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33129,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32924,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33158,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32915,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair05_flag1",
+      "trial": 5,
+      "flag": 1,
+      "raw": "raw/pair05_flag1.jsonl.gz",
+      "sha256": "03376f5e7fc1d13f212fc026bc4aab2c21b4ed5fc1c341908dae904fa178318e",
+      "returncode": 0,
+      "elapsed_us": 47.64800146,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 33082,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32868,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32869,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33087,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33082,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32875,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33092,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32846,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19744,
+          "cycles": 33119,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32876,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19648,
+          "cycles": 32938,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19744,
+          "cycles": 33112,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 19872,
+          "cycles": 32938,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 33088,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33081,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 32855,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19648,
+          "cycles": 32911,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19744,
+          "cycles": 33118,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33142,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19648,
+          "cycles": 32913,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 32868,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 33122,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33080,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 32854,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair05_flag0",
+      "trial": 5,
+      "flag": 0,
+      "raw": "raw/pair05_flag0.jsonl.gz",
+      "sha256": "61d63dac6f2faf8341e78c3a60cc0aa7ed5480d1ebe0f25e70e87eaae6ea9c36",
+      "returncode": 0,
+      "elapsed_us": 47.77599871,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32977,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20192,
+          "cycles": 33233,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32962,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20192,
+          "cycles": 33210,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33285,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33077,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33081,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33311,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19680,
+          "cycles": 32866,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33130,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33107,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32855,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32931,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33170,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32911,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33154,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33067,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32853,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19680,
+          "cycles": 32868,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33086,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32869,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33119,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32868,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33075,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair04_flag0",
+      "trial": 4,
+      "flag": 0,
+      "raw": "raw/pair04_flag0.jsonl.gz",
+      "sha256": "9a37ed9fe50bcbce5e184e9d770c46e1fe52410634a590595dab0ffcd6120e19",
+      "returncode": 0,
+      "elapsed_us": 47.93599993,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33074,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32872,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33085,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32854,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32935,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33084,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33092,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32876,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19872,
+          "cycles": 33108,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32858,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33080,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19744,
+          "cycles": 32873,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33084,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32869,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33096,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32870,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33146,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32882,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19648,
+          "cycles": 32852,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33107,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33098,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32851,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32855,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33063,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair04_flag1",
+      "trial": 4,
+      "flag": 1,
+      "raw": "raw/pair04_flag1.jsonl.gz",
+      "sha256": "a8b7d9065b2105328779ce5c5e57699bc3f4681b9b78887ece9737f33a5e1bd4",
+      "returncode": 0,
+      "elapsed_us": 47.71199822,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33114,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32868,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33078,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 32852,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33076,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32852,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32867,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33097,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33082,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 32870,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33082,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32851,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 33083,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32882,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32867,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33113,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19680,
+          "cycles": 32868,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 33119,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 33080,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19648,
+          "cycles": 32853,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32965,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33117,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33138,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32894,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair09_flag1",
+      "trial": 9,
+      "flag": 1,
+      "raw": "raw/pair09_flag1.jsonl.gz",
+      "sha256": "8f424af7ff5a53edf29d3cdfaf2976fab4656f09a423de314d4e1dd44d2dc012",
+      "returncode": 0,
+      "elapsed_us": 48.51200059,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33117,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32867,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33088,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 32844,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33080,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32869,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33091,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32848,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19616,
+          "cycles": 32869,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 33123,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19712,
+          "cycles": 33102,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32855,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32937,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 33123,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 33094,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 32864,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19616,
+          "cycles": 32851,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 33076,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19712,
+          "cycles": 33084,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19584,
+          "cycles": 32854,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 33123,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 32875,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 33087,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 32843,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair09_flag0",
+      "trial": 9,
+      "flag": 0,
+      "raw": "raw/pair09_flag0.jsonl.gz",
+      "sha256": "27153a77ce33b8e0ab9ed1337ee862989e6f167bef36d1877a9b779498033375",
+      "returncode": 0,
+      "elapsed_us": 48.2239984,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20448,
+          "cycles": 33075,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20320,
+          "cycles": 32869,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20448,
+          "cycles": 33088,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20320,
+          "cycles": 32844,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20448,
+          "cycles": 33079,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 32865,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20352,
+          "cycles": 32869,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20448,
+          "cycles": 33079,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32870,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33125,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32870,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33101,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 32900,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20416,
+          "cycles": 33146,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20384,
+          "cycles": 33123,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 32880,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32869,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33124,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 33094,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 20000,
+          "cycles": 32866,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 32957,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20384,
+          "cycles": 33168,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20320,
+          "cycles": 32987,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20416,
+          "cycles": 33217,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair07_flag1",
+      "trial": 7,
+      "flag": 1,
+      "raw": "raw/pair07_flag1.jsonl.gz",
+      "sha256": "c13d32ea5af55e765a726e7a825871e6e30d298dd9293d45b09698d65571f695",
+      "returncode": 0,
+      "elapsed_us": 48.4480001,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 33083,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32865,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32864,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33098,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32874,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20192,
+          "cycles": 33128,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 33082,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 32855,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19744,
+          "cycles": 32876,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 33127,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 33092,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 32846,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32868,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33079,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33081,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32855,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19744,
+          "cycles": 32935,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 33088,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19712,
+          "cycles": 32868,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 33086,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32866,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33137,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33076,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32879,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair07_flag0",
+      "trial": 7,
+      "flag": 0,
+      "raw": "raw/pair07_flag0.jsonl.gz",
+      "sha256": "8ab568eb17e3292373c17b36ac872ce6eb6be81b8afb193fb49a571b6c0c0316",
+      "returncode": 0,
+      "elapsed_us": 49.2159985,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20736,
+          "cycles": 33846,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20704,
+          "cycles": 33795,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20704,
+          "cycles": 33757,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20640,
+          "cycles": 33678,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20704,
+          "cycles": 33796,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20640,
+          "cycles": 33651,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20640,
+          "cycles": 33681,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20704,
+          "cycles": 33735,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33489,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33534,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33490,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33528,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20416,
+          "cycles": 33388,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20480,
+          "cycles": 33512,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20448,
+          "cycles": 33427,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20480,
+          "cycles": 33497,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33631,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33547,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33545,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33331,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20512,
+          "cycles": 33559,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20576,
+          "cycles": 33661,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20544,
+          "cycles": 33630,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20480,
+          "cycles": 33488,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair08_flag0",
+      "trial": 8,
+      "flag": 0,
+      "raw": "raw/pair08_flag0.jsonl.gz",
+      "sha256": "28cb184428a1db9a6d22e459b73e14c8187c8f4b78fadd41d5e26b06a6ccf420",
+      "returncode": 0,
+      "elapsed_us": 48.92800003,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 32883,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20416,
+          "cycles": 33156,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20384,
+          "cycles": 33108,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 32878,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 32903,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20416,
+          "cycles": 33116,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20416,
+          "cycles": 33150,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20288,
+          "cycles": 32923,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33074,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 32870,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32886,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33098,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20320,
+          "cycles": 33124,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32875,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33091,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32847,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32868,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33078,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 32877,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 33095,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20384,
+          "cycles": 33242,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 32990,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 32953,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20352,
+          "cycles": 33197,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair08_flag1",
+      "trial": 8,
+      "flag": 1,
+      "raw": "raw/pair08_flag1.jsonl.gz",
+      "sha256": "0f52277a15cd64fb6f570725b7e17b65b6d17636992e482f68bdd94937733a9d",
+      "returncode": 0,
+      "elapsed_us": 47.64800146,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 32932,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33084,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 32867,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20032,
+          "cycles": 33085,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33133,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32866,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33079,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 32853,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19584,
+          "cycles": 32860,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19680,
+          "cycles": 33058,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19712,
+          "cycles": 33098,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19584,
+          "cycles": 32872,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33125,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 32881,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33098,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 32872,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19584,
+          "cycles": 32886,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19712,
+          "cycles": 33134,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19712,
+          "cycles": 33097,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19616,
+          "cycles": 32867,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 32874,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 19904,
+          "cycles": 33080,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 32887,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33070,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair00_flag0",
+      "trial": 0,
+      "flag": 0,
+      "raw": "raw/pair00_flag0.jsonl.gz",
+      "sha256": "314ff55d897a0c33d2eed8ab35b93fbe04260ed3ba53ca085ad4e8ffc2275bc9",
+      "returncode": 0,
+      "elapsed_us": 48.86399955,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 32894,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20288,
+          "cycles": 33124,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 32868,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33086,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 32874,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33088,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 32871,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33081,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33115,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19776,
+          "cycles": 32872,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 32887,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33111,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32904,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20192,
+          "cycles": 33115,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20192,
+          "cycles": 33126,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32927,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 32888,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33155,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19776,
+          "cycles": 32869,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33117,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 32869,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33124,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32866,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33087,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair00_flag1",
+      "trial": 0,
+      "flag": 1,
+      "raw": "raw/pair00_flag1.jsonl.gz",
+      "sha256": "5fd5ce6146d9b1c46afa5082318b31f27578ca623d5d0274d01630f9dc8d1daa",
+      "returncode": 0,
+      "elapsed_us": 48.73599857,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33113,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32869,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33098,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32868,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 32892,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33074,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 32876,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33064,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 33158,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 32890,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19936,
+          "cycles": 33077,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 32850,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33164,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32912,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33132,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32904,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 33116,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19808,
+          "cycles": 32865,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19904,
+          "cycles": 33081,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19776,
+          "cycles": 32855,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32870,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33120,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 32869,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 33062,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair06_flag0",
+      "trial": 6,
+      "flag": 0,
+      "raw": "raw/pair06_flag0.jsonl.gz",
+      "sha256": "75c5c2cc1ef8ce0ec17114efc22c6837fd5faca81845626c3b6ac0bbd7091d99",
+      "returncode": 0,
+      "elapsed_us": 48.03200066,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33085,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32872,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33084,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32870,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20160,
+          "cycles": 32872,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20288,
+          "cycles": 33118,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20288,
+          "cycles": 33117,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 32868,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 33083,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 32874,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 19840,
+          "cycles": 32884,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19968,
+          "cycles": 33116,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20192,
+          "cycles": 33075,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32865,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 32901,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20192,
+          "cycles": 33091,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 33068,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 32864,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 20000,
+          "cycles": 33109,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19872,
+          "cycles": 32873,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 32877,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20160,
+          "cycles": 33132,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33099,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20064,
+          "cycles": 32869,
+          "sm": 31
+        }
+      ]
+    },
+    {
+      "id": "pair06_flag1",
+      "trial": 6,
+      "flag": 1,
+      "raw": "raw/pair06_flag1.jsonl.gz",
+      "sha256": "ff1dd3eba39dbf942c0694e570da85a46af37fe8736e249ef08cc762210bc0a3",
+      "returncode": 0,
+      "elapsed_us": 48.00000042,
+      "local": [
+        {
+          "cta": 0,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33213,
+          "sm": 130
+        },
+        {
+          "cta": 0,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 32966,
+          "sm": 130
+        },
+        {
+          "cta": 1,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33180,
+          "sm": 131
+        },
+        {
+          "cta": 1,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 32955,
+          "sm": 131
+        },
+        {
+          "cta": 6,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 32969,
+          "sm": 128
+        },
+        {
+          "cta": 6,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33176,
+          "sm": 128
+        },
+        {
+          "cta": 7,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 32944,
+          "sm": 129
+        },
+        {
+          "cta": 7,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33177,
+          "sm": 129
+        },
+        {
+          "cta": 14,
+          "role": 1,
+          "ns": 20096,
+          "cycles": 33480,
+          "sm": 6
+        },
+        {
+          "cta": 14,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33231,
+          "sm": 6
+        },
+        {
+          "cta": 15,
+          "role": 1,
+          "ns": 20032,
+          "cycles": 33444,
+          "sm": 7
+        },
+        {
+          "cta": 15,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33213,
+          "sm": 7
+        },
+        {
+          "cta": 22,
+          "role": 1,
+          "ns": 20224,
+          "cycles": 33287,
+          "sm": 14
+        },
+        {
+          "cta": 22,
+          "role": 2,
+          "ns": 20096,
+          "cycles": 33081,
+          "sm": 14
+        },
+        {
+          "cta": 23,
+          "role": 1,
+          "ns": 20064,
+          "cycles": 33071,
+          "sm": 15
+        },
+        {
+          "cta": 23,
+          "role": 2,
+          "ns": 20224,
+          "cycles": 33295,
+          "sm": 15
+        },
+        {
+          "cta": 30,
+          "role": 1,
+          "ns": 19968,
+          "cycles": 33315,
+          "sm": 22
+        },
+        {
+          "cta": 30,
+          "role": 2,
+          "ns": 19840,
+          "cycles": 33065,
+          "sm": 22
+        },
+        {
+          "cta": 31,
+          "role": 1,
+          "ns": 19808,
+          "cycles": 33047,
+          "sm": 23
+        },
+        {
+          "cta": 31,
+          "role": 2,
+          "ns": 19936,
+          "cycles": 33273,
+          "sm": 23
+        },
+        {
+          "cta": 38,
+          "role": 1,
+          "ns": 20256,
+          "cycles": 33399,
+          "sm": 30
+        },
+        {
+          "cta": 38,
+          "role": 2,
+          "ns": 20128,
+          "cycles": 33173,
+          "sm": 30
+        },
+        {
+          "cta": 39,
+          "role": 1,
+          "ns": 20128,
+          "cycles": 33190,
+          "sm": 31
+        },
+        {
+          "cta": 39,
+          "role": 2,
+          "ns": 20256,
+          "cycles": 33426,
+          "sm": 31
+        }
+      ]
+    }
+  ],
+  "common_L_control_passed": false,
+  "internal_endpoints_qualified": false,
+  "observation_qualified": false,
+  "local": [
+    {
+      "cta": 0,
+      "role": 1,
+      "signed": [
+        160,
+        -384,
+        0,
+        384,
+        0,
+        -64,
+        -32,
+        -576,
+        -320,
+        -416
+      ],
+      "median_absolute": 240.0,
+      "maximum_absolute": 576,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 0,
+      "role": 2,
+      "signed": [
+        -128,
+        -640,
+        -256,
+        320,
+        -64,
+        -256,
+        -32,
+        -672,
+        -384,
+        -416
+      ],
+      "median_absolute": 288.0,
+      "maximum_absolute": 672,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 1,
+      "role": 1,
+      "signed": [
+        160,
+        -512,
+        -224,
+        288,
+        -32,
+        -128,
+        -64,
+        -672,
+        -480,
+        -416
+      ],
+      "median_absolute": 256.0,
+      "maximum_absolute": 672,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 1,
+      "role": 2,
+      "signed": [
+        -96,
+        -512,
+        32,
+        320,
+        -32,
+        -160,
+        -64,
+        -480,
+        -224,
+        -448
+      ],
+      "median_absolute": 192.0,
+      "maximum_absolute": 512,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 6,
+      "role": 1,
+      "signed": [
+        32,
+        -448,
+        -128,
+        320,
+        64,
+        -192,
+        -32,
+        -640,
+        -256,
+        -416
+      ],
+      "median_absolute": 224.0,
+      "maximum_absolute": 640,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 6,
+      "role": 2,
+      "signed": [
+        0,
+        -448,
+        -96,
+        320,
+        -128,
+        -192,
+        -64,
+        -448,
+        -512,
+        -448
+      ],
+      "median_absolute": 256.0,
+      "maximum_absolute": 512,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 7,
+      "role": 1,
+      "signed": [
+        32,
+        -320,
+        -128,
+        320,
+        -128,
+        -96,
+        -192,
+        -480,
+        -384,
+        -288
+      ],
+      "median_absolute": 240.0,
+      "maximum_absolute": 480,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 7,
+      "role": 2,
+      "signed": [
+        0,
+        -544,
+        -128,
+        352,
+        96,
+        -352,
+        64,
+        -672,
+        -384,
+        -544
+      ],
+      "median_absolute": 352.0,
+      "maximum_absolute": 672,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 14,
+      "role": 1,
+      "signed": [
+        32,
+        -352,
+        64,
+        352,
+        -64,
+        64,
+        128,
+        -480,
+        -480,
+        -384
+      ],
+      "median_absolute": 240.0,
+      "maximum_absolute": 480,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 14,
+      "role": 2,
+      "signed": [
+        64,
+        -608,
+        -224,
+        288,
+        -32,
+        -192,
+        64,
+        -384,
+        -256,
+        -448
+      ],
+      "median_absolute": 240.0,
+      "maximum_absolute": 608,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 15,
+      "role": 1,
+      "signed": [
+        128,
+        -480,
+        -64,
+        192,
+        -32,
+        -192,
+        192,
+        -384,
+        -224,
+        -320
+      ],
+      "median_absolute": 192.0,
+      "maximum_absolute": 480,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 15,
+      "role": 2,
+      "signed": [
+        -128,
+        -544,
+        -96,
+        448,
+        -32,
+        64,
+        -32,
+        -544,
+        -480,
+        -544
+      ],
+      "median_absolute": 288.0,
+      "maximum_absolute": 544,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 22,
+      "role": 1,
+      "signed": [
+        192,
+        -544,
+        32,
+        224,
+        -64,
+        -64,
+        32,
+        -480,
+        -384,
+        -384
+      ],
+      "median_absolute": 208.0,
+      "maximum_absolute": 544,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 22,
+      "role": 2,
+      "signed": [
+        -96,
+        -800,
+        -256,
+        288,
+        -32,
+        -96,
+        0,
+        -416,
+        -320,
+        -416
+      ],
+      "median_absolute": 272.0,
+      "maximum_absolute": 800,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 23,
+      "role": 1,
+      "signed": [
+        32,
+        -544,
+        -224,
+        128,
+        -160,
+        0,
+        -32,
+        -384,
+        -352,
+        -384
+      ],
+      "median_absolute": 192.0,
+      "maximum_absolute": 544,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 23,
+      "role": 2,
+      "signed": [
+        0,
+        -800,
+        32,
+        320,
+        96,
+        -224,
+        32,
+        -544,
+        -352,
+        -384
+      ],
+      "median_absolute": 272.0,
+      "maximum_absolute": 800,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 30,
+      "role": 1,
+      "signed": [
+        128,
+        -512,
+        -64,
+        192,
+        -160,
+        -128,
+        0,
+        -512,
+        -352,
+        -384
+      ],
+      "median_absolute": 176.0,
+      "maximum_absolute": 512,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 30,
+      "role": 2,
+      "signed": [
+        -128,
+        -544,
+        -96,
+        448,
+        96,
+        64,
+        0,
+        -384,
+        -320,
+        -448
+      ],
+      "median_absolute": 224.0,
+      "maximum_absolute": 544,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 31,
+      "role": 1,
+      "signed": [
+        128,
+        -640,
+        -64,
+        320,
+        128,
+        96,
+        -192,
+        -512,
+        -256,
+        -448
+      ],
+      "median_absolute": 224.0,
+      "maximum_absolute": 640,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 31,
+      "role": 2,
+      "signed": [
+        -160,
+        -448,
+        -96,
+        320,
+        -160,
+        -160,
+        64,
+        -224,
+        -448,
+        -416
+      ],
+      "median_absolute": 192.0,
+      "maximum_absolute": 448,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 38,
+      "role": 1,
+      "signed": [
+        32,
+        -352,
+        -32,
+        160,
+        -96,
+        -96,
+        192,
+        -576,
+        -576,
+        -288
+      ],
+      "median_absolute": 176.0,
+      "maximum_absolute": 576,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 38,
+      "role": 2,
+      "signed": [
+        -32,
+        -608,
+        -32,
+        384,
+        96,
+        -64,
+        -32,
+        -448,
+        -352,
+        -512
+      ],
+      "median_absolute": 224.0,
+      "maximum_absolute": 608,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 39,
+      "role": 1,
+      "signed": [
+        0,
+        -480,
+        -128,
+        128,
+        128,
+        32,
+        0,
+        -480,
+        -416,
+        -352
+      ],
+      "median_absolute": 128.0,
+      "maximum_absolute": 480,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "cta": 39,
+      "role": 2,
+      "signed": [
+        -32,
+        -544,
+        96,
+        352,
+        -96,
+        -224,
+        192,
+        -544,
+        -416,
+        -576
+      ],
+      "median_absolute": 288.0,
+      "maximum_absolute": 576,
+      "passed": false,
+      "sm_changes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  ],
+  "event": {
+    "signed": [
+      -0.002619535469441603,
+      -0.0006609434916666768,
+      -0.00666663973333359,
+      0.0033355824598262362,
+      -0.004672932875648961,
+      -0.0026791119695256382,
+      -0.0006662275058355593,
+      -0.015604649370265178,
+      -0.026160860227582794,
+      0.0059721756709414375
+    ],
+    "median_absolute": 0.0040042576677375985,
+    "maximum_absolute": 0.026160860227582794,
+    "passed": true
+  },
+  "off_cv": 0.009784870880431553
+}

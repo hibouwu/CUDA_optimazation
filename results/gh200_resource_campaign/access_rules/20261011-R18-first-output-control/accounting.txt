@@ -1,0 +1,3 @@
+740068|COMPLETED|00:00:19|billing=288,cpu=288,gres/gpu=4,mem=16G,node=1
+740068.extern|COMPLETED|00:00:19|billing=288,cpu=288,gres/gpu=4,mem=16G,node=1
+740068.0|COMPLETED|00:00:18|cpu=4,gres/gpu=4,mem=16G,node=1
