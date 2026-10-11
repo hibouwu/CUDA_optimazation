@@ -5,6 +5,7 @@ The request spans are descriptor coverage, not physical memory traffic.
 """
 from collections import defaultdict
 from functools import lru_cache
+import math
 
 import numpy as np
 
@@ -513,6 +514,118 @@ def static_tma_requests(row, setup):
     return dict(source_fields=TMA_SOURCE_FIELDS,source_coefficients=None,destination_coefficients=None,
                 ctas=ctas,source_waves=[v.tolist() for v in waves],
                 effective_source_waves=[v.tolist() for v in effective])
+
+
+def input_slot_state(group, stages):
+    """Persistent input-ring state; group counts Ktiles across output tiles.
+
+    These are the phase arguments used to wait, not a sampled barrier phase.
+    The first producer waits on phase 1, the first consumer on phase 0.
+    A slot may be acquired again only after the prior generation is released.
+    """
+    if not isinstance(group, int) or not isinstance(stages, int) or group < 0 or stages < 1:
+        raise ValueError('nonnegative integer group and positive integer stages required')
+    generation, slot = divmod(group, stages)
+    return dict(group=group, slot=slot, generation=generation,
+                full_wait_phase=generation % 2, empty_wait_phase=(generation + 1) % 2,
+                previous_group=group-stages if group >= stages else None)
+
+
+def supply_work_ledger(row, setup):
+    """Software source boxes, multicast deliveries and output work, without prices.
+
+    Source atoms are templates at Ktile 0; every later Ktile adds 64 to K.
+    Destination dependencies name the actual issuing CTA and atom, including
+    remote multicast slices. Distinct source identities are counted over the
+    invocation, without asserting that repeated reads merge or remain cached.
+    Payload/valid/fill KiB and address coverage have separate meanings.
+    Output subtiles describe the fixed epilogue lattice, not physical traffic
+    or a transferred cooperative timing graph. No observation is read.
+    """
+    if row.get('source_copies', setup.get('source_copies', 1)) != 1 or setup.get('source_copies', 1) != 1:
+        raise ValueError('ledger requires one source allocation per operand')
+    if row.get('work_swap55_91', 0) or setup.get('work_swap55_91', 0):
+        raise ValueError('ledger does not support work exchange')
+    for name in ('config', 'm', 'n', 'k', 'swizzle', 'lda', 'ldb', 'input_map_m', 'input_map_n', 'b_offset_bytes', 'raster_order'):
+        if name in row and name in setup and row[name] != setup[name]:
+            raise ValueError('ledger row/setup mismatch: '+name)
+    request = static_tma_requests(row, setup)
+    tm, tn, cm, cn = CONFIGS[row['config']]
+    kt = row['k'] // 64
+    stages = setup['stages']
+    peers = {}
+    outputs = []
+    for cta, tiles in enumerate(request['ctas']):
+        for j, tile in enumerate(tiles):
+            key = (tuple(tile['cluster']), tile['cluster_rank'])
+            if key in peers:
+                raise ValueError('logical output tile appears more than once')
+            peers[key] = len(outputs)
+            valid_m = max(0, min(tm, row['m']-tile['coord'][0]*tm))
+            valid_n = max(0, min(tn, row['n']-tile['coord'][1]*tn))
+            # r18.cu: cfg_b uses 64x32; cooperative uses 128x32 FP32.
+            epi_m = 64 if row['config'] == 'cfg_b' else 128
+            outputs.append(dict(cta=cta, j=j, coord=tile['coord'],
+                cluster=tile['cluster'], rank=tile['cluster_rank'],
+                first_input_state=input_slot_state(j*kt, stages),
+                last_input_state=input_slot_state((j+1)*kt-1, stages),
+                operands={op: dict(valid_KiB=tile[op]['destination_valid_KiB'],
+                    fill_KiB=tile[op]['destination_fill_KiB'], source_atoms=[])
+                    for op in ('A', 'B')},
+                output=dict(nominal_KiB=tm*tn*4/1024,
+                    valid_KiB=valid_m*valid_n*4/1024,
+                    subtile_shape=[epi_m, 32], nominal_subtiles=tm*tn//(epi_m*32))))
+    atoms = []
+    distinct = {}
+    for cta, tiles in enumerate(request['ctas']):
+        for j, tile in enumerate(tiles):
+            for op in ('A', 'B'):
+                for box in tile[op]['source_boxes']:
+                    stride = [2*row.get('lda', row['k']), 2] if op == 'A' else [2, 2*row.get('ldb', row['n'])]
+                    extents = [row.get('input_map_m', row['m']), row['k']] if op == 'A' else [row.get('input_map_n', row['n']), row['k']]
+                    offset = 0 if op == 'A' else row.get('b_offset_bytes', 0)
+                    identity = (op, tuple(extents), tuple(stride), offset,
+                                tuple(box['origin']), tuple(box['shape']))
+                    payload = math.prod(box['shape'])*2/1024
+                    valid = box['source_KiB'][0]
+                    destinations = []
+                    for rank in range(cm*cn):
+                        if tile[op]['multicast_mask'] & (1 << rank):
+                            target = peers[(tuple(tile['cluster']), rank)]
+                            outputs[target]['operands'][op]['source_atoms'].append(len(atoms))
+                            destinations.append(dict(cta=outputs[target]['cta'], j=outputs[target]['j'], rank=rank))
+                    atoms.append(dict(id=len(atoms), cta=cta, j=j, operand=op,
+                        origin=box['origin'], shape=box['shape'], extents=extents,
+                        stride_bytes=stride, base_offset_bytes=offset,
+                        payload_KiB=payload, valid_KiB=valid, fill_KiB=payload-valid,
+                        extra32_KiB=box['source_KiB'][1], extra128_KiB=box['source_KiB'][2],
+                        multicast_mask=tile[op]['multicast_mask'], destinations=destinations))
+                    distinct[identity] = valid
+    for out in outputs:
+        for op, value in out['operands'].items():
+            incoming = [atoms[i] for i in value['source_atoms']]
+            if sum(a['valid_KiB'] for a in incoming) != value['valid_KiB'] or sum(a['fill_KiB'] for a in incoming) != value['fill_KiB']:
+                raise ValueError('source slices do not conserve destination valid/fill payload')
+    totals = dict(source_requests=len(atoms)*kt,
+        source_payload_KiB=sum(a['payload_KiB'] for a in atoms)*kt,
+        source_valid_KiB=sum(a['valid_KiB'] for a in atoms)*kt,
+        source_box_fill_KiB=sum(a['fill_KiB'] for a in atoms)*kt,
+        distinct_source_boxes=len(distinct)*kt,
+        distinct_valid_source_KiB=sum(distinct.values())*kt,
+        destination_atoms=sum(len(a['destinations']) for a in atoms)*kt,
+        destination_valid_KiB=sum(v['valid_KiB'] for o in outputs for v in o['operands'].values())*kt,
+        destination_fill_KiB=sum(v['fill_KiB'] for o in outputs for v in o['operands'].values())*kt,
+        output_tiles=len(outputs),
+        output_nominal_KiB=sum(o['output']['nominal_KiB'] for o in outputs),
+        output_valid_KiB=sum(o['output']['valid_KiB'] for o in outputs),
+        output_nominal_subtiles=sum(o['output']['nominal_subtiles'] for o in outputs))
+    if totals['output_valid_KiB'] != row['m']*row['n']*4/1024:
+        raise ValueError('output work does not cover the logical D exactly')
+    return dict(schema='gh200-supply-work-ledger/1', config=row['config'], ktiles=kt, stages=stages,
+        source_atoms=atoms, outputs=outputs, totals=totals,
+        legacy_clock_source_field='totals.source_payload_KiB',
+        K_origin_increment=[0, 64],
+        scope='within one invocation; logical source/delivery/output work only; no timing or physical traffic')
 
 
 def boundary_fill_features(row,setup):

@@ -4,6 +4,8 @@
 
 ## 作业与证据索引
 
+2026-10-11，B的静态工作统一为 [R13供给账本](R13-async-retirement.md#supply-work-ledger)。`gh200-supply-work-ledger/1`保留每个CTA/输出的descriptor box、源身份和multicast目的前驱，不再只返回七列聚合覆盖；R10的两个raster与36/126/132执行规模已进入57条件守恒复核。名义源payload、有效源地址、去重源身份、目的投递和D输出分别记账。该接口仅补齐组织信息，没有给方向或B32另加价格；旧几何B32变慢、新几何未见同量级惩罚仍是同一供给状态候选必须同时解释的约束。A16和stage4不用于另拟行距价，原局部冻结失败不变。
+
 | 作业 | 固定对象 | 结果入口 |
 |---|---|---|
 | 735876 | 三配置，2600×3000×2000，B 行距 6000/6016/6144 B | [v2 完整时间](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v2/analysis-formal/summary.json)、[v4 cfg_b 局部周期](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/analysis-formal/summary.json)、[独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reviews/ROOT-independent.md) |

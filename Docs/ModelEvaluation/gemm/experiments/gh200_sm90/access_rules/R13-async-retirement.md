@@ -33,6 +33,70 @@
 | 独立ready，739645 | 只读phase0观察开关 × 起步0/512 ns × B0/B32；10/40可绑定、30/40边界跨FIRST | [观察扰动与区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-observer.md) |
 | 释放界ready，739653 | 同四条件、同binary联合观察开关；40/40可绑定，ready前增长不能由consumer返回单独解释 | [逐进程区间与模型必要界](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/R13-ready-release.md) |
 
+<a id="supply-work-ledger"></a>
+
+## 2026-10-11：统一工作账本与局部生命周期复核
+
+本轮B先固定工作定义，未新增服务价格或GPU样本。纯接口 `supply_model.supply_work_ledger(row, setup)` 的版本为 `gh200-supply-work-ledger/1`；沿用 `static_tma_requests` 的完整Ktile、FP16 row-major、cfg_a/b/c、合法行距、源map与真实持久工作分配。每个源atom保留issuer CTA、输出序号、A/B身份、descriptor extent/stride、Ktile0的origin/shape、multicast mask及目的CTA；后续Ktile在K坐标加64。来源不是实测地址，源身份只在同一次调用内有效。rotation、工作交换和多份源分配明确拒绝，740033仍由专用入口复核。
+
+| 账目 | 定义与单位 | 可以怎样使用 |
+|---|---|---|
+| `totals.source_payload_KiB` | 全部发出的descriptor box名义FP16 payload，包括box内OOB；全部Ktile与输出累加 | 旧时钟S的兼容工作口径；不能改名为有效读字节 |
+| `source_valid_KiB`、`source_box_fill_KiB` | source box中有效地址与填零部分，分别累加 | 输入路径的独立候选工作量，不直接替换r2系数的输入 |
+| `distinct_source_boxes`、`distinct_valid_source_KiB` | descriptor、operand、origin/shape一致的box去重，跨输出保留相同B源 | 静态身份集合；不声称重访命中、在途合并或真实读取次数 |
+| `destination_atoms`、`destination_valid_KiB`、`destination_fill_KiB` | 每个multicast目的rank分别收取切片；每个目的操作数保留全部源atom前驱 | 目的SMEM投递与full依赖；不能随源共享删掉目的工作 |
+| `output_nominal_KiB`、`output_valid_KiB`、`output_nominal_subtiles` | FP32 D的名义tile、逻辑有效面积与固定epilogue子tile格点 | 独立输出工作；不当作物理写流量或cooperative已验证的提交图 |
+
+cfg_b第二WG对照的四条件账目相同：50688次输入请求、540672KiB目的投递、264个D tile/2112个8KiB名义子tile；去重源为2944个box/34816KiB有效地址。源共享只可能改变服务generation，不能减少目的或D工作。cfg_a每rank发本地A16KiB和B的两个8KiB K切片，B投给两rank；cfg_c每rank发A的16KiB M切片并投给两rank，B两个8KiB切片本地使用。例如cfg_c M192时两个issuer的A有效源为16/8KiB，每个目的A均为24KiB有效＋8KiB fill，机械平分成12/12错误。
+
+`input_slot_state(g,S)`明确保留跨输出的全局K-group：slot=`g%S`、generation=`g//S`、consumer full等待phase=`generation%2`、producer empty等待phase=`(generation+1)%2`，复用前驱为g−S。phase是等待参数，不是观测到的barrier当前值。K4096、stage6第二输出从g=64开始，slot4/generation10；不能在输出边界重置到slot0。来源为快照CUTLASS `PipelineState`、`make_producer_start_state` 与pingpong consumer的两输出步进，不把MAIN戳等同于empty到达。
+
+### 局部图必须分开的事件
+
+```mermaid
+flowchart LR
+  R[旧generation的WGMMA安全退休] --> E[所有需要的consumer release发出]
+  E --> V[empty arrival对producer可见]
+  V --> Q[acquire返回与发射准备]
+  Q --> I[A / B0 / B1分别发出]
+  I --> S[源服务generation完成]
+  S --> D[每个目的rank的切片投递完成]
+  D --> F[full就绪与consumer等待返回]
+  F --> H[WARPSYNC / arrive / HGMMA发射]
+  H --> C[commit分组]
+  C --> W[wait1确认前group可释放]
+  W --> E
+  C --> T[末group由wait0排空后释放]
+```
+
+图只给依赖，不给未识别的边成本。producer的等待前/后工作分别保留；commit不是TC执行开始，wait1返回不是当前group全部退休。cfg_b前WG在`mma()`返回后先到达math-order barrier，下一WG可开始，然后前WG才`mma_tail()`释放末slot；math次序与epilogue次序是两个depth。现有 `shared_stage_events` 仍把release发出/可见性合为一个事件，producer发射与consumer起动是零时长事件，统一gap不提供对称竞争。当前图修订没有给这些遗漏另拟常数，也没有宣称无成本并发成立。
+
+cfg_a/c沿用以上工作账本，**不沿用cfg_b的两WG交替时间图**。B提供目的rank的源切片前驱，C提供本地producer arrival、跨rank full/empty token、两WG安全释放与arrival可见性；这些前驱接入后才能组合。首版接口不为cluster/CTA/SM/源组编号定价。
+
+### 已有约束逐项结论
+
+| 对象/窗口 | 通过或支持的部分 | 失败、排除与未分辨范围 |
+|---|---|---|
+| 57个静态条件 | 三配置、首轮fill、R10方向/规模和R13两stage的源切片到目的valid/fill、D有效面积守恒 | 只确认工作量；未验证时间价格 |
+| 8个共享/不共享事件图 | 共1022098项依赖检查：三目的atom齐备、安全退休后释放、g−S复用、wait1/末wait0语义、严格订阅截止、D源buffer安全覆盖 | 只确认候选实现；release发出与可见性尚未分开 |
+| 739095 first/later、stage×K | 全部八个窗口保留 | 固定启动差、恒定每Ktile罚项和旧stage/K折扣迁移均不充分 |
+| 739556稀疏Ktile16与refill | 每调用L闭合；stage差在mma返回前累计 | full等待增量被随后commit段抵消；不能单点乘K或把6cycle wait当完整WGMMA延迟 |
+| 739578 C1→16、C17→63、H17→C17 | 同调用相邻段闭合；stage4早、后段均有额外推进时间 | 零循环推进、旧2257.5cycle ready底值及现有共同常量修订失配；观察协议单列 |
+| 739686 math交接与首full | receiver已到门口，stage差主要在首full；交接非零 | 局部观察扰动明显，不能拼旧协议价格或只移动FIRST解释全L |
+| 739717仅本CTA E0延期 | stage4 early周期十对缩短 | 局部E0单向排他最大响应仍不足；不唯一识别端口 |
+| 739740其它CTA E0延期 | stage4 early缩短、后段变长，按全部配对保留 | overlap数不能定价；同质FIFO不能解释空间排序与相位 |
+| 739790 second-prefill | stage4 early十对缩短，stage6无同量级响应；prefix16/prefixM逐调用闭合 | 累计到C16/M并不稳定改善；reduced子类必要界在stage4十对均失败；宽分支低训练误差仍漏局部等待/干预 |
+| 全CTA空间跨度与排序 | stage4组差在原生cycle中仍存在；源共享打破旧FIFO严格保序 | 当前共享/不共享参数四条件跨度均不足；观测PROD偏移不能补齐；不能让early改善抵消跨度失败 |
+| 740033 A源轮换 | 首窗10/10有效；固定位置RMSE仅8/10优于地址对应 | 不支持稳定地址跟随，也未识别固定位置价格；740030/740032失败保留，不重跑 |
+| ready/服务结束/服务开始订阅截止 | 三候选均保留全部目的工作 | 有界重拟均未同时修复early方向与跨度；不继续扫描截止 |
+| defer2局部E0排他 | 三范围×两stage全部返回结果与关闭时相同 | 本CTA输入/MMA起动已完成才开始E0，无第一处受阻事件；任意增大局部E0费用均不能修复此结构缺口 |
+| 739653 producer延迟与ready | 40/40绑定首代，issue→ready增量20/20严格为正 | 排除本协议“ready不变、只晚consumer返回”；排队/服务/通知可见性仍不可区分 |
+| R10 B32方向/规模、基址/工作交换/producer延迟 | 同批方向与规模改变行距响应，固定位置改变起步也改变响应 | 固定覆盖价、面板价、位置价均不充分；旧/新B32现象同时保留，尚无可迁移时间规则 |
+
+本轮专用入口为 `analyze_r13_lifecycle.py --data-root <主checkout结果根> --output <新的B独占目录>`。[复核结果](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-verification.json)核对34份交接哈希，精确重现旧候选/局部排他/轮换的13组结果；[账目](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-work-ledger-summary.json)与[全部已有窗口及干预](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/B-20261011-lifecycle-v3/B-existing-constraints.json)保持原生cycle/ns。v1因遗漏历史参数默认值在审计阶段停止，失败说明保留；v2成功，v3补齐接口版本与拒绝范围后重放。旧报告、V09冻结/评分和正式参数不变。
+
+下一轮先检验有限局部发射/消费/释放前驱与源ready的联合可行性，保留first/later和空间约束；没有两个明确解释给出现有证据无法区分的预测前，不申请补测。该里程碑没有独立冻结局部留出，持续目标未完成。
+
 <a id="second-prefill"></a>
 
 ## 第二WG的初态是否影响早段推进？
