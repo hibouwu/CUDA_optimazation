@@ -1,0 +1,10 @@
+{
+  "byte_identical_artifacts": {
+    "rule.json": "200c1461f5fdd065d826d51be5d408ac728285b2bc3a83b9147b48ad7d0e16e3",
+    "rule.sha256": "e70c62cc2aed9269fdc54aaf475f3ee2dfe3825d96197d37e07df2fa286f3d7d",
+    "verification.json": "b1c89925c5a7e9e0de6321e648c1cb71ea1017f3bfe9af71c1143efddd8f30e4",
+    "example-prefix.json": "94984dca9c21768ff030b98379f6ba3bd9d65fa5c8637781dbfa2a71dffac795",
+    "example-prediction.json": "455a80e95f454a51a334a9abb3905f5e6a566dc90c1194f1c5a1d34ddd660f2d"
+  },
+  "new_acquisition": false
+}

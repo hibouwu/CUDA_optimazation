@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "rule_sha256": "200c1461f5fdd065d826d51be5d408ac728285b2bc3a83b9147b48ad7d0e16e3",
+  "rule_origin_hashes": 8,
+  "exact_past_forecast_matches": 20,
+  "negative_cases": [
+    "top:trace",
+    "setup:trace",
+    "top:target_cycles",
+    "setup:target_cycles",
+    "top:target_ns",
+    "setup:target_ns",
+    "top:elapsed_us",
+    "setup:elapsed_us",
+    "top:residual",
+    "setup:residual",
+    "top:paired_arm",
+    "setup:paired_arm",
+    "history:empty",
+    "history:fifteen",
+    "history:seventeen",
+    "history:zero",
+    "history:negative",
+    "history:nan",
+    "history:boolean",
+    "declared-prefix-count",
+    "target-card",
+    "reference-card",
+    "prediction-source"
+  ],
+  "cli_sha_mismatch_rejected": true,
+  "cli_output_overwrite_rejected": true,
+  "self_contained_cli_prediction": true,
+  "preparation_replay_byte_identical": true,
+  "acquisition_status": "No new acquisition; all twenty replay prefixes are known development records.",
+  "qualifications": {
+    "observation": false,
+    "prediction": false,
+    "prospective_holdout": false,
+    "cross_card": false
+  }
+}

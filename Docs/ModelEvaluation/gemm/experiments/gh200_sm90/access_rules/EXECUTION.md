@@ -262,6 +262,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [前序输入与预测保存时点核对](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-availability-v1/README.md)：绑定原构建源码，prefix event在目标前host可用、目标后report才输出；现binary未执行数值预测预提交。优先保持binary、预冻结确定性规则后仅用前序字段评价新数据，明确后处理时点；不等同观测有效性，C独立审查最小控制证据，无GPU/门槛变更。
 
+[共同系数规则入口主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-clock-local-rule-v1/README.md)：接入A7d67c306，五文件逐字节同，20前序/40预测、23负例、固定SHA与拒绝覆盖/隔离目录重放通过。规则只读setup+16前序，不改binary；预冻结规则后处理不等于数值预提交，旧观察与新采集缺口保留，无GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

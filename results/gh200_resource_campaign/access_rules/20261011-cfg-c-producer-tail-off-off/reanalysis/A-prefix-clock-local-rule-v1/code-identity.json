@@ -1,0 +1,10 @@
+{
+  "worktree": "/home/jianyeshi/.codex/worktrees/9cce/CUDA_optimazation",
+  "head_before_document_commit": "736ac1907a8ba0af792d8da3fbcf17a55c36b728",
+  "module_sha256": {
+    "r09_prefix_clock_rule.py": "7907e1023f7986c5d86e84897fea7ff2171b3fe561cc25a1ddfe5958887852ba",
+    "r09_prefix_ordinal_clock.py": "42735ffb5c8124d006995bebe1ee18b8c502b35cc917571bcddb9d74d813400c"
+  },
+  "rule_sha256": "200c1461f5fdd065d826d51be5d408ac728285b2bc3a83b9147b48ad7d0e16e3",
+  "preparation_only": true
+}
