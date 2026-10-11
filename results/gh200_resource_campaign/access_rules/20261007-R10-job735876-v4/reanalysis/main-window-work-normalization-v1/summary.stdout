@@ -1,0 +1,114 @@
+{
+  "windows": 120,
+  "input_SHA": 41,
+  "work_ratio": "128/125",
+  "cases": [
+    {
+      "case": "cfg_b_ldb3000",
+      "windows": 40,
+      "window_cycles": {
+        "minimum": "24625",
+        "median": "27345",
+        "maximum": "31696"
+      },
+      "cycles_per_complete_K64_group": {
+        "minimum": "24625/32",
+        "median": "27345/32",
+        "maximum": "1981/2"
+      },
+      "cycles_per_effective_K64_equivalent": {
+        "minimum": "788",
+        "median": "21876/25",
+        "maximum": "126784/125"
+      },
+      "valid_flop_per_WG_window_cycle": {
+        "minimum": "4096000/1981",
+        "median": "8960409600/3738709",
+        "maximum": "524288/197"
+      },
+      "dense_tile_flop_equivalent_per_WG_window_cycle": {
+        "minimum": "4194304/1981",
+        "median": "45877297152/18693545",
+        "maximum": "67108864/24625"
+      }
+    },
+    {
+      "case": "cfg_b_ldb3008",
+      "windows": 40,
+      "window_cycles": {
+        "minimum": "18983",
+        "median": "42967/2",
+        "maximum": "24080"
+      },
+      "cycles_per_complete_K64_group": {
+        "minimum": "18983/32",
+        "median": "42967/64",
+        "maximum": "1505/2"
+      },
+      "cycles_per_effective_K64_equivalent": {
+        "minimum": "75932/125",
+        "median": "85934/125",
+        "maximum": "19264/25"
+      },
+      "valid_flop_per_WG_window_cycle": {
+        "minimum": "819200/301",
+        "median": "175992832000/57659379",
+        "maximum": "65536000/18983"
+      },
+      "dense_tile_flop_equivalent_per_WG_window_cycle": {
+        "minimum": "4194304/1505",
+        "median": "180216659968/57659379",
+        "maximum": "67108864/18983"
+      }
+    },
+    {
+      "case": "cfg_b_ldb3072",
+      "windows": 40,
+      "window_cycles": {
+        "minimum": "19548",
+        "median": "42179/2",
+        "maximum": "22635"
+      },
+      "cycles_per_complete_K64_group": {
+        "minimum": "4887/8",
+        "median": "42179/64",
+        "maximum": "22635/32"
+      },
+      "cycles_per_effective_K64_equivalent": {
+        "minimum": "78192/125",
+        "median": "84358/125",
+        "maximum": "18108/25"
+      },
+      "valid_flop_per_WG_window_cycle": {
+        "minimum": "13107200/4527",
+        "median": "691060736000/222383469",
+        "maximum": "16384000/4887"
+      },
+      "dense_tile_flop_equivalent_per_WG_window_cycle": {
+        "minimum": "67108864/22635",
+        "median": "707646193664/222383469",
+        "maximum": "16777216/4887"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "numerator": "cfg_b_ldb3000",
+      "denominator": "cfg_b_ldb3008",
+      "median_cycle_response": "11723/42967",
+      "normalization_invariant": true
+    },
+    {
+      "numerator": "cfg_b_ldb3000",
+      "denominator": "cfg_b_ldb3072",
+      "median_cycle_response": "12511/42179",
+      "normalization_invariant": true
+    },
+    {
+      "numerator": "cfg_b_ldb3008",
+      "denominator": "cfg_b_ldb3072",
+      "median_cycle_response": "788/42179",
+      "normalization_invariant": true
+    }
+  ]
+}
