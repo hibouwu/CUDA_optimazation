@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "input_hashes": 119,
+  "raw_calls": 40,
+  "exact_raw_window_identities": 12960,
+  "endpoint_selection_identities": 8640,
+  "exact_minimax_certificates": 40,
+  "negative_checks": [
+    "wrong oracle scale rejected",
+    "wrong lower-bound witness rejected",
+    "wrong relative floor rejected"
+  ],
+  "scope": "Raw same-endpoint arithmetic and conditional oracle certificates only; no physical clock or observer qualification.",
+  "prefix_proxy_pair_checks": 20
+}

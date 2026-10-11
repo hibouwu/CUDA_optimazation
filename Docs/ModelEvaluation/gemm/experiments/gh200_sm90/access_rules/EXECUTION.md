@@ -236,6 +236,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [共享FIFO前缀独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-shared-path-prefix-v1/README.md)：B043d06b8重算报告/2376需求同，804SHA+2模块匹配（演进工作树源码由原Git blob恢复）。独立未聚合FIFO70检查及高价上界292/165通过；回程512ns迟发最大S344.582ns不足，独立请求路径保留必要σ区间0.698602..0.917595，未选价/完整采用。无新GPU或资格。
 
+[共同倍率两种精度界复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-common-converter-bound-v1/README.md)：接入A229cd678，119SHA/40raw/12960窗口/8640端点/40最优证书通过，主线独立区间交集及两窗口下界同。部分pair绝对oracle仍>256ns，但最优最大相对残差on/off≤1.721%、off/off≤0.920%；不能据绝对gate失败强制增加ordinal状态或否定全时间5%/10%。仍是读取目标的条件oracle，不采用/改gate/授资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

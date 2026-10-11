@@ -1,0 +1,184 @@
+{
+  "schema": "gh200-r09-prefix-oracle-gap/1",
+  "pairs": [
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 0,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "71779686903/8495974147576",
+      "optimal_maximum_relative_residual": "11184/3410963"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 1,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "26140036997201/440457740211150",
+      "optimal_maximum_relative_residual": "186943865024/10865764555749"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 2,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "101767129408849/8694525437676840",
+      "optimal_maximum_relative_residual": "74089055323/7238002223069"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 3,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1504641464460223/131384129167329918",
+      "optimal_maximum_relative_residual": "20506885671913/2174711743293163"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 4,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "802830255653329/61533794290172631",
+      "optimal_maximum_relative_residual": "2475209621629/689470528083263"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 5,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "85264/6952661",
+      "optimal_maximum_relative_residual": "2284843106407/362090792754393"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 6,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "275883228342677/17864594521239115",
+      "optimal_maximum_relative_residual": "185974204222/32538536453429"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 7,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "871450409471533/71631328482796212",
+      "optimal_maximum_relative_residual": "9673839992503/1335436007294647"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 8,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "411672534449461/40802450629112575",
+      "optimal_maximum_relative_residual": "321595669/33730036881"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 9,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1660183952804959/72166858681183879",
+      "optimal_maximum_relative_residual": "2570805031/196397788711"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 0,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "133277160128771/33739246599561360",
+      "optimal_maximum_relative_residual": "366164865923/149315166918061"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 1,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "693609523/47940033924",
+      "optimal_maximum_relative_residual": "392899/73004957"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 2,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1013108161507775/34936373601457848",
+      "optimal_maximum_relative_residual": "16034725925429/1924595419202069"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 3,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1144913127979/37320297143545",
+      "optimal_maximum_relative_residual": "640317689/94030044591"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 4,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1016546854081/165728635929000",
+      "optimal_maximum_relative_residual": "469813/118649173"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 5,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "3375770471812877/251188261908721093",
+      "optimal_maximum_relative_residual": "7909152170077/2215470062468093"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 6,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "5214808826074643/250289838820221571",
+      "optimal_maximum_relative_residual": "49336486427/6335913192213"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 7,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "10216522013803/686419669825697",
+      "optimal_maximum_relative_residual": "36740452823/3994112306539"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 8,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "308904957407201/16543358817686272",
+      "optimal_maximum_relative_residual": "603961493/66265379029"
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 9,
+      "window_pairs": 432,
+      "prefix_maximum_relative_residual": "1295076962217235/194635531382332128",
+      "optimal_maximum_relative_residual": "29249664119087/6559363162506335"
+    }
+  ],
+  "groups": [
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "prefix_pair_maximum_relative": {
+        "minimum": 0.008448670588702247,
+        "median": 0.012214639001616118,
+        "maximum": 0.05934743474974419
+      },
+      "oracle_pair_maximum_relative": {
+        "minimum": 0.0032788394362530462,
+        "median": 0.008336829576966603,
+        "maximum": 0.01720485144555146
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "prefix_pair_maximum_relative": {
+        "minimum": 0.003950211506219695,
+        "median": 0.014676028694049766,
+        "maximum": 0.03067802819402328
+      },
+      "oracle_pair_maximum_relative": {
+        "minimum": 0.0024522951919809903,
+        "median": 0.0060957632001318995,
+        "maximum": 0.009198652917908695
+      }
+    }
+  ],
+  "main_prefix_exact_matches": 4320,
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-common-converter-bound-v1/report.json": "bc03445465a95c0463fbd59644d53708c0ed638ba7bfc34279f1585cf9d788fb",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/A-common-converter-bound-v1/windows.json.gz": "195d038f1b9efa1f579d59a2589971fa4f6227228bb62480798f10255fa2bd89",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/reanalysis/main-prefix-scalar-diagnostic-v1/windows.json.gz": "c596b3ff7635ad128e21afa4de5e00fbd39272c3040e523e0f237f0142e4b5b3"
+  },
+  "limits": [
+    "Prefix alpha itself is prior-event based, but the local test uses both target C and arm0 N, hence remains conditional.",
+    "Oracle uses all target windows; its lower error is not an achievable prospective result.",
+    "No new state function, hardware frequency estimate, acceptance gate, or corrected qualification is introduced."
+  ]
+}

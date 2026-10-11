@@ -1,0 +1,330 @@
+{
+  "input_report_sha256": "bc03445465a95c0463fbd59644d53708c0ed638ba7bfc34279f1585cf9d788fb",
+  "input_windows_sha256": "195d038f1b9efa1f579d59a2589971fa4f6227228bb62480798f10255fa2bd89",
+  "window_checks": 12960,
+  "certificates": 40,
+  "checks": [
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 0,
+      "scope": "WG",
+      "absolute_optimum_ns": "127980748800/1019866753",
+      "relative_optimum": "11184/3410963",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 0,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "23596583923200/216756424433",
+      "relative_optimum": "614494373/216756424433",
+      "absolute_and_relative_alpha_equal": true
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 1,
+      "scope": "WG",
+      "absolute_optimum_ns": "101697462573056/149541361547",
+      "relative_optimum": "186943865024/10865764555749",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 1,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "12418289355968/18715123341",
+      "relative_optimum": "194035771187/11563263039987",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 2,
+      "scope": "WG",
+      "absolute_optimum_ns": "118542488516800/294384312817",
+      "relative_optimum": "74089055323/7238002223069",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 2,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "315495548146336/769013195603",
+      "relative_optimum": "9859235879573/950229407530763",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 3,
+      "scope": "WG",
+      "absolute_optimum_ns": "1312440683002432/3517269113641",
+      "relative_optimum": "20506885671913/2174711743293163",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 3,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "88540917985952/238944911627",
+      "relative_optimum": "2766903687061/295610977496811",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 4,
+      "scope": "WG",
+      "absolute_optimum_ns": "1425720742058304/10407391498729",
+      "relative_optimum": "2475209621629/689470528083263",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 4,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "104432620793792/776683300417",
+      "relative_optimum": "1093106263511/310287190015519",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 5,
+      "scope": "WG",
+      "absolute_optimum_ns": "664504925299296/2688811777417",
+      "relative_optimum": "2284843106407/362090792754393",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 5,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "6971839618336/28260639531",
+      "relative_optimum": "653609964219/105240446569531",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 6,
+      "scope": "WG",
+      "absolute_optimum_ns": "148779363377600/661028543653",
+      "relative_optimum": "185974204222/32538536453429",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 6,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "46458928194016/221845139291",
+      "relative_optimum": "1451841506063/274442904419057",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 7,
+      "scope": "WG",
+      "absolute_optimum_ns": "309562879760096/1080013509983",
+      "relative_optimum": "9673839992503/1335436007294647",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 7,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "55219305427936/198377066483",
+      "relative_optimum": "1725603294623/243916198565027",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 8,
+      "scope": "WG",
+      "absolute_optimum_ns": "10291061408/27206599",
+      "relative_optimum": "321595669/33730036881",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 8,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "95714937192928/256744896311",
+      "relative_optimum": "157425883541/16786283528053",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 9,
+      "scope": "WG",
+      "absolute_optimum_ns": "82265760992/160153319",
+      "relative_optimum": "2570805031/196397788711",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "pair": 9,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "682769827000032/1334204490311",
+      "relative_optimum": "130785193557/10081952062613",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 0,
+      "scope": "WG",
+      "absolute_optimum_ns": "35151827128608/359246104999",
+      "relative_optimum": "366164865923/149315166918061",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 0,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "59229683550272/701492511941",
+      "relative_optimum": "13812892619/6297722832619",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 1,
+      "scope": "WG",
+      "absolute_optimum_ns": "287375758176/1330267355",
+      "relative_optimum": "392899/73004957",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 1,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "6693876151584/30598337281",
+      "relative_optimum": "9151841/1679229175",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 2,
+      "scope": "WG",
+      "absolute_optimum_ns": "513111229613728/1543715766469",
+      "relative_optimum": "16034725925429/1924595419202069",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 2,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "55321270048/164726663",
+      "relative_optimum": "1728789689/205813291639",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 3,
+      "scope": "WG",
+      "absolute_optimum_ns": "5184012010144/19369635099",
+      "relative_optimum": "640317689/94030044591",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 3,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "100160807855488/384944381929",
+      "relative_optimum": "782506311371/119254894081429",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 4,
+      "scope": "WG",
+      "absolute_optimum_ns": "18792520/119489",
+      "relative_optimum": "469813/118649173",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 4,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "10626322925312/63180005243",
+      "relative_optimum": "2441710231/578141555731",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 5,
+      "scope": "WG",
+      "absolute_optimum_ns": "253092869442464/1785080956039",
+      "relative_optimum": "7909152170077/2215470062468093",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 5,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "249635305637024/1795599054989",
+      "relative_optimum": "7801103301157/2227890671598043",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 6,
+      "scope": "WG",
+      "absolute_optimum_ns": "6315070262656/20461152609",
+      "relative_optimum": "49336486427/6335913192213",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 6,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "7475903898976/25599037985",
+      "relative_optimum": "233621996843/31625202624725",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 7,
+      "scope": "WG",
+      "absolute_optimum_ns": "12932639393696/35563221755",
+      "relative_optimum": "36740452823/3994112306539",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 7,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "95883593824/269964763",
+      "relative_optimum": "2996362307/335486020867",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 8,
+      "scope": "WG",
+      "absolute_optimum_ns": "3853377012073312/10739746016011",
+      "relative_optimum": "603961493/66265379029",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 8,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "238958580044256/669954413503",
+      "relative_optimum": "7467455626383/824988601969807",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 9,
+      "scope": "WG",
+      "absolute_optimum_ns": "467994625905392/2671094919485",
+      "relative_optimum": "29249664119087/6559363162506335",
+      "absolute_and_relative_alpha_equal": false
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "pair": 9,
+      "scope": "clock_selected_common",
+      "absolute_optimum_ns": "38231865019712/256182910363",
+      "relative_optimum": "597372890933/157348127871733",
+      "absolute_and_relative_alpha_equal": false
+    }
+  ],
+  "observation_qualified": false,
+  "prediction_qualified": false
+}
