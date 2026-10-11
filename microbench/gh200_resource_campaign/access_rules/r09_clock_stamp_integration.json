@@ -127,5 +127,18 @@
       "microbench/gh200_resource_campaign/access_rules/run_r18.py": "73d165e284c14cd0d359fc05b98315675eaf0561df5f789537dffb9befc8bc42",
       "microbench/gh200_resource_campaign/access_rules/analyze_r18.py": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264"
     }
+  },
+  "cpu_tile_api": {
+    "module": "microbench/gh200_resource_campaign/access_rules/r09_clock_brackets.py",
+    "function": "observer_L_window(tile_words, arm)",
+    "module_sha256": "64daaf7d6eb39f9400c81919d16ae56be9ba3fe854065b09ad48bd79b816a6c5",
+    "arms": [
+      "matched_dual",
+      "guarded_bracket"
+    ],
+    "returns": "Both: original native L cycles/ns and work coordinate. Guarded only: begin/end triples and exact window_bounds; baseline cannot be used as a bracket.",
+    "checks": "Exactly12 uint64 words; original nonzero coordinates/endpoints and role ordering; matched added fields zero; guarded positive after fields and complete CLOCK ordering.",
+    "caller_obligations": "Call only after explicit case/setup/call/source/binary/prefix identity,complete CTA/role/SM/work and full endpoint checks. The helper provides no hardware enclosure,complete record validity or perturbation qualification.",
+    "existing_math": "Feed guarded begin/end pairs to common_rate_interval with unchanged128ns TOTAL-window budget only after all caller validity checks."
   }
 }

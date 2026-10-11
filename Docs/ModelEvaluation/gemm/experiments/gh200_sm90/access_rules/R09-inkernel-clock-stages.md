@@ -437,7 +437,9 @@ r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic Alo
 
 下一项有界需求是[实际CUTLASS编译接口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_stamp_integration.json)，仅交主集成作目标CUDA12.9的CPU构建审查。保留原16个head word及每tile字段0–9，在原FIRST/MAIN各增加一个after word，形成12word/tile、1552word/CTA。plain、matched-dual与guarded-bracket都分配并在每次前序/目标前清零**1638912B**，避免740048已见的准备字节差；matched-dual在新增字段写零，bracket只在原thread128/256的FIRST/MAIN调用候选，工作和同步调用不改。新记录须有显式协议与arm身份，不沿用旧dual10解析；任何零stamp、类型/宽度错误或after<before均保留为无效，不能回退。
 
-接口同时消除r4的same-process歧义：每臂进程内plain-prefix与target共享A/B/D；不同臂进程间绑定相同内容、布局、初始化、模块与准备协议，不宣称物理页或绝对指针相同。新matched基准因增加记录写入而不同于旧dual，后续仍须复现原现象，不能预先认定等价。[接口依据与编译审查边界](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-clock-stamp-integration-request-v1/README.md)不修改r4的数学门槛，也不解决空间扰动资格；此时不请求GPU、正确性调用、pilot或30进程采样。完整时间规则的新局部留出与跨卡要求保持不变。
+接口同时消除r4的same-process歧义：每臂进程内plain-prefix与target共享A/B/D；不同臂进程间绑定相同内容、布局、初始化、模块与准备协议，不宣称物理页或绝对指针相同。新matched基准因增加记录写入而不同于旧dual，后续仍须复现原现象，不能预先认定等价。[接口依据与编译审查边界](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-clock-stamp-integration-request-v2/README.md)不修改r4的数学门槛，也不解决空间扰动资格；此时不请求GPU、正确性调用、pilot或30进程采样。完整时间规则的新局部留出与跨卡要求保持不变。
+
+CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格解码12word的一个原角色L；matched与guarded不可互相回退。函数返回原生cycle/ns，guarded另给FIRST/MAIN三元戳及精确cycle区间，可直接接既有`common_rate_interval`。六项数学/拒绝测试覆盖字段位置、uint64、零值、原角色顺序与可行/不可行交集；原740048的264个dual10 tile在两种新arm下全部拒绝。它只完成tile到数学窗口，不替代调用者对协议、源码/二进制、前序、CTA/角色/SM/工作完整性及观察资格的检查，也未生成新设备观测。
 
 ### 同plain前序接口的两进程冒烟证明了什么？
 

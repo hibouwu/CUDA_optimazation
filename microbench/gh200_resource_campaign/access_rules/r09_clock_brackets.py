@@ -1,6 +1,6 @@
 """Pure interval checks for CLOCK-before / GLOBALTIMER / CLOCK-after stamps.
 
-No parsing, calibration, fitting, IO, or target-duration prediction. The caller
+No archive parsing, calibration, fitting, IO, or target-duration prediction. The caller
 keeps CTA/role/endpoint identity. Bounds assume the globaltimer read corresponds
 to a cycle inside the recorded clock bracket; the test does not prove that
 measurement assumption or identify physical DVFS.
@@ -31,6 +31,42 @@ def window_bounds(begin, end):
     if ns<=0 or cycles_hi<=0:
         raise ValueError('nonpositive window')
     return dict(cycles_lo=cycles_lo,cycles_hi=cycles_hi,ns=ns)
+
+
+def observer_L_window(tile_words, arm):
+    """Decode ONLY one proposed12-word original-role FIRST/MAIN window.
+
+    The caller must first bind case/setup/call protocol, source/binary, role,
+    CTA/SM/work and prefix/preparation identities. This function does not make
+    a full record valid or establish hardware enclosure/observer qualification.
+    It never falls back between the matched baseline and guarded observer.
+    """
+    if arm not in ('matched_dual','guarded_bracket') or len(tile_words)!=12:
+        raise ValueError('explicit observing arm and twelve tile words required')
+    if any(type(value) is not int or not 0<=value<2**64 for value in tile_words):
+        raise ValueError('native uint64 tile words required')
+    if any(value==0 for value in tile_words[:10]):
+        raise ValueError('original endpoints and work coordinates must be nonzero')
+    if not tile_words[0]<tile_words[1]<=tile_words[2]<=tile_words[3]:
+        raise ValueError('original cycle endpoints reversed or L empty')
+    if not tile_words[6]<tile_words[7]<=tile_words[8]<=tile_words[9]:
+        raise ValueError('original timer endpoints reversed or L empty')
+    result=dict(arm=arm,cycles=tile_words[1]-tile_words[0],ns=tile_words[7]-tile_words[6],
+        work_coordinate=[tile_words[4]-1,tile_words[5]-1],
+        scope='Native tile-window arithmetic only; complete record identity and observation qualification remain caller obligations.')
+    if arm=='matched_dual':
+        if tile_words[10] or tile_words[11]:
+            raise ValueError('matched baseline must have two zero added fields')
+        result['clock_bracket_present']=False
+        return result
+    if not tile_words[10] or not tile_words[11]:
+        raise ValueError('guarded observer has a missing/invalid after stamp')
+    if not tile_words[0]<=tile_words[10]<=tile_words[1]<=tile_words[11]<=tile_words[2]:
+        raise ValueError('guarded CLOCK stamps violate original same-role order')
+    begin=(tile_words[0],tile_words[6],tile_words[10])
+    end=(tile_words[1],tile_words[7],tile_words[11])
+    result.update(clock_bracket_present=True,begin=begin,end=end,bounds=window_bounds(begin,end))
+    return result
 
 
 def _tolerance(value):
