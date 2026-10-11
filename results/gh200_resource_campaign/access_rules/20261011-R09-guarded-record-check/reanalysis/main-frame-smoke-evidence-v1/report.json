@@ -1,0 +1,165 @@
+{
+  "checks": [
+    {
+      "script": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-frame-build/reanalysis/A-frame-compile-audit-v1/audit.py",
+      "sha256": "41ff6c5b484b4b96a7152f98b5302252c675981b6983e9b00f023c4a73909eba",
+      "stdout": "verified860source files;4kernel resources;2actual guarded control chains;no binary execution\n",
+      "returncode": 0
+    },
+    {
+      "script": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/A-smoke-boundary-audit-v1/audit.py",
+      "sha256": "d5ba141a6ca596fff3627ba193134fef25c6392ae6fa218f2f508102973fc51d",
+      "stdout": "{\"numerical_values_verified\": 12288, \"feasible_at_128\": 0, \"minimum_total_interval_slack_ns\": {\"minimum\": 1149.5981851779518, \"median\": 1212.2175419057307, \"maximum\": 1242.1631477927062}, \"parser_complete_head_refusal\": false, \"observation_qualified\": false}\n",
+      "returncode": 0
+    },
+    {
+      "script": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-packet-header-v1/replay.py",
+      "sha256": "609f72d8ef782cd5e5ecd3992ed09f30690cb1d86741cf500edf8197939da17a",
+      "stdout": "{\"plain\": {\"records\": 0, \"rejected_mutations\": 0}, \"matched_dual\": {\"records\": 264, \"rejected_mutations\": 5}, \"guarded_bracket\": {\"records\": 264, \"rejected_mutations\": 5}}\n",
+      "returncode": 0
+    }
+  ],
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-frame-build/reanalysis/A-frame-compile-audit-v1/audit.json": "964015c086c68e48b1a733e8eb5287b23ecde3e836892d686b5563485a593fb4",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/A-smoke-boundary-audit-v1/audit.json": "578612453dac89262ec56558fe6c6d1c87c9e554e16d66c0ab8c5d4575fb8551",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-packet-header-v1/report.json": "a914ab641cf6ded3ac6f9f2ceb1dfa204c1a3cfe1930a45003c9b444d03b4f98"
+  },
+  "compile": {
+    "source_files": 860,
+    "all_four_kernels_registers": 168,
+    "barriers": 2,
+    "stack_bytes": 0,
+    "spill_bytes": 0,
+    "consumer_register_pool": 232,
+    "producer_register_pool": 40,
+    "static_shared_bytes": 1024,
+    "original_overlay_bytes_identical": true,
+    "guarded_sites": [
+      {
+        "event": "FIRST",
+        "read_pcs": [
+          "0x1a60",
+          "0x1af0",
+          "0x1ba0"
+        ],
+        "instructions": {
+          "0x1a60": "CS2R R18, SR_CLOCKLO",
+          "0x1a70": "ISETP.NE.U32.AND P1, PT, R18, RZ, PT",
+          "0x1a80": "ISETP.NE.U32.AND.EX P1, PT, R19, RZ, PT, P1",
+          "0x1a90": "@P1 BRA 0x1ae0",
+          "0x1aa0": "IADD3 R20, R20, 0x1, RZ",
+          "0x1ab0": "ISETP.GE.U32.AND P1, PT, R20, 0x2, PT",
+          "0x1ac0": "@!P1 BRA 0x1a60",
+          "0x1ad0": "BRA 0x1b60",
+          "0x1ae0": "IMAD.MOV.U32 R24, RZ, RZ, RZ",
+          "0x1af0": "CS2R R20, SR_GLOBALTIMERLO",
+          "0x1b00": "ISETP.NE.U32.AND P1, PT, R20, RZ, PT",
+          "0x1b10": "ISETP.NE.U32.AND.EX P1, PT, R21, RZ, PT, P1",
+          "0x1b20": "@P1 BRA 0x1ba0",
+          "0x1b30": "VIADD R24, R24, 0x1",
+          "0x1b40": "ISETP.GE.U32.AND P1, PT, R24, 0x2, PT",
+          "0x1b50": "@!P1 BRA 0x1af0",
+          "0x1b60": "CS2R R18, SRZ",
+          "0x1b70": "CS2R R20, SRZ",
+          "0x1b80": "CS2R R24, SRZ",
+          "0x1b90": "BRA 0x1bb0",
+          "0x1ba0": "CS2R R24, SR_CLOCKLO"
+        },
+        "store_instructions": {
+          "0x1c40": "STG.E.64 desc[UR30][R16.64], R18",
+          "0x1c50": "STG.E.64 desc[UR30][R16.64+0x30], R20",
+          "0x1c60": "STG.E.64 desc[UR30][R16.64+0x50], R24"
+        },
+        "clock_and_timer_maximum_reads_each": 2,
+        "exhaustion_outputs": "all three uint64 zero",
+        "final_clock_zero": "unretried native value; must be rejected by the reader"
+      },
+      {
+        "event": "MAIN",
+        "read_pcs": [
+          "0x24e0",
+          "0x2570",
+          "0x2620"
+        ],
+        "instructions": {
+          "0x24e0": "CS2R R16, SR_CLOCKLO",
+          "0x24f0": "ISETP.NE.U32.AND P1, PT, R16, RZ, PT",
+          "0x2500": "ISETP.NE.U32.AND.EX P1, PT, R17, RZ, PT, P1",
+          "0x2510": "@P1 BRA 0x2560",
+          "0x2520": "VIADD R18, R18, 0x1",
+          "0x2530": "ISETP.GE.U32.AND P1, PT, R18, 0x2, PT",
+          "0x2540": "@!P1 BRA 0x24e0",
+          "0x2550": "BRA 0x25e0",
+          "0x2560": "MOV R20, RZ",
+          "0x2570": "CS2R R18, SR_GLOBALTIMERLO",
+          "0x2580": "ISETP.NE.U32.AND P1, PT, R18, RZ, PT",
+          "0x2590": "ISETP.NE.U32.AND.EX P1, PT, R19, RZ, PT, P1",
+          "0x25a0": "@P1 BRA 0x2620",
+          "0x25b0": "VIADD R20, R20, 0x1",
+          "0x25c0": "ISETP.GE.U32.AND P1, PT, R20, 0x2, PT",
+          "0x25d0": "@!P1 BRA 0x2570",
+          "0x25e0": "CS2R R16, SRZ",
+          "0x25f0": "CS2R R18, SRZ",
+          "0x2600": "CS2R R20, SRZ",
+          "0x2610": "BRA 0x2630",
+          "0x2620": "CS2R R20, SR_CLOCKLO"
+        },
+        "store_instructions": {
+          "0x26f0": "STG.E.64 desc[UR30][R154.64+0x88], R16",
+          "0x2700": "STG.E.64 desc[UR30][R154.64+0xb8], R18",
+          "0x2710": "STG.E.64 desc[UR30][R154.64+0xd8], R20"
+        },
+        "clock_and_timer_maximum_reads_each": 2,
+        "exhaustion_outputs": "all three uint64 zero",
+        "final_clock_zero": "unretried native value; must be rejected by the reader"
+      }
+    ],
+    "launch_threads": 384
+  },
+  "runtime": {
+    "resources": [
+      {
+        "smem": 215040,
+        "smem_epilogue": 18432,
+        "max_active_ctas_per_sm": 1,
+        "sm_count": 132,
+        "scheduler_sm_count": 132
+      },
+      {
+        "smem": 215040,
+        "smem_epilogue": 18432,
+        "max_active_ctas_per_sm": 1,
+        "sm_count": 132,
+        "scheduler_sm_count": 132
+      },
+      {
+        "smem": 215040,
+        "smem_epilogue": 18432,
+        "max_active_ctas_per_sm": 1,
+        "sm_count": 132,
+        "scheduler_sm_count": 132
+      }
+    ],
+    "sampled_values": 12288,
+    "full_D_verified": false,
+    "entry_producer_and_SM_valid": true,
+    "original_snapshot_rejection_gap_preserved": true,
+    "current_reader_rejects_all_ten_mutations": true
+  },
+  "conditional_arithmetic": {
+    "feasible_CTA_pairs_at_128": 0,
+    "minimum_total_interval_slack_ns": {
+      "minimum": 1149.5981851779518,
+      "median": 1212.2175419057307,
+      "maximum": 1242.1631477927062
+    }
+  },
+  "observation_qualified": false,
+  "remaining": [
+    "Hardware sampling enclosure is not established by SASS ordering.",
+    "One call per arm cannot qualify local or spatial perturbation.",
+    "API maximum CTA count is not measured executed occupancy.",
+    "Static operation counts and unchanged overlays do not prove dynamic timing equivalence.",
+    "No new local/critical/total heldout validation or cross-card evaluation follows."
+  ]
+}
