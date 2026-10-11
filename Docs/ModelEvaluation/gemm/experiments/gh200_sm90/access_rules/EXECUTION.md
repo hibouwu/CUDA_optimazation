@@ -41,6 +41,8 @@ C首版依赖图 `e097a6b` 已合入为 `2878c1a`。主集成9项专用测试通
 
 B的释放前驱分析 `1042b17` 与输入校验 `c786438` 已合入为 `a05437e`/`843fce4`。主集成20进程复放的逐项观测、两组非唯一分解和摘要与B-v3一致，5项测试通过；source位置/修订哈希单列。现有leader到acquire窗口不能当作最后128个arrival已到之后的价格，四warp观察请求尚未实施。
 
+C的输出buffer generation接口 `287930d` 已合入为 `6854ee0`。主线[独立R14复放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/main-20261011-output-lifecycle-v1/README.md)复核852份源码、两二进制及40进程数值；20份trace的90个保证、70个跨输出中间窗口与C一致。只规范化当前工作目录绝对前缀后，JSON和两个CSV完整文本相同。中间permit→保证36598.5cycle包含下一输出推进，下一permit→保证657.5cycle；不将前者收费或迁为ns。
+
 [740050前序身份构建](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-prefix-identity-build/README.md)已通过：setup/call显式区分模块plain前序及清零准备，解析器拒绝未声明身份。旧r5仅保留数值smoke，不升级为同准备或观察有效性通过；正式dual/bracket必须另核对模块及准备容量一致。
 
 长期执行对话用独立worktree；同目录临时agent按明确文件边界工作。共享文件需求交管理者合成，不能各自复制cfg_a/b/c框架。各组只提交本组文件，管理者串行集成；不reset/stash他人修改、不追改冻结包。已完成的证据可读取复用，单组完成不代表整轮预测通过。
