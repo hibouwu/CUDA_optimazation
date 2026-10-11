@@ -1,0 +1,15 @@
+{
+  "artifact_sha256": {
+    "review.py": "6c18580bff2ff5388905a9c73ebc960a68bbb991cce3bf46efc03077788fdea8",
+    "report.json": "dbb09990ebc753a1f7956c73ea05e528e0991602313740e75fa5c84c9f5aec1d"
+  },
+  "input_files_verified": 910,
+  "full_D_exact_values": 7077888,
+  "warm_exact_values": 8192,
+  "complete_CTAs_per_warm": 132,
+  "negative_decoder_checks": 4,
+  "device_sass_identical_to_740082": true,
+  "host_entry_blockers_found": 0,
+  "new_C_GPU_execution": false,
+  "observation_qualified": false
+}

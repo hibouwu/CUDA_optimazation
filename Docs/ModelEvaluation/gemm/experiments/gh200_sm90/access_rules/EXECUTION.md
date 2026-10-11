@@ -202,6 +202,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [迟发响应独立重算](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-startup-absorption-v1/README.md)：接入B e541c478，18次模型/373248需求、2592旧窗口复现；803共同SHA及4路径不同模块SHA匹配，完整结果相同。+512ns后初始订阅仍余256.945ns，首复用仍余708.862..772.343ns，三候选首full/FIRST/MAIN不变、producer→MAIN预测−512ns，与旧记录非负变化不符。失败定位到首次供给吸收迟发，保留后续D时刻差；无新价格、数值重放、GPU或资格。
 
+[producer-tail独立正确性审查重跑](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/reanalysis/main-producer-tail-correctness-review-v1/README.md)：C脚本主线执行结果逐字段同，856源/7077888参考值/8192样本/四拒绝路径通过。另完成[增量扰动对照规格](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control-preparation/README.md)：20个交替配对命令、全CTA/角色/输出共同端点及L门槛明确，尚待采集判定器和冻结，未执行GPU；通过也不自动授予tail精度或基础dual资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
