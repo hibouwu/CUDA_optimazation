@@ -1,0 +1,4 @@
+Filesystem          1024-blocks    Used Available Capacity Mounted on
+/dev/mapper/live-rw    16766976 7095480   9671496      43% /
+JOB=740159 NODE=romeo-a058 RUN_TMP=/tmp/gh200-cfg-c-gt-bracket-smoke-nANALt5k
+srun: error: romeo-a058: task 0: Exited with exit code 1
