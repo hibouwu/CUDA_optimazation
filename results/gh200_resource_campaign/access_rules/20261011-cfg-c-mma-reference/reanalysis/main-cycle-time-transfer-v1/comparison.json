@@ -1,0 +1,17 @@
+{
+  "compared_full_contents": [
+    "transfer.json",
+    "verification.json",
+    "window-errors.json.gz"
+  ],
+  "all_equal": true,
+  "artifact_sha256": {
+    "analyze.py": "165f46617764b463ac6507e1ac77d56f1737cef059bf59399cc21103c81d495e",
+    "verify.py": "90d8aeb2cdc774db6fec4895a07d1b14c2854290bd286dbdb402af1bf665ef0e",
+    "replay.log": "18d749cf4b21868e56ba32c39b388f7e8bfa29653b022d8d97a00a9960c9b4b0",
+    "transfer.json": "a2dd4438325785adc60c37a78f8017a176062cc90c94e261e1b638fbb8eef1b4",
+    "window-errors.json.gz": "560e9e7b5d95fd84bbe942e9a88ba160073eefce456dfe2ca443088830e44e9c",
+    "verification.json": "034326fb70a7172fd3aafd8493f7ccb4fa63fd743f230ab9e1465f60bcc7dd00"
+  },
+  "prediction_qualified": false
+}

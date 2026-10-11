@@ -246,6 +246,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [请求路径必要区间端点诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-endpoints-v1/README.md)：仅原上下端20完整图/279936需求，2232首CTA及33480供给组；首轮空闲全0，最小ready余量下端66.731/上端45.755ns，L仍4608ns。排除中点独有现象，不证明区间内部；B继续全区间证书，主线不扫描拟价，无新GPU或资格。
 
+[同卡cycle/ns迁移主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/reanalysis/main-cycle-time-transfer-v1/README.md)：接入A1b667800，三个完整JSON重算相同；165SHA/6参考/40目标/8640整数窗口与有标签分项/80同SM窗口、两负例通过。工作量缩放周期最大误差2.912%，直接参考C/N换算ns最大15.075%；同SM也不直接迁移。后验参考与端点/负载差异保留，不归因物理频率，不加校正/资格，无GPU。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

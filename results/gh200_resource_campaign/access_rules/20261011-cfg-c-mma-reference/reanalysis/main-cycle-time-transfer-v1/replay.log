@@ -1,0 +1,292 @@
+{
+  "candidate": {
+    "selection": "Prescribed sustained 1024-group reference; median of its three fixed repeats, no target-based fitting.",
+    "target_work_flop": 268435456,
+    "reference_work_flop": 4294967296,
+    "work_ratio": "1/16",
+    "reference_cycles": "1049379",
+    "reference_ns": "578304",
+    "reference_cycle_per_ns": "349793/192768",
+    "predicted_common_cycle": "1049379/16",
+    "predicted_common_ns": "36144",
+    "target_observations_used": false
+  },
+  "verification": {
+    "reference_calls": 6,
+    "target_windows": 8640,
+    "same_reference_SM_target_windows": 80,
+    "exact_multiplicative_closures": 8640,
+    "original_formal_reference_values_already_verified": 196608
+  },
+  "groups": [
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "selection": "all_SM",
+      "ordinal": 0,
+      "metrics": {
+        "cycle_error": {
+          "n": 2640,
+          "median": -0.005923465753217031,
+          "median_absolute": 0.005923465753217031,
+          "maximum_absolute": 0.025827144448570368,
+          "minimum": -0.025827144448570368,
+          "maximum": -0.003416032274239869
+        },
+        "conditional_conversion_error": {
+          "n": 2640,
+          "median": -0.048940883260522566,
+          "median_absolute": 0.048940883260522566,
+          "maximum_absolute": 0.06660552022722611,
+          "minimum": -0.06660552022722611,
+          "maximum": -0.029048647877207064
+        },
+        "composed_window_error": {
+          "n": 2640,
+          "median": -0.05481171548117155,
+          "median_absolute": 0.05481171548117155,
+          "maximum_absolute": 0.07266009852216748,
+          "minimum": -0.07266009852216748,
+          "maximum": -0.03378956372968349
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "selection": "all_SM",
+      "ordinal": 1,
+      "metrics": {
+        "cycle_error": {
+          "n": 1680,
+          "median": -0.004248208483891538,
+          "median_absolute": 0.004248208483891538,
+          "maximum_absolute": 0.01650715281839039,
+          "minimum": -0.01650715281839039,
+          "maximum": -0.0028857409997567504
+        },
+        "conditional_conversion_error": {
+          "n": 1680,
+          "median": -0.11925178435145818,
+          "median_absolute": 0.11925178435145818,
+          "maximum_absolute": 0.1394162067618423,
+          "minimum": -0.1394162067618423,
+          "maximum": -0.08919258567834833
+        },
+        "composed_window_error": {
+          "n": 1680,
+          "median": -0.12373933281613654,
+          "median_absolute": 0.12373933281613654,
+          "maximum_absolute": 0.14431818181818182,
+          "minimum": -0.14431818181818182,
+          "maximum": -0.09204180064308681
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "selection": "SM124",
+      "ordinal": 0,
+      "metrics": {
+        "cycle_error": {
+          "n": 20,
+          "median": -0.006510553523537775,
+          "median_absolute": 0.006510553523537775,
+          "maximum_absolute": 0.009137382725748213,
+          "minimum": -0.009137382725748213,
+          "maximum": -0.004837455428267961
+        },
+        "conditional_conversion_error": {
+          "n": 20,
+          "median": -0.05327739651595791,
+          "median_absolute": 0.05327739651595791,
+          "maximum_absolute": 0.06523570163803487,
+          "minimum": -0.06523570163803487,
+          "maximum": -0.045457373763739116
+        },
+        "composed_window_error": {
+          "n": 20,
+          "median": -0.06031613976705491,
+          "median_absolute": 0.06031613976705491,
+          "maximum_absolute": 0.07189811010682005,
+          "minimum": -0.07189811010682005,
+          "maximum": -0.05243288590604027
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-control",
+      "selection": "SM124",
+      "ordinal": 1,
+      "metrics": {
+        "cycle_error": {
+          "n": 20,
+          "median": -0.005365673339399454,
+          "median_absolute": 0.005365673339399454,
+          "maximum_absolute": 0.005591880827837162,
+          "minimum": -0.005591880827837162,
+          "maximum": -0.003113077776595583
+        },
+        "conditional_conversion_error": {
+          "n": 20,
+          "median": -0.1278085850405719,
+          "median_absolute": 0.1278085850405719,
+          "maximum_absolute": 0.13839664470624025,
+          "minimum": -0.13839664470624025,
+          "maximum": -0.10925534449511892
+        },
+        "composed_window_error": {
+          "n": 20,
+          "median": -0.13248847926267282,
+          "median_absolute": 0.13248847926267282,
+          "maximum_absolute": 0.1430197268588771,
+          "minimum": -0.1430197268588771,
+          "maximum": -0.11202830188679246
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "selection": "all_SM",
+      "ordinal": 0,
+      "metrics": {
+        "cycle_error": {
+          "n": 2640,
+          "median": -0.00593853254115008,
+          "median_absolute": 0.00593853254115008,
+          "maximum_absolute": 0.02911510221603778,
+          "minimum": -0.02911510221603778,
+          "maximum": -0.003416032274239869
+        },
+        "conditional_conversion_error": {
+          "n": 2640,
+          "median": -0.051761836896934706,
+          "median_absolute": 0.051761836896934706,
+          "maximum_absolute": 0.06423083803515311,
+          "minimum": -0.06423083803515311,
+          "maximum": -0.034109751047828166
+        },
+        "composed_window_error": {
+          "n": 2640,
+          "median": -0.05875,
+          "median_absolute": 0.05875,
+          "maximum_absolute": 0.07569558101472995,
+          "minimum": -0.07569558101472995,
+          "maximum": -0.041171477079796265
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "selection": "all_SM",
+      "ordinal": 1,
+      "metrics": {
+        "cycle_error": {
+          "n": 1680,
+          "median": -0.004202852891608338,
+          "median_absolute": 0.004202852891608338,
+          "maximum_absolute": 0.018009140726766383,
+          "minimum": -0.018009140726766383,
+          "maximum": -0.0028857409997567504
+        },
+        "conditional_conversion_error": {
+          "n": 1680,
+          "median": -0.12304084267731338,
+          "median_absolute": 0.12304084267731338,
+          "maximum_absolute": 0.14659640870561003,
+          "minimum": -0.14659640870561003,
+          "maximum": -0.10075839411417882
+        },
+        "composed_window_error": {
+          "n": 1680,
+          "median": -0.12712519319938176,
+          "median_absolute": 0.12712519319938176,
+          "maximum_absolute": 0.1507518796992481,
+          "minimum": -0.1507518796992481,
+          "maximum": -0.10357142857142858
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "selection": "SM124",
+      "ordinal": 0,
+      "metrics": {
+        "cycle_error": {
+          "n": 20,
+          "median": -0.006616064701935481,
+          "median_absolute": 0.006616064701935481,
+          "maximum_absolute": 0.011854406159130972,
+          "minimum": -0.011854406159130972,
+          "maximum": -0.0050186219033026384
+        },
+        "conditional_conversion_error": {
+          "n": 20,
+          "median": -0.05598259659397459,
+          "median_absolute": 0.05598259659397459,
+          "maximum_absolute": 0.06282643953542569,
+          "minimum": -0.06282643953542569,
+          "maximum": -0.049833598414703306
+        },
+        "composed_window_error": {
+          "n": 20,
+          "median": -0.06265560165975104,
+          "median_absolute": 0.06265560165975104,
+          "maximum_absolute": 0.06960461285008238,
+          "minimum": -0.06960461285008238,
+          "maximum": -0.05717863105175292
+        }
+      }
+    },
+    {
+      "run": "20261011-cfg-c-producer-tail-off-off",
+      "selection": "SM124",
+      "ordinal": 1,
+      "metrics": {
+        "cycle_error": {
+          "n": 20,
+          "median": -0.005365673339399454,
+          "median_absolute": 0.005365673339399454,
+          "maximum_absolute": 0.005591880827837162,
+          "minimum": -0.005591880827837162,
+          "maximum": -0.003128229875972763
+        },
+        "conditional_conversion_error": {
+          "n": 20,
+          "median": -0.1307500391160509,
+          "median_absolute": 0.1307500391160509,
+          "maximum_absolute": 0.1459762808375454,
+          "minimum": -0.1459762808375454,
+          "maximum": -0.1216709895998956
+        },
+        "composed_window_error": {
+          "n": 20,
+          "median": -0.13514497533176795,
+          "median_absolute": 0.13514497533176795,
+          "maximum_absolute": 0.1507518796992481,
+          "minimum": -0.1507518796992481,
+          "maximum": -0.12441860465116279
+        }
+      }
+    }
+  ]
+}
+{
+  "passed": true,
+  "input_hashes": 165,
+  "reference_calls": 6,
+  "raw_target_calls": 40,
+  "exact_native_window_identities": 8640,
+  "labeled_multiplicative_closures": 8640,
+  "same_reference_SM_target_windows": 80,
+  "negative_checks": [
+    "swapped labeled terms rejected despite product closure",
+    "changed timer delta rejected despite recalculated closed terms"
+  ],
+  "recorded_globaltimer_chronology": {
+    "target_first_entry_ns": 1791713185817341888,
+    "target_last_recorded_final_ns": 1791713759969427104,
+    "reference_first_ns": 1791714305942919904,
+    "reference_last_ns": 1791714317447519776,
+    "reference_starts_after_last_target_recorded_endpoint_ns": 545973492800
+  },
+  "scope": "Exact recorded differences and retrospective transfer arithmetic; no hardware simultaneous-read or physical-rate proof."
+}
