@@ -373,3 +373,19 @@ cluster2×1的有效发送者由`spread_arrivals_to_warpgroup`决定。其`Swizz
 第二阶段请求据此修订为两rank各四个实际发送线程的自身arrival前后界，绑定同一全局group/slot/generation/phase及目标producer下一代acquire。跨rank只比较globaltimer ns，clock64保留在各CTA本地。若四个emit分别在`[b_i,e_i]`、完整acquire调用后戳为A，则最后emit保守位于`[max(b_i), min(max(e_i), A)]`；某个后clock晚于A不构成失败，实际emit仍可能更早。剩余区间仍包含远端可见、处理、轮询、调度、expect_tx与打点，不作为裸延迟。
 
 `cfg_a_empty_reuse_interval`拒绝缺失/重复发送者、错误physical thread、跨代或相位错配、非整数/非法globaltimer、未观测的零戳及不可行因果关系。新增节点只细分旧依赖边，T1/T2旧节点投影关系全部保持；没有改动冻结CTA或服务参数。CPU布局程序、源码/SASS SHA、投影证明与[条件观察接口](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-empty-arrival-routes-v6/observation-contract.json)见[本轮报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-empty-arrival-routes-v6/README.md)。第一阶段五切点请求不变，第二阶段仍待第一阶段定位，未新增GPU任务或冻结数值门槛。
+
+### 第一阶段切点的源码语义
+
+`analyze_r18_first_output.py`将原五切点绑定到739095的冻结源码，同时仅从两条件的静态scheduler复算观察集合，未读取时间或最后完成者。g0在prologue commit后；g16/g32/g63在steady commit后、本轮`wait<1>`和release之前。steady循环中剩余`k_tile_count`分别为48/32/1，不能将cfg_b的第几个commit命名直接用作cfg_a零起始group。
+
+| 切点 | slot / generation / full phase | 本切点之后的路径 |
+|---|---|---|
+| commit g0 | 0 / 0 / 0 | 推进read state，进入steady循环 |
+| commit g16 | 4 / 2 / 0 | wait1，release15 |
+| commit g32 | 2 / 5 / 1 | wait1，release31 |
+| commit g63 | 3 / 10 / 0 | wait1，release62，再从mma返回 |
+| mma返回 | 不从caller未推进的state重建末组 | mma_tail执行wait0和release63，再到MAIN |
+
+已有FIRST、MAIN加五个新点构成六个连续窗口。新局部接口`first_output_windows`保留原生整数clock64/globaltimer，逐CTA、逐consumer角色相减，核对六段之和精确等于同记录L；零戳、缺点、反向端点、错角色或跨SM本地周期均拒绝。map960减map1024时先在各调用内求时长，再按原配对求有符号差，不对不同调用的原始时钟相减，也不把负分段变化截成零。分别汇总的中位数不要求可加。
+
+commit63→mma返回包含最后一次wait1/release62及返回路径；mma返回→MAIN包含最终wait0/release63及端点开销。两段仍是源码窗口，不能直接作为裸GMMA退休成本。1920bytes只是新增时间戳载荷，分配容量、元数据和清零大小仍需公共实现单独声明并匹配。源码SHA、逐点位置、两条件完整工作列表及复算命令见[切点契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-first-output-source-ports-v1/README.md)。本次为源码和CPU接口验证，没有新GPU样本、观察器资格或服务价。
