@@ -218,6 +218,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [740091两域/轮次失败诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control/reanalysis/main-window-domain-diagnosis-v1/README.md)：4320窗口精确换算恒等式、1680同CTA/WG双输出对保留。pair1的168角色全首后轮ns差异号，观测C/N配对变化的轮次对比中位+2.926%；pair9为−2.012%，cycle分组中位多近零但不授资格。C独立冻结/raw/数值/门槛复核归档，原失败不变；无物理频率或tail开销归因，无校正/新GPU。
 
+[tail与首轮MAIN因果边界](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-control/reanalysis/main-tail-causal-boundary-v1/README.md)：T1/T2共16源码可达查询，T2首MAIN→本cluster两tail成立，T1无此顺序。740091十on的最早tail均来自T1，仅14..48/264首MAIN读数早于全部tail，不能由本cluster顺序排除跨cluster影响。保留物理读取边界，不归因、不校正、不改失败；若补测，优先相同流程两臂off基线辨别配对背景变化。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
