@@ -1,0 +1,9 @@
+{
+  "files": {
+    "run.sh": "292e8df82708dffd54d2e8b0738b31be34b5d2ec26a36feaa19324f4ecaf3445",
+    "source_hashes.json": "ebb49e1f1d57304f923428d07c63a000cadc39ccb5c3e9d5ca8f59a55b93eb23",
+    "interface.json": "0db5697276ee88822bda46f512269614e0f660151d9c15c021f4206146d6f729",
+    "build/commands.json": "04806d0cf7e4cb56dda8645ea8fa43a2f02eb2118df9e6b94aeb7c4efbad2eb2"
+  },
+  "scope": "CPU-only build; no device calls or sampling"
+}

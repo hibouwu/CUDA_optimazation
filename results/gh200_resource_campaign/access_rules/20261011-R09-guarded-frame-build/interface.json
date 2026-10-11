@@ -1,0 +1,131 @@
+{
+  "schema": "gh200-r09-clock-stamp-integration-request/1",
+  "status": "Reviewable compile-only interface request; not implemented, frozen, sampled or qualified.",
+  "owner": "Main integration only for public probe/runner/reader and target build. A owns this request and the candidate header/CPU arithmetic.",
+  "question": "Can the guarded three-read stamp be placed at the original cfg_b FIRST/MAIN sites without changing work/synchronization, spilling, or losing its control chain?",
+  "requested_next_action": "Target CUDA12.9 CPU-only build and actual CUTLASS source/SASS/resource audit. No GPU allocation, correctness run, pilot, formal sampling or new holdout is requested by this document.",
+  "predecessor": {
+    "path": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/minimum-observer-request-r4.json",
+    "sha256": "85cd21b8f4a16342ec47ae17e839b32fa9b06acdd7836b1955d4073fab3e0983",
+    "status": "r4 corrects target grid dimensions from authoritative static setups; mechanism plan remains unfrozen/deferred pending observation validity",
+    "unchanged_decisions": "Original128ns total-window allowance,3200ns duration gate and all reproduction/perturbation/qualification limits remain unchanged; spatial qualification is unresolved. This request does not authorize the deferred30-process mechanism study."
+  },
+  "target": {
+    "config": "cfg_b",
+    "m": 2816,
+    "n": 1536,
+    "k": 4096,
+    "lda": 4096,
+    "ldb": 1536,
+    "ldd": 1536,
+    "alloc_lda": 4104,
+    "alloc_ldb": 1536,
+    "stages": 6,
+    "grid": [
+      1,
+      132,
+      1
+    ],
+    "swizzle": 1,
+    "input_mode": "dyadic",
+    "seed": 17
+  },
+  "candidate": {
+    "header": "microbench/gh200_resource_campaign/access_rules/r09_clock_stamp.cuh",
+    "header_sha256": "a254875e9aa229e89f39acfb89482c5c5358f3c4b01e00ad223f8ee3ca577a08",
+    "function": "r09_guarded_clock_stamp()",
+    "fields": [
+      "clock_before",
+      "globaltimer_ns",
+      "clock_after"
+    ],
+    "normal_control": "CLOCK→64-bit nonzero compare→BRA→GT→64-bit nonzero compare→BRA→CLOCK",
+    "zero_behavior": "Before CLOCK and GT each retry at most once; exhaustion returns all zero. A zero final CLOCK is also invalid to the reader.",
+    "static_evidence_commits": [
+      "fab91fd21622ccd1d664d8d8d2f6a6106c4842b7",
+      "0c9afd90361d0445d5bef6d748346287705349be"
+    ],
+    "limits": "Local CUDA13 isolated device-C++/PTX/SASS evidence only; target12.9/full-frame/hardware sampling enclosure unqualified."
+  },
+  "layout": {
+    "head_words": 16,
+    "roles": 2,
+    "tile_capacity_per_role": 64,
+    "tile_words": 12,
+    "words_per_cta": 1552,
+    "ctas": 132,
+    "word_bytes": 8,
+    "scratch_bytes_each_arm": 1638912,
+    "tile_fields": {
+      "0": "FIRST CLOCK_before",
+      "1": "MAIN CLOCK_before",
+      "2": "PERMIT original CLOCK",
+      "3": "DONE original CLOCK",
+      "4": "M_idx+1",
+      "5": "N_idx+1",
+      "6": "FIRST GT",
+      "7": "MAIN GT",
+      "8": "PERMIT original GT",
+      "9": "DONE original GT",
+      "10": "FIRST CLOCK_after",
+      "11": "MAIN CLOCK_after"
+    },
+    "preserve": "All original16 head words and original tile0..9 meanings remain. Only fields10/11 are new. Existing6/10-word protocols and original runs remain unchanged."
+  },
+  "arms": [
+    {
+      "kind": "plain",
+      "trace_version": "none",
+      "device_observation": "No timestamp trace writes. Allocate and prepare the same1552 words/CTA; call.trace remains empty."
+    },
+    {
+      "kind": "matched_dual",
+      "trace_version": "r09-matched-dual12/v1",
+      "device_observation": "Original CLOCK→GT pairs at FIRST/MAIN/PERMIT/DONE; at FIRST/MAIN additionally store zero in the matching field10/11, without an extra CLOCK read. This is a new matched baseline, not byte-identical old dual."
+    },
+    {
+      "kind": "guarded_bracket",
+      "trace_version": "r09-guarded-dual12/v1",
+      "device_observation": "At original FIRST/MAIN, call candidate once and store before/GT/after in original fields plus10/11. PERMIT/DONE,entry,producer,final keep their original semantics."
+    }
+  ],
+  "placement": {
+    "threads": "Original role0/thread128 and role1/thread256 only, after the existing thread%128==0 and thread>=128 guard.",
+    "sites": "Only original v06_stamp FIRST and MAIN locations; do not add or move calls in the work loop.",
+    "work": "All132CTA must retain their original two outputs, one per original consumer role; full scheduled work covers264 tiles. No semantic work, WGMMA, release, wait, commit, barrier generation, output completion or synchronization changes.",
+    "stores": "Matched-dual and bracket write the same logical record fields at the same sites. Audit actual stores and register lifetimes; do not infer matching SASS from source store counts."
+  },
+  "history": {
+    "protocol": "r09-plain-module-sw1-16/v1",
+    "within_process": "Each arm process constructs all handles/allocations before prefix, then runs16 calls of the same independently compiled plain module followed by its target, on the same A/B/D pointers within that process.",
+    "across_processes": "Compare declared input contents, dimensions,strides,allocation sizes,initialization and prefix module/kernel identities. Absolute pointer equality or the same physical pages across distinct processes is not claimed.",
+    "preparation": "All three arms clear1638912 trace bytes and synchronize before every prefix/target, in the same order; no per-arm extra scratch/preparation is silently introduced. Preserve all16 inter-call gaps and define any gap policy before later sampling.",
+    "metadata": "setup/call both bind plain_prefix_protocol,ABI,preparation,clear_bytes,module/kernel/binary identity and same-buffers. The old warmup_policy label alone is insufficient.",
+    "wording_correction": "Clarifies r4 ambiguous same-process wording: prefix and target share a process within each arm. It does not require three separately compiled arm targets to share one process or physical buffers."
+  },
+  "reader_obligations": {
+    "identity": "A future case,setup and call must explicitly agree on r09_clock_observer_protocol=r09-clock-observer/v1 and arm kind. Require corresponding trace_version,tile_words12,trace_words1552,scratch1638912 and original config/stages/grid. Bind complete source/binary/header SHA through the existing freeze/build/process-record chain; do not add device-side hashing or require stdout to calculate hashes. Do not accept these as ordinary dual10 records.",
+    "guarded_stamps": "Each FIRST/MAIN stamp must contain three positive native uint64 integers, rejecting bool,float,zero,overflow or after<before. Require both original roles of all132CTAs, original work coordinates/counts and same-SM endpoints. Preserve invalid rows/reasons; no fallback to unbracketed dual.",
+    "matched_baseline": "Both added fields must be exactly zero; original dual endpoints,work/SM and metadata checks remain required.",
+    "plain": "No device trace; same host preparation identity and allocation bytes are required.",
+    "math": "Only after record validity use r09_clock_brackets.common_rate_interval.128ns is TOTAL window-difference allowance, not per endpoint. No phase price or target W/f is fitted."
+  },
+  "cpu_acceptance": [
+    "Compile actual cfg_b stage6 plain,matched_dual,guarded_bracket using target CUDA12.9, CUTLASS v3.9.2 and recorded public overlay/source identity; no CUDA runtime queries or device launches in this phase.",
+    "Record binary/SASS hashes,registers,SMEM,stack,spill,barriers and occupancy inputs; unexpected spill or loss of the original resident/work organization rejects this candidate build.",
+    "Audit actual FIRST/MAIN placement and active thread masks; both halves of each preceding read must control a real branch before the next read. CS2R plus SEL alone is rejected.",
+    "Audit finite retry initialization/bounds and zero-output exit; distinct inline sites must resolve their own scoped labels.",
+    "Verify original WGMMA/release/wait/commit/barrier and output-boundary source calls unchanged; check emitted instructions around both sites.",
+    "Review trace12 layout,matching host scratch/preparation and explicit parser identity/refusal paths before any future correctness or timing proposal."
+  ],
+  "after_cpu_acceptance": "Main integration decides next correctness/observer qualification work. CPU pass alone neither permits30-process execution nor resolves spatial perturbation/hardware-enclosure questions. A full clock rule still requires new independent frozen local validation, composition and cross-card assessment.",
+  "public_base": {
+    "commit": "7722a697eef6aa19bd6f6b50dd9fef7485db9b66",
+    "read_only_source_sha256": {
+      "microbench/gh200_resource_campaign/access_rules/probes/r18.cu": "f8fcb82b961da2c6b9fc9c2bef5d3b0aea3a6b9ff95157c7a05b7515d760c424",
+      "microbench/gh200_resource_campaign/access_rules/probes/r18_trace.hpp": "dcd28bb136b41140f84f49293d86d1015c34c4354937842f1e8a4bd27a48f7d1",
+      "microbench/gh200_resource_campaign/access_rules/run_r18.py": "73d165e284c14cd0d359fc05b98315675eaf0561df5f789537dffb9befc8bc42",
+      "microbench/gh200_resource_campaign/access_rules/analyze_r18.py": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264"
+    }
+  }
+}

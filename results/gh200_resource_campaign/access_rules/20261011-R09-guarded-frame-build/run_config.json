@@ -1,0 +1,12 @@
+{
+  "scope": "CPU compile only; reader and runtime qualification incomplete",
+  "arms": [
+    "cfg_b_plain",
+    "cfg_b_matched_dual",
+    "cfg_b_guarded_bracket",
+    "plain_prefix"
+  ],
+  "tile_words": 12,
+  "cta_words": 1552,
+  "scratch_bytes": 1638912
+}
