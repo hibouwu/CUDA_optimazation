@@ -3,6 +3,7 @@
 #include "gaps_common.hpp"
 #include <algorithm>
 #include <memory>
+#include <fstream>
 #ifdef R09_PLAIN_PREFIX_HOST
 #include "r09_plain_prefix_host.hpp"
 #endif
@@ -211,6 +212,7 @@ struct Args {
   unsigned second_prefill = 0;
   unsigned a_row_rotation = 0;
   unsigned release_warp_observer = 0;
+  std::string check_output;
   int64_t lda = 0, ldb = 0, ldd = 0;
   int64_t alloc_lda = 0, alloc_ldb = 0;
   int b_offset_bytes = 0, b_allocation_extra_bytes = 0;
@@ -253,12 +255,14 @@ struct Args {
       else if(key=="--producer-delay-ns")producer_delay_ns=std::stoul(v);
       else if(key=="--ready-observer")ready_observer=std::stoul(v);
       else if(key=="--epilogue-defer")epilogue_defer=std::stoul(v);
+      else if(key=="--check-output")check_output=v;
       else if(key=="--release-warp-observer")release_warp_observer=std::stoul(v);
       else if(key=="--second-prefill")second_prefill=std::stoul(v);
       else if(key=="--a-row-rotation")a_row_rotation=std::stoul(v);
       else if(key=="--first-supply-events")first_supply_events=std::stoul(v);
       else throw std::runtime_error("unknown option " + key);
     }
+    if (!check_output.empty() && mode != "check-release-warps") throw std::runtime_error("check-output only supports release correctness mode");
     if (release_warp_observer > 1) throw std::runtime_error("release-warp-observer must be 0 or 1");
 #ifndef R13_RELEASE_WARPS
     if (release_warp_observer || mode == "check-release-warps") throw std::runtime_error("release warp observer requires experiment build");
@@ -1082,6 +1086,14 @@ int main(int argc, char** argv) {
       }
       std::cout << "{\"event\":\"" << (o.mode == "check-release-warps" ? "release_warps_check" : o.mode == "check-a-row-rotation" ? "a_row_rotation_check" : o.mode == "check-second-prefill" ? "second_prefill_check" : o.mode == "check-epilogue-order" ? "epilogue_order_check" : o.mode == "check-ready-observer" ? "ready_observer_check" : o.mode == "check-first-supply" ? "first_supply_check" : o.mode == "check-producer-delay" ? "producer_delay_check" : "work_swap_check") << "\",\"elements\":" << size_t(o.m)*o.n
                 << ",\"comparison_flag\":" << flag << ",\"different\":" << different << ",\"nonfinite\":" << nonfinite << "}\n";
+      if (!o.check_output.empty() && different == 0 && nonfinite == 0) {
+        std::ofstream output(o.check_output,std::ios::binary);
+        if (!output) throw std::runtime_error("cannot open full D correctness output");
+        for (int i=0; i<o.m; ++i)
+          output.write(reinterpret_cast<char const*>(baseline.data()+size_t(i)*ldd),size_t(o.n)*sizeof(float));
+        output.close();
+        if (!output) throw std::runtime_error("cannot write full D correctness output");
+      }
       return different == 0 && nonfinite == 0 ? 0 : 2;
     }
 #endif

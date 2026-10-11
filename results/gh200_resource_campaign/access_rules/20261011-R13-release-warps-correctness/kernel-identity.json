@@ -1,0 +1,22 @@
+{
+  "cfg_b_s4_plain": {
+    "sass_instructions_same_as_740051": true,
+    "instruction_sha256": "66712faa9d536b1108571d2ad40536791d4a458e8bd83c1704e3d6bc38b62f17",
+    "binary_sha256": "725f8157c5e205eadff07462384176ff8e218455a44c47c8eb266902a75c37d1"
+  },
+  "cfg_b_s4_stamped": {
+    "sass_instructions_same_as_740051": true,
+    "instruction_sha256": "e46e0f425d68ebcb1c5b4433247e0ed0761b426182339a64a576ad2555a5fa07",
+    "binary_sha256": "18c164c88741a1e879e0dd917f9d0ce2a99bbf568342a3d1824bc79737ade364"
+  },
+  "cfg_b_s6_plain": {
+    "sass_instructions_same_as_740051": true,
+    "instruction_sha256": "332bb15a55e312011a62a15c0d47dc56b28b22dd4b07af83cdaa874158552df2",
+    "binary_sha256": "e279be283b0e45a712b4898ce35bb48048d7df03be85a7ac8daf86a893db4dd5"
+  },
+  "cfg_b_s6_stamped": {
+    "sass_instructions_same_as_740051": true,
+    "instruction_sha256": "ff7034e2feb8bb45989e704d63688127362097a3a9d297991e71a87c969e0d50",
+    "binary_sha256": "18ad3aca8461cc44557cedef262a5e0295ff3da5892d6fe172b9ade30773b6ce"
+  }
+}

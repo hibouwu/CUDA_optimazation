@@ -1,0 +1,31 @@
+JobId=740054 JobName=r13-release-check
+   UserId=hibouwu(100800) GroupId=hibouwu(100800) MCS_label=N/A
+   Priority=7339 Nice=0 Account=r260073 QOS=normal
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=0 Reboot=0 ExitCode=0:0
+   DerivedExitCode=0:0
+   RunTime=00:00:03 TimeLimit=00:10:00 TimeMin=N/A
+   SubmitTime=2026-10-11T10:19:42 EligibleTime=2026-10-11T10:19:42
+   AccrueTime=Unknown
+   StartTime=2026-10-11T10:19:42 EndTime=2026-10-11T10:29:42 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-11T10:19:42 Scheduler=Main
+   Partition=instant AllocNode:Sid=romeo1:253165
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=romeo-a057
+   BatchHost=romeo-a057
+   NumNodes=1 NumCPUs=4 NumTasks=1 CPUs/Task=4 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=4,mem=16G,node=1,billing=4,gres/gpu=1
+   AllocTRES=cpu=4,mem=16G,node=1,billing=4,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   JOB_GRES=gpu:h100:1
+     Nodes=romeo-a057 CPU_IDs=0,72,144,216 Mem=16384 GRES=gpu:h100:1(IDX:0)
+   MinCPUsNode=4 MinMemoryNode=16G MinTmpDiskNode=0
+   Features=armgpu DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)
+   Command=bash
+   WorkDir=/gpfs/home/hibouwu
+   Power=
+   TresPerNode=gres/gpu:1
+   TresPerTask=cpu:4
+   
+

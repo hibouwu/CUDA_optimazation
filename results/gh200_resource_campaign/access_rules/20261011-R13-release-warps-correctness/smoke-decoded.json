@@ -1,0 +1,258 @@
+[
+  {
+    "file": "stage4_flag0_smoke.jsonl.gz",
+    "stage": 4,
+    "flag": 0,
+    "check": {
+      "event": "check",
+      "status": "ok",
+      "samples": 4096,
+      "nonfinite": 0,
+      "padding_errors": 0,
+      "max_storage_reference_error": 0
+    },
+    "release": {
+      "enabled": false,
+      "warp_threads": [
+        256,
+        288,
+        320,
+        352
+      ],
+      "global_group": 80,
+      "consumer_phase": 0,
+      "pre": [
+        443117060002378,
+        0,
+        0,
+        0
+      ],
+      "post": [
+        443117060002400,
+        0,
+        0,
+        0
+      ],
+      "conditional_on_sass_coverage": true
+    },
+    "widths": [
+      22,
+      0,
+      0,
+      0
+    ],
+    "bracket_gate_each_le32": true,
+    "clocks": {
+      "entry": 443117059948532,
+      "acquire_begin": 443117060000006,
+      "acquire_end": 443117060000387,
+      "issue_end": 443117060000450,
+      "refill_begin": 443117060002153,
+      "refill_end": 443117060002610,
+      "refill_issue_end": 443117060002671,
+      "full_wait_begin": 443117060001336,
+      "full_wait_end": 443117060001621,
+      "commit_end": 443117060001729,
+      "wait1_end": 443117060001735,
+      "release_begin": 443117060002378,
+      "release_end": 443117060002400,
+      "first_mma": 443117059990064,
+      "main_end": 443117060030760,
+      "mma_return": 443117060030358,
+      "tail_begin": 443117060030367
+    },
+    "elapsed_us": 56.44800141
+  },
+  {
+    "file": "stage4_flag1_smoke.jsonl.gz",
+    "stage": 4,
+    "flag": 1,
+    "check": {
+      "event": "check",
+      "status": "ok",
+      "samples": 4096,
+      "nonfinite": 0,
+      "padding_errors": 0,
+      "max_storage_reference_error": 0
+    },
+    "release": {
+      "enabled": true,
+      "warp_threads": [
+        256,
+        288,
+        320,
+        352
+      ],
+      "global_group": 80,
+      "consumer_phase": 0,
+      "pre": [
+        443117655490215,
+        443117655490175,
+        443117655490175,
+        443117655490175
+      ],
+      "post": [
+        443117655490238,
+        443117655490197,
+        443117655490197,
+        443117655490197
+      ],
+      "conditional_on_sass_coverage": true
+    },
+    "widths": [
+      23,
+      22,
+      22,
+      22
+    ],
+    "bracket_gate_each_le32": true,
+    "clocks": {
+      "entry": 443117655433681,
+      "acquire_begin": 443117655487194,
+      "acquire_end": 443117655488026,
+      "issue_end": 443117655488091,
+      "refill_begin": 443117655490106,
+      "refill_end": 443117655490447,
+      "refill_issue_end": 443117655490508,
+      "full_wait_begin": 443117655488899,
+      "full_wait_end": 443117655489554,
+      "commit_end": 443117655489660,
+      "wait1_end": 443117655489666,
+      "release_begin": 443117655490215,
+      "release_end": 443117655490238,
+      "first_mma": 443117655478196,
+      "main_end": 443117655518276,
+      "mma_return": 443117655517870,
+      "tail_begin": 443117655517878
+    },
+    "elapsed_us": 57.34400079
+  },
+  {
+    "file": "stage6_flag0_smoke.jsonl.gz",
+    "stage": 6,
+    "flag": 0,
+    "check": {
+      "event": "check",
+      "status": "ok",
+      "samples": 4096,
+      "nonfinite": 0,
+      "padding_errors": 0,
+      "max_storage_reference_error": 0
+    },
+    "release": {
+      "enabled": false,
+      "warp_threads": [
+        256,
+        288,
+        320,
+        352
+      ],
+      "global_group": 80,
+      "consumer_phase": 1,
+      "pre": [
+        443119539569210,
+        0,
+        0,
+        0
+      ],
+      "post": [
+        443119539569232,
+        0,
+        0,
+        0
+      ],
+      "conditional_on_sass_coverage": true
+    },
+    "widths": [
+      22,
+      0,
+      0,
+      0
+    ],
+    "bracket_gate_each_le32": true,
+    "clocks": {
+      "entry": 443119539523201,
+      "acquire_begin": 443119539565919,
+      "acquire_end": 443119539566333,
+      "issue_end": 443119539566392,
+      "refill_begin": 443119539568981,
+      "refill_end": 443119539569359,
+      "refill_issue_end": 443119539569420,
+      "full_wait_begin": 443119539568251,
+      "full_wait_end": 443119539568314,
+      "commit_end": 443119539568635,
+      "wait1_end": 443119539568640,
+      "release_begin": 443119539569210,
+      "release_end": 443119539569232,
+      "first_mma": 443119539560077,
+      "main_end": 443119539593260,
+      "mma_return": 443119539592847,
+      "tail_begin": 443119539592857
+    },
+    "elapsed_us": 49.88799989
+  },
+  {
+    "file": "stage6_flag1_smoke.jsonl.gz",
+    "stage": 6,
+    "flag": 1,
+    "check": {
+      "event": "check",
+      "status": "ok",
+      "samples": 4096,
+      "nonfinite": 0,
+      "padding_errors": 0,
+      "max_storage_reference_error": 0
+    },
+    "release": {
+      "enabled": true,
+      "warp_threads": [
+        256,
+        288,
+        320,
+        352
+      ],
+      "global_group": 80,
+      "consumer_phase": 1,
+      "pre": [
+        443120127389392,
+        443120127389335,
+        443120127389335,
+        443120127389335
+      ],
+      "post": [
+        443120127389417,
+        443120127389357,
+        443120127389357,
+        443120127389357
+      ],
+      "conditional_on_sass_coverage": true
+    },
+    "widths": [
+      25,
+      22,
+      22,
+      22
+    ],
+    "bracket_gate_each_le32": true,
+    "clocks": {
+      "entry": 443120127343160,
+      "acquire_begin": 443120127385997,
+      "acquire_end": 443120127386529,
+      "issue_end": 443120127386591,
+      "refill_begin": 443120127389264,
+      "refill_end": 443120127389623,
+      "refill_issue_end": 443120127389685,
+      "full_wait_begin": 443120127388454,
+      "full_wait_end": 443120127388520,
+      "commit_end": 443120127388836,
+      "wait1_end": 443120127388842,
+      "release_begin": 443120127389392,
+      "release_end": 443120127389417,
+      "first_mma": 443120127380215,
+      "main_end": 443120127413441,
+      "mma_return": 443120127413027,
+      "tail_begin": 443120127413039
+    },
+    "elapsed_us": 50.01600087
+  }
+]
