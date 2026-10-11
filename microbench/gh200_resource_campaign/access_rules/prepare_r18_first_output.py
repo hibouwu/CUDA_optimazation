@@ -65,7 +65,8 @@ def patch_source(source):
     # Helpers need v06_clock/ns/base, and precede the collective using them.
     text=replace_once(text,'#ifdef R13_FIRST_SUPPLY',
         '#include "r18_first_output.hpp"\n\n#ifdef R13_FIRST_SUPPLY')
-    header.write_text(text)
+    (source/'probes/v06_trace.hpp').write_text(text)
+    header.write_text('#pragma once\n#include "../probes/v06_trace.hpp"\n')
     shutil.copy2(ROOT/'probes/r18_first_output.hpp',source/'probes/r18_first_output.hpp')
     path=source/'overlay'/common.MAINLOOP;text=path.read_text()
     text=replace_once(text,'Params const& mainloop_params, int v06_tile_seq = 0) {',

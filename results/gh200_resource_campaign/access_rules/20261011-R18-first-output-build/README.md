@@ -5,3 +5,5 @@
 off/on同一二进制，16次同二进制前序调用固定off，目标才切flag。decoder区分off零记录与on完整24角色，拒绝遗漏、非目标写入、布局/SM/坐标/原生uint64/源码顺序错误，始终保留observation_qualified=false。check-first-output模式在计时外完整比较off/on输出；尚未执行。
 
 11项CPU测试通过。派生源码与原overlay的release/wait/commit/syncthreads/mma_tail调用数完全相同，详见source-port-audit.json；不是SASS或数值证明。此次仅申请目标工具链CPU构建，无GPU申请和计时样本。SASS资源与控制流、数值及独立扰动pilot仍需后续验证；具体ns门槛必须在目标采样前由独立控制冻结。
+
+740064首次CPU构建在头文件重复定义处失败，无kernel执行；attempts/740064保存源码清单、冻结身份与日志。revision2仅统一扩展trace头文件及overlay转发入口后重新构建。
