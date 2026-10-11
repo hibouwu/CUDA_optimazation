@@ -1,0 +1,13 @@
+{
+  "README.md": "65499560851c2f628a02a9b02352fbc54665fa1641d6a3ca89f567c526a2c22a",
+  "analysis/audit.json": "da7d10808ecd82c227d3c5f712085772a4999efaae0633bdc47aa8b37a8d2182",
+  "analysis/phase-pairs.jsonl": "ad7111c79c3280c50ecc527f0521f948a7929a652cd10290c2ff567a1f2e8250",
+  "analysis/windows.jsonl": "f923bfbe6dfdca8427dad27aecb488732d5e7d423692b884f194cbb6a2a4b097",
+  "inputs.json": "c450ae460f180686e5c230b8e00b213b1b86a439ff012745288a0b9082fc3dde",
+  "r09_gt_brackets.py": "484b77a9fa88100429991a1130733dc3ad20cddce1f3187ca1c67188ca117c93",
+  "r09_gt_output_rates.py": "f3d9ca805e6dec06ded8a3901972fdd4f860acd2f657bf71f78000f603d2544c",
+  "r09_gt_window_audit.py": "ea167d594851220c732b381f82ac78d1d6f0c215981f21df466bb3cdc927b09c",
+  "replay-verification.json": "9685d3ece86f1e6b5c46dfdaeb1a3072791dc61ad6ac1875689d8cb5afa2eda4",
+  "verification.json": "ed0971f3817a6a507ca8c1654faaff3015c5fc30c7ecfd0043eab91ea64d6afe",
+  "verify.py": "aad0507f3832ca2ade2296e097f2e3bcf12f11666b4596cb4c58b7d3d70862f5"
+}

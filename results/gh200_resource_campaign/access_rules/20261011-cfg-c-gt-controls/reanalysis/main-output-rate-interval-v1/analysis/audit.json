@@ -1,0 +1,151 @@
+{
+  "WG_main_reader_intervals_matched": 4320,
+  "WG_windows": 4320,
+  "archive_file_matches": {
+    "input.tar.gz": 17,
+    "output.tar.gz": 105
+  },
+  "binary_sha256": "c5476d9b00679859eef64bff34e87532e4936ea73f7f432c476597b8c36a6480",
+  "checked_run_SHA": 67,
+  "common_first_second_pairs": 840,
+  "common_minimum_first_over_second_minus_one": {
+    "maximum": "199478/1782135",
+    "median": "4441911576/46617021325",
+    "minimum": "655069/8734397"
+  },
+  "common_windows": 2160,
+  "constant_average_rate_feasible_pairs": 0,
+  "enabled_processes": 10,
+  "first_second_pairs": 2520,
+  "frozen_files": 16,
+  "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+  "gt_error_ns": 0,
+  "hardware_sampling_enclosure": false,
+  "job": 740161,
+  "joint_feasibility_proved": false,
+  "limits": "Conditional exact GT-coordinate interval arithmetic, assuming real sampling enclosure. A shared exact average rate is tested within each process/CTA, not across processes. No fitted read-error budget, physical-frequency attribution, model price or prediction. Original failed observer/null controls unchanged.",
+  "numeric_evidence": "Reuses hash-bound main full-D and 40x4096 exact sample verification; not recomputed by A.",
+  "observation_qualified": false,
+  "per_process": [
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "7792825/78628629",
+        "median": "2535774389909/27565746247116",
+        "minimum": "56981/656899"
+      },
+      "process": "off_on_pair00_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "1247177/13227409",
+        "median": "54651793523581/618665831313200",
+        "minimum": "230221/2849175"
+      },
+      "process": "off_on_pair01_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "2718503/26166323",
+        "median": "17971023949633/184398696488000",
+        "minimum": "3553369/39370193"
+      },
+      "process": "off_on_pair02_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "6879605/78626247",
+        "median": "49927518263/625061388367",
+        "minimum": "655069/8734397"
+      },
+      "process": "off_on_pair03_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "199478/1782135",
+        "median": "129119151140527/1216953822566300",
+        "minimum": "53641/541241"
+      },
+      "process": "off_on_pair04_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "8562313/78080366",
+        "median": "52133554836511/504551772728192",
+        "minimum": "2536739/26136000"
+      },
+      "process": "off_on_pair05_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "2060938/19652255",
+        "median": "201012646822003/2069512135665320",
+        "minimum": "7210849/78809970"
+      },
+      "process": "off_on_pair06_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "8105729/78765439",
+        "median": "18806495620579/197057374862142",
+        "minimum": "273599/3036736"
+      },
+      "process": "off_on_pair07_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "8376049/79418451",
+        "median": "788101843/8022841745",
+        "minimum": "7131601/79436496"
+      },
+      "process": "off_on_pair08_arm1"
+    },
+    {
+      "common_pairs": 84,
+      "constant_average_rate_feasible_pairs": 0,
+      "first_second_pairs": 252,
+      "minimum_first_over_second_minus_one": {
+        "maximum": "48491/513342",
+        "median": "365862686395247/4107001714580898",
+        "minimum": "134021/1650625"
+      },
+      "process": "off_on_pair09_arm1"
+    }
+  ],
+  "physical_ns_accuracy": false,
+  "prediction_qualified": false,
+  "selected_windows": 6480,
+  "stamp_width_histogram": {
+    "0": 670,
+    "32": 7240,
+    "64": 718,
+    "96": 12
+  },
+  "stamps": 8640
+}

@@ -1,0 +1,17 @@
+{
+  "WG_stamps": 8640,
+  "archive_file_matches": {
+    "input.tar.gz": 17,
+    "output.tar.gz": 105
+  },
+  "common_pairs": 840,
+  "exact_arithmetic_recomputed": true,
+  "first_second_pairs": 2520,
+  "frozen_files": 16,
+  "input_SHA": 67,
+  "negative_controls_rejected": 4,
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "processes": 10,
+  "raw_selected_windows": 6480
+}
