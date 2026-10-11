@@ -394,6 +394,8 @@ job739579在同a058/GPU-ef8692f3记录完整历史：16次sw1前序后，连续1
 
 该累计量的源码／解析器时间输入复审发现并修复了一个必要顺序漏检：`C1≤H2≤旧H16≤B16≤C16`。原decoder接收H2晚于旧H16的完整数值正确记录；修复后stage4/6均拒绝。固定源码、6项CPU测试及8个开关／大整数CLOCK例核对通过，2⁶³+17的原点不影响整数周期差；缺1次前序event也被拒绝。这里只验证源码位置、16次前序和周期接口，不能替代GPU扰动／空对照；两个stage使用不同前序kernel，不证明跨stage初态相同。
 
+740259首条stage4/off实机记录暴露了CPU fixture与包装格式的差异：host输出二维cluster `[1,1]`，并有`input_zero_storage`包。[新decoder `f1b59f0e`的限定兼容性复审](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R13-early-wait-sum-build/reanalysis/A-wait-sum-time-contract-v1/format-update-v1/README.md)严格验证四包及原生整数`checked=nonzero=0`；纠正cluster表示后，整个前序／周期解析函数与原版AST相同。新7项CPU测试、8个整数边界例及固定原raw的16次前序、4096精确值核对通过；该off记录C16−C1=11500 cycle，累计等待量仍未观测。旧报告保留其原fixture适用范围，原采集失败状态不改写；包装修复没有授予性能、组件时间或预测资格。
+
 换卡或改变目标binary、执行/历史协议、源工作定义、观测/完成端点时，先重新绑定身份，再按实际变化复核受影响的周期、换算与observer→plain映射。未受影响的静态计数和已验证证据可复用；没有对应校准、有效误差合同与新冻结验证时，不扩展正式时间预测的支持范围。当前主线新增的必要源码依赖没有时间费用，也不构成重校准依据。
 
 ### 局部分量的中位数能直接组合吗？
