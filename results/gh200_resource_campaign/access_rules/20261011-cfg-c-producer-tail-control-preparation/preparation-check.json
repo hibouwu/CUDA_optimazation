@@ -2,23 +2,24 @@
   "input_sha256": {
     "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/returned/raw/flag0.jsonl.gz": "760d8bde85c3b153db4cf77b6bcc0c0cb2d8cc6e881a025c27388a2fadf8fd21",
     "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/returned/raw/flag1.jsonl.gz": "1c6a556123b7f0abea82d3f0974f32f70904eb24d0f3a9e68b42366f3f2f8f1e",
-    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_cfg_c_tail_control.py": "50c001bc82baf68778ef08ea8185009b9d6f35ba9a75fd827a863de99f2f443a",
-    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_cfg_c_tail_control.py": "9bcb44a7c049d35f0b82dd11c73e2b9387d32a8921285cd0faa2ec65b9dd5bef",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/analyze_cfg_c_tail_control.py": "025f1a277403d8f72f8e6e39455023b5eaae90ab03fae956eb33e1e2ff566371",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/test_cfg_c_tail_control.py": "6c4d58b3abf407d0bfee1ad068c1c3a7e300736004154b0da1b07a0fd061754c",
     "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/decode_cfg_c_producer_tail.py": "c68609e67f7d527f4bb86afe3caba93da5ec73935bb6c30b9ac4ec136a9cdfe9"
   },
   "smoke_packet_extraction": [
     {
       "id": "flag0",
-      "series": 2556,
+      "series": 4116,
       "ctas": 132
     },
     {
       "id": "flag1",
-      "series": 2556,
+      "series": 4116,
       "ctas": 132
     }
   ],
-  "tests_passed": 14,
+  "tests_passed": 15,
+  "allocation_rejections": 3,
   "perturbation_evaluated": false,
   "new_gpu_run": false,
   "observation_qualified": false

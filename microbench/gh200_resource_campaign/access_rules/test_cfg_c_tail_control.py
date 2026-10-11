@@ -57,6 +57,20 @@ class TailControl(unittest.TestCase):
         self.assertEqual(local['sm_changed'],[True]*10)
         self.assertFalse(r['incremental_control_passed'])
 
+    def test_opposed_endpoints_require_direct_window_gate(self):
+        for p in self.rows:
+            p['series']['0/0/0/0,0/PERMIT']=[1600,2400]
+            p['series']['0/0/0/0,0/W']=[100,150]
+            if p['flag']:
+                p['series']['0/0/0/0,0/MAIN'][0]-=40
+                p['series']['0/0/0/0,0/PERMIT'][0]+=40
+                p['series']['0/0/0/0,0/W'][0]+=80
+        r=evaluate(self.rows,self.manifest)
+        by_name={x['series'].split('/')[-1]:x for x in r['local']}
+        self.assertTrue(by_name['MAIN']['passed'] and by_name['PERMIT']['passed'])
+        self.assertFalse(by_name['W']['passed'])
+        self.assertFalse(r['incremental_control_passed'])
+
     def test_event_outlier_fails_even_with_local_agreement(self):
         self.rows[1]['elapsed_us']=106
         result=evaluate(self.rows,self.manifest)

@@ -39,12 +39,18 @@ def process(events, sample, gpu_uuid):
         for role in record['roles']:
             wg = role['wg']
             series[f'{cta}/{wg}/FINAL'] = [role['final_ns']-origin_ns, role['final_cycles']-origin_cycles]
+            previous_ns, previous_cycles = head[13], head[3]
             for j, tile in enumerate(role['tiles']):
                 coord = ','.join(map(str, tile['work']))
                 prefix = f'{cta}/{wg}/{j}/{coord}/'
                 for k, name in enumerate(('FIRST', 'MAIN', 'PERMIT', 'DONE')):
                     series[prefix+name] = [tile['ns'][k]-origin_ns, tile['cycles'][k]-origin_cycles]
                 series[prefix+'L'] = [tile['ns'][1]-tile['ns'][0], tile['cycles'][1]-tile['cycles'][0]]
+                for name, begin, end in (('W',1,2),('E',2,3)):
+                    series[prefix+name] = [tile['ns'][end]-tile['ns'][begin], tile['cycles'][end]-tile['cycles'][begin]]
+                series[prefix+'GAP'] = [tile['ns'][0]-previous_ns, tile['cycles'][0]-previous_cycles]
+                previous_ns, previous_cycles = tile['ns'][3], tile['cycles'][3]
+            series[f'{cta}/{wg}/TAIL'] = [role['final_ns']-previous_ns, role['final_cycles']-previous_cycles]
     return dict(id=sample['id'], pair=sample['pair'], flag=sample['flag'], elapsed_us=elapsed, series=series, sms=sms)
 
 

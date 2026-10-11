@@ -23,6 +23,8 @@ if [{k:r[k] for k in ('id','pair','flag','command')} for r in records]!=manifest
     raise ValueError('complete ordered manifest samples required')
 if json.loads((data/'complete.json').read_text())!=dict(manifest_sha256=sha(root/'manifest.json'),records=20):
     raise ValueError('completion marker mismatch')
+from validate_allocation import validate
+validate((data/'allocation.txt').read_text())
 processes=[]
 for row in records:
     path=data/row['raw']

@@ -10,4 +10,6 @@ SM变化逐对保存，ns判定保留所有记录；原生cycle只作同一记�
 
 本对照只能约束在现有dual基础上新增tail采样的增量扰动。off无tail戳，不能直接评价tail端点偏差；也不能授予dual基础观测、硬件包围、D可见或整kernel完成资格。已存在的观察失败不被覆盖。
 
-当前已完成具体命令、串行采集器和逐系列判定器，尚未冻结或执行。判定器从两份旧smoke包各提取2556系列/132CTA并验证数值，但未用单对评价扰动。14项相关测试通过，包含端点共同平移但L不变、单个超限尾值、正负相消、SM变化保留、缺失/重排/错坐标/bool flag拒绝及event/CV失败。采集器先以setup核对实际CUDA设备，再按清单运行20目标进程，不重试；分析器要求完整冻结链、归档回执和完成标记。运行前仍须完成独立规格审查、远端独占执行脚本和完整冻结包；没有正式结果。正确性审查见前一correctness目录的main-producer-tail-correctness-review-v1。
+当前已完成具体命令、串行采集器和逐系列判定器，尚未冻结或执行。判定器从两份旧smoke包各提取4116系列/132CTA并验证数值，但未用单对评价扰动。15项相关测试通过，包含端点共同平移但L不变、单个超限尾值、正负相消、SM变化保留、缺失/重排/错坐标/bool flag拒绝及event/CV失败。采集器先以setup核对实际CUDA设备，再按清单运行20目标进程，不重试；分析器要求完整冻结链、归档回执和完成标记。远端独占脚本和分配检查已写好，验证a058/288CPU/4GPU及OverSubscribe=NO；用旧合法分配记录和三种篡改副本验证拒绝。运行前仍须完成独立规格审查和完整冻结包；没有正式结果。正确性审查见前一correctness目录的main-producer-tail-correctness-review-v1。
+
+冻结前按C审查补入派生窗口：W=PERMIT−MAIN、E=DONE−PERMIT、GAP=FIRST−previous DONE（首输出减producer-start）、TAIL=FINAL−last DONE，均逐系列应用同一64/256ns门槛。MAIN变化−40ns且PERMIT变化+40ns时，两个entry相对端点各自可通过64ns，但W变化80ns必须失败；已加入整数反例测试。该修改未读取新对照结果、未增加硬件观察点或放宽门槛。
