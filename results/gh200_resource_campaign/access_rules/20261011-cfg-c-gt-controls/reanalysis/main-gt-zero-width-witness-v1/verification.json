@@ -1,0 +1,16 @@
+{
+  "counterexamples": 55,
+  "delta_cycle_histogram": {
+    "12": 1,
+    "8": 54
+  },
+  "independently_enumerated": true,
+  "input_SHA": 88,
+  "negative_certificates_rejected": 4,
+  "observation_qualified": false,
+  "ordered_same_SM_pairs": 29040,
+  "prediction_qualified": false,
+  "processes": 11,
+  "raw_stamps": 9504,
+  "zero_width_equal_coordinate_pairs": 55
+}

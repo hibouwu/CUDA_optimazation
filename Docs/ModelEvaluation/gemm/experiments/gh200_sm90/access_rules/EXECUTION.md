@@ -297,3 +297,5 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 [旧R10完整MMA与输入退出复核](../../../../../../results/gh200_resource_campaign/access_rules/20261007-R10-job735876-v4/reanalysis/main-boundary-lifecycle-v1/README.md)：B ff4a7423接入8a5413a0，两侧18SHA、完整报告重算同、199R13测试；独立轴工作守恒/672释放指针/6槽位退出证书通过。每K组固定8 atom，K16仍保留6个零有效K调用；每输出31普通释放+1tail释放，empty须128到达。输出切换q5才依赖前输出tail，producer_tail仅关闭输入阶段；零源fill、empty完成与旧pingpong输出接口仍未定价，无GPU/新资格。
 
 [旧首输出记录分段重放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R18-first-output-correctness/reanalysis/main-record-partitions-v1/README.md)：C交付7SHA、各37输入SHA及完整报告/4数据文件一致；48角色/288分段/144有符号差、96调用内和48差值闭合、16384数值通过。740067为432卡非排他correctness采集，各map的prefix沿用自身目标参数，不能称相同历史状态或map因果性能比较。保留全部原记录、控制失败和资格false，无新GPU/模型/价格。
+
+[零宽GT联合双点反例主线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-gt-zero-width-witness-v1/README.md)：A 30e5a211接入ef02d2e5，8交付/88输入SHA、2完整分析及独立verify逐字节同。11进程9504三元组/29040同SM有序双点中55个零宽GT同坐标却CLOCK不同（54×8cycles、1×12）；拒绝e=0精确物理盒与同SM单值非递减CLOCK的联合前提，不识别乱序/实际GT误差或拟合e。边际代数与零lag生命周期可行性均不能认证联合物理锚点，原控制失败/资格false保留，无新GPU/价格。

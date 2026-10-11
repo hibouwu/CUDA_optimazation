@@ -1,0 +1,10 @@
+{
+  "GPU_submitted": false,
+  "analysis_files_byte_identical": {
+    "summary.json": "627ee63b454a2c7c21d0c8e87b4ce1d993c2ff7e10e92bcdafcaac2735857e75",
+    "witnesses.jsonl": "1016a283f7124ccfe76c6e55fa49109997d81238c876b5a89acb20f0d0591890"
+  },
+  "fresh_directory_replay": true,
+  "independent_verification_byte_identical": true,
+  "rate_or_error_budget_fitted": false
+}
