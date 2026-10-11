@@ -332,3 +332,27 @@ producer acquire先等empty，再由本地leader对full设置期望字节。A在
 因此“A本地变慢→本rank释放变晚→两个producer可复用stage变晚→后续B/full一起变晚”在源码依赖图上可行，与两rank共同延长一致。它尚未证明实测4μs沿这条链传播，也没有给链中每段定值；单CTA平均供给取max会丢掉有限stage和跨rank代次关系，仅增加cluster字节价格不能恢复这些约束。
 
 后续若使用前述稀疏布局，关键是两个rank保存同一K迭代的wait前/后和commit/group-wait后时刻，才能看出是否一方较晚到达、另一方在相应区间等待。若差异确实集中在full等待，仍需该pipeline阶段的producer acquire/issue及consumer release端点，才能区分未供给与晚伙伴释放导致的回压；当前不提前增加这些打点，也不拟合cluster罚项。[同调用配对、静态非伙伴对照与逐进程来源](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
+
+### 两 rank 的显式依赖与剩余可辨识范围（2026-10-11）
+
+`output_model.cfg_a_rank_dependencies` 将当前 cfg_a 源码写成纯依赖图：全局 K-group `g` 跨输出连续，slot 为 `g % S`，generation 为 `g // S`。本 rank 的 full 需要 producer 的一次 `arrive_and_expect_tx`、本地 A 的16KiB完成及两个 rank 各8KiB B分片到本目的地的完成，合计32KiB。B分片每个由两个4KiB atom构成。slot重用需要上一代两个rank、每rank两个consumer WG共四次empty arrival；release发出与远端可见是不同节点。
+
+group g 的稳态安全释放需要 commit(g+1) 和 g 已退休；每个输出最后一组单列 `wait<0>`。MAIN_END在最后release发出之后，不保证远端empty已可见。图中没有填入供给、GMMA、仲裁或观察器服务价，也不复用到cfg_b/c。
+
+离线入口 `analyze_r18.py --rank-dependencies` 读取739095、739529及四个V09条件，共100个dual进程，逐值重放4096个保存输出并核对原始SHA。静态选择每种完整工作/fill序列的首个cluster，对370个“进程内cluster轨迹”施加已有FIRST/MAIN/PERMIT/DONE/final端点，零最小延迟约束均可行。这仅证明粗端点没有与图冲突。以P1的静态CTA6/7为例，g6 full、mma返回和末组排空端点的区间宽度中位均为20224ns；producer尾部与D全局可见仍无有限上界，不能由可行性判定回压原因。
+
+同样的静态边界类别还具有不同幅度。下表固定739095的logical M960/storage M1024，列出role2、first/T2的 map960 L减map1024 L；每个CTA先逐trial配对，再取十进程中位，未扣内部CTA偏移。
+
+| 完整伙伴 / 自身partial CTA | 完整伙伴差 ns | partial差 ns |
+|---|---:|---:|
+| 6 / 7 | 96 | 80 |
+| 14 / 15 | 4528 | 4576 |
+| 22 / 23 | 4240 | 4208 |
+| 30 / 31 | 1600 | 1616 |
+| 38 / 39 | 4256 | 4192 |
+
+因此，单个cluster类别的固定罚项不能决定类别内部的最后完成者；仅测类别中第一对也可能漏掉强响应。原逐进程配对与全部CTA残差保存在[新独立分析](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)，未修改V09候选集合。
+
+一个非拟合的构造性反例进一步限定了现有证据：固定同一套示意服务价，将同一B源对两目的地的额外延迟放在g6或g63，得到完全相同的两轮FIRST/MAIN端点、首轮两个rank的L共同增加2520ns、后轮L恢复；但commit16的增量分别为2520ns和0。这不能说明真实瓶颈就是B，也不能把示意价格用于预测；它证明现有粗端点不能唯一定位延迟位置。单点局部A延迟的另一个示例虽产生首轮共慢，却留下1480ns的rank间MAIN差，未复现已有近对齐现象；该失败只适用于这套固定价格和干预，不排除其它A路径解释。
+
+已向主集成交付[最小稀疏观察请求](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/minimum-observation.md)。第一步覆盖全部五个静态受影响T2 cluster及一个内部对照，记录四个固定commit切点和mma返回；若区间指向循环内等待，再申请对应代次的full/empty/release观察。该阶段用于辨识，不计作新的局部留出或模型通过。

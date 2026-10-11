@@ -1802,12 +1802,272 @@ def boundary_cluster_coupling(base,output):
     return dict(pairs=len(all_pairs),process_strata=len(processes),summary_rows=len(summary))
 
 
+def rank_dependency_anchors(ctas):
+    """Coarse leader stamps constrain program events, never remote arrival visibility."""
+    if len(ctas)!=2 or len(ctas[0]['work'])!=len(ctas[1]['work']):
+        raise ValueError('requires a two-rank cooperative pair with equal tile counts')
+    origin=min(c['entry_ns'] for c in ctas)
+    anchors={}
+    for rank,cta in enumerate(ctas):
+        first=min(role['tiles_ns'][0][0] for role in cta['roles'])
+        anchors[f'r{rank}.g0.acquire']=(cta['entry_ns']-origin,first-origin)
+        for wg,role in enumerate(cta['roles']):
+            for tile,times in enumerate(role['tiles_ns']):
+                for event,time in zip(('FIRST','MAIN','PERMIT','DONE'),times):
+                    anchors[f'r{rank}.w{wg}.t{tile}.{event}']=(time-origin,time-origin)
+            anchors[f'r{rank}.w{wg}.FINAL']=(role['final_ns']-origin,role['final_ns']-origin)
+    return origin,anchors
+
+
+def validate_rank_setup(static,sample):
+    """Bind the source-specific graph to this process's geometry and GPU."""
+    for field in ('config','grid','stages','cluster','tile','epilogue_tile','gpu_uuid'):
+        if static.get(field)!=sample.get(field):
+            raise ValueError('rank dependency setup changed: '+field)
+    if static['config']=='cfg_a' and (static['cluster']!=[2,1] or static['tile']!=[128,128,64]
+                                     or static['epilogue_tile']!=[128,32]):
+        raise ValueError('unsupported cfg_a rank dependency geometry')
+
+
+def rank_dependency_witnesses():
+    """Illustrative fixed-price traces; no prices are inferred from GPU observations."""
+    from output_model import cfg_a_rank_dependencies,dependency_bounds
+    graph=cfg_a_rank_dependencies(6,64,2)
+    prices={}
+    for name in graph['nodes']:
+        prices[name]=(300 if name.endswith('.retired') else 10 if
+                      name.endswith('.A_visible') or '.B_to_r' in name else
+                      200 if name.endswith('.DONE') else 1)
+    baseline=dependency_bounds(graph,latencies_ns=prices)
+    scenarios=[]
+    interventions=[('local_A_g6',['r1.g6.A_visible']),
+                   ('shared_B_g6',['r1.g6.B_to_r0','r1.g6.B_to_r1']),
+                   ('shared_B_g63',['r1.g63.B_to_r0','r1.g63.B_to_r1'])]
+    for name,events in interventions:
+        changed=dict(prices)
+        for event in events:changed[event]+=4000
+        bounds=dependency_bounds(graph,latencies_ns=changed)
+        endpoints=[]
+        for rank in range(2):
+            for tile in range(2):
+                prefix=f'r{rank}.w1.t{tile}.'
+                first,main=(bounds[prefix+event][0] for event in ('FIRST','MAIN'))
+                old_first,old_main=(baseline[prefix+event][0] for event in ('FIRST','MAIN'))
+                endpoints.append(dict(rank=rank,tile=tile,FIRST_ns=first,MAIN_ns=main,
+                    delta_MAIN_ns=main-old_main,delta_L_ns=(main-first)-(old_main-old_first)))
+        cuts=[]
+        for rank in range(2):
+            for group,event in [(0,'commit'),(16,'commit'),(32,'commit'),(63,'commit'),(63,'mma_return')]:
+                node=f'r{rank}.w1.g{group}.{event}'
+                cuts.append(dict(rank=rank,group=group,event=event,delta_ns=bounds[node][0]-baseline[node][0]))
+        scenarios.append(dict(name=name,extra_lag_ns=4000,events=events,endpoints=endpoints,cuts=cuts))
+    return dict(scope='Synthetic existence witnesses only; not calibrated or accepted quantitative explanations.',
+        prices_ns=dict(retired=300,destination_completion=10,DONE=200,other=1),scenarios=scenarios,
+        shared_early_and_late_have_identical_coarse_endpoints=scenarios[1]['endpoints']==scenarios[2]['endpoints'])
+
+
+def analyze_rank_dependencies(base,output):
+    """C-only offline dependency intervals and frozen per-CTA residuals; no refitting."""
+    import csv
+    from analyze_r13_sm import select_attempts
+    from output_model import cfg_a_rank_dependencies,dependency_bounds
+    base,output=Path(base),Path(output)
+    if output.exists():raise ValueError('output must be a new directory')
+    run_names=('20261010-R09-R13-R18-failure-controls',
+               '20261010-R18-cluster-fill-discrimination','20261009-V09-heldout-job739011')
+    frozen_path=base/run_names[-1]/'frozen/predictions.json'
+    predictions=json.loads(frozen_path.read_text())['predictions']
+    v09_cases={'v09d_cfg_a_G3_base','v09d_cfg_a_G3_A16',
+               'v09d_cfg_a_P1_partial_first_and_later','v09d_cfg_c_P2_partial_later_sw8'}
+    provenance={str(frozen_path):common.sha(frozen_path)}
+    cta_rows,stage_rows,interval_rows,processes,cases=[],[],[],[],[]
+    graphs={};dual_calls={};case_rows={};static_features={}
+    for run in run_names:
+        root=base/run
+        for name in ('cases.json','static_setup.json','environment.json'):
+            provenance[str(root/name)]=common.sha(root/name)
+        rows=[r for r in json.loads((root/'cases.json').read_text()) if
+              r['id'].startswith(('r18_partial_map','r18_cluster_fill_map')) or r['id'] in v09_cases]
+        setups={s['case']:s['setup'] for s in json.loads((root/'static_setup.json').read_text())}
+        for row in rows:
+            case_rows[run,row['id']]=row
+            setup=setups[row['id']]
+            features=static_boundary_features(row,setup)
+            static_features[run,row['id']]={(f['cta'],f['j']):f for f in features}
+            feature_lookup={(f['cta'],f['j']):f for f in features}
+            selected,failed,ignored=select_attempts(root,row['id'],('dual',))
+            representatives={}
+            if row['config']=='cfg_a':
+                first_groups=defaultdict(list)
+                for feature in features:
+                    if feature['j']==0:first_groups[tuple(feature['cluster'])].append(feature)
+                for cluster,members in sorted(first_groups.items()):
+                    members.sort(key=lambda f:f['rank'])
+                    if len(members)!=2 or len({f['T'] for f in members})!=1:
+                        raise ValueError('static cooperative cluster mismatch')
+                    pair=[f['cta'] for f in members];total=members[0]['T'];signature=[]
+                    for tile in range(total):
+                        fs=[feature_lookup[cta,tile] for cta in pair]
+                        if fs[0]['cluster']!=fs[1]['cluster'] or [f['rank'] for f in fs]!=[0,1]:
+                            raise ValueError('partners changed across output tiles')
+                        signature.append(tuple((boundary_geometry(row,f['coord']),f['operands']['A']['own']) for f in fs))
+                    representatives.setdefault((total,tuple(signature)),pair)
+            prediction=predictions.get(row['id']) if run==run_names[-1] else None
+            case=dict(run=run,case=row['id'],config=row['config'],selected_dual_processes=len(selected),
+                gpu_uuid=setup['gpu_uuid'],
+                failed_attempts=failed,ignored_attempts=ignored,static_pairs=list(representatives.values()),
+                static_selection='First lexicographic work cluster per T and full output/fill sequence; no timing or last-CTA input.',
+                frozen_candidates=prediction['critical_candidates'] if prediction else None,
+                frozen_representative=prediction['critical_cta'] if prediction else None)
+            case_processes=[]
+            for item in selected:
+                record=item['record'];source=str(root/record['raw'])
+                provenance[source]=record['raw_sha256']
+                observed=replay(root,record,row,retain_roles=True)
+                with gzip.open(source,'rt') as stream:
+                    sample_setup=next(event for line in stream for event in [json.loads(line)] if event['event']=='setup')
+                validate_rank_setup(setup,sample_setup)
+                dual_calls[run,row['id'],record['trial']]=observed
+                ctas=observed['ctas'];origin=min(c['entry_ns'] for c in ctas)
+                envelope=max(c['end_ns'] for c in ctas)-origin
+                for feature in features:
+                    if tuple(ctas[feature['cta']]['work'][feature['j']])!=tuple(feature['coord']):
+                        raise ValueError('static work differs from observed work')
+                stages=boundary_stage_rows(row,observed,prediction,source)
+                for stage in stages:
+                    stage['run']=run
+                    if stage['prediction_ns'] is not None:stage['error_ns']=stage['prediction_ns']-stage['ns']
+                stage_rows.extend(stages)
+                critical=critical_replacements(ctas,prediction) if prediction else None
+                if critical:
+                    critical.pop('ctas')
+                    critical['representative_finish_deficit_fraction']=critical['representative_finish_deficit_ns']/envelope
+                feasibility=[]
+                for pair in representatives.values():
+                    pair_ctas=[ctas[c] for c in pair];total=len(pair_ctas[0]['work']);kt=row['k']//64
+                    key=setup['stages'],kt,total
+                    if key not in graphs:graphs[key]=cfg_a_rank_dependencies(*key)
+                    graph=graphs[key];pair_origin,anchors=rank_dependency_anchors(pair_ctas)
+                    try:
+                        bounds=dependency_bounds(graph,anchors)
+                    except ValueError as error:
+                        feasibility.append(dict(ctas=pair,status='infeasible',reason=str(error)))
+                        continue
+                    feasibility.append(dict(ctas=pair,status='feasible'))
+                    sampled=[]
+                    for tile in range(total):
+                        for local in sorted({0,setup['stages'],kt//2,kt-1}):
+                            group=tile*kt+local
+                            for rank in range(2):
+                                sampled.extend(f'r{rank}.g{group}.{event}' for event in ('acquire','A_visible','full'))
+                                sampled.extend(f'r{s}.g{group}.B_to_r{rank}' for s in range(2))
+                                for wg in range(2):
+                                    sampled.extend(f'r{rank}.w{wg}.g{group}.{event}' for event in
+                                                   ('wait_return','retired','safe_release','release_issue'))
+                                    sampled.append(f'r{rank}.w{wg}.g{group}.empty_to_r{1-rank}')
+                                    if local==kt-1:
+                                        sampled.extend(f'r{rank}.w{wg}.g{group}.{event}' for event in ('mma_return','tail_wait0'))
+                    sampled.extend(['r0.producer_tail','r1.producer_tail','r0.output_source_read',
+                                    'r1.output_source_read','r0.D_visible','r1.D_visible','source_safe_exit','cuda_complete'])
+                    for rank in range(2):
+                        for subtile in sorted({0,3,4*total-1} | ({4} if total>1 else set())):
+                            sampled.extend(f'r{rank}.d{subtile}.{event}' for event in
+                                ('r2s','store_issue','acquire_after','source_read','D_visible'))
+                    for event in sampled:
+                        low,high=bounds[event]
+                        interval_rows.append(dict(run=run,case=row['id'],trial=record['trial'],ctas='+'.join(map(str,pair)),
+                            source=source,pair_origin_minus_call_origin_ns=pair_origin-origin,event=event,
+                            lower_ns=low,upper_ns=high,width_ns=None if low is None or high is None else high-low))
+                for cta in ctas:
+                    predicted=prediction['cta_duration_ns'][cta['cta']] if prediction else None
+                    own=[feature_lookup[cta['cta'],j]['operands']['A' if row['config']=='cfg_a' else 'B']['own']
+                         for j in range(len(cta['work']))]
+                    cta_rows.append(dict(run=run,case=row['id'],trial=record['trial'],cta=cta['cta'],sm=cta['sm'],
+                        source=source,work=cta['work'],own_fill_kib=own,entry_offset_ns=cta['entry_ns']-origin,
+                        end_offset_ns=cta['end_ns']-origin,duration_ns=cta['end_ns']-cta['entry_ns'],
+                        prediction_ns=predicted,duration_error_ns=None if predicted is None else predicted-(cta['end_ns']-cta['entry_ns']),
+                        finish_error_ns=None if predicted is None else predicted-(cta['end_ns']-origin),
+                        finish_gap_ns=max(c['end_ns'] for c in ctas)-cta['end_ns'],
+                        frozen_candidate=None if prediction is None else cta['cta'] in prediction['critical_candidates']))
+                process=dict(run=run,case=row['id'],trial=record['trial'],source=source,
+                    observed_envelope_ns=envelope,critical=critical,dependency_feasibility=feasibility)
+                processes.append(process);case_processes.append(process)
+            if prediction:
+                values=[p['critical'] for p in case_processes]
+                case['critical_summary']=dict(candidate_count=len(prediction['critical_candidates']),
+                    frozen_hits=sum(v['frozen_hit'] for v in values),entry_only_hits=sum(v['entry_only_hit'] for v in values),
+                    internal_only_hits=sum(v['internal_only_hit'] for v in values),
+                    median_best_frozen_finish_gap_ns=statistics.median(v['best_frozen_finish_deficit_ns'] for v in values),
+                    median_representative_finish_gap_fraction=statistics.median(v['representative_finish_deficit_fraction'] for v in values))
+            cases.append(case)
+    paired_rows=[]
+    for (run,case),row in case_rows.items():
+        if 'input_map_m' not in row or row['input_map_m']==1024:continue
+        baseline=next(r for (name,_),r in case_rows.items() if name==run and r.get('input_map_m')==1024)
+        for key,observed in sorted(dual_calls.items()):
+            if key[:2]!=(run,case):continue
+            reference=dual_calls[run,baseline['id'],key[2]]
+            for current,control in zip(observed['ctas'],reference['ctas']):
+                if current['work']!=control['work']:raise ValueError('paired input-map work differs')
+                for wg,(role,other) in enumerate(zip(current['roles'],control['roles'])):
+                    for tile,(times,base_times) in enumerate(zip(role['tiles_ns'],other['tiles_ns'])):
+                        feature=static_features[run,case][current['cta'],tile]
+                        paired_rows.append(dict(run=run,case=case,baseline=baseline['id'],trial=key[2],
+                            cta=current['cta'],role=wg,j=tile,T=len(current['work']),
+                            geometry=boundary_geometry(row,current['work'][tile]),own_fill_kib=feature['operands']['A']['own'],
+                            cluster_fill_kib=feature['operands']['A']['cluster_sum'],
+                            delta_L_ns=(times[1]-times[0])-(base_times[1]-base_times[0])))
+    paired_groups=defaultdict(list)
+    for row in paired_rows:
+        paired_groups[tuple(row[k] for k in ('run','case','baseline','cta','role','j','T','geometry','own_fill_kib','cluster_fill_kib'))].append(row['delta_L_ns'])
+    paired_summary=[]
+    for key,values in sorted(paired_groups.items()):
+        paired_summary.append(dict(zip(('run','case','baseline','cta','role','j','T','geometry','own_fill_kib','cluster_fill_kib'),key),
+            processes=len(values),median_delta_L_ns=statistics.median(values),min_delta_L_ns=min(values),max_delta_L_ns=max(values)))
+    output.mkdir(parents=True,exist_ok=False)
+    for name,rows in [('cta-residuals',cta_rows),('stage-residuals',stage_rows),('event-intervals',interval_rows),
+                      ('paired-L-processes',paired_rows),('paired-L-summary',paired_summary)]:
+        fields=list(dict.fromkeys(k for row in rows for k in row))
+        with gzip.open(output/(name+'.csv.gz'),'wt',newline='') as stream:
+            writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(rows)
+    graph_paths=[]
+    for key,graph in sorted(graphs.items()):
+        name='cfg_a-S%d-K%d-T%d.json'%key
+        common.write_json(output/name,graph);graph_paths.append(name)
+    source_root=base/run_names[1]/'source'
+    source_files=['overlay/cutlass/gemm/collective/sm90_mma_tma_gmma_ss_warpspecialized.hpp',
+        'overlay/cutlass/gemm/kernel/sm90_gemm_tma_warpspecialized_cooperative.hpp',
+        'cutlass/include/cutlass/pipeline/sm90_pipeline.hpp',
+        'cutlass/include/cutlass/epilogue/collective/sm90_epilogue_tma_warpspecialized.hpp',
+        'cutlass/include/cutlass/epilogue/collective/builders/sm90_builder.inl',
+        'probes/r18.cu',
+        'cutlass/include/cute/arch/copy_sm90_tma.hpp']
+    result=dict(scope='Existing-data diagnostic, no new heldout, calibrated prices or revised frozen candidates.',
+        cases=cases,processes=processes,synthetic_witnesses=rank_dependency_witnesses(),graphs=graph_paths,
+        row_counts=dict(cta=len(cta_rows),stage=len(stage_rows),interval=len(interval_rows)),raw_sha256=provenance,
+        code_sha256={name:common.sha(Path(__file__).parent/name) for name in
+                     ('output_model.py','analyze_r18.py','supply_model.py')},
+        source_sha256={name:common.sha(source_root/name) for name in source_files},
+        limits=['Leader stamps anchor only coarse program events; remote empty visibility is not MAIN_END.',
+                'Zero-lag feasibility permits arbitrary unpriced waiting and does not select a cause.',
+                'D_visible and CUDA completion have no upper bound from source-read/final consumer stamps.',
+                'cfg_c is scored using frozen predictions only; this cfg_a graph is not transferred to it.',
+                'Identical frozen ties are preserved and do not prove observation granularity or localization.'])
+    common.write_json(output/'C-rank-dependencies.json',result)
+    return result
+
+
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True,type=Path);p.add_argument('--output',type=Path)
     p.add_argument('--v08-padding',action='store_true')
     p.add_argument('--input-map-pairs',action='store_true')
+    p.add_argument('--rank-dependencies',action='store_true')
     a=p.parse_args()
-    if a.input_map_pairs:
+    if a.rank_dependencies:
+        if a.output is None:p.error('--rank-dependencies requires a new --output directory')
+        result=analyze_rank_dependencies(a.input.resolve(),a.output)
+        print(json.dumps(dict(cases=len(result['cases']),row_counts=result['row_counts'])))
+    elif a.input_map_pairs:
         if a.output is None:p.error('--input-map-pairs requires a new --output directory')
         analyze_input_map_pairs(a.input.resolve(),a.output)
     elif a.v08_padding:

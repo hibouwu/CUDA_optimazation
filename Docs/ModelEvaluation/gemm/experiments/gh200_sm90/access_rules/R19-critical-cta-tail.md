@@ -103,7 +103,7 @@ python3 microbench/gh200_resource_campaign/access_rules/analyze_r15.py --v08-out
 
 ### V09 的关键 CTA（2026-10-09）
 
-[V09](V09-component-validation.md) 保留冻结时的精确并列集合，没有测后扩大。cfg_a G3 A+16B中，模型选出的代表CTA比真正最后完成者的CTA内耗时短约14.60%；真正最后完成者仍落在132个并列候选中，因此集合命中不等于唯一定位。cfg_c partial/swizzle8中，真正最后完成者在10/10进程里均不属于冻结的7个候选，而该例总时间误差只有−5.75%。后续先用本批entry/end与分项记录区分入口偏斜和CTA内部耗时，不能用总时间达标代替定位正确。
+[V09](V09-component-validation.md) 保留冻结时的精确并列集合，没有测后扩大。cfg_a G3 A+16B中，冻结代表CTA相对实际最后完成者的共同globaltimer退出缺口，中位为调用包络 `max(final_ns)−min(entry_ns)` 的14.641%；真正最后完成者仍落在132个并列候选中，因此集合命中不等于唯一定位。cfg_c partial/swizzle8中，真正最后完成者在10/10进程里均不属于冻结的7个候选，而该例总时间误差只有−5.75%。后续先用本批entry/end与分项记录区分入口偏斜和CTA内部耗时，不能用总时间达标代替定位正确。
 
 
 <a id="v09-critical-failure"></a>
@@ -137,5 +137,9 @@ A16 的132个并列候选覆盖全体CTA，集合命中不提供定位能力。�
 更关键的是，P2十次进程中，实际最后CTA及其唯一静态cluster伙伴都不属于冻结的7个候选。常见实际pair为CTA56/122，也有9/75、35/101、11/77；这些身份直接由同调用端点和静态scheduler核对。问题发生在cluster之间的服务排序，不能通过把每个冻结候选再加上伙伴来解决。这里没有扩充或替换冻结候选集合。
 
 因此保留两个不同结论：cluster内部时间轨迹高度相关；哪一个cluster最后完成仍没有预测好。前者不能当作后者已解决的证据。[逐进程实际最后cluster及与冻结集合的交集](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/candidate-development-v1/C-cluster-coupling.json)。
+
+2026-10-11的[独立端点重放](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)再次保持冻结集合原样。A16的132候选命中10/10，代表共同退出缺口14.641%；P1的38候选命中10/10、代表缺口9.459%；P2的7候选命中0/10，最佳冻结候选距实际最后者的绝对缺口中位4640ns。仅替换实测入口的诊断在三者均命中0/10，而替换同CTA内部时长均命中10/10。这里的共同退出缺口与前述14.60%的CTA局部时长差采用不同分母，不互相替代。
+
+739095的新逐CTA配对还表明，P1同一静态受影响类别内部的响应从约0.1μs到4.6μs不等，详见[R18](R18-cluster-boundary.md#两-rank-的显式依赖与剩余可辨识范围2026-10-11)。类别能够覆盖响应位置，但不足以预测类别内部排序；下一观察覆盖全部五个静态cluster，不按实际最后者选点，也不扩大任何V09冻结候选。
 
 [R10工作序列交换](R10-layout-cache.md#work-swap)中，cfg_b的CTA55/91仍在SM55/87，交换完整工作后强弱行距响应仍留原物理位置。此前基址平移也未让响应整体移动。现在已排除只靠这两条逻辑工作序列定价，但物理CTA、SM位置及其形成的到达状态尚未解耦，不能命名源地址bank或GPC服务规则；该绑定也不外推到其它grid、卡或驱动。本批同源组端点显示早/晚软件位置也保留；739619随后固定位置干预producer起步，行距响应仍变化，位置常数也不足。时间状态约束见[R10](R10-layout-cache.md#producer-delay)，不为定位最后完成者增加测后候选。

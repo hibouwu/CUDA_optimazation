@@ -256,3 +256,18 @@ P1 中输出项偏高、主循环偏低，构成局部误差抵消。P2 输出�
 固定输出的 P1 map 补测进一步分离了两项：新 a058 卡上，将输入 map960 扩到1024，plain缩短4.080 μs，dual相对plain扰动仍仅2.41%/2.11%。同角色配对中 first partial 及其完整cluster伙伴的 L各缩短约4.13/4.14 μs，而各类E配对中位变化介于−32与+80 ns，末尾tail也没有同量级改善。最后完成CTA的sum E反而由约2.256变为2.528 μs。收益由输入边界相关的主循环变化主导；这些是新卡同期差值，不是旧V09输出系数的跨卡校准。配对明细见[R18](R18-cluster-boundary.md#v09-boundary-failure)。
 
 逐 CTA 分解保存在 [C-processes](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-heldout-job739011/reanalysis/failure-decomposition-v1/C-processes.json)；输入路径的干预证据集中在 [R18](R18-cluster-boundary.md#v09-boundary-failure)，身份错位集中在 [R19](R19-critical-cta-tail.md#v09-critical-failure)。无需为上述输出归因另加一组 epilogue 测量。
+
+## cfg_a 的输出缓冲依赖（2026-10-11）
+
+`output_model.cfg_a_rank_dependencies` 现将本批实际输出配置写入无服务价的事件图。cfg_a的epilogue tile为128×32，完整128×128 FP32输出对应四个名义16KiB子tile；`ElementC=void`，源码选择`DelayTmaStore=true`、`ReuseSmemC=false`和`StagesD=2`。这与前文cfg_b的八个8KiB子tile不同；名义字节数不等于partial/OOB的物理流量。
+
+子tile q的寄存器准备可先于q−1的TMA提交；写入共享缓冲前，必须经过q−1提交后的acquire。两缓冲状态跨输出连续，q使用`q % 2`，generation为`q // 2`。`acquire_after(q)`保证除最近提交批次外的旧源读取已完成，所以中间输出DONE允许最后一笔源读取继续进行。下一输出的首笔提交/acquire可提供上一输出最后子tile的源复用保证，其间包含下一主循环，不能另算一笔裸输出服务。
+
+| 事件 | 依赖所保证的边界 |
+|---|---|
+| `DONE` | store调用返回，最后一笔源读取可以仍在进行 |
+| `output_source_read` | 全部已提交子tile的源读取完成；最终issuer `.read0` 返回提供该保证 |
+| `D_visible` | 全部D写入全局可见，与源读取完成分开 |
+| `cuda_complete` | 输入producer尾部、consumer退出及D写入均完成 |
+
+已有consumer final戳约束最终issuer的源读取完成，但不能给D可见或producer尾部提供有限上界。图没有把CUDA event的elapsed标量当作内部globaltimer绝对端点。此图只保留执行和复用约束，没有改变现行`output_intervals`参数、partial插值或V09输出成绩；尚不能据此报告输出模型通过。源码SHA、逐事件可行区间及跨输出缓冲测试见[独立分析](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)。R14跨域页面由主集成统一更新。
