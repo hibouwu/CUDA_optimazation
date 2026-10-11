@@ -1,0 +1,5 @@
+{
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "test_actual_archived_off_record_format (test_r13_wait_sum.WaitSumTests.test_actual_archived_off_record_format) ... ok\ntest_actual_cpp_collector_partition_and_bad_sequences (test_r13_wait_sum.WaitSumTests.test_actual_cpp_collector_partition_and_bad_sequences) ... ok\ntest_first_wait_cannot_start_after_group16_marker (test_r13_wait_sum.WaitSumTests.test_first_wait_cannot_start_after_group16_marker) ... ok\ntest_history_identity_other_cta_and_native_integer_rejected (test_r13_wait_sum.WaitSumTests.test_history_identity_other_cta_and_native_integer_rejected) ... ok\ntest_missing_duplicate_and_escaping_intervals_rejected (test_r13_wait_sum.WaitSumTests.test_missing_duplicate_and_escaping_intervals_rejected) ... ok\ntest_numerical_witness_checked_independently (test_r13_wait_sum.WaitSumTests.test_numerical_witness_checked_independently) ... ok\ntest_partition_and_disabled_is_missing (test_r13_wait_sum.WaitSumTests.test_partition_and_disabled_is_missing) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 0.214s\n\nOK\n"
+}
