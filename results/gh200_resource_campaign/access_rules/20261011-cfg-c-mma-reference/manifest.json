@@ -1,0 +1,159 @@
+{
+  "status": "frozen",
+  "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+  "binary_sha256": "ec9375c227a4262eaf1473b4b8bd7fa86add18f147d2c6e7c820dbfbab80feab",
+  "build_run": "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference-preparation",
+  "samples": [
+    {
+      "id": "g64_p0",
+      "trial": 0,
+      "iterations": 64,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "64"
+      ]
+    },
+    {
+      "id": "g1024_p0",
+      "trial": 0,
+      "iterations": 1024,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "1024"
+      ]
+    },
+    {
+      "id": "g64_p1",
+      "trial": 1,
+      "iterations": 64,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "64"
+      ]
+    },
+    {
+      "id": "g1024_p1",
+      "trial": 1,
+      "iterations": 1024,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "1024"
+      ]
+    },
+    {
+      "id": "g64_p2",
+      "trial": 2,
+      "iterations": 64,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "64"
+      ]
+    },
+    {
+      "id": "g1024_p2",
+      "trial": 2,
+      "iterations": 1024,
+      "command": [
+        "../../build/cfg_c_mma_reference",
+        "--dtype",
+        "fp16",
+        "--source",
+        "SS",
+        "--n",
+        "128",
+        "--groups",
+        "2",
+        "--b-major",
+        "MN",
+        "--scope",
+        "one_cta",
+        "--mode",
+        "cfg_c_batch8_wait1",
+        "--iterations",
+        "1024"
+      ]
+    }
+  ],
+  "scope": "Independent resident-SMEM instruction reference only; no GEMM prediction qualification",
+  "limits": [
+    "Six prescribed independent processes; no retries or removal based on timing.",
+    "64 groups matches target MMA count, 1024 probes sustained service; no intercept fit.",
+    "Coordinate short checks and full formal outputs required before timing interpretation.",
+    "Fixed16 warmup, native single-CTA clock64 scope; no conversion to ns."
+  ]
+}

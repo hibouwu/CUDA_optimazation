@@ -1,0 +1,13 @@
+{
+  "files": {
+    "build/cfg_c_mma_reference": "ec9375c227a4262eaf1473b4b8bd7fa86add18f147d2c6e7c820dbfbab80feab",
+    "collect.py": "ae569d6d0e8c5e829b44425ed43ea5fc586b07a437f5f00c5e2b6fe45feebf54",
+    "command.json": "98c77e6aa6796d795afc6b8336c3157d35a32f2744f4ae133298821d58d2e471",
+    "manifest.json": "d740212f176a4fe328b6155be42afd76e946fbec39e10c492268de91612a7968",
+    "origin-build-audit.json": "0f6bbbbf725a71cfbef02de394f9904e3f11ba8beb3c38867039f26fd6c13c03",
+    "origin-source_hashes.json": "87b367d3c2a30bbc067ffbb7842fcc8e0059511f98b9ccb7a09169abccd2aecc",
+    "run.sh": "f3e791938b95cf1a51e8fbc4f529921feec8170f2dbd90576359256011b31b75",
+    "validate_allocation.py": "2c165aa1e21ffa8e81be93332c57645230384fba793f2d5e0d1959d3eee15d00",
+    "verify.py": "aa74a008a1ebc247c7c51a6ca312c934759756caa202347022a8a248d033190c"
+  }
+}
