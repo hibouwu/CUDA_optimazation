@@ -232,6 +232,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [同卡MMA参考740095](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/README.md)：0f357f4冻结两长度×3进程，ef/a058独占、实际SM124；196608正式FP32值独立精确，坐标短检查通过。64组均66339cycle，1024组均1049379cycle，持续4092.865682 FLOP/SM-cycle；各比4096条件参考多803，不拟/扣截距。只补同卡指令参考，不转成完整GEMM/全SM/跨卡或观察资格。
 
+[同卡静态compute候选](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/reanalysis/main-static-compute-candidate-v1/README.md)：独立长窗口参考给K4096预测1049379/16cycle，无目标残差/截距；740092全4320开发窗口误差中位0.541%/最大2.912%。15旧cfg_c多K/行距条件实为432卡，入口全部拒绝直接ef价格迁移。3语义测试通过，仅compute实验候选，不授观察/留出或完整范围资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。

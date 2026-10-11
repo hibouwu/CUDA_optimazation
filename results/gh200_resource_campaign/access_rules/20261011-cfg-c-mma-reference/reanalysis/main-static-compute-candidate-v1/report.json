@@ -1,0 +1,164 @@
+{
+  "input_sha256": {
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/manifest.json": "d740212f176a4fe328b6155be42afd76e946fbec39e10c492268de91612a7968",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/verification.json": "e8424738a6eab6af738291c06836b70ff5b5884029fede6362c17cc79250d847",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/returned/records.json": "03453225b7e351cde29eacebe2298d357e077f26cc5e5be3ad9231e7c123eb9e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/returned/samples/g1024_p0/stdout.json": "4f91a4154b926560fe31588e47ea33c8564d2dde48f8e8f023b1295d6dac5185",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/returned/samples/g1024_p1/stdout.json": "10b5a6a73ae1721019ac23cd103c2f6a1b08d020075610a9083dd21e137c95b6",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/returned/samples/g1024_p2/stdout.json": "c038ee963cbe46d6644af6f11602fb32d877266c7a1ecce4f81502ad48565479",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/records.json": "475022459b3381f28326a4cf1e0181f7be24c9763a7befc4846e312d87f6f182",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair00_arm0_off.jsonl.gz": "3a8fc46129716b80905a6c45b4cffd6b18887008aa87e7ee0eaa816f5784bb68",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair00_arm1_off.jsonl.gz": "51e84d1185162d71ca154b88a795f509ffab459f2bb067473f7966e8730fe145",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair01_arm1_off.jsonl.gz": "2956ef930734e0ffa5c78a7888afaf8f5be4f1a7e4a2b087aacf0c3e6d95b8ac",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair01_arm0_off.jsonl.gz": "1b27d6937bbc6db13baa470ee26e4fc86c192e0e585d5ad9f18d6cd2c8200246",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair02_arm0_off.jsonl.gz": "079f261028ea577bcf5a80e43825bcacad316a46ecf08dd6dfb8a1f194c34c9f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair02_arm1_off.jsonl.gz": "749e8fcca7a8bc61905841145c72c627f7109fd2edadc47cacba1ea7feed7fa3",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair03_arm1_off.jsonl.gz": "2eaa7bafac8b3afa59fb8fbe53c79e8ba2dcd010824b6f0da408773f17eb7270",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair03_arm0_off.jsonl.gz": "1daff8e0d8d61639545c9ef02efbfdd5a24d9258a6b5419343f25cb4397edca0",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair04_arm0_off.jsonl.gz": "3856a05d7614abc6c95a17e006c5d13e55d3687e66d610b1c961062156acd206",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair04_arm1_off.jsonl.gz": "76ac12f228ff29239425c1609d13908be15af7193e8c37cbb24fb9c84cf57a98",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair05_arm1_off.jsonl.gz": "b69ae8684de4c25376de0c8d1b6826e737c036b8ea1ed2c22d3bc80e9e4dda3e",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair05_arm0_off.jsonl.gz": "8cf35f88263b271ff39e2a6bbf0d7f6e3255643b557f2b420a2ce7f38753e2df",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair06_arm0_off.jsonl.gz": "3bc6195942e491000a180decc3c0eda593b9878ace2b23cc3cda0cce935af8d0",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair06_arm1_off.jsonl.gz": "4defd4ee58a71f1e101975d55bf6c685276c2d94d64e495a42b6e46883b65c5b",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair07_arm1_off.jsonl.gz": "f8a0d8349a5a0a32fc5d1fc39bcd52f21af40dc08bbbbcf737bfebb3768ef56a",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair07_arm0_off.jsonl.gz": "1c3060963eed1ff667a9b770464d5f083569c3a48062dd06ffe310dd341ef820",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair08_arm0_off.jsonl.gz": "a0cd048057646ae7650ce6aad440755b3ae18b41260c1514fb5709b9a53bca3c",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair08_arm1_off.jsonl.gz": "47c11343b96757679902c53188920cb281dde1447d0b0b22248eb279c12fa1c5",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair09_arm1_off.jsonl.gz": "06ff2d5fa638392954d358da6c202e0d99888a6db1e60db4f0e9e65d2098b419",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-off-off/returned/raw/pair09_arm0_off.jsonl.gz": "3badf886976b0fc7bc4ec8cabbf451220bb18e366b29e5315f126733d8ad1c72",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/static_setup.json": "a00e1bb69ecfb2ff69d1b7fbbc9805d3e57d97babc77f433c35f89ce0c0a50ea",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/results/gh200_resource_campaign/access_rules/20261009-R18-first-fill-job738865/static_setup.json": "5d61cd8e86f668be5ab284d706298a5b807dc119ab7483c755448f628e4d018f",
+    "/home/jianyeshi/Note/CUDA/CUDA_optimazation/microbench/gh200_resource_campaign/access_rules/cfg_c_native_compute.py": "1f35f6c5ef0bbc9ae091612c9d67660a052012b1709c00f31072d67a112db39a"
+  },
+  "reference": {
+    "protocol": "cfg-c-mma-reference-v1",
+    "iterations": 1024,
+    "mma_shape": [
+      64,
+      128,
+      16
+    ],
+    "warpgroups": 2,
+    "chains_per_wg": 2,
+    "per_chain_batch": 4,
+    "b_major": "MN",
+    "wait_group": 1,
+    "gpu_uuid": "GPU-ef8692f3-8bd7-80a2-608b-10731c9ec114",
+    "cycle_samples": [
+      1049379,
+      1049379,
+      1049379
+    ],
+    "source_manifest_sha256": "d740212f176a4fe328b6155be42afd76e946fbec39e10c492268de91612a7968"
+  },
+  "target_processes": 20,
+  "target_windows": 4320,
+  "predicted_cycles": [
+    1049379,
+    16
+  ],
+  "median_absolute_relative_error": 0.0054109230699240255,
+  "maximum_absolute_relative_error": 0.02911510221603778,
+  "historical_rejections": [
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k1024_aligned",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k1024_a16",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k1024_b16",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k4096_aligned",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k4096_a16",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r13_comp_k4096_b16",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_padN_oob_k1024",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_padN_address_zero_k1024",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_padN_oob_k4096",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_padN_address_zero_k4096",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R13-R15-R18-composition-job738496",
+      "case": "cfg_c_r15_single48_k4096",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R18-first-fill-job738865",
+      "case": "cfg_c_first_fill_oob_k1024",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R18-first-fill-job738865",
+      "case": "cfg_c_first_fill_address_zero_k1024",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R18-first-fill-job738865",
+      "case": "cfg_c_first_fill_oob_k4096",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    },
+    {
+      "run": "20261009-R18-first-fill-job738865",
+      "case": "cfg_c_first_fill_address_zero_k4096",
+      "gpu_uuid": "GPU-43269fbc-449d-3e0f-908a-9c81229546d3",
+      "reason": "same-device reference required; cross-card price transfer unsupported"
+    }
+  ],
+  "observation_qualified": false,
+  "prediction_qualified": false,
+  "limits": [
+    "Development same-card compute-envelope hypothesis; targets were already revealed before reference selection.",
+    "No target residual, overhead subtraction, clock conversion, source price or output price fitted.",
+    "Independent instruction reference is SM124 resident repeated operands; application to all target SMs remains a transfer hypothesis.",
+    "The 15 historical cfg_c conditions on GPU432 are preserved as unsupported direct price transfers, not silently rescored.",
+    "No whole-time, critical-CTA or full cfg_a/b/c support implied."
+  ]
+}
