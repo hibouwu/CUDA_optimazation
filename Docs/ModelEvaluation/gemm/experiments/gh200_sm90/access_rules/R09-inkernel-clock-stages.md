@@ -445,6 +445,16 @@ CPU侧已实现`r09_clock_brackets.observer_L_window(tile_words,arm)`，严格�
 
 四kernel模板类型相同，overlay与plain的`SharedStorage`定义逐字节相同，启动/occupancy入口均使用`GemmKernel::SharedStorageSize`和384线程。编译报告的1024B静态shared不等于该动态启动字节数；本次没有执行二进制，未核定动态字节数值或查询运行时occupancy。审查通过的是上述编译接口条件，硬件读取包围、数值、扰动及归档身份完整绑定仍未资格化，不能进入30进程机制采样。
 
+740071后续三臂各一次记录检查由主集成执行。本组[独立只读复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/A-smoke-boundary-audit-v1/README.md)再次绑定原始源/二进制/模块/snapshot/raw，独立精确复算12288个不同抽样位置；plain无trace，matched/guarded各264角色。三target返回动态SMEM215040B、epilogue18432B、API最大1CTA/SM、实际与scheduler132SM一致，仍不是执行期间occupancy采样。FIRST原生括号宽度min/median/max为73/77/130cycle，MAIN为73/74/138cycle。
+
+直接以Fraction重算132个CTA首/后L的交集、精确最小预算及最小点可行性，原128ns总区间预算下0/132可行；所需最小总区间容差min/median/max为1149.598/1212.218/1242.163ns，与主集成报告逐项一致。结论以GLOBALTIMER硬件取样落在前后CLOCK为前提，不证明前提，也不改变128ns预算。每臂只有一进程，观察扰动和空间资格未取得，原现象判读仍`inconclusive`、`observation_qualified=false`。
+
+冻结packet入口对entry/producer置零及固定完整GH200合同之外的SM编码曾接受：两臂共10个内存复制负例保存在同一审计目录，原raw未改。主集成补齐head正值/顺序与该固定设备SM身份拒绝后，本组独立复验SHA为`18e6eea99ce7705867c3bd07f348fa5cb98e148a34bbb176eff51485bae926bc`的reader，原三臂仍有效，10个负例全部拒绝并保留两角色原因；旧snapshot不追改。
+
+在同一硬件包围假设下，进一步允许全卡任意连续非负F，而将每个原三元戳完整用于`Cb≤offset_sm+F(t)≤Ca`、`t∈[N−ε,N+ε]`。每SM原点自由，不跨SM相减clock64。共同≤1.98分支最小可行整数额外单端点容差为187ns，无上限共同分支为177ns；各SM独立≤1.98时，全部132个SM都在零额外容差下可行。有限上限的实数最小值在`(186,187]`，无上限下确界仅定位到`[176,177]`且可取性未证。它说明只放宽全卡共同周期演化，仍不能在零额外容差下解释这些记录；不能据此认定SM物理独立或把177/187ns当timer误差、物理频率修正或服务价。
+
+[共同曲线条件反例](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/A-guarded-common-curve-v1/README.md)保留6份共同图证书及132份独立局部见证；138份证书、1584个原括号通过无求解器复验。只使用已有guarded单次调用的FIRST/MAIN，未加入未包围的其他端点；曲线由目标观测条件构造，不能成为自由预测输入。硬件包围与扰动资格仍是未完成的因果边界。
+
 ### 同plain前序接口的两进程冒烟证明了什么？
 
 主集成740048在GPU-43269fbc上完成plain-host/dual-host各一进程，二者都通过共享库调用16次同plain kernel，再在同A/B/D上执行目标。实际grid均为`[1,132,1]`、stage6；各4096值按原标准精确正确、padding/非有限为零。本组独立重放原gzip及检查值。设备SASS与冻结plain/dual各自相同的证明来自主集成，本组绑定其报告与源包哈希，不把两进程冒烟算正式计时、观察扰动资格或局部留出。
