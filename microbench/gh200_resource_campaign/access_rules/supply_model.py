@@ -732,32 +732,52 @@ def cfg_a_source_bindings(row, setup):
     """
     if row['config'] != 'cfg_a':
         raise ValueError('rank source bindings require cfg_a cluster2x1')
+    return _cooperative_source_bindings(row, setup)
+
+
+def cfg_c_source_bindings(row, setup):
+    """cfg_c cluster1x2: A16 multicast, two local B8 atoms per rank.
+
+    Physical rank, source descriptor and destination valid/fill are explicit.
+    An output-OOB rank may still issue A needed by its partner. No timing or
+    cfg_a empty/release/output lifecycle is transferred.
+    """
+    if row['config'] != 'cfg_c':
+        raise ValueError('rank source bindings require cfg_c cluster1x2')
+    return _cooperative_source_bindings(row, setup)
+
+
+def _cooperative_source_bindings(row, setup):
+    config = row['config']
+    cm, cn = CONFIGS[config][2:]
     if len(setup['grid']) != 3 or setup['grid'][2] != 1:
-        raise ValueError('cfg_a source bindings require a two-dimensional grid')
+        raise ValueError(config+' source bindings require a two-dimensional grid')
     ledger = supply_work_ledger(row, setup)
     gx, gy, _ = setup['grid']
     physical = {}
     for cta in range(gx*gy):
         bx, by = cta % gx, cta // gx
-        cluster = (bx//2, by)
-        physical.setdefault(cluster, dict(ctas=[None, None], rank_outputs=[[], []]))['ctas'][bx%2] = cta
+        cluster = (bx//cm, by//cn)
+        rank = bx%cm+(by%cn)*cm
+        physical.setdefault(cluster, dict(ctas=[None, None], rank_outputs=[[], []]))['ctas'][rank] = cta
     atoms = defaultdict(list)
     for atom in ledger['source_atoms']:
         atoms[atom['cta'], atom['j']].append(atom)
     for output in ledger['outputs']:
         cta, j = output['cta'], output['j']
         bx, by = cta % gx, cta // gx
-        rank = bx % 2
-        cluster = physical[(bx//2, by)]
+        rank = bx%cm+(by%cn)*cm
+        cluster = physical[(bx//cm, by//cn)]
         if output['rank'] != rank or j != len(cluster['rank_outputs'][rank]):
             raise ValueError('logical work rank/ordinal differs from physical cluster')
         owned = atoms[cta, j]
-        if [(a['operand'], a['shape'], a['payload_KiB']) for a in owned] != [
-                ('A', [128,64], 16), ('B', [64,32], 4), ('B', [64,32], 4)]:
-            raise ValueError('cfg_a source atoms differ from A16/B0+B1 each4KiB')
+        expected_atoms = [('A', [128,64], 16), ('B', [64,64//cm], 8//cm), ('B', [64,64//cm], 8//cm)]
+        if [(a['operand'], a['shape'], a['payload_KiB']) for a in owned] != expected_atoms:
+            raise ValueError(config+' source atom shape/payload differs from the fixed layout')
         sources = []
         for label, atom in zip(('A','B0','B1'), owned):
-            targets = [rank] if label == 'A' else [0, 1]
+            multicast = (label=='A' and cn==2) or (label!='A' and cm==2)
+            targets = [0,1] if multicast else [rank]
             expected = [dict(cta=cluster['ctas'][d], j=j, rank=d) for d in targets]
             if atom['destinations'] != expected:
                 raise ValueError('source destination differs from physical cluster/rank/ordinal')
@@ -779,14 +799,61 @@ def cfg_a_source_bindings(row, setup):
             idle.append(dict(cluster=list(coord),ctas=cluster['ctas']))
             continue
         for a, b in zip(left, right):
-            if a['coord'][0]//2 != b['coord'][0]//2 or a['coord'][1] != b['coord'][1]:
+            if [a['coord'][0]//cm,a['coord'][1]//cn] != [b['coord'][0]//cm,b['coord'][1]//cn]:
                 raise ValueError('rank partners do not execute the same logical cluster')
         clusters.append(dict(cluster=list(coord),ctas=cluster['ctas'],
             output_tiles=len(left),rank_outputs=cluster['rank_outputs']))
-    return dict(schema='gh200-cfg-a-source-bindings/1',ledger_schema=ledger['schema'],
+    return dict(schema='gh200-'+config.replace('_','-')+'-source-bindings/1',ledger_schema=ledger['schema'],
         stages=ledger['stages'],k_tiles=ledger['ktiles'],K_origin_increment=[0,64],
         clusters=clusters,idle_clusters=idle,totals=ledger['totals'],
         scope='Static physical-rank source bindings, without calibrated timing or idle-CTA lifecycle')
+
+
+def cfg_c_source_port_graph(stages, k_tiles, output_tiles):
+    """Open source/destination DAG for cfg_c, without C's rank lifecycle.
+
+    arrive_expect_tx and acquire_return are external producer ports. full is
+    an output port for both local consumer WGs. No ordering between these two
+    external ports, prior producer calls, empty arrival or release is invented.
+    Each B atom may progress after A issue, without waiting for the other B.
+    """
+    if any(type(v) is not int for v in (stages,k_tiles,output_tiles)) or min(stages,k_tiles)<2 or output_tiles<1:
+        raise ValueError('cfg_c source ports require integer stages/Ktiles>=2 and outputs>=1')
+    nodes, groups, requests, deliveries, producer_ports, full_ports = {}, [], [], [], [], []
+    for g in range(k_tiles*output_tiles):
+        groups.append(dict(input_slot_state(g,stages),tile=g//k_tiles,k=g%k_tiles,expected_full_bytes=49152))
+        for rank in range(2):
+            prefix=f'r{rank}.g{g}.'
+            for port in ('arrive_expect_tx','acquire_return'):
+                nodes[prefix+port]=[];producer_ports.append(prefix+port)
+            nodes[prefix+'A_issue']=[prefix+'acquire_return']
+            for atom,operand,size,targets in (('A','A',16384,[0,1]),('B0','B',8192,[rank]),('B1','B',8192,[rank])):
+                issue=prefix+atom+'_issue';ready=prefix+atom+'_source_ready'
+                if atom!='A':nodes[issue]=[prefix+'A_issue']
+                nodes[ready]=[issue]
+                requests.append(dict(group=g,source_rank=rank,atom=atom,operand=operand,
+                    issue=issue,source_ready=ready,bytes=size))
+                for target in targets:
+                    done=prefix+atom+f'_delivered_r{target}'
+                    nodes[done]=[ready]
+                    deliveries.append(dict(group=g,source_rank=rank,destination_rank=target,
+                        atom=atom,source_ready=ready,completion=done,bytes=size))
+            nodes[prefix+'B_issue']=[prefix+'B0_issue',prefix+'B1_issue']
+        for rank in range(2):
+            full=f'r{rank}.g{g}.full'
+            nodes[full]=[f'r{rank}.g{g}.arrive_expect_tx']+[
+                f'r{s}.g{g}.A_delivered_r{rank}' for s in range(2)]+[
+                f'r{rank}.g{g}.{atom}_delivered_r{rank}' for atom in ('B0','B1')]
+            full_ports.append(full)
+    return dict(schema='gh200-cfg-c-source-ports/1',stages=stages,k_tiles=k_tiles,output_tiles=output_tiles,
+        nodes=nodes,groups=groups,input_requests=requests,input_deliveries=deliveries,
+        external_producer_ports=producer_ports,full_output_ports=full_ports,
+        transport_join_nodes=[f'r{r}.g{g}.B_issue' for g in range(k_tiles*output_tiles) for r in range(2)],
+        totals=dict(source_requests=len(requests),source_payload_bytes=sum(r['bytes'] for r in requests),
+            destination_atoms=len(deliveries),destination_payload_bytes=sum(d['bytes'] for d in deliveries)),
+        unresolved=['Producer order, empty emit/arrival and acquire prerequisites belong to the missing cfg_c rank graph.',
+            'Consumer WGMMA retirement/safe release, finite-stage reuse and kernel completion are not supplied here.'],
+        scope='Open source-only dependency ports; no calibrated service, closed rank lifecycle or timing prediction')
 
 
 def cfg_a_atomic_source_graph(rank_graph):

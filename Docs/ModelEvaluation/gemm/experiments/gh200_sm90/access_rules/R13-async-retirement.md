@@ -115,6 +115,16 @@ C增加输出source guarantee、`empty_emit_to_r`与`acquire_return`后，[v3组
 
 <a id="release-prerequisites"></a>
 
+### cfg_c的源切片与full接口已绑定，rank生命周期仍未闭合
+
+`cfg_c_source_bindings`将cluster1×2的物理block/rank、各输出ordinal、descriptor及A/B目的绑定到统一账本。`cfg_c_source_port_graph`仅提供源到full的开放依赖：每rank的A16KiB投递到两rank，B0/B1各8KiB投递本地；每cluster每K-group为六个源atom/64KiB、八个目的atom/96KiB。每rank full需要本地`arrive_expect_tx`、两rank各一个A16及本地两个B8，共48KiB，不能沿用cfg_a的32KiB full。A与B、valid与fill、名义需求与实际服务继续分账，未给价格。
+
+输出OOB不代表该rank无供给义务。例如M256/N128时rank1的D有效面积为0，但它仍发出A16供rank0组成完整A32；本地B16为fill，完整输入请求不能随D有效面积删除。M192时，两rank向每个目的提供的A为24KiB有效＋8KiB fill；扩大descriptor覆盖并初始化为零后才成为32KiB有效，full名义payload均为48KiB。C的本地输出接口独立核对每tile八个128×32 FP32名义子tile、两个source buffer及末名义generation，不因空D子tile删除源保护义务。
+
+[离线接口复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/B-20261011-cfg-c-source-ports-v1/B-cfg-c-source-ports.json)覆盖26个静态条件；其中原composition/first-fill的150个dual进程、18960个CTA、150×4096个D抽样值重新复核，实际物理伙伴及两consumer WG工作一致。另11个已揭示V09条件仅做静态几何，不重评或改变原失败。12个源接口模板与6个C本地输出模板通过拓扑和工作守恒检查；cfg_a的22份既有压缩绑定逐字节不变。
+
+当前C只提供cfg_a的完整rank依赖和cfg_c的本地输出图。cfg_c源图的`arrive_expect_tx`与`acquire_return`是待接的外部producer端口，`full`是待接consumer端口；empty发出/可见、producer次序、WGMMA安全释放、有限stage复用和完整退出尚未组合。这些开放根节点不能当作零成本完成，也没有把cfg_a的empty路由或cfg_b pingpong时间图迁入。当前交付是源/目的接口及绑定，不能称三配置时间模型已完成。
+
 ## cfg_b的释放标记没有定位全部128次empty arrival
 
 本轮继续离线复核739556全部20个同调用稀疏记录。kernel为cfg_b设置`num_consumers=NumThreadsPerWarpGroup=128`；cluster1的`PipelineTmaAsync`以128初始化empty arrival count，所有consumer线程均`is_signaling_thread=true`。Ktile17的wait1确认前group安全后，128线程各执行原`consumer_release`，释放Ktile16；原观察只给thread256打点，不能据该线程返回认定其它三个warp已经arrival。源码与SASS均属于同一归档，未拼接其它观察批次。
