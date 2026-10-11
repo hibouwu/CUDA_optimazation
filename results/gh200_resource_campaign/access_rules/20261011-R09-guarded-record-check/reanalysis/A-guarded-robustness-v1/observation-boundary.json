@@ -1,0 +1,27 @@
+{
+  "schema": "gh200-r09-clock-observation-boundary/1",
+  "status": "unqualified; diagnostic contract only",
+  "cycle_axis": "same-SM native clock64 epoch, before/after interval",
+  "timer_axis": "recorded globaltimer ns",
+  "required_independent_bounds": {
+    "extra_timer_endpoint_ns": null,
+    "extra_native_cycles_outside_bracket": null,
+    "source_of_joint_bound": null
+  },
+  "hardware_enclosure": "Not proved by source/SASS control flow or numerical correctness.",
+  "admissibility": "Use an independently established epsilon/kappa pair to test curve compatibility. Do not infer physical error bounds from target-fitted witnesses.",
+  "current_evidence": {
+    "run": "740071",
+    "original_triples": 528,
+    "shared_curve_cases": 20,
+    "exact_cycle_minima": "robustness.json.gz",
+    "nonidentifiability_witnesses": [
+      "independent SM curves, epsilon0/kappa0 in predecessor",
+      "shared curve, epsilon0/kappa106 in this report"
+    ]
+  },
+  "source_work": "Q/S and B source-work definitions unchanged; no work or price parameters in this audit.",
+  "free_prediction": "Target-derived curves/allowances forbidden as predictor inputs; no accepted converter follows.",
+  "observation_qualified": false,
+  "physical_inference_scope": "Joint epsilon/kappa bounds constrain physical shared-clock interpretation. Empirical time rules retain the existing observer,free-prediction,component,event,holdout and cross-card validation requirements."
+}

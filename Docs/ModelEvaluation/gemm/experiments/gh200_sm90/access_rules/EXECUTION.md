@@ -198,6 +198,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [cfg_c闭合供给影响范围独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-closed-response-v1/README.md)：12图byte同、349SHA匹配、30测试通过；拓扑最短距离独立核对126查询/100路径/26无后续full。B完成q=0最早remote full为g+4，q>0为g+3；B issue为g+1。短K可仅影响producer退出而不达伙伴D，可达仍不是服务时间或正响应证据。
 
+[guarded联合读取界独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261011-R09-guarded-record-check/reanalysis/main-guarded-robustness-v1/README.md)：接入A37b10506，1091输入SHA/528原raw端点/46证书/25110边/10560交集通过，相关100测试通过。ε=32ns时四端点证明κ至少105cycle，完整图在此可行；容差是条件相容变量，不是硬件误差测量或校正量。物理时钟与读取误差仍不可区分，原观察资格及预算不变，无GPU运行。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
