@@ -9,6 +9,8 @@
 
 `*_all` 消费者端口表示参与的 128 个线程对应事件的最大时刻。它们是聚合必要边，不能用单线程 trace 替代；尤其不意味着非 TMA issuing 线程必须在 issuing warp 的 read0 返回后才到达 epilogue 顺序屏障。`mma_retired` 表示已经 commit 的组完成这一逻辑义务，不作为裸 MMA 执行终点或硬件价格。store_tail 内部暂未展开，只保留返回与顺序到达的接口。
 
+`release_emit_all` 指 128 次实际 arrival 发出的最大时刻，`empty_complete` 指全部到达在目标 barrier 生效。前者不能替换为 `consumer_release` 返回后的打点：目标 barrier 可以在最后发出线程读返回后时间戳之前已完成。当前图没有赋予这些端口观测时间。
+
 `verify.py` 直接查询完整图的祖先关系：
 
 | 源码约束的结果 | 核对数 |
