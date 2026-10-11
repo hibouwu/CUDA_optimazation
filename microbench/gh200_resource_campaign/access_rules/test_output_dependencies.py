@@ -2,7 +2,7 @@
 import math
 import unittest
 
-from output_model import cfg_a_rank_dependencies, dependency_bounds, dependency_order
+from output_model import cfg_a_rank_dependencies, cfg_a_output_source_guarantees, dependency_bounds, dependency_order
 from analyze_r18 import rank_dependency_anchors, validate_rank_setup
 
 
@@ -41,7 +41,8 @@ class RankDependencyTests(unittest.TestCase):
     def test_exit_keeps_source_read_and_global_visibility_separate(self):
         tail = self.nodes['r0.producer_tail']
         self.assertEqual(len([n for n in tail if 'empty_to' in n]), 6 * 4)
-        self.assertIn('r0.output_source_read', self.nodes['r0.w1.FINAL'])
+        self.assertIn('r0.store_tail_read0', self.nodes['r0.w1.FINAL'])
+        self.assertIn('r0.output_source_read', self.nodes['r0.store_tail_read0'])
         self.assertNotIn('r0.D_visible', self.nodes['r0.w1.FINAL'])
         bounds = dependency_bounds(self.graph, {'r0.w1.FINAL': (100, 100)})
         self.assertEqual(bounds['r0.D_visible'][1], None)
@@ -58,6 +59,25 @@ class RankDependencyTests(unittest.TestCase):
         self.assertIn('r0.d3.read_retired', self.nodes['r0.d4.acquire_after'])
         self.assertNotIn('r0.d3.source_read', self.nodes['r0.w1.t0.DONE'])
         self.assertIn('r0.d3.acquire_after', self.nodes['r0.w1.t0.DONE'])
+
+    def test_observed_guarantee_maps_to_next_output_acquire_and_terminal_read0(self):
+        guarantees = cfg_a_output_source_guarantees(8)
+        first = guarantees[0]
+        self.assertEqual((first['read_through_count'], first['committed_count'], first['pending_batches']), (4, 5, 1))
+        self.assertEqual((first['last_subtile'], first['acquire_subtile'], first['reuse_subtile']), (3, 4, 5))
+        self.assertEqual(first['guarantee_token'], 'r0.d4.acquire_after')
+        self.assertEqual((first['protected_buffer'], first['source_generation']), (1, 1))
+        last = guarantees[7]
+        self.assertEqual(last['guarantee_token'], 'r0.store_tail_read0')
+        self.assertEqual((last['read_through_count'], last['pending_batches']), (32, 0))
+        self.assertEqual(last['committed_count'],32)
+        graph = cfg_a_rank_dependencies(6, 64, 8)
+        for entry in guarantees:
+            self.assertIn(entry['source_completion'], graph['nodes'])
+            self.assertIn(entry['guarantee_token'], graph['nodes'])
+        for invalid in (0, -1, 1.5):
+            with self.assertRaises(ValueError):
+                cfg_a_output_source_guarantees(invalid)
 
     def test_anchor_subtraction_preserves_large_integer_globaltimer(self):
         origin = 10**18

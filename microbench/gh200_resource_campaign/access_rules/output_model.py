@@ -35,6 +35,32 @@ def output_intervals(params, schedule, valid, first_bytes, single, output_rule):
     return p, epilogues
 
 
+def cfg_a_output_source_guarantees(output_tiles):
+    """Bind each output's last source buffer to the acquire/read0 guarantee.
+
+    R14 records after the wait returns: its timestamp is an upper bound on the
+    guarantee and source completion, never an exact physical read-completion time.
+    """
+    if not isinstance(output_tiles,int) or output_tiles<1:
+        raise ValueError('requires a positive integer output tile count')
+    guarantees=[]
+    for rank in range(2):
+        for tile in range(output_tiles):
+            last=4*tile+3
+            terminal=tile==output_tiles-1
+            acquire=None if terminal else last+1
+            guarantees.append(dict(rank=rank,tile=tile,issuer_wg=1,terminal=terminal,
+                last_subtile=last,protected_buffer=last%2,source_generation=last//2,
+                read_through_count=last+1,committed_count=last+1 if terminal else acquire+1,
+                pending_batches=0 if terminal else 1,
+                acquire_subtile=acquire,reuse_subtile=None if terminal else last+2,
+                source_completion=f'r{rank}.d{last}.read_retired',
+                guarantee_token=f'r{rank}.store_tail_read0' if terminal else f'r{rank}.d{acquire}.acquire_after',
+                observation='r14_source_tail' if terminal else 'r14_source_acquire',
+                following_output=None if terminal else tile+1))
+    return guarantees
+
+
 def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
     """Source-derived partial order for cluster2x1, two consumer WGs, K_PIPE_MMAS=1.
 
@@ -135,15 +161,17 @@ def cfg_a_rank_dependencies(stages, k_tiles, output_tiles):
         add(f'r{r}.producer_tail',[producer(r,total-1,'B_issue')]
             +[arrival(s,w,r,g) for g in last for s in range(2) for w in range(2)])
         add(f'r{r}.output_source_read',[f'r{r}.d{4*output_tiles-1}.read_retired'])
+        add(f'r{r}.store_tail_read0',[f'r{r}.w1.t{output_tiles-1}.DONE',f'r{r}.output_source_read'])
         for w in range(2):
             key=f'r{r}.w{w}.FINAL'
             add(key,[f'r{r}.w{w}.t{output_tiles-1}.DONE']
-                +([f'r{r}.output_source_read'] if w==1 else []));markers[key]=key
+                +([f'r{r}.store_tail_read0'] if w==1 else []));markers[key]=key
         add(f'r{r}.D_visible',[f'r{r}.d{q}.D_visible' for q in range(4*output_tiles)])
     add('source_safe_exit',[f'r{r}.producer_tail' for r in range(2)]
         +[f'r{r}.w{w}.FINAL' for r in range(2) for w in range(2)])
     add('cuda_complete',['source_safe_exit','r0.D_visible','r1.D_visible'])
-    return dict(nodes=nodes,markers=markers,groups=groups,transfers=transfers,outputs=outputs,stages=stages,k_tiles=k_tiles,
+    return dict(nodes=nodes,markers=markers,groups=groups,transfers=transfers,outputs=outputs,
+                source_guarantees=cfg_a_output_source_guarantees(output_tiles),stages=stages,k_tiles=k_tiles,
                 output_tiles=output_tiles,scope='Partial order; no calibrated service or GPU timing prediction')
 
 

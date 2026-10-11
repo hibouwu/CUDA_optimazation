@@ -271,3 +271,17 @@ P1 中输出项偏高、主循环偏低，构成局部误差抵消。P2 输出�
 | `cuda_complete` | 输入producer尾部、consumer退出及D写入均完成 |
 
 已有consumer final戳约束最终issuer的源读取完成，但不能给D可见或producer尾部提供有限上界。图没有把CUDA event的elapsed标量当作内部globaltimer绝对端点。此图只保留执行和复用约束，没有改变现行`output_intervals`参数、partial插值或V09输出成绩；尚不能据此报告输出模型通过。源码SHA、逐事件可行区间及跨输出缓冲测试见[独立分析](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-rank-dependencies-v5/README.md)。R14跨域页面由主集成统一更新。
+
+### 源完成保证的实际代次
+
+新增`cfg_a_output_source_guarantees(T)`将记录端点绑定到具体缓冲代次。输出t的最后子tile为q=`4t+3`；非末输出在下一输出首笔q+1提交后的acquire/read1得到完成保证，此时committed count为`4t+5`、pending为1、已保证读完的count为`4t+4`。实际复用同一buffer1的是q+2。末输出另由`store_tail_read0`提供完成保证，随后才到issuer FINAL。观测戳在wait返回之后，所以是保证时刻及实际源读取完成的上界，不将其锚定为真实读取完成的精确时刻。
+
+对R14已有cfg_a K4096、t1/t8的40个plain/trace正式进程重新核对原始SHA、二进制、几何和11,796,480个保存FP32值，全部精确通过。20个trace轨迹与该代次图相容，70个中间source戳全部位于下一输出PERMIT之后。只使用同CTA clock64 cycles；细阶段globaltimer槽未观测，不做频率换算。t8每进程先对七个中间tile取中位，再跨十进程取中位：
+
+| 同issuer区间 | cycle中位数 | 端点含义 |
+|---|---:|---|
+| 本输出PERMIT→其中间source戳 | 36598.5 | 包含下一主循环与下一输出前缀，不能作为独立E |
+| 下一输出PERMIT→同一个source戳 | 657.5 | 下一输出首笔提交/acquire处取得的旧源完成保证，也不是整笔E |
+| 最后输出PERMIT→末尾source戳 | 3052 | 原tail read0后的终端保证 |
+
+t1终端区间中位3167.5cycles。每条记录的分解精确可加，分别汇总的中位数不要求可加。这些是旧卡4CTA合格域的端点核对，不给整卡或新卡转入服务价。[独立生命周期报告](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R18-cluster-fill-discrimination/reanalysis/C-20261011-output-lifecycle-v4/README.md)保存逐tile代次与实际源完成的可行区间。细化tail节点后，R18/V09原100进程再次重放，五份逐CTA/分项/区间/配对CSV解压内容与首批交付精确一致；原冻结评分保持不变。
