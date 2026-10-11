@@ -1,0 +1,317 @@
+{
+  "method": "Noninterpolated equal-tail order-statistic intervals; exact binomial tails and Bonferroni union bound. 95% is an illustrative design level, not a newly adopted gate.",
+  "assumptions": "For each coordinate/arm, independent identically distributed process repeats from a fixed population with a median. No independence between CTA coordinates or between arms is needed for the union bound. These sampling assumptions have not been established for the sequential GPU records.",
+  "formula": "P(median outside [X_(k),X_(n-k+1)]) <= 2*sum_{j=0}^{k-1} choose(n,j)/2^n. family_failure <= number_of_arm_medians * marginal_failure.",
+  "ties": "Equality at a median may make coverage conservative; no interpolation or jitter is added to quantized readings.",
+  "capacity": {
+    "one_coordinate_one_cohort": {
+      "arm_medians": 2,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 7,
+      "n10": {
+        "lower_rank": 2,
+        "upper_rank": 9,
+        "simultaneous_coverage_lower_bound": "245/256"
+      },
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 7,
+        "simultaneous_coverage_lower_bound": "31/32"
+      },
+      "ranks_by_n": {
+        "10": {
+          "lower_rank": 2,
+          "upper_rank": 9,
+          "simultaneous_coverage_lower_bound": "245/256"
+        },
+        "16": {
+          "lower_rank": 4,
+          "upper_rank": 13,
+          "simultaneous_coverage_lower_bound": "15687/16384"
+        },
+        "17": {
+          "lower_rank": 4,
+          "upper_rank": 14,
+          "simultaneous_coverage_lower_bound": "15967/16384"
+        },
+        "20": {
+          "lower_rank": 5,
+          "upper_rank": 16,
+          "simultaneous_coverage_lower_bound": "63987/65536"
+        },
+        "32": {
+          "lower_rank": 10,
+          "upper_rank": 23,
+          "simultaneous_coverage_lower_bound": "1030659851/1073741824"
+        },
+        "64": {
+          "lower_rank": 23,
+          "upper_rank": 42,
+          "simultaneous_coverage_lower_bound": "4456196659780981755/4611686018427387904"
+        }
+      }
+    },
+    "one_coordinate_two_cohorts": {
+      "arm_medians": 4,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 8,
+      "n10": {
+        "lower_rank": 1,
+        "upper_rank": 10,
+        "simultaneous_coverage_lower_bound": "127/128"
+      },
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 8,
+        "simultaneous_coverage_lower_bound": "31/32"
+      },
+      "ranks_by_n": {
+        "10": {
+          "lower_rank": 1,
+          "upper_rank": 10,
+          "simultaneous_coverage_lower_bound": "127/128"
+        },
+        "16": {
+          "lower_rank": 3,
+          "upper_rank": 14,
+          "simultaneous_coverage_lower_bound": "8055/8192"
+        },
+        "17": {
+          "lower_rank": 3,
+          "upper_rank": 15,
+          "simultaneous_coverage_lower_bound": "8115/8192"
+        },
+        "20": {
+          "lower_rank": 5,
+          "upper_rank": 16,
+          "simultaneous_coverage_lower_bound": "31219/32768"
+        },
+        "32": {
+          "lower_rank": 9,
+          "upper_rank": 24,
+          "simultaneous_coverage_lower_bound": "521837739/536870912"
+        },
+        "64": {
+          "lower_rank": 22,
+          "upper_rank": 43,
+          "simultaneous_coverage_lower_bound": "2230701099010525723/2305843009213693952"
+        }
+      }
+    },
+    "all432_L_one_cohort": {
+      "arm_medians": 864,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 16,
+      "n10": null,
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 16,
+        "simultaneous_coverage_lower_bound": "997/1024"
+      },
+      "ranks_by_n": {
+        "10": null,
+        "16": {
+          "lower_rank": 1,
+          "upper_rank": 16,
+          "simultaneous_coverage_lower_bound": "997/1024"
+        },
+        "17": {
+          "lower_rank": 1,
+          "upper_rank": 17,
+          "simultaneous_coverage_lower_bound": "2021/2048"
+        },
+        "20": {
+          "lower_rank": 2,
+          "upper_rank": 19,
+          "simultaneous_coverage_lower_bound": "15817/16384"
+        },
+        "32": {
+          "lower_rank": 5,
+          "upper_rank": 28,
+          "simultaneous_coverage_lower_bound": "65989741/67108864"
+        },
+        "64": {
+          "lower_rank": 16,
+          "upper_rank": 49,
+          "simultaneous_coverage_lower_bound": "282162841285118461/288230376151711744"
+        }
+      }
+    },
+    "all432_L_two_cohorts": {
+      "arm_medians": 1728,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 17,
+      "n10": null,
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 17,
+        "simultaneous_coverage_lower_bound": "997/1024"
+      },
+      "ranks_by_n": {
+        "10": null,
+        "16": null,
+        "17": {
+          "lower_rank": 1,
+          "upper_rank": 17,
+          "simultaneous_coverage_lower_bound": "997/1024"
+        },
+        "20": {
+          "lower_rank": 1,
+          "upper_rank": 20,
+          "simultaneous_coverage_lower_bound": "8165/8192"
+        },
+        "32": {
+          "lower_rank": 5,
+          "upper_rank": 28,
+          "simultaneous_coverage_lower_bound": "32435309/33554432"
+        },
+        "64": {
+          "lower_rank": 16,
+          "upper_rank": 49,
+          "simultaneous_coverage_lower_bound": "138047653209262589/144115188075855872"
+        }
+      }
+    },
+    "all6372_series_one_cohort": {
+      "arm_medians": 12744,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 19,
+      "n10": null,
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 19,
+        "simultaneous_coverage_lower_bound": "31175/32768"
+      },
+      "ranks_by_n": {
+        "10": null,
+        "16": null,
+        "17": null,
+        "20": {
+          "lower_rank": 1,
+          "upper_rank": 20,
+          "simultaneous_coverage_lower_bound": "63943/65536"
+        },
+        "32": {
+          "lower_rank": 4,
+          "upper_rank": 29,
+          "simultaneous_coverage_lower_bound": "259691479/268435456"
+        },
+        "64": {
+          "lower_rank": 14,
+          "upper_rank": 51,
+          "simultaneous_coverage_lower_bound": "1125284844293550127/1152921504606846976"
+        }
+      }
+    },
+    "all6372_series_two_cohorts": {
+      "arm_medians": 25488,
+      "minimum_n_per_arm_for_finite_equal_tail_interval": 20,
+      "n10": null,
+      "minimum_n_ranks": {
+        "lower_rank": 1,
+        "upper_rank": 20,
+        "simultaneous_coverage_lower_bound": "31175/32768"
+      },
+      "ranks_by_n": {
+        "10": null,
+        "16": null,
+        "17": null,
+        "20": {
+          "lower_rank": 1,
+          "upper_rank": 20,
+          "simultaneous_coverage_lower_bound": "31175/32768"
+        },
+        "32": {
+          "lower_rank": 3,
+          "upper_rank": 30,
+          "simultaneous_coverage_lower_bound": "133375031/134217728"
+        },
+        "64": {
+          "lower_rank": 14,
+          "upper_rank": 51,
+          "simultaneous_coverage_lower_bound": "548824091990126639/576460752303423488"
+        }
+      }
+    }
+  },
+  "sign_enumeration": [
+    {
+      "n": 10,
+      "k": 1,
+      "sign_patterns": 1024,
+      "covered_patterns": 1022
+    },
+    {
+      "n": 10,
+      "k": 2,
+      "sign_patterns": 1024,
+      "covered_patterns": 1002
+    },
+    {
+      "n": 10,
+      "k": 3,
+      "sign_patterns": 1024,
+      "covered_patterns": 912
+    },
+    {
+      "n": 10,
+      "k": 4,
+      "sign_patterns": 1024,
+      "covered_patterns": 672
+    },
+    {
+      "n": 10,
+      "k": 5,
+      "sign_patterns": 1024,
+      "covered_patterns": 252
+    }
+  ],
+  "marginal_difference_coverage_lower_bound": "245/256",
+  "descriptive_conditional_interval_summaries": {
+    "off_on": {
+      "ns": {
+        "marginal_intervals_containing_zero": 432,
+        "median_difference_disagrees_with_median_paired_difference": 364,
+        "interval_width_median": 800.0,
+        "interval_width_max": 1280
+      },
+      "cycles": {
+        "marginal_intervals_containing_zero": 329,
+        "median_difference_disagrees_with_median_paired_difference": 417,
+        "interval_width_median": 373.5,
+        "interval_width_max": 1782
+      }
+    },
+    "off_off": {
+      "ns": {
+        "marginal_intervals_containing_zero": 432,
+        "median_difference_disagrees_with_median_paired_difference": 406,
+        "interval_width_median": 1120.0,
+        "interval_width_max": 1792
+      },
+      "cycles": {
+        "marginal_intervals_containing_zero": 430,
+        "median_difference_disagrees_with_median_paired_difference": 411,
+        "interval_width_median": 489.5,
+        "interval_width_max": 1872
+      }
+    }
+  },
+  "current_n": 10,
+  "original_L_failure_counts": {
+    "off_on": 432,
+    "off_off": 432
+  },
+  "input_sha256": {
+    "results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/analyze.py": "e28b769620aa81e0c17d7b4bf27cd914082cc29d5017614bc5385390bd6ab1ff",
+    "results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/data/report.json": "d3b0a2f1b9dae62d4d9486c072ac7876d5acacd51c01b4ed351131433239b2fe",
+    "results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/data/coordinate-pairs.json.gz": "9e44083a4faa15591ac090047c2e2d9a9cec935474fce9417c04bab4fb220401",
+    "results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/verification.json": "459f67cd4eb27a7bad545fb3ace8f302f70d8fc4927451f87b63ec770317fb94"
+  },
+  "source_inputs_verified": 45,
+  "analysis_sha256": "12a075b00062f5a219d64a86b60a499f2a72159bc25b34f2a90e271d9e2a2e3f",
+  "limits": [
+    "The minimum n applies only to this equal-tail Bonferroni construction, not every possible simultaneous method.",
+    "Finite endpoints do not ensure a narrow interval, equivalence, observer accuracy, or stable process populations.",
+    "432 within-process CTA coordinates do not supply432 independent process repetitions.",
+    "Containing zero is not evidence of equivalence; no equivalence margin or pass count is defined.",
+    "Old pointwise64/256ns failures remain; no resampling of old data, cross-cohort center subtraction, new GPU or critical-CTA qualification."
+  ],
+  "observation_qualified": false,
+  "prediction_qualified": false
+}

@@ -317,3 +317,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [同 SM 原生 L 一致性诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-native-L-consistency-v1/README.md)：40原进程/45输入SHA/8640配对差匹配原分析；off/off相对原生周期差最大2.484611%，不将全部差异归因于ns换算。原64/256ns门槛及两批L各432/432失败保留；四个执行的合成反例区分点差、均值、中位数、尾部及准确度，不作为GPU证据。未设新门槛、拟合、启动GPU或授予资格；未来统计对象须单独明确。
 
 [cfg_c G2共享供给参数与时钟联合区间](../../../../../../results/gh200_resource_campaign/access_rules/20261009-V09-freeze-job738972-r2/reanalysis/main-g2-coupled-bounds-v1/README.md)：冻结source/15输入身份，64个单输出CTA共享θ的163次LP并求时钟闭合，plain条件区间17.099059–17.442896µs（宽2.010851%）。一维可行线段/仿射交点独立核对端点差≤2.65e−10µs，21组原预测器重放通过；两端关键集合分别64CTA并列与62/63并列，仅代数结果。独立读job739011十plain/20SHA得中位17.872000µs，整个区间仍低估2.401–4.325%；仅等价供给参数无法消除偏差，不包含其他组件/观测不确定性。原unsupported及评分不变，无新GPU/模型/资格。
+
+[中位数采样能力诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-sampling-capacity-v1/README.md)：复用45SHA/864系列/8640配对；精确二项尾与1024符号枚举核对。在未插值次序统计量+Bonferroni、示例95%且采样假设成立的条件下，全432 L一批/两批有限区间至少每臂16/17次；非通用最小量，也不保证精度。旧十次逐坐标两臂ns区间均含零，宽度中位800/1120ns，不能判等价或全坐标通过；中位数之差也不同于配对差中位数。采样独立同分布未证明，原门槛/失败/资格false保留，无新GPU或新标准。
