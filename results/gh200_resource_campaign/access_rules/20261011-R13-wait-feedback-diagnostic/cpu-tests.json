@@ -1,0 +1,5 @@
+{
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "test_conditional_rank_by_sign_enumeration (test_analysis.FeedbackContrastTests.test_conditional_rank_by_sign_enumeration) ... ok\ntest_joint_F_median_not_difference_of_medians (test_analysis.FeedbackContrastTests.test_joint_F_median_not_difference_of_medians) ... ok\ntest_joint_difference_and_missingness (test_analysis.FeedbackContrastTests.test_joint_difference_and_missingness) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.020s\n\nOK\n"
+}
