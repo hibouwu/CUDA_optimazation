@@ -56,7 +56,9 @@ def process(events, sample, gpu_uuid):
                 series[prefix+'GAP'] = [tile['ns'][0]-previous_ns, tile['cycles'][0]-previous_cycles]
                 previous_ns, previous_cycles = tile['ns'][3], tile['cycles'][3]
             series[f'{cta}/{wg}/TAIL'] = [role['final_ns']-previous_ns, role['final_cycles']-previous_cycles]
-    return dict(id=sample['id'], pair=sample['pair'], flag=sample['flag'], elapsed_us=elapsed, series=series, sms=sms)
+    result = dict(id=sample['id'], pair=sample['pair'], flag=sample['flag'], elapsed_us=elapsed, series=series, sms=sms)
+    if 'arm' in sample: result['arm'] = sample['arm']
+    return result
 
 
 def metric(values, median_limit, maximum_limit):
@@ -68,13 +70,18 @@ def metric(values, median_limit, maximum_limit):
 
 def evaluate(processes, manifest):
     expected = manifest['samples']
+    comparison = manifest.get('comparison', 'off_on')
+    if comparison not in ('off_on','off_off'): raise ValueError('unknown comparison')
+    arm_key = 'arm' if comparison == 'off_off' else 'flag'
     if len(expected) != 20 or len(processes) != 20:
         raise ValueError('exactly twenty prescribed processes required')
     for i, (sample, actual) in enumerate(zip(expected, processes)):
         pair = i//2
         flag = (i%2) if pair%2 == 0 else (1-i%2)
-        if not equal(sample['pair'], pair) or not equal(sample['flag'], flag):
+        if not equal(sample['pair'], pair) or not equal(sample[arm_key], flag):
             raise ValueError('prescribed alternating order required')
+        if comparison == 'off_off' and (not equal(sample['flag'],0) or not equal(actual.get('arm'),sample['arm'])):
+            raise ValueError('off/off requires distinct arms and both real flags zero')
         if not all(equal(actual[k], sample[k]) for k in ('id', 'pair', 'flag')):
             raise ValueError('missing/reordered/mismatched process')
     keys = set(processes[0]['series'])
@@ -86,7 +93,7 @@ def evaluate(processes, manifest):
     pairs = []
     for pair in range(10):
         rows = processes[pair*2:pair*2+2]
-        pairs.append((next(p for p in rows if p['flag']==0), next(p for p in rows if p['flag']==1)))
+        pairs.append((next(p for p in rows if p[arm_key]==0), next(p for p in rows if p[arm_key]==1)))
     gates = manifest['gates']
     local = []
     for key in sorted(keys):
@@ -99,7 +106,12 @@ def evaluate(processes, manifest):
                    gates['event_median_absolute_ratio'], gates['event_maximum_absolute_ratio'])
     off = [a['elapsed_us'] for a,b in pairs]
     cv = statistics.pstdev(off)/statistics.fmean(off)
-    return dict(local=local, event=event, off_event_population_cv=cv,
+    result = dict(local=local, event=event, off_event_population_cv=cv,
         incremental_control_passed=all(row['passed'] for row in local) and event['passed'] and cv<=gates['off_event_population_cv'],
         observation_qualified=False, tail_precision_qualified=False, baseline_dual_qualified=False,
         limits='Incremental observer only. No tail off/on comparison, clock correction or pooled role acceptance.')
+
+    if comparison == 'off_off':
+        result['baseline_consistency_passed'] = result.pop('incremental_control_passed')
+        result['limits'] = 'Both real flags zero; baseline pairing consistency only, no observer qualification or subtraction from prior failure.'
+    return result

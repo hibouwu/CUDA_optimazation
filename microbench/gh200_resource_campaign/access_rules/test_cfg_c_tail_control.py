@@ -57,6 +57,18 @@ class TailControl(unittest.TestCase):
         self.assertEqual(local['sm_changed'],[True]*10)
         self.assertFalse(r['incremental_control_passed'])
 
+    def test_off_off_labels_are_separate_from_real_flags(self):
+        self.manifest['comparison']='off_off'
+        for sample,row in zip(self.manifest['samples'],self.rows):
+            sample['arm']=sample['flag'];row['arm']=row['flag']
+            sample['flag']=0;row['flag']=0
+        r=evaluate(self.rows,self.manifest)
+        self.assertTrue(r['baseline_consistency_passed'])
+        self.assertNotIn('incremental_control_passed',r)
+        self.assertFalse(r['observation_qualified'])
+        self.rows[1]['flag']=1
+        with self.assertRaises(ValueError):evaluate(self.rows,self.manifest)
+
     def test_whole_cta_translation_is_caught_by_common_origin(self):
         for p in self.rows:
             p['series']['0/GLOBAL_ENTRY']=[80 if p['flag'] else 0,None]
