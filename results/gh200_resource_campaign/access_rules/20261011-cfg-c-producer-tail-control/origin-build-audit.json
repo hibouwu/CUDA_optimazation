@@ -1,0 +1,12 @@
+{
+  "job": 740087,
+  "returncode": 0,
+  "binary_sha256": "9fdbf10afe162a92f44a889a1fe3c87b89f57a0e73a5ec385abde32035742b55",
+  "sass_sha256": "81cd006cc1fbbdc7ab045b93a9c317d7a62c24ec5e6fbb52ec9d7eefebfaba62",
+  "previous_job": 740082,
+  "complete_sass_byte_identical": true,
+  "resources_byte_identical": true,
+  "full_D_mode_prepared": true,
+  "device_executed": false,
+  "observation_qualified": false
+}
