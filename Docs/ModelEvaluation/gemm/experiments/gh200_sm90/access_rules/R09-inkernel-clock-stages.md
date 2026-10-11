@@ -468,6 +468,27 @@ t_j-t_i\ge(C_j-C_i)/f_{cap},\qquad
 
 [2772个CTA的逐点见证与输入哈希](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-R13-R18-failure-controls/reanalysis/A-local-clock-consistency-v1/local-clock-consistency.json)由[专用入口](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_local_clock_consistency.py)生成；纯构造函数在`r09_clock_brackets.local_clock_witness`，不解析数据、不拟合参数。
 
+### 只使用先前调用，能预测下一次时间吗？
+
+2026-10-11对上述80进程检验两个零参数基线：固定保持第16次prefix的观测，或每次使用紧前已完成调用的观测。前者预测整条目标轨迹时不读任何目标观测；后者是逐次预测，只在前一目标完成后更新。两者均不使用当前或未来目标，不拟合参数；这是已知开发数据的诊断，尚不是预先冻结的新留出。
+
+归档`timed()`逐次返回CUDA event结果，主机在下次调用前已可使用；逐角色cycle/ns则逐次D2D保存、整批后才D2H读回。因此event基线不需新增设备读取，角色分项仍是离线诊断，不能声称当前协议已经提供在线周期率状态。以下误差为`预测/实测−1`，表中为全部逐调用的RMS / 最大绝对误差，单位%。
+
+| 目标条件 | 目标调用数 | 保持prefix末值 | 紧前调用末值 |
+|---|---:|---:|---:|
+| series sw1 | 190 | 5.97 / 17.51 | 3.34 / 10.04 |
+| series sw8，含首个切换 | 190 | 26.51 / 43.31 | 6.50 / 40.62 |
+| same源，两slot合并 | 380 | 4.42 / 16.91 | 3.82 / 15.38 |
+| mirror源，两slot合并 | 380 | 5.33 / 23.17 | 3.52 / 17.62 |
+| single sw1 | 10 | 2.87 / 5.62 | 2.87 / 5.62 |
+| single sw8 | 10 | 28.20 / 39.09 | 28.20 / 39.09 |
+
+series sw8排除首个切换后的180次，紧前event基线RMS为1.23%、最大7.76%；首个切换10次的误差中位+25.81%、最大40.62%仍在完整结果中。该预定义分段说明连续同负载状态可提供信息，不支持把首个切换删掉后宣称整族通过，也不排除使用静态负载信息的更完整历史规则。
+
+对同CTA、同原消费者角色，以紧前窗口`(C_p,N_p)`预测当前`(C_t,N_t)`，保留`e_C=C_p/C_t−1`、条件换算项`e_f=(C_t/N_t)/(C_p/N_p)−1`和自由窗口项`e_N=N_p/N_t−1`。逐角色满足`(1+e_C)(1+e_f)=1+e_N`，全部601920条的最大闭合残差4.5×10⁻¹⁶；各项取角色中位后不保证闭合，也不重建完整event。series sw1的逐调用角色中位误差RMS为周期3.41%、条件换算1.13%；sw8首个切换之后为0.015%/1.25%。镜像四个源/slot分层的相应范围为周期3.14%–3.70%、换算0.93%–1.08%。这些分项保留观测端点效应，不能直接命名为物理服务价格或DVFS误差；但不能只增加频率状态，把sw1的原生周期变化全部吸收进去。
+
+[完整记录、分层结果与可用时点证据](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-history-forecast-v1/README.md)由[r09_history_forecast.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_history_forecast.py)生成：1160个目标、两个基线共2320个event预测，全部single/series、首个/连续目标、same/mirror及slot均保留。Q/S和校准系数未变，未增加纯时间候选；周期率的观测资格、独立局部留出和跨卡组合边界仍未完成。
+
 复核入口：[r09_time_contract.py](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_time_contract.py)。[本轮结果与契约](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/README.md)包含逐进程CSV、源哈希、经验下界、支持/排除/不可区分及独立复放命令。持续目标仍未完成，后续规则须另经冻结的新局部留出与组合检查。
 
 ## 作业与复核索引
