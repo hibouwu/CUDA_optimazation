@@ -429,6 +429,10 @@ stage4/6各进程先取132个CTA必要界的中位，再取10进程中位，分�
 
 r4纠正提案的grid维度：该cfg_b 2816×1536×4096、stage6、heuristic AlongN的原V09与739095 setup均为`[1,132,1]`，此前误写为`[132,1,1]`。总CTA数仍为132；prefix与target须逐维匹配，不能只检查乘积。[原setup哈希与校验](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-time-contract-20261011-v3/grid-correction-verification.json)保留修订来源，r3及主集成记录的740046/740047在GEMM前拒绝不追改。
 
+读取顺序还需要机器码证据。2026-10-11的独立CPU汇编样件先检验“CLOCK值非零时读取GT、GT值非零时读取后CLOCK”的PTX谓词链；CUDA13.0的ptxas将它降为无条件`CS2R`后接`SEL`，预期的数据依赖没有保留，故拒绝该版本。随后[r09_clock_stamp.cuh](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_stamp.cuh)用最多两次零值重读及真实退出分支，得到`CLOCK→64位非零比较→BRA→GT→64位非零比较→BRA→CLOCK`。单处与双处展开都保留控制链，双处标签作用域也通过汇编；零值重读耗尽时返回全零，未来reader必须拒绝任何零字段及`CLOCK_after<CLOCK_before`，不能退回普通dual解析。
+
+[静态样件与失败版本](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R09-history-series/reanalysis/A-clock-stamp-static-v1/README.md)保留源码、机械提取的PTX、cubin、SASS和工具版本。[专用检查器](../../../../../../microbench/gh200_resource_campaign/access_rules/r09_clock_stamp_static.py)仅检查该隔离样件的64位比较、退出分支、两次重读上限和全零失效路径，不是通用CUTLASS审计器。当地CUDA C++编译在主机GNU版本检查处失败，因此只声称同一inline PTX的sm_90a汇编证据；没有运行设备、没有得到实际CUTLASS帧或采样误差界。控制依赖比相邻读数提供更强的编译证据，仍不能单独证明硬件采样包围关系。r4继续未冻结/延后，公共集成、目标工具链复核与局部扰动资格由主集成决定，本样件不触发GPU请求。
+
 ### 同plain前序接口的两进程冒烟证明了什么？
 
 主集成740048在GPU-43269fbc上完成plain-host/dual-host各一进程，二者都通过共享库调用16次同plain kernel，再在同A/B/D上执行目标。实际grid均为`[1,132,1]`、stage6；各4096值按原标准精确正确、padding/非有限为零。本组独立重放原gzip及检查值。设备SASS与冻结plain/dual各自相同的证明来自主集成，本组绑定其报告与源包哈希，不把两进程冒烟算正式计时、观察扰动资格或局部留出。
