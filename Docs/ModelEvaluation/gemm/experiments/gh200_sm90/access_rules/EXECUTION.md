@@ -196,6 +196,8 @@ cfg_c producer-tail补齐[严格decoder与7项合成拒绝测试](../../../../..
 
 [cfg_c producer-tail正确性740088](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-producer-tail-correctness/README.md)完成：740087补host全D入口，SASS/资源byte同740082；GPU-fd5317a4获配单卡，7077888全D off/on逐位且独立参考精确，两warm各132CTA严格有效、8192抽样值精确。身份与实际卡分别保存；不计跨卡性能或扰动资格，不将单对当正式对照。
 
+[cfg_c闭合供给影响范围独立复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-closed-response-v1/README.md)：12图byte同、349SHA匹配、30测试通过；拓扑最短距离独立核对126查询/100路径/26无后续full。B完成q=0最早remote full为g+4，q>0为g+3；B issue为g+1。短K可仅影响producer退出而不达伙伴D，可达仍不是服务时间或正响应证据。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
