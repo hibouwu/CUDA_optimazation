@@ -254,6 +254,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [区间分段成本诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-cell-cost-v1/README.md)：仅增加计数、原v2中点证书逐字段相同；259409非恒定比较中236882为heap排序（91.3%），最终两侧界来自heap弹出，当前cell只占原域0.000384347%。不能据此估计总cell数，也不能跳过资源排序；建议用有证明的偏序/保守界缩短路径，原未覆盖域保留，无GPU/资格。
 
+[single126源并集独立核对](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-single126-source-union-v1/README.md)：B0/B32共1024不同描述符/6553600有效FP16元素独立地址枚举与128B覆盖函数同；每组总单元3200/3248，16组各120组对不重叠。仅静态工作前提，单次服务界仍须证明同组订阅不失效，不称物理流量或全区间结论，无GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
