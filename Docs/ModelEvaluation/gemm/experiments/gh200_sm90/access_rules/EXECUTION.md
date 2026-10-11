@@ -248,6 +248,8 @@ producer-tail按C最终审查再补2256条每调用min-entry共同原点ns系列
 
 [同卡cycle/ns迁移主线复放](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-mma-reference/reanalysis/main-cycle-time-transfer-v1/README.md)：接入A1b667800，三个完整JSON重算相同；165SHA/6参考/40目标/8640整数窗口与有标签分项/80同SM窗口、两负例通过。工作量缩放周期最大误差2.912%，直接参考C/N换算ns最大15.075%；同SM也不直接迁移。后验参考与端点/负载差异保留，不归因物理频率，不加校正/资格，无GPU。
 
+[请求路径最小余量分支核对](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-raster-pitch/reanalysis/main-input-path-witness-v1/README.md)：仅重放原两端极小窗口，FIRST/余量与原报告逐值同。下端g1由源完成限制，ready间隔221.269ns；上端由请求路径限制，间隔264σ=242.245ns，距compute288余45.755ns。两端限制分支不同，不能线性外推或据聚合吞吐作全区间证明，无新价/GPU/资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
