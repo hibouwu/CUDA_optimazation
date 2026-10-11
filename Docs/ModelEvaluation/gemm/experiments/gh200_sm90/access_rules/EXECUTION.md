@@ -176,6 +176,8 @@ C后续输出诊断已独立复放，原20进程/5280角色路径/2640配对的J
 
 [cfg_c跨K全窗口补查](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-cross-k-v1/README.md#全窗口条件迁移检查)：12960窗口以4×K1024实测作条件迁移，按K4096目标分母的cycle误差最大4.809%，无>5%；ns最大17.378%，3921窗口>10%。精确分数验证，不以分组中位掩盖尾部；这种条件输入仍不是静态自由预测或验收通过。
 
+[cfg_c完整rank图主集成复核](../../../../../../results/gh200_resource_campaign/access_rules/20261009-R13-R15-R18-composition-job738496/reanalysis/main-cfg-c-rank-dependencies-v2/README.md)完成：接入C d6422c9，44测试通过，12完整图byte同、341输入SHA匹配，覆盖26静态条件/1556cluster/7148rank输出。接入前cfg_a三完整图、cfg_c三本地图和cfg_a arrival routes逐字段不变。源到四stage复用/两WG尾部/输出完成逻辑闭合，entry与服务仍未定价；不增加预测或观察资格。
+
 <a id="goals"></a>
 
 原目标模式启动文本保留在[固定历史版本](https://github.com/hibouwu/CUDA_optimazation/blob/cee978a47fba73d4507a20a5cc90d37da9910121/Docs/ModelEvaluation/gemm/experiments/gh200_sm90/access_rules/EXECUTION.md#goals)。文档中的旧模板不激活任务或自动授权GPU；当前执行以用户在对话中已确认的具体范围为准。
