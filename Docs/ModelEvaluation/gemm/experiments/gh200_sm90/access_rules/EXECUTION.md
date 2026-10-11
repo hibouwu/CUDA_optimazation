@@ -321,3 +321,5 @@ B对上述组合完成限定源码边审查，无行动项；16项定向父边/�
 [中位数采样能力诊断](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-sampling-capacity-v1/README.md)：复用45SHA/864系列/8640配对；精确二项尾与1024符号枚举核对。在未插值次序统计量+Bonferroni、示例95%且采样假设成立的条件下，全432 L一批/两批有限区间至少每臂16/17次；非通用最小量，也不保证精度。旧十次逐坐标两臂ns区间均含零，宽度中位800/1120ns，不能判等价或全坐标通过；中位数之差也不同于配对差中位数。采样独立同分布未证明，原门槛/失败/资格false保留，无新GPU或新标准。
 
 [局部中位数等价候选协议](../../../../../../results/gh200_resource_campaign/access_rules/20261011-cfg-c-gt-controls/reanalysis/main-median-protocol-v1/README.md)：落实全部6372系列×两批×两臂的数值判定器，候选95%同时覆盖、±64ns中位数差容差、64 block共256进程随机交错表；仅提案未冻结/执行，样本量不保证精度。52SHA/40原raw重提取，12744原点控制逐项复现4912/4729失败；n10回放全部覆盖不足，不追认通过。8定向测试通过；统计等价与观察/时间戳/关键CTA资格分开，全部资格false。B/C/A继续限定joint端点与统计组合审查，未改公共模型或启动GPU。
+
+[R10联合端点统计主线复核](../../../../../../results/gh200_resource_campaign/access_rules/20261010-R10-producer-delay/reanalysis/main-paired-estimands-v1/README.md)：B 1eb0b5ec接入ad34fe27；两侧90SHA（86共同、3重定位字节同、1新增其他trace分支）核对，完整报告除输入路径/模块身份同、两gzip账本同。独立原始字复验5280CTA/52800时长/13200响应向量通过。B32分段响应中位数之和336ns而联合窗口288ns；B0配对响应816ns而条件中位数差832ns。已接入候选协议联合记录/独立预列估计对象要求，未改统计目标、容差、旧控制或资格，无GPU。

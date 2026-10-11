@@ -1,0 +1,19 @@
+{
+  "B_commit": "1eb0b5ec846cbb9d7588c7962aa9ab58dacd81f0",
+  "main_cherry_pick": "ad34fe27",
+  "B_report_sha256": "5acf156511a9a77b05cf23840a654e2e7704a4d48d498121db681a23fead27ed",
+  "main_report_sha256": "eed0a41b3e4577fc3d69a64ce6704f17608ffb68ade4671288fd3a69207e1ec7",
+  "inputs_each": 90,
+  "shared_inputs": 86,
+  "relocated_identical_modules": 3,
+  "changed_module": {
+    "name": "analyze_r18.py",
+    "B_sha256": "aceff77fbb2f11b8fac4725cc7018b1c277d420cb43f0b4d34411673c1fc8cbf",
+    "main_sha256": "b9a53d004a64958afb9bb8c7ed26f097d523d4876f881502f4dbe814005e1264",
+    "replay_AST_difference": "Only sparse-trace dispatch if changed; actual r18-dual-clock-events matches neither version of that if."
+  },
+  "full_report_except_input_paths_identical": true,
+  "two_complete_compressed_ledgers_identical": true,
+  "verifier_sha256": "39c39cec7956f6301dea64183a5f9bb2ceaa2baf0ef60b399d1b12630017fbb5",
+  "qualification": false
+}
